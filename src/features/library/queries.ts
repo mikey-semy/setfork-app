@@ -8,6 +8,7 @@ export type FeedSort = 'trending' | 'newest' | 'mostRun'
 export interface FeedItem {
   id: string
   ownerHandle: string
+  ownerAvatarUrl: string | null
   slug: string
   title: LocaleText
   desc: LocaleText
@@ -57,6 +58,7 @@ export async function getFeed(
     .select({
       id: templates.id,
       ownerHandle: users.handle,
+      ownerAvatarUrl: users.avatarUrl,
       slug: templates.slug,
       title: templates.title,
       desc: templates.desc,
@@ -99,6 +101,7 @@ export async function getUserTemplates(userId: string): Promise<FeedItem[]> {
     .select({
       id: templates.id,
       ownerHandle: users.handle,
+      ownerAvatarUrl: users.avatarUrl,
       slug: templates.slug,
       title: templates.title,
       desc: templates.desc,

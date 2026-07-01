@@ -4,20 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Plus, Search } from 'lucide-react'
 import { LangSwitch, ThemeToggle } from '@/shared/ui/controls'
+import { Avatar } from '@/shared/ui/Avatar'
 import { t, type Lang } from '@/shared/i18n'
 import type { SessionUser } from '@/shared/auth/session'
-
-function Avatar({ user }: { user: SessionUser }) {
-  if (user.avatarUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={user.avatarUrl} alt={user.handle} className="h-[30px] w-[30px] rounded-full object-cover" />
-  }
-  return (
-    <div className="grid h-[30px] w-[30px] place-items-center rounded-full bg-ink text-xs font-bold text-[var(--canvas)]">
-      {(user.name ?? user.handle).charAt(0).toUpperCase()}
-    </div>
-  )
-}
 
 export function TopNav({ lang, user }: { lang: Lang; user: SessionUser | null }) {
   const pathname = usePathname()
@@ -56,8 +45,8 @@ export function TopNav({ lang, user }: { lang: Lang; user: SessionUser | null })
         <LangSwitch lang={lang} />
         <ThemeToggle />
         {user ? (
-          <Link href="/runs" aria-label={user.handle}>
-            <Avatar user={user} />
+          <Link href={`/${user.handle}`} aria-label={user.handle}>
+            <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={30} />
           </Link>
         ) : (
           <Link href="/login" className="text-[13px] font-semibold text-ink">

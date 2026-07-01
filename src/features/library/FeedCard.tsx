@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { GitFork, Play, Star } from 'lucide-react'
-import { Identicon } from '@/shared/ui/Identicon'
+import { Avatar } from '@/shared/ui/Avatar'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { forkTemplate } from '@/features/runs/actions'
 import type { FeedItem } from './queries'
@@ -16,14 +16,21 @@ export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
   const fork = forkTemplate.bind(null, item.id)
 
   return (
-    <div className="flex gap-3.5 border-b border-border py-4">
-      <Identicon seed={`${item.ownerHandle}/${item.slug}`} color={color} />
+    <div className="flex gap-3.5 rounded-lg border border-border bg-surface p-4 transition-colors hover:border-border-strong">
+      <Link href={`/${item.ownerHandle}`} className="flex-shrink-0">
+        <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={40} />
+      </Link>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <Link href={`/${item.ownerHandle}/${item.slug}`} className="text-[15px]">
-            <span className="text-ink-2">{item.ownerHandle}/</span>
-            <span className="font-semibold text-accent">{item.slug}</span>
-          </Link>
+          <span className="text-[15px]">
+            <Link href={`/${item.ownerHandle}`} className="text-ink-2 hover:text-accent">
+              {item.ownerHandle}
+            </Link>
+            <span className="text-ink-2">/</span>
+            <Link href={`/${item.ownerHandle}/${item.slug}`} className="font-semibold text-accent hover:underline">
+              {item.slug}
+            </Link>
+          </span>
           {topicLabel && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] text-ink-2">
               <span className="h-[7px] w-[7px] flex-shrink-0 rounded-full" style={{ background: color }} />
@@ -35,7 +42,7 @@ export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
           </span>
         </div>
         <div className="mt-1.5 text-[13px] leading-normal text-ink-2">{tr(item.desc, lang)}</div>
-        <div className="mt-2 flex flex-wrap gap-4 text-[12px] text-muted">
+        <div className="mt-2.5 flex flex-wrap gap-4 text-[12px] text-muted">
           <span className="inline-flex items-center gap-1.5">
             <Play size={13} /> {fmt(item.runsCount)}
           </span>

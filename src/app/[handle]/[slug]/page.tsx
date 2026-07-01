@@ -14,9 +14,9 @@ import type { RunStepData } from '@/features/runs/RunStep'
 export default async function TemplatePage({
   params,
 }: {
-  params: Promise<{ owner: string; slug: string }>
+  params: Promise<{ handle: string; slug: string }>
 }) {
-  const { owner, slug } = await params
+  const { handle: owner, slug } = await params
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
@@ -63,7 +63,10 @@ export default async function TemplatePage({
           <div className="px-5 pb-3.5 pt-5">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="text-[15px]">
-                <span className="text-ink-2">{tpl.owner.handle}/</span>
+                <Link href={`/${tpl.owner.handle}`} className="text-ink-2 hover:text-accent">
+                  {tpl.owner.handle}
+                </Link>
+                <span className="text-ink-2">/</span>
                 <span className="font-semibold text-ink">{tpl.slug}</span>
               </span>
               <span className="rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[11px] text-accent">

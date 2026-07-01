@@ -66,6 +66,11 @@ const DICT = {
   forkedFrom: { en: 'forked from', ru: 'форк от' },
   allTopics: { en: 'All topics', ru: 'Все темы' },
   nothingFound: { en: 'Nothing found.', ru: 'Ничего не найдено.' },
+  lists: { en: 'Lists', ru: 'Списки' },
+  starred: { en: 'Starred', ru: 'В избранном' },
+  joined: { en: 'joined', ru: 'на сайте с' },
+  noStars: { en: 'No starred lists yet.', ru: 'Пока ничего в избранном.' },
+  noProfileLists: { en: 'No lists yet.', ru: 'Пока нет списков.' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT

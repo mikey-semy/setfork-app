@@ -85,7 +85,11 @@ export default async function ExplorePage({
             {feed.length === 0 ? (
               <div className="py-16 text-center text-[13.5px] text-muted">{t('nothingFound', lang)}</div>
             ) : (
-              feed.map((item) => <FeedCard key={item.id} item={item} lang={lang} />)
+              <div className="space-y-3 py-3">
+                {feed.map((item) => (
+                  <FeedCard key={item.id} item={item} lang={lang} />
+                ))}
+              </div>
             )}
           </section>
     </div>

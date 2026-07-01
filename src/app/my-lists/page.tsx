@@ -27,7 +27,11 @@ export default async function MyListsPage() {
           ) : items.length === 0 ? (
             <div className="py-16 text-center text-[13.5px] text-muted">{t('emptyMyLists', lang)}</div>
           ) : (
-            items.map((item) => <FeedCard key={item.id} item={item} lang={lang} />)
+            <div className="space-y-3">
+              {items.map((item) => (
+                <FeedCard key={item.id} item={item} lang={lang} />
+              ))}
+            </div>
           )}
     </div>
   )
