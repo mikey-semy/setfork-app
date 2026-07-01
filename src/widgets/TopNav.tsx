@@ -8,7 +8,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { t, type Lang } from '@/shared/i18n'
 import type { SessionUser } from '@/shared/auth/session'
 
-export function TopNav({ lang, user }: { lang: Lang; user: SessionUser | null }) {
+export function TopNav({ lang, user, isAdmin }: { lang: Lang; user: SessionUser | null; isAdmin?: boolean }) {
   const pathname = usePathname()
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
   const navLink = (href: string, label: string) => (
@@ -32,6 +32,7 @@ export function TopNav({ lang, user }: { lang: Lang; user: SessionUser | null })
       <nav className="hidden items-center gap-[22px] text-[13.5px] font-medium sm:flex">
         {navLink('/explore', t('explore', lang))}
         {navLink('/my-lists', t('myLists', lang))}
+        {isAdmin && navLink('/admin', lang === 'ru' ? 'Админ' : 'Admin')}
       </nav>
       <div className="ml-auto flex items-center gap-3">
         <Link

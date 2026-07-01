@@ -1,7 +1,10 @@
 import Link from 'next/link'
+import { Sparkles } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { hasOpenRouterKey } from '@/shared/settings/ai'
 import { FeedCard } from '@/features/library/FeedCard'
+import { generateFromQuery } from '@/features/library/actions'
 import { getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
 
 const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostLiked' }[] = [
@@ -13,9 +16,10 @@ const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostLiked' }[] = [
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tag?: string; sort?: string }>
+  searchParams: Promise<{ q?: string; tag?: string; sort?: string; e?: string }>
 }) {
   const sp = await searchParams
+  const aiOn = hasOpenRouterKey()
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
   const [lang, tags, feed] = await Promise.all([
     getLang(),
@@ -85,6 +89,31 @@ export default async function ExplorePage({
             </Link>
           </div>
         )}
+        {sp.e === 'aifail' && (
+          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-[var(--danger)]">
+            {t('aiFail', lang)}
+          </div>
+        )}
+        {sp.e === 'ratelimited' && (
+          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-[var(--warn)]">
+            {t('rateLimited', lang)}
+          </div>
+        )}
+
+        {/* Поиск + нет точного совпадения → предложить сгенерировать (Generate → Verify) */}
+        {sp.q && aiOn && (
+          <form action={generateFromQuery} className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3">
+            <Sparkles size={16} className="text-accent" />
+            <span className="text-[13px] text-ink">
+              {t('cantFind', lang)} <span className="font-semibold">“{sp.q}”</span>
+            </span>
+            <input type="hidden" name="q" value={sp.q} />
+            <button className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[12.5px] font-semibold text-primary-fg">
+              <Sparkles size={13} /> {t('generateWithAi', lang)}
+            </button>
+          </form>
+        )}
+
         {feed.length === 0 ? (
           <div className="py-16 text-center text-[13.5px] text-muted">{t('nothingFound', lang)}</div>
         ) : (

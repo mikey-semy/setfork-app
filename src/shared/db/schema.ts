@@ -168,6 +168,13 @@ export const stars = pgTable(
   (t) => ({ userTpl: unique('stars_user_tpl').on(t.userId, t.templateId) }),
 )
 
+// ── App settings (key-value, в т.ч. AI-настройки) ────────────────────
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ── Suggestions (предложения правок, PR) ─────────────────────────────
 export const suggestions = pgTable('suggestions', {
   id: uuid('id').primaryKey().defaultRandom(),

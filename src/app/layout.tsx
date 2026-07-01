@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Hanken_Grotesk, IBM_Plex_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
+import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { TopNav } from '@/widgets/TopNav'
 import './globals.css'
@@ -29,7 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <div className="flex min-h-screen flex-col bg-canvas">
-            <TopNav lang={lang} user={user} />
+            <TopNav lang={lang} user={user} isAdmin={isAdminHandle(user?.handle)} />
             <main className="flex flex-1 flex-col">{children}</main>
           </div>
         </ThemeProvider>

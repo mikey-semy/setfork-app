@@ -15,6 +15,8 @@ import {
 } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { generateListDraft } from '@/shared/ai/generate'
+import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { parseEditorItems, toProposedItems } from './editor'
 
 function parseTags(raw: unknown): string[] {
@@ -190,6 +192,60 @@ export async function rejectSuggestion(suggestionId: string): Promise<void> {
     .set({ status: 'rejected', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
   revalidatePath('/', 'layout')
+}
+
+// ── AI-генерация черновика списка по запросу ─────────────────────────
+export async function generateFromQuery(formData: FormData): Promise<void> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const query = String(formData.get('q') ?? '').trim()
+  if (!query) redirect('/explore')
+
+  const { allowed } = checkRateLimit(`gen:${session.userId}`)
+  if (!allowed) redirect(`/explore?q=${encodeURIComponent(query)}&e=ratelimited`)
+
+  const draft = await generateListDraft(query, lang)
+  if (!draft) redirect(`/explore?q=${encodeURIComponent(query)}&e=aifail`)
+
+  let slug = slugify(draft.title || query)
+  const owned = await db
+    .select({ slug: templates.slug })
+    .from(templates)
+    .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, slug)))
+  if (owned.length) slug = `${slug}-${Date.now().toString(36).slice(-4)}`
+
+  const tags = draft.tags.length ? parseTags(draft.tags.join(' ')) : parseTags(query)
+  const proposed = toProposedItems(
+    draft.items.map((it) => ({
+      title: it.title,
+      desc: it.desc,
+      command: it.command,
+      hasImage: false,
+      subtasks: it.subtasks,
+      refs: [],
+    })),
+    lang,
+  )
+
+  const [tpl] = await db
+    .insert(templates)
+    .values({
+      ownerId: session.userId,
+      slug,
+      title: { [lang]: draft.title || query },
+      desc: draft.desc ? { [lang]: draft.desc } : {},
+      tags,
+      currentVersion: 1,
+      origin: 'ai_draft',
+    })
+    .returning()
+  const [ver] = await db
+    .insert(templateVersions)
+    .values({ templateId: tpl.id, version: 1, note: 'ai draft' })
+    .returning()
+  await insertSteps(ver.id, proposed)
+
+  redirect(`/${await ownerHandle(session.userId)}/${slug}`)
 }
 
 // ── Лайк ──────────────────────────────────────────────────────────────

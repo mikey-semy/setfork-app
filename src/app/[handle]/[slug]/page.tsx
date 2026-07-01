@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Clock, ExternalLink, GitFork, GitPullRequest, Image as ImageIcon, Pencil } from 'lucide-react'
+import { ArrowLeft, Clock, ExternalLink, GitFork, GitPullRequest, Image as ImageIcon, Pencil, Sparkles } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
@@ -128,6 +128,12 @@ export default async function ListPage({
           <span className="font-mono text-[12px] text-muted">{suggCount}</span>
         </Link>
       </div>
+
+      {tpl.origin === 'ai_draft' && (
+        <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3 text-[13px] text-accent">
+          <Sparkles size={15} className="flex-shrink-0" /> {t('aiVerifyHint', lang)}
+        </div>
+      )}
 
       {/* Содержимое-эталон */}
       <div className="mt-5 flex flex-col gap-3">
