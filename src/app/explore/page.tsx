@@ -1,8 +1,6 @@
 import Link from 'next/link'
-import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { TopNav } from '@/widgets/TopNav'
 import { FeedCard } from '@/features/library/FeedCard'
 import { getFeed, getTopics, type FeedSort } from '@/features/library/queries'
 
@@ -19,9 +17,8 @@ export default async function ExplorePage({
 }) {
   const sp = await searchParams
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
-  const [lang, user, topics, feed] = await Promise.all([
+  const [lang, topics, feed] = await Promise.all([
     getLang(),
-    getSession(),
     getTopics(),
     getFeed({ sort, topicSlug: sp.topic, q: sp.q }),
   ])
@@ -34,11 +31,8 @@ export default async function ExplorePage({
   }
 
   return (
-    <main className="min-h-screen bg-canvas px-4 py-10 sm:px-10">
-      <div className="mx-auto max-w-[1120px] overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-        <TopNav lang={lang} user={user} active="explore" />
-        <div className="flex items-stretch">
-          <aside className="hidden w-[250px] flex-shrink-0 border-r border-border bg-surface-2 px-4 py-5 md:block">
+    <div className="flex flex-1 items-stretch">
+          <aside className="hidden w-[260px] flex-shrink-0 border-r border-border bg-surface-2 px-4 py-5 md:block">
             <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
               {t('topics', lang)}
             </div>
@@ -94,8 +88,6 @@ export default async function ExplorePage({
               feed.map((item) => <FeedCard key={item.id} item={item} lang={lang} />)
             )}
           </section>
-        </div>
-      </div>
-    </main>
+    </div>
   )
 }

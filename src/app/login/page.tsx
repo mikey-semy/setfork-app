@@ -10,7 +10,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const hasGithub = !!process.env.GITHUB_CLIENT_ID
 
   return (
-    <main className="grid min-h-screen place-items-center bg-canvas px-4">
+    <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-[380px] rounded-xl border border-border bg-surface p-8 text-center shadow-card">
         <div className="mb-1 text-[40px] font-bold leading-none tracking-tight text-ink">SH</div>
         <div className="mb-6 text-[13.5px] text-ink-2">{t('loginRequired', lang)}</div>
@@ -48,7 +48,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           ← SetHub
         </Link>
       </div>
-    </main>
+    </div>
   )
 }
 

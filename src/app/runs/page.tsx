@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { TopNav } from '@/widgets/TopNav'
 import { getUserRuns } from '@/features/runs/queries'
 import { getTemplateDetail } from '@/features/library/queries'
 
@@ -11,10 +10,7 @@ export default async function RunsPage() {
   const runs = session ? await getUserRuns(session.userId) : []
 
   return (
-    <main className="min-h-screen bg-canvas px-4 py-10 sm:px-10">
-      <div className="mx-auto max-w-[1120px] overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-        <TopNav lang={lang} user={session} active="runs" />
-        <div className="px-6 py-5">
+    <div className="w-full px-6 py-6 lg:px-8">
           <h1 className="mb-4 text-[15px] font-semibold text-ink">{t('runs', lang)}</h1>
           {!session ? (
             <SignInHint lang={lang} />
@@ -49,9 +45,7 @@ export default async function RunsPage() {
               ))}
             </div>
           )}
-        </div>
-      </div>
-    </main>
+    </div>
   )
 }
 

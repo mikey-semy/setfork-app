@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { TopNav } from '@/widgets/TopNav'
 import { getTopics } from '@/features/library/queries'
 import { createTemplate } from '@/features/library/actions'
 
@@ -13,10 +12,8 @@ export default async function NewListPage() {
   const ru = lang === 'ru'
 
   return (
-    <main className="min-h-screen bg-canvas px-4 py-10 sm:px-10">
-      <div className="mx-auto max-w-[1120px] overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-        <TopNav lang={lang} user={session} />
-        <form action={createTemplate} className="mx-auto max-w-[640px] px-6 py-8">
+    <div className="mx-auto w-full max-w-[680px] px-6 py-8">
+        <form action={createTemplate}>
           <h1 className="mb-6 text-[18px] font-bold text-ink">{t('newList', lang)}</h1>
 
           <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">
@@ -65,7 +62,6 @@ export default async function NewListPage() {
             {ru ? 'Создать список' : 'Create list'}
           </button>
         </form>
-      </div>
-    </main>
+    </div>
   )
 }

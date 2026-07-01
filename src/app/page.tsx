@@ -2,10 +2,8 @@ import Link from 'next/link'
 import { ArrowRight, Search } from 'lucide-react'
 import { sql } from 'drizzle-orm'
 import { db, runs, templates } from '@/shared/db'
-import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { TopNav } from '@/widgets/TopNav'
 
 const CHIPS = [
   { en: 'Deploy Next.js to a VPS', ru: 'Задеплоить Next.js на VPS' },
@@ -23,14 +21,12 @@ async function stats() {
 }
 
 export default async function HomePage() {
-  const [lang, user, s] = await Promise.all([getLang(), getSession(), stats()])
+  const [lang, s] = await Promise.all([getLang(), stats()])
   const ru = lang === 'ru'
 
   return (
-    <main className="min-h-screen bg-canvas px-4 py-10 sm:px-10">
-      <div className="mx-auto max-w-[1120px] overflow-hidden rounded-xl border border-border bg-surface shadow-card">
-        <TopNav lang={lang} user={user} />
-        <div className="flex flex-col items-center gap-6 px-6 py-16 text-center">
+    <div className="flex flex-1 items-center justify-center px-4 py-16">
+        <div className="flex w-full max-w-[640px] flex-col items-center gap-6 text-center">
           <div className="text-[64px] font-bold leading-none tracking-tight text-ink">SH</div>
           <div className="-mt-2 text-[15px] text-ink-2">{t('heroSub', lang)}</div>
 
@@ -77,7 +73,6 @@ export default async function HomePage() {
               : `${s.templates} lists · ${s.runs} runs`}
           </div>
         </div>
-      </div>
-    </main>
+    </div>
   )
 }

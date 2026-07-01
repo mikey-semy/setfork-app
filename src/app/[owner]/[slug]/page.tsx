@@ -53,19 +53,12 @@ export default async function TemplatePage({
   const forkBound = forkTemplate.bind(null, tpl.id)
 
   return (
-    <main className="min-h-screen bg-canvas px-4 py-10 sm:px-10">
-      <div className="mx-auto max-w-[600px]">
+    <div className="mx-auto w-full max-w-[760px] px-4 py-8">
         <Link href="/explore" className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
           <ArrowLeft size={15} /> {t('backToExplore', lang)}
         </Link>
 
-        <div className="overflow-hidden rounded-xl border border-border bg-surface-2 shadow-card">
-          <div className="flex items-center border-b border-border bg-surface px-5 py-3.5">
-            <Link href="/" className="text-[15px] font-bold text-ink">
-              SH
-            </Link>
-          </div>
-
+        <div className="overflow-hidden rounded-xl border border-border bg-surface-2">
           {/* Заголовок + версия + история + прогресс */}
           <div className="px-5 pb-3.5 pt-5">
             <div className="flex flex-wrap items-center gap-2.5">
@@ -134,7 +127,6 @@ export default async function TemplatePage({
           </div>
         </div>
       </div>
-    </main>
   )
 }
 

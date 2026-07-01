@@ -10,7 +10,7 @@
   --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --canvas: #eceae4; /* фон страницы (тёплый светлый) */
+  --canvas: #f4f4f1; /* фон страницы (светлый, под контент во всю ширину) */
   --surface: #ffffff;
   --surface-2: #fbfbfa;
   --border: #e7e6e0;
