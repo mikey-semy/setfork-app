@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens (SetHub) ────────────────────────────────────────────
+   Значения взяты напрямую из макетов SetHub.dc.html / RunStep.dc.html.
+   Light — палитра экранов Search/Explore и карточки 2A.
+   Dark  — палитра карточки 2B / dark RunStep. */
+:root {
+  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --canvas: #eceae4; /* фон страницы (тёплый светлый) */
+  --surface: #ffffff;
+  --surface-2: #fbfbfa;
+  --border: #e7e6e0;
+  --border-strong: #dcdbd5;
+  --ink: #1c1c1a;
+  --ink-2: #6b6b66;
+  --muted: #a3a39c;
+  --accent: #2159d6; /* ссылки owner/name */
+  --accent-soft: #eef3ff;
+  --primary: #1c1c1a; /* тёмная основная кнопка */
+  --primary-fg: #ffffff;
+  --cur: #2563eb; /* текущий шаг */
+  --ok: #16a34a;
+  --warn: #d97706;
+  --danger: #dc2626;
+}
+
+.dark {
+  --canvas: #080b11;
+  --surface: #0f141c;
+  --surface-2: #0d1119;
+  --border: #1d2632;
+  --border-strong: #2a3644;
+  --ink: #e8edf5;
+  --ink-2: #8a97ab;
+  --muted: #66748a;
+  --accent: #7dc0ff;
+  --accent-soft: #0e2233;
+  --primary: #4c9fff;
+  --primary-fg: #07131d;
+  --cur: #4c9fff;
+  --ok: #34d399;
+  --warn: #eab308;
+  --danger: #f87171;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: #cfe0ff;
+  color: #0b2a6b;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: inherit;
+  opacity: 0.55;
+}
+
+/* Тонкая полоса прокрутки под тёмную/светлую тему */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}

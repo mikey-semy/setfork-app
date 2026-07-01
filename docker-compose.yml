@@ -1,0 +1,21 @@
+# Локальная разработка: только Postgres. Приложение запускаем `npm run dev`.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sethub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sethub}
+      POSTGRES_DB: ${POSTGRES_DB:-sethub}
+    ports:
+      - '${DB_PORT:-5435}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-sethub} -d ${POSTGRES_DB:-sethub}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
