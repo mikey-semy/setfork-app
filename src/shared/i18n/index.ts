@@ -1,23 +1,28 @@
-// Минимальная i18n EN/RU. Язык хранится в cookie `lang` и в <html lang>.
-// Контент (шаблоны/шаги) двуязычен в БД (поля *_en/*_ru) — здесь только UI-строки.
+// i18n SetHub. English-first (как GitHub), сейчас доступен русский.
+// Контент (шаблоны/шаги/темы) хранится как locale-JSON (LocaleText), поэтому
+// добавить язык = только данные, без миграций схемы. UI-строки — в DICT ниже.
 
-export type Lang = 'en' | 'ru'
+export const LOCALES = ['en', 'ru'] as const
+export type Locale = (typeof LOCALES)[number]
+export type Lang = Locale
 
-export const LANGS: Lang[] = ['en', 'ru']
 export const DEFAULT_LANG: Lang = 'en'
 export const LANG_COOKIE = 'lang'
 
+/** Переводимый контент: { en: '…', ru: '…', … }. Ключ — код языка. */
+export type LocaleText = Partial<Record<string, string>>
+
 export function isLang(v: unknown): v is Lang {
-  return v === 'en' || v === 'ru'
+  return typeof v === 'string' && (LOCALES as readonly string[]).includes(v)
 }
 
-/** Выбор двуязычного поля объекта: pick(t, 'title', lang) → t.titleEn | t.titleRu */
-export function pick<T extends object>(obj: T, base: string, lang: Lang): string {
-  const key = base + (lang === 'ru' ? 'Ru' : 'En')
-  return ((obj as Record<string, unknown>)[key] as string) ?? ''
+/** Резолв locale-текста с фолбэком: запрошенный → en → первый доступный. */
+export function tr(text: LocaleText | null | undefined, lang: Lang): string {
+  if (!text) return ''
+  return text[lang] ?? text.en ?? Object.values(text).find(Boolean) ?? ''
 }
 
-type Dict = Record<string, { en: string; ru: string }>
+type Dict = Record<string, LocaleText>
 
 const DICT = {
   explore: { en: 'Explore', ru: 'Обзор' },
@@ -59,10 +64,12 @@ const DICT = {
   runIt: { en: 'Run it', ru: 'Прогнать' },
   resume: { en: 'Resume run', ru: 'Продолжить прогон' },
   forkedFrom: { en: 'forked from', ru: 'форк от' },
+  allTopics: { en: 'All topics', ru: 'Все темы' },
+  nothingFound: { en: 'Nothing found.', ru: 'Ничего не найдено.' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT
 
 export function t(key: TKey, lang: Lang): string {
-  return DICT[key][lang]
+  return tr(DICT[key], lang)
 }

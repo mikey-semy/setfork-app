@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { pick, t, type Lang } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { TopNav } from '@/widgets/TopNav'
 import { getTopics } from '@/features/library/queries'
 import { createTemplate } from '@/features/library/actions'
@@ -46,7 +46,7 @@ export default async function NewListPage() {
             <option value="">—</option>
             {topics.map((tp) => (
               <option key={tp.slug} value={tp.slug}>
-                {pick(tp as unknown as Record<string, unknown>, 'label', lang as Lang)}
+                {tr(tp.label, lang)}
               </option>
             ))}
           </select>

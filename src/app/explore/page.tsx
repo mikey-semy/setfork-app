@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { pick, t, type Lang } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { TopNav } from '@/widgets/TopNav'
 import { FeedCard } from '@/features/library/FeedCard'
 import { getFeed, getTopics, type FeedSort } from '@/features/library/queries'
@@ -49,7 +49,7 @@ export default async function ExplorePage({
                   !sp.topic ? 'bg-[var(--accent-soft)] text-ink' : 'text-ink-2 hover:text-ink'
                 }`}
               >
-                {lang === 'ru' ? 'Все темы' : 'All topics'}
+                {t('allTopics', lang)}
               </Link>
               {topics.map((tp) => (
                 <Link
@@ -61,7 +61,7 @@ export default async function ExplorePage({
                 >
                   <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: tp.color }} />
                   <span className={`flex-1 text-[13px] ${sp.topic === tp.slug ? 'text-ink' : 'text-ink-2'}`}>
-                    {pick(tp as unknown as Record<string, unknown>, 'label', lang as Lang)}
+                    {tr(tp.label, lang)}
                   </span>
                   <span className="font-mono text-[11.5px] text-muted">{tp.count}</span>
                 </Link>
@@ -89,9 +89,7 @@ export default async function ExplorePage({
               </span>
             </div>
             {feed.length === 0 ? (
-              <div className="py-16 text-center text-[13.5px] text-muted">
-                {lang === 'ru' ? 'Ничего не найдено.' : 'Nothing found.'}
-              </div>
+              <div className="py-16 text-center text-[13.5px] text-muted">{t('nothingFound', lang)}</div>
             ) : (
               feed.map((item) => <FeedCard key={item.id} item={item} lang={lang} />)
             )}

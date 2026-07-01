@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { pick, t } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { TopNav } from '@/widgets/TopNav'
 import { getUserRuns } from '@/features/runs/queries'
 import { getTemplateDetail } from '@/features/library/queries'
@@ -33,7 +33,7 @@ export default async function RunsPage() {
                       <span className="text-ink-2">{r.ownerHandle}/</span>
                       <span className="font-semibold text-accent">{r.slug}</span>
                     </div>
-                    <div className="text-[12.5px] text-ink-2">{pick(r, 'title', lang)}</div>
+                    <div className="text-[12.5px] text-ink-2">{tr(r.title, lang)}</div>
                   </div>
                   <span className="font-mono text-[12px] text-muted">v{r.version}</span>
                   <span

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { GitFork, Play, Star } from 'lucide-react'
 import { Identicon } from '@/shared/ui/Identicon'
-import { pick, t, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { forkTemplate } from '@/features/runs/actions'
 import type { FeedItem } from './queries'
 
@@ -12,7 +12,7 @@ function fmt(n: number): string {
 
 export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
   const color = item.topicColor ?? '#6b6b66'
-  const topicLabel = pick(item, 'topicLabel', lang) || null
+  const topicLabel = item.topicLabel ? tr(item.topicLabel, lang) : null
   const fork = forkTemplate.bind(null, item.id)
 
   return (
@@ -34,7 +34,7 @@ export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
             v{item.version}
           </span>
         </div>
-        <div className="mt-1.5 text-[13px] leading-normal text-ink-2">{pick(item, 'desc', lang)}</div>
+        <div className="mt-1.5 text-[13px] leading-normal text-ink-2">{tr(item.desc, lang)}</div>
         <div className="mt-2 flex flex-wrap gap-4 text-[12px] text-muted">
           <span className="inline-flex items-center gap-1.5">
             <Play size={13} /> {fmt(item.runsCount)}

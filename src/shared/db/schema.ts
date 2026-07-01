@@ -20,6 +20,7 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
+import type { LocaleText } from '../i18n'
 
 // ── Enums ────────────────────────────────────────────────────────────
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
@@ -41,8 +42,7 @@ export const users = pgTable('users', {
 export const topics = pgTable('topics', {
   id: uuid('id').primaryKey().defaultRandom(),
   slug: text('slug').notNull().unique(),
-  labelEn: text('label_en').notNull(),
-  labelRu: text('label_ru').notNull(),
+  label: jsonb('label').notNull().$type<LocaleText>(),
   color: text('color').notNull(), // hex, напр. #2563eb
 })
 
@@ -55,10 +55,8 @@ export const templates = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     slug: text('slug').notNull(),
-    titleEn: text('title_en').notNull(),
-    titleRu: text('title_ru').notNull(),
-    descEn: text('desc_en').notNull().default(''),
-    descRu: text('desc_ru').notNull().default(''),
+    title: jsonb('title').notNull().$type<LocaleText>(),
+    desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
     topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
     currentVersion: integer('current_version').notNull().default(1),
     origin: templateOrigin('origin').notNull().default('authored'),
@@ -94,15 +92,13 @@ export const steps = pgTable('steps', {
     .notNull()
     .references(() => templateVersions.id, { onDelete: 'cascade' }),
   n: integer('n').notNull(), // порядковый номер (1..)
-  titleEn: text('title_en').notNull(),
-  titleRu: text('title_ru').notNull(),
-  descEn: text('desc_en').notNull().default(''),
-  descRu: text('desc_ru').notNull().default(''),
+  title: jsonb('title').notNull().$type<LocaleText>(),
+  desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
   command: text('command').notNull().default(''),
   hasImage: boolean('has_image').notNull().default(false),
-  // Подшаги и ссылки — простой контент шага, храним как JSON (в v0 не редактируем отдельно).
-  subtasks: jsonb('subtasks').notNull().default([]).$type<{ en: string; ru: string }[]>(),
-  refs: jsonb('refs').notNull().default([]).$type<{ en: string; ru: string; url?: string }[]>(),
+  // Подшаги и ссылки — простой контент шага, храним как locale-JSON.
+  subtasks: jsonb('subtasks').notNull().default([]).$type<LocaleText[]>(),
+  refs: jsonb('refs').notNull().default([]).$type<{ label: LocaleText; url?: string }[]>(),
 })
 
 // ── Runs (прогон = исполняемый экземпляр шаблона на версии) ──────────

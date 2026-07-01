@@ -26,8 +26,7 @@ export async function getUserRuns(userId: string) {
       updatedAt: runs.updatedAt,
       ownerHandle: users.handle,
       slug: templates.slug,
-      titleEn: templates.titleEn,
-      titleRu: templates.titleRu,
+      title: templates.title,
     })
     .from(runs)
     .innerJoin(templates, eq(runs.templateId, templates.id))

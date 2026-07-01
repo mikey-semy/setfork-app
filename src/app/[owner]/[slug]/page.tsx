@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Clock, GitFork, Play } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { pick, t } from '@/shared/i18n'
+import { t, tr, type LocaleText } from '@/shared/i18n'
 import type { Step } from '@/shared/db'
 import { getTemplateDetail } from '@/features/library/queries'
 import { getActiveRun } from '@/features/runs/queries'
@@ -33,13 +33,13 @@ export default async function TemplatePage({
         return {
           id: s.id,
           n: s.n,
-          title: pick(s, 'title', lang),
-          desc: pick(s, 'desc', lang),
+          title: tr(s.title, lang),
+          desc: tr(s.desc, lang),
           command: s.command,
           hasImage: s.hasImage,
-          subtasks: (s.subtasks as { en: string; ru: string }[]).map((x) => (lang === 'ru' ? x.ru : x.en)),
-          refs: (s.refs as { en: string; ru: string; url?: string }[]).map((x) => ({
-            label: lang === 'ru' ? x.ru : x.en,
+          subtasks: (s.subtasks as LocaleText[]).map((x) => tr(x, lang)),
+          refs: (s.refs as { label: LocaleText; url?: string }[]).map((x) => ({
+            label: tr(x.label, lang),
             url: x.url,
           })),
           status: (st?.status ?? 'todo') as 'todo' | 'cur' | 'done',
@@ -146,9 +146,9 @@ function ReadonlySteps({ lang, steps }: { lang: 'en' | 'ru'; steps: Step[] }) {
           <span className="mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-full border-[1.5px] border-muted" />
           <div className="min-w-0 flex-1">
             <div className="text-[14px] font-medium text-ink">
-              {s.n}. {pick(s, 'title', lang)}
+              {s.n}. {tr(s.title, lang)}
             </div>
-            <div className="mt-1 truncate text-[12.5px] text-ink-2">{pick(s, 'desc', lang)}</div>
+            <div className="mt-1 truncate text-[12.5px] text-ink-2">{tr(s.desc, lang)}</div>
           </div>
         </div>
       ))}

@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { db, steps, templateVersions, templates, topics, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { getLang } from '@/shared/i18n/server'
 
 function slugify(input: string): string {
   return (
@@ -24,6 +25,7 @@ function slugify(input: string): string {
  */
 export async function createTemplate(formData: FormData): Promise<void> {
   const session = await requireSession()
+  const lang = await getLang() // язык ввода → под этот код и сохраняем контент
   const title = String(formData.get('title') ?? '').trim()
   const desc = String(formData.get('desc') ?? '').trim()
   const topicSlug = String(formData.get('topic') ?? '').trim()
@@ -48,10 +50,8 @@ export async function createTemplate(formData: FormData): Promise<void> {
     .values({
       ownerId: session.userId,
       slug,
-      titleEn: title,
-      titleRu: title,
-      descEn: desc,
-      descRu: desc,
+      title: { [lang]: title },
+      desc: desc ? { [lang]: desc } : {},
       topicId,
       currentVersion: 1,
       origin: 'authored',
@@ -72,8 +72,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
       lines.map((line, i) => ({
         versionId: ver.id,
         n: i + 1,
-        titleEn: line,
-        titleRu: line,
+        title: { [lang]: line },
       })),
     )
   }

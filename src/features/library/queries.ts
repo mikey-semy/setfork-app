@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
 import { db, templates, topics, users } from '@/shared/db'
+import type { LocaleText } from '@/shared/i18n'
 
 export type FeedSort = 'trending' | 'newest' | 'mostRun'
 
@@ -8,12 +9,9 @@ export interface FeedItem {
   id: string
   ownerHandle: string
   slug: string
-  titleEn: string
-  titleRu: string
-  descEn: string
-  descRu: string
-  topicLabelEn: string | null
-  topicLabelRu: string | null
+  title: LocaleText
+  desc: LocaleText
+  topicLabel: LocaleText | null
   topicColor: string | null
   version: number
   origin: 'authored' | 'forked' | 'ai_draft'
@@ -25,8 +23,7 @@ export interface FeedItem {
 
 export interface TopicRow {
   slug: string
-  labelEn: string
-  labelRu: string
+  label: LocaleText
   color: string
   count: number
 }
@@ -35,8 +32,7 @@ export async function getTopics(): Promise<TopicRow[]> {
   const rows = await db
     .select({
       slug: topics.slug,
-      labelEn: topics.labelEn,
-      labelRu: topics.labelRu,
+      label: topics.label,
       color: topics.color,
       count: sql<number>`count(${templates.id})::int`,
     })
@@ -62,12 +58,9 @@ export async function getFeed(
       id: templates.id,
       ownerHandle: users.handle,
       slug: templates.slug,
-      titleEn: templates.titleEn,
-      titleRu: templates.titleRu,
-      descEn: templates.descEn,
-      descRu: templates.descRu,
-      topicLabelEn: topics.labelEn,
-      topicLabelRu: topics.labelRu,
+      title: templates.title,
+      desc: templates.desc,
+      topicLabel: topics.label,
       topicColor: topics.color,
       version: templates.currentVersion,
       origin: templates.origin,
@@ -84,13 +77,12 @@ export async function getFeed(
   if (opts.topicSlug) filters.push(eq(topics.slug, opts.topicSlug))
   if (opts.q?.trim()) {
     const like = `%${opts.q.trim()}%`
+    // Поиск по всем языкам сразу: jsonb → text.
     filters.push(
       or(
-        ilike(templates.titleEn, like),
-        ilike(templates.titleRu, like),
+        ilike(sql`${templates.title}::text`, like),
+        ilike(sql`${templates.desc}::text`, like),
         ilike(templates.slug, like),
-        ilike(templates.descEn, like),
-        ilike(templates.descRu, like),
       )!,
     )
   }
@@ -108,12 +100,9 @@ export async function getUserTemplates(userId: string): Promise<FeedItem[]> {
       id: templates.id,
       ownerHandle: users.handle,
       slug: templates.slug,
-      titleEn: templates.titleEn,
-      titleRu: templates.titleRu,
-      descEn: templates.descEn,
-      descRu: templates.descRu,
-      topicLabelEn: topics.labelEn,
-      topicLabelRu: topics.labelRu,
+      title: templates.title,
+      desc: templates.desc,
+      topicLabel: topics.label,
       topicColor: topics.color,
       version: templates.currentVersion,
       origin: templates.origin,

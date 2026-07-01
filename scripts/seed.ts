@@ -232,7 +232,7 @@ async function main() {
   // Topics
   const topicRows = await db
     .insert(topics)
-    .values(TOPICS.map((t) => ({ slug: t.slug, labelEn: t.en, labelRu: t.ru, color: t.color })))
+    .values(TOPICS.map((t) => ({ slug: t.slug, label: { en: t.en, ru: t.ru }, color: t.color })))
     .returning()
   const topicId = new Map(topicRows.map((t) => [t.slug, t.id]))
 
@@ -251,10 +251,8 @@ async function main() {
       .values({
         ownerId: ownerId.get(l.owner)!,
         slug: l.slug,
-        titleEn: l.titleEn,
-        titleRu: l.titleRu,
-        descEn: l.descEn,
-        descRu: l.descRu,
+        title: { en: l.titleEn, ru: l.titleRu },
+        desc: { en: l.descEn, ru: l.descRu },
         topicId: topicId.get(l.topic) ?? null,
         currentVersion: l.ver,
         origin: 'authored',
@@ -273,14 +271,12 @@ async function main() {
       l.steps.map((s, i) => ({
         versionId: ver.id,
         n: i + 1,
-        titleEn: s.en,
-        titleRu: s.ru,
-        descEn: s.ie,
-        descRu: s.ir,
+        title: { en: s.en, ru: s.ru },
+        desc: { en: s.ie, ru: s.ir },
         command: s.c,
         hasImage: !!s.img,
-        subtasks: s.subs ?? [],
-        refs: s.refs ?? [],
+        subtasks: (s.subs ?? []).map((x) => ({ en: x.en, ru: x.ru })),
+        refs: (s.refs ?? []).map((x) => ({ label: { en: x.en, ru: x.ru }, url: x.url })),
       })),
     )
     console.log(`  ✓ ${l.owner}/${l.slug} (v${l.ver}, ${l.steps.length} steps)`)
