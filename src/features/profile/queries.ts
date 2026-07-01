@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, desc, eq, sql } from 'drizzle-orm'
-import { db, runs, stars, templates, topics, users } from '@/shared/db'
+import { db, runs, stars, templates, users } from '@/shared/db'
 import type { FeedItem } from '@/features/library/queries'
 
 export async function getUserByHandle(handle: string) {
@@ -27,8 +27,7 @@ export async function getStarredTemplates(userId: string): Promise<FeedItem[]> {
       slug: templates.slug,
       title: templates.title,
       desc: templates.desc,
-      topicLabel: topics.label,
-      topicColor: topics.color,
+      tags: templates.tags,
       version: templates.currentVersion,
       origin: templates.origin,
       runsCount: templates.runsCount,
@@ -39,7 +38,6 @@ export async function getStarredTemplates(userId: string): Promise<FeedItem[]> {
     .from(stars)
     .innerJoin(templates, eq(stars.templateId, templates.id))
     .innerJoin(users, eq(templates.ownerId, users.id))
-    .leftJoin(topics, eq(templates.topicId, topics.id))
     .where(eq(stars.userId, userId))
     .orderBy(desc(stars.createdAt))
   return rows as FeedItem[]

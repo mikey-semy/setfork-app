@@ -254,6 +254,9 @@ async function main() {
         title: { en: l.titleEn, ru: l.titleRu },
         desc: { en: l.descEn, ru: l.descRu },
         topicId: topicId.get(l.topic) ?? null,
+        tags: Array.from(new Set([l.topic, ...l.slug.split('-')])).filter(
+          (w) => w.length > 1 && !['to', 'the', 'and', 'of'].includes(w),
+        ),
         currentVersion: l.ver,
         origin: 'authored',
         runsCount: l.runs,

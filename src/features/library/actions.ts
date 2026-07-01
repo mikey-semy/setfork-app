@@ -10,13 +10,24 @@ import {
   suggestions,
   templateVersions,
   templates,
-  topics,
   users,
   type ProposedItem,
 } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { parseEditorItems, toProposedItems } from './editor'
+
+function parseTags(raw: unknown): string[] {
+  return [
+    ...new Set(
+      String(raw ?? '')
+        .toLowerCase()
+        .split(/[\s,]+/)
+        .map((tag) => tag.replace(/[^a-z0-9а-яё-]/gi, '').trim())
+        .filter(Boolean),
+    ),
+  ].slice(0, 8)
+}
 
 function slugify(input: string): string {
   return (
@@ -57,7 +68,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
   const lang = await getLang()
   const title = String(formData.get('title') ?? '').trim()
   const desc = String(formData.get('desc') ?? '').trim()
-  const topicSlug = String(formData.get('topic') ?? '').trim()
+  const tags = parseTags(formData.get('tags'))
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   if (!title) return
 
@@ -68,12 +79,6 @@ export async function createTemplate(formData: FormData): Promise<void> {
     .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, slug)))
   if (owned.length) slug = `${slug}-${Date.now().toString(36).slice(-4)}`
 
-  let topicId: string | null = null
-  if (topicSlug) {
-    const [tp] = await db.select({ id: topics.id }).from(topics).where(eq(topics.slug, topicSlug)).limit(1)
-    topicId = tp?.id ?? null
-  }
-
   const [tpl] = await db
     .insert(templates)
     .values({
@@ -81,7 +86,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
       slug,
       title: { [lang]: title },
       desc: desc ? { [lang]: desc } : {},
-      topicId,
+      tags,
       currentVersion: 1,
       origin: 'authored',
     })
@@ -104,6 +109,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   if (!tpl || tpl.ownerId !== session.userId) return
 
   const note = String(formData.get('note') ?? '').trim()
+  const tags = parseTags(formData.get('tags'))
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   const newVersion = tpl.currentVersion + 1
 
@@ -114,7 +120,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await insertSteps(ver.id, proposed)
   await db
     .update(templates)
-    .set({ currentVersion: newVersion, updatedAt: new Date() })
+    .set({ currentVersion: newVersion, tags, updatedAt: new Date() })
     .where(eq(templates.id, tpl.id))
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
@@ -233,7 +239,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
       slug,
       title: src.title,
       desc: src.desc,
-      topicId: src.topicId,
+      tags: src.tags,
       currentVersion: 1,
       origin: 'forked',
       forkedFromId: src.id,

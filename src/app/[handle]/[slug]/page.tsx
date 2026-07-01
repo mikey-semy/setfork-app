@@ -71,6 +71,20 @@ export default async function ListPage({
 
       {tr(tpl.desc, lang) && <p className="mt-4 text-[14px] leading-relaxed text-ink-2">{tr(tpl.desc, lang)}</p>}
 
+      {tpl.tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {tpl.tags.map((tag) => (
+            <Link
+              key={tag}
+              href={`/explore?tag=${encodeURIComponent(tag)}`}
+              className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-[12px] font-medium text-accent hover:underline"
+            >
+              {tag}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* Действия */}
       <div className="mt-4 flex flex-wrap items-center gap-2.5 border-b border-border pb-5">
         {session ? (

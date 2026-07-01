@@ -11,8 +11,6 @@ function fmt(n: number): string {
 }
 
 export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
-  const color = item.topicColor ?? '#6b6b66'
-  const topicLabel = item.topicLabel ? tr(item.topicLabel, lang) : null
   const fork = forkTemplate.bind(null, item.id)
 
   return (
@@ -31,15 +29,18 @@ export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
               {item.slug}
             </Link>
           </span>
-          {topicLabel && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] text-ink-2">
-              <span className="h-[7px] w-[7px] flex-shrink-0 rounded-full" style={{ background: color }} />
-              {topicLabel}
-            </span>
-          )}
           <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">
             v{item.version}
           </span>
+          {item.tags.slice(0, 4).map((tag) => (
+            <Link
+              key={tag}
+              href={`/explore?tag=${encodeURIComponent(tag)}`}
+              className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11px] font-medium text-accent hover:underline"
+            >
+              {tag}
+            </Link>
+          ))}
         </div>
         <div className="mt-1.5 text-[13px] leading-normal text-ink-2">{tr(item.desc, lang)}</div>
         <div className="mt-2.5 flex flex-wrap gap-4 text-[12px] text-muted">

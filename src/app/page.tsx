@@ -2,8 +2,10 @@ import Link from 'next/link'
 import { ArrowRight, Search } from 'lucide-react'
 import { sql } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
+import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { Dashboard } from '@/widgets/Dashboard'
 
 const CHIPS = [
   { en: 'Deploy Next.js to a VPS', ru: 'Задеплоить Next.js на VPS' },
@@ -21,7 +23,10 @@ async function stats() {
 }
 
 export default async function HomePage() {
-  const [lang, s] = await Promise.all([getLang(), stats()])
+  const [lang, session] = await Promise.all([getLang(), getSession()])
+  if (session) return <Dashboard lang={lang} userId={session.userId} />
+
+  const s = await stats()
   const ru = lang === 'ru'
 
   return (

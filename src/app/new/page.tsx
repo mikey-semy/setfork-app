@@ -1,15 +1,13 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr } from '@/shared/i18n'
-import { getTopics } from '@/features/library/queries'
+import { t } from '@/shared/i18n'
 import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 
 export default async function NewListPage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
   if (!session) redirect('/login')
-  const topics = await getTopics()
   const ru = lang === 'ru'
 
   return (
@@ -34,18 +32,12 @@ export default async function NewListPage() {
           className="mb-5 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
         />
 
-        <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('topics', lang)}</label>
-        <select
-          name="topic"
+        <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('tags', lang)}</label>
+        <input
+          name="tags"
+          placeholder={ru ? 'напр. docker deploy vps' : 'e.g. docker deploy vps'}
           className="mb-6 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
-        >
-          <option value="">—</option>
-          {topics.map((tp) => (
-            <option key={tp.slug} value={tp.slug}>
-              {tr(tp.label, lang)}
-            </option>
-          ))}
-        </select>
+        />
 
         <label className="mb-2 block text-[12.5px] font-semibold text-ink-2">{ru ? 'Пункты' : 'Items'}</label>
         <ListEditor name="items" initialItems={[]} lang={lang} />

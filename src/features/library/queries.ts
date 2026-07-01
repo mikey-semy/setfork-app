@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
-import { db, stars, suggestions, templates, topics, users } from '@/shared/db'
+import { db, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 
 export type FeedSort = 'trending' | 'newest' | 'mostLiked'
@@ -12,8 +12,7 @@ export interface FeedItem {
   slug: string
   title: LocaleText
   desc: LocaleText
-  topicLabel: LocaleText | null
-  topicColor: string | null
+  tags: string[]
   version: number
   origin: 'authored' | 'forked' | 'ai_draft'
   runsCount: number
@@ -22,30 +21,25 @@ export interface FeedItem {
   updatedAt: Date
 }
 
-export interface TopicRow {
-  slug: string
-  label: LocaleText
-  color: string
+export interface TagRow {
+  tag: string
   count: number
 }
 
-export async function getTopics(): Promise<TopicRow[]> {
-  const rows = await db
-    .select({
-      slug: topics.slug,
-      label: topics.label,
-      color: topics.color,
-      count: sql<number>`count(${templates.id})::int`,
-    })
-    .from(topics)
-    .leftJoin(templates, eq(templates.topicId, topics.id))
-    .groupBy(topics.id)
-    .orderBy(desc(sql`count(${templates.id})`))
-  return rows
+/** Популярные теги с counts (как GitHub topics). */
+export async function getPopularTags(limit = 24): Promise<TagRow[]> {
+  const res = await db.execute(sql`
+    select unnest(${templates.tags}) as tag, count(*)::int as count
+    from ${templates}
+    group by 1
+    order by count desc, tag asc
+    limit ${limit}
+  `)
+  return res.rows as unknown as TagRow[]
 }
 
 export async function getFeed(
-  opts: { sort?: FeedSort; topicSlug?: string; q?: string } = {},
+  opts: { sort?: FeedSort; tag?: string; q?: string } = {},
 ): Promise<FeedItem[]> {
   const order =
     opts.sort === 'newest'
@@ -62,8 +56,7 @@ export async function getFeed(
       slug: templates.slug,
       title: templates.title,
       desc: templates.desc,
-      topicLabel: topics.label,
-      topicColor: topics.color,
+      tags: templates.tags,
       version: templates.currentVersion,
       origin: templates.origin,
       runsCount: templates.runsCount,
@@ -73,10 +66,9 @@ export async function getFeed(
     })
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
-    .leftJoin(topics, eq(templates.topicId, topics.id))
 
   const filters: SQL[] = []
-  if (opts.topicSlug) filters.push(eq(topics.slug, opts.topicSlug))
+  if (opts.tag) filters.push(sql`${templates.tags} @> ARRAY[${opts.tag}]::text[]`)
   if (opts.q?.trim()) {
     const like = `%${opts.q.trim()}%`
     // Поиск по всем языкам сразу: jsonb → text.
@@ -105,8 +97,7 @@ export async function getUserTemplates(userId: string): Promise<FeedItem[]> {
       slug: templates.slug,
       title: templates.title,
       desc: templates.desc,
-      topicLabel: topics.label,
-      topicColor: topics.color,
+      tags: templates.tags,
       version: templates.currentVersion,
       origin: templates.origin,
       runsCount: templates.runsCount,
@@ -116,10 +107,43 @@ export async function getUserTemplates(userId: string): Promise<FeedItem[]> {
     })
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
-    .leftJoin(topics, eq(templates.topicId, topics.id))
     .where(eq(templates.ownerId, userId))
     .orderBy(desc(templates.updatedAt))
   return rows as FeedItem[]
+}
+
+export interface ActivityItem {
+  templateId: string
+  ownerHandle: string
+  ownerAvatarUrl: string | null
+  slug: string
+  title: LocaleText
+  version: number
+  note: string
+  origin: 'authored' | 'forked' | 'ai_draft'
+  createdAt: Date
+}
+
+/** Лента изменений: недавние версии (создание/правки) списков. */
+export async function getActivity(limit = 30): Promise<ActivityItem[]> {
+  const rows = await db
+    .select({
+      templateId: templates.id,
+      ownerHandle: users.handle,
+      ownerAvatarUrl: users.avatarUrl,
+      slug: templates.slug,
+      title: templates.title,
+      version: templateVersions.version,
+      note: templateVersions.note,
+      origin: templates.origin,
+      createdAt: templateVersions.createdAt,
+    })
+    .from(templateVersions)
+    .innerJoin(templates, eq(templateVersions.templateId, templates.id))
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .orderBy(desc(templateVersions.createdAt))
+    .limit(limit)
+  return rows as ActivityItem[]
 }
 
 /** Предложения правок для списка (с авторами). */

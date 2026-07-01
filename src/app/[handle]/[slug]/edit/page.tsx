@@ -42,9 +42,18 @@ export default async function EditPage({
         <input
           name="note"
           placeholder={t('changeNote', lang)}
+          className="mb-4 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
+        />
+
+        <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('tags', lang)}</label>
+        <input
+          name="tags"
+          defaultValue={tpl.tags.join(' ')}
+          placeholder={t('tagsHint', lang)}
           className="mb-6 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
         />
 
+        <label className="mb-2 block text-[12.5px] font-semibold text-ink-2">{lang === 'ru' ? 'Пункты' : 'Items'}</label>
         <ListEditor name="items" initialItems={initial} lang={lang} />
 
         <button className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">

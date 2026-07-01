@@ -7,7 +7,7 @@
 //
 // Осознанно НЕ в v0: AI-генерация, community-trust, PR/merge, права/биллинг.
 
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   bigint,
   boolean,
@@ -69,6 +69,7 @@ export const templates = pgTable(
     title: jsonb('title').notNull().$type<LocaleText>(),
     desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
     topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
+    tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     currentVersion: integer('current_version').notNull().default(1),
     origin: templateOrigin('origin').notNull().default('authored'),
     forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
