@@ -4,6 +4,7 @@ import { getAiSettings, hasOpenRouterKey } from '@/shared/settings/ai'
 import { fetchChatModels } from '@/shared/ai/models'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { setAiSettings } from '@/features/admin/actions'
+import { ModelSelect } from '@/features/admin/ModelSelect'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none'
 
@@ -34,8 +35,11 @@ export default async function AdminPage() {
         </div>
       )}
       {credits && (
-        <div className="mb-5 rounded-md border border-border bg-surface px-3 py-2.5 font-mono text-[12.5px] text-ink-2">
-          OpenRouter: ${credits.remaining.toFixed(2)} {ru ? 'осталось' : 'left'} / ${credits.total.toFixed(2)}
+        <div className="mb-5 flex items-center gap-2 text-[12.5px]">
+          <span className="text-muted">{ru ? 'Баланс OpenRouter:' : 'OpenRouter balance:'}</span>
+          <span className="font-mono font-semibold text-ink">${credits.remaining.toFixed(2)}</span>
+          <span className="font-mono text-muted">/ ${credits.total.toFixed(2)}</span>
+          <span className="text-muted">({ru ? 'только показ' : 'read-only'})</span>
         </div>
       )}
 
@@ -50,13 +54,12 @@ export default async function AdminPage() {
             {ru ? 'Модель генерации' : 'Chat model'}
           </label>
           {chatIds.length > 0 ? (
-            <select name="chatModel" defaultValue={settings.chatModel} className={field}>
-              {chatIds.map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))}
-            </select>
+            <ModelSelect
+              name="chatModel"
+              defaultValue={settings.chatModel}
+              options={chatIds}
+              placeholder={ru ? 'Выбери модель' : 'Pick a model'}
+            />
           ) : (
             <input name="chatModel" defaultValue={settings.chatModel} className={`${field} font-mono`} />
           )}
@@ -67,14 +70,7 @@ export default async function AdminPage() {
             {ru ? 'Запасная модель (для дешёвого режима)' : 'Fallback model (cheap mode)'}
           </label>
           {ids.length > 0 ? (
-            <select name="fallbackModel" defaultValue={settings.fallbackModel} className={field}>
-              <option value="">—</option>
-              {ids.map((id) => (
-                <option key={id} value={id}>
-                  {id}
-                </option>
-              ))}
-            </select>
+            <ModelSelect name="fallbackModel" defaultValue={settings.fallbackModel} options={ids} allowEmpty placeholder="—" />
           ) : (
             <input name="fallbackModel" defaultValue={settings.fallbackModel} className={`${field} font-mono`} />
           )}
