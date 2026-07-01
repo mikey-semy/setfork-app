@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
-import { db, stars, templates, topics, users } from '@/shared/db'
+import { db, stars, suggestions, templates, topics, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 
 export type FeedSort = 'trending' | 'newest' | 'mostLiked'
@@ -120,6 +120,24 @@ export async function getUserTemplates(userId: string): Promise<FeedItem[]> {
     .where(eq(templates.ownerId, userId))
     .orderBy(desc(templates.updatedAt))
   return rows as FeedItem[]
+}
+
+/** Предложения правок для списка (с авторами). */
+export async function getSuggestions(templateId: string) {
+  return db.query.suggestions.findMany({
+    where: (s) => eq(s.templateId, templateId),
+    with: { author: true },
+    orderBy: (s, { asc, desc: d }) => [asc(s.status), d(s.createdAt)],
+  })
+}
+
+/** Число открытых предложений. */
+export async function getOpenSuggestionCount(templateId: string): Promise<number> {
+  const [r] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(suggestions)
+    .where(and(eq(suggestions.templateId, templateId), eq(suggestions.status, 'open')))
+  return r?.c ?? 0
 }
 
 /** Лайкнул ли пользователь список. */

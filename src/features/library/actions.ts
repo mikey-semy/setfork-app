@@ -3,9 +3,20 @@
 import { and, asc, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, stars, steps, templateVersions, templates, topics, users } from '@/shared/db'
+import {
+  db,
+  stars,
+  steps,
+  suggestions,
+  templateVersions,
+  templates,
+  topics,
+  users,
+  type ProposedItem,
+} from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { parseEditorItems, toProposedItems } from './editor'
 
 function slugify(input: string): string {
   return (
@@ -19,18 +30,35 @@ function slugify(input: string): string {
   )
 }
 
-/**
- * Минимальное создание списка (v0): заголовок, описание, тема и пункты
- * (по строке на пункт). Заголовки пунктов пишутся в оба языковых поля —
- * полноценный двуязычный редактор откладываем.
- */
+async function insertSteps(versionId: string, items: ProposedItem[]): Promise<void> {
+  if (!items.length) return
+  await db.insert(steps).values(
+    items.map((it, i) => ({
+      versionId,
+      n: i + 1,
+      title: it.title,
+      desc: it.desc,
+      command: it.command,
+      hasImage: it.hasImage,
+      subtasks: it.subtasks,
+      refs: it.refs,
+    })),
+  )
+}
+
+async function ownerHandle(userId: string): Promise<string> {
+  const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
+  return u.handle
+}
+
+// ── Создание списка ───────────────────────────────────────────────────
 export async function createTemplate(formData: FormData): Promise<void> {
   const session = await requireSession()
   const lang = await getLang()
   const title = String(formData.get('title') ?? '').trim()
   const desc = String(formData.get('desc') ?? '').trim()
   const topicSlug = String(formData.get('topic') ?? '').trim()
-  const stepsRaw = String(formData.get('steps') ?? '')
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   if (!title) return
 
   let slug = slugify(title)
@@ -63,22 +91,102 @@ export async function createTemplate(formData: FormData): Promise<void> {
     .insert(templateVersions)
     .values({ templateId: tpl.id, version: 1, note: 'initial' })
     .returning()
+  await insertSteps(ver.id, proposed)
 
-  const lines = stepsRaw
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean)
-  if (lines.length) {
-    await db.insert(steps).values(
-      lines.map((line, i) => ({ versionId: ver.id, n: i + 1, title: { [lang]: line } })),
-    )
-  }
-
-  const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, session.userId))
-  redirect(`/${owner.handle}/${slug}`)
+  redirect(`/${await ownerHandle(session.userId)}/${slug}`)
 }
 
-// ── Лайк (сигнал эталонности) ─────────────────────────────────────────
+// ── Владелец: сохранить как новую версию ─────────────────────────────
+export async function saveNewVersion(templateId: string, formData: FormData): Promise<void> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+
+  const note = String(formData.get('note') ?? '').trim()
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
+  const newVersion = tpl.currentVersion + 1
+
+  const [ver] = await db
+    .insert(templateVersions)
+    .values({ templateId: tpl.id, version: newVersion, note: note || 'edit' })
+    .returning()
+  await insertSteps(ver.id, proposed)
+  await db
+    .update(templates)
+    .set({ currentVersion: newVersion, updatedAt: new Date() })
+    .where(eq(templates.id, tpl.id))
+
+  redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
+}
+
+// ── Предложить правку (PR) ────────────────────────────────────────────
+export async function submitSuggestion(templateId: string, formData: FormData): Promise<void> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl) return
+
+  const note = String(formData.get('note') ?? '').trim()
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
+
+  await db.insert(suggestions).values({
+    templateId: tpl.id,
+    authorId: session.userId,
+    note,
+    baseVersion: tpl.currentVersion,
+    items: proposed,
+  })
+
+  redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions`)
+}
+
+// ── Автор списка: принять предложение → новая версия ─────────────────
+export async function acceptSuggestion(suggestionId: string): Promise<void> {
+  const session = await requireSession()
+  const sug = await db.query.suggestions.findFirst({
+    where: (s) => eq(s.id, suggestionId),
+    with: { template: true },
+  })
+  if (!sug || sug.status !== 'open' || sug.template.ownerId !== session.userId) return
+
+  const tpl = sug.template
+  const newVersion = tpl.currentVersion + 1
+  const [ver] = await db
+    .insert(templateVersions)
+    .values({ templateId: tpl.id, version: newVersion, note: sug.note || 'suggested edit' })
+    .returning()
+  await insertSteps(ver.id, sug.items)
+  await db
+    .update(templates)
+    .set({ currentVersion: newVersion, updatedAt: new Date() })
+    .where(eq(templates.id, tpl.id))
+  await db
+    .update(suggestions)
+    .set({ status: 'accepted', resolvedAt: new Date() })
+    .where(eq(suggestions.id, sug.id))
+
+  revalidatePath('/', 'layout')
+  redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
+}
+
+// ── Автор списка: отклонить предложение ──────────────────────────────
+export async function rejectSuggestion(suggestionId: string): Promise<void> {
+  const session = await requireSession()
+  const sug = await db.query.suggestions.findFirst({
+    where: (s) => eq(s.id, suggestionId),
+    with: { template: true },
+  })
+  if (!sug || sug.status !== 'open' || sug.template.ownerId !== session.userId) return
+
+  await db
+    .update(suggestions)
+    .set({ status: 'rejected', resolvedAt: new Date() })
+    .where(eq(suggestions.id, sug.id))
+  revalidatePath('/', 'layout')
+}
+
+// ── Лайк ──────────────────────────────────────────────────────────────
 export async function toggleLike(templateId: string): Promise<void> {
   const session = await requireSession()
   const existing = await db
@@ -103,7 +211,7 @@ export async function toggleLike(templateId: string): Promise<void> {
   revalidatePath('/', 'layout')
 }
 
-// ── Форк списка в пространство пользователя (улучшенная/альтернативная версия) ──
+// ── Форк ──────────────────────────────────────────────────────────────
 export async function forkTemplate(templateId: string): Promise<void> {
   const session = await requireSession()
   const src = await db.query.templates.findFirst({
@@ -139,11 +247,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
     .returning()
 
   if (srcCurrent) {
-    const srcSteps = await db
-      .select()
-      .from(steps)
-      .where(eq(steps.versionId, srcCurrent.id))
-      .orderBy(asc(steps.n))
+    const srcSteps = await db.select().from(steps).where(eq(steps.versionId, srcCurrent.id)).orderBy(asc(steps.n))
     if (srcSteps.length) {
       await db.insert(steps).values(
         srcSteps.map((s) => ({
@@ -165,7 +269,6 @@ export async function forkTemplate(templateId: string): Promise<void> {
     .set({ forksCount: sql`${templates.forksCount} + 1` })
     .where(eq(templates.id, src.id))
 
-  const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, session.userId))
   revalidatePath('/explore')
-  redirect(`/${owner.handle}/${slug}`)
+  redirect(`/${await ownerHandle(session.userId)}/${slug}`)
 }

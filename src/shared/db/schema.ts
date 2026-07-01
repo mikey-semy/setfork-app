@@ -26,6 +26,17 @@ import type { LocaleText } from '../i18n'
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
 export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned'])
 export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done'])
+export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
+
+// Предложенный пункт (снимок правки внутри suggestion).
+export type ProposedItem = {
+  title: LocaleText
+  desc: LocaleText
+  command: string
+  hasImage: boolean
+  subtasks: LocaleText[]
+  refs: { label: LocaleText; url?: string }[]
+}
 
 // ── Users ────────────────────────────────────────────────────────────
 // handle = публичный идентификатор в модели owner/name (как в дизайне: acme/deploy-to-vps).
@@ -156,6 +167,23 @@ export const stars = pgTable(
   (t) => ({ userTpl: unique('stars_user_tpl').on(t.userId, t.templateId) }),
 )
 
+// ── Suggestions (предложения правок, PR) ─────────────────────────────
+export const suggestions = pgTable('suggestions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  templateId: uuid('template_id')
+    .notNull()
+    .references(() => templates.id, { onDelete: 'cascade' }),
+  authorId: uuid('author_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  status: suggestionStatus('status').notNull().default('open'),
+  note: text('note').notNull().default(''),
+  baseVersion: integer('base_version').notNull(),
+  items: jsonb('items').notNull().default([]).$type<ProposedItem[]>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+})
+
 // ── Relations ────────────────────────────────────────────────────────
 export const usersRelations = relations(users, ({ many }) => ({
   templates: many(templates),
@@ -195,6 +223,11 @@ export const runStepStateRelations = relations(runStepState, ({ one }) => ({
   step: one(steps, { fields: [runStepState.stepId], references: [steps.id] }),
 }))
 
+export const suggestionsRelations = relations(suggestions, ({ one }) => ({
+  template: one(templates, { fields: [suggestions.templateId], references: [templates.id] }),
+  author: one(users, { fields: [suggestions.authorId], references: [users.id] }),
+}))
+
 // ── Inferred types ───────────────────────────────────────────────────
 export type User = typeof users.$inferSelect
 export type Topic = typeof topics.$inferSelect
@@ -203,3 +236,4 @@ export type TemplateVersion = typeof templateVersions.$inferSelect
 export type Step = typeof steps.$inferSelect
 export type Run = typeof runs.$inferSelect
 export type RunStepState = typeof runStepState.$inferSelect
+export type Suggestion = typeof suggestions.$inferSelect

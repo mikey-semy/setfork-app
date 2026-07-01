@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Clock, ExternalLink, GitFork, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Clock, ExternalLink, GitFork, GitPullRequest, Image as ImageIcon, Pencil } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { CopyButton } from '@/shared/ui/CopyButton'
-import { getTemplateDetail, isLiked } from '@/features/library/queries'
+import { getOpenSuggestionCount, getTemplateDetail, isLiked } from '@/features/library/queries'
 import { forkTemplate } from '@/features/library/actions'
 import { LikeButton } from '@/features/library/LikeButton'
 
@@ -21,6 +21,8 @@ export default async function ListPage({
   if (!detail) notFound()
   const { tpl, currentVersion, steps } = detail
   const liked = session ? await isLiked(tpl.id, session.userId) : false
+  const isOwner = session?.userId === tpl.ownerId
+  const suggCount = await getOpenSuggestionCount(tpl.id)
   const forkBound = forkTemplate.bind(null, tpl.id)
 
   return (
@@ -87,6 +89,30 @@ export default async function ListPage({
             <span className="font-mono text-[12px] text-muted">{tpl.forksCount}</span>
           </button>
         </form>
+
+        {isOwner ? (
+          <Link
+            href={`/${owner}/${slug}/edit`}
+            className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+          >
+            <Pencil size={14} /> {t('edit', lang)}
+          </Link>
+        ) : (
+          <Link
+            href={`/${owner}/${slug}/suggest`}
+            className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+          >
+            <Pencil size={14} /> {t('suggestEdit', lang)}
+          </Link>
+        )}
+
+        <Link
+          href={`/${owner}/${slug}/suggestions`}
+          className="inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-[13px] font-medium text-ink-2 hover:text-ink"
+        >
+          <GitPullRequest size={14} /> {t('suggestions', lang)}
+          <span className="font-mono text-[12px] text-muted">{suggCount}</span>
+        </Link>
       </div>
 
       {/* Содержимое-эталон */}
