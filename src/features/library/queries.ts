@@ -1,9 +1,9 @@
 import 'server-only'
 import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
-import { db, templates, topics, users } from '@/shared/db'
+import { db, stars, templates, topics, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 
-export type FeedSort = 'trending' | 'newest' | 'mostRun'
+export type FeedSort = 'trending' | 'newest' | 'mostLiked'
 
 export interface FeedItem {
   id: string
@@ -50,9 +50,9 @@ export async function getFeed(
   const order =
     opts.sort === 'newest'
       ? desc(templates.updatedAt)
-      : opts.sort === 'mostRun'
-        ? desc(templates.runsCount)
-        : desc(sql`${templates.runsCount} + ${templates.starsCount}`) // trending
+      : opts.sort === 'mostLiked'
+        ? desc(templates.starsCount)
+        : desc(sql`${templates.starsCount} + ${templates.forksCount}`) // trending
 
   const base = db
     .select({
@@ -122,7 +122,17 @@ export async function getUserTemplates(userId: string): Promise<FeedItem[]> {
   return rows as FeedItem[]
 }
 
-/** Детальный шаблон (owner/slug) + шаги текущей версии. */
+/** Лайкнул ли пользователь список. */
+export async function isLiked(templateId: string, userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: stars.id })
+    .from(stars)
+    .where(and(eq(stars.userId, userId), eq(stars.templateId, templateId)))
+    .limit(1)
+  return !!row
+}
+
+/** Детальный список (owner/slug) + пункты текущей версии. */
 export async function getTemplateDetail(ownerHandle: string, slug: string) {
   const owner = await db.select().from(users).where(eq(users.handle, ownerHandle)).limit(1)
   if (!owner[0]) return null

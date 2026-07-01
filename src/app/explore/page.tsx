@@ -4,10 +4,10 @@ import { t, tr } from '@/shared/i18n'
 import { FeedCard } from '@/features/library/FeedCard'
 import { getFeed, getTopics, type FeedSort } from '@/features/library/queries'
 
-const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostRun' }[] = [
+const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostLiked' }[] = [
   { key: 'trending', tkey: 'trending' },
   { key: 'newest', tkey: 'newest' },
-  { key: 'mostRun', tkey: 'mostRun' },
+  { key: 'mostLiked', tkey: 'mostLiked' },
 ]
 
 export default async function ExplorePage({

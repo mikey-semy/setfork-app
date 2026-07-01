@@ -32,7 +32,6 @@ export function TopNav({ lang, user }: { lang: Lang; user: SessionUser | null })
       <nav className="hidden items-center gap-[22px] text-[13.5px] font-medium sm:flex">
         {navLink('/explore', t('explore', lang))}
         {navLink('/my-lists', t('myLists', lang))}
-        {navLink('/runs', t('runs', lang))}
       </nav>
       <div className="ml-auto flex items-center gap-3">
         <Link

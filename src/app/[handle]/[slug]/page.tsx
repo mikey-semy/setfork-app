@@ -1,17 +1,16 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Clock, GitFork, Play } from 'lucide-react'
+import { ArrowLeft, Clock, ExternalLink, GitFork, Image as ImageIcon } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
-import type { Step } from '@/shared/db'
-import { getTemplateDetail } from '@/features/library/queries'
-import { getActiveRun } from '@/features/runs/queries'
-import { forkTemplate, startRun } from '@/features/runs/actions'
-import { RunView } from '@/features/runs/RunView'
-import type { RunStepData } from '@/features/runs/RunStep'
+import { Avatar } from '@/shared/ui/Avatar'
+import { CopyButton } from '@/shared/ui/CopyButton'
+import { getTemplateDetail, isLiked } from '@/features/library/queries'
+import { forkTemplate } from '@/features/library/actions'
+import { LikeButton } from '@/features/library/LikeButton'
 
-export default async function TemplatePage({
+export default async function ListPage({
   params,
 }: {
   params: Promise<{ handle: string; slug: string }>
@@ -21,132 +20,142 @@ export default async function TemplatePage({
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, currentVersion, steps } = detail
-
-  const active = session ? await getActiveRun(tpl.id, session.userId) : null
-  const total = steps.length
-  const doneCount = active ? active.run.doneCount : 0
-  const pct = total ? Math.round((doneCount / total) * 100) : 0
-
-  const runSteps: RunStepData[] = active
-    ? steps.map((s) => {
-        const st = active.byStep.get(s.id)
-        return {
-          id: s.id,
-          n: s.n,
-          title: tr(s.title, lang),
-          desc: tr(s.desc, lang),
-          command: s.command,
-          hasImage: s.hasImage,
-          subtasks: (s.subtasks as LocaleText[]).map((x) => tr(x, lang)),
-          refs: (s.refs as { label: LocaleText; url?: string }[]).map((x) => ({
-            label: tr(x.label, lang),
-            url: x.url,
-          })),
-          status: (st?.status ?? 'todo') as 'todo' | 'cur' | 'done',
-          note: st?.note ?? '',
-          subtasksDone: (st?.subtasksDone as number[]) ?? [],
-        }
-      })
-    : []
-
-  const startBound = startRun.bind(null, owner, slug)
+  const liked = session ? await isLiked(tpl.id, session.userId) : false
   const forkBound = forkTemplate.bind(null, tpl.id)
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-4 py-8">
-        <Link href="/explore" className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
-          <ArrowLeft size={15} /> {t('backToExplore', lang)}
+    <div className="mx-auto w-full max-w-[780px] px-4 py-8">
+      <Link href="/explore" className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
+        <ArrowLeft size={15} /> {t('backToExplore', lang)}
+      </Link>
+
+      {/* Шапка эталона */}
+      <div className="flex items-start gap-3.5">
+        <Link href={`/${tpl.owner.handle}`} className="flex-shrink-0">
+          <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={44} />
         </Link>
-
-        <div className="overflow-hidden rounded-xl border border-border bg-surface-2">
-          {/* Заголовок + версия + история + прогресс */}
-          <div className="px-5 pb-3.5 pt-5">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="text-[15px]">
-                <Link href={`/${tpl.owner.handle}`} className="text-ink-2 hover:text-accent">
-                  {tpl.owner.handle}
-                </Link>
-                <span className="text-ink-2">/</span>
-                <span className="font-semibold text-ink">{tpl.slug}</span>
-              </span>
-              <span className="rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[11px] text-accent">
-                v{currentVersion?.version ?? tpl.currentVersion}
-              </span>
-              {tpl.origin === 'forked' && (
-                <span className="font-mono text-[10.5px] text-muted">{t('forkedFrom', lang)}</span>
-              )}
-              <span className="ml-auto inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
-                <Clock size={14} /> {t('history', lang)}
-              </span>
-            </div>
-            <div className="mt-3.5 flex items-center gap-3">
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
-                <div
-                  className="h-full rounded-full bg-ink transition-[width] duration-300"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <span className="font-mono text-[12px] text-ink-2">
-                {doneCount}/{total} · {pct}%
-              </span>
-            </div>
-          </div>
-
-          {/* Тело: прогон / превью / CTA */}
-          <div className="flex flex-col px-3.5 pb-0.5 pt-1.5">
-            {active ? (
-              <RunView runId={active.run.id} steps={runSteps} lang={lang} />
-            ) : (
-              <div className="px-1">
-                <ReadonlySteps lang={lang} steps={steps} />
-                {session ? (
-                  <form action={startBound} className="my-3">
-                    <button className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[14px] font-semibold text-primary-fg">
-                      <Play size={15} /> {t('runIt', lang)}
-                    </button>
-                  </form>
-                ) : (
-                  <div className="my-3 rounded-md border border-border bg-surface px-4 py-3 text-center text-[13px] text-ink-2">
-                    {t('loginRequired', lang)}{' '}
-                    <Link href="/login" className="font-semibold text-accent">
-                      {t('signIn', lang)}
-                    </Link>
-                  </div>
-                )}
-              </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-[20px] font-bold">
+              <Link href={`/${tpl.owner.handle}`} className="text-ink-2 hover:text-accent">
+                {tpl.owner.handle}
+              </Link>
+              <span className="text-ink-2">/</span>
+              <span className="text-ink">{tpl.slug}</span>
+            </h1>
+            <span className="rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[11px] text-accent">
+              v{currentVersion?.version ?? tpl.currentVersion}
+            </span>
+            {tpl.origin === 'forked' && (
+              <span className="font-mono text-[10.5px] text-muted">{t('forkedFrom', lang)}</span>
             )}
           </div>
-
-          {/* Футер: состояние + форк */}
-          <div className="mx-4 mb-4 mt-1 flex justify-between border-t border-border pt-3 text-[11.5px] text-muted">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-muted">
             <span>
-              {t('stateSaved', lang)} v{active ? active.run.version : (currentVersion?.version ?? tpl.currentVersion)}
+              {t('maintainedBy', lang)}{' '}
+              <Link href={`/${tpl.owner.handle}`} className="text-ink-2 hover:text-accent">
+                {tpl.owner.name ?? tpl.owner.handle}
+              </Link>
             </span>
-            <form action={forkBound}>
-              <button className="inline-flex items-center gap-1 text-accent">
-                <GitFork size={12} /> {t('forkTemplate', lang)}
-              </button>
-            </form>
+            <span className="inline-flex items-center gap-1">
+              <Clock size={12} /> {t('updated', lang)}{' '}
+              {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { month: 'short', day: 'numeric' }).format(
+                new Date(tpl.updatedAt),
+              )}
+            </span>
           </div>
         </div>
       </div>
-  )
-}
 
-function ReadonlySteps({ lang, steps }: { lang: 'en' | 'ru'; steps: Step[] }) {
-  return (
-    <div className="flex flex-col gap-2 py-2">
-      {steps.map((s) => (
-        <div key={s.id} className="flex items-start gap-3 rounded-lg border border-border bg-surface p-3.5">
-          <span className="mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-full border-[1.5px] border-muted" />
-          <div className="min-w-0 flex-1">
-            <div className="text-[14px] font-medium text-ink">
-              {s.n}. {tr(s.title, lang)}
+      {tr(tpl.desc, lang) && <p className="mt-4 text-[14px] leading-relaxed text-ink-2">{tr(tpl.desc, lang)}</p>}
+
+      {/* Действия */}
+      <div className="mt-4 flex flex-wrap items-center gap-2.5 border-b border-border pb-5">
+        {session ? (
+          <LikeButton templateId={tpl.id} liked={liked} count={tpl.starsCount} label={t('like', lang)} />
+        ) : (
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+          >
+            ♥ {t('like', lang)} <span className="font-mono text-[12px] text-muted">{tpl.starsCount}</span>
+          </Link>
+        )}
+        <form action={forkBound}>
+          <button className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
+            <GitFork size={14} /> {t('fork', lang)}{' '}
+            <span className="font-mono text-[12px] text-muted">{tpl.forksCount}</span>
+          </button>
+        </form>
+      </div>
+
+      {/* Содержимое-эталон */}
+      <div className="mt-5 flex flex-col gap-3">
+        {steps.map((s) => {
+          const subs = (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean)
+          const refs = (s.refs as { label: LocaleText; url?: string }[]).map((x) => ({
+            label: tr(x.label, lang),
+            url: x.url,
+          }))
+          return (
+            <div key={s.id} className="rounded-lg border border-border bg-surface p-4">
+              <div className="flex gap-3">
+                <span className="mt-0.5 font-mono text-[13px] text-muted">{s.n}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</div>
+                  {tr(s.desc, lang) && (
+                    <div className="mt-1 text-[13px] leading-snug text-ink-2">{tr(s.desc, lang)}</div>
+                  )}
+
+                  {s.hasImage && (
+                    <div className="mt-3 flex h-[120px] flex-col items-center justify-center gap-2 rounded-lg border border-border bg-surface-2 text-muted">
+                      <ImageIcon size={22} strokeWidth={1.5} />
+                      <span className="text-[11.5px]">{t('screenshot', lang)}</span>
+                    </div>
+                  )}
+
+                  {s.command && (
+                    <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12px] text-ink">
+                      <span style={{ color: 'var(--accent)' }}>$</span>
+                      <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{s.command}</span>
+                      <CopyButton text={s.command} />
+                    </div>
+                  )}
+
+                  {subs.length > 0 && (
+                    <ul className="mt-3 flex flex-col gap-1.5">
+                      {subs.map((label, i) => (
+                        <li key={i} className="flex gap-2 text-[13px] text-ink-2">
+                          <span className="text-muted">–</span>
+                          {label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {refs.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {refs.map((r, i) => {
+                        const cls =
+                          'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent'
+                        return r.url ? (
+                          <a key={i} href={r.url} target="_blank" rel="noreferrer" className={cls}>
+                            <ExternalLink size={11} /> {r.label}
+                          </a>
+                        ) : (
+                          <span key={i} className={cls}>
+                            <ExternalLink size={11} /> {r.label}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="mt-1 truncate text-[12.5px] text-ink-2">{tr(s.desc, lang)}</div>
-          </div>
-        </div>
-      ))}
+          )
+        })}
+      </div>
     </div>
   )
 }

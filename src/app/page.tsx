@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight, Search } from 'lucide-react'
 import { sql } from 'drizzle-orm'
-import { db, runs, templates } from '@/shared/db'
+import { db, templates } from '@/shared/db'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 
@@ -13,11 +13,11 @@ const CHIPS = [
 ]
 
 async function stats() {
-  const [[tpl], [run]] = await Promise.all([
+  const [[tpl], [likes]] = await Promise.all([
     db.select({ c: sql<number>`count(*)::int` }).from(templates),
-    db.select({ c: sql<number>`count(*)::int` }).from(runs),
+    db.select({ c: sql<number>`coalesce(sum(${templates.starsCount}), 0)::int` }).from(templates),
   ])
-  return { templates: tpl?.c ?? 0, runs: run?.c ?? 0 }
+  return { templates: tpl?.c ?? 0, likes: likes?.c ?? 0 }
 }
 
 export default async function HomePage() {
@@ -63,14 +63,14 @@ export default async function HomePage() {
 
           <div className="max-w-[600px] text-[13.5px] leading-relaxed text-ink-2">
             {ru
-              ? 'Список — не статичный док. Ты прогоняешь его, отмечаешь шаги, он хранит прогресс и версию, а форкнуть готовый можно под свой стек.'
-              : "A list isn't a static doc. You run it, tick steps off, it saves progress and the version — and you can fork a proven one to your own stack."}
+              ? 'Эталонные списки, выверенные сообществом: лучший всплывает по лайкам, а форкнуть и улучшить может каждый. Единый источник правды по теме.'
+              : 'Canonical lists, refined by the community: the best rises by likes, and anyone can fork it and make it better. One source of truth per topic.'}
           </div>
 
           <div className="font-mono text-[12px] text-muted">
             {ru
-              ? `${s.templates} списков · ${s.runs} прогонов`
-              : `${s.templates} lists · ${s.runs} runs`}
+              ? `${s.templates} списков · ${s.likes.toLocaleString('ru')} лайков`
+              : `${s.templates} lists · ${s.likes.toLocaleString('en')} likes`}
           </div>
         </div>
     </div>
