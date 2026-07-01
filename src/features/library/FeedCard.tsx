@@ -14,9 +14,9 @@ export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
   const fork = forkTemplate.bind(null, item.id)
 
   return (
-    <div className="flex gap-3.5 rounded-lg border border-border bg-surface p-4 transition-colors hover:border-border-strong">
+    <div className="flex gap-3 rounded-lg border border-border bg-surface px-3.5 py-3 transition-colors hover:border-border-strong">
       <Link href={`/${item.ownerHandle}`} className="flex-shrink-0">
-        <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={40} />
+        <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={32} />
       </Link>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2.5">
@@ -42,8 +42,8 @@ export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
             </Link>
           ))}
         </div>
-        <div className="mt-1.5 text-[13px] leading-normal text-ink-2">{tr(item.desc, lang)}</div>
-        <div className="mt-2.5 flex flex-wrap gap-4 text-[12px] text-muted">
+        <div className="mt-1 truncate text-[12.5px] text-ink-2">{tr(item.desc, lang)}</div>
+        <div className="mt-1.5 flex flex-wrap gap-3.5 text-[11.5px] text-muted">
           <span className="inline-flex items-center gap-1.5">
             <Heart size={13} /> {fmt(item.starsCount)}
           </span>

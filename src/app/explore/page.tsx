@@ -35,7 +35,7 @@ export default async function ExplorePage({
   }
 
   return (
-    <div className="flex flex-1 items-stretch">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-1 items-stretch">
       <aside className="hidden w-[260px] flex-shrink-0 border-r border-border bg-surface-2 px-4 py-5 md:block">
         <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">{t('tags', lang)}</div>
         <div className="flex flex-wrap gap-1.5">

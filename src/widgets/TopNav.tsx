@@ -2,9 +2,17 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Sparkles } from 'lucide-react'
 import { LangSwitch, ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu'
 import { t, type Lang } from '@/shared/i18n'
 import type { SessionUser } from '@/shared/auth/session'
 
@@ -32,26 +40,92 @@ export function TopNav({ lang, user, isAdmin }: { lang: Lang; user: SessionUser 
       <nav className="hidden items-center gap-[22px] text-[13.5px] font-medium sm:flex">
         {navLink('/explore', t('explore', lang))}
         {navLink('/my-lists', t('myLists', lang))}
-        {isAdmin && navLink('/admin', lang === 'ru' ? 'Админ' : 'Admin')}
       </nav>
+
       <div className="ml-auto flex items-center gap-3">
-        <Link
-          href="/new"
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-[13px] font-semibold text-primary-fg"
-        >
-          <Plus size={14} />
-          <span className="hidden sm:inline">{t('newList', lang)}</span>
-        </Link>
-        <LangSwitch lang={lang} />
-        <ThemeToggle />
         {user ? (
-          <Link href={`/${user.handle}`} aria-label={user.handle}>
-            <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={30} />
-          </Link>
+          <>
+            {/* «+» create menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  aria-label={t('create', lang)}
+                  className="grid h-[30px] w-[30px] place-items-center rounded-md bg-primary text-primary-fg"
+                >
+                  <Plus size={16} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href="/new">
+                    <Plus size={15} /> {t('newList', lang)}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/generate">
+                    <Sparkles size={15} /> {t('generateWithAi', lang)}
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* avatar user menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button aria-label={user.handle} className="rounded-full outline-none">
+                  <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={30} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  {t('signedInAs', lang)} <span className="font-semibold text-ink">{user.handle}</span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={`/${user.handle}`}>{t('yourProfile', lang)}</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/my-lists">{t('myLists', lang)}</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/${user.handle}?tab=liked`}>{t('liked', lang)}</Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">Admin</Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <div className="flex items-center justify-between px-2.5 py-1.5">
+                  <span className="text-[13px] text-ink-2">{t('theme', lang)}</span>
+                  <ThemeToggle />
+                </div>
+                <div className="flex items-center justify-between px-2.5 py-1.5">
+                  <span className="text-[13px] text-ink-2">{t('language', lang)}</span>
+                  <LangSwitch lang={lang} />
+                </div>
+                <DropdownMenuSeparator />
+                <form action="/api/auth/logout" method="post">
+                  <DropdownMenuItem asChild>
+                    <button type="submit" className="w-full text-left text-[var(--danger)]">
+                      {t('signOut', lang)}
+                    </button>
+                  </DropdownMenuItem>
+                </form>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         ) : (
-          <Link href="/login" className="text-[13px] font-semibold text-ink">
-            {t('signIn', lang)}
-          </Link>
+          <>
+            <LangSwitch lang={lang} />
+            <ThemeToggle />
+            <Link href="/login" className="text-[13px] font-semibold text-ink">
+              {t('signIn', lang)}
+            </Link>
+          </>
         )}
       </div>
     </header>

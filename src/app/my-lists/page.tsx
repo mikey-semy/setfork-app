@@ -10,7 +10,7 @@ export default async function MyListsPage() {
   const items = session ? await getUserTemplates(session.userId) : []
 
   return (
-    <div className="w-full px-6 py-6 lg:px-8">
+    <div className="mx-auto w-full max-w-[1100px] px-6 py-6">
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-[15px] font-semibold text-ink">{t('myLists', lang)}</h1>
             <Link href="/new" className="rounded-md bg-primary px-3 py-2 text-[13px] font-semibold text-primary-fg">
