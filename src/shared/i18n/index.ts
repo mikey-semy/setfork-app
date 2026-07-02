@@ -175,6 +175,8 @@ const DICT = {
   followingLabel: { en: 'following', ru: 'подписки' },
   editProfile: { en: 'Edit profile', ru: 'Редактировать профиль' },
   followingFeedEmpty: { en: 'Follow people to see their activity here.', ru: 'Подпишитесь на людей, чтобы видеть их активность.' },
+  settingsSearchPh: { en: 'Search settings…', ru: 'Поиск по настройкам…' },
+  noSettingsFound: { en: 'No settings match your search.', ru: 'По запросу ничего не найдено.' },
   notifFork: { en: 'forked your list', ru: 'форкнул ваш список' },
   notifSuggestionNew: { en: 'suggested an edit to', ru: 'предложил правку к' },
   notifAccepted: { en: 'accepted your edit to', ru: 'принял вашу правку к' },
