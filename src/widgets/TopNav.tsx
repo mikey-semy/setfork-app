@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Bell, Plus, Search, Sparkles } from 'lucide-react'
+import { Plus, Search, Sparkles } from 'lucide-react'
+import { NotificationsBell } from '@/features/notifications/NotificationsBell'
+import type { NotificationItem } from '@/features/notifications/queries'
 import { LangSwitch, ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
 import {
@@ -21,11 +23,13 @@ export function TopNav({
   user,
   isAdmin,
   unread = 0,
+  notifications = [],
 }: {
   lang: Lang
   user: SessionUser | null
   isAdmin?: boolean
   unread?: number
+  notifications?: NotificationItem[]
 }) {
   const pathname = usePathname()
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
@@ -55,19 +59,8 @@ export function TopNav({
       <div className="ml-auto flex items-center gap-3">
         {user ? (
           <>
-            {/* bell / уведомления */}
-            <Link
-              href="/notifications"
-              aria-label={t('notifications', lang)}
-              className="relative grid h-[30px] w-[30px] place-items-center rounded-md text-ink-2 hover:text-ink"
-            >
-              <Bell size={17} />
-              {unread > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 grid h-[15px] min-w-[15px] place-items-center rounded-full bg-[var(--danger)] px-1 text-[9px] font-bold text-white">
-                  {unread > 9 ? '9+' : unread}
-                </span>
-              )}
-            </Link>
+            {/* bell / уведомления (выпадашка + страница «Все») */}
+            <NotificationsBell unread={unread} items={notifications} lang={lang} />
 
             {/* «+» create menu */}
             <DropdownMenu>

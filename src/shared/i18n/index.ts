@@ -166,6 +166,7 @@ const DICT = {
   // ── Уведомления ──
   notifications: { en: 'Notifications', ru: 'Уведомления' },
   noNotifications: { en: 'No notifications yet.', ru: 'Пока нет уведомлений.' },
+  seeAll: { en: 'See all', ru: 'Все уведомления' },
   notifStar: { en: 'starred your list', ru: 'отметил звездой ваш список' },
   notifFork: { en: 'forked your list', ru: 'форкнул ваш список' },
   notifSuggestionNew: { en: 'suggested an edit to', ru: 'предложил правку к' },

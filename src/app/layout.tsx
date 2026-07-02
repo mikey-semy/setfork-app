@@ -4,7 +4,7 @@ import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { getUnreadCount } from '@/features/notifications/queries'
+import { getNotifications, getUnreadCount } from '@/features/notifications/queries'
 import { TopNav } from '@/widgets/TopNav'
 import './globals.css'
 
@@ -26,13 +26,15 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [lang, user] = await Promise.all([getLang(), getSession()])
-  const unread = user ? await getUnreadCount(user.userId) : 0
+  const [unread, notifications] = user
+    ? await Promise.all([getUnreadCount(user.userId), getNotifications(user.userId, 8)])
+    : [0, []]
   return (
     <html lang={lang} className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <div className="flex min-h-screen flex-col bg-canvas">
-            <TopNav lang={lang} user={user} isAdmin={isAdminHandle(user?.handle)} unread={unread} />
+            <TopNav lang={lang} user={user} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
             <main className="flex flex-1 flex-col">{children}</main>
           </div>
         </ThemeProvider>
