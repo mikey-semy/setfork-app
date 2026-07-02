@@ -53,11 +53,30 @@ export default async function EditPage({
           className="mb-6 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
         />
 
+        <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('listKind', lang)}</label>
+        <div className="mb-6 grid grid-cols-2 gap-2">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+            <input type="radio" name="ordered" value="ordered" defaultChecked={tpl.ordered} className="mt-0.5" />
+            <span>
+              <span className="block text-[13.5px] font-medium text-ink">{t('orderedLabel', lang)}</span>
+              <span className="block text-[12px] text-ink-2">{t('orderedHint', lang)}</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+            <input type="radio" name="ordered" value="unordered" defaultChecked={!tpl.ordered} className="mt-0.5" />
+            <span>
+              <span className="block text-[13.5px] font-medium text-ink">{t('unorderedLabel', lang)}</span>
+              <span className="block text-[12px] text-ink-2">{t('unorderedHint', lang)}</span>
+            </span>
+          </label>
+        </div>
+
         <label className="mb-2 block text-[12.5px] font-semibold text-ink-2">{lang === 'ru' ? 'Пункты' : 'Items'}</label>
         <ListEditor
           name="items"
           initialItems={initial}
           lang={lang}
+          ordered={tpl.ordered}
           aiRefine={{ title: tr(tpl.title, lang), desc: tr(tpl.desc, lang), tags: tpl.tags }}
         />
 

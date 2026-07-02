@@ -105,6 +105,8 @@ export const templates = pgTable(
     currentVersion: integer('current_version').notNull().default(1),
     origin: templateOrigin('origin').notNull().default('authored'),
     status: listStatus('status').notNull().default('published'),
+    // true — упорядоченный (шаги 1..N); false — набор/чек-лист (порядок неважен).
+    ordered: boolean('ordered').notNull().default(true),
     visibility: listVisibility('visibility').notNull().default('public'),
     moderation: moderationStatus('moderation').notNull().default('active'),
     moderationReason: text('moderation_reason'),

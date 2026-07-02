@@ -1,7 +1,19 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, ImageUp, Loader2, Plus, Sparkles, Trash2, X } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  GripVertical,
+  ImageUp,
+  Loader2,
+  Plus,
+  Redo2,
+  Sparkles,
+  Trash2,
+  Undo2,
+  X,
+} from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { emptyItem, type EditorItem } from './editor'
 import { refineList, uploadStepImage } from './actions'
@@ -14,16 +26,65 @@ export function ListEditor({
   initialItems,
   lang,
   aiRefine,
+  ordered = true,
 }: {
   name?: string
   initialItems: EditorItem[]
   lang: Lang
   /** Включает панель «Улучшить с ИИ»; передай title/desc/tags для контекста. */
   aiRefine?: { title: string; desc: string; tags: string[] }
+  /** Упорядоченный список — нумерация; иначе набор (маркеры). */
+  ordered?: boolean
 }) {
   const ru = lang === 'ru'
-  const [items, setItems] = useState<EditorItem[]>(initialItems.length ? initialItems : [emptyItem()])
+  const first = initialItems.length ? initialItems : [emptyItem()]
+  const [items, setItemsRaw] = useState<EditorItem[]>(first)
   const [uploading, setUploading] = useState<number | null>(null)
+  const [dragI, setDragI] = useState<number | null>(null)
+  const [overI, setOverI] = useState<number | null>(null)
+
+  // История для undo/redo. Текстовые правки заменяют верхний снимок,
+  // структурные (добавить/удалить/переместить/refine) — добавляют новый шаг.
+  const hist = useRef<EditorItem[][]>([first])
+  const ptr = useRef(0)
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
+  const syncFlags = () => {
+    setCanUndo(ptr.current > 0)
+    setCanRedo(ptr.current < hist.current.length - 1)
+  }
+
+  // Текстовая правка: обновляем состояние и синхронизируем верхний снимок.
+  const setText = (next: EditorItem[]) => {
+    hist.current[ptr.current] = next
+    setItemsRaw(next)
+  }
+  // Структурная правка: новый шаг истории.
+  const commit = (next: EditorItem[]) => {
+    hist.current = hist.current.slice(0, ptr.current + 1)
+    hist.current.push(next)
+    ptr.current = hist.current.length - 1
+    setItemsRaw(next)
+    syncFlags()
+  }
+  const undo = () => {
+    if (ptr.current > 0) {
+      ptr.current -= 1
+      setItemsRaw(hist.current[ptr.current])
+      syncFlags()
+    }
+  }
+  const redo = () => {
+    if (ptr.current < hist.current.length - 1) {
+      ptr.current += 1
+      setItemsRaw(hist.current[ptr.current])
+      syncFlags()
+    }
+  }
+
+  const patch = (i: number, p: Partial<EditorItem>) =>
+    setText(items.map((it, idx) => (idx === i ? { ...it, ...p } : it)))
+
   const [instruction, setInstruction] = useState('')
   const [refining, setRefining] = useState(false)
   const [refineErr, setRefineErr] = useState('')
@@ -44,13 +105,10 @@ export function ListEditor({
       return
     }
     if (res.items.length) {
-      setItems(res.items)
+      commit(res.items)
       setInstruction('')
     }
   }
-
-  const patch = (i: number, p: Partial<EditorItem>) =>
-    setItems((xs) => xs.map((it, idx) => (idx === i ? { ...it, ...p } : it)))
 
   async function uploadFor(i: number, file: File) {
     setUploading(i)
@@ -61,20 +119,73 @@ export function ListEditor({
     if ('error' in res) alert(res.error)
     else patch(i, { imageKey: res.key, imagePreview: res.url })
   }
-  const addItem = () => setItems((xs) => [...xs, emptyItem()])
-  const removeItem = (i: number) => setItems((xs) => (xs.length > 1 ? xs.filter((_, idx) => idx !== i) : xs))
-  const move = (i: number, dir: -1 | 1) =>
-    setItems((xs) => {
-      const j = i + dir
-      if (j < 0 || j >= xs.length) return xs
-      const next = [...xs]
-      ;[next[i], next[j]] = [next[j], next[i]]
-      return next
-    })
+  const addItem = () => commit([...items, emptyItem()])
+  const removeItem = (i: number) => {
+    if (items.length > 1) commit(items.filter((_, idx) => idx !== i))
+  }
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir
+    if (j < 0 || j >= items.length) return
+    const next = [...items]
+    ;[next[i], next[j]] = [next[j], next[i]]
+    commit(next)
+  }
+  const reorder = (from: number, to: number) => {
+    if (from === to) return
+    const next = [...items]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    commit(next)
+  }
+
+  // Клавиши: Ctrl/⌘+Z / +Shift+Z / +Y — undo/redo (не в полях, там нативно);
+  // Alt+↑/↓ — переместить пункт под фокусом.
+  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    const el = e.target as HTMLElement
+    const inField = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
+    const mod = e.ctrlKey || e.metaKey
+    if (mod && e.key.toLowerCase() === 'z') {
+      if (inField) return
+      e.preventDefault()
+      e.shiftKey ? redo() : undo()
+    } else if (mod && e.key.toLowerCase() === 'y') {
+      if (inField) return
+      e.preventDefault()
+      redo()
+    } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      const card = el.closest('[data-i]') as HTMLElement | null
+      if (!card) return
+      e.preventDefault()
+      move(Number(card.dataset.i), e.key === 'ArrowUp' ? -1 : 1)
+    }
+  }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3" onKeyDown={onKeyDown}>
       <input type="hidden" name={name} value={JSON.stringify(items)} />
+
+      {/* Тулбар: undo/redo + подсказка */}
+      <div className="flex items-center gap-2 text-[12px] text-muted">
+        <button
+          type="button"
+          onClick={undo}
+          disabled={!canUndo}
+          title={ru ? 'Отменить (Ctrl+Z)' : 'Undo (Ctrl+Z)'}
+          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2"
+        >
+          <Undo2 size={13} /> {ru ? 'Отменить' : 'Undo'}
+        </button>
+        <button
+          type="button"
+          onClick={redo}
+          disabled={!canRedo}
+          title={ru ? 'Повторить (Ctrl+Shift+Z)' : 'Redo (Ctrl+Shift+Z)'}
+          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2"
+        >
+          <Redo2 size={13} /> {ru ? 'Повторить' : 'Redo'}
+        </button>
+        <span className="ml-1 hidden sm:inline">{ru ? 'перетаскивай ⠿, Alt+↑/↓ — двигать' : 'drag ⠿, Alt+↑/↓ to move'}</span>
+      </div>
 
       {aiRefine && (
         <div className="rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] p-3">
@@ -115,9 +226,39 @@ export function ListEditor({
       )}
 
       {items.map((it, i) => (
-        <div key={i} className="rounded-lg border border-border bg-surface p-4">
+        <div
+          key={i}
+          data-i={i}
+          onDragOver={(e) => {
+            if (dragI !== null) {
+              e.preventDefault()
+              if (overI !== i) setOverI(i)
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault()
+            if (dragI !== null) reorder(dragI, i)
+            setDragI(null)
+            setOverI(null)
+          }}
+          className={`rounded-lg border bg-surface p-4 transition-colors ${
+            overI === i && dragI !== null ? 'border-accent' : 'border-border'
+          } ${dragI === i ? 'opacity-50' : ''}`}
+        >
           <div className="mb-2.5 flex items-center gap-2">
-            <span className="font-mono text-[12px] text-muted">{ru ? 'Пункт' : 'Item'} {i + 1}</span>
+            <span
+              draggable
+              onDragStart={() => setDragI(i)}
+              onDragEnd={() => {
+                setDragI(null)
+                setOverI(null)
+              }}
+              title={ru ? 'Перетащить' : 'Drag to reorder'}
+              className="cursor-grab rounded p-0.5 text-muted hover:text-ink active:cursor-grabbing"
+            >
+              <GripVertical size={15} />
+            </span>
+            <span className="font-mono text-[12px] text-muted">{ordered ? `${ru ? 'Пункт' : 'Item'} ${i + 1}` : '•'}</span>
             <div className="ml-auto flex items-center gap-1">
               <button type="button" onClick={() => move(i, -1)} className="rounded p-1 text-muted hover:text-ink" title="up">
                 <ChevronUp size={15} />

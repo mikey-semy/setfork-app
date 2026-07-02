@@ -91,6 +91,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
   const desc = String(formData.get('desc') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
   const visibility = formData.get('visibility') === 'private' ? 'private' : 'public'
+  const ordered = formData.get('ordered') !== 'unordered'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   if (!title) return
 
@@ -112,6 +113,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
       currentVersion: 1,
       origin: 'authored',
       visibility,
+      ordered,
     })
     .returning()
 
@@ -134,6 +136,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
 
   const note = String(formData.get('note') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
+  const ordered = formData.get('ordered') !== 'unordered'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   const newVersion = tpl.currentVersion + 1
 
@@ -144,7 +147,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await insertSteps(ver.id, proposed)
   await db
     .update(templates)
-    .set({ currentVersion: newVersion, tags, updatedAt: new Date() })
+    .set({ currentVersion: newVersion, tags, ordered, updatedAt: new Date() })
     .where(eq(templates.id, tpl.id))
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
@@ -331,6 +334,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
       currentVersion: 1,
       origin: 'forked',
       visibility: src.visibility,
+      ordered: src.ordered,
       forkedFromId: src.id,
     })
     .returning()

@@ -51,6 +51,11 @@ const DICT = {
     en: 'Drafted by AI — review, refine and star it so it becomes a proven reference.',
     ru: 'Черновик от нейросети — проверьте, доработайте и отметьте звездой, чтобы он стал эталоном.',
   },
+  listKind: { en: 'List type', ru: 'Тип списка' },
+  orderedLabel: { en: 'Ordered', ru: 'Упорядоченный' },
+  orderedHint: { en: 'A sequence — steps 1, 2, 3… run in order.', ru: 'Последовательность — шаги 1, 2, 3… по порядку.' },
+  unorderedLabel: { en: 'Unordered', ru: 'Без порядка' },
+  unorderedHint: { en: 'A set/checklist — order doesn’t matter.', ru: 'Набор/чек-лист — порядок неважен.' },
   aiUsageTitle: { en: 'AI usage', ru: 'Расход ИИ' },
   aiUsageIntro: {
     en: 'Your AI generation and refinement consumption on SetHub.',
