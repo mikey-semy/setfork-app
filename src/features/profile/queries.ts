@@ -2,6 +2,7 @@ import 'server-only'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { db, runs, stars, templates, users } from '@/shared/db'
 import type { FeedItem } from '@/features/library/queries'
+import { avatarSrc } from '@/shared/media'
 
 export async function getUserByHandle(handle: string) {
   const [u] = await db.select().from(users).where(eq(users.handle, handle)).limit(1)
@@ -40,7 +41,7 @@ export async function getStarredTemplates(userId: string): Promise<FeedItem[]> {
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(eq(stars.userId, userId))
     .orderBy(desc(stars.createdAt))
-  return rows as FeedItem[]
+  return (rows as FeedItem[]).map((r) => ({ ...r, ownerAvatarUrl: avatarSrc(r.ownerAvatarUrl, 96) }))
 }
 
 /** Прогоны пользователя (для вкладки профиля). */

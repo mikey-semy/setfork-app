@@ -6,7 +6,8 @@ import { eq, inArray, sql } from 'drizzle-orm'
 import { db, stars, suggestions, templates, users } from '@/shared/db'
 import type { Social } from '@/shared/db/schema'
 import { clearSessionCookie, requireSession, setSessionCookie } from '@/shared/auth/session'
-import { removeAvatarFiles, saveAvatarFile } from './avatar'
+import { avatarSrc } from '@/shared/media'
+import { removeAvatar, saveAvatar } from './avatar'
 
 export type ActionResult = { ok?: true; error?: string }
 
@@ -41,11 +42,11 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
   const website = normalizeUrl(String(formData.get('website') ?? '')).slice(0, 200) || null
   const socials = parseSocials(String(formData.get('socials') ?? '[]'))
 
-  let avatarUrl: string | undefined
+  let avatarRef: string | undefined // storage_key (S3) или /uploads-путь
   const file = formData.get('avatar')
   if (file instanceof File && file.size > 0) {
     try {
-      avatarUrl = await saveAvatarFile(session.userId, file)
+      avatarRef = await saveAvatar(session.userId, file)
     } catch (e) {
       return { error: e instanceof Error ? e.message : 'Не удалось загрузить аватар.' }
     }
@@ -53,15 +54,15 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
 
   await db
     .update(users)
-    .set({ name, bio, location, website, socials, ...(avatarUrl ? { avatarUrl } : {}) })
+    .set({ name, bio, location, website, socials, ...(avatarRef ? { avatarUrl: avatarRef } : {}) })
     .where(eq(users.id, session.userId))
 
-  // Обновляем сессионную cookie, чтобы навбар/аватар сразу отражали изменения.
+  // В сессии храним УЖЕ отрезолвленный URL (навбар — клиент, подписать сам не может).
   await setSessionCookie({
     userId: session.userId,
     handle: session.handle,
     name: name ?? undefined,
-    avatarUrl: avatarUrl ?? session.avatarUrl,
+    avatarUrl: avatarRef ? (avatarSrc(avatarRef, 64) ?? undefined) : session.avatarUrl,
   })
 
   revalidatePath('/settings')
@@ -116,7 +117,7 @@ export async function deleteAccount(_prev: ActionResult | null, formData: FormDa
   }
 
   // 4) Удаляем аккаунт — каскадом уходят его звёзды и прогоны.
-  await removeAvatarFiles(session.userId)
+  await removeAvatar(session.userId)
   await db.delete(users).where(eq(users.id, session.userId))
 
   await clearSessionCookie()

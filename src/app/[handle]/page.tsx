@@ -8,6 +8,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { getProfileCounts, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { avatarSrc } from '@/shared/media'
 import { SocialIcon, socialLabel } from '@/features/settings/socials'
 
 function displayUrl(url: string): string {
@@ -35,7 +36,7 @@ export default async function ProfilePage({
     <div className="w-full px-6 py-8 lg:px-8">
       <div className="mx-auto flex max-w-[980px] flex-col gap-8 md:flex-row">
         <aside className="flex-shrink-0 md:w-[280px]">
-          <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={180} rounded="rounded-2xl" />
+          <Avatar handle={user.handle} avatarUrl={avatarSrc(user.avatarUrl, 180)} size={180} rounded="rounded-2xl" />
           <div className="mt-4">
             {user.name && <div className="text-[22px] font-bold leading-tight text-ink">{user.name}</div>}
             <div className="text-[18px] text-ink-2">{user.handle}</div>

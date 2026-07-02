@@ -2,6 +2,12 @@ import 'server-only'
 import { and, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
 import { db, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
+import { avatarSrc } from '@/shared/media'
+
+// Резолвим ownerAvatarUrl (storage_key → подписанный imgproxy-URL) для ленты.
+function withAvatar<T extends { ownerAvatarUrl: string | null }>(rows: T[]): T[] {
+  return rows.map((r) => ({ ...r, ownerAvatarUrl: avatarSrc(r.ownerAvatarUrl, 96) }))
+}
 
 export type FeedSort = 'trending' | 'newest' | 'mostStarred'
 
@@ -84,7 +90,7 @@ export async function getFeed(
   const rows = filters.length
     ? await base.where(and(...filters)).orderBy(order)
     : await base.orderBy(order)
-  return rows as FeedItem[]
+  return withAvatar(rows as FeedItem[])
 }
 
 /** Списки, созданные или форкнутые пользователем (страница /my-lists). */
@@ -109,7 +115,7 @@ export async function getUserTemplates(userId: string): Promise<FeedItem[]> {
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(eq(templates.ownerId, userId))
     .orderBy(desc(templates.updatedAt))
-  return rows as FeedItem[]
+  return withAvatar(rows as FeedItem[])
 }
 
 export interface ActivityItem {
@@ -143,16 +149,17 @@ export async function getActivity(limit = 30): Promise<ActivityItem[]> {
     .innerJoin(users, eq(templates.ownerId, users.id))
     .orderBy(desc(templateVersions.createdAt))
     .limit(limit)
-  return rows as ActivityItem[]
+  return withAvatar(rows as ActivityItem[])
 }
 
 /** Предложения правок для списка (с авторами). */
 export async function getSuggestions(templateId: string) {
-  return db.query.suggestions.findMany({
+  const rows = await db.query.suggestions.findMany({
     where: (s) => eq(s.templateId, templateId),
     with: { author: true },
     orderBy: (s, { asc, desc: d }) => [asc(s.status), d(s.createdAt)],
   })
+  return rows.map((r) => ({ ...r, author: { ...r.author, avatarUrl: avatarSrc(r.author.avatarUrl, 64) } }))
 }
 
 /** Число открытых предложений. */
@@ -208,7 +215,8 @@ export async function getListMeta(ownerHandle: string, slug: string) {
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(users.handle, ownerHandle), eq(templates.slug, slug)))
     .limit(1)
-  return row ?? null
+  if (!row) return null
+  return { ...row, ownerAvatarUrl: avatarSrc(row.ownerAvatarUrl, 96) }
 }
 
 /** Версии списка (для вкладки «Версии»). */
@@ -235,6 +243,7 @@ export async function getTemplateDetail(ownerHandle: string, slug: string) {
   })
   if (!tpl) return null
 
+  tpl.owner.avatarUrl = avatarSrc(tpl.owner.avatarUrl, 96)
   const currentVersion = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
   const stepRows = currentVersion
     ? await db.query.steps.findMany({

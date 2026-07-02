@@ -1,10 +1,10 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
-import { Plus, Upload, X } from 'lucide-react'
-import { Avatar } from '@/shared/ui/Avatar'
+import { useActionState, useState } from 'react'
+import { Plus, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import type { Social } from '@/shared/db/schema'
+import { AvatarDropzone } from './AvatarDropzone'
 import { SOCIAL_TYPES } from './socials'
 import { updateProfile, type ActionResult } from './actions'
 
@@ -31,14 +31,7 @@ export function SettingsForm({
   socials: Social[]
 }) {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(updateProfile, null)
-  const [preview, setPreview] = useState<string | null>(null)
   const [rows, setRows] = useState<Social[]>(socials.length ? socials : [])
-  const fileRef = useRef<HTMLInputElement>(null)
-
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    setPreview(f ? URL.createObjectURL(f) : null)
-  }
 
   const addRow = () => setRows((r) => [...r, { type: 'github', url: '' }])
   const setRow = (i: number, patch: Partial<Social>) => setRows((r) => r.map((s, j) => (j === i ? { ...s, ...patch } : s)))
@@ -46,29 +39,7 @@ export function SettingsForm({
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      {/* Avatar */}
-      <div>
-        <label className={lbl}>{t('avatar', lang)}</label>
-        <div className="flex items-center gap-4">
-          {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="" className="h-[72px] w-[72px] rounded-full object-cover" />
-          ) : (
-            <Avatar handle={handle} avatarUrl={avatarUrl} size={72} />
-          )}
-          <div>
-            <input ref={fileRef} type="file" name="avatar" accept="image/png,image/jpeg,image/webp,image/gif" onChange={onFile} className="hidden" />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[13px] font-medium text-ink hover:border-border-strong"
-            >
-              <Upload size={14} /> {t('changeAvatar', lang)}
-            </button>
-            <p className="mt-1.5 text-[12px] text-muted">{t('avatarHint', lang)}</p>
-          </div>
-        </div>
-      </div>
+      <AvatarDropzone handle={handle} avatarUrl={avatarUrl} lang={lang} />
 
       <div>
         <label className={lbl}>{t('displayName', lang)}</label>

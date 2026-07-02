@@ -1,4 +1,7 @@
-# Локальная разработка: только Postgres. Приложение запускаем `npm run dev`.
+# Локальная разработка: Postgres + медиа-стек (MinIO + imgproxy). Приложение — `npm run dev`.
+# Медиа: оригиналы лежат в S3-совместимом MinIO, imgproxy отдаёт подписанные
+# трансформации на лету. В проде MinIO меняется на Selectel S3 (+ CDN перед imgproxy)
+# правкой S3_ENDPOINT/креды и CDN_URL — тот же код и подписи.
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -17,5 +20,55 @@ services:
       timeout: 5s
       retries: 10
 
+  # S3-совместимое хранилище оригиналов (локальный аналог Selectel).
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-sethub}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-sethubsecret}
+    ports:
+      - '${MINIO_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - miniodata:/data
+
+  # Создаёт бакет при старте (идемпотентно) и выходит.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-sethub}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-sethubsecret}
+      S3_BUCKET: ${S3_BUCKET:-sethub}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${S3_ACCESS_KEY} $${S3_SECRET_KEY}; do echo waiting for minio; sleep 1; done;
+      mc mb -p local/$${S3_BUCKET} || true;
+      echo bucket ready; "
+
+  # Трансформации изображений на лету по подписанным URL (как img.devon-pro.ru).
+  imgproxy:
+    image: ghcr.io/imgproxy/imgproxy:v3.31.0
+    restart: unless-stopped
+    depends_on:
+      - minio
+    environment:
+      IMGPROXY_USE_S3: 'true'
+      IMGPROXY_S3_ENDPOINT: http://minio:9000
+      IMGPROXY_S3_REGION: ${S3_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-sethub}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-sethubsecret}
+      IMGPROXY_ALLOWED_SOURCES: s3://${S3_BUCKET:-sethub}/
+      IMGPROXY_KEY: ${IMGPROXY_KEY}
+      IMGPROXY_SALT: ${IMGPROXY_SALT}
+      IMGPROXY_ENABLE_WEBP_DETECTION: 'true'
+      IMGPROXY_MAX_SRC_RESOLUTION: '50'
+    ports:
+      - '${IMGPROXY_PORT:-8081}:8080'
+
 volumes:
   pgdata:
+  miniodata:

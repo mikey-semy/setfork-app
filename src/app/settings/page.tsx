@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { SettingsForm } from '@/features/settings/SettingsForm'
@@ -28,7 +29,7 @@ export default async function SettingsPage() {
           lang={lang}
           handle={user.handle}
           name={user.name ?? ''}
-          avatarUrl={user.avatarUrl}
+          avatarUrl={avatarSrc(user.avatarUrl, 144)}
           bio={user.bio ?? ''}
           location={user.location ?? ''}
           website={user.website ?? ''}

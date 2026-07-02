@@ -11,9 +11,11 @@ export async function upsertGithubUser(gh: {
 }): Promise<SessionUser> {
   const existing = await db.select().from(users).where(eq(users.githubId, gh.id)).limit(1)
   if (existing[0]) {
+    // Синхронизируем только handle; имя/аватар не перезатираем — их пользователь
+    // мог настроить в /settings (в т.ч. загрузить свой аватар).
     const [u] = await db
       .update(users)
-      .set({ handle: gh.login, name: gh.name, avatarUrl: gh.avatar_url })
+      .set({ handle: gh.login })
       .where(eq(users.id, existing[0].id))
       .returning()
     return toSession(u)
