@@ -1,11 +1,14 @@
+import { headers } from 'next/headers'
 import { eq } from 'drizzle-orm'
-import { BarChart3, Bell, Monitor, TriangleAlert, User } from 'lucide-react'
+import { BarChart3, Bell, KeyRound, Monitor, TriangleAlert, User } from 'lucide-react'
 import { db, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { getUserUsage } from '@/shared/ai/usage'
+import { getApiTokens } from '@/features/mcp/queries'
+import { ApiTokensSection } from '@/features/mcp/ApiTokensSection'
 import { SettingsForm } from '@/features/settings/SettingsForm'
 import { DangerZone } from '@/features/settings/DangerZone'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
@@ -26,6 +29,11 @@ export default async function SettingsPage() {
   const avatar = await avatarSrc(user.avatarUrl, 144)
   const userSessions = await getUserSessions(session.userId, session.sid)
   const usage = await getUserUsage(session.userId)
+  const tokens = await getApiTokens(session.userId)
+  const h = await headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
+  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
+  const mcpUrl = `${proto}://${host}/api/mcp/mcp`
 
   const sections: SettingsSection[] = [
     {
@@ -72,6 +80,19 @@ export default async function SettingsPage() {
           <div className="mb-1 font-semibold text-ink">{t('sessionsTitle', lang)}</div>
           <p className="mb-4 text-[13px] text-ink-2">{t('sessionsIntro', lang)}</p>
           <SessionsList sessions={userSessions} lang={lang} />
+        </section>
+      ),
+    },
+    {
+      id: 'mcp',
+      title: t('mcpTitle', lang),
+      icon: <KeyRound size={15} />,
+      keywords: ['api', 'mcp', 'token', 'agent', 'integration', 'bearer', 'токен', 'агент', 'интеграция', 'ключ'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{t('mcpTitle', lang)}</div>
+          <p className="mb-4 text-[13px] text-ink-2">{t('mcpIntro', lang)}</p>
+          <ApiTokensSection tokens={tokens} lang={lang} mcpUrl={mcpUrl} />
         </section>
       ),
     },
