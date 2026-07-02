@@ -26,6 +26,7 @@ import type { LocaleText } from '../i18n'
 
 // ── Enums ────────────────────────────────────────────────────────────
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
+export const listVisibility = pgEnum('list_visibility', ['public', 'private'])
 export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned'])
 export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
@@ -95,6 +96,7 @@ export const templates = pgTable(
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     currentVersion: integer('current_version').notNull().default(1),
     origin: templateOrigin('origin').notNull().default('authored'),
+    visibility: listVisibility('visibility').notNull().default('public'),
     forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
     runsCount: integer('runs_count').notNull().default(0),
     forksCount: integer('forks_count').notNull().default(0),

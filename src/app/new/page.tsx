@@ -39,6 +39,24 @@ export default async function NewListPage() {
           className="mb-6 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
         />
 
+        <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('visibility', lang)}</label>
+        <div className="mb-6 flex flex-col gap-2">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+            <input type="radio" name="visibility" value="public" defaultChecked className="mt-0.5" />
+            <span>
+              <span className="block text-[13.5px] font-medium text-ink">{t('publicLabel', lang)}</span>
+              <span className="block text-[12px] text-ink-2">{t('publicHint', lang)}</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+            <input type="radio" name="visibility" value="private" className="mt-0.5" />
+            <span>
+              <span className="block text-[13.5px] font-medium text-ink">{t('privateLabel', lang)}</span>
+              <span className="block text-[12px] text-ink-2">{t('privateHint', lang)}</span>
+            </span>
+          </label>
+        </div>
+
         <label className="mb-2 block text-[12.5px] font-semibold text-ink-2">{ru ? 'Пункты' : 'Items'}</label>
         <ListEditor name="items" initialItems={[]} lang={lang} />
 

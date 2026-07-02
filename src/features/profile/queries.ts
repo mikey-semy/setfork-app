@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { db, runs, stars, templates, users } from '@/shared/db'
 import type { FeedItem } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
@@ -18,8 +18,11 @@ export async function getProfileCounts(userId: string) {
   return { lists: l?.c ?? 0, stars: s?.c ?? 0, runs: r?.c ?? 0 }
 }
 
-/** Списки, отмеченные звездой этим пользователем. */
-export async function getStarredTemplates(userId: string): Promise<FeedItem[]> {
+/** Списки, отмеченные звездой пользователем. viewerId скрывает чужие приватные. */
+export async function getStarredTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
+  const visible = viewerId
+    ? or(eq(templates.visibility, 'public'), eq(templates.ownerId, viewerId))!
+    : eq(templates.visibility, 'public')
   const rows = await db
     .select({
       id: templates.id,
@@ -34,12 +37,13 @@ export async function getStarredTemplates(userId: string): Promise<FeedItem[]> {
       runsCount: templates.runsCount,
       forksCount: templates.forksCount,
       starsCount: templates.starsCount,
+      visibility: templates.visibility,
       updatedAt: templates.updatedAt,
     })
     .from(stars)
     .innerJoin(templates, eq(stars.templateId, templates.id))
     .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(eq(stars.userId, userId))
+    .where(and(eq(stars.userId, userId), visible))
     .orderBy(desc(stars.createdAt))
   return Promise.all(
     (rows as FeedItem[]).map(async (r) => ({ ...r, ownerAvatarUrl: await avatarSrc(r.ownerAvatarUrl, 96) })),

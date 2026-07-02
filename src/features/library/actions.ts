@@ -62,6 +62,25 @@ async function insertSteps(versionId: string, items: ProposedItem[]): Promise<vo
   )
 }
 
+// ── Видимость списка (public/private) и удаление ─────────────────────
+export async function setListVisibility(templateId: string, visibility: 'public' | 'private'): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  await db.update(templates).set({ visibility }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}`)
+  revalidatePath('/explore')
+}
+
+export async function deleteListAction(templateId: string): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  await db.delete(templates).where(eq(templates.id, templateId)) // каскад: версии/шаги/звёзды/предложения
+  revalidatePath('/', 'layout')
+  redirect(`/${session.handle}`)
+}
+
 // ── Загрузка скриншота шага (в редакторе) ────────────────────────────
 export async function uploadStepImage(formData: FormData): Promise<{ key: string; url: string } | { error: string }> {
   const session = await requireSession()
@@ -87,6 +106,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
   const title = String(formData.get('title') ?? '').trim()
   const desc = String(formData.get('desc') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
+  const visibility = formData.get('visibility') === 'private' ? 'private' : 'public'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   if (!title) return
 
@@ -107,6 +127,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
       tags,
       currentVersion: 1,
       origin: 'authored',
+      visibility,
     })
     .returning()
 
@@ -320,6 +341,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
       tags: src.tags,
       currentVersion: 1,
       origin: 'forked',
+      visibility: src.visibility,
       forkedFromId: src.id,
     })
     .returning()

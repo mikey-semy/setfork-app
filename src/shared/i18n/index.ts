@@ -205,6 +205,17 @@ const DICT = {
   lastSeen: { en: 'last seen', ru: 'был(а)' },
   onlineUsers: { en: 'Online now', ru: 'Сейчас онлайн' },
   noOnline: { en: 'No one online.', ru: 'Никого онлайн.' },
+  // ── Видимость списка ──
+  privateLabel: { en: 'Private', ru: 'Приватный' },
+  publicLabel: { en: 'Public', ru: 'Публичный' },
+  visibility: { en: 'Visibility', ru: 'Видимость' },
+  publicHint: { en: 'Anyone can find and view it in explore & search.', ru: 'Виден всем в обзоре и поиске.' },
+  privateHint: { en: 'Only you can see it.', ru: 'Виден только вам.' },
+  makePrivate: { en: 'Make private', ru: 'Сделать приватным' },
+  makePublic: { en: 'Make public', ru: 'Сделать публичным' },
+  deleteList: { en: 'Delete this list', ru: 'Удалить список' },
+  deleteListHint: { en: 'Permanently deletes the list, its versions and stars. Cannot be undone.', ru: 'Безвозвратно удаляет список, версии и звёзды.' },
+  listSettings: { en: 'List settings', ru: 'Настройки списка' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT

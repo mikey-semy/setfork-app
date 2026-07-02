@@ -20,6 +20,7 @@ export default async function SuggestPage({
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, steps } = detail
+  if (tpl.visibility === 'private' && session.userId !== tpl.ownerId) notFound()
 
   const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
   const action = submitSuggestion.bind(null, tpl.id)

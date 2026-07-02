@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { ArrowLeft, GitFork, GitPullRequest, ListChecks, Pencil, Star, Tag } from 'lucide-react'
+import { notFound } from 'next/navigation'
+import { ArrowLeft, GitFork, GitPullRequest, ListChecks, Lock, Pencil, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -9,16 +10,17 @@ import { StarButton } from '@/features/library/StarButton'
 import { ShareButton } from '@/features/library/ShareButton'
 import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/library/queries'
 
-type Tab = 'overview' | 'versions' | 'suggestions'
+type Tab = 'overview' | 'versions' | 'suggestions' | 'settings'
 
 /** Общая шапка страницы списка (= «репозиторий»): back, owner/name, действия, вкладки. */
 export async function ListHeader({ owner, slug, active }: { owner: string; slug: string; active: Tab }) {
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const meta = await getListMeta(owner, slug)
   if (!meta) return null
+  const isOwner = session?.userId === meta.ownerId
+  if (meta.visibility === 'private' && !isOwner) notFound() // приватный список — только владельцу
   const starred = session ? await isStarred(meta.id, session.userId) : false
   const suggCount = await getOpenSuggestionCount(meta.id)
-  const isOwner = session?.userId === meta.ownerId
   const base = `/${owner}/${slug}`
   const forkBound = forkTemplate.bind(null, meta.id)
 
@@ -58,6 +60,11 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
             <span className="rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[11px] text-accent">
               v{meta.currentVersion}
             </span>
+            {meta.visibility === 'private' && (
+              <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
+                <Lock size={11} /> {t('privateLabel', lang)}
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -106,6 +113,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
           {tab('overview', base, <ListChecks size={15} />, t('overviewTab', lang))}
           {tab('versions', `${base}/versions`, <Tag size={15} />, t('versionsTab', lang))}
           {tab('suggestions', `${base}/suggestions`, <GitPullRequest size={15} />, t('suggestions', lang), suggCount)}
+          {isOwner && tab('settings', `${base}/settings`, <Settings size={15} />, t('settings', lang))}
         </nav>
       </div>
     </div>

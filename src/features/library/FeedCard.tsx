@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { GitFork, Star } from 'lucide-react'
+import { GitFork, Lock, Star } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
@@ -33,6 +33,11 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
           <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">
             v{item.version}
           </span>
+          {item.visibility === 'private' && (
+            <span className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10.5px] text-ink-2" title="private">
+              <Lock size={10} />
+            </span>
+          )}
           {item.tags.slice(0, 4).map((tag) => (
             <Link
               key={tag}

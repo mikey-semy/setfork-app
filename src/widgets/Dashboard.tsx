@@ -6,8 +6,8 @@ import { getActivity, getPopularTags, getUserTemplates } from '@/features/librar
 
 export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }) {
   const [mine, activity, tags] = await Promise.all([
-    getUserTemplates(userId),
-    getActivity(30),
+    getUserTemplates(userId, userId),
+    getActivity(30, userId),
     getPopularTags(18),
   ])
 

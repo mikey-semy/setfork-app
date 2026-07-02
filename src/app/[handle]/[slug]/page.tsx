@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ExternalLink, GitFork, Sparkles, Star, Tag } from 'lucide-react'
+import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { CopyButton } from '@/shared/ui/CopyButton'
@@ -18,6 +19,8 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, currentVersion, steps } = detail
+  const viewer = await getSession()
+  if (tpl.visibility === 'private' && viewer?.userId !== tpl.ownerId) notFound()
   // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.
   const previews = await getStepPreviews(steps, 'rs:fit:1400:1400')
   const stepImages: Record<string, string> = Object.fromEntries(

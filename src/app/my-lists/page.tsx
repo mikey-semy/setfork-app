@@ -7,7 +7,7 @@ import { getUserTemplates } from '@/features/library/queries'
 
 export default async function MyListsPage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const items = session ? await getUserTemplates(session.userId) : []
+  const items = session ? await getUserTemplates(session.userId, session.userId) : []
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-6 py-6">

@@ -38,6 +38,7 @@ export interface FeedItem {
   runsCount: number
   forksCount: number
   starsCount: number
+  visibility: 'public' | 'private'
   updatedAt: Date
 }
 
@@ -46,11 +47,12 @@ export interface TagRow {
   count: number
 }
 
-/** Популярные теги с counts (как GitHub topics). */
+/** Популярные теги с counts (как GitHub topics). Только по публичным спискам. */
 export async function getPopularTags(limit = 24): Promise<TagRow[]> {
   const res = await db.execute(sql`
     select unnest(${templates.tags}) as tag, count(*)::int as count
     from ${templates}
+    where ${templates.visibility} = 'public'
     group by 1
     order by count desc, tag asc
     limit ${limit}
@@ -72,21 +74,33 @@ const FEED_COLS = {
   runsCount: templates.runsCount,
   forksCount: templates.forksCount,
   starsCount: templates.starsCount,
+  visibility: templates.visibility,
   updatedAt: templates.updatedAt,
 }
 
 const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${tag}]::text[]`
 
+// Приватные списки видит только владелец. Публичные — все.
+function visibleFilter(viewerId?: string): SQL {
+  return viewerId
+    ? or(eq(templates.visibility, 'public'), eq(templates.ownerId, viewerId))!
+    : eq(templates.visibility, 'public')
+}
+
 /** Поиск/лента по ключевым словам (ILIKE по всем языкам сразу). q пустой = просто лента. */
-async function keywordFeed(order: SQL, tag?: string, q?: string): Promise<FeedItem[]> {
-  const filters: SQL[] = []
+async function keywordFeed(order: SQL, viewerId?: string, tag?: string, q?: string): Promise<FeedItem[]> {
+  const filters: SQL[] = [visibleFilter(viewerId)]
   if (tag) filters.push(tagFilter(tag))
   if (q) {
     const like = `%${q}%`
     filters.push(or(ilike(sql`${templates.title}::text`, like), ilike(sql`${templates.desc}::text`, like), ilike(templates.slug, like))!)
   }
-  const base = db.select(FEED_COLS).from(templates).innerJoin(users, eq(templates.ownerId, users.id))
-  const rows = filters.length ? await base.where(and(...filters)).orderBy(order) : await base.orderBy(order)
+  const rows = await db
+    .select(FEED_COLS)
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(...filters))
+    .orderBy(order)
   return rows as FeedItem[]
 }
 
@@ -96,6 +110,7 @@ async function semanticFeed(
   tag: string | undefined,
   limit: number,
   minScore: number,
+  viewerId?: string,
 ): Promise<FeedItem[] | null> {
   const { getAiSettings } = await import('@/shared/settings/ai')
   const { embedOne } = await import('@/shared/ai/embeddings')
@@ -105,7 +120,7 @@ async function semanticFeed(
 
   const distance = cosineDistance(embeddings.embedding, vec)
   const similarity = sql<number>`1 - (${distance})`
-  const filters: SQL[] = [eq(embeddings.kind, 'list'), isNotNull(embeddings.embedding)]
+  const filters: SQL[] = [eq(embeddings.kind, 'list'), isNotNull(embeddings.embedding), visibleFilter(viewerId)]
   // Порог: similarity >= minScore  ⇔  distance <= 1 - minScore.
   if (minScore > 0) filters.push(sql`${distance} <= ${1 - minScore}`)
   if (tag) filters.push(tagFilter(tag))
@@ -122,6 +137,7 @@ async function semanticFeed(
 
 export async function getFeed(
   opts: { sort?: FeedSort; tag?: string; q?: string } = {},
+  viewerId?: string,
 ): Promise<FeedItem[]> {
   const order =
     opts.sort === 'newest'
@@ -131,43 +147,29 @@ export async function getFeed(
         : desc(sql`${templates.starsCount} + ${templates.forksCount}`) // trending
 
   const q = opts.q?.trim()
-  if (!q) return withAvatar(await keywordFeed(order, opts.tag))
+  if (!q) return withAvatar(await keywordFeed(order, viewerId, opts.tag))
 
   const { mode, minScore, limit } = await getSearchSettings()
-  if (mode === 'keyword') return withAvatar(await keywordFeed(order, opts.tag, q))
+  if (mode === 'keyword') return withAvatar(await keywordFeed(order, viewerId, opts.tag, q))
 
-  const semantic = await semanticFeed(q, opts.tag, limit, minScore)
+  const semantic = await semanticFeed(q, opts.tag, limit, minScore, viewerId)
   // Нет вектора (нет ключа/эмбеддингов) → откат на ключевые слова.
-  if (!semantic) return withAvatar(await keywordFeed(order, opts.tag, q))
+  if (!semantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q))
   if (mode === 'semantic') return withAvatar(semantic)
 
   // hybrid: сначала по смыслу, затем добираем совпадения по словам, которых ещё нет.
-  const keyword = await keywordFeed(order, opts.tag, q)
+  const keyword = await keywordFeed(order, viewerId, opts.tag, q)
   const seen = new Set(semantic.map((r) => r.id))
   return withAvatar([...semantic, ...keyword.filter((r) => !seen.has(r.id))])
 }
 
-/** Списки, созданные или форкнутые пользователем (страница /my-lists). */
-export async function getUserTemplates(userId: string): Promise<FeedItem[]> {
+/** Списки пользователя. viewerId = кто смотрит: владелец видит и приватные. */
+export async function getUserTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
   const rows = await db
-    .select({
-      id: templates.id,
-      ownerHandle: users.handle,
-      ownerAvatarUrl: users.avatarUrl,
-      slug: templates.slug,
-      title: templates.title,
-      desc: templates.desc,
-      tags: templates.tags,
-      version: templates.currentVersion,
-      origin: templates.origin,
-      runsCount: templates.runsCount,
-      forksCount: templates.forksCount,
-      starsCount: templates.starsCount,
-      updatedAt: templates.updatedAt,
-    })
+    .select(FEED_COLS)
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(eq(templates.ownerId, userId))
+    .where(and(eq(templates.ownerId, userId), visibleFilter(viewerId)))
     .orderBy(desc(templates.updatedAt))
   return withAvatar(rows as FeedItem[])
 }
@@ -185,7 +187,7 @@ export interface ActivityItem {
 }
 
 /** Лента изменений: недавние версии (создание/правки) списков. */
-export async function getActivity(limit = 30): Promise<ActivityItem[]> {
+export async function getActivity(limit = 30, viewerId?: string): Promise<ActivityItem[]> {
   const rows = await db
     .select({
       templateId: templates.id,
@@ -201,6 +203,7 @@ export async function getActivity(limit = 30): Promise<ActivityItem[]> {
     .from(templateVersions)
     .innerJoin(templates, eq(templateVersions.templateId, templates.id))
     .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(visibleFilter(viewerId))
     .orderBy(desc(templateVersions.createdAt))
     .limit(limit)
   return withAvatar(rows as ActivityItem[])
@@ -262,6 +265,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       tags: templates.tags,
       currentVersion: templates.currentVersion,
       origin: templates.origin,
+      visibility: templates.visibility,
       starsCount: templates.starsCount,
       forksCount: templates.forksCount,
       createdAt: templates.createdAt,

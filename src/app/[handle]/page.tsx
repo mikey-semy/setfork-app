@@ -30,7 +30,7 @@ export default async function ProfilePage({
 
   const tab: Tab = sp.tab === 'starred' ? 'starred' : 'lists'
   const counts = await getProfileCounts(user.id)
-  const items = tab === 'starred' ? await getStarredTemplates(user.id) : await getUserTemplates(user.id)
+  const items = tab === 'starred' ? await getStarredTemplates(user.id, viewer?.userId) : await getUserTemplates(user.id, viewer?.userId)
   const bigAvatar = await avatarSrc(user.avatarUrl, 180)
 
   return (

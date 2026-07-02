@@ -23,11 +23,10 @@ export default async function ExplorePage({
   const sp = await searchParams
   const aiOn = hasOpenRouterKey()
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
-  const [lang, session, tags, feed] = await Promise.all([
-    getLang(),
-    getSession(),
+  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [tags, feed] = await Promise.all([
     getPopularTags(),
-    getFeed({ sort, tag: sp.tag, q: sp.q }),
+    getFeed({ sort, tag: sp.tag, q: sp.q }, session?.userId),
   ])
   const qs = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams()
