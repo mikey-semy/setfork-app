@@ -53,7 +53,7 @@ const DICT = {
   },
   trending: { en: 'Trending', ru: 'В тренде' },
   newest: { en: 'Newest', ru: 'Новые' },
-  mostLiked: { en: 'Most liked', ru: 'Популярные' },
+  mostStarred: { en: 'Most starred', ru: 'Популярные' },
   like: { en: 'Like', ru: 'Нравится' },
   liked: { en: 'Liked', ru: 'Понравилось' },
   star: { en: 'Star', ru: 'Отметить' },

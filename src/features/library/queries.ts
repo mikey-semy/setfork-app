@@ -3,7 +3,7 @@ import { and, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
 import { db, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 
-export type FeedSort = 'trending' | 'newest' | 'mostLiked'
+export type FeedSort = 'trending' | 'newest' | 'mostStarred'
 
 export interface FeedItem {
   id: string
@@ -44,7 +44,7 @@ export async function getFeed(
   const order =
     opts.sort === 'newest'
       ? desc(templates.updatedAt)
-      : opts.sort === 'mostLiked'
+      : opts.sort === 'mostStarred'
         ? desc(templates.starsCount)
         : desc(sql`${templates.starsCount} + ${templates.forksCount}`) // trending
 

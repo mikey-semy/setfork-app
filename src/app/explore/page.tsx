@@ -8,10 +8,10 @@ import { FeedList } from '@/features/library/FeedList'
 import { generateFromQuery } from '@/features/library/actions'
 import { getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
 
-const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostLiked' }[] = [
+const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostStarred' }[] = [
   { key: 'trending', tkey: 'trending' },
   { key: 'newest', tkey: 'newest' },
-  { key: 'mostLiked', tkey: 'mostLiked' },
+  { key: 'mostStarred', tkey: 'mostStarred' },
 ]
 
 export default async function ExplorePage({
