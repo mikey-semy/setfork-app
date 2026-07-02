@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, BadgeCheck, GitFork, GitPullRequest, ListChecks, Lock, Pencil, Settings, Star, Tag } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, GitFork, GitPullRequest, ListChecks, Lock, Pencil, PlayCircle, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { forkTemplate } from '@/features/library/actions'
+import { startRun } from '@/features/runs/actions'
 import { StarButton } from '@/features/library/StarButton'
 import { ShareButton } from '@/features/library/ShareButton'
 import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/library/queries'
@@ -76,6 +77,13 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {session && active === 'overview' && (
+              <form action={startRun.bind(null, meta.id)}>
+                <button className="inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-primary-fg">
+                  <PlayCircle size={15} /> {t('runStart', lang)}
+                </button>
+              </form>
+            )}
             {session ? (
               <StarButton templateId={meta.id} starred={starred} count={meta.starsCount} label={t('star', lang)} />
             ) : (
@@ -109,7 +117,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
             ) : (
               <Link
                 href={`${base}/suggest`}
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-[13px] font-semibold text-primary-fg"
+                className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong"
               >
                 <Pencil size={14} /> {t('suggestEdit', lang)}
               </Link>
