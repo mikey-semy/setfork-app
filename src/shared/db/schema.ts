@@ -532,9 +532,10 @@ export const runStepStateRelations = relations(runStepState, ({ one }) => ({
   step: one(steps, { fields: [runStepState.stepId], references: [steps.id] }),
 }))
 
-export const suggestionsRelations = relations(suggestions, ({ one }) => ({
+export const suggestionsRelations = relations(suggestions, ({ one, many }) => ({
   template: one(templates, { fields: [suggestions.templateId], references: [templates.id] }),
   author: one(users, { fields: [suggestions.authorId], references: [users.id] }),
+  comments: many(suggestionComments),
 }))
 
 export const generationsRelations = relations(generations, ({ one, many }) => ({
