@@ -4,8 +4,9 @@ import { useActionState, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import type { Social } from '@/shared/db/schema'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { AvatarDropzone } from './AvatarDropzone'
-import { SOCIAL_TYPES } from './socials'
+import { SOCIAL_TYPES, SocialIcon } from './socials'
 import { updateProfile, type ActionResult } from './actions'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
@@ -48,7 +49,14 @@ export function SettingsForm({
 
       <div>
         <label className={lbl}>{t('bio', lang)}</label>
-        <textarea name="bio" defaultValue={bio} maxLength={280} rows={3} placeholder={t('bioPh', lang)} className={`${field} resize-y`} />
+        <textarea
+          name="bio"
+          defaultValue={bio}
+          maxLength={280}
+          rows={2}
+          placeholder={t('bioPh', lang)}
+          className={`${field} min-h-[39px] max-h-[81px] resize-y overflow-y-auto`}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -69,17 +77,21 @@ export function SettingsForm({
         <div className="flex flex-col gap-2">
           {rows.map((row, i) => (
             <div key={i} className="flex items-center gap-2">
-              <select
-                value={row.type}
-                onChange={(e) => setRow(i, { type: e.target.value })}
-                className="w-[140px] shrink-0 rounded-md border border-border bg-surface-2 px-2 py-2 text-[13px] text-ink outline-none focus:border-border-strong"
-              >
-                {SOCIAL_TYPES.map((s) => (
-                  <option key={s.type} value={s.type}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
+              <Select value={row.type} onValueChange={(v) => setRow(i, { type: v })}>
+                <SelectTrigger className="w-[160px] shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SOCIAL_TYPES.map((s) => (
+                    <SelectItem key={s.type} value={s.type}>
+                      <span className="flex items-center gap-2">
+                        <SocialIcon type={s.type} className="shrink-0 text-ink-2" />
+                        {s.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <input
                 value={row.url}
                 onChange={(e) => setRow(i, { url: e.target.value })}
@@ -90,7 +102,7 @@ export function SettingsForm({
                 type="button"
                 onClick={() => removeRow(i)}
                 aria-label="remove"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border text-muted hover:text-ink"
+                className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-md border border-border text-muted hover:text-ink"
               >
                 <X size={15} />
               </button>
