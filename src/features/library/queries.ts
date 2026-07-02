@@ -1,8 +1,9 @@
 import 'server-only'
-import { and, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
-import { db, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
+import { and, cosineDistance, desc, eq, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { db, embeddings, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc } from '@/shared/media'
+import { getSearchMode } from '@/shared/settings/search'
 
 // Резолвим ownerAvatarUrl (storage_key → подписанный imgproxy-URL) для ленты.
 async function withAvatar<T extends { ownerAvatarUrl: string | null }>(rows: T[]): Promise<T[]> {
@@ -44,6 +45,60 @@ export async function getPopularTags(limit = 24): Promise<TagRow[]> {
   return res.rows as unknown as TagRow[]
 }
 
+// Колонки FeedItem — общие для ленты и поиска.
+const FEED_COLS = {
+  id: templates.id,
+  ownerHandle: users.handle,
+  ownerAvatarUrl: users.avatarUrl,
+  slug: templates.slug,
+  title: templates.title,
+  desc: templates.desc,
+  tags: templates.tags,
+  version: templates.currentVersion,
+  origin: templates.origin,
+  runsCount: templates.runsCount,
+  forksCount: templates.forksCount,
+  starsCount: templates.starsCount,
+  updatedAt: templates.updatedAt,
+}
+
+const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${tag}]::text[]`
+
+/** Поиск/лента по ключевым словам (ILIKE по всем языкам сразу). q пустой = просто лента. */
+async function keywordFeed(order: SQL, tag?: string, q?: string): Promise<FeedItem[]> {
+  const filters: SQL[] = []
+  if (tag) filters.push(tagFilter(tag))
+  if (q) {
+    const like = `%${q}%`
+    filters.push(or(ilike(sql`${templates.title}::text`, like), ilike(sql`${templates.desc}::text`, like), ilike(templates.slug, like))!)
+  }
+  const base = db.select(FEED_COLS).from(templates).innerJoin(users, eq(templates.ownerId, users.id))
+  const rows = filters.length ? await base.where(and(...filters)).orderBy(order) : await base.orderBy(order)
+  return rows as FeedItem[]
+}
+
+/** Семантический поиск (pgvector cosine). null, если запрос нельзя векторизовать. */
+async function semanticFeed(q: string, tag: string | undefined, limit: number): Promise<FeedItem[] | null> {
+  const { getAiSettings } = await import('@/shared/settings/ai')
+  const { embedOne } = await import('@/shared/ai/embeddings')
+  const { embeddingModel } = await getAiSettings()
+  const vec = await embedOne(q, embeddingModel)
+  if (!vec) return null
+
+  const similarity = sql<number>`1 - (${cosineDistance(embeddings.embedding, vec)})`
+  const filters: SQL[] = [eq(embeddings.kind, 'list'), isNotNull(embeddings.embedding)]
+  if (tag) filters.push(tagFilter(tag))
+  const rows = await db
+    .select(FEED_COLS)
+    .from(embeddings)
+    .innerJoin(templates, eq(embeddings.refId, templates.id))
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(...filters))
+    .orderBy(desc(similarity))
+    .limit(limit)
+  return rows as FeedItem[]
+}
+
 export async function getFeed(
   opts: { sort?: FeedSort; tag?: string; q?: string } = {},
 ): Promise<FeedItem[]> {
@@ -54,43 +109,21 @@ export async function getFeed(
         ? desc(templates.starsCount)
         : desc(sql`${templates.starsCount} + ${templates.forksCount}`) // trending
 
-  const base = db
-    .select({
-      id: templates.id,
-      ownerHandle: users.handle,
-      ownerAvatarUrl: users.avatarUrl,
-      slug: templates.slug,
-      title: templates.title,
-      desc: templates.desc,
-      tags: templates.tags,
-      version: templates.currentVersion,
-      origin: templates.origin,
-      runsCount: templates.runsCount,
-      forksCount: templates.forksCount,
-      starsCount: templates.starsCount,
-      updatedAt: templates.updatedAt,
-    })
-    .from(templates)
-    .innerJoin(users, eq(templates.ownerId, users.id))
+  const q = opts.q?.trim()
+  if (!q) return withAvatar(await keywordFeed(order, opts.tag))
 
-  const filters: SQL[] = []
-  if (opts.tag) filters.push(sql`${templates.tags} @> ARRAY[${opts.tag}]::text[]`)
-  if (opts.q?.trim()) {
-    const like = `%${opts.q.trim()}%`
-    // Поиск по всем языкам сразу: jsonb → text.
-    filters.push(
-      or(
-        ilike(sql`${templates.title}::text`, like),
-        ilike(sql`${templates.desc}::text`, like),
-        ilike(templates.slug, like),
-      )!,
-    )
-  }
+  const mode = await getSearchMode()
+  if (mode === 'keyword') return withAvatar(await keywordFeed(order, opts.tag, q))
 
-  const rows = filters.length
-    ? await base.where(and(...filters)).orderBy(order)
-    : await base.orderBy(order)
-  return withAvatar(rows as FeedItem[])
+  const semantic = await semanticFeed(q, opts.tag, 40)
+  // Нет вектора (нет ключа/эмбеддингов) → откат на ключевые слова.
+  if (!semantic) return withAvatar(await keywordFeed(order, opts.tag, q))
+  if (mode === 'semantic') return withAvatar(semantic)
+
+  // hybrid: сначала по смыслу, затем добираем совпадения по словам, которых ещё нет.
+  const keyword = await keywordFeed(order, opts.tag, q)
+  const seen = new Set(semantic.map((r) => r.id))
+  return withAvatar([...semantic, ...keyword.filter((r) => !seen.has(r.id))])
 }
 
 /** Списки, созданные или форкнутые пользователем (страница /my-lists). */

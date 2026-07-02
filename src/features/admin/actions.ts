@@ -5,6 +5,7 @@ import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
 import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
+import { clearSearchModeCache, SEARCH_MODES, SEARCH_MODE_KEY, type SearchMode } from '@/shared/settings/search'
 
 export async function setAiSettings(formData: FormData): Promise<void> {
   await requireAdmin()
@@ -63,6 +64,17 @@ export async function setMediaSettings(formData: FormData): Promise<void> {
   await saveSettings(settings)
   clearMediaCache()
   revalidatePath('/admin')
+}
+
+// ── Режим поиска ─────────────────────────────────────────────────────
+export async function setSearchMode(mode: string): Promise<{ ok: true } | { error: string }> {
+  if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
+  if (!SEARCH_MODES.includes(mode as SearchMode)) return { error: 'Неизвестный режим.' }
+  await saveSettings({ [SEARCH_MODE_KEY]: mode })
+  clearSearchModeCache()
+  revalidatePath('/admin')
+  revalidatePath('/explore')
+  return { ok: true }
 }
 
 // ── Реиндексация эмбеддингов (RAG) ───────────────────────────────────

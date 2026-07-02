@@ -2,8 +2,10 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getAiSettings, getApiKey, maskKey } from '@/shared/settings/ai'
 import { getMediaSettings, maskSecret } from '@/shared/settings/media'
+import { getSearchMode } from '@/shared/settings/search'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
+import { SearchModeSelect } from '@/features/admin/SearchModeSelect'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { AiKeyAndSwitch } from '@/features/admin/AiKeyAndSwitch'
 import { CreditsWidget } from '@/features/admin/CreditsWidget'
@@ -47,7 +49,7 @@ export default async function AdminPage() {
   await requireAdmin()
   const lang = await getLang()
   const ru = lang === 'ru'
-  const [settings, apiKey, media] = await Promise.all([getAiSettings(), getApiKey(), getMediaSettings()])
+  const [settings, apiKey, media, searchMode] = await Promise.all([getAiSettings(), getApiKey(), getMediaSettings(), getSearchMode()])
   const hasKey = Boolean(apiKey)
   const maskedKey = maskKey(apiKey)
   const mediaValues = {
@@ -166,6 +168,16 @@ export default async function AdminPage() {
             : 'S3-compatible storage, imgproxy and CDN. Values override .env; an empty field falls back to .env.'}
         </p>
         <MediaSettingsForm ru={ru} v={mediaValues} />
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <div className="mb-1 font-semibold text-ink">{ru ? 'Поиск' : 'Search'}</div>
+        <p className="mb-4 text-[13px] text-ink-2">
+          {ru
+            ? 'Режим строки поиска. Семантика и гибрид используют векторный индекс (нужен ключ и индексация); при недоступности — откат на ключевые слова.'
+            : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'}
+        </p>
+        <SearchModeSelect current={searchMode} ru={ru} />
       </section>
 
       <ReindexPanel ru={ru} />
