@@ -33,7 +33,7 @@ export default async function SettingsPage() {
   const h = await headers()
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
-  const mcpUrl = `${proto}://${host}/api/mcp/mcp`
+  const mcpUrl = `${proto}://${host}/api/mcp`
 
   const sections: SettingsSection[] = [
     {

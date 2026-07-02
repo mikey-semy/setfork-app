@@ -45,7 +45,7 @@ const handler = createMcpHandler(
     )
   },
   { serverInfo: { name: 'sethub', version: '0.1.0' }, capabilities: { tools: {} } },
-  { basePath: '/api/mcp' },
+  { basePath: '/api' }, // → эндпоинт /api/mcp (Streamable HTTP), /api/sse (legacy)
 )
 
 // Bearer-токен SetHub → пользователь.
