@@ -1,62 +1,119 @@
-# SetHub — runnable checklists (MVP)
+# SetHub — списки-эталоны, которые создаёт сообщество и ИИ
 
-Запускаемые, версионируемые чек-листы для разработчиков. Список — не статичный
-док: ты **прогоняешь** его, отмечаешь шаги, он хранит прогресс и версию, а из
-публичной **библиотеки** любой чек-лист можно **форкнуть** под свой стек.
+SetHub — площадка для **канонических списков-инструкций**: не статичный док и не
+просто чек-лист, а живой эталон, который **генерирует нейросеть**, дорабатывает
+сообщество, а версии и авторство честно хранятся. Нашёл готовый — **форкнул** под
+свой стек; не нашёл — **сгенерировал по запросу** (с веб-поиском); хочешь
+подключить ИИ-агента — он ходит в SetHub **по MCP**.
 
-Ядро ценности v0 (single-player, полезно при нуле других пользователей):
+Список — это упорядоченная последовательность **или** неупорядоченный набор шагов;
+у шага есть заголовок, описание, команда, подпункты-проверки, ссылки и скриншот.
 
-1. **Структурированный чек-лист** — упорядоченные шаги с markdown/командами/подшагами/ссылками.
-2. **Прогоны (runs)** — исполняемый экземпляр шаблона: отмечаешь шаги, состояние и заметки сохраняются, прогон привязан к версии.
-3. **Форк + публичная библиотека** — засеянные качественные чек-листы (деплой, инцидент, релиз, аудит…), форк под себя.
-4. **Лёгкое версионирование** — у шаблона есть версии, прогон помнит, на какой версии он шёл.
+## Что умеет
 
-Осознанно **вне MVP** (фаза v1): AI-генерация черновиков, community-trust/верификация,
-PR/merge, репутация, команды/права/биллинг, интеграция с IDE.
+**Списки и версии**
+- Типы: **упорядоченный** (шаги 1..N) или **набор/чек-лист** (порядок неважен).
+- Приватность **public/private** (как в GitHub), смена в danger-зоне списка.
+- Версионирование: черновик правится на месте, публикация = снимок-версия; правки не плодят версии.
+- Форк чужого списка (с атрибуцией), звёзды, предложения правок (PR-подобные suggestions).
+
+**AI**
+- **Генерация по запросу** через OpenRouter с **веб-поиском** (`:online`): нет совпадения в поиске → «Сгенерировать» → выбор из вариантов-кандидатов → создаётся **приватный черновик** → владелец публикует.
+- **«Улучшить с ИИ»** — правка пунктов по инструкции прямо в редакторе.
+- **Генерация примечания к версии** из диффа (как commit-message в Copilot).
+
+**Редактор**
+- Drag-and-drop переупорядочивание, **undo/redo** (Ctrl+Z/Shift+Z), Alt+↑/↓ для перемещения пункта.
+- Скриншоты шагов (загрузка перетаскиванием).
+
+**Поиск**
+- Keyword / **semantic (pgvector)** / hybrid — режим, порог релевантности и лимит настраиваются в админке; при отсутствии эмбеддингов — откат на ключевые слова.
+
+**Сообщество и модерация**
+- Подписки (follow) + лента активности по подпискам.
+- Уведомления: колокольчик с выпадашкой + страница + предпочтения.
+- **ИИ-модерация** только публичного контента (таксономия MLCommons/Llama Guard S1–S14): опасное не удаляется, а не пускается в публичное; verified-бейдж; админ-панель.
+
+**Аккаунты**
+- Вход по **паролю** (scrypt) и через **GitHub OAuth**; серверные сессии с отзывом и «кто онлайн».
+- Профиль: bio/локация/сайт/соцсети, аватар (drag-and-drop), удаление аккаунта = анонимизация.
+
+**Медиа**
+- S3-совместимое хранилище (MinIO локально / Selectel в проде) + **imgproxy** (подписанные webp-трансформы); настройки — в админке.
+
+**Экспорт / печать**
+- Скачать список в **Markdown / HTML**, печать → PDF (пункт не рвётся между страницами).
+
+**MCP / API для ИИ-агентов**
+- Удалённый **MCP-сервер** (`/api/mcp`, Streamable HTTP) с авторизацией персональными API-токенами.
+- Инструменты: `search_lists`, `get_list`, `create_list`, `update_list` (создаёт черновик; правит только владелец).
+
+**Учёт расхода ИИ (фундамент биллинга)**
+- Каждый вызов ИИ пишется в `ai_usage` с **фактической стоимостью OpenRouter**; админ-дашборд по пользователям + свой расход в настройках.
 
 ## Стек
 
 - **Next.js 16** (App Router) + **React 19** + TypeScript
-- **Drizzle ORM** + **PostgreSQL 16**
+- **Drizzle ORM** + **PostgreSQL 16** с **pgvector** (RAG-эмбеддинги, hnsw)
 - **Tailwind CSS** (токены дизайна в `globals.css`) + Radix-примитивы, light/dark
-- **GitHub OAuth** (jose-сессии) + dev-фолбэк «войти как demo»
-- Двуязычный интерфейс **EN/RU**
+- **OpenRouter** + Vercel `ai` SDK (генерация, refine, модерация, эмбеддинги)
+- **imgproxy** + S3 (`@aws-sdk/client-s3`), MinIO локально
+- **MCP**: `mcp-handler` + `@modelcontextprotocol/sdk`
+- Авторизация: **jose**-сессии, scrypt-пароли (node crypto), GitHub OAuth
+- Двуязычный интерфейс **EN/RU** (locale-JSON контент)
 - Feature-Sliced Design: `src/{app, features, shared, widgets}`
-
-Дизайн-исходник: `SetHub.dc.html` / `RunStep.dc.html` (Claude Design handoff).
 
 ## Быстрый старт
 
 ```bash
-cp .env.example .env         # заполни AUTH_SECRET (openssl rand -hex 32)
+cp .env.example .env          # заполни AUTH_SECRET (openssl rand -hex 32)
 npm install
-npm run db:up                # поднять Postgres в docker (порт 5435)
-npm run db:push              # применить схему
-npm run db:seed              # засеять библиотеку (8 тем, 8 чек-листов)
-npm run dev                  # http://localhost:3000
+npm run db:up                 # Postgres (pgvector) в docker, порт DB_PORT (по умолч. 5435)
+npm run db:push               # применить схему
+npm run db:seed               # засеять публичную библиотеку (темы + списки)
+npm run dev                   # http://localhost:3000
 ```
 
-Без GitHub OAuth-приложения на `/login` доступен вход **«Continue as demo»** —
-приложение полностью работает без внешней настройки.
+Без внешней настройки на `/login` работает вход **«Continue as demo»** — приложение
+полностью функционально. Опционально:
 
-Чтобы включить GitHub-вход: создай OAuth App
-(callback `http://localhost:3000/api/auth/github/callback`) и заполни
-`GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` в `.env`.
+- **AI** — задай `OPENROUTER_API_KEY` в `.env` **или** прямо в `/admin` (ключ хранится в БД, на клиент не уходит). Без ключа генерация/refine/семантика выключены (откат на keyword-поиск).
+- **GitHub-вход** — OAuth App (callback `…/api/auth/github/callback`) + `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET`.
+- **Медиа** — S3/imgproxy настраиваются в `/admin` (перекрывают `.env`); без них аватары/скриншоты падают на локальный диск.
+
+Админ-доступ (`/admin`) — по хэндлам из env `ADMIN_HANDLES` (по умолчанию `demo`).
+
+## Подключение ИИ-агента (MCP)
+
+1. Настройки → **«API и MCP-доступ»** → создай токен (показывается один раз).
+2. В ИИ-клиенте добавь удалённый MCP-сервер: URL `http://<host>/api/mcp`, заголовок `Authorization: Bearer shub_…`.
 
 ## Структура
 
 ```
 src/
-  app/                    # роуты: / (Search), /explore, /[owner]/[slug] (run), /login, /runs, /my-lists, /new
-    api/auth/*            # GitHub OAuth + demo + logout
+  app/
+    explore/                 # лента + поиск
+    generate/  generate/[id] # AI-генерация: запрос → выбор варианта
+    new/                     # создание списка (типы, редактор)
+    [handle]/                # профиль
+    [handle]/[slug]/         # список: overview / edit / versions / suggest(ions) / settings / export
+    admin/                   # AI/медиа/поиск + moderation + usage
+    api/[transport]/         # MCP-сервер (Streamable HTTP)
+    api/auth/*               # GitHub OAuth + demo + logout
   features/
-    library/              # лента, темы, детальная, создание списка
-    runs/                 # прогон: старт, отметка шагов, подшаги, заметки, форк
+    library/                 # лента, карточки, редактор (DnD/undo/redo), refine, change-note, экспорт
+    generation/              # генерация: кандидаты, экран выбора, «Underpants Gnomes»-заглушка
+    moderation/ follows/ notifications/ sessions/ settings/ profile/ auth/
+    mcp/                     # инструменты + API-токены
+    admin/                   # настройки ИИ/медиа/поиска, reindex, usage
   shared/
-    db/                   # Drizzle schema + клиент
-    auth/                 # jose-сессии + upsert юзера
-    i18n/                 # EN/RU
-    ui/, lib/             # Identicon, контролы, cn
-  widgets/                # TopNav
-scripts/seed.ts           # сид публичной библиотеки
+    db/                      # Drizzle schema + клиент (pgvector)
+    ai/                      # generate/refine/note, moderate, embeddings, usage(биллинг), models, rate-limit
+    auth/                    # jose-сессии, scrypt-пароли, api-token
+    media/                   # S3 + imgproxy (avatarSrc/imageUrl)
+    settings/                # AI/media/search — key-value в app_settings
+    i18n/  ui/  lib/
+  widgets/                   # TopNav, Dashboard
+scripts/seed.ts              # сид публичной библиотеки
 ```
