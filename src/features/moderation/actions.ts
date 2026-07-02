@@ -1,11 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { asc, eq } from 'drizzle-orm'
-import { db, steps, templates, templateVersions } from '@/shared/db'
+import { eq } from 'drizzle-orm'
+import { db, templates } from '@/shared/db'
 import { getAdmin } from '@/shared/auth/admin'
-import type { LocaleText } from '@/shared/i18n'
 import { moderateContent } from '@/shared/ai/moderate'
+import { buildListText, verdictReason } from './moderate-list'
 
 type Mod = 'active' | 'flagged' | 'hidden'
 
@@ -32,42 +32,19 @@ export async function setModeration(
   return { ok: true }
 }
 
-/** Собирает текст списка (заголовок + описание + шаги) для ИИ-проверки. */
-async function listText(templateId: string): Promise<string> {
-  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
-  if (!tpl) return ''
-  const [ver] = await db
-    .select({ id: templateVersions.id })
-    .from(templateVersions)
-    .where(eq(templateVersions.templateId, templateId))
-    .orderBy(asc(templateVersions.version))
-    .limit(1)
-  const stepRows = ver
-    ? await db.select().from(steps).where(eq(steps.versionId, ver.id)).orderBy(asc(steps.n))
-    : []
-  const flat = (x: LocaleText | null | undefined) => (x ? Object.values(x).filter(Boolean).join(' / ') : '')
-  return [
-    flat(tpl.title as LocaleText),
-    flat(tpl.desc as LocaleText),
-    ...stepRows.map((s, i) => `${i + 1}. ${flat(s.title as LocaleText)} — ${flat(s.desc as LocaleText)} ${s.command}`),
-  ]
-    .filter(Boolean)
-    .join('\n')
-}
-
-/** Проверить список ИИ; при опасности — flagged + причина. */
+/** Проверить список ИИ вручную (админ); при опасности — flagged + причина. */
 export async function aiModerate(templateId: string): Promise<{ flagged: boolean; reason: string } | { error: string }> {
   if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
-  const text = await listText(templateId)
-  const result = await moderateContent(text)
+  const result = await moderateContent(await buildListText(templateId))
   if (!result) return { error: 'ИИ недоступен (нет ключа/ошибка).' }
   await db
     .update(templates)
     .set({
       moderation: result.flagged ? 'flagged' : 'active',
-      moderationReason: result.flagged ? `AI: ${result.reason}` : null,
+      moderationReason: result.flagged ? verdictReason(result) : null,
     })
     .where(eq(templates.id, templateId))
   revalidatePath('/admin/moderation')
-  return result
+  revalidatePath('/explore')
+  return { flagged: result.flagged, reason: result.reason }
 }

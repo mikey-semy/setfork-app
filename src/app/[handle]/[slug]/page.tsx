@@ -23,7 +23,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
   const viewer = await getSession()
   const isOwnerOrAdmin = viewer?.userId === tpl.ownerId || isAdminHandle(viewer?.handle)
   if (tpl.visibility === 'private' && viewer?.userId !== tpl.ownerId) notFound()
-  if (tpl.moderation === 'hidden' && !isOwnerOrAdmin) notFound()
+  if (tpl.moderation !== 'active' && !isOwnerOrAdmin) notFound()
   // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.
   const previews = await getStepPreviews(steps, 'rs:fit:1400:1400')
   const stepImages: Record<string, string> = Object.fromEntries(

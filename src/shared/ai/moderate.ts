@@ -4,8 +4,37 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { getAiSettings, getApiKey } from '@/shared/settings/ai'
 import { pickChatModel } from './credits'
 
-/** ИИ-классификатор безопасности контента. null — если ИИ недоступен/ошибка. */
-export async function moderateContent(text: string): Promise<{ flagged: boolean; reason: string } | null> {
+export interface ModerationVerdict {
+  flagged: boolean
+  category: string // S-код + название по таксономии MLCommons, или '' если безопасно
+  reason: string
+}
+
+// Промт на базе стандартной таксономии опасностей MLCommons (как в Llama Guard, S1–S14).
+const SYSTEM = `You are a safety classifier for a PUBLIC how-to checklist website (mostly developer/IT, but any topic).
+Decide whether a list is safe to show publicly. Classify against the MLCommons hazard taxonomy.
+
+Flag (unsafe) ONLY if the list provides actionable how-to content that materially enables real-world harm in one of:
+S1 Violent Crimes — assisting violence against people/animals.
+S2 Non-Violent Crimes — fraud, scams, malware/hacking meant to cause harm, theft, drug production/trafficking.
+S3 Sex-Related Crimes — trafficking, sexual assault, non-consensual acts.
+S4 Child Sexual Exploitation — any sexual content involving minors.
+S6 Specialized Advice — dangerous medical/financial/legal instructions presented as safe/authoritative.
+S9 Indiscriminate Weapons — explosives, incendiaries, chemical/biological/nuclear/radiological weapons.
+S10 Hate — demeaning/dehumanizing a protected group; inciting hatred.
+S11 Suicide & Self-Harm — encouraging or instructing self-harm, suicide, eating disorders.
+S12 Sexual Content — explicit sexual/pornographic material.
+
+SAFE (do NOT flag): ordinary technical/DevOps/coding, defensive security & hardening, penetration testing in the abstract,
+education, cooking, fitness, productivity, everyday legal tasks, general knowledge.
+Bias toward SAFE for ambiguous, defensive, or educational content — this is a checklist site, not a weapons manual.
+
+Return ONLY strict JSON, no markdown:
+{"flagged": boolean, "category": string, "reason": string}
+category = the matching "Sx Name" (e.g. "S9 Indiscriminate Weapons") or "" when safe. reason = one short sentence.`
+
+/** ИИ-классификатор безопасности (MLCommons-таксономия). null — если ИИ недоступен/ошибка. */
+export async function moderateContent(text: string): Promise<ModerationVerdict | null> {
   const apiKey = await getApiKey()
   if (!apiKey || !text.trim()) return null
   const settings = await getAiSettings()
@@ -18,19 +47,18 @@ export async function moderateContent(text: string): Promise<{ flagged: boolean;
   try {
     const { text: out } = await generateText({
       model: openrouter.chat(model),
-      system: `You are a content-safety classifier for a public checklist site.
-Flag a list ONLY if it gives actionable instructions for clearly harmful/illegal activity:
-weapons or explosives manufacturing, creating dangerous substances/poisons, malware or hacking meant to cause harm,
-violence, self-harm, or sexual content involving minors.
-Educational, defensive-security, legal and everyday technical content is SAFE.
-Return ONLY strict JSON, no markdown: {"flagged": boolean, "reason": string}. Keep reason short.`,
+      system: SYSTEM,
       prompt: `Classify this list:\n${text.slice(0, 4000)}`,
       temperature: 0,
       maxOutputTokens: 200,
     })
     const cleaned = out.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
-    const obj = JSON.parse(cleaned) as { flagged?: unknown; reason?: unknown }
-    return { flagged: !!obj.flagged, reason: String(obj.reason ?? '').slice(0, 300) }
+    const obj = JSON.parse(cleaned) as { flagged?: unknown; category?: unknown; reason?: unknown }
+    return {
+      flagged: !!obj.flagged,
+      category: String(obj.category ?? '').slice(0, 60),
+      reason: String(obj.reason ?? '').slice(0, 300),
+    }
   } catch {
     return null
   }

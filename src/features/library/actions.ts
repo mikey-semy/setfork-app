@@ -19,6 +19,7 @@ import { generateListDraft } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { imageUrl, uploadImageFile } from '@/shared/media'
 import { notify } from '@/features/notifications/notify'
+import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems } from './editor'
 
 function parseTags(raw: unknown): string[] {
@@ -67,7 +68,13 @@ export async function setListVisibility(templateId: string, visibility: 'public'
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl || tpl.ownerId !== session.userId) return
-  await db.update(templates).set({ visibility }).where(eq(templates.id, templateId))
+  if (visibility === 'private') {
+    // приватному модерация не нужна — сбрасываем статус
+    await db.update(templates).set({ visibility, moderation: 'active', moderationReason: null }).where(eq(templates.id, templateId))
+  } else {
+    await db.update(templates).set({ visibility }).where(eq(templates.id, templateId))
+    await autoModerateList(templateId) // публикация → проверяем
+  }
   revalidatePath(`/${session.handle}/${tpl.slug}`)
   revalidatePath('/explore')
 }
@@ -136,6 +143,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
     .values({ templateId: tpl.id, version: 1, note: 'initial' })
     .returning()
   await insertSteps(ver.id, proposed)
+  if (visibility === 'public') await autoModerateList(tpl.id) // приватные не модерируем
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
 }
@@ -285,6 +293,7 @@ export async function generateFromQuery(formData: FormData): Promise<void> {
     .values({ templateId: tpl.id, version: 1, note: 'ai draft' })
     .returning()
   await insertSteps(ver.id, proposed)
+  await autoModerateList(tpl.id) // ai_draft публичен → проверяем
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
 }

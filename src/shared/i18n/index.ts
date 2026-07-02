@@ -224,13 +224,14 @@ const DICT = {
   unverifyAction: { en: 'Unverify', ru: 'Снять проверку' },
   hideAction: { en: 'Hide', ru: 'Скрыть' },
   unhideAction: { en: 'Unhide', ru: 'Показать' },
+  approveAction: { en: 'Approve', ru: 'Одобрить' },
   aiCheck: { en: 'AI check', ru: 'Проверка ИИ' },
   flaggedLabel: { en: 'Flagged', ru: 'На проверке' },
   hiddenLabel: { en: 'Hidden', ru: 'Скрыт' },
   statusActive: { en: 'Active', ru: 'Активен' },
   filterAll: { en: 'All', ru: 'Все' },
   hiddenNotice: { en: 'Hidden by moderation — not shown publicly.', ru: 'Скрыт модерацией — не виден публично.' },
-  flaggedNotice: { en: 'Flagged for review by moderation.', ru: 'Помечен модерацией на проверку.' },
+  flaggedNotice: { en: 'Under review — not public yet. Only you can see it.', ru: 'На проверке — пока не публичен. Виден только вам.' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT

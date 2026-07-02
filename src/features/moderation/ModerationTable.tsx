@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { BadgeCheck, EyeOff, Eye, Loader2, Sparkles } from 'lucide-react'
+import { BadgeCheck, Check, EyeOff, Eye, Loader2, Sparkles } from 'lucide-react'
 import { t, tr, type Lang } from '@/shared/i18n'
 import type { ModFilter, ModItem } from './queries'
 import { aiModerate, setModeration, setVerified } from './actions'
@@ -81,6 +81,15 @@ export function ModerationTable({
               </div>
 
               <div className="flex shrink-0 items-center gap-1.5">
+                {it.moderation !== 'active' && (
+                  <button
+                    onClick={() => start(() => void setModeration(it.id, 'active'))}
+                    disabled={pending}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[var(--ok)]/50 px-2.5 py-1.5 text-[12px] font-medium text-[var(--ok)] disabled:opacity-60"
+                  >
+                    <Check size={13} /> {t('approveAction', lang)}
+                  </button>
+                )}
                 <button
                   onClick={() => start(() => void setVerified(it.id, !it.verified))}
                   disabled={pending}

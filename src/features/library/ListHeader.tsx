@@ -21,7 +21,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   const isOwner = session?.userId === meta.ownerId
   const isAdmin = isAdminHandle(session?.handle)
   if (meta.visibility === 'private' && !isOwner) notFound() // приватный — только владельцу
-  if (meta.moderation === 'hidden' && !isOwner && !isAdmin) notFound() // скрытый — владелец и админ
+  if (meta.moderation !== 'active' && !isOwner && !isAdmin) notFound() // flagged/hidden не публичны
   const starred = session ? await isStarred(meta.id, session.userId) : false
   const suggCount = await getOpenSuggestionCount(meta.id)
   const base = `/${owner}/${slug}`
