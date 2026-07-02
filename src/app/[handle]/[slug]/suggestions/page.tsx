@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Check, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
-import { getSuggestions, getTemplateDetail } from '@/features/library/queries'
+import { getListMeta, getSuggestions } from '@/features/library/queries'
 import { acceptSuggestion, rejectSuggestion } from '@/features/library/actions'
+import { ListHeader } from '@/features/library/ListHeader'
 import type { ProposedItem } from '@/shared/db'
 
 export default async function SuggestionsPage({
@@ -16,11 +17,10 @@ export default async function SuggestionsPage({
 }) {
   const { handle: owner, slug } = await params
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const detail = await getTemplateDetail(owner, slug)
-  if (!detail) notFound()
-  const { tpl } = detail
-  const isOwner = session?.userId === tpl.ownerId
-  const list = await getSuggestions(tpl.id)
+  const meta = await getListMeta(owner, slug)
+  if (!meta) notFound()
+  const isOwner = session?.userId === meta.ownerId
+  const list = await getSuggestions(meta.id)
 
   const statusLabel = (s: string) =>
     s === 'accepted' ? t('statusAccepted', lang) : s === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
@@ -32,14 +32,9 @@ export default async function SuggestionsPage({
         : 'bg-[var(--accent-soft)] text-accent'
 
   return (
-    <div className="mx-auto w-full max-w-[780px] px-6 py-8">
-      <Link href={`/${owner}/${slug}`} className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
-        <ArrowLeft size={15} /> {tpl.owner.handle}/{tpl.slug}
-      </Link>
-      <h1 className="mb-5 text-[18px] font-bold text-ink">
-        {t('suggestions', lang)} <span className="text-muted">{list.length}</span>
-      </h1>
-
+    <>
+      <ListHeader owner={owner} slug={slug} active="suggestions" />
+      <div className="mx-auto w-full max-w-[820px] px-4 py-6">
       {list.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
           {t('noSuggestions', lang)}
@@ -103,6 +98,7 @@ export default async function SuggestionsPage({
           })}
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }

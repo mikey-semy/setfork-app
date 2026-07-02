@@ -184,6 +184,42 @@ export async function getStarredIds(userId: string, ids: string[]): Promise<Set<
   return new Set(rows.map((r) => r.t))
 }
 
+/** Лёгкая мета списка для шапки/сайдбара (без шагов). */
+export async function getListMeta(ownerHandle: string, slug: string) {
+  const [row] = await db
+    .select({
+      id: templates.id,
+      ownerId: templates.ownerId,
+      ownerHandle: users.handle,
+      ownerName: users.name,
+      ownerAvatarUrl: users.avatarUrl,
+      slug: templates.slug,
+      title: templates.title,
+      desc: templates.desc,
+      tags: templates.tags,
+      currentVersion: templates.currentVersion,
+      origin: templates.origin,
+      starsCount: templates.starsCount,
+      forksCount: templates.forksCount,
+      createdAt: templates.createdAt,
+      updatedAt: templates.updatedAt,
+    })
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(eq(users.handle, ownerHandle), eq(templates.slug, slug)))
+    .limit(1)
+  return row ?? null
+}
+
+/** Версии списка (для вкладки «Версии»). */
+export async function getVersions(templateId: string) {
+  return db
+    .select()
+    .from(templateVersions)
+    .where(eq(templateVersions.templateId, templateId))
+    .orderBy(desc(templateVersions.version))
+}
+
 /** Детальный список (owner/slug) + пункты текущей версии. */
 export async function getTemplateDetail(ownerHandle: string, slug: string) {
   const owner = await db.select().from(users).where(eq(users.handle, ownerHandle)).limit(1)
