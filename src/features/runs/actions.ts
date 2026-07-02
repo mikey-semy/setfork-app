@@ -97,18 +97,6 @@ export async function toggleSubtask(runId: string, stepId: string, idx: number):
   await db.update(runs).set({ updatedAt: new Date() }).where(eq(runs.id, runId))
 }
 
-// ── Заметка к шагу в прогоне ──────────────────────────────────────────
-export async function saveStepNote(runId: string, stepId: string, note: string): Promise<void> {
-  const session = await requireSession()
-  const run = await ownedRun(runId, session.userId)
-  if (!run) return
-  await db
-    .update(runStepState)
-    .set({ note: note.slice(0, 2000) })
-    .where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, stepId)))
-  await db.update(runs).set({ updatedAt: new Date() }).where(eq(runs.id, runId))
-}
-
 // ── Завершить / бросить прогон ────────────────────────────────────────
 export async function finishRun(runId: string): Promise<void> {
   const session = await requireSession()
@@ -116,7 +104,6 @@ export async function finishRun(runId: string): Promise<void> {
   if (!run) return
   await db.update(runs).set({ status: 'done', updatedAt: new Date() }).where(eq(runs.id, runId))
   revalidatePath(`/runs/${runId}`)
-  revalidatePath('/runs')
 }
 
 export async function reopenRun(runId: string): Promise<void> {
@@ -132,5 +119,10 @@ export async function abandonRun(runId: string): Promise<void> {
   const run = await ownedRun(runId, session.userId)
   if (!run) return
   await db.update(runs).set({ status: 'abandoned', updatedAt: new Date() }).where(eq(runs.id, runId))
-  redirect('/runs')
+  // Возвращаемся к самому списку (отдельной страницы «Мои прогоны» нет).
+  const back = await db.query.runs.findFirst({
+    where: (r) => eq(r.id, runId),
+    with: { template: { with: { owner: true } } },
+  })
+  redirect(back ? `/${back.template.owner.handle}/${back.template.slug}` : '/explore')
 }

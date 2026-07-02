@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, desc, eq, sql } from 'drizzle-orm'
-import { db, runStepState, runs, steps, templates, users } from '@/shared/db'
+import { and, eq } from 'drizzle-orm'
+import { db, runs } from '@/shared/db'
 
 /** Прогон со всеми шагами версии и их состоянием. Только владельцу прогона. */
 export async function getRun(runId: string, userId: string) {
@@ -34,40 +34,6 @@ export async function getRun(runId: string, userId: string) {
       state: stateByStep.get(s.id) ?? null,
     })),
   }
-}
-
-export interface RunListItem {
-  id: string
-  handle: string
-  slug: string
-  title: typeof templates.$inferSelect.title
-  status: 'active' | 'done' | 'abandoned'
-  doneCount: number
-  total: number
-  version: number
-  updatedAt: Date
-}
-
-/** Прогоны пользователя с прогрессом. */
-export async function getUserRuns(userId: string): Promise<RunListItem[]> {
-  const rows = await db
-    .select({
-      id: runs.id,
-      handle: users.handle,
-      slug: templates.slug,
-      title: templates.title,
-      status: runs.status,
-      doneCount: runs.doneCount,
-      total: sql<number>`(select count(*)::int from ${runStepState} where ${runStepState.runId} = ${runs.id})`,
-      version: runs.version,
-      updatedAt: runs.updatedAt,
-    })
-    .from(runs)
-    .innerJoin(templates, eq(runs.templateId, templates.id))
-    .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(eq(runs.userId, userId))
-    .orderBy(desc(runs.updatedAt))
-  return rows as RunListItem[]
 }
 
 /** Активный прогон пользователя по текущей версии списка (для кнопки «Продолжить»). */
