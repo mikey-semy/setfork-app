@@ -1,0 +1,130 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { CircleDot, CircleCheck } from 'lucide-react'
+import { getSession } from '@/shared/auth/session'
+import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
+import { Avatar } from '@/shared/ui/Avatar'
+import { Markdown } from '@/shared/ui/Markdown'
+import { getListMeta } from '@/features/library/queries'
+import { ListHeader } from '@/features/library/ListHeader'
+import { getIssue, getIssueComments } from '@/features/issues/queries'
+import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
+import { addIssueComment, setIssueStatus } from '@/features/issues/actions'
+
+const textareaCls = 'w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
+
+export default async function IssueThreadPage({
+  params,
+}: {
+  params: Promise<{ handle: string; slug: string; number: string }>
+}) {
+  const { handle: owner, slug, number: numStr } = await params
+  const number = Number(numStr)
+  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const meta = await getListMeta(owner, slug)
+  if (!meta) notFound()
+  const issue = number > 0 ? await getIssue(meta.id, number) : null
+  if (!issue) notFound()
+  const comments = await getIssueComments(issue.id)
+
+  const isOwner = session?.userId === meta.ownerId
+  const isAuthor = session?.userId === issue.authorId
+  const canToggle = isOwner || isAuthor
+  const closed = issue.status === 'closed'
+  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  const Header = ({ handle, avatarUrl, date, verb }: { handle: string; avatarUrl: string | null; date: Date; verb: string }) => (
+    <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px] text-ink-2">
+      <Avatar handle={handle} avatarUrl={avatarUrl} size={22} />
+      <span className="font-semibold text-ink">{handle}</span> {verb} · {fmt.format(new Date(date))}
+    </div>
+  )
+
+  return (
+    <>
+      <ListHeader owner={owner} slug={slug} active="issues" />
+      <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+        <div className="mb-1 flex flex-wrap items-start gap-x-2 gap-y-1">
+          <h1 className="text-[22px] font-bold leading-tight text-ink">
+            {issue.title} <span className="font-normal text-muted">#{issue.number}</span>
+          </h1>
+        </div>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold text-white ${
+              closed ? 'bg-accent' : 'bg-ok'
+            }`}
+          >
+            {closed ? <CircleCheck size={14} /> : <CircleDot size={14} />}
+            {closed ? t('issueClosedBadge', lang) : t('issueOpenBadge', lang)}
+          </span>
+          <span className="text-[13px] text-ink-2">
+            <span className="font-semibold text-ink">{issue.authorHandle}</span> {t('openedThis', lang)} ·{' '}
+            {comments.length} {t('commentBtn', lang).toLowerCase()}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            <IssueLabelChips labels={issue.labels} lang={lang} />
+          </div>
+        </div>
+
+        {/* Тело issue */}
+        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+          <Header handle={issue.authorHandle} avatarUrl={issue.authorAvatarUrl} date={issue.createdAt} verb={t('openedThis', lang)} />
+          <div className="px-4 py-3">
+            {issue.body ? <Markdown>{issue.body}</Markdown> : <p className="text-[13px] italic text-muted">—</p>}
+          </div>
+        </div>
+
+        {/* Комментарии */}
+        <div className="mt-3 flex flex-col gap-3">
+          {comments.map((c) => (
+            <div key={c.id} className="overflow-hidden rounded-lg border border-border bg-surface">
+              <Header handle={c.authorHandle} avatarUrl={c.authorAvatarUrl} date={c.createdAt} verb={t('commentedOn', lang)} />
+              <div className="px-4 py-3">
+                <Markdown>{c.body}</Markdown>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Форма ответа */}
+        {session ? (
+          <div className="mt-5 rounded-lg border border-border bg-surface p-4">
+            {/* Отдельная форма смены статуса (сиблинг, не вложенная) — кнопка ниже привязана через form=… */}
+            {canToggle && (
+              <form id="issue-status-form" action={setIssueStatus.bind(null, owner, slug, issue.number, closed ? 'open' : 'closed')} className="hidden" />
+            )}
+            <form action={addIssueComment} className="flex flex-col gap-3">
+              <input type="hidden" name="owner" value={owner} />
+              <input type="hidden" name="slug" value={slug} />
+              <input type="hidden" name="number" value={issue.number} />
+              <textarea name="body" rows={4} className={textareaCls} placeholder={t('writeComment', lang)} maxLength={20000} />
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {canToggle && (
+                  <button
+                    type="submit"
+                    form="issue-status-form"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+                  >
+                    {closed ? <CircleDot size={14} className="text-ok" /> : <CircleCheck size={14} className="text-accent" />}
+                    {closed ? t('reopenIssue', lang) : t('closeIssue', lang)}
+                  </button>
+                )}
+                <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+                  {t('commentBtn', lang)}
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <div className="mt-5 rounded-lg border border-border bg-surface px-4 py-3 text-[13.5px] text-ink-2">
+            <Link href={`/login?next=/${owner}/${slug}/issues/${issue.number}`} className="font-semibold text-accent hover:underline">
+              {t('signInToComment', lang)}
+            </Link>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}

@@ -15,6 +15,9 @@ export async function updateNotifyPrefs(formData: FormData): Promise<void> {
     suggestionResolved: on('suggestionResolved'),
     stars: on('stars'),
     forks: on('forks'),
+    issues: on('issues'),
+    comments: on('comments'),
+    watchedUpdates: on('watchedUpdates'),
   }
   await db.update(users).set({ notifyPrefs: prefs }).where(eq(users.id, session.userId))
   revalidatePath('/settings')

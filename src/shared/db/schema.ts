@@ -43,10 +43,16 @@ export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
   'suggestion_rejected',
+  'suggestion_comment',
+  'issue_new',
+  'issue_comment',
+  'new_version',
   'star',
   'fork',
   'follow',
 ])
+
+export const issueStatus = pgEnum('issue_status', ['open', 'closed'])
 
 // Предложенный пункт (снимок правки внутри suggestion).
 export type StepLevel = 'required' | 'recommended' | 'optional'
@@ -68,7 +74,15 @@ export type ProposedItem = {
 export type Social = { type: string; url: string } // type: github | x | telegram | youtube | linkedin | site …
 
 // Предпочтения уведомлений. Отсутствие ключа = включено (opt-out).
-export type NotifyPrefs = { newSuggestions?: boolean; suggestionResolved?: boolean; stars?: boolean; forks?: boolean }
+export type NotifyPrefs = {
+  newSuggestions?: boolean
+  suggestionResolved?: boolean
+  stars?: boolean
+  forks?: boolean
+  issues?: boolean // новый issue на моём списке
+  comments?: boolean // комментарии в issue/правке, где я участвую
+  watchedUpdates?: boolean // новая версия отслеживаемого списка
+}
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -261,6 +275,83 @@ export const suggestions = pgTable('suggestions', {
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 })
 
+// Комментарии-обсуждение к правке (review-комментарии, как в PR).
+export const suggestionComments = pgTable(
+  'suggestion_comments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('suggestion_comments_sug_idx').on(t.suggestionId)],
+)
+
+// ── Issues (обсуждения проблем/идей к списку) ────────────────────────
+export const issues = pgTable(
+  'issues',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    number: integer('number').notNull(), // порядковый номер в рамках списка (#1, #2…)
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    body: text('body').notNull().default(''),
+    status: issueStatus('status').notNull().default('open'),
+    labels: jsonb('labels').notNull().default([]).$type<string[]>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+  },
+  (t) => [
+    unique('issues_tpl_number').on(t.templateId, t.number),
+    index('issues_tpl_status_idx').on(t.templateId, t.status),
+  ],
+)
+
+export const issueComments = pgTable(
+  'issue_comments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    issueId: uuid('issue_id')
+      .notNull()
+      .references(() => issues.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('issue_comments_issue_idx').on(t.issueId)],
+)
+
+// ── Watches (подписка на список — как Watch на GitHub) ───────────────
+export const watches = pgTable(
+  'watches',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ userTpl: unique('watches_user_tpl').on(t.userId, t.templateId) }),
+)
+
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
@@ -379,6 +470,7 @@ export const notifications = pgTable(
     actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
     type: notificationType('type').notNull(),
     templateId: uuid('template_id').references(() => templates.id, { onDelete: 'cascade' }),
+    issueId: uuid('issue_id').references(() => issues.id, { onDelete: 'cascade' }),
     read: boolean('read').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -410,6 +502,22 @@ export const templateVersionsRelations = relations(templateVersions, ({ one, man
 
 export const stepsRelations = relations(steps, ({ one }) => ({
   version: one(templateVersions, { fields: [steps.versionId], references: [templateVersions.id] }),
+}))
+
+export const issuesRelations = relations(issues, ({ one, many }) => ({
+  template: one(templates, { fields: [issues.templateId], references: [templates.id] }),
+  author: one(users, { fields: [issues.authorId], references: [users.id] }),
+  comments: many(issueComments),
+}))
+
+export const issueCommentsRelations = relations(issueComments, ({ one }) => ({
+  issue: one(issues, { fields: [issueComments.issueId], references: [issues.id] }),
+  author: one(users, { fields: [issueComments.authorId], references: [users.id] }),
+}))
+
+export const suggestionCommentsRelations = relations(suggestionComments, ({ one }) => ({
+  suggestion: one(suggestions, { fields: [suggestionComments.suggestionId], references: [suggestions.id] }),
+  author: one(users, { fields: [suggestionComments.authorId], references: [users.id] }),
 }))
 
 export const runsRelations = relations(runs, ({ one, many }) => ({

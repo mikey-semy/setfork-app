@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, BadgeCheck, GitFork, GitPullRequest, ListChecks, Lock, Pencil, PlayCircle, Settings, Star, Tag } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, CircleDot, GitFork, GitPullRequest, ListChecks, Lock, Pencil, PlayCircle, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -11,8 +11,9 @@ import { startRun } from '@/features/runs/actions'
 import { StarButton } from '@/features/library/StarButton'
 import { ShareButton } from '@/features/library/ShareButton'
 import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/library/queries'
+import { getOpenIssueCount } from '@/features/issues/queries'
 
-type Tab = 'overview' | 'versions' | 'suggestions' | 'settings'
+type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'settings'
 
 /** Общая шапка страницы списка (= «репозиторий»): back, owner/name, действия, вкладки. */
 export async function ListHeader({ owner, slug, active }: { owner: string; slug: string; active: Tab }) {
@@ -24,7 +25,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   if (meta.visibility === 'private' && !isOwner) notFound() // приватный — только владельцу
   if (meta.moderation !== 'active' && !isOwner && !isAdmin) notFound() // flagged/hidden не публичны
   const starred = session ? await isStarred(meta.id, session.userId) : false
-  const suggCount = await getOpenSuggestionCount(meta.id)
+  const [suggCount, issueCount] = await Promise.all([getOpenSuggestionCount(meta.id), getOpenIssueCount(meta.id)])
   const base = `/${owner}/${slug}`
   const forkBound = forkTemplate.bind(null, meta.id)
 
@@ -128,6 +129,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
         <nav className="mt-3 flex gap-5 text-[14px] font-semibold">
           {tab('overview', base, <ListChecks size={15} />, t('overviewTab', lang))}
           {tab('versions', `${base}/versions`, <Tag size={15} />, t('versionsTab', lang))}
+          {tab('issues', `${base}/issues`, <CircleDot size={15} />, t('issuesTab', lang), issueCount)}
           {tab('suggestions', `${base}/suggestions`, <GitPullRequest size={15} />, t('suggestions', lang), suggCount)}
           {isOwner && tab('settings', `${base}/settings`, <Settings size={15} />, t('settings', lang))}
         </nav>
