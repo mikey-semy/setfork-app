@@ -11,16 +11,23 @@ import { ReindexPanel } from '@/features/admin/ReindexPanel'
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
-// Цена, по которой красим: для эмбеддингов — prompt, для чата — completion (или prompt).
+// OpenRouter возвращает отрицательную цену (-1/токен) у авто-роутеров — она «плавающая».
+function isVariable(m: ModelOption): boolean {
+  return m.promptPrice < 0 || m.completionPrice < 0
+}
+// Цена, по которой красим и сортируем: для эмбеддингов — prompt, для чата — completion (или prompt).
 function priceMetric(m: ModelOption, embedding?: boolean): number {
+  if (isVariable(m)) return Number.POSITIVE_INFINITY // «плавающие» — в конец списка
   return embedding ? m.promptPrice : m.completionPrice || m.promptPrice
 }
 function priceText(m: ModelOption, embedding: boolean, ru: boolean): string {
+  if (isVariable(m)) return ru ? 'Плавающая' : 'Variable'
   if (!m.promptPrice && !m.completionPrice) return ru ? 'Бесплатно' : 'Free'
   return embedding ? `$${m.promptPrice.toFixed(2)}` : `$${m.promptPrice.toFixed(2)} / $${m.completionPrice.toFixed(2)}`
 }
-// Зелёный — дёшево, жёлтый — средне, красный — дорого.
+// Зелёный — дёшево, жёлтый — средне, красный — дорого, серый — плавающая.
 function priceClass(metric: number): string {
+  if (!Number.isFinite(metric)) return 'text-muted'
   if (metric <= 1) return 'text-[var(--ok)]'
   if (metric <= 10) return 'text-[var(--warn)]'
   return 'text-[var(--danger)]'
