@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitFork, PlayCircle, Rocket, Sparkles, Star, Tag } from 'lucide-react'
+import { ExternalLink, FileText, GitFork, Info, PlayCircle, Rocket, Sparkles, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { Markdown } from '@/shared/ui/Markdown'
+import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 import { ExportMenu } from '@/features/library/ExportMenu'
@@ -108,9 +110,18 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                     <div className="flex gap-3">
                       <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? s.n : '•'}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</div>
-                        {tr(s.desc, lang) && (
-                          <div className="mt-1 text-[13px] leading-snug text-ink-2">{tr(s.desc, lang)}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</span>
+                          <StepLevelBadge level={s.level} lang={lang} />
+                        </div>
+                        {tr(s.desc, lang) && <Markdown className="mt-1">{tr(s.desc, lang)}</Markdown>}
+                        {tr(s.why, lang) && (
+                          <div className="mt-1.5 flex gap-1.5 text-[12.5px] text-ink-2">
+                            <Info size={13} className="mt-0.5 shrink-0 text-muted" />
+                            <span>
+                              <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> {tr(s.why, lang)}
+                            </span>
+                          </div>
                         )}
                         {stepImages[s.id] && (
                           // eslint-disable-next-line @next/next/no-img-element

@@ -297,6 +297,33 @@ export function ListEditor({
               onChange={(e) => patch(i, { command: e.target.value })}
             />
 
+            {/* Уровень + «зачем» */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11.5px] text-muted">{ru ? 'Уровень' : 'Level'}:</span>
+              {(['required', 'recommended', 'optional'] as const).map((lv) => (
+                <button
+                  key={lv}
+                  type="button"
+                  onClick={() => patch(i, { level: lv })}
+                  className={`rounded px-2 py-0.5 text-[11.5px] ${
+                    it.level === lv ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-ink-2 hover:text-ink'
+                  }`}
+                >
+                  {lv === 'required'
+                    ? ru ? 'Обязательно' : 'Required'
+                    : lv === 'recommended'
+                      ? ru ? 'Рекомендуется' : 'Recommended'
+                      : ru ? 'Опционально' : 'Optional'}
+                </button>
+              ))}
+            </div>
+            <input
+              className={input}
+              placeholder={ru ? 'Зачем этот шаг (необязательно)' : 'Why this step matters (optional)'}
+              value={it.why}
+              onChange={(e) => patch(i, { why: e.target.value })}
+            />
+
             {/* Подпункты */}
             {it.subtasks.length > 0 && (
               <div className="flex flex-col gap-1.5">

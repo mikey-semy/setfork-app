@@ -46,8 +46,10 @@ const handler = createMcpHandler(
 
     const itemShape = z.object({
       title: z.string().describe('Step title (short imperative)'),
-      desc: z.string().optional().describe('One clarifying sentence'),
+      desc: z.string().optional().describe('One or two clarifying sentences (light markdown ok)'),
       command: z.string().optional().describe('Shell command, if any'),
+      level: z.enum(['required', 'recommended', 'optional']).optional().describe('How essential the step is'),
+      why: z.string().optional().describe('Why this step matters (rationale)'),
       subtasks: z.array(z.string()).optional().describe('Verification checks'),
     })
 

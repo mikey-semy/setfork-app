@@ -10,6 +10,8 @@ export interface GeneratedItem {
   title: string
   desc: string
   command: string
+  level: 'required' | 'recommended' | 'optional'
+  why: string
   subtasks: string[]
 }
 export interface GeneratedList {
@@ -32,12 +34,12 @@ export interface GenerateOptions {
 }
 
 const JSON_SHAPE = `Return ONLY valid JSON (no markdown fences), exactly this shape:
-{"title": string, "desc": string, "tags": string[], "items": [{"title": string, "desc": string, "command": string, "subtasks": string[]}]}
+{"title": string, "desc": string, "tags": string[], "items": [{"title": string, "desc": string, "command": string, "level": "required"|"recommended"|"optional", "why": string, "subtasks": string[]}]}
 Rules:
 - title: concise noun phrase naming the list.
 - desc: one sentence describing it.
 - tags: 3-6 short lowercase tags, no '#'.
-- items: 4-12 ordered steps. title = short imperative. desc = one clarifying sentence. command = a shell command when applicable, else "". subtasks = 0-3 short verification checks.`
+- items: 4-12 ordered steps. title = short imperative. desc = one or two clarifying sentences; you MAY use light markdown (inline code, **bold**, bullet lists). command = a shell command when applicable, else "". level = how essential the step is. why = one short sentence on WHY this step matters (rationale), or "". subtasks = 0-3 short verification checks.`
 
 function parseList(text: string, fallbackTitle: string): GeneratedList | null {
   const cleaned = text
@@ -51,6 +53,7 @@ function parseList(text: string, fallbackTitle: string): GeneratedList | null {
   } catch {
     return null
   }
+  const LEVELS = ['required', 'recommended', 'optional']
   const items: GeneratedItem[] = Array.isArray(obj.items)
     ? obj.items
         .slice(0, 20)
@@ -58,6 +61,8 @@ function parseList(text: string, fallbackTitle: string): GeneratedList | null {
           title: String(it?.title ?? '').trim(),
           desc: String(it?.desc ?? '').trim(),
           command: String(it?.command ?? '').trim(),
+          level: (LEVELS.includes(String(it?.level)) ? String(it?.level) : 'required') as GeneratedItem['level'],
+          why: String(it?.why ?? '').trim(),
           subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s) => String(s).trim()).filter(Boolean).slice(0, 6) : [],
         }))
         .filter((it) => it.title)
