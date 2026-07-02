@@ -39,8 +39,8 @@ export interface Seg {
 }
 export interface DiffRow {
   type: 'ctx' | 'add' | 'del'
-  oldStep?: number
-  newStep?: number
+  oldNo?: number // номер строки в старой версии
+  newNo?: number // номер строки в новой версии
   head: boolean
   text: string
   segs?: Seg[] // пословная подсветка (для изменённых пар строк)
@@ -131,26 +131,26 @@ export function lineDiff(a: SLine[], b: SLine[]): { rows: DiffRow[]; added: numb
   let removed = 0
   while (i < n && j < m) {
     if (a[i].text === b[j].text) {
-      rows.push({ type: 'ctx', oldStep: a[i].step, newStep: b[j].step, head: a[i].head || b[j].head, text: a[i].text })
+      rows.push({ type: 'ctx', oldNo: i + 1, newNo: j + 1, head: a[i].head || b[j].head, text: a[i].text })
       i++
       j++
     } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      rows.push({ type: 'del', oldStep: a[i].step, head: a[i].head, text: a[i].text })
+      rows.push({ type: 'del', oldNo: i + 1, head: a[i].head, text: a[i].text })
       i++
       removed++
     } else {
-      rows.push({ type: 'add', newStep: b[j].step, head: b[j].head, text: b[j].text })
+      rows.push({ type: 'add', newNo: j + 1, head: b[j].head, text: b[j].text })
       j++
       added++
     }
   }
   while (i < n) {
-    rows.push({ type: 'del', oldStep: a[i].step, head: a[i].head, text: a[i].text })
+    rows.push({ type: 'del', oldNo: i + 1, head: a[i].head, text: a[i].text })
     i++
     removed++
   }
   while (j < m) {
-    rows.push({ type: 'add', newStep: b[j].step, head: b[j].head, text: b[j].text })
+    rows.push({ type: 'add', newNo: j + 1, head: b[j].head, text: b[j].text })
     j++
     added++
   }

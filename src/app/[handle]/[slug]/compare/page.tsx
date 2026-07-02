@@ -117,15 +117,13 @@ function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: CmpStep[];
           const rowStyle = clr ? { backgroundColor: `color-mix(in srgb, ${clr} 13%, transparent)` } : undefined
           const sign = r.type === 'add' ? '+' : r.type === 'del' ? '−' : ''
           const signColor = r.type === 'add' ? 'text-[var(--ok)]' : r.type === 'del' ? 'text-[var(--danger)]' : 'text-transparent'
-          const oldGut = r.head && r.type !== 'add' ? r.oldStep : undefined
-          const newGut = r.head && r.type !== 'del' ? r.newStep : undefined
           return (
-            <div key={i} style={rowStyle} className={`flex ${r.head && i > 0 ? 'border-t border-border/60' : ''}`}>
-              <span className="w-9 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] font-semibold text-muted">
-                {oldGut ?? ''}
+            <div key={i} style={rowStyle} className="flex">
+              <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] text-muted">
+                {r.oldNo ?? ''}
               </span>
-              <span className="w-9 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] font-semibold text-muted">
-                {newGut ?? ''}
+              <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] text-muted">
+                {r.newNo ?? ''}
               </span>
               <span className={`w-4 shrink-0 select-none text-center ${signColor}`}>{sign}</span>
               <span className="whitespace-pre-wrap break-words px-2 text-ink">
