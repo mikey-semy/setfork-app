@@ -2,8 +2,23 @@
 
 import { revalidatePath } from 'next/cache'
 import { and, eq } from 'drizzle-orm'
-import { db, notifications } from '@/shared/db'
-import { getSession } from '@/shared/auth/session'
+import { db, notifications, users } from '@/shared/db'
+import type { NotifyPrefs } from '@/shared/db/schema'
+import { getSession, requireSession } from '@/shared/auth/session'
+
+/** Сохранить предпочтения уведомлений (какие типы получать). */
+export async function updateNotifyPrefs(formData: FormData): Promise<void> {
+  const session = await requireSession()
+  const on = (k: string) => formData.get(k) === 'on'
+  const prefs: NotifyPrefs = {
+    newSuggestions: on('newSuggestions'),
+    suggestionResolved: on('suggestionResolved'),
+    stars: on('stars'),
+    forks: on('forks'),
+  }
+  await db.update(users).set({ notifyPrefs: prefs }).where(eq(users.id, session.userId))
+  revalidatePath('/settings')
+}
 
 /** Пометить все уведомления пользователя прочитанными. */
 export async function markNotificationsRead(): Promise<void> {

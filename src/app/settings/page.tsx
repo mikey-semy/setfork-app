@@ -6,6 +6,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { SettingsForm } from '@/features/settings/SettingsForm'
 import { DangerZone } from '@/features/settings/DangerZone'
+import { NotifyPrefsForm } from '@/features/notifications/NotifyPrefsForm'
 
 export default async function SettingsPage() {
   const session = await requireSession()
@@ -36,6 +37,12 @@ export default async function SettingsPage() {
           website={user.website ?? ''}
           socials={user.socials}
         />
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <div className="mb-1 font-semibold text-ink">{t('notifPrefsTitle', lang)}</div>
+        <p className="mb-4 text-[13px] text-ink-2">{t('notifPrefsIntro', lang)}</p>
+        <NotifyPrefsForm prefs={user.notifyPrefs} lang={lang} />
       </section>
 
       <DangerZone lang={lang} handle={user.handle} />

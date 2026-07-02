@@ -3,6 +3,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { redirect } from 'next/navigation'
+import { LoginForm } from '@/features/auth/AuthForms'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
@@ -14,6 +15,18 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="w-full max-w-[380px] rounded-xl border border-border bg-surface p-8 text-center shadow-card">
         <div className="mb-1 text-[40px] font-bold leading-none tracking-tight text-ink">SH</div>
         <div className="mb-6 text-[13.5px] text-ink-2">{t('loginRequired', lang)}</div>
+
+        <LoginForm lang={lang} />
+        <div className="mt-4 text-[12.5px] text-ink-2">
+          {t('noAccount', lang)}{' '}
+          <Link href="/register" className="font-semibold text-accent hover:underline">
+            {t('createAccount', lang)}
+          </Link>
+        </div>
+
+        <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-muted">
+          <span className="h-px flex-1 bg-border" /> {t('orSep', lang)} <span className="h-px flex-1 bg-border" />
+        </div>
 
         {hasGithub && (
           <Link

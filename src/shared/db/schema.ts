@@ -52,9 +52,14 @@ export type ProposedItem = {
 // handle = публичный идентификатор в модели owner/name (как в дизайне: acme/deploy-to-vps).
 export type Social = { type: string; url: string } // type: github | x | telegram | youtube | linkedin | site …
 
+// Предпочтения уведомлений. Отсутствие ключа = включено (opt-out).
+export type NotifyPrefs = { newSuggestions?: boolean; suggestionResolved?: boolean; stars?: boolean; forks?: boolean }
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   githubId: bigint('github_id', { mode: 'number' }).unique(), // null для demo-пользователя и ghost
+  email: text('email').unique(), // вход по паролю (null у github/demo/ghost)
+  passwordHash: text('password_hash'), // scrypt-хеш (null у oauth)
   handle: text('handle').notNull().unique(),
   name: text('name'),
   avatarUrl: text('avatar_url'),
@@ -62,6 +67,7 @@ export const users = pgTable('users', {
   location: text('location'),
   website: text('website'),
   socials: jsonb('socials').notNull().default([]).$type<Social[]>(),
+  notifyPrefs: jsonb('notify_prefs').notNull().default({}).$type<NotifyPrefs>(),
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
