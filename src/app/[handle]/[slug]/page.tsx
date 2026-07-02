@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitFork, Rocket, Sparkles, Star, Tag } from 'lucide-react'
+import { ExternalLink, FileText, GitFork, PlayCircle, Rocket, Sparkles, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -10,6 +10,8 @@ import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 import { ExportMenu } from '@/features/library/ExportMenu'
 import { publishList } from '@/features/library/actions'
+import { startRun } from '@/features/runs/actions'
+import { getActiveRunId } from '@/features/runs/queries'
 
 function fmt(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0) + 'k'
@@ -33,6 +35,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
   const stepImages: Record<string, string> = Object.fromEntries(
     steps.filter((s) => s.imageKey && previews[s.imageKey]).map((s) => [s.id, previews[s.imageKey as string]]),
   )
+  const activeRunId = viewer && currentVersion ? await getActiveRunId(tpl.id, currentVersion.id, viewer.userId) : null
 
   return (
     <>
@@ -71,6 +74,25 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
             {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
               <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3 text-[13px] text-accent print:hidden">
                 <Sparkles size={15} className="flex-shrink-0" /> {t('aiVerifyHint', lang)}
+              </div>
+            )}
+
+            {viewer && steps.length > 0 && (
+              <div className="mb-4 print:hidden">
+                {activeRunId ? (
+                  <Link
+                    href={`/runs/${activeRunId}`}
+                    className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-[13.5px] font-semibold text-primary-fg"
+                  >
+                    <PlayCircle size={16} /> {t('runContinue', lang)}
+                  </Link>
+                ) : (
+                  <form action={startRun.bind(null, tpl.id)}>
+                    <button className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-[13.5px] font-semibold text-primary-fg">
+                      <PlayCircle size={16} /> {t('runStart', lang)}
+                    </button>
+                  </form>
+                )}
               </div>
             )}
 
