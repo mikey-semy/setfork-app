@@ -3,6 +3,9 @@ import { getLang } from '@/shared/i18n/server'
 import { getAiSettings, getApiKey, maskKey } from '@/shared/settings/ai'
 import { getMediaSettings, maskSecret } from '@/shared/settings/media'
 import { getSearchSettings } from '@/shared/settings/search'
+import { getOnlineUsers } from '@/features/sessions/queries'
+import { Avatar } from '@/shared/ui/Avatar'
+import Link from 'next/link'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
@@ -49,7 +52,13 @@ export default async function AdminPage() {
   await requireAdmin()
   const lang = await getLang()
   const ru = lang === 'ru'
-  const [settings, apiKey, media, search] = await Promise.all([getAiSettings(), getApiKey(), getMediaSettings(), getSearchSettings()])
+  const [settings, apiKey, media, search, online] = await Promise.all([
+    getAiSettings(),
+    getApiKey(),
+    getMediaSettings(),
+    getSearchSettings(),
+    getOnlineUsers(),
+  ])
   const hasKey = Boolean(apiKey)
   const maskedKey = maskKey(apiKey)
   const mediaValues = {
@@ -79,6 +88,25 @@ export default async function AdminPage() {
           {ru ? 'Модель и параметры генерации. Хранится в БД, меняется на лету.' : 'Model & generation params. Stored in DB, changeable on the fly.'}
         </p>
       </div>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <div className="mb-3 flex items-center gap-2 font-semibold text-ink">
+          <span className="h-2 w-2 rounded-full bg-[var(--ok)]" />
+          {ru ? 'Сейчас онлайн' : 'Online now'} <span className="font-mono text-[12px] text-muted">{online.length}</span>
+        </div>
+        {online.length === 0 ? (
+          <p className="text-[13px] text-muted">{ru ? 'Никого онлайн.' : 'No one online.'}</p>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            {online.map((u) => (
+              <Link key={u.userId} href={`/${u.handle}`} className="flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-1 pr-3 hover:border-border-strong">
+                <Avatar handle={u.handle} avatarUrl={u.avatarUrl} size={24} />
+                <span className="text-[13px] text-ink">{u.handle}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="rounded-lg border border-border bg-surface p-5">
         <div className="mb-4 font-semibold text-ink">{ru ? 'Генерация и модели' : 'Generation & models'}</div>

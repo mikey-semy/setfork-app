@@ -1,0 +1,83 @@
+import 'server-only'
+import { desc, eq, gte, sql } from 'drizzle-orm'
+import { db, sessions, users } from '@/shared/db'
+import { avatarSrc } from '@/shared/media'
+
+const ONLINE_WINDOW_MS = 5 * 60_000
+
+/** UA → короткая метка «Chrome · Windows». */
+export function parseUA(ua: string | null): string {
+  if (!ua) return 'Unknown device'
+  const os = /Windows/.test(ua)
+    ? 'Windows'
+    : /Mac OS X|Macintosh/.test(ua)
+      ? 'macOS'
+      : /Android/.test(ua)
+        ? 'Android'
+        : /iPhone|iPad|iOS/.test(ua)
+          ? 'iOS'
+          : /Linux/.test(ua)
+            ? 'Linux'
+            : 'Unknown OS'
+  const br = /Edg\//.test(ua)
+    ? 'Edge'
+    : /OPR\/|Opera/.test(ua)
+      ? 'Opera'
+      : /Firefox\//.test(ua)
+        ? 'Firefox'
+        : /Chrome\//.test(ua)
+          ? 'Chrome'
+          : /Safari\//.test(ua)
+            ? 'Safari'
+            : 'Browser'
+  return `${br} · ${os}`
+}
+
+export interface UserSession {
+  id: string
+  device: string
+  ip: string | null
+  createdAt: Date
+  lastSeenAt: Date
+  current: boolean
+  online: boolean
+}
+
+export async function getUserSessions(userId: string, currentSid?: string): Promise<UserSession[]> {
+  const rows = await db.select().from(sessions).where(eq(sessions.userId, userId)).orderBy(desc(sessions.lastSeenAt))
+  const now = Date.now()
+  return rows.map((r) => ({
+    id: r.id,
+    device: parseUA(r.userAgent),
+    ip: r.ip,
+    createdAt: r.createdAt,
+    lastSeenAt: r.lastSeenAt,
+    current: r.id === currentSid,
+    online: now - new Date(r.lastSeenAt).getTime() < ONLINE_WINDOW_MS,
+  }))
+}
+
+export interface OnlineUser {
+  userId: string
+  handle: string
+  avatarUrl: string | null
+  lastSeenAt: Date
+}
+
+/** Пользователи с активной сессией за последние 5 минут (для админа). */
+export async function getOnlineUsers(): Promise<OnlineUser[]> {
+  const since = new Date(Date.now() - ONLINE_WINDOW_MS)
+  const rows = await db
+    .select({
+      userId: users.id,
+      handle: users.handle,
+      avatarUrl: users.avatarUrl,
+      lastSeenAt: sql<Date>`max(${sessions.lastSeenAt})`,
+    })
+    .from(sessions)
+    .innerJoin(users, eq(sessions.userId, users.id))
+    .where(gte(sessions.lastSeenAt, since))
+    .groupBy(users.id, users.handle, users.avatarUrl)
+    .orderBy(desc(sql`max(${sessions.lastSeenAt})`))
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 64) })))
+}

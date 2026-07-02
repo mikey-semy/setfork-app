@@ -2,7 +2,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 import { upsertGithubUser } from '@/shared/auth/users'
-import { setSessionCookie } from '@/shared/auth/session'
+import { startSession } from '@/shared/auth/session'
 
 export async function GET(req: NextRequest) {
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
@@ -47,6 +47,6 @@ export async function GET(req: NextRequest) {
   }
 
   const session = await upsertGithubUser(gh)
-  await setSessionCookie(session)
+  await startSession(session)
   return NextResponse.redirect(appUrl)
 }

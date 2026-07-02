@@ -195,6 +195,16 @@ const DICT = {
   passwordShort: { en: 'Password must be at least 8 characters.', ru: 'Пароль минимум 8 символов.' },
   invalidEmailMsg: { en: 'Enter a valid email.', ru: 'Введите корректную почту.' },
   invalidHandleMsg: { en: 'Handle: 3–30 chars, a–z, 0–9, hyphen.', ru: 'Ник: 3–30 символов, a–z, 0–9, дефис.' },
+  // ── Sessions / presence ──
+  sessionsTitle: { en: 'Active sessions', ru: 'Активные сессии' },
+  sessionsIntro: { en: "Devices where you're signed in.", ru: 'Устройства, где вы вошли.' },
+  currentSession: { en: 'this device', ru: 'это устройство' },
+  revoke: { en: 'Revoke', ru: 'Отозвать' },
+  signOutOthers: { en: 'Sign out other sessions', ru: 'Выйти на других устройствах' },
+  onlineLabel: { en: 'online', ru: 'онлайн' },
+  lastSeen: { en: 'last seen', ru: 'был(а)' },
+  onlineUsers: { en: 'Online now', ru: 'Сейчас онлайн' },
+  noOnline: { en: 'No one online.', ru: 'Никого онлайн.' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT

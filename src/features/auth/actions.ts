@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { eq } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
-import { setSessionCookie } from '@/shared/auth/session'
+import { startSession } from '@/shared/auth/session'
 import { hashPassword, verifyPassword } from '@/shared/auth/password'
 import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
@@ -15,8 +15,8 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 const HANDLE_RE = /^[a-z0-9-]{3,30}$/
 const RESERVED = new Set(['explore', 'new', 'settings', 'admin', 'login', 'register', 'notifications', 'my-lists', 'api', 'generate', 'ghost'])
 
-async function startSession(user: { id: string; handle: string; name: string | null; avatarUrl: string | null }) {
-  await setSessionCookie({
+async function beginSession(user: { id: string; handle: string; name: string | null; avatarUrl: string | null }) {
+  await startSession({
     userId: user.id,
     handle: user.handle,
     name: user.name ?? undefined,
@@ -47,7 +47,7 @@ export async function registerWithPassword(_prev: AuthResult | null, formData: F
     return { error: t('emailTaken', lang) } // гонка по unique
   }
 
-  await startSession(created)
+  await beginSession(created)
   redirect('/')
 }
 
@@ -59,6 +59,6 @@ export async function loginWithPassword(_prev: AuthResult | null, formData: Form
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
   if (!user || !verifyPassword(password, user.passwordHash)) return { error: t('invalidCredentials', lang) }
 
-  await startSession(user)
+  await beginSession(user)
   redirect('/')
 }

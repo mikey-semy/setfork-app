@@ -235,6 +235,22 @@ export const suggestions = pgTable('suggestions', {
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 })
 
+// ── Sessions (серверный реестр входов — для отзыва и «кто онлайн») ────
+export const sessions = pgTable(
+  'sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    userAgent: text('user_agent'),
+    ip: text('ip'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('sessions_user_idx').on(t.userId), index('sessions_last_seen_idx').on(t.lastSeenAt)],
+)
+
 // ── Notifications (колокольчик) ──────────────────────────────────────
 export const notifications = pgTable(
   'notifications',

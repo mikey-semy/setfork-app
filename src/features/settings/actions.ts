@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { eq, inArray, sql } from 'drizzle-orm'
 import { db, stars, suggestions, templates, users } from '@/shared/db'
 import type { Social } from '@/shared/db/schema'
-import { clearSessionCookie, requireSession, setSessionCookie } from '@/shared/auth/session'
+import { clearSessionCookie, refreshSessionCookie, requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
 import { removeAvatar, saveAvatar } from './avatar'
 
@@ -59,7 +59,7 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
 
   // В сессии храним УЖЕ отрезолвленный URL (навбар — клиент, подписать сам не может).
   const sessionAvatar = avatarRef ? ((await avatarSrc(avatarRef, 64)) ?? undefined) : session.avatarUrl
-  await setSessionCookie({
+  await refreshSessionCookie({
     userId: session.userId,
     handle: session.handle,
     name: name ?? undefined,

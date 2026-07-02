@@ -7,6 +7,8 @@ import { t } from '@/shared/i18n'
 import { SettingsForm } from '@/features/settings/SettingsForm'
 import { DangerZone } from '@/features/settings/DangerZone'
 import { NotifyPrefsForm } from '@/features/notifications/NotifyPrefsForm'
+import { getUserSessions } from '@/features/sessions/queries'
+import { SessionsList } from '@/features/sessions/SessionsList'
 
 export default async function SettingsPage() {
   const session = await requireSession()
@@ -17,6 +19,7 @@ export default async function SettingsPage() {
     redirect('/login')
   }
   const avatar = await avatarSrc(user.avatarUrl, 144)
+  const userSessions = await getUserSessions(session.userId, session.sid)
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-6 py-8">
@@ -43,6 +46,12 @@ export default async function SettingsPage() {
         <div className="mb-1 font-semibold text-ink">{t('notifPrefsTitle', lang)}</div>
         <p className="mb-4 text-[13px] text-ink-2">{t('notifPrefsIntro', lang)}</p>
         <NotifyPrefsForm prefs={user.notifyPrefs} lang={lang} />
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <div className="mb-1 font-semibold text-ink">{t('sessionsTitle', lang)}</div>
+        <p className="mb-4 text-[13px] text-ink-2">{t('sessionsIntro', lang)}</p>
+        <SessionsList sessions={userSessions} lang={lang} />
       </section>
 
       <DangerZone lang={lang} handle={user.handle} />
