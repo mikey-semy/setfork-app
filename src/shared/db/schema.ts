@@ -116,6 +116,7 @@ export const templates = pgTable(
     moderation: moderationStatus('moderation').notNull().default('active'),
     moderationReason: text('moderation_reason'),
     verified: boolean('verified').notNull().default(false),
+    pinned: boolean('pinned').notNull().default(false), // закреплён владельцем на профиле
     forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
     runsCount: integer('runs_count').notNull().default(0),
     forksCount: integer('forks_count').notNull().default(0),

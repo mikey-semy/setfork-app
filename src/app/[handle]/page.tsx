@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Link2, MapPin } from 'lucide-react'
+import { Link2, MapPin, Pin } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
-import { getUserTemplates } from '@/features/library/queries'
+import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
 import { getContributions, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
 import { ActivityGraph } from '@/features/profile/ActivityGraph'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
@@ -41,7 +41,10 @@ export default async function ProfilePage({
     getContributions(user.id),
     getReceivedStats(user.id),
   ])
-  const items = tab === 'starred' ? await getStarredTemplates(user.id, viewer?.userId) : await getUserTemplates(user.id, viewer?.userId)
+  const [items, pinned] = await Promise.all([
+    tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
+    getPinnedTemplates(user.id, viewer?.userId),
+  ])
 
   return (
     <div className="w-full px-6 py-8 lg:px-8">
@@ -128,6 +131,33 @@ export default async function ProfilePage({
         </aside>
 
         <section className="min-w-0 flex-1">
+          {pinned.length > 0 && (
+            <div className="mb-6">
+              <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-2">
+                <Pin size={13} className="text-muted" /> {t('pinnedLabel', lang)}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {pinned.map((it) => {
+                  const desc = tr(it.desc, lang)
+                  return (
+                    <Link
+                      key={it.id}
+                      href={`/${it.ownerHandle}/${it.slug}`}
+                      className="group rounded-lg border border-border bg-surface px-3.5 py-3 hover:border-border-strong"
+                    >
+                      <div className="truncate text-[13.5px] font-semibold text-accent group-hover:underline">{tr(it.title, lang)}</div>
+                      {desc && <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-ink-2">{desc}</p>}
+                      <div className="mt-2 flex items-center gap-3 font-mono text-[11px] text-muted">
+                        <span>★ {it.starsCount}</span>
+                        <span>⑂ {it.forksCount}</span>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="mb-6">
             <ActivityGraph
               contributions={contributions}

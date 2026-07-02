@@ -181,6 +181,17 @@ export async function getFeed(
   return withAvatar([...semantic, ...keyword.filter((r) => !seen.has(r.id))])
 }
 
+/** Закреплённые списки пользователя (для профиля). */
+export async function getPinnedTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
+  const rows = await db
+    .select(FEED_COLS)
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(eq(templates.ownerId, userId), eq(templates.pinned, true), visibleFilter(viewerId)))
+    .orderBy(desc(templates.updatedAt))
+  return withAvatar(rows as FeedItem[])
+}
+
 /** Списки пользователя. viewerId = кто смотрит: владелец видит и приватные. */
 export async function getUserTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
   const rows = await db
@@ -288,6 +299,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       origin: templates.origin,
       status: templates.status,
       ordered: templates.ordered,
+      pinned: templates.pinned,
       visibility: templates.visibility,
       moderation: templates.moderation,
       moderationReason: templates.moderationReason,
