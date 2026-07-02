@@ -6,7 +6,7 @@ import { getSearchSettings } from '@/shared/settings/search'
 import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
-import { Shield } from 'lucide-react'
+import { BarChart3, Shield } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
@@ -90,12 +90,20 @@ export default async function AdminPage() {
             {ru ? 'Модель и параметры генерации. Хранится в БД, меняется на лету.' : 'Model & generation params. Stored in DB, changeable on the fly.'}
           </p>
         </div>
-        <Link
-          href="/admin/moderation"
-          className="inline-flex shrink-0 items-center gap-2 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg"
-        >
-          <Shield size={14} /> {ru ? 'Модерация' : 'Moderation'}
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/admin/usage"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+          >
+            <BarChart3 size={14} /> {ru ? 'Расход ИИ' : 'AI usage'}
+          </Link>
+          <Link
+            href="/admin/moderation"
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg"
+          >
+            <Shield size={14} /> {ru ? 'Модерация' : 'Moderation'}
+          </Link>
+        </div>
       </div>
 
       <section className="rounded-lg border border-border bg-surface p-5">

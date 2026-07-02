@@ -16,9 +16,11 @@ import {
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { imageUrl, uploadImageFile } from '@/shared/media'
+import { generateListRefine } from '@/shared/ai/generate'
+import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { notify } from '@/features/notifications/notify'
 import { autoModerateList } from '@/features/moderation/moderate-list'
-import { parseEditorItems, toProposedItems } from './editor'
+import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { parseTags, slugify } from './slug'
 
 async function insertSteps(versionId: string, items: ProposedItem[]): Promise<void> {
@@ -215,6 +217,51 @@ export async function rejectSuggestion(suggestionId: string): Promise<void> {
     .where(eq(suggestions.id, sug.id))
   await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_rejected', templateId: sug.templateId })
   revalidatePath('/', 'layout')
+}
+
+// ── AI-refine: правка пунктов редактора по инструкции ────────────────
+export async function refineList(input: {
+  items: EditorItem[]
+  title: string
+  desc: string
+  tags: string[]
+  instruction: string
+}): Promise<{ items: EditorItem[] } | { error: string }> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const instruction = String(input.instruction ?? '').trim()
+  if (!instruction) return { error: 'empty' }
+
+  const { allowed } = checkRateLimit(`refine:${session.userId}`)
+  if (!allowed) return { error: 'ratelimited' }
+
+  const current = {
+    title: input.title || '',
+    desc: input.desc || '',
+    tags: input.tags || [],
+    items: (input.items || [])
+      .filter((it) => it.title?.trim())
+      .map((it) => ({
+        title: it.title,
+        desc: it.desc,
+        command: it.command,
+        subtasks: (it.subtasks || []).filter((s) => s.trim()),
+      })),
+  }
+  const refined = await generateListRefine(current, instruction, lang, { userId: session.userId, feature: 'refine' })
+  if (!refined) return { error: 'aifail' }
+
+  // Refine переписывает текстовое содержимое шагов; скриншоты/ссылки не переносятся.
+  const items: EditorItem[] = refined.items.map((it) => ({
+    title: it.title,
+    desc: it.desc,
+    command: it.command,
+    imageKey: '',
+    imagePreview: '',
+    subtasks: it.subtasks,
+    refs: [],
+  }))
+  return { items }
 }
 
 // ── Публикация черновика (draft → published) ─────────────────────────

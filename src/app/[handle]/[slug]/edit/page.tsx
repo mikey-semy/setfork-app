@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { saveNewVersion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
@@ -54,7 +54,12 @@ export default async function EditPage({
         />
 
         <label className="mb-2 block text-[12.5px] font-semibold text-ink-2">{lang === 'ru' ? 'Пункты' : 'Items'}</label>
-        <ListEditor name="items" initialItems={initial} lang={lang} />
+        <ListEditor
+          name="items"
+          initialItems={initial}
+          lang={lang}
+          aiRefine={{ title: tr(tpl.title, lang), desc: tr(tpl.desc, lang), tags: tpl.tags }}
+        />
 
         <button className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
           {t('saveVersion', lang)}

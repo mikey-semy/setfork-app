@@ -58,7 +58,7 @@ export default async function NewListPage() {
         </div>
 
         <label className="mb-2 block text-[12.5px] font-semibold text-ink-2">{ru ? 'Пункты' : 'Items'}</label>
-        <ListEditor name="items" initialItems={[]} lang={lang} />
+        <ListEditor name="items" initialItems={[]} lang={lang} aiRefine={{ title: '', desc: '', tags: [] }} />
 
         <button className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
           {ru ? 'Создать список' : 'Create list'}

@@ -1,0 +1,111 @@
+import 'server-only'
+import { and, desc, eq, gte, sql } from 'drizzle-orm'
+import { aiUsage, db, users } from '@/shared/db'
+
+export type AiFeature = 'generate' | 'regenerate' | 'refine' | 'moderate' | 'embed'
+
+// Форма usage-объекта OpenRouter (providerMetadata.openrouter.usage).
+export interface OpenRouterUsage {
+  promptTokens?: number
+  completionTokens?: number
+  totalTokens?: number
+  cost?: number // в кредитах OpenRouter (= USD)
+}
+
+/** Достаёт usage/cost из результата generateText (OpenRouter usage accounting), с фолбэком на result.usage. */
+export function extractUsage(result: {
+  usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number }
+  providerMetadata?: Record<string, unknown>
+}): { input: number; output: number; total: number; cost: number } {
+  const orRaw = (result.providerMetadata?.openrouter as { usage?: OpenRouterUsage } | undefined)?.usage
+  const input = orRaw?.promptTokens ?? result.usage?.inputTokens ?? 0
+  const output = orRaw?.completionTokens ?? result.usage?.outputTokens ?? 0
+  const total = orRaw?.totalTokens ?? result.usage?.totalTokens ?? input + output
+  const cost = typeof orRaw?.cost === 'number' ? orRaw.cost : 0
+  return { input, output, total, cost }
+}
+
+/** Записать один вызов ИИ в журнал расхода. Никогда не роняет основной поток. */
+export async function recordUsage(row: {
+  userId?: string | null
+  feature: AiFeature
+  model: string
+  input: number
+  output: number
+  total: number
+  cost: number
+  refType?: string
+  refId?: string
+}): Promise<void> {
+  try {
+    await db.insert(aiUsage).values({
+      userId: row.userId ?? null,
+      feature: row.feature,
+      model: row.model,
+      inputTokens: Math.round(row.input),
+      outputTokens: Math.round(row.output),
+      totalTokens: Math.round(row.total),
+      costUsd: row.cost.toFixed(6),
+      refType: row.refType ?? null,
+      refId: row.refId ?? null,
+    })
+  } catch (e) {
+    console.warn('[ai-usage] record failed', e instanceof Error ? e.message : e)
+  }
+}
+
+export interface UsageByUser {
+  userId: string | null
+  handle: string | null
+  name: string | null
+  calls: number
+  totalTokens: number
+  costUsd: number
+}
+
+/** Агрегаты расхода по пользователям (для админки). sinceDays — окно, 0 = всё время. */
+export async function getUsageByUser(sinceDays = 0): Promise<UsageByUser[]> {
+  const filters = sinceDays > 0 ? [gte(aiUsage.createdAt, sql`now() - ${`${sinceDays} days`}::interval`)] : []
+  const rows = await db
+    .select({
+      userId: aiUsage.userId,
+      handle: users.handle,
+      name: users.name,
+      calls: sql<number>`count(*)::int`,
+      totalTokens: sql<number>`coalesce(sum(${aiUsage.totalTokens}),0)::int`,
+      costUsd: sql<number>`coalesce(sum(${aiUsage.costUsd}),0)::float8`,
+    })
+    .from(aiUsage)
+    .leftJoin(users, eq(aiUsage.userId, users.id))
+    .where(filters.length ? and(...filters) : undefined)
+    .groupBy(aiUsage.userId, users.handle, users.name)
+    .orderBy(desc(sql`coalesce(sum(${aiUsage.costUsd}),0)`))
+  return rows as UsageByUser[]
+}
+
+/** Итог по всему сервису за окно. */
+export async function getUsageTotals(sinceDays = 0): Promise<{ calls: number; totalTokens: number; costUsd: number }> {
+  const filters = sinceDays > 0 ? [gte(aiUsage.createdAt, sql`now() - ${`${sinceDays} days`}::interval`)] : []
+  const [r] = await db
+    .select({
+      calls: sql<number>`count(*)::int`,
+      totalTokens: sql<number>`coalesce(sum(${aiUsage.totalTokens}),0)::int`,
+      costUsd: sql<number>`coalesce(sum(${aiUsage.costUsd}),0)::float8`,
+    })
+    .from(aiUsage)
+    .where(filters.length ? and(...filters) : undefined)
+  return r ?? { calls: 0, totalTokens: 0, costUsd: 0 }
+}
+
+/** Расход одного пользователя (для его настроек). */
+export async function getUserUsage(userId: string): Promise<{ calls: number; totalTokens: number; costUsd: number }> {
+  const [r] = await db
+    .select({
+      calls: sql<number>`count(*)::int`,
+      totalTokens: sql<number>`coalesce(sum(${aiUsage.totalTokens}),0)::int`,
+      costUsd: sql<number>`coalesce(sum(${aiUsage.costUsd}),0)::float8`,
+    })
+    .from(aiUsage)
+    .where(eq(aiUsage.userId, userId))
+  return r ?? { calls: 0, totalTokens: 0, costUsd: 0 }
+}

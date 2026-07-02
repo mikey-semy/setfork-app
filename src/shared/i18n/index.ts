@@ -51,6 +51,14 @@ const DICT = {
     en: 'Drafted by AI — review, refine and star it so it becomes a proven reference.',
     ru: 'Черновик от нейросети — проверьте, доработайте и отметьте звездой, чтобы он стал эталоном.',
   },
+  aiUsageTitle: { en: 'AI usage', ru: 'Расход ИИ' },
+  aiUsageIntro: {
+    en: 'Your AI generation and refinement consumption on SetHub.',
+    ru: 'Ваш расход на AI-генерацию и правки на SetHub.',
+  },
+  aiUsageCalls: { en: 'Calls', ru: 'Вызовы' },
+  aiUsageTokens: { en: 'Tokens', ru: 'Токены' },
+  aiUsageCost: { en: 'Cost', ru: 'Стоимость' },
   draftBadge: { en: 'Draft', ru: 'Черновик' },
   draftHint: {
     en: 'Only you can see this. Edit it, then publish when it’s ready.',
