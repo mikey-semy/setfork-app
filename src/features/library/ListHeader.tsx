@@ -70,7 +70,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
               </span>
             )}
             {meta.verified && (
-              <span className="inline-flex items-center gap-1 rounded-md border border-[var(--ok)]/40 bg-[var(--ok)]/10 px-2 py-0.5 text-[11px] font-medium text-[var(--ok)]">
+              <span className="inline-flex items-center gap-1 rounded-md border border-ok/40 bg-ok/10 px-2 py-0.5 text-[11px] font-medium text-ok">
                 <BadgeCheck size={12} /> {t('verifiedLabel', lang)}
               </span>
             )}
@@ -136,8 +136,8 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
           <div
             className={`mt-3 rounded-md border px-3 py-2 text-[12.5px] ${
               meta.moderation === 'hidden'
-                ? 'border-[var(--danger)]/40 bg-[var(--danger)]/10 text-[var(--danger)]'
-                : 'border-[var(--warn)]/40 bg-[var(--warn)]/10 text-[var(--warn)]'
+                ? 'border-danger/40 bg-danger/10 text-danger'
+                : 'border-warn/40 bg-warn/10 text-warn'
             }`}
           >
             {meta.moderation === 'hidden' ? t('hiddenNotice', lang) : t('flaggedNotice', lang)}

@@ -27,9 +27,10 @@ const config: Config = {
         primary: 'var(--primary)',
         'primary-fg': 'var(--primary-fg)',
         cur: 'var(--cur)',
-        ok: 'var(--ok)',
-        warn: 'var(--warn)',
-        danger: 'var(--danger)',
+        // rgb-триплет + <alpha-value> — чтобы работали bg-ok/10, border-danger/40 и т.п.
+        ok: 'rgb(var(--ok-rgb) / <alpha-value>)',
+        warn: 'rgb(var(--warn-rgb) / <alpha-value>)',
+        danger: 'rgb(var(--danger-rgb) / <alpha-value>)',
       },
       borderRadius: { xl: '16px', lg: '11px', md: '9px', sm: '7px' },
       boxShadow: {

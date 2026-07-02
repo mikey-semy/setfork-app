@@ -29,13 +29,13 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             <Link href={`/${item.ownerHandle}/${item.slug}`} className="font-semibold text-accent hover:underline">
               {item.slug}
             </Link>
-            {item.verified && <BadgeCheck size={14} className="ml-1 inline text-[var(--ok)]" />}
+            {item.verified && <BadgeCheck size={14} className="ml-1 inline text-ok" />}
           </span>
           <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">
             v{item.version}
           </span>
           {item.status === 'draft' && (
-            <span className="rounded border border-[var(--warn)] px-1.5 py-0.5 text-[10.5px] font-medium text-[var(--warn)]">
+            <span className="rounded border border-warn px-1.5 py-0.5 text-[10.5px] font-medium text-warn">
               {t('draftBadge', lang)}
             </span>
           )}
@@ -72,7 +72,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
         <button
           title="star"
           className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors hover:border-border-strong ${
-            starred ? 'border-[var(--warn)] text-[var(--warn)]' : 'border-border text-ink-2'
+            starred ? 'border-warn text-warn' : 'border-border text-ink-2'
           }`}
         >
           <Star size={14} fill={starred ? 'currentColor' : 'none'} /> {fmt(item.starsCount)}

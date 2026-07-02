@@ -42,7 +42,7 @@ export function CreditsWidget({ ru }: { ru: boolean }) {
 
   if (error) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-3 py-2 text-[12.5px] text-[var(--warn)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-[12.5px] text-warn">
         <span>{error}</span>
         {refresh}
       </div>

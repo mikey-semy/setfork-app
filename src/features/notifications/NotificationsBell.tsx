@@ -38,7 +38,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
         >
           <Bell size={17} />
           {count > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 grid h-[15px] min-w-[15px] place-items-center rounded-full bg-[var(--danger)] px-1 text-[9px] font-bold text-white">
+            <span className="absolute -right-0.5 -top-0.5 grid h-[15px] min-w-[15px] place-items-center rounded-full bg-danger px-1 text-[9px] font-bold text-white">
               {count > 9 ? '9+' : count}
             </span>
           )}

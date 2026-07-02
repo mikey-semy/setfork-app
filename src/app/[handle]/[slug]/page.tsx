@@ -56,9 +56,9 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
             </div>
 
             {tpl.status === 'draft' && isOwner && (
-              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--warn)] bg-surface px-4 py-3 print:hidden">
+              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-warn bg-surface px-4 py-3 print:hidden">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--warn)]">
+                  <div className="flex items-center gap-1.5 text-[13.5px] font-semibold text-warn">
                     <FileText size={15} /> {t('draftBadge', lang)}
                   </div>
                   <p className="mt-0.5 text-[12.5px] text-ink-2">{t('draftHint', lang)}</p>

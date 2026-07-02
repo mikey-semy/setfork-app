@@ -66,7 +66,7 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
                 onClick={() => setActive(s.id)}
                 className={`flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
                   !shown ? 'pointer-events-none opacity-30' : active === s.id ? 'bg-surface-2 font-semibold text-ink' : 'text-ink-2 hover:text-ink'
-                } ${s.danger ? 'text-[var(--danger)]' : ''}`}
+                } ${s.danger ? 'text-danger' : ''}`}
               >
                 {s.icon} {s.title}
               </a>

@@ -92,12 +92,12 @@ export default async function ExplorePage({
           </div>
         )}
         {sp.e === 'aifail' && (
-          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-[var(--danger)]">
+          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-danger">
             {t('aiFail', lang)}
           </div>
         )}
         {sp.e === 'ratelimited' && (
-          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-[var(--warn)]">
+          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-warn">
             {t('rateLimited', lang)}
           </div>
         )}

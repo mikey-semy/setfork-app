@@ -11,8 +11,8 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
   const matches = confirm.trim().toLowerCase() === handle.toLowerCase()
 
   return (
-    <section className="rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/5 p-5">
-      <div className="mb-1 font-semibold text-[var(--danger)]">{t('dangerZone', lang)}</div>
+    <section className="rounded-lg border border-danger/40 bg-danger/5 p-5">
+      <div className="mb-1 font-semibold text-danger">{t('dangerZone', lang)}</div>
       <p className="mb-4 max-w-[560px] text-[13px] text-ink-2">{t('deleteAccountHint', lang)}</p>
 
       <form action={action} className="flex flex-col gap-3">
@@ -25,15 +25,15 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="off"
-            className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-[var(--danger)]"
+            className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-danger"
           />
           <button
             disabled={!matches || pending}
-            className="inline-flex items-center gap-2 rounded-md bg-[var(--danger)] px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-md bg-danger px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
           >
             <Trash2 size={14} /> {t('deleteAccount', lang)}
           </button>
-          {state?.error && <span className="text-[13px] text-[var(--danger)]">{state.error}</span>}
+          {state?.error && <span className="text-[13px] text-danger">{state.error}</span>}
         </div>
       </form>
     </section>

@@ -48,7 +48,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </form>
 
         {sp.e && (
-          <div className="mt-4 text-[12px] text-[var(--danger)]">
+          <div className="mt-4 text-[12px] text-danger">
             {sp.e === 'no_github'
               ? lang === 'ru'
                 ? 'GitHub OAuth не настроен — используйте demo-вход.'

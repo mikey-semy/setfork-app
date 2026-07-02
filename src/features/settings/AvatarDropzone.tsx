@@ -85,7 +85,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
             {dragOver ? t('dropRelease', lang) : t('dropAvatar', lang)}
           </div>
           <p className="mt-1 text-[12px] text-muted">{t('avatarHint', lang)}</p>
-          {error && <p className="mt-1 text-[12px] text-[var(--danger)]">{error}</p>}
+          {error && <p className="mt-1 text-[12px] text-danger">{error}</p>}
           {preview && (
             <button
               type="button"

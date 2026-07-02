@@ -8,7 +8,7 @@ export function StepLevelBadge({ level, lang }: { level: StepLevel; lang: Lang }
   return (
     <span
       className={`rounded border px-1.5 py-0.5 text-[10.5px] font-medium ${
-        recommended ? 'border-[var(--warn)] text-[var(--warn)]' : 'border-border text-muted'
+        recommended ? 'border-warn text-warn' : 'border-border text-muted'
       }`}
     >
       {t(recommended ? 'levelRecommended' : 'levelOptional', lang)}

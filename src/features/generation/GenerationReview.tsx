@@ -51,12 +51,12 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
       </p>
 
       {error === 'aifail' && (
-        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-[var(--danger)]">
+        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-danger">
           {ru ? 'Не удалось сгенерировать ещё вариант.' : 'Could not generate another variant.'}
         </div>
       )}
       {error === 'ratelimited' && (
-        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-[var(--warn)]">
+        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-warn">
           {ru ? 'Слишком часто — подожди немного.' : 'Too many requests — please wait a bit.'}
         </div>
       )}

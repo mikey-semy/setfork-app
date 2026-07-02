@@ -60,7 +60,7 @@ export function ChangeNoteField({
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
         </button>
       </div>
-      {err && <p className="mt-1 text-[12px] text-[var(--danger)]">{err}</p>}
+      {err && <p className="mt-1 text-[12px] text-danger">{err}</p>}
     </div>
   )
 }
