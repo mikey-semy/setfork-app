@@ -277,6 +277,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       currentVersion: templates.currentVersion,
       origin: templates.origin,
       status: templates.status,
+      ordered: templates.ordered,
       visibility: templates.visibility,
       moderation: templates.moderation,
       moderationReason: templates.moderationReason,

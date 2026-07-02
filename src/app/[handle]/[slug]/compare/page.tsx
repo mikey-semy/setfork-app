@@ -5,19 +5,9 @@ import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
-import { Markdown } from '@/shared/ui/Markdown'
-import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getListMeta, getVersions, getVersionSteps } from '@/features/library/queries'
-import { diffSteps, type CmpStep, type DiffEntry } from '@/features/library/diff'
-
-const STATUS: Record<DiffEntry['status'], { border: string; badge: string; key: 'diffAdded' | 'diffRemoved' | 'diffChanged' | 'diffMoved' | null }> = {
-  added: { border: 'border-[var(--ok)]/50 bg-[var(--ok)]/5', badge: 'text-[var(--ok)] border-[var(--ok)]/50', key: 'diffAdded' },
-  removed: { border: 'border-[var(--danger)]/50 bg-[var(--danger)]/5', badge: 'text-[var(--danger)] border-[var(--danger)]/50', key: 'diffRemoved' },
-  changed: { border: 'border-[var(--warn)]/50 bg-[var(--warn)]/5', badge: 'text-[var(--warn)] border-[var(--warn)]/50', key: 'diffChanged' },
-  moved: { border: 'border-[var(--accent)]/50', badge: 'text-accent border-[var(--accent)]/50', key: 'diffMoved' },
-  unchanged: { border: 'border-border opacity-60', badge: '', key: null },
-}
+import { lineDiff, serializeSteps, type CmpStep } from '@/features/library/diff'
 
 function toCmp(steps: { title: LocaleText; desc: LocaleText; command: string; level: CmpStep['level']; why: LocaleText; subtasks: LocaleText[] }[], lang: 'en' | 'ru'): CmpStep[] {
   return steps.map((s) => ({
@@ -53,7 +43,10 @@ export default async function ComparePage({
 
   const [fromV, toV] = await Promise.all([getVersionSteps(meta.id, fromN), getVersionSteps(meta.id, toN)])
   if (!fromV || !toV) notFound()
-  const { entries, summary } = diffSteps(toCmp(fromV.steps, lang), toCmp(toV.steps, lang))
+  const { rows, added, removed } = lineDiff(
+    serializeSteps(toCmp(fromV.steps, lang), meta.ordered),
+    serializeSteps(toCmp(toV.steps, lang), meta.ordered),
+  )
 
   const base = `/${owner}/${slug}/compare`
   const chip = (v: number, param: 'from' | 'to', activeN: number, other: number) => (
@@ -86,68 +79,34 @@ export default async function ComparePage({
         </div>
 
         {/* Сводка */}
-        <div className="mb-4 flex flex-wrap gap-3 text-[12.5px]">
-          <span className="text-[var(--ok)]">+{summary.added}</span>
-          <span className="text-[var(--danger)]">−{summary.removed}</span>
-          <span className="text-[var(--warn)]">~{summary.changed}</span>
-          <span className="text-muted">{t('diffSummary', lang)}</span>
+        <div className="mb-3 flex flex-wrap gap-3 text-[12.5px]">
+          <span className="text-[var(--ok)]">+{added}</span>
+          <span className="text-[var(--danger)]">−{removed}</span>
+          <span className="text-muted">
+            v{fromN} → v{toN}
+          </span>
         </div>
 
-        {summary.added + summary.removed + summary.changed === 0 ? (
+        {added + removed === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-12 text-center text-[13.5px] text-muted">
             {t('diffNothing', lang)}
           </div>
         ) : (
-          <div className="flex flex-col gap-2.5">
-            {entries.map((e, i) => {
-              const st = STATUS[e.status]
+          <div className="overflow-x-auto rounded-lg border border-border font-mono text-[12px] leading-[1.55]">
+            {rows.map((r, i) => {
+              const bg = r.type === 'add' ? 'bg-[var(--ok)]/10' : r.type === 'del' ? 'bg-[var(--danger)]/10' : ''
+              const sign = r.type === 'add' ? '+' : r.type === 'del' ? '−' : ''
+              const signColor = r.type === 'add' ? 'text-[var(--ok)]' : r.type === 'del' ? 'text-[var(--danger)]' : 'text-transparent'
               return (
-                <div key={i} className={`rounded-lg border p-4 ${st.border}`}>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-[14.5px] font-semibold text-ink ${e.status === 'removed' ? 'line-through opacity-70' : ''}`}>
-                      {e.title}
-                    </span>
-                    <StepLevelBadge level={e.level} lang={lang} />
-                    {st.key && (
-                      <span className={`rounded border px-1.5 py-0.5 text-[10.5px] font-medium ${st.badge}`}>{t(st.key, lang)}</span>
-                    )}
-                  </div>
-
-                  {e.status !== 'removed' && e.desc && <Markdown className="mt-1">{e.desc}</Markdown>}
-                  {e.status === 'removed' && e.desc && (
-                    <div className="mt-1 text-[13px] text-ink-2 line-through opacity-70">{e.desc}</div>
-                  )}
-
-                  {/* Что изменилось */}
-                  {e.status === 'changed' && e.before && (
-                    <div className="mt-2 space-y-1 border-l-2 border-[var(--warn)]/40 pl-2.5 text-[12px] text-ink-2">
-                      {e.changes.includes('level') && (
-                        <div>
-                          level: <span className="line-through opacity-70">{e.before.level}</span> → <b>{e.level}</b>
-                        </div>
-                      )}
-                      {e.changes.includes('command') && (
-                        <div className="font-mono">
-                          {e.before.command && <span className="line-through opacity-70">{e.before.command}</span>}
-                          {e.command && <> → {e.command}</>}
-                        </div>
-                      )}
-                      {e.changes.includes('desc') && e.before.desc && (
-                        <div>
-                          {t('diffWas', lang)}: <span className="line-through opacity-70">{e.before.desc}</span>
-                        </div>
-                      )}
-                      {(e.changes.includes('subtasks') || e.changes.includes('why')) && (
-                        <div className="text-muted">
-                          {e.changes.filter((c) => c === 'subtasks' || c === 'why').join(', ')} {t('diffChanged', lang).toLowerCase()}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {e.status !== 'removed' && e.command && !e.changes.includes('command') && (
-                    <code className="mt-2 block rounded bg-surface-2 px-2 py-1 font-mono text-[12px] text-ink">{e.command}</code>
-                  )}
+                <div key={i} className={`flex ${bg}`}>
+                  <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] text-muted">
+                    {r.oldNo ?? ''}
+                  </span>
+                  <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] text-muted">
+                    {r.newNo ?? ''}
+                  </span>
+                  <span className={`w-4 shrink-0 select-none text-center ${signColor}`}>{sign}</span>
+                  <span className="whitespace-pre-wrap break-words px-2 text-ink">{r.text || ' '}</span>
                 </div>
               )
             })}
