@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, cosineDistance, desc, eq, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, embeddings, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
+import { and, asc, cosineDistance, desc, eq, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { db, embeddings, stars, steps, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
@@ -301,6 +301,22 @@ export async function getVersions(templateId: string) {
     .from(templateVersions)
     .where(eq(templateVersions.templateId, templateId))
     .orderBy(desc(templateVersions.version))
+}
+
+/** Шаги конкретной версии (по номеру) — для диффа версий. */
+export async function getVersionSteps(templateId: string, version: number) {
+  const [v] = await db
+    .select({ id: templateVersions.id, note: templateVersions.note, createdAt: templateVersions.createdAt })
+    .from(templateVersions)
+    .where(and(eq(templateVersions.templateId, templateId), eq(templateVersions.version, version)))
+    .limit(1)
+  if (!v) return null
+  const rows = await db
+    .select()
+    .from(steps)
+    .where(eq(steps.versionId, v.id))
+    .orderBy(asc(steps.n))
+  return { note: v.note, createdAt: v.createdAt, steps: rows }
 }
 
 /** Детальный список (owner/slug) + пункты текущей версии. */
