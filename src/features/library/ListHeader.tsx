@@ -10,8 +10,10 @@ import { forkTemplate } from '@/features/library/actions'
 import { startRun } from '@/features/runs/actions'
 import { StarButton } from '@/features/library/StarButton'
 import { ShareButton } from '@/features/library/ShareButton'
+import { WatchButton } from '@/features/watch/WatchButton'
 import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/library/queries'
 import { getOpenIssueCount } from '@/features/issues/queries'
+import { getWatchCount, isWatching } from '@/features/watch/queries'
 
 type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'settings'
 
@@ -25,7 +27,12 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   if (meta.visibility === 'private' && !isOwner) notFound() // приватный — только владельцу
   if (meta.moderation !== 'active' && !isOwner && !isAdmin) notFound() // flagged/hidden не публичны
   const starred = session ? await isStarred(meta.id, session.userId) : false
-  const [suggCount, issueCount] = await Promise.all([getOpenSuggestionCount(meta.id), getOpenIssueCount(meta.id)])
+  const watching = session ? await isWatching(session.userId, meta.id) : false
+  const [suggCount, issueCount, watchCount] = await Promise.all([
+    getOpenSuggestionCount(meta.id),
+    getOpenIssueCount(meta.id),
+    getWatchCount(meta.id),
+  ])
   const base = `/${owner}/${slug}`
   const forkBound = forkTemplate.bind(null, meta.id)
 
@@ -84,6 +91,15 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
                   <PlayCircle size={15} /> {t('runStart', lang)}
                 </button>
               </form>
+            )}
+            {session && (
+              <WatchButton
+                templateId={meta.id}
+                watching={watching}
+                count={watchCount}
+                watchLabel={t('watch', lang)}
+                unwatchLabel={t('unwatch', lang)}
+              />
             )}
             {session ? (
               <StarButton templateId={meta.id} starred={starred} count={meta.starsCount} label={t('star', lang)} />

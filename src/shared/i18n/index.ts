@@ -93,6 +93,8 @@ const DICT = {
   proposedChanges: { en: 'Proposed changes', ru: 'Предлагаемые изменения' },
   discussionHeading: { en: 'Discussion', ru: 'Обсуждение' },
   noCommentsYet: { en: 'No comments yet.', ru: 'Пока нет комментариев.' },
+  watch: { en: 'Watch', ru: 'Следить' },
+  unwatch: { en: 'Unwatch', ru: 'Не следить' },
   filters: { en: 'Filters', ru: 'Фильтры' },
   filterVerified: { en: 'Verified only', ru: 'Только проверенные' },
   filterAllTypes: { en: 'Any type', ru: 'Любой тип' },
