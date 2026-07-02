@@ -18,6 +18,7 @@ import { getLang } from '@/shared/i18n/server'
 import { generateListDraft } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { imageUrl, uploadImageFile } from '@/shared/media'
+import { notify } from '@/features/notifications/notify'
 import { parseEditorItems, toProposedItems } from './editor'
 
 function parseTags(raw: unknown): string[] {
@@ -160,6 +161,7 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
     baseVersion: tpl.currentVersion,
     items: proposed,
   })
+  await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id })
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions`)
 }
@@ -188,6 +190,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
+  await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id })
 
   revalidatePath('/', 'layout')
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
@@ -206,6 +209,7 @@ export async function rejectSuggestion(suggestionId: string): Promise<void> {
     .update(suggestions)
     .set({ status: 'rejected', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
+  await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_rejected', templateId: sug.templateId })
   revalidatePath('/', 'layout')
 }
 
@@ -285,6 +289,8 @@ export async function toggleStar(templateId: string): Promise<void> {
       .update(templates)
       .set({ starsCount: sql`${templates.starsCount} + 1` })
       .where(eq(templates.id, templateId))
+    const [t] = await db.select({ ownerId: templates.ownerId }).from(templates).where(eq(templates.id, templateId))
+    if (t) await notify({ recipientId: t.ownerId, actorId: session.userId, type: 'star', templateId })
   }
   revalidatePath('/', 'layout')
 }
@@ -347,6 +353,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
     .update(templates)
     .set({ forksCount: sql`${templates.forksCount} + 1` })
     .where(eq(templates.id, src.id))
+  await notify({ recipientId: src.ownerId, actorId: session.userId, type: 'fork', templateId: src.id })
 
   revalidatePath('/explore')
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)

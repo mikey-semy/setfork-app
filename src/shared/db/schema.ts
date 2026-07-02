@@ -29,6 +29,13 @@ export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', '
 export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned'])
 export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
+export const notificationType = pgEnum('notification_type', [
+  'suggestion_new',
+  'suggestion_accepted',
+  'suggestion_rejected',
+  'star',
+  'fork',
+])
 
 // Предложенный пункт (снимок правки внутри suggestion).
 export type ProposedItem = {
@@ -221,6 +228,23 @@ export const suggestions = pgTable('suggestions', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 })
+
+// ── Notifications (колокольчик) ──────────────────────────────────────
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    recipientId: uuid('recipient_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    type: notificationType('type').notNull(),
+    templateId: uuid('template_id').references(() => templates.id, { onDelete: 'cascade' }),
+    read: boolean('read').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('notifications_recipient_idx').on(t.recipientId, t.read)],
+)
 
 // ── Relations ────────────────────────────────────────────────────────
 export const usersRelations = relations(users, ({ many }) => ({

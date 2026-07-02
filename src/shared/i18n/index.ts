@@ -163,6 +163,15 @@ const DICT = {
   somethingWrongText: { en: 'An unexpected error occurred. Try again.', ru: 'Произошла непредвиденная ошибка. Попробуйте ещё раз.' },
   tryAgain: { en: 'Try again', ru: 'Повторить' },
   emptyExplore: { en: 'No lists yet — be the first to create one.', ru: 'Списков пока нет — создайте первый.' },
+  // ── Уведомления ──
+  notifications: { en: 'Notifications', ru: 'Уведомления' },
+  noNotifications: { en: 'No notifications yet.', ru: 'Пока нет уведомлений.' },
+  notifStar: { en: 'starred your list', ru: 'отметил звездой ваш список' },
+  notifFork: { en: 'forked your list', ru: 'форкнул ваш список' },
+  notifSuggestionNew: { en: 'suggested an edit to', ru: 'предложил правку к' },
+  notifAccepted: { en: 'accepted your edit to', ru: 'принял вашу правку к' },
+  notifRejected: { en: 'rejected your edit to', ru: 'отклонил вашу правку к' },
+  aList: { en: 'a list', ru: 'список' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT
