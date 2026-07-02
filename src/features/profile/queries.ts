@@ -1,12 +1,42 @@
 import 'server-only'
 import { and, desc, eq, or, sql } from 'drizzle-orm'
-import { db, runs, stars, templates, users } from '@/shared/db'
+import { db, runs, stars, suggestions, templateVersions, templates, users } from '@/shared/db'
 import type { FeedItem } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
 
 export async function getUserByHandle(handle: string) {
   const [u] = await db.select().from(users).where(eq(users.handle, handle)).limit(1)
   return u ?? null
+}
+
+/** Активность по дням за ~год: версии списков (правки) + предложения правок. */
+export async function getContributions(userId: string): Promise<{ date: string; count: number }[]> {
+  const res = await db.execute(sql`
+    select (day::date)::text as date, count(*)::int as count
+    from (
+      select tv.created_at as day
+        from ${templateVersions} tv
+        join ${templates} t on t.id = tv.template_id
+        where t.owner_id = ${userId}
+      union all
+      select s.created_at from ${suggestions} s where s.author_id = ${userId}
+    ) x
+    where day >= now() - interval '371 days'
+    group by 1
+  `)
+  return res.rows as unknown as { date: string; count: number }[]
+}
+
+/** Полученные звёзды и форки на списках пользователя. */
+export async function getReceivedStats(userId: string): Promise<{ stars: number; forks: number }> {
+  const [r] = await db
+    .select({
+      stars: sql<number>`coalesce(sum(${templates.starsCount}),0)::int`,
+      forks: sql<number>`coalesce(sum(${templates.forksCount}),0)::int`,
+    })
+    .from(templates)
+    .where(eq(templates.ownerId, userId))
+  return { stars: r?.stars ?? 0, forks: r?.forks ?? 0 }
 }
 
 export async function getProfileCounts(userId: string) {
