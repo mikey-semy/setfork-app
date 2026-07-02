@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Search } from 'lucide-react'
+import { SearchInput } from '@/shared/ui/SearchInput'
 import { t, type Lang } from '@/shared/i18n'
 
 export interface SettingsSection {
@@ -49,15 +49,13 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
   return (
     <div className="mx-auto flex w-full max-w-[920px] flex-col gap-8 px-6 py-8 md:flex-row">
       <aside className="flex-shrink-0 md:sticky md:top-[70px] md:h-fit md:w-[220px]">
-        <div className="relative mb-3">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t('settingsSearchPh', lang)}
-            className="w-full rounded-md border border-border bg-surface-2 py-2 pl-8 pr-3 text-[13px] text-ink outline-none focus:border-border-strong"
-          />
-        </div>
+        <SearchInput
+          value={q}
+          onChange={setQ}
+          placeholder={t('settingsSearchPh', lang)}
+          className="mb-3"
+          clearLabel={t('clear', lang)}
+        />
         <nav className="flex flex-col gap-0.5">
           {sections.map((s) => {
             const shown = visible.some((v) => v.id === s.id)

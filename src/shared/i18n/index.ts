@@ -56,6 +56,7 @@ const DICT = {
   orderedHint: { en: 'A sequence — steps 1, 2, 3… run in order.', ru: 'Последовательность — шаги 1, 2, 3… по порядку.' },
   unorderedLabel: { en: 'Unordered', ru: 'Без порядка' },
   unorderedHint: { en: 'A set/checklist — order doesn’t matter.', ru: 'Набор/чек-лист — порядок неважен.' },
+  clear: { en: 'Clear', ru: 'Очистить' },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for AI agents to connect via MCP (search & read your lists).',

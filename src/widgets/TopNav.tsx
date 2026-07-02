@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Plus, Search, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Plus, Sparkles } from 'lucide-react'
+import { SearchInput } from '@/shared/ui/SearchInput'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { LangSwitch, ThemeToggle } from '@/shared/ui/controls'
@@ -32,6 +34,12 @@ export function TopNav({
   notifications?: NotificationItem[]
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [q, setQ] = useState('')
+  const submitSearch = () => {
+    const s = q.trim()
+    router.push(s ? `/explore?q=${encodeURIComponent(s)}` : '/explore')
+  }
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
   const navLink = (href: string, label: string) => (
     <Link href={href} className={isActive(href) ? 'text-ink' : 'text-ink-2 hover:text-ink'}>
@@ -44,13 +52,15 @@ export function TopNav({
       <Link href="/" className="flex-shrink-0 text-[17px] font-bold tracking-tight text-ink">
         SH
       </Link>
-      <Link
-        href="/explore"
-        className="flex max-w-[460px] flex-1 items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-[7px] text-muted hover:border-border-strong"
+      <form
+        className="max-w-[460px] flex-1"
+        onSubmit={(e) => {
+          e.preventDefault()
+          submitSearch()
+        }}
       >
-        <Search size={15} />
-        <span className="truncate text-[13px]">{t('searchLists', lang)}</span>
-      </Link>
+        <SearchInput value={q} onChange={setQ} placeholder={t('searchLists', lang)} inputClassName="py-[7px]" clearLabel={t('clear', lang)} />
+      </form>
       <nav className="hidden items-center gap-[22px] text-[13.5px] font-medium sm:flex">
         {navLink('/explore', t('explore', lang))}
         {navLink('/my-lists', t('myLists', lang))}
