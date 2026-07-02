@@ -1,5 +1,6 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Tag } from 'lucide-react'
+import { GitCompare, Tag } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { getListMeta, getVersions } from '@/features/library/queries'
@@ -20,6 +21,14 @@ export default async function VersionsPage({
     <>
       <ListHeader owner={owner} slug={slug} active="versions" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+        {meta.currentVersion > 1 && (
+          <Link
+            href={`/${owner}/${slug}/compare`}
+            className="mb-4 inline-flex items-center gap-2 rounded-md border border-border bg-surface px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+          >
+            <GitCompare size={15} /> {t('compareTitle', lang)}
+          </Link>
+        )}
         <div className="flex flex-col gap-2.5">
           {versions.map((v) => (
             <div key={v.id} className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
@@ -31,6 +40,14 @@ export default async function VersionsPage({
                     <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11px] font-semibold text-accent">
                       {t('currentVersion', lang)}
                     </span>
+                  )}
+                  {v.version > 1 && (
+                    <Link
+                      href={`/${owner}/${slug}/compare?from=${v.version - 1}&to=${v.version}`}
+                      className="inline-flex items-center gap-1 text-[11.5px] text-ink-2 hover:text-accent"
+                    >
+                      <GitCompare size={12} /> {t('compareVersions', lang)} v{v.version - 1}
+                    </Link>
                   )}
                 </div>
                 {v.note && v.note !== 'seeded' && (
