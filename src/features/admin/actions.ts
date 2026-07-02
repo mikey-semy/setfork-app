@@ -52,3 +52,15 @@ export async function purgeEmbeddings(): Promise<{ ok: true; removed: number } |
     return { error: `Не удалось: ${e instanceof Error ? e.message : 'ошибка'}` }
   }
 }
+
+// ── Баланс OpenRouter (свежий, для виджета) ──────────────────────────
+export async function fetchOpenRouterCredits(): Promise<
+  { ok: true; total: number; used: number; remaining: number } | { error: string }
+> {
+  if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
+  const { getOpenRouterCredits, clearCreditsCache } = await import('@/shared/ai/credits')
+  clearCreditsCache()
+  const c = await getOpenRouterCredits({ fresh: true })
+  if (!c) return { error: 'Не удалось получить баланс (нет ключа или API недоступен).' }
+  return { ok: true, total: c.total, used: c.used, remaining: c.remaining }
+}

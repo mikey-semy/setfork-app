@@ -79,7 +79,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
   const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[13px] font-semibold disabled:opacity-60'
 
   return (
-    <div className="mt-8 rounded-lg border border-border bg-surface p-4">
+    <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-1 font-semibold text-ink">{ru ? 'Индексация поиска (эмбеддинги)' : 'Search index (embeddings)'}</div>
       <p className="mb-3 text-[13px] text-ink-2">
         {ru
@@ -124,50 +124,50 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
 
       {msg && <div className="mb-3 text-[12.5px] text-ink-2">{msg}</div>}
 
-      {status && status.total > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-[12px] text-muted">
-            <span>
-              {stalled
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-[12px] text-muted">
+          <span>
+            {stalled
+              ? ru
+                ? 'Прервано — запустите заново'
+                : 'Interrupted — run again'
+              : running
                 ? ru
-                  ? 'Прервано — запустите заново'
-                  : 'Interrupted — run again'
-                : running
+                  ? 'Индексируем…'
+                  : 'Indexing…'
+                : status?.status === 'done'
                   ? ru
-                    ? 'Индексируем…'
-                    : 'Indexing…'
-                  : status.status === 'done'
-                    ? ru
-                      ? `Готово${status.vectorized ? '' : ' (без векторов — нет ключа)'}`
-                      : `Done${status.vectorized ? '' : ' (no vectors — no key)'}`
-                    : status.status === 'error'
-                      ? `${ru ? 'Ошибка' : 'Error'}: ${status.error ?? ''}`
-                      : ''}
-            </span>
-            <span className="font-mono">
-              {status.doneItems}/{status.total} · {pct}%
-            </span>
-          </div>
-          <div
-            ref={gridRef}
-            className="grid w-full grid-flow-col gap-0.5"
-            style={{ gridTemplateRows: `repeat(${ROWS}, auto)`, gridAutoColumns: 'minmax(0, 1fr)' }}
-          >
-            {Array.from({ length: totalCells }, (_, i) => {
-              const filled = i < greenCells
-              const errored = !filled && finished && hasErrors
-              return (
-                <span
-                  key={i}
-                  className={`h-3 w-full rounded-[2px] transition-colors ${
-                    filled ? 'animate-cell-pop bg-[var(--ok)]' : errored ? 'bg-[var(--danger)]' : 'bg-[var(--border)]'
-                  }`}
-                />
-              )
-            })}
-          </div>
+                    ? `Готово${status.vectorized ? '' : ' (без векторов — нет ключа)'}`
+                    : `Done${status.vectorized ? '' : ' (no vectors — no key)'}`
+                  : status?.status === 'error'
+                    ? `${ru ? 'Ошибка' : 'Error'}: ${status.error ?? ''}`
+                    : ru
+                      ? 'Индекс ещё не построен'
+                      : 'Not indexed yet'}
+          </span>
+          <span className="font-mono">
+            {status?.doneItems ?? 0}/{status?.total ?? 0} · {pct}%
+          </span>
         </div>
-      )}
+        <div
+          ref={gridRef}
+          className="grid w-full grid-flow-col gap-0.5"
+          style={{ gridTemplateRows: `repeat(${ROWS}, auto)`, gridAutoColumns: 'minmax(0, 1fr)' }}
+        >
+          {Array.from({ length: totalCells }, (_, i) => {
+            const filled = i < greenCells
+            const errored = !filled && finished && hasErrors
+            return (
+              <span
+                key={i}
+                className={`h-3 w-full rounded-[2px] transition-colors ${
+                  filled ? 'animate-cell-pop bg-[var(--ok)]' : errored ? 'bg-[var(--danger)]' : 'bg-[var(--border)]'
+                }`}
+              />
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
