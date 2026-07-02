@@ -2,7 +2,7 @@ import { GitFork, Star } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 
 // GitHub-стайл граф активности (contribution-хитмап) за ~год.
-const LEVEL = ['bg-surface-2 border border-border/60', 'bg-ok/25', 'bg-ok/50', 'bg-ok/75', 'bg-ok']
+const LEVEL = ['bg-border', 'bg-ok/25', 'bg-ok/50', 'bg-ok/75', 'bg-ok']
 const level = (c: number): number => (c === 0 ? 0 : c <= 2 ? 1 : c <= 4 ? 2 : c <= 6 ? 3 : 4)
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
@@ -64,7 +64,7 @@ export function ActivityGraph({
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="scroll-thin overflow-x-auto pb-1">
         <div className="inline-flex flex-col gap-1">
           <div className="flex gap-[3px] text-[10px] leading-none text-muted">
             {months.map((m, i) => (

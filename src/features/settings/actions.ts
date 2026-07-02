@@ -66,8 +66,8 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
     avatarUrl: sessionAvatar,
   })
 
-  revalidatePath('/settings')
-  revalidatePath(`/${session.handle}`)
+  // layout — чтобы обновился аватар в шапке (TopNav), а не только на страницах.
+  revalidatePath('/', 'layout')
   return { ok: true }
 }
 
