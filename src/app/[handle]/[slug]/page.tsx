@@ -8,6 +8,7 @@ import { t, tr, type LocaleText } from '@/shared/i18n'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
+import { ExportMenu } from '@/features/library/ExportMenu'
 import { publishList } from '@/features/library/actions'
 
 function fmt(n: number): string {
@@ -35,14 +36,25 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="overview" />
+      <div className="print:hidden">
+        <ListHeader owner={owner} slug={slug} active="overview" />
+      </div>
 
       <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Основное: содержимое-эталон */}
           <main className="min-w-0 flex-1">
+            {/* Заголовок только для печати (в экране он в шапке) */}
+            <div className="mb-4 hidden print:block">
+              <h1 className="text-[20px] font-bold text-ink">{tr(tpl.title, lang)}</h1>
+              {tr(tpl.desc, lang) && <p className="mt-1 text-[13.5px] text-ink-2">{tr(tpl.desc, lang)}</p>}
+              <p className="mt-1 font-mono text-[11px] text-muted">
+                {owner}/{slug} · v{currentVersion?.version ?? tpl.currentVersion}
+              </p>
+            </div>
+
             {tpl.status === 'draft' && isOwner && (
-              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--warn)] bg-surface px-4 py-3">
+              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--warn)] bg-surface px-4 py-3 print:hidden">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--warn)]">
                     <FileText size={15} /> {t('draftBadge', lang)}
@@ -57,7 +69,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
               </div>
             )}
             {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
-              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3 text-[13px] text-accent">
+              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3 text-[13px] text-accent print:hidden">
                 <Sparkles size={15} className="flex-shrink-0" /> {t('aiVerifyHint', lang)}
               </div>
             )}
@@ -70,7 +82,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                   url: x.url,
                 }))
                 return (
-                  <div key={s.id} className="rounded-lg border border-border bg-surface p-4">
+                  <div key={s.id} className="break-inside-avoid rounded-lg border border-border bg-surface p-4">
                     <div className="flex gap-3">
                       <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? s.n : '•'}</span>
                       <div className="min-w-0 flex-1">
@@ -129,10 +141,13 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
           </main>
 
           {/* About-сайдбар */}
-          <aside className="flex-shrink-0 lg:w-[300px]">
+          <aside className="flex-shrink-0 print:hidden lg:w-[300px]">
             <div className="rounded-lg border border-border bg-surface p-4">
               <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
                 {t('about', lang)}
+              </div>
+              <div className="mb-3 border-b border-border pb-3">
+                <ExportMenu base={`/${owner}/${slug}`} lang={lang} />
               </div>
               {tr(tpl.desc, lang) && <p className="text-[13.5px] leading-relaxed text-ink-2">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
