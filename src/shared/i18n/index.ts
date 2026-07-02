@@ -48,8 +48,8 @@ const DICT = {
   aiFail: { en: "AI couldn't generate a list — try rephrasing.", ru: 'Нейросеть не смогла — переформулируй запрос.' },
   rateLimited: { en: 'Too many requests. Try again in a minute.', ru: 'Слишком часто. Попробуй через минуту.' },
   aiVerifyHint: {
-    en: 'Drafted by AI — run it, like it, and improve it so it becomes proven.',
-    ru: 'Черновик от нейросети — проверь, лайкни и улучши, чтобы он стал проверенным.',
+    en: 'Drafted by AI — review, refine and star it so it becomes a proven reference.',
+    ru: 'Черновик от нейросети — проверьте, доработайте и отметьте звездой, чтобы он стал эталоном.',
   },
   trending: { en: 'Trending', ru: 'В тренде' },
   newest: { en: 'Newest', ru: 'Новые' },
@@ -154,6 +154,15 @@ const DICT = {
   deleteConfirmLabel: { en: 'Type your handle to confirm:', ru: 'Введите свой ник для подтверждения:' },
   deletedUser: { en: 'Deleted user', ru: 'Удалённый пользователь' },
   cancel: { en: 'Cancel', ru: 'Отмена' },
+  // ── Состояния: 404 / ошибка / пусто ──
+  pageNotFound: { en: 'Page not found', ru: 'Страница не найдена' },
+  pageNotFoundText: { en: "This page doesn't exist or was moved.", ru: 'Такой страницы нет или она была перемещена.' },
+  goHome: { en: 'Go home', ru: 'На главную' },
+  goExplore: { en: 'Browse lists', ru: 'К спискам' },
+  somethingWrong: { en: 'Something went wrong', ru: 'Что-то пошло не так' },
+  somethingWrongText: { en: 'An unexpected error occurred. Try again.', ru: 'Произошла непредвиденная ошибка. Попробуйте ещё раз.' },
+  tryAgain: { en: 'Try again', ru: 'Повторить' },
+  emptyExplore: { en: 'No lists yet — be the first to create one.', ru: 'Списков пока нет — создайте первый.' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT

@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { Sparkles } from 'lucide-react'
+import { SearchX, Sparkles } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { hasOpenRouterKey } from '@/shared/settings/ai'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { generateFromQuery } from '@/features/library/actions'
 import { getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
@@ -117,7 +118,13 @@ export default async function ExplorePage({
         )}
 
         {feed.length === 0 ? (
-          <div className="py-16 text-center text-[13.5px] text-muted">{t('nothingFound', lang)}</div>
+          <div className="py-6">
+            <EmptyState
+              icon={<SearchX size={36} strokeWidth={1.5} />}
+              title={sp.q || sp.tag ? t('nothingFound', lang) : t('emptyExplore', lang)}
+              action={!sp.q && session ? { href: '/new', label: t('newList', lang) } : undefined}
+            />
+          </div>
         ) : (
           <FeedList items={feed} lang={lang} viewerId={session?.userId} className="space-y-3 py-3" />
         )}
