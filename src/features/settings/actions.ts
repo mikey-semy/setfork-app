@@ -6,7 +6,6 @@ import { eq, inArray, sql } from 'drizzle-orm'
 import { db, stars, suggestions, templates, users } from '@/shared/db'
 import type { Social } from '@/shared/db/schema'
 import { clearSessionCookie, refreshSessionCookie, requireSession } from '@/shared/auth/session'
-import { avatarSrc } from '@/shared/media'
 import { removeAvatar, saveAvatar } from './avatar'
 
 export type ActionResult = { ok?: true; error?: string }
@@ -58,12 +57,12 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
     .where(eq(users.id, session.userId))
 
   // В сессии храним УЖЕ отрезолвленный URL (навбар — клиент, подписать сам не может).
-  const sessionAvatar = avatarRef ? ((await avatarSrc(avatarRef, 64)) ?? undefined) : session.avatarUrl
+  // Храним в сессии storage_key/ref (не подписанный URL) — layout резолвит на рендере.
   await refreshSessionCookie({
     userId: session.userId,
     handle: session.handle,
     name: name ?? undefined,
-    avatarUrl: sessionAvatar,
+    avatarUrl: avatarRef ?? session.avatarUrl ?? undefined,
   })
 
   // layout — чтобы обновился аватар в шапке (TopNav), а не только на страницах.
