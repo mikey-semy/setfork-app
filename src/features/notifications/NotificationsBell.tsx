@@ -15,6 +15,7 @@ const VERB: Record<NotificationItem['type'], TKey> = {
   suggestion_rejected: 'notifRejected',
   star: 'notifStar',
   fork: 'notifFork',
+  follow: 'notifFollow',
 }
 
 export function NotificationsBell({ unread, items, lang }: { unread: number; items: NotificationItem[]; lang: Lang }) {
@@ -51,7 +52,12 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
         ) : (
           <div className="max-h-[360px] overflow-auto">
             {items.map((n) => {
-              const href = n.ownerHandle && n.slug ? `/${n.ownerHandle}/${n.slug}` : '/notifications'
+              const isFollow = n.type === 'follow'
+              const href = isFollow
+                ? `/${n.actorHandle ?? ''}`
+                : n.ownerHandle && n.slug
+                  ? `/${n.ownerHandle}/${n.slug}`
+                  : '/notifications'
               return (
                 <Link
                   key={n.id}
@@ -60,8 +66,8 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
                 >
                   <Avatar handle={n.actorHandle ?? '?'} avatarUrl={n.actorAvatarUrl} size={26} />
                   <div className="min-w-0 flex-1 text-[12.5px] leading-snug text-ink-2">
-                    <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(VERB[n.type], lang)}{' '}
-                    <span className="text-ink">{n.title ? tr(n.title, lang) : t('aList', lang)}</span>
+                    <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(VERB[n.type], lang)}
+                    {!isFollow && <> <span className="text-ink">{n.title ? tr(n.title, lang) : t('aList', lang)}</span></>}
                   </div>
                   <span className="shrink-0 font-mono text-[10.5px] text-muted">{fmt.format(new Date(n.createdAt))}</span>
                 </Link>

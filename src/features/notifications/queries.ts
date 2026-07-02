@@ -7,7 +7,7 @@ import { avatarSrc } from '@/shared/media'
 
 export interface NotificationItem {
   id: string
-  type: 'suggestion_new' | 'suggestion_accepted' | 'suggestion_rejected' | 'star' | 'fork'
+  type: 'suggestion_new' | 'suggestion_accepted' | 'suggestion_rejected' | 'star' | 'fork' | 'follow'
   read: boolean
   createdAt: Date
   actorHandle: string | null

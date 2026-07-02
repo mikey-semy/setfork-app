@@ -189,7 +189,10 @@ export interface ActivityItem {
 }
 
 /** Лента изменений: недавние версии (создание/правки) списков. */
-export async function getActivity(limit = 30, viewerId?: string): Promise<ActivityItem[]> {
+export async function getActivity(limit = 30, viewerId?: string, ownerIds?: string[]): Promise<ActivityItem[]> {
+  if (ownerIds && ownerIds.length === 0) return []
+  const filters: SQL[] = [visibleFilter(viewerId)]
+  if (ownerIds && ownerIds.length) filters.push(inArray(templates.ownerId, ownerIds))
   const rows = await db
     .select({
       templateId: templates.id,
@@ -205,7 +208,7 @@ export async function getActivity(limit = 30, viewerId?: string): Promise<Activi
     .from(templateVersions)
     .innerJoin(templates, eq(templateVersions.templateId, templates.id))
     .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(visibleFilter(viewerId))
+    .where(and(...filters))
     .orderBy(desc(templateVersions.createdAt))
     .limit(limit)
   return withAvatar(rows as ActivityItem[])

@@ -3,13 +3,18 @@ import { Plus, Sparkles } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { getActivity, getPopularTags, getUserTemplates } from '@/features/library/queries'
+import { getFollowingIds } from '@/features/follows/queries'
 
 export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }) {
-  const [mine, activity, tags] = await Promise.all([
+  const following = await getFollowingIds(userId)
+  const [mine, followedActivity, tags] = await Promise.all([
     getUserTemplates(userId, userId),
-    getActivity(30, userId),
+    following.length ? getActivity(30, userId, following) : Promise.resolve([]),
     getPopularTags(18),
   ])
+  // Лента подписок; если не подписан ни на кого (или тихо) — общая, с подсказкой.
+  const activity = followedActivity.length ? followedActivity : await getActivity(30, userId)
+  const showFollowHint = following.length === 0
 
   return (
     <div className="mx-auto grid w-full max-w-[1280px] gap-6 px-6 py-6 lg:grid-cols-[300px_minmax(0,1fr)_260px]">
@@ -46,7 +51,16 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
 
       {/* Центр: лента изменений */}
       <section className="min-w-0">
-        <h2 className="mb-3 text-[15px] font-semibold text-ink">{t('recentActivity', lang)}</h2>
+        <h2 className="mb-1 text-[15px] font-semibold text-ink">{t('recentActivity', lang)}</h2>
+        {showFollowHint && (
+          <p className="mb-3 text-[12.5px] text-muted">
+            {t('followingFeedEmpty', lang)}{' '}
+            <Link href="/explore" className="text-accent hover:underline">
+              {t('explore', lang)}
+            </Link>
+          </p>
+        )}
+        {!showFollowHint && <div className="mb-3" />}
         {activity.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
             {t('noActivity', lang)}

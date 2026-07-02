@@ -8,6 +8,8 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { getProfileCounts, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { getFollowCounts, isFollowing } from '@/features/follows/queries'
+import { FollowButton } from '@/features/follows/FollowButton'
 import { avatarSrc } from '@/shared/media'
 import { SocialIcon, socialLabel } from '@/features/settings/socials'
 
@@ -29,9 +31,14 @@ export default async function ProfilePage({
   if (!user) notFound()
 
   const tab: Tab = sp.tab === 'starred' ? 'starred' : 'lists'
-  const counts = await getProfileCounts(user.id)
+  const isOwner = viewer?.userId === user.id
+  const [counts, followCounts, following, bigAvatar] = await Promise.all([
+    getProfileCounts(user.id),
+    getFollowCounts(user.id),
+    viewer && !isOwner ? isFollowing(viewer.userId, user.id) : Promise.resolve(false),
+    avatarSrc(user.avatarUrl, 180),
+  ])
   const items = tab === 'starred' ? await getStarredTemplates(user.id, viewer?.userId) : await getUserTemplates(user.id, viewer?.userId)
-  const bigAvatar = await avatarSrc(user.avatarUrl, 180)
 
   return (
     <div className="w-full px-6 py-8 lg:px-8">
@@ -43,6 +50,33 @@ export default async function ProfilePage({
             <div className="text-[18px] text-ink-2">{user.handle}</div>
           </div>
           {user.bio && <p className="mt-3 text-[14px] leading-snug text-ink">{user.bio}</p>}
+
+          <div className="mt-4">
+            {isOwner ? (
+              <Link
+                href="/settings"
+                className="inline-flex w-full items-center justify-center rounded-md border border-border px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+              >
+                {t('editProfile', lang)}
+              </Link>
+            ) : viewer ? (
+              <FollowButton targetUserId={user.id} following={following} lang={lang} />
+            ) : (
+              <Link href="/login" className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+                {t('follow', lang)}
+              </Link>
+            )}
+          </div>
+
+          <div className="mt-3 flex gap-4 text-[13px]">
+            <span className="text-ink-2">
+              <b className="text-ink">{followCounts.followers}</b> {t('followersLabel', lang)}
+            </span>
+            <span className="text-ink-2">
+              <b className="text-ink">{followCounts.following}</b> {t('followingLabel', lang)}
+            </span>
+          </div>
+
           <div className="mt-3 font-mono text-[12px] text-muted">
             {t('joined', lang)}{' '}
             {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { year: 'numeric', month: 'short' }).format(

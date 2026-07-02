@@ -3,10 +3,10 @@ import { eq } from 'drizzle-orm'
 import { db, notifications, users } from '@/shared/db'
 import type { NotifyPrefs } from '@/shared/db/schema'
 
-type NotifType = 'suggestion_new' | 'suggestion_accepted' | 'suggestion_rejected' | 'star' | 'fork'
+type NotifType = 'suggestion_new' | 'suggestion_accepted' | 'suggestion_rejected' | 'star' | 'fork' | 'follow'
 
-// Тип события → ключ предпочтения получателя.
-const TYPE_PREF: Record<NotifType, keyof NotifyPrefs> = {
+// Тип события → ключ предпочтения получателя (follow не отключается — ключа нет).
+const TYPE_PREF: Partial<Record<NotifType, keyof NotifyPrefs>> = {
   suggestion_new: 'newSuggestions',
   suggestion_accepted: 'suggestionResolved',
   suggestion_rejected: 'suggestionResolved',
@@ -25,7 +25,8 @@ export async function notify(params: {
   try {
     const [u] = await db.select({ prefs: users.notifyPrefs }).from(users).where(eq(users.id, params.recipientId)).limit(1)
     const prefs = (u?.prefs ?? {}) as NotifyPrefs
-    if (prefs[TYPE_PREF[params.type]] === false) return // отключено получателем
+    const prefKey = TYPE_PREF[params.type]
+    if (prefKey && prefs[prefKey] === false) return // отключено получателем
     await db.insert(notifications).values({
       recipientId: params.recipientId,
       actorId: params.actorId ?? null,

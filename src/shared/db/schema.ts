@@ -38,6 +38,7 @@ export const notificationType = pgEnum('notification_type', [
   'suggestion_rejected',
   'star',
   'fork',
+  'follow',
 ])
 
 // Предложенный пункт (снимок правки внутри suggestion).
@@ -241,6 +242,22 @@ export const suggestions = pgTable('suggestions', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 })
+
+// ── Follows (подписки пользователей) ─────────────────────────────────
+export const follows = pgTable(
+  'follows',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    followerId: uuid('follower_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    followingId: uuid('following_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('follows_pair').on(t.followerId, t.followingId), index('follows_following_idx').on(t.followingId)],
+)
 
 // ── Sessions (серверный реестр входов — для отзыва и «кто онлайн») ────
 export const sessions = pgTable(
