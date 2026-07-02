@@ -24,3 +24,9 @@ export async function getWatcherIds(templateId: string): Promise<string[]> {
   const rows = await db.select({ id: watches.userId }).from(watches).where(eq(watches.templateId, templateId))
   return rows.map((r) => r.id)
 }
+
+/** ID списков, за которыми следит пользователь (для ленты дашборда). */
+export async function getWatchedIds(userId: string): Promise<string[]> {
+  const rows = await db.select({ id: watches.templateId }).from(watches).where(eq(watches.userId, userId))
+  return rows.map((r) => r.id)
+}
