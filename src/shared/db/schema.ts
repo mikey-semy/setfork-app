@@ -324,6 +324,24 @@ export const follows = pgTable(
   (t) => [unique('follows_pair').on(t.followerId, t.followingId), index('follows_following_idx').on(t.followingId)],
 )
 
+// ── API tokens (доступ по MCP / API — Bearer) ────────────────────────
+// Храним только sha256-хеш токена; полный токен показываем один раз при создании.
+export const apiTokens = pgTable(
+  'api_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    prefix: text('prefix').notNull(), // для отображения, напр. shub_ab12cd…
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('api_tokens_user_idx').on(t.userId)],
+)
+
 // ── Sessions (серверный реестр входов — для отзыва и «кто онлайн») ────
 export const sessions = pgTable(
   'sessions',
@@ -422,3 +440,4 @@ export type Suggestion = typeof suggestions.$inferSelect
 export type Generation = typeof generations.$inferSelect
 export type GenerationCandidate = typeof generationCandidates.$inferSelect
 export type AiUsage = typeof aiUsage.$inferSelect
+export type ApiToken = typeof apiTokens.$inferSelect
