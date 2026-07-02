@@ -3,13 +3,27 @@ import { eq } from 'drizzle-orm'
 import { db, notifications, users } from '@/shared/db'
 import type { NotifyPrefs } from '@/shared/db/schema'
 
-type NotifType = 'suggestion_new' | 'suggestion_accepted' | 'suggestion_rejected' | 'star' | 'fork' | 'follow'
+type NotifType =
+  | 'suggestion_new'
+  | 'suggestion_accepted'
+  | 'suggestion_rejected'
+  | 'suggestion_comment'
+  | 'issue_new'
+  | 'issue_comment'
+  | 'new_version'
+  | 'star'
+  | 'fork'
+  | 'follow'
 
 // Тип события → ключ предпочтения получателя (follow не отключается — ключа нет).
 const TYPE_PREF: Partial<Record<NotifType, keyof NotifyPrefs>> = {
   suggestion_new: 'newSuggestions',
   suggestion_accepted: 'suggestionResolved',
   suggestion_rejected: 'suggestionResolved',
+  suggestion_comment: 'comments',
+  issue_new: 'issues',
+  issue_comment: 'comments',
+  new_version: 'watchedUpdates',
   star: 'stars',
   fork: 'forks',
 }
@@ -20,6 +34,7 @@ export async function notify(params: {
   actorId?: string | null
   type: NotifType
   templateId?: string | null
+  issueId?: string | null
 }): Promise<void> {
   if (params.actorId && params.actorId === params.recipientId) return
   try {
@@ -32,8 +47,18 @@ export async function notify(params: {
       actorId: params.actorId ?? null,
       type: params.type,
       templateId: params.templateId ?? null,
+      issueId: params.issueId ?? null,
     })
   } catch {
     /* уведомление — не критичный путь */
   }
+}
+
+/** Рассылка нескольким получателям (дедуп, себя пропустит notify). */
+export async function notifyMany(
+  recipientIds: string[],
+  params: { actorId?: string | null; type: NotifType; templateId?: string | null; issueId?: string | null },
+): Promise<void> {
+  const unique = [...new Set(recipientIds)].filter(Boolean)
+  await Promise.all(unique.map((recipientId) => notify({ recipientId, ...params })))
 }

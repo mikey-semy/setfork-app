@@ -5,9 +5,15 @@ import { t, type Lang } from '@/shared/i18n'
 import type { NotifyPrefs } from '@/shared/db/schema'
 import { updateNotifyPrefs } from './actions'
 
-const ROWS: { key: keyof NotifyPrefs; labelKey: 'prefNewSuggestions' | 'prefSuggestionResolved' | 'prefStars' | 'prefForks' }[] = [
+const ROWS: {
+  key: keyof NotifyPrefs
+  labelKey: 'prefNewSuggestions' | 'prefSuggestionResolved' | 'prefStars' | 'prefForks' | 'prefIssues' | 'prefComments' | 'prefWatchedUpdates'
+}[] = [
   { key: 'newSuggestions', labelKey: 'prefNewSuggestions' },
   { key: 'suggestionResolved', labelKey: 'prefSuggestionResolved' },
+  { key: 'issues', labelKey: 'prefIssues' },
+  { key: 'comments', labelKey: 'prefComments' },
+  { key: 'watchedUpdates', labelKey: 'prefWatchedUpdates' },
   { key: 'stars', labelKey: 'prefStars' },
   { key: 'forks', labelKey: 'prefForks' },
 ]

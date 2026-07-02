@@ -1,13 +1,25 @@
 import 'server-only'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
-import { db, notifications, templates, users } from '@/shared/db'
+import { db, issues, notifications, templates, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc } from '@/shared/media'
 
+export type NotificationType =
+  | 'suggestion_new'
+  | 'suggestion_accepted'
+  | 'suggestion_rejected'
+  | 'suggestion_comment'
+  | 'issue_new'
+  | 'issue_comment'
+  | 'new_version'
+  | 'star'
+  | 'fork'
+  | 'follow'
+
 export interface NotificationItem {
   id: string
-  type: 'suggestion_new' | 'suggestion_accepted' | 'suggestion_rejected' | 'star' | 'fork' | 'follow'
+  type: NotificationType
   read: boolean
   createdAt: Date
   actorHandle: string | null
@@ -15,6 +27,7 @@ export interface NotificationItem {
   ownerHandle: string | null
   slug: string | null
   title: LocaleText | null
+  issueNumber: number | null
 }
 
 export async function getUnreadCount(userId: string): Promise<number> {
@@ -39,11 +52,13 @@ export async function getNotifications(userId: string, limit = 50): Promise<Noti
       ownerHandle: owner.handle,
       slug: templates.slug,
       title: templates.title,
+      issueNumber: issues.number,
     })
     .from(notifications)
     .leftJoin(actor, eq(notifications.actorId, actor.id))
     .leftJoin(templates, eq(notifications.templateId, templates.id))
     .leftJoin(owner, eq(owner.id, templates.ownerId))
+    .leftJoin(issues, eq(notifications.issueId, issues.id))
     .where(eq(notifications.recipientId, userId))
     .orderBy(desc(notifications.createdAt))
     .limit(limit)
