@@ -31,12 +31,13 @@ export default async function ProfilePage({
   const tab: Tab = sp.tab === 'starred' ? 'starred' : 'lists'
   const counts = await getProfileCounts(user.id)
   const items = tab === 'starred' ? await getStarredTemplates(user.id) : await getUserTemplates(user.id)
+  const bigAvatar = await avatarSrc(user.avatarUrl, 180)
 
   return (
     <div className="w-full px-6 py-8 lg:px-8">
       <div className="mx-auto flex max-w-[980px] flex-col gap-8 md:flex-row">
         <aside className="flex-shrink-0 md:w-[280px]">
-          <Avatar handle={user.handle} avatarUrl={avatarSrc(user.avatarUrl, 180)} size={180} rounded="rounded-2xl" />
+          <Avatar handle={user.handle} avatarUrl={bigAvatar} size={180} rounded="rounded-2xl" />
           <div className="mt-4">
             {user.name && <div className="text-[22px] font-bold leading-tight text-ink">{user.name}</div>}
             <div className="text-[18px] text-ink-2">{user.handle}</div>

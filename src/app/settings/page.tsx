@@ -15,6 +15,7 @@ export default async function SettingsPage() {
     const { redirect } = await import('next/navigation')
     redirect('/login')
   }
+  const avatar = await avatarSrc(user.avatarUrl, 144)
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-6 py-8">
@@ -29,7 +30,7 @@ export default async function SettingsPage() {
           lang={lang}
           handle={user.handle}
           name={user.name ?? ''}
-          avatarUrl={avatarSrc(user.avatarUrl, 144)}
+          avatarUrl={avatar}
           bio={user.bio ?? ''}
           location={user.location ?? ''}
           website={user.website ?? ''}

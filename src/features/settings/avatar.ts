@@ -28,7 +28,7 @@ export async function saveAvatar(userId: string, file: File): Promise<string> {
   if (file.size > MAX_BYTES) throw new Error('Файл больше 2 МБ.')
   const buffer = Buffer.from(await file.arrayBuffer())
 
-  if (isS3Configured()) {
+  if (await isS3Configured()) {
     await deleteByPrefix(`avatars/${userId}/`).catch(() => {}) // убрать прошлые
     const key = `avatars/${userId}/${randomUUID()}.${ext}`
     return putObject(key, buffer, file.type)
@@ -43,7 +43,7 @@ export async function saveAvatar(userId: string, file: File): Promise<string> {
 
 /** Удаляет файлы аватара пользователя (S3 или диск) — best-effort. */
 export async function removeAvatar(userId: string): Promise<void> {
-  if (isS3Configured()) {
+  if (await isS3Configured()) {
     await deleteByPrefix(`avatars/${userId}/`).catch(() => {})
     return
   }

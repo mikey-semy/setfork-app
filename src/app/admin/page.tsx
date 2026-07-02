@@ -1,11 +1,13 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getAiSettings, getApiKey, maskKey } from '@/shared/settings/ai'
+import { getMediaSettings, maskSecret } from '@/shared/settings/media'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { AiKeyAndSwitch } from '@/features/admin/AiKeyAndSwitch'
 import { CreditsWidget } from '@/features/admin/CreditsWidget'
+import { MediaSettingsForm } from '@/features/admin/MediaSettingsForm'
 import { ReindexPanel } from '@/features/admin/ReindexPanel'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none'
@@ -45,9 +47,22 @@ export default async function AdminPage() {
   await requireAdmin()
   const lang = await getLang()
   const ru = lang === 'ru'
-  const [settings, apiKey] = await Promise.all([getAiSettings(), getApiKey()])
+  const [settings, apiKey, media] = await Promise.all([getAiSettings(), getApiKey(), getMediaSettings()])
   const hasKey = Boolean(apiKey)
   const maskedKey = maskKey(apiKey)
+  const mediaValues = {
+    s3Endpoint: media.s3Endpoint,
+    s3Region: media.s3Region,
+    s3Bucket: media.s3Bucket,
+    s3Prefix: media.s3Prefix,
+    s3AccessKey: media.s3AccessKey,
+    imgproxyUrl: media.imgproxyUrl,
+    cdnUrl: media.cdnUrl,
+    useImgproxy: media.useImgproxy,
+    s3SecretMask: maskSecret(media.s3SecretKey),
+    imgproxyKeyMask: maskSecret(media.imgproxyKey),
+    imgproxySaltMask: maskSecret(media.imgproxySalt),
+  }
   const models = hasKey ? await fetchModels() : { chat: [], embedding: [] }
 
   const chatOpts = ensure(buildOpts(models.chat, false, ru), settings.chatModel)
@@ -141,6 +156,16 @@ export default async function AdminPage() {
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <div className="mb-1 font-semibold text-ink">{ru ? 'Хранилище и изображения' : 'Storage & images'}</div>
+        <p className="mb-4 text-[13px] text-ink-2">
+          {ru
+            ? 'S3-совместимое хранилище, imgproxy и CDN. Значения перекрывают .env; пустое поле — берётся из .env.'
+            : 'S3-compatible storage, imgproxy and CDN. Values override .env; an empty field falls back to .env.'}
+        </p>
+        <MediaSettingsForm ru={ru} v={mediaValues} />
       </section>
 
       <ReindexPanel ru={ru} />

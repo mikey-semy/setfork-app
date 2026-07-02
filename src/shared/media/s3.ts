@@ -5,32 +5,28 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
-import { mediaConfig } from './config'
+import { getMediaSettings } from '@/shared/settings/media'
 
-let cached: S3Client | null = null
-function client(): S3Client {
-  if (cached) return cached
-  const { endpoint, region, accessKey, secretKey } = mediaConfig.s3
-  cached = new S3Client({
-    endpoint,
-    region,
+async function client(): Promise<{ s3: S3Client; bucket: string; prefix: string }> {
+  const s = await getMediaSettings()
+  const s3 = new S3Client({
+    endpoint: s.s3Endpoint,
+    region: s.s3Region,
     forcePathStyle: true, // Selectel/MinIO — path-style (бакет в пути, не в поддомене)
-    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
+    credentials: { accessKeyId: s.s3AccessKey, secretAccessKey: s.s3SecretKey },
   })
-  return cached
+  return { s3, bucket: s.s3Bucket, prefix: s.s3Prefix }
 }
 
-function prefixed(key: string): string {
-  const p = mediaConfig.s3.prefix
-  return p ? `${p}/${key}` : key
-}
+const withPrefix = (prefix: string, key: string) => (prefix ? `${prefix}/${key}` : key)
 
 /** Загрузка объекта. Возвращает storage_key (без префикса окружения). */
 export async function putObject(key: string, body: Buffer, contentType: string): Promise<string> {
-  await client().send(
+  const { s3, bucket, prefix } = await client()
+  await s3.send(
     new PutObjectCommand({
-      Bucket: mediaConfig.s3.bucket,
-      Key: prefixed(key),
+      Bucket: bucket,
+      Key: withPrefix(prefix, key),
       Body: body,
       ContentType: contentType,
       CacheControl: 'max-age=31536000', // 1 год — оригиналы неизменяемы (uuid в имени)
@@ -41,12 +37,11 @@ export async function putObject(key: string, body: Buffer, contentType: string):
 
 /** Удаляет все объекты под префиксом (напр. avatars/{userId}/). */
 export async function deleteByPrefix(keyPrefix: string): Promise<void> {
-  const listed = await client().send(
-    new ListObjectsV2Command({ Bucket: mediaConfig.s3.bucket, Prefix: prefixed(keyPrefix) }),
+  const { s3, bucket, prefix } = await client()
+  const listed = await s3.send(
+    new ListObjectsV2Command({ Bucket: bucket, Prefix: withPrefix(prefix, keyPrefix) }),
   )
   const objects = (listed.Contents ?? []).map((o) => ({ Key: o.Key! })).filter((o) => o.Key)
   if (objects.length === 0) return
-  await client().send(
-    new DeleteObjectsCommand({ Bucket: mediaConfig.s3.bucket, Delete: { Objects: objects } }),
-  )
+  await s3.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: objects } }))
 }

@@ -41,7 +41,9 @@ export async function getStarredTemplates(userId: string): Promise<FeedItem[]> {
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(eq(stars.userId, userId))
     .orderBy(desc(stars.createdAt))
-  return (rows as FeedItem[]).map((r) => ({ ...r, ownerAvatarUrl: avatarSrc(r.ownerAvatarUrl, 96) }))
+  return Promise.all(
+    (rows as FeedItem[]).map(async (r) => ({ ...r, ownerAvatarUrl: await avatarSrc(r.ownerAvatarUrl, 96) })),
+  )
 }
 
 /** Прогоны пользователя (для вкладки профиля). */

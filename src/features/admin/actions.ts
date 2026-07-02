@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
 import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } from '@/shared/settings/ai'
+import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 
 export async function setAiSettings(formData: FormData): Promise<void> {
   await requireAdmin()
@@ -32,6 +33,35 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   settings['ai.enabled'] = enabled && keyExists ? 'true' : 'false'
 
   await saveSettings(settings)
+  revalidatePath('/admin')
+}
+
+// ── Хранилище и изображения (S3 + imgproxy + CDN) ────────────────────
+export async function setMediaSettings(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const str = (k: string) => String(formData.get(k) ?? '').trim()
+
+  // Обычные поля пишем всегда (пусто = фолбэк на env при чтении).
+  const settings: Record<string, string> = {
+    [MEDIA_KEYS.s3Endpoint]: str('s3Endpoint'),
+    [MEDIA_KEYS.s3Region]: str('s3Region'),
+    [MEDIA_KEYS.s3Bucket]: str('s3Bucket'),
+    [MEDIA_KEYS.s3Prefix]: str('s3Prefix'),
+    [MEDIA_KEYS.s3AccessKey]: str('s3AccessKey'),
+    [MEDIA_KEYS.imgproxyUrl]: str('imgproxyUrl'),
+    [MEDIA_KEYS.cdnUrl]: str('cdnUrl'),
+    [MEDIA_KEYS.useImgproxy]: formData.get('useImgproxy') === 'on' ? 'true' : 'false',
+  }
+  // Секреты перезаписываем только если ввели непустое (пусто = оставить как есть).
+  const secretKey = str('s3SecretKey')
+  if (secretKey) settings[MEDIA_KEYS.s3SecretKey] = secretKey
+  const imgKey = str('imgproxyKey')
+  if (imgKey) settings[MEDIA_KEYS.imgproxyKey] = imgKey
+  const imgSalt = str('imgproxySalt')
+  if (imgSalt) settings[MEDIA_KEYS.imgproxySalt] = imgSalt
+
+  await saveSettings(settings)
+  clearMediaCache()
   revalidatePath('/admin')
 }
 

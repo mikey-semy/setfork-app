@@ -5,8 +5,8 @@ import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc } from '@/shared/media'
 
 // Резолвим ownerAvatarUrl (storage_key → подписанный imgproxy-URL) для ленты.
-function withAvatar<T extends { ownerAvatarUrl: string | null }>(rows: T[]): T[] {
-  return rows.map((r) => ({ ...r, ownerAvatarUrl: avatarSrc(r.ownerAvatarUrl, 96) }))
+async function withAvatar<T extends { ownerAvatarUrl: string | null }>(rows: T[]): Promise<T[]> {
+  return Promise.all(rows.map(async (r) => ({ ...r, ownerAvatarUrl: await avatarSrc(r.ownerAvatarUrl, 96) })))
 }
 
 export type FeedSort = 'trending' | 'newest' | 'mostStarred'
@@ -159,7 +159,9 @@ export async function getSuggestions(templateId: string) {
     with: { author: true },
     orderBy: (s, { asc, desc: d }) => [asc(s.status), d(s.createdAt)],
   })
-  return rows.map((r) => ({ ...r, author: { ...r.author, avatarUrl: avatarSrc(r.author.avatarUrl, 64) } }))
+  return Promise.all(
+    rows.map(async (r) => ({ ...r, author: { ...r.author, avatarUrl: await avatarSrc(r.author.avatarUrl, 64) } })),
+  )
 }
 
 /** Число открытых предложений. */
@@ -216,7 +218,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
     .where(and(eq(users.handle, ownerHandle), eq(templates.slug, slug)))
     .limit(1)
   if (!row) return null
-  return { ...row, ownerAvatarUrl: avatarSrc(row.ownerAvatarUrl, 96) }
+  return { ...row, ownerAvatarUrl: await avatarSrc(row.ownerAvatarUrl, 96) }
 }
 
 /** Версии списка (для вкладки «Версии»). */
@@ -243,7 +245,7 @@ export async function getTemplateDetail(ownerHandle: string, slug: string) {
   })
   if (!tpl) return null
 
-  tpl.owner.avatarUrl = avatarSrc(tpl.owner.avatarUrl, 96)
+  tpl.owner.avatarUrl = await avatarSrc(tpl.owner.avatarUrl, 96)
   const currentVersion = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
   const stepRows = currentVersion
     ? await db.query.steps.findMany({

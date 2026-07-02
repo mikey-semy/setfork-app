@@ -58,11 +58,12 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
     .where(eq(users.id, session.userId))
 
   // В сессии храним УЖЕ отрезолвленный URL (навбар — клиент, подписать сам не может).
+  const sessionAvatar = avatarRef ? ((await avatarSrc(avatarRef, 64)) ?? undefined) : session.avatarUrl
   await setSessionCookie({
     userId: session.userId,
     handle: session.handle,
     name: name ?? undefined,
-    avatarUrl: avatarRef ? (avatarSrc(avatarRef, 64) ?? undefined) : session.avatarUrl,
+    avatarUrl: sessionAvatar,
   })
 
   revalidatePath('/settings')
