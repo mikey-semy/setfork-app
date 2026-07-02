@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, cosineDistance, desc, eq, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, embeddings, stars, steps, suggestions, templates, templateVersions, users } from '@/shared/db'
+import { db, embeddings, stars, steps, suggestionComments, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
@@ -245,12 +245,44 @@ export async function getActivity(limit = 30, viewerId?: string, ownerIds?: stri
 export async function getSuggestions(templateId: string) {
   const rows = await db.query.suggestions.findMany({
     where: (s) => eq(s.templateId, templateId),
-    with: { author: true },
+    with: { author: true, comments: { columns: { id: true } } },
     orderBy: (s, { asc, desc: d }) => [asc(s.status), d(s.createdAt)],
   })
   return Promise.all(
-    rows.map(async (r) => ({ ...r, author: { ...r.author, avatarUrl: await avatarSrc(r.author.avatarUrl, 64) } })),
+    rows.map(async (r) => ({
+      ...r,
+      commentCount: r.comments.length,
+      author: { ...r.author, avatarUrl: await avatarSrc(r.author.avatarUrl, 64) },
+    })),
   )
+}
+
+/** Одно предложение с автором (для страницы-обсуждения). */
+export async function getSuggestion(templateId: string, id: string) {
+  const row = await db.query.suggestions.findFirst({
+    where: (s, { and: a, eq: e }) => a(e(s.id, id), e(s.templateId, templateId)),
+    with: { author: true },
+  })
+  if (!row) return null
+  return { ...row, author: { ...row.author, avatarUrl: await avatarSrc(row.author.avatarUrl, 64) } }
+}
+
+/** Комментарии-обсуждение к предложению. */
+export async function getSuggestionComments(suggestionId: string) {
+  const rows = await db
+    .select({
+      id: suggestionComments.id,
+      body: suggestionComments.body,
+      createdAt: suggestionComments.createdAt,
+      authorId: suggestionComments.authorId,
+      authorHandle: users.handle,
+      authorAvatarUrl: users.avatarUrl,
+    })
+    .from(suggestionComments)
+    .innerJoin(users, eq(suggestionComments.authorId, users.id))
+    .where(eq(suggestionComments.suggestionId, suggestionId))
+    .orderBy(asc(suggestionComments.createdAt))
+  return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
 }
 
 /** Число открытых предложений. */

@@ -7,6 +7,7 @@ import {
   db,
   stars,
   steps,
+  suggestionComments,
   suggestions,
   templateVersions,
   templates,
@@ -19,7 +20,7 @@ import { tr } from '@/shared/i18n'
 import { imageUrl, uploadImageFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
-import { notify } from '@/features/notifications/notify'
+import { notify, notifyMany } from '@/features/notifications/notify'
 import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { parseTags, slugify } from './slug'
@@ -216,6 +217,33 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
 
   revalidatePath('/', 'layout')
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
+}
+
+// ── Обсуждение предложения (review-комментарии) ──────────────────────
+export async function addSuggestionComment(formData: FormData): Promise<void> {
+  const session = await requireSession()
+  const suggestionId = String(formData.get('suggestionId') ?? '')
+  const body = String(formData.get('body') ?? '').trim().slice(0, 20000)
+  const sug = await db.query.suggestions.findFirst({
+    where: (s) => eq(s.id, suggestionId),
+    with: { template: true },
+  })
+  if (!sug) return
+  const handle = await ownerHandle(sug.template.ownerId)
+  const path = `/${handle}/${sug.template.slug}/suggestions/${sug.id}`
+  if (!body) redirect(path)
+
+  await db.insert(suggestionComments).values({ suggestionId: sug.id, authorId: session.userId, body })
+
+  const commenters = await db
+    .selectDistinct({ id: suggestionComments.authorId })
+    .from(suggestionComments)
+    .where(eq(suggestionComments.suggestionId, sug.id))
+  const recipients = [sug.authorId, sug.template.ownerId, ...commenters.map((c) => c.id)]
+  await notifyMany(recipients, { actorId: session.userId, type: 'suggestion_comment', templateId: sug.templateId })
+
+  revalidatePath(path)
+  redirect(path)
 }
 
 // ── Автор списка: отклонить предложение ──────────────────────────────
