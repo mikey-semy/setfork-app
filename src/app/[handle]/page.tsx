@@ -7,7 +7,8 @@ import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
-import { getProfileCounts, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { getContributions, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { ActivityGraph } from '@/features/profile/ActivityGraph'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { FollowButton } from '@/features/follows/FollowButton'
 import { avatarSrc } from '@/shared/media'
@@ -32,11 +33,13 @@ export default async function ProfilePage({
 
   const tab: Tab = sp.tab === 'starred' ? 'starred' : 'lists'
   const isOwner = viewer?.userId === user.id
-  const [counts, followCounts, following, bigAvatar] = await Promise.all([
+  const [counts, followCounts, following, bigAvatar, contributions, received] = await Promise.all([
     getProfileCounts(user.id),
     getFollowCounts(user.id),
     viewer && !isOwner ? isFollowing(viewer.userId, user.id) : Promise.resolve(false),
     avatarSrc(user.avatarUrl, 180),
+    getContributions(user.id),
+    getReceivedStats(user.id),
   ])
   const items = tab === 'starred' ? await getStarredTemplates(user.id, viewer?.userId) : await getUserTemplates(user.id, viewer?.userId)
 
@@ -125,6 +128,15 @@ export default async function ProfilePage({
         </aside>
 
         <section className="min-w-0 flex-1">
+          <div className="mb-6">
+            <ActivityGraph
+              contributions={contributions}
+              starsReceived={received.stars}
+              forksReceived={received.forks}
+              lang={lang}
+            />
+          </div>
+
           <div className="mb-4 flex gap-5 border-b border-border text-[14px] font-semibold">
             <TabLink handle={handle} tab="lists" active={tab} label={`${t('lists', lang)} ${counts.lists}`} />
             <TabLink handle={handle} tab="starred" active={tab} label={`${t('starredTab', lang)} ${counts.stars}`} />
