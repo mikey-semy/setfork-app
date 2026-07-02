@@ -140,7 +140,7 @@ export function TopNav({
                 <DropdownMenuSeparator />
                 <form action="/api/auth/logout" method="post">
                   <DropdownMenuItem asChild>
-                    <button type="submit" className="w-full text-left text-[var(--danger)]">
+                    <button type="submit" className="w-full text-left text-danger">
                       {t('signOut', lang)}
                     </button>
                   </DropdownMenuItem>

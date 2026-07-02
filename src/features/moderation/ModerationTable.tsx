@@ -9,9 +9,9 @@ import { aiModerate, setModeration, setVerified } from './actions'
 
 function StatusBadge({ s, lang }: { s: ModItem['moderation']; lang: Lang }) {
   if (s === 'hidden')
-    return <span className="rounded-full bg-[var(--danger)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--danger)]">{t('hiddenLabel', lang)}</span>
+    return <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[11px] font-semibold text-danger">{t('hiddenLabel', lang)}</span>
   if (s === 'flagged')
-    return <span className="rounded-full bg-[var(--warn)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--warn)]">{t('flaggedLabel', lang)}</span>
+    return <span className="rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-semibold text-warn">{t('flaggedLabel', lang)}</span>
   return <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">{t('statusActive', lang)}</span>
 }
 
@@ -71,13 +71,13 @@ export function ModerationTable({
                   <Link href={`/${it.ownerHandle}/${it.slug}`} className="truncate font-mono text-[13px] text-accent hover:underline">
                     {it.ownerHandle}/{it.slug}
                   </Link>
-                  {it.verified && <BadgeCheck size={15} className="text-[var(--ok)]" />}
+                  {it.verified && <BadgeCheck size={15} className="text-ok" />}
                   <StatusBadge s={it.moderation} lang={lang} />
                   {it.visibility === 'private' && <span className="text-[11px] text-muted">private</span>}
                   <span className="font-mono text-[11px] text-muted">★{it.starsCount}</span>
                 </div>
                 <div className="truncate text-[12.5px] text-ink-2">{tr(it.title, lang)}</div>
-                {it.moderationReason && <div className="text-[11.5px] text-[var(--warn)]">{it.moderationReason}</div>}
+                {it.moderationReason && <div className="text-[11.5px] text-warn">{it.moderationReason}</div>}
               </div>
 
               <div className="flex shrink-0 items-center gap-1.5">
@@ -85,7 +85,7 @@ export function ModerationTable({
                   <button
                     onClick={() => start(() => void setModeration(it.id, 'active'))}
                     disabled={pending}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-[var(--ok)]/50 px-2.5 py-1.5 text-[12px] font-medium text-[var(--ok)] disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-ok/50 px-2.5 py-1.5 text-[12px] font-medium text-ok disabled:opacity-60"
                   >
                     <Check size={13} /> {t('approveAction', lang)}
                   </button>
@@ -94,7 +94,7 @@ export function ModerationTable({
                   onClick={() => start(() => void setVerified(it.id, !it.verified))}
                   disabled={pending}
                   className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] font-medium disabled:opacity-60 ${
-                    it.verified ? 'border-[var(--ok)] text-[var(--ok)]' : 'border-border text-ink-2 hover:text-ink'
+                    it.verified ? 'border-ok text-ok' : 'border-border text-ink-2 hover:text-ink'
                   }`}
                 >
                   <BadgeCheck size={13} /> {it.verified ? t('unverifyAction', lang) : t('verifyAction', lang)}
@@ -110,7 +110,7 @@ export function ModerationTable({
                   onClick={() => start(() => void setModeration(it.id, hidden ? 'active' : 'hidden'))}
                   disabled={pending}
                   className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] font-medium disabled:opacity-60 ${
-                    hidden ? 'border-border text-ink-2 hover:text-ink' : 'border-[var(--danger)]/40 text-[var(--danger)]'
+                    hidden ? 'border-border text-ink-2 hover:text-ink' : 'border-danger/40 text-danger'
                   }`}
                 >
                   {hidden ? <Eye size={13} /> : <EyeOff size={13} />} {hidden ? t('unhideAction', lang) : t('hideAction', lang)}

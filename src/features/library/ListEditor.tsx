@@ -221,7 +221,7 @@ export function ListEditor({
               ? 'ИИ перепишет пункты. Скриншоты и ссылки при этом сбрасываются.'
               : 'AI rewrites the items. Screenshots and links are reset.'}
           </p>
-          {refineErr && <p className="mt-1 text-[12px] text-[var(--danger)]">{refineErr}</p>}
+          {refineErr && <p className="mt-1 text-[12px] text-danger">{refineErr}</p>}
         </div>
       )}
 
@@ -269,7 +269,7 @@ export function ListEditor({
               <button
                 type="button"
                 onClick={() => removeItem(i)}
-                className="rounded p-1 text-muted hover:text-[var(--danger)]"
+                className="rounded p-1 text-muted hover:text-danger"
                 title="remove"
               >
                 <Trash2 size={15} />
@@ -341,7 +341,7 @@ export function ListEditor({
                     <button
                       type="button"
                       onClick={() => patch(i, { subtasks: it.subtasks.filter((_, xi) => xi !== si) })}
-                      className="text-muted hover:text-[var(--danger)]"
+                      className="text-muted hover:text-danger"
                     >
                       <X size={14} />
                     </button>
@@ -376,7 +376,7 @@ export function ListEditor({
                     <button
                       type="button"
                       onClick={() => patch(i, { refs: it.refs.filter((_, xi) => xi !== ri) })}
-                      className="text-muted hover:text-[var(--danger)]"
+                      className="text-muted hover:text-danger"
                     >
                       <X size={14} />
                     </button>

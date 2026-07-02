@@ -22,7 +22,7 @@ export function StarButton({
       disabled={pending}
       className={`inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:opacity-60 ${
         starred
-          ? 'border-[var(--warn)] bg-[var(--accent-soft)] text-[var(--warn)]'
+          ? 'border-warn bg-[var(--accent-soft)] text-warn'
           : 'border-border text-ink hover:border-border-strong'
       }`}
     >

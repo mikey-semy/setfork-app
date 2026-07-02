@@ -26,7 +26,7 @@ export default async function SuggestionsPage({
     s === 'accepted' ? t('statusAccepted', lang) : s === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
   const statusCls = (s: string) =>
     s === 'accepted'
-      ? 'bg-[var(--accent-soft)] text-[var(--ok)]'
+      ? 'bg-[var(--accent-soft)] text-ok'
       : s === 'rejected'
         ? 'bg-surface-2 text-muted'
         : 'bg-[var(--accent-soft)] text-accent'

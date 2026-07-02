@@ -13,7 +13,7 @@ export function LoginForm({ lang }: { lang: Lang }) {
     <form action={action} className="flex flex-col gap-3 text-left">
       <input name="email" type="email" required autoComplete="email" placeholder={t('emailField', lang)} className={field} />
       <input name="password" type="password" required autoComplete="current-password" placeholder={t('passwordField', lang)} className={field} />
-      {state?.error && <div className="text-[12.5px] text-[var(--danger)]">{state.error}</div>}
+      {state?.error && <div className="text-[12.5px] text-danger">{state.error}</div>}
       <button disabled={pending} className={btn}>
         {t('signIn', lang)}
       </button>
@@ -32,7 +32,7 @@ export function RegisterForm({ lang }: { lang: Lang }) {
       </div>
       <input name="name" placeholder={t('displayName', lang)} className={field} />
       <input name="password" type="password" required minLength={8} autoComplete="new-password" placeholder={t('passwordField', lang)} className={field} />
-      {state?.error && <div className="text-[12.5px] text-[var(--danger)]">{state.error}</div>}
+      {state?.error && <div className="text-[12.5px] text-danger">{state.error}</div>}
       <button disabled={pending} className={btn}>
         {t('createAccount', lang)}
       </button>

@@ -20,7 +20,7 @@ function Copyable({ text, label }: { text: string; label: string }) {
       }}
       className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-[12px] text-ink-2 hover:text-ink"
     >
-      {done ? <Check size={12} className="text-[var(--ok)]" /> : <Copy size={12} />} {label}
+      {done ? <Check size={12} className="text-ok" /> : <Copy size={12} />} {label}
     </button>
   )
 }
@@ -67,8 +67,8 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
 
       {/* Показ только что созданного токена */}
       {created && (
-        <div className="rounded-md border border-[var(--warn)] bg-surface p-3">
-          <div className="mb-1 flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--warn)]">
+        <div className="rounded-md border border-warn bg-surface p-3">
+          <div className="mb-1 flex items-center gap-1.5 text-[12.5px] font-semibold text-warn">
             <TriangleAlert size={14} /> {ru ? 'Скопируй сейчас — больше не покажем' : 'Copy it now — shown only once'}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -101,7 +101,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
           {pending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {ru ? 'Создать токен' : 'Create token'}
         </button>
       </div>
-      {err && <p className="text-[12px] text-[var(--danger)]">{err}</p>}
+      {err && <p className="text-[12px] text-danger">{err}</p>}
 
       {/* Список */}
       {tokens.length === 0 ? (
@@ -119,7 +119,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
               </div>
               <form action={revokeApiToken.bind(null, tk.id)}>
                 <button
-                  className="inline-flex items-center gap-1 rounded p-1.5 text-muted hover:text-[var(--danger)]"
+                  className="inline-flex items-center gap-1 rounded p-1.5 text-muted hover:text-danger"
                   title={ru ? 'Отозвать' : 'Revoke'}
                 >
                   <Trash2 size={15} />

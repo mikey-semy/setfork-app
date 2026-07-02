@@ -108,15 +108,15 @@ function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: CmpStep[];
   return (
     <>
       <div className="mb-3 flex gap-3 text-[12.5px]">
-        <span className="text-[var(--ok)]">+{added}</span>
-        <span className="text-[var(--danger)]">−{removed}</span>
+        <span className="text-ok">+{added}</span>
+        <span className="text-danger">−{removed}</span>
       </div>
       <div className="overflow-x-auto rounded-lg border border-border font-mono text-[12px] leading-[1.55]">
         {rows.map((r, i) => {
           const clr = r.type === 'add' ? 'var(--ok)' : r.type === 'del' ? 'var(--danger)' : ''
           const rowStyle = clr ? { backgroundColor: `color-mix(in srgb, ${clr} 13%, transparent)` } : undefined
           const sign = r.type === 'add' ? '+' : r.type === 'del' ? '−' : ''
-          const signColor = r.type === 'add' ? 'text-[var(--ok)]' : r.type === 'del' ? 'text-[var(--danger)]' : 'text-transparent'
+          const signColor = r.type === 'add' ? 'text-ok' : r.type === 'del' ? 'text-danger' : 'text-transparent'
           return (
             <div key={i} style={rowStyle} className="flex">
               <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] text-muted">
@@ -154,9 +154,9 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
   return (
     <>
       <div className="mb-3 flex gap-3 text-[12.5px]">
-        <span className="text-[var(--ok)]">+{summary.added}</span>
-        <span className="text-[var(--danger)]">−{summary.removed}</span>
-        <span className="text-[var(--warn)]">~{summary.changed}</span>
+        <span className="text-ok">+{summary.added}</span>
+        <span className="text-danger">−{summary.removed}</span>
+        <span className="text-warn">~{summary.changed}</span>
       </div>
       <div className="flex flex-col gap-2.5">
         {entries.map((e, i) => {
@@ -181,7 +181,7 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
               {e.status !== 'removed' && e.desc && <Markdown className="mt-1">{e.desc}</Markdown>}
               {e.status === 'removed' && e.desc && <div className="mt-1 text-[13px] text-ink-2 line-through opacity-70">{e.desc}</div>}
               {e.status === 'changed' && e.before && (
-                <div className="mt-2 space-y-1 border-l-2 border-[var(--warn)]/40 pl-2.5 text-[12px] text-ink-2">
+                <div className="mt-2 space-y-1 border-l-2 border-warn/40 pl-2.5 text-[12px] text-ink-2">
                   {e.changes.includes('level') && (
                     <div>
                       level: <span className="line-through opacity-70">{e.before.level}</span> → <b>{e.level}</b>

@@ -24,17 +24,17 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
       </p>
 
       {!aiOn && (
-        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2.5 text-[13px] text-[var(--warn)]">
+        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2.5 text-[13px] text-warn">
           {ru ? 'Генерация не настроена (нет ключа).' : 'Generation is not configured (no key).'}
         </div>
       )}
       {sp.e === 'aifail' && (
-        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2.5 text-[13px] text-[var(--danger)]">
+        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2.5 text-[13px] text-danger">
           {t('aiFail', lang)}
         </div>
       )}
       {sp.e === 'ratelimited' && (
-        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2.5 text-[13px] text-[var(--warn)]">
+        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2.5 text-[13px] text-warn">
           {t('rateLimited', lang)}
         </div>
       )}

@@ -26,6 +26,10 @@
   --ok: #16a34a;
   --warn: #d97706;
   --danger: #dc2626;
+  /* RGB-триплеты для alpha в Tailwind (bg-ok/10 и т.п.) */
+  --ok-rgb: 22 163 74;
+  --warn-rgb: 217 119 6;
+  --danger-rgb: 220 38 38;
 }
 
 .dark {
@@ -45,6 +49,9 @@
   --ok: #34d399;
   --warn: #eab308;
   --danger: #f87171;
+  --ok-rgb: 52 211 153;
+  --warn-rgb: 234 179 8;
+  --danger-rgb: 248 113 113;
 }
 
 * {

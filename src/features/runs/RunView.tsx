@@ -101,14 +101,14 @@ export function RunView({
                 if (confirm(t('runAbandonConfirm', lang))) start(() => abandonRun(runId))
               }}
               title={t('runAbandon', lang)}
-              className="grid h-8 w-8 place-items-center rounded-md text-muted hover:text-[var(--danger)]"
+              className="grid h-8 w-8 place-items-center rounded-md text-muted hover:text-danger"
             >
               <Trash2 size={15} />
             </button>
           </div>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-          <div className="h-full rounded-full bg-[var(--ok)] transition-all" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-ok transition-all" style={{ width: `${pct}%` }} />
         </div>
       </div>
 
@@ -117,14 +117,14 @@ export function RunView({
         {steps.map((s, i) => (
           <div
             key={s.id}
-            className={`rounded-lg border p-4 transition-colors ${s.done ? 'border-[var(--ok)]/40 bg-[var(--ok)]/5' : 'border-border bg-surface'}`}
+            className={`rounded-lg border p-4 transition-colors ${s.done ? 'border-ok/40 bg-ok/5' : 'border-border bg-surface'}`}
           >
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => toggle(i)}
                 aria-label={s.done ? 'uncheck' : 'check'}
-                className={`mt-0.5 shrink-0 ${s.done ? 'text-[var(--ok)]' : 'text-muted hover:text-ink'}`}
+                className={`mt-0.5 shrink-0 ${s.done ? 'text-ok' : 'text-muted hover:text-ink'}`}
               >
                 {s.done ? <SquareCheckBig size={20} /> : <Square size={20} />}
               </button>
@@ -163,7 +163,7 @@ export function RunView({
                             onClick={() => toggleSub(i, idx)}
                             className="flex items-start gap-2 text-left text-[13px] text-ink-2"
                           >
-                            <span className={`mt-0.5 shrink-0 ${checked ? 'text-[var(--ok)]' : 'text-muted'}`}>
+                            <span className={`mt-0.5 shrink-0 ${checked ? 'text-ok' : 'text-muted'}`}>
                               {checked ? <Check size={14} /> : <Square size={14} />}
                             </span>
                             <span className={checked ? 'line-through opacity-70' : ''}>{sub}</span>

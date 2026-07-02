@@ -25,7 +25,7 @@ export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }
   const secretPh = ru ? '•••• (задан) — оставьте пустым, чтобы не менять' : '•••• (set) — leave blank to keep'
   return (
     <form action={setMediaSettings} className="flex flex-col gap-5">
-      <div className="rounded-md border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-3 py-2.5 text-[12.5px] text-[var(--warn)]">
+      <div className="rounded-md border border-warn/40 bg-warn/10 px-3 py-2.5 text-[12.5px] text-warn">
         {ru
           ? 'Значения S3/ключей подписи должны совпадать с окружением контейнера imgproxy. Пустое поле = берётся из .env. После смены кредов или ключей перезапустите контейнер imgproxy.'
           : 'S3 / signing-key values must match the imgproxy container environment. Empty field = taken from .env. After changing credentials or keys, restart the imgproxy container.'}

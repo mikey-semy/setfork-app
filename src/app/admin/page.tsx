@@ -36,9 +36,9 @@ function priceText(m: ModelOption, embedding: boolean, ru: boolean): string {
 // Зелёный — дёшево, жёлтый — средне, красный — дорого, серый — плавающая.
 function priceClass(metric: number): string {
   if (!Number.isFinite(metric)) return 'text-muted'
-  if (metric <= 1) return 'text-[var(--ok)]'
-  if (metric <= 10) return 'text-[var(--warn)]'
-  return 'text-[var(--danger)]'
+  if (metric <= 1) return 'text-ok'
+  if (metric <= 10) return 'text-warn'
+  return 'text-danger'
 }
 function buildOpts(models: ModelOption[], embedding: boolean, ru: boolean): Option[] {
   return [...models]
@@ -108,7 +108,7 @@ export default async function AdminPage() {
 
       <section className="rounded-lg border border-border bg-surface p-5">
         <div className="mb-3 flex items-center gap-2 font-semibold text-ink">
-          <span className="h-2 w-2 rounded-full bg-[var(--ok)]" />
+          <span className="h-2 w-2 rounded-full bg-ok" />
           {ru ? 'Сейчас онлайн' : 'Online now'} <span className="font-mono text-[12px] text-muted">{online.length}</span>
         </div>
         {online.length === 0 ? (
@@ -129,7 +129,7 @@ export default async function AdminPage() {
         <div className="mb-4 font-semibold text-ink">{ru ? 'Генерация и модели' : 'Generation & models'}</div>
 
         {!hasKey && (
-          <div className="mb-5 rounded-md border border-[var(--warn)]/40 bg-[var(--warn)]/10 px-3 py-2.5 text-[13px] text-[var(--warn)]">
+          <div className="mb-5 rounded-md border border-warn/40 bg-warn/10 px-3 py-2.5 text-[13px] text-warn">
             {ru
               ? 'Нет OPENROUTER_API_KEY в .env — генерация и списки моделей недоступны (id можно ввести вручную).'
               : 'No OPENROUTER_API_KEY in .env — generation and model lists are unavailable (id can be typed manually).'}

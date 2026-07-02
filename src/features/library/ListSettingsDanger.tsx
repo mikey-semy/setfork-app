@@ -22,8 +22,8 @@ export function ListSettingsDanger({
   const matches = confirm.trim() === slug
 
   return (
-    <section className="rounded-lg border border-[var(--danger)]/40 bg-[var(--danger)]/5 p-5">
-      <div className="mb-4 font-semibold text-[var(--danger)]">{t('dangerZone', lang)}</div>
+    <section className="rounded-lg border border-danger/40 bg-danger/5 p-5">
+      <div className="mb-4 font-semibold text-danger">{t('dangerZone', lang)}</div>
 
       {/* Смена видимости */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
@@ -55,12 +55,12 @@ export function ListSettingsDanger({
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder={slug}
-            className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-[var(--danger)]"
+            className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-danger"
           />
           <button
             onClick={() => start(() => deleteListAction(templateId))}
             disabled={!matches || pending}
-            className="inline-flex items-center gap-2 rounded-md bg-[var(--danger)] px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-md bg-danger px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
           >
             <Trash2 size={14} /> {t('deleteList', lang)}
           </button>

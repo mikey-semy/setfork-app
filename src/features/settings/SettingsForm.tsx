@@ -119,8 +119,8 @@ export function SettingsForm({
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-        {state?.ok && <span className="text-[13px] text-[var(--ok)]">{t('profileSaved', lang)}</span>}
-        {state?.error && <span className="text-[13px] text-[var(--danger)]">{state.error}</span>}
+        {state?.ok && <span className="text-[13px] text-ok">{t('profileSaved', lang)}</span>}
+        {state?.error && <span className="text-[13px] text-danger">{state.error}</span>}
         <button
           disabled={pending}
           className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg disabled:opacity-60"
