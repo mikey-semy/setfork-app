@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { SearchX, Sparkles } from 'lucide-react'
+import { BadgeCheck, SearchX, Sparkles } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -18,27 +18,52 @@ const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostStarred' }[] = 
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tag?: string; sort?: string; e?: string }>
+  searchParams: Promise<{ q?: string; tag?: string; sort?: string; e?: string; verified?: string; type?: string }>
 }) {
   const sp = await searchParams
   const aiOn = hasOpenRouterKey()
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
+  const verified = sp.verified === '1'
+  const type = sp.type === 'ordered' ? 'ordered' : sp.type === 'unordered' ? 'unordered' : undefined
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const [tags, feed] = await Promise.all([
     getPopularTags(),
-    getFeed({ sort, tag: sp.tag, q: sp.q }, session?.userId),
+    getFeed(
+      { sort, tag: sp.tag, q: sp.q, verified: verified || undefined, ordered: type ? type === 'ordered' : undefined },
+      session?.userId,
+    ),
   ])
   const qs = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams()
-    const merged = { q: sp.q, tag: sp.tag, sort: sp.sort, ...over }
+    const merged = { q: sp.q, tag: sp.tag, sort: sp.sort, verified: sp.verified, type: sp.type, ...over }
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v)
     const s = p.toString()
     return s ? `/explore?${s}` : '/explore'
   }
+  const chip = (active: boolean) =>
+    `rounded-full px-2.5 py-1 text-[12px] ${active ? 'bg-primary text-primary-fg' : 'bg-surface text-ink-2 hover:text-ink'}`
 
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-1 items-stretch">
       <aside className="hidden w-[260px] flex-shrink-0 border-r border-border bg-surface-2 px-4 py-5 md:block">
+        <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">{t('filters', lang)}</div>
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          <Link href={qs({ verified: verified ? undefined : '1' })} className={`inline-flex items-center gap-1 ${chip(verified)}`}>
+            <BadgeCheck size={12} /> {t('filterVerified', lang)}
+          </Link>
+        </div>
+        <div className="mb-5 flex flex-wrap gap-1.5">
+          <Link href={qs({ type: undefined })} className={chip(!type)}>
+            {t('filterAllTypes', lang)}
+          </Link>
+          <Link href={qs({ type: 'ordered' })} className={chip(type === 'ordered')}>
+            {t('orderedLabel', lang)}
+          </Link>
+          <Link href={qs({ type: 'unordered' })} className={chip(type === 'unordered')}>
+            {t('unorderedLabel', lang)}
+          </Link>
+        </div>
+
         <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">{t('tags', lang)}</div>
         <div className="flex flex-wrap gap-1.5">
           <Link

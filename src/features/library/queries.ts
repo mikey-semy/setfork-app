@@ -95,9 +95,17 @@ function visibleFilter(viewerId?: string): SQL {
   return viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
 }
 
+/** Доп. фильтры ленты: только verified, тип списка (ordered/unordered). */
+function extraFilters(opts: { verified?: boolean; ordered?: boolean }): SQL[] {
+  const f: SQL[] = []
+  if (opts.verified) f.push(eq(templates.verified, true))
+  if (opts.ordered !== undefined) f.push(eq(templates.ordered, opts.ordered))
+  return f
+}
+
 /** Поиск/лента по ключевым словам (ILIKE по всем языкам сразу). q пустой = просто лента. */
-async function keywordFeed(order: SQL, viewerId?: string, tag?: string, q?: string): Promise<FeedItem[]> {
-  const filters: SQL[] = [visibleFilter(viewerId)]
+async function keywordFeed(order: SQL, viewerId?: string, tag?: string, q?: string, extra: SQL[] = []): Promise<FeedItem[]> {
+  const filters: SQL[] = [visibleFilter(viewerId), ...extra]
   if (tag) filters.push(tagFilter(tag))
   if (q) {
     const like = `%${q}%`
@@ -119,6 +127,7 @@ async function semanticFeed(
   limit: number,
   minScore: number,
   viewerId?: string,
+  extra: SQL[] = [],
 ): Promise<FeedItem[] | null> {
   const { getAiSettings } = await import('@/shared/settings/ai')
   const { embedOne } = await import('@/shared/ai/embeddings')
@@ -128,7 +137,7 @@ async function semanticFeed(
 
   const distance = cosineDistance(embeddings.embedding, vec)
   const similarity = sql<number>`1 - (${distance})`
-  const filters: SQL[] = [eq(embeddings.kind, 'list'), isNotNull(embeddings.embedding), visibleFilter(viewerId)]
+  const filters: SQL[] = [eq(embeddings.kind, 'list'), isNotNull(embeddings.embedding), visibleFilter(viewerId), ...extra]
   // Порог: similarity >= minScore  ⇔  distance <= 1 - minScore.
   if (minScore > 0) filters.push(sql`${distance} <= ${1 - minScore}`)
   if (tag) filters.push(tagFilter(tag))
@@ -144,7 +153,7 @@ async function semanticFeed(
 }
 
 export async function getFeed(
-  opts: { sort?: FeedSort; tag?: string; q?: string } = {},
+  opts: { sort?: FeedSort; tag?: string; q?: string; verified?: boolean; ordered?: boolean } = {},
   viewerId?: string,
 ): Promise<FeedItem[]> {
   const order =
@@ -154,19 +163,20 @@ export async function getFeed(
         ? desc(templates.starsCount)
         : desc(sql`${templates.starsCount} + ${templates.forksCount}`) // trending
 
+  const extra = extraFilters(opts)
   const q = opts.q?.trim()
-  if (!q) return withAvatar(await keywordFeed(order, viewerId, opts.tag))
+  if (!q) return withAvatar(await keywordFeed(order, viewerId, opts.tag, undefined, extra))
 
   const { mode, minScore, limit } = await getSearchSettings()
-  if (mode === 'keyword') return withAvatar(await keywordFeed(order, viewerId, opts.tag, q))
+  if (mode === 'keyword') return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra))
 
-  const semantic = await semanticFeed(q, opts.tag, limit, minScore, viewerId)
+  const semantic = await semanticFeed(q, opts.tag, limit, minScore, viewerId, extra)
   // Нет вектора (нет ключа/эмбеддингов) → откат на ключевые слова.
-  if (!semantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q))
+  if (!semantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra))
   if (mode === 'semantic') return withAvatar(semantic)
 
   // hybrid: сначала по смыслу, затем добираем совпадения по словам, которых ещё нет.
-  const keyword = await keywordFeed(order, viewerId, opts.tag, q)
+  const keyword = await keywordFeed(order, viewerId, opts.tag, q, extra)
   const seen = new Set(semantic.map((r) => r.id))
   return withAvatar([...semantic, ...keyword.filter((r) => !seen.has(r.id))])
 }
