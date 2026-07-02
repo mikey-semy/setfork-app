@@ -15,6 +15,7 @@ import {
 } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import type { Lang } from '@/shared/i18n'
 import { generateListDraft } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { toProposedItems } from '@/features/library/editor'
@@ -90,7 +91,6 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
 // ── Принять кандидата → создать черновик-список (draft) ───────────────
 export async function acceptCandidate(generationId: string, candidateId: string): Promise<void> {
   const session = await requireSession()
-  const lang = await getLang()
   const gen = await db.query.generations.findFirst({ where: (g) => eq(g.id, generationId) })
   if (!gen || gen.userId !== session.userId) redirect('/explore')
   if (gen.chosenTemplateId) {
@@ -105,6 +105,8 @@ export async function acceptCandidate(generationId: string, candidateId: string)
   })
   if (!cand || cand.generationId !== generationId) redirect(`/generate/${generationId}`)
 
+  // Ключ locale-JSON = язык, на котором СГЕНЕРИРОВАН контент (а не текущий UI-язык).
+  const genLang: Lang = gen.lang === 'ru' ? 'ru' : 'en'
   const slug = await uniqueSlug(cand.title || gen.query, session.userId)
   const proposed = toProposedItems(
     cand.items.map((it) => ({
@@ -116,7 +118,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       subtasks: it.subtasks,
       refs: [],
     })),
-    lang,
+    genLang,
   )
 
   const [tpl] = await db
@@ -124,8 +126,8 @@ export async function acceptCandidate(generationId: string, candidateId: string)
     .values({
       ownerId: session.userId,
       slug,
-      title: { [lang]: cand.title || gen.query },
-      desc: cand.desc ? { [lang]: cand.desc } : {},
+      title: { [genLang]: cand.title || gen.query },
+      desc: cand.desc ? { [genLang]: cand.desc } : {},
       tags: cand.tags,
       currentVersion: 1,
       origin: 'ai_draft',
