@@ -29,6 +29,8 @@ export async function getRun(runId: string, userId: string) {
       title: s.title,
       desc: s.desc,
       command: s.command,
+      level: s.level,
+      why: s.why,
       subtasks: s.subtasks,
       refs: s.refs,
       state: stateByStep.get(s.id) ?? null,

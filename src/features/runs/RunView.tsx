@@ -2,10 +2,13 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Check, CircleCheckBig, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, CircleCheckBig, Info, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
+import type { StepLevel } from '@/shared/db'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { Markdown } from '@/shared/ui/Markdown'
+import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { abandonRun, finishRun, reopenRun, toggleStep, toggleSubtask } from './actions'
 
 export interface RunStepVM {
@@ -14,6 +17,8 @@ export interface RunStepVM {
   title: string
   desc: string
   command: string
+  level: StepLevel
+  why: string
   subtasks: string[]
   refs: { label: string; url?: string }[]
   done: boolean
@@ -124,11 +129,20 @@ export function RunView({
                 {s.done ? <SquareCheckBig size={20} /> : <Square size={20} />}
               </button>
               <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-2">
+                <div className="flex flex-wrap items-baseline gap-2">
                   {ordered && <span className="font-mono text-[12px] text-muted">{s.n}</span>}
                   <span className={`text-[14.5px] font-semibold ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
+                  <StepLevelBadge level={s.level} lang={lang} />
                 </div>
-                {s.desc && <div className="mt-1 text-[13px] leading-snug text-ink-2">{s.desc}</div>}
+                {s.desc && <Markdown className="mt-1">{s.desc}</Markdown>}
+                {s.why && (
+                  <div className="mt-1.5 flex gap-1.5 text-[12.5px] text-ink-2">
+                    <Info size={13} className="mt-0.5 shrink-0 text-muted" />
+                    <span>
+                      <span className="font-medium">{t('whyLabel', lang)}:</span> {s.why}
+                    </span>
+                  </div>
+                )}
 
                 {s.command && (
                   <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12px] text-ink">

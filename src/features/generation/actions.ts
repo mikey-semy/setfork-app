@@ -47,6 +47,8 @@ async function addCandidate(
     title: it.title,
     desc: it.desc,
     command: it.command,
+    level: it.level,
+    why: it.why,
     subtasks: it.subtasks,
   }))
   await db.insert(generationCandidates).values({
@@ -128,6 +130,8 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       command: it.command,
       imageKey: '',
       imagePreview: '',
+      level: it.level ?? 'required',
+      why: it.why ?? '',
       subtasks: it.subtasks,
       refs: [],
     })),

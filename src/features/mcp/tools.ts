@@ -9,8 +9,12 @@ export interface McpItemInput {
   title: string
   desc?: string
   command?: string
+  level?: 'required' | 'recommended' | 'optional'
+  why?: string
   subtasks?: string[]
 }
+
+const LEVELS = ['required', 'recommended', 'optional']
 
 // MCP-контент нейтрален к языку → кладём под 'en' (locale-JSON, tr с фолбэком читает).
 function toProposed(items: McpItemInput[]): ProposedItem[] {
@@ -21,6 +25,8 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
       desc: it.desc?.trim() ? { en: it.desc.trim() } : {},
       command: it.command?.trim() ?? '',
       hasImage: false,
+      level: (LEVELS.includes(it.level as string) ? it.level : 'required') as ProposedItem['level'],
+      why: it.why?.trim() ? { en: it.why.trim() } : {},
       subtasks: (it.subtasks ?? []).filter((s) => s.trim()).map((s) => ({ en: s.trim() })),
       refs: [],
     }))
@@ -37,6 +43,8 @@ async function insertSteps(versionId: string, items: ProposedItem[]): Promise<vo
       command: it.command,
       hasImage: false,
       imageKey: null,
+      level: it.level,
+      why: it.why,
       subtasks: it.subtasks,
       refs: it.refs,
     })),
@@ -87,6 +95,8 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
       title: tr(s.title, 'en'),
       desc: tr(s.desc, 'en'),
       command: s.command || undefined,
+      level: s.level,
+      why: tr(s.why, 'en') || undefined,
       subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
       refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label),
     })),

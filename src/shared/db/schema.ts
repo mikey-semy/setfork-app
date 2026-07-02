@@ -34,6 +34,8 @@ export const listStatus = pgEnum('list_status', ['draft', 'published'])
 export const moderationStatus = pgEnum('moderation_status', ['active', 'flagged', 'hidden'])
 export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned'])
 export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done'])
+// Уровень важности шага (как в стандартах: MUST / SHOULD / MAY).
+export const stepLevel = pgEnum('step_level', ['required', 'recommended', 'optional'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
 // Тип AI-вызова для учёта расхода (токены/деньги).
 export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed'])
@@ -47,12 +49,15 @@ export const notificationType = pgEnum('notification_type', [
 ])
 
 // Предложенный пункт (снимок правки внутри suggestion).
+export type StepLevel = 'required' | 'recommended' | 'optional'
 export type ProposedItem = {
   title: LocaleText
   desc: LocaleText
   command: string
   hasImage: boolean
   imageKey?: string // storage_key скриншота в S3 (если есть)
+  level: StepLevel
+  why: LocaleText // «зачем/почему» — обоснование шага
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
 }
@@ -148,6 +153,8 @@ export const steps = pgTable('steps', {
   command: text('command').notNull().default(''),
   hasImage: boolean('has_image').notNull().default(false),
   imageKey: text('image_key'), // storage_key скриншота в S3
+  level: stepLevel('level').notNull().default('required'),
+  why: jsonb('why').notNull().default({}).$type<LocaleText>(), // «зачем/почему»
 
   // Подшаги и ссылки — простой контент шага, храним как locale-JSON.
   subtasks: jsonb('subtasks').notNull().default([]).$type<LocaleText[]>(),
@@ -254,7 +261,7 @@ export const suggestions = pgTable('suggestions', {
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
-export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[] }
+export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; level?: StepLevel; why?: string }
 
 export const generations = pgTable('generations', {
   id: uuid('id').primaryKey().defaultRandom(),

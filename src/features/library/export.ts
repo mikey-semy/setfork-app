@@ -1,11 +1,14 @@
 // Экспорт списка в Markdown / автономный HTML (для скачивания и печати).
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
+import type { StepLevel } from '@/shared/db'
 
 export interface ExportStep {
   n: number
   title: LocaleText
   desc: LocaleText
   command: string
+  level: StepLevel
+  why: LocaleText
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
 }
@@ -35,9 +38,12 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
 
   list.steps.forEach((s, i) => {
     const marker = list.ordered ? `${i + 1}.` : '-'
-    out.push(`${marker} **${tr(s.title, lang)}**`)
+    const lvl = s.level !== 'required' ? ` _(${s.level})_` : ''
+    out.push(`${marker} **${tr(s.title, lang)}**${lvl}`)
     const d = tr(s.desc, lang)
     if (d) out.push(`   ${d}`)
+    const why = tr(s.why, lang)
+    if (why) out.push(`   > Why: ${why}`)
     if (s.command) out.push('', '   ```', `   ${s.command}`, '   ```')
     s.subtasks.forEach((st) => {
       const t = tr(st, lang)
@@ -62,6 +68,8 @@ export function toHtml(list: ExportList, lang: Lang): string {
     .map((s, i) => {
       const marker = list.ordered ? `${i + 1}` : '•'
       const d = esc(tr(s.desc, lang))
+      const badge = s.level !== 'required' ? `<span class="lvl">${s.level}</span>` : ''
+      const why = esc(tr(s.why, lang))
       const cmd = s.command ? `<pre><code>${esc(s.command)}</code></pre>` : ''
       const subs = s.subtasks
         .map((st) => esc(tr(st, lang)))
@@ -76,8 +84,9 @@ export function toHtml(list: ExportList, lang: Lang): string {
         })
         .join('')
       return `<div class="step">
-  <div class="step-head"><span class="n">${marker}</span><h2>${esc(tr(s.title, lang))}</h2></div>
+  <div class="step-head"><span class="n">${marker}</span><h2>${esc(tr(s.title, lang))}</h2>${badge}</div>
   ${d ? `<p class="d">${d}</p>` : ''}
+  ${why ? `<p class="why"><b>Why:</b> ${why}</p>` : ''}
   ${cmd}
   ${subs ? `<ul class="subs">${subs}</ul>` : ''}
   ${refs ? `<ul class="refs">${refs}</ul>` : ''}
@@ -101,6 +110,8 @@ export function toHtml(list: ExportList, lang: Lang): string {
   .step-head { display: flex; align-items: baseline; gap: .5rem; }
   .step-head .n { font-family: ui-monospace, monospace; color: #999; font-size: .85rem; }
   .step h2 { font-size: 1rem; margin: 0; }
+  .lvl { border: 1px solid #d1a000; color: #a67c00; border-radius: 4px; padding: 0 .35rem; font-size: .68rem; text-transform: capitalize; }
+  .why { color: #555; font-size: .85rem; margin: .25rem 0 .1rem; }
   .d { color: #444; margin: .3rem 0 .1rem; }
   pre { background: #f5f5f3; border-radius: 6px; padding: .5rem .7rem; overflow-x: auto; font-size: .82rem; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }

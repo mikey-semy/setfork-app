@@ -1,7 +1,10 @@
 // Типы и конвертеры редактора пунктов. Редактор работает в ОДНОМ языке
 // (текущий UI-язык), контент сохраняется как locale-JSON под этот код.
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
-import type { ProposedItem } from '@/shared/db'
+import type { ProposedItem, StepLevel } from '@/shared/db'
+
+const LEVELS: StepLevel[] = ['required', 'recommended', 'optional']
+const asLevel = (v: unknown): StepLevel => (LEVELS.includes(v as StepLevel) ? (v as StepLevel) : 'required')
 
 export type EditorRef = { label: string; url: string }
 export type EditorItem = {
@@ -10,12 +13,14 @@ export type EditorItem = {
   command: string
   imageKey: string // storage_key скриншота ('' — нет)
   imagePreview: string // отображаемый URL превью (imgproxy/objectURL); только клиент
+  level: StepLevel
+  why: string
   subtasks: string[]
   refs: EditorRef[]
 }
 
 export function emptyItem(): EditorItem {
-  return { title: '', desc: '', command: '', imageKey: '', imagePreview: '', subtasks: [], refs: [] }
+  return { title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', subtasks: [], refs: [] }
 }
 
 /** Плоские (одноязычные) пункты редактора → locale-JSON снимок. */
@@ -28,6 +33,8 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
       command: it.command.trim(),
       hasImage: !!it.imageKey,
       imageKey: it.imageKey || undefined,
+      level: asLevel(it.level),
+      why: it.why.trim() ? { [lang]: it.why.trim() } : {},
       subtasks: it.subtasks.filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
       refs: it.refs
         .filter((r) => r.label.trim())
@@ -41,6 +48,8 @@ type LocaleItem = {
   command: string
   hasImage: boolean
   imageKey?: string | null
+  level?: StepLevel
+  why?: LocaleText
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
 }
@@ -54,6 +63,8 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     command: it.command ?? '',
     imageKey: it.imageKey ?? '',
     imagePreview: it.imageKey ? (previews[it.imageKey] ?? '') : '',
+    level: asLevel(it.level),
+    why: it.why ? tr(it.why, lang) : '',
     subtasks: (it.subtasks ?? []).map((s) => tr(s, lang)),
     refs: (it.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' })),
   }))
@@ -71,6 +82,8 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
       command: String(it?.command ?? ''),
       imageKey: String(it?.imageKey ?? ''),
       imagePreview: String(it?.imagePreview ?? ''),
+      level: asLevel(it?.level),
+      why: String(it?.why ?? ''),
       subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s: unknown) => String(s)) : [],
       refs: Array.isArray(it?.refs)
         ? it.refs.map((r: { label?: unknown; url?: unknown }) => ({

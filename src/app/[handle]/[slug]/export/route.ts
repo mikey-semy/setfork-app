@@ -35,6 +35,8 @@ export async function GET(
       title: s.title,
       desc: s.desc,
       command: s.command,
+      level: s.level,
+      why: s.why,
       subtasks: s.subtasks,
       refs: s.refs,
     })),
