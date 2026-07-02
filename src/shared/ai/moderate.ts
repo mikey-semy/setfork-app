@@ -3,6 +3,7 @@ import { generateText } from 'ai'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { getAiSettings, getApiKey } from '@/shared/settings/ai'
 import { pickChatModel } from './credits'
+import { extractUsage, recordUsage } from './usage'
 
 export interface ModerationVerdict {
   flagged: boolean
@@ -34,7 +35,10 @@ Return ONLY strict JSON, no markdown:
 category = the matching "Sx Name" (e.g. "S9 Indiscriminate Weapons") or "" when safe. reason = one short sentence.`
 
 /** ИИ-классификатор безопасности (MLCommons-таксономия). null — если ИИ недоступен/ошибка. */
-export async function moderateContent(text: string): Promise<ModerationVerdict | null> {
+export async function moderateContent(
+  text: string,
+  meta: { userId?: string; refId?: string } = {},
+): Promise<ModerationVerdict | null> {
   const apiKey = await getApiKey()
   if (!apiKey || !text.trim()) return null
   const settings = await getAiSettings()
@@ -45,14 +49,16 @@ export async function moderateContent(text: string): Promise<ModerationVerdict |
   })
   const model = await pickChatModel(settings)
   try {
-    const { text: out } = await generateText({
-      model: openrouter.chat(model),
+    const result = await generateText({
+      model: openrouter.chat(model, { usage: { include: true } }),
       system: SYSTEM,
       prompt: `Classify this list:\n${text.slice(0, 4000)}`,
       temperature: 0,
       maxOutputTokens: 200,
     })
-    const cleaned = out.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
+    const u = extractUsage(result)
+    await recordUsage({ userId: meta.userId, feature: 'moderate', model, ...u, refType: 'template', refId: meta.refId })
+    const cleaned = result.text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
     const obj = JSON.parse(cleaned) as { flagged?: unknown; category?: unknown; reason?: unknown }
     return {
       flagged: !!obj.flagged,

@@ -1,10 +1,11 @@
 import { eq } from 'drizzle-orm'
-import { Bell, Monitor, TriangleAlert, User } from 'lucide-react'
+import { BarChart3, Bell, Monitor, TriangleAlert, User } from 'lucide-react'
 import { db, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { getUserUsage } from '@/shared/ai/usage'
 import { SettingsForm } from '@/features/settings/SettingsForm'
 import { DangerZone } from '@/features/settings/DangerZone'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
   }
   const avatar = await avatarSrc(user.avatarUrl, 144)
   const userSessions = await getUserSessions(session.userId, session.sid)
+  const usage = await getUserUsage(session.userId)
 
   const sections: SettingsSection[] = [
     {
@@ -70,6 +72,30 @@ export default async function SettingsPage() {
           <div className="mb-1 font-semibold text-ink">{t('sessionsTitle', lang)}</div>
           <p className="mb-4 text-[13px] text-ink-2">{t('sessionsIntro', lang)}</p>
           <SessionsList sessions={userSessions} lang={lang} />
+        </section>
+      ),
+    },
+    {
+      id: 'usage',
+      title: t('aiUsageTitle', lang),
+      icon: <BarChart3 size={15} />,
+      keywords: ['ai', 'usage', 'tokens', 'cost', 'spend', 'расход', 'токены', 'стоимость', 'ии', 'генерация'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{t('aiUsageTitle', lang)}</div>
+          <p className="mb-4 text-[13px] text-ink-2">{t('aiUsageIntro', lang)}</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { k: t('aiUsageCalls', lang), v: new Intl.NumberFormat('en').format(usage.calls) },
+              { k: t('aiUsageTokens', lang), v: new Intl.NumberFormat('en').format(usage.totalTokens) },
+              { k: t('aiUsageCost', lang), v: '$' + usage.costUsd.toFixed(usage.costUsd < 1 ? 4 : 2) },
+            ].map((x) => (
+              <div key={x.k} className="rounded-md border border-border bg-surface-2 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted">{x.k}</div>
+                <div className="mt-1 text-[17px] font-bold text-ink">{x.v}</div>
+              </div>
+            ))}
+          </div>
         </section>
       ),
     },

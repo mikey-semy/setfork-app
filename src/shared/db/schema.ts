@@ -14,6 +14,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -34,6 +35,8 @@ export const moderationStatus = pgEnum('moderation_status', ['active', 'flagged'
 export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned'])
 export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
+// Тип AI-вызова для учёта расхода (токены/деньги).
+export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed'])
 export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
@@ -102,6 +105,8 @@ export const templates = pgTable(
     currentVersion: integer('current_version').notNull().default(1),
     origin: templateOrigin('origin').notNull().default('authored'),
     status: listStatus('status').notNull().default('published'),
+    // true — упорядоченный (шаги 1..N); false — набор/чек-лист (порядок неважен).
+    ordered: boolean('ordered').notNull().default(true),
     visibility: listVisibility('visibility').notNull().default('public'),
     moderation: moderationStatus('moderation').notNull().default('active'),
     moderationReason: text('moderation_reason'),
@@ -282,6 +287,27 @@ export const generationCandidates = pgTable(
   ],
 )
 
+// ── AI usage (учёт токенов/денег по каждому вызову ИИ) ───────────────
+// Одна строка = один вызов модели. costUsd — фактическая стоимость OpenRouter
+// (usage accounting), с фолбэком на расчёт по ценам моделей.
+export const aiUsage = pgTable(
+  'ai_usage',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }), // null — системный вызов
+    feature: aiFeature('feature').notNull(),
+    model: text('model').notNull().default(''),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    totalTokens: integer('total_tokens').notNull().default(0),
+    costUsd: numeric('cost_usd', { precision: 12, scale: 6 }).notNull().default('0'),
+    refType: text('ref_type'), // 'generation' | 'template' | …
+    refId: uuid('ref_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('ai_usage_user_idx').on(t.userId, t.createdAt), index('ai_usage_created_idx').on(t.createdAt)],
+)
+
 // ── Follows (подписки пользователей) ─────────────────────────────────
 export const follows = pgTable(
   'follows',
@@ -395,3 +421,4 @@ export type RunStepState = typeof runStepState.$inferSelect
 export type Suggestion = typeof suggestions.$inferSelect
 export type Generation = typeof generations.$inferSelect
 export type GenerationCandidate = typeof generationCandidates.$inferSelect
+export type AiUsage = typeof aiUsage.$inferSelect

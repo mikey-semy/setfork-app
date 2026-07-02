@@ -72,7 +72,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                 return (
                   <div key={s.id} className="rounded-lg border border-border bg-surface p-4">
                     <div className="flex gap-3">
-                      <span className="mt-0.5 font-mono text-[13px] text-muted">{s.n}</span>
+                      <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? s.n : '•'}</span>
                       <div className="min-w-0 flex-1">
                         <div className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</div>
                         {tr(s.desc, lang) && (

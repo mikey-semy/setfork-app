@@ -39,6 +39,24 @@ export default async function NewListPage() {
           className="mb-6 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
         />
 
+        <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('listKind', lang)}</label>
+        <div className="mb-6 grid grid-cols-2 gap-2">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+            <input type="radio" name="ordered" value="ordered" defaultChecked className="mt-0.5" />
+            <span>
+              <span className="block text-[13.5px] font-medium text-ink">{t('orderedLabel', lang)}</span>
+              <span className="block text-[12px] text-ink-2">{t('orderedHint', lang)}</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+            <input type="radio" name="ordered" value="unordered" className="mt-0.5" />
+            <span>
+              <span className="block text-[13.5px] font-medium text-ink">{t('unorderedLabel', lang)}</span>
+              <span className="block text-[12px] text-ink-2">{t('unorderedHint', lang)}</span>
+            </span>
+          </label>
+        </div>
+
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('visibility', lang)}</label>
         <div className="mb-6 flex flex-col gap-2">
           <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
@@ -58,7 +76,7 @@ export default async function NewListPage() {
         </div>
 
         <label className="mb-2 block text-[12.5px] font-semibold text-ink-2">{ru ? 'Пункты' : 'Items'}</label>
-        <ListEditor name="items" initialItems={[]} lang={lang} />
+        <ListEditor name="items" initialItems={[]} lang={lang} aiRefine={{ title: '', desc: '', tags: [] }} />
 
         <button className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
           {ru ? 'Создать список' : 'Create list'}

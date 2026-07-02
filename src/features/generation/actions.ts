@@ -27,8 +27,21 @@ async function ownerHandle(userId: string): Promise<string> {
 }
 
 /** Сгенерировать один вариант и сохранить его кандидатом (idx). Возвращает false при ошибке ИИ. */
-async function addCandidate(generationId: string, query: string, lang: 'en' | 'ru', idx: number): Promise<boolean> {
-  const draft = await generateListDraft(query, lang, { web: true, variant: idx })
+async function addCandidate(
+  generationId: string,
+  userId: string,
+  query: string,
+  lang: 'en' | 'ru',
+  idx: number,
+): Promise<boolean> {
+  const draft = await generateListDraft(query, lang, {
+    web: true,
+    variant: idx,
+    userId,
+    feature: idx > 1 ? 'regenerate' : 'generate',
+    refType: 'generation',
+    refId: generationId,
+  })
   if (!draft) return false
   const items: CandidateItem[] = draft.items.map((it) => ({
     title: it.title,
@@ -58,7 +71,7 @@ export async function startGeneration(formData: FormData): Promise<void> {
   if (!allowed) redirect(`/explore?q=${encodeURIComponent(query)}&e=ratelimited`)
 
   const [gen] = await db.insert(generations).values({ userId: session.userId, query, lang }).returning()
-  const ok = await addCandidate(gen.id, query, lang, 1)
+  const ok = await addCandidate(gen.id, session.userId, query, lang, 1)
   if (!ok) {
     await db.delete(generations).where(eq(generations.id, gen.id))
     redirect(`/explore?q=${encodeURIComponent(query)}&e=aifail`)
@@ -82,7 +95,7 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
   const nextIdx = (max ?? 0) + 1
   if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}`) // разумный потолок вариантов
 
-  const ok = await addCandidate(generationId, gen.query, gen.lang as 'en' | 'ru', nextIdx)
+  const ok = await addCandidate(generationId, session.userId, gen.query, gen.lang as 'en' | 'ru', nextIdx)
   if (!ok) redirect(`/generate/${generationId}?e=aifail`)
   revalidatePath(`/generate/${generationId}`)
   redirect(`/generate/${generationId}?v=${nextIdx}`)
