@@ -8,13 +8,14 @@ export type EditorItem = {
   title: string
   desc: string
   command: string
-  hasImage: boolean
+  imageKey: string // storage_key скриншота ('' — нет)
+  imagePreview: string // отображаемый URL превью (imgproxy/objectURL); только клиент
   subtasks: string[]
   refs: EditorRef[]
 }
 
 export function emptyItem(): EditorItem {
-  return { title: '', desc: '', command: '', hasImage: false, subtasks: [], refs: [] }
+  return { title: '', desc: '', command: '', imageKey: '', imagePreview: '', subtasks: [], refs: [] }
 }
 
 /** Плоские (одноязычные) пункты редактора → locale-JSON снимок. */
@@ -25,7 +26,8 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
       title: { [lang]: it.title.trim() },
       desc: it.desc.trim() ? { [lang]: it.desc.trim() } : {},
       command: it.command.trim(),
-      hasImage: !!it.hasImage,
+      hasImage: !!it.imageKey,
+      imageKey: it.imageKey || undefined,
       subtasks: it.subtasks.filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
       refs: it.refs
         .filter((r) => r.label.trim())
@@ -38,17 +40,20 @@ type LocaleItem = {
   desc: LocaleText
   command: string
   hasImage: boolean
+  imageKey?: string | null
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
 }
 
-/** Существующие пункты (locale-JSON) → плоские для префилла редактора. */
-export function toEditorItems(items: LocaleItem[], lang: Lang): EditorItem[] {
+/** Существующие пункты (locale-JSON) → плоские для префилла редактора.
+ *  previews — карта imageKey → отображаемый URL (резолвится на сервере). */
+export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<string, string> = {}): EditorItem[] {
   return items.map((it) => ({
     title: tr(it.title, lang),
     desc: tr(it.desc, lang),
     command: it.command ?? '',
-    hasImage: !!it.hasImage,
+    imageKey: it.imageKey ?? '',
+    imagePreview: it.imageKey ? (previews[it.imageKey] ?? '') : '',
     subtasks: (it.subtasks ?? []).map((s) => tr(s, lang)),
     refs: (it.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' })),
   }))
@@ -64,7 +69,8 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
       title: String(it?.title ?? ''),
       desc: String(it?.desc ?? ''),
       command: String(it?.command ?? ''),
-      hasImage: !!it?.hasImage,
+      imageKey: String(it?.imageKey ?? ''),
+      imagePreview: String(it?.imagePreview ?? ''),
       subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s: unknown) => String(s)) : [],
       refs: Array.isArray(it?.refs)
         ? it.refs.map((r: { label?: unknown; url?: unknown }) => ({

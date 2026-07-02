@@ -2,8 +2,16 @@ import 'server-only'
 import { imgproxyUrl } from './imgproxy'
 
 export { isS3Configured, getMediaSettings } from '@/shared/settings/media'
-export { deleteByPrefix, putObject } from './s3'
+export { deleteByPrefix, deleteObject, putObject } from './s3'
+export { removeImageFile, uploadImageFile } from './upload'
 export { imgproxyUrl }
+
+/** Реф картинки → src для <img>. http(s)/data/uploads → как есть; иначе storage_key → imgproxy. */
+export async function imageUrl(ref: string | null | undefined, options = 'rs:fit:1200:1200'): Promise<string | null> {
+  if (!ref) return null
+  if (/^(https?:|data:|\/)/i.test(ref)) return ref
+  return imgproxyUrl(ref, options)
+}
 
 /**
  * Аватар-реф → src для <img> (async, т.к. настройки медиа читаются из БД).

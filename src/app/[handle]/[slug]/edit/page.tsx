@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { getTemplateDetail } from '@/features/library/queries'
+import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { saveNewVersion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { toEditorItems } from '@/features/library/editor'
@@ -22,7 +22,7 @@ export default async function EditPage({
   const { tpl, steps } = detail
   if (tpl.ownerId !== session.userId) redirect(`/${owner}/${slug}`)
 
-  const initial = toEditorItems(steps, lang)
+  const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
   const action = saveNewVersion.bind(null, tpl.id)
 
   return (

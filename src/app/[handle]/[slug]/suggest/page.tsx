@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { getTemplateDetail } from '@/features/library/queries'
+import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { submitSuggestion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { toEditorItems } from '@/features/library/editor'
@@ -21,7 +21,7 @@ export default async function SuggestPage({
   if (!detail) notFound()
   const { tpl, steps } = detail
 
-  const initial = toEditorItems(steps, lang)
+  const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
   const action = submitSuggestion.bind(null, tpl.id)
 
   return (

@@ -17,6 +17,7 @@ import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { generateListDraft } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
+import { imageUrl, uploadImageFile } from '@/shared/media'
 import { parseEditorItems, toProposedItems } from './editor'
 
 function parseTags(raw: unknown): string[] {
@@ -53,10 +54,24 @@ async function insertSteps(versionId: string, items: ProposedItem[]): Promise<vo
       desc: it.desc,
       command: it.command,
       hasImage: it.hasImage,
+      imageKey: it.imageKey ?? null,
       subtasks: it.subtasks,
       refs: it.refs,
     })),
   )
+}
+
+// ── Загрузка скриншота шага (в редакторе) ────────────────────────────
+export async function uploadStepImage(formData: FormData): Promise<{ key: string; url: string } | { error: string }> {
+  const session = await requireSession()
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.size === 0) return { error: 'Файл не выбран.' }
+  try {
+    const key = await uploadImageFile(`steps/${session.userId}`, file)
+    return { key, url: (await imageUrl(key, 'rs:fit:960:960')) ?? '' }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Не удалось загрузить.' }
+  }
 }
 
 async function ownerHandle(userId: string): Promise<string> {
@@ -220,7 +235,8 @@ export async function generateFromQuery(formData: FormData): Promise<void> {
       title: it.title,
       desc: it.desc,
       command: it.command,
-      hasImage: false,
+      imageKey: '',
+      imagePreview: '',
       subtasks: it.subtasks,
       refs: [],
     })),
@@ -319,6 +335,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
           desc: s.desc,
           command: s.command,
           hasImage: s.hasImage,
+          imageKey: s.imageKey,
           subtasks: s.subtasks,
           refs: s.refs,
         })),

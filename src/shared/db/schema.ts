@@ -36,6 +36,7 @@ export type ProposedItem = {
   desc: LocaleText
   command: string
   hasImage: boolean
+  imageKey?: string // storage_key скриншота в S3 (если есть)
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
 }
@@ -117,6 +118,8 @@ export const steps = pgTable('steps', {
   desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
   command: text('command').notNull().default(''),
   hasImage: boolean('has_image').notNull().default(false),
+  imageKey: text('image_key'), // storage_key скриншота в S3
+
   // Подшаги и ссылки — простой контент шага, храним как locale-JSON.
   subtasks: jsonb('subtasks').notNull().default([]).$type<LocaleText[]>(),
   refs: jsonb('refs').notNull().default([]).$type<{ label: LocaleText; url?: string }[]>(),

@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, GitFork, Image as ImageIcon, Sparkles, Star, Tag } from 'lucide-react'
+import { ExternalLink, GitFork, Sparkles, Star, Tag } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { CopyButton } from '@/shared/ui/CopyButton'
-import { getTemplateDetail } from '@/features/library/queries'
+import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 
 function fmt(n: number): string {
@@ -18,6 +18,11 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, currentVersion, steps } = detail
+  // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.
+  const previews = await getStepPreviews(steps, 'rs:fit:1400:1400')
+  const stepImages: Record<string, string> = Object.fromEntries(
+    steps.filter((s) => s.imageKey && previews[s.imageKey]).map((s) => [s.id, previews[s.imageKey as string]]),
+  )
 
   return (
     <>
@@ -49,11 +54,13 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                         {tr(s.desc, lang) && (
                           <div className="mt-1 text-[13px] leading-snug text-ink-2">{tr(s.desc, lang)}</div>
                         )}
-                        {s.hasImage && (
-                          <div className="mt-3 flex h-[120px] flex-col items-center justify-center gap-2 rounded-lg border border-border bg-surface-2 text-muted">
-                            <ImageIcon size={22} strokeWidth={1.5} />
-                            <span className="text-[11.5px]">{t('screenshot', lang)}</span>
-                          </div>
+                        {stepImages[s.id] && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={stepImages[s.id]}
+                            alt={t('screenshot', lang)}
+                            className="mt-3 max-h-[420px] w-auto rounded-lg border border-border"
+                          />
                         )}
                         {s.command && (
                           <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12px] text-ink">

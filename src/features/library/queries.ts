@@ -2,8 +2,21 @@ import 'server-only'
 import { and, cosineDistance, desc, eq, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
-import { avatarSrc } from '@/shared/media'
+import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
+
+/** Резолвит скриншоты шагов: imageKey → подписанный URL. Для префилла редактора и показа. */
+export async function getStepPreviews(
+  steps: { imageKey: string | null }[],
+  options = 'rs:fit:960:960',
+): Promise<Record<string, string>> {
+  const entries = await Promise.all(
+    steps
+      .filter((s) => s.imageKey)
+      .map(async (s) => [s.imageKey as string, await imageUrl(s.imageKey, options)] as const),
+  )
+  return Object.fromEntries(entries.filter(([, u]) => u)) as Record<string, string>
+}
 
 // Резолвим ownerAvatarUrl (storage_key → подписанный imgproxy-URL) для ленты.
 async function withAvatar<T extends { ownerAvatarUrl: string | null }>(rows: T[]): Promise<T[]> {

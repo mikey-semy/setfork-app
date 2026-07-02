@@ -1,5 +1,6 @@
 import 'server-only'
 import {
+  DeleteObjectCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -33,6 +34,12 @@ export async function putObject(key: string, body: Buffer, contentType: string):
     }),
   )
   return key
+}
+
+/** Удаляет один объект по storage_key. */
+export async function deleteObject(key: string): Promise<void> {
+  const { s3, bucket, prefix } = await client()
+  await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: withPrefix(prefix, key) }))
 }
 
 /** Удаляет все объекты под префиксом (напр. avatars/{userId}/). */
