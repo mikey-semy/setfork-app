@@ -15,36 +15,11 @@ import {
 } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { generateListDraft } from '@/shared/ai/generate'
-import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { imageUrl, uploadImageFile } from '@/shared/media'
 import { notify } from '@/features/notifications/notify'
 import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems } from './editor'
-
-function parseTags(raw: unknown): string[] {
-  return [
-    ...new Set(
-      String(raw ?? '')
-        .toLowerCase()
-        .split(/[\s,]+/)
-        .map((tag) => tag.replace(/[^a-z0-9а-яё-]/gi, '').trim())
-        .filter(Boolean),
-    ),
-  ].slice(0, 8)
-}
-
-function slugify(input: string): string {
-  return (
-    input
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .slice(0, 60) || 'list'
-  )
-}
+import { parseTags, slugify } from './slug'
 
 async function insertSteps(versionId: string, items: ProposedItem[]): Promise<void> {
   if (!items.length) return
@@ -242,60 +217,18 @@ export async function rejectSuggestion(suggestionId: string): Promise<void> {
   revalidatePath('/', 'layout')
 }
 
-// ── AI-генерация черновика списка по запросу ─────────────────────────
-export async function generateFromQuery(formData: FormData): Promise<void> {
+// ── Публикация черновика (draft → published) ─────────────────────────
+export async function publishList(templateId: string): Promise<void> {
   const session = await requireSession()
-  const lang = await getLang()
-  const query = String(formData.get('q') ?? '').trim()
-  if (!query) redirect('/explore')
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId || tpl.status !== 'draft') return
 
-  const { allowed } = checkRateLimit(`gen:${session.userId}`)
-  if (!allowed) redirect(`/explore?q=${encodeURIComponent(query)}&e=ratelimited`)
+  await db.update(templates).set({ status: 'published', updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+  // Публикуем публичный список → авто-модерация (приватный не трогаем).
+  if (tpl.visibility === 'public') await autoModerateList(tpl.id)
 
-  const draft = await generateListDraft(query, lang)
-  if (!draft) redirect(`/explore?q=${encodeURIComponent(query)}&e=aifail`)
-
-  let slug = slugify(draft.title || query)
-  const owned = await db
-    .select({ slug: templates.slug })
-    .from(templates)
-    .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, slug)))
-  if (owned.length) slug = `${slug}-${Date.now().toString(36).slice(-4)}`
-
-  const tags = draft.tags.length ? parseTags(draft.tags.join(' ')) : parseTags(query)
-  const proposed = toProposedItems(
-    draft.items.map((it) => ({
-      title: it.title,
-      desc: it.desc,
-      command: it.command,
-      imageKey: '',
-      imagePreview: '',
-      subtasks: it.subtasks,
-      refs: [],
-    })),
-    lang,
-  )
-
-  const [tpl] = await db
-    .insert(templates)
-    .values({
-      ownerId: session.userId,
-      slug,
-      title: { [lang]: draft.title || query },
-      desc: draft.desc ? { [lang]: draft.desc } : {},
-      tags,
-      currentVersion: 1,
-      origin: 'ai_draft',
-    })
-    .returning()
-  const [ver] = await db
-    .insert(templateVersions)
-    .values({ templateId: tpl.id, version: 1, note: 'ai draft' })
-    .returning()
-  await insertSteps(ver.id, proposed)
-  await autoModerateList(tpl.id) // ai_draft публичен → проверяем
-
-  redirect(`/${await ownerHandle(session.userId)}/${slug}`)
+  revalidatePath('/', 'layout')
+  redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
 }
 
 // ── Star (сигнал качества + личная коллекция) ────────────────────────

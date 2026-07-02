@@ -27,6 +27,8 @@ import type { LocaleText } from '../i18n'
 // ── Enums ────────────────────────────────────────────────────────────
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
 export const listVisibility = pgEnum('list_visibility', ['public', 'private'])
+// draft — черновик (не опубликован, виден только владельцу); published — опубликован (виден по visibility).
+export const listStatus = pgEnum('list_status', ['draft', 'published'])
 // active — норма; flagged — на проверку (репорт/ИИ); hidden — скрыт админом (не публичен).
 export const moderationStatus = pgEnum('moderation_status', ['active', 'flagged', 'hidden'])
 export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned'])
@@ -99,6 +101,7 @@ export const templates = pgTable(
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     currentVersion: integer('current_version').notNull().default(1),
     origin: templateOrigin('origin').notNull().default('authored'),
+    status: listStatus('status').notNull().default('published'),
     visibility: listVisibility('visibility').notNull().default('public'),
     moderation: moderationStatus('moderation').notNull().default('active'),
     moderationReason: text('moderation_reason'),
@@ -243,6 +246,42 @@ export const suggestions = pgTable('suggestions', {
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 })
 
+// ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
+// Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
+// ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
+export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[] }
+
+export const generations = pgTable('generations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  query: text('query').notNull(),
+  lang: text('lang').notNull().default('en'),
+  chosenTemplateId: uuid('chosen_template_id').references(() => templates.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const generationCandidates = pgTable(
+  'generation_candidates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    generationId: uuid('generation_id')
+      .notNull()
+      .references(() => generations.id, { onDelete: 'cascade' }),
+    idx: integer('idx').notNull(), // порядковый номер варианта (1..)
+    title: text('title').notNull(),
+    desc: text('desc').notNull().default(''),
+    tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+    items: jsonb('items').notNull().default([]).$type<CandidateItem[]>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('generation_candidates_gen_idx').on(t.generationId, t.idx),
+    index('generation_candidates_gen_idx2').on(t.generationId),
+  ],
+)
+
 // ── Follows (подписки пользователей) ─────────────────────────────────
 export const follows = pgTable(
   'follows',
@@ -336,6 +375,15 @@ export const suggestionsRelations = relations(suggestions, ({ one }) => ({
   author: one(users, { fields: [suggestions.authorId], references: [users.id] }),
 }))
 
+export const generationsRelations = relations(generations, ({ one, many }) => ({
+  user: one(users, { fields: [generations.userId], references: [users.id] }),
+  candidates: many(generationCandidates),
+}))
+
+export const generationCandidatesRelations = relations(generationCandidates, ({ one }) => ({
+  generation: one(generations, { fields: [generationCandidates.generationId], references: [generations.id] }),
+}))
+
 // ── Inferred types ───────────────────────────────────────────────────
 export type User = typeof users.$inferSelect
 export type Topic = typeof topics.$inferSelect
@@ -345,3 +393,5 @@ export type Step = typeof steps.$inferSelect
 export type Run = typeof runs.$inferSelect
 export type RunStepState = typeof runStepState.$inferSelect
 export type Suggestion = typeof suggestions.$inferSelect
+export type Generation = typeof generations.$inferSelect
+export type GenerationCandidate = typeof generationCandidates.$inferSelect

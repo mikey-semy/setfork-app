@@ -18,35 +18,52 @@ export interface GeneratedList {
   items: GeneratedItem[]
 }
 
+export interface GenerateOptions {
+  /** Веб-поиск (OpenRouter `:online`) — список ближе к реальности. По умолчанию включён. */
+  web?: boolean
+  /** Вариативность: подсказка «сделай ИНАЧЕ» для перегенерации (variant 2, 3…). */
+  variant?: number
+}
+
 /** Черновик эталонного списка по запросу (LLM через OpenRouter). null при ошибке/выкл. */
-export async function generateListDraft(query: string, lang: Lang): Promise<GeneratedList | null> {
+export async function generateListDraft(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<GeneratedList | null> {
   const apiKey = await getApiKey()
   if (!apiKey) return null
   const settings = await getAiSettings()
   if (!settings.enabled) return null
+
+  const web = opts.web ?? true
 
   const openrouter = createOpenRouter({
     apiKey,
     appName: 'SetHub',
     appUrl: process.env.APP_URL || 'http://localhost:3000',
   })
-  const model = await pickChatModel(settings)
-  const models = [model, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i)
+  const base = await pickChatModel(settings)
+  // `:online` подключает веб-поиск OpenRouter к любой модели.
+  const online = (m: string) => (web && m ? `${m}:online` : m)
+  const model = online(base)
+  const models = [base, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i).map(online)
   const langName = lang === 'ru' ? 'Russian' : 'English'
+
+  const variantHint =
+    opts.variant && opts.variant > 1
+      ? `\nThis is regeneration attempt #${opts.variant}: produce a MEANINGFULLY DIFFERENT take (different angle, ordering or scope) from a typical answer.`
+      : ''
 
   try {
     const { text } = await generateText({
       model: openrouter.chat(model, { extraBody: { models, transforms: ['middle-out'] } }),
       system: `You generate a canonical, high-quality, community-grade reference checklist as STRICT JSON.
 All content MUST be in ${langName}.
-Return ONLY valid JSON (no markdown fences), exactly this shape:
+${web ? 'Use up-to-date web search results to make the checklist accurate and current.\n' : ''}Return ONLY valid JSON (no markdown fences), exactly this shape:
 {"title": string, "desc": string, "tags": string[], "items": [{"title": string, "desc": string, "command": string, "subtasks": string[]}]}
 Rules:
 - title: concise noun phrase naming the list.
 - desc: one sentence describing it.
 - tags: 3-6 short lowercase tags, no '#'.
 - items: 4-10 ordered steps. title = short imperative. desc = one clarifying sentence. command = a shell command when applicable, else "". subtasks = 0-3 short verification checks.
-- Be accurate and practical. Everything in ${langName}.`,
+- Be accurate and practical. Everything in ${langName}.${variantHint}`,
       prompt: `Create the reference list for: ${query}`,
       temperature: settings.temperature,
       maxOutputTokens: settings.maxTokens,

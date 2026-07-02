@@ -35,6 +35,7 @@ export interface FeedItem {
   tags: string[]
   version: number
   origin: 'authored' | 'forked' | 'ai_draft'
+  status: 'draft' | 'published'
   runsCount: number
   forksCount: number
   starsCount: number
@@ -53,7 +54,7 @@ export async function getPopularTags(limit = 24): Promise<TagRow[]> {
   const res = await db.execute(sql`
     select unnest(${templates.tags}) as tag, count(*)::int as count
     from ${templates}
-    where ${templates.visibility} = 'public' and ${templates.moderation} = 'active'
+    where ${templates.status} = 'published' and ${templates.visibility} = 'public' and ${templates.moderation} = 'active'
     group by 1
     order by count desc, tag asc
     limit ${limit}
@@ -72,6 +73,7 @@ const FEED_COLS = {
   tags: templates.tags,
   version: templates.currentVersion,
   origin: templates.origin,
+  status: templates.status,
   runsCount: templates.runsCount,
   forksCount: templates.forksCount,
   starsCount: templates.starsCount,
@@ -82,10 +84,14 @@ const FEED_COLS = {
 
 const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${tag}]::text[]`
 
-// В публичном доступе — только public + moderation='active' (flagged/hidden не публикуются).
-// Владелец видит свои списки в любом статусе.
+// В публичном доступе — только published + public + moderation='active'
+// (черновики/flagged/hidden не публикуются). Владелец видит свои списки в любом статусе.
 function visibleFilter(viewerId?: string): SQL {
-  const publicVisible = and(eq(templates.visibility, 'public'), eq(templates.moderation, 'active'))!
+  const publicVisible = and(
+    eq(templates.status, 'published'),
+    eq(templates.visibility, 'public'),
+    eq(templates.moderation, 'active'),
+  )!
   return viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
 }
 
@@ -270,6 +276,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       tags: templates.tags,
       currentVersion: templates.currentVersion,
       origin: templates.origin,
+      status: templates.status,
       visibility: templates.visibility,
       moderation: templates.moderation,
       moderationReason: templates.moderationReason,

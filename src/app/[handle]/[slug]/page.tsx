@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, GitFork, Sparkles, Star, Tag } from 'lucide-react'
+import { ExternalLink, FileText, GitFork, Rocket, Sparkles, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -8,6 +8,7 @@ import { t, tr, type LocaleText } from '@/shared/i18n'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
+import { publishList } from '@/features/library/actions'
 
 function fmt(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0) + 'k'
@@ -23,7 +24,9 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
   const viewer = await getSession()
   const isOwnerOrAdmin = viewer?.userId === tpl.ownerId || isAdminHandle(viewer?.handle)
   if (tpl.visibility === 'private' && viewer?.userId !== tpl.ownerId) notFound()
+  if (tpl.status === 'draft' && viewer?.userId !== tpl.ownerId) notFound()
   if (tpl.moderation !== 'active' && !isOwnerOrAdmin) notFound()
+  const isOwner = viewer?.userId === tpl.ownerId
   // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.
   const previews = await getStepPreviews(steps, 'rs:fit:1400:1400')
   const stepImages: Record<string, string> = Object.fromEntries(
@@ -38,7 +41,22 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Основное: содержимое-эталон */}
           <main className="min-w-0 flex-1">
-            {tpl.origin === 'ai_draft' && (
+            {tpl.status === 'draft' && isOwner && (
+              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--warn)] bg-surface px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--warn)]">
+                    <FileText size={15} /> {t('draftBadge', lang)}
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] text-ink-2">{t('draftHint', lang)}</p>
+                </div>
+                <form action={publishList.bind(null, tpl.id)}>
+                  <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+                    <Rocket size={14} /> {t('publish', lang)}
+                  </button>
+                </form>
+              </div>
+            )}
+            {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
               <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3 text-[13px] text-accent">
                 <Sparkles size={15} className="flex-shrink-0" /> {t('aiVerifyHint', lang)}
               </div>
