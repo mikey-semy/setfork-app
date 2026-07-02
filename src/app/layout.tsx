@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
+import { avatarSrc } from '@/shared/media'
 import { getNotifications, getUnreadCount } from '@/features/notifications/queries'
 import { TopNav } from '@/widgets/TopNav'
 import './globals.css'
@@ -29,12 +30,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [unread, notifications] = user
     ? await Promise.all([getUnreadCount(user.userId), getNotifications(user.userId, 8)])
     : [0, []]
+  // Резолвим аватар для шапки: сессия может хранить storage_key — превращаем в imgproxy-URL.
+  const navUser = user ? { ...user, avatarUrl: (await avatarSrc(user.avatarUrl, 60)) ?? undefined } : null
   return (
     <html lang={lang} className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <div className="flex min-h-screen flex-col bg-canvas">
-            <TopNav lang={lang} user={user} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
+            <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
             <main className="flex flex-1 flex-col">{children}</main>
           </div>
         </ThemeProvider>
