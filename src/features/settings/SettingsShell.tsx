@@ -28,41 +28,27 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
     [sections, query],
   )
 
-  // Scrollspy: подсветка активной секции по прокрутке.
+  // Scrollspy по позиции: активна — последняя секция, чей верх пересёк линию ~110px.
+  // Надёжнее IntersectionObserver: любая секция (в т.ч. предпоследняя, как «Расход ИИ»)
+  // получает active. На самом низу страницы — последняя.
   useEffect(() => {
-    // Докрутили до низа страницы → последняя секция не может доскроллиться
-    // в зону активации, поэтому подсвечиваем её принудительно.
-    const atBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
-
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (atBottom()) {
-          const last = visible[visible.length - 1]
-          if (last) setActive(last.id)
-          return
-        }
-        const vis = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        if (vis[0]) setActive(vis[0].target.id)
-      },
-      { rootMargin: '-80px 0px -55% 0px', threshold: 0 },
-    )
-    visible.forEach((s) => {
-      const el = document.getElementById(s.id)
-      if (el) obs.observe(el)
-    })
-
-    const onScroll = () => {
-      if (atBottom()) {
-        const last = visible[visible.length - 1]
-        if (last) setActive(last.id)
+    const ids = visible.map((s) => s.id)
+    const compute = () => {
+      const line = 110
+      let current = ids[0]
+      for (const id of ids) {
+        const el = document.getElementById(id)
+        if (el && el.getBoundingClientRect().top - line <= 1) current = id
       }
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) current = ids[ids.length - 1]
+      if (current) setActive(current)
     }
-    window.addEventListener('scroll', onScroll, { passive: true })
+    compute()
+    window.addEventListener('scroll', compute, { passive: true })
+    window.addEventListener('resize', compute)
     return () => {
-      obs.disconnect()
-      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('scroll', compute)
+      window.removeEventListener('resize', compute)
     }
   }, [visible])
 
@@ -107,6 +93,8 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
             </div>
           ))
         )}
+        {/* Спейсер: чтобы последние секции могли доскроллиться до линии активации. */}
+        {visible.length > 1 && <div aria-hidden className="h-[45vh]" />}
       </div>
     </div>
   )
