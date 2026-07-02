@@ -5,7 +5,9 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, issueComments, issues, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
-import { notify, notifyMany } from '@/features/notifications/notify'
+import { notifyMany } from '@/features/notifications/notify'
+import { ensureWatch } from '@/features/watch/actions'
+import { getWatcherIds } from '@/features/watch/queries'
 import { isLabelKey } from './labels'
 
 async function resolveTemplate(owner: string, slug: string) {
@@ -53,7 +55,9 @@ export async function createIssue(formData: FormData): Promise<void> {
     })
     .returning({ number: issues.number })
 
-  await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'issue_new', templateId: tpl.id, issueId: undefined })
+  await ensureWatch(session.userId, tpl.id) // автор issue следит за списком
+  const watchers = await getWatcherIds(tpl.id)
+  await notifyMany([tpl.ownerId, ...watchers], { actorId: session.userId, type: 'issue_new', templateId: tpl.id })
   revalidatePath(`/${owner}/${slug}/issues`)
   redirect(`/${owner}/${slug}/issues/${ins.number}`)
 }
@@ -84,13 +88,15 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   const { tpl, iss } = loaded
 
   await db.insert(issueComments).values({ issueId: iss.id, authorId: session.userId, body })
+  await ensureWatch(session.userId, tpl.id) // комментатор начинает следить
 
-  // Участники: автор issue + владелец списка + прежние комментаторы.
+  // Участники: автор issue + владелец + прежние комментаторы + наблюдатели.
   const commenters = await db
     .selectDistinct({ id: issueComments.authorId })
     .from(issueComments)
     .where(eq(issueComments.issueId, iss.id))
-  const recipients = [iss.authorId, tpl.ownerId, ...commenters.map((c) => c.id)]
+  const watchers = await getWatcherIds(tpl.id)
+  const recipients = [iss.authorId, tpl.ownerId, ...commenters.map((c) => c.id), ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'issue_comment', templateId: tpl.id, issueId: iss.id })
 
   revalidatePath(path)

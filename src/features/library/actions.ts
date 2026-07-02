@@ -21,6 +21,8 @@ import { imageUrl, uploadImageFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { notify, notifyMany } from '@/features/notifications/notify'
+import { ensureWatch } from '@/features/watch/actions'
+import { getWatcherIds } from '@/features/watch/queries'
 import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { parseTags, slugify } from './slug'
@@ -92,6 +94,11 @@ export async function uploadStepImage(formData: FormData): Promise<{ key: string
   }
 }
 
+async function notifyWatchersNewVersion(templateId: string, actorId: string): Promise<void> {
+  const watchers = await getWatcherIds(templateId)
+  await notifyMany(watchers, { actorId, type: 'new_version', templateId })
+}
+
 async function ownerHandle(userId: string): Promise<string> {
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
   return u.handle
@@ -136,6 +143,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
     .values({ templateId: tpl.id, version: 1, note: 'initial' })
     .returning()
   await insertSteps(ver.id, proposed)
+  await ensureWatch(session.userId, tpl.id) // владелец следит за своим списком
   if (visibility === 'public') await autoModerateList(tpl.id) // приватные не модерируем
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
@@ -163,6 +171,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
     .update(templates)
     .set({ currentVersion: newVersion, tags, ordered, updatedAt: new Date() })
     .where(eq(templates.id, tpl.id))
+  await notifyWatchersNewVersion(tpl.id, session.userId)
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
 }
@@ -184,6 +193,7 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
     baseVersion: tpl.currentVersion,
     items: proposed,
   })
+  await ensureWatch(session.userId, tpl.id) // автор правки следит за списком
   await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id })
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions`)
@@ -214,6 +224,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     .set({ status: 'accepted', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
   await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id })
+  await notifyWatchersNewVersion(tpl.id, session.userId)
 
   revalidatePath('/', 'layout')
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
@@ -234,12 +245,14 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   if (!body) redirect(path)
 
   await db.insert(suggestionComments).values({ suggestionId: sug.id, authorId: session.userId, body })
+  await ensureWatch(session.userId, sug.templateId)
 
   const commenters = await db
     .selectDistinct({ id: suggestionComments.authorId })
     .from(suggestionComments)
     .where(eq(suggestionComments.suggestionId, sug.id))
-  const recipients = [sug.authorId, sug.template.ownerId, ...commenters.map((c) => c.id)]
+  const watchers = await getWatcherIds(sug.templateId)
+  const recipients = [sug.authorId, sug.template.ownerId, ...commenters.map((c) => c.id), ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'suggestion_comment', templateId: sug.templateId })
 
   revalidatePath(path)
