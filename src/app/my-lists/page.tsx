@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { FeedCard } from '@/features/library/FeedCard'
+import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 
 export default async function MyListsPage() {
@@ -27,11 +27,7 @@ export default async function MyListsPage() {
           ) : items.length === 0 ? (
             <div className="py-16 text-center text-[13.5px] text-muted">{t('emptyMyLists', lang)}</div>
           ) : (
-            <div className="space-y-3">
-              {items.map((item) => (
-                <FeedCard key={item.id} item={item} lang={lang} />
-              ))}
-            </div>
+            <FeedList items={items} lang={lang} />
           )}
     </div>
   )

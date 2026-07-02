@@ -4,6 +4,7 @@ import { and, asc, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import {
+  bookmarks,
   db,
   stars,
   steps,
@@ -269,6 +270,22 @@ export async function toggleLike(templateId: string): Promise<void> {
       .update(templates)
       .set({ starsCount: sql`${templates.starsCount} + 1` })
       .where(eq(templates.id, templateId))
+  }
+  revalidatePath('/', 'layout')
+}
+
+// ── Закладка (приватная) ─────────────────────────────────────────────
+export async function toggleBookmark(templateId: string): Promise<void> {
+  const session = await requireSession()
+  const existing = await db
+    .select({ id: bookmarks.id })
+    .from(bookmarks)
+    .where(and(eq(bookmarks.userId, session.userId), eq(bookmarks.templateId, templateId)))
+    .limit(1)
+  if (existing.length) {
+    await db.delete(bookmarks).where(and(eq(bookmarks.userId, session.userId), eq(bookmarks.templateId, templateId)))
+  } else {
+    await db.insert(bookmarks).values({ userId: session.userId, templateId })
   }
   revalidatePath('/', 'layout')
 }

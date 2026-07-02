@@ -1,8 +1,7 @@
 import Link from 'next/link'
-import { ArrowRight, GitFork, Heart } from 'lucide-react'
+import { GitFork, Heart } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { t, tr, type Lang } from '@/shared/i18n'
-import { forkTemplate } from '@/features/library/actions'
 import type { FeedItem } from './queries'
 
 function fmt(n: number): string {
@@ -10,17 +9,17 @@ function fmt(n: number): string {
   return String(n)
 }
 
+/** Карточка-строка (как список репозиториев GitHub): клик по имени открывает
+ *  список. Действия — уже внутри, на странице списка. */
 export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
-  const fork = forkTemplate.bind(null, item.id)
-
   return (
     <div className="flex gap-3 rounded-lg border border-border bg-surface px-3.5 py-3 transition-colors hover:border-border-strong">
       <Link href={`/${item.ownerHandle}`} className="flex-shrink-0">
         <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={32} />
       </Link>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <span className="text-[15px]">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[14.5px]">
             <Link href={`/${item.ownerHandle}`} className="text-ink-2 hover:text-accent">
               {item.ownerHandle}
             </Link>
@@ -43,12 +42,12 @@ export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
           ))}
         </div>
         <div className="mt-1 truncate text-[12.5px] text-ink-2">{tr(item.desc, lang)}</div>
-        <div className="mt-1.5 flex flex-wrap gap-3.5 text-[11.5px] text-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <Heart size={13} /> {fmt(item.starsCount)}
+        <div className="mt-1.5 flex flex-wrap items-center gap-3.5 text-[11.5px] text-muted">
+          <span className="inline-flex items-center gap-1">
+            <Heart size={12} /> {fmt(item.starsCount)}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <GitFork size={13} /> {fmt(item.forksCount)}
+          <span className="inline-flex items-center gap-1">
+            <GitFork size={12} /> {fmt(item.forksCount)}
           </span>
           <span>
             {t('updated', lang)}{' '}
@@ -57,22 +56,6 @@ export function FeedCard({ item, lang }: { item: FeedItem; lang: Lang }) {
             )}
           </span>
         </div>
-      </div>
-      <div className="flex flex-shrink-0 flex-col items-stretch gap-2">
-        <Link
-          href={`/${item.ownerHandle}/${item.slug}`}
-          className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3.5 py-[7px] text-[12.5px] font-semibold text-primary-fg"
-        >
-          {t('open', lang)} <ArrowRight size={12} />
-        </Link>
-        <form action={fork}>
-          <button
-            type="submit"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-surface px-3.5 py-[7px] text-[12.5px] font-semibold text-ink hover:border-border-strong"
-          >
-            <GitFork size={12} /> {t('fork', lang)}
-          </button>
-        </form>
       </div>
     </div>
   )

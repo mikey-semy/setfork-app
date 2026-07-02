@@ -1,14 +1,25 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Clock, ExternalLink, GitFork, GitPullRequest, Image as ImageIcon, Pencil, Sparkles } from 'lucide-react'
+import {
+  ArrowLeft,
+  Bookmark,
+  Clock,
+  ExternalLink,
+  GitFork,
+  GitPullRequest,
+  Image as ImageIcon,
+  Pencil,
+  Sparkles,
+} from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { CopyButton } from '@/shared/ui/CopyButton'
-import { getOpenSuggestionCount, getTemplateDetail, isLiked } from '@/features/library/queries'
-import { forkTemplate } from '@/features/library/actions'
+import { getOpenSuggestionCount, getTemplateDetail, isBookmarked, isLiked } from '@/features/library/queries'
+import { forkTemplate, toggleBookmark } from '@/features/library/actions'
 import { LikeButton } from '@/features/library/LikeButton'
+import { ShareButton } from '@/features/library/ShareButton'
 
 export default async function ListPage({
   params,
@@ -21,9 +32,11 @@ export default async function ListPage({
   if (!detail) notFound()
   const { tpl, currentVersion, steps } = detail
   const liked = session ? await isLiked(tpl.id, session.userId) : false
+  const bookmarked = session ? await isBookmarked(tpl.id, session.userId) : false
   const isOwner = session?.userId === tpl.ownerId
   const suggCount = await getOpenSuggestionCount(tpl.id)
   const forkBound = forkTemplate.bind(null, tpl.id)
+  const bookmarkBound = toggleBookmark.bind(null, tpl.id)
 
   return (
     <div className="mx-auto w-full max-w-[780px] px-4 py-8">
@@ -103,6 +116,25 @@ export default async function ListPage({
             <span className="font-mono text-[12px] text-muted">{tpl.forksCount}</span>
           </button>
         </form>
+
+        <form action={bookmarkBound}>
+          <button
+            className={`inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-[13px] font-semibold hover:border-border-strong ${
+              bookmarked ? 'border-[var(--accent)] text-accent' : 'border-border text-ink'
+            }`}
+          >
+            <Bookmark size={14} fill={bookmarked ? 'currentColor' : 'none'} />{' '}
+            {bookmarked ? t('saved', lang) : t('bookmark', lang)}
+          </button>
+        </form>
+
+        <ShareButton
+          path={`/${owner}/${slug}`}
+          title={tpl.slug}
+          label={t('share', lang)}
+          copiedLabel={t('copied', lang)}
+          className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+        />
 
         {isOwner ? (
           <Link

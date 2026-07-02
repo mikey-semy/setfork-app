@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
-import { db, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
+import { and, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
+import { bookmarks, db, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 
 export type FeedSort = 'trending' | 'newest' | 'mostLiked'
@@ -172,6 +172,55 @@ export async function isLiked(templateId: string, userId: string): Promise<boole
     .where(and(eq(stars.userId, userId), eq(stars.templateId, templateId)))
     .limit(1)
   return !!row
+}
+
+export async function isBookmarked(templateId: string, userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: bookmarks.id })
+    .from(bookmarks)
+    .where(and(eq(bookmarks.userId, userId), eq(bookmarks.templateId, templateId)))
+    .limit(1)
+  return !!row
+}
+
+/** Флаги (лайк/закладка) текущего пользователя для набора списков — для карточек ленты. */
+export async function getUserListFlags(userId: string, ids: string[]) {
+  const empty = { liked: new Set<string>(), bookmarked: new Set<string>() }
+  if (!ids.length) return empty
+  const [likes, bms] = await Promise.all([
+    db.select({ t: stars.templateId }).from(stars).where(and(eq(stars.userId, userId), inArray(stars.templateId, ids))),
+    db
+      .select({ t: bookmarks.templateId })
+      .from(bookmarks)
+      .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.templateId, ids))),
+  ])
+  return { liked: new Set(likes.map((r) => r.t)), bookmarked: new Set(bms.map((r) => r.t)) }
+}
+
+/** Списки в закладках пользователя (страница /bookmarks). */
+export async function getBookmarkedTemplates(userId: string): Promise<FeedItem[]> {
+  const rows = await db
+    .select({
+      id: templates.id,
+      ownerHandle: users.handle,
+      ownerAvatarUrl: users.avatarUrl,
+      slug: templates.slug,
+      title: templates.title,
+      desc: templates.desc,
+      tags: templates.tags,
+      version: templates.currentVersion,
+      origin: templates.origin,
+      runsCount: templates.runsCount,
+      forksCount: templates.forksCount,
+      starsCount: templates.starsCount,
+      updatedAt: templates.updatedAt,
+    })
+    .from(bookmarks)
+    .innerJoin(templates, eq(bookmarks.templateId, templates.id))
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(eq(bookmarks.userId, userId))
+    .orderBy(desc(bookmarks.createdAt))
+  return rows as FeedItem[]
 }
 
 /** Детальный список (owner/slug) + пункты текущей версии. */

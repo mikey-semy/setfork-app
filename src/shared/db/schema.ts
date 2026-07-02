@@ -192,6 +192,22 @@ export const suggestions = pgTable('suggestions', {
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 })
 
+// ── Bookmarks (закладка = «хочу воспользоваться», приватная) ─────────
+export const bookmarks = pgTable(
+  'bookmarks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ userTpl: unique('bookmarks_user_tpl').on(t.userId, t.templateId) }),
+)
+
 // ── Relations ────────────────────────────────────────────────────────
 export const usersRelations = relations(users, ({ many }) => ({
   templates: many(templates),

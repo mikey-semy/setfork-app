@@ -3,7 +3,7 @@ import { Sparkles } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { hasOpenRouterKey } from '@/shared/settings/ai'
-import { FeedCard } from '@/features/library/FeedCard'
+import { FeedList } from '@/features/library/FeedList'
 import { generateFromQuery } from '@/features/library/actions'
 import { getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
 
@@ -117,11 +117,7 @@ export default async function ExplorePage({
         {feed.length === 0 ? (
           <div className="py-16 text-center text-[13.5px] text-muted">{t('nothingFound', lang)}</div>
         ) : (
-          <div className="space-y-3 py-3">
-            {feed.map((item) => (
-              <FeedCard key={item.id} item={item} lang={lang} />
-            ))}
-          </div>
+          <FeedList items={feed} lang={lang} className="space-y-3 py-3" />
         )}
       </section>
     </div>
