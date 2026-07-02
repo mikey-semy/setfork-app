@@ -60,6 +60,7 @@ const DICT = {
   compareVersions: { en: 'Compare', ru: 'Сравнить' },
   viewCode: { en: 'Code', ru: 'Код' },
   viewList: { en: 'List', ru: 'Список' },
+  swapVersions: { en: 'Swap direction', ru: 'Поменять местами' },
   compareTitle: { en: 'Compare versions', ru: 'Сравнение версий' },
   diffFrom: { en: 'From', ru: 'От' },
   diffTo: { en: 'To', ru: 'До' },

@@ -88,7 +88,16 @@ export default async function ComparePage({
         </div>
 
         <div className="mb-4">
-          <VersionPicker base={base} versions={nums} from={fromN} to={toN} view={view} fromLabel={`${t('diffFrom', lang)}:`} toLabel={`${t('diffTo', lang)}:`} />
+          <VersionPicker
+            base={base}
+            versions={nums}
+            from={fromN}
+            to={toN}
+            view={view}
+            fromLabel={`${t('diffFrom', lang)}:`}
+            toLabel={`${t('diffTo', lang)}:`}
+            swapLabel={t('swapVersions', lang)}
+          />
         </div>
 
         {view === 'code' ? (
