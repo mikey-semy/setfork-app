@@ -87,39 +87,17 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
           : 'Rebuild the vector index of lists. Runs in batches, at most once per 30 min.'}
       </p>
 
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <label className="mb-1 block text-[12px] text-ink-2">{ru ? 'Разнести на, мин' : 'Spread over, min'}</label>
-          <input
-            type="number"
-            min={0}
-            max={120}
-            value={spread}
-            disabled={running}
-            onChange={(e) => setSpread(Math.max(0, Math.min(120, Number(e.target.value) || 0)))}
-            className="w-24 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={purge} disabled={purging || running} className={`${btn} border border-border text-ink hover:border-border-strong`}>
-            {purging ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} />}
-            {ru ? 'Почистить' : 'Purge'}
-          </button>
-          <button onClick={start} disabled={running || onCooldown || starting} className={`${btn} bg-primary text-primary-fg`}>
-            {running || starting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-            {running
-              ? ru
-                ? 'Индексируем…'
-                : 'Indexing…'
-              : onCooldown
-                ? ru
-                  ? `Через ${Math.ceil(cooldownLeft / 60000)} мин`
-                  : `In ${Math.ceil(cooldownLeft / 60000)} min`
-                : ru
-                  ? 'Запустить'
-                  : 'Run'}
-          </button>
-        </div>
+      <div className="mb-3">
+        <label className="mb-1 block text-[12px] text-ink-2">{ru ? 'Разнести на, мин' : 'Spread over, min'}</label>
+        <input
+          type="number"
+          min={0}
+          max={120}
+          value={spread}
+          disabled={running}
+          onChange={(e) => setSpread(Math.max(0, Math.min(120, Number(e.target.value) || 0)))}
+          className="w-24 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none"
+        />
       </div>
 
       {msg && <div className="mb-3 text-[12.5px] text-ink-2">{msg}</div>}
@@ -167,6 +145,27 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
             )
           })}
         </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">
+        <button onClick={purge} disabled={purging || running} className={`${btn} border border-border text-ink hover:border-border-strong`}>
+          {purging ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} />}
+          {ru ? 'Почистить' : 'Purge'}
+        </button>
+        <button onClick={start} disabled={running || onCooldown || starting} className={`${btn} bg-primary text-primary-fg`}>
+          {running || starting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+          {running
+            ? ru
+              ? 'Индексируем…'
+              : 'Indexing…'
+            : onCooldown
+              ? ru
+                ? `Через ${Math.ceil(cooldownLeft / 60000)} мин`
+                : `In ${Math.ceil(cooldownLeft / 60000)} min`
+              : ru
+                ? 'Запустить'
+                : 'Run'}
+        </button>
       </div>
     </div>
   )

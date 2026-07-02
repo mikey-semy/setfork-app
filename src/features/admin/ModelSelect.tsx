@@ -30,11 +30,12 @@ export function ModelSelect({
       <SelectContent className="max-h-72">
         {allowEmpty && <SelectItem value={NONE}>—</SelectItem>}
         {options.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
-            <span className="flex w-full items-center justify-between gap-4">
-              <span className="truncate font-mono text-[12px]">{o.id}</span>
-              {o.price && <span className={`shrink-0 tabular-nums text-[11.5px] ${o.priceClass ?? ''}`}>{o.price}</span>}
-            </span>
+          <SelectItem
+            key={o.value}
+            value={o.value}
+            trailing={o.price ? <span className={`tabular-nums text-[11.5px] ${o.priceClass ?? ''}`}>{o.price}</span> : undefined}
+          >
+            <span className="font-mono text-[12px]">{o.id}</span>
           </SelectItem>
         ))}
       </SelectContent>

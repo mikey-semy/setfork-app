@@ -1,7 +1,7 @@
 import 'server-only'
 import { generateText } from 'ai'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { getAiSettings, hasOpenRouterKey } from '@/shared/settings/ai'
+import { getAiSettings, getApiKey } from '@/shared/settings/ai'
 import { pickChatModel } from './credits'
 import type { Lang } from '@/shared/i18n'
 
@@ -20,12 +20,13 @@ export interface GeneratedList {
 
 /** Черновик эталонного списка по запросу (LLM через OpenRouter). null при ошибке/выкл. */
 export async function generateListDraft(query: string, lang: Lang): Promise<GeneratedList | null> {
-  if (!hasOpenRouterKey()) return null
+  const apiKey = await getApiKey()
+  if (!apiKey) return null
   const settings = await getAiSettings()
   if (!settings.enabled) return null
 
   const openrouter = createOpenRouter({
-    apiKey: process.env.OPENROUTER_API_KEY!,
+    apiKey,
     appName: 'SetHub',
     appUrl: process.env.APP_URL || 'http://localhost:3000',
   })

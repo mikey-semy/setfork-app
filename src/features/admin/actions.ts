@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
-import { defaultChatModel, defaultEmbeddingModel } from '@/shared/settings/ai'
+import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } from '@/shared/settings/ai'
 
 export async function setAiSettings(formData: FormData): Promise<void> {
   await requireAdmin()
@@ -15,16 +15,23 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   const temperature = Math.min(2, Math.max(0, Number(formData.get('temperature')) || 0.3))
   const maxTokens = Math.min(4000, Math.max(64, Math.round(Number(formData.get('maxTokens')) || 1500)))
   const cheapModeThreshold = Math.max(0, Number(formData.get('cheapModeThreshold')) || 0)
+  // Ключ пишем только если поле заполнено — пустое поле значит «не менять».
+  const apiKey = String(formData.get('apiKey') ?? '').trim()
 
-  await saveSettings({
-    'ai.enabled': enabled ? 'true' : 'false',
+  const settings: Record<string, string> = {
     'ai.chat_model': chatModel || defaultChatModel(),
     'ai.fallback_model': fallbackModel,
     'ai.embedding_model': embeddingModel || defaultEmbeddingModel(),
     'ai.temperature': String(temperature),
     'ai.max_tokens': String(maxTokens),
     'ai.cheap_mode_threshold': String(cheapModeThreshold),
-  })
+  }
+  if (apiKey) settings[API_KEY_SETTING] = apiKey
+  // Включать генерацию можно только при наличии ключа.
+  const keyExists = apiKey.length > 0 || (await hasApiKey())
+  settings['ai.enabled'] = enabled && keyExists ? 'true' : 'false'
+
+  await saveSettings(settings)
   revalidatePath('/admin')
 }
 

@@ -1,4 +1,5 @@
 import 'server-only'
+import { getApiKey } from '@/shared/settings/ai'
 
 export interface ModelOption {
   id: string
@@ -45,7 +46,7 @@ async function fetchList(url: string, init?: RequestInit): Promise<RawModel[]> {
 
 /** Каталог моделей OpenRouter (chat + embedding) с ценами — для селектов в админке. */
 export async function fetchModels(): Promise<ModelsResult> {
-  const key = process.env.OPENROUTER_API_KEY
+  const key = await getApiKey()
   const base = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
   const init = key ? { headers: { Authorization: `Bearer ${key}` } } : undefined
   const [chat, embedding] = await Promise.all([

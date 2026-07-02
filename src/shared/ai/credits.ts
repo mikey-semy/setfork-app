@@ -1,5 +1,5 @@
 import 'server-only'
-import type { AiSettings } from '@/shared/settings/ai'
+import { getApiKey, type AiSettings } from '@/shared/settings/ai'
 
 export interface OpenRouterCredits {
   total: number
@@ -16,7 +16,7 @@ export function clearCreditsCache(): void {
 }
 
 export async function getOpenRouterCredits(opts?: { fresh?: boolean }): Promise<OpenRouterCredits | null> {
-  const key = process.env.OPENROUTER_API_KEY
+  const key = await getApiKey()
   if (!key) return null
   if (!opts?.fresh && cache && Date.now() - cache.fetchedAt < TTL_MS) return cache
   const url = `${process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'}/credits`

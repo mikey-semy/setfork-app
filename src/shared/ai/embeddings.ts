@@ -1,4 +1,5 @@
 import 'server-only'
+import { getApiKey } from '@/shared/settings/ai'
 
 // Эмбеддинги через OpenRouter (openai/text-embedding-3-small → 1536 dims,
 // под колонку embeddings.embedding). Один OPENROUTER_API_KEY на чат и эмбеддинги.
@@ -9,8 +10,8 @@ const DEFAULT_EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'openai/text-embe
 
 export const EMBEDDING_DIM = 1536
 
-export function isEmbeddingEnabled(): boolean {
-  return Boolean(process.env.OPENROUTER_API_KEY)
+export async function isEmbeddingEnabled(): Promise<boolean> {
+  return Boolean(await getApiKey())
 }
 
 function headers(key: string): Record<string, string> {
@@ -23,7 +24,7 @@ function headers(key: string): Record<string, string> {
 }
 
 export async function embedTexts(texts: string[], model?: string): Promise<number[][] | null> {
-  const key = process.env.OPENROUTER_API_KEY
+  const key = await getApiKey()
   if (!key || texts.length === 0) return null
   const usedModel = model || DEFAULT_EMBEDDING_MODEL
   try {

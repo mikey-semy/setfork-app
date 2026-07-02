@@ -1,9 +1,10 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { getAiSettings, hasOpenRouterKey } from '@/shared/settings/ai'
+import { getAiSettings, getApiKey, maskKey } from '@/shared/settings/ai'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
+import { AiKeyAndSwitch } from '@/features/admin/AiKeyAndSwitch'
 import { CreditsWidget } from '@/features/admin/CreditsWidget'
 import { ReindexPanel } from '@/features/admin/ReindexPanel'
 
@@ -37,11 +38,10 @@ export default async function AdminPage() {
   await requireAdmin()
   const lang = await getLang()
   const ru = lang === 'ru'
-  const hasKey = hasOpenRouterKey()
-  const [settings, models] = await Promise.all([
-    getAiSettings(),
-    hasKey ? fetchModels() : Promise.resolve({ chat: [], embedding: [] }),
-  ])
+  const [settings, apiKey] = await Promise.all([getAiSettings(), getApiKey()])
+  const hasKey = Boolean(apiKey)
+  const maskedKey = maskKey(apiKey)
+  const models = hasKey ? await fetchModels() : { chat: [], embedding: [] }
 
   const chatOpts = ensure(buildOpts(models.chat, false, ru), settings.chatModel)
   const fallbackOpts = ensure(buildOpts(models.chat, false, ru), settings.fallbackModel)
@@ -68,10 +68,7 @@ export default async function AdminPage() {
         )}
 
         <form action={setAiSettings} className="flex flex-col gap-5">
-          <label className="flex items-center gap-2.5 text-[14px] text-ink">
-            <input type="checkbox" name="enabled" defaultChecked={settings.enabled} />
-            {ru ? 'Генерация включена' : 'Generation enabled'}
-          </label>
+          <AiKeyAndSwitch enabled={settings.enabled} hasKey={hasKey} maskedKey={maskedKey} ru={ru} />
 
           <div>
             <label className={lbl}>{ru ? 'Модель генерации' : 'Chat model'}</label>
@@ -131,9 +128,11 @@ export default async function AdminPage() {
             </div>
           </div>
 
-          <button className="w-fit rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
-            {ru ? 'Сохранить' : 'Save'}
-          </button>
+          <div className="flex justify-end border-t border-border pt-4">
+            <button className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
+              {ru ? 'Сохранить' : 'Save'}
+            </button>
+          </div>
         </form>
       </section>
 

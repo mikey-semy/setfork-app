@@ -1,6 +1,9 @@
 import 'server-only'
-import { inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { appSettings, db } from '@/shared/db'
+
+/** Ключ в app_settings, где хранится введённый в админке API-ключ OpenRouter. */
+export const API_KEY_SETTING = 'ai.api_key'
 
 export interface AiSettings {
   enabled: boolean
@@ -31,8 +34,26 @@ export function defaultEmbeddingModel(): string {
   return process.env.EMBEDDING_MODEL || 'openai/text-embedding-3-small'
 }
 
+/** Синхронная проверка только env-ключа (для мест, где нет доступа к БД). */
 export function hasOpenRouterKey(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY)
+}
+
+/** Действующий ключ: сначала введённый в админке (БД), иначе из .env. */
+export async function getApiKey(): Promise<string> {
+  const rows = await db.select().from(appSettings).where(eq(appSettings.key, API_KEY_SETTING))
+  return (rows[0]?.value?.trim() || process.env.OPENROUTER_API_KEY || '').trim()
+}
+
+export async function hasApiKey(): Promise<boolean> {
+  return Boolean(await getApiKey())
+}
+
+/** Маскирует ключ для показа в UI: «sk-or-v1••••••••1a2b». Полный ключ на клиент не уходит. */
+export function maskKey(k: string): string {
+  if (!k) return ''
+  if (k.length <= 12) return `${k.slice(0, 2)}${'•'.repeat(8)}`
+  return `${k.slice(0, 8)}${'•'.repeat(10)}${k.slice(-4)}`
 }
 
 export async function getAiSettings(): Promise<AiSettings> {
@@ -54,7 +75,7 @@ export async function getAiSettings(): Promise<AiSettings> {
 }
 
 export async function isAiAvailable(): Promise<boolean> {
-  if (!hasOpenRouterKey()) return false
+  if (!(await hasApiKey())) return false
   const s = await getAiSettings()
   return s.enabled
 }
