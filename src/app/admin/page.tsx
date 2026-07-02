@@ -6,6 +6,7 @@ import { getSearchSettings } from '@/shared/settings/search'
 import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
+import { Shield } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
@@ -82,11 +83,19 @@ export default async function AdminPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-6 py-8">
-      <div>
-        <h1 className="mb-1 text-[18px] font-bold text-ink">{ru ? 'Настройки ИИ' : 'AI settings'}</h1>
-        <p className="text-[13px] text-ink-2">
-          {ru ? 'Модель и параметры генерации. Хранится в БД, меняется на лету.' : 'Model & generation params. Stored in DB, changeable on the fly.'}
-        </p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="mb-1 text-[18px] font-bold text-ink">{ru ? 'Настройки ИИ' : 'AI settings'}</h1>
+          <p className="text-[13px] text-ink-2">
+            {ru ? 'Модель и параметры генерации. Хранится в БД, меняется на лету.' : 'Model & generation params. Stored in DB, changeable on the fly.'}
+          </p>
+        </div>
+        <Link
+          href="/admin/moderation"
+          className="inline-flex shrink-0 items-center gap-2 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg"
+        >
+          <Shield size={14} /> {ru ? 'Модерация' : 'Moderation'}
+        </Link>
       </div>
 
       <section className="rounded-lg border border-border bg-surface p-5">

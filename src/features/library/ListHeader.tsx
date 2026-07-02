@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, GitFork, GitPullRequest, ListChecks, Lock, Pencil, Settings, Star, Tag } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, GitFork, GitPullRequest, ListChecks, Lock, Pencil, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
+import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
@@ -18,7 +19,9 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   const meta = await getListMeta(owner, slug)
   if (!meta) return null
   const isOwner = session?.userId === meta.ownerId
-  if (meta.visibility === 'private' && !isOwner) notFound() // приватный список — только владельцу
+  const isAdmin = isAdminHandle(session?.handle)
+  if (meta.visibility === 'private' && !isOwner) notFound() // приватный — только владельцу
+  if (meta.moderation === 'hidden' && !isOwner && !isAdmin) notFound() // скрытый — владелец и админ
   const starred = session ? await isStarred(meta.id, session.userId) : false
   const suggCount = await getOpenSuggestionCount(meta.id)
   const base = `/${owner}/${slug}`
@@ -63,6 +66,11 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
             {meta.visibility === 'private' && (
               <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
                 <Lock size={11} /> {t('privateLabel', lang)}
+              </span>
+            )}
+            {meta.verified && (
+              <span className="inline-flex items-center gap-1 rounded-md border border-[var(--ok)]/40 bg-[var(--ok)]/10 px-2 py-0.5 text-[11px] font-medium text-[var(--ok)]">
+                <BadgeCheck size={12} /> {t('verifiedLabel', lang)}
               </span>
             )}
           </div>
@@ -115,6 +123,19 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
           {tab('suggestions', `${base}/suggestions`, <GitPullRequest size={15} />, t('suggestions', lang), suggCount)}
           {isOwner && tab('settings', `${base}/settings`, <Settings size={15} />, t('settings', lang))}
         </nav>
+
+        {meta.moderation !== 'active' && (isOwner || isAdmin) && (
+          <div
+            className={`mt-3 rounded-md border px-3 py-2 text-[12.5px] ${
+              meta.moderation === 'hidden'
+                ? 'border-[var(--danger)]/40 bg-[var(--danger)]/10 text-[var(--danger)]'
+                : 'border-[var(--warn)]/40 bg-[var(--warn)]/10 text-[var(--warn)]'
+            }`}
+          >
+            {meta.moderation === 'hidden' ? t('hiddenNotice', lang) : t('flaggedNotice', lang)}
+            {meta.moderationReason && ` — ${meta.moderationReason}`}
+          </div>
+        )}
       </div>
     </div>
   )

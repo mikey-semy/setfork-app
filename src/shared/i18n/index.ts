@@ -216,6 +216,21 @@ const DICT = {
   deleteList: { en: 'Delete this list', ru: 'Удалить список' },
   deleteListHint: { en: 'Permanently deletes the list, its versions and stars. Cannot be undone.', ru: 'Безвозвратно удаляет список, версии и звёзды.' },
   listSettings: { en: 'List settings', ru: 'Настройки списка' },
+  // ── Модерация ──
+  moderation: { en: 'Moderation', ru: 'Модерация' },
+  moderationIntro: { en: 'Review published lists. Hidden lists are removed from public.', ru: 'Проверка публикаций. Скрытые списки убираются из публичного доступа.' },
+  verifiedLabel: { en: 'Verified', ru: 'Проверено' },
+  verifyAction: { en: 'Verify', ru: 'Отметить проверенным' },
+  unverifyAction: { en: 'Unverify', ru: 'Снять проверку' },
+  hideAction: { en: 'Hide', ru: 'Скрыть' },
+  unhideAction: { en: 'Unhide', ru: 'Показать' },
+  aiCheck: { en: 'AI check', ru: 'Проверка ИИ' },
+  flaggedLabel: { en: 'Flagged', ru: 'На проверке' },
+  hiddenLabel: { en: 'Hidden', ru: 'Скрыт' },
+  statusActive: { en: 'Active', ru: 'Активен' },
+  filterAll: { en: 'All', ru: 'Все' },
+  hiddenNotice: { en: 'Hidden by moderation — not shown publicly.', ru: 'Скрыт модерацией — не виден публично.' },
+  flaggedNotice: { en: 'Flagged for review by moderation.', ru: 'Помечен модерацией на проверку.' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT

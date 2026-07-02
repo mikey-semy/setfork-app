@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, cosineDistance, desc, eq, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { and, cosineDistance, desc, eq, ilike, inArray, isNotNull, ne, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
@@ -39,6 +39,7 @@ export interface FeedItem {
   forksCount: number
   starsCount: number
   visibility: 'public' | 'private'
+  verified: boolean
   updatedAt: Date
 }
 
@@ -52,7 +53,7 @@ export async function getPopularTags(limit = 24): Promise<TagRow[]> {
   const res = await db.execute(sql`
     select unnest(${templates.tags}) as tag, count(*)::int as count
     from ${templates}
-    where ${templates.visibility} = 'public'
+    where ${templates.visibility} = 'public' and ${templates.moderation} <> 'hidden'
     group by 1
     order by count desc, tag asc
     limit ${limit}
@@ -75,16 +76,16 @@ const FEED_COLS = {
   forksCount: templates.forksCount,
   starsCount: templates.starsCount,
   visibility: templates.visibility,
+  verified: templates.verified,
   updatedAt: templates.updatedAt,
 }
 
 const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${tag}]::text[]`
 
-// Приватные списки видит только владелец. Публичные — все.
+// Публичный и не скрытый модерацией — всем; свой (любой) — владельцу.
 function visibleFilter(viewerId?: string): SQL {
-  return viewerId
-    ? or(eq(templates.visibility, 'public'), eq(templates.ownerId, viewerId))!
-    : eq(templates.visibility, 'public')
+  const publicVisible = and(eq(templates.visibility, 'public'), ne(templates.moderation, 'hidden'))!
+  return viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
 }
 
 /** Поиск/лента по ключевым словам (ILIKE по всем языкам сразу). q пустой = просто лента. */
@@ -266,6 +267,9 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       currentVersion: templates.currentVersion,
       origin: templates.origin,
       visibility: templates.visibility,
+      moderation: templates.moderation,
+      moderationReason: templates.moderationReason,
+      verified: templates.verified,
       starsCount: templates.starsCount,
       forksCount: templates.forksCount,
       createdAt: templates.createdAt,
