@@ -1,32 +1,32 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Heart } from 'lucide-react'
-import { toggleLike } from '@/features/library/actions'
+import { Star } from 'lucide-react'
+import { toggleStar } from '@/features/library/actions'
 
-export function LikeButton({
+export function StarButton({
   templateId,
-  liked,
+  starred,
   count,
   label,
 }: {
   templateId: string
-  liked: boolean
+  starred: boolean
   count: number
   label: string
 }) {
   const [pending, start] = useTransition()
   return (
     <button
-      onClick={() => start(() => toggleLike(templateId))}
+      onClick={() => start(() => toggleStar(templateId))}
       disabled={pending}
       className={`inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:opacity-60 ${
-        liked
-          ? 'border-[var(--danger)] bg-[var(--accent-soft)] text-[var(--danger)]'
+        starred
+          ? 'border-[var(--warn)] bg-[var(--accent-soft)] text-[var(--warn)]'
           : 'border-border text-ink hover:border-border-strong'
       }`}
     >
-      <Heart size={14} fill={liked ? 'currentColor' : 'none'} /> {label}
+      <Star size={14} fill={starred ? 'currentColor' : 'none'} /> {label}
       <span className="font-mono text-[12px] text-muted">{count}</span>
     </button>
   )

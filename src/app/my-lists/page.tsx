@@ -27,7 +27,7 @@ export default async function MyListsPage() {
           ) : items.length === 0 ? (
             <div className="py-16 text-center text-[13.5px] text-muted">{t('emptyMyLists', lang)}</div>
           ) : (
-            <FeedList items={items} lang={lang} />
+            <FeedList items={items} lang={lang} viewerId={session.userId} />
           )}
     </div>
   )

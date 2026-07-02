@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import {
   ArrowLeft,
-  Bookmark,
   Clock,
   ExternalLink,
   GitFork,
@@ -10,15 +9,16 @@ import {
   Image as ImageIcon,
   Pencil,
   Sparkles,
+  Star,
 } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { CopyButton } from '@/shared/ui/CopyButton'
-import { getOpenSuggestionCount, getTemplateDetail, isBookmarked, isLiked } from '@/features/library/queries'
-import { forkTemplate, toggleBookmark } from '@/features/library/actions'
-import { LikeButton } from '@/features/library/LikeButton'
+import { getOpenSuggestionCount, getTemplateDetail, isStarred } from '@/features/library/queries'
+import { forkTemplate } from '@/features/library/actions'
+import { StarButton } from '@/features/library/StarButton'
 import { ShareButton } from '@/features/library/ShareButton'
 
 export default async function ListPage({
@@ -31,12 +31,10 @@ export default async function ListPage({
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, currentVersion, steps } = detail
-  const liked = session ? await isLiked(tpl.id, session.userId) : false
-  const bookmarked = session ? await isBookmarked(tpl.id, session.userId) : false
+  const starred = session ? await isStarred(tpl.id, session.userId) : false
   const isOwner = session?.userId === tpl.ownerId
   const suggCount = await getOpenSuggestionCount(tpl.id)
   const forkBound = forkTemplate.bind(null, tpl.id)
-  const bookmarkBound = toggleBookmark.bind(null, tpl.id)
 
   return (
     <div className="mx-auto w-full max-w-[780px] px-4 py-8">
@@ -101,30 +99,19 @@ export default async function ListPage({
       {/* Действия */}
       <div className="mt-4 flex flex-wrap items-center gap-2.5 border-b border-border pb-5">
         {session ? (
-          <LikeButton templateId={tpl.id} liked={liked} count={tpl.starsCount} label={t('like', lang)} />
+          <StarButton templateId={tpl.id} starred={starred} count={tpl.starsCount} label={t('star', lang)} />
         ) : (
           <Link
             href="/login"
             className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
-            ♥ {t('like', lang)} <span className="font-mono text-[12px] text-muted">{tpl.starsCount}</span>
+            <Star size={14} /> {t('star', lang)} <span className="font-mono text-[12px] text-muted">{tpl.starsCount}</span>
           </Link>
         )}
         <form action={forkBound}>
           <button className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
             <GitFork size={14} /> {t('fork', lang)}{' '}
             <span className="font-mono text-[12px] text-muted">{tpl.forksCount}</span>
-          </button>
-        </form>
-
-        <form action={bookmarkBound}>
-          <button
-            className={`inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-[13px] font-semibold hover:border-border-strong ${
-              bookmarked ? 'border-[var(--accent)] text-accent' : 'border-border text-ink'
-            }`}
-          >
-            <Bookmark size={14} fill={bookmarked ? 'currentColor' : 'none'} />{' '}
-            {bookmarked ? t('saved', lang) : t('bookmark', lang)}
           </button>
         </form>
 

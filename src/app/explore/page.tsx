@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Sparkles } from 'lucide-react'
+import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { hasOpenRouterKey } from '@/shared/settings/ai'
@@ -21,8 +22,9 @@ export default async function ExplorePage({
   const sp = await searchParams
   const aiOn = hasOpenRouterKey()
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
-  const [lang, tags, feed] = await Promise.all([
+  const [lang, session, tags, feed] = await Promise.all([
     getLang(),
+    getSession(),
     getPopularTags(),
     getFeed({ sort, tag: sp.tag, q: sp.q }),
   ])
@@ -117,7 +119,7 @@ export default async function ExplorePage({
         {feed.length === 0 ? (
           <div className="py-16 text-center text-[13.5px] text-muted">{t('nothingFound', lang)}</div>
         ) : (
-          <FeedList items={feed} lang={lang} className="space-y-3 py-3" />
+          <FeedList items={feed} lang={lang} viewerId={session?.userId} className="space-y-3 py-3" />
         )}
       </section>
     </div>

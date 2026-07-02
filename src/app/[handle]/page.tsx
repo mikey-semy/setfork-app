@@ -1,13 +1,14 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
-import { FeedCard } from '@/features/library/FeedCard'
+import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { getProfileCounts, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
 
-type Tab = 'lists' | 'liked'
+type Tab = 'lists' | 'starred'
 
 export default async function ProfilePage({
   params,
@@ -16,17 +17,17 @@ export default async function ProfilePage({
   params: Promise<{ handle: string }>
   searchParams: Promise<{ tab?: string }>
 }) {
-  const [{ handle }, sp, lang] = await Promise.all([params, searchParams, getLang()])
+  const [{ handle }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
   const user = await getUserByHandle(handle)
   if (!user) notFound()
 
-  const tab: Tab = sp.tab === 'liked' ? 'liked' : 'lists'
+  const tab: Tab = sp.tab === 'starred' ? 'starred' : 'lists'
   const counts = await getProfileCounts(user.id)
+  const items = tab === 'starred' ? await getStarredTemplates(user.id) : await getUserTemplates(user.id)
 
   return (
     <div className="w-full px-6 py-8 lg:px-8">
       <div className="mx-auto flex max-w-[980px] flex-col gap-8 md:flex-row">
-        {/* Sidebar: аватар + идентичность */}
         <aside className="flex-shrink-0 md:w-[280px]">
           <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={180} rounded="rounded-2xl" />
           <div className="mt-4">
@@ -44,22 +45,21 @@ export default async function ProfilePage({
               <b className="text-ink">{counts.lists}</b> {t('lists', lang).toLowerCase()}
             </span>
             <span className="text-ink-2">
-              <b className="text-ink">{counts.stars}</b> {t('liked', lang).toLowerCase()}
+              <b className="text-ink">{counts.stars}</b> {t('starredTab', lang).toLowerCase()}
             </span>
           </div>
         </aside>
 
-        {/* Main: вкладки + контент */}
         <section className="min-w-0 flex-1">
           <div className="mb-4 flex gap-5 border-b border-border text-[14px] font-semibold">
             <TabLink handle={handle} tab="lists" active={tab} label={`${t('lists', lang)} ${counts.lists}`} />
-            <TabLink handle={handle} tab="liked" active={tab} label={`${t('liked', lang)} ${counts.stars}`} />
+            <TabLink handle={handle} tab="starred" active={tab} label={`${t('starredTab', lang)} ${counts.stars}`} />
           </div>
 
-          {tab === 'lists' ? (
-            <ListsTab userId={user.id} lang={lang} />
+          {items.length === 0 ? (
+            <Empty text={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
           ) : (
-            <StarredTab userId={user.id} lang={lang} />
+            <FeedList items={items} lang={lang} viewerId={viewer?.userId} />
           )}
         </section>
       </div>
@@ -76,30 +76,6 @@ function TabLink({ handle, tab, active, label }: { handle: string; tab: Tab; act
     >
       {label}
     </Link>
-  )
-}
-
-async function ListsTab({ userId, lang }: { userId: string; lang: 'en' | 'ru' }) {
-  const items = await getUserTemplates(userId)
-  if (items.length === 0) return <Empty text={t('noProfileLists', lang)} />
-  return (
-    <div className="space-y-3">
-      {items.map((item) => (
-        <FeedCard key={item.id} item={item} lang={lang} />
-      ))}
-    </div>
-  )
-}
-
-async function StarredTab({ userId, lang }: { userId: string; lang: 'en' | 'ru' }) {
-  const items = await getStarredTemplates(userId)
-  if (items.length === 0) return <Empty text={t('noStars', lang)} />
-  return (
-    <div className="space-y-3">
-      {items.map((item) => (
-        <FeedCard key={item.id} item={item} lang={lang} />
-      ))}
-    </div>
   )
 }
 

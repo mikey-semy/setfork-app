@@ -56,6 +56,8 @@ const DICT = {
   mostLiked: { en: 'Most liked', ru: 'Популярные' },
   like: { en: 'Like', ru: 'Нравится' },
   liked: { en: 'Liked', ru: 'Понравилось' },
+  star: { en: 'Star', ru: 'Отметить' },
+  starredTab: { en: 'Starred', ru: 'Избранное' },
   suggestEdit: { en: 'Suggest edit', ru: 'Предложить правку' },
   maintainedBy: { en: 'maintained by', ru: 'ведёт' },
   open: { en: 'Open', ru: 'Открыть' },

@@ -88,10 +88,7 @@ export function TopNav({ lang, user, isAdmin }: { lang: Lang; user: SessionUser 
                   <Link href="/my-lists">{t('myLists', lang)}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={`/${user.handle}?tab=liked`}>{t('liked', lang)}</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/bookmarks">{lang === 'ru' ? 'Закладки' : 'Saved'}</Link>
+                  <Link href={`/${user.handle}?tab=starred`}>{t('starredTab', lang)}</Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <>
