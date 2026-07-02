@@ -2,7 +2,7 @@ import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js'
 import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { z } from 'zod'
 import { verifyApiToken } from '@/shared/auth/api-token'
-import { mcpGetList, mcpSearch } from '@/features/mcp/tools'
+import { mcpCreateList, mcpGetList, mcpSearch, mcpUpdateList } from '@/features/mcp/tools'
 
 const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
@@ -43,6 +43,56 @@ const handler = createMcpHandler(
         return list ? json(list) : err('List not found or not accessible')
       },
     )
+
+    const itemShape = z.object({
+      title: z.string().describe('Step title (short imperative)'),
+      desc: z.string().optional().describe('One clarifying sentence'),
+      command: z.string().optional().describe('Shell command, if any'),
+      subtasks: z.array(z.string()).optional().describe('Verification checks'),
+    })
+
+    server.registerTool(
+      'create_list',
+      {
+        title: 'Create a checklist',
+        description: 'Create a new checklist owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site.',
+        inputSchema: {
+          title: z.string().describe('List title'),
+          desc: z.string().optional().describe('One-line description'),
+          tags: z.array(z.string()).optional().describe('3-6 short tags'),
+          ordered: z.boolean().optional().describe('true = ordered steps, false = unordered set (default true)'),
+          items: z.array(itemShape).min(1).describe('The steps'),
+        },
+      },
+      async (args, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined
+        if (!userId) return err('Unauthorized')
+        const res = await mcpCreateList(userId, args)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    server.registerTool(
+      'update_list',
+      {
+        title: 'Update a checklist',
+        description: 'Replace the steps of a checklist you own. A draft is edited in place; a published list gets a new version.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle (must be you)'),
+          slug: z.string().describe('List slug'),
+          items: z.array(itemShape).min(1).describe('The new full set of steps'),
+          note: z.string().optional().describe('Change note (for published lists)'),
+          tags: z.array(z.string()).optional(),
+          ordered: z.boolean().optional(),
+        },
+      },
+      async ({ handle, slug, ...rest }, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined
+        if (!userId) return err('Unauthorized')
+        const res = await mcpUpdateList(userId, handle, slug, rest)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
   },
   { serverInfo: { name: 'sethub', version: '0.1.0' }, capabilities: { tools: {} } },
   { basePath: '/api' }, // → эндпоинт /api/mcp (Streamable HTTP), /api/sse (legacy)
@@ -52,7 +102,7 @@ const handler = createMcpHandler(
 const verifyToken = async (_req: Request, bearer?: string): Promise<AuthInfo | undefined> => {
   const userId = await verifyApiToken(bearer)
   if (!userId) return undefined
-  return { token: bearer as string, scopes: ['read'], clientId: userId, extra: { userId } }
+  return { token: bearer as string, scopes: ['read', 'write'], clientId: userId, extra: { userId } }
 }
 
 const authHandler = withMcpAuth(handler, verifyToken, { required: true })
