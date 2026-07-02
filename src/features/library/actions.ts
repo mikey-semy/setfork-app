@@ -37,6 +37,7 @@ async function insertSteps(versionId: string, items: ProposedItem[]): Promise<vo
       imageKey: it.imageKey ?? null,
       level: it.level,
       why: it.why,
+      section: it.section,
       subtasks: it.subtasks,
       refs: it.refs,
     })),
@@ -277,6 +278,7 @@ export async function refineList(input: {
     imagePreview: '',
     level: it.level,
     why: it.why,
+    section: '',
     subtasks: it.subtasks,
     refs: [],
   }))
@@ -410,6 +412,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
           imageKey: s.imageKey,
           level: s.level,
           why: s.why,
+          section: s.section,
           subtasks: s.subtasks,
           refs: s.refs,
         })),

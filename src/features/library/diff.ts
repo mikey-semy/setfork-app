@@ -10,6 +10,7 @@ export interface CmpStep {
   command: string
   level: StepLevel
   why: string
+  section?: string
   subtasks: string[]
 }
 
@@ -22,8 +23,12 @@ export interface SLine {
 /** Шаги версии → строки с привязкой к номеру пункта. */
 export function serializeSteps(steps: CmpStep[], ordered: boolean): SLine[] {
   const lines: SLine[] = []
+  let prevSection = ''
   steps.forEach((s, idx) => {
     const step = idx + 1
+    const section = s.section?.trim() ?? ''
+    if (section && section !== prevSection) lines.push({ text: `## ${section}`, step, head: false })
+    prevSection = section
     lines.push({ text: `${ordered ? `${step}.` : '•'} ${s.title}${s.level !== 'required' ? `  [${s.level}]` : ''}`, step, head: true })
     if (s.desc) s.desc.split('\n').forEach((l) => lines.push({ text: `    ${l}`, step, head: false }))
     if (s.command) s.command.split('\n').forEach((l) => lines.push({ text: `    $ ${l}`, step, head: false }))

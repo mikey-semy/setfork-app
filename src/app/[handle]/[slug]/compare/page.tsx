@@ -14,7 +14,7 @@ import { getListMeta, getVersions, getVersionSteps } from '@/features/library/qu
 import { diffSteps, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from '@/features/library/diff'
 
 function toCmp(
-  steps: { title: LocaleText; desc: LocaleText; command: string; level: CmpStep['level']; why: LocaleText; subtasks: LocaleText[] }[],
+  steps: { title: LocaleText; desc: LocaleText; command: string; level: CmpStep['level']; why: LocaleText; section?: LocaleText; subtasks: LocaleText[] }[],
   lang: Lang,
 ): CmpStep[] {
   return steps.map((s) => ({
@@ -23,6 +23,7 @@ function toCmp(
     command: s.command,
     level: s.level,
     why: tr(s.why, lang),
+    section: s.section ? tr(s.section, lang) : '',
     subtasks: (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean),
   }))
 }

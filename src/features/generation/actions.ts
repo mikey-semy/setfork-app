@@ -132,6 +132,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       imagePreview: '',
       level: it.level ?? 'required',
       why: it.why ?? '',
+      section: '',
       subtasks: it.subtasks,
       refs: [],
     })),

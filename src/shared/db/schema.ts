@@ -58,6 +58,7 @@ export type ProposedItem = {
   imageKey?: string // storage_key скриншота в S3 (если есть)
   level: StepLevel
   why: LocaleText // «зачем/почему» — обоснование шага
+  section: LocaleText // заголовок секции-группы (пусто — без секции)
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
 }
@@ -156,6 +157,7 @@ export const steps = pgTable('steps', {
   imageKey: text('image_key'), // storage_key скриншота в S3
   level: stepLevel('level').notNull().default('required'),
   why: jsonb('why').notNull().default({}).$type<LocaleText>(), // «зачем/почему»
+  section: jsonb('section').notNull().default({}).$type<LocaleText>(), // заголовок секции-группы
 
   // Подшаги и ссылки — простой контент шага, храним как locale-JSON.
   subtasks: jsonb('subtasks').notNull().default([]).$type<LocaleText[]>(),

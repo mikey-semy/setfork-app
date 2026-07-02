@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronUp,
   GripVertical,
+  Heading,
   ImageUp,
   Loader2,
   Plus,
@@ -278,6 +279,16 @@ export function ListEditor({
           </div>
 
           <div className="flex flex-col gap-2">
+            {/* Заголовок секции-группы: если задан — начинает новую группу пунктов */}
+            <div className={`flex items-center gap-1.5 ${it.section.trim() ? 'text-accent' : 'text-muted'}`}>
+              <Heading size={13} className="shrink-0" />
+              <input
+                className="w-full bg-transparent text-[12.5px] font-semibold outline-none placeholder:font-normal placeholder:text-muted"
+                placeholder={ru ? 'Секция (необязательно) — группирует пункты ниже' : 'Section (optional) — groups the items below'}
+                value={it.section}
+                onChange={(e) => patch(i, { section: e.target.value })}
+              />
+            </div>
             <input
               className={input}
               placeholder={ru ? 'Заголовок пункта' : 'Item title'}
