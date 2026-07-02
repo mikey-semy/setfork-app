@@ -2,10 +2,10 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getAiSettings, getApiKey, maskKey } from '@/shared/settings/ai'
 import { getMediaSettings, maskSecret } from '@/shared/settings/media'
-import { getSearchMode } from '@/shared/settings/search'
+import { getSearchSettings } from '@/shared/settings/search'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
-import { SearchModeSelect } from '@/features/admin/SearchModeSelect'
+import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { AiKeyAndSwitch } from '@/features/admin/AiKeyAndSwitch'
 import { CreditsWidget } from '@/features/admin/CreditsWidget'
@@ -49,7 +49,7 @@ export default async function AdminPage() {
   await requireAdmin()
   const lang = await getLang()
   const ru = lang === 'ru'
-  const [settings, apiKey, media, searchMode] = await Promise.all([getAiSettings(), getApiKey(), getMediaSettings(), getSearchMode()])
+  const [settings, apiKey, media, search] = await Promise.all([getAiSettings(), getApiKey(), getMediaSettings(), getSearchSettings()])
   const hasKey = Boolean(apiKey)
   const maskedKey = maskKey(apiKey)
   const mediaValues = {
@@ -177,7 +177,7 @@ export default async function AdminPage() {
             ? 'Режим строки поиска. Семантика и гибрид используют векторный индекс (нужен ключ и индексация); при недоступности — откат на ключевые слова.'
             : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'}
         </p>
-        <SearchModeSelect current={searchMode} ru={ru} />
+        <SearchSettingsForm current={search} ru={ru} />
       </section>
 
       <ReindexPanel ru={ru} />

@@ -3,7 +3,7 @@ import { and, cosineDistance, desc, eq, ilike, inArray, isNotNull, or, sql, type
 import { db, embeddings, stars, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc } from '@/shared/media'
-import { getSearchMode } from '@/shared/settings/search'
+import { getSearchSettings } from '@/shared/settings/search'
 
 // Резолвим ownerAvatarUrl (storage_key → подписанный imgproxy-URL) для ленты.
 async function withAvatar<T extends { ownerAvatarUrl: string | null }>(rows: T[]): Promise<T[]> {
@@ -77,16 +77,24 @@ async function keywordFeed(order: SQL, tag?: string, q?: string): Promise<FeedIt
   return rows as FeedItem[]
 }
 
-/** Семантический поиск (pgvector cosine). null, если запрос нельзя векторизовать. */
-async function semanticFeed(q: string, tag: string | undefined, limit: number): Promise<FeedItem[] | null> {
+/** Семантический поиск (pgvector cosine) с порогом схожести. null, если запрос нельзя векторизовать. */
+async function semanticFeed(
+  q: string,
+  tag: string | undefined,
+  limit: number,
+  minScore: number,
+): Promise<FeedItem[] | null> {
   const { getAiSettings } = await import('@/shared/settings/ai')
   const { embedOne } = await import('@/shared/ai/embeddings')
   const { embeddingModel } = await getAiSettings()
   const vec = await embedOne(q, embeddingModel)
   if (!vec) return null
 
-  const similarity = sql<number>`1 - (${cosineDistance(embeddings.embedding, vec)})`
+  const distance = cosineDistance(embeddings.embedding, vec)
+  const similarity = sql<number>`1 - (${distance})`
   const filters: SQL[] = [eq(embeddings.kind, 'list'), isNotNull(embeddings.embedding)]
+  // Порог: similarity >= minScore  ⇔  distance <= 1 - minScore.
+  if (minScore > 0) filters.push(sql`${distance} <= ${1 - minScore}`)
   if (tag) filters.push(tagFilter(tag))
   const rows = await db
     .select(FEED_COLS)
@@ -112,10 +120,10 @@ export async function getFeed(
   const q = opts.q?.trim()
   if (!q) return withAvatar(await keywordFeed(order, opts.tag))
 
-  const mode = await getSearchMode()
+  const { mode, minScore, limit } = await getSearchSettings()
   if (mode === 'keyword') return withAvatar(await keywordFeed(order, opts.tag, q))
 
-  const semantic = await semanticFeed(q, opts.tag, 40)
+  const semantic = await semanticFeed(q, opts.tag, limit, minScore)
   // Нет вектора (нет ключа/эмбеддингов) → откат на ключевые слова.
   if (!semantic) return withAvatar(await keywordFeed(order, opts.tag, q))
   if (mode === 'semantic') return withAvatar(semantic)

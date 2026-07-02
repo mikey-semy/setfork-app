@@ -5,7 +5,7 @@ import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
 import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
-import { clearSearchModeCache, SEARCH_MODES, SEARCH_MODE_KEY, type SearchMode } from '@/shared/settings/search'
+import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
 
 export async function setAiSettings(formData: FormData): Promise<void> {
   await requireAdmin()
@@ -66,15 +66,20 @@ export async function setMediaSettings(formData: FormData): Promise<void> {
   revalidatePath('/admin')
 }
 
-// ── Режим поиска ─────────────────────────────────────────────────────
-export async function setSearchMode(mode: string): Promise<{ ok: true } | { error: string }> {
-  if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
-  if (!SEARCH_MODES.includes(mode as SearchMode)) return { error: 'Неизвестный режим.' }
-  await saveSettings({ [SEARCH_MODE_KEY]: mode })
-  clearSearchModeCache()
+// ── Настройки поиска (режим + порог + лимит) ─────────────────────────
+export async function setSearchSettings(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const mode = String(formData.get('mode') ?? '')
+  const minScore = Math.min(1, Math.max(0, Number(formData.get('minScore')) || 0))
+  const limit = Math.min(100, Math.max(1, Math.round(Number(formData.get('limit')) || 20)))
+  await saveSettings({
+    [SEARCH_KEYS.mode]: SEARCH_MODES.includes(mode as SearchMode) ? mode : 'hybrid',
+    [SEARCH_KEYS.minScore]: String(minScore),
+    [SEARCH_KEYS.limit]: String(limit),
+  })
+  clearSearchCache()
   revalidatePath('/admin')
   revalidatePath('/explore')
-  return { ok: true }
 }
 
 // ── Реиндексация эмбеддингов (RAG) ───────────────────────────────────
