@@ -73,6 +73,22 @@ textarea::placeholder {
   opacity: 0.55;
 }
 
+/* Клетка сетки индексации «лопается» при заполнении. */
+@keyframes cell-pop {
+  0% {
+    transform: scale(0.3);
+  }
+  55% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-cell-pop {
+  animation: cell-pop 260ms ease-out;
+}
+
 /* Тонкая полоса прокрутки под тёмную/светлую тему */
 * {
   scrollbar-width: thin;

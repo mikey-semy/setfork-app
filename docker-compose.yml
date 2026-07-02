@@ -1,7 +1,7 @@
 # Локальная разработка: только Postgres. Приложение запускаем `npm run dev`.
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-sethub}

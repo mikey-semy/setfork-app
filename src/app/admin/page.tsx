@@ -5,6 +5,7 @@ import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { setAiSettings } from '@/features/admin/actions'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
+import { ReindexPanel } from '@/features/admin/ReindexPanel'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none'
 
@@ -112,6 +113,8 @@ export default async function AdminPage() {
           {ru ? 'Сохранить' : 'Save'}
         </button>
       </form>
+
+      <ReindexPanel ru={ru} />
     </div>
   )
 }

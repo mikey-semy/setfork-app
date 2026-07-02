@@ -11,6 +11,7 @@ import { relations, sql } from 'drizzle-orm'
 import {
   bigint,
   boolean,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -19,6 +20,7 @@ import {
   timestamp,
   unique,
   uuid,
+  vector,
 } from 'drizzle-orm/pg-core'
 import type { LocaleText } from '../i18n'
 
@@ -166,6 +168,24 @@ export const stars = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ userTpl: unique('stars_user_tpl').on(t.userId, t.templateId) }),
+)
+
+// ── Embeddings (RAG, pgvector 1536) ──────────────────────────────────
+export const embeddings = pgTable(
+  'embeddings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    kind: text('kind').notNull(), // 'list'
+    refId: uuid('ref_id'), // template.id
+    content: text('content').notNull(),
+    embedding: vector('embedding', { dimensions: 1536 }),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('embeddings_hnsw_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
+    index('embeddings_kind_idx').on(t.kind),
+  ],
 )
 
 // ── App settings (key-value, в т.ч. AI-настройки) ────────────────────
