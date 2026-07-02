@@ -6,7 +6,7 @@ import { ArrowLeft, Check, CircleCheckBig, RotateCcw, Square, SquareCheckBig, Tr
 import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
 import { CopyButton } from '@/shared/ui/CopyButton'
-import { abandonRun, finishRun, reopenRun, saveStepNote, toggleStep, toggleSubtask } from './actions'
+import { abandonRun, finishRun, reopenRun, toggleStep, toggleSubtask } from './actions'
 
 export interface RunStepVM {
   id: string
@@ -18,7 +18,6 @@ export interface RunStepVM {
   refs: { label: string; url?: string }[]
   done: boolean
   subtasksDone: number[]
-  note: string
 }
 
 export function RunView({
@@ -56,11 +55,6 @@ export function RunView({
     const has = s.subtasksDone.includes(idx)
     patch(i, { subtasksDone: has ? s.subtasksDone.filter((x) => x !== idx) : [...s.subtasksDone, idx] })
     start(() => toggleSubtask(runId, s.id, idx))
-  }
-  function noteBlur(i: number, value: string) {
-    if (value === steps[i].note) return
-    patch(i, { note: value })
-    start(() => saveStepNote(runId, steps[i].id, value))
   }
 
   return (
@@ -187,14 +181,6 @@ export function RunView({
                     )}
                   </div>
                 )}
-
-                <textarea
-                  defaultValue={s.note}
-                  onBlur={(e) => noteBlur(i, e.target.value)}
-                  placeholder={t('runNotePh', lang)}
-                  rows={s.note ? 2 : 1}
-                  className="mt-3 w-full resize-y rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[12.5px] text-ink outline-none focus:border-border-strong"
-                />
               </div>
             </div>
           </div>

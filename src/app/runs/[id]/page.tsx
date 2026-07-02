@@ -21,7 +21,6 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
     refs: (s.refs as { label: LocaleText; url?: string }[]).map((r) => ({ label: tr(r.label, lang), url: r.url })).filter((r) => r.label),
     done: s.state?.status === 'done',
     subtasksDone: s.state?.subtasksDone ?? [],
-    note: s.state?.note ?? '',
   }))
 
   return (

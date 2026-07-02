@@ -64,10 +64,6 @@ const DICT = {
   runAbandon: { en: 'Abandon run', ru: 'Бросить прогон' },
   runAbandonConfirm: { en: 'Abandon this run? Progress will be kept but marked abandoned.', ru: 'Бросить прогон? Прогресс сохранится, но пометится брошенным.' },
   runDone: { en: 'Completed 🎉', ru: 'Завершён 🎉' },
-  runNotePh: { en: 'Note for this step…', ru: 'Заметка к шагу…' },
-  myRuns: { en: 'My runs', ru: 'Мои прогоны' },
-  myRunsIntro: { en: 'Lists you are running — pick up where you left off.', ru: 'Списки, которые ты проходишь — продолжи с места остановки.' },
-  noRuns: { en: 'No runs yet — start one from any list.', ru: 'Прогонов пока нет — начни с любого списка.' },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for AI agents to connect via MCP (search & read your lists).',
