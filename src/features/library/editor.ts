@@ -15,12 +15,13 @@ export type EditorItem = {
   imagePreview: string // отображаемый URL превью (imgproxy/objectURL); только клиент
   level: StepLevel
   why: string
+  section: string // заголовок секции-группы ('' — без секции)
   subtasks: string[]
   refs: EditorRef[]
 }
 
 export function emptyItem(): EditorItem {
-  return { title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', subtasks: [], refs: [] }
+  return { title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
 }
 
 /** Плоские (одноязычные) пункты редактора → locale-JSON снимок. */
@@ -35,6 +36,7 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
       imageKey: it.imageKey || undefined,
       level: asLevel(it.level),
       why: it.why.trim() ? { [lang]: it.why.trim() } : {},
+      section: it.section.trim() ? { [lang]: it.section.trim() } : {},
       subtasks: it.subtasks.filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
       refs: it.refs
         .filter((r) => r.label.trim())
@@ -50,6 +52,7 @@ type LocaleItem = {
   imageKey?: string | null
   level?: StepLevel
   why?: LocaleText
+  section?: LocaleText
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
 }
@@ -65,6 +68,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     imagePreview: it.imageKey ? (previews[it.imageKey] ?? '') : '',
     level: asLevel(it.level),
     why: it.why ? tr(it.why, lang) : '',
+    section: it.section ? tr(it.section, lang) : '',
     subtasks: (it.subtasks ?? []).map((s) => tr(s, lang)),
     refs: (it.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' })),
   }))
@@ -84,6 +88,7 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
       imagePreview: String(it?.imagePreview ?? ''),
       level: asLevel(it?.level),
       why: String(it?.why ?? ''),
+      section: String(it?.section ?? ''),
       subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s: unknown) => String(s)) : [],
       refs: Array.isArray(it?.refs)
         ? it.refs.map((r: { label?: unknown; url?: unknown }) => ({

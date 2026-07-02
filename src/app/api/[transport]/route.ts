@@ -50,6 +50,7 @@ const handler = createMcpHandler(
       command: z.string().optional().describe('Shell command, if any'),
       level: z.enum(['required', 'recommended', 'optional']).optional().describe('How essential the step is'),
       why: z.string().optional().describe('Why this step matters (rationale)'),
+      section: z.string().optional().describe('Optional section header; consecutive steps sharing it are grouped under it'),
       subtasks: z.array(z.string()).optional().describe('Verification checks'),
     })
 

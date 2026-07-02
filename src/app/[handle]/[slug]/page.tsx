@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ExternalLink, FileText, GitFork, Info, Rocket, Sparkles, Star, Tag } from 'lucide-react'
@@ -77,14 +78,23 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
             )}
 
             <div className="flex flex-col gap-3">
-              {steps.map((s) => {
+              {steps.map((s, si) => {
                 const subs = (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean)
                 const refs = (s.refs as { label: LocaleText; url?: string }[]).map((x) => ({
                   label: tr(x.label, lang),
                   url: x.url,
                 }))
+                const section = tr(s.section, lang)
+                const prevSection = si > 0 ? tr(steps[si - 1].section, lang) : ''
+                const showHeader = !!section && section !== prevSection
                 return (
-                  <div key={s.id} className="break-inside-avoid rounded-lg border border-border bg-surface p-4">
+                  <Fragment key={s.id}>
+                    {showHeader && (
+                      <h2 className={`text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-2 ${si > 0 ? 'mt-3' : ''}`}>
+                        {section}
+                      </h2>
+                    )}
+                  <div className="break-inside-avoid rounded-lg border border-border bg-surface p-4">
                     <div className="flex gap-3">
                       <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? s.n : '•'}</span>
                       <div className="min-w-0 flex-1">
@@ -146,6 +156,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                       </div>
                     </div>
                   </div>
+                  </Fragment>
                 )
               })}
             </div>

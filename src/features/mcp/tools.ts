@@ -11,6 +11,7 @@ export interface McpItemInput {
   command?: string
   level?: 'required' | 'recommended' | 'optional'
   why?: string
+  section?: string
   subtasks?: string[]
 }
 
@@ -27,6 +28,7 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
       hasImage: false,
       level: (LEVELS.includes(it.level as string) ? it.level : 'required') as ProposedItem['level'],
       why: it.why?.trim() ? { en: it.why.trim() } : {},
+      section: it.section?.trim() ? { en: it.section.trim() } : {},
       subtasks: (it.subtasks ?? []).filter((s) => s.trim()).map((s) => ({ en: s.trim() })),
       refs: [],
     }))
@@ -45,6 +47,7 @@ async function insertSteps(versionId: string, items: ProposedItem[]): Promise<vo
       imageKey: null,
       level: it.level,
       why: it.why,
+      section: it.section,
       subtasks: it.subtasks,
       refs: it.refs,
     })),
