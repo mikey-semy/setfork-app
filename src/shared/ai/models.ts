@@ -7,6 +7,11 @@ export interface ModelOption {
   completionPrice: number // USD / 1M completion tokens
 }
 
+export interface ModelsResult {
+  chat: ModelOption[]
+  embedding: ModelOption[]
+}
+
 interface RawModel {
   id: string
   name?: string
@@ -24,17 +29,31 @@ function toOptions(raw: RawModel[] | undefined): ModelOption[] {
     .sort((a, b) => a.id.localeCompare(b.id))
 }
 
-/** Каталог чат-моделей OpenRouter (с ценами) для выпадающих списков в админке. */
-export async function fetchChatModels(): Promise<ModelOption[]> {
+// Только 1536-мерные эмбеддинги совместимы с колонкой embeddings.embedding (pgvector 1536).
+const EMBEDDING_1536 = new Set(['openai/text-embedding-3-small', 'openai/text-embedding-ada-002'])
+
+async function fetchList(url: string, init?: RequestInit): Promise<RawModel[]> {
+  try {
+    const res = await fetch(url, init)
+    if (!res.ok) return []
+    const data = (await res.json()) as { data?: RawModel[] }
+    return data.data ?? []
+  } catch {
+    return []
+  }
+}
+
+/** Каталог моделей OpenRouter (chat + embedding) с ценами — для селектов в админке. */
+export async function fetchModels(): Promise<ModelsResult> {
   const key = process.env.OPENROUTER_API_KEY
   const base = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
   const init = key ? { headers: { Authorization: `Bearer ${key}` } } : undefined
-  try {
-    const res = await fetch(`${base}/models`, init)
-    if (!res.ok) return []
-    const data = (await res.json()) as { data?: RawModel[] }
-    return toOptions(data.data)
-  } catch {
-    return []
+  const [chat, embedding] = await Promise.all([
+    fetchList(`${base}/models`, init),
+    fetchList(`${base}/embeddings/models`, init),
+  ])
+  return {
+    chat: toOptions(chat),
+    embedding: toOptions(embedding).filter((m) => EMBEDDING_1536.has(m.id)),
   }
 }

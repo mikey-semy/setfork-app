@@ -1,12 +1,22 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getAiSettings, hasOpenRouterKey } from '@/shared/settings/ai'
-import { fetchChatModels } from '@/shared/ai/models'
+import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { setAiSettings } from '@/features/admin/actions'
-import { ModelSelect } from '@/features/admin/ModelSelect'
+import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none'
+
+function chatLabel(m: ModelOption): string {
+  return `${m.id}  ·  $${m.promptPrice.toFixed(2)} / $${m.completionPrice.toFixed(2)} за 1M`
+}
+function embLabel(m: ModelOption): string {
+  return `${m.id}  ·  $${m.promptPrice.toFixed(3)} за 1M`
+}
+function ensure(opts: Option[], current: string): Option[] {
+  return current && !opts.some((o) => o.value === current) ? [{ value: current, label: current }, ...opts] : opts
+}
 
 export default async function AdminPage() {
   await requireAdmin()
@@ -15,12 +25,13 @@ export default async function AdminPage() {
   const hasKey = hasOpenRouterKey()
   const [settings, models, credits] = await Promise.all([
     getAiSettings(),
-    hasKey ? fetchChatModels() : Promise.resolve([]),
+    hasKey ? fetchModels() : Promise.resolve({ chat: [], embedding: [] }),
     hasKey ? getOpenRouterCredits() : Promise.resolve(null),
   ])
 
-  const ids = models.map((m) => m.id)
-  const chatIds = ids.includes(settings.chatModel) ? ids : [settings.chatModel, ...ids].filter(Boolean)
+  const chatOpts = ensure(models.chat.map((m) => ({ value: m.id, label: chatLabel(m) })), settings.chatModel)
+  const fallbackOpts = ensure(models.chat.map((m) => ({ value: m.id, label: chatLabel(m) })), settings.fallbackModel)
+  const embOpts = ensure(models.embedding.map((m) => ({ value: m.id, label: embLabel(m) })), settings.embeddingModel)
 
   return (
     <div className="mx-auto w-full max-w-[720px] px-6 py-8">
@@ -53,13 +64,8 @@ export default async function AdminPage() {
           <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">
             {ru ? 'Модель генерации' : 'Chat model'}
           </label>
-          {chatIds.length > 0 ? (
-            <ModelSelect
-              name="chatModel"
-              defaultValue={settings.chatModel}
-              options={chatIds}
-              placeholder={ru ? 'Выбери модель' : 'Pick a model'}
-            />
+          {chatOpts.length > 0 ? (
+            <ModelSelect name="chatModel" defaultValue={settings.chatModel} options={chatOpts} placeholder={ru ? 'Выбери модель' : 'Pick a model'} />
           ) : (
             <input name="chatModel" defaultValue={settings.chatModel} className={`${field} font-mono`} />
           )}
@@ -69,8 +75,8 @@ export default async function AdminPage() {
           <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">
             {ru ? 'Запасная модель (для дешёвого режима)' : 'Fallback model (cheap mode)'}
           </label>
-          {ids.length > 0 ? (
-            <ModelSelect name="fallbackModel" defaultValue={settings.fallbackModel} options={ids} allowEmpty placeholder="—" />
+          {fallbackOpts.length > 0 ? (
+            <ModelSelect name="fallbackModel" defaultValue={settings.fallbackModel} options={fallbackOpts} allowEmpty placeholder="—" />
           ) : (
             <input name="fallbackModel" defaultValue={settings.fallbackModel} className={`${field} font-mono`} />
           )}
@@ -95,7 +101,11 @@ export default async function AdminPage() {
           <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">
             {ru ? 'Модель эмбеддингов (RAG)' : 'Embedding model (RAG)'}
           </label>
-          <input name="embeddingModel" defaultValue={settings.embeddingModel} className={`${field} font-mono`} />
+          {embOpts.length > 0 ? (
+            <ModelSelect name="embeddingModel" defaultValue={settings.embeddingModel} options={embOpts} placeholder={ru ? 'Выбери модель' : 'Pick a model'} />
+          ) : (
+            <input name="embeddingModel" defaultValue={settings.embeddingModel} className={`${field} font-mono`} />
+          )}
         </div>
 
         <button className="w-fit rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">

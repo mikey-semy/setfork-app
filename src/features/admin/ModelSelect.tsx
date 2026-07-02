@@ -5,6 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 /** Значение-пустышка для «нет модели» (Radix не разрешает пустое value у Item). */
 export const NONE = '__none__'
 
+export type Option = { value: string; label: string }
+
 export function ModelSelect({
   name,
   defaultValue,
@@ -14,7 +16,7 @@ export function ModelSelect({
 }: {
   name: string
   defaultValue?: string
-  options: string[]
+  options: Option[]
   placeholder?: string
   allowEmpty?: boolean
 }) {
@@ -26,8 +28,8 @@ export function ModelSelect({
       <SelectContent>
         {allowEmpty && <SelectItem value={NONE}>—</SelectItem>}
         {options.map((o) => (
-          <SelectItem key={o} value={o}>
-            {o}
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
           </SelectItem>
         ))}
       </SelectContent>
