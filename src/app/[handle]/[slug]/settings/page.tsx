@@ -16,7 +16,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
     <>
       <ListHeader owner={owner} slug={slug} active="settings" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
-        <ListSettingsDanger templateId={meta.id} slug={meta.slug} visibility={meta.visibility} lang={lang} />
+        <ListSettingsDanger templateId={meta.id} slug={meta.slug} visibility={meta.visibility} pinned={meta.pinned} lang={lang} />
       </div>
     </>
   )

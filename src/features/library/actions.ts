@@ -59,6 +59,15 @@ export async function setListVisibility(templateId: string, visibility: 'public'
   revalidatePath('/explore')
 }
 
+export async function setListPinned(templateId: string, pinned: boolean): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  await db.update(templates).set({ pinned }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}`)
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+}
+
 export async function deleteListAction(templateId: string): Promise<void> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
