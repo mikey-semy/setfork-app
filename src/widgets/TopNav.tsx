@@ -90,6 +90,9 @@ export function TopNav({ lang, user, isAdmin }: { lang: Lang; user: SessionUser 
                 <DropdownMenuItem asChild>
                   <Link href={`/${user.handle}?tab=starred`}>{t('starredTab', lang)}</Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">{t('settings', lang)}</Link>
+                </DropdownMenuItem>
                 {isAdmin && (
                   <>
                     <DropdownMenuSeparator />

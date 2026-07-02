@@ -1,0 +1,124 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { eq, inArray, sql } from 'drizzle-orm'
+import { db, stars, suggestions, templates, users } from '@/shared/db'
+import type { Social } from '@/shared/db/schema'
+import { clearSessionCookie, requireSession, setSessionCookie } from '@/shared/auth/session'
+import { removeAvatarFiles, saveAvatarFile } from './avatar'
+
+export type ActionResult = { ok?: true; error?: string }
+
+const ALLOWED_SOCIAL = new Set(['github', 'x', 'telegram', 'youtube', 'linkedin', 'site'])
+
+function normalizeUrl(raw: string): string {
+  const v = raw.trim()
+  if (!v) return ''
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`
+}
+
+function parseSocials(raw: string): Social[] {
+  let arr: unknown
+  try {
+    arr = JSON.parse(raw || '[]')
+  } catch {
+    return []
+  }
+  if (!Array.isArray(arr)) return []
+  return arr
+    .map((s) => ({ type: String((s as Social)?.type ?? '').trim(), url: normalizeUrl(String((s as Social)?.url ?? '')) }))
+    .filter((s) => ALLOWED_SOCIAL.has(s.type) && s.url)
+    .slice(0, 8)
+}
+
+export async function updateProfile(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const session = await requireSession()
+
+  const name = String(formData.get('name') ?? '').trim().slice(0, 80) || null
+  const bio = String(formData.get('bio') ?? '').trim().slice(0, 280) || null
+  const location = String(formData.get('location') ?? '').trim().slice(0, 80) || null
+  const website = normalizeUrl(String(formData.get('website') ?? '')).slice(0, 200) || null
+  const socials = parseSocials(String(formData.get('socials') ?? '[]'))
+
+  let avatarUrl: string | undefined
+  const file = formData.get('avatar')
+  if (file instanceof File && file.size > 0) {
+    try {
+      avatarUrl = await saveAvatarFile(session.userId, file)
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : 'Не удалось загрузить аватар.' }
+    }
+  }
+
+  await db
+    .update(users)
+    .set({ name, bio, location, website, socials, ...(avatarUrl ? { avatarUrl } : {}) })
+    .where(eq(users.id, session.userId))
+
+  // Обновляем сессионную cookie, чтобы навбар/аватар сразу отражали изменения.
+  await setSessionCookie({
+    userId: session.userId,
+    handle: session.handle,
+    name: name ?? undefined,
+    avatarUrl: avatarUrl ?? session.avatarUrl,
+  })
+
+  revalidatePath('/settings')
+  revalidatePath(`/${session.handle}`)
+  return { ok: true }
+}
+
+/** Спец-аккаунт «удалённый пользователь» — под него переходят списки удалённых людей. */
+async function ensureGhostUser(): Promise<string> {
+  const [g] = await db.select().from(users).where(eq(users.handle, 'ghost')).limit(1)
+  if (g) return g.id
+  const [created] = await db.insert(users).values({ handle: 'ghost', name: 'Deleted user', deleted: true }).returning()
+  return created.id
+}
+
+export async function deleteAccount(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const session = await requireSession()
+  const confirm = String(formData.get('confirm') ?? '').trim()
+  if (confirm.toLowerCase() !== session.handle.toLowerCase()) {
+    return { error: 'Ник не совпадает.' }
+  }
+  if (session.handle.toLowerCase() === 'ghost') return { error: 'Этот аккаунт нельзя удалить.' }
+
+  const ghostId = await ensureGhostUser()
+
+  // 1) Переносим списки на ghost, следя за уникальностью slug под ghost.
+  const mine = await db.select({ id: templates.id, slug: templates.slug }).from(templates).where(eq(templates.ownerId, session.userId))
+  const taken = new Set(
+    (await db.select({ slug: templates.slug }).from(templates).where(eq(templates.ownerId, ghostId))).map((r) => r.slug),
+  )
+  for (const tpl of mine) {
+    let slug = tpl.slug
+    if (taken.has(slug)) {
+      let i = 2
+      while (taken.has(`${slug}-${i}`)) i++
+      slug = `${slug}-${i}`
+    }
+    taken.add(slug)
+    await db.update(templates).set({ ownerId: ghostId, slug }).where(eq(templates.id, tpl.id))
+  }
+
+  // 2) Авторство предложений тоже на ghost (сохраняем историю правок).
+  await db.update(suggestions).set({ authorId: ghostId }).where(eq(suggestions.authorId, session.userId))
+
+  // 3) Списки, которые пользователь звёздил, потеряют его звезду (каскад) — уменьшаем счётчик заранее.
+  const starred = await db.select({ tid: stars.templateId }).from(stars).where(eq(stars.userId, session.userId))
+  if (starred.length) {
+    await db
+      .update(templates)
+      .set({ starsCount: sql`GREATEST(0, ${templates.starsCount} - 1)` })
+      .where(inArray(templates.id, starred.map((r) => r.tid)))
+  }
+
+  // 4) Удаляем аккаунт — каскадом уходят его звёзды и прогоны.
+  await removeAvatarFiles(session.userId)
+  await db.delete(users).where(eq(users.id, session.userId))
+
+  await clearSessionCookie()
+  redirect('/')
+}

@@ -42,12 +42,19 @@ export type ProposedItem = {
 
 // ── Users ────────────────────────────────────────────────────────────
 // handle = публичный идентификатор в модели owner/name (как в дизайне: acme/deploy-to-vps).
+export type Social = { type: string; url: string } // type: github | x | telegram | youtube | linkedin | site …
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  githubId: bigint('github_id', { mode: 'number' }).unique(), // null для demo-пользователя
+  githubId: bigint('github_id', { mode: 'number' }).unique(), // null для demo-пользователя и ghost
   handle: text('handle').notNull().unique(),
   name: text('name'),
   avatarUrl: text('avatar_url'),
+  bio: text('bio'),
+  location: text('location'),
+  website: text('website'),
+  socials: jsonb('socials').notNull().default([]).$type<Social[]>(),
+  deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 

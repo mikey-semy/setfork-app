@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { Link2, MapPin } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -7,6 +8,11 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { getProfileCounts, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { SocialIcon, socialLabel } from '@/features/settings/socials'
+
+function displayUrl(url: string): string {
+  return url.replace(/^https?:\/\//i, '').replace(/\/$/, '')
+}
 
 type Tab = 'lists' | 'starred'
 
@@ -34,6 +40,7 @@ export default async function ProfilePage({
             {user.name && <div className="text-[22px] font-bold leading-tight text-ink">{user.name}</div>}
             <div className="text-[18px] text-ink-2">{user.handle}</div>
           </div>
+          {user.bio && <p className="mt-3 text-[14px] leading-snug text-ink">{user.bio}</p>}
           <div className="mt-3 font-mono text-[12px] text-muted">
             {t('joined', lang)}{' '}
             {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { year: 'numeric', month: 'short' }).format(
@@ -48,6 +55,37 @@ export default async function ProfilePage({
               <b className="text-ink">{counts.stars}</b> {t('starredTab', lang).toLowerCase()}
             </span>
           </div>
+
+          {(user.location || user.website || user.socials.length > 0) && (
+            <div className="mt-4 flex flex-col gap-2 text-[13px]">
+              {user.location && (
+                <div className="flex items-center gap-2 text-ink-2">
+                  <MapPin size={15} className="shrink-0 text-muted" /> {user.location}
+                </div>
+              )}
+              {user.website && (
+                <a
+                  href={user.website}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="flex items-center gap-2 text-accent hover:underline"
+                >
+                  <Link2 size={15} className="shrink-0 text-muted" /> <span className="truncate">{displayUrl(user.website)}</span>
+                </a>
+              )}
+              {user.socials.map((s, i) => (
+                <a
+                  key={i}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="flex items-center gap-2 text-ink-2 hover:text-ink"
+                >
+                  <SocialIcon type={s.type} className="shrink-0 text-muted" /> <span className="truncate">{socialLabel(s.type)}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </aside>
 
         <section className="min-w-0 flex-1">

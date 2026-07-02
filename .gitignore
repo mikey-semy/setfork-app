@@ -13,3 +13,6 @@ build/
 
 # TS build info
 *.tsbuildinfo
+
+# Uploaded user content (avatars) — not committed
+/public/uploads/

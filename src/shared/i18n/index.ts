@@ -123,6 +123,32 @@ const DICT = {
   joined: { en: 'joined', ru: 'на сайте с' },
   noStars: { en: 'No starred lists yet.', ru: 'Пока ничего в избранном.' },
   noProfileLists: { en: 'No lists yet.', ru: 'Пока нет списков.' },
+  // ── Settings / профиль ──
+  settings: { en: 'Settings', ru: 'Настройки' },
+  publicProfile: { en: 'Public profile', ru: 'Публичный профиль' },
+  profileIntro: { en: 'This info shows on your public profile.', ru: 'Эти данные видны в публичном профиле.' },
+  displayName: { en: 'Name', ru: 'Имя' },
+  bio: { en: 'Bio', ru: 'О себе' },
+  bioPh: { en: 'Tell people about yourself', ru: 'Пара слов о себе' },
+  location: { en: 'Location', ru: 'Локация' },
+  locationPh: { en: 'City, Country', ru: 'Город, страна' },
+  website: { en: 'Website', ru: 'Сайт' },
+  socials: { en: 'Social links', ru: 'Соцсети' },
+  addSocial: { en: 'Add link', ru: 'Добавить ссылку' },
+  avatar: { en: 'Avatar', ru: 'Аватар' },
+  changeAvatar: { en: 'Change avatar', ru: 'Сменить аватар' },
+  avatarHint: { en: 'PNG, JPG, WEBP or GIF, up to 2 MB.', ru: 'PNG, JPG, WEBP или GIF, до 2 МБ.' },
+  saveChanges: { en: 'Save changes', ru: 'Сохранить' },
+  profileSaved: { en: 'Profile saved.', ru: 'Профиль сохранён.' },
+  dangerZone: { en: 'Danger zone', ru: 'Опасная зона' },
+  deleteAccount: { en: 'Delete account', ru: 'Удалить аккаунт' },
+  deleteAccountHint: {
+    en: 'Your account is removed and personal data erased. Your lists stay online under a deleted-user placeholder.',
+    ru: 'Аккаунт удаляется, личные данные стираются. Ваши списки остаются под пометкой «удалённый пользователь».',
+  },
+  deleteConfirmLabel: { en: 'Type your handle to confirm:', ru: 'Введите свой ник для подтверждения:' },
+  deletedUser: { en: 'Deleted user', ru: 'Удалённый пользователь' },
+  cancel: { en: 'Cancel', ru: 'Отмена' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT
