@@ -58,6 +58,8 @@ const DICT = {
   unorderedHint: { en: 'A set/checklist — order doesn’t matter.', ru: 'Набор/чек-лист — порядок неважен.' },
   clear: { en: 'Clear', ru: 'Очистить' },
   compareVersions: { en: 'Compare', ru: 'Сравнить' },
+  viewCode: { en: 'Code', ru: 'Код' },
+  viewList: { en: 'List', ru: 'Список' },
   compareTitle: { en: 'Compare versions', ru: 'Сравнение версий' },
   diffFrom: { en: 'From', ru: 'От' },
   diffTo: { en: 'To', ru: 'До' },
