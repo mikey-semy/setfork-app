@@ -7,6 +7,7 @@ import { t, tr } from '@/shared/i18n'
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { saveNewVersion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
+import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
 
 export default async function EditPage({
@@ -39,11 +40,7 @@ export default async function EditPage({
           {t('edit', lang)} · v{tpl.currentVersion} → v{tpl.currentVersion + 1}
         </h1>
 
-        <input
-          name="note"
-          placeholder={t('changeNote', lang)}
-          className="mb-4 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
-        />
+        <ChangeNoteField templateId={tpl.id} lang={lang} placeholder={t('changeNote', lang)} />
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('tags', lang)}</label>
         <input

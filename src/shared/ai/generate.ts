@@ -138,6 +138,47 @@ ${web ? 'Use up-to-date web search results to make the checklist accurate and cu
   return runListModel(system, `Create the reference list for: ${query}`, query, feature, { ...opts, web })
 }
 
+type NoteItem = { title: string; desc: string; command: string; subtasks: string[] }
+
+/** Примечание к версии из диффа (как git-commit message). Возвращает одну строку или null. */
+export async function generateChangeNote(
+  base: NoteItem[],
+  next: NoteItem[],
+  lang: Lang,
+  opts: GenerateOptions = {},
+): Promise<string | null> {
+  const apiKey = await getApiKey()
+  if (!apiKey) return null
+  const settings = await getAiSettings()
+  if (!settings.enabled) return null
+
+  const openrouter = createOpenRouter({
+    apiKey,
+    appName: 'SetHub',
+    appUrl: process.env.APP_URL || 'http://localhost:3000',
+  })
+  const model = await pickChatModel(settings)
+  const langName = lang === 'ru' ? 'Russian' : 'English'
+  const compact = (xs: NoteItem[]) => xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n')
+
+  try {
+    const result = await generateText({
+      model: openrouter.chat(model, { usage: { include: true } }),
+      system: `You write a SHORT changelog note (like a git commit message) describing what changed between two versions of a checklist, and why it matters. One concise line, imperative mood, in ${langName}. No quotes, no markdown, max ~90 characters.`,
+      prompt: `BEFORE:\n${compact(base) || '(empty)'}\n\nAFTER:\n${compact(next) || '(empty)'}\n\nWrite the change note.`,
+      temperature: 0.3,
+      maxOutputTokens: 60,
+    })
+    const u = extractUsage(result)
+    await recordUsage({ userId: opts.userId, feature: 'note', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType, refId: opts.refId })
+    const note = result.text.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, ' ').slice(0, 140)
+    return note || null
+  } catch (e) {
+    console.warn('[change-note] failed', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
 /** Правка существующего списка по инструкции пользователя (AI-refine). */
 export async function generateListRefine(
   current: { title: string; desc: string; tags: string[]; items: GeneratedItem[] },

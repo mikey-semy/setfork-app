@@ -2,7 +2,7 @@ import 'server-only'
 import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import { aiUsage, db, users } from '@/shared/db'
 
-export type AiFeature = 'generate' | 'regenerate' | 'refine' | 'moderate' | 'embed'
+export type AiFeature = 'generate' | 'regenerate' | 'refine' | 'note' | 'moderate' | 'embed'
 
 // Форма usage-объекта OpenRouter (providerMetadata.openrouter.usage).
 export interface OpenRouterUsage {

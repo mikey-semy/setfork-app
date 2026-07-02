@@ -15,8 +15,9 @@ import {
 } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { tr } from '@/shared/i18n'
 import { imageUrl, uploadImageFile } from '@/shared/media'
-import { generateListRefine } from '@/shared/ai/generate'
+import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { notify } from '@/features/notifications/notify'
 import { autoModerateList } from '@/features/moderation/moderate-list'
@@ -265,6 +266,41 @@ export async function refineList(input: {
     refs: [],
   }))
   return { items }
+}
+
+// ── AI: примечание к версии из диффа (What changed & why) ────────────
+export async function generateChangeNoteAction(
+  templateId: string,
+  itemsJson: string,
+): Promise<{ note: string } | { error: string }> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const tpl = await db.query.templates.findFirst({
+    where: (t) => eq(t.id, templateId),
+    with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
+  })
+  if (!tpl || tpl.ownerId !== session.userId) return { error: 'forbidden' }
+
+  const { allowed } = checkRateLimit(`note:${session.userId}`)
+  if (!allowed) return { error: 'ratelimited' }
+
+  const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
+  const baseSteps = cur
+    ? await db.select().from(steps).where(eq(steps.versionId, cur.id)).orderBy(asc(steps.n))
+    : []
+  const base = baseSteps.map((s) => ({
+    title: tr(s.title, lang),
+    desc: tr(s.desc, lang),
+    command: s.command,
+    subtasks: s.subtasks.map((x) => tr(x, lang)),
+  }))
+  const next = parseEditorItems(itemsJson)
+    .filter((it) => it.title.trim())
+    .map((it) => ({ title: it.title, desc: it.desc, command: it.command, subtasks: it.subtasks.filter((s) => s.trim()) }))
+
+  const note = await generateChangeNote(base, next, lang, { userId: session.userId, refType: 'template', refId: tpl.id })
+  if (!note) return { error: 'aifail' }
+  return { note }
 }
 
 // ── Публикация черновика (draft → published) ─────────────────────────
