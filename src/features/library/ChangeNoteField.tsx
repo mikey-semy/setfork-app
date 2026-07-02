@@ -39,24 +39,25 @@ export function ChangeNoteField({
 
   return (
     <div className="mb-4">
-      <div className="flex items-center gap-2">
+      <div className="relative">
         <input
           ref={ref}
           name="note"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none focus:border-border-strong"
+          className="w-full rounded-md border border-border bg-surface-2 py-2.5 pl-3 pr-11 text-[14px] text-ink outline-none focus:border-border-strong"
         />
+        {/* Иконка-генерация внутри инпута справа, как commit-message в VSCode */}
         <button
           type="button"
           onClick={generate}
           disabled={busy}
-          title={ru ? 'Сгенерировать из изменений' : 'Generate from changes'}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-3 py-2.5 text-[13px] font-semibold text-accent disabled:opacity-50"
+          title={ru ? 'Сгенерировать из изменений' : 'Generate commit message from changes'}
+          aria-label={ru ? 'Сгенерировать из изменений' : 'Generate commit message from changes'}
+          className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2"
         >
-          {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-          {busy ? (ru ? 'Пишу…' : 'Writing…') : ru ? 'Сгенерировать' : 'Generate'}
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
         </button>
       </div>
       {err && <p className="mt-1 text-[12px] text-[var(--danger)]">{err}</p>}
