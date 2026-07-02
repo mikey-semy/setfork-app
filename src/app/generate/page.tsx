@@ -4,9 +4,9 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { hasOpenRouterKey } from '@/shared/settings/ai'
 import { t } from '@/shared/i18n'
-import { generateFromQuery } from '@/features/library/actions'
+import { startGeneration } from '@/features/generation/actions'
 
-export default async function GeneratePage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
+export default async function GeneratePage({ searchParams }: { searchParams: Promise<{ e?: string; q?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (!session) redirect('/login')
   const ru = lang === 'ru'
@@ -39,11 +39,12 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      <form action={generateFromQuery} className="flex flex-col gap-3">
+      <form action={startGeneration} className="flex flex-col gap-3">
         <input
           name="q"
           required
           autoFocus
+          defaultValue={sp.q ?? ''}
           placeholder={ru ? 'напр. Настроить nginx reverse proxy с TLS' : 'e.g. Set up an nginx reverse proxy with TLS'}
           className="w-full rounded-md border border-border bg-surface-2 px-3.5 py-3 text-[14px] text-ink outline-none focus:border-border-strong"
         />

@@ -6,7 +6,7 @@ import { t } from '@/shared/i18n'
 import { hasOpenRouterKey } from '@/shared/settings/ai'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
-import { generateFromQuery } from '@/features/library/actions'
+import { startGeneration } from '@/features/generation/actions'
 import { getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
 
 const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostStarred' }[] = [
@@ -104,7 +104,7 @@ export default async function ExplorePage({
 
         {/* Поиск + нет точного совпадения → предложить сгенерировать (Generate → Verify) */}
         {sp.q && aiOn && (
-          <form action={generateFromQuery} className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3">
+          <form action={startGeneration} className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3">
             <Sparkles size={16} className="text-accent" />
             <span className="text-[13px] text-ink">
               {t('cantFind', lang)} <span className="font-semibold">“{sp.q}”</span>

@@ -51,6 +51,12 @@ const DICT = {
     en: 'Drafted by AI — review, refine and star it so it becomes a proven reference.',
     ru: 'Черновик от нейросети — проверьте, доработайте и отметьте звездой, чтобы он стал эталоном.',
   },
+  draftBadge: { en: 'Draft', ru: 'Черновик' },
+  draftHint: {
+    en: 'Only you can see this. Edit it, then publish when it’s ready.',
+    ru: 'Виден только вам. Доработайте и опубликуйте, когда будет готов.',
+  },
+  publish: { en: 'Publish', ru: 'Опубликовать' },
   trending: { en: 'Trending', ru: 'В тренде' },
   newest: { en: 'Newest', ru: 'Новые' },
   mostStarred: { en: 'Most starred', ru: 'Популярные' },
