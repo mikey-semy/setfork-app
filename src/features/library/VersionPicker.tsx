@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
-// Выбор пары версий выпадающими списками — масштабируется на десятки/сотни версий.
+// Выбор пары версий (shadcn Select) — масштабируется на десятки/сотни версий.
 export function VersionPicker({
   base,
   versions,
@@ -23,27 +24,29 @@ export function VersionPicker({
 }) {
   const router = useRouter()
   const go = (f: number, t: number) => router.push(`${base}?from=${f}&to=${t}&view=${view}`)
-  const sel = 'rounded-md border border-border bg-surface-2 px-2 py-1.5 font-mono text-[13px] text-ink outline-none'
+
+  const picker = (value: number, onPick: (v: number) => void) => (
+    <Select value={String(value)} onValueChange={(v) => onPick(Number(v))}>
+      <SelectTrigger className="h-8 w-[92px] font-mono text-[13px]">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {versions.map((v) => (
+          <SelectItem key={v} value={String(v)} className="font-mono">
+            v{v}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-[12px] text-muted">{fromLabel}</span>
-      <select value={from} onChange={(e) => go(Number(e.target.value), to)} className={sel}>
-        {versions.map((v) => (
-          <option key={v} value={v}>
-            v{v}
-          </option>
-        ))}
-      </select>
+      {picker(from, (v) => go(v, to))}
       <ArrowRight size={14} className="text-muted" />
       <span className="text-[12px] text-muted">{toLabel}</span>
-      <select value={to} onChange={(e) => go(from, Number(e.target.value))} className={sel}>
-        {versions.map((v) => (
-          <option key={v} value={v}>
-            v{v}
-          </option>
-        ))}
-      </select>
+      {picker(to, (v) => go(from, v))}
     </div>
   )
 }
