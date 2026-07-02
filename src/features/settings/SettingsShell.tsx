@@ -30,8 +30,17 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
 
   // Scrollspy: подсветка активной секции по прокрутке.
   useEffect(() => {
+    // Докрутили до низа страницы → последняя секция не может доскроллиться
+    // в зону активации, поэтому подсвечиваем её принудительно.
+    const atBottom = () => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
+
     const obs = new IntersectionObserver(
       (entries) => {
+        if (atBottom()) {
+          const last = visible[visible.length - 1]
+          if (last) setActive(last.id)
+          return
+        }
         const vis = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
@@ -43,7 +52,18 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
       const el = document.getElementById(s.id)
       if (el) obs.observe(el)
     })
-    return () => obs.disconnect()
+
+    const onScroll = () => {
+      if (atBottom()) {
+        const last = visible[visible.length - 1]
+        if (last) setActive(last.id)
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      obs.disconnect()
+      window.removeEventListener('scroll', onScroll)
+    }
   }, [visible])
 
   return (
