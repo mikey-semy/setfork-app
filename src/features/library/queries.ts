@@ -215,11 +215,23 @@ export interface ActivityItem {
   createdAt: Date
 }
 
-/** Лента изменений: недавние версии (создание/правки) списков. */
-export async function getActivity(limit = 30, viewerId?: string, ownerIds?: string[]): Promise<ActivityItem[]> {
-  if (ownerIds && ownerIds.length === 0) return []
+/** Лента изменений: недавние версии (создание/правки) списков.
+ *  scope — если задан, ограничивает ленту авторами и/или конкретными списками (OR). */
+export async function getActivity(
+  limit = 30,
+  viewerId?: string,
+  scope?: { ownerIds?: string[]; templateIds?: string[] },
+): Promise<ActivityItem[]> {
+  const ownerIds = scope?.ownerIds ?? []
+  const templateIds = scope?.templateIds ?? []
+  if (scope && ownerIds.length === 0 && templateIds.length === 0) return []
   const filters: SQL[] = [visibleFilter(viewerId)]
-  if (ownerIds && ownerIds.length) filters.push(inArray(templates.ownerId, ownerIds))
+  if (scope) {
+    const ors: SQL[] = []
+    if (ownerIds.length) ors.push(inArray(templates.ownerId, ownerIds))
+    if (templateIds.length) ors.push(inArray(templates.id, templateIds))
+    filters.push(ors.length === 1 ? ors[0] : or(...ors)!)
+  }
   const rows = await db
     .select({
       templateId: templates.id,

@@ -4,17 +4,19 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { getActivity, getPopularTags, getUserTemplates } from '@/features/library/queries'
 import { getFollowingIds } from '@/features/follows/queries'
+import { getWatchedIds } from '@/features/watch/queries'
 
 export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }) {
-  const following = await getFollowingIds(userId)
-  const [mine, followedActivity, tags] = await Promise.all([
+  const [following, watched] = await Promise.all([getFollowingIds(userId), getWatchedIds(userId)])
+  const hasScope = following.length > 0 || watched.length > 0
+  const [mine, scopedActivity, tags] = await Promise.all([
     getUserTemplates(userId, userId),
-    following.length ? getActivity(30, userId, following) : Promise.resolve([]),
+    hasScope ? getActivity(30, userId, { ownerIds: following, templateIds: watched }) : Promise.resolve([]),
     getPopularTags(18),
   ])
-  // Лента подписок; если не подписан ни на кого (или тихо) — общая, с подсказкой.
-  const activity = followedActivity.length ? followedActivity : await getActivity(30, userId)
-  const showFollowHint = following.length === 0
+  // Лента подписок и отслеживаемых; если пусто — общая, с подсказкой.
+  const activity = scopedActivity.length ? scopedActivity : await getActivity(30, userId)
+  const showFollowHint = !hasScope
 
   return (
     <div className="mx-auto grid w-full max-w-[1280px] gap-6 px-6 py-6 lg:grid-cols-[300px_minmax(0,1fr)_260px]">
