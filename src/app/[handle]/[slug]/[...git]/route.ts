@@ -1,4 +1,5 @@
 import { getListMeta } from '@/features/library/queries'
+import { isCollaborator } from '@/features/collab/queries'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { gitStore } from '@/features/git/adapter'
 import { maybeGunzip } from '@/features/git/smart-http'
@@ -39,11 +40,12 @@ async function authorizeRead(req: Request, meta: Meta): Promise<'ok' | 401 | 404
   return userId === meta.ownerId ? 'ok' : 404
 }
 
-/** Доступ на запись (push): только владелец по токену. */
+/** Доступ на запись (push): владелец или коллаборатор по токену. */
 async function authorizeWrite(req: Request, meta: Meta): Promise<'ok' | 401> {
   const userId = await userFromBasic(req)
   if (!userId) return 401
-  return userId === meta.ownerId ? 'ok' : 401
+  if (userId === meta.ownerId) return 'ok'
+  return (await isCollaborator(meta.id, userId)) ? 'ok' : 401
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {

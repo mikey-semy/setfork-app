@@ -15,6 +15,7 @@ import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/library/queries'
 import { getOpenIssueCount } from '@/features/issues/queries'
 import { getWatchCount, isWatching } from '@/features/watch/queries'
+import { isCollaborator } from '@/features/collab/queries'
 
 type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'settings'
 
@@ -24,6 +25,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   const meta = await getListMeta(owner, slug)
   if (!meta) return null
   const isOwner = session?.userId === meta.ownerId
+  const canWrite = isOwner || (session ? await isCollaborator(meta.id, session.userId) : false)
   const isAdmin = isAdminHandle(session?.handle)
   if (meta.visibility === 'private' && !isOwner) notFound() // приватный — только владельцу
   if (meta.moderation !== 'active' && !isOwner && !isAdmin) notFound() // flagged/hidden не публичны
@@ -126,7 +128,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
               className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong"
             />
             <CloneDropdown base={base} slug={meta.slug} lang={lang} />
-            {isOwner ? (
+            {canWrite ? (
               <Link
                 href={`${base}/edit`}
                 className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong"

@@ -352,6 +352,26 @@ export const watches = pgTable(
   (t) => ({ userTpl: unique('watches_user_tpl').on(t.userId, t.templateId) }),
 )
 
+// ── Collaborators (совместная запись — push/правки не только владельцем) ─
+// Пока привязка к списку (templateId); при вводе таблицы repositories мигрирует
+// на уровень репозитория. Роль-задел: сейчас только 'write'.
+export const collaboratorRole = pgEnum('collaborator_role', ['write'])
+export const collaborators = pgTable(
+  'collaborators',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: collaboratorRole('role').notNull().default('write'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ tplUser: unique('collab_tpl_user').on(t.templateId, t.userId) }),
+)
+
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
