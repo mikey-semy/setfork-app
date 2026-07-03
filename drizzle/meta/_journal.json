@@ -15,6 +15,13 @@
       "when": 1783096876255,
       "tag": "0001_issue_assignees",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783097809508,
+      "tag": "0002_milestones",
+      "breakpoints": true
     }
   ]
 }

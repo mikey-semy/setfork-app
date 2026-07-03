@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
-import { db, issueAssignees, issueComments, issues, users } from '@/shared/db'
+import { db, issueAssignees, issueComments, issues, milestones, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
 
 export type IssueFilter = 'open' | 'closed'
@@ -16,19 +16,21 @@ export interface IssueRow {
   authorHandle: string
   authorAvatarUrl: string | null
   commentCount: number
+  milestoneTitle: string | null
 }
 
 const commentCountSql = sql<number>`(select count(*)::int from ${issueComments} c where c.issue_id = ${issues.id})`
 
-/** Список issue: статус + опц. поиск по заголовку, фильтр по label, сортировка. */
+/** Список issue: статус + опц. поиск, фильтр по label/вехе, сортировка. */
 export async function getIssues(
   templateId: string,
-  opts: { status: IssueFilter; q?: string; label?: string; sort?: IssueSort },
+  opts: { status: IssueFilter; q?: string; label?: string; milestone?: string; sort?: IssueSort },
 ): Promise<IssueRow[]> {
   const conds = [eq(issues.templateId, templateId), eq(issues.status, opts.status)]
   const q = opts.q?.trim()
   if (q) conds.push(sql`${issues.title} ilike ${'%' + q + '%'}`)
   if (opts.label) conds.push(sql`${opts.label} = any(${issues.labels})`)
+  if (opts.milestone) conds.push(eq(issues.milestoneId, opts.milestone))
   const order = opts.sort === 'oldest' ? asc(issues.number) : desc(issues.number)
 
   const rows = await db
@@ -42,9 +44,11 @@ export async function getIssues(
       authorHandle: users.handle,
       authorAvatarUrl: users.avatarUrl,
       commentCount: commentCountSql,
+      milestoneTitle: milestones.title,
     })
     .from(issues)
     .innerJoin(users, eq(issues.authorId, users.id))
+    .leftJoin(milestones, eq(milestones.id, issues.milestoneId))
     .where(and(...conds))
     .orderBy(order)
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
@@ -128,6 +132,8 @@ export interface IssueDetail {
   authorId: string
   authorHandle: string
   authorAvatarUrl: string | null
+  milestoneId: string | null
+  milestoneTitle: string | null
 }
 
 export interface IssueComment {
@@ -153,9 +159,12 @@ export async function getIssue(templateId: string, number: number): Promise<Issu
       authorId: issues.authorId,
       authorHandle: users.handle,
       authorAvatarUrl: users.avatarUrl,
+      milestoneId: issues.milestoneId,
+      milestoneTitle: milestones.title,
     })
     .from(issues)
     .innerJoin(users, eq(issues.authorId, users.id))
+    .leftJoin(milestones, eq(milestones.id, issues.milestoneId))
     .where(and(eq(issues.templateId, templateId), eq(issues.number, number)))
     .limit(1)
   if (!row) return null

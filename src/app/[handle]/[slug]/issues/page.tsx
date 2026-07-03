@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { CircleCheck, CircleDot, MessageSquare, Plus, Search } from 'lucide-react'
+import { CircleCheck, CircleDot, MessageSquare, Milestone as MilestoneIcon, Plus, Search } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -10,13 +10,14 @@ import { ListHeader } from '@/features/library/ListHeader'
 import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, type IssueFilter, type IssueSort } from '@/features/issues/queries'
 import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
 import { FilterMenu } from '@/features/issues/FilterMenu'
+import { getMilestonesForPicker } from '@/features/milestones/queries'
 
 export default async function IssuesPage({
   params,
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ status?: string; q?: string; label?: string; sort?: string }>
+  searchParams: Promise<{ status?: string; q?: string; label?: string; milestone?: string; sort?: string }>
 }) {
   const { handle: owner, slug } = await params
   const sp = await searchParams
@@ -27,12 +28,14 @@ export default async function IssuesPage({
   const status: IssueFilter = sp.status === 'closed' ? 'closed' : 'open'
   const q = sp.q?.trim() || undefined
   const label = sp.label || undefined
+  const milestone = sp.milestone || undefined
   const sort: IssueSort = sp.sort === 'oldest' ? 'oldest' : 'newest'
 
-  const [counts, list, labels] = await Promise.all([
+  const [counts, list, labels, mstones] = await Promise.all([
     getIssueCounts(meta.id),
-    getIssues(meta.id, { status, q, label, sort }),
+    getIssues(meta.id, { status, q, label, milestone, sort }),
     getIssueLabelsInUse(meta.id),
+    getMilestonesForPicker(meta.id),
   ])
   const assigneesByIssue = await getIssueAssigneesFor(list.map((i) => i.id))
   const base = `/${owner}/${slug}/issues`
@@ -41,13 +44,13 @@ export default async function IssuesPage({
   // href с текущими параметрами + перекрытием (undefined убирает параметр).
   const hrefWith = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams()
-    const merged: Record<string, string | undefined> = { status, q, label, sort: sort === 'newest' ? undefined : sort, ...over }
+    const merged: Record<string, string | undefined> = { status, q, label, milestone, sort: sort === 'newest' ? undefined : sort, ...over }
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v)
     const s = p.toString()
     return s ? `${base}?${s}` : base
   }
 
-  const filtered = !!(q || label)
+  const filtered = !!(q || label || milestone)
 
   return (
     <>
@@ -85,12 +88,24 @@ export default async function IssuesPage({
             </Link>
           </div>
           <div className="flex items-center gap-1">
+            <Link href={`/${owner}/${slug}/milestones`} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-ink-2 hover:bg-surface hover:text-ink">
+              <MilestoneIcon size={14} /> {t('milestonesTitle', lang)}
+            </Link>
             {labels.length > 0 && (
               <FilterMenu
                 label={t('labelsLabel', lang)}
                 items={[
                   { label: lang === 'ru' ? 'Все метки' : 'All labels', href: hrefWith({ label: undefined }), active: !label },
                   ...labels.map((l) => ({ label: l, href: hrefWith({ label: l }), active: label === l })),
+                ]}
+              />
+            )}
+            {mstones.length > 0 && (
+              <FilterMenu
+                label={t('milestoneLabel', lang)}
+                items={[
+                  { label: lang === 'ru' ? 'Все вехи' : 'All milestones', href: hrefWith({ milestone: undefined }), active: !milestone },
+                  ...mstones.map((m) => ({ label: m.title, href: hrefWith({ milestone: m.id }), active: milestone === m.id })),
                 ]}
               />
             )}
@@ -123,6 +138,11 @@ export default async function IssuesPage({
                       {it.title}
                     </Link>
                     <IssueLabelChips labels={it.labels} lang={lang} />
+                    {it.milestoneTitle && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[11.5px] text-ink-2">
+                        <MilestoneIcon size={11} className="text-accent" /> {it.milestoneTitle}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-0.5 text-[12px] text-muted">
                     #{it.number} · {t('openedThis', lang)} {it.authorHandle} · {fmt.format(new Date(it.createdAt))}

@@ -12,7 +12,9 @@ import { ListHeader } from '@/features/library/ListHeader'
 import { getIssue, getIssueAssignees, getIssueComments } from '@/features/issues/queries'
 import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
 import { AssigneePicker } from '@/features/issues/AssigneePicker'
+import { MilestonePicker } from '@/features/issues/MilestonePicker'
 import { addIssueComment, setIssueStatus } from '@/features/issues/actions'
+import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
@@ -31,10 +33,11 @@ export default async function IssueThreadPage({
   if (!issue) notFound()
   const comments = await getIssueComments(issue.id)
   const path = `/${owner}/${slug}/issues/${issue.number}`
-  const [issueR, cmtR, assignees] = await Promise.all([
+  const [issueR, cmtR, assignees, milestoneOpts] = await Promise.all([
     getReactionsFor('issue', [issue.id], session?.userId),
     getReactionsFor('issue_comment', comments.map((c) => c.id), session?.userId),
     getIssueAssignees(issue.id),
+    getMilestonesForPicker(meta.id),
   ])
 
   const isOwner = session?.userId === meta.ownerId
@@ -78,9 +81,18 @@ export default async function IssueThreadPage({
           </div>
         </div>
 
-        {/* Исполнители */}
-        <div className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3">
+        {/* Исполнители + веха */}
+        <div className="mb-4 grid gap-4 rounded-lg border border-border bg-surface-2 px-4 py-3 sm:grid-cols-2">
           <AssigneePicker owner={owner} slug={slug} number={issue.number} assignees={assignees} canEdit={canManage} lang={lang} />
+          <MilestonePicker
+            owner={owner}
+            slug={slug}
+            number={issue.number}
+            current={issue.milestoneId && issue.milestoneTitle ? { id: issue.milestoneId, title: issue.milestoneTitle } : null}
+            options={milestoneOpts}
+            canEdit={canManage}
+            lang={lang}
+          />
         </div>
 
         {/* Тело issue */}

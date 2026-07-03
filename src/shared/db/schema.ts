@@ -331,6 +331,7 @@ export const issues = pgTable(
     body: text('body').notNull().default(''),
     status: issueStatus('status').notNull().default('open'),
     labels: jsonb('labels').notNull().default([]).$type<string[]>(),
+    milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     closedAt: timestamp('closed_at', { withTimezone: true }),
@@ -339,6 +340,23 @@ export const issues = pgTable(
     unique('issues_tpl_number').on(t.templateId, t.number),
     index('issues_tpl_status_idx').on(t.templateId, t.status),
   ],
+)
+
+// Вехи (milestones) — группировка issue по цели/срокам, как в GitHub.
+export const milestones = pgTable(
+  'milestones',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    desc: text('desc').notNull().default(''),
+    dueOn: timestamp('due_on', { withTimezone: true }),
+    closed: boolean('closed').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('milestones_tpl_idx').on(t.templateId)],
 )
 
 // Исполнители issue (много на issue, как в GitHub).
