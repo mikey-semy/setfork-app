@@ -11,6 +11,8 @@ import { acceptSuggestion, addSuggestionComment, rejectSuggestion } from '@/feat
 import { ListHeader } from '@/features/library/ListHeader'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
 import { diffSteps } from '@/features/library/suggestion-diff'
+import { getReactionsFor } from '@/features/reactions/queries'
+import { Reactions } from '@/features/reactions/Reactions'
 import type { ProposedItem } from '@/shared/db'
 
 const textareaCls = 'w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
@@ -27,6 +29,11 @@ export default async function SuggestionThreadPage({
   const sug = await getSuggestion(meta.id, id)
   if (!sug) notFound()
   const [comments, base] = await Promise.all([getSuggestionComments(sug.id), getVersionSteps(meta.id, sug.baseVersion)])
+  const path = `/${owner}/${slug}/suggestions/${sug.id}`
+  const [sugR, cmtR] = await Promise.all([
+    getReactionsFor('suggestion', [sug.id], session?.userId),
+    getReactionsFor('suggestion_comment', comments.map((c) => c.id), session?.userId),
+  ])
 
   const isOwner = session?.userId === meta.ownerId
   const items = sug.items as ProposedItem[]
@@ -69,6 +76,9 @@ export default async function SuggestionThreadPage({
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → правка` : `v${sug.baseVersion} → suggestion`}
         </div>
         <SuggestionDiff rows={diff.rows} summary={diff.summary} lang={lang} />
+        <div className="mt-2">
+          <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} />
+        </div>
 
         {isOwner && sug.status === 'open' && (
           <div className="mt-3 flex gap-2.5">
@@ -99,6 +109,9 @@ export default async function SuggestionThreadPage({
                 </div>
                 <div className="px-4 py-3">
                   <Markdown>{c.body}</Markdown>
+                  <div className="mt-2">
+                    <Reactions targetType="suggestion_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} />
+                  </div>
                 </div>
               </div>
             ))}

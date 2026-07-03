@@ -11,6 +11,8 @@ import { ListHeader } from '@/features/library/ListHeader'
 import { getIssue, getIssueComments } from '@/features/issues/queries'
 import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
 import { addIssueComment, setIssueStatus } from '@/features/issues/actions'
+import { getReactionsFor } from '@/features/reactions/queries'
+import { Reactions } from '@/features/reactions/Reactions'
 
 const textareaCls = 'w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
 
@@ -27,6 +29,11 @@ export default async function IssueThreadPage({
   const issue = number > 0 ? await getIssue(meta.id, number) : null
   if (!issue) notFound()
   const comments = await getIssueComments(issue.id)
+  const path = `/${owner}/${slug}/issues/${issue.number}`
+  const [issueR, cmtR] = await Promise.all([
+    getReactionsFor('issue', [issue.id], session?.userId),
+    getReactionsFor('issue_comment', comments.map((c) => c.id), session?.userId),
+  ])
 
   const isOwner = session?.userId === meta.ownerId
   const isAuthor = session?.userId === issue.authorId
@@ -73,6 +80,9 @@ export default async function IssueThreadPage({
           <Header handle={issue.authorHandle} avatarUrl={issue.authorAvatarUrl} date={issue.createdAt} verb={t('openedThis', lang)} />
           <div className="px-4 py-3">
             {issue.body ? <Markdown>{issue.body}</Markdown> : <p className="text-[13px] italic text-muted">—</p>}
+            <div className="mt-2">
+              <Reactions targetType="issue" targetId={issue.id} reactions={issueR[issue.id] ?? []} canReact={!!session} path={path} />
+            </div>
           </div>
         </div>
 
@@ -83,6 +93,9 @@ export default async function IssueThreadPage({
               <Header handle={c.authorHandle} avatarUrl={c.authorAvatarUrl} date={c.createdAt} verb={t('commentedOn', lang)} />
               <div className="px-4 py-3">
                 <Markdown>{c.body}</Markdown>
+                <div className="mt-2">
+                  <Reactions targetType="issue_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} />
+                </div>
               </div>
             </div>
           ))}

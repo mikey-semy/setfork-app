@@ -294,6 +294,27 @@ export const suggestionComments = pgTable(
   (t) => [index('suggestion_comments_sug_idx').on(t.suggestionId)],
 )
 
+// ── Reactions (эмодзи на issues/suggestions/комментарии, как в GitHub) ──
+// Полиморфно: target_type ∈ {issue, issue_comment, suggestion, suggestion_comment}.
+// FK на target нет (разные таблицы); чистка — при удалении контента (сейчас не удаляем).
+export const reactions = pgTable(
+  'reactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    targetType: text('target_type').notNull(),
+    targetId: uuid('target_id').notNull(),
+    emoji: text('emoji').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('reactions_uniq').on(t.userId, t.targetType, t.targetId, t.emoji),
+    index('reactions_target_idx').on(t.targetType, t.targetId),
+  ],
+)
+
 // ── Issues (обсуждения проблем/идей к списку) ────────────────────────
 export const issues = pgTable(
   'issues',
