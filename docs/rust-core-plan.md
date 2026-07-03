@@ -142,8 +142,15 @@ Postgres** (self-check: 11 списков, резолв `demo/redis-…`→uuid+
   дискриминатор — с выключенным core роут даёт **500** (значит remote реально активен, не inproc);
   `git push` (Basic-токен `sf_`) → версия 5 в Postgres. `.env.local` gitignored; убрать 2 строки =
   возврат к inproc. Требует запущенного `setfork-core` (cargo run / docker).
-- [ ] **Остаётся (оптимизация): `gix`/`git2` вместо шелла git** в Rust (материализация/upload/receive
-  без спавна git). Катоверу не мешает — это перф/чистота. Большой отдельный шаг.
+- [x] **`git2` (libgit2) вместо шелла — СДЕЛАНО для объектов/коммитов/деревьев/рефов.**
+  `bundle.rs` (materialize/bootstrap/append/max_tag) и `project.rs` (read_tip/tag) на git2
+  (`init_bare`+treebuilder+`repo.commit` фикс-идентичность SetFork+Time offset 0; open_bare+
+  tree.get_path). git2 0.19 `default-features=false` (без сети; libgit2 собирается на Windows через cc).
+  **Проверено байт-в-байт:** git2 vs shell материализация → одинаковый SHA (`1f9115d…`, A/B через stash);
+  полный e2e через реальный роут (git2-bootstrap на удалённом репо, clone v1..v6 детерминированно, push
+  v7→git2-проекция). **Шелл git остался ТОЛЬКО для** `git bundle create` (у libgit2 нет bundle) и
+  `upload/receive-pack --stateless-rpc` (wire-протокол — как у Gitaly). Полностью нативный pack-протокол
+  (gix server-side) — отдельный большой шаг, низкий приоритет.
 - [ ] Материализация репо (сначала шелл `git`, как TS; детерминированные SHA) → RPC по одному:
   `CreateBundle` → `InfoRefs*` → `UploadPack` → `ReceivePack`(+проекция). Потом gix/git2 вместо шелла.
 - [ ] TS Connect-ES клиент из `proto/git.proto` → `gitCoreRemote` (`features/git/core.ts`) →
