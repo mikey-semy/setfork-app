@@ -1,8 +1,9 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
-import { db, steps, templateVersions, templates, users, type ProposedItem } from '@/shared/db'
+import { db, steps, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
+import { listStore } from '@/features/library/list-store.adapter'
 import { uniqueSlug } from '@/features/library/slug'
 
 export interface McpItemInput {
@@ -34,6 +35,8 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
     }))
 }
 
+// Прямая перезапись шагов версии (для in-place правки черновика; порт addVersion создаёт НОВУЮ).
+// TODO(rust-boundary): вынести в порт (ListStore.replaceDraftSteps) при следующем проходе.
 async function insertSteps(versionId: string, items: ProposedItem[]): Promise<void> {
   if (!items.length) return
   await db.insert(steps).values(
@@ -52,6 +55,22 @@ async function insertSteps(versionId: string, items: ProposedItem[]): Promise<vo
       refs: it.refs,
     })),
   )
+}
+
+/** ProposedItem[] → доменный вход шагов для ListStore.create/addVersion. */
+function stepInput(items: ProposedItem[]) {
+  return items.map((it, i) => ({
+    n: i + 1,
+    title: it.title,
+    desc: it.desc,
+    command: it.command,
+    level: it.level,
+    why: it.why,
+    section: it.section,
+    subtasks: it.subtasks,
+    refs: it.refs,
+    imageRef: it.imageKey ?? null,
+  }))
 }
 
 // Инструменты MCP работают от имени пользователя токена (userId).
@@ -125,22 +144,19 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   const slug = await uniqueSlug(title, userId)
   const tags = (input.tags ?? []).map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
 
-  const [tpl] = await db
-    .insert(templates)
-    .values({
-      ownerId: userId,
-      slug,
-      title: { en: title },
-      desc: input.desc?.trim() ? { en: input.desc.trim() } : {},
-      tags,
-      currentVersion: 1,
-      origin: 'authored',
-      status: 'draft',
-      ordered: input.ordered ?? true,
-    })
-    .returning()
-  const [ver] = await db.insert(templateVersions).values({ templateId: tpl.id, version: 1, note: 'created via API' }).returning()
-  await insertSteps(ver.id, proposed)
+  await listStore.create({
+    ownerId: userId,
+    slug,
+    title: { en: title },
+    desc: input.desc?.trim() ? { en: input.desc.trim() } : {},
+    tags,
+    ordered: input.ordered ?? true,
+    visibility: 'public',
+    status: 'draft',
+    origin: 'authored',
+    note: 'created via API',
+    steps: stepInput(proposed),
+  })
 
   return {
     ref: `${u.handle}/${slug}`,
@@ -182,15 +198,10 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
     return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version }
   }
 
-  const newVersion = tpl.currentVersion + 1
-  const [ver] = await db
-    .insert(templateVersions)
-    .values({ templateId: tpl.id, version: newVersion, note: input.note?.trim() || 'updated via API' })
-    .returning()
-  await insertSteps(ver.id, proposed)
+  const ver = await listStore.addVersion(tpl.id, { note: input.note?.trim() || 'updated via API', steps: stepInput(proposed) })
   await db
     .update(templates)
-    .set({ currentVersion: newVersion, tags, ordered: input.ordered ?? tpl.ordered, updatedAt: new Date() })
+    .set({ tags, ordered: input.ordered ?? tpl.ordered, updatedAt: new Date() })
     .where(eq(templates.id, tpl.id))
-  return { ref: `${handle}/${slug}`, status: 'published', version: newVersion }
+  return { ref: `${handle}/${slug}`, status: 'published', version: ver.version }
 }

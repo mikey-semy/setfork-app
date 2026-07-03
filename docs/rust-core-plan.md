@@ -49,10 +49,14 @@
 - [x] `forkTemplate` (создание форка + первая версия) → `listStore.create`
 - [x] `createTemplate` (/new) → `listStore.create`
 - [x] расширить `ListStore`: `create(input)` (+ `toStepInput` хелпер; `insertSteps` удалён)
-- [ ] `generation accept` (features/generation/actions) → create/addVersion
-- [ ] MCP `create_list`/`update_list` (features/mcp/tools) → порт
-- [ ] git `projectPushedCommit` → addVersion (сейчас пишет напрямую)
+- [x] `generation accept` (features/generation/actions) → `listStore.create`
+- [x] MCP `create_list` → create, `update_list` published → addVersion (draft in-place: TODO port-метод `replaceDraftSteps`)
+- [x] git `projectPushedCommit` → addVersion (e2e-проверено пушем)
 - [ ] `updateMeta` в `ListStore` (title/desc/tags/ordered/visibility/pinned) — по потребности
+- [ ] MCP draft in-place → порт (`ListStore.replaceDraftSteps`)
+
+**Итог write-path:** все создатели версий/списков идут через `ListStore.create`/`addVersion`
+(кроме нишевого MCP-draft-in-place). Проверено: push→addVersion e2e (v2 с сохранением level).
 
 **Остальные порты — адаптеры + развести потребителей:**
 - [ ] **CurationStore** (stars/watch/follow/counts): обернуть `features/library` (toggleStar/isStarred),
