@@ -1,31 +1,14 @@
 import 'server-only'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db, watches } from '@/shared/db'
+import { curationStore } from '@/features/curation/adapter'
 
-export async function isWatching(userId: string, templateId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ id: watches.id })
-    .from(watches)
-    .where(and(eq(watches.userId, userId), eq(watches.templateId, templateId)))
-    .limit(1)
-  return !!row
-}
+// Тонкие обёртки над портом CurationStore — потребители не меняются, логика в адаптере.
+export const isWatching = (userId: string, templateId: string) => curationStore.isWatching(templateId, userId)
+export const getWatchCount = (templateId: string) => curationStore.watchCount(templateId)
+export const getWatcherIds = (templateId: string) => curationStore.watcherIds(templateId)
 
-export async function getWatchCount(templateId: string): Promise<number> {
-  const [r] = await db
-    .select({ c: sql<number>`count(*)::int` })
-    .from(watches)
-    .where(eq(watches.templateId, templateId))
-  return r?.c ?? 0
-}
-
-/** ID всех наблюдателей списка (для рассылки уведомлений). */
-export async function getWatcherIds(templateId: string): Promise<string[]> {
-  const rows = await db.select({ id: watches.userId }).from(watches).where(eq(watches.templateId, templateId))
-  return rows.map((r) => r.id)
-}
-
-/** ID списков, за которыми следит пользователь (для ленты дашборда). */
+/** ID списков, за которыми следит пользователь (для ленты дашборда). Не в порту CurationStore. */
 export async function getWatchedIds(userId: string): Promise<string[]> {
   const rows = await db.select({ id: watches.templateId }).from(watches).where(eq(watches.userId, userId))
   return rows.map((r) => r.id)

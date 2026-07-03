@@ -5,7 +5,6 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import {
   db,
-  stars,
   steps,
   suggestionComments,
   suggestions,
@@ -23,6 +22,7 @@ import { notify, notifyMany } from '@/features/notifications/notify'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
+import { curationStore } from '@/features/curation/adapter'
 import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { listStore } from './list-store.adapter'
@@ -355,24 +355,8 @@ export async function publishList(templateId: string): Promise<void> {
 // ── Star (сигнал качества + личная коллекция) ────────────────────────
 export async function toggleStar(templateId: string): Promise<void> {
   const session = await requireSession()
-  const existing = await db
-    .select({ id: stars.id })
-    .from(stars)
-    .where(and(eq(stars.userId, session.userId), eq(stars.templateId, templateId)))
-    .limit(1)
-
-  if (existing.length) {
-    await db.delete(stars).where(and(eq(stars.userId, session.userId), eq(stars.templateId, templateId)))
-    await db
-      .update(templates)
-      .set({ starsCount: sql`GREATEST(${templates.starsCount} - 1, 0)` })
-      .where(eq(templates.id, templateId))
-  } else {
-    await db.insert(stars).values({ userId: session.userId, templateId })
-    await db
-      .update(templates)
-      .set({ starsCount: sql`${templates.starsCount} + 1` })
-      .where(eq(templates.id, templateId))
+  const nowStarred = await curationStore.toggleStar(templateId, session.userId)
+  if (nowStarred) {
     const [t] = await db.select({ ownerId: templates.ownerId }).from(templates).where(eq(templates.id, templateId))
     if (t) await notify({ recipientId: t.ownerId, actorId: session.userId, type: 'star', templateId })
   }

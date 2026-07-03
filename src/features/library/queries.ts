@@ -4,6 +4,7 @@ import { db, embeddings, stars, steps, suggestionComments, suggestions, template
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
+import { curationStore } from '@/features/curation/adapter'
 
 /** Резолвит скриншоты шагов: imageKey → подписанный URL. Для префилла редактора и показа. */
 export async function getStepPreviews(
@@ -358,15 +359,8 @@ export async function getOpenSuggestionCount(templateId: string): Promise<number
   return r?.c ?? 0
 }
 
-/** Отметил ли пользователь список звездой. */
-export async function isStarred(templateId: string, userId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ id: stars.id })
-    .from(stars)
-    .where(and(eq(stars.userId, userId), eq(stars.templateId, templateId)))
-    .limit(1)
-  return !!row
-}
+/** Отметил ли пользователь список звездой. Через порт CurationStore. */
+export const isStarred = (templateId: string, userId: string) => curationStore.isStarred(templateId, userId)
 
 /** ID списков, отмеченных звездой пользователем (для карточек ленты). */
 export async function getStarredIds(userId: string, ids: string[]): Promise<Set<string>> {

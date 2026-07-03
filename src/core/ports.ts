@@ -80,10 +80,11 @@ export interface SearchIndex {
 // ── Курирование / соц. граф ──────────────────────────────────────────
 export interface CurationStore {
   isStarred(listId: Id, userId: Id): Promise<boolean>
-  toggleStar(listId: Id, userId: Id): Promise<boolean> // → новое состояние
+  toggleStar(listId: Id, userId: Id): Promise<boolean> // → новое состояние (true = теперь со звездой)
   isWatching(listId: Id, userId: Id): Promise<boolean>
   toggleWatch(listId: Id, userId: Id): Promise<boolean>
   ensureWatch(listId: Id, userId: Id): Promise<void>
+  watchCount(listId: Id): Promise<number>
   watcherIds(listId: Id): Promise<Id[]>
 }
 
