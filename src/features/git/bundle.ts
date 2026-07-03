@@ -69,7 +69,7 @@ async function writeFiles(dir: string, files: RepoFile[]): Promise<void> {
 const GIT_BASE = ['-c', 'user.name=SetHub', '-c', 'user.email=git@sethub.dev', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false']
 
 /** Общая загрузка версий списка. Возвращает null если списка нет. */
-async function loadListVersions(ownerHandle: string, slug: string): Promise<VersionData[] | null> {
+export async function loadListVersions(ownerHandle: string, slug: string): Promise<VersionData[] | null> {
   const [tpl] = await db
     .select({ id: templates.id, title: templates.title, desc: templates.desc, tags: templates.tags, ordered: templates.ordered })
     .from(templates)

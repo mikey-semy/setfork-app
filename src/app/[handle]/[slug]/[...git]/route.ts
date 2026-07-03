@@ -1,11 +1,19 @@
-import { rm } from 'node:fs/promises'
 import { getListMeta } from '@/features/library/queries'
 import { verifyApiToken } from '@/shared/auth/api-token'
-import { materializeRepoForList } from '@/features/git/bundle'
-import { maybeGunzip, uploadPackAdvertise, uploadPackRpc } from '@/features/git/smart-http'
+import { ensureRepo, withRepoLock } from '@/features/git/store'
+import { projectPushedCommit } from '@/features/git/project'
+import {
+  maybeGunzip,
+  receivePackAdvertise,
+  receivePackRpc,
+  uploadPackAdvertise,
+  uploadPackRpc,
+} from '@/features/git/smart-http'
+import { notifyMany } from '@/features/notifications/notify'
+import { getWatcherIds } from '@/features/watch/queries'
 
-// git smart-HTTP (read-only): `git clone/pull https://host/{owner}/{slug}.git`.
-// Работает из VSCode и любого git-клиента. Push (receive-pack) пока не поддержан.
+// git smart-HTTP: `git clone/pull/push https://host/{owner}/{slug}.git`.
+// Работает из VSCode. Источник правды — персистентный bare-репо (features/git/store).
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -25,70 +33,93 @@ async function userFromBasic(req: Request): Promise<string | null> {
   }
 }
 
-type AuthResult = { ok: true } | { status: 401 | 404 }
+const cleanSlug = (raw: string) => raw.replace(/\.git$/, '')
 
-async function authorize(req: Request, owner: string, slug: string): Promise<AuthResult> {
-  const meta = await getListMeta(owner, slug)
-  if (!meta) return { status: 404 }
+type Meta = NonNullable<Awaited<ReturnType<typeof getListMeta>>>
+
+/** Доступ на чтение (clone/pull): public — аноним; private/draft — владелец по токену. */
+async function authorizeRead(req: Request, meta: Meta): Promise<'ok' | 401 | 404> {
   const needsAuth = meta.visibility === 'private' || meta.status === 'draft' || meta.moderation !== 'active'
-  if (!needsAuth) return { ok: true }
+  if (!needsAuth) return 'ok'
   const userId = await userFromBasic(req)
-  if (!userId) return { status: 401 }
-  if (userId !== meta.ownerId) return { status: 404 } // приватное — только владельцу
-  return { ok: true }
+  if (!userId) return 401
+  return userId === meta.ownerId ? 'ok' : 404
 }
 
-function cleanSlug(raw: string): string {
-  return raw.replace(/\.git$/, '')
+/** Доступ на запись (push): только владелец по токену. */
+async function authorizeWrite(req: Request, meta: Meta): Promise<'ok' | 401> {
+  const userId = await userFromBasic(req)
+  if (!userId) return 401
+  return userId === meta.ownerId ? 'ok' : 401
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
   const { handle, slug: rawSlug, git } = await params
-  const path = (git ?? []).join('/')
-  if (path !== 'info/refs') return new Response('Not found', { status: 404 })
+  if ((git ?? []).join('/') !== 'info/refs') return new Response('Not found', { status: 404 })
   const service = new URL(req.url).searchParams.get('service')
-  if (service !== 'git-upload-pack') return new Response('Service not available', { status: 403 }) // read-only
-
   const slug = cleanSlug(rawSlug)
-  const az = await authorize(req, handle, slug)
-  if ('status' in az) return az.status === 401 ? unauthorized() : new Response('Not found', { status: 404 })
+  const meta = await getListMeta(handle, slug)
+  if (!meta) return new Response('Not found', { status: 404 })
+  const gitProtocol = req.headers.get('git-protocol') ?? undefined
 
-  const repo = await materializeRepoForList(handle, slug)
-  if (!repo) return new Response('Repository unavailable', { status: 500 })
-  try {
-    const body = await uploadPackAdvertise(repo, req.headers.get('git-protocol') ?? undefined)
-    return new Response(new Uint8Array(body), {
-      headers: { 'Content-Type': 'application/x-git-upload-pack-advertisement', ...noCache },
-    })
-  } catch {
-    return new Response('git error', { status: 500 })
-  } finally {
-    await rm(repo, { recursive: true, force: true }).catch(() => {})
+  if (service === 'git-upload-pack') {
+    const az = await authorizeRead(req, meta)
+    if (az !== 'ok') return az === 401 ? unauthorized() : new Response('Not found', { status: 404 })
+    const bare = await ensureRepo(handle, slug)
+    if (!bare) return new Response('Repository unavailable', { status: 500 })
+    const body = await uploadPackAdvertise(bare, gitProtocol)
+    return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-upload-pack-advertisement', ...noCache } })
   }
+
+  if (service === 'git-receive-pack') {
+    const az = await authorizeWrite(req, meta)
+    if (az !== 'ok') return unauthorized()
+    const bare = await ensureRepo(handle, slug)
+    if (!bare) return new Response('Repository unavailable', { status: 500 })
+    const body = await receivePackAdvertise(bare, gitProtocol)
+    return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-receive-pack-advertisement', ...noCache } })
+  }
+
+  return new Response('Service not available', { status: 403 })
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
   const { handle, slug: rawSlug, git } = await params
   const path = (git ?? []).join('/')
-  if (path === 'git-receive-pack') return new Response('Push is not supported yet (read-only).', { status: 403 })
-  if (path !== 'git-upload-pack') return new Response('Not found', { status: 404 })
-
   const slug = cleanSlug(rawSlug)
-  const az = await authorize(req, handle, slug)
-  if ('status' in az) return az.status === 401 ? unauthorized() : new Response('Not found', { status: 404 })
+  const meta = await getListMeta(handle, slug)
+  if (!meta) return new Response('Not found', { status: 404 })
+  const gitProtocol = req.headers.get('git-protocol') ?? undefined
 
-  const repo = await materializeRepoForList(handle, slug)
-  if (!repo) return new Response('Repository unavailable', { status: 500 })
-  try {
+  if (path === 'git-upload-pack') {
+    const az = await authorizeRead(req, meta)
+    if (az !== 'ok') return az === 401 ? unauthorized() : new Response('Not found', { status: 404 })
+    const bare = await ensureRepo(handle, slug)
+    if (!bare) return new Response('Repository unavailable', { status: 500 })
+    const raw = Buffer.from(await req.arrayBuffer())
+    const out = await uploadPackRpc(bare, maybeGunzip(raw, req.headers.get('content-encoding')), gitProtocol)
+    return new Response(new Uint8Array(out), { headers: { 'Content-Type': 'application/x-git-upload-pack-result', ...noCache } })
+  }
+
+  if (path === 'git-receive-pack') {
+    const az = await authorizeWrite(req, meta)
+    if (az !== 'ok') return unauthorized()
+    const bare = await ensureRepo(handle, slug)
+    if (!bare) return new Response('Repository unavailable', { status: 500 })
     const raw = Buffer.from(await req.arrayBuffer())
     const body = maybeGunzip(raw, req.headers.get('content-encoding'))
-    const out = await uploadPackRpc(repo, body, req.headers.get('git-protocol') ?? undefined)
-    return new Response(new Uint8Array(out), {
-      headers: { 'Content-Type': 'application/x-git-upload-pack-result', ...noCache },
+    // receive-pack + проекция под одним локом (чтобы ленивый append не вклинился).
+    const out = await withRepoLock(meta.id, async () => {
+      const res = await receivePackRpc(bare, body, gitProtocol)
+      const version = await projectPushedCommit(meta.id, bare).catch(() => null)
+      if (version != null) {
+        const watchers = await getWatcherIds(meta.id)
+        await notifyMany(watchers, { type: 'new_version', templateId: meta.id }).catch(() => {})
+      }
+      return res
     })
-  } catch {
-    return new Response('git error', { status: 500 })
-  } finally {
-    await rm(repo, { recursive: true, force: true }).catch(() => {})
+    return new Response(new Uint8Array(out), { headers: { 'Content-Type': 'application/x-git-receive-pack-result', ...noCache } })
   }
+
+  return new Response('Not found', { status: 404 })
 }

@@ -1,7 +1,7 @@
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getListMeta } from '@/features/library/queries'
-import { buildListBundle } from '@/features/git/bundle'
+import { bundleRepo } from '@/features/git/store'
 
 // GET /{handle}/{slug}/repo.bundle — git-бандл всей истории версий.
 // Клонируется: `curl -O <url> && git clone <slug>.bundle`.
@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ handle:
   if (meta.status === 'draft' && !isOwner) return new Response('Not found', { status: 404 })
   if (meta.moderation !== 'active' && !isOwnerOrAdmin) return new Response('Not found', { status: 404 })
 
-  const buf = await buildListBundle(handle, slug)
+  const buf = await bundleRepo(handle, slug)
   if (!buf) return new Response('Could not build bundle', { status: 500 })
   return new Response(new Uint8Array(buf), {
     headers: {

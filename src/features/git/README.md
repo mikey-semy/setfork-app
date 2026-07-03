@@ -1,29 +1,50 @@
-# Git compatibility
+# Git compatibility — git as source of truth
 
-Goal: make a SetHub list clonable with **standard git tooling** (git CLI, VS Code),
-with full version history.
+A SetHub list is a real git repository: **clone, pull, and push** with standard git
+tooling (git CLI, VS Code). Git objects are authoritative; the Postgres `steps`/
+`template_versions` tables are a projection that keeps the web UI / AI / search working.
 
-## Smart-HTTP — direct `git clone` (verified)
+## Full round-trip (verified end-to-end)
 
 ```sh
-git clone https://sethub.app/ops/k8s-rollout.git
+git clone https://sethub.app/ops/k8s-rollout.git   # read
+# …edit list.json / steps…
+git commit -am "tweak step 3" && git push           # write → creates a new version
 ```
 
-Works from the git CLI and **VS Code** (Clone Repository → paste the URL). Read-only
-(`git-upload-pack`): clone / fetch / pull. Implemented as a catch-all route
-`app/[handle]/[slug]/[...git]/route.ts` that shells out to
-`git upload-pack --stateless-rpc` over a freshly materialised repo. Commit SHAs are
-deterministic (fixed author + dates), so the stateless per-request rebuild between
-`info/refs` and `upload-pack` stays consistent.
+Verified live: clone → edit `list.json` → commit → push creates version N+1 in
+Postgres (note = commit message, steps re-projected); the **pushed commit's SHA
+persists** on reclone (no divergence); pushing without `list.json` is rejected by a
+`pre-receive` hook; a wrong/absent token gets `401`.
 
-- **Public lists**: anonymous clone.
-- **Private / draft**: HTTP Basic auth — any username, password = a SetHub **API
-  token** (`shub_…`, created in Settings). `git`/VS Code will prompt; we answer 401
-  with `WWW-Authenticate: Basic`.
-- **Push** (`git-receive-pack`) → `403` for now (see next steps).
+- **Read** (`git-upload-pack`): public = anonymous; private/draft = HTTP Basic
+  (any username, password = a SetHub **API token** `shub_…` from Settings).
+- **Write** (`git-receive-pack`): owner only, Basic auth with an API token.
+- **Edit format**: `list.json` at the repo root is the machine-readable source the
+  projection parses (`{title, desc, tags, ordered, steps:[…]}`). `README.md` and
+  `steps/NN-*.md` are generated views. A pushed commit **must** contain `list.json`.
 
-`smart-http.ts` holds the pkt-line advertisement + `upload-pack` process glue
-(supports protocol v2 via the `Git-Protocol` header and gzipped request bodies).
+## Architecture
+
+- `store.ts` — **persistent bare repo per list** under `GIT_DATA_DIR` (the source of
+  truth). `ensureRepo()` bootstraps from history on first access and lazily appends
+  web-created versions on top (preserving pushed commits). Per-`templateId` in-process
+  lock serialises repo ops. Installs the `pre-receive` validation hook.
+- `smart-http.ts` — pkt-line advertisement + `upload-pack`/`receive-pack --stateless-rpc`
+  glue (protocol v2 via `Git-Protocol`, gzip bodies).
+- `project.ts` — parses the pushed tip's `list.json` → new version + steps in Postgres,
+  tags the commit `vN`, notifies watchers.
+- route `app/[handle]/[slug]/[...git]/route.ts` — GET `info/refs` (upload/receive
+  advertise) + POST `git-upload-pack` / `git-receive-pack` (push runs receive-pack +
+  projection under the repo lock).
+
+## Prod requirements / caveats
+- **`git` binary** at runtime (add to the container image).
+- **Persistent volume** for `GIT_DATA_DIR` (default `<cwd>/.sethub-git`, gitignored).
+  Repos hold pushed commits — losing the volume rebuilds deterministic history from
+  Postgres but drops the exact pushed SHAs.
+- **Single-instance lock**: the repo lock is in-process. Multi-instance deploys need a
+  distributed lock (or sticky routing per list) before enabling push at scale.
 
 ## Bundle — offline single-file clone (verified)
 
@@ -73,13 +94,10 @@ file-level diff of the list's evolution.
   `templateId` + `currentVersion`) before heavy use.
 
 ## Next steps
-1. **Caching**: repo is rebuilt per request (fine for small lists). Persist the
-   materialised repo keyed by `templateId` + `currentVersion`; invalidate on new
-   version. Needed before heavy traffic.
-2. **Write path** (`git push` → new version): the real bet. Accept
-   `git-receive-pack`, capture the pushed pack, diff the tree back into steps,
-   validate, and create a new version (author = pushing token's user, must be the
-   owner or a collaborator). Reject non-fast-forward / malformed trees. This closes
-   the loop for full VS Code editing.
-3. **SSH** (optional): `git@sethub.app:owner/slug.git` via an SSH endpoint keyed on
-   uploaded public keys. HTTPS + token already covers VS Code, so lower priority.
+1. **Distributed lock** for multi-instance push (see caveat above).
+2. **Richer projection**: also parse `steps/NN-*.md` (not just `list.json`) so
+   editing the Markdown files directly is honoured; today `list.json` wins.
+3. **Collaborators**: allow non-owner write for named collaborators (currently
+   owner-only). Ties into a future co-owner/permissions model.
+4. **SSH** (optional): `git@sethub.app:owner/slug.git`. HTTPS + token already covers
+   VS Code, so lower priority.
