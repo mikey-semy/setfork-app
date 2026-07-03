@@ -1,12 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import Link from 'next/link'
-import { Check, Loader2, Pencil, RotateCw, Sparkles } from 'lucide-react'
+import { Check, Link2, Loader2, Pencil, RotateCw, Sparkles, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import { GnomeLoader } from './GnomeLoader'
-import { acceptCandidate, regenerateCandidate } from './actions'
+import { acceptCandidate, regenerateCandidate, regenerateWithQuery } from './actions'
 
 interface Props {
   generationId: string
@@ -25,6 +24,8 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
   })
   const [pending, start] = useTransition()
   const [mode, setMode] = useState<'accept' | 'regen'>('regen')
+  const [editing, setEditing] = useState(false)
+  const [editQ, setEditQ] = useState(query)
 
   const cand = candidates[sel]
 
@@ -36,6 +37,17 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
   function regen() {
     setMode('regen')
     start(() => regenerateCandidate(generationId))
+  }
+  function openEdit() {
+    setEditQ(query)
+    setEditing(true)
+  }
+  function submitEdit() {
+    const q = editQ.trim()
+    if (!q) return
+    setEditing(false)
+    setMode('regen')
+    start(() => regenerateWithQuery(generationId, q))
   }
 
   return (
@@ -124,11 +136,65 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
                       ))}
                     </ul>
                   )}
+                  {it.refs && it.refs.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {it.refs.map((r, k) => (
+                        <a
+                          key={k}
+                          href={r.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded border border-border bg-surface-2 px-2 py-0.5 text-[11.5px] text-accent hover:underline"
+                        >
+                          <Link2 size={11} /> {r.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>
           </div>
         )
+      )}
+
+      {/* Инлайн-правка запроса: добавляет новый вариант, прежние остаются */}
+      {editing && !pending && (
+        <div className="mt-4 rounded-lg border border-accent bg-[var(--accent-soft)] p-3">
+          <div className="mb-2 text-[12.5px] text-ink-2">
+            {ru
+              ? 'Подправь запрос — добавим новый вариант, прежние останутся.'
+              : 'Tweak the query — we add a new variant, the existing ones stay.'}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              autoFocus
+              value={editQ}
+              onChange={(e) => setEditQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  submitEdit()
+                }
+              }}
+              className="min-w-[240px] flex-1 rounded-md border border-border bg-surface px-3 py-2 text-[13.5px] text-ink outline-none focus:border-border-strong"
+            />
+            <button
+              onClick={submitEdit}
+              disabled={!editQ.trim()}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg disabled:opacity-50"
+            >
+              <RotateCw size={14} /> {ru ? 'Сгенерировать' : 'Generate'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-[13px] text-ink-2 hover:text-ink"
+            >
+              <X size={14} /> {ru ? 'Отмена' : 'Cancel'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Действия */}
@@ -147,12 +213,14 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
         >
           <RotateCw size={15} /> {ru ? 'Ещё вариант' : 'Another variant'}
         </button>
-        <Link
-          href={`/generate?q=${encodeURIComponent(query)}`}
-          className="inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[13px] text-ink-2 hover:text-ink"
+        <button
+          type="button"
+          onClick={openEdit}
+          disabled={pending}
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[13px] text-ink-2 hover:text-ink disabled:opacity-50"
         >
           <Pencil size={14} /> {ru ? 'Изменить запрос' : 'Edit query'}
-        </Link>
+        </button>
       </div>
     </div>
   )

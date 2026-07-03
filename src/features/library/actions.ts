@@ -268,12 +268,13 @@ export async function refineList(input: {
         level: it.level ?? 'required',
         why: it.why ?? '',
         subtasks: (it.subtasks || []).filter((s) => s.trim()),
+        refs: (it.refs || []).filter((r) => r.label?.trim() && r.url?.trim()).map((r) => ({ label: r.label, url: r.url })),
       })),
   }
   const refined = await generateListRefine(current, instruction, lang, { userId: session.userId, feature: 'refine' })
   if (!refined) return { error: 'aifail' }
 
-  // Refine переписывает текстовое содержимое шагов; скриншоты/ссылки не переносятся.
+  // Refine переписывает текстовое содержимое шагов; скриншоты не переносятся, ссылки — да.
   const items: EditorItem[] = refined.items.map((it) => ({
     title: it.title,
     desc: it.desc,
@@ -284,7 +285,7 @@ export async function refineList(input: {
     why: it.why,
     section: '',
     subtasks: it.subtasks,
-    refs: [],
+    refs: (it.refs ?? []).map((r) => ({ label: r.label, url: r.url })),
   }))
   return { items }
 }

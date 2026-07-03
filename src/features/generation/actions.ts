@@ -42,6 +42,7 @@ async function addCandidate(
     level: it.level,
     why: it.why,
     subtasks: it.subtasks,
+    refs: it.refs,
   }))
   await db.insert(generationCandidates).values({
     generationId,
@@ -95,6 +96,35 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
   redirect(`/generate/${generationId}?v=${nextIdx}`)
 }
 
+// ── Правка запроса → новый вариант, СТАРЫЕ сохраняются ────────────────
+export async function regenerateWithQuery(generationId: string, newQuery: string): Promise<void> {
+  const session = await requireSession()
+  const gen = await db.query.generations.findFirst({ where: (g) => eq(g.id, generationId) })
+  if (!gen || gen.userId !== session.userId || gen.chosenTemplateId) redirect('/explore')
+
+  const query = newQuery.trim().slice(0, 300)
+  if (!query) redirect(`/generate/${generationId}`)
+
+  const { allowed } = checkRateLimit(`gen:${session.userId}`)
+  if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
+
+  const [{ max }] = await db
+    .select({ max: sql<number>`coalesce(max(${generationCandidates.idx}), 0)::int` })
+    .from(generationCandidates)
+    .where(eq(generationCandidates.generationId, generationId))
+  const nextIdx = (max ?? 0) + 1
+  if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}`)
+
+  // Обновляем запрос генерации: заголовок и будущие «ещё вариант» пойдут по нему.
+  // Прежние кандидаты НЕ трогаем — пользователь сам решит, какой оставить.
+  if (query !== gen.query) await db.update(generations).set({ query }).where(eq(generations.id, generationId))
+
+  const ok = await addCandidate(generationId, session.userId, query, gen.lang as 'en' | 'ru', nextIdx)
+  if (!ok) redirect(`/generate/${generationId}?e=aifail`)
+  revalidatePath(`/generate/${generationId}`)
+  redirect(`/generate/${generationId}?v=${nextIdx}`)
+}
+
 // ── Принять кандидата → создать черновик-список (draft) ───────────────
 export async function acceptCandidate(generationId: string, candidateId: string): Promise<void> {
   const session = await requireSession()
@@ -126,7 +156,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       why: it.why ?? '',
       section: '',
       subtasks: it.subtasks,
-      refs: [],
+      refs: (it.refs ?? []).map((r) => ({ label: r.label, url: r.url })),
     })),
     genLang,
   )
