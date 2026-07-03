@@ -103,13 +103,15 @@ CurationStore/CollabStore/SearchIndex/CatalogStore/Notifier/AiPort). Следу�
 
 ## Фаза 2 — Rust git-ядро (git-first)
 
-**Проект создан:** `C:\Users\Mike\Projects\setfork-core` (отдельный git-репо). `tonic`+`prost`+`tokio`,
-`build.rs` кодогенит из `proto/git.proto` (protoc из `protoc-bin-vendored`), `src/main.rs` = tonic
-`GitCore` со всеми 5 RPC (пока `unimplemented`). ⚠️ **НЕ собран в dev-среде: `crates.io` заблокирован**
-(npm работает, cargo — нет). Собирать там, где у cargo есть сеть. См. `setfork-core/README.md`.
+**Проект создан и РАБОТАЕТ:** `C:\Users\Mike\Projects\setfork-core` (отдельный git-репо).
+`tonic`+`prost`+`tokio`+`sqlx`, `build.rs` кодогенит из `proto/git.proto` (protoc из
+`protoc-bin-vendored`). **Проверено: `cargo build` ок, сервер стартует, sqlx подключается к той же
+Postgres** (self-check: 11 списков, резолв `demo/redis-…`→uuid+v3). (Ранний timeout crates.io был
+временным сбоем сети, НЕ блоком.) См. `setfork-core/README.md`.
 
-- [x] Rust-проект-скелет (tonic GitCore из proto) — создан, закоммичен (собрать вне этой среды).
-- [ ] **sqlx** (та же Postgres) + резолв owner/slug→list + загрузка истории версий.
+- [x] Rust-проект-скелет (tonic GitCore из proto) — собирается + запускается.
+- [x] **sqlx** подключение к той же Postgres + `resolve_list(owner,slug)`→(id,version) + self-check.
+- [ ] загрузка истории версий (versions+steps) в Rust (для материализации репо).
 - [ ] Материализация репо (сначала шелл `git`, как TS; детерминированные SHA) → RPC по одному:
   `CreateBundle` → `InfoRefs*` → `UploadPack` → `ReceivePack`(+проекция). Потом gix/git2 вместо шелла.
 - [ ] TS Connect-ES клиент из `proto/git.proto` → `gitCoreRemote` (`features/git/core.ts`) →
