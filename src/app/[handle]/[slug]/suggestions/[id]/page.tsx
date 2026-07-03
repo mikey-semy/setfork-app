@@ -37,6 +37,13 @@ export default async function SuggestionThreadPage({
   const isOwner = session?.userId === meta.ownerId
   const items = sug.items as ProposedItem[]
   const diff = diffSteps(base?.steps ?? [], items, lang)
+
+  // Участники для @mention: автор правки + комментаторы, без дублей.
+  const sugSeen = new Set<string>()
+  const sugPeople = [
+    { handle: sug.author.handle, avatarUrl: sug.author.avatarUrl },
+    ...comments.map((c) => ({ handle: c.authorHandle, avatarUrl: c.authorAvatarUrl })),
+  ].filter((p) => p.handle && !sugSeen.has(p.handle) && sugSeen.add(p.handle))
   const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' })
   const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
   const statusCls =
@@ -121,7 +128,7 @@ export default async function SuggestionThreadPage({
           <div className="mt-4 rounded-lg border border-border bg-surface p-4">
             <form action={addSuggestionComment} className="flex flex-col gap-3">
               <input type="hidden" name="suggestionId" value={sug.id} />
-              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} />
+              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={sugPeople} />
               <div className="flex justify-end">
                 <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
                   {t('commentBtn', lang)}

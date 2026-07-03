@@ -42,6 +42,14 @@ export default async function IssueThreadPage({
 
   const isOwner = session?.userId === meta.ownerId
   const canManage = isOwner || (session ? await isCollaborator(meta.id, session.userId) : false)
+
+  // Участники для @mention (сразу под курсором): автор + исполнители + комментаторы, без дублей.
+  const seenPeople = new Set<string>()
+  const issuePeople = [
+    { handle: issue.authorHandle, avatarUrl: issue.authorAvatarUrl },
+    ...assignees.map((a) => ({ handle: a.handle, avatarUrl: a.avatarUrl })),
+    ...comments.map((c) => ({ handle: c.authorHandle, avatarUrl: c.authorAvatarUrl })),
+  ].filter((p) => p.handle && !seenPeople.has(p.handle) && seenPeople.add(p.handle))
   const isAuthor = session?.userId === issue.authorId
   const canToggle = isOwner || isAuthor
   const closed = issue.status === 'closed'
@@ -132,7 +140,7 @@ export default async function IssueThreadPage({
               <input type="hidden" name="owner" value={owner} />
               <input type="hidden" name="slug" value={slug} />
               <input type="hidden" name="number" value={issue.number} />
-              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} />
+              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={issuePeople} />
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {canToggle && (
                   <button

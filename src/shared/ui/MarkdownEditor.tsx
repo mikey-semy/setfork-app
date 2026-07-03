@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes'
 import { AtSign, Bold, Code, Heading, ImageIcon, Italic, Link2, List, ListChecks, ListOrdered, Paperclip, Quote, SmilePlus, Strikethrough } from 'lucide-react'
 import emojiData from '@emoji-mart/data'
 import { Markdown } from './Markdown'
+import { caretCoords } from './caret-coords'
 
 const EmojiPicker = dynamic(() => import('@emoji-mart/react'), { ssr: false })
 
@@ -19,6 +20,8 @@ type Props = {
   className?: string
   /** Репо для #-reference (кросс-ссылки на issue): включает `#`-автодополнение. */
   refScope?: { owner: string; slug: string }
+  /** Участники (автор/исполнители/комментаторы) — показываются в @mention сразу, первыми. */
+  people?: MentionUser[]
 }
 
 type MentionUser = { handle: string; avatarUrl: string | null }
@@ -27,7 +30,7 @@ const btn = 'inline-flex h-7 w-7 items-center justify-center rounded text-muted 
 
 // Богатый markdown-редактор: тулбар (группы+разделители), Write/Preview, эмодзи, @mention,
 // картинки+вложения, Tab-отступ, undo/redo + горячие клавиши. Управляемая <textarea name>.
-export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6, maxLength, autoFocus, lang = 'en', className, refScope }: Props) {
+export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6, maxLength, autoFocus, lang = 'en', className, refScope, people = [] }: Props) {
   const [val, setVal] = useState(defaultValue)
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [emojiOpen, setEmojiOpen] = useState(false)
@@ -38,6 +41,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   const [iref, setIref] = useState<{ start: number; query: string } | null>(null)
   const [issueHits, setIssueHits] = useState<IssueHit[]>([])
   const [iIdx, setIIdx] = useState(0)
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null) // позиция поповера под кареткой
 
   const ref = useRef<HTMLTextAreaElement>(null)
   const imgInput = useRef<HTMLInputElement>(null)
@@ -162,18 +166,31 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
     return { start: caret - m[1].length - 1, query: m[1] }
   }
   async function runMentionSearch(query: string) {
-    if (!query) return setUsers([])
     const seq = ++searchSeq.current
+    const q = query.toLowerCase()
+    // участники — мгновенно (в т.ч. при пустом query сразу после '@')
+    const seeded = people.filter((p) => !q || p.handle.toLowerCase().startsWith(q))
+    setUsers(seeded.slice(0, 8))
+    setMIdx(0)
+    if (!query) return
     try {
       const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
       const data = (await res.json()) as MentionUser[]
       if (seq === searchSeq.current) {
-        setUsers(Array.isArray(data) ? data : [])
+        const seen = new Set(seeded.map((p) => p.handle))
+        setUsers([...seeded, ...(Array.isArray(data) ? data : []).filter((u) => !seen.has(u.handle))].slice(0, 8))
         setMIdx(0)
       }
     } catch {
       /* игнор */
     }
+  }
+
+  function computeAnchor(caret: number): { top: number; left: number } | null {
+    const el = ref.current
+    if (!el) return null
+    const c = caretCoords(el, caret)
+    return { top: c.top - el.scrollTop + c.height, left: Math.min(Math.max(0, c.left), Math.max(0, el.clientWidth - 240)) }
   }
   // ── #-reference (issue) ──
   function detectIssueRef(value: string, caret: number) {
@@ -213,12 +230,20 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
     const caret = ref.current?.selectionStart ?? value.length
     const m = detectMention(value, caret)
     setMention(m)
-    if (m) void runMentionSearch(m.query)
-    else setUsers([])
+    if (m) {
+      setAnchor(computeAnchor(caret))
+      void runMentionSearch(m.query)
+    } else {
+      setUsers([])
+    }
     const r = detectIssueRef(value, caret)
     setIref(r)
-    if (r) void runIssueSearch(r.query)
-    else setIssueHits([])
+    if (r) {
+      setAnchor(computeAnchor(caret))
+      void runIssueSearch(r.query)
+    } else {
+      setIssueHits([])
+    }
   }
   function pickMention(u: MentionUser) {
     if (!mention) return
@@ -440,7 +465,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
         />
 
         {mention && users.length > 0 && (
-          <div className="absolute bottom-2 left-2 z-20 w-64 overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+          <div className="absolute z-20 max-h-52 w-64 overflow-y-auto rounded-md border border-border bg-surface shadow-lg" style={{ top: anchor?.top ?? 8, left: anchor?.left ?? 8 }}>
             {users.map((u, i) => (
               <button
                 key={u.handle}
@@ -462,7 +487,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
 
         {/* #-reference автодополнение */}
         {iref && issueHits.length > 0 && (
-          <div className="absolute bottom-2 left-2 z-20 w-72 overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+          <div className="absolute z-20 max-h-52 w-72 overflow-y-auto rounded-md border border-border bg-surface shadow-lg" style={{ top: anchor?.top ?? 8, left: anchor?.left ?? 8 }}>
             {issueHits.map((h, i) => (
               <button
                 key={h.number}
