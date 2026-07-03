@@ -3,15 +3,7 @@
 import { and, asc, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import {
-  db,
-  steps,
-  suggestionComments,
-  suggestions,
-  templates,
-  users,
-  type ProposedItem,
-} from '@/shared/db'
+import { db, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
@@ -23,6 +15,7 @@ import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { curationStore } from '@/features/curation/adapter'
+import { collabStore, suggestionCommenterIds } from '@/features/collab-store/adapter'
 import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { listStore } from './list-store.adapter'
@@ -171,13 +164,7 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   const note = String(formData.get('note') ?? '').trim()
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
-  await db.insert(suggestions).values({
-    templateId: tpl.id,
-    authorId: session.userId,
-    note,
-    baseVersion: tpl.currentVersion,
-    items: proposed,
-  })
+  await collabStore.createSuggestion(tpl.id, session.userId, note, toStepInput(proposed))
   await ensureWatch(session.userId, tpl.id) // автор правки следит за списком
   await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id })
 
@@ -221,15 +208,12 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   const path = `/${handle}/${sug.template.slug}/suggestions/${sug.id}`
   if (!body) redirect(path)
 
-  await db.insert(suggestionComments).values({ suggestionId: sug.id, authorId: session.userId, body })
+  await collabStore.addSuggestionComment(sug.id, session.userId, body)
   await ensureWatch(session.userId, sug.templateId)
 
-  const commenters = await db
-    .selectDistinct({ id: suggestionComments.authorId })
-    .from(suggestionComments)
-    .where(eq(suggestionComments.suggestionId, sug.id))
+  const commenters = await suggestionCommenterIds(sug.id)
   const watchers = await getWatcherIds(sug.templateId)
-  const recipients = [sug.authorId, sug.template.ownerId, ...commenters.map((c) => c.id), ...watchers]
+  const recipients = [sug.authorId, sug.template.ownerId, ...commenters, ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'suggestion_comment', templateId: sug.templateId })
 
   revalidatePath(path)

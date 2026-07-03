@@ -62,7 +62,10 @@
 - [x] **CurationStore** (stars/watch): `features/curation/adapter.ts` = каноническая DB-логика;
   `toggleStar`/`toggleWatch`/`ensureWatch` мутации через порт; `watch/queries` + `library.isStarred`
   = тонкие обёртки над портом (потребители не менялись). Follow — отдельно позже.
-- [ ] **CollabStore** (issues/suggestions/comments): обернуть `features/issues`, suggestion-actions.
+- [x] **CollabStore** (issues/suggestions/comments): `features/collab-store/adapter.ts` = каноническая
+  DB-логика (openIssue/addIssueComment/setIssueStatus/createSuggestion/addSuggestionComment);
+  issue-actions + submitSuggestion/addSuggestionComment ходят через порт (auth/notify/watch — в actions).
+  setIssueLabels/setIssueStatus-labels — direct (niche).
 - [ ] **SearchIndex** (`getFeed`, semantic pgvector, reindex): обернуть `features/library/queries` + generation embeddings.
 - [ ] **AiPort** (generate/refine/embed + учёт стоимости): обернуть `shared/ai/*`.
 - [ ] **Notifier**: обернуть `features/notifications/notify` (частично уже чистый).

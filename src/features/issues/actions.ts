@@ -1,13 +1,14 @@
 'use server'
 
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, issueComments, issues, templates, users } from '@/shared/db'
+import { db, issues, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { notifyMany } from '@/features/notifications/notify'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
+import { collabStore, issueCommenterIds } from '@/features/collab-store/adapter'
 import { isLabelKey } from './labels'
 
 async function resolveTemplate(owner: string, slug: string) {
@@ -43,17 +44,7 @@ export async function createIssue(formData: FormData): Promise<void> {
   if (tpl.visibility === 'private' && !isOwner) redirect(`/${owner}/${slug}`)
   if (tpl.moderation !== 'active' && !isOwner) redirect(`/${owner}/${slug}`)
 
-  const [ins] = await db
-    .insert(issues)
-    .values({
-      templateId: tpl.id,
-      authorId: session.userId,
-      title,
-      body,
-      labels,
-      number: sql`(select coalesce(max(${issues.number}), 0) + 1 from ${issues} where ${issues.templateId} = ${tpl.id})`,
-    })
-    .returning({ number: issues.number })
+  const ins = await collabStore.openIssue(tpl.id, session.userId, title, body, labels)
 
   await ensureWatch(session.userId, tpl.id) // автор issue следит за списком
   const watchers = await getWatcherIds(tpl.id)
@@ -87,16 +78,13 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   if (!loaded) redirect(`/${owner}/${slug}`)
   const { tpl, iss } = loaded
 
-  await db.insert(issueComments).values({ issueId: iss.id, authorId: session.userId, body })
+  await collabStore.addIssueComment(iss.id, session.userId, body)
   await ensureWatch(session.userId, tpl.id) // комментатор начинает следить
 
   // Участники: автор issue + владелец + прежние комментаторы + наблюдатели.
-  const commenters = await db
-    .selectDistinct({ id: issueComments.authorId })
-    .from(issueComments)
-    .where(eq(issueComments.issueId, iss.id))
+  const commenters = await issueCommenterIds(iss.id)
   const watchers = await getWatcherIds(tpl.id)
-  const recipients = [iss.authorId, tpl.ownerId, ...commenters.map((c) => c.id), ...watchers]
+  const recipients = [iss.authorId, tpl.ownerId, ...commenters, ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'issue_comment', templateId: tpl.id, issueId: iss.id })
 
   revalidatePath(path)
@@ -110,10 +98,7 @@ export async function setIssueStatus(owner: string, slug: string, number: number
   if (!loaded) redirect(`/${owner}/${slug}`)
   const { tpl, iss } = loaded
   if (session.userId !== iss.authorId && session.userId !== tpl.ownerId) redirect(`/${owner}/${slug}/issues/${number}`)
-  await db
-    .update(issues)
-    .set({ status, closedAt: status === 'closed' ? new Date() : null, updatedAt: new Date() })
-    .where(eq(issues.id, iss.id))
+  await collabStore.setIssueStatus(iss.id, status)
   revalidatePath(`/${owner}/${slug}/issues/${number}`)
   revalidatePath(`/${owner}/${slug}/issues`)
 }
