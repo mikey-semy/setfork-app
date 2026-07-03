@@ -203,6 +203,17 @@ export async function getUserTemplates(userId: string, viewerId?: string): Promi
   return withAvatar(rows as FeedItem[])
 }
 
+/** Списки внутри каталога (repository). */
+export async function getListsInCatalog(repositoryId: string, viewerId?: string): Promise<FeedItem[]> {
+  const rows = await db
+    .select(FEED_COLS)
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(eq(templates.repositoryId, repositoryId), visibleFilter(viewerId)))
+    .orderBy(desc(templates.updatedAt))
+  return withAvatar(rows as FeedItem[])
+}
+
 export interface ActivityItem {
   templateId: string
   ownerHandle: string
@@ -385,6 +396,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       status: templates.status,
       ordered: templates.ordered,
       pinned: templates.pinned,
+      repositoryId: templates.repositoryId,
       visibility: templates.visibility,
       moderation: templates.moderation,
       moderationReason: templates.moderationReason,

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Link2, MapPin, Pin } from 'lucide-react'
+import { FolderGit2, Link2, MapPin, Pin } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
@@ -8,6 +8,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
 import { getContributions, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { ActivityGraph } from '@/features/profile/ActivityGraph'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { FollowButton } from '@/features/follows/FollowButton'
@@ -18,7 +19,7 @@ function displayUrl(url: string): string {
   return url.replace(/^https?:\/\//i, '').replace(/\/$/, '')
 }
 
-type Tab = 'lists' | 'starred'
+type Tab = 'lists' | 'starred' | 'catalogs'
 
 export default async function ProfilePage({
   params,
@@ -31,7 +32,7 @@ export default async function ProfilePage({
   const user = await getUserByHandle(handle)
   if (!user) notFound()
 
-  const tab: Tab = sp.tab === 'starred' ? 'starred' : 'lists'
+  const tab: Tab = sp.tab === 'starred' ? 'starred' : sp.tab === 'catalogs' ? 'catalogs' : 'lists'
   const isOwner = viewer?.userId === user.id
   const [counts, followCounts, following, bigAvatar, contributions, received] = await Promise.all([
     getProfileCounts(user.id),
@@ -41,9 +42,10 @@ export default async function ProfilePage({
     getContributions(user.id),
     getReceivedStats(user.id),
   ])
-  const [items, pinned] = await Promise.all([
+  const [items, pinned, catalogs] = await Promise.all([
     tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
+    getOwnerCatalogs(user.id),
   ])
 
   return (
@@ -170,9 +172,34 @@ export default async function ProfilePage({
           <div className="mb-4 flex gap-5 border-b border-border text-[14px] font-semibold">
             <TabLink handle={handle} tab="lists" active={tab} label={`${t('lists', lang)} ${counts.lists}`} />
             <TabLink handle={handle} tab="starred" active={tab} label={`${t('starredTab', lang)} ${counts.stars}`} />
+            {catalogs.length > 0 && (
+              <TabLink handle={handle} tab="catalogs" active={tab} label={`${t('catalogsTab', lang)} ${catalogs.length}`} />
+            )}
           </div>
 
-          {items.length === 0 ? (
+          {tab === 'catalogs' ? (
+            catalogs.length === 0 ? (
+              <Empty text={t('noCatalogsYet', lang)} />
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {catalogs.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/${handle}/catalogs/${c.name}`}
+                    className="group rounded-lg border border-border bg-surface px-4 py-3 hover:border-border-strong"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FolderGit2 size={15} className="text-muted" />
+                      <span className="truncate font-semibold text-accent group-hover:underline">{tr(c.title, lang) || c.name}</span>
+                    </div>
+                    <div className="mt-1 font-mono text-[11.5px] text-muted">
+                      {c.listCount} {t('lists', lang).toLowerCase()}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )
+          ) : items.length === 0 ? (
             <Empty text={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
           ) : (
             <FeedList items={items} lang={lang} viewerId={viewer?.userId} />
