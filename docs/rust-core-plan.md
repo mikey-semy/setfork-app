@@ -87,13 +87,19 @@ CurationStore/CollabStore/SearchIndex/CatalogStore/Notifier/AiPort). Следу�
 
 ---
 
-## Фаза 1 — Контракт провода (Rust-seam)
+## Фаза 1 — Контракт провода (Rust-seam) — В РАБОТЕ (git-ядро первым)
 
-- [ ] Выбрать транспорт (реком. HTTP+JSON) и зафиксировать.
-- [ ] Описать API-контракт = порты, сериализованные (типы запрос/ответ). Держать типы общими
-  (например, генерить TS-клиент из Rust-схемы или общий OpenAPI).
-- [ ] Ввести **feature-flag на адаптер**: `inproc` (текущий Drizzle) vs `remote` (HTTP к Rust).
-  Фичи не меняются — меняется реализация порта.
+**Решения:** транспорт = **Connect** (protobuf-контракт + HTTP/JSON, без Envoy); переезд —
+**git-ядро ПЕРВЫМ** (как Gitaly). Подробности: `docs/phase1-wire-contract.md`.
+
+- [x] Транспорт зафиксирован: **Connect** (protobuf codegen; git-first как GitLab Gitaly).
+- [x] Контракт git-ядра: порт **`GitCore`** (`@/core`) + **`proto/git.proto`** (`service GitCore`:
+  InfoRefs*/UploadPack/ReceivePack/CreateBundle). Сервис резолвит/лочит/проецирует внутри.
+- [x] In-process реализация `features/git/core.inproc.ts` (поверх `GitStore`); роут `[...git]` и
+  `repo.bundle` зависят только от порта `GitCore`. e2e: clone/pull/push/bundle ✅.
+- [x] **Feature-flag** `features/git/core.ts`: `SETFORK_CORE_URL` → inproc/remote (remote = заглушка до Ф2).
+- [ ] (Ф2) Сгенерировать TS-клиент Connect-ES из `proto/git.proto` и реализовать `gitCoreRemote`.
+- [ ] Контракты доменных портов (ListStore/Curation/Collab/…) в proto — ПОСЛЕ git-ядра.
 
 ## Фаза 2 — Rust-скелет: READ-порты
 

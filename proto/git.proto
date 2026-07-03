@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+// SetFork git-core — контракт провода Rust↔Next (Connect/gRPC).
+// Аналог Gitaly SmartHTTP: BFF (Next) отдаёт клиентам smart-HTTP, а тяжёлые
+// git-операции зовёт здесь. Сервис резолвит/лочит/проецирует репо ВНУТРИ.
+// Соответствует порту @/core GitCore и features/git/core.inproc.ts.
+//
+// Фаза 2: реализовать на Rust (tonic/connect + gix read / git2 write),
+// сгенерировать TS-клиент (Connect-ES) и включить через SETFORK_CORE_URL.
+
+package setfork.git.v1;
+
+// Ссылка на репозиторий-список. Сервис резолвит owner/slug → внутренний repo.
+message RepoRef {
+  string owner = 1;
+  string slug = 2;
+}
+
+message InfoRefsRequest {
+  RepoRef repo = 1;
+  string git_protocol = 2; // значение заголовка Git-Protocol (напр. "version=2")
+}
+
+message PostRequest {
+  RepoRef repo = 1;
+  bytes body = 2;          // тело запроса клиента (pkt-lines), уже раз-gzip-нутое
+  string git_protocol = 3;
+}
+
+message BytesResponse {
+  bytes data = 1;          // сырой ответ git (advertisement / packfile / bundle)
+}
+
+// Ответ на push: сырой report-status + номер созданной проекцией версии (0 = нет).
+message ReceivePackResponse {
+  bytes data = 1;
+  int32 new_version = 2;
+}
+
+service GitCore {
+  // GET /info/refs?service=git-upload-pack  (реклама для clone/pull)
+  rpc InfoRefsUploadPack(InfoRefsRequest) returns (BytesResponse);
+  // GET /info/refs?service=git-receive-pack (реклама для push; auth — на BFF)
+  rpc InfoRefsReceivePack(InfoRefsRequest) returns (BytesResponse);
+  // POST /git-upload-pack  (clone/pull: negotiation → packfile)
+  rpc UploadPack(PostRequest) returns (BytesResponse);
+  // POST /git-receive-pack (push: приём пака + проекция list.json → версия, атомарно)
+  rpc ReceivePack(PostRequest) returns (ReceivePackResponse);
+  // Скачать весь репозиторий одним bundle-файлом
+  rpc CreateBundle(RepoRef) returns (BytesResponse);
+}
