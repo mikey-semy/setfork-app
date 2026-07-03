@@ -15,9 +15,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-# ── migrate: drizzle-kit push (применить схему к БД); запускается как one-shot ──
+# ── migrate: применить версионные миграции к БД (one-shot перед стартом app) ──
 FROM builder AS migrate
-CMD ["npx", "drizzle-kit", "push"]
+CMD ["npx", "drizzle-kit", "migrate"]
 
 # ── runner: минимальный standalone-сервер (непривилегированный) ──
 FROM base AS runner
