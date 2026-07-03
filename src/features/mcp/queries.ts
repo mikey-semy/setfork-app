@@ -6,6 +6,8 @@ export interface TokenRow {
   id: string
   name: string
   prefix: string
+  scope: string
+  expiresAt: Date | null
   lastUsedAt: Date | null
   createdAt: Date
 }
@@ -16,6 +18,8 @@ export async function getApiTokens(userId: string): Promise<TokenRow[]> {
       id: apiTokens.id,
       name: apiTokens.name,
       prefix: apiTokens.prefix,
+      scope: apiTokens.scope,
+      expiresAt: apiTokens.expiresAt,
       lastUsedAt: apiTokens.lastUsedAt,
       createdAt: apiTokens.createdAt,
     })

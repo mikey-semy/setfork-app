@@ -22,6 +22,13 @@
       "when": 1783097809508,
       "tag": "0002_milestones",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783102167911,
+      "tag": "0003_token_scope_expiry",
+      "breakpoints": true
     }
   ]
 }

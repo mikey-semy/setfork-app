@@ -16,7 +16,7 @@ const noCache = { Expires: 'Fri, 01 Jan 1980 00:00:00 GMT', Pragma: 'no-cache', 
 const unauthorized = () =>
   new Response('Authentication required', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="SetFork", charset="UTF-8"' } })
 
-async function userFromBasic(req: Request): Promise<string | null> {
+async function userFromBasic(req: Request): Promise<{ userId: string; scope: 'read' | 'write' } | null> {
   const h = req.headers.get('authorization') ?? ''
   if (!h.toLowerCase().startsWith('basic ')) return null
   try {
@@ -36,17 +36,17 @@ type Meta = NonNullable<Awaited<ReturnType<typeof getListMeta>>>
 async function authorizeRead(req: Request, meta: Meta): Promise<'ok' | 401 | 404> {
   const needsAuth = meta.visibility === 'private' || meta.status === 'draft' || meta.moderation !== 'active'
   if (!needsAuth) return 'ok'
-  const userId = await userFromBasic(req)
-  if (!userId) return 401
-  return userId === meta.ownerId ? 'ok' : 404
+  const auth = await userFromBasic(req)
+  if (!auth) return 401
+  return auth.userId === meta.ownerId ? 'ok' : 404
 }
 
-/** Доступ на запись (push): владелец или коллаборатор по токену. */
+/** Доступ на запись (push): владелец/коллаборатор по токену со scope 'write'. */
 async function authorizeWrite(req: Request, meta: Meta): Promise<'ok' | 401> {
-  const userId = await userFromBasic(req)
-  if (!userId) return 401
-  if (userId === meta.ownerId) return 'ok'
-  return (await isCollaborator(meta.id, userId)) ? 'ok' : 401
+  const auth = await userFromBasic(req)
+  if (!auth || auth.scope !== 'write') return 401 // read-only токен не может пушить
+  if (auth.userId === meta.ownerId) return 'ok'
+  return (await isCollaborator(meta.id, auth.userId)) ? 'ok' : 401
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {

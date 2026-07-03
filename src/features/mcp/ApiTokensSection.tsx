@@ -28,6 +28,8 @@ function Copyable({ text, label }: { text: string; label: string }) {
 export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[]; lang: Lang; mcpUrl: string }) {
   const ru = lang === 'ru'
   const [name, setName] = useState('')
+  const [scope, setScope] = useState<'read' | 'write'>('write')
+  const [expiryDays, setExpiryDays] = useState<number>(90)
   const [created, setCreated] = useState<string | null>(null)
   const [err, setErr] = useState('')
   const [pending, start] = useTransition()
@@ -37,7 +39,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
     if (!n || pending) return
     setErr('')
     start(async () => {
-      const r = await createApiToken(n)
+      const r = await createApiToken(n, scope, expiryDays)
       if ('error' in r) setErr(ru ? 'Не удалось создать.' : 'Could not create.')
       else {
         setCreated(r.token)
@@ -45,6 +47,15 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
       }
     })
   }
+
+  const pill = (active: boolean) =>
+    `rounded-md px-2.5 py-1 text-[12px] font-medium ${active ? 'bg-primary text-primary-fg' : 'border border-border text-ink-2 hover:text-ink'}`
+  const EXPIRY = [
+    { d: 30, en: '30 days', ru: '30 дней' },
+    { d: 90, en: '90 days', ru: '90 дней' },
+    { d: 365, en: '1 year', ru: '1 год' },
+    { d: 0, en: 'never', ru: 'бессрочно' },
+  ]
 
   const fmtDate = (d: Date | null) =>
     d ? new Intl.DateTimeFormat(ru ? 'ru' : 'en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(d)) : ru ? 'ни разу' : 'never'
@@ -101,6 +112,25 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
           {pending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {ru ? 'Создать токен' : 'Create token'}
         </button>
       </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px]">
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted">{ru ? 'Доступ:' : 'Access:'}</span>
+          <button type="button" onClick={() => setScope('write')} className={pill(scope === 'write')}>
+            {ru ? 'чтение+запись' : 'read + write'}
+          </button>
+          <button type="button" onClick={() => setScope('read')} className={pill(scope === 'read')}>
+            {ru ? 'только чтение' : 'read-only'}
+          </button>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted">{ru ? 'Истекает:' : 'Expires:'}</span>
+          {EXPIRY.map((e) => (
+            <button key={e.d} type="button" onClick={() => setExpiryDays(e.d)} className={pill(expiryDays === e.d)}>
+              {ru ? e.ru : e.en}
+            </button>
+          ))}
+        </div>
+      </div>
       {err && <p className="text-[12px] text-danger">{err}</p>}
 
       {/* Список */}
@@ -108,13 +138,24 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
         <p className="text-[13px] text-muted">{ru ? 'Токенов пока нет.' : 'No tokens yet.'}</p>
       ) : (
         <div className="divide-y divide-border rounded-md border border-border">
-          {tokens.map((tk) => (
+          {tokens.map((tk) => {
+            const expired = !!tk.expiresAt && new Date(tk.expiresAt).getTime() < Date.now()
+            return (
             <div key={tk.id} className="flex items-center gap-3 px-3 py-2.5">
               <KeyRound size={15} className="shrink-0 text-muted" />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13.5px] font-medium text-ink">{tk.name}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="truncate text-[13.5px] font-medium text-ink">{tk.name}</span>
+                  <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                    {tk.scope === 'read' ? (ru ? 'чтение' : 'read') : (ru ? 'запись' : 'write')}
+                  </span>
+                  {expired && (
+                    <span className="rounded-full bg-danger/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-danger">{ru ? 'истёк' : 'expired'}</span>
+                  )}
+                </div>
                 <div className="font-mono text-[11.5px] text-muted">
-                  {tk.prefix} · {ru ? 'исп.' : 'used'} {fmtDate(tk.lastUsedAt)} · {ru ? 'создан' : 'created'} {fmtDate(tk.createdAt)}
+                  {tk.prefix} · {ru ? 'исп.' : 'used'} {fmtDate(tk.lastUsedAt)} ·{' '}
+                  {tk.expiresAt ? `${ru ? 'истекает' : 'expires'} ${fmtDate(tk.expiresAt)}` : ru ? 'бессрочный' : 'no expiry'}
                 </div>
               </div>
               <form action={revokeApiToken.bind(null, tk.id)}>
@@ -126,7 +167,8 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
                 </button>
               </form>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

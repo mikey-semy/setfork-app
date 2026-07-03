@@ -529,6 +529,8 @@ export const apiTokens = pgTable(
     name: text('name').notNull(),
     tokenHash: text('token_hash').notNull().unique(),
     prefix: text('prefix').notNull(), // для отображения, напр. sf_ab12cd…
+    scope: text('scope').notNull().default('write'), // 'read' (clone/pull) | 'write' (+push)
+    expiresAt: timestamp('expires_at', { withTimezone: true }), // null = бессрочный
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

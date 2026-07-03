@@ -7,11 +7,13 @@ import { requireSession } from '@/shared/auth/session'
 import { newToken } from '@/shared/auth/api-token'
 
 /** Создать API-токен. Возвращает ПОЛНЫЙ токен один раз (больше нигде не покажем). */
-export async function createApiToken(name: string): Promise<{ token: string } | { error: string }> {
+export async function createApiToken(name: string, scope: 'read' | 'write' = 'write', expiresInDays?: number): Promise<{ token: string } | { error: string }> {
   const session = await requireSession()
   const label = name.trim().slice(0, 60) || 'token'
+  const sc = scope === 'read' ? 'read' : 'write'
+  const expiresAt = expiresInDays && expiresInDays > 0 ? new Date(Date.now() + expiresInDays * 86_400_000) : null
   const { token, hash, prefix } = newToken()
-  await db.insert(apiTokens).values({ userId: session.userId, name: label, tokenHash: hash, prefix })
+  await db.insert(apiTokens).values({ userId: session.userId, name: label, tokenHash: hash, prefix, scope: sc, expiresAt })
   revalidatePath('/settings')
   return { token }
 }

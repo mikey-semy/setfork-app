@@ -103,9 +103,10 @@ const handler = createMcpHandler(
 
 // Bearer-токен SetFork → пользователь.
 const verifyToken = async (_req: Request, bearer?: string): Promise<AuthInfo | undefined> => {
-  const userId = await verifyApiToken(bearer)
-  if (!userId) return undefined
-  return { token: bearer as string, scopes: ['read', 'write'], clientId: userId, extra: { userId } }
+  const auth = await verifyApiToken(bearer)
+  if (!auth) return undefined
+  const scopes = auth.scope === 'read' ? ['read'] : ['read', 'write']
+  return { token: bearer as string, scopes, clientId: auth.userId, extra: { userId: auth.userId } }
 }
 
 const authHandler = withMcpAuth(handler, verifyToken, { required: true })
