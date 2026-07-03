@@ -132,6 +132,7 @@ export const templates = pgTable(
     moderationReason: text('moderation_reason'),
     verified: boolean('verified').notNull().default(false),
     pinned: boolean('pinned').notNull().default(false), // закреплён владельцем на профиле
+    repositoryId: uuid('repository_id'), // каталог-репозиторий (FK задаётся в relations); null = solo
     forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
     runsCount: integer('runs_count').notNull().default(0),
     forksCount: integer('forks_count').notNull().default(0),
@@ -372,6 +373,23 @@ export const collaborators = pgTable(
   (t) => ({ tplUser: unique('collab_tpl_user').on(t.templateId, t.userId) }),
 )
 
+// ── Repositories (каталоги — группа из 1..N списков; git-единица в Rust-эре) ─
+// Сейчас: логическая группировка. templates.repositoryId = null → solo-список.
+export const repositories = pgTable(
+  'repositories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(), // slug каталога (в URL)
+    title: jsonb('title').notNull().default({}).$type<LocaleText>(),
+    desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ ownerName: unique('repo_owner_name').on(t.ownerId, t.name) }),
+)
+
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
@@ -503,8 +521,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   runs: many(runs),
 }))
 
+export const repositoriesRelations = relations(repositories, ({ one, many }) => ({
+  owner: one(users, { fields: [repositories.ownerId], references: [users.id] }),
+  lists: many(templates),
+}))
+
 export const templatesRelations = relations(templates, ({ one, many }) => ({
   owner: one(users, { fields: [templates.ownerId], references: [users.id] }),
+  repository: one(repositories, { fields: [templates.repositoryId], references: [repositories.id] }),
   topic: one(topics, { fields: [templates.topicId], references: [topics.id] }),
   forkedFrom: one(templates, {
     fields: [templates.forkedFromId],
