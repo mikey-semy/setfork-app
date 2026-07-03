@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, Code2, Copy, Download, Terminal } from 'lucide-react'
+import { Check, ChevronDown, Copy, Download, ListChecks, Terminal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { t, type Lang } from '@/shared/i18n'
 
@@ -23,7 +23,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="inline-flex items-center gap-1.5 rounded-md bg-ok px-3.5 py-1.5 text-[13px] font-semibold text-white hover:opacity-90">
-          <Code2 size={15} /> {t('codeLabel', lang)} <ChevronDown size={13} />
+          <ListChecks size={15} /> {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[340px] p-3">
