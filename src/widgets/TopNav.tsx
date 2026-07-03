@@ -50,7 +50,7 @@ export function TopNav({
   return (
     <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-border bg-surface px-5 py-2.5 print:hidden">
       <Link href="/" className="flex-shrink-0 text-[17px] font-bold tracking-tight text-ink">
-        SH
+        SF
       </Link>
       <form
         className="max-w-[460px] flex-1"

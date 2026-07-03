@@ -22,11 +22,11 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[14.5px]">
-            <Link href={`/${item.ownerHandle}`} className="text-ink-2 hover:text-accent">
+            <Link href={`/${item.ownerHandle}`} className="font-semibold text-ink hover:text-accent">
               {item.ownerHandle}
             </Link>
-            <span className="text-ink-2">/</span>
-            <Link href={`/${item.ownerHandle}/${item.slug}`} className="font-semibold text-accent hover:underline">
+            <span className="text-muted">/</span>
+            <Link href={`/${item.ownerHandle}/${item.slug}`} className="font-semibold text-ink hover:text-accent hover:underline">
               {item.slug}
             </Link>
             {item.verified && <BadgeCheck size={14} className="ml-1 inline text-ok" />}

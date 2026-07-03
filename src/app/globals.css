@@ -94,6 +94,12 @@ body {
   color: #0b2a6b;
 }
 
+/* Убираем фокус-обводку при клике мышью (некрасивый «бокс» вокруг ссылок/кнопок),
+   но СОХРАНЯЕМ её для навигации с клавиатуры (доступность). */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: inherit;
