@@ -1,0 +1,125 @@
+// Порты — контракты инфраструктуры, от которых зависит домен.
+// Адаптеры (Drizzle, git, pgvector, OpenRouter) реализуют их; пост-MVP —
+// реализация на Rust. Домен видит только эти интерфейсы. См. docs/architecture.md.
+//
+// Это КОНТРАКТ, а не финальный API: методы добавляются по мере того, как
+// features/* мигрируют на порты (мягко, послойно).
+
+import type {
+  Contributor,
+  Id,
+  Issue,
+  IssueComment,
+  List,
+  NotificationType,
+  Step,
+  Suggestion,
+  SuggestionComment,
+  Version,
+} from './domain/entities'
+
+// ── Утилиты (детерминизм/тестируемость) ──────────────────────────────
+export interface Clock {
+  now(): Date
+}
+export interface IdGen {
+  uuid(): Id
+}
+
+// ── Списки / версии / шаги ───────────────────────────────────────────
+export interface NewVersionInput {
+  note: string
+  steps: Omit<Step, 'id' | 'versionId'>[]
+}
+
+export interface ListStore {
+  getBySlug(owner: string, slug: string): Promise<List | null>
+  listVersions(listId: Id): Promise<Version[]>
+  getVersion(listId: Id, version: number): Promise<{ version: Version; steps: Step[] } | null>
+  /** Создать новую версию (снимок). Двигает currentVersion. */
+  addVersion(listId: Id, input: NewVersionInput): Promise<Version>
+  getContributors(listId: Id): Promise<Contributor[]>
+}
+
+// ── Дискавери / поиск ────────────────────────────────────────────────
+export type FeedSort = 'trending' | 'newest' | 'mostStarred'
+export interface FeedQuery {
+  q?: string
+  tag?: string
+  verified?: boolean
+  ordered?: boolean
+  sort?: FeedSort
+}
+export interface SearchIndex {
+  feed(query: FeedQuery, viewerId?: Id): Promise<List[]>
+  /** Пересчитать эмбеддинг/индекс для списка (после правки/пуша). */
+  reindex(listId: Id): Promise<void>
+}
+
+// ── Курирование / соц. граф ──────────────────────────────────────────
+export interface CurationStore {
+  isStarred(listId: Id, userId: Id): Promise<boolean>
+  toggleStar(listId: Id, userId: Id): Promise<boolean> // → новое состояние
+  isWatching(listId: Id, userId: Id): Promise<boolean>
+  toggleWatch(listId: Id, userId: Id): Promise<boolean>
+  ensureWatch(listId: Id, userId: Id): Promise<void>
+  watcherIds(listId: Id): Promise<Id[]>
+}
+
+// ── Issues / предложения / комментарии ───────────────────────────────
+export interface CollabStore {
+  openIssue(listId: Id, authorId: Id, title: string, body: string, labels: string[]): Promise<Issue>
+  addIssueComment(issueId: Id, authorId: Id, body: string): Promise<IssueComment>
+  setIssueStatus(issueId: Id, status: Issue['status']): Promise<void>
+  createSuggestion(listId: Id, authorId: Id, note: string, steps: Suggestion['steps']): Promise<Suggestion>
+  addSuggestionComment(suggestionId: Id, authorId: Id, body: string): Promise<SuggestionComment>
+}
+
+// ── Git (ключевой порт; пост-MVP → gix read / git2 write) ────────────
+export interface GitRepoRef {
+  owner: string
+  slug: string
+}
+/** Непрозрачный хэндл материализованного репо (сейчас — путь на диске). */
+export type RepoHandle = string
+export interface GitStore {
+  /** Гарантирует персистентный bare-репо, синхронный с историей версий. */
+  ensureRepo(ref: GitRepoRef): Promise<RepoHandle | null>
+  uploadPackAdvertise(repo: RepoHandle, gitProtocol?: string): Promise<Uint8Array>
+  uploadPackRpc(repo: RepoHandle, body: Uint8Array, gitProtocol?: string): Promise<Uint8Array>
+  receivePackAdvertise(repo: RepoHandle, gitProtocol?: string): Promise<Uint8Array>
+  receivePackRpc(repo: RepoHandle, body: Uint8Array, gitProtocol?: string): Promise<Uint8Array>
+  bundle(ref: GitRepoRef): Promise<Uint8Array | null>
+  /** Сериализация push-критической секции (receive-pack + проекция) по списку. */
+  withRepoLock<T>(listId: Id, fn: () => Promise<T>): Promise<T>
+}
+
+/** Проекция запушенного коммита в новую версию (git → домен). */
+export interface GitProjection {
+  projectPushedCommit(listId: Id, repo: RepoHandle): Promise<number | null>
+}
+
+// ── AI (генерация/refine/эмбеддинги + учёт стоимости) ────────────────
+export interface AiUsageMeta {
+  userId: Id
+  feature: string
+  refType?: string
+  refId?: Id
+}
+export interface AiPort {
+  embed(text: string, meta: AiUsageMeta): Promise<number[] | null>
+  // generateDraft/refine добавляются при миграции features/generation.
+}
+
+// ── Уведомления ──────────────────────────────────────────────────────
+export interface NotifyInput {
+  recipientId: Id
+  actorId?: Id | null
+  type: NotificationType
+  listId?: Id | null
+  issueId?: Id | null
+}
+export interface Notifier {
+  notify(input: NotifyInput): Promise<void>
+  notifyMany(recipientIds: Id[], input: Omit<NotifyInput, 'recipientId'>): Promise<void>
+}
