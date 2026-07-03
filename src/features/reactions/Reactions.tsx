@@ -67,18 +67,17 @@ export function Reactions({
             <>
               {/* клик снаружи — закрыть */}
               <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-              <div className="absolute left-0 z-20 mt-1 w-[300px] max-w-[calc(100vw-2rem)]">
+              <div className="absolute left-0 z-20 mt-1">
                 <EmojiPicker
                   data={emojiData}
                   locale={lang === 'ru' ? 'ru' : 'en'}
                   theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
                   previewPosition="none"
                   skinTonePosition="none"
-                  dynamicWidth={true}
                   perLine={8}
-                  emojiSize={18}
-                  emojiButtonSize={28}
-                  maxFrequentRows={1}
+                  emojiSize={20}
+                  emojiButtonSize={30}
+                  maxFrequentRows={2}
                   onEmojiSelect={(e: { native?: string }) => {
                     if (e.native) react(e.native)
                     setOpen(false)

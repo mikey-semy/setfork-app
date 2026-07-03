@@ -1,5 +1,6 @@
 'use client'
 import { type KeyboardEvent, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
 import { AtSign, Bold, Code, Heading, ImageIcon, Italic, Link2, List, ListChecks, ListOrdered, Paperclip, Quote, SmilePlus, Strikethrough } from 'lucide-react'
@@ -34,6 +35,20 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   const [val, setVal] = useState(defaultValue)
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [emojiOpen, setEmojiOpen] = useState(false)
+  const [emojiPos, setEmojiPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const emojiBtn = useRef<HTMLButtonElement>(null)
+  // Пикер эмодзи рендерим порталом в body: корневой контейнер редактора —
+  // overflow-hidden, он бы обрезал абсолютный поповер по границе карточки.
+  const EMOJI_W = 300
+  const toggleEmoji = () => {
+    if (emojiOpen) return setEmojiOpen(false)
+    const r = emojiBtn.current?.getBoundingClientRect()
+    if (r) {
+      const left = Math.max(8, Math.min(r.right - EMOJI_W, window.innerWidth - EMOJI_W - 8))
+      setEmojiPos({ top: r.bottom + 6, left })
+    }
+    setEmojiOpen(true)
+  }
   const [busy, setBusy] = useState(0)
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
   const [users, setUsers] = useState<MentionUser[]>([])
@@ -405,33 +420,34 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
             <button type="button" title={L('упомянуть', 'mention')} aria-label={L('упомянуть', 'mention')} onClick={() => insertAt('@')} className={btn}>
               <AtSign size={15} />
             </button>
-            <span className="relative inline-flex">
-              <button type="button" title={L('эмодзи', 'emoji')} aria-label={L('эмодзи', 'emoji')} onClick={() => setEmojiOpen((o) => !o)} className={btn}>
+            <span className="inline-flex">
+              <button ref={emojiBtn} type="button" title={L('эмодзи', 'emoji')} aria-label={L('эмодзи', 'emoji')} onClick={toggleEmoji} className={btn}>
                 <SmilePlus size={15} />
               </button>
-              {emojiOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setEmojiOpen(false)} />
-                  <div className="absolute right-0 top-8 z-20 w-[300px] max-w-[calc(100vw-2rem)]">
-                    <EmojiPicker
-                      data={emojiData}
-                      locale={lang === 'ru' ? 'ru' : 'en'}
-                      theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
-                      previewPosition="none"
-                      skinTonePosition="none"
-                      dynamicWidth={true}
-                      perLine={8}
-                      emojiSize={18}
-                      emojiButtonSize={28}
-                      maxFrequentRows={1}
-                      onEmojiSelect={(ev: { native?: string }) => {
-                        if (ev.native) insertAt(ev.native)
-                        setEmojiOpen(false)
-                      }}
-                    />
-                  </div>
-                </>
-              )}
+              {emojiOpen &&
+                createPortal(
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setEmojiOpen(false)} />
+                    <div className="fixed z-50" style={{ top: emojiPos.top, left: emojiPos.left }}>
+                      <EmojiPicker
+                        data={emojiData}
+                        locale={lang === 'ru' ? 'ru' : 'en'}
+                        theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                        previewPosition="none"
+                        skinTonePosition="none"
+                        perLine={8}
+                        emojiSize={20}
+                        emojiButtonSize={30}
+                        maxFrequentRows={2}
+                        onEmojiSelect={(ev: { native?: string }) => {
+                          if (ev.native) insertAt(ev.native)
+                          setEmojiOpen(false)
+                        }}
+                      />
+                    </div>
+                  </>,
+                  document.body,
+                )}
             </span>
           </div>
         )}
