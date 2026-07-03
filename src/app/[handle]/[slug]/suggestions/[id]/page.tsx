@@ -3,12 +3,14 @@ import { notFound } from 'next/navigation'
 import { Check, GitPullRequest, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr, type LocaleText } from '@/shared/i18n'
+import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
-import { getListMeta, getSuggestion, getSuggestionComments } from '@/features/library/queries'
+import { getListMeta, getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
 import { acceptSuggestion, addSuggestionComment, rejectSuggestion } from '@/features/library/actions'
 import { ListHeader } from '@/features/library/ListHeader'
+import { SuggestionDiff } from '@/features/library/SuggestionDiff'
+import { diffSteps } from '@/features/library/suggestion-diff'
 import type { ProposedItem } from '@/shared/db'
 
 const textareaCls = 'w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
@@ -24,10 +26,11 @@ export default async function SuggestionThreadPage({
   if (!meta) notFound()
   const sug = await getSuggestion(meta.id, id)
   if (!sug) notFound()
-  const comments = await getSuggestionComments(sug.id)
+  const [comments, base] = await Promise.all([getSuggestionComments(sug.id), getVersionSteps(meta.id, sug.baseVersion)])
 
   const isOwner = session?.userId === meta.ownerId
   const items = sug.items as ProposedItem[]
+  const diff = diffSteps(base?.steps ?? [], items, lang)
   const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' })
   const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
   const statusCls =
@@ -62,24 +65,10 @@ export default async function SuggestionThreadPage({
           </div>
         )}
 
-        <div className="rounded-lg border border-border bg-surface-2 p-3">
-          <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
-            {t('proposedChanges', lang)} · {items.length}
-          </div>
-          <ol className="flex flex-col gap-1.5">
-            {items.map((it, i) => (
-              <li key={i} className="flex gap-2 text-[13.5px]">
-                <span className="font-mono text-muted">{i + 1}</span>
-                <div>
-                  <span className="text-ink">{tr(it.title as LocaleText, lang)}</span>
-                  {tr(it.desc as LocaleText, lang) && (
-                    <span className="text-ink-2"> — {tr(it.desc as LocaleText, lang)}</span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
+        <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+          {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → правка` : `v${sug.baseVersion} → suggestion`}
         </div>
+        <SuggestionDiff rows={diff.rows} summary={diff.summary} lang={lang} />
 
         {isOwner && sug.status === 'open' && (
           <div className="mt-3 flex gap-2.5">
