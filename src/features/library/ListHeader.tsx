@@ -11,6 +11,7 @@ import { startRun } from '@/features/runs/actions'
 import { StarButton } from '@/features/library/StarButton'
 import { ShareButton } from '@/features/library/ShareButton'
 import { WatchButton } from '@/features/watch/WatchButton'
+import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/library/queries'
 import { getOpenIssueCount } from '@/features/issues/queries'
 import { getWatchCount, isWatching } from '@/features/watch/queries'
@@ -124,6 +125,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
               copiedLabel={t('copied', lang)}
               className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong"
             />
+            <CloneDropdown base={base} slug={meta.slug} lang={lang} />
             {isOwner ? (
               <Link
                 href={`${base}/edit`}
