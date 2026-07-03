@@ -24,12 +24,18 @@
   --primary-fg: #ffffff;
   --cur: #2563eb; /* текущий шаг */
   --ok: #16a34a;
+  --ok-solid: #15803d; /* чуть темнее ok — для заливок-кнопок/бейджей с белым текстом */
   --warn: #d97706;
   --danger: #dc2626;
   /* RGB-триплеты для alpha в Tailwind (bg-ok/10 и т.п.) */
   --ok-rgb: 22 163 74;
   --warn-rgb: 217 119 6;
   --danger-rgb: 220 38 38;
+  /* Триплеты поверхностей — для тем сторонних виджетов (emoji-mart). */
+  --surface-rgb: 255 255 255;
+  --surface-2-rgb: 251 251 250;
+  --ink-rgb: 28 28 26;
+  --accent-rgb: 33 89 214;
 }
 
 .dark {
@@ -47,11 +53,16 @@
   --primary-fg: #07131d;
   --cur: #4c9fff;
   --ok: #34d399;
+  --ok-solid: #2f9e44; /* тёмно-зелёный для заливок в тёмной теме (белый текст читается) */
   --warn: #eab308;
   --danger: #f87171;
   --ok-rgb: 52 211 153;
   --warn-rgb: 234 179 8;
   --danger-rgb: 248 113 113;
+  --surface-rgb: 15 20 28;
+  --surface-2-rgb: 13 17 25;
+  --ink-rgb: 232 237 245;
+  --accent-rgb: 125 192 255;
 }
 
 * {
@@ -135,6 +146,24 @@ textarea::placeholder {
 }
 .animate-fadein {
   animation: fadein 500ms ease-out;
+}
+
+/* Emoji-mart: подгоняем фон/текст/инпут под наши токены (иначе фон отличается),
+   компактнее и с нашим шрифтом. Переменные читаются web-компонентом em-emoji-picker. */
+em-emoji-picker {
+  --rgb-background: var(--surface-rgb) !important;
+  --rgb-input: var(--surface-2-rgb) !important;
+  --rgb-color: var(--ink-rgb) !important;
+  --rgb-accent: var(--accent-rgb) !important;
+  --border-radius: 10px;
+  --font-family: var(--font-sans);
+  --color-border: rgb(var(--ink-rgb) / 0.12);
+  --color-border-over: rgb(var(--ink-rgb) / 0.18);
+  height: 320px;
+  max-width: min(320px, calc(100vw - 2rem));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
 }
 
 /* Тонкая полоса прокрутки под тёмную/светлую тему */

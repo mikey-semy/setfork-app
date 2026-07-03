@@ -419,6 +419,10 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
                       theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
                       previewPosition="none"
                       skinTonePosition="none"
+                      perLine={8}
+                      emojiSize={20}
+                      emojiButtonSize={30}
+                      maxFrequentRows={1}
                       onEmojiSelect={(ev: { native?: string }) => {
                         if (ev.native) insertAt(ev.native)
                         setEmojiOpen(false)

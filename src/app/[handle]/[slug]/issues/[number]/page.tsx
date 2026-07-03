@@ -74,7 +74,7 @@ export default async function IssueThreadPage({
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold text-white ${
-              closed ? 'bg-accent' : 'bg-ok'
+              closed ? 'bg-accent' : 'bg-[var(--ok-solid)]'
             }`}
           >
             {closed ? <CircleCheck size={14} /> : <CircleDot size={14} />}

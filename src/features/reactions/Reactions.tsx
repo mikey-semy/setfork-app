@@ -74,6 +74,10 @@ export function Reactions({
                   theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
                   previewPosition="none"
                   skinTonePosition="none"
+                  perLine={8}
+                  emojiSize={20}
+                  emojiButtonSize={30}
+                  maxFrequentRows={1}
                   onEmojiSelect={(e: { native?: string }) => {
                     if (e.native) react(e.native)
                     setOpen(false)

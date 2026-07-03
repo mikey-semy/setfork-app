@@ -47,7 +47,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="inline-flex items-center gap-1.5 rounded-md bg-ok px-3.5 py-1.5 text-[13px] font-semibold text-white hover:opacity-90">
+        <button className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ok-solid)] px-3.5 py-1.5 text-[13px] font-semibold text-white hover:opacity-90">
           <ListChecks size={15} /> {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>
       </DropdownMenuTrigger>
