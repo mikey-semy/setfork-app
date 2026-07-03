@@ -62,19 +62,14 @@ export interface ListStore {
   getContributors(listId: Id): Promise<Contributor[]>
 }
 
-// ── Дискавери / поиск ────────────────────────────────────────────────
-export type FeedSort = 'trending' | 'newest' | 'mostStarred'
-export interface FeedQuery {
-  q?: string
-  tag?: string
-  verified?: boolean
-  ordered?: boolean
-  sort?: FeedSort
-}
+// ── Индекс поиска (обслуживание) ─────────────────────────────────────
+// Чтение ленты — read-проекция (getFeed в library/queries), не порт.
+// Здесь только МУТАЦИИ индекса (эмбеддинги pgvector).
 export interface SearchIndex {
-  feed(query: FeedQuery, viewerId?: Id): Promise<List[]>
-  /** Пересчитать эмбеддинг/индекс для списка (после правки/пуша). */
+  /** Пересчитать эмбеддинг одного списка (или убрать из индекса, если списка нет). */
   reindex(listId: Id): Promise<void>
+  /** Убрать из индекса осиротевшие (удалённые) списки. */
+  purgeStale(activeRefIds?: Set<Id>): Promise<{ removed: number }>
 }
 
 // ── Курирование / соц. граф ──────────────────────────────────────────
