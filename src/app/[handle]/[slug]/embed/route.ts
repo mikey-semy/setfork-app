@@ -1,6 +1,6 @@
 import { getLang } from '@/shared/i18n/server'
 import { getTemplateDetail } from '@/features/library/queries'
-import { toHtml, type ExportList } from '@/features/library/export'
+import { embedHtml, type ExportList } from '@/features/library/export'
 
 // GET /{handle}/{slug}/embed — самодостаточный HTML списка для вставки в <iframe>.
 // Только публичные опубликованные списки (embed идёт на внешние сайты).
@@ -37,9 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   }
 
   const origin = new URL(req.url).origin
-  const footer = `<div style="text-align:center;margin:20px 0 8px;font:12px/1.4 system-ui,sans-serif"><a href="${origin}/${handle}/${slug}" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:none">↗ SetFork · ${handle}/${slug}</a></div>`
-  let html = toHtml(list, lang)
-  html = html.includes('</body>') ? html.replace('</body>', `${footer}</body>`) : html + footer
+  const html = embedHtml(list, lang, `${origin}/${handle}/${slug}`)
 
   return new Response(html, {
     headers: {

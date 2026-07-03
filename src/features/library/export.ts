@@ -58,6 +58,67 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
   return out.join('\n')
 }
 
+/** Компактный embed-виджет: авто light/dark, фикс-высота с внутренним скроллом,
+ *  футер-ссылка назад. Для вставки в <iframe> на внешних сайтах. */
+export function embedHtml(list: ExportList, lang: Lang, backUrl: string): string {
+  const title = esc(tr(list.title, lang))
+  const count = list.steps.length
+  const itemsWord = lang === 'ru' ? 'пунктов' : 'items'
+  const openWord = lang === 'ru' ? 'Открыть на SetFork' : 'Open on SetFork'
+
+  const steps = list.steps
+    .map((s, i) => {
+      const marker = list.ordered ? `${i + 1}` : '•'
+      const d = esc(tr(s.desc, lang))
+      const badge = s.level !== 'required' ? `<span class="lvl">${esc(s.level)}</span>` : ''
+      const cmd = s.command ? `<code class="cmd">${esc(s.command)}</code>` : ''
+      return `<li class="step"><span class="n">${marker}</span><div class="body"><div class="st">${esc(tr(s.title, lang))}${badge}</div>${d ? `<p class="d">${d}</p>` : ''}${cmd}</div></li>`
+    })
+    .join('')
+
+  return `<!doctype html>
+<html lang="${lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>
+  :root { color-scheme: light dark; --bg:#fff; --fg:#1f2328; --muted:#6b7280; --border:#e5e7eb; --border2:#eceef1; --accent:#2563eb; --chip:#f3f4f6; }
+  @media (prefers-color-scheme: dark){ :root{ --bg:#0d1117; --fg:#e6edf3; --muted:#8b949e; --border:#30363d; --border2:#21262d; --accent:#58a6ff; --chip:#161b22; } }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--fg); font: 13px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+  .wrap { display: flex; flex-direction: column; height: 100vh; }
+  header { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); }
+  .title { font-size: 15px; font-weight: 700; }
+  .sub { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  ol.steps { flex: 1; overflow: auto; list-style: none; margin: 0; padding: 8px 10px; }
+  .step { display: flex; gap: 8px; padding: 7px 6px; border-bottom: 1px solid var(--border2); }
+  .step:last-child { border-bottom: 0; }
+  .n { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); font-size: 12px; min-width: 16px; text-align: right; }
+  .body { min-width: 0; flex: 1; }
+  .st { font-weight: 600; }
+  .lvl { margin-left: 6px; border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: 0 5px; font-size: 10px; text-transform: capitalize; font-weight: 500; }
+  .d { color: var(--muted); margin: 2px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .cmd { display: block; margin-top: 4px; background: var(--chip); border-radius: 5px; padding: 3px 7px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; overflow-x: auto; white-space: nowrap; }
+  footer { border-top: 1px solid var(--border); padding: 8px 14px; font-size: 11.5px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+  footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">${title}</div>
+    <div class="sub">${esc(list.ownerHandle)}/${esc(list.slug)} · v${list.version} · ${count} ${itemsWord}</div>
+  </header>
+  <ol class="steps">${steps}</ol>
+  <footer><span>${count} ${itemsWord}</span><a href="${esc(backUrl)}" target="_blank" rel="noopener">↗ ${openWord}</a></footer>
+</div>
+</body>
+</html>`
+}
+
 /** Автономный HTML — с печатью без разрыва пунктов (break-inside: avoid). */
 export function toHtml(list: ExportList, lang: Lang): string {
   const title = esc(tr(list.title, lang))
