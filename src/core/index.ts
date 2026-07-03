@@ -1,0 +1,4 @@
+// Ядро домена SetHub. Импортируй отсюда: `import type { List, GitStore } from '@/core'`.
+// Правило: core НЕ зависит от features/shared/app/Drizzle/Next. См. docs/architecture.md.
+export * from './domain/entities'
+export * from './ports'
