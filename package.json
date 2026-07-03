@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "gen:proto": "buf generate",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md}\" --ignore-path .gitignore",
     "db:up": "docker compose up -d db",
@@ -74,6 +76,7 @@
     "prettier": "^3.7.4",
     "tailwindcss": "^3.4.19",
     "tsx": "^4.22.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.9"
   }
 }
