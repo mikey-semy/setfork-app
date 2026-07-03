@@ -66,7 +66,7 @@ async function writeFiles(dir: string, files: RepoFile[]): Promise<void> {
   }
 }
 
-const GIT_BASE = ['-c', 'user.name=SetHub', '-c', 'user.email=git@sethub.dev', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false']
+const GIT_BASE = ['-c', 'user.name=SetFork', '-c', 'user.email=git@setfork.com', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false']
 
 /** Общая загрузка версий списка. Возвращает null если списка нет. */
 export async function loadListVersions(ownerHandle: string, slug: string): Promise<VersionData[] | null> {
@@ -85,7 +85,7 @@ export async function loadListVersions(ownerHandle: string, slug: string): Promi
  *  ВОЗВРАЩАЕТ путь; чистит вызывающий (rm -rf). null при ошибке/пустой истории. */
 export async function buildRepoFromVersions(versions: VersionData[]): Promise<string | null> {
   if (!versions || versions.length === 0) return null
-  const work = await mkdtemp(join(tmpdir(), 'sethub-git-'))
+  const work = await mkdtemp(join(tmpdir(), 'setfork-git-'))
   try {
     await exec('git', ['init', '-q', '-b', 'main', work])
     for (const v of versions) {
@@ -125,7 +125,7 @@ export async function buildListBundle(ownerHandle: string, slug: string): Promis
 export async function bundleFromVersions(versions: VersionData[]): Promise<Buffer | null> {
   const work = await buildRepoFromVersions(versions)
   if (!work) return null
-  const bundlePath = join(tmpdir(), `sethub-${randomUUID()}.bundle`)
+  const bundlePath = join(tmpdir(), `setfork-${randomUUID()}.bundle`)
   try {
     await exec('git', [...GIT_BASE, '-C', work, 'bundle', 'create', bundlePath, '--all'])
     const { readFile } = await import('node:fs/promises')

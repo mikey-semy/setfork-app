@@ -44,7 +44,7 @@ export async function moderateContent(
   const settings = await getAiSettings()
   const openrouter = createOpenRouter({
     apiKey,
-    appName: 'SetHub',
+    appName: 'SetFork',
     appUrl: process.env.APP_URL || 'http://localhost:3000',
   })
   const model = await pickChatModel(settings)

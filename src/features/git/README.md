@@ -1,13 +1,13 @@
 # Git compatibility — git as source of truth
 
-A SetHub list is a real git repository: **clone, pull, and push** with standard git
+A SetFork list is a real git repository: **clone, pull, and push** with standard git
 tooling (git CLI, VS Code). Git objects are authoritative; the Postgres `steps`/
 `template_versions` tables are a projection that keeps the web UI / AI / search working.
 
 ## Full round-trip (verified end-to-end)
 
 ```sh
-git clone https://sethub.app/ops/k8s-rollout.git   # read
+git clone https://setfork.com/ops/k8s-rollout.git   # read
 # …edit list.json / steps…
 git commit -am "tweak step 3" && git push           # write → creates a new version
 ```
@@ -18,7 +18,7 @@ persists** on reclone (no divergence); pushing without `list.json` is rejected b
 `pre-receive` hook; a wrong/absent token gets `401`.
 
 - **Read** (`git-upload-pack`): public = anonymous; private/draft = HTTP Basic
-  (any username, password = a SetHub **API token** `shub_…` from Settings).
+  (any username, password = a SetFork **API token** `sf_…` from Settings).
 - **Write** (`git-receive-pack`): owner only, Basic auth with an API token.
 - **Edit format**: `list.json` at the repo root is the machine-readable source the
   projection parses (`{title, desc, tags, ordered, steps:[…]}`). `README.md` and
@@ -40,7 +40,7 @@ persists** on reclone (no divergence); pushing without `list.json` is rejected b
 
 ## Prod requirements / caveats
 - **`git` binary** at runtime (add to the container image).
-- **Persistent volume** for `GIT_DATA_DIR` (default `<cwd>/.sethub-git`, gitignored).
+- **Persistent volume** for `GIT_DATA_DIR` (default `<cwd>/.setfork-git`, gitignored).
   Repos hold pushed commits — losing the volume rebuilds deterministic history from
   Postgres but drops the exact pushed SHAs.
 - **Single-instance lock**: the repo lock is in-process. Multi-instance deploys need a
@@ -57,7 +57,7 @@ GET /{owner}/{slug}/repo.bundle
 Download it and clone with vanilla git:
 
 ```sh
-curl -LO https://sethub.app/ops/k8s-rollout/repo.bundle
+curl -LO https://setfork.com/ops/k8s-rollout/repo.bundle
 git clone k8s-rollout.bundle
 ```
 
@@ -99,5 +99,5 @@ file-level diff of the list's evolution.
    editing the Markdown files directly is honoured; today `list.json` wins.
 3. **Collaborators**: allow non-owner write for named collaborators (currently
    owner-only). Ties into a future co-owner/permissions model.
-4. **SSH** (optional): `git@sethub.app:owner/slug.git`. HTTPS + token already covers
+4. **SSH** (optional): `git@setfork.com:owner/slug.git`. HTTPS + token already covers
    VS Code, so lower priority.

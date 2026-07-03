@@ -6,7 +6,7 @@ import { SignJWT, jwtVerify } from 'jose'
 import { eq } from 'drizzle-orm'
 import { db, sessions } from '@/shared/db'
 
-const COOKIE_NAME = 'sethub_session'
+const COOKIE_NAME = 'setfork_session'
 const SESSION_DURATION_DAYS = 30
 const LASTSEEN_THROTTLE_MS = 60_000
 

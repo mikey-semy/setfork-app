@@ -21,7 +21,7 @@ const mono = IBM_Plex_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'SetHub — runnable checklists',
+  title: 'SetFork — runnable checklists',
   description: 'Запускаемые версионируемые чек-листы: прогоняй, отмечай шаги, форкай из библиотеки.',
 }
 

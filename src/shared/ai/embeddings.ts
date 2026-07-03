@@ -19,7 +19,7 @@ function headers(key: string): Record<string, string> {
     Authorization: `Bearer ${key}`,
     'Content-Type': 'application/json',
     'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
-    'X-Title': 'SetHub',
+    'X-Title': 'SetFork',
   }
 }
 

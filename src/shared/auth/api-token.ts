@@ -3,7 +3,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { apiTokens, db } from '@/shared/db'
 
-const PREFIX = 'shub_'
+const PREFIX = 'sf_'
 
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex')

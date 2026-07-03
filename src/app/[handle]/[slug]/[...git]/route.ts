@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 
 const noCache = { Expires: 'Fri, 01 Jan 1980 00:00:00 GMT', Pragma: 'no-cache', 'Cache-Control': 'no-cache, max-age=0, must-revalidate' }
 const unauthorized = () =>
-  new Response('Authentication required', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="SetHub", charset="UTF-8"' } })
+  new Response('Authentication required', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="SetFork", charset="UTF-8"' } })
 
 async function userFromBasic(req: Request): Promise<string | null> {
   const h = req.headers.get('authorization') ?? ''
