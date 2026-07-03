@@ -101,8 +101,21 @@ CurationStore/CollabStore/SearchIndex/CatalogStore/Notifier/AiPort). Следу�
 - [ ] (Ф2) Сгенерировать TS-клиент Connect-ES из `proto/git.proto` и реализовать `gitCoreRemote`.
 - [ ] Контракты доменных портов (ListStore/Curation/Collab/…) в proto — ПОСЛЕ git-ядра.
 
-## Фаза 2 — Rust-скелет: READ-порты
+## Фаза 2 — Rust git-ядро (git-first)
 
+**Проект создан:** `C:\Users\Mike\Projects\setfork-core` (отдельный git-репо). `tonic`+`prost`+`tokio`,
+`build.rs` кодогенит из `proto/git.proto` (protoc из `protoc-bin-vendored`), `src/main.rs` = tonic
+`GitCore` со всеми 5 RPC (пока `unimplemented`). ⚠️ **НЕ собран в dev-среде: `crates.io` заблокирован**
+(npm работает, cargo — нет). Собирать там, где у cargo есть сеть. См. `setfork-core/README.md`.
+
+- [x] Rust-проект-скелет (tonic GitCore из proto) — создан, закоммичен (собрать вне этой среды).
+- [ ] **sqlx** (та же Postgres) + резолв owner/slug→list + загрузка истории версий.
+- [ ] Материализация репо (сначала шелл `git`, как TS; детерминированные SHA) → RPC по одному:
+  `CreateBundle` → `InfoRefs*` → `UploadPack` → `ReceivePack`(+проекция). Потом gix/git2 вместо шелла.
+- [ ] TS Connect-ES клиент из `proto/git.proto` → `gitCoreRemote` (`features/git/core.ts`) →
+  флип `SETFORK_CORE_URL` → **golden-сверка** байт/SHA с inproc.
+
+### (историч. набросок Фазы 2, до git-first) — Rust READ-порты
 - [ ] Rust-проект: **axum + sqlx + tokio**, та же Postgres.
 - [ ] Реализовать READ: `ListStore` (getBySlug/versions/getVersion/contributors), `SearchIndex`
   (feed + semantic pgvector), `CurationStore` reads.
