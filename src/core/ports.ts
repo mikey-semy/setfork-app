@@ -11,11 +11,15 @@ import type {
   Issue,
   IssueComment,
   List,
+  ListOrigin,
+  ListStatus,
+  LocaleText,
   NotificationType,
   Step,
   Suggestion,
   SuggestionComment,
   Version,
+  Visibility,
 } from './domain/entities'
 
 // ── Утилиты (детерминизм/тестируемость) ──────────────────────────────
@@ -32,10 +36,27 @@ export interface NewVersionInput {
   steps: Omit<Step, 'id' | 'versionId'>[]
 }
 
+export interface CreateListInput {
+  ownerId: Id
+  slug: string
+  title: LocaleText
+  desc: LocaleText
+  tags: string[]
+  ordered: boolean
+  visibility: Visibility
+  status: ListStatus
+  origin: ListOrigin
+  forkedFromId?: Id | null
+  note: string // заметка первой версии
+  steps: Omit<Step, 'id' | 'versionId'>[]
+}
+
 export interface ListStore {
   getBySlug(owner: string, slug: string): Promise<List | null>
   listVersions(listId: Id): Promise<Version[]>
   getVersion(listId: Id, version: number): Promise<{ version: Version; steps: Step[] } | null>
+  /** Создать список + первую версию + шаги. */
+  create(input: CreateListInput): Promise<List>
   /** Создать новую версию (снимок). Двигает currentVersion. */
   addVersion(listId: Id, input: NewVersionInput): Promise<Version>
   getContributors(listId: Id): Promise<Contributor[]>

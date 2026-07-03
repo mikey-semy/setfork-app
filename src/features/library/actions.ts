@@ -9,7 +9,6 @@ import {
   steps,
   suggestionComments,
   suggestions,
-  templateVersions,
   templates,
   users,
   type ProposedItem,
@@ -29,24 +28,20 @@ import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { listStore } from './list-store.adapter'
 import { parseTags, slugify } from './slug'
 
-async function insertSteps(versionId: string, items: ProposedItem[]): Promise<void> {
-  if (!items.length) return
-  await db.insert(steps).values(
-    items.map((it, i) => ({
-      versionId,
-      n: i + 1,
-      title: it.title,
-      desc: it.desc,
-      command: it.command,
-      hasImage: it.hasImage,
-      imageKey: it.imageKey ?? null,
-      level: it.level,
-      why: it.why,
-      section: it.section,
-      subtasks: it.subtasks,
-      refs: it.refs,
-    })),
-  )
+/** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
+function toStepInput(items: ProposedItem[]) {
+  return items.map((it, i) => ({
+    n: i + 1,
+    title: it.title,
+    desc: it.desc,
+    command: it.command,
+    level: it.level,
+    why: it.why,
+    section: it.section,
+    subtasks: it.subtasks,
+    refs: it.refs,
+    imageRef: it.imageKey ?? null,
+  }))
 }
 
 // ── Видимость списка (public/private) и удаление ─────────────────────
@@ -125,28 +120,21 @@ export async function createTemplate(formData: FormData): Promise<void> {
     .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, slug)))
   if (owned.length) slug = `${slug}-${Date.now().toString(36).slice(-4)}`
 
-  const [tpl] = await db
-    .insert(templates)
-    .values({
-      ownerId: session.userId,
-      slug,
-      title: { [lang]: title },
-      desc: desc ? { [lang]: desc } : {},
-      tags,
-      currentVersion: 1,
-      origin: 'authored',
-      visibility,
-      ordered,
-    })
-    .returning()
-
-  const [ver] = await db
-    .insert(templateVersions)
-    .values({ templateId: tpl.id, version: 1, note: 'initial' })
-    .returning()
-  await insertSteps(ver.id, proposed)
-  await ensureWatch(session.userId, tpl.id) // владелец следит за своим списком
-  if (visibility === 'public') await autoModerateList(tpl.id) // приватные не модерируем
+  const list = await listStore.create({
+    ownerId: session.userId,
+    slug,
+    title: { [lang]: title },
+    desc: desc ? { [lang]: desc } : {},
+    tags,
+    ordered,
+    visibility,
+    status: 'published',
+    origin: 'authored',
+    note: 'initial',
+    steps: toStepInput(proposed),
+  })
+  await ensureWatch(session.userId, list.id) // владелец следит за своим списком
+  if (visibility === 'public') await autoModerateList(list.id) // приватные не модерируем
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
 }
@@ -165,21 +153,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
   // Создание версии+шагов идёт через доменный порт ListStore (write-seam под Rust).
-  await listStore.addVersion(tpl.id, {
-    note: note || 'edit',
-    steps: proposed.map((it, i) => ({
-      n: i + 1,
-      title: it.title,
-      desc: it.desc,
-      command: it.command,
-      level: it.level,
-      why: it.why,
-      section: it.section,
-      subtasks: it.subtasks,
-      refs: it.refs,
-      imageRef: it.imageKey ?? null,
-    })),
-  })
+  await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed) })
   // tags/ordered — атрибуты списка, не версии; обновляем отдельно.
   await db.update(templates).set({ tags, ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   await notifyWatchersNewVersion(tpl.id, session.userId)
@@ -220,16 +194,8 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
   if (!sug || sug.status !== 'open' || sug.template.ownerId !== session.userId) return
 
   const tpl = sug.template
-  const newVersion = tpl.currentVersion + 1
-  const [ver] = await db
-    .insert(templateVersions)
-    .values({ templateId: tpl.id, version: newVersion, note: sug.note || 'suggested edit' })
-    .returning()
-  await insertSteps(ver.id, sug.items)
-  await db
-    .update(templates)
-    .set({ currentVersion: newVersion, updatedAt: new Date() })
-    .where(eq(templates.id, tpl.id))
+  // Новая версия из принятого предложения — через доменный порт.
+  await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items) })
   await db
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })
@@ -428,49 +394,35 @@ export async function forkTemplate(templateId: string): Promise<void> {
     .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, src.slug)))
   const slug = owned.length ? `${src.slug}-fork` : src.slug
 
-  const [fork] = await db
-    .insert(templates)
-    .values({
-      ownerId: session.userId,
-      slug,
-      title: src.title,
-      desc: src.desc,
-      tags: src.tags,
-      currentVersion: 1,
-      origin: 'forked',
-      visibility: src.visibility,
-      ordered: src.ordered,
-      forkedFromId: src.id,
-    })
-    .returning()
-
   const srcCurrent = src.versions.find((v) => v.version === src.currentVersion) ?? src.versions[0]
-  const [ver] = await db
-    .insert(templateVersions)
-    .values({ templateId: fork.id, version: 1, note: `forked from ${src.slug} v${srcCurrent?.version ?? 1}` })
-    .returning()
-
-  if (srcCurrent) {
-    const srcSteps = await db.select().from(steps).where(eq(steps.versionId, srcCurrent.id)).orderBy(asc(steps.n))
-    if (srcSteps.length) {
-      await db.insert(steps).values(
-        srcSteps.map((s) => ({
-          versionId: ver.id,
-          n: s.n,
-          title: s.title,
-          desc: s.desc,
-          command: s.command,
-          hasImage: s.hasImage,
-          imageKey: s.imageKey,
-          level: s.level,
-          why: s.why,
-          section: s.section,
-          subtasks: s.subtasks,
-          refs: s.refs,
-        })),
-      )
-    }
-  }
+  const srcSteps = srcCurrent
+    ? await db.select().from(steps).where(eq(steps.versionId, srcCurrent.id)).orderBy(asc(steps.n))
+    : []
+  await listStore.create({
+    ownerId: session.userId,
+    slug,
+    title: src.title,
+    desc: src.desc,
+    tags: src.tags,
+    ordered: src.ordered,
+    visibility: src.visibility,
+    status: 'published',
+    origin: 'forked',
+    forkedFromId: src.id,
+    note: `forked from ${src.slug} v${srcCurrent?.version ?? 1}`,
+    steps: srcSteps.map((s, i) => ({
+      n: i + 1,
+      title: s.title,
+      desc: s.desc,
+      command: s.command,
+      level: s.level,
+      why: s.why,
+      section: s.section,
+      subtasks: s.subtasks,
+      refs: s.refs,
+      imageRef: s.imageKey ?? null,
+    })),
+  })
 
   await db
     .update(templates)
