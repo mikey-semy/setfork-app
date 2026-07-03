@@ -4,6 +4,7 @@ import { db, issueComments, issues, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
 
 export type IssueFilter = 'open' | 'closed'
+export type IssueSort = 'newest' | 'oldest'
 
 export interface IssueRow {
   id: string
@@ -19,8 +20,17 @@ export interface IssueRow {
 
 const commentCountSql = sql<number>`(select count(*)::int from ${issueComments} c where c.issue_id = ${issues.id})`
 
-/** Список issue выбранного статуса. */
-export async function getIssues(templateId: string, status: IssueFilter): Promise<IssueRow[]> {
+/** Список issue: статус + опц. поиск по заголовку, фильтр по label, сортировка. */
+export async function getIssues(
+  templateId: string,
+  opts: { status: IssueFilter; q?: string; label?: string; sort?: IssueSort },
+): Promise<IssueRow[]> {
+  const conds = [eq(issues.templateId, templateId), eq(issues.status, opts.status)]
+  const q = opts.q?.trim()
+  if (q) conds.push(sql`${issues.title} ilike ${'%' + q + '%'}`)
+  if (opts.label) conds.push(sql`${opts.label} = any(${issues.labels})`)
+  const order = opts.sort === 'oldest' ? asc(issues.number) : desc(issues.number)
+
   const rows = await db
     .select({
       id: issues.id,
@@ -35,9 +45,17 @@ export async function getIssues(templateId: string, status: IssueFilter): Promis
     })
     .from(issues)
     .innerJoin(users, eq(issues.authorId, users.id))
-    .where(and(eq(issues.templateId, templateId), eq(issues.status, status)))
-    .orderBy(desc(issues.number))
+    .where(and(...conds))
+    .orderBy(order)
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
+}
+
+/** Уникальные label'ы, использованные в issue списка (для фильтра). */
+export async function getIssueLabelsInUse(templateId: string): Promise<string[]> {
+  const rows = await db.select({ labels: issues.labels }).from(issues).where(eq(issues.templateId, templateId))
+  const set = new Set<string>()
+  for (const r of rows) for (const l of r.labels ?? []) set.add(l)
+  return [...set].sort((a, b) => a.localeCompare(b))
 }
 
 export async function getIssueCounts(templateId: string): Promise<{ open: number; closed: number }> {
