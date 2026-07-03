@@ -136,7 +136,14 @@ Postgres** (self-check: 11 списков, резолв `demo/redis-…`→uuid+
 - [x] **Docker (оба репо):** `Dockerfile` + `docker-compose.yml` (обычный) + `docker-compose.dokploy.yml`
   (сеть `dokploy-network` external). Core: rust→debian-slim+git. Front: node standalone + `migrate` target
   (drizzle-kit push). Все compose провалидированы `docker compose config`.
-- [ ] Потом gix/git2 вместо шелла; флип `SETFORK_CORE_URL` в dev → полный катовер git на Rust.
+- [x] **КАТОВЕР git на Rust — ГОТОВ (dev).** Флип `.env.local`: `SETFORK_CORE_URL=1` +
+  `SETFORK_CORE_ADDR=127.0.0.1:50051` → `gitCore` в роуте `[...git]` = `gitCoreRemote` → Rust.
+  **Проверено через НАСТОЯЩИЙ Next-роут** (не мост): `git clone localhost:3000` отдаёт историю (v1..v5);
+  дискриминатор — с выключенным core роут даёт **500** (значит remote реально активен, не inproc);
+  `git push` (Basic-токен `sf_`) → версия 5 в Postgres. `.env.local` gitignored; убрать 2 строки =
+  возврат к inproc. Требует запущенного `setfork-core` (cargo run / docker).
+- [ ] **Остаётся (оптимизация): `gix`/`git2` вместо шелла git** в Rust (материализация/upload/receive
+  без спавна git). Катоверу не мешает — это перф/чистота. Большой отдельный шаг.
 - [ ] Материализация репо (сначала шелл `git`, как TS; детерминированные SHA) → RPC по одному:
   `CreateBundle` → `InfoRefs*` → `UploadPack` → `ReceivePack`(+проекция). Потом gix/git2 вместо шелла.
 - [ ] TS Connect-ES клиент из `proto/git.proto` → `gitCoreRemote` (`features/git/core.ts`) →
