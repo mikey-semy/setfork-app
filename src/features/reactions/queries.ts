@@ -1,12 +1,7 @@
 import 'server-only'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { db, reactions } from '@/shared/db'
-import { REACTION_EMOJI, type ReactionAgg, type ReactionTarget } from './constants'
-
-const order = (e: string) => {
-  const i = (REACTION_EMOJI as readonly string[]).indexOf(e)
-  return i === -1 ? 99 : i
-}
+import type { ReactionAgg, ReactionTarget } from './constants'
 
 /** Агрегаты реакций для набора целей одного типа: { targetId → [{emoji,count,mine}] }. */
 export async function getReactionsFor(
@@ -31,6 +26,7 @@ export async function getReactionsFor(
   for (const r of rows) {
     ;(out[r.targetId] ??= []).push({ emoji: r.emoji, count: Number(r.count), mine: !!r.mine })
   }
-  for (const id of Object.keys(out)) out[id].sort((a, b) => order(a.emoji) - order(b.emoji))
+  // популярные слева; при равенстве — стабильно по эмодзи.
+  for (const id of Object.keys(out)) out[id].sort((a, b) => b.count - a.count || a.emoji.localeCompare(b.emoji))
   return out
 }

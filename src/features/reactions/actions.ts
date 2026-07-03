@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { requireSession } from '@/shared/auth/session'
 import { db, issueComments, issues, reactions, suggestionComments, suggestions } from '@/shared/db'
-import { REACTION_EMOJI, REACTION_TARGETS, type ReactionTarget } from './constants'
+import { MAX_EMOJI_LEN, REACTION_TARGETS, type ReactionTarget } from './constants'
 
 // Проверка, что цель реально существует (лёгкая целостность/скоуп).
 async function targetExists(targetType: ReactionTarget, id: string): Promise<boolean> {
@@ -33,9 +33,10 @@ export async function toggleReaction(input: {
   path: string
 }): Promise<void> {
   const session = await requireSession()
-  const { targetType, targetId, emoji, path } = input
+  const { targetType, targetId, path } = input
+  const emoji = (input.emoji ?? '').trim()
   if (!REACTION_TARGETS.includes(targetType as ReactionTarget)) return
-  if (!(REACTION_EMOJI as readonly string[]).includes(emoji)) return
+  if (!emoji || emoji.length > MAX_EMOJI_LEN) return // любое эмодзи из пикера; защита от мусора
   if (!targetId) return
   if (!(await targetExists(targetType as ReactionTarget, targetId))) return
 
