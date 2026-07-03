@@ -3,7 +3,7 @@ import { imgproxyUrl } from './imgproxy'
 
 export { isS3Configured, getMediaSettings } from '@/shared/settings/media'
 export { deleteByPrefix, deleteObject, putObject } from './s3'
-export { removeImageFile, uploadImageFile } from './upload'
+export { removeImageFile, uploadAttachmentFile, uploadImageFile } from './upload'
 export { imgproxyUrl }
 
 /** Реф картинки → src для <img>. http(s)/data/uploads → как есть; иначе storage_key → imgproxy. */

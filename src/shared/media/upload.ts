@@ -34,6 +34,28 @@ export async function uploadImageFile(dir: string, file: File): Promise<string> 
   return `/uploads/${dir}/${name}`
 }
 
+const ATTACH_MAX_BYTES = 25 * 1024 * 1024 // 25 МБ на вложение
+// Разрешённые расширения вложений (не-картинки). Исполняемое/скриптовое — не пускаем.
+const ATTACH_EXT = new Set(['pdf', 'txt', 'md', 'csv', 'json', 'log', 'zip', 'gz', 'tar', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'svg'])
+
+/**
+ * Загрузка произвольного вложения (не-картинки) на диск (`/uploads/files/...`).
+ * Картинки грузить через uploadImageFile. Возвращает публичный путь + имя.
+ * NB: всегда диск — для S3-прода вложения нужен отдельный download-роут (пока не нужно).
+ */
+export async function uploadAttachmentFile(file: File): Promise<{ url: string; name: string }> {
+  const dot = file.name.lastIndexOf('.')
+  const ext = dot >= 0 ? file.name.slice(dot + 1).toLowerCase() : ''
+  if (!ATTACH_EXT.has(ext)) throw new Error(`Тип .${ext || '?'} не разрешён для вложения.`)
+  if (file.size > ATTACH_MAX_BYTES) throw new Error('Файл больше 25 МБ.')
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const stored = `${randomUUID()}.${ext}`
+  const diskDir = join(process.cwd(), 'public', 'uploads', 'files')
+  await mkdir(diskDir, { recursive: true })
+  await writeFile(join(diskDir, stored), buffer)
+  return { url: `/uploads/files/${stored}`, name: file.name }
+}
+
 /** Удаляет ранее загруженную картинку (S3 storage_key или /uploads-путь). */
 export async function removeImageFile(ref: string | null | undefined): Promise<void> {
   if (!ref) return
