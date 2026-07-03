@@ -4,7 +4,10 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { getAiSettings, getApiKey } from '@/shared/settings/ai'
 import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
+import { sanitizeCommand } from './sanitize-command'
 import type { Lang } from '@/shared/i18n'
+
+export { sanitizeCommand }
 
 export interface GeneratedItem {
   title: string
@@ -39,7 +42,7 @@ Rules:
 - title: concise noun phrase naming the list.
 - desc: one sentence describing it.
 - tags: 3-6 short lowercase tags, no '#'.
-- items: 4-12 ordered steps. title = short imperative. desc = one or two clarifying sentences; you MAY use light markdown (inline code, **bold**, bullet lists). command = a shell command when applicable, else "". level = how essential the step is. why = one short sentence on WHY this step matters (rationale), or "". subtasks = 0-3 short verification checks.`
+- items: 4-12 ordered steps. title = short imperative. desc = one or two clarifying sentences; you MAY use light markdown (inline code, **bold**, bullet lists). command = a real, runnable terminal command ONLY when the step is literally executed in a shell (e.g. "npm install", "docker compose up -d", "git clone …"). For non-technical steps (recipes, physical tasks, planning, writing) it MUST be "". NEVER invent placeholder tokens or restate the step title as a fake command (e.g. "sugar_syrup" is wrong — use ""). level = how essential the step is. why = one short sentence on WHY this step matters (rationale), or "". subtasks = 0-3 short verification checks.`
 
 function parseList(text: string, fallbackTitle: string): GeneratedList | null {
   const cleaned = text
@@ -60,7 +63,7 @@ function parseList(text: string, fallbackTitle: string): GeneratedList | null {
         .map((it) => ({
           title: String(it?.title ?? '').trim(),
           desc: String(it?.desc ?? '').trim(),
-          command: String(it?.command ?? '').trim(),
+          command: sanitizeCommand(String(it?.command ?? '')),
           level: (LEVELS.includes(String(it?.level)) ? String(it?.level) : 'required') as GeneratedItem['level'],
           why: String(it?.why ?? '').trim(),
           subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s) => String(s).trim()).filter(Boolean).slice(0, 6) : [],

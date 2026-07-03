@@ -7,7 +7,7 @@ import { db, generationCandidates, generations, users, type CandidateItem } from
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import type { Lang } from '@/shared/i18n'
-import { generateListDraft } from '@/shared/ai/generate'
+import { generateListDraft, sanitizeCommand } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { toProposedItems } from '@/features/library/editor'
 import { listStore } from '@/features/library/list-store.adapter'
@@ -119,7 +119,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
     cand.items.map((it) => ({
       title: it.title,
       desc: it.desc,
-      command: it.command,
+      command: sanitizeCommand(it.command ?? ''),
       imageKey: '',
       imagePreview: '',
       level: it.level ?? 'required',

@@ -122,6 +122,21 @@ textarea::placeholder {
   animation: cell-pop 260ms ease-out;
 }
 
+/* Плавное появление сменяемой фразы в лоадере генерации. */
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadein {
+  animation: fadein 500ms ease-out;
+}
+
 /* Тонкая полоса прокрутки под тёмную/светлую тему */
 * {
   scrollbar-width: thin;
