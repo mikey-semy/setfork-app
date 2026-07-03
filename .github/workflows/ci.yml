@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          # Плейсхолдеры: build динамических роутов к БД не ходит; нужны лишь для чтения env.
+          DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+          AUTH_SECRET: ci-placeholder-secret-at-least-32-characters
