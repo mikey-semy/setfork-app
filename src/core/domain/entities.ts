@@ -3,8 +3,9 @@
 // которое пост-MVP переносится на Rust как есть (см. docs/architecture.md).
 
 // ── Примитивы ────────────────────────────────────────────────────────
-/** Локализованный текст: код языка → строка (например { en, ru }). */
-export type LocaleText = { [lang: string]: string }
+/** Локализованный текст: код языка → строка (например { en, ru }).
+ *  Совместимо с `@/shared/i18n` LocaleText (Partial<Record<string,string>>). */
+export type LocaleText = Partial<Record<string, string>>
 
 export type Id = string // uuid; при желании позже сделать branded-типы
 

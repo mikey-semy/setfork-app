@@ -26,6 +26,7 @@ import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
+import { listStore } from './list-store.adapter'
 import { parseTags, slugify } from './slug'
 
 async function insertSteps(versionId: string, items: ProposedItem[]): Promise<void> {
@@ -162,17 +163,25 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   const tags = parseTags(formData.get('tags'))
   const ordered = formData.get('ordered') !== 'unordered'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
-  const newVersion = tpl.currentVersion + 1
 
-  const [ver] = await db
-    .insert(templateVersions)
-    .values({ templateId: tpl.id, version: newVersion, note: note || 'edit' })
-    .returning()
-  await insertSteps(ver.id, proposed)
-  await db
-    .update(templates)
-    .set({ currentVersion: newVersion, tags, ordered, updatedAt: new Date() })
-    .where(eq(templates.id, tpl.id))
+  // Создание версии+шагов идёт через доменный порт ListStore (write-seam под Rust).
+  await listStore.addVersion(tpl.id, {
+    note: note || 'edit',
+    steps: proposed.map((it, i) => ({
+      n: i + 1,
+      title: it.title,
+      desc: it.desc,
+      command: it.command,
+      level: it.level,
+      why: it.why,
+      section: it.section,
+      subtasks: it.subtasks,
+      refs: it.refs,
+      imageRef: it.imageKey ?? null,
+    })),
+  })
+  // tags/ordered — атрибуты списка, не версии; обновляем отдельно.
+  await db.update(templates).set({ tags, ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   await notifyWatchersNewVersion(tpl.id, session.userId)
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)

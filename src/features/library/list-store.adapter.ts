@@ -93,9 +93,34 @@ export const listStore: ListStore = {
     return { version: toVersion(v), steps: rows.map(toStep) }
   },
 
-  async addVersion() {
-    // TODO(rust-boundary): write-path ещё не мигрирован на порт (сейчас saveNewVersion/acceptSuggestion).
-    throw new Error('ListStore.addVersion: not migrated to the port yet')
+  async addVersion(listId, input) {
+    const [tpl] = await db.select({ currentVersion: templates.currentVersion }).from(templates).where(eq(templates.id, listId)).limit(1)
+    if (!tpl) throw new Error('addVersion: list not found')
+    const newVersion = tpl.currentVersion + 1
+    const [ver] = await db
+      .insert(templateVersions)
+      .values({ templateId: listId, version: newVersion, note: input.note })
+      .returning()
+    if (input.steps.length) {
+      await db.insert(stepsTable).values(
+        input.steps.map((s, i) => ({
+          versionId: ver.id,
+          n: i + 1,
+          title: s.title,
+          desc: s.desc,
+          command: s.command,
+          hasImage: !!s.imageRef,
+          imageKey: s.imageRef ?? null,
+          level: s.level,
+          why: s.why,
+          section: s.section,
+          subtasks: s.subtasks,
+          refs: s.refs,
+        })),
+      )
+    }
+    await db.update(templates).set({ currentVersion: newVersion, updatedAt: new Date() }).where(eq(templates.id, listId))
+    return toVersion(ver)
   },
 
   async getContributors(listId) {
