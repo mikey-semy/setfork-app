@@ -34,7 +34,10 @@
   bare-репо (`.setfork-git`), проекция `list.json`→версия, pre-receive hook, коллабораторы.
 - ✅ **Каталоги v1** (метаданные): таблица `repositories` + `templates.repositoryId`.
 
-**➡️ NEXT (Фаза 0, по порядку):** домиграция оставшихся писателей и портов (см. чек-лист ниже).
+**➡️ NEXT: Фаза 0 ЗАКРЫТА** (все доменные мутации через `@/core`-порты: GitStore/ListStore/
+CurationStore/CollabStore/SearchIndex/CatalogStore/Notifier/AiPort). Следующее — **Фаза 1**
+(контракт провода Rust↔Next: транспорт HTTP+JSON, feature-flag inproc↔remote), затем **Фаза 2**
+(Rust-скелет axum+sqlx, READ-порты + golden-сверка).
 
 ---
 
@@ -69,12 +72,18 @@
 - [x] **SearchIndex** (обслуживание индекса): `features/search/adapter.ts` = порт `reindex`/`purgeStale`
   над `library/reindex.ts`; admin-purge через порт. Чтение ленты (`getFeed`) — read-проекция, НЕ порт.
   (Опционально позже: авто-`reindex` в write-path после версии — сейчас индекс bulk-админкой.)
-- [ ] **AiPort** (generate/refine/embed + учёт стоимости): обернуть `shared/ai/*`.
-- [ ] **Notifier**: обернуть `features/notifications/notify` (частично уже чистый).
-- [ ] **CatalogStore** (новый порт): repositories CRUD + assign (сейчас `features/catalogs` напрямую).
+- [x] **CatalogStore** (порт добавлен): `features/catalogs/adapter.ts` (ensure/setListCatalog/remove);
+  catalog-actions ходят через порт (auth/revalidate — в actions).
+- [x] **Notifier**: `features/notifications/adapter.ts` — формальный порт над `notify`/`notifyMany`
+  (домен listId → БД templateId). Потребители пока зовут notify() напрямую (тонкая обёртка = сам порт).
+- [x] **AiPort** (пока `embed`): `shared/ai/adapter.ts` над `embedOne`+settings. generate/refine — при
+  миграции features/generation (streaming/cost, лучше сразу на Rust-стороне).
 
-**Acceptance Фазы 0:** нет прямых `db.insert(steps|templateVersions|...)` вне адаптеров;
-grep по фичам не находит Drizzle-мутаций домена вне `*.adapter.ts`.
+**Acceptance Фазы 0 — ДОСТИГНУТО:** доменные мутации версий/списков/курирования/коллаборации/каталогов
+идут через `@/core`-порты (`*.adapter.ts`); прямых `db.insert(steps|templateVersions)` вне адаптеров нет.
+Осталось по мелочи: `updateMeta`/MCP-draft-in-place/follow (не мутируют версии) — по потребности.
+
+**➡️ Фаза 0 закрыта. NEXT: Фаза 1 (контракт провода) → Фаза 2 (Rust-скелет).**
 
 ---
 

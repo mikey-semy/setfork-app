@@ -6,6 +6,7 @@ import { db, repositories, templates } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { slugify } from '@/features/library/slug'
+import { catalogStore } from './adapter'
 
 async function ownTemplate(templateId: string, userId: string) {
   const [tpl] = await db
@@ -26,21 +27,8 @@ export async function createCatalogAndAssign(templateId: string, formData: FormD
   const name = slugify(raw)
   if (!name) return
 
-  const [repo] = await db
-    .insert(repositories)
-    .values({ ownerId: session.userId, name, title: { [lang]: raw } })
-    .onConflictDoNothing()
-    .returning({ id: repositories.id })
-  let repoId = repo?.id
-  if (!repoId) {
-    const [ex] = await db
-      .select({ id: repositories.id })
-      .from(repositories)
-      .where(and(eq(repositories.ownerId, session.userId), eq(repositories.name, name)))
-      .limit(1)
-    repoId = ex?.id
-  }
-  if (repoId) await db.update(templates).set({ repositoryId: repoId }).where(eq(templates.id, templateId))
+  const catalogId = await catalogStore.ensure(session.userId, name, { [lang]: raw })
+  if (catalogId) await catalogStore.setListCatalog(templateId, catalogId)
 
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
   revalidatePath(`/${session.handle}`)
@@ -53,6 +41,7 @@ export async function setListCatalog(templateId: string, catalogId: string): Pro
   if (!tpl) return
   let repoId: string | null = null
   if (catalogId) {
+    // проверяем владение каталогом (auth) перед привязкой
     const [repo] = await db
       .select({ id: repositories.id })
       .from(repositories)
@@ -61,7 +50,7 @@ export async function setListCatalog(templateId: string, catalogId: string): Pro
     if (!repo) return
     repoId = repo.id
   }
-  await db.update(templates).set({ repositoryId: repoId }).where(eq(templates.id, templateId))
+  await catalogStore.setListCatalog(templateId, repoId)
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
   revalidatePath(`/${session.handle}`)
 }
@@ -69,13 +58,6 @@ export async function setListCatalog(templateId: string, catalogId: string): Pro
 /** Удалить каталог (списки становятся solo). */
 export async function deleteCatalog(catalogId: string): Promise<void> {
   const session = await requireSession()
-  const [repo] = await db
-    .select({ id: repositories.id, name: repositories.name })
-    .from(repositories)
-    .where(and(eq(repositories.id, catalogId), eq(repositories.ownerId, session.userId)))
-    .limit(1)
-  if (!repo) return
-  await db.update(templates).set({ repositoryId: null }).where(eq(templates.repositoryId, catalogId))
-  await db.delete(repositories).where(eq(repositories.id, catalogId))
+  await catalogStore.remove(catalogId, session.userId)
   revalidatePath(`/${session.handle}`)
 }

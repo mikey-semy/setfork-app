@@ -140,3 +140,13 @@ export interface Notifier {
   notify(input: NotifyInput): Promise<void>
   notifyMany(recipientIds: Id[], input: Omit<NotifyInput, 'recipientId'>): Promise<void>
 }
+
+// ── Каталоги (repositories) ──────────────────────────────────────────
+export interface CatalogStore {
+  /** Создать каталог владельца (или вернуть существующий с тем же name). → id каталога. */
+  ensure(ownerId: Id, name: string, title: LocaleText): Promise<Id | null>
+  /** Привязать список к каталогу (или отвязать, catalogId=null). */
+  setListCatalog(listId: Id, catalogId: Id | null): Promise<void>
+  /** Удалить каталог владельца (списки становятся solo). */
+  remove(catalogId: Id, ownerId: Id): Promise<void>
+}
