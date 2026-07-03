@@ -338,6 +338,8 @@ const DICT = {
   notifSuggestionNew: { en: 'suggested an edit to', ru: 'предложил правку к' },
   notifAccepted: { en: 'accepted your edit to', ru: 'принял вашу правку к' },
   notifRejected: { en: 'rejected your edit to', ru: 'отклонил вашу правку к' },
+  notifMention: { en: 'mentioned you in', ru: 'упомянул(а) вас в' },
+  notifAssigned: { en: 'assigned you to an issue in', ru: 'назначил(а) вас на обсуждение в' },
   aList: { en: 'a list', ru: 'список' },
   notifPrefsTitle: { en: 'Notifications', ru: 'Уведомления' },
   notifPrefsIntro: { en: 'Choose what you get notified about.', ru: 'Выберите, о чём получать уведомления.' },

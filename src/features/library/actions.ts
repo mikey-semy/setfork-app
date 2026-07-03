@@ -10,7 +10,7 @@ import { tr } from '@/shared/i18n'
 import { imageUrl, uploadImageFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
-import { notify, notifyMany } from '@/features/notifications/notify'
+import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
@@ -167,6 +167,7 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   await collabStore.createSuggestion(tpl.id, session.userId, note, toStepInput(proposed))
   await ensureWatch(session.userId, tpl.id) // автор правки следит за списком
   await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id })
+  await notifyMentions({ text: note, actorId: session.userId, templateId: tpl.id })
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions`)
 }
@@ -215,6 +216,7 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   const watchers = await getWatcherIds(sug.templateId)
   const recipients = [sug.authorId, sug.template.ownerId, ...commenters, ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'suggestion_comment', templateId: sug.templateId })
+  await notifyMentions({ text: body, actorId: session.userId, templateId: sug.templateId })
 
   revalidatePath(path)
   redirect(path)

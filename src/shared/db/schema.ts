@@ -50,6 +50,8 @@ export const notificationType = pgEnum('notification_type', [
   'star',
   'fork',
   'follow',
+  'mention',
+  'assigned',
 ])
 
 export const issueStatus = pgEnum('issue_status', ['open', 'closed'])

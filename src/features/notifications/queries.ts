@@ -16,6 +16,8 @@ export type NotificationType =
   | 'star'
   | 'fork'
   | 'follow'
+  | 'mention'
+  | 'assigned'
 
 export interface NotificationItem {
   id: string

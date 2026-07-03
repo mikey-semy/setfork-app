@@ -20,6 +20,8 @@ const VERB: Record<NotificationItem['type'], TKey> = {
   star: 'notifStar',
   fork: 'notifFork',
   follow: 'notifFollow',
+  mention: 'notifMention',
+  assigned: 'notifAssigned',
 }
 
 export function NotificationsBell({ unread, items, lang }: { unread: number; items: NotificationItem[]; lang: Lang }) {
@@ -57,11 +59,10 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
           <div className="max-h-[360px] overflow-auto">
             {items.map((n) => {
               const isFollow = n.type === 'follow'
-              const isIssue = n.type === 'issue_new' || n.type === 'issue_comment'
               const listHref = n.ownerHandle && n.slug ? `/${n.ownerHandle}/${n.slug}` : null
               const href = isFollow
                 ? `/${n.actorHandle ?? ''}`
-                : isIssue && listHref && n.issueNumber != null
+                : listHref && n.issueNumber != null
                   ? `${listHref}/issues/${n.issueNumber}`
                   : (listHref ?? '/notifications')
               return (

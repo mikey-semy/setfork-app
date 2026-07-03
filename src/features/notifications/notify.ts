@@ -1,7 +1,8 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { db, notifications, users } from '@/shared/db'
 import type { NotifyPrefs } from '@/shared/db/schema'
+import { extractHandles } from './mentions'
 
 type NotifType =
   | 'suggestion_new'
@@ -14,6 +15,8 @@ type NotifType =
   | 'star'
   | 'fork'
   | 'follow'
+  | 'mention'
+  | 'assigned'
 
 // Тип события → ключ предпочтения получателя (follow не отключается — ключа нет).
 const TYPE_PREF: Partial<Record<NotifType, keyof NotifyPrefs>> = {
@@ -61,4 +64,28 @@ export async function notifyMany(
 ): Promise<void> {
   const unique = [...new Set(recipientIds)].filter(Boolean)
   await Promise.all(unique.map((recipientId) => notify({ recipientId, ...params })))
+}
+
+/**
+ * Разбирает @-упоминания в тексте и шлёт `mention`-уведомление каждому
+ * существующему пользователю (кроме автора — это делает notify). Best-effort.
+ */
+export async function notifyMentions(params: {
+  text: string
+  actorId: string
+  templateId?: string | null
+  issueId?: string | null
+}): Promise<void> {
+  const handles = extractHandles(params.text)
+  if (handles.length === 0) return
+  try {
+    const rows = await db.select({ id: users.id }).from(users).where(inArray(users.handle, handles))
+    if (rows.length === 0) return
+    await notifyMany(
+      rows.map((r) => r.id),
+      { actorId: params.actorId, type: 'mention', templateId: params.templateId ?? null, issueId: params.issueId ?? null },
+    )
+  } catch {
+    /* уведомление — не критичный путь */
+  }
 }
