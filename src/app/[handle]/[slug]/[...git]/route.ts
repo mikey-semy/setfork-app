@@ -1,7 +1,7 @@
 import { getListMeta } from '@/features/library/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { verifyApiToken } from '@/shared/auth/api-token'
-import { gitStore } from '@/features/git/adapter'
+import { gitCore } from '@/features/git/core'
 import { maybeGunzip } from '@/features/git/smart-http'
 import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
@@ -60,18 +60,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   if (service === 'git-upload-pack') {
     const az = await authorizeRead(req, meta)
     if (az !== 'ok') return az === 401 ? unauthorized() : new Response('Not found', { status: 404 })
-    const bare = await gitStore.ensureRepo({ owner: handle, slug })
-    if (!bare) return new Response('Repository unavailable', { status: 500 })
-    const body = await gitStore.uploadPackAdvertise(bare, gitProtocol)
+    const body = await gitCore.infoRefsUploadPack({ owner: handle, slug }, gitProtocol)
+    if (!body) return new Response('Repository unavailable', { status: 500 })
     return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-upload-pack-advertisement', ...noCache } })
   }
 
   if (service === 'git-receive-pack') {
     const az = await authorizeWrite(req, meta)
     if (az !== 'ok') return unauthorized()
-    const bare = await gitStore.ensureRepo({ owner: handle, slug })
-    if (!bare) return new Response('Repository unavailable', { status: 500 })
-    const body = await gitStore.receivePackAdvertise(bare, gitProtocol)
+    const body = await gitCore.infoRefsReceivePack({ owner: handle, slug }, gitProtocol)
+    if (!body) return new Response('Repository unavailable', { status: 500 })
     return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-receive-pack-advertisement', ...noCache } })
   }
 
@@ -89,31 +87,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
   if (path === 'git-upload-pack') {
     const az = await authorizeRead(req, meta)
     if (az !== 'ok') return az === 401 ? unauthorized() : new Response('Not found', { status: 404 })
-    const bare = await gitStore.ensureRepo({ owner: handle, slug })
-    if (!bare) return new Response('Repository unavailable', { status: 500 })
     const raw = Buffer.from(await req.arrayBuffer())
-    const out = await gitStore.uploadPackRpc(bare, maybeGunzip(raw, req.headers.get('content-encoding')), gitProtocol)
+    const out = await gitCore.uploadPack({ owner: handle, slug }, maybeGunzip(raw, req.headers.get('content-encoding')), gitProtocol)
+    if (!out) return new Response('Repository unavailable', { status: 500 })
     return new Response(new Uint8Array(out), { headers: { 'Content-Type': 'application/x-git-upload-pack-result', ...noCache } })
   }
 
   if (path === 'git-receive-pack') {
     const az = await authorizeWrite(req, meta)
     if (az !== 'ok') return unauthorized()
-    const bare = await gitStore.ensureRepo({ owner: handle, slug })
-    if (!bare) return new Response('Repository unavailable', { status: 500 })
     const raw = Buffer.from(await req.arrayBuffer())
     const body = maybeGunzip(raw, req.headers.get('content-encoding'))
-    // receive-pack + проекция под одним локом (чтобы ленивый append не вклинился).
-    const out = await gitStore.withRepoLock(meta.id, async () => {
-      const res = await gitStore.receivePackRpc(bare, body, gitProtocol)
-      const version = await gitStore.projectPushedCommit(meta.id, bare).catch(() => null)
-      if (version != null) {
-        const watchers = await getWatcherIds(meta.id)
-        await notifyMany(watchers, { type: 'new_version', templateId: meta.id }).catch(() => {})
-      }
-      return res
-    })
-    return new Response(new Uint8Array(out), { headers: { 'Content-Type': 'application/x-git-receive-pack-result', ...noCache } })
+    const res = await gitCore.receivePack({ owner: handle, slug }, body, gitProtocol)
+    if (!res) return new Response('Repository unavailable', { status: 500 })
+    // Уведомление наблюдателей — delivery-эффект, вне git-ядра.
+    if (res.newVersion != null) {
+      const watchers = await getWatcherIds(meta.id)
+      await notifyMany(watchers, { type: 'new_version', templateId: meta.id }).catch(() => {})
+    }
+    return new Response(new Uint8Array(res.data), { headers: { 'Content-Type': 'application/x-git-receive-pack-result', ...noCache } })
   }
 
   return new Response('Not found', { status: 404 })

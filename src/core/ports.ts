@@ -116,6 +116,19 @@ export interface GitProjection {
   projectPushedCommit(listId: Id, repo: RepoHandle): Promise<number | null>
 }
 
+// ── GitCore — высокоуровневый порт под ПРОВОД (Gitaly-стиль) ──────────
+// Совпадает с proto/git.proto: сервис резолвит/лочит/проецирует репо ВНУТРИ.
+// Реализации: inproc (поверх GitStore) сейчас; remote (Connect→Rust) в Фазе 2.
+// Возвращает null, если репо недоступно; auth — на стороне вызывающего (BFF-роут).
+export interface GitCore {
+  infoRefsUploadPack(repo: GitRepoRef, gitProtocol?: string): Promise<Uint8Array | null>
+  infoRefsReceivePack(repo: GitRepoRef, gitProtocol?: string): Promise<Uint8Array | null>
+  uploadPack(repo: GitRepoRef, body: Uint8Array, gitProtocol?: string): Promise<Uint8Array | null>
+  /** receive-pack + проекция в версию (атомарно под локом). newVersion — созданная версия. */
+  receivePack(repo: GitRepoRef, body: Uint8Array, gitProtocol?: string): Promise<{ data: Uint8Array; newVersion: number | null } | null>
+  bundle(repo: GitRepoRef): Promise<Uint8Array | null>
+}
+
 // ── AI (генерация/refine/эмбеддинги + учёт стоимости) ────────────────
 export interface AiUsageMeta {
   userId: Id
