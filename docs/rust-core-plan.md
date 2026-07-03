@@ -66,7 +66,9 @@
   DB-логика (openIssue/addIssueComment/setIssueStatus/createSuggestion/addSuggestionComment);
   issue-actions + submitSuggestion/addSuggestionComment ходят через порт (auth/notify/watch — в actions).
   setIssueLabels/setIssueStatus-labels — direct (niche).
-- [ ] **SearchIndex** (`getFeed`, semantic pgvector, reindex): обернуть `features/library/queries` + generation embeddings.
+- [x] **SearchIndex** (обслуживание индекса): `features/search/adapter.ts` = порт `reindex`/`purgeStale`
+  над `library/reindex.ts`; admin-purge через порт. Чтение ленты (`getFeed`) — read-проекция, НЕ порт.
+  (Опционально позже: авто-`reindex` в write-path после версии — сейчас индекс bulk-админкой.)
 - [ ] **AiPort** (generate/refine/embed + учёт стоимости): обернуть `shared/ai/*`.
 - [ ] **Notifier**: обернуть `features/notifications/notify` (частично уже чистый).
 - [ ] **CatalogStore** (новый порт): repositories CRUD + assign (сейчас `features/catalogs` напрямую).

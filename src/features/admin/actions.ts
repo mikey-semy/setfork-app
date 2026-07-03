@@ -99,8 +99,8 @@ export async function getReindexStatus() {
 export async function purgeEmbeddings(): Promise<{ ok: true; removed: number } | { error: string }> {
   if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
   try {
-    const { purgeStaleEmbeddings } = await import('@/features/library/reindex')
-    const { removed } = await purgeStaleEmbeddings()
+    const { searchIndex } = await import('@/features/search/adapter')
+    const { removed } = await searchIndex.purgeStale()
     return { ok: true, removed }
   } catch (e) {
     return { error: `Не удалось: ${e instanceof Error ? e.message : 'ошибка'}` }
