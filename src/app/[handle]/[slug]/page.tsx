@@ -12,7 +12,6 @@ import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 import { ExportMenu } from '@/features/library/ExportMenu'
-import { CloneBox } from '@/features/git/CloneBox'
 import { publishList } from '@/features/library/actions'
 
 function fmt(n: number): string {
@@ -171,9 +170,6 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
               </div>
               <div className="mb-3 border-b border-border pb-3">
                 <ExportMenu base={`/${owner}/${slug}`} lang={lang} />
-              </div>
-              <div className="mb-3 border-b border-border pb-3">
-                <CloneBox base={`/${owner}/${slug}`} slug={slug} lang={lang === 'ru' ? 'ru' : 'en'} />
               </div>
               {tr(tpl.desc, lang) && <p className="text-[13.5px] leading-relaxed text-ink-2">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (

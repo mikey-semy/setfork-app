@@ -66,9 +66,10 @@ async function writeFiles(dir: string, files: RepoFile[]): Promise<void> {
   }
 }
 
-/** Строит git-репозиторий из истории версий и возвращает bundle-файл (весь репо в одном файле).
- *  Клонируется стандартным `git clone <file>.bundle`. */
-export async function buildListBundle(ownerHandle: string, slug: string): Promise<Buffer | null> {
+const GIT_BASE = ['-c', 'user.name=SetHub', '-c', 'user.email=git@sethub.dev', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false']
+
+/** Общая загрузка версий списка. Возвращает null если списка нет. */
+async function loadListVersions(ownerHandle: string, slug: string): Promise<VersionData[] | null> {
   const [tpl] = await db
     .select({ id: templates.id, title: templates.title, desc: templates.desc, tags: templates.tags, ordered: templates.ordered })
     .from(templates)
@@ -76,18 +77,15 @@ export async function buildListBundle(ownerHandle: string, slug: string): Promis
     .where(and(eq(users.handle, ownerHandle), eq(templates.slug, slug)))
     .limit(1)
   if (!tpl) return null
-
-  const versions = await loadVersions(tpl.id, tpl.ordered, tpl.title as LocaleText, tpl.desc as LocaleText, tpl.tags)
-  return bundleFromVersions(versions)
+  return loadVersions(tpl.id, tpl.ordered, tpl.title as LocaleText, tpl.desc as LocaleText, tpl.tags)
 }
 
-const GIT_BASE = ['-c', 'user.name=SetHub', '-c', 'user.email=git@sethub.dev', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false']
-
-/** Материализует историю версий в git-репо и возвращает bundle-файл. Чистая (не трогает БД). */
-export async function bundleFromVersions(versions: VersionData[]): Promise<Buffer | null> {
-  if (versions.length === 0) return null
+/** Материализует историю версий в git-репозиторий (temp dir). Детерминированные SHA
+ *  (фикс. автор/даты) → одинаковы при каждой сборке, что нужно для stateless smart-HTTP.
+ *  ВОЗВРАЩАЕТ путь; чистит вызывающий (rm -rf). null при ошибке/пустой истории. */
+export async function buildRepoFromVersions(versions: VersionData[]): Promise<string | null> {
+  if (!versions || versions.length === 0) return null
   const work = await mkdtemp(join(tmpdir(), 'sethub-git-'))
-  const bundlePath = join(tmpdir(), `sethub-${randomUUID()}.bundle`)
   try {
     await exec('git', ['init', '-q', '-b', 'main', work])
     for (const v of versions) {
@@ -101,6 +99,34 @@ export async function bundleFromVersions(versions: VersionData[]): Promise<Buffe
       })
       await exec('git', [...GIT_BASE, '-C', work, 'tag', `v${v.version}`]).catch(() => {}) // тег на версию (как релиз)
     }
+    return work
+  } catch {
+    await rm(work, { recursive: true, force: true }).catch(() => {})
+    return null
+  }
+}
+
+/** Материализует репозиторий списка по owner/slug (для smart-HTTP). Вызывающий чистит dir. */
+export async function materializeRepoForList(ownerHandle: string, slug: string): Promise<string | null> {
+  const versions = await loadListVersions(ownerHandle, slug)
+  if (!versions) return null
+  return buildRepoFromVersions(versions)
+}
+
+/** Строит git-репозиторий из истории версий и возвращает bundle-файл (весь репо в одном файле).
+ *  Клонируется стандартным `git clone <file>.bundle`. */
+export async function buildListBundle(ownerHandle: string, slug: string): Promise<Buffer | null> {
+  const versions = await loadListVersions(ownerHandle, slug)
+  if (!versions) return null
+  return bundleFromVersions(versions)
+}
+
+/** Материализует историю версий в git-репо и возвращает bundle-файл. Чистая (не трогает БД). */
+export async function bundleFromVersions(versions: VersionData[]): Promise<Buffer | null> {
+  const work = await buildRepoFromVersions(versions)
+  if (!work) return null
+  const bundlePath = join(tmpdir(), `sethub-${randomUUID()}.bundle`)
+  try {
     await exec('git', [...GIT_BASE, '-C', work, 'bundle', 'create', bundlePath, '--all'])
     const { readFile } = await import('node:fs/promises')
     return await readFile(bundlePath)
