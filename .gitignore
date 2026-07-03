@@ -16,3 +16,6 @@ build/
 
 # Uploaded user content (avatars) — not committed
 /public/uploads/
+
+# SetHub git-as-source-of-truth persistent repos
+.sethub-git/

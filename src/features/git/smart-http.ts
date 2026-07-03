@@ -41,6 +41,17 @@ export async function uploadPackRpc(repoDir: string, body: Buffer, gitProtocol?:
   return runGit(['upload-pack', '--stateless-rpc', repoDir], body, gitProtocol)
 }
 
+/** GET /info/refs?service=git-receive-pack — реклама для push. */
+export async function receivePackAdvertise(repoDir: string, gitProtocol?: string): Promise<Buffer> {
+  const refs = await runGit(['receive-pack', '--stateless-rpc', '--advertise-refs', repoDir], undefined, gitProtocol)
+  return Buffer.concat([pktLine('# service=git-receive-pack\n'), Buffer.from('0000'), refs])
+}
+
+/** POST /git-receive-pack — приём пака (обновляет ref'ы в bare-репо). */
+export async function receivePackRpc(repoDir: string, body: Buffer, gitProtocol?: string): Promise<Buffer> {
+  return runGit(['receive-pack', '--stateless-rpc', repoDir], body, gitProtocol)
+}
+
 /** Распаковать тело, если Content-Encoding: gzip. */
 export function maybeGunzip(body: Buffer, contentEncoding: string | null): Buffer {
   return contentEncoding && contentEncoding.includes('gzip') ? gunzipSync(body) : body
