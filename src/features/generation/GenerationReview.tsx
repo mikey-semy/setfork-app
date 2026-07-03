@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { Check, Pencil, RotateCw, Sparkles } from 'lucide-react'
+import { Check, Loader2, Pencil, RotateCw, Sparkles } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import { GnomeLoader } from './GnomeLoader'
@@ -80,19 +80,15 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
       )}
 
       {pending ? (
-        <GnomeLoader
-          query={query}
-          lang={lang}
-          label={
-            mode === 'accept'
-              ? ru
-                ? 'Создаём черновик…'
-                : 'Creating your draft…'
-              : ru
-                ? 'Генерируем ещё вариант…'
-                : 'Generating another variant…'
-          }
-        />
+        mode === 'accept' ? (
+          // Принятие — это не генерация: без гнома и «Profit», просто аккуратный спиннер.
+          <div className="flex items-center gap-2.5 rounded-lg border border-border bg-surface px-5 py-6 text-[13.5px] text-ink-2">
+            <Loader2 size={16} className="animate-spin text-accent" />
+            {ru ? 'Создаём черновик…' : 'Creating your draft…'}
+          </div>
+        ) : (
+          <GnomeLoader query={query} lang={lang} label={ru ? 'Генерируем ещё вариант…' : 'Generating another variant…'} />
+        )
       ) : (
         cand && (
           <div className="rounded-lg border border-border bg-surface p-5">

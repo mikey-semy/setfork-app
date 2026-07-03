@@ -4,7 +4,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { hasOpenRouterKey } from '@/shared/settings/ai'
 import { t } from '@/shared/i18n'
-import { startGeneration } from '@/features/generation/actions'
+import { GenerateForm } from '@/features/generation/GenerateForm'
 
 export default async function GeneratePage({ searchParams }: { searchParams: Promise<{ e?: string; q?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
@@ -39,22 +39,7 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      <form action={startGeneration} className="flex flex-col gap-3">
-        <input
-          name="q"
-          required
-          autoFocus
-          defaultValue={sp.q ?? ''}
-          placeholder={ru ? 'напр. Настроить nginx reverse proxy с TLS' : 'e.g. Set up an nginx reverse proxy with TLS'}
-          className="w-full rounded-md border border-border bg-surface-2 px-3.5 py-3 text-[14px] text-ink outline-none focus:border-border-strong"
-        />
-        <button
-          disabled={!aiOn}
-          className="inline-flex w-fit items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg disabled:opacity-50"
-        >
-          <Sparkles size={15} /> {t('generateWithAi', lang)}
-        </button>
-      </form>
+      <GenerateForm lang={lang} aiOn={aiOn} defaultQuery={sp.q ?? ''} />
     </div>
   )
 }
