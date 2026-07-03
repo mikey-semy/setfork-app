@@ -3,8 +3,9 @@
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, issues, templates, users } from '@/shared/db'
+import { db, issueAssignees, issues, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { isCollaborator } from '@/features/collab/queries'
 import { notifyMany } from '@/features/notifications/notify'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
@@ -111,5 +112,31 @@ export async function setIssueLabels(owner: string, slug: string, number: number
   const { tpl, iss } = loaded
   if (session.userId !== tpl.ownerId) redirect(`/${owner}/${slug}/issues/${number}`)
   await db.update(issues).set({ labels: cleanLabels(labels), updatedAt: new Date() }).where(eq(issues.id, iss.id))
+  revalidatePath(`/${owner}/${slug}/issues/${number}`)
+}
+
+/** Назначить/снять исполнителя по handle (владелец или коллаборатор). */
+export async function toggleIssueAssignee(owner: string, slug: string, number: number, handle: string): Promise<void> {
+  const session = await requireSession()
+  const loaded = await loadIssue(owner, slug, number)
+  if (!loaded) redirect(`/${owner}/${slug}`)
+  const { tpl, iss } = loaded
+  const canAssign = session.userId === tpl.ownerId || (await isCollaborator(tpl.id, session.userId))
+  if (!canAssign) redirect(`/${owner}/${slug}/issues/${number}`)
+
+  const [u] = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
+  if (!u) return
+  const userId = u.id
+  const [existing] = await db
+    .select({ id: issueAssignees.id })
+    .from(issueAssignees)
+    .where(and(eq(issueAssignees.issueId, iss.id), eq(issueAssignees.userId, userId)))
+    .limit(1)
+  if (existing) {
+    await db.delete(issueAssignees).where(eq(issueAssignees.id, existing.id))
+  } else {
+    await db.insert(issueAssignees).values({ issueId: iss.id, userId })
+    // TODO: отдельный тип уведомления 'assigned' (enum+pref) — пока без нотификации.
+  }
   revalidatePath(`/${owner}/${slug}/issues/${number}`)
 }

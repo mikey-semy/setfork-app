@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, asc, desc, eq, sql } from 'drizzle-orm'
-import { db, issueComments, issues, users } from '@/shared/db'
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
+import { db, issueAssignees, issueComments, issues, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
 
 export type IssueFilter = 'open' | 'closed'
@@ -56,6 +56,41 @@ export async function getIssueLabelsInUse(templateId: string): Promise<string[]>
   const set = new Set<string>()
   for (const r of rows) for (const l of r.labels ?? []) set.add(l)
   return [...set].sort((a, b) => a.localeCompare(b))
+}
+
+export interface AssigneeRow {
+  userId: string
+  handle: string
+  avatarUrl: string | null
+}
+
+/** Исполнители одного issue. */
+export async function getIssueAssignees(issueId: string): Promise<AssigneeRow[]> {
+  const rows = await db
+    .select({ userId: users.id, handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(issueAssignees)
+    .innerJoin(users, eq(issueAssignees.userId, users.id))
+    .where(eq(issueAssignees.issueId, issueId))
+    .orderBy(asc(users.handle))
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
+/** Исполнители для набора issue (батч, чтобы не было N+1 на списке). */
+export async function getIssueAssigneesFor(issueIds: string[]): Promise<Record<string, AssigneeRow[]>> {
+  const out: Record<string, AssigneeRow[]> = {}
+  if (issueIds.length === 0) return out
+  const rows = await db
+    .select({ issueId: issueAssignees.issueId, userId: users.id, handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(issueAssignees)
+    .innerJoin(users, eq(issueAssignees.userId, users.id))
+    .where(inArray(issueAssignees.issueId, issueIds))
+    .orderBy(asc(users.handle))
+  const byId: Record<string, typeof rows> = {}
+  for (const r of rows) (byId[r.issueId] ??= []).push(r)
+  for (const [id, list] of Object.entries(byId)) {
+    out[id] = await Promise.all(list.map(async (r) => ({ userId: r.userId, handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 36) })))
+  }
+  return out
 }
 
 export async function getIssueCounts(templateId: string): Promise<{ open: number; closed: number }> {

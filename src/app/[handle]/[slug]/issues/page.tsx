@@ -7,7 +7,7 @@ import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { getListMeta } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
-import { getIssueCounts, getIssueLabelsInUse, getIssues, type IssueFilter, type IssueSort } from '@/features/issues/queries'
+import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, type IssueFilter, type IssueSort } from '@/features/issues/queries'
 import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
 import { FilterMenu } from '@/features/issues/FilterMenu'
 
@@ -34,6 +34,7 @@ export default async function IssuesPage({
     getIssues(meta.id, { status, q, label, sort }),
     getIssueLabelsInUse(meta.id),
   ])
+  const assigneesByIssue = await getIssueAssigneesFor(list.map((i) => i.id))
   const base = `/${owner}/${slug}/issues`
   const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short' })
 
@@ -127,6 +128,15 @@ export default async function IssuesPage({
                     #{it.number} · {t('openedThis', lang)} {it.authorHandle} · {fmt.format(new Date(it.createdAt))}
                   </div>
                 </div>
+                {(assigneesByIssue[it.id] ?? []).length > 0 && (
+                  <div className="mt-0.5 flex -space-x-1.5">
+                    {(assigneesByIssue[it.id] ?? []).slice(0, 3).map((a) => (
+                      <span key={a.handle} title={a.handle} className="ring-2 ring-surface">
+                        <Avatar handle={a.handle} avatarUrl={a.avatarUrl} size={18} />
+                      </span>
+                    ))}
+                  </div>
+                )}
                 {it.commentCount > 0 && (
                   <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] text-muted">
                     <MessageSquare size={13} /> {it.commentCount}

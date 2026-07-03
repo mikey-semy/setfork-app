@@ -9,9 +9,11 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
-import { getIssue, getIssueComments } from '@/features/issues/queries'
+import { getIssue, getIssueAssignees, getIssueComments } from '@/features/issues/queries'
 import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
+import { AssigneePicker } from '@/features/issues/AssigneePicker'
 import { addIssueComment, setIssueStatus } from '@/features/issues/actions'
+import { isCollaborator } from '@/features/collab/queries'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
 
@@ -29,12 +31,14 @@ export default async function IssueThreadPage({
   if (!issue) notFound()
   const comments = await getIssueComments(issue.id)
   const path = `/${owner}/${slug}/issues/${issue.number}`
-  const [issueR, cmtR] = await Promise.all([
+  const [issueR, cmtR, assignees] = await Promise.all([
     getReactionsFor('issue', [issue.id], session?.userId),
     getReactionsFor('issue_comment', comments.map((c) => c.id), session?.userId),
+    getIssueAssignees(issue.id),
   ])
 
   const isOwner = session?.userId === meta.ownerId
+  const canManage = isOwner || (session ? await isCollaborator(meta.id, session.userId) : false)
   const isAuthor = session?.userId === issue.authorId
   const canToggle = isOwner || isAuthor
   const closed = issue.status === 'closed'
@@ -72,6 +76,11 @@ export default async function IssueThreadPage({
           <div className="flex flex-wrap gap-1.5">
             <IssueLabelChips labels={issue.labels} lang={lang} />
           </div>
+        </div>
+
+        {/* Исполнители */}
+        <div className="mb-4 rounded-lg border border-border bg-surface-2 px-4 py-3">
+          <AssigneePicker owner={owner} slug={slug} number={issue.number} assignees={assignees} canEdit={canManage} lang={lang} />
         </div>
 
         {/* Тело issue */}

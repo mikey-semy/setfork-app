@@ -341,6 +341,21 @@ export const issues = pgTable(
   ],
 )
 
+// Исполнители issue (много на issue, как в GitHub).
+export const issueAssignees = pgTable(
+  'issue_assignees',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    issueId: uuid('issue_id')
+      .notNull()
+      .references(() => issues.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+  },
+  (t) => [unique('issue_assignees_uq').on(t.issueId, t.userId), index('issue_assignees_issue_idx').on(t.issueId)],
+)
+
 export const issueComments = pgTable(
   'issue_comments',
   {

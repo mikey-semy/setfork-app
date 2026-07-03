@@ -1,0 +1,111 @@
+'use client'
+import { useState, useTransition } from 'react'
+import { Check, UserPlus, X } from 'lucide-react'
+import { Avatar } from '@/shared/ui/Avatar'
+import { toggleIssueAssignee } from './actions'
+
+type Person = { handle: string; avatarUrl: string | null }
+
+// Исполнители issue: текущий список + поповер-поиск (для владельца/коллаборатора).
+export function AssigneePicker({
+  owner,
+  slug,
+  number,
+  assignees,
+  canEdit,
+  lang = 'en',
+}: {
+  owner: string
+  slug: string
+  number: number
+  assignees: Person[]
+  canEdit: boolean
+  lang?: string
+}) {
+  const [pending, start] = useTransition()
+  const [open, setOpen] = useState(false)
+  const [found, setFound] = useState<Person[]>([])
+  const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
+  const has = new Set(assignees.map((a) => a.handle))
+  const toggle = (handle: string) => start(() => void toggleIssueAssignee(owner, slug, number, handle))
+
+  async function search(v: string) {
+    if (!v.trim()) return setFound([])
+    try {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(v.trim())}`)
+      setFound((await res.json()) as Person[])
+    } catch {
+      setFound([])
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[12px] font-semibold uppercase tracking-[0.04em] text-muted">{L('Исполнители', 'Assignees')}</span>
+        {canEdit && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-label={L('назначить', 'assign')}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-ink"
+            >
+              <UserPlus size={14} />
+            </button>
+            {open && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+                <div className="absolute right-0 z-20 mt-1 w-60 overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+                  <input
+                    autoFocus
+                    onChange={(e) => search(e.target.value)}
+                    placeholder={L('поиск по handle…', 'search by handle…')}
+                    className="w-full border-b border-border bg-surface-2 px-3 py-2 text-[13px] text-ink outline-none"
+                  />
+                  <div className="max-h-56 overflow-y-auto">
+                    {found.length === 0 ? (
+                      <div className="px-3 py-2 text-[12.5px] text-muted">{L('начните вводить handle', 'start typing a handle')}</div>
+                    ) : (
+                      found.map((u) => (
+                        <button
+                          key={u.handle}
+                          type="button"
+                          disabled={pending}
+                          onClick={() => toggle(u.handle)}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2"
+                        >
+                          <Avatar handle={u.handle} avatarUrl={u.avatarUrl} size={20} />
+                          <span className="flex-1 truncate">{u.handle}</span>
+                          {has.has(u.handle) && <Check size={14} className="text-accent" />}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {assignees.length === 0 ? (
+        <span className="text-[13px] text-muted">{L('никого', 'no one')}</span>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {assignees.map((a) => (
+            <span key={a.handle} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 py-0.5 pl-0.5 pr-2 text-[12.5px]">
+              <Avatar handle={a.handle} avatarUrl={a.avatarUrl} size={20} />
+              <span className="text-ink">{a.handle}</span>
+              {canEdit && (
+                <button type="button" disabled={pending} onClick={() => toggle(a.handle)} aria-label={L('снять', 'unassign')} className="text-muted hover:text-danger">
+                  <X size={13} />
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
