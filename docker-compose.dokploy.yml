@@ -1,0 +1,69 @@
+# Полный деплой SetFork в Dokploy: Postgres + git-ядро (Rust) + миграции + фронт (Next).
+# Всё в общей сети dokploy-network. Медиа (S3/imgproxy) — внешние (Selectel), задаётся через .env.
+#
+# core собирается из соседнего чекаута ../setfork-core — при деплое оба репо должны быть рядом
+# (моно-чекаут). Иначе деплойте core отдельно его же setfork-core/docker-compose.dokploy.yml,
+# уберите здесь сервис `core` и оставьте SETFORK_CORE_ADDR=setfork-core:50051.
+#
+# Traefik-роутинг на `app` (домен, порт 3000) настраивается ярлыками Dokploy в UI — тут портов нет.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sethub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-sethub}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-sethub} -d ${POSTGRES_DB:-sethub}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [dokploy-network]
+
+  core:
+    build: { context: ../setfork-core, target: runtime }
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sethub}
+      SETFORK_CORE_ADDR: 0.0.0.0:50051
+      GIT_DATA_DIR: /data/git
+    volumes:
+      - setfork_git:/data/git # ОБЩИЙ том git-объектов (git = источник правды)
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [dokploy-network]
+
+  migrate:
+    build: { context: ., target: migrate }
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sethub}
+    depends_on:
+      db: { condition: service_healthy }
+    restart: 'no'
+    networks: [dokploy-network]
+
+  app:
+    build: { context: ., target: runner }
+    container_name: setfork-frontend
+    restart: always
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sethub}
+      SETFORK_CORE_URL: '1' # включить remote-режим git-ядра
+      SETFORK_CORE_ADDR: core:50051
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+      core: { condition: service_started }
+    networks: [dokploy-network]
+
+volumes:
+  pgdata:
+  setfork_git:
+
+networks:
+  dokploy-network:
+    external: true

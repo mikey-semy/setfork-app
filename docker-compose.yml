@@ -69,6 +69,48 @@ services:
     ports:
       - '${IMGPROXY_PORT:-8081}:8080'
 
+  # ── Полный стек в контейнерах (обычный `docker compose up --build`). ──
+  # Для чистого dev по-прежнему проще `npm run dev` + `db:up` (эти сервисы не мешают).
+  # git-ядро (Rust) собирается из соседнего чекаута ../setfork-core.
+  core:
+    build: { context: ../setfork-core, target: runtime }
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD:-sethub}@db:5432/${POSTGRES_DB:-sethub}
+      SETFORK_CORE_ADDR: 0.0.0.0:50051
+      GIT_DATA_DIR: /data/git
+    ports:
+      - '${CORE_PORT:-50051}:50051'
+    volumes:
+      - gitdata:/data/git
+    depends_on:
+      db: { condition: service_healthy }
+
+  migrate:
+    build: { context: ., target: migrate }
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD:-sethub}@db:5432/${POSTGRES_DB:-sethub}
+    depends_on:
+      db: { condition: service_healthy }
+    restart: 'no'
+
+  app:
+    build: { context: ., target: runner }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD:-sethub}@db:5432/${POSTGRES_DB:-sethub}
+      SETFORK_CORE_URL: '1' # remote-режим: фронт зовёт Rust-ядро
+      SETFORK_CORE_ADDR: core:50051
+      S3_ENDPOINT: http://minio:9000 # в контейнере медиа-хосты — по именам сервисов
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+      core: { condition: service_started }
+
 volumes:
   pgdata:
   miniodata:
+  gitdata:
