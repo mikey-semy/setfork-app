@@ -66,7 +66,7 @@ export default async function SuggestionThreadPage({
               <span className="font-semibold text-ink">{sug.author.handle}</span>
             </div>
             <div className="px-4 py-3">
-              <Markdown>{sug.note}</Markdown>
+              <Markdown refBase={`/${owner}/${slug}/issues`}>{sug.note}</Markdown>
             </div>
           </div>
         )}
@@ -107,7 +107,7 @@ export default async function SuggestionThreadPage({
                   <span className="font-semibold text-ink">{c.authorHandle}</span> · {fmt.format(new Date(c.createdAt))}
                 </div>
                 <div className="px-4 py-3">
-                  <Markdown>{c.body}</Markdown>
+                  <Markdown refBase={`/${owner}/${slug}/issues`}>{c.body}</Markdown>
                   <div className="mt-2">
                     <Reactions targetType="suggestion_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />
                   </div>
@@ -121,7 +121,7 @@ export default async function SuggestionThreadPage({
           <div className="mt-4 rounded-lg border border-border bg-surface p-4">
             <form action={addSuggestionComment} className="flex flex-col gap-3">
               <input type="hidden" name="suggestionId" value={sug.id} />
-              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} />
+              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} />
               <div className="flex justify-end">
                 <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
                   {t('commentBtn', lang)}

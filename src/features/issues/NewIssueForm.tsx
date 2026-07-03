@@ -43,7 +43,7 @@ export function NewIssueForm({ owner, slug, lang }: { owner: string; slug: strin
         </div>
       </div>
 
-      <MarkdownEditor name="body" rows={8} placeholder={t('issueBodyPh', lang)} maxLength={20000} lang={lang} />
+      <MarkdownEditor name="body" rows={8} placeholder={t('issueBodyPh', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} />
 
       <div>
         <div className="mb-1.5 text-[12px] font-semibold text-ink-2">{t('labelsLabel', lang)}</div>

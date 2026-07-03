@@ -17,14 +17,17 @@ type Props = {
   autoFocus?: boolean
   lang?: string
   className?: string
+  /** Репо для #-reference (кросс-ссылки на issue): включает `#`-автодополнение. */
+  refScope?: { owner: string; slug: string }
 }
 
 type MentionUser = { handle: string; avatarUrl: string | null }
+type IssueHit = { number: number; title: string; status: string }
 const btn = 'inline-flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-surface hover:text-ink'
 
 // Богатый markdown-редактор: тулбар (группы+разделители), Write/Preview, эмодзи, @mention,
 // картинки+вложения, Tab-отступ, undo/redo + горячие клавиши. Управляемая <textarea name>.
-export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6, maxLength, autoFocus, lang = 'en', className }: Props) {
+export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6, maxLength, autoFocus, lang = 'en', className, refScope }: Props) {
   const [val, setVal] = useState(defaultValue)
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [emojiOpen, setEmojiOpen] = useState(false)
@@ -32,11 +35,15 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
   const [users, setUsers] = useState<MentionUser[]>([])
   const [mIdx, setMIdx] = useState(0)
+  const [iref, setIref] = useState<{ start: number; query: string } | null>(null)
+  const [issueHits, setIssueHits] = useState<IssueHit[]>([])
+  const [iIdx, setIIdx] = useState(0)
 
   const ref = useRef<HTMLTextAreaElement>(null)
   const imgInput = useRef<HTMLInputElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const searchSeq = useRef(0)
+  const irefSeq = useRef(0)
   const valRef = useRef(defaultValue) // «живое» значение (без задержки setState) для расчётов
   const hist = useRef({ stack: [defaultValue], idx: 0, at: 0, typing: false }) // история undo/redo
   const { resolvedTheme } = useTheme()
@@ -168,6 +175,37 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
       /* игнор */
     }
   }
+  // ── #-reference (issue) ──
+  function detectIssueRef(value: string, caret: number) {
+    if (!refScope) return null
+    const m = /(?:^|\s)#(\d{0,10})$/.exec(value.slice(0, caret))
+    if (!m) return null
+    return { start: caret - m[1].length - 1, query: m[1] }
+  }
+  async function runIssueSearch(query: string) {
+    if (!refScope) return
+    const seq = ++irefSeq.current
+    try {
+      const res = await fetch(`/api/issues/search?owner=${encodeURIComponent(refScope.owner)}&slug=${encodeURIComponent(refScope.slug)}&q=${encodeURIComponent(query)}`)
+      const data = (await res.json()) as IssueHit[]
+      if (seq === irefSeq.current) {
+        setIssueHits(Array.isArray(data) ? data : [])
+        setIIdx(0)
+      }
+    } catch {
+      /* игнор */
+    }
+  }
+  function pickIssueRef(hit: IssueHit) {
+    if (!iref) return
+    const end = iref.start + 1 + iref.query.length
+    const ins = `#${hit.number} `
+    const caret = iref.start + ins.length
+    apply(valRef.current.slice(0, iref.start) + ins + valRef.current.slice(end), [caret, caret])
+    setIref(null)
+    setIssueHits([])
+  }
+
   function onChange(value: string) {
     valRef.current = value
     setVal(value)
@@ -177,6 +215,10 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
     setMention(m)
     if (m) void runMentionSearch(m.query)
     else setUsers([])
+    const r = detectIssueRef(value, caret)
+    setIref(r)
+    if (r) void runIssueSearch(r.query)
+    else setIssueHits([])
   }
   function pickMention(u: MentionUser) {
     if (!mention) return
@@ -208,6 +250,29 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
       if (e.key === 'Escape') {
         setMention(null)
         setUsers([])
+        return
+      }
+    }
+    // 1b) навигация по #-reference
+    if (iref && issueHits.length) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setIIdx((i) => (i + 1) % issueHits.length)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setIIdx((i) => (i - 1 + issueHits.length) % issueHits.length)
+        return
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        pickIssueRef(issueHits[iIdx])
+        return
+      }
+      if (e.key === 'Escape') {
+        setIref(null)
+        setIssueHits([])
         return
       }
     }
@@ -352,7 +417,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
           value={val}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
-          onBlur={() => setTimeout(() => setMention(null), 150)}
+          onBlur={() => setTimeout(() => { setMention(null); setIref(null) }, 150)}
           placeholder={placeholder}
           rows={rows}
           maxLength={maxLength}
@@ -390,6 +455,27 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="h-5 w-5 rounded-full" /> : <span className="h-5 w-5 rounded-full bg-surface-2" />}
                 <span className="font-medium">@{u.handle}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* #-reference автодополнение */}
+        {iref && issueHits.length > 0 && (
+          <div className="absolute bottom-2 left-2 z-20 w-72 overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+            {issueHits.map((h, i) => (
+              <button
+                key={h.number}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  pickIssueRef(h)
+                }}
+                onMouseEnter={() => setIIdx(i)}
+                className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[13px] ${i === iIdx ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
+              >
+                <span className={`font-mono ${h.status === 'closed' ? 'text-accent' : 'text-ok'}`}>#{h.number}</span>
+                <span className="min-w-0 flex-1 truncate">{h.title}</span>
               </button>
             ))}
           </div>

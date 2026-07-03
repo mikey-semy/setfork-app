@@ -99,7 +99,7 @@ export default async function IssueThreadPage({
         <div className="overflow-hidden rounded-lg border border-border bg-surface">
           <Header handle={issue.authorHandle} avatarUrl={issue.authorAvatarUrl} date={issue.createdAt} verb={t('openedThis', lang)} />
           <div className="px-4 py-3">
-            {issue.body ? <Markdown>{issue.body}</Markdown> : <p className="text-[13px] italic text-muted">—</p>}
+            {issue.body ? <Markdown refBase={`/${owner}/${slug}/issues`}>{issue.body}</Markdown> : <p className="text-[13px] italic text-muted">—</p>}
             <div className="mt-2">
               <Reactions targetType="issue" targetId={issue.id} reactions={issueR[issue.id] ?? []} canReact={!!session} path={path} lang={lang} />
             </div>
@@ -112,7 +112,7 @@ export default async function IssueThreadPage({
             <div key={c.id} className="overflow-hidden rounded-lg border border-border bg-surface">
               <Header handle={c.authorHandle} avatarUrl={c.authorAvatarUrl} date={c.createdAt} verb={t('commentedOn', lang)} />
               <div className="px-4 py-3">
-                <Markdown>{c.body}</Markdown>
+                <Markdown refBase={`/${owner}/${slug}/issues`}>{c.body}</Markdown>
                 <div className="mt-2">
                   <Reactions targetType="issue_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />
                 </div>
@@ -132,7 +132,7 @@ export default async function IssueThreadPage({
               <input type="hidden" name="owner" value={owner} />
               <input type="hidden" name="slug" value={slug} />
               <input type="hidden" name="number" value={issue.number} />
-              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} />
+              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} />
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {canToggle && (
                   <button

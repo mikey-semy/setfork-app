@@ -1,15 +1,17 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/shared/lib/cn'
+import { remarkIssueRefs } from './remark-issue-refs'
 
 // Безопасный рендер markdown (react-markdown не пропускает сырой HTML) + GFM
-// (таск-листы, таблицы, strikethrough, автоссылки) + картинки.
-export function Markdown({ children, className }: { children: string; className?: string }) {
+// (таск-листы, таблицы, strikethrough, автоссылки) + картинки. refBase — префикс
+// для кросс-ссылок `#N` на issue (напр. /owner/slug/issues); задаётся в issue/suggestion.
+export function Markdown({ children, className, refBase }: { children: string; className?: string; refBase?: string }) {
   if (!children?.trim()) return null
   return (
     <div className={cn('text-[13px] leading-snug text-ink-2 [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={refBase ? [remarkGfm, remarkIssueRefs(refBase)] : [remarkGfm]}
         components={{
           a: (p) => <a {...p} target="_blank" rel="noreferrer" className="text-accent hover:underline" />,
           code: (p) => <code {...p} className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[0.9em] text-ink" />,
