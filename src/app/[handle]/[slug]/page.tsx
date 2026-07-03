@@ -1,15 +1,17 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitFork, Info, Rocket, Sparkles, Star, Tag } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, Info, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
+import { Avatar } from '@/shared/ui/Avatar'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
-import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
+import { timeAgo } from '@/shared/ui/timeAgo'
+import { getContributors, getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 import { ExportMenu } from '@/features/library/ExportMenu'
 import { publishList } from '@/features/library/actions'
@@ -36,6 +38,13 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
   const stepImages: Record<string, string> = Object.fromEntries(
     steps.filter((s) => s.imageKey && previews[s.imageKey]).map((s) => [s.id, previews[s.imageKey as string]]),
   )
+  const contributors = await getContributors(tpl.id, tpl.ownerId)
+  const base = `/${owner}/${slug}`
+  const latestNote = currentVersion?.note
+  const latestMessage =
+    latestNote && !['initial', 'edit', 'seeded', 'ai draft'].includes(latestNote)
+      ? latestNote
+      : `v${currentVersion?.version ?? tpl.currentVersion}`
 
   return (
     <>
@@ -74,6 +83,21 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
             {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
               <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3 text-[13px] text-accent print:hidden">
                 <Sparkles size={15} className="flex-shrink-0" /> {t('aiVerifyHint', lang)}
+              </div>
+            )}
+
+            {/* Строка «последнего коммита» — как на GitHub над списком файлов */}
+            {currentVersion && (
+              <div className="mb-3 flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
+                <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
+                <Link href={`/${tpl.owner.handle}`} className="font-semibold text-ink hover:text-accent">
+                  {tpl.owner.handle}
+                </Link>
+                <span className="min-w-0 flex-1 truncate text-ink-2">{latestMessage}</span>
+                <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 text-muted hover:text-accent">
+                  <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
+                </Link>
+                <span className="shrink-0 text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
               </div>
             )}
 
@@ -192,12 +216,10 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                 <span className="inline-flex items-center gap-2">
                   <GitFork size={14} /> <b className="text-ink">{fmt(tpl.forksCount)}</b> forks
                 </span>
-                <Link
-                  href={`/${owner}/${slug}/versions`}
-                  className="inline-flex items-center gap-2 hover:text-accent"
-                >
-                  <Tag size={14} /> {t('versionsTab', lang)}:{' '}
+                <Link href={`${base}/versions`} className="inline-flex items-center gap-2 hover:text-accent">
+                  <Tag size={14} /> {t('releasesLabel', lang)}:{' '}
                   <b className="text-ink">v{currentVersion?.version ?? tpl.currentVersion}</b>
+                  <span className="rounded-full bg-ok/15 px-1.5 py-0.5 text-[10px] font-semibold text-ok">{t('latest', lang)}</span>
                 </Link>
                 <span>
                   {t('maintainedBy', lang)}{' '}
@@ -206,6 +228,21 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                   </Link>
                 </span>
               </div>
+
+              {contributors.length > 0 && (
+                <div className="mt-4 border-t border-border pt-3">
+                  <div className="mb-2 flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
+                    <Users size={12} /> {t('contributors', lang)} <span className="text-ink-2">{contributors.length}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {contributors.slice(0, 14).map((c) => (
+                      <Link key={c.handle} href={`/${c.handle}`} title={c.handle} className="hover:opacity-80">
+                        <Avatar handle={c.handle} avatarUrl={c.avatarUrl} size={28} />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </aside>
         </div>

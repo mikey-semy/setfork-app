@@ -297,6 +297,37 @@ export async function getSuggestionComments(suggestionId: string) {
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
 }
 
+export interface Contributor {
+  handle: string
+  avatarUrl: string | null
+  accepted: number // сколько правок принято (0 = только автор/предлагал)
+}
+
+/** Контрибьюторы списка: владелец + авторы предложений (принятые впереди). */
+export async function getContributors(templateId: string, ownerId: string): Promise<Contributor[]> {
+  const rows = await db
+    .select({
+      handle: users.handle,
+      avatarUrl: users.avatarUrl,
+      authorId: suggestions.authorId,
+      accepted: sql<number>`count(*) filter (where ${suggestions.status} = 'accepted')::int`,
+    })
+    .from(suggestions)
+    .innerJoin(users, eq(suggestions.authorId, users.id))
+    .where(eq(suggestions.templateId, templateId))
+    .groupBy(users.handle, users.avatarUrl, suggestions.authorId)
+
+  const [owner] = await db.select({ handle: users.handle, avatarUrl: users.avatarUrl }).from(users).where(eq(users.id, ownerId)).limit(1)
+  const list: Contributor[] = []
+  if (owner) list.push({ handle: owner.handle, avatarUrl: owner.avatarUrl, accepted: Infinity })
+  for (const r of rows) {
+    if (r.authorId === ownerId) continue
+    list.push({ handle: r.handle, avatarUrl: r.avatarUrl, accepted: r.accepted })
+  }
+  list.sort((a, b) => b.accepted - a.accepted)
+  return Promise.all(list.map(async (c) => ({ ...c, avatarUrl: await avatarSrc(c.avatarUrl, 48), accepted: Number.isFinite(c.accepted) ? c.accepted : 0 })))
+}
+
 /** Число открытых предложений. */
 export async function getOpenSuggestionCount(templateId: string): Promise<number> {
   const [r] = await db
