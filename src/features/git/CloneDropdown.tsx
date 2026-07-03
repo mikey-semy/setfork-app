@@ -79,7 +79,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
           {heading(<Sparkles size={12} />, t('mcpHeading', lang))}
           {copyField('mcp', mcpUrl)}
           <p className="mt-1 text-[11px] text-ink-2">{t('mcpHint', lang)}</p>
-          <Link href="/settings" className="mt-1 inline-block text-[12px] text-accent hover:underline">
+          <Link href="/settings#mcp" className="mt-1 inline-block text-[12px] text-accent hover:underline">
             {t('getTokenLink', lang)}
           </Link>
         </div>

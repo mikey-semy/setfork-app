@@ -22,22 +22,23 @@ type Props = {
 type MentionUser = { handle: string; avatarUrl: string | null }
 const btn = 'inline-flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-surface hover:text-ink'
 
-// Богатый markdown-редактор: тулбар с группами, Write/Preview, эмодзи, @mention,
-// картинки + вложения, Tab-отступ. Управляемая <textarea name> — сабмитится в <form action>.
+// Богатый markdown-редактор: тулбар (группы+разделители), Write/Preview, эмодзи, @mention,
+// картинки+вложения, Tab-отступ, undo/redo + горячие клавиши. Управляемая <textarea name>.
 export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6, maxLength, autoFocus, lang = 'en', className }: Props) {
   const [val, setVal] = useState(defaultValue)
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [emojiOpen, setEmojiOpen] = useState(false)
   const [busy, setBusy] = useState(0)
-  // @mention
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
   const [users, setUsers] = useState<MentionUser[]>([])
   const [mIdx, setMIdx] = useState(0)
-  const searchSeq = useRef(0)
 
   const ref = useRef<HTMLTextAreaElement>(null)
   const imgInput = useRef<HTMLInputElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const searchSeq = useRef(0)
+  const valRef = useRef(defaultValue) // «живое» значение (без задержки setState) для расчётов
+  const hist = useRef({ stack: [defaultValue], idx: 0, at: 0, typing: false }) // история undo/redo
   const { resolvedTheme } = useTheme()
   const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
 
@@ -50,35 +51,80 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
       }
     })
 
+  // Записать состояние в историю. coalesce=true — печать сливается в один шаг за окно 500мс.
+  function record(next: string, coalesce: boolean) {
+    const h = hist.current
+    if (h.idx < h.stack.length - 1) h.stack = h.stack.slice(0, h.idx + 1)
+    const now = performance.now()
+    if (coalesce && h.typing && now - h.at < 500) {
+      h.stack[h.idx] = next
+    } else {
+      h.stack.push(next)
+      if (h.stack.length > 300) h.stack.shift()
+      h.idx = h.stack.length - 1
+    }
+    h.at = now
+    h.typing = coalesce
+  }
+
+  // Программное изменение (тулбар/эмодзи/вставка): в состояние + историю (+ каретка).
+  function apply(next: string, sel?: [number, number]) {
+    valRef.current = next
+    setVal(next)
+    record(next, false)
+    if (sel) restore(sel[0], sel[1])
+  }
+
+  function undo() {
+    const h = hist.current
+    if (h.idx <= 0) return
+    h.idx--
+    const v = h.stack[h.idx]
+    valRef.current = v
+    setVal(v)
+    h.typing = false
+    restore(v.length, v.length)
+  }
+  function redo() {
+    const h = hist.current
+    if (h.idx >= h.stack.length - 1) return
+    h.idx++
+    const v = h.stack[h.idx]
+    valRef.current = v
+    setVal(v)
+    h.typing = false
+    restore(v.length, v.length)
+  }
+
   function surround(before: string, after = before, ph = '') {
     const el = ref.current
     if (!el) return
+    const cur = valRef.current
     const s = el.selectionStart
     const e = el.selectionEnd
-    const sel = val.slice(s, e) || ph
-    setVal(val.slice(0, s) + before + sel + after + val.slice(e))
-    restore(s + before.length, s + before.length + sel.length)
+    const sel = cur.slice(s, e) || ph
+    apply(cur.slice(0, s) + before + sel + after + cur.slice(e), [s + before.length, s + before.length + sel.length])
   }
 
   function linePrefix(make: (i: number) => string) {
     const el = ref.current
     if (!el) return
+    const cur = valRef.current
     const s = el.selectionStart
     const e = el.selectionEnd
-    const start = val.lastIndexOf('\n', s - 1) + 1
-    const block = val.slice(start, e)
+    const start = cur.lastIndexOf('\n', s - 1) + 1
+    const block = cur.slice(start, e)
     const replaced = block.split('\n').map((l, i) => make(i) + l).join('\n')
-    setVal(val.slice(0, start) + replaced + val.slice(e))
-    restore(start, start + replaced.length)
+    apply(cur.slice(0, start) + replaced + cur.slice(e), [start, start + replaced.length])
   }
 
   function insertAt(text: string) {
     const el = ref.current
     if (!el) return
+    const cur = valRef.current
     const s = el.selectionStart
     const e = el.selectionEnd
-    setVal(val.slice(0, s) + text + val.slice(e))
-    restore(s + text.length, s + text.length)
+    apply(cur.slice(0, s) + text + cur.slice(e), [s + text.length, s + text.length])
   }
 
   async function uploadFiles(files: File[]) {
@@ -93,28 +139,23 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
         const res = await fetch('/api/upload', { method: 'POST', body: fd })
         const data = (await res.json().catch(() => ({}))) as { url?: string; kind?: string; name?: string; error?: string }
         const md = res.ok && data.url ? (data.kind === 'image' ? `![${data.name ?? file.name}](${data.url})` : `[📎 ${data.name ?? file.name}](${data.url})`) : `*(${data.error ?? L('загрузка не удалась', 'upload failed')})*`
-        setVal((v) => v.replace(token, md))
+        apply(valRef.current.replace(token, md))
       } catch {
-        setVal((v) => v.replace(token, `*(${L('загрузка не удалась', 'upload failed')})*`))
+        apply(valRef.current.replace(token, `*(${L('загрузка не удалась', 'upload failed')})*`))
       } finally {
         setBusy((b) => b - 1)
       }
     }
   }
 
-  // ── @mention ──────────────────────────────────────────────
+  // ── @mention ──
   function detectMention(value: string, caret: number) {
-    const upto = value.slice(0, caret)
-    const m = /(?:^|\s)@([\w-]{0,30})$/.exec(upto)
+    const m = /(?:^|\s)@([\w-]{0,30})$/.exec(value.slice(0, caret))
     if (!m) return null
     return { start: caret - m[1].length - 1, query: m[1] }
   }
-
   async function runMentionSearch(query: string) {
-    if (!query) {
-      setUsers([])
-      return
-    }
+    if (!query) return setUsers([])
     const seq = ++searchSeq.current
     try {
       const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
@@ -127,29 +168,27 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
       /* игнор */
     }
   }
-
   function onChange(value: string) {
+    valRef.current = value
     setVal(value)
-    const el = ref.current
-    const caret = el?.selectionStart ?? value.length
+    record(value, true)
+    const caret = ref.current?.selectionStart ?? value.length
     const m = detectMention(value, caret)
     setMention(m)
     if (m) void runMentionSearch(m.query)
     else setUsers([])
   }
-
   function pickMention(u: MentionUser) {
     if (!mention) return
     const end = mention.start + 1 + mention.query.length
-    const next = val.slice(0, mention.start) + `@${u.handle} ` + val.slice(end)
-    setVal(next)
+    const caret = mention.start + u.handle.length + 2
+    apply(valRef.current.slice(0, mention.start) + `@${u.handle} ` + valRef.current.slice(end), [caret, caret])
     setMention(null)
     setUsers([])
-    restore(mention.start + u.handle.length + 2, mention.start + u.handle.length + 2)
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Меню @mention перехватывает навигацию
+    // 1) навигация по @mention
     if (mention && users.length) {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
@@ -172,23 +211,52 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
         return
       }
     }
-    // Tab-отступ (2 пробела); Shift+Tab — снять
+    // 2) горячие клавиши
+    const mod = e.metaKey || e.ctrlKey
+    if (mod) {
+      const k = e.key.toLowerCase()
+      if (k === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+        return
+      }
+      if (k === 'y' || (k === 'z' && e.shiftKey)) {
+        e.preventDefault()
+        redo()
+        return
+      }
+      if (k === 'b') {
+        e.preventDefault()
+        surround('**', '**', L('текст', 'text'))
+        return
+      }
+      if (k === 'i') {
+        e.preventDefault()
+        surround('_', '_', L('текст', 'text'))
+        return
+      }
+      if (k === 'k') {
+        e.preventDefault()
+        surround('[', '](url)', L('текст', 'text'))
+        return
+      }
+    }
+    // 3) Tab-отступ / снятие
     if (e.key === 'Tab') {
       e.preventDefault()
       const el = e.currentTarget
+      const cur = valRef.current
       const s = el.selectionStart
       const en = el.selectionEnd
-      const lineStart = val.lastIndexOf('\n', s - 1) + 1
+      const lineStart = cur.lastIndexOf('\n', s - 1) + 1
       if (e.shiftKey) {
-        const block = val.slice(lineStart, en)
+        const block = cur.slice(lineStart, en)
         const dedented = block.replace(/^ {1,2}/gm, '')
-        setVal(val.slice(0, lineStart) + dedented + val.slice(en))
-        restore(Math.max(lineStart, s - 2), en - (block.length - dedented.length))
+        apply(cur.slice(0, lineStart) + dedented + cur.slice(en), [Math.max(lineStart, s - 2), en - (block.length - dedented.length)])
       } else if (s !== en) {
-        const block = val.slice(lineStart, en)
+        const block = cur.slice(lineStart, en)
         const indented = block.replace(/^/gm, '  ')
-        setVal(val.slice(0, lineStart) + indented + val.slice(en))
-        restore(s + 2, en + (indented.length - block.length))
+        apply(cur.slice(0, lineStart) + indented + cur.slice(en), [s + 2, en + (indented.length - block.length)])
       } else {
         insertAt('  ')
       }
@@ -198,14 +266,14 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   const groups: { icon: typeof Bold; t: string; run: () => void }[][] = [
     [
       { icon: Heading, t: L('заголовок', 'heading'), run: () => linePrefix(() => '### ') },
-      { icon: Bold, t: L('жирный', 'bold'), run: () => surround('**', '**', L('текст', 'text')) },
-      { icon: Italic, t: L('курсив', 'italic'), run: () => surround('_', '_', L('текст', 'text')) },
+      { icon: Bold, t: `${L('жирный', 'bold')} (Ctrl+B)`, run: () => surround('**', '**', L('текст', 'text')) },
+      { icon: Italic, t: `${L('курсив', 'italic')} (Ctrl+I)`, run: () => surround('_', '_', L('текст', 'text')) },
       { icon: Strikethrough, t: L('зачёркнутый', 'strikethrough'), run: () => surround('~~', '~~', L('текст', 'text')) },
     ],
     [
       { icon: Quote, t: L('цитата', 'quote'), run: () => linePrefix(() => '> ') },
       { icon: Code, t: L('код', 'code'), run: () => surround('`', '`', 'code') },
-      { icon: Link2, t: L('ссылка', 'link'), run: () => surround('[', '](url)', L('текст', 'text')) },
+      { icon: Link2, t: `${L('ссылка', 'link')} (Ctrl+K)`, run: () => surround('[', '](url)', L('текст', 'text')) },
     ],
     [
       { icon: List, t: L('список', 'bulleted list'), run: () => linePrefix(() => '- ') },
@@ -216,7 +284,6 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
 
   return (
     <div className={`overflow-hidden rounded-md border border-border bg-surface ${className ?? ''}`}>
-      {/* Табы + тулбар */}
       <div className="flex flex-wrap items-center gap-1 border-b border-border bg-surface-2 px-1.5 py-1">
         <div className="mr-1 flex overflow-hidden rounded border border-border">
           {(['write', 'preview'] as const).map((k) => (
@@ -238,8 +305,6 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
                 ))}
               </div>
             ))}
-
-            {/* Группа вставки: картинка, вложение, mention, эмодзи */}
             <span className="mx-1 h-4 w-px bg-border" />
             <button type="button" title={L('картинка', 'image')} aria-label={L('картинка', 'image')} onClick={() => imgInput.current?.click()} className={btn}>
               <ImageIcon size={15} />
@@ -247,16 +312,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
             <button type="button" title={L('файл', 'attach file')} aria-label={L('файл', 'attach file')} onClick={() => fileInput.current?.click()} className={btn}>
               <Paperclip size={15} />
             </button>
-            <button
-              type="button"
-              title={L('упомянуть', 'mention')}
-              aria-label={L('упомянуть', 'mention')}
-              onClick={() => {
-                insertAt('@')
-                setTab('write')
-              }}
-              className={btn}
-            >
+            <button type="button" title={L('упомянуть', 'mention')} aria-label={L('упомянуть', 'mention')} onClick={() => insertAt('@')} className={btn}>
               <AtSign size={15} />
             </button>
             <span className="relative inline-flex">
@@ -273,8 +329,8 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
                       theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
                       previewPosition="none"
                       skinTonePosition="none"
-                      onEmojiSelect={(e: { native?: string }) => {
-                        if (e.native) insertAt(e.native)
+                      onEmojiSelect={(ev: { native?: string }) => {
+                        if (ev.native) insertAt(ev.native)
                         setEmojiOpen(false)
                       }}
                     />
@@ -289,7 +345,6 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
       <input ref={imgInput} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) uploadFiles(Array.from(e.target.files)); e.target.value = '' }} />
       <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files) uploadFiles(Array.from(e.target.files)); e.target.value = '' }} />
 
-      {/* Тело */}
       <div className={`relative ${tab === 'preview' ? 'hidden' : ''}`}>
         <textarea
           ref={ref}
@@ -303,10 +358,10 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
           maxLength={maxLength}
           autoFocus={autoFocus}
           onPaste={(e) => {
-            const imgs = Array.from(e.clipboardData.files)
-            if (imgs.length) {
+            const files = Array.from(e.clipboardData.files)
+            if (files.length) {
               e.preventDefault()
-              uploadFiles(imgs)
+              uploadFiles(files)
             }
           }}
           onDrop={(e) => {
@@ -319,7 +374,6 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
           className="w-full resize-y bg-surface px-3 py-2.5 text-[14px] text-ink outline-none placeholder:text-muted"
         />
 
-        {/* @mention автодополнение */}
         {mention && users.length > 0 && (
           <div className="absolute bottom-2 left-2 z-20 w-64 overflow-hidden rounded-md border border-border bg-surface shadow-lg">
             {users.map((u, i) => (
