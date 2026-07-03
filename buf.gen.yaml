@@ -1,0 +1,12 @@
+# Кодоген Connect-ES (Protobuf-ES v2). Сервисы генерит protoc-gen-es@2 —
+# отдельный connect-плагин в v2 не нужен (клиент строится из *_pb.ts).
+# moduleResolution=bundler → import_extension=none (без .js в импортах).
+version: v2
+inputs:
+  - directory: proto
+plugins:
+  - local: protoc-gen-es
+    out: src/features/git/gen
+    opt:
+      - target=ts
+      - import_extension=none
