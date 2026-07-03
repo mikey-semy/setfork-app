@@ -106,6 +106,7 @@ const DICT = {
   exportMd: { en: 'Markdown (.md)', ru: 'Markdown (.md)' },
   exportHtml: { en: 'HTML (.html)', ru: 'HTML (.html)' },
   releasesLabel: { en: 'Releases', ru: 'Релизы' },
+  noReleases: { en: 'No releases yet.', ru: 'Пока нет релизов.' },
   latest: { en: 'Latest', ru: 'Последняя' },
   contributors: { en: 'Contributors', ru: 'Контрибьюторы' },
   collaboratorsHeading: { en: 'Collaborators', ru: 'Соавторы' },

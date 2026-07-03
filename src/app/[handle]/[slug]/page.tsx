@@ -212,7 +212,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                 <span className="inline-flex items-center gap-2">
                   <GitFork size={14} /> <b className="text-ink">{fmt(tpl.forksCount)}</b> forks
                 </span>
-                <Link href={`${base}/versions`} className="inline-flex items-center gap-2 hover:text-accent">
+                <Link href={`${base}/releases`} className="inline-flex items-center gap-2 hover:text-accent">
                   <Tag size={14} /> {t('releasesLabel', lang)}:{' '}
                   <b className="text-ink">v{currentVersion?.version ?? tpl.currentVersion}</b>
                   <span className="rounded-full bg-ok/15 px-1.5 py-0.5 text-[10px] font-semibold text-ok">{t('latest', lang)}</span>
