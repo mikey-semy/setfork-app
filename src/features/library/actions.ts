@@ -23,6 +23,7 @@ import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { notify, notifyMany } from '@/features/notifications/notify'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
+import { isCollaborator } from '@/features/collab/queries'
 import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { parseTags, slugify } from './slug'
@@ -154,7 +155,8 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   const session = await requireSession()
   const lang = await getLang()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
-  if (!tpl || tpl.ownerId !== session.userId) return
+  if (!tpl) return
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
 
   const note = String(formData.get('note') ?? '').trim()
   const tags = parseTags(formData.get('tags'))

@@ -5,6 +5,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
+import { canWriteList } from '@/features/collab/queries'
 import { saveNewVersion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
@@ -21,7 +22,7 @@ export default async function EditPage({
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, steps } = detail
-  if (tpl.ownerId !== session.userId) redirect(`/${owner}/${slug}`)
+  if (!(await canWriteList(tpl.id, tpl.ownerId, session.userId))) redirect(`/${owner}/${slug}`)
 
   const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
   const action = saveNewVersion.bind(null, tpl.id)
