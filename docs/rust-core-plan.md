@@ -111,7 +111,12 @@ Postgres** (self-check: 11 списков, резолв `demo/redis-…`→uuid+
 
 - [x] Rust-проект-скелет (tonic GitCore из proto) — собирается + запускается.
 - [x] **sqlx** подключение к той же Postgres + `resolve_list(owner,slug)`→(id,version) + self-check.
-- [ ] загрузка истории версий (versions+steps) в Rust (для материализации репо).
+- [x] Загрузка истории версий (`db::load_bundle_data`: versions+steps, jsonb LocaleText→'en').
+- [x] Материализация репо (шелл git, детерм. даты/идентичность) + **`CreateBundle` RPC** + CLI.
+  Проверено: bundle demo/redis-… клонируется (3 коммита, теги v1-v3, list.json). `src/bundle.rs`.
+- [ ] **Golden-exact match с TS** (порядок ключей list.json, README/steps байт-в-байт, steps/*.md)
+  → одинаковые SHA. Сейчас функционально ок, но не байт-идентично TS.
+- [ ] Остальные RPC: `InfoRefsUploadPack` → `UploadPack` (clone/pull) → `ReceivePack` (push+проекция).
 - [ ] Материализация репо (сначала шелл `git`, как TS; детерминированные SHA) → RPC по одному:
   `CreateBundle` → `InfoRefs*` → `UploadPack` → `ReceivePack`(+проекция). Потом gix/git2 вместо шелла.
 - [ ] TS Connect-ES клиент из `proto/git.proto` → `gitCoreRemote` (`features/git/core.ts`) →
