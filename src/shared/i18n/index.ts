@@ -95,7 +95,7 @@ const DICT = {
   noCommentsYet: { en: 'No comments yet.', ru: 'Пока нет комментариев.' },
   watch: { en: 'Watch', ru: 'Следить' },
   unwatch: { en: 'Unwatch', ru: 'Не следить' },
-  codeLabel: { en: 'Code', ru: 'Код' },
+  cloneMenuLabel: { en: 'List', ru: 'Список' },
   cloneHeading: { en: 'Clone', ru: 'Клонировать' },
   cloneHttpsHint: { en: 'Clone with git or open in VS Code.', ru: 'Клонируйте через git или откройте в VS Code.' },
   cloneAuthHint: { en: 'Private lists: use an API token as the password.', ru: 'Приватные списки: используйте API-токен как пароль.' },

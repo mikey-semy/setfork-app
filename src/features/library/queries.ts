@@ -255,16 +255,26 @@ export async function getActivity(
 
 /** Предложения правок для списка (с авторами). */
 export async function getSuggestions(templateId: string) {
-  const rows = await db.query.suggestions.findMany({
-    where: (s) => eq(s.templateId, templateId),
-    with: { author: true, comments: { columns: { id: true } } },
-    orderBy: (s, { asc, desc: d }) => [asc(s.status), d(s.createdAt)],
-  })
+  const rows = await db
+    .select({
+      id: suggestions.id,
+      status: suggestions.status,
+      note: suggestions.note,
+      baseVersion: suggestions.baseVersion,
+      items: suggestions.items,
+      createdAt: suggestions.createdAt,
+      authorHandle: users.handle,
+      authorAvatarUrl: users.avatarUrl,
+      commentCount: sql<number>`(select count(*)::int from ${suggestionComments} sc where sc.suggestion_id = ${suggestions.id})`,
+    })
+    .from(suggestions)
+    .innerJoin(users, eq(suggestions.authorId, users.id))
+    .where(eq(suggestions.templateId, templateId))
+    .orderBy(asc(suggestions.status), desc(suggestions.createdAt))
   return Promise.all(
     rows.map(async (r) => ({
       ...r,
-      commentCount: r.comments.length,
-      author: { ...r.author, avatarUrl: await avatarSrc(r.author.avatarUrl, 64) },
+      author: { handle: r.authorHandle, avatarUrl: await avatarSrc(r.authorAvatarUrl, 64) },
     })),
   )
 }
