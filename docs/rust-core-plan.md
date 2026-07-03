@@ -97,8 +97,9 @@ CurationStore/CollabStore/SearchIndex/CatalogStore/Notifier/AiPort). Следу�
   InfoRefs*/UploadPack/ReceivePack/CreateBundle). Сервис резолвит/лочит/проецирует внутри.
 - [x] In-process реализация `features/git/core.inproc.ts` (поверх `GitStore`); роут `[...git]` и
   `repo.bundle` зависят только от порта `GitCore`. e2e: clone/pull/push/bundle ✅.
-- [x] **Feature-flag** `features/git/core.ts`: `SETFORK_CORE_URL` → inproc/remote (remote = заглушка до Ф2).
-- [ ] (Ф2) Сгенерировать TS-клиент Connect-ES из `proto/git.proto` и реализовать `gitCoreRemote`.
+- [x] **Feature-flag** `features/git/core.ts`: `SETFORK_CORE_URL` → inproc/remote (адрес `SETFORK_CORE_ADDR`).
+- [x] **TS-клиент Connect-ES** из `proto/git.proto` (`buf.gen.yaml` + `gen/git_pb.ts`, protobuf-es v2) +
+  `gitCoreRemote` (`core.remote.ts`, gRPC h2c). `tsc` зелёный. **e2e clone через Rust core сверен ✅.**
 - [ ] Контракты доменных портов (ListStore/Curation/Collab/…) в proto — ПОСЛЕ git-ядра.
 
 ## Фаза 2 — Rust git-ядро (git-first)
@@ -118,8 +119,15 @@ Postgres** (self-check: 11 списков, резолв `demo/redis-…`→uuid+
   `serde_json preserve_order`, `floor(epoch)` (git усекает дробные сек). **Проверено:** bundle
   demo/redis-… — рабочее дерево И commit-SHA идентичны TS (485ed58/052ada9/93618ff), и сам
   bundle-файл **байт-в-байт** (`cmp` ✅). → drop-in для TS smart-HTTP.
-- [ ] Остальные RPC: `InfoRefsUploadPack` → `UploadPack` (clone/pull) → `ReceivePack` (push+проекция).
-- [ ] Потом gix/git2 вместо шелла; TS Connect-ES клиент → `gitCoreRemote` → флип `SETFORK_CORE_URL`.
+- [x] **READ RPC: `InfoRefsUploadPack` + `UploadPack` (clone/pull) — РАБОТАЮТ e2e.**
+  `smart_http.rs` (порт smart-http.ts: pkt-line, `git upload-pack --stateless-rpc`, `GIT_PROTOCOL`),
+  `bundle::materialize_repo` вынесен для переиспользования, `with_materialized` (материализация→op→cleanup).
+  **Проверено:** advertise-байты идентичны TS (550==550, `cmp`); полный `git clone` через Rust
+  (Connect-ES клиент → gRPC) даёт SHA 485ed58/052ada9/93618ff + теги v1..v3, все файлы. `InfoRefsReceivePack`
+  (advertise для push) тоже реализован.
+- [ ] **NEXT: `ReceivePack`** (write-path) — приём пака + проекция `list.json` → новая версия в Postgres
+  (пишущий путь из Rust; `receive_pack_rpc` уже в smart_http.rs, нужна проекция+персист).
+- [ ] Потом gix/git2 вместо шелла; флип `SETFORK_CORE_URL` в dev → полный катовер git на Rust.
 - [ ] Материализация репо (сначала шелл `git`, как TS; детерминированные SHA) → RPC по одному:
   `CreateBundle` → `InfoRefs*` → `UploadPack` → `ReceivePack`(+проекция). Потом gix/git2 вместо шелла.
 - [ ] TS Connect-ES клиент из `proto/git.proto` → `gitCoreRemote` (`features/git/core.ts`) →
