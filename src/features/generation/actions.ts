@@ -3,22 +3,14 @@
 import { eq, sql } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import {
-  db,
-  generationCandidates,
-  generations,
-  steps,
-  templateVersions,
-  templates,
-  users,
-  type CandidateItem,
-} from '@/shared/db'
+import { db, generationCandidates, generations, users, type CandidateItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import type { Lang } from '@/shared/i18n'
 import { generateListDraft } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { toProposedItems } from '@/features/library/editor'
+import { listStore } from '@/features/library/list-store.adapter'
 import { parseTags, uniqueSlug } from '@/features/library/slug'
 
 async function ownerHandle(userId: string): Promise<string> {
@@ -139,39 +131,31 @@ export async function acceptCandidate(generationId: string, candidateId: string)
     genLang,
   )
 
-  const [tpl] = await db
-    .insert(templates)
-    .values({
-      ownerId: session.userId,
-      slug,
-      title: { [genLang]: cand.title || gen.query },
-      desc: cand.desc ? { [genLang]: cand.desc } : {},
-      tags: cand.tags,
-      currentVersion: 1,
-      origin: 'ai_draft',
-      status: 'draft', // черновик: не публичен, пока владелец не опубликует
-    })
-    .returning()
-  const [ver] = await db
-    .insert(templateVersions)
-    .values({ templateId: tpl.id, version: 1, note: 'ai draft' })
-    .returning()
-  if (proposed.length) {
-    await db.insert(steps).values(
-      proposed.map((it, i) => ({
-        versionId: ver.id,
-        n: i + 1,
-        title: it.title,
-        desc: it.desc,
-        command: it.command,
-        hasImage: it.hasImage,
-        imageKey: it.imageKey ?? null,
-        subtasks: it.subtasks,
-        refs: it.refs,
-      })),
-    )
-  }
-  await db.update(generations).set({ chosenTemplateId: tpl.id }).where(eq(generations.id, gen.id))
+  const list = await listStore.create({
+    ownerId: session.userId,
+    slug,
+    title: { [genLang]: cand.title || gen.query },
+    desc: cand.desc ? { [genLang]: cand.desc } : {},
+    tags: cand.tags,
+    ordered: true,
+    visibility: 'public',
+    status: 'draft', // черновик: не публичен, пока владелец не опубликует
+    origin: 'ai_draft',
+    note: 'ai draft',
+    steps: proposed.map((it, i) => ({
+      n: i + 1,
+      title: it.title,
+      desc: it.desc,
+      command: it.command,
+      level: it.level,
+      why: it.why,
+      section: it.section,
+      subtasks: it.subtasks,
+      refs: it.refs,
+      imageRef: it.imageKey ?? null,
+    })),
+  })
+  await db.update(generations).set({ chosenTemplateId: list.id }).where(eq(generations.id, gen.id))
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
 }
