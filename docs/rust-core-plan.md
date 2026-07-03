@@ -45,13 +45,14 @@
 
 **Писатели на `ListStore` (сейчас часть в обход порта):**
 - [x] `saveNewVersion` → `listStore.addVersion`
-- [ ] `acceptSuggestion` (library/actions) → addVersion
-- [ ] `forkTemplate` (создание форка + первая версия) → `listStore.create` + addVersion
-- [ ] `createTemplate` (/new) → `listStore.create`
+- [x] `acceptSuggestion` (library/actions) → addVersion
+- [x] `forkTemplate` (создание форка + первая версия) → `listStore.create`
+- [x] `createTemplate` (/new) → `listStore.create`
+- [x] расширить `ListStore`: `create(input)` (+ `toStepInput` хелпер; `insertSteps` удалён)
 - [ ] `generation accept` (features/generation/actions) → create/addVersion
 - [ ] MCP `create_list`/`update_list` (features/mcp/tools) → порт
 - [ ] git `projectPushedCommit` → addVersion (сейчас пишет напрямую)
-- [ ] расширить `ListStore`: `create(input)`, `updateMeta` (title/desc/tags/ordered/visibility/pinned)
+- [ ] `updateMeta` в `ListStore` (title/desc/tags/ordered/visibility/pinned) — по потребности
 
 **Остальные порты — адаптеры + развести потребителей:**
 - [ ] **CurationStore** (stars/watch/follow/counts): обернуть `features/library` (toggleStar/isStarred),

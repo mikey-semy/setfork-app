@@ -93,6 +93,45 @@ export const listStore: ListStore = {
     return { version: toVersion(v), steps: rows.map(toStep) }
   },
 
+  async create(input) {
+    const [row] = await db
+      .insert(templates)
+      .values({
+        ownerId: input.ownerId,
+        slug: input.slug,
+        title: input.title,
+        desc: input.desc,
+        tags: input.tags,
+        ordered: input.ordered,
+        visibility: input.visibility,
+        status: input.status,
+        origin: input.origin,
+        forkedFromId: input.forkedFromId ?? null,
+        currentVersion: 1,
+      })
+      .returning()
+    const [ver] = await db.insert(templateVersions).values({ templateId: row.id, version: 1, note: input.note }).returning()
+    if (input.steps.length) {
+      await db.insert(stepsTable).values(
+        input.steps.map((s, i) => ({
+          versionId: ver.id,
+          n: i + 1,
+          title: s.title,
+          desc: s.desc,
+          command: s.command,
+          hasImage: !!s.imageRef,
+          imageKey: s.imageRef ?? null,
+          level: s.level,
+          why: s.why,
+          section: s.section,
+          subtasks: s.subtasks,
+          refs: s.refs,
+        })),
+      )
+    }
+    return toList(row)
+  },
+
   async addVersion(listId, input) {
     const [tpl] = await db.select({ currentVersion: templates.currentVersion }).from(templates).where(eq(templates.id, listId)).limit(1)
     if (!tpl) throw new Error('addVersion: list not found')
