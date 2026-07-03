@@ -59,8 +59,9 @@
 (кроме нишевого MCP-draft-in-place). Проверено: push→addVersion e2e (v2 с сохранением level).
 
 **Остальные порты — адаптеры + развести потребителей:**
-- [ ] **CurationStore** (stars/watch/follow/counts): обернуть `features/library` (toggleStar/isStarred),
-  `features/watch`, `features/follows`; развести потребителей.
+- [x] **CurationStore** (stars/watch): `features/curation/adapter.ts` = каноническая DB-логика;
+  `toggleStar`/`toggleWatch`/`ensureWatch` мутации через порт; `watch/queries` + `library.isStarred`
+  = тонкие обёртки над портом (потребители не менялись). Follow — отдельно позже.
 - [ ] **CollabStore** (issues/suggestions/comments): обернуть `features/issues`, suggestion-actions.
 - [ ] **SearchIndex** (`getFeed`, semantic pgvector, reindex): обернуть `features/library/queries` + generation embeddings.
 - [ ] **AiPort** (generate/refine/embed + учёт стоимости): обернуть `shared/ai/*`.
