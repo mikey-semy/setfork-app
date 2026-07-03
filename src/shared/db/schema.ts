@@ -1,4 +1,4 @@
-// Схема БД SetHub (MVP чек-листов).
+// Схема БД SetFork (MVP чек-листов).
 //
 // Ядро ценности: шаблон (template) — это упорядоченная последовательность шагов,
 // у него есть версии; прогон (run) — исполняемый экземпляр шаблона, привязанный
@@ -456,7 +456,7 @@ export const apiTokens = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     tokenHash: text('token_hash').notNull().unique(),
-    prefix: text('prefix').notNull(), // для отображения, напр. shub_ab12cd…
+    prefix: text('prefix').notNull(), // для отображения, напр. sf_ab12cd…
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

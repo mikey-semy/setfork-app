@@ -1,4 +1,4 @@
-// Доменные сущности SetHub — чистые типы (ubiquitous language).
+// Доменные сущности SetFork — чистые типы (ubiquitous language).
 // НИЧЕГО не импортируем из features/shared/app/Drizzle/Next — это ядро,
 // которое пост-MVP переносится на Rust как есть (см. docs/architecture.md).
 

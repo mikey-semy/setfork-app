@@ -92,7 +92,7 @@ async function runListModel(
   const web = opts.web ?? false
   const openrouter = createOpenRouter({
     apiKey,
-    appName: 'SetHub',
+    appName: 'SetFork',
     appUrl: process.env.APP_URL || 'http://localhost:3000',
   })
   const base = await pickChatModel(settings)
@@ -159,7 +159,7 @@ export async function generateChangeNote(
 
   const openrouter = createOpenRouter({
     apiKey,
-    appName: 'SetHub',
+    appName: 'SetFork',
     appUrl: process.env.APP_URL || 'http://localhost:3000',
   })
   const model = await pickChatModel(settings)

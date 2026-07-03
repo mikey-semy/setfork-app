@@ -1,4 +1,4 @@
-// i18n SetHub. English-first (как GitHub), сейчас доступен русский.
+// i18n SetFork. English-first (как GitHub), сейчас доступен русский.
 // Контент (шаблоны/шаги/темы) хранится как locale-JSON (LocaleText), поэтому
 // добавить язык = только данные, без миграций схемы. UI-строки — в DICT ниже.
 
@@ -164,8 +164,8 @@ const DICT = {
   },
   aiUsageTitle: { en: 'AI usage', ru: 'Расход ИИ' },
   aiUsageIntro: {
-    en: 'Your AI generation and refinement consumption on SetHub.',
-    ru: 'Ваш расход на AI-генерацию и правки на SetHub.',
+    en: 'Your AI generation and refinement consumption on SetFork.',
+    ru: 'Ваш расход на AI-генерацию и правки на SetFork.',
   },
   aiUsageCalls: { en: 'Calls', ru: 'Вызовы' },
   aiUsageTokens: { en: 'Tokens', ru: 'Токены' },
@@ -317,7 +317,7 @@ const DICT = {
   emailField: { en: 'Email', ru: 'Почта' },
   passwordField: { en: 'Password', ru: 'Пароль' },
   handleField: { en: 'Handle', ru: 'Ник' },
-  handleHint: { en: 'Your URL: sethub/handle', ru: 'Ваш адрес: sethub/ник' },
+  handleHint: { en: 'Your URL: setfork/handle', ru: 'Ваш адрес: setfork/ник' },
   createAccount: { en: 'Create account', ru: 'Создать аккаунт' },
   registerTitle: { en: 'Create your account', ru: 'Создайте аккаунт' },
   haveAccount: { en: 'Already have an account?', ru: 'Уже есть аккаунт?' },

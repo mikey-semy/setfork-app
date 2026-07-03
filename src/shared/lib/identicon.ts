@@ -1,4 +1,4 @@
-// Детерминированный identicon 5×5 (порт из макета SetHub.dc.html).
+// Детерминированный identicon 5×5 (порт из макета SetFork.dc.html).
 // Возвращает массив из 25 булевых ячеек (зеркальных по вертикали).
 export function identiconCells(seed: string): boolean[] {
   let h = 0

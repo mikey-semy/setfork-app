@@ -53,7 +53,7 @@ export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }
         </div>
         <div>
           <label className={lbl}>Bucket</label>
-          <input name="s3Bucket" defaultValue={v.s3Bucket} placeholder="sethub" className={`${field} font-mono`} />
+          <input name="s3Bucket" defaultValue={v.s3Bucket} placeholder="setfork" className={`${field} font-mono`} />
         </div>
         <div>
           <label className={lbl}>{ru ? 'Префикс пути' : 'Path prefix'}</label>

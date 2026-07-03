@@ -58,7 +58,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         )}
 
         <Link href="/" className="mt-6 inline-block text-[12.5px] text-ink-2 hover:text-ink">
-          ← SetHub
+          ← SetFork
         </Link>
       </div>
     </div>

@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Design tokens (SetHub) ────────────────────────────────────────────
-   Значения взяты напрямую из макетов SetHub.dc.html / RunStep.dc.html.
+/* ── Design tokens (SetFork) ────────────────────────────────────────────
+   Значения взяты напрямую из макетов SetFork.dc.html / RunStep.dc.html.
    Light — палитра экранов Search/Explore и карточки 2A.
    Dark  — палитра карточки 2B / dark RunStep. */
 :root {

@@ -13,7 +13,7 @@ const handler = createMcpHandler(
       'search_lists',
       {
         title: 'Search checklists',
-        description: 'Search public SetHub checklists (and your own private ones) by keywords/meaning. Returns list refs "owner/slug".',
+        description: 'Search public SetFork checklists (and your own private ones) by keywords/meaning. Returns list refs "owner/slug".',
         inputSchema: {
           query: z.string().describe('Search terms — topic, tool or task'),
           limit: z.number().int().min(1).max(50).optional().describe('Max results (default 10)'),
@@ -97,11 +97,11 @@ const handler = createMcpHandler(
       },
     )
   },
-  { serverInfo: { name: 'sethub', version: '0.1.0' }, capabilities: { tools: {} } },
+  { serverInfo: { name: 'setfork', version: '0.1.0' }, capabilities: { tools: {} } },
   { basePath: '/api' }, // → эндпоинт /api/mcp (Streamable HTTP), /api/sse (legacy)
 )
 
-// Bearer-токен SetHub → пользователь.
+// Bearer-токен SetFork → пользователь.
 const verifyToken = async (_req: Request, bearer?: string): Promise<AuthInfo | undefined> => {
   const userId = await verifyApiToken(bearer)
   if (!userId) return undefined

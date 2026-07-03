@@ -32,7 +32,7 @@ export default async function HomePage() {
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
         <div className="flex w-full max-w-[640px] flex-col items-center gap-6 text-center">
-          <div className="text-[64px] font-bold leading-none tracking-tight text-ink">SH</div>
+          <div className="text-[64px] font-bold leading-none tracking-tight text-ink">SF</div>
           <div className="-mt-2 text-[15px] text-ink-2">{t('heroSub', lang)}</div>
 
           <HeroSearch placeholder={t('searchPh', lang)} clearLabel={t('clear', lang)} />

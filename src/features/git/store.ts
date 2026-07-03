@@ -14,8 +14,8 @@ const exec = promisify(execFile)
 
 // Персистентные bare-репозитории — источник правды для git-объектов.
 // Прод: смонтировать том и задать GIT_DATA_DIR.
-const ROOT = process.env.GIT_DATA_DIR || join(process.cwd(), '.sethub-git')
-const IDENT = ['-c', 'user.name=SetHub', '-c', 'user.email=git@sethub.dev', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false']
+const ROOT = process.env.GIT_DATA_DIR || join(process.cwd(), '.setfork-git')
+const IDENT = ['-c', 'user.name=SetFork', '-c', 'user.email=git@setfork.com', '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false']
 
 const repoPath = (templateId: string) => join(ROOT, `${templateId}.git`)
 
@@ -52,11 +52,11 @@ async function writeFiles(dir: string, files: RepoFile[]): Promise<void> {
 }
 
 const PRE_RECEIVE = `#!/bin/sh
-# SetHub: каждый пушнутый коммит обязан содержать list.json в корне.
+# SetFork: каждый пушнутый коммит обязан содержать list.json в корне.
 while read old new ref; do
   case "$new" in *0000000000000000000000000000000000000000) continue ;; esac
   if ! git cat-file -e "$new:list.json" 2>/dev/null; then
-    echo "SetHub: list.json is required at the repo root" >&2
+    echo "SetFork: list.json is required at the repo root" >&2
     exit 1
   fi
 done
@@ -98,7 +98,7 @@ async function maxTagVersion(bare: string): Promise<number> {
  *  сохраняя ранее запушенные коммиты. */
 async function appendVersions(bare: string, files: { version: number; note: string; createdAt: Date; files: RepoFile[] }[]): Promise<void> {
   if (files.length === 0) return
-  const wt = await mkdtemp(join(tmpdir(), 'sethub-wt-'))
+  const wt = await mkdtemp(join(tmpdir(), 'setfork-wt-'))
   try {
     await exec('git', ['-C', bare, 'worktree', 'add', '--quiet', '--detach', wt, 'main'])
     for (const v of files) {
@@ -164,7 +164,7 @@ export function withRepoLock<T>(templateId: string, fn: () => Promise<T>): Promi
 export async function bundleRepo(owner: string, slug: string): Promise<Buffer | null> {
   const bare = await ensureRepo(owner, slug)
   if (!bare) return null
-  const out = join(tmpdir(), `sethub-${randomUUID()}.bundle`)
+  const out = join(tmpdir(), `setfork-${randomUUID()}.bundle`)
   try {
     await exec('git', ['-C', bare, 'bundle', 'create', out, '--all'])
     const { readFile } = await import('node:fs/promises')
