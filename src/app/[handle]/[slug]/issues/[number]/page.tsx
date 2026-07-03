@@ -6,6 +6,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
+import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getIssue, getIssueComments } from '@/features/issues/queries'
@@ -13,8 +14,6 @@ import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
 import { addIssueComment, setIssueStatus } from '@/features/issues/actions'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
-
-const textareaCls = 'w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
 
 export default async function IssueThreadPage({
   params,
@@ -81,7 +80,7 @@ export default async function IssueThreadPage({
           <div className="px-4 py-3">
             {issue.body ? <Markdown>{issue.body}</Markdown> : <p className="text-[13px] italic text-muted">—</p>}
             <div className="mt-2">
-              <Reactions targetType="issue" targetId={issue.id} reactions={issueR[issue.id] ?? []} canReact={!!session} path={path} />
+              <Reactions targetType="issue" targetId={issue.id} reactions={issueR[issue.id] ?? []} canReact={!!session} path={path} lang={lang} />
             </div>
           </div>
         </div>
@@ -94,7 +93,7 @@ export default async function IssueThreadPage({
               <div className="px-4 py-3">
                 <Markdown>{c.body}</Markdown>
                 <div className="mt-2">
-                  <Reactions targetType="issue_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} />
+                  <Reactions targetType="issue_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />
                 </div>
               </div>
             </div>
@@ -112,7 +111,7 @@ export default async function IssueThreadPage({
               <input type="hidden" name="owner" value={owner} />
               <input type="hidden" name="slug" value={slug} />
               <input type="hidden" name="number" value={issue.number} />
-              <textarea name="body" rows={4} className={textareaCls} placeholder={t('writeComment', lang)} maxLength={20000} />
+              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} />
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {canToggle && (
                   <button

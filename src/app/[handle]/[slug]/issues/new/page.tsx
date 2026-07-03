@@ -5,6 +5,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { getListMeta } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
+import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { createIssue } from '@/features/issues/actions'
 import { LabelPicker } from '@/features/issues/LabelPicker'
 
@@ -40,7 +41,7 @@ export default async function NewIssuePage({
           <input type="hidden" name="owner" value={owner} />
           <input type="hidden" name="slug" value={slug} />
           <input name="title" className={inputCls} placeholder={t('issueTitlePh', lang)} autoFocus maxLength={200} />
-          <textarea name="body" rows={8} className={`${inputCls} resize-y font-normal`} placeholder={t('issueBodyPh', lang)} maxLength={20000} />
+          <MarkdownEditor name="body" rows={8} placeholder={t('issueBodyPh', lang)} maxLength={20000} lang={lang} />
           <div>
             <div className="mb-1.5 text-[12px] font-semibold text-ink-2">{t('labelsLabel', lang)}</div>
             <LabelPicker lang={lang} />

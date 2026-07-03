@@ -6,6 +6,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
+import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta, getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
 import { acceptSuggestion, addSuggestionComment, rejectSuggestion } from '@/features/library/actions'
 import { ListHeader } from '@/features/library/ListHeader'
@@ -14,8 +15,6 @@ import { diffSteps } from '@/features/library/suggestion-diff'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
 import type { ProposedItem } from '@/shared/db'
-
-const textareaCls = 'w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
 
 export default async function SuggestionThreadPage({
   params,
@@ -77,7 +76,7 @@ export default async function SuggestionThreadPage({
         </div>
         <SuggestionDiff rows={diff.rows} summary={diff.summary} lang={lang} />
         <div className="mt-2">
-          <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} />
+          <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
         </div>
 
         {isOwner && sug.status === 'open' && (
@@ -110,7 +109,7 @@ export default async function SuggestionThreadPage({
                 <div className="px-4 py-3">
                   <Markdown>{c.body}</Markdown>
                   <div className="mt-2">
-                    <Reactions targetType="suggestion_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} />
+                    <Reactions targetType="suggestion_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />
                   </div>
                 </div>
               </div>
@@ -122,7 +121,7 @@ export default async function SuggestionThreadPage({
           <div className="mt-4 rounded-lg border border-border bg-surface p-4">
             <form action={addSuggestionComment} className="flex flex-col gap-3">
               <input type="hidden" name="suggestionId" value={sug.id} />
-              <textarea name="body" rows={4} className={textareaCls} placeholder={t('writeComment', lang)} maxLength={20000} />
+              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} />
               <div className="flex justify-end">
                 <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
                   {t('commentBtn', lang)}
