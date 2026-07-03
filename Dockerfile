@@ -19,7 +19,7 @@ RUN npm run build
 FROM builder AS migrate
 CMD ["npx", "drizzle-kit", "push"]
 
-# ── runner: минимальный standalone-сервер ──
+# ── runner: минимальный standalone-сервер (непривилегированный) ──
 FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=3000 HOSTNAME=0.0.0.0
@@ -27,8 +27,12 @@ ENV PORT=3000 HOSTNAME=0.0.0.0
 RUN apt-get update \
   && apt-get install -y --no-install-recommends git ca-certificates \
   && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
+# node-образ уже содержит пользователя `node` (uid 1000); отдаём ему владение.
+COPY --chown=node:node --from=builder /app/.next/standalone ./
+COPY --chown=node:node --from=builder /app/.next/static ./.next/static
+COPY --chown=node:node --from=builder /app/public ./public
+USER node
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=4s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "server.js"]
