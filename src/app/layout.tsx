@@ -7,6 +7,7 @@ import { getLang } from '@/shared/i18n/server'
 import { avatarSrc } from '@/shared/media'
 import { getNotifications, getUnreadCount } from '@/features/notifications/queries'
 import { TopNav } from '@/widgets/TopNav'
+import { Footer } from '@/widgets/Footer'
 import './globals.css'
 
 const sans = Hanken_Grotesk({
@@ -39,6 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="flex min-h-screen flex-col bg-canvas">
             <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
             <main className="flex flex-1 flex-col">{children}</main>
+            <Footer lang={lang} />
           </div>
         </ThemeProvider>
       </body>
