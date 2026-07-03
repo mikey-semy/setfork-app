@@ -114,9 +114,12 @@ Postgres** (self-check: 11 списков, резолв `demo/redis-…`→uuid+
 - [x] Загрузка истории версий (`db::load_bundle_data`: versions+steps, jsonb LocaleText→'en').
 - [x] Материализация репо (шелл git, детерм. даты/идентичность) + **`CreateBundle` RPC** + CLI.
   Проверено: bundle demo/redis-… клонируется (3 коммита, теги v1-v3, list.json). `src/bundle.rs`.
-- [ ] **Golden-exact match с TS** (порядок ключей list.json, README/steps байт-в-байт, steps/*.md)
-  → одинаковые SHA. Сейчас функционально ок, но не байт-идентично TS.
+- [x] **Golden-exact match с TS — ДОСТИГНУТ.** Полный порт serialize.ts (README+list.json+steps/*.md),
+  `serde_json preserve_order`, `floor(epoch)` (git усекает дробные сек). **Проверено:** bundle
+  demo/redis-… — рабочее дерево И commit-SHA идентичны TS (485ed58/052ada9/93618ff), и сам
+  bundle-файл **байт-в-байт** (`cmp` ✅). → drop-in для TS smart-HTTP.
 - [ ] Остальные RPC: `InfoRefsUploadPack` → `UploadPack` (clone/pull) → `ReceivePack` (push+проекция).
+- [ ] Потом gix/git2 вместо шелла; TS Connect-ES клиент → `gitCoreRemote` → флип `SETFORK_CORE_URL`.
 - [ ] Материализация репо (сначала шелл `git`, как TS; детерминированные SHA) → RPC по одному:
   `CreateBundle` → `InfoRefs*` → `UploadPack` → `ReceivePack`(+проекция). Потом gix/git2 вместо шелла.
 - [ ] TS Connect-ES клиент из `proto/git.proto` → `gitCoreRemote` (`features/git/core.ts`) →
