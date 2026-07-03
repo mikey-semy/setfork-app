@@ -12,6 +12,7 @@ export interface CmpStep {
   why: string
   section?: string
   subtasks: string[]
+  refs?: { label: string; url: string }[]
 }
 
 export interface SLine {
@@ -34,6 +35,12 @@ export function serializeSteps(steps: CmpStep[], ordered: boolean): SLine[] {
     if (s.command) s.command.split('\n').forEach((l) => lines.push({ text: `    $ ${l}`, step, head: false }))
     if (s.why) lines.push({ text: `    why: ${s.why}`, step, head: false })
     s.subtasks.forEach((st) => lines.push({ text: `    - [ ] ${st}`, step, head: false }))
+    ;(s.refs ?? []).forEach((r) => {
+      const label = r.label.trim()
+      const url = r.url.trim()
+      const text = url ? (label ? `${label} — ${url}` : url) : label
+      if (text) lines.push({ text: `    → ${text}`, step, head: false })
+    })
   })
   return lines
 }
@@ -173,6 +180,7 @@ export interface DiffEntry extends CmpStep {
 
 const skey = (s: CmpStep) => s.title.trim().toLowerCase()
 const sameArr = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i])
+const refsKey = (rs?: { label: string; url: string }[]) => (rs ?? []).map((r) => `${r.label.trim()}|${r.url.trim()}`).join('\n')
 
 export function diffSteps(from: CmpStep[], to: CmpStep[]): {
   entries: DiffEntry[]
@@ -198,6 +206,7 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
     if (f.s.level !== s.level) changes.push('level')
     if (f.s.why !== s.why) changes.push('why')
     if (!sameArr(f.s.subtasks, s.subtasks)) changes.push('subtasks')
+    if (refsKey(f.s.refs) !== refsKey(s.refs)) changes.push('refs')
     if (changes.length) {
       entries.push({ ...s, status: 'changed', changes, before: f.s })
       changed++

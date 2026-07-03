@@ -14,7 +14,16 @@ import { getListMeta, getVersions, getVersionSteps } from '@/features/library/qu
 import { diffSteps, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from '@/features/library/diff'
 
 function toCmp(
-  steps: { title: LocaleText; desc: LocaleText; command: string; level: CmpStep['level']; why: LocaleText; section?: LocaleText; subtasks: LocaleText[] }[],
+  steps: {
+    title: LocaleText
+    desc: LocaleText
+    command: string
+    level: CmpStep['level']
+    why: LocaleText
+    section?: LocaleText
+    subtasks: LocaleText[]
+    refs?: { label: LocaleText; url?: string }[]
+  }[],
   lang: Lang,
 ): CmpStep[] {
   return steps.map((s) => ({
@@ -25,6 +34,9 @@ function toCmp(
     why: tr(s.why, lang),
     section: s.section ? tr(s.section, lang) : '',
     subtasks: (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean),
+    refs: (s.refs ?? [])
+      .map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' }))
+      .filter((r) => r.label || r.url),
   }))
 }
 
@@ -208,13 +220,31 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
                       {t('diffWas', lang)}: <span className="line-through opacity-70">{e.before.desc}</span>
                     </div>
                   )}
-                  {(e.changes.includes('subtasks') || e.changes.includes('why')) && (
-                    <div className="text-muted">{e.changes.filter((c) => c === 'subtasks' || c === 'why').join(', ')} {t('diffChanged', lang).toLowerCase()}</div>
+                  {(e.changes.includes('subtasks') || e.changes.includes('why') || e.changes.includes('refs')) && (
+                    <div className="text-muted">
+                      {e.changes.filter((c) => c === 'subtasks' || c === 'why' || c === 'refs').join(', ')}{' '}
+                      {t('diffChanged', lang).toLowerCase()}
+                    </div>
                   )}
                 </div>
               )}
               {e.status !== 'removed' && e.command && !e.changes.includes('command') && (
                 <code className="mt-2 block rounded bg-surface-2 px-2 py-1 font-mono text-[12px] text-ink">{e.command}</code>
+              )}
+              {e.status !== 'removed' && e.refs && e.refs.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {e.refs.map((r, k) => (
+                    <a
+                      key={k}
+                      href={r.url || '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded border border-border bg-surface-2 px-2 py-0.5 text-[11.5px] text-accent hover:underline"
+                    >
+                      {r.label || r.url}
+                    </a>
+                  ))}
+                </div>
               )}
             </div>
           )

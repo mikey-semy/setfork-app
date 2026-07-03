@@ -412,16 +412,17 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
               {emojiOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setEmojiOpen(false)} />
-                  <div className="absolute right-0 top-8 z-20">
+                  <div className="absolute right-0 top-8 z-20 w-[300px] max-w-[calc(100vw-2rem)]">
                     <EmojiPicker
                       data={emojiData}
                       locale={lang === 'ru' ? 'ru' : 'en'}
                       theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
                       previewPosition="none"
                       skinTonePosition="none"
+                      dynamicWidth={true}
                       perLine={8}
-                      emojiSize={20}
-                      emojiButtonSize={30}
+                      emojiSize={18}
+                      emojiButtonSize={28}
                       maxFrequentRows={1}
                       onEmojiSelect={(ev: { native?: string }) => {
                         if (ev.native) insertAt(ev.native)
