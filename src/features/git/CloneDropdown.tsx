@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, Copy, Download, ListChecks, Terminal } from 'lucide-react'
+import { Check, ChevronDown, Copy, FileCode, FileDown, GitBranch, ListChecks, Printer, Terminal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { t, type Lang } from '@/shared/i18n'
 
@@ -43,9 +43,24 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
         </div>
         <p className="mt-1.5 text-[11.5px] text-ink-2">{t('cloneHttpsHint', lang)}</p>
         <p className="mt-0.5 text-[11px] text-muted">{t('cloneAuthHint', lang)}</p>
-        <div className="mt-2.5 border-t border-border pt-2.5">
-          <a href={`${base}/repo.bundle`} className="inline-flex items-center gap-1.5 text-[12.5px] text-accent hover:underline">
-            <Download size={13} /> {t('downloadBundle', lang)} · {slug}.bundle
+
+        <div className="mt-2.5 border-t border-border pt-2">
+          <div className="mb-1 px-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">{t('downloadHeading', lang)}</div>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-left text-[12.5px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+          >
+            <Printer size={14} className="text-muted" /> {t('printPdf', lang)}
+          </button>
+          <a href={`${base}/export?format=md`} className="flex items-center gap-2 rounded px-1.5 py-1.5 text-[12.5px] text-ink-2 hover:bg-surface-2 hover:text-ink">
+            <FileDown size={14} className="text-muted" /> {t('exportMd', lang)}
+          </a>
+          <a href={`${base}/export?format=html`} className="flex items-center gap-2 rounded px-1.5 py-1.5 text-[12.5px] text-ink-2 hover:bg-surface-2 hover:text-ink">
+            <FileCode size={14} className="text-muted" /> {t('exportHtml', lang)}
+          </a>
+          <a href={`${base}/repo.bundle`} className="flex items-center gap-2 rounded px-1.5 py-1.5 text-[12.5px] text-ink-2 hover:bg-surface-2 hover:text-ink">
+            <GitBranch size={14} className="text-muted" /> {t('downloadBundle', lang)}
           </a>
         </div>
       </DropdownMenuContent>

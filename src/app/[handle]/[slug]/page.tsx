@@ -13,7 +13,6 @@ import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
-import { ExportMenu } from '@/features/library/ExportMenu'
 import { publishList } from '@/features/library/actions'
 
 function fmt(n: number): string {
@@ -191,9 +190,6 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
             <div className="rounded-lg border border-border bg-surface p-4">
               <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
                 {t('about', lang)}
-              </div>
-              <div className="mb-3 border-b border-border pb-3">
-                <ExportMenu base={`/${owner}/${slug}`} lang={lang} />
               </div>
               {tr(tpl.desc, lang) && <p className="text-[13.5px] leading-relaxed text-ink-2">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
