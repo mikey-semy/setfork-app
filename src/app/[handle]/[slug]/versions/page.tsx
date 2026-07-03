@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation'
 import { GitCompare, Tag } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { getListMeta, getVersions } from '@/features/library/queries'
+import { getListMeta } from '@/features/library/queries'
+import { listStore } from '@/features/library/list-store.adapter'
 import { ListHeader } from '@/features/library/ListHeader'
 
 export default async function VersionsPage({
@@ -15,7 +16,7 @@ export default async function VersionsPage({
   const lang = await getLang()
   const meta = await getListMeta(owner, slug)
   if (!meta) notFound()
-  const versions = await getVersions(meta.id)
+  const versions = await listStore.listVersions(meta.id)
 
   return (
     <>
