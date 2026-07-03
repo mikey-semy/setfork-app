@@ -125,8 +125,17 @@ Postgres** (self-check: 11 списков, резолв `demo/redis-…`→uuid+
   **Проверено:** advertise-байты идентичны TS (550==550, `cmp`); полный `git clone` через Rust
   (Connect-ES клиент → gRPC) даёт SHA 485ed58/052ada9/93618ff + теги v1..v3, все файлы. `InfoRefsReceivePack`
   (advertise для push) тоже реализован.
-- [ ] **NEXT: `ReceivePack`** (write-path) — приём пака + проекция `list.json` → новая версия в Postgres
-  (пишущий путь из Rust; `receive_pack_rpc` уже в smart_http.rs, нужна проекция+персист).
+- [x] **`ReceivePack` (git push) — РАБОТАЕТ e2e.** Персистентные bare-репо под `GIT_DATA_DIR`
+  (общий том с фронтом, git=источник правды): `repo.rs` (`ensure_repo` bootstrap `git clone --bare` /
+  ленивый append веб-версий, пер-репо async-лок), `bundle.rs` (`bootstrap_bare`/`append_versions`/
+  `max_tag_version`/pre-receive hook), `project.rs` (парс list.json запушенного tip → `ProjStep`),
+  `db.rs` (`add_version` tx: current+1→insert version+steps→bump; `update_meta`; step_level enum,
+  LocaleText `{en}`). READ RPC + CreateBundle теперь тоже через `ensure_repo` (после push клоны видят
+  коммит). **Проверено:** `git push` через Rust → коммит персистится (re-clone) И в Postgres версия 4
+  (8 шагов, note, tags-мета, current_version). TS Connect-ES `receivePack` тоже проверен (мост).
+- [x] **Docker (оба репо):** `Dockerfile` + `docker-compose.yml` (обычный) + `docker-compose.dokploy.yml`
+  (сеть `dokploy-network` external). Core: rust→debian-slim+git. Front: node standalone + `migrate` target
+  (drizzle-kit push). Все compose провалидированы `docker compose config`.
 - [ ] Потом gix/git2 вместо шелла; флип `SETFORK_CORE_URL` в dev → полный катовер git на Rust.
 - [ ] Материализация репо (сначала шелл `git`, как TS; детерминированные SHA) → RPC по одному:
   `CreateBundle` → `InfoRefs*` → `UploadPack` → `ReceivePack`(+проекция). Потом gix/git2 вместо шелла.
