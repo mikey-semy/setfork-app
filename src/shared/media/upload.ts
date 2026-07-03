@@ -13,20 +13,30 @@ const EXT: Record<string, string> = {
   'image/gif': 'gif',
 }
 
+/** Реальный тип картинки по сигнатуре (magic bytes), а НЕ по client-provided mime. */
+function sniffImage(b: Buffer): string | null {
+  if (b.length >= 4 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png'
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg'
+  if (b.length >= 4 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'image/gif'
+  if (b.length >= 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') return 'image/webp'
+  return null
+}
+
 /**
- * Универсальная загрузка картинки. Возвращает ref для хранения в БД:
+ * Универсальная загрузка картинки. Тип определяется по СОДЕРЖИМОМУ (magic bytes),
+ * client-provided mime игнорируется (защита от подмены). Возвращает ref:
  * S3 → storage_key (`{dir}/{uuid}.ext`); иначе диск → `/uploads/{dir}/{uuid}.ext`.
- * Бросает Error при ошибке валидации.
  */
 export async function uploadImageFile(dir: string, file: File): Promise<string> {
-  const ext = EXT[file.type]
-  if (!ext) throw new Error('Неподдерживаемый формат (PNG, JPG, WEBP или GIF).')
   if (file.size > MAX_BYTES) throw new Error('Файл больше 4 МБ.')
   const buffer = Buffer.from(await file.arrayBuffer())
+  const mime = sniffImage(buffer)
+  const ext = mime ? EXT[mime] : undefined
+  if (!ext) throw new Error('Файл не похож на изображение (PNG, JPG, WEBP или GIF).')
   const name = `${randomUUID()}.${ext}`
 
   if (await isS3Configured()) {
-    return putObject(`${dir}/${name}`, buffer, file.type)
+    return putObject(`${dir}/${name}`, buffer, mime!)
   }
   const diskDir = join(process.cwd(), 'public', 'uploads', dir)
   await mkdir(diskDir, { recursive: true })

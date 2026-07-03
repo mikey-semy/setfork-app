@@ -5,6 +5,7 @@ import { gitCore } from '@/features/git/core'
 import { maybeGunzip } from '@/features/git/smart-http'
 import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
+import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 
 // git smart-HTTP: `git clone/pull/push https://host/{owner}/{slug}.git`.
 // Работает из VSCode. Источник правды — персистентный bare-репо (features/git/store).
@@ -49,6 +50,8 @@ async function authorizeWrite(req: Request, meta: Meta): Promise<'ok' | 401> {
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
+  const rl = rateLimit(`git:${clientIp(req)}`, 240, 60_000)
+  if (!rl.ok) return tooMany(rl)
   const { handle, slug: rawSlug, git } = await params
   if ((git ?? []).join('/') !== 'info/refs') return new Response('Not found', { status: 404 })
   const service = new URL(req.url).searchParams.get('service')
@@ -77,6 +80,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
+  const rl = rateLimit(`git:${clientIp(req)}`, 240, 60_000)
+  if (!rl.ok) return tooMany(rl)
   const { handle, slug: rawSlug, git } = await params
   const path = (git ?? []).join('/')
   const slug = cleanSlug(rawSlug)
