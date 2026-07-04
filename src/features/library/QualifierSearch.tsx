@@ -92,12 +92,14 @@ export function QualifierSearch({
       let list: Suggestion[] = []
       if (tok.key === 'tag' || tok.key === 'topic') {
         if (!tagsRef.current) {
-          tagsRef.current = (await fetch('/api/tags/popular')
-            .then((r) => (r.ok ? r.json() : []))
-            .catch(() => [])) as { tag: string; count: number }[]
+          // Кэшируем только успешный ответ; при ошибке оставляем null → повторим позже.
+          const fetched = (await fetch('/api/tags/popular')
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)) as { tag: string; count: number }[] | null
+          if (fetched) tagsRef.current = fetched
         }
         if (cancelled) return
-        list = tagsRef.current
+        list = (tagsRef.current ?? [])
           .filter((tg) => tg.tag.includes(tok.partial))
           .slice(0, 8)
           .map((tg) => ({ value: tg.tag, group: t('tags', lang), kind: 'tag', count: tg.count }))

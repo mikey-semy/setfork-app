@@ -108,7 +108,7 @@ function extraFilters(opts: {
   if (opts.verified) f.push(eq(templates.verified, true))
   if (opts.ordered !== undefined) f.push(eq(templates.ordered, opts.ordered))
   if (opts.by) f.push(eq(users.handle, opts.by)) // users приджойнен в обоих режимах
-  if (opts.minStars) f.push(gte(templates.starsCount, opts.minStars))
+  if (opts.minStars != null) f.push(gte(templates.starsCount, opts.minStars))
   for (const tag of opts.tags ?? []) f.push(tagFilter(tag))
   return f
 }

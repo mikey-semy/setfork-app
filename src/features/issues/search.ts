@@ -28,8 +28,8 @@ function issuesWhere(q?: string, state: IssueStateFilter = 'open'): SQL {
   const term = q?.trim()
   if (term) {
     const like = `%${term}%`
-    const n = parseInt(term, 10)
-    conds.push(Number.isFinite(n) ? or(ilike(issues.title, like), eq(issues.number, n))! : ilike(issues.title, like))
+    // Номер #N ищем только если весь токен — цифры (иначе "12abc" всплывал бы issue #12).
+    conds.push(/^\d+$/.test(term) ? or(ilike(issues.title, like), eq(issues.number, Number(term)))! : ilike(issues.title, like))
   }
   return and(...conds)!
 }
