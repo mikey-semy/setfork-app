@@ -201,6 +201,18 @@ export async function getFeed(
   return withAvatar([...keyword, ...semantic.filter((r) => !seen.has(r.id))])
 }
 
+export type TrendRange = 'day' | 'week' | 'month' | 'all'
+
+/** Тренд за период: списки с наибольшим приростом звёзд за range (day/week/month),
+ *  при равенстве — по суммарным звёздам+форкам. 'all' — просто trending. */
+export async function getTrendingFeed(range: TrendRange, viewerId?: string): Promise<FeedItem[]> {
+  if (range === 'all') return getFeed({ sort: 'trending' }, viewerId)
+  const days = range === 'day' ? 1 : range === 'week' ? 7 : 30
+  const gained = sql`(select count(*)::int from ${stars} s where s.template_id = ${templates.id} and s.created_at >= now() - make_interval(days => ${days}))`
+  const order = desc(sql`${gained} * 1000 + ${templates.starsCount} + ${templates.forksCount}`)
+  return withAvatar(await keywordFeed(order, viewerId, undefined, undefined, []))
+}
+
 /** Счётчик списков под текущий запрос (для бейджа scope-переключателя). По ключевым
     словам, без семантики — этого достаточно для числа рядом с вкладкой. */
 export async function countLists(
