@@ -11,7 +11,7 @@ export function HeroSearch({ placeholder, clearLabel }: { placeholder: string; c
   const [q, setQ] = useState('')
   const go = () => {
     const s = q.trim()
-    router.push(s ? `/explore?q=${encodeURIComponent(s)}` : '/explore')
+    router.push(s ? `/search?q=${encodeURIComponent(s)}` : '/search')
   }
   return (
     <form

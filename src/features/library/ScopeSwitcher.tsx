@@ -15,12 +15,14 @@ export function ScopeSwitcher({
   q,
   sort,
   lang,
+  basePath = '/search',
 }: {
   active: Scope
   counts: { lists: number; people: number; issues: number }
   q?: string
   sort?: string
   lang: Lang
+  basePath?: string
 }) {
   const href = (scope: Scope) => {
     const p = new URLSearchParams()
@@ -28,7 +30,7 @@ export function ScopeSwitcher({
     if (q) p.set('q', q)
     if (scope === 'lists' && sort) p.set('sort', sort)
     const s = p.toString()
-    return s ? `/explore?${s}` : '/explore'
+    return s ? `${basePath}?${s}` : basePath
   }
 
   const items: { scope: Scope; label: string; icon: typeof Users; count: number }[] = [

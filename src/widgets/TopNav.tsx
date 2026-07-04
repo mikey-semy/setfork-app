@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ChevronDown, Compass, Home, ListChecks, Menu, PlayCircle, Plus, Search, Sparkles, X } from 'lucide-react'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
+import { QualifierSearch } from '@/features/library/QualifierSearch'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
@@ -34,13 +35,16 @@ export function TopNav({
   notifications?: NotificationItem[]
 }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const [q, setQ] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  // На странице поиска поле в шапке = полноценный квалификатор-поиск во всю ширину.
+  const isSearch = pathname.startsWith('/search')
   const submitSearch = () => {
     const s = q.trim()
-    router.push(s ? `/explore?q=${encodeURIComponent(s)}` : '/explore')
+    router.push(s ? `/search?q=${encodeURIComponent(s)}` : '/search')
   }
   // Хоткей «/» фокусирует поиск (как на GitHub); Escape закрывает боковое меню.
   useEffect(() => {
@@ -51,7 +55,8 @@ export function TopNav({
       const tag = el?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return
       e.preventDefault()
-      searchRef.current?.focus()
+      // На странице поиска виджета-инпута нет — фокусируем поле в шапке.
+      ;(searchRef.current ?? document.querySelector<HTMLInputElement>('header input'))?.focus()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -113,28 +118,45 @@ export function TopNav({
           SF
         </Link>
       </div>
-      {title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>}
-
-      <div className="ml-auto flex items-center gap-2">
-        {/* GitHub-подобный поиск: поле с иконкой + подсказка «/» (единый SearchField) */}
-        <form className="hidden md:block" onSubmit={(e) => { e.preventDefault(); submitSearch() }}>
-          <SearchField
-            ref={searchRef}
-            size="sm"
-            value={q}
-            onValueChange={setQ}
-            placeholder={t('searchTypeSlash', lang)}
-            ariaLabel={t('searchLists', lang)}
-            className="w-[220px] xl:w-[300px]"
-            hint={
-              <kbd className="hidden rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted lg:inline">/</kbd>
-            }
+      {/* Страница поиска: поле-квалификатор во всю ширину прямо в шапке (как GitHub Search). */}
+      {isSearch ? (
+        <div className="mx-2 flex min-w-0 flex-1 md:mx-4">
+          <QualifierSearch
+            key={searchParams.get('q') ?? ''}
+            initial={searchParams.get('q') ?? ''}
+            scope={searchParams.get('scope')}
+            autoFocus={searchParams.get('focus') === '1'}
+            lang={lang}
           />
-        </form>
-        {/* Мобильный поиск — иконка ведёт в Explore */}
-        <Link href="/explore" aria-label={t('searchLists', lang)} className={`${iconBtn} md:hidden`}>
-          <Search size={17} />
-        </Link>
+        </div>
+      ) : (
+        title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>
+      )}
+
+      <div className={`flex items-center gap-2 ${isSearch ? '' : 'ml-auto'}`}>
+        {/* Небольшой виджет-поиск — на всех страницах, КРОМЕ страницы поиска */}
+        {!isSearch && (
+          <>
+            <form className="hidden md:block" onSubmit={(e) => { e.preventDefault(); submitSearch() }}>
+              <SearchField
+                ref={searchRef}
+                size="sm"
+                value={q}
+                onValueChange={setQ}
+                placeholder={t('searchTypeSlash', lang)}
+                ariaLabel={t('searchLists', lang)}
+                className="w-[220px] xl:w-[300px]"
+                hint={
+                  <kbd className="hidden rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted lg:inline">/</kbd>
+                }
+              />
+            </form>
+            {/* Мобильный поиск — иконка ведёт на страницу поиска */}
+            <Link href="/search" aria-label={t('searchLists', lang)} className={`${iconBtn} md:hidden`}>
+              <Search size={17} />
+            </Link>
+          </>
+        )}
 
         {user ? (
           <>

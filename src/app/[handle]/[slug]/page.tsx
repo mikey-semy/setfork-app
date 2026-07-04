@@ -197,7 +197,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                   {tpl.tags.map((tag) => (
                     <Link
                       key={tag}
-                      href={`/explore?tag=${encodeURIComponent(tag)}`}
+                      href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
                       className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-[12px] font-medium text-accent hover:underline"
                     >
                       {tag}

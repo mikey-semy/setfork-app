@@ -114,7 +114,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
           {tags.map((tg) => (
             <Link
               key={tg.tag}
-              href={`/explore?tag=${encodeURIComponent(tg.tag)}`}
+              href={`/search?q=${encodeURIComponent(`tag:${tg.tag}`)}`}
               className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-[12px] text-ink-2 hover:text-ink"
             >
               {tg.tag}

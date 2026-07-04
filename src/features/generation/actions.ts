@@ -31,10 +31,10 @@ export async function startGeneration(formData: FormData): Promise<void> {
   const session = await requireSession()
   const lang = await getLang()
   const query = String(formData.get('q') ?? '').trim().slice(0, 300)
-  if (!query) redirect('/explore')
+  if (!query) redirect('/search')
 
   const { allowed } = checkRateLimit(`gen:${session.userId}`)
-  if (!allowed) redirect(`/explore?q=${encodeURIComponent(query)}&e=ratelimited`)
+  if (!allowed) redirect(`/search?q=${encodeURIComponent(query)}&e=ratelimited`)
 
   const [gen] = await db.insert(generations).values({ userId: session.userId, query, lang }).returning()
   await enqueueGenerate(gen.id, session.userId, query, lang, 1)

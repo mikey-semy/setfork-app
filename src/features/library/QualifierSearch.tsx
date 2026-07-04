@@ -58,7 +58,19 @@ function renderHighlight(v: string) {
  * печатаешь `by:` → люди, `tag:` → теги, `is:`/`type:` → значения. Варианты
  * сгруппированы под заголовками, значение квалификатора подсвечено в самом поле.
  */
-export function QualifierSearch({ initial, tags, lang }: { initial: string; tags: { tag: string; count: number }[]; lang: Lang }) {
+export function QualifierSearch({
+  initial,
+  lang,
+  basePath = '/search',
+  scope,
+  autoFocus,
+}: {
+  initial: string
+  lang: Lang
+  basePath?: string
+  scope?: string | null
+  autoFocus?: boolean
+}) {
   const router = useRouter()
   const [value, setValue] = useState(initial)
   const [sugs, setSugs] = useState<Suggestion[]>([])
@@ -66,6 +78,7 @@ export function QualifierSearch({ initial, tags, lang }: { initial: string; tags
   const [active, setActive] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
+  const tagsRef = useRef<{ tag: string; count: number }[] | null>(null)
 
   useEffect(() => {
     const tok = activeToken(value)
@@ -78,7 +91,13 @@ export function QualifierSearch({ initial, tags, lang }: { initial: string; tags
     const run = async () => {
       let list: Suggestion[] = []
       if (tok.key === 'tag' || tok.key === 'topic') {
-        list = tags
+        if (!tagsRef.current) {
+          tagsRef.current = (await fetch('/api/tags/popular')
+            .then((r) => (r.ok ? r.json() : []))
+            .catch(() => [])) as { tag: string; count: number }[]
+        }
+        if (cancelled) return
+        list = tagsRef.current
           .filter((tg) => tg.tag.includes(tok.partial))
           .slice(0, 8)
           .map((tg) => ({ value: tg.tag, group: t('tags', lang), kind: 'tag', count: tg.count }))
@@ -107,7 +126,7 @@ export function QualifierSearch({ initial, tags, lang }: { initial: string; tags
     return () => {
       cancelled = true
     }
-  }, [value, tags, lang])
+  }, [value, lang])
 
   function apply(s: Suggestion) {
     const word = value.split(/\s/).pop() ?? ''
@@ -120,7 +139,11 @@ export function QualifierSearch({ initial, tags, lang }: { initial: string; tags
 
   function submit() {
     const q = value.trim()
-    router.push(q ? `/explore?q=${encodeURIComponent(q)}` : '/explore')
+    const p = new URLSearchParams()
+    if (q) p.set('q', q)
+    if (scope) p.set('scope', scope)
+    const s = p.toString()
+    router.push(s ? `${basePath}?${s}` : basePath)
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -160,7 +183,7 @@ export function QualifierSearch({ initial, tags, lang }: { initial: string; tags
   }
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -169,6 +192,7 @@ export function QualifierSearch({ initial, tags, lang }: { initial: string; tags
       >
         <SearchField
           ref={inputRef}
+          autoFocus={autoFocus}
           value={value}
           onValueChange={setValue}
           onKeyDown={onKeyDown}

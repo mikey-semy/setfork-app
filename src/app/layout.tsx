@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import type { Metadata, Viewport } from 'next'
 import { Chakra_Petch, Hanken_Grotesk, IBM_Plex_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/shared/providers/theme-provider'
@@ -84,7 +85,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <div className="flex min-h-screen flex-col bg-canvas">
-            <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
+            <Suspense>
+              <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
+            </Suspense>
             <main className="flex flex-1 flex-col">{children}</main>
             <Footer lang={lang} />
             {user && browserNotify && <BrowserNotifier enabled />}

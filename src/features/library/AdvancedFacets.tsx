@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { BadgeCheck, Check, ChevronDown, Layers, List, ListOrdered } from 'lucide-react'
+import { BadgeCheck, Check, ChevronDown, Layers, List, ListOrdered, Plus } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { SearchField } from '@/shared/ui/SearchField'
 import { buildSearchQuery, parseSearchQuery, type ParsedQuery } from './search-query'
@@ -17,10 +17,12 @@ export function AdvancedFacets({
   initialQ,
   tags,
   lang,
+  basePath = '/search',
 }: {
   initialQ: string
   tags: { tag: string; count: number }[]
   lang: Lang
+  basePath?: string
 }) {
   const router = useRouter()
   const sp = useSearchParams()
@@ -36,7 +38,19 @@ export function AdvancedFacets({
     const sort = sp.get('sort')
     if (sort) p.set('sort', sort)
     const s = p.toString()
-    router.push(s ? `/explore?${s}` : '/explore')
+    router.push(s ? `${basePath}?${s}` : basePath)
+  }
+
+  // Advanced (как на GitHub): дописываем «голый» квалификатор в строку поиска и
+  // фокусируем её (focus=1) — значение пользователь вводит уже в поле, с автокомплитом.
+  function insertQualifier(prefix: string) {
+    const raw = initialQ.trim()
+    const p = new URLSearchParams()
+    p.set('q', raw ? `${raw} ${prefix}` : prefix)
+    const sort = sp.get('sort')
+    if (sort) p.set('sort', sort)
+    p.set('focus', '1')
+    router.push(`${basePath}?${p.toString()}`)
   }
 
   const setType = (type: ParsedQuery['type']) => go({ ...parsed, type: parsed.type === type ? undefined : type })
@@ -124,11 +138,23 @@ export function AdvancedFacets({
         )}
       </div>
 
-      {/* Синтаксис поиска: продвинутые квалификаторы набираются прямо в строке (как на GitHub) */}
-      <div className="mt-5 border-t border-border pt-3 text-[11px] leading-relaxed text-muted">
-        <div className="mb-1 px-2 font-semibold text-ink-2">{t('searchTips', lang)}</div>
-        <div className="px-2 font-mono">by:handle · tag:redis · is:verified · type:ordered · stars:&gt;100</div>
+      {/* Advanced: клик вставляет квалификатор в поле поиска в шапке (как «+» на GitHub) */}
+      <div className="mt-5 border-t border-border pt-3">
+        <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">{t('advancedFilters', lang)}</div>
+        <div className="flex flex-col gap-0.5">
+          <button type="button" onClick={() => insertQualifier('by:')} className={advRow}>
+            <Plus size={13} className="shrink-0 text-muted" /> {t('filterAuthor', lang)}
+            <code className="ml-auto font-mono text-[11px] text-muted">by:</code>
+          </button>
+          <button type="button" onClick={() => insertQualifier('stars:>')} className={advRow}>
+            <Plus size={13} className="shrink-0 text-muted" /> {t('filterMinStars', lang)}
+            <code className="ml-auto font-mono text-[11px] text-muted">stars:</code>
+          </button>
+        </div>
       </div>
     </div>
   )
 }
+
+const advRow =
+  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-ink-2 outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong'
