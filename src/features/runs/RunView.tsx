@@ -190,8 +190,9 @@ export function RunView({
 
                 {s.command && (
                   <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12px] text-ink">
-                    <span style={{ color: 'var(--accent)' }}>$</span>
-                    <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{s.command}</span>
+                    <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
+                    {/* Горизонтальный скролл + выделение части строки (см. list detail). */}
+                    <span className="min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{s.command}</span>
                     <CopyButton text={s.command} />
                   </div>
                 )}
