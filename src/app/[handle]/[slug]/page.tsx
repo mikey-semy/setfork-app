@@ -69,6 +69,13 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
               </p>
             </div>
 
+            {/* Показатели наверху на мобиле; на десктопе они в About-сайдбаре справа. */}
+            <div className="mb-4 flex items-center gap-4 text-[13px] text-ink-2 lg:hidden print:hidden">
+              <span className="inline-flex items-center gap-1"><Star size={14} /> {tpl.starsCount}</span>
+              <span className="inline-flex items-center gap-1"><GitFork size={14} /> {tpl.forksCount}</span>
+              <span className="inline-flex items-center gap-1"><Tag size={14} /> v{currentVersion?.version ?? tpl.currentVersion}</span>
+            </div>
+
             {tpl.status === 'draft' && isOwner && (
               <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-warn bg-surface px-4 py-3 print:hidden">
                 <div className="min-w-0 flex-1">
