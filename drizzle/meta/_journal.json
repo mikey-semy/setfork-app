@@ -43,6 +43,13 @@
       "when": 1783135987857,
       "tag": "0005_whole_luckman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783141416149,
+      "tag": "0006_abnormal_shadow_king",
+      "breakpoints": true
     }
   ]
 }

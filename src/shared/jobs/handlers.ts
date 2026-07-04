@@ -2,6 +2,8 @@ import 'server-only'
 import type { Lang } from '@/shared/i18n'
 import type { NotificationType } from '@/features/notifications/queries'
 import { sendNotificationEmail } from '@/features/notifications/email'
+import { resolveNotificationDisplay } from '@/features/notifications/display'
+import { sendPushToUser } from '@/shared/push/send'
 import { addCandidate } from '@/features/generation/service'
 import { reindexList } from '@/features/library/reindex'
 
@@ -44,4 +46,20 @@ export interface ReindexJobPayload {
 export async function runReindexJob(payload: unknown): Promise<void> {
   const p = payload as ReindexJobPayload
   await reindexList(p.templateId)
+}
+
+export interface PushJobPayload {
+  userId: string
+  lang: Lang
+  actorId?: string | null
+  type: NotificationType
+  templateId?: string | null
+  issueId?: string | null
+}
+
+/** Web-push уведомления на подписки пользователя (фоновый браузерный поп-ап). */
+export async function runPushJob(payload: unknown): Promise<void> {
+  const p = payload as PushJobPayload
+  const d = await resolveNotificationDisplay(p)
+  await sendPushToUser(p.userId, { title: 'SetFork', body: d.text, url: d.url })
 }

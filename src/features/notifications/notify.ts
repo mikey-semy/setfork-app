@@ -4,6 +4,8 @@ import { db, notifications, users } from '@/shared/db'
 import type { NotifyPrefs } from '@/shared/db/schema'
 import { emailEnabled } from '@/shared/settings/email'
 import { enqueueJob } from '@/shared/jobs/queue'
+import { pushEnabled } from '@/shared/push/vapid'
+import { userHasPush } from '@/shared/push/send'
 import { extractHandles } from './mentions'
 
 type NotifType =
@@ -58,17 +60,23 @@ export async function notify(params: {
       templateId: params.templateId ?? null,
       issueId: params.issueId ?? null,
     })
+    const refPayload = {
+      lang: 'en' as const, // язык получателя в БД не хранится (только кука актора) → пока 'en'
+      actorId: params.actorId ?? null,
+      type: params.type,
+      templateId: params.templateId ?? null,
+      issueId: params.issueId ?? null,
+    }
+
     // Дублируем на почту через очередь (durable + ретраи), если получатель включил
     // email-уведомления и SMTP настроен. Отправка уходит из request-пути к воркеру.
     if (prefs.email === true && u?.email && (await emailEnabled())) {
-      await enqueueJob('email', {
-        to: u.email,
-        lang: 'en', // язык получателя в БД не хранится (только кука актора) → пока 'en'
-        actorId: params.actorId ?? null,
-        type: params.type,
-        templateId: params.templateId ?? null,
-        issueId: params.issueId ?? null,
-      })
+      await enqueueJob('email', { to: u.email, ...refPayload })
+    }
+
+    // Фоновый web-push, если включён browser-pref, есть подписка и VAPID настроен.
+    if (prefs.browser === true && (await pushEnabled()) && (await userHasPush(params.recipientId))) {
+      await enqueueJob('push', { userId: params.recipientId, ...refPayload })
     }
   } catch {
     /* уведомление — не критичный путь */

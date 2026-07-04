@@ -4,6 +4,7 @@ import { Switch } from '@/shared/ui/switch'
 import { t, type Lang } from '@/shared/i18n'
 import type { NotifyPrefs } from '@/shared/db/schema'
 import { updateNotifyPrefs } from './actions'
+import { subscribeToPush, unsubscribeFromPush } from './push-client'
 
 const ROWS: {
   key: keyof NotifyPrefs
@@ -50,8 +51,10 @@ export function NotifyPrefsForm({ prefs, lang, hasEmail }: { prefs: NotifyPrefs;
             name="browser"
             defaultChecked={prefs.browser === true}
             onCheckedChange={(v) => {
-              // При включении сразу спрашиваем разрешение браузера (нужен жест пользователя).
-              if (v && typeof Notification !== 'undefined' && Notification.permission === 'default') void Notification.requestPermission()
+              // Вкл → регистрируем SW + подписка на web-push (нужен жест пользователя);
+              // выкл → отписываемся. Сам pref сохраняется по кнопке «Сохранить».
+              if (v) void subscribeToPush()
+              else void unsubscribeFromPush()
             }}
           />
         </div>

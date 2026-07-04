@@ -1,12 +1,13 @@
 import 'server-only'
 import { claimJob, completeJob, failJob, type Job } from './queue'
-import { runEmailJob, runGenerateJob, runReindexJob } from './handlers'
+import { runEmailJob, runGenerateJob, runPushJob, runReindexJob } from './handlers'
 
 // Реестр обработчиков по типу задачи.
 const HANDLERS: Record<string, (payload: unknown) => Promise<void>> = {
   email: runEmailJob,
   generate: runGenerateJob,
   reindex: runReindexJob,
+  push: runPushJob,
 }
 
 const POLL_MS = 3000

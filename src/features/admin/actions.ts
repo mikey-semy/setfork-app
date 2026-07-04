@@ -7,6 +7,7 @@ import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } f
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
 import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/email'
+import { clearVapidCache, VAPID_KEYS } from '@/shared/push/vapid'
 import { sendMail } from '@/shared/email/mailer'
 import { db, users } from '@/shared/db'
 import { eq } from 'drizzle-orm'
@@ -105,6 +106,25 @@ export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: 
     html: '<p style="font-family:sans-serif;font-size:15px">SMTP works ✅ — SetFork может отправлять почту.</p>',
   })
   return ok ? { ok: true } : { ok: false, error: 'Отправка не удалась — проверьте host/port/креды.' }
+}
+
+// ── Web Push (VAPID: свои ключи, без сторонних сервисов) ─────────────
+export async function generateVapidKeys(): Promise<{ ok: true; publicKey: string } | { error: string }> {
+  if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
+  const webpush = (await import('web-push')).default
+  const keys = webpush.generateVAPIDKeys()
+  await saveSettings({ [VAPID_KEYS.public]: keys.publicKey, [VAPID_KEYS.private]: keys.privateKey })
+  clearVapidCache()
+  revalidatePath('/admin')
+  return { ok: true, publicKey: keys.publicKey }
+}
+
+export async function setPushSubject(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const subject = String(formData.get('subject') ?? '').trim()
+  await saveSettings({ [VAPID_KEYS.subject]: subject })
+  clearVapidCache()
+  revalidatePath('/admin')
 }
 
 // ── Настройки поиска (режим + порог + лимит) ─────────────────────────
