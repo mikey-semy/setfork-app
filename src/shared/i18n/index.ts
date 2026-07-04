@@ -346,6 +346,7 @@ const DICT = {
   starred: { en: 'Starred', ru: 'В избранном' },
   joined: { en: 'joined', ru: 'на сайте с' },
   noStars: { en: 'No starred lists yet.', ru: 'Пока ничего в избранном.' },
+  allStars: { en: 'All', ru: 'Все' },
   noProfileLists: { en: 'No lists yet.', ru: 'Пока нет списков.' },
   // ── Settings / профиль ──
   settings: { en: 'Settings', ru: 'Настройки' },

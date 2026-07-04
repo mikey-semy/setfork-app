@@ -10,6 +10,7 @@ import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries
 import { getContributions, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
 import { getFollowers, getFollowing } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
+import { getFolderTemplateIds, getUserFolders } from '@/features/star-folders/queries'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { ActivityGraph } from '@/features/profile/ActivityGraph'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
@@ -39,7 +40,7 @@ export default async function ProfilePage({
   searchParams,
 }: {
   params: Promise<{ handle: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; folder?: string }>
 }) {
   const [{ handle }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
   const user = await getUserByHandle(handle)
@@ -63,12 +64,17 @@ export default async function ProfilePage({
     getContributions(user.id),
     getReceivedStats(user.id),
   ])
-  const [items, pinned, catalogs] = await Promise.all([
+  const [rawItems, pinned, catalogs] = await Promise.all([
     !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
     getOwnerCatalogs(user.id),
   ])
   const people = tab === 'followers' ? await getFollowers(user.id) : tab === 'following' ? await getFollowing(user.id) : []
+
+  // Папки для звёзд (как GitHub Lists): чипы-фильтры на вкладке Stars.
+  const starFolders = tab === 'starred' ? await getUserFolders(user.id) : []
+  const folderIds = tab === 'starred' && sp.folder ? await getFolderTemplateIds(user.id, sp.folder) : null
+  const items = folderIds ? rawItems.filter((it) => folderIds.includes(it.id)) : rawItems
 
   return (
     <div className="w-full px-6 py-8 lg:px-8">
@@ -240,14 +246,40 @@ export default async function ProfilePage({
                 ))}
               </div>
             )
-          ) : items.length === 0 ? (
-            <Empty text={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
           ) : (
-            <FeedList items={items} lang={lang} viewerId={viewer?.userId} />
+            <>
+              {/* Папки-фильтры на вкладке Stars (как GitHub Lists). */}
+              {tab === 'starred' && starFolders.length > 0 && (
+                <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto text-[13px]">
+                  <FolderChip handle={handle} name={null} active={sp.folder} label={t('allStars', lang)} count={counts.stars} />
+                  {starFolders.map((f) => (
+                    <FolderChip key={f.id} handle={handle} name={f.name} active={sp.folder} label={f.name} count={f.count} />
+                  ))}
+                </div>
+              )}
+              {items.length === 0 ? (
+                <Empty text={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
+              ) : (
+                <FeedList items={items} lang={lang} viewerId={viewer?.userId} />
+              )}
+            </>
           )}
         </section>
       </div>
     </div>
+  )
+}
+
+function FolderChip({ handle, name, active, label, count }: { handle: string; name: string | null; active?: string; label: string; count: number }) {
+  const on = name ? active === name : !active
+  const href = name ? `/${handle}?tab=starred&folder=${encodeURIComponent(name)}` : `/${handle}?tab=starred`
+  return (
+    <Link
+      href={href}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 ${on ? 'border-accent bg-accent/10 text-ink' : 'border-border bg-surface-2 text-ink-2 hover:text-ink'}`}
+    >
+      {label} <span className="font-mono text-[11px] text-muted">{count}</span>
+    </Link>
   )
 }
 

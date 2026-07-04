@@ -9,6 +9,8 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { forkTemplate } from '@/features/library/actions'
 import { startRun } from '@/features/runs/actions'
 import { StarButton } from '@/features/library/StarButton'
+import { StarFolderMenu } from '@/features/star-folders/StarFolderMenu'
+import { getFoldersForTemplate, getUserFolders } from '@/features/star-folders/queries'
 import { ShareButton } from '@/features/library/ShareButton'
 import { WatchButton } from '@/features/watch/WatchButton'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
@@ -31,6 +33,10 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   if (meta.moderation !== 'active' && !isOwner && !isAdmin) notFound() // flagged/hidden не публичны
   const starred = session ? await isStarred(meta.id, session.userId) : false
   const watching = session ? await isWatching(session.userId, meta.id) : false
+  // Папки для звёзд (организация starred по папкам, как GitHub Lists).
+  const [folders, inFolders] = session
+    ? await Promise.all([getUserFolders(session.userId), getFoldersForTemplate(session.userId, meta.id)])
+    : [[], []]
   const [suggCount, issueCount, watchCount] = await Promise.all([
     getOpenSuggestionCount(meta.id),
     getOpenIssueCount(meta.id),
@@ -103,7 +109,10 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
               />
             )}
             {session ? (
-              <StarButton templateId={meta.id} starred={starred} count={meta.starsCount} label={t('star', lang)} />
+              <>
+                <StarButton templateId={meta.id} starred={starred} count={meta.starsCount} label={t('star', lang)} />
+                <StarFolderMenu templateId={meta.id} folders={folders} inFolders={inFolders} lang={lang} />
+              </>
             ) : (
               <Link
                 href="/login"
