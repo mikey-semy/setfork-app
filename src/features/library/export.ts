@@ -191,3 +191,62 @@ ${steps}
 </body>
 </html>`
 }
+
+// Экранирование для одинарных кавычек shell: закрыть '…' → вставить \' → снова открыть.
+function shSingle(s: string): string {
+  return s.replace(/\r?\n/g, ' ').replace(/'/g, `'\\''`)
+}
+// Строки текста → shell-комментарии (# …), без хвостовых пробелов.
+function shComment(s: string): string {
+  return s
+    .split(/\r?\n/)
+    .map((l) => `# ${l}`.replace(/\s+$/, ''))
+    .join('\n')
+}
+
+/**
+ * «Raw»-версия списка как исполняемый bash-скрипт (аналог gist «curl … | bash»):
+ * заголовки/описания шагов → комментарии + echo-прогресс, поле command → сами
+ * команды построчно, `set -euo pipefail` для стопа на первой ошибке.
+ * `url` — абсолютный адрес самого raw-эндпоинта (для шапки-подсказки).
+ */
+export function toShellScript(list: ExportList, lang: Lang, url: string): string {
+  const title = tr(list.title, lang)
+  const out: string[] = ['#!/usr/bin/env bash']
+  out.push(shComment(title))
+  out.push(`# ${list.ownerHandle}/${list.slug} · v${list.version} · ${url}`)
+  const desc = tr(list.desc, lang)
+  if (desc) out.push(shComment(desc))
+  out.push(
+    '#',
+    '# ⚠  Review before running — this script comes from a SetFork list, not from you.',
+    `#    Inspect:  curl -fsSL ${url} | less`,
+    `#    Run:      curl -fsSL ${url} | bash`,
+    '',
+    'set -euo pipefail',
+    '',
+  )
+  list.steps.forEach((s, i) => {
+    const n = i + 1
+    const st = tr(s.title, lang)
+    const rule = '─'.repeat(Math.max(3, 50 - st.length))
+    out.push(`# ── ${n}. ${st} ${rule}`)
+    const d = tr(s.desc, lang)
+    if (d) out.push(shComment(d))
+    const why = tr(s.why, lang)
+    if (why) out.push(shComment(`Why: ${why}`))
+    out.push(`echo '==> ${n}. ${shSingle(st)}'`)
+    if (s.command && s.command.trim()) {
+      out.push(s.command.trim())
+    } else {
+      // Информационный шаг без команды — подпункты как echo.
+      s.subtasks.forEach((stk) => {
+        const tt = tr(stk, lang)
+        if (tt) out.push(`echo '     - ${shSingle(tt)}'`)
+      })
+    }
+    out.push('')
+  })
+  out.push(`echo '✓ ${shSingle(title)} — done'`, '')
+  return out.join('\n')
+}
