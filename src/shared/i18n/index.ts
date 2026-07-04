@@ -397,6 +397,8 @@ const DICT = {
   following: { en: 'Following', ru: 'Вы подписаны' },
   followersLabel: { en: 'followers', ru: 'подписчиков' },
   followingLabel: { en: 'following', ru: 'подписки' },
+  noFollowers: { en: 'No followers yet.', ru: 'Пока нет подписчиков.' },
+  noFollowing: { en: 'Not following anyone yet.', ru: 'Пока ни на кого не подписан.' },
   editProfile: { en: 'Edit profile', ru: 'Редактировать профиль' },
   followingFeedEmpty: { en: 'Follow people to see their activity here.', ru: 'Подпишитесь на людей, чтобы видеть их активность.' },
   settingsSearchPh: { en: 'Search settings…', ru: 'Поиск по настройкам…' },

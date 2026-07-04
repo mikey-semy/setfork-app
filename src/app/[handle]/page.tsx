@@ -8,6 +8,8 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
 import { getContributions, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { getFollowers, getFollowing } from '@/features/profile/search'
+import { PeopleResults } from '@/features/profile/PeopleResults'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { ActivityGraph } from '@/features/profile/ActivityGraph'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
@@ -19,7 +21,7 @@ function displayUrl(url: string): string {
   return url.replace(/^https?:\/\//i, '').replace(/\/$/, '')
 }
 
-type Tab = 'lists' | 'starred' | 'catalogs'
+type Tab = 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 
 // Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
@@ -43,7 +45,13 @@ export default async function ProfilePage({
   const user = await getUserByHandle(handle)
   if (!user) notFound()
 
-  const tab: Tab = sp.tab === 'starred' ? 'starred' : sp.tab === 'catalogs' ? 'catalogs' : 'lists'
+  const tab: Tab =
+    sp.tab === 'starred' ? 'starred'
+    : sp.tab === 'catalogs' ? 'catalogs'
+    : sp.tab === 'followers' ? 'followers'
+    : sp.tab === 'following' ? 'following'
+    : 'lists'
+  const isPeopleTab = tab === 'followers' || tab === 'following'
   const isOwner = viewer?.userId === user.id
   const [counts, followCounts, following, bigAvatar, contributions, received] = await Promise.all([
     getProfileCounts(user.id),
@@ -54,10 +62,11 @@ export default async function ProfilePage({
     getReceivedStats(user.id),
   ])
   const [items, pinned, catalogs] = await Promise.all([
-    tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
+    isPeopleTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
     getOwnerCatalogs(user.id),
   ])
+  const people = tab === 'followers' ? await getFollowers(user.id) : tab === 'following' ? await getFollowing(user.id) : []
 
   return (
     <div className="w-full px-6 py-8 lg:px-8">
@@ -88,12 +97,12 @@ export default async function ProfilePage({
           </div>
 
           <div className="mt-3 flex gap-4 text-[13px]">
-            <span className="text-ink-2">
+            <Link href={`/${handle}?tab=followers`} className="text-ink-2 hover:text-accent">
               <b className="text-ink">{followCounts.followers}</b> {t('followersLabel', lang)}
-            </span>
-            <span className="text-ink-2">
+            </Link>
+            <Link href={`/${handle}?tab=following`} className="text-ink-2 hover:text-accent">
               <b className="text-ink">{followCounts.following}</b> {t('followingLabel', lang)}
-            </span>
+            </Link>
           </div>
 
           <div className="mt-3 font-mono text-[12px] text-muted">
@@ -181,14 +190,29 @@ export default async function ProfilePage({
           </div>
 
           <div className="mb-4 flex gap-5 border-b border-border text-[14px] font-semibold">
-            <TabLink handle={handle} tab="lists" active={tab} label={`${t('lists', lang)} ${counts.lists}`} />
-            <TabLink handle={handle} tab="starred" active={tab} label={`${t('starredTab', lang)} ${counts.stars}`} />
-            {catalogs.length > 0 && (
-              <TabLink handle={handle} tab="catalogs" active={tab} label={`${t('catalogsTab', lang)} ${catalogs.length}`} />
+            {isPeopleTab ? (
+              <>
+                <TabLink handle={handle} tab="followers" active={tab} label={`${t('followersLabel', lang)} ${followCounts.followers}`} />
+                <TabLink handle={handle} tab="following" active={tab} label={`${t('followingLabel', lang)} ${followCounts.following}`} />
+              </>
+            ) : (
+              <>
+                <TabLink handle={handle} tab="lists" active={tab} label={`${t('lists', lang)} ${counts.lists}`} />
+                <TabLink handle={handle} tab="starred" active={tab} label={`${t('starredTab', lang)} ${counts.stars}`} />
+                {catalogs.length > 0 && (
+                  <TabLink handle={handle} tab="catalogs" active={tab} label={`${t('catalogsTab', lang)} ${catalogs.length}`} />
+                )}
+              </>
             )}
           </div>
 
-          {tab === 'catalogs' ? (
+          {isPeopleTab ? (
+            people.length === 0 ? (
+              <Empty text={tab === 'followers' ? t('noFollowers', lang) : t('noFollowing', lang)} />
+            ) : (
+              <PeopleResults people={people} lang={lang} />
+            )
+          ) : tab === 'catalogs' ? (
             catalogs.length === 0 ? (
               <Empty text={t('noCatalogsYet', lang)} />
             ) : (
