@@ -40,8 +40,8 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
     <div className="flex flex-col gap-5">
       <div className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[12.5px] text-ink-2">
         {ru
-          ? 'Свой SMTP-сервер (без сторонних сервисов). Пусто = берётся из .env. Dev: MailHog (host mailhog/localhost, port 1025), письма — на :8025. Прод: свой MTA (напр. Rust — Stalwart/KumoMTA) + 587/STARTTLS.'
-          : 'Your own SMTP server (no third-party service). Empty = taken from .env. Dev: MailHog (host mailhog/localhost, port 1025), inbox at :8025. Prod: your MTA (e.g. Rust — Stalwart/KumoMTA) + 587/STARTTLS.'}
+          ? 'Свой SMTP-сервер (без сторонних сервисов). Пусто = берётся из .env. docker compose поднимает Stalwart (Rust MTA): host=mail, port=587; разовая настройка — админка Stalwart на :8080 (пароль в логах сервиса mail). Прод: домен + DKIM/SPF/DMARC.'
+          : 'Your own SMTP server (no third-party service). Empty = taken from .env. docker compose runs Stalwart (Rust MTA): host=mail, port=587; one-time setup in Stalwart admin at :8080 (password in the mail service logs). Prod: domain + DKIM/SPF/DMARC.'}
       </div>
 
       <form action={setEmailSettings} className="flex flex-col gap-4">
