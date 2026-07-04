@@ -5,6 +5,7 @@ import { gitCore } from '@/features/git/core'
 import { maybeGunzip } from '@/features/git/smart-http'
 import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
+import { recordAudit } from '@/shared/audit'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 
 // git smart-HTTP: `git clone/pull/push https://host/{owner}/{slug}.git`.
@@ -41,12 +42,13 @@ async function authorizeRead(req: Request, meta: Meta): Promise<'ok' | 401 | 404
   return auth.userId === meta.ownerId ? 'ok' : 404
 }
 
-/** Доступ на запись (push): владелец/коллаборатор по токену со scope 'write'. */
-async function authorizeWrite(req: Request, meta: Meta): Promise<'ok' | 401> {
+/** Доступ на запись (push): владелец/коллаборатор по токену со scope 'write'.
+ *  Возвращает userId пушащего (для аудита) или 401. */
+async function authorizeWrite(req: Request, meta: Meta): Promise<string | 401> {
   const auth = await userFromBasic(req)
   if (!auth || auth.scope !== 'write') return 401 // read-only токен не может пушить
-  if (auth.userId === meta.ownerId) return 'ok'
-  return (await isCollaborator(meta.id, auth.userId)) ? 'ok' : 401
+  if (auth.userId === meta.ownerId) return auth.userId
+  return (await isCollaborator(meta.id, auth.userId)) ? auth.userId : 401
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
@@ -70,7 +72,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
 
   if (service === 'git-receive-pack') {
     const az = await authorizeWrite(req, meta)
-    if (az !== 'ok') return unauthorized()
+    if (az === 401) return unauthorized()
     const body = await gitCore.infoRefsReceivePack({ owner: handle, slug }, gitProtocol)
     if (!body) return new Response('Repository unavailable', { status: 500 })
     return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-receive-pack-advertisement', ...noCache } })
@@ -100,15 +102,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
 
   if (path === 'git-receive-pack') {
     const az = await authorizeWrite(req, meta)
-    if (az !== 'ok') return unauthorized()
+    if (az === 401) return unauthorized()
     const raw = Buffer.from(await req.arrayBuffer())
     const body = maybeGunzip(raw, req.headers.get('content-encoding'))
     const res = await gitCore.receivePack({ owner: handle, slug }, body, gitProtocol)
     if (!res) return new Response('Repository unavailable', { status: 500 })
-    // Уведомление наблюдателей — delivery-эффект, вне git-ядра.
+    // Уведомление наблюдателей + аудит — delivery-эффекты, вне git-ядра.
     if (res.newVersion != null) {
       const watchers = await getWatcherIds(meta.id)
       await notifyMany(watchers, { type: 'new_version', templateId: meta.id }).catch(() => {})
+      await recordAudit('git.push', { actorId: az, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } })
     }
     return new Response(new Uint8Array(res.data), { headers: { 'Content-Type': 'application/x-git-receive-pack-result', ...noCache } })
   }

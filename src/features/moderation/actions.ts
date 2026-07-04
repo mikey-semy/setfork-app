@@ -5,13 +5,16 @@ import { eq } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 import { getAdmin } from '@/shared/auth/admin'
 import { moderateContent } from '@/shared/ai/moderate'
+import { recordAudit } from '@/shared/audit'
 import { buildListText, verdictReason } from './moderate-list'
 
 type Mod = 'active' | 'flagged' | 'hidden'
 
 export async function setVerified(templateId: string, verified: boolean): Promise<{ ok: true } | { error: string }> {
-  if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
+  const admin = await getAdmin()
+  if (!admin) return { error: 'Доступ запрещён.' }
   await db.update(templates).set({ verified }).where(eq(templates.id, templateId))
+  await recordAudit('list.verify', { actorId: admin.userId, targetType: 'list', targetId: templateId, meta: { verified } })
   revalidatePath('/admin/moderation')
   revalidatePath('/explore')
   return { ok: true }
@@ -22,11 +25,13 @@ export async function setModeration(
   moderation: Mod,
   reason?: string,
 ): Promise<{ ok: true } | { error: string }> {
-  if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
+  const admin = await getAdmin()
+  if (!admin) return { error: 'Доступ запрещён.' }
   await db
     .update(templates)
     .set({ moderation, moderationReason: reason ?? null })
     .where(eq(templates.id, templateId))
+  await recordAudit('list.moderate', { actorId: admin.userId, targetType: 'list', targetId: templateId, meta: { moderation, reason: reason ?? null } })
   revalidatePath('/admin/moderation')
   revalidatePath('/explore')
   return { ok: true }
