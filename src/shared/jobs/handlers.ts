@@ -3,6 +3,7 @@ import type { Lang } from '@/shared/i18n'
 import type { NotificationType } from '@/features/notifications/queries'
 import { sendNotificationEmail } from '@/features/notifications/email'
 import { addCandidate } from '@/features/generation/service'
+import { reindexList } from '@/features/library/reindex'
 
 export interface EmailJobPayload {
   to: string
@@ -33,4 +34,14 @@ export async function runGenerateJob(payload: unknown): Promise<void> {
   const p = payload as GenerateJobPayload
   const ok = await addCandidate(p.generationId, p.userId, p.query, p.lang, p.idx)
   if (!ok) throw new Error('generation failed (AI error)')
+}
+
+export interface ReindexJobPayload {
+  templateId: string
+}
+
+/** Переиндексация одного списка (эмбеддинг). Ошибка embedding-API → ретрай с backoff. */
+export async function runReindexJob(payload: unknown): Promise<void> {
+  const p = payload as ReindexJobPayload
+  await reindexList(p.templateId)
 }

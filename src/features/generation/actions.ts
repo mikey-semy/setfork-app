@@ -10,6 +10,7 @@ import type { Lang } from '@/shared/i18n'
 import { sanitizeCommand } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { enqueueJob } from '@/shared/jobs/queue'
+import { enqueueReindex } from '@/features/search/adapter'
 import { toProposedItems } from '@/features/library/editor'
 import { listStore } from '@/features/library/list-store.adapter'
 import { uniqueSlug } from '@/features/library/slug'
@@ -148,6 +149,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
     })),
   })
   await db.update(generations).set({ chosenTemplateId: list.id }).where(eq(generations.id, gen.id))
+  await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
 }
