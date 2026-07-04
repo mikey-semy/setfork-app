@@ -201,6 +201,29 @@ export async function getFeed(
   return withAvatar([...keyword, ...semantic.filter((r) => !seen.has(r.id))])
 }
 
+/** Счётчик списков под текущий запрос (для бейджа scope-переключателя). По ключевым
+    словам, без семантики — этого достаточно для числа рядом с вкладкой. */
+export async function countLists(
+  opts: { q?: string; tag?: string; verified?: boolean; ordered?: boolean; by?: string; tags?: string[]; minStars?: number } = {},
+  viewerId?: string,
+): Promise<number> {
+  const filters: SQL[] = [visibleFilter(viewerId), ...extraFilters(opts)]
+  if (opts.tag) filters.push(tagFilter(opts.tag))
+  const q = opts.q?.trim()
+  if (q) {
+    const like = `%${q}%`
+    filters.push(
+      or(ilike(sql`${templates.title}::text`, like), ilike(sql`${templates.desc}::text`, like), ilike(templates.slug, like))!,
+    )
+  }
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(...filters))
+  return row?.n ?? 0
+}
+
 /** Закреплённые списки пользователя (для профиля). */
 export async function getPinnedTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
   const rows = await db
