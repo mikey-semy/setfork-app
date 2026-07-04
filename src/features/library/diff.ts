@@ -184,7 +184,7 @@ const refsKey = (rs?: { label: string; url: string }[]) => (rs ?? []).map((r) =>
 
 export function diffSteps(from: CmpStep[], to: CmpStep[]): {
   entries: DiffEntry[]
-  summary: { added: number; removed: number; changed: number }
+  summary: { added: number; removed: number; changed: number; moved: number }
 } {
   const fromMap = new Map<string, { s: CmpStep; i: number }>()
   from.forEach((s, i) => fromMap.set(skey(s), { s, i }))
@@ -193,6 +193,7 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
   let added = 0
   let changed = 0
   let removed = 0
+  let moved = 0
   to.forEach((s, i) => {
     const f = fromMap.get(skey(s))
     if (!f) {
@@ -210,8 +211,10 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
     if (changes.length) {
       entries.push({ ...s, status: 'changed', changes, before: f.s })
       changed++
-    } else if (f.i !== i) entries.push({ ...s, status: 'moved', changes: [] })
-    else entries.push({ ...s, status: 'unchanged', changes: [] })
+    } else if (f.i !== i) {
+      entries.push({ ...s, status: 'moved', changes: [] })
+      moved++
+    } else entries.push({ ...s, status: 'unchanged', changes: [] })
   })
   from.forEach((s) => {
     if (!toKeys.has(skey(s))) {
@@ -219,5 +222,5 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
       removed++
     }
   })
-  return { entries, summary: { added, removed, changed } }
+  return { entries, summary: { added, removed, changed, moved } }
 }

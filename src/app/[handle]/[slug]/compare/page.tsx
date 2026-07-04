@@ -171,7 +171,7 @@ function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: CmpStep[];
 
 function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps: CmpStep[]; lang: Lang }) {
   const { entries, summary } = diffSteps(fromSteps, toSteps)
-  if (summary.added + summary.removed + summary.changed === 0)
+  if (summary.added + summary.removed + summary.changed + summary.moved === 0)
     return <div className="rounded-lg border border-dashed border-border py-12 text-center text-[13.5px] text-muted">{t('diffNothing', lang)}</div>
   return (
     <>
@@ -179,6 +179,7 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
         <span className="text-ok">+{summary.added}</span>
         <span className="text-danger">−{summary.removed}</span>
         <span className="text-warn">~{summary.changed}</span>
+        {summary.moved > 0 && <span className="text-ink-2">⇅{summary.moved}</span>}
       </div>
       <div className="flex flex-col gap-2.5">
         {entries.map((e, i) => {
