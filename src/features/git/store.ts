@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path'
 import { and, eq } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import { buildRepoFromVersions, loadListVersions } from './bundle'
+import { withDistLock } from './dist-lock'
 import type { RepoFile } from './serialize'
 
 const exec = promisify(execFile)
@@ -19,9 +20,12 @@ const IDENT = ['-c', 'user.name=SetFork', '-c', 'user.email=git@setfork.com', '-
 
 const repoPath = (templateId: string) => join(ROOT, `${templateId}.git`)
 
-// Внутрипроцессная сериализация операций над одним репозиторием.
+// Сериализация операций над одним репозиторием. Два слоя:
+//  1) in-proc gate — дёшево сериализует локальных вызывающих (без БД);
+//  2) pg advisory-лок (withDistLock, опц.) — кросс-инстансно, только для того,
+//     кто выиграл локальный gate, поэтому лишь одно соединение пула на ключ.
 const locks = new Map<string, Promise<unknown>>()
-async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+async function withInProcLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const prev = locks.get(key) ?? Promise.resolve()
   let release!: () => void
   const gate = new Promise<void>((r) => (release = r))
@@ -33,6 +37,9 @@ async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
     release()
     if (locks.get(key) === prev.then(() => gate)) locks.delete(key)
   }
+}
+function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  return withInProcLock(key, () => withDistLock(key, fn))
 }
 
 const exists = (p: string) => access(p).then(() => true).catch(() => false)

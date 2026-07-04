@@ -8,7 +8,7 @@ import { getVapid } from '@/shared/push/vapid'
 import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
-import { BarChart3, Shield } from 'lucide-react'
+import { BarChart3, Shield, ScrollText } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
@@ -106,6 +106,12 @@ export default async function AdminPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/admin/audit"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+          >
+            <ScrollText size={14} /> {ru ? 'Аудит' : 'Audit'}
+          </Link>
           <Link
             href="/admin/usage"
             className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"

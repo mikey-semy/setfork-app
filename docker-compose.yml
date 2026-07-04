@@ -70,16 +70,19 @@ services:
       - '${IMGPROXY_PORT:-8081}:8080'
 
   # Свой почтовый сервер — Stalwart (Rust MTA/IMAP/JMAP), без сторонних сервисов.
+  # ОПЦИОНАЛЬНО, выключен по умолчанию (profile "mail") — почта необязательна.
+  # Включить: `docker compose --profile mail up -d`.
   # Первый старт печатает пароль администратора в логах:
   #   docker compose logs mail | grep -i password
   # Настройка домена / DKIM / TLS / аккаунта — веб-админка на http://localhost:8080.
   # Затем в приложении: /admin → Почта → host=mail, port=587, user/pass созданного
   # аккаунта, TLS выкл (внутри docker-сети). Тест-письмо — кнопкой там же.
   mail:
-    image: stalwartlabs/mail-server:latest
+    image: stalwartlabs/stalwart:v0.16.11 # репо переименован из mail-server; latest у mail-server больше нет
+    profiles: ['mail']
     restart: unless-stopped
     volumes:
-      - stalwartdata:/opt/stalwart-mail
+      - stalwartdata:/opt/stalwart
     ports:
       - '${SMTP_PORT:-587}:587'
       - '${MAIL_ADMIN_PORT:-8080}:8080'
@@ -126,8 +129,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
-      core: { condition: service_started }
-      mail: { condition: service_started }
+      core: { condition: service_healthy }
 
 volumes:
   pgdata:

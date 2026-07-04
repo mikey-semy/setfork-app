@@ -583,6 +583,22 @@ export const apiTokens = pgTable(
   (t) => [index('api_tokens_user_idx').on(t.userId)],
 )
 
+// ── Audit log (кто что сделал: пуши, удаления, токены, модерация) ────
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    action: text('action').notNull(), // напр. 'token.create' | 'list.delete' | 'git.push'
+    targetType: text('target_type'), // 'list' | 'token' | 'session' | …
+    targetId: text('target_id'), // uuid или ref/slug (text для гибкости)
+    meta: jsonb('meta').notNull().default({}).$type<Record<string, unknown>>(),
+    ip: text('ip'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('audit_log_created_idx').on(t.createdAt), index('audit_log_actor_idx').on(t.actorId)],
+)
+
 // ── Sessions (серверный реестр входов — для отзыва и «кто онлайн») ────
 export const sessions = pgTable(
   'sessions',

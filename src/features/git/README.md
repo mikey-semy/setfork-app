@@ -43,8 +43,10 @@ persists** on reclone (no divergence); pushing without `list.json` is rejected b
 - **Persistent volume** for `GIT_DATA_DIR` (default `<cwd>/.setfork-git`, gitignored).
   Repos hold pushed commits — losing the volume rebuilds deterministic history from
   Postgres but drops the exact pushed SHAs.
-- **Single-instance lock**: the repo lock is in-process. Multi-instance deploys need a
-  distributed lock (or sticky routing per list) before enabling push at scale.
+- **Repo lock**: in-process by default. For multi-instance TS deploys sharing one
+  `GIT_DATA_DIR` volume, set `GIT_DISTRIBUTED_LOCK=1` to add a Postgres advisory lock
+  (per list) on top of the in-proc gate — see `dist-lock.ts`. (The Rust core has its own
+  pg advisory lock, so remote-core prod is already covered.)
 
 ## Bundle — offline single-file clone (verified)
 
@@ -94,7 +96,7 @@ file-level diff of the list's evolution.
   `templateId` + `currentVersion`) before heavy use.
 
 ## Next steps
-1. **Distributed lock** for multi-instance push (see caveat above).
+1. ~~**Distributed lock** for multi-instance push~~ — done (`GIT_DISTRIBUTED_LOCK=1`, see caveat above).
 2. **Richer projection**: also parse `steps/NN-*.md` (not just `list.json`) so
    editing the Markdown files directly is honoured; today `list.json` wins.
 3. **Collaborators**: allow non-owner write for named collaborators (currently

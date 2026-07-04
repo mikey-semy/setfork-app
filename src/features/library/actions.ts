@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { recordAudit } from '@/shared/audit'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { imageUrl, uploadImageFile } from '@/shared/media'
@@ -68,6 +69,7 @@ export async function deleteListAction(templateId: string): Promise<void> {
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl || tpl.ownerId !== session.userId) return
   await db.delete(templates).where(eq(templates.id, templateId)) // каскад: версии/шаги/звёзды/предложения
+  await recordAudit('list.delete', { actorId: session.userId, targetType: 'list', targetId: templateId, meta: { slug: tpl.slug } })
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}`)
 }

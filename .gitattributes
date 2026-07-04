@@ -1,0 +1,2 @@
+# Shell-скрипты выполняются на Linux-хосте — только LF, иначе CRLF ломает shebang.
+*.sh text eol=lf
