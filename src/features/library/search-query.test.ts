@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseSearchQuery } from './search-query'
+import { parseSearchQuery, buildSearchQuery } from './search-query'
 
 describe('parseSearchQuery', () => {
   it('plain text has no qualifiers', () => {
@@ -34,5 +34,23 @@ describe('parseSearchQuery', () => {
   it('stars accepts > and plain number', () => {
     expect(parseSearchQuery('stars:50').minStars).toBe(50)
     expect(parseSearchQuery('stars:>=10').minStars).toBe(10)
+  })
+})
+
+describe('buildSearchQuery', () => {
+  it('emits qualifiers for every set field', () => {
+    expect(
+      buildSearchQuery({ text: 'docker', by: 'demo', tags: ['redis', 'db'], verified: true, type: 'ordered', minStars: 100 }),
+    ).toBe('docker by:demo tag:redis tag:db is:verified type:ordered stars:>100')
+  })
+
+  it('round-trips through parseSearchQuery', () => {
+    const q = 'docker by:demo tag:redis is:verified type:ordered stars:>100'
+    expect(buildSearchQuery(parseSearchQuery(q))).toBe(q)
+  })
+
+  it('omits empty fields', () => {
+    expect(buildSearchQuery({ text: '', tags: [] })).toBe('')
+    expect(buildSearchQuery({ text: 'foo', tags: [] })).toBe('foo')
   })
 })

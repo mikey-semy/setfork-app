@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BadgeCheck, Check, Layers, List, ListOrdered, SearchX, Sparkles } from 'lucide-react'
+import { SearchX, Sparkles } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -7,6 +7,7 @@ import { hasOpenRouterKey } from '@/shared/settings/ai'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
+import { AdvancedFacets } from '@/features/library/AdvancedFacets'
 import { startGeneration } from '@/features/generation/actions'
 import { getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
 import { parseSearchQuery } from '@/features/library/search-query'
@@ -54,64 +55,10 @@ export default async function ExplorePage({
     const s = p.toString()
     return s ? `/explore?${s}` : '/explore'
   }
-  // GitHub-подобный ряд-фасет: иконка + подпись + (счётчик/галочка справа), активный подсвечен.
-  const facet = (active: boolean) =>
-    `flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] ${
-      active ? 'bg-surface font-semibold text-ink' : 'text-ink-2 hover:bg-surface hover:text-ink'
-    }`
-
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-1 items-stretch">
       <aside className="hidden w-[240px] flex-shrink-0 border-r border-border bg-surface-2 px-3 py-5 md:block">
-        <div className="mb-4 text-[13px] font-semibold text-ink">{t('filters', lang)}</div>
-
-        {/* Тип списка — наш аналог фасета «Languages» на GitHub */}
-        <div className="mb-4">
-          <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">{t('filterType', lang)}</div>
-          <div className="flex flex-col gap-0.5">
-            <Link href={qs({ type: undefined })} className={facet(!type)}>
-              <Layers size={14} className="shrink-0 text-muted" /> {t('filterAllTypes', lang)}
-            </Link>
-            <Link href={qs({ type: 'ordered' })} className={facet(type === 'ordered')}>
-              <ListOrdered size={14} className="shrink-0 text-muted" /> {t('orderedLabel', lang)}
-            </Link>
-            <Link href={qs({ type: 'unordered' })} className={facet(type === 'unordered')}>
-              <List size={14} className="shrink-0 text-muted" /> {t('unorderedLabel', lang)}
-            </Link>
-          </div>
-        </div>
-
-        {/* Проверенные — тумблер-фасет */}
-        <div className="mb-4">
-          <Link href={qs({ verified: verified ? undefined : '1' })} className={facet(verified)}>
-            <BadgeCheck size={14} className={`shrink-0 ${verified ? 'text-ok' : 'text-muted'}`} /> {t('filterVerified', lang)}
-            {verified && <Check size={13} className="ml-auto text-accent" />}
-          </Link>
-        </div>
-
-        {/* Теги — фасет со счётчиками (как «Languages» с числами) */}
-        <div>
-          <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">{t('tags', lang)}</div>
-          <div className="flex flex-col gap-0.5">
-            <Link href={qs({ tag: undefined })} className={facet(!sp.tag)}>
-              {t('allTags', lang)}
-            </Link>
-            {tags.map((tg) => (
-              <Link key={tg.tag} href={qs({ tag: tg.tag })} className={facet(sp.tag === tg.tag)}>
-                <span className="truncate">{tg.tag}</span>
-                <span className="ml-auto shrink-0 font-mono text-[11px] text-muted">{tg.count}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Синтаксис поиска: квалификаторы прямо в строке (как на GitHub) */}
-        <div className="mt-5 border-t border-border pt-3 text-[11px] leading-relaxed text-muted">
-          <div className="mb-1 px-2 font-semibold text-ink-2">{t('searchTips', lang)}</div>
-          <div className="px-2 font-mono">
-            by:handle · tag:redis · is:verified · type:ordered · stars:&gt;100
-          </div>
-        </div>
+        <AdvancedFacets initialQ={sp.q ?? ''} tags={tags} lang={lang} />
       </aside>
 
       <section className="min-w-0 flex-1 px-6 py-4">

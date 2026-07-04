@@ -51,3 +51,18 @@ export function parseSearchQuery(raw: string): ParsedQuery {
   out.text = words.join(' ')
   return out
 }
+
+/**
+ * Обратная сборка строки поиска из структуры — чтобы фасеты писали квалификаторы
+ * в единый `q` (как на GitHub). Round-trips с parseSearchQuery.
+ */
+export function buildSearchQuery(p: ParsedQuery): string {
+  const parts: string[] = []
+  if (p.text.trim()) parts.push(p.text.trim())
+  if (p.by) parts.push(`by:${p.by}`)
+  for (const tag of p.tags) parts.push(`tag:${tag}`)
+  if (p.verified) parts.push('is:verified')
+  if (p.type) parts.push(`type:${p.type}`)
+  if (p.minStars != null) parts.push(`stars:>${p.minStars}`)
+  return parts.join(' ')
+}
