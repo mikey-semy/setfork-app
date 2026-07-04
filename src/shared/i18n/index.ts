@@ -30,6 +30,7 @@ const DICT = {
   runs: { en: 'Runs', ru: 'Прогоны' },
   newList: { en: 'New list', ru: 'Новый список' },
   searchLists: { en: 'Search lists, topics or people…', ru: 'Поиск списков, тем, людей…' },
+  searchTypeSlash: { en: 'Type / to search', ru: 'Введите / для поиска' },
   heroSub: { en: 'Find the canonical list — or make it better', ru: 'Найди эталонный список — или сделай его лучше' },
   searchPh: { en: 'Describe what you need to do…', ru: 'Опиши, что нужно сделать…' },
   topics: { en: 'Topics', ru: 'Темы' },

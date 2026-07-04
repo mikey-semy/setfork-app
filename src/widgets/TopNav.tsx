@@ -1,10 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Plus, Sparkles } from 'lucide-react'
-import { SearchInput } from '@/shared/ui/SearchInput'
+import { ChevronDown, Plus, Search, Sparkles } from 'lucide-react'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { ThemeToggle } from '@/shared/ui/controls'
@@ -36,50 +35,76 @@ export function TopNav({
   const pathname = usePathname()
   const router = useRouter()
   const [q, setQ] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
   const submitSearch = () => {
     const s = q.trim()
     router.push(s ? `/explore?q=${encodeURIComponent(s)}` : '/explore')
   }
+  // Хоткей «/» фокусирует поиск (как на GitHub), если не печатаем в другом поле.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+      const el = document.activeElement as HTMLElement | null
+      const tag = el?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return
+      e.preventDefault()
+      searchRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
   const navLink = (href: string, label: string) => (
     <Link href={href} className={isActive(href) ? 'text-ink' : 'text-ink-2 hover:text-ink'}>
       {label}
     </Link>
   )
+  const iconBtn = 'grid h-8 w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink'
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-border bg-surface px-5 py-2.5 print:hidden">
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-surface px-4 py-2.5 print:hidden">
       <Link href="/" className="flex-shrink-0 text-[22px] font-extrabold leading-none tracking-tight text-ink" aria-label="SetFork">
         S<span className="text-accent">F</span>
       </Link>
-      <form
-        className="max-w-[460px] flex-1"
-        onSubmit={(e) => {
-          e.preventDefault()
-          submitSearch()
-        }}
-      >
-        <SearchInput value={q} onChange={setQ} placeholder={t('searchLists', lang)} inputClassName="py-[7px]" clearLabel={t('clear', lang)} />
-      </form>
-      <nav className="hidden items-center gap-[22px] text-[13.5px] font-medium sm:flex">
+      <nav className="hidden items-center gap-5 text-[13.5px] font-medium sm:flex">
         {navLink('/explore', t('explore', lang))}
         {navLink('/my-lists', t('myLists', lang))}
       </nav>
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-2">
+        {/* GitHub-подобный поиск: поле с иконкой + подсказка «/» */}
+        <form className="hidden md:block" onSubmit={(e) => { e.preventDefault(); submitSearch() }}>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 py-[5px] focus-within:border-border-strong">
+            <Search size={14} className="shrink-0 text-muted" />
+            <input
+              ref={searchRef}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t('searchTypeSlash', lang)}
+              aria-label={t('searchLists', lang)}
+              className="w-[180px] bg-transparent text-[13px] text-ink outline-none placeholder:text-muted xl:w-[260px]"
+            />
+            <kbd className="ml-auto hidden rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted lg:inline">/</kbd>
+          </div>
+        </form>
+        {/* Мобильный поиск — иконка ведёт в Explore */}
+        <Link href="/explore" aria-label={t('searchLists', lang)} className={`${iconBtn} md:hidden`}>
+          <Search size={17} />
+        </Link>
+
         {user ? (
           <>
             {/* bell / уведомления (выпадашка + страница «Все») */}
             <NotificationsBell unread={unread} items={notifications} lang={lang} />
 
-            {/* «+» create menu */}
+            {/* «+» create menu (GitHub-стиль: иконка + chevron) */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   aria-label={t('create', lang)}
-                  className="grid h-[30px] w-[30px] place-items-center rounded-md bg-primary text-primary-fg"
+                  className="inline-flex h-8 items-center gap-0.5 rounded-md border border-border px-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink"
                 >
-                  <Plus size={16} />
+                  <Plus size={16} /> <ChevronDown size={13} />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -95,6 +120,8 @@ export function TopNav({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <span className="mx-0.5 h-5 w-px bg-border" />
 
             {/* avatar user menu */}
             <DropdownMenu>
