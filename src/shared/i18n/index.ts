@@ -168,6 +168,7 @@ const DICT = {
   searchPrompt: { en: 'Search lists, people and issues', ru: 'Ищите списки, людей и задачи' },
   popularPeople: { en: 'Popular people', ru: 'Популярные люди' },
   searchFor: { en: 'Search for', ru: 'Искать' },
+  shareVia: { en: 'Share via', ru: 'Поделиться через' },
   proTip: { en: 'Search tips', ru: 'Подсказки поиска' },
   proTipBody: { en: 'Refine with qualifiers right in the search box:', ru: 'Уточняйте квалификаторами прямо в строке поиска:' },
   scopeLists: { en: 'Lists', ru: 'Списки' },

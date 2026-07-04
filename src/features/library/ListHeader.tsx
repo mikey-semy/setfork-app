@@ -4,7 +4,7 @@ import { ArrowLeft, BadgeCheck, CircleDot, GitFork, GitPullRequest, ListChecks, 
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { forkTemplate } from '@/features/library/actions'
 import { startRun } from '@/features/runs/actions'
@@ -122,9 +122,11 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
             </form>
             <ShareButton
               path={base}
+              title={tr(meta.title, lang)}
               label={t('share', lang)}
               copiedLabel={t('copied', lang)}
               copyLinkLabel={t('copyLink', lang)}
+              shareViaLabel={t('shareVia', lang)}
               qrHint={t('qrHint', lang)}
               className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong"
             />
