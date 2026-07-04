@@ -38,7 +38,7 @@ export function ShareButton({
   return (
     <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
-        <button type="button" className={className}>
+        <button type="button" className={className} aria-label={label || 'Share'}>
           <Share2 size={15} /> {label && <span>{label}</span>}
         </button>
       </DropdownMenuTrigger>

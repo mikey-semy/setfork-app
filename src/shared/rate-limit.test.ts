@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { rateLimit } from './rate-limit'
 
 describe('rateLimit — fixed window', () => {
@@ -20,14 +20,17 @@ describe('rateLimit — fixed window', () => {
   })
 
   it('resets after the window elapses', () => {
-    const key = `w-${Math.random()}`
-    expect(rateLimit(key, 1, 1).ok).toBe(true) // окно 1мс
-    expect(rateLimit(key, 1, 1).ok).toBe(false)
-    return new Promise<void>((res) =>
-      setTimeout(() => {
-        expect(rateLimit(key, 1, 1).ok).toBe(true) // окно прошло → снова можно
-        res()
-      }, 5),
-    )
+    // Fake-таймеры: детерминированно, без гонки на границе миллисекунды
+    // (при реальном окне 1мс два синхронных вызова могли «перешагнуть» мс и сбросить счётчик).
+    vi.useFakeTimers()
+    try {
+      const key = `w-${Math.random()}`
+      expect(rateLimit(key, 1, 1000).ok).toBe(true)
+      expect(rateLimit(key, 1, 1000).ok).toBe(false)
+      vi.advanceTimersByTime(1001) // окно прошло
+      expect(rateLimit(key, 1, 1000).ok).toBe(true) // снова можно
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

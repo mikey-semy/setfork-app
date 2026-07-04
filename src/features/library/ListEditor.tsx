@@ -361,6 +361,7 @@ export function ListEditor({
               <Heading size={13} className="shrink-0" />
               <input
                 className="w-full bg-transparent text-[12.5px] font-semibold outline-none placeholder:font-normal placeholder:text-muted"
+                aria-label={ru ? `Секция пункта ${i + 1}` : `Item ${i + 1} section`}
                 placeholder={ru ? 'Секция (необязательно) — группирует пункты ниже' : 'Section (optional) — groups the items below'}
                 value={it.section}
                 onChange={(e) => patch(i, { section: e.target.value })}
@@ -368,18 +369,21 @@ export function ListEditor({
             </div>
             <input
               className={input}
+              aria-label={ru ? `Заголовок пункта ${i + 1}` : `Item ${i + 1} title`}
               placeholder={ru ? 'Заголовок пункта' : 'Item title'}
               value={it.title}
               onChange={(e) => patch(i, { title: e.target.value })}
             />
             <input
               className={input}
+              aria-label={ru ? `Описание пункта ${i + 1}` : `Item ${i + 1} description`}
               placeholder={ru ? 'Описание (необязательно)' : 'Description (optional)'}
               value={it.desc}
               onChange={(e) => patch(i, { desc: e.target.value })}
             />
             <input
               className={`${input} font-mono`}
+              aria-label={ru ? `Команда пункта ${i + 1}` : `Item ${i + 1} command`}
               placeholder={ru ? 'Команда (необязательно)' : 'Command (optional)'}
               value={it.command}
               onChange={(e) => patch(i, { command: e.target.value })}
@@ -420,6 +424,7 @@ export function ListEditor({
                     <span className="text-muted">–</span>
                     <input
                       className={input}
+                      aria-label={ru ? `Подпункт ${si + 1}` : `Sub-item ${si + 1}`}
                       placeholder={ru ? 'Подпункт' : 'Sub-item'}
                       value={s}
                       onChange={(e) =>
@@ -430,6 +435,7 @@ export function ListEditor({
                       type="button"
                       onClick={() => patch(i, { subtasks: it.subtasks.filter((_, xi) => xi !== si) })}
                       className="text-muted hover:text-danger"
+                      aria-label={ru ? 'Удалить подпункт' : 'Remove sub-item'}
                     >
                       <X size={14} />
                     </button>
@@ -445,6 +451,7 @@ export function ListEditor({
                   <div key={ri} className="flex items-center gap-2">
                     <input
                       className={`${input} max-w-[200px]`}
+                      aria-label={ru ? 'Название ссылки' : 'Link label'}
                       placeholder={ru ? 'Название ссылки' : 'Link label'}
                       value={r.label}
                       onChange={(e) =>
@@ -455,6 +462,7 @@ export function ListEditor({
                     />
                     <input
                       className={`${input} font-mono`}
+                      aria-label={ru ? 'URL ссылки' : 'Link URL'}
                       placeholder="https://…"
                       value={r.url}
                       onChange={(e) =>
@@ -465,6 +473,7 @@ export function ListEditor({
                       type="button"
                       onClick={() => patch(i, { refs: it.refs.filter((_, xi) => xi !== ri) })}
                       className="text-muted hover:text-danger"
+                      aria-label={ru ? 'Удалить ссылку' : 'Remove link'}
                     >
                       <X size={14} />
                     </button>

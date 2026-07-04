@@ -34,6 +34,7 @@ export function NewIssueForm({ owner, slug, lang }: { owner: string; slug: strin
           required
           onChange={() => error && setError(false)}
           className={`${inputCls} ${error ? 'border-danger focus:border-danger' : ''}`}
+          aria-label={t('issueTitlePh', lang)}
           placeholder={t('issueTitlePh', lang)}
           autoFocus
           maxLength={200}

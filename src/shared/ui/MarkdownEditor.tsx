@@ -464,6 +464,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
           onBlur={() => setTimeout(() => { setMention(null); setIref(null) }, 150)}
+          aria-label={placeholder || L('Текст в разметке Markdown', 'Markdown text')}
           placeholder={placeholder}
           rows={rows}
           maxLength={maxLength}
