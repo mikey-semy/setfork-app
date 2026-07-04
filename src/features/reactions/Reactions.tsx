@@ -1,5 +1,6 @@
 'use client'
 import { useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
 import { SmilePlus } from 'lucide-react'
@@ -63,29 +64,34 @@ export function Reactions({
           >
             <SmilePlus size={14} />
           </button>
-          {open && (
-            <>
-              {/* клик снаружи — закрыть */}
-              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-              <div className="absolute left-0 z-20 mt-1">
-                <EmojiPicker
-                  data={emojiData}
-                  locale={lang === 'ru' ? 'ru' : 'en'}
-                  theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
-                  previewPosition="none"
-                  skinTonePosition="none"
-                  perLine={8}
-                  emojiSize={20}
-                  emojiButtonSize={30}
-                  maxFrequentRows={2}
-                  onEmojiSelect={(e: { native?: string }) => {
-                    if (e.native) react(e.native)
-                    setOpen(false)
-                  }}
-                />
-              </div>
-            </>
-          )}
+          {open &&
+            createPortal(
+              // Портал в body + fixed по центру: пикер не привязан к кнопке (не едет
+              // со скроллом) и не обрезается overflow/z-index карточки комментария.
+              <div
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4"
+                onClick={() => setOpen(false)}
+              >
+                <div onClick={(e) => e.stopPropagation()}>
+                  <EmojiPicker
+                    data={emojiData}
+                    locale={lang === 'ru' ? 'ru' : 'en'}
+                    theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                    previewPosition="none"
+                    skinTonePosition="none"
+                    perLine={8}
+                    emojiSize={20}
+                    emojiButtonSize={30}
+                    maxFrequentRows={2}
+                    onEmojiSelect={(e: { native?: string }) => {
+                      if (e.native) react(e.native)
+                      setOpen(false)
+                    }}
+                  />
+                </div>
+              </div>,
+              document.body,
+            )}
         </div>
       )}
     </div>
