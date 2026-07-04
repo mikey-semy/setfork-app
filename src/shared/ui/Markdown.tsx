@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/shared/lib/cn'
+import { SmartImage } from './SmartImage'
 import { remarkIssueRefs } from './remark-issue-refs'
 
 // Безопасный рендер markdown (react-markdown не пропускает сырой HTML) + GFM
@@ -25,8 +26,9 @@ export function Markdown({ children, className, refBase }: { children: string; c
           h3: (p) => <div {...p} className="font-semibold text-ink" />,
           blockquote: (p) => <blockquote {...p} className="border-l-2 border-border pl-3 text-muted" />,
           input: (p) => <input {...p} disabled className="mr-1.5 align-middle accent-accent" />,
-          // eslint-disable-next-line @next/next/no-img-element
-          img: (p) => <img {...p} alt={p.alt || ''} className="my-1.5 max-w-full rounded-md border border-border" />,
+          img: (p) => (
+            <SmartImage src={typeof p.src === 'string' ? p.src : ''} alt={p.alt || ''} className="my-1.5 max-w-full rounded-md border border-border" />
+          ),
           table: (p) => (
             <div className="overflow-x-auto">
               <table {...p} className="w-full border-collapse text-[12.5px]" />
