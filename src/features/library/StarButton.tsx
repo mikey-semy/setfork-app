@@ -36,7 +36,8 @@ export function StarButton({
           : 'border-border text-ink hover:border-border-strong'
       }`}
     >
-      <Star size={14} fill={opt.starred ? 'currentColor' : 'none'} /> {label}
+      <Star size={14} fill={opt.starred ? 'currentColor' : 'none'} />
+      <span className="hidden sm:inline">{label}</span>
       <span className="font-mono text-[12px] text-muted">{opt.count}</span>
     </button>
   )

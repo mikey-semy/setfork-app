@@ -82,7 +82,7 @@ export function ShareButton({
     <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <button type="button" className={className} aria-label={label || 'Share'}>
-          <Share2 size={15} /> {label && <span>{label}</span>}
+          <Share2 size={15} /> {label && <span className="hidden sm:inline">{label}</span>}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[240px] p-3">
