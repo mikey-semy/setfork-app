@@ -6,6 +6,10 @@ import { saveSettings } from '@/shared/settings/kv'
 import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
+import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/email'
+import { sendMail } from '@/shared/email/mailer'
+import { db, users } from '@/shared/db'
+import { eq } from 'drizzle-orm'
 
 export async function setAiSettings(formData: FormData): Promise<void> {
   await requireAdmin()
@@ -64,6 +68,43 @@ export async function setMediaSettings(formData: FormData): Promise<void> {
   await saveSettings(settings)
   clearMediaCache()
   revalidatePath('/admin')
+}
+
+// ── Почта (SMTP: свой сервер, без сторонних сервисов) ────────────────
+export async function setEmailSettings(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const str = (k: string) => String(formData.get(k) ?? '').trim()
+  const settings: Record<string, string> = {
+    [EMAIL_KEYS.host]: str('host'),
+    [EMAIL_KEYS.port]: str('port'),
+    [EMAIL_KEYS.secure]: formData.get('secure') === 'on' ? 'true' : 'false',
+    [EMAIL_KEYS.user]: str('user'),
+    [EMAIL_KEYS.from]: str('from'),
+  }
+  const pass = str('pass')
+  if (pass) settings[EMAIL_KEYS.pass] = pass // пусто = не менять
+  await saveSettings(settings)
+  clearEmailCache()
+  revalidatePath('/admin')
+}
+
+/** Тест-письмо на указанный адрес (или на email админа). Возвращает результат для UI. */
+export async function sendTestEmail(to: string): Promise<{ ok: boolean; error?: string }> {
+  const admin = await requireAdmin()
+  clearEmailCache() // вдруг настройки только что сохранили
+  if (!(await emailEnabled())) return { ok: false, error: 'SMTP не настроен (нет host).' }
+  let recipient = to.trim()
+  if (!recipient) {
+    const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, admin.userId)).limit(1)
+    recipient = u?.email ?? ''
+  }
+  if (!recipient) return { ok: false, error: 'Нет адреса получателя.' }
+  const ok = await sendMail({
+    to: recipient,
+    subject: 'SetFork — test email',
+    html: '<p style="font-family:sans-serif;font-size:15px">SMTP works ✅ — SetFork может отправлять почту.</p>',
+  })
+  return ok ? { ok: true } : { ok: false, error: 'Отправка не удалась — проверьте host/port/креды.' }
 }
 
 // ── Настройки поиска (режим + порог + лимит) ─────────────────────────

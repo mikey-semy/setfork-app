@@ -3,7 +3,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { db, notifications, users } from '@/shared/db'
 import type { NotifyPrefs } from '@/shared/db/schema'
 import type { Lang } from '@/shared/i18n'
-import { emailEnabled } from '@/shared/email/mailer'
+import { emailEnabled } from '@/shared/settings/email'
 import { extractHandles } from './mentions'
 import { sendNotificationEmail } from './email'
 
@@ -60,7 +60,7 @@ export async function notify(params: {
       issueId: params.issueId ?? null,
     })
     // Дублируем на почту, если получатель включил email-уведомления и SMTP настроен.
-    if (prefs.email === true && u?.email && emailEnabled()) {
+    if (prefs.email === true && u?.email && (await emailEnabled())) {
       await sendNotificationEmail({
         to: u.email,
         // Язык получателя в БД не хранится (только в куке актора) → пока 'en'.
