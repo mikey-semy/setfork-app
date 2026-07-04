@@ -86,6 +86,14 @@ export default async function SuggestionThreadPage({
           <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
         </div>
 
+        {isOwner && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
+          <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">
+            {lang === 'ru'
+              ? `Правка основана на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
+              : `This suggestion is based on v${sug.baseVersion}, but the list is now at v${meta.currentVersion}. Accepting will overwrite the newer changes (v${sug.baseVersion + 1}–v${meta.currentVersion}).`}
+          </div>
+        )}
+
         {isOwner && sug.status === 'open' && (
           <div className="mt-3 flex gap-2.5">
             <form action={acceptSuggestion.bind(null, sug.id)}>
