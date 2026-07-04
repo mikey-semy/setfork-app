@@ -106,13 +106,14 @@ export async function setIssueStatus(owner: string, slug: string, number: number
   revalidatePath(`/${owner}/${slug}/issues`)
 }
 
-/** Изменить метки issue — только владелец списка. */
+/** Изменить метки issue — владелец списка ИЛИ коллаборатор (как assignees/milestones). */
 export async function setIssueLabels(owner: string, slug: string, number: number, labels: string[]): Promise<void> {
   const session = await requireSession()
   const loaded = await loadIssue(owner, slug, number)
   if (!loaded) redirect(`/${owner}/${slug}`)
   const { tpl, iss } = loaded
-  if (session.userId !== tpl.ownerId) redirect(`/${owner}/${slug}/issues/${number}`)
+  const canManage = session.userId === tpl.ownerId || (await isCollaborator(tpl.id, session.userId))
+  if (!canManage) redirect(`/${owner}/${slug}/issues/${number}`)
   await db.update(issues).set({ labels: cleanLabels(labels), updatedAt: new Date() }).where(eq(issues.id, iss.id))
   revalidatePath(`/${owner}/${slug}/issues/${number}`)
 }

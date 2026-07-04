@@ -10,7 +10,7 @@ import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getIssue, getIssueAssignees, getIssueComments } from '@/features/issues/queries'
-import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
+import { LabelEditor } from '@/features/issues/LabelEditor'
 import { AssigneePicker } from '@/features/issues/AssigneePicker'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
 import { addIssueComment, setIssueStatus } from '@/features/issues/actions'
@@ -84,9 +84,7 @@ export default async function IssueThreadPage({
             <span className="font-semibold text-ink">{issue.authorHandle}</span> {t('openedThis', lang)} ·{' '}
             {comments.length} {t('commentBtn', lang).toLowerCase()}
           </span>
-          <div className="flex flex-wrap gap-1.5">
-            <IssueLabelChips labels={issue.labels} lang={lang} />
-          </div>
+          <LabelEditor owner={owner} slug={slug} number={issue.number} labels={issue.labels} canEdit={canManage} lang={lang} />
         </div>
 
         {/* Исполнители + веха */}
