@@ -204,13 +204,18 @@ export function TopNav({
                   <ThemeToggle />
                 </div>
                 <DropdownMenuSeparator />
-                <form action="/api/auth/logout" method="post">
-                  <DropdownMenuItem asChild>
-                    <button type="submit" className="w-full text-left text-danger">
-                      {t('signOut', lang)}
-                    </button>
-                  </DropdownMenuItem>
-                </form>
+                {/* Логаут через fetch, а НЕ форму: Radix закрывает меню и размонтирует
+                    форму раньше, чем уходит submit — из-за этого выйти не получалось. */}
+                <DropdownMenuItem
+                  className="text-danger"
+                  onSelect={() => {
+                    void fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
+                      window.location.href = '/'
+                    })
+                  }}
+                >
+                  {t('signOut', lang)}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
