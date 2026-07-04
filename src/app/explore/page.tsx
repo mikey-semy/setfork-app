@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BadgeCheck, SearchX, Sparkles } from 'lucide-react'
+import { BadgeCheck, Check, Layers, List, ListOrdered, SearchX, Sparkles } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -40,54 +40,55 @@ export default async function ExplorePage({
     const s = p.toString()
     return s ? `/explore?${s}` : '/explore'
   }
-  const chip = (active: boolean) =>
-    `rounded-full px-2.5 py-1 text-[12px] ${active ? 'bg-primary text-primary-fg' : 'bg-surface text-ink-2 hover:text-ink'}`
+  // GitHub-подобный ряд-фасет: иконка + подпись + (счётчик/галочка справа), активный подсвечен.
+  const facet = (active: boolean) =>
+    `flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] ${
+      active ? 'bg-surface font-semibold text-ink' : 'text-ink-2 hover:bg-surface hover:text-ink'
+    }`
 
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-1 items-stretch">
-      <aside className="hidden w-[260px] flex-shrink-0 border-r border-border bg-surface-2 px-4 py-5 md:block">
-        <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">{t('filters', lang)}</div>
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          <Link href={qs({ verified: verified ? undefined : '1' })} className={`inline-flex items-center gap-1 ${chip(verified)}`}>
-            <BadgeCheck size={12} /> {t('filterVerified', lang)}
-          </Link>
+      <aside className="hidden w-[240px] flex-shrink-0 border-r border-border bg-surface-2 px-3 py-5 md:block">
+        <div className="mb-4 text-[13px] font-semibold text-ink">{t('filters', lang)}</div>
+
+        {/* Тип списка — наш аналог фасета «Languages» на GitHub */}
+        <div className="mb-4">
+          <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">{t('filterType', lang)}</div>
+          <div className="flex flex-col gap-0.5">
+            <Link href={qs({ type: undefined })} className={facet(!type)}>
+              <Layers size={14} className="shrink-0 text-muted" /> {t('filterAllTypes', lang)}
+            </Link>
+            <Link href={qs({ type: 'ordered' })} className={facet(type === 'ordered')}>
+              <ListOrdered size={14} className="shrink-0 text-muted" /> {t('orderedLabel', lang)}
+            </Link>
+            <Link href={qs({ type: 'unordered' })} className={facet(type === 'unordered')}>
+              <List size={14} className="shrink-0 text-muted" /> {t('unorderedLabel', lang)}
+            </Link>
+          </div>
         </div>
-        <div className="mb-5 flex flex-wrap gap-1.5">
-          <Link href={qs({ type: undefined })} className={chip(!type)}>
-            {t('filterAllTypes', lang)}
-          </Link>
-          <Link href={qs({ type: 'ordered' })} className={chip(type === 'ordered')}>
-            {t('orderedLabel', lang)}
-          </Link>
-          <Link href={qs({ type: 'unordered' })} className={chip(type === 'unordered')}>
-            {t('unorderedLabel', lang)}
+
+        {/* Проверенные — тумблер-фасет */}
+        <div className="mb-4">
+          <Link href={qs({ verified: verified ? undefined : '1' })} className={facet(verified)}>
+            <BadgeCheck size={14} className={`shrink-0 ${verified ? 'text-ok' : 'text-muted'}`} /> {t('filterVerified', lang)}
+            {verified && <Check size={13} className="ml-auto text-accent" />}
           </Link>
         </div>
 
-        <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">{t('tags', lang)}</div>
-        <div className="flex flex-wrap gap-1.5">
-          <Link
-            href={qs({ tag: undefined })}
-            className={`rounded-full px-2.5 py-1 text-[12px] ${
-              !sp.tag ? 'bg-primary text-primary-fg' : 'bg-surface text-ink-2 hover:text-ink'
-            }`}
-          >
-            {t('allTags', lang)}
-          </Link>
-          {tags.map((tg) => (
-            <Link
-              key={tg.tag}
-              href={qs({ tag: tg.tag })}
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] ${
-                sp.tag === tg.tag ? 'bg-primary text-primary-fg' : 'bg-surface text-ink-2 hover:text-ink'
-              }`}
-            >
-              {tg.tag}
-              <span className={`font-mono text-[10.5px] ${sp.tag === tg.tag ? 'text-primary-fg/70' : 'text-muted'}`}>
-                {tg.count}
-              </span>
+        {/* Теги — фасет со счётчиками (как «Languages» с числами) */}
+        <div>
+          <div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted">{t('tags', lang)}</div>
+          <div className="flex flex-col gap-0.5">
+            <Link href={qs({ tag: undefined })} className={facet(!sp.tag)}>
+              {t('allTags', lang)}
             </Link>
-          ))}
+            {tags.map((tg) => (
+              <Link key={tg.tag} href={qs({ tag: tg.tag })} className={facet(sp.tag === tg.tag)}>
+                <span className="truncate">{tg.tag}</span>
+                <span className="ml-auto shrink-0 font-mono text-[11px] text-muted">{tg.count}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </aside>
 

@@ -157,6 +157,7 @@ const DICT = {
   noCollaborators: { en: 'No collaborators yet.', ru: 'Пока нет соавторов.' },
   removeLabel: { en: 'Remove', ru: 'Убрать' },
   filters: { en: 'Filters', ru: 'Фильтры' },
+  filterType: { en: 'Type', ru: 'Тип' },
   filterVerified: { en: 'Verified only', ru: 'Только проверенные' },
   filterAllTypes: { en: 'Any type', ru: 'Любой тип' },
   listKind: { en: 'List type', ru: 'Тип списка' },
