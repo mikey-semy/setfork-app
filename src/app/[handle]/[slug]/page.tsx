@@ -22,6 +22,12 @@ function fmt(n: number): string {
   return String(n)
 }
 
+// Заголовок вкладки как в GitHub: owner/slug (layout добавит « · SetFork»).
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `${handle}/${slug}` }
+}
+
 export default async function ListPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle: owner, slug } = await params
   const lang = await getLang()
