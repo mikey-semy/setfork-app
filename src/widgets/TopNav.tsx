@@ -122,10 +122,10 @@ export function TopNav({
           SF
         </Link>
       </div>
-      {/* Бредкрамб (как GitHub owner/repo): чей профиль/список открыт. Прячем на поиске. */}
+      {/* Бредкрамб (как GitHub owner/repo): чей профиль/список открыт. Прячем на поиске.
+          Слеша между лого и handle нет — только между handle и slug. */}
       {crumb && !isSearch && (
-        <nav className="ml-1 flex min-w-0 items-center gap-1 text-[14px]" aria-label="breadcrumb">
-          <span className="text-muted">/</span>
+        <nav className="ml-2 flex min-w-0 items-center gap-1 text-[14px]" aria-label="breadcrumb">
           <Link href={`/${crumb.handle}`} className={`truncate text-ink hover:text-accent ${crumb.slug ? 'font-medium' : 'font-semibold'}`}>
             {crumb.handle}
           </Link>

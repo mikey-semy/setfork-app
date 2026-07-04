@@ -44,11 +44,11 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
   )
   const contributors = await getContributors(tpl.id, tpl.ownerId)
   const base = `/${owner}/${slug}`
-  const latestNote = currentVersion?.note
-  const latestMessage =
-    latestNote && !['initial', 'edit', 'seeded', 'ai draft'].includes(latestNote)
-      ? latestNote
-      : `v${currentVersion?.version ?? tpl.currentVersion}`
+  // Показываем note версии, только если он осмысленный (не служебный boilerplate).
+  const latestNote =
+    currentVersion?.note && !['initial', 'edit', 'seeded', 'ai draft'].includes(currentVersion.note)
+      ? currentVersion.note
+      : ''
 
   return (
     <>
@@ -90,18 +90,22 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
               </div>
             )}
 
-            {/* Строка «последнего коммита» — как на GitHub над списком файлов */}
+            {/* Последняя версия (как строка «последнего коммита» на GitHub):
+                КТО опубликовал · КАКУЮ (note/номер) · КОГДА · сколько версий всего. */}
             {currentVersion && (
-              <div className="mb-3 flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
+              <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
                 <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
-                <Link href={`/${tpl.owner.handle}`} className="font-semibold text-ink hover:text-accent">
+                <Link href={`/${tpl.owner.handle}`} className="shrink-0 font-semibold text-ink hover:text-accent">
                   {tpl.owner.handle}
                 </Link>
-                <span className="min-w-0 flex-1 truncate text-ink-2">{latestMessage}</span>
-                <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 text-muted hover:text-accent">
+                <span className="shrink-0 rounded border border-[var(--accent)]/50 bg-[var(--accent-soft)] px-1.5 font-mono text-[11px] text-accent">
+                  v{currentVersion.version}
+                </span>
+                {latestNote && <span className="min-w-0 flex-1 truncate text-ink-2">{latestNote}</span>}
+                <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
+                <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent" title={t('versionsTab', lang)}>
                   <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
                 </Link>
-                <span className="shrink-0 text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
               </div>
             )}
 
