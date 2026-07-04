@@ -87,7 +87,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
             {session && active === 'overview' && (
               <form action={startRun.bind(null, meta.id)}>
                 <button className="inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-primary-fg">
-                  <PlayCircle size={15} /> {t('runStart', lang)}
+                  <PlayCircle size={15} /> <span className="hidden sm:inline">{t('runStart', lang)}</span>
                 </button>
               </form>
             )}
@@ -107,12 +107,12 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
                 href="/login"
                 className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong"
               >
-                <Star size={14} /> {t('star', lang)} <span className="font-mono text-[12px] text-muted">{meta.starsCount}</span>
+                <Star size={14} /> <span className="hidden sm:inline">{t('star', lang)}</span> <span className="font-mono text-[12px] text-muted">{meta.starsCount}</span>
               </Link>
             )}
             <form action={forkBound}>
               <button className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong">
-                <GitFork size={14} /> {t('fork', lang)}{' '}
+                <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>{' '}
                 <span className="font-mono text-[12px] text-muted">{meta.forksCount}</span>
               </button>
             </form>
