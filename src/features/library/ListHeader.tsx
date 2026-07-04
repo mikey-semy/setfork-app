@@ -42,7 +42,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   const tab = (key: Tab, href: string, icon: React.ReactNode, label: string, count?: number) => (
     <Link
       href={href}
-      className={`inline-flex items-center gap-1.5 pb-2.5 ${
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap pb-2.5 ${
         active === key ? 'border-b-2 border-ink text-ink' : 'text-ink-2 hover:text-ink'
       }`}
     >
@@ -149,7 +149,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
           </div>
         </div>
 
-        <nav className="mt-3 flex gap-5 text-[14px] font-semibold">
+        <nav className="no-scrollbar mt-3 flex gap-5 overflow-x-auto text-[14px] font-semibold">
           {tab('overview', base, <ListChecks size={15} />, t('overviewTab', lang))}
           {tab('versions', `${base}/versions`, <Tag size={15} />, t('versionsTab', lang))}
           {tab('issues', `${base}/issues`, <CircleDot size={15} />, t('issuesTab', lang), issueCount)}

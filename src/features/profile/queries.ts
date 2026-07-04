@@ -1,13 +1,16 @@
 import 'server-only'
+import { cache } from 'react'
 import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { db, runs, stars, suggestions, templateVersions, templates, users } from '@/shared/db'
 import type { FeedItem } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
 
-export async function getUserByHandle(handle: string) {
+// cache() — дедуп в рамках одного запроса (generateMetadata + сама страница
+// зовут его на профиле → один SQL вместо двух).
+export const getUserByHandle = cache(async (handle: string) => {
   const [u] = await db.select().from(users).where(eq(users.handle, handle)).limit(1)
   return u ?? null
-}
+})
 
 /** Активность по дням за ~год: версии списков (правки) + предложения правок. */
 export async function getContributions(userId: string): Promise<{ date: string; count: number }[]> {

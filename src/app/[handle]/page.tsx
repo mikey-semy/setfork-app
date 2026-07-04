@@ -21,6 +21,17 @@ function displayUrl(url: string): string {
 
 type Tab = 'lists' | 'starred' | 'catalogs'
 
+// Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
+export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
+  const { handle } = await params
+  const user = await getUserByHandle(handle)
+  if (!user) return { title: handle }
+  return {
+    title: user.name ? `${user.name} (${handle})` : handle,
+    description: user.bio ?? undefined,
+  }
+}
+
 export default async function ProfilePage({
   params,
   searchParams,
