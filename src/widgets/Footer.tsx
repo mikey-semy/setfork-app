@@ -3,65 +3,23 @@ import { t, type Lang } from '@/shared/i18n'
 
 const REPO_URL = 'https://github.com/mikey-semy/setfork-frontend'
 
-/** Глобальный подвал (GitHub-подобный): бренд + группы ссылок + нижняя полоса. */
+/** Плоский подвал (как в GitHub): один ряд приглушённых ссылок, без границ и колонок. */
 export function Footer({ lang }: { lang: Lang }) {
   const year = new Date().getFullYear()
-
-  const group = (title: string, links: { href: string; label: string; external?: boolean }[]) => (
-    <div className="flex flex-col gap-2">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">{title}</div>
-      {links.map((l) =>
-        l.external ? (
-          <a key={l.href} href={l.href} target="_blank" rel="noreferrer" className="text-[12.5px] text-ink-2 hover:text-ink">
-            {l.label}
-          </a>
-        ) : (
-          <Link key={l.href} href={l.href} className="text-[12.5px] text-ink-2 hover:text-ink">
-            {l.label}
-          </Link>
-        ),
-      )}
-    </div>
-  )
+  const link = 'text-muted hover:text-ink-2 transition-colors'
 
   return (
-    <footer className="mt-auto border-t border-border bg-surface print:hidden">
-      <div className="mx-auto grid w-full max-w-[1080px] grid-cols-2 gap-8 px-6 py-10 sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        {/* бренд */}
-        <div className="col-span-2 flex flex-col gap-2 sm:col-span-1">
-          <Link href="/" aria-label="SetFork" className="font-logo text-[18px] leading-none text-ink">
-            SF
-          </Link>
-          <p className="max-w-[240px] text-[12.5px] leading-snug text-ink-2">{t('footerTagline', lang)}</p>
-        </div>
-
-        {group(t('footerProduct', lang), [
-          { href: '/explore', label: t('explore', lang) },
-          { href: '/new', label: t('newList', lang) },
-          { href: '/my-lists', label: t('myLists', lang) },
-        ])}
-
-        {group(t('footerResources', lang), [
-          { href: '/about', label: t('aboutProject', lang) },
-          { href: REPO_URL, label: t('sourceCode', lang), external: true },
-          { href: `${REPO_URL}/issues`, label: t('contact', lang), external: true },
-        ])}
-
-        {group(t('footerLegal', lang), [
-          { href: '/terms', label: t('terms', lang) },
-          { href: '/privacy', label: t('privacy', lang) },
-        ])}
-      </div>
-
-      <div className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-between gap-2 px-6 py-4 text-[11.5px] text-muted">
-          <span>
-            © {year} SetFork. {t('allRightsReserved', lang)}
-          </span>
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-ink-2">
-            <GithubMark /> mikey-semy/setfork
-          </a>
-        </div>
+    <footer className="mt-auto print:hidden">
+      <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-center gap-x-4 gap-y-2 px-6 py-8 text-[12px]">
+        <a href={REPO_URL} target="_blank" rel="noreferrer" className={`inline-flex items-center gap-1.5 ${link}`}>
+          <GithubMark /> © {year} SetFork
+        </a>
+        <Link href="/explore" className={link}>{t('explore', lang)}</Link>
+        <Link href="/about" className={link}>{t('aboutProject', lang)}</Link>
+        <a href={REPO_URL} target="_blank" rel="noreferrer" className={link}>{t('sourceCode', lang)}</a>
+        <a href={`${REPO_URL}/issues`} target="_blank" rel="noreferrer" className={link}>{t('contact', lang)}</a>
+        <Link href="/terms" className={link}>{t('terms', lang)}</Link>
+        <Link href="/privacy" className={link}>{t('privacy', lang)}</Link>
       </div>
     </footer>
   )
