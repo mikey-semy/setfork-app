@@ -20,6 +20,11 @@ const USERS = [
   { handle: 'dana-sec', name: 'Dana Ivanova', bio: 'AppSec engineer. Hardening things for a living.', location: 'Tallinn' },
   { handle: 'evan-sre', name: 'Evan Wright', bio: 'SRE. On-call survivor. Runbooks or it did not happen.', location: 'Austin' },
   { handle: 'mira-data', name: 'Mira Kaur', bio: 'Data / analytics engineer. Pipelines and data quality.', location: 'Toronto' },
+  // ── Фан-персонажи (demo живёт в вакууме, поэтому можно и не про код) ──
+  { handle: 'chef-remy', name: 'Remy Gusteau', bio: 'Anyone can cook. Even you. Even at 2am.', location: 'Paris' },
+  { handle: 'gnome-biz', name: 'Underpants Gnome', bio: 'Phase 1 specialist. Phase 2 is proprietary.', location: 'South Park, CO' },
+  { handle: 'dm-gary', name: 'Gary G.', bio: 'Forever DM. Rolls for initiative on everything.', location: 'Lake Geneva' },
+  { handle: 'ranger-rae', name: 'Rae Wilder', bio: 'Leave no trace. Take only photos, leave only footprints.', location: 'Yosemite' },
 ]
 const DEMO_HANDLES = USERS.map((u) => u.handle)
 
@@ -143,6 +148,92 @@ const LISTS: List[] = [
       { t: 'Quarantine bad rows, do not silently drop them' },
     ],
   },
+
+  // ─────────────────────────── Фан-списки ───────────────────────────
+  {
+    owner: 'chef-remy', slug: 'how-to-roast-the-perfect-marshmallow', ordered: true,
+    title: 'How to roast the perfect marshmallow',
+    desc: 'Golden, gooey, evenly toasted. A rigorous methodology for a serious craft.',
+    tags: ['cooking', 'campfire', 'dessert', 'not-programming'],
+    steps: [
+      { t: 'Select a fresh marshmallow', d: 'Stale ones will not puff — squeeze for softness.' },
+      { t: 'Use a long stick or metal skewer', d: 'Long enough to keep your knuckles off the heat.' },
+      { t: 'Roast over glowing embers, not open flame', d: 'Flames char the outside and leave the inside cold. Embers toast evenly.' },
+      { t: 'Rotate slowly and patiently', d: 'Aim for a uniform golden brown all the way around. This takes 2–3 minutes.' },
+      { t: 'If it catches fire, do not panic', d: 'Blow it out immediately. A little char is a personal choice, not a failure.' },
+      { t: 'Let it cool for ten seconds', d: 'Molten sugar is roughly the temperature of the sun. Respect it.' },
+      { t: 'Assemble a s’more (optional but recommended)', d: 'Graham cracker, chocolate square, marshmallow. Press gently.' },
+    ],
+  },
+  {
+    owner: 'chef-remy', slug: 'brewing-a-proper-cup-of-tea', ordered: true,
+    title: 'Brewing a proper cup of tea',
+    desc: 'A calm, opinionated guide. Yes, the milk debate is addressed.',
+    tags: ['tea', 'drinks', 'calm', 'not-programming'],
+    steps: [
+      { t: 'Start with fresh, cold water', d: 'Re-boiled water is flat — it has lost its dissolved oxygen.' },
+      { t: 'Warm the pot or mug first', d: 'A splash of hot water, swirled and tipped out. Keeps the brew hotter.' },
+      { t: 'One teaspoon of leaves per cup', d: '…and one for the pot, if you are feeling traditional.' },
+      { t: 'Water just off the boil', d: 'Black tea: boiling. Green tea: ~80°C, or it turns bitter.' },
+      { t: 'Steep 3–5 minutes — and time it', d: 'Guessing leads to stewed, bitter tea. Use a timer.' },
+      { t: 'Milk in first or last?', d: 'Last lets you judge the strength. First is gentler on the leaves. Choose your side and defend it.' },
+    ],
+  },
+  {
+    owner: 'gnome-biz', slug: 'underpants-business-plan', ordered: true,
+    title: 'The Underpants Business Plan™',
+    desc: 'A proven three-phase strategy. Results guaranteed once fully executed.',
+    tags: ['business', 'strategy', 'gnomes', 'not-programming'],
+    steps: [
+      { t: 'Phase 1: Collect underpants', d: 'Quietly. At night. From every drawer. Volume is everything — do not question it.' },
+      { t: 'Phase 2: ?', d: 'This step is intentionally left undefined. It is under active research and has been for some time.' },
+      { t: 'Phase 3: Profit', d: 'Guaranteed. Inevitable, even. The moment Phase 2 is resolved, riches follow automatically.' },
+      { t: 'Scale operations', d: 'More gnomes, more drawers. The model is infinitely scalable (pending Phase 2).' },
+    ],
+  },
+  {
+    owner: 'dm-gary', slug: 'dnd-session-zero-checklist', ordered: false,
+    title: 'D&D session zero checklist',
+    desc: 'Set the table before the first dice roll. Fewer surprises, more fun.',
+    tags: ['dnd', 'tabletop', 'games', 'not-programming'],
+    steps: [
+      { t: 'Agree on tone and content', d: 'Heroic romp or grim survival? Line up expectations early.' },
+      { t: 'Introduce safety tools (X-card, lines & veils)', d: 'A way to fast-forward past content anyone is uncomfortable with.' },
+      { t: 'Tie the characters together', d: 'Give them a reason to be a party — shared history beats "we met at a tavern".' },
+      { t: 'Set the schedule and table etiquette', d: 'Phones down, snacks assigned, start time respected.' },
+      { t: 'Cover the house rules', d: 'Flanking? Critical hits? Death saves in the open? Decide now, not mid-combat.' },
+    ],
+  },
+  {
+    owner: 'ranger-rae', slug: 'building-a-campfire-safely', ordered: true,
+    title: 'Building a campfire safely',
+    desc: 'One match, no lighter fluid, no drama. And put it out properly.',
+    tags: ['camping', 'outdoors', 'fire', 'not-programming'],
+    steps: [
+      { t: 'Check that fires are allowed', d: 'Bans exist for a reason. A phone call beats a wildfire.' },
+      { t: 'Use an existing fire ring', d: 'Do not scar a new patch of ground.' },
+      { t: 'Gather tinder, kindling, and fuel wood', d: 'Three sizes: fluff, twigs, and logs. Dead and down only.' },
+      { t: 'Build a teepee or log-cabin structure', d: 'Air needs to flow — a packed pile just smoulders.' },
+      { t: 'Light the tinder with a single match', d: 'If it needs lighter fluid, your structure is wrong.' },
+      { t: 'Never leave it unattended', d: 'Not even for a minute. Fire has no manners.' },
+      { t: 'Drown it dead when you are done', d: 'Water, stir, water again. Cold to the touch before you walk away.' },
+    ],
+  },
+  {
+    owner: 'ranger-rae', slug: 'leave-no-trace-basics', ordered: false,
+    title: 'Leave No Trace: the seven basics',
+    desc: 'Enjoy the outdoors and leave it exactly as you found it.',
+    tags: ['camping', 'ethics', 'outdoors', 'not-programming'],
+    steps: [
+      { t: 'Plan ahead and prepare' },
+      { t: 'Travel and camp on durable surfaces' },
+      { t: 'Pack out everything you pack in', d: 'Yes, everything. Orange peels are not "natural".' },
+      { t: 'Leave what you find', d: 'Take photos, not souvenirs.' },
+      { t: 'Minimize campfire impact' },
+      { t: 'Respect wildlife — observe from a distance' },
+      { t: 'Be considerate of other visitors' },
+    ],
+  },
 ]
 
 // Форк: evan форкает базовый security-список dana.
@@ -159,6 +250,13 @@ const ISSUES: Issue[] = [
   { list: 'evan-sre/on-call-onboarding', by: 'mira-data', title: 'Add a step about updating the runbook after incidents', labels: ['enhancement'] },
   { list: 'bob-backend/rest-api-versioning', by: 'dana-sec', title: 'Path vs header versioning — pick a recommendation', body: 'The list stays neutral; a stance would help readers.', labels: ['question'], closed: true },
   { list: 'mira-data/data-pipeline-quality-gates', by: 'alice-ops', title: 'Great-Expectations vs hand-rolled checks?', labels: ['question'] },
+  // Фан-issues
+  { list: 'gnome-biz/underpants-business-plan', by: 'dana-sec', title: 'Phase 2 is undefined — is this a supply-chain risk?', body: 'An undocumented step is an attack surface. Please threat-model Phase 2.', labels: ['security', 'question'] },
+  { list: 'gnome-biz/underpants-business-plan', by: 'bob-backend', title: 'Where is the revenue model between Phase 1 and Phase 3?', body: 'The unit economics of collecting underpants are unclear.', labels: ['question'] },
+  { list: 'chef-remy/how-to-roast-the-perfect-marshmallow', by: 'evan-sre', title: 'Add a proper incident runbook for "it caught fire"', body: 'Step 5 is currently the entire incident response. We need severity levels.', labels: ['enhancement'] },
+  { list: 'chef-remy/brewing-a-proper-cup-of-tea', by: 'dm-gary', title: 'Milk-first is objectively correct; step 6 hedges', body: 'This is not a matter of opinion.', labels: ['wontfix'], closed: true },
+  { list: 'ranger-rae/building-a-campfire-safely', by: 'alice-ops', title: 'Step 5 assumes dry wood — add a wet-weather note', labels: ['docs'] },
+  { list: 'dm-gary/dnd-session-zero-checklist', by: 'mira-data', title: 'Add a step about a shared campaign wiki/doc', labels: ['enhancement'] },
 ]
 
 // Кто какой список звездит (owner/slug).
@@ -170,6 +268,11 @@ const STARS: Record<string, string[]> = {
   'dana-sec/secrets-management': ['bob-backend', 'evan-sre'],
   'mira-data/data-pipeline-quality-gates': ['bob-backend'],
   'alice-ops/ci-pipeline-essentials': ['evan-sre', 'mira-data'],
+  'chef-remy/how-to-roast-the-perfect-marshmallow': ['alice-ops', 'bob-backend', 'evan-sre', 'dm-gary', 'ranger-rae', 'mira-data'],
+  'gnome-biz/underpants-business-plan': ['bob-backend', 'dana-sec', 'evan-sre', 'alice-ops'],
+  'dm-gary/dnd-session-zero-checklist': ['ranger-rae', 'mira-data', 'chef-remy'],
+  'ranger-rae/building-a-campfire-safely': ['chef-remy', 'evan-sre'],
+  'chef-remy/brewing-a-proper-cup-of-tea': ['dana-sec', 'mira-data'],
 }
 const WATCHES: Record<string, string[]> = {
   'alice-ops/kubernetes-deployment-checklist': ['bob-backend', 'evan-sre'],
@@ -178,6 +281,8 @@ const WATCHES: Record<string, string[]> = {
 const FOLLOWS: [string, string][] = [
   ['bob-backend', 'alice-ops'], ['dana-sec', 'alice-ops'], ['evan-sre', 'dana-sec'],
   ['mira-data', 'bob-backend'], ['alice-ops', 'bob-backend'], ['evan-sre', 'alice-ops'],
+  ['chef-remy', 'ranger-rae'], ['ranger-rae', 'chef-remy'], ['dm-gary', 'chef-remy'],
+  ['alice-ops', 'chef-remy'], ['mira-data', 'dm-gary'], ['gnome-biz', 'bob-backend'],
 ]
 
 async function main() {
