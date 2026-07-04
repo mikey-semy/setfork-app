@@ -9,7 +9,7 @@ import type { StepLevel } from '@/shared/db'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
-import { abandonRun, blockStep, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
+import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 
 export interface RunStepVM {
   id: string
@@ -133,18 +133,20 @@ export function RunView({
                 >
                   <CircleAlert size={13} /> {t('runFailAction', lang)}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm(t('runAbandonConfirm', lang))) start(() => abandonRun(runId))
-                  }}
-                  title={t('runAbandon', lang)}
-                  className="grid h-8 w-8 place-items-center rounded-md text-muted hover:text-danger"
-                >
-                  <Trash2 size={15} />
-                </button>
               </>
             )}
+            {/* Delete — реально удаляет прогон (в отличие от «завершить/неудача»), уводит на /runs */}
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(t('runDeleteConfirm', lang))) start(() => deleteRun(runId))
+              }}
+              title={t('runDelete', lang)}
+              aria-label={t('runDelete', lang)}
+              className="grid h-8 w-8 place-items-center rounded-md text-muted hover:text-danger"
+            >
+              <Trash2 size={15} />
+            </button>
           </div>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">

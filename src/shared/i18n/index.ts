@@ -213,6 +213,8 @@ const DICT = {
   runBlockAction: { en: 'Mark blocked', ru: 'Заблокировать' },
   runReport: { en: 'Report to the list', ru: 'Сообщить в список' },
   runUnblock: { en: 'Unblock', ru: 'Разблокировать' },
+  runDelete: { en: 'Delete run', ru: 'Удалить прогон' },
+  runDeleteConfirm: { en: 'Delete this run? Your progress will be lost — this cannot be undone.', ru: 'Удалить прогон? Прогресс пропадёт — это необратимо.' },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for AI agents to connect via MCP (search & read your lists).',

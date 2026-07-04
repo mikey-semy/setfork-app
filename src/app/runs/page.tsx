@@ -6,6 +6,7 @@ import { t, tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
+import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
 
 export default async function MyRunsPage() {
   const session = await requireSession()
@@ -54,14 +55,14 @@ function Section({ label, rows, lang, muted }: { label: string; rows: UserRunRow
 function RunCard({ r, lang, muted }: { r: UserRunRow; lang: 'en' | 'ru'; muted?: boolean }) {
   const pct = r.total > 0 ? Math.round((r.doneCount / r.total) * 100) : 0
   return (
-    <Link
-      href={`/runs/${r.id}`}
+    <div
       className={`flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 transition-colors hover:border-border-strong ${muted ? 'opacity-70' : ''}`}
     >
-      <div className="min-w-0 flex-1">
+      <Link href={`/runs/${r.id}`} className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-[14px] font-semibold text-ink">{tr(r.title, lang)}</span>
           <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">v{r.version}</span>
+          {r.status === 'failed' && <span className="rounded border border-danger/40 px-1.5 py-0.5 text-[10.5px] font-medium text-danger">{t('runFailed', lang)}</span>}
         </div>
         <div className="mt-0.5 truncate text-[12px] text-muted">
           {r.handle}/{r.slug} · {timeAgo(r.updatedAt, lang)}
@@ -74,10 +75,14 @@ function RunCard({ r, lang, muted }: { r: UserRunRow; lang: 'en' | 'ru'; muted?:
             {r.doneCount}/{r.total}
           </span>
         </div>
-      </div>
-      <span className="shrink-0 rounded-md border border-border px-3 py-1.5 text-[12.5px] font-semibold text-ink">
+      </Link>
+      <Link
+        href={`/runs/${r.id}`}
+        className="shrink-0 rounded-md border border-border px-3 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
+      >
         {r.status === 'active' ? t('runResume', lang) : t('runOpen', lang)}
-      </span>
-    </Link>
+      </Link>
+      <DeleteRunButton runId={r.id} confirmText={t('runDeleteConfirm', lang)} label={t('runDelete', lang)} />
+    </div>
   )
 }

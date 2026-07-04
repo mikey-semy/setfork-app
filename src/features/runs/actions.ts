@@ -129,6 +129,15 @@ export async function abandonRun(runId: string): Promise<void> {
   redirect(back ? `/${back.template.owner.handle}/${back.template.slug}` : '/explore')
 }
 
+/** Полностью удалить прогон (и его состояние шагов — каскадом). Необратимо. */
+export async function deleteRun(runId: string): Promise<void> {
+  const session = await requireSession()
+  const run = await ownedRun(runId, session.userId)
+  if (!run) return
+  await db.delete(runs).where(eq(runs.id, runId)) // run_step_state удалится по ON DELETE CASCADE
+  redirect('/runs')
+}
+
 // ── Неудачный путь: заблокировать шаг (не получилось) + причина ───────
 export async function blockStep(runId: string, stepId: string, reason: string): Promise<void> {
   const session = await requireSession()
