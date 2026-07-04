@@ -1,10 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { and, eq } from 'drizzle-orm'
 import { getSession } from '@/shared/auth/session'
+import { crossOriginBlock } from '@/shared/csrf'
 import { db, pushSubscriptions } from '@/shared/db'
 
 /** Сохранить push-подписку текущего пользователя (upsert по endpoint). */
 export async function POST(req: NextRequest) {
+  const blocked = crossOriginBlock(req)
+  if (blocked) return blocked
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const sub = await req.json().catch(() => null)
@@ -21,6 +24,8 @@ export async function POST(req: NextRequest) {
 
 /** Удалить подписку (по endpoint) — при выключении браузерных уведомлений. */
 export async function DELETE(req: NextRequest) {
+  const blocked = crossOriginBlock(req)
+  if (blocked) return blocked
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
