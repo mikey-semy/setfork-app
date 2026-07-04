@@ -61,3 +61,36 @@ export async function searchPeople({
     .limit(limit)
   return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 96) })))
 }
+
+const personCols = {
+  handle: users.handle,
+  name: users.name,
+  avatarUrl: users.avatarUrl,
+  bio: users.bio,
+  listsCount: listsCountExpr,
+  followersCount: followersCountExpr,
+}
+
+/** Кто подписан на userId (followers). */
+export async function getFollowers(userId: string): Promise<PersonRow[]> {
+  const rows = await db
+    .select(personCols)
+    .from(follows)
+    .innerJoin(users, eq(users.id, follows.followerId))
+    .where(and(eq(follows.followingId, userId), eq(users.deleted, false)))
+    .orderBy(desc(follows.createdAt))
+    .limit(200)
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 96) })))
+}
+
+/** На кого подписан userId (following). */
+export async function getFollowing(userId: string): Promise<PersonRow[]> {
+  const rows = await db
+    .select(personCols)
+    .from(follows)
+    .innerJoin(users, eq(users.id, follows.followingId))
+    .where(and(eq(follows.followerId, userId), eq(users.deleted, false)))
+    .orderBy(desc(follows.createdAt))
+    .limit(200)
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 96) })))
+}
