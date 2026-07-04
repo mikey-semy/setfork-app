@@ -256,17 +256,37 @@ export const dialectMime = (d: ScriptDialect) => DIALECTS[d].mime
  * стоп-на-ошибке); сами команды — авторские, за совместимость отвечает автор.
  * `url` — абсолютный адрес raw-эндпоинта (без ?lang, для шапки-подсказки).
  */
+const VAR_RE = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g
+/** Уникальные `${VAR}`-плейсхолдеры во всех командах (по порядку появления). */
+function scriptVariables(list: ExportList): string[] {
+  const seen = new Set<string>()
+  for (const s of list.steps) {
+    for (const m of (s.command ?? '').matchAll(VAR_RE)) seen.add(m[1])
+  }
+  return [...seen]
+}
+
 export function toRunnableScript(list: ExportList, lang: Lang, url: string, dialect: ScriptDialect = 'sh'): string {
   const d = DIALECTS[dialect]
   const title = tr(list.title, lang)
+  const vars = scriptVariables(list) // опционально: нет ${VAR} → скрипт как раньше
   const out: string[] = []
   if (d.shebang) out.push(d.shebang)
   out.push(hashComment(title))
   out.push(`# ${list.ownerHandle}/${list.slug} · v${list.version} · ${url}`)
   const desc = tr(list.desc, lang)
   if (desc) out.push(hashComment(desc))
-  out.push('#', '# ⚠  Review before running — this script comes from a SetFork list, not from you.', `#    Run:  ${d.run(url)}`, '')
+  out.push('#', '# ⚠  Review before running — this script comes from a SetFork list, not from you.', `#    Run:  ${d.run(url)}`)
+  if (vars.length) out.push(`#    Required variables (pass as env): ${vars.map((v) => `${v}=…`).join(' ')}`)
+  out.push('')
   if (d.pre) out.push(d.pre, '')
+  // Guard-преамбула: падать понятно, если переменная не задана (sh/ps1 нативно).
+  if (vars.length) {
+    if (dialect === 'sh') vars.forEach((v) => out.push(`: "\${${v}:?set ${v}}"`))
+    else if (dialect === 'ps1') vars.forEach((v) => out.push(`if (-not $env:${v}) { throw 'set ${v}' }; $${v} = $env:${v}`))
+    // py: команды на python, ${VAR} не их синтаксис — ограничиваемся строкой Required variables выше.
+    if (dialect !== 'py') out.push('')
+  }
 
   list.steps.forEach((s, i) => {
     const n = i + 1

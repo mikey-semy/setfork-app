@@ -25,12 +25,12 @@ const LISTS: List[] = [
     tags: ['security', 'postgres', 'docker', 'audit'],
     items: [
       { title: 'Find running Postgres containers', command: "docker ps --format '{{.ID}} {{.Image}}' | grep postgres" },
-      { title: 'Check for ports exposed to the world', desc: '0.0.0.0 means reachable from the internet — bind to 127.0.0.1 instead.', command: 'docker port <container>   # any 0.0.0.0:* mapping is dangerous' },
-      { title: 'Check the Postgres version', desc: 'Old majors miss security fixes — plan an upgrade if behind.', command: 'docker exec <container> psql --version' },
-      { title: 'Scan for crypto-miner / suspicious processes', command: "docker exec <container> ps aux | grep -E 'kinsing|kdevtmpfsi|xmrig|minerd' | grep -v grep" },
-      { title: 'Look for executables in /tmp', command: 'docker exec <container> find /tmp -type f -executable' },
-      { title: 'Scan recent logs for errors', command: "docker logs <container> 2>&1 | grep -iE 'error|fatal|unauthorized|failed' | tail -5" },
-      { title: 'Review roles and pg_hba', desc: 'Check for weak/blank passwords and overly-open host rules.', command: "docker exec <container> psql -U postgres -c '\\\\du'" },
+      { title: 'Check for ports exposed to the world', desc: '0.0.0.0 means reachable from the internet — bind to 127.0.0.1 instead.', command: 'docker port ${CONTAINER}   # any 0.0.0.0:* mapping is dangerous' },
+      { title: 'Check the Postgres version', desc: 'Old majors miss security fixes — plan an upgrade if behind.', command: 'docker exec ${CONTAINER} psql --version' },
+      { title: 'Scan for crypto-miner / suspicious processes', command: "docker exec ${CONTAINER} ps aux | grep -E 'kinsing|kdevtmpfsi|xmrig|minerd' | grep -v grep" },
+      { title: 'Look for executables in /tmp', command: 'docker exec ${CONTAINER} find /tmp -type f -executable' },
+      { title: 'Scan recent logs for errors', command: "docker logs ${CONTAINER} 2>&1 | grep -iE 'error|fatal|unauthorized|failed' | tail -5" },
+      { title: 'Review roles and pg_hba', desc: 'Check for weak/blank passwords and overly-open host rules.', command: "docker exec ${CONTAINER} psql -U postgres -c '\\\\du'" },
     ],
   },
   {
@@ -58,6 +58,10 @@ const LISTS: List[] = [
 async function main() {
   const [demo] = await db.select({ id: users.id }).from(users).where(eq(users.handle, 'demo'))
   if (!demo) throw new Error('demo user not found — run npm run db:seed first')
+
+  // Идемпотентность: убираем прошлые версии этих списков (иначе create_list добавит -1/-2).
+  const targetSlugs = ['postgres-container-security-audit', 'docker-auto-cleanup-via-cron']
+  await db.delete(templates).where(and(eq(templates.ownerId, demo.id), inArray(templates.slug, targetSlugs)))
 
   // (1) временный write-токен
   const raw = randomBytes(24).toString('hex')

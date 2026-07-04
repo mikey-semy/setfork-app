@@ -49,17 +49,16 @@ EOF`,
     desc: 'Lock down a Swarm manager node with UFW: deny inbound by default, open SSH/HTTP/HTTPS, and allow Swarm ports only from the worker.',
     tags: ['security', 'firewall', 'ufw', 'docker', 'swarm'],
     steps: [
-      { t: 'Set the worker private IP', d: 'Put your worker node IP here — example only. Swarm ports will be opened ONLY from this address.', c: 'WORKER_IP=10.0.0.2   # <-- replace with your worker node IP' },
-      { t: 'Reset and set default policy', d: 'Deny all inbound, allow all outbound.', c: 'ufw --force reset && ufw default deny incoming && ufw default allow outgoing' },
+      { t: 'Reset and set default policy', d: 'Deny all inbound, allow all outbound. Pass your worker node IP as WORKER_IP.', c: 'ufw --force reset && ufw default deny incoming && ufw default allow outgoing' },
       { t: 'Allow SSH FIRST (critical)', d: "Do this before enabling UFW or you'll lock yourself out.", c: "ufw allow 22/tcp comment 'SSH access'" },
       { t: 'Allow HTTP and HTTPS', c: "ufw allow 80/tcp comment 'HTTP' && ufw allow 443/tcp comment 'HTTPS'" },
       {
         t: 'Allow Swarm ports from the worker only',
-        d: '2377 (management), 7946 tcp+udp (node comms), 4789 udp (overlay network).',
-        c: `ufw allow from "$WORKER_IP" to any port 2377 proto tcp comment 'Swarm mgmt'
-ufw allow from "$WORKER_IP" to any port 7946 proto tcp comment 'Swarm comms tcp'
-ufw allow from "$WORKER_IP" to any port 7946 proto udp comment 'Swarm comms udp'
-ufw allow from "$WORKER_IP" to any port 4789 proto udp comment 'Swarm overlay'`,
+        d: '2377 (management), 7946 tcp+udp (node comms), 4789 udp (overlay network). Uses ${WORKER_IP}.',
+        c: `ufw allow from "\${WORKER_IP}" to any port 2377 proto tcp comment 'Swarm mgmt'
+ufw allow from "\${WORKER_IP}" to any port 7946 proto tcp comment 'Swarm comms tcp'
+ufw allow from "\${WORKER_IP}" to any port 7946 proto udp comment 'Swarm comms udp'
+ufw allow from "\${WORKER_IP}" to any port 4789 proto udp comment 'Swarm overlay'`,
       },
       { t: 'Enable UFW and review', d: 'Open a SECOND SSH session to confirm access before closing the first one.', c: 'ufw --force enable && ufw status verbose' },
     ],
