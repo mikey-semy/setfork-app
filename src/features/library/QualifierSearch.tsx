@@ -88,7 +88,8 @@ export function QualifierSearch({
   const [value, setValue] = useState(initial)
   const [sugs, setSugs] = useState<Suggestion[]>([])
   const [open, setOpen] = useState(false)
-  const [active, setActive] = useState(0)
+  // -1 = ничего явно не выбрано → Enter уходит в поиск (/search), не «прыгает» на сущность.
+  const [active, setActive] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const tagsRef = useRef<{ tag: string; count: number }[] | null>(null)
@@ -152,7 +153,7 @@ export function QualifierSearch({
       if (cancelled) return
       setSugs(list)
       setOpen(list.length > 0)
-      setActive(0)
+      setActive(-1)
     }, 150)
     return () => {
       cancelled = true
@@ -197,22 +198,28 @@ export function QualifierSearch({
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setActive((i) => (i - 1 + sugs.length) % sugs.length)
-        return
-      }
-      if (e.key === 'Enter' || e.key === 'Tab') {
-        e.preventDefault()
-        apply(sugs[active])
+        setActive((i) => (i <= 0 ? sugs.length : i) - 1)
         return
       }
       if (e.key === 'Escape') {
         setOpen(false)
         return
       }
+      // Tab — дополнить первым/выбранным вариантом (квалификатор/сущность).
+      if (e.key === 'Tab') {
+        const sel = sugs[active >= 0 ? active : 0]
+        if (sel) {
+          e.preventDefault()
+          apply(sel)
+        }
+        return
+      }
     }
     if (e.key === 'Enter') {
       e.preventDefault()
-      submit()
+      // По умолчанию (ничего явно не выбрано стрелками) Enter всегда идёт в поиск.
+      if (open && active >= 0 && sugs[active]) apply(sugs[active])
+      else submit()
     }
   }
 
