@@ -93,11 +93,14 @@ export function QualifierSearch({
   const inputRef = useRef<HTMLInputElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const tagsRef = useRef<{ tag: string; count: number }[] | null>(null)
+  // Подсказки показываем только когда пользователь сам начал печатать, а не при
+  // заходе на /search с уже заполненным q (страница = развёрнутый ответ).
+  const touchedRef = useRef(false)
 
   useEffect(() => {
     const tok = activeToken(value)
     const trimmed = value.trim()
-    if (!tok && !trimmed) {
+    if (!touchedRef.current || (!tok && !trimmed)) {
       setOpen(false)
       setSugs([])
       return
@@ -247,7 +250,10 @@ export function QualifierSearch({
           hint={hint}
           autoFocus={autoFocus}
           value={value}
-          onValueChange={setValue}
+          onValueChange={(v) => {
+            touchedRef.current = true
+            setValue(v)
+          }}
           onKeyDown={onKeyDown}
           onScroll={(e) => {
             if (overlayRef.current) overlayRef.current.scrollLeft = e.currentTarget.scrollLeft
