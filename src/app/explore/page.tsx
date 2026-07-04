@@ -67,7 +67,7 @@ export default async function ExplorePage({
         <div className="mb-4">
           {/* key = q: пере-монтируем поле, чтобы оно синхронизировалось с квалификаторами,
               которые дописали клик-фасеты сайдбара (иначе value поля «залипает»). */}
-          <QualifierSearch key={sp.q ?? ''} initial={sp.q ?? ''} tags={tags.map((tg) => tg.tag)} lang={lang} />
+          <QualifierSearch key={sp.q ?? ''} initial={sp.q ?? ''} tags={tags} lang={lang} />
         </div>
         <div className="mb-1 flex items-center justify-between border-b border-border pb-1.5">
           <div className="flex gap-4 text-[13.5px] font-semibold">

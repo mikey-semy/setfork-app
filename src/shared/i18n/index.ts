@@ -37,6 +37,8 @@ const DICT = {
   heroSub: { en: 'Find the canonical list — or make it better', ru: 'Найди эталонный список — или сделай его лучше' },
   searchPh: { en: 'Describe what you need to do…', ru: 'Опиши, что нужно сделать…' },
   topics: { en: 'Topics', ru: 'Темы' },
+  people: { en: 'People', ru: 'Люди' },
+  filterState: { en: 'State', ru: 'Статус' },
   tags: { en: 'Tags', ru: 'Теги' },
   allTags: { en: 'All', ru: 'Все' },
   tagsHint: { en: 'Tags (space or comma separated)', ru: 'Теги (через пробел или запятую)' },
