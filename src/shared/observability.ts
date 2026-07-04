@@ -1,7 +1,9 @@
 // Единая наблюдаемость: структурный логгер + choke-point для ошибок.
 // В prod пишем JSON-строкой (легко парсить сборщику логов), в dev — читаемо.
-// `captureError` — ЕДИНАЯ точка, куда позже подключается внешний трекер (Sentry
-// и т.п.) по DSN; без него это просто структурный error-лог со стеком.
+// `captureError` — ЕДИНАЯ точка: структурный error-лог со стеком + отправка во
+// внешний трекер (Sentry) по DSN, если он задан (см. shared/sentry).
+
+import { reportToSentry } from './sentry'
 
 type Level = 'info' | 'warn' | 'error'
 const isProd = process.env.NODE_ENV === 'production'
@@ -31,4 +33,5 @@ export const log = {
 export function captureError(err: unknown, ctx?: Record<string, unknown>): void {
   const e = err instanceof Error ? err : new Error(typeof err === 'string' ? err : 'Unknown error')
   emit('error', e.message, { ...ctx, errorName: e.name, stack: e.stack })
+  reportToSentry(e, ctx)
 }
