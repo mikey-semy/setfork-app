@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { ChevronDown, Plus, Search, Sparkles } from 'lucide-react'
+import { ChevronDown, Compass, Home, ListChecks, Menu, PlayCircle, Plus, Search, Sparkles, X } from 'lucide-react'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { ThemeToggle } from '@/shared/ui/controls'
@@ -35,14 +35,16 @@ export function TopNav({
   const pathname = usePathname()
   const router = useRouter()
   const [q, setQ] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const submitSearch = () => {
     const s = q.trim()
     router.push(s ? `/explore?q=${encodeURIComponent(s)}` : '/explore')
   }
-  // Хоткей «/» фокусирует поиск (как на GitHub), если не печатаем в другом поле.
+  // Хоткей «/» фокусирует поиск (как на GitHub); Escape закрывает боковое меню.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return setMenuOpen(false)
       if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
       const el = document.activeElement as HTMLElement | null
       const tag = el?.tagName
@@ -54,22 +56,52 @@ export function TopNav({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
-  const navLink = (href: string, label: string) => (
-    <Link href={href} className={isActive(href) ? 'text-ink' : 'text-ink-2 hover:text-ink'}>
-      {label}
-    </Link>
-  )
   const iconBtn = 'grid h-8 w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink'
 
+  // Контекстный заголовок страницы (в шапке — только он, навигация ушла в боковое меню).
+  const title = pathname === '/'
+    ? t('home', lang)
+    : pathname.startsWith('/explore')
+      ? t('explore', lang)
+      : pathname.startsWith('/my-lists')
+        ? t('myLists', lang)
+        : pathname.startsWith('/runs')
+          ? t('myRuns', lang)
+          : pathname.startsWith('/settings')
+            ? t('settings', lang)
+            : pathname.startsWith('/generate')
+              ? t('generateWithAi', lang)
+              : pathname.startsWith('/new')
+                ? t('newList', lang)
+                : pathname.startsWith('/notifications')
+                  ? t('notifications', lang)
+                  : pathname.startsWith('/admin')
+                    ? 'Admin'
+                    : ''
+
+  // Пункты бокового меню (глобальная навигация; аккаунт — в меню аватара).
+  const navItems: { href: string; label: string; icon: typeof Home }[] = [
+    { href: '/', label: t('home', lang), icon: Home },
+    { href: '/explore', label: t('explore', lang), icon: Compass },
+    ...(user
+      ? [
+          { href: '/my-lists', label: t('myLists', lang), icon: ListChecks },
+          { href: '/runs', label: t('myRuns', lang), icon: PlayCircle },
+          { href: '/new', label: t('newList', lang), icon: Plus },
+          { href: '/generate', label: t('generateWithAi', lang), icon: Sparkles },
+        ]
+      : []),
+  ]
+
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-surface px-4 py-2.5 print:hidden">
+    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5 print:hidden">
+      <button type="button" aria-label={t('menu', lang)} onClick={() => setMenuOpen(true)} className={iconBtn}>
+        <Menu size={18} />
+      </button>
       <Link href="/" className="flex-shrink-0 text-[22px] font-extrabold leading-none tracking-tight text-ink" aria-label="SetFork">
         S<span className="text-accent">F</span>
       </Link>
-      <nav className="hidden items-center gap-5 text-[13.5px] font-medium sm:flex">
-        {navLink('/explore', t('explore', lang))}
-        {navLink('/my-lists', t('myLists', lang))}
-      </nav>
+      {title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>}
 
       <div className="ml-auto flex items-center gap-2">
         {/* GitHub-подобный поиск: поле с иконкой + подсказка «/» */}
@@ -183,6 +215,37 @@ export function TopNav({
           </>
         )}
       </div>
+
+      {/* Боковое меню (глобальная навигация), открывается бургером — как на GitHub */}
+      {menuOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setMenuOpen(false)} />
+          <aside className="fixed left-0 top-0 z-50 flex h-full w-[280px] max-w-[85vw] flex-col border-r border-border bg-surface p-3 shadow-xl">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <span className="text-[20px] font-extrabold leading-none tracking-tight text-ink">
+                S<span className="text-accent">F</span>
+              </span>
+              <button type="button" aria-label={t('menu', lang)} onClick={() => setMenuOpen(false)} className={iconBtn}>
+                <X size={18} />
+              </button>
+            </div>
+            <nav className="flex flex-col gap-0.5">
+              {navItems.map((it) => (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[14px] ${
+                    isActive(it.href) ? 'bg-surface-2 font-semibold text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
+                  }`}
+                >
+                  <it.icon size={16} className="shrink-0 text-muted" /> {it.label}
+                </Link>
+              ))}
+            </nav>
+          </aside>
+        </>
+      )}
     </header>
   )
 }
