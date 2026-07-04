@@ -3,6 +3,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { db, runs, runStepState, steps, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
+import { canViewList } from '@/features/library/access'
 import { dialectExt, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store.adapter'
 import { uniqueSlug } from '@/features/library/slug'
@@ -101,11 +102,8 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return null
   const { tpl, currentVersion, steps } = detail
-  const isOwner = tpl.ownerId === userId
-  // Те же гарантии, что и на странице: чужое приватное/черновик/скрытое не отдаём.
-  if (tpl.visibility === 'private' && !isOwner) return null
-  if (tpl.status === 'draft' && !isOwner) return null
-  if (tpl.moderation !== 'active' && !isOwner) return null
+  // Тот же единый предикат приватности, что и на сайте (у MCP админа нет).
+  if (!canViewList(tpl, { isOwner: tpl.ownerId === userId })) return null
 
   return {
     ref: `${handle}/${slug}`,
@@ -134,10 +132,7 @@ export async function mcpGetScript(userId: string, handle: string, slug: string,
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return null
   const { tpl, currentVersion, steps } = detail
-  const isOwner = tpl.ownerId === userId
-  if (tpl.visibility === 'private' && !isOwner) return null
-  if (tpl.status === 'draft' && !isOwner) return null
-  if (tpl.moderation !== 'active' && !isOwner) return null
+  if (!canViewList(tpl, { isOwner: tpl.ownerId === userId })) return null
 
   const dialect = normalizeDialect(dialectRaw)
   const url = `${SITE_URL}/${handle}/${slug}/raw`
