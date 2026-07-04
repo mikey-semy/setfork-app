@@ -25,7 +25,7 @@ const VERB: Record<NotificationType, TKey> = {
 const appUrl = () => (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '')
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
-/** Собирает и шлёт письмо по одному уведомлению на языке получателя. Best-effort. */
+/** Собирает и шлёт письмо по одному уведомлению на языке получателя. true = отправлено. */
 export async function sendNotificationEmail(p: {
   to: string
   lang: Lang
@@ -33,7 +33,7 @@ export async function sendNotificationEmail(p: {
   type: NotificationType
   templateId?: string | null
   issueId?: string | null
-}): Promise<void> {
+}): Promise<boolean> {
   const actorAlias = alias(users, 'actor')
   const ownerAlias = alias(users, 'owner')
 
@@ -77,5 +77,5 @@ export async function sendNotificationEmail(p: {
     <p style="color:#a3a39c;font-size:12px;margin-top:16px">${esc(footer)}</p>
   </div></body></html>`
 
-  await sendMail({ to: p.to, subject, html })
+  return sendMail({ to: p.to, subject, html })
 }

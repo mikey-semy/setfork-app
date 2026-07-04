@@ -4,4 +4,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
   const { validateEnv } = await import('@/shared/env')
   validateEnv()
+  // Фоновый воркер очереди задач (email и т.п.). Idempotent, безопасен между инстансами.
+  const { startWorker } = await import('@/shared/jobs/worker')
+  startWorker()
 }

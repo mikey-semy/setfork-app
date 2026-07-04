@@ -2,10 +2,9 @@ import 'server-only'
 import { eq, inArray } from 'drizzle-orm'
 import { db, notifications, users } from '@/shared/db'
 import type { NotifyPrefs } from '@/shared/db/schema'
-import type { Lang } from '@/shared/i18n'
 import { emailEnabled } from '@/shared/settings/email'
+import { enqueueJob } from '@/shared/jobs/queue'
 import { extractHandles } from './mentions'
-import { sendNotificationEmail } from './email'
 
 type NotifType =
   | 'suggestion_new'
@@ -59,16 +58,16 @@ export async function notify(params: {
       templateId: params.templateId ?? null,
       issueId: params.issueId ?? null,
     })
-    // Дублируем на почту, если получатель включил email-уведомления и SMTP настроен.
+    // Дублируем на почту через очередь (durable + ретраи), если получатель включил
+    // email-уведомления и SMTP настроен. Отправка уходит из request-пути к воркеру.
     if (prefs.email === true && u?.email && (await emailEnabled())) {
-      await sendNotificationEmail({
+      await enqueueJob('email', {
         to: u.email,
-        // Язык получателя в БД не хранится (только в куке актора) → пока 'en'.
-        lang: 'en' as Lang,
-        actorId: params.actorId,
+        lang: 'en', // язык получателя в БД не хранится (только кука актора) → пока 'en'
+        actorId: params.actorId ?? null,
         type: params.type,
-        templateId: params.templateId,
-        issueId: params.issueId,
+        templateId: params.templateId ?? null,
+        issueId: params.issueId ?? null,
       })
     }
   } catch {

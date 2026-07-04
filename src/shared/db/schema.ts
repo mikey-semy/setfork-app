@@ -263,6 +263,32 @@ export const appSettings = pgTable('app_settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+// ── Фоновые задачи (durable-очередь поверх Postgres) ──────────────────
+// Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
+// при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
+export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
+export type JobType = 'email'
+
+export const jobs = pgTable(
+  'jobs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: text('type').notNull(),
+    payload: jsonb('payload').notNull().default({}),
+    status: jobStatus('status').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(5),
+    runAt: timestamp('run_at', { withTimezone: true }).notNull().defaultNow(),
+    lastError: text('last_error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    // Индекс под выборку готовых к запуску pending-задач.
+    ready: index('jobs_ready_idx').on(t.status, t.runAt),
+  }),
+)
+
 // ── Suggestions (предложения правок, PR) ─────────────────────────────
 export const suggestions = pgTable('suggestions', {
   id: uuid('id').primaryKey().defaultRandom(),
