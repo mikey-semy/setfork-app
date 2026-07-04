@@ -2,10 +2,11 @@ import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getTemplateDetail } from '@/features/library/queries'
-import { toShellScript, type ExportList } from '@/features/library/export'
+import { dialectExt, dialectMime, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
 
-// GET /{handle}/{slug}/raw — список как исполняемый bash-скрипт (аналог gist raw).
+// GET /{handle}/{slug}/raw[?lang=sh|ps1|py] — список как исполняемый скрипт (gist-стиль).
 //   curl -fsSL https://host/{owner}/{slug}/raw | bash
+//   irm "https://host/{owner}/{slug}/raw?lang=ps1" | iex   (PowerShell)
 export const runtime = 'nodejs'
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -25,6 +26,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
 
   const u = new URL(req.url)
   const rawUrl = `${u.origin}${u.pathname}`
+  const dialect = normalizeDialect(u.searchParams.get('lang'))
   const list: ExportList = {
     title: tpl.title,
     desc: tpl.desc,
@@ -45,10 +47,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
     })),
   }
 
-  return new Response(toShellScript(list, lang, rawUrl), {
+  return new Response(toRunnableScript(list, lang, rawUrl, dialect), {
     headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Content-Disposition': `inline; filename="${slug}.sh"`,
+      'Content-Type': dialectMime(dialect),
+      'Content-Disposition': `inline; filename="${slug}.${dialectExt(dialect)}"`,
     },
   })
 }

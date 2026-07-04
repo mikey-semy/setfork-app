@@ -3,8 +3,11 @@ import { and, eq, sql } from 'drizzle-orm'
 import { db, runs, runStepState, steps, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
+import { dialectExt, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store.adapter'
 import { uniqueSlug } from '@/features/library/slug'
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')
 
 export interface McpItemInput {
   title: string
@@ -122,6 +125,48 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
       subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
       refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label),
     })),
+  }
+}
+
+// get_script: тот же список, но как готовый исполняемый скрипт (bash/ps1/py) —
+// удобно агенту, который прогоняет чек-лист (CI-for-AI). Приватность как у get_list.
+export async function mcpGetScript(userId: string, handle: string, slug: string, dialectRaw?: string) {
+  const detail = await getTemplateDetail(handle, slug)
+  if (!detail) return null
+  const { tpl, currentVersion, steps } = detail
+  const isOwner = tpl.ownerId === userId
+  if (tpl.visibility === 'private' && !isOwner) return null
+  if (tpl.status === 'draft' && !isOwner) return null
+  if (tpl.moderation !== 'active' && !isOwner) return null
+
+  const dialect = normalizeDialect(dialectRaw)
+  const url = `${SITE_URL}/${handle}/${slug}/raw`
+  const list: ExportList = {
+    title: tpl.title,
+    desc: tpl.desc,
+    tags: tpl.tags,
+    ordered: tpl.ordered,
+    version: currentVersion?.version ?? tpl.currentVersion,
+    ownerHandle: handle,
+    slug,
+    steps: steps.map((s) => ({
+      n: s.n,
+      title: s.title,
+      desc: s.desc,
+      command: s.command,
+      level: s.level,
+      why: s.why,
+      subtasks: s.subtasks,
+      refs: s.refs,
+    })),
+  }
+  return {
+    ref: `${handle}/${slug}`,
+    dialect,
+    filename: `${slug}.${dialectExt(dialect)}`,
+    url: dialect === 'sh' ? url : `${url}?lang=${dialect}`,
+    note: 'Commands come from the list authors — review before running.',
+    script: toRunnableScript(list, 'en', url, dialect),
   }
 }
 
