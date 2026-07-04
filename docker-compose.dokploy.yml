@@ -23,18 +23,12 @@ services:
       retries: 10
     networks: [dokploy-network]
 
-  core:
-    build: { context: ../setfork-core, target: runtime }
-    restart: always
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sethub}
-      SETFORK_CORE_ADDR: 0.0.0.0:50051
-      GIT_DATA_DIR: /data/git
-    volumes:
-      - setfork_git:/data/git # ОБЩИЙ том git-объектов (git = источник правды)
-    depends_on:
-      db: { condition: service_healthy }
-    networks: [dokploy-network]
+  # git-ядро (Rust) деплоится ОТДЕЛЬНЫМ проектом Dokploy из репо setfork-core
+  # (setfork-core/docker-compose.dokploy.yml) → контейнер `setfork-core` в общей
+  # сети dokploy-network. Здесь его НЕ собираем (иначе Dokploy ищет ../setfork-core,
+  # которого в single-repo чекауте нет). Фронт зовёт его по имени контейнера:
+  # SETFORK_CORE_ADDR=setfork-core:50051 (см. сервис app). Том git-объектов и
+  # DATABASE_URL ядра живут в ЕГО проекте.
 
   migrate:
     build: { context: ., target: migrate }
@@ -98,16 +92,14 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sethub}
       SETFORK_CORE_URL: '1' # включить remote-режим git-ядра
-      SETFORK_CORE_ADDR: core:50051
+      SETFORK_CORE_ADDR: setfork-core:50051 # контейнер ядра из отдельного проекта setfork-core
     depends_on:
       db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
-      core: { condition: service_healthy }
     networks: [dokploy-network]
 
 volumes:
   pgdata:
-  setfork_git:
   stalwart:
 
 networks:
