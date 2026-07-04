@@ -176,10 +176,11 @@ export async function getFeed(
   if (!semantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra))
   if (mode === 'semantic') return withAvatar(semantic)
 
-  // hybrid: сначала по смыслу, затем добираем совпадения по словам, которых ещё нет.
+  // hybrid: сначала ТОЧНЫЕ совпадения по словам (буквальное «ubuntu» точнее),
+  // затем добираем по смыслу — чтобы семантически-похожее не всплывало над точным.
   const keyword = await keywordFeed(order, viewerId, opts.tag, q, extra)
-  const seen = new Set(semantic.map((r) => r.id))
-  return withAvatar([...semantic, ...keyword.filter((r) => !seen.has(r.id))])
+  const seen = new Set(keyword.map((r) => r.id))
+  return withAvatar([...keyword, ...semantic.filter((r) => !seen.has(r.id))])
 }
 
 /** Закреплённые списки пользователя (для профиля). */
