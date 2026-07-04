@@ -172,6 +172,8 @@ const DICT = {
   runHeading: { en: 'Run in terminal', ru: 'Запуск в терминале' },
   runHint: { en: 'Pipes the list into your shell like a gist. Review it first.', ru: 'Пайпит список в шелл, как gist. Сначала проверь.' },
   viewRaw: { en: 'View raw script', ru: 'Смотреть raw-скрипт' },
+  signedInLabel: { en: 'signed in', ru: 'вход' },
+  staleLabel: { en: 'stale', ru: 'неактивна' },
   proTip: { en: 'Search tips', ru: 'Подсказки поиска' },
   proTipBody: { en: 'Refine with qualifiers right in the search box:', ru: 'Уточняйте квалификаторами прямо в строке поиска:' },
   scopeLists: { en: 'Lists', ru: 'Списки' },

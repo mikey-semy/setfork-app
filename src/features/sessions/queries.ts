@@ -4,6 +4,7 @@ import { db, sessions, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
 
 const ONLINE_WINDOW_MS = 5 * 60_000
+const STALE_MS = 7 * 24 * 3600 * 1000
 const SESSION_MAX_AGE_MS = 30 * 24 * 3600 * 1000
 
 /** UA → короткая метка «Chrome · Windows». */
@@ -42,6 +43,7 @@ export interface UserSession {
   lastSeenAt: Date
   current: boolean
   online: boolean
+  stale: boolean
 }
 
 export async function getUserSessions(userId: string, currentSid?: string): Promise<UserSession[]> {
@@ -52,6 +54,7 @@ export async function getUserSessions(userId: string, currentSid?: string): Prom
     .from(sessions)
     .where(and(eq(sessions.userId, userId), gte(sessions.lastSeenAt, fresh)))
     .orderBy(desc(sessions.lastSeenAt))
+    .limit(50) // потолок показа (сессии дедупятся по устройству + капаются в startSession)
   const now = Date.now()
   return rows.map((r) => ({
     id: r.id,
@@ -61,6 +64,7 @@ export async function getUserSessions(userId: string, currentSid?: string): Prom
     lastSeenAt: r.lastSeenAt,
     current: r.id === currentSid,
     online: now - new Date(r.lastSeenAt).getTime() < ONLINE_WINDOW_MS,
+    stale: now - new Date(r.lastSeenAt).getTime() > STALE_MS,
   }))
 }
 

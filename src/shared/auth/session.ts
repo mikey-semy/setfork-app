@@ -3,18 +3,32 @@
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
 import { SignJWT, jwtVerify } from 'jose'
-import { and, eq, lt } from 'drizzle-orm'
+import { and, desc, eq, gte, isNull, lt, notInArray } from 'drizzle-orm'
 import { db, sessions } from '@/shared/db'
 
 const COOKIE_NAME = 'setfork_session'
 const SESSION_DURATION_DAYS = 30
 const SESSION_MAX_AGE_MS = SESSION_DURATION_DAYS * 24 * 3600 * 1000
 const LASTSEEN_THROTTLE_MS = 60_000
+const MAX_SESSIONS_PER_USER = 40 // жёсткий потолок числа строк на юзера (защита от разрастания)
 
-/** Удаляет протухшие по неактивности сессии пользователя (чтобы список не рос бесконечно). */
+/** Чистит сессии пользователя: протухшие по неактивности + всё сверх последних N. */
 async function pruneStaleSessions(userId: string): Promise<void> {
   const cutoff = new Date(Date.now() - SESSION_MAX_AGE_MS)
   await db.delete(sessions).where(and(eq(sessions.userId, userId), lt(sessions.lastSeenAt, cutoff))).catch(() => {})
+  // Кап: держим только последние MAX_SESSIONS_PER_USER по активности, остальное удаляем.
+  const keep = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(eq(sessions.userId, userId))
+    .orderBy(desc(sessions.lastSeenAt))
+    .limit(MAX_SESSIONS_PER_USER)
+  if (keep.length >= MAX_SESSIONS_PER_USER) {
+    await db
+      .delete(sessions)
+      .where(and(eq(sessions.userId, userId), notInArray(sessions.id, keep.map((k) => k.id))))
+      .catch(() => {})
+  }
 }
 
 export interface SessionUser {
@@ -63,9 +77,33 @@ export async function startSession(payload: SessionUser): Promise<void> {
     return
   }
 
-  const [row] = await db.insert(sessions).values({ userId: payload.userId, userAgent, ip }).returning({ id: sessions.id })
+  // Свежий вход без cookie: дедуп по устройству — то же (userId, UA, IP) в пределах
+  // свежести переиспользуем, а не плодим строку (иначе повторные логины = гора сессий).
+  const fresh = new Date(Date.now() - SESSION_MAX_AGE_MS)
+  const [same] = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(
+      and(
+        eq(sessions.userId, payload.userId),
+        userAgent === null ? isNull(sessions.userAgent) : eq(sessions.userAgent, userAgent),
+        ip === null ? isNull(sessions.ip) : eq(sessions.ip, ip),
+        gte(sessions.lastSeenAt, fresh),
+      ),
+    )
+    .orderBy(desc(sessions.lastSeenAt))
+    .limit(1)
+
+  let sid: string
+  if (same) {
+    await db.update(sessions).set({ lastSeenAt: new Date() }).where(eq(sessions.id, same.id))
+    sid = same.id
+  } else {
+    const [row] = await db.insert(sessions).values({ userId: payload.userId, userAgent, ip }).returning({ id: sessions.id })
+    sid = row.id
+  }
   await pruneStaleSessions(payload.userId)
-  await signCookie({ ...payload, sid: row.id })
+  await signCookie({ ...payload, sid })
 }
 
 /** Обновить cookie (имя/аватар), сохранив тот же sid. Для правок профиля. */
