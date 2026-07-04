@@ -107,6 +107,8 @@ const DICT = {
   prefEmail: { en: 'Email notifications', ru: 'Уведомления на почту' },
   prefEmailHint: { en: 'Also send the notifications above to your email.', ru: 'Дублировать уведомления выше на вашу почту.' },
   prefEmailNoAddr: { en: 'Add an email to your account to enable this.', ru: 'Добавьте почту в аккаунт, чтобы включить.' },
+  prefBrowser: { en: 'Browser notifications', ru: 'Уведомления в браузере' },
+  prefBrowserHint: { en: 'Native pop-ups while SetFork is open in a tab.', ru: 'Нативные всплывашки, пока SetFork открыт во вкладке.' },
   emailOpen: { en: 'Open on SetFork', ru: 'Открыть в SetFork' },
   emailFooter: { en: 'You receive this because email notifications are on in your SetFork settings.', ru: 'Вы получили это письмо, потому что в настройках SetFork включены уведомления на почту.' },
   suggestionHeading: { en: 'Suggested edit', ru: 'Предложенная правка' },

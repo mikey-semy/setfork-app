@@ -41,6 +41,20 @@ export function NotifyPrefsForm({ prefs, lang, hasEmail }: { prefs: NotifyPrefs;
           </div>
           <Switch name="email" defaultChecked={prefs.email === true} disabled={!hasEmail} />
         </div>
+        <div className="mt-3 flex items-center justify-between gap-4">
+          <div>
+            <span className="text-[14px] text-ink">{t('prefBrowser', lang)}</span>
+            <p className="text-[12px] text-muted">{t('prefBrowserHint', lang)}</p>
+          </div>
+          <Switch
+            name="browser"
+            defaultChecked={prefs.browser === true}
+            onCheckedChange={(v) => {
+              // При включении сразу спрашиваем разрешение браузера (нужен жест пользователя).
+              if (v && typeof Notification !== 'undefined' && Notification.permission === 'default') void Notification.requestPermission()
+            }}
+          />
+        </div>
       </div>
 
       <div className="flex justify-end border-t border-border pt-4">

@@ -5,7 +5,8 @@ import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { avatarSrc } from '@/shared/media'
-import { getNotifications, getUnreadCount } from '@/features/notifications/queries'
+import { getBrowserNotifyEnabled, getNotifications, getUnreadCount } from '@/features/notifications/queries'
+import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
 import { TopNav } from '@/widgets/TopNav'
 import { Footer } from '@/widgets/Footer'
 import './globals.css'
@@ -28,9 +29,9 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [lang, user] = await Promise.all([getLang(), getSession()])
-  const [unread, notifications] = user
-    ? await Promise.all([getUnreadCount(user.userId), getNotifications(user.userId, 8)])
-    : [0, []]
+  const [unread, notifications, browserNotify] = user
+    ? await Promise.all([getUnreadCount(user.userId), getNotifications(user.userId, 8), getBrowserNotifyEnabled(user.userId)])
+    : [0, [], false]
   // Резолвим аватар для шапки: сессия может хранить storage_key — превращаем в imgproxy-URL.
   const navUser = user ? { ...user, avatarUrl: (await avatarSrc(user.avatarUrl, 60)) ?? undefined } : null
   return (
@@ -41,6 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
             <main className="flex flex-1 flex-col">{children}</main>
             <Footer lang={lang} />
+            {user && browserNotify && <BrowserNotifier enabled />}
           </div>
         </ThemeProvider>
       </body>

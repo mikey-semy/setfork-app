@@ -32,6 +32,12 @@ export interface NotificationItem {
   issueNumber: number | null
 }
 
+/** Включены ли у пользователя браузерные уведомления (для монтирования нотификатора). */
+export async function getBrowserNotifyEnabled(userId: string): Promise<boolean> {
+  const [u] = await db.select({ prefs: users.notifyPrefs }).from(users).where(eq(users.id, userId)).limit(1)
+  return (u?.prefs as { browser?: boolean } | undefined)?.browser === true
+}
+
 export async function getUnreadCount(userId: string): Promise<number> {
   const [r] = await db
     .select({ c: sql<number>`count(*)::int` })
