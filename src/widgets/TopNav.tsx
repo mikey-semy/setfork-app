@@ -95,12 +95,20 @@ export function TopNav({
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5 print:hidden">
-      <button type="button" aria-label={t('menu', lang)} onClick={() => setMenuOpen(true)} className={iconBtn}>
-        <Menu size={18} />
-      </button>
-      <Link href="/" className="font-logo flex-shrink-0 text-[19px] leading-none text-ink" aria-label="SetFork">
-        SF
-      </Link>
+      {/* Бургер + SF = логотип на одном уровне: ☰ читается как «список», линии жирные */}
+      <div className="flex flex-shrink-0 items-center gap-1.5">
+        <button
+          type="button"
+          aria-label={t('menu', lang)}
+          onClick={() => setMenuOpen(true)}
+          className="grid h-8 w-8 place-items-center rounded-md text-ink hover:bg-surface-2"
+        >
+          <Menu size={21} strokeWidth={2.75} />
+        </button>
+        <Link href="/" className="font-logo text-[19px] leading-none text-ink" aria-label="SetFork">
+          SF
+        </Link>
+      </div>
       {title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>}
 
       <div className="ml-auto flex items-center gap-2">
