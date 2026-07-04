@@ -9,6 +9,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (session) redirect('/')
   const hasGithub = !!process.env.GITHUB_CLIENT_ID
+  // На проде задаётся DEMO_URL=https://demo.setfork.com → «demo» ведёт в изолированную
+  // песочницу (там свой богатый контент), а не логинит пустого юзера в прод-базе. На
+  // самом demo-сайте эту переменную НЕ задаём — там обычный demo-вход. (Серверный
+  // компонент читает рантайм-env, поэтому НЕ NEXT_PUBLIC — меняется без пересборки.)
+  const demoSite = process.env.DEMO_URL
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
@@ -37,15 +42,26 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </Link>
         )}
 
-        <form action="/api/auth/demo" method="post">
-          <button
+        {demoSite ? (
+          <a
+            href={demoSite}
             className={`flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-[14px] font-semibold ${
               hasGithub ? 'border border-border text-ink' : 'bg-primary text-primary-fg'
             }`}
           >
-            {t('signInDemo', lang)}
-          </button>
-        </form>
+            {t('tryLiveDemo', lang)}
+          </a>
+        ) : (
+          <form action="/api/auth/demo" method="post">
+            <button
+              className={`flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-[14px] font-semibold ${
+                hasGithub ? 'border border-border text-ink' : 'bg-primary text-primary-fg'
+              }`}
+            >
+              {t('signInDemo', lang)}
+            </button>
+          </form>
+        )}
 
         {sp.e && (
           <div className="mt-4 text-[12px] text-danger">
