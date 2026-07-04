@@ -469,6 +469,7 @@ const DICT = {
   // ── Видимость списка ──
   privateLabel: { en: 'Private', ru: 'Приватный' },
   publicLabel: { en: 'Public', ru: 'Публичный' },
+  publicLabel: { en: 'Public', ru: 'Публичный' },
   visibility: { en: 'Visibility', ru: 'Видимость' },
   publicHint: { en: 'Anyone can find and view it in explore & search.', ru: 'Виден всем в обзоре и поиске.' },
   privateHint: { en: 'Only you can see it.', ru: 'Виден только вам.' },

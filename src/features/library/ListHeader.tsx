@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BadgeCheck, CircleDot, GitFork, GitPullRequest, ListChecks, Lock, Pencil, PlayCircle, Settings, Star, Tag } from 'lucide-react'
+import { BadgeCheck, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, Pencil, PlayCircle, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -61,21 +61,23 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
             <Link href={`/${meta.ownerHandle}`} className="flex-shrink-0">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
-            <h1 className="text-[19px] font-bold">
-              <Link href={`/${meta.ownerHandle}`} className="text-ink-2 hover:text-accent">
-                {meta.ownerHandle}
-              </Link>
-              <span className="text-ink-2">/</span>
-              <span className="text-ink">{meta.slug}</span>
-            </h1>
-            <span className="rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[11px] text-accent">
+            {/* Только название списка (владелец — в бредкрамбе шапки и на аватаре). */}
+            <h1 className="min-w-0 truncate text-[19px] font-bold text-ink">{meta.slug}</h1>
+            <span className="shrink-0 rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[11px] text-accent">
               v{meta.currentVersion}
             </span>
-            {meta.visibility === 'private' && (
-              <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
-                <Lock size={11} /> {t('privateLabel', lang)}
-              </span>
-            )}
+            {/* Индикатор видимости: приватный или публичный (как Public/Private у GitHub). */}
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
+              {meta.visibility === 'private' ? (
+                <>
+                  <Lock size={11} /> {t('privateLabel', lang)}
+                </>
+              ) : (
+                <>
+                  <Globe size={11} /> {t('publicLabel', lang)}
+                </>
+              )}
+            </span>
             {meta.verified && (
               <span className="inline-flex items-center gap-1 rounded-md border border-ok/40 bg-ok/10 px-2 py-0.5 text-[11px] font-medium text-ok">
                 <BadgeCheck size={12} /> {t('verifiedLabel', lang)}
