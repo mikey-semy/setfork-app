@@ -134,17 +134,20 @@ const handler = createMcpHandler(
       'check_step',
       {
         title: 'Check off a run step',
-        description: 'Mark a step of your run done or not-done by its number. Omit "done" to toggle. Returns the updated run.',
+        description:
+          'Report the outcome of a run step by its number (like a CI step). done true/false marks it passed/not; blocked true marks it failed with an optional reason. Omit all to toggle done. Returns the updated run.',
         inputSchema: {
           runId: z.string().describe('The run id'),
           step: z.number().int().min(1).describe('Step number (1-based)'),
-          done: z.boolean().optional().describe('true = done, false = not done; omit to toggle'),
+          done: z.boolean().optional().describe('true = done, false = not done'),
+          blocked: z.boolean().optional().describe('true = this step failed / could not be completed'),
+          reason: z.string().optional().describe('Why it failed (used with blocked)'),
         },
       },
-      async ({ runId, step, done }, extra) => {
+      async ({ runId, step, done, blocked, reason }, extra) => {
         const userId = extra.authInfo?.extra?.userId as string | undefined
         if (!userId) return err('Unauthorized')
-        const res = await mcpCheckStep(userId, runId, step, done)
+        const res = await mcpCheckStep(userId, runId, step, { done, blocked, reason })
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )

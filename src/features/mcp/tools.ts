@@ -220,9 +220,18 @@ async function mcpRunState(userId: string, runId: string) {
     .where(eq(templates.id, run.templateId))
     .limit(1)
   const stepRows = await db.select({ id: steps.id, n: steps.n, title: steps.title }).from(steps).where(eq(steps.versionId, run.versionId)).orderBy(steps.n)
-  const states = await db.select({ stepId: runStepState.stepId, status: runStepState.status }).from(runStepState).where(eq(runStepState.runId, runId))
-  const doneSet = new Set(states.filter((s) => s.status === 'done').map((s) => s.stepId))
-  const stepsOut = stepRows.map((s) => ({ n: s.n, title: tr(s.title, 'en'), done: doneSet.has(s.id) }))
+  const states = await db.select({ stepId: runStepState.stepId, status: runStepState.status, note: runStepState.note }).from(runStepState).where(eq(runStepState.runId, runId))
+  const byStep = new Map(states.map((s) => [s.stepId, s]))
+  const stepsOut = stepRows.map((s) => {
+    const st = byStep.get(s.id)
+    return {
+      n: s.n,
+      title: tr(s.title, 'en'),
+      done: st?.status === 'done',
+      blocked: st?.status === 'blocked',
+      reason: st?.status === 'blocked' && st.note ? st.note : undefined,
+    }
+  })
   return {
     runId,
     ref: meta ? `${meta.ownerHandle}/${meta.slug}` : undefined,
@@ -266,16 +275,27 @@ export async function mcpGetRun(userId: string, runId: string) {
   return mcpRunState(userId, runId)
 }
 
-/** Отметить/снять шаг прогона по его номеру N (или задать явно через done). */
-export async function mcpCheckStep(userId: string, runId: string, stepN: number, done?: boolean) {
+/**
+ * Отметить шаг прогона по номеру N (CI-стиль для агента):
+ * blocked=true → «упал» + причина; done=true/false → выполнен/нет; иначе — тоггл done.
+ */
+export async function mcpCheckStep(userId: string, runId: string, stepN: number, opts?: { done?: boolean; blocked?: boolean; reason?: string }) {
   const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
   if (!run || run.userId !== userId) return { error: 'run not found' }
   const [st] = await db.select({ id: steps.id }).from(steps).where(and(eq(steps.versionId, run.versionId), eq(steps.n, stepN))).limit(1)
   if (!st) return { error: 'step not found' }
   const [state] = await db.select().from(runStepState).where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, st.id))).limit(1)
   if (!state) return { error: 'step state not found' }
-  const target = done === undefined ? (state.status === 'done' ? 'todo' : 'done') : done ? 'done' : 'todo'
-  await db.update(runStepState).set({ status: target, doneAt: target === 'done' ? new Date() : null }).where(eq(runStepState.id, state.id))
+
+  if (opts?.blocked) {
+    await db
+      .update(runStepState)
+      .set({ status: 'blocked', note: (opts.reason ?? '').trim().slice(0, 500), doneAt: null })
+      .where(eq(runStepState.id, state.id))
+  } else {
+    const target = opts?.done === undefined ? (state.status === 'done' ? 'todo' : 'done') : opts.done ? 'done' : 'todo'
+    await db.update(runStepState).set({ status: target, note: '', doneAt: target === 'done' ? new Date() : null }).where(eq(runStepState.id, state.id))
+  }
   // Пересчёт doneCount (зеркало runs/actions.recountDone).
   const [{ c }] = await db
     .select({ c: sql<number>`count(*)::int` })

@@ -2,14 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Check, CircleCheckBig, Info, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
+import { ArrowLeft, Ban, Check, CircleAlert, CircleCheckBig, Flag, Info, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
-import { abandonRun, finishRun, reopenRun, toggleStep, toggleSubtask } from './actions'
+import { abandonRun, blockStep, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 
 export interface RunStepVM {
   id: string
@@ -22,6 +22,8 @@ export interface RunStepVM {
   subtasks: string[]
   refs: { label: string; url?: string }[]
   done: boolean
+  blocked: boolean
+  reason: string
   subtasksDone: number[]
 }
 
@@ -35,7 +37,7 @@ export function RunView({
   lang,
 }: {
   runId: string
-  status: 'active' | 'done' | 'abandoned'
+  status: 'active' | 'done' | 'abandoned' | 'failed'
   ordered: boolean
   title: string
   backHref: string
@@ -45,14 +47,18 @@ export function RunView({
   const ru = lang === 'ru'
   const [steps, setSteps] = useState(initial)
   const [, start] = useTransition()
+  const [blockingId, setBlockingId] = useState<string | null>(null)
+  const [reasonDraft, setReasonDraft] = useState('')
   const done = steps.filter((s) => s.done).length
+  const blockedCount = steps.filter((s) => s.blocked).length
   const pct = steps.length ? Math.round((done / steps.length) * 100) : 0
+  const closed = status === 'done' || status === 'failed' || status === 'abandoned'
 
   const patch = (i: number, p: Partial<RunStepVM>) => setSteps((xs) => xs.map((s, idx) => (idx === i ? { ...s, ...p } : s)))
 
   function toggle(i: number) {
     const s = steps[i]
-    patch(i, { done: !s.done })
+    patch(i, { done: !s.done, blocked: false })
     start(() => toggleStep(runId, s.id))
   }
   function toggleSub(i: number, idx: number) {
@@ -60,6 +66,19 @@ export function RunView({
     const has = s.subtasksDone.includes(idx)
     patch(i, { subtasksDone: has ? s.subtasksDone.filter((x) => x !== idx) : [...s.subtasksDone, idx] })
     start(() => toggleSubtask(runId, s.id, idx))
+  }
+  function confirmBlock(i: number) {
+    const s = steps[i]
+    const reason = reasonDraft.trim()
+    patch(i, { blocked: true, done: false, reason })
+    setBlockingId(null)
+    setReasonDraft('')
+    start(() => blockStep(runId, s.id, reason))
+  }
+  function unblock(i: number) {
+    const s = steps[i]
+    patch(i, { blocked: false, reason: '' })
+    start(() => unblockStep(runId, s.id))
   }
 
   return (
@@ -74,11 +93,20 @@ export function RunView({
           <div className="min-w-0">
             <div className="truncate text-[15px] font-semibold text-ink">{title}</div>
             <div className="text-[12.5px] text-ink-2">
-              {status === 'done' ? t('runDone', lang) : `${done} / ${steps.length} · ${pct}%`}
+              {status === 'done' ? (
+                t('runDone', lang)
+              ) : status === 'failed' ? (
+                <span className="text-danger">
+                  {t('runFailed', lang)}
+                  {blockedCount > 0 && ` · ${blockedCount} ${t('runBlockedLabel', lang)}`}
+                </span>
+              ) : (
+                `${done} / ${steps.length} · ${pct}%${blockedCount > 0 ? ` · ${blockedCount} ${t('runBlockedLabel', lang)}` : ''}`
+              )}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {status === 'done' ? (
+            {closed ? (
               <button
                 type="button"
                 onClick={() => start(() => reopenRun(runId))}
@@ -87,24 +115,36 @@ export function RunView({
                 <RotateCcw size={13} /> {t('runReopen', lang)}
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => start(() => finishRun(runId))}
-                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-[12.5px] font-semibold text-primary-fg"
-              >
-                <CircleCheckBig size={13} /> {t('runFinish', lang)}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => start(() => finishRun(runId))}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-[12.5px] font-semibold text-primary-fg"
+                >
+                  <CircleCheckBig size={13} /> {t('runFinish', lang)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(t('runFailConfirm', lang))) start(() => failRun(runId))
+                  }}
+                  title={t('runFailAction', lang)}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/10"
+                >
+                  <CircleAlert size={13} /> {t('runFailAction', lang)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(t('runAbandonConfirm', lang))) start(() => abandonRun(runId))
+                  }}
+                  title={t('runAbandon', lang)}
+                  className="grid h-8 w-8 place-items-center rounded-md text-muted hover:text-danger"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm(t('runAbandonConfirm', lang))) start(() => abandonRun(runId))
-              }}
-              title={t('runAbandon', lang)}
-              className="grid h-8 w-8 place-items-center rounded-md text-muted hover:text-danger"
-            >
-              <Trash2 size={15} />
-            </button>
           </div>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
@@ -117,7 +157,9 @@ export function RunView({
         {steps.map((s, i) => (
           <div
             key={s.id}
-            className={`rounded-lg border p-4 transition-colors ${s.done ? 'border-ok/40 bg-ok/5' : 'border-border bg-surface'}`}
+            className={`rounded-lg border p-4 transition-colors ${
+              s.blocked ? 'border-danger/40 bg-danger/5' : s.done ? 'border-ok/40 bg-ok/5' : 'border-border bg-surface'
+            }`}
           >
             <div className="flex gap-3">
               <button
@@ -193,6 +235,75 @@ export function RunView({
                         </span>
                       ),
                     )}
+                  </div>
+                )}
+
+                {/* Неудачный путь: «не получилось» → причина → сообщить */}
+                {!closed && !s.blocked && !s.done && blockingId !== s.id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBlockingId(s.id)
+                      setReasonDraft('')
+                    }}
+                    className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-danger"
+                  >
+                    <Ban size={13} /> {t('runCantComplete', lang)}
+                  </button>
+                )}
+                {blockingId === s.id && (
+                  <div className="mt-3 rounded-md border border-danger/40 bg-danger/5 p-2.5">
+                    <textarea
+                      autoFocus
+                      value={reasonDraft}
+                      onChange={(e) => setReasonDraft(e.target.value)}
+                      rows={2}
+                      aria-label={t('runReasonPh', lang)}
+                      placeholder={t('runReasonPh', lang)}
+                      className="w-full resize-none rounded border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-border-strong"
+                    />
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => confirmBlock(i)}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-[12.5px] font-semibold text-white"
+                      >
+                        <Ban size={13} /> {t('runBlockAction', lang)}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBlockingId(null)
+                          setReasonDraft('')
+                        }}
+                        className="rounded-md px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:text-ink"
+                      >
+                        {t('cancel', lang)}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {s.blocked && blockingId !== s.id && (
+                  <div className="mt-3 rounded-md border border-danger/40 bg-danger/5 p-2.5 text-[12.5px]">
+                    <div className="flex items-center gap-1.5 font-semibold text-danger">
+                      <Ban size={13} /> {t('runBlockedLabel', lang)}
+                      {s.reason ? ':' : ''}
+                    </div>
+                    {s.reason && <div className="mt-0.5 text-ink-2">{s.reason}</div>}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => start(() => reportBlockedStep(runId, s.id))}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-ink hover:border-border-strong"
+                      >
+                        <Flag size={12} /> {t('runReport', lang)}
+                      </button>
+                      {!closed && (
+                        <button type="button" onClick={() => unblock(i)} className="rounded-md px-2.5 py-1.5 text-[12px] text-ink-2 hover:text-ink">
+                          {t('runUnblock', lang)}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

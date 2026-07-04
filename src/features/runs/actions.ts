@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { db, runStepState, runs, steps, templates } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { tr, type LocaleText } from '@/shared/i18n'
+import { collabStore } from '@/features/collab-store/adapter'
 
 async function ownedRun(runId: string, userId: string) {
   const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
@@ -125,4 +127,80 @@ export async function abandonRun(runId: string): Promise<void> {
     with: { template: { with: { owner: true } } },
   })
   redirect(back ? `/${back.template.owner.handle}/${back.template.slug}` : '/explore')
+}
+
+// ── Неудачный путь: заблокировать шаг (не получилось) + причина ───────
+export async function blockStep(runId: string, stepId: string, reason: string): Promise<void> {
+  const session = await requireSession()
+  const run = await ownedRun(runId, session.userId)
+  if (!run) return
+  const [st] = await db
+    .select({ id: runStepState.id })
+    .from(runStepState)
+    .where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, stepId)))
+    .limit(1)
+  if (!st) return
+  await db
+    .update(runStepState)
+    .set({ status: 'blocked', note: reason.trim().slice(0, 500), doneAt: null })
+    .where(eq(runStepState.id, st.id))
+  await recountDone(runId) // blocked ≠ done → счётчик пересчитываем
+  revalidatePath(`/runs/${runId}`)
+}
+
+/** Снять блокировку шага (обратно в todo, причина очищается). */
+export async function unblockStep(runId: string, stepId: string): Promise<void> {
+  const session = await requireSession()
+  const run = await ownedRun(runId, session.userId)
+  if (!run) return
+  const [st] = await db
+    .select({ id: runStepState.id })
+    .from(runStepState)
+    .where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, stepId)))
+    .limit(1)
+  if (!st) return
+  await db.update(runStepState).set({ status: 'todo', note: '' }).where(eq(runStepState.id, st.id))
+  revalidatePath(`/runs/${runId}`)
+}
+
+/** Завершить прогон с исходом «неудача» (в отличие от done/abandoned). */
+export async function failRun(runId: string): Promise<void> {
+  const session = await requireSession()
+  const run = await ownedRun(runId, session.userId)
+  if (!run) return
+  await db.update(runs).set({ status: 'failed', updatedAt: new Date() }).where(eq(runs.id, runId))
+  revalidatePath(`/runs/${runId}`)
+}
+
+// ── Петля обратной связи: заблокированный шаг → issue на список ───────
+export async function reportBlockedStep(runId: string, stepId: string): Promise<void> {
+  const session = await requireSession()
+  const run = await db.query.runs.findFirst({
+    where: (r) => eq(r.id, runId),
+    with: { template: { with: { owner: true } } },
+  })
+  if (!run || run.userId !== session.userId) return
+  const tpl = run.template
+  // issue открываем только там, где это в принципе доступно (активная модерация или свой список).
+  const isOwner = tpl.ownerId === session.userId
+  if (tpl.moderation !== 'active' && !isOwner) redirect(`/runs/${runId}`)
+
+  const [st] = await db
+    .select({ n: steps.n, title: steps.title, state: runStepState.note })
+    .from(steps)
+    .leftJoin(runStepState, and(eq(runStepState.stepId, steps.id), eq(runStepState.runId, runId)))
+    .where(eq(steps.id, stepId))
+    .limit(1)
+  if (!st) redirect(`/runs/${runId}`)
+
+  const stepTitle = tr(st.title as LocaleText, 'en') || `#${st.n}`
+  const reason = (st.state ?? '').trim()
+  const title = `Run blocked at step ${st.n}: ${stepTitle}`.slice(0, 200)
+  const body =
+    `Reported from a run of **v${run.version}**.\n\n` +
+    `**Step ${st.n}: ${stepTitle}** could not be completed.` +
+    (reason ? `\n\n**What went wrong:** ${reason}` : '')
+
+  const ins = await collabStore.openIssue(tpl.id, session.userId, title, body.slice(0, 20000), ['bug'])
+  redirect(`/${tpl.owner.handle}/${tpl.slug}/issues/${ins.number}`)
 }

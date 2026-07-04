@@ -32,8 +32,8 @@ export const listVisibility = pgEnum('list_visibility', ['public', 'private'])
 export const listStatus = pgEnum('list_status', ['draft', 'published'])
 // active — норма; flagged — на проверку (репорт/ИИ); hidden — скрыт админом (не публичен).
 export const moderationStatus = pgEnum('moderation_status', ['active', 'flagged', 'hidden'])
-export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned'])
-export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done'])
+export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned', 'failed'])
+export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done', 'blocked'])
 // Уровень важности шага (как в стандартах: MUST / SHOULD / MAY).
 export const stepLevel = pgEnum('step_level', ['required', 'recommended', 'optional'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])

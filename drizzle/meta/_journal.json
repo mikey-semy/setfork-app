@@ -50,6 +50,13 @@
       "when": 1783141416149,
       "tag": "0006_abnormal_shadow_king",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783144872324,
+      "tag": "0007_quiet_robbie_robertson",
+      "breakpoints": true
     }
   ]
 }
