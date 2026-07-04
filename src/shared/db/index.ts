@@ -24,6 +24,13 @@ function getDb(): NodePgDatabase<typeof schema> {
   return database
 }
 
+/** Пул pg (тот же singleton, что и у Drizzle). Для низкоуровневых нужд —
+ *  напр. advisory-локов, где lock+unlock должны идти по ОДНОМУ соединению. */
+export function getPool(): pg.Pool {
+  getDb() // гарантирует ленивую инициализацию пула
+  return global.__pgPool!
+}
+
 export const db: NodePgDatabase<typeof schema> = new Proxy(
   {} as NodePgDatabase<typeof schema>,
   {
