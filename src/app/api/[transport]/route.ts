@@ -2,7 +2,7 @@ import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js'
 import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { z } from 'zod'
 import { verifyApiToken } from '@/shared/auth/api-token'
-import { mcpCreateList, mcpGetList, mcpSearch, mcpUpdateList } from '@/features/mcp/tools'
+import { mcpCheckStep, mcpCreateList, mcpGetList, mcpGetRun, mcpSearch, mcpStartRun, mcpUpdateList } from '@/features/mcp/tools'
 
 const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
@@ -93,6 +93,58 @@ const handler = createMcpHandler(
         const userId = extra.authInfo?.extra?.userId as string | undefined
         if (!userId) return err('Unauthorized')
         const res = await mcpUpdateList(userId, handle, slug, rest)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    server.registerTool(
+      'start_run',
+      {
+        title: 'Start a run',
+        description: 'Start (or resume your active) run of a checklist by ref — a personal pass to track progress. Returns the run id, steps and progress.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle'),
+          slug: z.string().describe('List slug'),
+        },
+      },
+      async ({ handle, slug }, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined
+        if (!userId) return err('Unauthorized')
+        const res = await mcpStartRun(userId, handle, slug)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    server.registerTool(
+      'get_run',
+      {
+        title: 'Get run progress',
+        description: 'Fetch a run by its id: steps with done/not-done and overall progress.',
+        inputSchema: { runId: z.string().describe('The run id from start_run') },
+      },
+      async ({ runId }, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined
+        if (!userId) return err('Unauthorized')
+        const res = await mcpGetRun(userId, runId)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    server.registerTool(
+      'check_step',
+      {
+        title: 'Check off a run step',
+        description: 'Mark a step of your run done or not-done by its number. Omit "done" to toggle. Returns the updated run.',
+        inputSchema: {
+          runId: z.string().describe('The run id'),
+          step: z.number().int().min(1).describe('Step number (1-based)'),
+          done: z.boolean().optional().describe('true = done, false = not done; omit to toggle'),
+        },
+      },
+      async ({ runId, step, done }, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined
+        if (!userId) return err('Unauthorized')
+        const res = await mcpCheckStep(userId, runId, step, done)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )

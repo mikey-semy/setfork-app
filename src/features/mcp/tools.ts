@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, eq } from 'drizzle-orm'
-import { db, steps, templates, users, type ProposedItem } from '@/shared/db'
+import { and, eq, sql } from 'drizzle-orm'
+import { db, runs, runStepState, steps, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { listStore } from '@/features/library/list-store.adapter'
@@ -204,4 +204,83 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
     .set({ tags, ordered: input.ordered ?? tpl.ordered, updatedAt: new Date() })
     .where(eq(templates.id, tpl.id))
   return { ref: `${handle}/${slug}`, status: 'published', version: ver.version }
+}
+
+// ── Прогоны (runs): запуск/просмотр/отметка шагов через MCP ──────────
+// Логика зеркалит features/runs, но принимает userId из токена (не session).
+
+/** Состояние прогона: список шагов с отметками + прогресс. */
+async function mcpRunState(userId: string, runId: string) {
+  const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
+  if (!run || run.userId !== userId) return { error: 'run not found' }
+  const [meta] = await db
+    .select({ slug: templates.slug, ownerHandle: users.handle })
+    .from(templates)
+    .innerJoin(users, eq(users.id, templates.ownerId))
+    .where(eq(templates.id, run.templateId))
+    .limit(1)
+  const stepRows = await db.select({ id: steps.id, n: steps.n, title: steps.title }).from(steps).where(eq(steps.versionId, run.versionId)).orderBy(steps.n)
+  const states = await db.select({ stepId: runStepState.stepId, status: runStepState.status }).from(runStepState).where(eq(runStepState.runId, runId))
+  const doneSet = new Set(states.filter((s) => s.status === 'done').map((s) => s.stepId))
+  const stepsOut = stepRows.map((s) => ({ n: s.n, title: tr(s.title, 'en'), done: doneSet.has(s.id) }))
+  return {
+    runId,
+    ref: meta ? `${meta.ownerHandle}/${meta.slug}` : undefined,
+    version: run.version,
+    status: run.status,
+    progress: { done: stepsOut.filter((s) => s.done).length, total: stepsOut.length },
+    steps: stepsOut,
+  }
+}
+
+/** Запустить (или продолжить активный) прогон списка по текущей версии. */
+export async function mcpStartRun(userId: string, handle: string, slug: string) {
+  const detail = await getTemplateDetail(handle, slug)
+  if (!detail) return { error: 'list not found' }
+  const { tpl, currentVersion } = detail
+  const isOwner = tpl.ownerId === userId
+  if (tpl.visibility === 'private' && !isOwner) return { error: 'forbidden' }
+  if (tpl.status === 'draft' && !isOwner) return { error: 'forbidden' }
+  if (tpl.moderation !== 'active' && !isOwner) return { error: 'forbidden' }
+  const cur = currentVersion
+  if (!cur) return { error: 'list has no version' }
+
+  const existing = await db
+    .select({ id: runs.id })
+    .from(runs)
+    .where(and(eq(runs.userId, userId), eq(runs.templateId, tpl.id), eq(runs.versionId, cur.id), eq(runs.status, 'active')))
+    .limit(1)
+  let runId = existing[0]?.id
+  if (!runId) {
+    const [r] = await db.insert(runs).values({ templateId: tpl.id, versionId: cur.id, version: cur.version, userId }).returning()
+    runId = r.id
+    const stepRows = await db.select({ id: steps.id }).from(steps).where(eq(steps.versionId, cur.id))
+    if (stepRows.length) await db.insert(runStepState).values(stepRows.map((s) => ({ runId: r.id, stepId: s.id })))
+    await db.update(templates).set({ runsCount: sql`${templates.runsCount} + 1` }).where(eq(templates.id, tpl.id))
+  }
+  return mcpRunState(userId, runId)
+}
+
+/** Текущее состояние прогона по его id. */
+export async function mcpGetRun(userId: string, runId: string) {
+  return mcpRunState(userId, runId)
+}
+
+/** Отметить/снять шаг прогона по его номеру N (или задать явно через done). */
+export async function mcpCheckStep(userId: string, runId: string, stepN: number, done?: boolean) {
+  const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
+  if (!run || run.userId !== userId) return { error: 'run not found' }
+  const [st] = await db.select({ id: steps.id }).from(steps).where(and(eq(steps.versionId, run.versionId), eq(steps.n, stepN))).limit(1)
+  if (!st) return { error: 'step not found' }
+  const [state] = await db.select().from(runStepState).where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, st.id))).limit(1)
+  if (!state) return { error: 'step state not found' }
+  const target = done === undefined ? (state.status === 'done' ? 'todo' : 'done') : done ? 'done' : 'todo'
+  await db.update(runStepState).set({ status: target, doneAt: target === 'done' ? new Date() : null }).where(eq(runStepState.id, state.id))
+  // Пересчёт doneCount (зеркало runs/actions.recountDone).
+  const [{ c }] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(runStepState)
+    .where(and(eq(runStepState.runId, runId), eq(runStepState.status, 'done')))
+  await db.update(runs).set({ doneCount: c, updatedAt: new Date() }).where(eq(runs.id, runId))
+  return mcpRunState(userId, runId)
 }
