@@ -255,8 +255,8 @@ const DICT = {
   runDeleteConfirm: { en: 'Delete this run? Your progress will be lost — this cannot be undone.', ru: 'Удалить прогон? Прогресс пропадёт — это необратимо.' },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
-    en: 'Personal tokens for AI agents to connect via MCP (search & read your lists).',
-    ru: 'Персональные токены, чтобы ИИ-агенты подключались по MCP (поиск и чтение списков).',
+    en: 'Personal tokens for AI agents to connect via MCP: search and read your lists — and, with write access, create and update them.',
+    ru: 'Персональные токены, чтобы ИИ-агенты подключались по MCP: поиск и чтение ваших списков, а с доступом на запись — создание и обновление.',
   },
   aiUsageTitle: { en: 'AI usage', ru: 'Расход ИИ' },
   aiUsageIntro: {
