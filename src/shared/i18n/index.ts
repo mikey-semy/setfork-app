@@ -177,6 +177,7 @@ const DICT = {
   proTip: { en: 'Search tips', ru: 'Подсказки поиска' },
   proTipBody: { en: 'Refine with qualifiers right in the search box:', ru: 'Уточняйте квалификаторами прямо в строке поиска:' },
   scopeLists: { en: 'Lists', ru: 'Списки' },
+  scopePeople: { en: 'People', ru: 'Люди' },
   scopeIssues: { en: 'Issues', ru: 'Задачи' },
   listsLabel: { en: 'lists', ru: 'списков' },
   issueOpen: { en: 'Open', ru: 'Открыт' },
