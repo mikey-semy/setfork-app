@@ -238,6 +238,36 @@ export const stars = pgTable(
   (t) => ({ userTpl: unique('stars_user_tpl').on(t.userId, t.templateId) }),
 )
 
+// ── Star folders (папки для организации starred-списков, как GitHub Lists) ──
+export const starFolders = pgTable(
+  'star_folders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('star_folders_user_name').on(t.userId, t.name), index('star_folders_user_idx').on(t.userId)],
+)
+
+// Членство: какой starred-список в какой папке (список может быть в нескольких).
+export const starFolderItems = pgTable(
+  'star_folder_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    folderId: uuid('folder_id')
+      .notNull()
+      .references(() => starFolders.id, { onDelete: 'cascade' }),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('star_folder_items_pair').on(t.folderId, t.templateId), index('star_folder_items_folder_idx').on(t.folderId)],
+)
+
 // ── Embeddings (RAG, pgvector 1536) ──────────────────────────────────
 export const embeddings = pgTable(
   'embeddings',
