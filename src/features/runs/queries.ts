@@ -1,6 +1,42 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { db, runs } from '@/shared/db'
+import type { LocaleText } from '@/shared/i18n'
+
+export interface UserRunRow {
+  id: string
+  status: 'active' | 'done' | 'abandoned'
+  version: number
+  doneCount: number
+  total: number
+  updatedAt: Date
+  handle: string
+  slug: string
+  title: LocaleText
+}
+
+/** Все прогоны пользователя (для страницы «Мои прогоны»), свежие сверху. */
+export async function getUserRuns(userId: string): Promise<UserRunRow[]> {
+  const rows = await db.query.runs.findMany({
+    where: (r) => eq(r.userId, userId),
+    with: {
+      template: { with: { owner: true } },
+      version: { with: { steps: { columns: { id: true } } } },
+    },
+    orderBy: (r, { desc }) => desc(r.updatedAt),
+  })
+  return rows.map((r) => ({
+    id: r.id,
+    status: r.status,
+    version: r.version,
+    doneCount: r.doneCount,
+    total: r.version.steps.length,
+    updatedAt: r.updatedAt,
+    handle: r.template.owner.handle,
+    slug: r.template.slug,
+    title: r.template.title as LocaleText,
+  }))
+}
 
 /** Прогон со всеми шагами версии и их состоянием. Только владельцу прогона. */
 export async function getRun(runId: string, userId: string) {
