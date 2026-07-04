@@ -84,6 +84,8 @@ export type NotifyPrefs = {
   issues?: boolean // новый issue на моём списке
   comments?: boolean // комментарии в issue/правке, где я участвую
   watchedUpdates?: boolean // новая версия отслеживаемого списка
+  email?: boolean // дублировать уведомления на почту (по умолчанию выкл)
+  browser?: boolean // показывать браузерные уведомления (по умолчанию выкл)
 }
 
 export const users = pgTable('users', {

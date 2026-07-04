@@ -2,7 +2,10 @@ import 'server-only'
 import { eq, inArray } from 'drizzle-orm'
 import { db, notifications, users } from '@/shared/db'
 import type { NotifyPrefs } from '@/shared/db/schema'
+import type { Lang } from '@/shared/i18n'
+import { emailEnabled } from '@/shared/email/mailer'
 import { extractHandles } from './mentions'
+import { sendNotificationEmail } from './email'
 
 type NotifType =
   | 'suggestion_new'
@@ -41,7 +44,11 @@ export async function notify(params: {
 }): Promise<void> {
   if (params.actorId && params.actorId === params.recipientId) return
   try {
-    const [u] = await db.select({ prefs: users.notifyPrefs }).from(users).where(eq(users.id, params.recipientId)).limit(1)
+    const [u] = await db
+      .select({ prefs: users.notifyPrefs, email: users.email })
+      .from(users)
+      .where(eq(users.id, params.recipientId))
+      .limit(1)
     const prefs = (u?.prefs ?? {}) as NotifyPrefs
     const prefKey = TYPE_PREF[params.type]
     if (prefKey && prefs[prefKey] === false) return // отключено получателем
@@ -52,6 +59,18 @@ export async function notify(params: {
       templateId: params.templateId ?? null,
       issueId: params.issueId ?? null,
     })
+    // Дублируем на почту, если получатель включил email-уведомления и SMTP настроен.
+    if (prefs.email === true && u?.email && emailEnabled()) {
+      await sendNotificationEmail({
+        to: u.email,
+        // Язык получателя в БД не хранится (только в куке актора) → пока 'en'.
+        lang: 'en' as Lang,
+        actorId: params.actorId,
+        type: params.type,
+        templateId: params.templateId,
+        issueId: params.issueId,
+      })
+    }
   } catch {
     /* уведомление — не критичный путь */
   }
