@@ -12,6 +12,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews, getTemplateDetail } from '@/features/library/queries'
+import { canViewList } from '@/features/library/access'
 import { ListHeader } from '@/features/library/ListHeader'
 import { publishList } from '@/features/library/actions'
 
@@ -27,11 +28,8 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
   if (!detail) notFound()
   const { tpl, currentVersion, steps } = detail
   const viewer = await getSession()
-  const isOwnerOrAdmin = viewer?.userId === tpl.ownerId || isAdminHandle(viewer?.handle)
-  if (tpl.visibility === 'private' && viewer?.userId !== tpl.ownerId) notFound()
-  if (tpl.status === 'draft' && viewer?.userId !== tpl.ownerId) notFound()
-  if (tpl.moderation !== 'active' && !isOwnerOrAdmin) notFound()
   const isOwner = viewer?.userId === tpl.ownerId
+  if (!canViewList(tpl, { isOwner, isAdmin: isAdminHandle(viewer?.handle) })) notFound()
   // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.
   const previews = await getStepPreviews(steps, 'rs:fit:1400:1400')
   const stepImages: Record<string, string> = Object.fromEntries(
@@ -197,7 +195,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                   {tpl.tags.map((tag) => (
                     <Link
                       key={tag}
-                      href={`/explore?tag=${encodeURIComponent(tag)}`}
+                      href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
                       className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-[12px] font-medium text-accent hover:underline"
                     >
                       {tag}

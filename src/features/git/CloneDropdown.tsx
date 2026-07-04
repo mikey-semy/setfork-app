@@ -47,7 +47,7 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="inline-flex items-center gap-1.5 rounded-md bg-ok px-3.5 py-1.5 text-[13px] font-semibold text-white hover:opacity-90">
+        <button className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ok-solid)] px-3.5 py-1.5 text-[13px] font-semibold text-white hover:opacity-90">
           <ListChecks size={15} /> {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>
       </DropdownMenuTrigger>
@@ -59,6 +59,17 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
         <a href={`${base}/repo.bundle`} className={`${row} mt-1`}>
           <GitBranch size={14} className="text-muted" /> {t('downloadBundle', lang)}
         </a>
+
+        {/* Run — исполняемый скрипт (gist-стиль): bash + PowerShell */}
+        <div className="mt-2.5 border-t border-border pt-2">
+          {heading(<Terminal size={12} />, t('runHeading', lang))}
+          {copyField('run', `curl -fsSL ${origin}${base}/raw | bash`)}
+          <div className="mt-1.5">{copyField('run-ps', `irm "${origin}${base}/raw?lang=ps1" | iex`)}</div>
+          <p className="mt-1 text-[11px] text-ink-2">{t('runHint', lang)}</p>
+          <a href={`${base}/raw`} className={`${row} mt-1`}>
+            <FileCode size={14} className="text-muted" /> {t('viewRaw', lang)}
+          </a>
+        </div>
 
         {/* Export */}
         <div className="mt-2.5 border-t border-border pt-2">

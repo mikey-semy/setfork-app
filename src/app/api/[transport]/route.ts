@@ -2,7 +2,7 @@ import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js'
 import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { z } from 'zod'
 import { verifyApiToken } from '@/shared/auth/api-token'
-import { mcpCreateList, mcpGetList, mcpSearch, mcpUpdateList } from '@/features/mcp/tools'
+import { mcpCheckStep, mcpCreateList, mcpGetList, mcpGetRun, mcpGetScript, mcpSearch, mcpStartRun, mcpUpdateList } from '@/features/mcp/tools'
 
 const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
@@ -41,6 +41,26 @@ const handler = createMcpHandler(
         if (!userId) return err('Unauthorized')
         const list = await mcpGetList(userId, handle, slug)
         return list ? json(list) : err('List not found or not accessible')
+      },
+    )
+
+    server.registerTool(
+      'get_script',
+      {
+        title: 'Get a runnable script',
+        description:
+          'Render a checklist as a ready-to-run script (its commands, with progress echoes). dialect: "sh" bash (default), "ps1" PowerShell, "py" python. Commands come from the list authors — review before running.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle, e.g. "acme"'),
+          slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
+          dialect: z.enum(['sh', 'ps1', 'py']).optional().describe('Script dialect (default "sh")'),
+        },
+      },
+      async ({ handle, slug, dialect }, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined
+        if (!userId) return err('Unauthorized')
+        const r = await mcpGetScript(userId, handle, slug, dialect)
+        return r ? json(r) : err('List not found or not accessible')
       },
     )
 
@@ -93,6 +113,61 @@ const handler = createMcpHandler(
         const userId = extra.authInfo?.extra?.userId as string | undefined
         if (!userId) return err('Unauthorized')
         const res = await mcpUpdateList(userId, handle, slug, rest)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    server.registerTool(
+      'start_run',
+      {
+        title: 'Start a run',
+        description: 'Start (or resume your active) run of a checklist by ref — a personal pass to track progress. Returns the run id, steps and progress.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle'),
+          slug: z.string().describe('List slug'),
+        },
+      },
+      async ({ handle, slug }, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined
+        if (!userId) return err('Unauthorized')
+        const res = await mcpStartRun(userId, handle, slug)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    server.registerTool(
+      'get_run',
+      {
+        title: 'Get run progress',
+        description: 'Fetch a run by its id: steps with done/not-done and overall progress.',
+        inputSchema: { runId: z.string().describe('The run id from start_run') },
+      },
+      async ({ runId }, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined
+        if (!userId) return err('Unauthorized')
+        const res = await mcpGetRun(userId, runId)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    server.registerTool(
+      'check_step',
+      {
+        title: 'Check off a run step',
+        description:
+          'Report the outcome of a run step by its number (like a CI step). done true/false marks it passed/not; blocked true marks it failed with an optional reason. Omit all to toggle done. Returns the updated run.',
+        inputSchema: {
+          runId: z.string().describe('The run id'),
+          step: z.number().int().min(1).describe('Step number (1-based)'),
+          done: z.boolean().optional().describe('true = done, false = not done'),
+          blocked: z.boolean().optional().describe('true = this step failed / could not be completed'),
+          reason: z.string().optional().describe('Why it failed (used with blocked)'),
+        },
+      },
+      async ({ runId, step, done, blocked, reason }, extra) => {
+        const userId = extra.authInfo?.extra?.userId as string | undefined
+        if (!userId) return err('Unauthorized')
+        const res = await mcpCheckStep(userId, runId, step, { done, blocked, reason })
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )

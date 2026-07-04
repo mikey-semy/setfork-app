@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { CircleCheck, CircleDot, MessageSquare, Milestone as MilestoneIcon, Plus, Search } from 'lucide-react'
+import { CircleCheck, CircleDot, MessageSquare, Milestone as MilestoneIcon, Plus } from 'lucide-react'
+import { IssuesSearch } from '@/features/issues/IssuesSearch'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -58,17 +59,11 @@ export default async function IssuesPage({
       <div className="mx-auto w-full max-w-[900px] px-4 py-6">
         {/* Поиск + New */}
         <div className="mb-3 flex items-center gap-2">
-          <form action={base} method="get" className="relative flex-1">
+          <form action={base} method="get" className="flex-1">
             {status === 'closed' && <input type="hidden" name="status" value="closed" />}
             {label && <input type="hidden" name="label" value={label} />}
             {sort === 'oldest' && <input type="hidden" name="sort" value="oldest" />}
-            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-            <input
-              name="q"
-              defaultValue={q}
-              placeholder={t('searchIssuesPh', lang)}
-              className="w-full rounded-md border border-border bg-surface-2 py-2 pl-9 pr-3 text-[13.5px] text-ink outline-none focus:border-border-strong"
-            />
+            <IssuesSearch initial={q ?? ''} placeholder={t('searchIssuesPh', lang)} />
           </form>
           {session && (
             <Link href={`${base}/new`} className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">

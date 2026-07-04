@@ -66,7 +66,7 @@ export default async function SettingsPage() {
         <section className={card}>
           <div className="mb-1 font-semibold text-ink">{t('notifPrefsTitle', lang)}</div>
           <p className="mb-4 text-[13px] text-ink-2">{t('notifPrefsIntro', lang)}</p>
-          <NotifyPrefsForm prefs={user.notifyPrefs} lang={lang} />
+          <NotifyPrefsForm prefs={user.notifyPrefs} lang={lang} hasEmail={!!user.email} />
         </section>
       ),
     },

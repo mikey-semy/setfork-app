@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, cosineDistance, desc, eq, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, stars, steps, suggestionComments, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
@@ -96,11 +96,20 @@ function visibleFilter(viewerId?: string): SQL {
   return viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
 }
 
-/** Доп. фильтры ленты: только verified, тип списка (ordered/unordered). */
-function extraFilters(opts: { verified?: boolean; ordered?: boolean }): SQL[] {
+/** Доп. фильтры ленты: verified, тип, автор (by), теги (AND), минимум звёзд. */
+function extraFilters(opts: {
+  verified?: boolean
+  ordered?: boolean
+  by?: string
+  tags?: string[]
+  minStars?: number
+}): SQL[] {
   const f: SQL[] = []
   if (opts.verified) f.push(eq(templates.verified, true))
   if (opts.ordered !== undefined) f.push(eq(templates.ordered, opts.ordered))
+  if (opts.by) f.push(eq(users.handle, opts.by)) // users приджойнен в обоих режимах
+  if (opts.minStars != null) f.push(gte(templates.starsCount, opts.minStars))
+  for (const tag of opts.tags ?? []) f.push(tagFilter(tag))
   return f
 }
 
@@ -154,7 +163,16 @@ async function semanticFeed(
 }
 
 export async function getFeed(
-  opts: { sort?: FeedSort; tag?: string; q?: string; verified?: boolean; ordered?: boolean } = {},
+  opts: {
+    sort?: FeedSort
+    tag?: string
+    q?: string
+    verified?: boolean
+    ordered?: boolean
+    by?: string
+    tags?: string[]
+    minStars?: number
+  } = {},
   viewerId?: string,
 ): Promise<FeedItem[]> {
   const order =
@@ -176,10 +194,62 @@ export async function getFeed(
   if (!semantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra))
   if (mode === 'semantic') return withAvatar(semantic)
 
-  // hybrid: сначала по смыслу, затем добираем совпадения по словам, которых ещё нет.
+  // hybrid: сначала ТОЧНЫЕ совпадения по словам (буквальное «ubuntu» точнее),
+  // затем добираем по смыслу — чтобы семантически-похожее не всплывало над точным.
   const keyword = await keywordFeed(order, viewerId, opts.tag, q, extra)
-  const seen = new Set(semantic.map((r) => r.id))
-  return withAvatar([...semantic, ...keyword.filter((r) => !seen.has(r.id))])
+  const seen = new Set(keyword.map((r) => r.id))
+  return withAvatar([...keyword, ...semantic.filter((r) => !seen.has(r.id))])
+}
+
+/** Счётчик списков под текущий запрос (для бейджа scope-переключателя). По ключевым
+    словам, без семантики — этого достаточно для числа рядом с вкладкой. */
+export async function countLists(
+  opts: { q?: string; tag?: string; verified?: boolean; ordered?: boolean; by?: string; tags?: string[]; minStars?: number } = {},
+  viewerId?: string,
+): Promise<number> {
+  const filters: SQL[] = [visibleFilter(viewerId), ...extraFilters(opts)]
+  if (opts.tag) filters.push(tagFilter(opts.tag))
+  const q = opts.q?.trim()
+  if (q) {
+    const like = `%${q}%`
+    filters.push(
+      or(ilike(sql`${templates.title}::text`, like), ilike(sql`${templates.desc}::text`, like), ilike(templates.slug, like))!,
+    )
+  }
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(...filters))
+  return row?.n ?? 0
+}
+
+export interface ListSuggestion {
+  handle: string
+  slug: string
+  title: LocaleText
+}
+
+/** Быстрые подсказки списков для автокомплита в шапке (prefix/contains по title/slug). */
+export async function searchListSuggestions(q: string, limit = 6): Promise<ListSuggestion[]> {
+  const term = q.trim()
+  if (!term) return []
+  const like = `%${term}%`
+  const rows = await db
+    .select({ handle: users.handle, slug: templates.slug, title: templates.title })
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(
+      and(
+        eq(templates.status, 'published'),
+        eq(templates.visibility, 'public'),
+        eq(templates.moderation, 'active'),
+        or(ilike(sql`${templates.title}::text`, like), ilike(templates.slug, like))!,
+      ),
+    )
+    .orderBy(desc(sql`${templates.starsCount} + ${templates.forksCount}`))
+    .limit(limit)
+  return rows as ListSuggestion[]
 }
 
 /** Закреплённые списки пользователя (для профиля). */

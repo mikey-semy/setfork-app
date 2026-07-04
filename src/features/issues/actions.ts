@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { db, issueAssignees, issues, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isCollaborator } from '@/features/collab/queries'
-import { notifyMany } from '@/features/notifications/notify'
+import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { collabStore, issueCommenterIds } from '@/features/collab-store/adapter'
@@ -50,6 +50,7 @@ export async function createIssue(formData: FormData): Promise<void> {
   await ensureWatch(session.userId, tpl.id) // автор issue следит за списком
   const watchers = await getWatcherIds(tpl.id)
   await notifyMany([tpl.ownerId, ...watchers], { actorId: session.userId, type: 'issue_new', templateId: tpl.id })
+  await notifyMentions({ text: `${title}\n${body}`, actorId: session.userId, templateId: tpl.id, issueId: ins.id })
   revalidatePath(`/${owner}/${slug}/issues`)
   redirect(`/${owner}/${slug}/issues/${ins.number}`)
 }
@@ -87,6 +88,7 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   const watchers = await getWatcherIds(tpl.id)
   const recipients = [iss.authorId, tpl.ownerId, ...commenters, ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'issue_comment', templateId: tpl.id, issueId: iss.id })
+  await notifyMentions({ text: body, actorId: session.userId, templateId: tpl.id, issueId: iss.id })
 
   revalidatePath(path)
   redirect(path)
@@ -104,13 +106,14 @@ export async function setIssueStatus(owner: string, slug: string, number: number
   revalidatePath(`/${owner}/${slug}/issues`)
 }
 
-/** Изменить метки issue — только владелец списка. */
+/** Изменить метки issue — владелец списка ИЛИ коллаборатор (как assignees/milestones). */
 export async function setIssueLabels(owner: string, slug: string, number: number, labels: string[]): Promise<void> {
   const session = await requireSession()
   const loaded = await loadIssue(owner, slug, number)
   if (!loaded) redirect(`/${owner}/${slug}`)
   const { tpl, iss } = loaded
-  if (session.userId !== tpl.ownerId) redirect(`/${owner}/${slug}/issues/${number}`)
+  const canManage = session.userId === tpl.ownerId || (await isCollaborator(tpl.id, session.userId))
+  if (!canManage) redirect(`/${owner}/${slug}/issues/${number}`)
   await db.update(issues).set({ labels: cleanLabels(labels), updatedAt: new Date() }).where(eq(issues.id, iss.id))
   revalidatePath(`/${owner}/${slug}/issues/${number}`)
 }
@@ -136,7 +139,7 @@ export async function toggleIssueAssignee(owner: string, slug: string, number: n
     await db.delete(issueAssignees).where(eq(issueAssignees.id, existing.id))
   } else {
     await db.insert(issueAssignees).values({ issueId: iss.id, userId })
-    // TODO: отдельный тип уведомления 'assigned' (enum+pref) — пока без нотификации.
+    await notify({ recipientId: userId, actorId: session.userId, type: 'assigned', templateId: tpl.id, issueId: iss.id })
   }
   revalidatePath(`/${owner}/${slug}/issues/${number}`)
 }

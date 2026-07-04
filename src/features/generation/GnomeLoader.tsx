@@ -11,11 +11,14 @@ const STEP2: Record<Lang, string[]> = {
   ru: ['?', 'здесь магия нейросети', 'ИИ усиленно думает', 'ищем в интернете…', 'собираем шаги', 'сверяемся с источниками', '???'],
 }
 
+// Фразы меняем НЕ спеша (болтанка раз в ~0.9с раздражала): спокойный переход раз в 8с.
+const ROTATE_MS = 8000
+
 export function GnomeLoader({ query, lang, label }: { query: string; lang: Lang; label?: string }) {
   const [i, setI] = useState(0)
   const phrases = STEP2[lang] ?? STEP2.en
   useEffect(() => {
-    const id = setInterval(() => setI((n) => (n + 1) % phrases.length), 900)
+    const id = setInterval(() => setI((n) => (n + 1) % phrases.length), ROTATE_MS)
     return () => clearInterval(id)
   }, [phrases.length])
 
@@ -37,7 +40,10 @@ export function GnomeLoader({ query, lang, label }: { query: string; lang: Lang;
         </li>
         <li className="flex gap-2">
           <span className="text-muted">2.</span>
-          <span className="text-accent transition-opacity">{phrases[i]}</span>
+          {/* key={i} → перемонтирование запускает fade-in на каждой смене фразы */}
+          <span key={i} className="animate-fadein text-accent">
+            {phrases[i]}
+          </span>
         </li>
         <li className="flex gap-2">
           <span className="text-muted">3.</span>

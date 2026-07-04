@@ -1,8 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import {
   ChevronDown,
+  ChevronsDown,
+  ChevronsUp,
   ChevronUp,
   GripVertical,
   Heading,
@@ -44,9 +46,17 @@ export function ListEditor({
   const [dragI, setDragI] = useState<number | null>(null)
   const [overI, setOverI] = useState<number | null>(null)
 
-  // История для undo/redo. Текстовые правки заменяют верхний снимок,
+  // Стабильные id пунктов (параллельно items) — нужны для ключей React и FLIP-анимации
+  // перестановки. Начальные id детерминированы (без гидрационных расхождений).
+  const nextUid = useRef(first.length)
+  const newUid = () => 'r' + nextUid.current++
+  const [uids, setUidsRaw] = useState<string[]>(() => first.map((_, i) => 'r' + i))
+
+  // История для undo/redo. Снимок хранит и пункты, и их id (чтобы undo/redo и анимация
+  // не путали, кто есть кто). Текстовые правки заменяют верхний снимок,
   // структурные (добавить/удалить/переместить/refine) — добавляют новый шаг.
-  const hist = useRef<EditorItem[][]>([first])
+  type Snap = { items: EditorItem[]; uids: string[] }
+  const hist = useRef<Snap[]>([{ items: first, uids: first.map((_, i) => 'r' + i) }])
   const ptr = useRef(0)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
@@ -54,37 +64,66 @@ export function ListEditor({
     setCanUndo(ptr.current > 0)
     setCanRedo(ptr.current < hist.current.length - 1)
   }
+  const restore = (s: Snap) => {
+    setItemsRaw(s.items)
+    setUidsRaw(s.uids)
+  }
 
-  // Текстовая правка: обновляем состояние и синхронизируем верхний снимок.
+  // Текстовая правка: порядок/состав не меняются — id те же, обновляем верхний снимок.
   const setText = (next: EditorItem[]) => {
-    hist.current[ptr.current] = next
+    hist.current[ptr.current] = { items: next, uids }
     setItemsRaw(next)
   }
-  // Структурная правка: новый шаг истории.
-  const commit = (next: EditorItem[]) => {
+  // Структурная правка: новый шаг истории (пункты + их id).
+  const commit = (next: EditorItem[], nextUids: string[]) => {
     hist.current = hist.current.slice(0, ptr.current + 1)
-    hist.current.push(next)
+    hist.current.push({ items: next, uids: nextUids })
     ptr.current = hist.current.length - 1
     setItemsRaw(next)
+    setUidsRaw(nextUids)
     syncFlags()
   }
   const undo = () => {
     if (ptr.current > 0) {
       ptr.current -= 1
-      setItemsRaw(hist.current[ptr.current])
+      restore(hist.current[ptr.current])
       syncFlags()
     }
   }
   const redo = () => {
     if (ptr.current < hist.current.length - 1) {
       ptr.current += 1
-      setItemsRaw(hist.current[ptr.current])
+      restore(hist.current[ptr.current])
       syncFlags()
     }
   }
 
   const patch = (i: number, p: Partial<EditorItem>) =>
     setText(items.map((it, idx) => (idx === i ? { ...it, ...p } : it)))
+
+  // FLIP-анимация перестановки: карточка плавно «доезжает» до новой позиции,
+  // а не перепрыгивает. Меряем позиции до/после и анимируем дельту (WAAPI).
+  const listRef = useRef<HTMLDivElement>(null)
+  const prevRects = useRef<Map<string, number>>(new Map())
+  useLayoutEffect(() => {
+    const nodes = listRef.current?.querySelectorAll<HTMLElement>('[data-uid]')
+    if (!nodes) return
+    const now = new Map<string, number>()
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    nodes.forEach((node) => {
+      const uid = node.dataset.uid!
+      const top = node.getBoundingClientRect().top
+      now.set(uid, top)
+      const prev = prevRects.current.get(uid)
+      if (prev != null && prev !== top && !reduce) {
+        node.animate(
+          [{ transform: `translateY(${prev - top}px)` }, { transform: 'translateY(0)' }],
+          { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' },
+        )
+      }
+    })
+    prevRects.current = now
+  }, [uids])
 
   const [instruction, setInstruction] = useState('')
   const [refining, setRefining] = useState(false)
@@ -106,7 +145,7 @@ export function ListEditor({
       return
     }
     if (res.items.length) {
-      commit(res.items)
+      commit(res.items, res.items.map(() => newUid()))
       setInstruction('')
     }
   }
@@ -120,24 +159,30 @@ export function ListEditor({
     if ('error' in res) alert(res.error)
     else patch(i, { imageKey: res.key, imagePreview: res.url })
   }
-  const addItem = () => commit([...items, emptyItem()])
+  const addItem = () => commit([...items, emptyItem()], [...uids, newUid()])
   const removeItem = (i: number) => {
-    if (items.length > 1) commit(items.filter((_, idx) => idx !== i))
+    if (items.length > 1) commit(items.filter((_, idx) => idx !== i), uids.filter((_, idx) => idx !== i))
   }
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir
     if (j < 0 || j >= items.length) return
-    const next = [...items]
-    ;[next[i], next[j]] = [next[j], next[i]]
-    commit(next)
+    const nextI = [...items]
+    const nextU = [...uids]
+    ;[nextI[i], nextI[j]] = [nextI[j], nextI[i]]
+    ;[nextU[i], nextU[j]] = [nextU[j], nextU[i]]
+    commit(nextI, nextU)
   }
   const reorder = (from: number, to: number) => {
-    if (from === to) return
-    const next = [...items]
-    const [moved] = next.splice(from, 1)
-    next.splice(to, 0, moved)
-    commit(next)
+    if (from === to || from < 0 || to < 0) return
+    const nextI = [...items]
+    const nextU = [...uids]
+    const [movedI] = nextI.splice(from, 1)
+    const [movedU] = nextU.splice(from, 1)
+    nextI.splice(to, 0, movedI)
+    nextU.splice(to, 0, movedU)
+    commit(nextI, nextU)
   }
+  const moveToEdge = (i: number, edge: 'top' | 'bottom') => reorder(i, edge === 'top' ? 0 : items.length - 1)
 
   // Клавиши: Ctrl/⌘+Z / +Shift+Z / +Y — undo/redo (не в полях, там нативно);
   // Alt+↑/↓ — переместить пункт под фокусом.
@@ -226,10 +271,12 @@ export function ListEditor({
         </div>
       )}
 
+      <div ref={listRef} className="flex flex-col gap-3">
       {items.map((it, i) => (
         <div
-          key={i}
+          key={uids[i]}
           data-i={i}
+          data-uid={uids[i]}
           onDragOver={(e) => {
             if (dragI !== null) {
               e.preventDefault()
@@ -261,17 +308,47 @@ export function ListEditor({
             </span>
             <span className="font-mono text-[12px] text-muted">{ordered ? `${ru ? 'Пункт' : 'Item'} ${i + 1}` : '•'}</span>
             <div className="ml-auto flex items-center gap-1">
-              <button type="button" onClick={() => move(i, -1)} className="rounded p-1 text-muted hover:text-ink" title="up">
+              <button
+                type="button"
+                onClick={() => moveToEdge(i, 'top')}
+                disabled={i === 0}
+                className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
+                title={ru ? 'В начало' : 'Move to top'}
+              >
+                <ChevronsUp size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => move(i, -1)}
+                disabled={i === 0}
+                className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
+                title={ru ? 'Выше' : 'Move up'}
+              >
                 <ChevronUp size={15} />
               </button>
-              <button type="button" onClick={() => move(i, 1)} className="rounded p-1 text-muted hover:text-ink" title="down">
+              <button
+                type="button"
+                onClick={() => move(i, 1)}
+                disabled={i === items.length - 1}
+                className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
+                title={ru ? 'Ниже' : 'Move down'}
+              >
                 <ChevronDown size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => moveToEdge(i, 'bottom')}
+                disabled={i === items.length - 1}
+                className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
+                title={ru ? 'В конец' : 'Move to bottom'}
+              >
+                <ChevronsDown size={15} />
               </button>
               <button
                 type="button"
                 onClick={() => removeItem(i)}
                 className="rounded p-1 text-muted hover:text-danger"
-                title="remove"
+                title={ru ? 'Удалить' : 'Remove'}
               >
                 <Trash2 size={15} />
               </button>
@@ -284,6 +361,7 @@ export function ListEditor({
               <Heading size={13} className="shrink-0" />
               <input
                 className="w-full bg-transparent text-[12.5px] font-semibold outline-none placeholder:font-normal placeholder:text-muted"
+                aria-label={ru ? `Секция пункта ${i + 1}` : `Item ${i + 1} section`}
                 placeholder={ru ? 'Секция (необязательно) — группирует пункты ниже' : 'Section (optional) — groups the items below'}
                 value={it.section}
                 onChange={(e) => patch(i, { section: e.target.value })}
@@ -291,18 +369,21 @@ export function ListEditor({
             </div>
             <input
               className={input}
+              aria-label={ru ? `Заголовок пункта ${i + 1}` : `Item ${i + 1} title`}
               placeholder={ru ? 'Заголовок пункта' : 'Item title'}
               value={it.title}
               onChange={(e) => patch(i, { title: e.target.value })}
             />
             <input
               className={input}
+              aria-label={ru ? `Описание пункта ${i + 1}` : `Item ${i + 1} description`}
               placeholder={ru ? 'Описание (необязательно)' : 'Description (optional)'}
               value={it.desc}
               onChange={(e) => patch(i, { desc: e.target.value })}
             />
             <input
               className={`${input} font-mono`}
+              aria-label={ru ? `Команда пункта ${i + 1}` : `Item ${i + 1} command`}
               placeholder={ru ? 'Команда (необязательно)' : 'Command (optional)'}
               value={it.command}
               onChange={(e) => patch(i, { command: e.target.value })}
@@ -343,6 +424,7 @@ export function ListEditor({
                     <span className="text-muted">–</span>
                     <input
                       className={input}
+                      aria-label={ru ? `Подпункт ${si + 1}` : `Sub-item ${si + 1}`}
                       placeholder={ru ? 'Подпункт' : 'Sub-item'}
                       value={s}
                       onChange={(e) =>
@@ -353,6 +435,7 @@ export function ListEditor({
                       type="button"
                       onClick={() => patch(i, { subtasks: it.subtasks.filter((_, xi) => xi !== si) })}
                       className="text-muted hover:text-danger"
+                      aria-label={ru ? 'Удалить подпункт' : 'Remove sub-item'}
                     >
                       <X size={14} />
                     </button>
@@ -368,6 +451,7 @@ export function ListEditor({
                   <div key={ri} className="flex items-center gap-2">
                     <input
                       className={`${input} max-w-[200px]`}
+                      aria-label={ru ? 'Название ссылки' : 'Link label'}
                       placeholder={ru ? 'Название ссылки' : 'Link label'}
                       value={r.label}
                       onChange={(e) =>
@@ -378,6 +462,7 @@ export function ListEditor({
                     />
                     <input
                       className={`${input} font-mono`}
+                      aria-label={ru ? 'URL ссылки' : 'Link URL'}
                       placeholder="https://…"
                       value={r.url}
                       onChange={(e) =>
@@ -388,6 +473,7 @@ export function ListEditor({
                       type="button"
                       onClick={() => patch(i, { refs: it.refs.filter((_, xi) => xi !== ri) })}
                       className="text-muted hover:text-danger"
+                      aria-label={ru ? 'Удалить ссылку' : 'Remove link'}
                     >
                       <X size={14} />
                     </button>
@@ -433,6 +519,7 @@ export function ListEditor({
           </div>
         </div>
       ))}
+      </div>
 
       <button
         type="button"

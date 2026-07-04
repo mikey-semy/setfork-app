@@ -19,6 +19,8 @@ const VERB: Record<NotificationItem['type'], TKey> = {
   star: 'notifStar',
   fork: 'notifFork',
   follow: 'notifFollow',
+  mention: 'notifMention',
+  assigned: 'notifAssigned',
 }
 
 export default async function NotificationsPage() {
@@ -38,14 +40,15 @@ export default async function NotificationsPage() {
         <div className="flex flex-col gap-1.5">
           {items.map((n) => {
             const isFollow = n.type === 'follow'
-            const isIssue = n.type === 'issue_new' || n.type === 'issue_comment'
             const listTitle = n.title ? tr(n.title, lang) : t('aList', lang)
             const listHref = n.ownerHandle && n.slug ? `/${n.ownerHandle}/${n.slug}` : null
             const href = isFollow
               ? `/${n.actorHandle ?? ''}`
-              : isIssue && listHref && n.issueNumber != null
+              : listHref && n.issueNumber != null
                 ? `${listHref}/issues/${n.issueNumber}`
-                : listHref
+                : listHref && n.suggestionId
+                  ? `${listHref}/suggestions/${n.suggestionId}`
+                  : listHref
             return (
               <div
                 key={n.id}

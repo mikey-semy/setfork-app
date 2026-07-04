@@ -3,6 +3,8 @@ import { getLang } from '@/shared/i18n/server'
 import { getAiSettings, getApiKey, maskKey } from '@/shared/settings/ai'
 import { getMediaSettings, maskSecret } from '@/shared/settings/media'
 import { getSearchSettings } from '@/shared/settings/search'
+import { getEmailSettings } from '@/shared/settings/email'
+import { getVapid } from '@/shared/push/vapid'
 import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
@@ -14,6 +16,8 @@ import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { AiKeyAndSwitch } from '@/features/admin/AiKeyAndSwitch'
 import { CreditsWidget } from '@/features/admin/CreditsWidget'
 import { MediaSettingsForm } from '@/features/admin/MediaSettingsForm'
+import { EmailSettingsForm } from '@/features/admin/EmailSettingsForm'
+import { PushSettingsForm } from '@/features/admin/PushSettingsForm'
 import { ReindexPanel } from '@/features/admin/ReindexPanel'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none'
@@ -53,13 +57,24 @@ export default async function AdminPage() {
   await requireAdmin()
   const lang = await getLang()
   const ru = lang === 'ru'
-  const [settings, apiKey, media, search, online] = await Promise.all([
+  const [settings, apiKey, media, search, email, online] = await Promise.all([
     getAiSettings(),
     getApiKey(),
     getMediaSettings(),
     getSearchSettings(),
+    getEmailSettings(),
     getOnlineUsers(),
   ])
+  const vapid = await getVapid()
+  const pushValues = { publicKey: vapid.publicKey, subject: vapid.subject, configured: Boolean(vapid.publicKey && vapid.privateKey) }
+  const emailValues = {
+    host: email.host,
+    port: email.port,
+    secure: email.secure,
+    user: email.user,
+    from: email.from,
+    passMask: maskSecret(email.pass),
+  }
   const hasKey = Boolean(apiKey)
   const maskedKey = maskKey(apiKey)
   const mediaValues = {
@@ -213,6 +228,26 @@ export default async function AdminPage() {
             : 'S3-compatible storage, imgproxy and CDN. Values override .env; an empty field falls back to .env.'}
         </p>
         <MediaSettingsForm ru={ru} v={mediaValues} />
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <div className="mb-1 font-semibold text-ink">{ru ? 'Почта (SMTP)' : 'Email (SMTP)'}</div>
+        <p className="mb-4 text-[13px] text-ink-2">
+          {ru
+            ? 'Свой SMTP для уведомлений на почту. Значения перекрывают .env; пустое поле — берётся из .env.'
+            : 'Your own SMTP for email notifications. Values override .env; an empty field falls back to .env.'}
+        </p>
+        <EmailSettingsForm ru={ru} v={emailValues} />
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <div className="mb-1 font-semibold text-ink">{ru ? 'Push-уведомления (Web Push)' : 'Push notifications (Web Push)'}</div>
+        <p className="mb-4 text-[13px] text-ink-2">
+          {ru
+            ? 'Фоновые браузерные уведомления через service worker. Свои VAPID-ключи — без сторонних сервисов.'
+            : 'Background browser notifications via a service worker. Your own VAPID keys — no third-party service.'}
+        </p>
+        <PushSettingsForm ru={ru} v={pushValues} />
       </section>
 
       <section className="rounded-lg border border-border bg-surface p-5">

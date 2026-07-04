@@ -4,8 +4,15 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { getAiSettings, getApiKey } from '@/shared/settings/ai'
 import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
+import { sanitizeCommand } from './sanitize-command'
 import type { Lang } from '@/shared/i18n'
 
+export { sanitizeCommand }
+
+export interface GeneratedRef {
+  label: string
+  url: string
+}
 export interface GeneratedItem {
   title: string
   desc: string
@@ -13,6 +20,7 @@ export interface GeneratedItem {
   level: 'required' | 'recommended' | 'optional'
   why: string
   subtasks: string[]
+  refs: GeneratedRef[]
 }
 export interface GeneratedList {
   title: string
@@ -34,12 +42,16 @@ export interface GenerateOptions {
 }
 
 const JSON_SHAPE = `Return ONLY valid JSON (no markdown fences), exactly this shape:
-{"title": string, "desc": string, "tags": string[], "items": [{"title": string, "desc": string, "command": string, "level": "required"|"recommended"|"optional", "why": string, "subtasks": string[]}]}
+{"title": string, "desc": string, "tags": string[], "items": [{"title": string, "desc": string, "command": string, "level": "required"|"recommended"|"optional", "why": string, "subtasks": string[], "refs": [{"label": string, "url": string}]}]}
 Rules:
 - title: concise noun phrase naming the list.
 - desc: one sentence describing it.
 - tags: 3-6 short lowercase tags, no '#'.
-- items: 4-12 ordered steps. title = short imperative. desc = one or two clarifying sentences; you MAY use light markdown (inline code, **bold**, bullet lists). command = a shell command when applicable, else "". level = how essential the step is. why = one short sentence on WHY this step matters (rationale), or "". subtasks = 0-3 short verification checks.`
+- FIRST decide whether the topic is software/technical (coding, devops, CLI) or NOT (travel, cooking, fitness, planning, study…). This governs the "command" field for every step.
+- items: 4-12 ordered steps. title = short imperative. desc = one or two clarifying sentences; you MAY use light markdown (inline code, **bold**, bullet lists).
+- command = a real, runnable TERMINAL command ONLY for technical topics where the step is literally typed into a shell (e.g. "npm install", "docker compose up -d"). For NON-technical topics it MUST be "" for every step. NEVER restate the title as a fake command and NEVER wrap a URL in curl/wget just to fill the field (e.g. "curl https://museum.org" is WRONG — put that link in refs, command="").
+- refs = 0-3 helpful links for the step (official site, docs, booking/map page). Put ALL URLs here, never in command. Each ref: label = short human name, url = full https URL. Use [] when there is no good link.
+- level = how essential the step is. why = one short sentence on WHY this step matters, or "". subtasks = 0-3 short verification checks.`
 
 function parseList(text: string, fallbackTitle: string): GeneratedList | null {
   const cleaned = text
@@ -60,10 +72,16 @@ function parseList(text: string, fallbackTitle: string): GeneratedList | null {
         .map((it) => ({
           title: String(it?.title ?? '').trim(),
           desc: String(it?.desc ?? '').trim(),
-          command: String(it?.command ?? '').trim(),
+          command: sanitizeCommand(String(it?.command ?? '')),
           level: (LEVELS.includes(String(it?.level)) ? String(it?.level) : 'required') as GeneratedItem['level'],
           why: String(it?.why ?? '').trim(),
           subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s) => String(s).trim()).filter(Boolean).slice(0, 6) : [],
+          refs: Array.isArray(it?.refs)
+            ? it.refs
+                .map((r) => ({ label: String(r?.label ?? '').trim(), url: String(r?.url ?? '').trim() }))
+                .filter((r) => r.label && /^https?:\/\//i.test(r.url))
+                .slice(0, 3)
+            : [],
         }))
         .filter((it) => it.title)
     : []

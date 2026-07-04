@@ -1,6 +1,49 @@
 import 'server-only'
-import { and, eq } from 'drizzle-orm'
-import { db, runs } from '@/shared/db'
+import { and, eq, inArray, sql } from 'drizzle-orm'
+import { db, runs, steps } from '@/shared/db'
+import type { LocaleText } from '@/shared/i18n'
+
+export interface UserRunRow {
+  id: string
+  status: 'active' | 'done' | 'abandoned' | 'failed'
+  version: number
+  doneCount: number
+  total: number
+  updatedAt: Date
+  handle: string
+  slug: string
+  title: LocaleText
+}
+
+/** Все прогоны пользователя (для страницы «Мои прогоны»), свежие сверху. */
+export async function getUserRuns(userId: string): Promise<UserRunRow[]> {
+  const rows = await db.query.runs.findMany({
+    where: (r) => eq(r.userId, userId),
+    with: { template: { with: { owner: true } } },
+    orderBy: (r, { desc }) => desc(r.updatedAt),
+  })
+  if (rows.length === 0) return []
+  // Кол-во шагов в версиях прогонов — одним запросом (без relation `version`,
+  // чтобы не конфликтовать с одноимённой колонкой runs.version).
+  const versionIds = [...new Set(rows.map((r) => r.versionId))]
+  const counts = await db
+    .select({ versionId: steps.versionId, c: sql<number>`count(*)::int` })
+    .from(steps)
+    .where(inArray(steps.versionId, versionIds))
+    .groupBy(steps.versionId)
+  const totalByVersion = new Map(counts.map((c) => [c.versionId, c.c]))
+  return rows.map((r) => ({
+    id: r.id,
+    status: r.status,
+    version: r.version,
+    doneCount: r.doneCount,
+    total: totalByVersion.get(r.versionId) ?? 0,
+    updatedAt: r.updatedAt,
+    handle: r.template.owner.handle,
+    slug: r.template.slug,
+    title: r.template.title as LocaleText,
+  }))
+}
 
 /** Прогон со всеми шагами версии и их состоянием. Только владельцу прогона. */
 export async function getRun(runId: string, userId: string) {

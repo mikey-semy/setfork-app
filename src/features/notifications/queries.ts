@@ -16,6 +16,8 @@ export type NotificationType =
   | 'star'
   | 'fork'
   | 'follow'
+  | 'mention'
+  | 'assigned'
 
 export interface NotificationItem {
   id: string
@@ -28,6 +30,13 @@ export interface NotificationItem {
   slug: string | null
   title: LocaleText | null
   issueNumber: number | null
+  suggestionId: string | null
+}
+
+/** Включены ли у пользователя браузерные уведомления (для монтирования нотификатора). */
+export async function getBrowserNotifyEnabled(userId: string): Promise<boolean> {
+  const [u] = await db.select({ prefs: users.notifyPrefs }).from(users).where(eq(users.id, userId)).limit(1)
+  return (u?.prefs as { browser?: boolean } | undefined)?.browser === true
 }
 
 export async function getUnreadCount(userId: string): Promise<number> {
@@ -53,6 +62,7 @@ export async function getNotifications(userId: string, limit = 50): Promise<Noti
       slug: templates.slug,
       title: templates.title,
       issueNumber: issues.number,
+      suggestionId: notifications.suggestionId,
     })
     .from(notifications)
     .leftJoin(actor, eq(notifications.actorId, actor.id))

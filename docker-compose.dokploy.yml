@@ -45,6 +45,24 @@ services:
     restart: 'no'
     networks: [dokploy-network]
 
+  # Свой почтовый сервер — Stalwart (Rust MTA). Разовая настройка после первого старта:
+  #   1) пароль админа из логов: `docker compose logs mail | grep -i password`;
+  #   2) веб-админка на :8080 (закройте фаерволом/после настройки) — добавьте домен,
+  #      сгенерируйте DKIM, привяжите TLS-сертификат, создайте аккаунт для приложения;
+  #   3) DNS домена: A/AAAA на mail, MX → mail, SPF/DKIM/DMARC + PTR (reverse-DNS);
+  #   4) в приложении /admin → Почта: host=mail, port=587, user/pass аккаунта.
+  mail:
+    image: stalwartlabs/mail-server:latest
+    restart: always
+    volumes:
+      - stalwart:/opt/stalwart-mail
+    ports:
+      - '25:25' # входящая почта (MX)
+      - '587:587' # submission (STARTTLS)
+      - '465:465' # submission (implicit TLS)
+      - '8080:8080' # веб-админка (закрыть после настройки)
+    networks: [dokploy-network]
+
   app:
     build: { context: ., target: runner }
     container_name: setfork-frontend
@@ -58,11 +76,13 @@ services:
       db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
       core: { condition: service_started }
+      mail: { condition: service_started }
     networks: [dokploy-network]
 
 volumes:
   pgdata:
   setfork_git:
+  stalwart:
 
 networks:
   dokploy-network:

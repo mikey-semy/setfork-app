@@ -29,6 +29,41 @@
       "when": 1783102167911,
       "tag": "0003_token_scope_expiry",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783105399927,
+      "tag": "0004_calm_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783135987857,
+      "tag": "0005_whole_luckman",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783141416149,
+      "tag": "0006_abnormal_shadow_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783144872324,
+      "tag": "0007_quiet_robbie_robertson",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783171312798,
+      "tag": "0008_violet_mastermind",
+      "breakpoints": true
     }
   ]
 }

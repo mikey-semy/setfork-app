@@ -32,8 +32,8 @@ export const listVisibility = pgEnum('list_visibility', ['public', 'private'])
 export const listStatus = pgEnum('list_status', ['draft', 'published'])
 // active — норма; flagged — на проверку (репорт/ИИ); hidden — скрыт админом (не публичен).
 export const moderationStatus = pgEnum('moderation_status', ['active', 'flagged', 'hidden'])
-export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned'])
-export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done'])
+export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned', 'failed'])
+export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done', 'blocked'])
 // Уровень важности шага (как в стандартах: MUST / SHOULD / MAY).
 export const stepLevel = pgEnum('step_level', ['required', 'recommended', 'optional'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
@@ -50,6 +50,8 @@ export const notificationType = pgEnum('notification_type', [
   'star',
   'fork',
   'follow',
+  'mention',
+  'assigned',
 ])
 
 export const issueStatus = pgEnum('issue_status', ['open', 'closed'])
@@ -82,6 +84,8 @@ export type NotifyPrefs = {
   issues?: boolean // новый issue на моём списке
   comments?: boolean // комментарии в issue/правке, где я участвую
   watchedUpdates?: boolean // новая версия отслеживаемого списка
+  email?: boolean // дублировать уведомления на почту (по умолчанию выкл)
+  browser?: boolean // показывать браузерные уведомления (по умолчанию выкл)
 }
 
 export const users = pgTable('users', {
@@ -258,6 +262,48 @@ export const appSettings = pgTable('app_settings', {
   value: text('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+// ── Фоновые задачи (durable-очередь поверх Postgres) ──────────────────
+// Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
+// при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
+export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
+export type JobType = 'email' | 'generate' | 'reindex' | 'push'
+
+export const jobs = pgTable(
+  'jobs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: text('type').notNull(),
+    payload: jsonb('payload').notNull().default({}),
+    status: jobStatus('status').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    maxAttempts: integer('max_attempts').notNull().default(5),
+    runAt: timestamp('run_at', { withTimezone: true }).notNull().defaultNow(),
+    lastError: text('last_error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    // Индекс под выборку готовых к запуску pending-задач.
+    ready: index('jobs_ready_idx').on(t.status, t.runAt),
+  }),
+)
+
+// ── Web Push подписки (фоновые браузерные уведомления через service worker) ──
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull().unique(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ byUser: index('push_subs_user_idx').on(t.userId) }),
+)
 
 // ── Suggestions (предложения правок, PR) ─────────────────────────────
 export const suggestions = pgTable('suggestions', {
@@ -447,7 +493,7 @@ export const repositories = pgTable(
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
-export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; level?: StepLevel; why?: string }
+export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; level?: StepLevel; why?: string; refs?: { label: string; url: string }[] }
 
 export const generations = pgTable('generations', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -565,6 +611,7 @@ export const notifications = pgTable(
     type: notificationType('type').notNull(),
     templateId: uuid('template_id').references(() => templates.id, { onDelete: 'cascade' }),
     issueId: uuid('issue_id').references(() => issues.id, { onDelete: 'cascade' }),
+    suggestionId: uuid('suggestion_id').references(() => suggestions.id, { onDelete: 'cascade' }),
     read: boolean('read').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

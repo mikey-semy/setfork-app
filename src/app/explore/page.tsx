@@ -1,158 +1,74 @@
 import Link from 'next/link'
-import { BadgeCheck, SearchX, Sparkles } from 'lucide-react'
+import { Compass, Flame, Hash, Sparkles, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { hasOpenRouterKey } from '@/shared/settings/ai'
-import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
-import { startGeneration } from '@/features/generation/actions'
-import { getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
+import { getFeed, getPopularTags } from '@/features/library/queries'
+import { searchPeople } from '@/features/profile/search'
+import { PeopleResults } from '@/features/profile/PeopleResults'
 
-const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostStarred' }[] = [
-  { key: 'trending', tkey: 'trending' },
-  { key: 'newest', tkey: 'newest' },
-  { key: 'mostStarred', tkey: 'mostStarred' },
-]
-
-export default async function ExplorePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; tag?: string; sort?: string; e?: string; verified?: string; type?: string }>
-}) {
-  const sp = await searchParams
-  const aiOn = hasOpenRouterKey()
-  const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
-  const verified = sp.verified === '1'
-  const type = sp.type === 'ordered' ? 'ordered' : sp.type === 'unordered' ? 'unordered' : undefined
+// Витрина-открытие (не поиск!): трендовые списки, популярные темы, люди, свежее.
+// Полнотекстовый/квалификаторный поиск живёт на /search.
+export default async function ExplorePage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const [tags, feed] = await Promise.all([
-    getPopularTags(),
-    getFeed(
-      { sort, tag: sp.tag, q: sp.q, verified: verified || undefined, ordered: type ? type === 'ordered' : undefined },
-      session?.userId,
-    ),
+  const [trending, newest, tags, people] = await Promise.all([
+    getFeed({ sort: 'trending' }, session?.userId),
+    getFeed({ sort: 'newest' }, session?.userId),
+    getPopularTags(24),
+    searchPeople({ sort: 'followers', limit: 5 }),
   ])
-  const qs = (over: Record<string, string | undefined>) => {
-    const p = new URLSearchParams()
-    const merged = { q: sp.q, tag: sp.tag, sort: sp.sort, verified: sp.verified, type: sp.type, ...over }
-    for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v)
-    const s = p.toString()
-    return s ? `/explore?${s}` : '/explore'
-  }
-  const chip = (active: boolean) =>
-    `rounded-full px-2.5 py-1 text-[12px] ${active ? 'bg-primary text-primary-fg' : 'bg-surface text-ink-2 hover:text-ink'}`
 
   return (
-    <div className="mx-auto flex w-full max-w-[1280px] flex-1 items-stretch">
-      <aside className="hidden w-[260px] flex-shrink-0 border-r border-border bg-surface-2 px-4 py-5 md:block">
-        <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">{t('filters', lang)}</div>
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          <Link href={qs({ verified: verified ? undefined : '1' })} className={`inline-flex items-center gap-1 ${chip(verified)}`}>
-            <BadgeCheck size={12} /> {t('filterVerified', lang)}
-          </Link>
-        </div>
-        <div className="mb-5 flex flex-wrap gap-1.5">
-          <Link href={qs({ type: undefined })} className={chip(!type)}>
-            {t('filterAllTypes', lang)}
-          </Link>
-          <Link href={qs({ type: 'ordered' })} className={chip(type === 'ordered')}>
-            {t('orderedLabel', lang)}
-          </Link>
-          <Link href={qs({ type: 'unordered' })} className={chip(type === 'unordered')}>
-            {t('unorderedLabel', lang)}
-          </Link>
-        </div>
+    <div className="mx-auto w-full max-w-[1080px] px-6 py-8">
+      <div className="mb-6 flex items-center gap-2.5">
+        <Compass size={22} className="text-accent" />
+        <h1 className="text-[22px] font-semibold text-ink">{t('explore', lang)}</h1>
+      </div>
 
-        <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">{t('tags', lang)}</div>
-        <div className="flex flex-wrap gap-1.5">
-          <Link
-            href={qs({ tag: undefined })}
-            className={`rounded-full px-2.5 py-1 text-[12px] ${
-              !sp.tag ? 'bg-primary text-primary-fg' : 'bg-surface text-ink-2 hover:text-ink'
-            }`}
-          >
-            {t('allTags', lang)}
-          </Link>
-          {tags.map((tg) => (
-            <Link
-              key={tg.tag}
-              href={qs({ tag: tg.tag })}
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] ${
-                sp.tag === tg.tag ? 'bg-primary text-primary-fg' : 'bg-surface text-ink-2 hover:text-ink'
-              }`}
-            >
-              {tg.tag}
-              <span className={`font-mono text-[10.5px] ${sp.tag === tg.tag ? 'text-primary-fg/70' : 'text-muted'}`}>
-                {tg.count}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </aside>
-
-      <section className="min-w-0 flex-1 px-6 py-4">
-        <div className="mb-1 flex items-center justify-between border-b border-border pb-1.5">
-          <div className="flex gap-4 text-[13.5px] font-semibold">
-            {SORTS.map((s) => (
+      {/* Популярные темы → ведут в поиск по tag: */}
+      {tags.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-2.5 flex items-center gap-2 text-[13px] font-semibold text-ink-2">
+            <Hash size={15} className="text-muted" /> {t('popularTags', lang)}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tg) => (
               <Link
-                key={s.key}
-                href={qs({ sort: s.key })}
-                className={`pb-2.5 ${sort === s.key ? 'border-b-2 border-ink text-ink' : 'text-ink-2'}`}
+                key={tg.tag}
+                href={`/search?q=${encodeURIComponent(`tag:${tg.tag}`)}`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-[12.5px] text-ink-2 hover:text-ink"
               >
-                {t(s.tkey, lang)}
+                {tg.tag}
+                <span className="font-mono text-[10.5px] text-muted">{tg.count}</span>
               </Link>
             ))}
           </div>
-          <span className="text-[12.5px] text-muted">
-            {feed.length} {t('ofLists', lang)}
-          </span>
+        </section>
+      )}
+
+      <section className="mb-8">
+        <div className="mb-2 flex items-center gap-2 text-[15px] font-semibold text-ink">
+          <Flame size={17} className="text-accent" /> {t('trending', lang)}
         </div>
-        {sp.tag && (
-          <div className="mt-3 text-[13px] text-ink-2">
-            #{sp.tag}{' '}
-            <Link href={qs({ tag: undefined })} className="text-accent hover:underline">
-              ✕
-            </Link>
-          </div>
-        )}
-        {sp.e === 'aifail' && (
-          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-danger">
-            {t('aiFail', lang)}
-          </div>
-        )}
-        {sp.e === 'ratelimited' && (
-          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-warn">
-            {t('rateLimited', lang)}
-          </div>
-        )}
-
-        {/* Поиск + нет точного совпадения → предложить сгенерировать (Generate → Verify) */}
-        {sp.q && aiOn && (
-          <form action={startGeneration} className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3">
-            <Sparkles size={16} className="text-accent" />
-            <span className="text-[13px] text-ink">
-              {t('cantFind', lang)} <span className="font-semibold">“{sp.q}”</span>
-            </span>
-            <input type="hidden" name="q" value={sp.q} />
-            <button className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[12.5px] font-semibold text-primary-fg">
-              <Sparkles size={13} /> {t('generateWithAi', lang)}
-            </button>
-          </form>
-        )}
-
-        {feed.length === 0 ? (
-          <div className="py-6">
-            <EmptyState
-              icon={<SearchX size={36} strokeWidth={1.5} />}
-              title={sp.q || sp.tag ? t('nothingFound', lang) : t('emptyExplore', lang)}
-              action={!sp.q && session ? { href: '/new', label: t('newList', lang) } : undefined}
-            />
-          </div>
-        ) : (
-          <FeedList items={feed} lang={lang} viewerId={session?.userId} className="space-y-3 py-3" />
-        )}
+        <FeedList items={trending.slice(0, 9)} lang={lang} viewerId={session?.userId} className="space-y-3" />
       </section>
+
+      <section className="mb-8">
+        <div className="mb-2 flex items-center gap-2 text-[15px] font-semibold text-ink">
+          <Sparkles size={17} className="text-accent" /> {t('newest', lang)}
+        </div>
+        <FeedList items={newest.slice(0, 6)} lang={lang} viewerId={session?.userId} className="space-y-3" />
+      </section>
+
+      {people.length > 0 && (
+        <section>
+          <div className="mb-2 flex items-center gap-2 text-[15px] font-semibold text-ink">
+            <Users size={17} className="text-accent" /> {t('popularPeople', lang)}
+          </div>
+          <PeopleResults people={people} lang={lang} />
+        </section>
+      )}
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { getGeneration } from '@/features/generation/queries'
+import { getGeneration, getGenerationStatus } from '@/features/generation/queries'
 import { GenerationReview } from '@/features/generation/GenerationReview'
 
 export default async function GenerationPage({
@@ -18,6 +18,7 @@ export default async function GenerationPage({
 
   const gen = await getGeneration(id, session.userId)
   if (!gen) notFound()
+  const status = await getGenerationStatus(id)
 
   // Уже принят → открываем созданный список.
   if (gen.chosenTemplateId) {
@@ -35,6 +36,7 @@ export default async function GenerationPage({
       query={gen.query}
       lang={lang}
       candidates={gen.candidates}
+      status={status}
       initialIdx={Number(sp.v) || gen.candidates[gen.candidates.length - 1]?.idx || 1}
       error={sp.e}
     />

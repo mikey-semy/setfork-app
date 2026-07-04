@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { Code2, List } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
@@ -14,7 +14,16 @@ import { getListMeta, getVersions, getVersionSteps } from '@/features/library/qu
 import { diffSteps, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from '@/features/library/diff'
 
 function toCmp(
-  steps: { title: LocaleText; desc: LocaleText; command: string; level: CmpStep['level']; why: LocaleText; section?: LocaleText; subtasks: LocaleText[] }[],
+  steps: {
+    title: LocaleText
+    desc: LocaleText
+    command: string
+    level: CmpStep['level']
+    why: LocaleText
+    section?: LocaleText
+    subtasks: LocaleText[]
+    refs?: { label: LocaleText; url?: string }[]
+  }[],
   lang: Lang,
 ): CmpStep[] {
   return steps.map((s) => ({
@@ -25,6 +34,9 @@ function toCmp(
     why: tr(s.why, lang),
     section: s.section ? tr(s.section, lang) : '',
     subtasks: (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean),
+    refs: (s.refs ?? [])
+      .map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' }))
+      .filter((r) => r.label || r.url),
   }))
 }
 
@@ -56,6 +68,8 @@ export default async function ComparePage({
   const view = sp.view === 'list' ? 'list' : 'code'
   const versions = await getVersions(meta.id)
   const nums = versions.map((v) => v.version).sort((a, b) => a - b)
+  // Нечего сравнивать при одной версии — отправляем на историю версий (URL достижим напрямую).
+  if (nums.length < 2) redirect(`/${owner}/${slug}/versions`)
   const toN = Math.min(Number(sp.to) || meta.currentVersion, meta.currentVersion)
   const fromN = Math.max(Number(sp.from) || Math.max(nums[0], toN - 1), nums[0])
 
@@ -159,7 +173,7 @@ function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: CmpStep[];
 
 function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps: CmpStep[]; lang: Lang }) {
   const { entries, summary } = diffSteps(fromSteps, toSteps)
-  if (summary.added + summary.removed + summary.changed === 0)
+  if (summary.added + summary.removed + summary.changed + summary.moved === 0)
     return <div className="rounded-lg border border-dashed border-border py-12 text-center text-[13.5px] text-muted">{t('diffNothing', lang)}</div>
   return (
     <>
@@ -167,6 +181,7 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
         <span className="text-ok">+{summary.added}</span>
         <span className="text-danger">−{summary.removed}</span>
         <span className="text-warn">~{summary.changed}</span>
+        {summary.moved > 0 && <span className="text-ink-2">⇅{summary.moved}</span>}
       </div>
       <div className="flex flex-col gap-2.5">
         {entries.map((e, i) => {
@@ -208,13 +223,33 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
                       {t('diffWas', lang)}: <span className="line-through opacity-70">{e.before.desc}</span>
                     </div>
                   )}
-                  {(e.changes.includes('subtasks') || e.changes.includes('why')) && (
-                    <div className="text-muted">{e.changes.filter((c) => c === 'subtasks' || c === 'why').join(', ')} {t('diffChanged', lang).toLowerCase()}</div>
+                  {(e.changes.includes('subtasks') || e.changes.includes('why') || e.changes.includes('refs')) && (
+                    <div className="text-muted">
+                      {e.changes.filter((c) => c === 'subtasks' || c === 'why' || c === 'refs').join(', ')}{' '}
+                      {t('diffChanged', lang).toLowerCase()}
+                    </div>
                   )}
                 </div>
               )}
               {e.status !== 'removed' && e.command && !e.changes.includes('command') && (
                 <code className="mt-2 block rounded bg-surface-2 px-2 py-1 font-mono text-[12px] text-ink">{e.command}</code>
+              )}
+              {e.status !== 'removed' && e.refs && e.refs.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {e.refs.map((r, k) => {
+                    const cls = 'inline-flex items-center gap-1 rounded border border-border bg-surface-2 px-2 py-0.5 text-[11.5px]'
+                    // Ссылка без URL — не делаем «#»-якорь на верх страницы, показываем как текст.
+                    return r.url ? (
+                      <a key={k} href={r.url} target="_blank" rel="noreferrer" className={`${cls} text-accent hover:underline`}>
+                        {r.label || r.url}
+                      </a>
+                    ) : (
+                      <span key={k} className={`${cls} text-ink-2`}>
+                        {r.label}
+                      </span>
+                    )
+                  })}
+                </div>
               )}
             </div>
           )

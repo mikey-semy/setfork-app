@@ -69,6 +69,21 @@ services:
     ports:
       - '${IMGPROXY_PORT:-8081}:8080'
 
+  # Свой почтовый сервер — Stalwart (Rust MTA/IMAP/JMAP), без сторонних сервисов.
+  # Первый старт печатает пароль администратора в логах:
+  #   docker compose logs mail | grep -i password
+  # Настройка домена / DKIM / TLS / аккаунта — веб-админка на http://localhost:8080.
+  # Затем в приложении: /admin → Почта → host=mail, port=587, user/pass созданного
+  # аккаунта, TLS выкл (внутри docker-сети). Тест-письмо — кнопкой там же.
+  mail:
+    image: stalwartlabs/mail-server:latest
+    restart: unless-stopped
+    volumes:
+      - stalwartdata:/opt/stalwart-mail
+    ports:
+      - '${SMTP_PORT:-587}:587'
+      - '${MAIL_ADMIN_PORT:-8080}:8080'
+
   # ── Полный стек в контейнерах (обычный `docker compose up --build`). ──
   # Для чистого dev по-прежнему проще `npm run dev` + `db:up` (эти сервисы не мешают).
   # git-ядро (Rust) собирается из соседнего чекаута ../setfork-core.
@@ -103,14 +118,19 @@ services:
       SETFORK_CORE_URL: '1' # remote-режим: фронт зовёт Rust-ядро
       SETFORK_CORE_ADDR: core:50051
       S3_ENDPOINT: http://minio:9000 # в контейнере медиа-хосты — по именам сервисов
+      SMTP_HOST: ${SMTP_HOST:-mail} # встроенный Stalwart (нужна разовая настройка, см. сервис mail)
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:-SetFork <no-reply@setfork.local>}
     ports:
       - '${APP_PORT:-3000}:3000'
     depends_on:
       db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
       core: { condition: service_started }
+      mail: { condition: service_started }
 
 volumes:
   pgdata:
   miniodata:
   gitdata:
+  stalwartdata:

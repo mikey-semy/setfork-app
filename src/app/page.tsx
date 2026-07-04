@@ -41,7 +41,7 @@ export default async function HomePage() {
             {CHIPS.map((c, i) => (
               <Link
                 key={i}
-                href={`/explore?q=${encodeURIComponent(ru ? c.ru : c.en)}`}
+                href={`/search?q=${encodeURIComponent(ru ? c.ru : c.en)}`}
                 className="rounded-full border border-border bg-surface-2 px-3.5 py-[7px] text-[13px] text-ink-2 hover:text-ink"
               >
                 {ru ? c.ru : c.en}

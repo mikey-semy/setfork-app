@@ -2,6 +2,7 @@ import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getTemplateDetail } from '@/features/library/queries'
+import { canViewList } from '@/features/library/access'
 import { toHtml, toMarkdown, type ExportList } from '@/features/library/export'
 
 // GET /{handle}/{slug}/export?format=md|html — скачивание списка.
@@ -15,12 +16,9 @@ export async function GET(
   if (!detail) return new Response('Not found', { status: 404 })
 
   const { tpl, currentVersion, steps } = detail
-  const isOwner = viewer?.userId === tpl.ownerId
-  const isOwnerOrAdmin = isOwner || isAdminHandle(viewer?.handle)
-  // Те же гарантии приватности, что и на странице списка — не отдаём чужое.
-  if (tpl.visibility === 'private' && !isOwner) return new Response('Not found', { status: 404 })
-  if (tpl.status === 'draft' && !isOwner) return new Response('Not found', { status: 404 })
-  if (tpl.moderation !== 'active' && !isOwnerOrAdmin) return new Response('Not found', { status: 404 })
+  // Единый предикат приватности (тот же, что на странице списка/raw).
+  if (!canViewList(tpl, { isOwner: viewer?.userId === tpl.ownerId, isAdmin: isAdminHandle(viewer?.handle) }))
+    return new Response('Not found', { status: 404 })
 
   const list: ExportList = {
     title: tpl.title,

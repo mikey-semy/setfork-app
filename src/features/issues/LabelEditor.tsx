@@ -1,0 +1,79 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { Check, Tag } from 'lucide-react'
+import type { Lang } from '@/shared/i18n'
+import { ISSUE_LABELS, labelText } from './labels'
+import { IssueLabelChips } from './IssueLabelChips'
+import { setIssueLabels } from './actions'
+
+// Метки issue: текущие чипы + поповер-редактор (владелец/коллаборатор), как AssigneePicker.
+export function LabelEditor({
+  owner,
+  slug,
+  number,
+  labels,
+  canEdit,
+  lang,
+}: {
+  owner: string
+  slug: string
+  number: number
+  labels: string[]
+  canEdit: boolean
+  lang: Lang
+}) {
+  const [pending, start] = useTransition()
+  const [open, setOpen] = useState(false)
+  const [sel, setSel] = useState<string[]>(labels)
+  const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
+
+  const toggle = (k: string) => {
+    const next = sel.includes(k) ? sel.filter((x) => x !== k) : [...sel, k]
+    setSel(next) // оптимистично
+    start(() => void setIssueLabels(owner, slug, number, next))
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <IssueLabelChips labels={sel} lang={lang} />
+      {canEdit ? (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-label={L('изменить метки', 'edit labels')}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted hover:text-ink"
+          >
+            <Tag size={11} /> {L('метки', 'labels')}
+          </button>
+          {open && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+              <div className="absolute left-0 z-20 mt-1 w-56 overflow-hidden rounded-md border border-border bg-surface p-1 shadow-lg">
+                {ISSUE_LABELS.map((l) => {
+                  const on = sel.includes(l.key)
+                  return (
+                    <button
+                      key={l.key}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => toggle(l.key)}
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2 disabled:opacity-60"
+                    >
+                      <span className={`h-3 w-3 shrink-0 rounded-full border ${l.cls}`} />
+                      <span className="flex-1 truncate">{labelText(l.key, lang)}</span>
+                      {on && <Check size={13} className="shrink-0 text-accent" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        sel.length === 0 && <span className="text-[11px] text-muted">{L('нет меток', 'no labels')}</span>
+      )}
+    </div>
+  )
+}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { SearchInput } from '@/shared/ui/SearchInput'
+import { SearchField } from '@/shared/ui/SearchField'
 import { t, type Lang } from '@/shared/i18n'
 
 export interface SettingsSection {
@@ -55,9 +55,9 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
   return (
     <div className="mx-auto flex w-full max-w-[920px] flex-col gap-8 px-6 py-8 md:flex-row">
       <aside className="flex-shrink-0 md:sticky md:top-[70px] md:h-fit md:w-[220px]">
-        <SearchInput
+        <SearchField
           value={q}
-          onChange={setQ}
+          onValueChange={setQ}
           placeholder={t('settingsSearchPh', lang)}
           className="mb-3"
           clearLabel={t('clear', lang)}

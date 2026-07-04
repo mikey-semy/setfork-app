@@ -47,7 +47,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
           {item.tags.slice(0, 4).map((tag) => (
             <Link
               key={tag}
-              href={`/explore?tag=${encodeURIComponent(tag)}`}
+              href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
               className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11px] font-medium text-accent hover:underline"
             >
               {tag}

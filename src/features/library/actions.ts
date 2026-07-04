@@ -10,7 +10,8 @@ import { tr } from '@/shared/i18n'
 import { imageUrl, uploadImageFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
-import { notify, notifyMany } from '@/features/notifications/notify'
+import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
+import { enqueueReindex } from '@/features/search/adapter'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
@@ -128,6 +129,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
   })
   await ensureWatch(session.userId, list.id) // владелец следит за своим списком
   if (visibility === 'public') await autoModerateList(list.id) // приватные не модерируем
+  await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
 }
@@ -150,6 +152,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   // tags/ordered — атрибуты списка, не версии; обновляем отдельно.
   await db.update(templates).set({ tags, ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   await notifyWatchersNewVersion(tpl.id, session.userId)
+  await enqueueReindex(tpl.id)
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
 }
@@ -164,9 +167,10 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   const note = String(formData.get('note') ?? '').trim()
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
-  await collabStore.createSuggestion(tpl.id, session.userId, note, toStepInput(proposed))
+  const created = await collabStore.createSuggestion(tpl.id, session.userId, note, toStepInput(proposed))
   await ensureWatch(session.userId, tpl.id) // автор правки следит за списком
-  await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id })
+  await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+  await notifyMentions({ text: note, actorId: session.userId, templateId: tpl.id })
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions`)
 }
@@ -187,8 +191,9 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
-  await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id })
+  await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   await notifyWatchersNewVersion(tpl.id, session.userId)
+  await enqueueReindex(tpl.id)
 
   revalidatePath('/', 'layout')
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
@@ -214,7 +219,8 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   const commenters = await suggestionCommenterIds(sug.id)
   const watchers = await getWatcherIds(sug.templateId)
   const recipients = [sug.authorId, sug.template.ownerId, ...commenters, ...watchers]
-  await notifyMany(recipients, { actorId: session.userId, type: 'suggestion_comment', templateId: sug.templateId })
+  await notifyMany(recipients, { actorId: session.userId, type: 'suggestion_comment', templateId: sug.templateId, suggestionId: sug.id })
+  await notifyMentions({ text: body, actorId: session.userId, templateId: sug.templateId })
 
   revalidatePath(path)
   redirect(path)
@@ -233,7 +239,7 @@ export async function rejectSuggestion(suggestionId: string): Promise<void> {
     .update(suggestions)
     .set({ status: 'rejected', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
-  await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_rejected', templateId: sug.templateId })
+  await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_rejected', templateId: sug.templateId, suggestionId: sug.id })
   revalidatePath('/', 'layout')
 }
 
@@ -266,12 +272,13 @@ export async function refineList(input: {
         level: it.level ?? 'required',
         why: it.why ?? '',
         subtasks: (it.subtasks || []).filter((s) => s.trim()),
+        refs: (it.refs || []).filter((r) => r.label?.trim() && r.url?.trim()).map((r) => ({ label: r.label, url: r.url })),
       })),
   }
   const refined = await generateListRefine(current, instruction, lang, { userId: session.userId, feature: 'refine' })
   if (!refined) return { error: 'aifail' }
 
-  // Refine переписывает текстовое содержимое шагов; скриншоты/ссылки не переносятся.
+  // Refine переписывает текстовое содержимое шагов; скриншоты не переносятся, ссылки — да.
   const items: EditorItem[] = refined.items.map((it) => ({
     title: it.title,
     desc: it.desc,
@@ -282,7 +289,7 @@ export async function refineList(input: {
     why: it.why,
     section: '',
     subtasks: it.subtasks,
-    refs: [],
+    refs: (it.refs ?? []).map((r) => ({ label: r.label, url: r.url })),
   }))
   return { items }
 }
@@ -366,7 +373,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
   const srcSteps = srcCurrent
     ? await db.select().from(steps).where(eq(steps.versionId, srcCurrent.id)).orderBy(asc(steps.n))
     : []
-  await listStore.create({
+  const forked = await listStore.create({
     ownerId: session.userId,
     slug,
     title: src.title,
@@ -397,6 +404,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
     .set({ forksCount: sql`${templates.forksCount} + 1` })
     .where(eq(templates.id, src.id))
   await notify({ recipientId: src.ownerId, actorId: session.userId, type: 'fork', templateId: src.id })
+  await enqueueReindex(forked.id)
 
   revalidatePath('/explore')
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)

@@ -6,6 +6,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
+import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta, getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
 import { acceptSuggestion, addSuggestionComment, rejectSuggestion } from '@/features/library/actions'
@@ -86,17 +87,25 @@ export default async function SuggestionThreadPage({
           <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
         </div>
 
+        {isOwner && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
+          <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">
+            {lang === 'ru'
+              ? `Правка основана на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
+              : `This suggestion is based on v${sug.baseVersion}, but the list is now at v${meta.currentVersion}. Accepting will overwrite the newer changes (v${sug.baseVersion + 1}–v${meta.currentVersion}).`}
+          </div>
+        )}
+
         {isOwner && sug.status === 'open' && (
           <div className="mt-3 flex gap-2.5">
             <form action={acceptSuggestion.bind(null, sug.id)}>
-              <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
                 <Check size={14} /> {t('accept', lang)}
-              </button>
+              </SubmitButton>
             </form>
             <form action={rejectSuggestion.bind(null, sug.id)}>
-              <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
+              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
                 <X size={14} /> {t('reject', lang)}
-              </button>
+              </SubmitButton>
             </form>
           </div>
         )}
@@ -130,9 +139,9 @@ export default async function SuggestionThreadPage({
               <input type="hidden" name="suggestionId" value={sug.id} />
               <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={sugPeople} />
               <div className="flex justify-end">
-                <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+                <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
                   {t('commentBtn', lang)}
-                </button>
+                </SubmitButton>
               </div>
             </form>
           </div>

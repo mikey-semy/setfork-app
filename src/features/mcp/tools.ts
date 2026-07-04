@@ -1,10 +1,14 @@
 import 'server-only'
-import { and, eq } from 'drizzle-orm'
-import { db, steps, templates, users, type ProposedItem } from '@/shared/db'
+import { and, eq, sql } from 'drizzle-orm'
+import { db, runs, runStepState, steps, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
+import { canViewList } from '@/features/library/access'
+import { dialectExt, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store.adapter'
 import { uniqueSlug } from '@/features/library/slug'
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')
 
 export interface McpItemInput {
   title: string
@@ -98,11 +102,8 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return null
   const { tpl, currentVersion, steps } = detail
-  const isOwner = tpl.ownerId === userId
-  // Те же гарантии, что и на странице: чужое приватное/черновик/скрытое не отдаём.
-  if (tpl.visibility === 'private' && !isOwner) return null
-  if (tpl.status === 'draft' && !isOwner) return null
-  if (tpl.moderation !== 'active' && !isOwner) return null
+  // Тот же единый предикат приватности, что и на сайте (у MCP админа нет).
+  if (!canViewList(tpl, { isOwner: tpl.ownerId === userId })) return null
 
   return {
     ref: `${handle}/${slug}`,
@@ -122,6 +123,45 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
       subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
       refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label),
     })),
+  }
+}
+
+// get_script: тот же список, но как готовый исполняемый скрипт (bash/ps1/py) —
+// удобно агенту, который прогоняет чек-лист (CI-for-AI). Приватность как у get_list.
+export async function mcpGetScript(userId: string, handle: string, slug: string, dialectRaw?: string) {
+  const detail = await getTemplateDetail(handle, slug)
+  if (!detail) return null
+  const { tpl, currentVersion, steps } = detail
+  if (!canViewList(tpl, { isOwner: tpl.ownerId === userId })) return null
+
+  const dialect = normalizeDialect(dialectRaw)
+  const url = `${SITE_URL}/${handle}/${slug}/raw`
+  const list: ExportList = {
+    title: tpl.title,
+    desc: tpl.desc,
+    tags: tpl.tags,
+    ordered: tpl.ordered,
+    version: currentVersion?.version ?? tpl.currentVersion,
+    ownerHandle: handle,
+    slug,
+    steps: steps.map((s) => ({
+      n: s.n,
+      title: s.title,
+      desc: s.desc,
+      command: s.command,
+      level: s.level,
+      why: s.why,
+      subtasks: s.subtasks,
+      refs: s.refs,
+    })),
+  }
+  return {
+    ref: `${handle}/${slug}`,
+    dialect,
+    filename: `${slug}.${dialectExt(dialect)}`,
+    url: dialect === 'sh' ? url : `${url}?lang=${dialect}`,
+    note: 'Commands come from the list authors — review before running.',
+    script: toRunnableScript(list, 'en', url, dialect),
   }
 }
 
@@ -204,4 +244,103 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
     .set({ tags, ordered: input.ordered ?? tpl.ordered, updatedAt: new Date() })
     .where(eq(templates.id, tpl.id))
   return { ref: `${handle}/${slug}`, status: 'published', version: ver.version }
+}
+
+// ── Прогоны (runs): запуск/просмотр/отметка шагов через MCP ──────────
+// Логика зеркалит features/runs, но принимает userId из токена (не session).
+
+/** Состояние прогона: список шагов с отметками + прогресс. */
+async function mcpRunState(userId: string, runId: string) {
+  const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
+  if (!run || run.userId !== userId) return { error: 'run not found' }
+  const [meta] = await db
+    .select({ slug: templates.slug, ownerHandle: users.handle })
+    .from(templates)
+    .innerJoin(users, eq(users.id, templates.ownerId))
+    .where(eq(templates.id, run.templateId))
+    .limit(1)
+  const stepRows = await db.select({ id: steps.id, n: steps.n, title: steps.title }).from(steps).where(eq(steps.versionId, run.versionId)).orderBy(steps.n)
+  const states = await db.select({ stepId: runStepState.stepId, status: runStepState.status, note: runStepState.note }).from(runStepState).where(eq(runStepState.runId, runId))
+  const byStep = new Map(states.map((s) => [s.stepId, s]))
+  const stepsOut = stepRows.map((s) => {
+    const st = byStep.get(s.id)
+    return {
+      n: s.n,
+      title: tr(s.title, 'en'),
+      done: st?.status === 'done',
+      blocked: st?.status === 'blocked',
+      reason: st?.status === 'blocked' && st.note ? st.note : undefined,
+    }
+  })
+  return {
+    runId,
+    ref: meta ? `${meta.ownerHandle}/${meta.slug}` : undefined,
+    version: run.version,
+    status: run.status,
+    progress: { done: stepsOut.filter((s) => s.done).length, total: stepsOut.length },
+    steps: stepsOut,
+  }
+}
+
+/** Запустить (или продолжить активный) прогон списка по текущей версии. */
+export async function mcpStartRun(userId: string, handle: string, slug: string) {
+  const detail = await getTemplateDetail(handle, slug)
+  if (!detail) return { error: 'list not found' }
+  const { tpl, currentVersion } = detail
+  const isOwner = tpl.ownerId === userId
+  if (tpl.visibility === 'private' && !isOwner) return { error: 'forbidden' }
+  if (tpl.status === 'draft' && !isOwner) return { error: 'forbidden' }
+  if (tpl.moderation !== 'active' && !isOwner) return { error: 'forbidden' }
+  const cur = currentVersion
+  if (!cur) return { error: 'list has no version' }
+
+  const existing = await db
+    .select({ id: runs.id })
+    .from(runs)
+    .where(and(eq(runs.userId, userId), eq(runs.templateId, tpl.id), eq(runs.versionId, cur.id), eq(runs.status, 'active')))
+    .limit(1)
+  let runId = existing[0]?.id
+  if (!runId) {
+    const [r] = await db.insert(runs).values({ templateId: tpl.id, versionId: cur.id, version: cur.version, userId }).returning()
+    runId = r.id
+    const stepRows = await db.select({ id: steps.id }).from(steps).where(eq(steps.versionId, cur.id))
+    if (stepRows.length) await db.insert(runStepState).values(stepRows.map((s) => ({ runId: r.id, stepId: s.id })))
+    await db.update(templates).set({ runsCount: sql`${templates.runsCount} + 1` }).where(eq(templates.id, tpl.id))
+  }
+  return mcpRunState(userId, runId)
+}
+
+/** Текущее состояние прогона по его id. */
+export async function mcpGetRun(userId: string, runId: string) {
+  return mcpRunState(userId, runId)
+}
+
+/**
+ * Отметить шаг прогона по номеру N (CI-стиль для агента):
+ * blocked=true → «упал» + причина; done=true/false → выполнен/нет; иначе — тоггл done.
+ */
+export async function mcpCheckStep(userId: string, runId: string, stepN: number, opts?: { done?: boolean; blocked?: boolean; reason?: string }) {
+  const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
+  if (!run || run.userId !== userId) return { error: 'run not found' }
+  const [st] = await db.select({ id: steps.id }).from(steps).where(and(eq(steps.versionId, run.versionId), eq(steps.n, stepN))).limit(1)
+  if (!st) return { error: 'step not found' }
+  const [state] = await db.select().from(runStepState).where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, st.id))).limit(1)
+  if (!state) return { error: 'step state not found' }
+
+  if (opts?.blocked) {
+    await db
+      .update(runStepState)
+      .set({ status: 'blocked', note: (opts.reason ?? '').trim().slice(0, 500), doneAt: null })
+      .where(eq(runStepState.id, state.id))
+  } else {
+    const target = opts?.done === undefined ? (state.status === 'done' ? 'todo' : 'done') : opts.done ? 'done' : 'todo'
+    await db.update(runStepState).set({ status: target, note: '', doneAt: target === 'done' ? new Date() : null }).where(eq(runStepState.id, state.id))
+  }
+  // Пересчёт doneCount (зеркало runs/actions.recountDone).
+  const [{ c }] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(runStepState)
+    .where(and(eq(runStepState.runId, runId), eq(runStepState.status, 'done')))
+  await db.update(runs).set({ doneCount: c, updatedAt: new Date() }).where(eq(runs.id, runId))
+  return mcpRunState(userId, runId)
 }

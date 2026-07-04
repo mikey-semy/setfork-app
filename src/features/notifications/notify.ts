@@ -1,7 +1,13 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { db, notifications, users } from '@/shared/db'
 import type { NotifyPrefs } from '@/shared/db/schema'
+import { emailEnabled } from '@/shared/settings/email'
+import { enqueueJob } from '@/shared/jobs/queue'
+import { pushEnabled } from '@/shared/push/vapid'
+import { userHasPush } from '@/shared/push/send'
+import { captureError } from '@/shared/observability'
+import { extractHandles } from './mentions'
 
 type NotifType =
   | 'suggestion_new'
@@ -14,6 +20,8 @@ type NotifType =
   | 'star'
   | 'fork'
   | 'follow'
+  | 'mention'
+  | 'assigned'
 
 // Тип события → ключ предпочтения получателя (follow не отключается — ключа нет).
 const TYPE_PREF: Partial<Record<NotifType, keyof NotifyPrefs>> = {
@@ -35,10 +43,15 @@ export async function notify(params: {
   type: NotifType
   templateId?: string | null
   issueId?: string | null
+  suggestionId?: string | null
 }): Promise<void> {
   if (params.actorId && params.actorId === params.recipientId) return
   try {
-    const [u] = await db.select({ prefs: users.notifyPrefs }).from(users).where(eq(users.id, params.recipientId)).limit(1)
+    const [u] = await db
+      .select({ prefs: users.notifyPrefs, email: users.email })
+      .from(users)
+      .where(eq(users.id, params.recipientId))
+      .limit(1)
     const prefs = (u?.prefs ?? {}) as NotifyPrefs
     const prefKey = TYPE_PREF[params.type]
     if (prefKey && prefs[prefKey] === false) return // отключено получателем
@@ -48,17 +61,62 @@ export async function notify(params: {
       type: params.type,
       templateId: params.templateId ?? null,
       issueId: params.issueId ?? null,
+      suggestionId: params.suggestionId ?? null,
     })
-  } catch {
-    /* уведомление — не критичный путь */
+    const refPayload = {
+      lang: 'en' as const, // язык получателя в БД не хранится (только кука актора) → пока 'en'
+      actorId: params.actorId ?? null,
+      type: params.type,
+      templateId: params.templateId ?? null,
+      issueId: params.issueId ?? null,
+      suggestionId: params.suggestionId ?? null,
+    }
+
+    // Дублируем на почту через очередь (durable + ретраи), если получатель включил
+    // email-уведомления и SMTP настроен. Отправка уходит из request-пути к воркеру.
+    if (prefs.email === true && u?.email && (await emailEnabled())) {
+      await enqueueJob('email', { to: u.email, ...refPayload })
+    }
+
+    // Фоновый web-push, если включён browser-pref, есть подписка и VAPID настроен.
+    if (prefs.browser === true && (await pushEnabled()) && (await userHasPush(params.recipientId))) {
+      await enqueueJob('push', { userId: params.recipientId, ...refPayload })
+    }
+  } catch (e) {
+    // Уведомление — не критичный путь: не роняем вызывающего, но и не глотаем молча.
+    captureError(e, { where: 'notify', type: params.type, recipientId: params.recipientId })
   }
 }
 
 /** Рассылка нескольким получателям (дедуп, себя пропустит notify). */
 export async function notifyMany(
   recipientIds: string[],
-  params: { actorId?: string | null; type: NotifType; templateId?: string | null; issueId?: string | null },
+  params: { actorId?: string | null; type: NotifType; templateId?: string | null; issueId?: string | null; suggestionId?: string | null },
 ): Promise<void> {
   const unique = [...new Set(recipientIds)].filter(Boolean)
   await Promise.all(unique.map((recipientId) => notify({ recipientId, ...params })))
+}
+
+/**
+ * Разбирает @-упоминания в тексте и шлёт `mention`-уведомление каждому
+ * существующему пользователю (кроме автора — это делает notify). Best-effort.
+ */
+export async function notifyMentions(params: {
+  text: string
+  actorId: string
+  templateId?: string | null
+  issueId?: string | null
+}): Promise<void> {
+  const handles = extractHandles(params.text)
+  if (handles.length === 0) return
+  try {
+    const rows = await db.select({ id: users.id }).from(users).where(inArray(users.handle, handles))
+    if (rows.length === 0) return
+    await notifyMany(
+      rows.map((r) => r.id),
+      { actorId: params.actorId, type: 'mention', templateId: params.templateId ?? null, issueId: params.issueId ?? null },
+    )
+  } catch (e) {
+    captureError(e, { where: 'notifyMentions', templateId: params.templateId })
+  }
 }
