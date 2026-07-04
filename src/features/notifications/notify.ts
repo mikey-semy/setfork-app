@@ -6,6 +6,7 @@ import { emailEnabled } from '@/shared/settings/email'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { pushEnabled } from '@/shared/push/vapid'
 import { userHasPush } from '@/shared/push/send'
+import { captureError } from '@/shared/observability'
 import { extractHandles } from './mentions'
 
 type NotifType =
@@ -81,8 +82,9 @@ export async function notify(params: {
     if (prefs.browser === true && (await pushEnabled()) && (await userHasPush(params.recipientId))) {
       await enqueueJob('push', { userId: params.recipientId, ...refPayload })
     }
-  } catch {
-    /* уведомление — не критичный путь */
+  } catch (e) {
+    // Уведомление — не критичный путь: не роняем вызывающего, но и не глотаем молча.
+    captureError(e, { where: 'notify', type: params.type, recipientId: params.recipientId })
   }
 }
 
@@ -114,7 +116,7 @@ export async function notifyMentions(params: {
       rows.map((r) => r.id),
       { actorId: params.actorId, type: 'mention', templateId: params.templateId ?? null, issueId: params.issueId ?? null },
     )
-  } catch {
-    /* уведомление — не критичный путь */
+  } catch (e) {
+    captureError(e, { where: 'notifyMentions', templateId: params.templateId })
   }
 }

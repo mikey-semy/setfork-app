@@ -1,4 +1,5 @@
 import 'server-only'
+import { captureError, log } from '@/shared/observability'
 import { claimJob, completeJob, failJob, type Job } from './queue'
 import { runEmailJob, runGenerateJob, runPushJob, runReindexJob } from './handlers'
 
@@ -22,6 +23,7 @@ async function processOne(job: Job): Promise<void> {
     await handler(job.payload)
     await completeJob(job.id)
   } catch (e) {
+    captureError(e, { where: 'jobs.handle', jobType: job.type, jobId: job.id })
     await failJob(job, e instanceof Error ? e.message : String(e))
   }
 }
@@ -47,12 +49,12 @@ export function startWorker(): void {
       }
     } catch (e) {
       // Ошибка самого цикла (напр. БД недоступна) — не роняем сервер, ждём следующий тик.
-      console.warn('[jobs] tick error:', e instanceof Error ? e.message : e)
+      captureError(e, { where: 'jobs.tick' })
     } finally {
       running = false
     }
   }
 
   setInterval(() => void tick(), POLL_MS)
-  console.log('[jobs] worker started')
+  log.info('jobs worker started', { pollMs: POLL_MS })
 }

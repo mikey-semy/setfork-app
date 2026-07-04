@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { RotateCw, TriangleAlert } from 'lucide-react'
 import { DEFAULT_LANG, isLang, t, type Lang } from '@/shared/i18n'
+import { captureError } from '@/shared/observability'
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const [lang, setLang] = useState<Lang>(DEFAULT_LANG)
@@ -11,7 +12,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     if (m && isLang(m[1])) setLang(m[1])
   }, [])
   useEffect(() => {
-    console.error(error)
+    captureError(error, { where: 'app/error', digest: error.digest })
   }, [error])
 
   return (
