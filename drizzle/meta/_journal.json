@@ -57,6 +57,13 @@
       "when": 1783144872324,
       "tag": "0007_quiet_robbie_robertson",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783171312798,
+      "tag": "0008_violet_mastermind",
+      "breakpoints": true
     }
   ]
 }

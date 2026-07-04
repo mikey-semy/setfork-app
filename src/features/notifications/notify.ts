@@ -42,6 +42,7 @@ export async function notify(params: {
   type: NotifType
   templateId?: string | null
   issueId?: string | null
+  suggestionId?: string | null
 }): Promise<void> {
   if (params.actorId && params.actorId === params.recipientId) return
   try {
@@ -59,6 +60,7 @@ export async function notify(params: {
       type: params.type,
       templateId: params.templateId ?? null,
       issueId: params.issueId ?? null,
+      suggestionId: params.suggestionId ?? null,
     })
     const refPayload = {
       lang: 'en' as const, // язык получателя в БД не хранится (только кука актора) → пока 'en'
@@ -66,6 +68,7 @@ export async function notify(params: {
       type: params.type,
       templateId: params.templateId ?? null,
       issueId: params.issueId ?? null,
+      suggestionId: params.suggestionId ?? null,
     }
 
     // Дублируем на почту через очередь (durable + ретраи), если получатель включил
@@ -86,7 +89,7 @@ export async function notify(params: {
 /** Рассылка нескольким получателям (дедуп, себя пропустит notify). */
 export async function notifyMany(
   recipientIds: string[],
-  params: { actorId?: string | null; type: NotifType; templateId?: string | null; issueId?: string | null },
+  params: { actorId?: string | null; type: NotifType; templateId?: string | null; issueId?: string | null; suggestionId?: string | null },
 ): Promise<void> {
   const unique = [...new Set(recipientIds)].filter(Boolean)
   await Promise.all(unique.map((recipientId) => notify({ recipientId, ...params })))

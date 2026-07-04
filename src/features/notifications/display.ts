@@ -38,6 +38,7 @@ export interface NotificationRef {
   type: NotificationType
   templateId?: string | null
   issueId?: string | null
+  suggestionId?: string | null
 }
 
 /**
@@ -70,7 +71,14 @@ export async function resolveNotificationDisplay(p: NotificationRef): Promise<No
   const verb = t(VERB[p.type], p.lang)
 
   const base = tpl ? `${appUrl()}/${tpl.owner}/${tpl.slug}` : appUrl()
-  const url = p.type === 'follow' ? `${appUrl()}/${actorHandle}` : iss ? `${base}/issues/${iss.number}` : base
+  const url =
+    p.type === 'follow'
+      ? `${appUrl()}/${actorHandle}`
+      : iss
+        ? `${base}/issues/${iss.number}`
+        : p.suggestionId && tpl
+          ? `${base}/suggestions/${p.suggestionId}`
+          : base
   const text = listTitle ? `${actorHandle} ${verb} ${listTitle}` : `${actorHandle} ${verb}`
 
   return { actorHandle, verb, listTitle, url, text }

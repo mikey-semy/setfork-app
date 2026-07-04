@@ -46,7 +46,9 @@ export default async function NotificationsPage() {
               ? `/${n.actorHandle ?? ''}`
               : listHref && n.issueNumber != null
                 ? `${listHref}/issues/${n.issueNumber}`
-                : listHref
+                : listHref && n.suggestionId
+                  ? `${listHref}/suggestions/${n.suggestionId}`
+                  : listHref
             return (
               <div
                 key={n.id}

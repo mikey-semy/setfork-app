@@ -64,7 +64,9 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
                 ? `/${n.actorHandle ?? ''}`
                 : listHref && n.issueNumber != null
                   ? `${listHref}/issues/${n.issueNumber}`
-                  : (listHref ?? '/notifications')
+                  : listHref && n.suggestionId
+                    ? `${listHref}/suggestions/${n.suggestionId}`
+                    : (listHref ?? '/notifications')
               return (
                 <Link
                   key={n.id}

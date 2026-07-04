@@ -611,6 +611,7 @@ export const notifications = pgTable(
     type: notificationType('type').notNull(),
     templateId: uuid('template_id').references(() => templates.id, { onDelete: 'cascade' }),
     issueId: uuid('issue_id').references(() => issues.id, { onDelete: 'cascade' }),
+    suggestionId: uuid('suggestion_id').references(() => suggestions.id, { onDelete: 'cascade' }),
     read: boolean('read').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

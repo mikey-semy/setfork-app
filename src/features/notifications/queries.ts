@@ -30,6 +30,7 @@ export interface NotificationItem {
   slug: string | null
   title: LocaleText | null
   issueNumber: number | null
+  suggestionId: string | null
 }
 
 /** Включены ли у пользователя браузерные уведомления (для монтирования нотификатора). */
@@ -61,6 +62,7 @@ export async function getNotifications(userId: string, limit = 50): Promise<Noti
       slug: templates.slug,
       title: templates.title,
       issueNumber: issues.number,
+      suggestionId: notifications.suggestionId,
     })
     .from(notifications)
     .leftJoin(actor, eq(notifications.actorId, actor.id))
