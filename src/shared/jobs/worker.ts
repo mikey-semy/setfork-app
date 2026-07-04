@@ -1,10 +1,11 @@
 import 'server-only'
 import { claimJob, completeJob, failJob, type Job } from './queue'
-import { runEmailJob } from './handlers'
+import { runEmailJob, runGenerateJob } from './handlers'
 
 // Реестр обработчиков по типу задачи.
 const HANDLERS: Record<string, (payload: unknown) => Promise<void>> = {
   email: runEmailJob,
+  generate: runGenerateJob,
 }
 
 const POLL_MS = 3000

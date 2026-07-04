@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Check, Link2, Loader2, Pencil, RotateCw, Sparkles, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
+import type { GenerationStatus } from './queries'
 import { GnomeLoader } from './GnomeLoader'
 import { acceptCandidate, regenerateCandidate, regenerateWithQuery } from './actions'
 
@@ -12,22 +14,39 @@ interface Props {
   query: string
   lang: Lang
   candidates: GenerationCandidate[]
+  status: GenerationStatus
   initialIdx: number
   error?: string
 }
 
-export function GenerationReview({ generationId, query, lang, candidates, initialIdx, error }: Props) {
+export function GenerationReview({ generationId, query, lang, candidates, status, initialIdx, error }: Props) {
   const ru = lang === 'ru'
-  const [sel, setSel] = useState(() => {
-    const found = candidates.findIndex((c) => c.idx === initialIdx)
-    return found >= 0 ? found : candidates.length - 1
-  })
+  const router = useRouter()
+  const [selIdx, setSelIdx] = useState(initialIdx)
+  const [prevInitial, setPrevInitial] = useState(initialIdx)
   const [pending, start] = useTransition()
   const [mode, setMode] = useState<'accept' | 'regen'>('regen')
   const [editing, setEditing] = useState(false)
   const [editQ, setEditQ] = useState(query)
 
-  const cand = candidates[sel]
+  // Смена ?v= в URL (после «ещё вариант») → выбираем этот вариант (без setState-в-эффекте).
+  if (initialIdx !== prevInitial) {
+    setPrevInitial(initialIdx)
+    setSelIdx(initialIdx)
+  }
+
+  // Пока идёт фоновая генерация — поллим страницу, чтобы подхватить готовый кандидат.
+  useEffect(() => {
+    if (status !== 'pending') return
+    const t = setInterval(() => router.refresh(), 2500)
+    return () => clearInterval(t)
+  }, [status, router])
+
+  const cand = candidates.find((c) => c.idx === selIdx)
+  const waiting = status === 'pending'
+  const genFailed = status === 'failed'
+  const acceptSpinner = pending && mode === 'accept'
+  const showGnome = (pending && mode === 'regen') || (waiting && !cand)
 
   function accept() {
     if (!cand) return
@@ -76,13 +95,13 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
       {/* Табы вариантов */}
       {candidates.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {candidates.map((c, i) => (
+          {candidates.map((c) => (
             <button
               key={c.id}
-              onClick={() => setSel(i)}
+              onClick={() => setSelIdx(c.idx)}
               disabled={pending}
               className={`rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors ${
-                i === sel ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-ink-2 hover:text-ink'
+                c.idx === selIdx ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-ink-2 hover:text-ink'
               }`}
             >
               {ru ? 'Вариант' : 'Variant'} {c.idx}
@@ -91,19 +110,35 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
         </div>
       )}
 
-      {pending ? (
-        mode === 'accept' ? (
-          // Принятие — это не генерация: без гнома и «Profit», просто аккуратный спиннер.
-          <div className="flex items-center gap-2.5 rounded-lg border border-border bg-surface px-5 py-6 text-[13.5px] text-ink-2">
-            <Loader2 size={16} className="animate-spin text-accent" />
-            {ru ? 'Создаём черновик…' : 'Creating your draft…'}
-          </div>
-        ) : (
-          <GnomeLoader query={query} lang={lang} label={ru ? 'Генерируем ещё вариант…' : 'Generating another variant…'} />
-        )
-      ) : (
-        cand && (
-          <div className="rounded-lg border border-border bg-surface p-5">
+      {/* Идёт генерация ещё одного варианта, но текущий уже виден */}
+      {waiting && cand && !acceptSpinner && (
+        <div className="mb-3 flex items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-3 py-2 text-[12.5px] text-accent">
+          <Loader2 size={13} className="animate-spin" /> {ru ? 'Генерируем ещё вариант…' : 'Generating another variant…'}
+        </div>
+      )}
+
+      {acceptSpinner ? (
+        // Принятие — это не генерация: без гнома и «Profit», просто аккуратный спиннер.
+        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-surface px-5 py-6 text-[13.5px] text-ink-2">
+          <Loader2 size={16} className="animate-spin text-accent" />
+          {ru ? 'Создаём черновик…' : 'Creating your draft…'}
+        </div>
+      ) : showGnome ? (
+        <GnomeLoader
+          query={query}
+          lang={lang}
+          label={
+            candidates.length === 0
+              ? ru
+                ? 'Генерируем черновик…'
+                : 'Drafting your list…'
+              : ru
+                ? 'Генерируем ещё вариант…'
+                : 'Generating another variant…'
+          }
+        />
+      ) : cand ? (
+        <div className="rounded-lg border border-border bg-surface p-5">
             <div className="text-[15px] font-semibold text-ink">{cand.title}</div>
             {cand.desc && <p className="mt-1 text-[13px] text-ink-2">{cand.desc}</p>}
             {cand.tags.length > 0 && (
@@ -155,8 +190,11 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
               ))}
             </ol>
           </div>
-        )
-      )}
+      ) : genFailed ? (
+        <div className="rounded-lg border border-danger/40 bg-danger/5 px-5 py-6 text-[13.5px] text-danger">
+          {ru ? 'Не удалось сгенерировать. Попробуйте ещё раз.' : 'Generation failed. Please try again.'}
+        </div>
+      ) : null}
 
       {/* Инлайн-правка запроса: добавляет новый вариант, прежние остаются */}
       {editing && !pending && (
@@ -208,7 +246,7 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
         </button>
         <button
           onClick={regen}
-          disabled={pending}
+          disabled={pending || waiting}
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-4 py-2.5 text-[13.5px] font-medium text-ink hover:border-border-strong disabled:opacity-50"
         >
           <RotateCw size={15} /> {ru ? 'Ещё вариант' : 'Another variant'}
@@ -216,7 +254,7 @@ export function GenerationReview({ generationId, query, lang, candidates, initia
         <button
           type="button"
           onClick={openEdit}
-          disabled={pending}
+          disabled={pending || waiting}
           className="inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[13px] text-ink-2 hover:text-ink disabled:opacity-50"
         >
           <Pencil size={14} /> {ru ? 'Изменить запрос' : 'Edit query'}

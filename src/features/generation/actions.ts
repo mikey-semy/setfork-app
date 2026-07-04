@@ -3,59 +3,29 @@
 import { eq, sql } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { db, generationCandidates, generations, users, type CandidateItem } from '@/shared/db'
+import { db, generationCandidates, generations, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import type { Lang } from '@/shared/i18n'
-import { generateListDraft, sanitizeCommand } from '@/shared/ai/generate'
+import { sanitizeCommand } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
+import { enqueueJob } from '@/shared/jobs/queue'
 import { toProposedItems } from '@/features/library/editor'
 import { listStore } from '@/features/library/list-store.adapter'
-import { parseTags, uniqueSlug } from '@/features/library/slug'
+import { uniqueSlug } from '@/features/library/slug'
 
 async function ownerHandle(userId: string): Promise<string> {
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
   return u.handle
 }
 
-/** Сгенерировать один вариант и сохранить его кандидатом (idx). Возвращает false при ошибке ИИ. */
-async function addCandidate(
-  generationId: string,
-  userId: string,
-  query: string,
-  lang: 'en' | 'ru',
-  idx: number,
-): Promise<boolean> {
-  const draft = await generateListDraft(query, lang, {
-    web: true,
-    variant: idx,
-    userId,
-    feature: idx > 1 ? 'regenerate' : 'generate',
-    refType: 'generation',
-    refId: generationId,
-  })
-  if (!draft) return false
-  const items: CandidateItem[] = draft.items.map((it) => ({
-    title: it.title,
-    desc: it.desc,
-    command: it.command,
-    level: it.level,
-    why: it.why,
-    subtasks: it.subtasks,
-    refs: it.refs,
-  }))
-  await db.insert(generationCandidates).values({
-    generationId,
-    idx,
-    title: (draft.title || query).slice(0, 140),
-    desc: draft.desc ?? '',
-    tags: draft.tags.length ? parseTags(draft.tags.join(' ')) : parseTags(query),
-    items,
-  })
-  return true
+// Ставит задачу генерации варианта в очередь (сама генерация — в фоновом воркере,
+// см. features/generation/service.ts + shared/jobs). Страница дождётся кандидата поллингом.
+async function enqueueGenerate(generationId: string, userId: string, query: string, lang: string, idx: number): Promise<void> {
+  await enqueueJob('generate', { generationId, userId, query, lang: lang === 'ru' ? 'ru' : 'en', idx })
 }
 
-// ── Старт генерации: запрос → первый кандидат → экран выбора ──────────
+// ── Старт генерации: запрос → задача в очередь → экран ожидания ───────
 export async function startGeneration(formData: FormData): Promise<void> {
   const session = await requireSession()
   const lang = await getLang()
@@ -66,11 +36,7 @@ export async function startGeneration(formData: FormData): Promise<void> {
   if (!allowed) redirect(`/explore?q=${encodeURIComponent(query)}&e=ratelimited`)
 
   const [gen] = await db.insert(generations).values({ userId: session.userId, query, lang }).returning()
-  const ok = await addCandidate(gen.id, session.userId, query, lang, 1)
-  if (!ok) {
-    await db.delete(generations).where(eq(generations.id, gen.id))
-    redirect(`/explore?q=${encodeURIComponent(query)}&e=aifail`)
-  }
+  await enqueueGenerate(gen.id, session.userId, query, lang, 1)
   redirect(`/generate/${gen.id}`)
 }
 
@@ -90,9 +56,7 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
   const nextIdx = (max ?? 0) + 1
   if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}`) // разумный потолок вариантов
 
-  const ok = await addCandidate(generationId, session.userId, gen.query, gen.lang as 'en' | 'ru', nextIdx)
-  if (!ok) redirect(`/generate/${generationId}?e=aifail`)
-  revalidatePath(`/generate/${generationId}`)
+  await enqueueGenerate(generationId, session.userId, gen.query, gen.lang, nextIdx)
   redirect(`/generate/${generationId}?v=${nextIdx}`)
 }
 
@@ -119,9 +83,7 @@ export async function regenerateWithQuery(generationId: string, newQuery: string
   // Прежние кандидаты НЕ трогаем — пользователь сам решит, какой оставить.
   if (query !== gen.query) await db.update(generations).set({ query }).where(eq(generations.id, generationId))
 
-  const ok = await addCandidate(generationId, session.userId, query, gen.lang as 'en' | 'ru', nextIdx)
-  if (!ok) redirect(`/generate/${generationId}?e=aifail`)
-  revalidatePath(`/generate/${generationId}`)
+  await enqueueGenerate(generationId, session.userId, query, gen.lang, nextIdx)
   redirect(`/generate/${generationId}?v=${nextIdx}`)
 }
 
