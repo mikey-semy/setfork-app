@@ -6,6 +6,7 @@ import { t } from '@/shared/i18n'
 import { hasOpenRouterKey } from '@/shared/settings/ai'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
+import { QualifierSearch } from '@/features/library/QualifierSearch'
 import { startGeneration } from '@/features/generation/actions'
 import { getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
 import { parseSearchQuery } from '@/features/library/search-query'
@@ -114,6 +115,9 @@ export default async function ExplorePage({
       </aside>
 
       <section className="min-w-0 flex-1 px-6 py-4">
+        <div className="mb-4">
+          <QualifierSearch initial={sp.q ?? ''} tags={tags.map((tg) => tg.tag)} lang={lang} />
+        </div>
         <div className="mb-1 flex items-center justify-between border-b border-border pb-1.5">
           <div className="flex gap-4 text-[13.5px] font-semibold">
             {SORTS.map((s) => (
