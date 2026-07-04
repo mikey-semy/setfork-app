@@ -8,6 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { startGeneration } from '@/features/generation/actions'
 import { getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
+import { parseSearchQuery } from '@/features/library/search-query'
 
 const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostStarred' }[] = [
   { key: 'trending', tkey: 'trending' },
@@ -25,11 +26,23 @@ export default async function ExplorePage({
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
   const verified = sp.verified === '1'
   const type = sp.type === 'ordered' ? 'ordered' : sp.type === 'unordered' ? 'unordered' : undefined
+  // Квалификаторы из строки поиска (by:/tag:/is:/type:/stars:) + свободный текст.
+  const parsed = parseSearchQuery(sp.q ?? '')
+  const typeQ = parsed.type ?? type
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const [tags, feed] = await Promise.all([
     getPopularTags(),
     getFeed(
-      { sort, tag: sp.tag, q: sp.q, verified: verified || undefined, ordered: type ? type === 'ordered' : undefined },
+      {
+        sort,
+        tag: sp.tag,
+        q: parsed.text || undefined,
+        verified: verified || parsed.verified || undefined,
+        ordered: typeQ ? typeQ === 'ordered' : undefined,
+        by: parsed.by,
+        tags: parsed.tags.length ? parsed.tags : undefined,
+        minStars: parsed.minStars,
+      },
       session?.userId,
     ),
   ])
@@ -88,6 +101,14 @@ export default async function ExplorePage({
                 <span className="ml-auto shrink-0 font-mono text-[11px] text-muted">{tg.count}</span>
               </Link>
             ))}
+          </div>
+        </div>
+
+        {/* Синтаксис поиска: квалификаторы прямо в строке (как на GitHub) */}
+        <div className="mt-5 border-t border-border pt-3 text-[11px] leading-relaxed text-muted">
+          <div className="mb-1 px-2 font-semibold text-ink-2">{t('searchTips', lang)}</div>
+          <div className="px-2 font-mono">
+            by:handle · tag:redis · is:verified · type:ordered · stars:&gt;100
           </div>
         </div>
       </aside>

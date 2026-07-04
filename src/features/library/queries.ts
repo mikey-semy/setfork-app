@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, cosineDistance, desc, eq, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, stars, steps, suggestionComments, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
@@ -96,11 +96,20 @@ function visibleFilter(viewerId?: string): SQL {
   return viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
 }
 
-/** Доп. фильтры ленты: только verified, тип списка (ordered/unordered). */
-function extraFilters(opts: { verified?: boolean; ordered?: boolean }): SQL[] {
+/** Доп. фильтры ленты: verified, тип, автор (by), теги (AND), минимум звёзд. */
+function extraFilters(opts: {
+  verified?: boolean
+  ordered?: boolean
+  by?: string
+  tags?: string[]
+  minStars?: number
+}): SQL[] {
   const f: SQL[] = []
   if (opts.verified) f.push(eq(templates.verified, true))
   if (opts.ordered !== undefined) f.push(eq(templates.ordered, opts.ordered))
+  if (opts.by) f.push(eq(users.handle, opts.by)) // users приджойнен в обоих режимах
+  if (opts.minStars) f.push(gte(templates.starsCount, opts.minStars))
+  for (const tag of opts.tags ?? []) f.push(tagFilter(tag))
   return f
 }
 
@@ -154,7 +163,16 @@ async function semanticFeed(
 }
 
 export async function getFeed(
-  opts: { sort?: FeedSort; tag?: string; q?: string; verified?: boolean; ordered?: boolean } = {},
+  opts: {
+    sort?: FeedSort
+    tag?: string
+    q?: string
+    verified?: boolean
+    ordered?: boolean
+    by?: string
+    tags?: string[]
+    minStars?: number
+  } = {},
   viewerId?: string,
 ): Promise<FeedItem[]> {
   const order =
