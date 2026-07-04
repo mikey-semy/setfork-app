@@ -2,8 +2,9 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Hash, List, ListOrdered, Search } from 'lucide-react'
+import { BadgeCheck, Hash, List, ListOrdered } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { SearchField } from '@/shared/ui/SearchField'
 import { t, type Lang } from '@/shared/i18n'
 
 type SugKind = 'user' | 'tag' | 'verified' | 'ordered' | 'unordered'
@@ -166,10 +167,17 @@ export function QualifierSearch({ initial, tags, lang }: { initial: string; tags
           submit()
         }}
       >
-        <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 focus-within:border-border-strong">
-          <Search size={15} className="shrink-0 text-muted" />
-          {/* Оверлей с раскрашенными токенами лежит под прозрачным текстом инпута. */}
-          <div className="relative min-w-0 flex-1">
+        <SearchField
+          ref={inputRef}
+          value={value}
+          onValueChange={setValue}
+          onKeyDown={onKeyDown}
+          onScroll={(e) => {
+            if (overlayRef.current) overlayRef.current.scrollLeft = e.currentTarget.scrollLeft
+          }}
+          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          placeholder={t('searchLists', lang)}
+          overlay={
             <div
               ref={overlayRef}
               aria-hidden
@@ -177,21 +185,8 @@ export function QualifierSearch({ initial, tags, lang }: { initial: string; tags
             >
               <span className="whitespace-pre">{renderHighlight(value)}</span>
             </div>
-            <input
-              ref={inputRef}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={onKeyDown}
-              onScroll={(e) => {
-                if (overlayRef.current) overlayRef.current.scrollLeft = e.currentTarget.scrollLeft
-              }}
-              onBlur={() => setTimeout(() => setOpen(false), 120)}
-              placeholder={t('searchLists', lang)}
-              aria-label={t('searchLists', lang)}
-              className="relative w-full bg-transparent text-[13.5px] text-transparent caret-ink outline-none placeholder:text-muted"
-            />
-          </div>
-        </div>
+          }
+        />
       </form>
       {open && sugs.length > 0 && (
         <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 overflow-hidden rounded-md border border-border bg-surface py-1 shadow-card">

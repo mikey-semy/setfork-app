@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
-import { SearchInput } from '@/shared/ui/SearchInput'
+import { SearchField } from '@/shared/ui/SearchField'
 
 // Поиск на лендинге: печатаешь → Enter/стрелка → /explore?q=…, с кнопкой очистки.
 export function HeroSearch({ placeholder, clearLabel }: { placeholder: string; clearLabel: string }) {
@@ -21,12 +21,13 @@ export function HeroSearch({ placeholder, clearLabel }: { placeholder: string; c
       }}
       className="flex w-full max-w-[600px] items-center gap-3 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-[0_12px_36px_-14px_rgba(0,0,0,.22)]"
     >
-      <SearchInput
+      <SearchField
+        variant="bare"
+        size="lg"
         value={q}
-        onChange={setQ}
+        onValueChange={setQ}
         placeholder={placeholder}
         className="flex-1"
-        inputClassName="border-0 bg-transparent py-1 text-[15px] focus:border-0"
         clearLabel={clearLabel}
         autoFocus
       />

@@ -2,6 +2,7 @@
 import { useState, useTransition } from 'react'
 import { Check, UserPlus, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { SearchField } from '@/shared/ui/SearchField'
 import { toggleIssueAssignee } from './actions'
 
 type Person = { handle: string; avatarUrl: string | null }
@@ -24,6 +25,7 @@ export function AssigneePicker({
 }) {
   const [pending, start] = useTransition()
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
   const [found, setFound] = useState<Person[]>([])
   const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
   const has = new Set(assignees.map((a) => a.handle))
@@ -57,11 +59,19 @@ export function AssigneePicker({
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
                 <div className="absolute right-0 z-20 mt-1 w-60 overflow-hidden rounded-md border border-border bg-surface shadow-lg">
-                  <input
+                  <SearchField
+                    variant="bare"
+                    size="sm"
                     autoFocus
-                    onChange={(e) => search(e.target.value)}
+                    value={query}
+                    onValueChange={(v) => {
+                      setQuery(v)
+                      void search(v)
+                    }}
+                    onClear={() => setFound([])}
                     placeholder={L('поиск по handle…', 'search by handle…')}
-                    className="w-full border-b border-border bg-surface-2 px-3 py-2 text-[13px] text-ink outline-none"
+                    clearLabel={L('очистить', 'clear')}
+                    className="border-b border-border bg-surface-2 px-3 py-2"
                   />
                   <div className="max-h-56 overflow-y-auto">
                     {found.length === 0 ? (

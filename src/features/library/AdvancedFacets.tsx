@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { BadgeCheck, Check, ChevronDown, Layers, List, ListOrdered, Search } from 'lucide-react'
+import { BadgeCheck, Check, ChevronDown, Layers, List, ListOrdered } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
+import { SearchField } from '@/shared/ui/SearchField'
 import { buildSearchQuery, parseSearchQuery, type ParsedQuery } from './search-query'
 
 /**
@@ -98,16 +99,7 @@ export function AdvancedFacets({
         {tagsOpen && (
           <>
             <div className="mb-1.5 px-1">
-              <div className="flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1 focus-within:border-border-strong">
-                <Search size={12} className="shrink-0 text-muted" />
-                <input
-                  value={tagFilter}
-                  onChange={(e) => setTagFilter(e.target.value)}
-                  placeholder={t('filterTags', lang)}
-                  aria-label={t('filterTags', lang)}
-                  className="w-full bg-transparent text-[12.5px] text-ink outline-none placeholder:text-muted"
-                />
-              </div>
+              <SearchField size="xs" value={tagFilter} onValueChange={setTagFilter} placeholder={t('filterTags', lang)} />
             </div>
             <div className="flex max-h-[280px] flex-col gap-0.5 overflow-y-auto pr-0.5">
               {shownTags.length === 0 ? (

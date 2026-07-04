@@ -8,6 +8,7 @@ import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
+import { SearchField } from '@/shared/ui/SearchField'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -115,20 +116,20 @@ export function TopNav({
       {title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>}
 
       <div className="ml-auto flex items-center gap-2">
-        {/* GitHub-подобный поиск: поле с иконкой + подсказка «/» */}
+        {/* GitHub-подобный поиск: поле с иконкой + подсказка «/» (единый SearchField) */}
         <form className="hidden md:block" onSubmit={(e) => { e.preventDefault(); submitSearch() }}>
-          <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 py-[5px] focus-within:border-border-strong">
-            <Search size={14} className="shrink-0 text-muted" />
-            <input
-              ref={searchRef}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t('searchTypeSlash', lang)}
-              aria-label={t('searchLists', lang)}
-              className="w-[180px] bg-transparent text-[13px] text-ink outline-none placeholder:text-muted xl:w-[260px]"
-            />
-            <kbd className="ml-auto hidden rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted lg:inline">/</kbd>
-          </div>
+          <SearchField
+            ref={searchRef}
+            size="sm"
+            value={q}
+            onValueChange={setQ}
+            placeholder={t('searchTypeSlash', lang)}
+            ariaLabel={t('searchLists', lang)}
+            className="w-[220px] xl:w-[300px]"
+            hint={
+              <kbd className="hidden rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted lg:inline">/</kbd>
+            }
+          />
         </form>
         {/* Мобильный поиск — иконка ведёт в Explore */}
         <Link href="/explore" aria-label={t('searchLists', lang)} className={`${iconBtn} md:hidden`}>
