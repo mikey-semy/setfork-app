@@ -20,6 +20,12 @@ import {
 import { t, type Lang } from '@/shared/i18n'
 import type { SessionUser } from '@/shared/auth/session'
 
+// Роуты, чей первый сегмент — НЕ handle пользователя (для бредкрамба в шапке).
+const RESERVED_TOP = new Set([
+  'explore', 'search', 'settings', 'new', 'login', 'register', 'admin', 'runs',
+  'notifications', 'api', 'about', 'terms', 'privacy', 'my-lists', 'catalogs',
+])
+
 export function TopNav({
   lang,
   user,
@@ -38,6 +44,13 @@ export function TopNav({
   const [menuOpen, setMenuOpen] = useState(false)
   // На странице поиска поле в шапке = полноценный квалификатор-поиск во всю ширину.
   const isSearch = pathname.startsWith('/search')
+  // Бредкрамб в шапке (как GitHub owner/repo): показываем чей это профиль/список.
+  // Первый сегмент — handle, если это не зарезервированный роут; второй — slug списка.
+  const crumb = (() => {
+    const segs = pathname.split('/').filter(Boolean)
+    if (segs.length === 0 || RESERVED_TOP.has(segs[0])) return null
+    return { handle: segs[0], slug: segs[1] } // slug undefined на профиле
+  })()
   // Хоткей «/» фокусирует поле поиска в шапке (как на GitHub); Escape закрывает меню.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -109,6 +122,23 @@ export function TopNav({
           SF
         </Link>
       </div>
+      {/* Бредкрамб (как GitHub owner/repo): чей профиль/список открыт. Прячем на поиске. */}
+      {crumb && !isSearch && (
+        <nav className="ml-1 flex min-w-0 items-center gap-1 text-[14px]" aria-label="breadcrumb">
+          <span className="text-muted">/</span>
+          <Link href={`/${crumb.handle}`} className={`truncate text-ink hover:text-accent ${crumb.slug ? 'font-medium' : 'font-semibold'}`}>
+            {crumb.handle}
+          </Link>
+          {crumb.slug && (
+            <>
+              <span className="text-muted">/</span>
+              <Link href={`/${crumb.handle}/${crumb.slug}`} className="truncate font-semibold text-ink hover:text-accent">
+                {crumb.slug}
+              </Link>
+            </>
+          )}
+        </nav>
+      )}
       {/* Страница поиска: поле-квалификатор во всю ширину прямо в шапке (как GitHub Search). */}
       {isSearch ? (
         <div className="mx-2 flex min-w-0 flex-1 md:mx-4">
