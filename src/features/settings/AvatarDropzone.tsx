@@ -15,6 +15,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
   const [preview, setPreview] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [removed, setRemoved] = useState(false) // помечен на удаление существующий аватар
 
   const accept = (file: File): boolean => {
     if (!ACCEPT.includes(file.type)) {
@@ -31,6 +32,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
 
   const applyFile = (file: File) => {
     if (!accept(file)) return
+    setRemoved(false) // выбор нового файла отменяет пометку на удаление
     // Кладём файл в input, чтобы он ушёл в FormData вместе с формой.
     const dt = new DataTransfer()
     dt.items.add(file)
@@ -77,7 +79,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
           // eslint-disable-next-line @next/next/no-img-element
           <img src={preview} alt="" className="h-[72px] w-[72px] shrink-0 rounded-full object-cover" />
         ) : (
-          <Avatar handle={handle} avatarUrl={avatarUrl} size={72} />
+          <Avatar handle={handle} avatarUrl={removed ? null : avatarUrl} size={72} />
         )}
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[13.5px] font-medium text-ink">
@@ -98,8 +100,30 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
               <X size={12} /> {t('removePhoto', lang)}
             </button>
           )}
+          {/* Убрать УЖЕ загруженный аватар (когда нет нового файла). */}
+          {!preview && avatarUrl && !removed && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setRemoved(true)
+              }}
+              className="mt-1.5 inline-flex items-center gap-1 text-[12px] text-ink-2 hover:text-danger"
+            >
+              <X size={12} /> {t('removePhoto', lang)}
+            </button>
+          )}
+          {removed && (
+            <p className="mt-1.5 text-[12px] text-muted">
+              {t('avatarWillRemove', lang)}{' '}
+              <button type="button" onClick={(e) => { e.stopPropagation(); setRemoved(false) }} className="text-ink-2 underline hover:text-ink">
+                {t('undo', lang)}
+              </button>
+            </p>
+          )}
         </div>
       </div>
+      <input type="hidden" name="avatarRemove" value={removed ? '1' : ''} />
       <input
         ref={inputRef}
         type="file"

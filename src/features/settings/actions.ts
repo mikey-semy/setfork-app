@@ -51,9 +51,13 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
     }
   }
 
+  // Явный запрос убрать аватар (и без загрузки нового): чистим хранилище + БД → аватар-плейсхолдер.
+  const clearAvatar = formData.get('avatarRemove') === '1' && !avatarRef
+  if (clearAvatar) await removeAvatar(session.userId).catch(() => {})
+
   await db
     .update(users)
-    .set({ name, bio, location, website, socials, ...(avatarRef ? { avatarUrl: avatarRef } : {}) })
+    .set({ name, bio, location, website, socials, ...(avatarRef ? { avatarUrl: avatarRef } : clearAvatar ? { avatarUrl: null } : {}) })
     .where(eq(users.id, session.userId))
 
   // В сессии храним УЖЕ отрезолвленный URL (навбар — клиент, подписать сам не может).
@@ -62,7 +66,7 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
     userId: session.userId,
     handle: session.handle,
     name: name ?? undefined,
-    avatarUrl: avatarRef ?? session.avatarUrl ?? undefined,
+    avatarUrl: avatarRef ?? (clearAvatar ? undefined : session.avatarUrl ?? undefined),
   })
 
   // layout — чтобы обновился аватар в шапке (TopNav), а не только на страницах.

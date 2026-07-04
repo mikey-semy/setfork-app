@@ -364,6 +364,8 @@ const DICT = {
   avatarTypeErr: { en: 'Unsupported format — use PNG, JPG, WEBP or GIF.', ru: 'Неподдерживаемый формат — PNG, JPG, WEBP или GIF.' },
   avatarSizeErr: { en: 'File is larger than 2 MB.', ru: 'Файл больше 2 МБ.' },
   removePhoto: { en: 'Remove', ru: 'Убрать' },
+  avatarWillRemove: { en: 'Avatar will be removed on save.', ru: 'Аватар удалится при сохранении.' },
+  undo: { en: 'Undo', ru: 'Отменить' },
   saveChanges: { en: 'Save changes', ru: 'Сохранить' },
   profileSaved: { en: 'Profile saved.', ru: 'Профиль сохранён.' },
   dangerZone: { en: 'Danger zone', ru: 'Опасная зона' },
