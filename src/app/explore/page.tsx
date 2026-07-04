@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Compass, Flame, Hash, Sparkles, Users } from 'lucide-react'
+import { Flame, Hash, Sparkles, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -31,12 +31,7 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="mx-auto w-full max-w-[1080px] px-6 py-8">
-      <div className="mb-5 flex items-center gap-2.5">
-        <Compass size={22} className="text-accent" />
-        <h1 className="text-[22px] font-semibold text-ink">{t('explore', lang)}</h1>
-      </div>
-
-      {/* Вкладки (нижняя граница + подчёркивание активной, как в GitHub) */}
+      {/* Без заголовка — как в GitHub Explore: сразу вкладки под шапкой. */}
       <nav className="no-scrollbar mb-6 flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map((tb) => {
           const on = tb.id === active
