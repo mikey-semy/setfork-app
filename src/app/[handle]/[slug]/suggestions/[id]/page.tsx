@@ -6,6 +6,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
+import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta, getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
 import { acceptSuggestion, addSuggestionComment, rejectSuggestion } from '@/features/library/actions'
@@ -97,14 +98,14 @@ export default async function SuggestionThreadPage({
         {isOwner && sug.status === 'open' && (
           <div className="mt-3 flex gap-2.5">
             <form action={acceptSuggestion.bind(null, sug.id)}>
-              <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
                 <Check size={14} /> {t('accept', lang)}
-              </button>
+              </SubmitButton>
             </form>
             <form action={rejectSuggestion.bind(null, sug.id)}>
-              <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
+              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
                 <X size={14} /> {t('reject', lang)}
-              </button>
+              </SubmitButton>
             </form>
           </div>
         )}
@@ -138,9 +139,9 @@ export default async function SuggestionThreadPage({
               <input type="hidden" name="suggestionId" value={sug.id} />
               <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={sugPeople} />
               <div className="flex justify-end">
-                <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+                <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
                   {t('commentBtn', lang)}
-                </button>
+                </SubmitButton>
               </div>
             </form>
           </div>
