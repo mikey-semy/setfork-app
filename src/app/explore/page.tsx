@@ -31,6 +31,8 @@ export default async function ExplorePage({
   // Квалификаторы из строки поиска (by:/tag:/is:/type:/stars:) + свободный текст.
   const parsed = parseSearchQuery(sp.q ?? '')
   const typeQ = parsed.type ?? type
+  // Генерируем СПИСОК только по свободному тексту-теме; чистые фильтры (by:/tag:) — нет.
+  const canGenerate = aiOn && parsed.text.trim().length > 0
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const [tags, feed] = await Promise.all([
     getPopularTags(),
@@ -63,7 +65,9 @@ export default async function ExplorePage({
 
       <section className="min-w-0 flex-1 px-6 py-4">
         <div className="mb-4">
-          <QualifierSearch initial={sp.q ?? ''} tags={tags.map((tg) => tg.tag)} lang={lang} />
+          {/* key = q: пере-монтируем поле, чтобы оно синхронизировалось с квалификаторами,
+              которые дописали клик-фасеты сайдбара (иначе value поля «залипает»). */}
+          <QualifierSearch key={sp.q ?? ''} initial={sp.q ?? ''} tags={tags.map((tg) => tg.tag)} lang={lang} />
         </div>
         <div className="mb-1 flex items-center justify-between border-b border-border pb-1.5">
           <div className="flex gap-4 text-[13.5px] font-semibold">
@@ -100,14 +104,17 @@ export default async function ExplorePage({
           </div>
         )}
 
-        {/* Поиск + нет точного совпадения → предложить сгенерировать (Generate → Verify) */}
-        {sp.q && aiOn && (
+        {/* Нечего найти по теме → предложить сгенерировать СПИСОК. Только при наличии
+            свободного текста-темы (parsed.text): по фильтрам людей (by:) и тегам не
+            предлагаем — мы генерируем списки, а не пользователей. В генерацию уходит
+            только текст, без квалификаторов. */}
+        {canGenerate && feed.length === 0 && (
           <form action={startGeneration} className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3">
             <Sparkles size={16} className="text-accent" />
             <span className="text-[13px] text-ink">
-              {t('cantFind', lang)} <span className="font-semibold">“{sp.q}”</span>
+              {t('cantFind', lang)} <span className="font-semibold">“{parsed.text}”</span>
             </span>
-            <input type="hidden" name="q" value={sp.q} />
+            <input type="hidden" name="q" value={parsed.text} />
             <button className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[12.5px] font-semibold text-primary-fg">
               <Sparkles size={13} /> {t('generateWithAi', lang)}
             </button>
@@ -115,13 +122,15 @@ export default async function ExplorePage({
         )}
 
         {feed.length === 0 ? (
-          <div className="py-6">
-            <EmptyState
-              icon={<SearchX size={36} strokeWidth={1.5} />}
-              title={sp.q || sp.tag ? t('nothingFound', lang) : t('emptyExplore', lang)}
-              action={!sp.q && session ? { href: '/new', label: t('newList', lang) } : undefined}
-            />
-          </div>
+          canGenerate ? null : (
+            <div className="py-6">
+              <EmptyState
+                icon={<SearchX size={36} strokeWidth={1.5} />}
+                title={sp.q || sp.tag ? t('nothingFound', lang) : t('emptyExplore', lang)}
+                action={!sp.q && session ? { href: '/new', label: t('newList', lang) } : undefined}
+              />
+            </div>
+          )
         ) : (
           <FeedList items={feed} lang={lang} viewerId={session?.userId} className="space-y-3 py-3" />
         )}
