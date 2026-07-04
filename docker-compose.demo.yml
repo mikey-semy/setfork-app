@@ -36,6 +36,20 @@ services:
     restart: 'no'
     networks: [dokploy-network]
 
+  # Авто-наполнение demo-данными при деплое (one-shot, после миграций). Скрипт
+  # идемпотентный: пересоздаёт свой набор demo-юзеров/списков — можно гонять каждый
+  # деплой (демо всегда в чистом известном состоянии). Отключить: DEMO_SEED=0.
+  seed:
+    build: { context: ., target: migrate } # тот же образ: есть tsx + исходники + drizzle
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@setfork-demo-db:5432/${POSTGRES_DB:-sethub_demo}
+      DEMO_SEED: ${DEMO_SEED:-1}
+    entrypoint: ['sh', '-c', 'if [ "$$DEMO_SEED" = "1" ]; then npx tsx scripts/seed-demo.ts; else echo "DEMO_SEED=0 — сид пропущен"; fi']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: 'no'
+    networks: [dokploy-network]
+
   # imgproxy для demo-картинок. Читает оригиналы из того же S3 (Selectel), но по
   # префиксу demo/ — чтобы demo-медиа не смешивалось с прод. Порт 8082 (прод — 8081).
   imgproxy:
