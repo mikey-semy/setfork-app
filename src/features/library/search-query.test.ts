@@ -53,4 +53,21 @@ describe('buildSearchQuery', () => {
     expect(buildSearchQuery({ text: '', tags: [] })).toBe('')
     expect(buildSearchQuery({ text: 'foo', tags: [] })).toBe('foo')
   })
+
+  it('keeps minStars 0 (stars:>0 round-trips)', () => {
+    expect(parseSearchQuery('stars:>0').minStars).toBe(0)
+    expect(buildSearchQuery({ text: '', tags: [], minStars: 0 })).toBe('stars:>0')
+  })
+})
+
+describe('parseSearchQuery edge cases', () => {
+  it('drops a bare qualifier with no value', () => {
+    const p = parseSearchQuery('docker by:')
+    expect(p.text).toBe('docker')
+    expect(p.by).toBeUndefined()
+  })
+
+  it('keeps free text that merely contains a colon', () => {
+    expect(parseSearchQuery('ratio 3:2').text).toBe('ratio 3:2')
+  })
 })
