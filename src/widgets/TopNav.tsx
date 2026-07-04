@@ -7,7 +7,7 @@ import { Plus, Sparkles } from 'lucide-react'
 import { SearchInput } from '@/shared/ui/SearchInput'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import type { NotificationItem } from '@/features/notifications/queries'
-import { LangSwitch, ThemeToggle } from '@/shared/ui/controls'
+import { ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
 import {
   DropdownMenu,
@@ -133,10 +133,6 @@ export function TopNav({
                   <span className="text-[13px] text-ink-2">{t('theme', lang)}</span>
                   <ThemeToggle />
                 </div>
-                <div className="flex items-center justify-between px-2.5 py-1.5">
-                  <span className="text-[13px] text-ink-2">{t('language', lang)}</span>
-                  <LangSwitch lang={lang} />
-                </div>
                 <DropdownMenuSeparator />
                 <form action="/api/auth/logout" method="post">
                   <DropdownMenuItem asChild>
@@ -150,7 +146,6 @@ export function TopNav({
           </>
         ) : (
           <>
-            <LangSwitch lang={lang} />
             <ThemeToggle />
             <Link href="/login" className="text-[13px] font-semibold text-ink">
               {t('signIn', lang)}
