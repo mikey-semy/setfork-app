@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import { identiconCells } from '@/shared/lib/identicon'
 
 const COLORS = ['#2563eb', '#dc2626', '#7c3aed', '#0891b2', '#e11d48', '#16a34a', '#4f46e5', '#d97706']
@@ -11,6 +14,8 @@ function colorFor(seed: string): string {
 /**
  * Аватар пользователя: загруженное фото (avatar_url) или identicon по нику
  * (дефолтный аватар в стиле GitHub — один и тот же для одного пользователя).
+ * Если фото не загрузилось (битый URL / CDN недоступен) — тихо откатываемся на
+ * identicon вместо иконки «сломанное изображение».
  */
 export function Avatar({
   handle,
@@ -23,12 +28,15 @@ export function Avatar({
   size?: number
   rounded?: string
 }) {
-  if (avatarUrl) {
+  const [failed, setFailed] = useState(false)
+
+  if (avatarUrl && !failed) {
     // eslint-disable-next-line @next/next/no-img-element
     return (
       <img
         src={avatarUrl}
         alt={handle}
+        onError={() => setFailed(true)}
         style={{ width: size, height: size }}
         className={`${rounded} flex-shrink-0 object-cover`}
       />

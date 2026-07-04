@@ -8,6 +8,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { SmartImage } from '@/shared/ui/SmartImage'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
@@ -133,8 +134,7 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                           </div>
                         )}
                         {stepImages[s.id] && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <SmartImage
                             src={stepImages[s.id]}
                             alt={t('screenshot', lang)}
                             className="mt-3 max-h-[420px] w-auto rounded-lg border border-border"
