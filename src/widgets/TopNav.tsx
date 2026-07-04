@@ -56,7 +56,10 @@ export function TopNav({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
-  const iconBtn = 'grid h-8 w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink'
+  // Убираем дефолтный аутлайн (Radix возвращает фокус на триггер после закрытия —
+  // из-за этого «залипало» выделение); кольцо оставляем только для клавиатуры.
+  const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-border-strong'
+  const iconBtn = `grid h-8 w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`
 
   // Контекстный заголовок страницы (в шапке — только он, навигация ушла в боковое меню).
   const title = pathname === '/'
@@ -101,7 +104,7 @@ export function TopNav({
           type="button"
           aria-label={t('menu', lang)}
           onClick={() => setMenuOpen(true)}
-          className="grid h-8 w-8 place-items-center rounded-md text-ink hover:bg-surface-2"
+          className={`grid h-8 w-8 place-items-center rounded-md text-ink hover:bg-surface-2 ${focusRing}`}
         >
           <Menu size={21} strokeWidth={2.75} />
         </button>
@@ -142,7 +145,7 @@ export function TopNav({
               <DropdownMenuTrigger asChild>
                 <button
                   aria-label={t('create', lang)}
-                  className="inline-flex h-8 items-center gap-0.5 rounded-md border border-border px-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink"
+                  className={`inline-flex h-8 items-center gap-0.5 rounded-md border border-border px-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`}
                 >
                   <Plus size={16} /> <ChevronDown size={13} />
                 </button>
@@ -166,7 +169,7 @@ export function TopNav({
             {/* avatar user menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button aria-label={user.handle} className="rounded-full outline-none">
+                <button aria-label={user.handle} className={`rounded-full ${focusRing}`}>
                   <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={30} />
                 </button>
               </DropdownMenuTrigger>
