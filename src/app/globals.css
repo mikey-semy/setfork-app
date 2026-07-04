@@ -148,6 +148,42 @@ textarea::placeholder {
   animation: fadein 500ms ease-out;
 }
 
+/* Логотип SetFork — шрифт с прямыми углами (см. layout, --font-logo). */
+.font-logo {
+  font-family: var(--font-logo), var(--font-sans);
+  letter-spacing: 0.02em;
+}
+
+/* Плавное появление бокового меню: затемнение фона + выезд панели слева. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 160ms ease-out;
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-slide-in-left {
+  animation: slide-in-left 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-in-left {
+    animation: none;
+  }
+}
+
 /* Emoji-mart: подгоняем фон/текст/инпут под наши токены (иначе фон отличается),
    компактнее и с нашим шрифтом. Переменные читаются web-компонентом em-emoji-picker. */
 em-emoji-picker {

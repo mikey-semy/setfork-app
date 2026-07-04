@@ -98,8 +98,8 @@ export function TopNav({
       <button type="button" aria-label={t('menu', lang)} onClick={() => setMenuOpen(true)} className={iconBtn}>
         <Menu size={18} />
       </button>
-      <Link href="/" className="flex-shrink-0 text-[22px] font-extrabold leading-none tracking-tight text-ink" aria-label="SetFork">
-        S<span className="text-accent">F</span>
+      <Link href="/" className="font-logo flex-shrink-0 text-[19px] leading-none text-ink" aria-label="SetFork">
+        SF
       </Link>
       {title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>}
 
@@ -219,12 +219,10 @@ export function TopNav({
       {/* Боковое меню (глобальная навигация), открывается бургером — как на GitHub */}
       {menuOpen && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setMenuOpen(false)} />
-          <aside className="fixed left-0 top-0 z-50 flex h-full w-[280px] max-w-[85vw] flex-col border-r border-border bg-surface p-3 shadow-xl">
+          <div className="animate-fade-in fixed inset-0 z-40 bg-black/40" onClick={() => setMenuOpen(false)} />
+          <aside className="animate-slide-in-left fixed left-0 top-0 z-50 flex h-full w-[280px] max-w-[85vw] flex-col border-r border-border bg-surface p-3 shadow-xl">
             <div className="mb-3 flex items-center justify-between px-1">
-              <span className="text-[20px] font-extrabold leading-none tracking-tight text-ink">
-                S<span className="text-accent">F</span>
-              </span>
+              <span className="font-logo text-[18px] leading-none text-ink">SF</span>
               <button type="button" aria-label={t('menu', lang)} onClick={() => setMenuOpen(false)} className={iconBtn}>
                 <X size={18} />
               </button>

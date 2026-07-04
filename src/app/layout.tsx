@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Hanken_Grotesk, IBM_Plex_Mono } from 'next/font/google'
+import { Chakra_Petch, Hanken_Grotesk, IBM_Plex_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
@@ -21,6 +21,12 @@ const mono = IBM_Plex_Mono({
   weight: ['400', '500', '600'],
   variable: '--font-mono',
 })
+// Логотип: гротеск с прямыми/квадратными углами (Chakra Petch), жирный.
+const logoFont = Chakra_Petch({
+  subsets: ['latin'],
+  weight: ['700'],
+  variable: '--font-logo',
+})
 
 export const metadata: Metadata = {
   title: 'SetFork — runnable checklists',
@@ -35,7 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Резолвим аватар для шапки: сессия может хранить storage_key — превращаем в imgproxy-URL.
   const navUser = user ? { ...user, avatarUrl: (await avatarSrc(user.avatarUrl, 60)) ?? undefined } : null
   return (
-    <html lang={lang} className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html lang={lang} className={`${sans.variable} ${mono.variable} ${logoFont.variable}`} suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <div className="flex min-h-screen flex-col bg-canvas">

@@ -29,8 +29,8 @@ export function Footer({ lang }: { lang: Lang }) {
       <div className="mx-auto grid w-full max-w-[1080px] grid-cols-2 gap-8 px-6 py-10 sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
         {/* бренд */}
         <div className="col-span-2 flex flex-col gap-2 sm:col-span-1">
-          <Link href="/" aria-label="SetFork" className="text-[20px] font-extrabold leading-none tracking-tight text-ink">
-            S<span className="text-accent">F</span>
+          <Link href="/" aria-label="SetFork" className="font-logo text-[18px] leading-none text-ink">
+            SF
           </Link>
           <p className="max-w-[240px] text-[12.5px] leading-snug text-ink-2">{t('footerTagline', lang)}</p>
         </div>

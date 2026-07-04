@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-[380px] rounded-xl border border-border bg-surface p-8 text-center shadow-card">
-        <div className="mb-1 text-[40px] font-bold leading-none tracking-tight text-ink">SF</div>
+        <div className="font-logo mb-1 text-[38px] leading-none text-ink">SF</div>
         <div className="mb-6 text-[13.5px] text-ink-2">{t('loginRequired', lang)}</div>
 
         <LoginForm lang={lang} />
