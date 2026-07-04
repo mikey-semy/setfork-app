@@ -146,10 +146,11 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
         </div>
 
         <nav className="no-scrollbar mt-3 flex gap-5 overflow-x-auto text-[14px] font-semibold">
-          {tab('overview', base, <ListChecks size={15} />, t('overviewTab', lang))}
-          {tab('versions', `${base}/versions`, <Tag size={15} />, t('versionsTab', lang))}
+          {/* Первый таб — сам список (как «Code» у GitHub-репо), не «Overview». */}
+          {tab('overview', base, <ListChecks size={15} />, t('listTab', lang))}
           {tab('issues', `${base}/issues`, <CircleDot size={15} />, t('issuesTab', lang), issueCount)}
           {tab('suggestions', `${base}/suggestions`, <GitPullRequest size={15} />, t('suggestions', lang), suggCount)}
+          {tab('versions', `${base}/versions`, <Tag size={15} />, t('versionsTab', lang))}
           {isOwner && tab('settings', `${base}/settings`, <Settings size={15} />, t('settings', lang))}
         </nav>
 

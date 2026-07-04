@@ -21,7 +21,7 @@ function displayUrl(url: string): string {
   return url.replace(/^https?:\/\//i, '').replace(/\/$/, '')
 }
 
-type Tab = 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
+type Tab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 
 // Заголовок вкладки: «Имя (handle)» как в GitHub (layout добавит « · SetFork»).
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
@@ -46,12 +46,14 @@ export default async function ProfilePage({
   if (!user) notFound()
 
   const tab: Tab =
-    sp.tab === 'starred' ? 'starred'
+    sp.tab === 'lists' ? 'lists'
+    : sp.tab === 'starred' ? 'starred'
     : sp.tab === 'catalogs' ? 'catalogs'
     : sp.tab === 'followers' ? 'followers'
     : sp.tab === 'following' ? 'following'
-    : 'lists'
+    : 'overview'
   const isPeopleTab = tab === 'followers' || tab === 'following'
+  const isListsTab = tab === 'lists' || tab === 'starred'
   const isOwner = viewer?.userId === user.id
   const [counts, followCounts, following, bigAvatar, contributions, received] = await Promise.all([
     getProfileCounts(user.id),
@@ -62,7 +64,7 @@ export default async function ProfilePage({
     getReceivedStats(user.id),
   ])
   const [items, pinned, catalogs] = await Promise.all([
-    isPeopleTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
+    !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
     getOwnerCatalogs(user.id),
   ])
@@ -153,43 +155,8 @@ export default async function ProfilePage({
         </aside>
 
         <section className="min-w-0 flex-1">
-          {pinned.length > 0 && (
-            <div className="mb-6">
-              <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-2">
-                <Pin size={13} className="text-muted" /> {t('pinnedLabel', lang)}
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {pinned.map((it) => {
-                  const desc = tr(it.desc, lang)
-                  return (
-                    <Link
-                      key={it.id}
-                      href={`/${it.ownerHandle}/${it.slug}`}
-                      className="group rounded-lg border border-border bg-surface px-3.5 py-3 hover:border-border-strong"
-                    >
-                      <div className="truncate text-[13.5px] font-semibold text-accent group-hover:underline">{tr(it.title, lang)}</div>
-                      {desc && <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-ink-2">{desc}</p>}
-                      <div className="mt-2 flex items-center gap-3 font-mono text-[11px] text-muted">
-                        <span>★ {it.starsCount}</span>
-                        <span>⑂ {it.forksCount}</span>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="mb-6">
-            <ActivityGraph
-              contributions={contributions}
-              starsReceived={received.stars}
-              forksReceived={received.forks}
-              lang={lang}
-            />
-          </div>
-
-          <div className="mb-4 flex gap-5 border-b border-border text-[14px] font-semibold">
+          {/* Топ-табы профиля как в GitHub: Overview / Lists / Stars / Catalogs. */}
+          <div className="mb-6 flex gap-5 border-b border-border text-[14px] font-semibold">
             {isPeopleTab ? (
               <>
                 <TabLink handle={handle} tab="followers" active={tab} label={`${t('followersLabel', lang)} ${followCounts.followers}`} />
@@ -197,6 +164,7 @@ export default async function ProfilePage({
               </>
             ) : (
               <>
+                <TabLink handle={handle} tab="overview" active={tab} label={t('overviewTab', lang)} />
                 <TabLink handle={handle} tab="lists" active={tab} label={`${t('lists', lang)} ${counts.lists}`} />
                 <TabLink handle={handle} tab="starred" active={tab} label={`${t('starredTab', lang)} ${counts.stars}`} />
                 {catalogs.length > 0 && (
@@ -206,7 +174,45 @@ export default async function ProfilePage({
             )}
           </div>
 
-          {isPeopleTab ? (
+          {/* Overview: закреплённые (Popular) + граф активности. */}
+          {tab === 'overview' && (
+            <>
+              {pinned.length > 0 && (
+                <div className="mb-6">
+                  <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-2">
+                    <Pin size={13} className="text-muted" /> {t('pinnedLabel', lang)}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {pinned.map((it) => {
+                      const desc = tr(it.desc, lang)
+                      return (
+                        <Link
+                          key={it.id}
+                          href={`/${it.ownerHandle}/${it.slug}`}
+                          className="group rounded-lg border border-border bg-surface px-3.5 py-3 hover:border-border-strong"
+                        >
+                          <div className="truncate text-[13.5px] font-semibold text-accent group-hover:underline">{tr(it.title, lang)}</div>
+                          {desc && <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-ink-2">{desc}</p>}
+                          <div className="mt-2 flex items-center gap-3 font-mono text-[11px] text-muted">
+                            <span>★ {it.starsCount}</span>
+                            <span>⑂ {it.forksCount}</span>
+                          </div>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              <ActivityGraph
+                contributions={contributions}
+                starsReceived={received.stars}
+                forksReceived={received.forks}
+                lang={lang}
+              />
+            </>
+          )}
+
+          {tab === 'overview' ? null : isPeopleTab ? (
             people.length === 0 ? (
               <Empty text={tab === 'followers' ? t('noFollowers', lang) : t('noFollowing', lang)} />
             ) : (
@@ -246,7 +252,7 @@ export default async function ProfilePage({
 }
 
 function TabLink({ handle, tab, active, label }: { handle: string; tab: Tab; active: Tab; label: string }) {
-  const href = tab === 'lists' ? `/${handle}` : `/${handle}?tab=${tab}`
+  const href = tab === 'overview' ? `/${handle}` : `/${handle}?tab=${tab}`
   return (
     <Link
       href={href}

@@ -286,6 +286,7 @@ const DICT = {
   edit: { en: 'Edit', ru: 'Редактировать' },
   suggestions: { en: 'Suggestions', ru: 'Предложения' },
   overviewTab: { en: 'Overview', ru: 'Обзор' },
+  listTab: { en: 'List', ru: 'Список' },
   versionsTab: { en: 'Versions', ru: 'Версии' },
   about: { en: 'About', ru: 'О списке' },
   currentVersion: { en: 'current', ru: 'текущая' },
