@@ -1,15 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { ChevronDown, Compass, Home, ListChecks, Menu, PlayCircle, Plus, Search, Sparkles, X } from 'lucide-react'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
-import { SearchField } from '@/shared/ui/SearchField'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,17 +35,10 @@ export function TopNav({
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const router = useRouter()
-  const [q, setQ] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
-  const searchRef = useRef<HTMLInputElement>(null)
   // На странице поиска поле в шапке = полноценный квалификатор-поиск во всю ширину.
   const isSearch = pathname.startsWith('/search')
-  const submitSearch = () => {
-    const s = q.trim()
-    router.push(s ? `/search?q=${encodeURIComponent(s)}` : '/search')
-  }
-  // Хоткей «/» фокусирует поиск (как на GitHub); Escape закрывает боковое меню.
+  // Хоткей «/» фокусирует поле поиска в шапке (как на GitHub); Escape закрывает меню.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') return setMenuOpen(false)
@@ -55,8 +47,7 @@ export function TopNav({
       const tag = el?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return
       e.preventDefault()
-      // На странице поиска виджета-инпута нет — фокусируем поле в шапке.
-      ;(searchRef.current ?? document.querySelector<HTMLInputElement>('header input'))?.focus()
+      document.querySelector<HTMLInputElement>('header input')?.focus()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -92,7 +83,6 @@ export function TopNav({
   const navItems: { href: string; label: string; icon: typeof Home }[] = [
     { href: '/', label: t('home', lang), icon: Home },
     { href: '/explore', label: t('explore', lang), icon: Compass },
-    { href: '/search', label: t('searchLists', lang), icon: Search },
     ...(user
       ? [
           { href: '/my-lists', label: t('myLists', lang), icon: ListChecks },
@@ -135,23 +125,20 @@ export function TopNav({
       )}
 
       <div className={`flex items-center gap-2 ${isSearch ? '' : 'ml-auto'}`}>
-        {/* Небольшой виджет-поиск — на всех страницах, КРОМЕ страницы поиска */}
+        {/* Небольшой виджет-поиск с подсказками — на всех страницах, КРОМЕ страницы поиска */}
         {!isSearch && (
           <>
-            <form className="hidden md:block" onSubmit={(e) => { e.preventDefault(); submitSearch() }}>
-              <SearchField
-                ref={searchRef}
+            <div className="hidden md:block">
+              <QualifierSearch
+                lang={lang}
+                initial=""
                 size="sm"
-                value={q}
-                onValueChange={setQ}
-                placeholder={t('searchTypeSlash', lang)}
-                ariaLabel={t('searchLists', lang)}
-                className="w-[220px] xl:w-[300px]"
+                containerClassName="w-[220px] xl:w-[300px]"
                 hint={
                   <kbd className="hidden rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted lg:inline">/</kbd>
                 }
               />
-            </form>
+            </div>
             {/* Мобильный поиск — иконка ведёт на страницу поиска */}
             <Link href="/search" aria-label={t('searchLists', lang)} className={`${iconBtn} md:hidden`}>
               <Search size={17} />

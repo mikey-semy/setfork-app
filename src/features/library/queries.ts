@@ -224,6 +224,34 @@ export async function countLists(
   return row?.n ?? 0
 }
 
+export interface ListSuggestion {
+  handle: string
+  slug: string
+  title: LocaleText
+}
+
+/** Быстрые подсказки списков для автокомплита в шапке (prefix/contains по title/slug). */
+export async function searchListSuggestions(q: string, limit = 6): Promise<ListSuggestion[]> {
+  const term = q.trim()
+  if (!term) return []
+  const like = `%${term}%`
+  const rows = await db
+    .select({ handle: users.handle, slug: templates.slug, title: templates.title })
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(
+      and(
+        eq(templates.status, 'published'),
+        eq(templates.visibility, 'public'),
+        eq(templates.moderation, 'active'),
+        or(ilike(sql`${templates.title}::text`, like), ilike(templates.slug, like))!,
+      ),
+    )
+    .orderBy(desc(sql`${templates.starsCount} + ${templates.forksCount}`))
+    .limit(limit)
+  return rows as ListSuggestion[]
+}
+
 /** Закреплённые списки пользователя (для профиля). */
 export async function getPinnedTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
   const rows = await db
