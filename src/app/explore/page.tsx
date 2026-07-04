@@ -1,19 +1,22 @@
 import Link from 'next/link'
-import { Compass, Flame, Hash, Sparkles } from 'lucide-react'
+import { Compass, Flame, Hash, Sparkles, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { FeedList } from '@/features/library/FeedList'
 import { getFeed, getPopularTags } from '@/features/library/queries'
+import { searchPeople } from '@/features/profile/search'
+import { PeopleResults } from '@/features/profile/PeopleResults'
 
-// Витрина-открытие (не поиск!): трендовые списки, популярные темы, свежее.
+// Витрина-открытие (не поиск!): трендовые списки, популярные темы, люди, свежее.
 // Полнотекстовый/квалификаторный поиск живёт на /search.
 export default async function ExplorePage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const [trending, newest, tags] = await Promise.all([
+  const [trending, newest, tags, people] = await Promise.all([
     getFeed({ sort: 'trending' }, session?.userId),
     getFeed({ sort: 'newest' }, session?.userId),
     getPopularTags(24),
+    searchPeople({ sort: 'followers', limit: 5 }),
   ])
 
   return (
@@ -51,12 +54,21 @@ export default async function ExplorePage() {
         <FeedList items={trending.slice(0, 9)} lang={lang} viewerId={session?.userId} className="space-y-3" />
       </section>
 
-      <section>
+      <section className="mb-8">
         <div className="mb-2 flex items-center gap-2 text-[15px] font-semibold text-ink">
           <Sparkles size={17} className="text-accent" /> {t('newest', lang)}
         </div>
         <FeedList items={newest.slice(0, 6)} lang={lang} viewerId={session?.userId} className="space-y-3" />
       </section>
+
+      {people.length > 0 && (
+        <section>
+          <div className="mb-2 flex items-center gap-2 text-[15px] font-semibold text-ink">
+            <Users size={17} className="text-accent" /> {t('popularPeople', lang)}
+          </div>
+          <PeopleResults people={people} lang={lang} />
+        </section>
+      )}
     </div>
   )
 }

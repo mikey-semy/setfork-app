@@ -166,6 +166,7 @@ const DICT = {
   filterAuthor: { en: 'Owner', ru: 'Автор' },
   filterMinStars: { en: 'Min stars', ru: 'Мин. звёзд' },
   searchPrompt: { en: 'Search lists, people and issues', ru: 'Ищите списки, людей и задачи' },
+  popularPeople: { en: 'Popular people', ru: 'Популярные люди' },
   scopeLists: { en: 'Lists', ru: 'Списки' },
   scopeIssues: { en: 'Issues', ru: 'Задачи' },
   listsLabel: { en: 'lists', ru: 'списков' },

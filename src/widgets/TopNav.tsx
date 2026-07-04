@@ -92,6 +92,7 @@ export function TopNav({
   const navItems: { href: string; label: string; icon: typeof Home }[] = [
     { href: '/', label: t('home', lang), icon: Home },
     { href: '/explore', label: t('explore', lang), icon: Compass },
+    { href: '/search', label: t('searchLists', lang), icon: Search },
     ...(user
       ? [
           { href: '/my-lists', label: t('myLists', lang), icon: ListChecks },

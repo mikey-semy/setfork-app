@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { SearchX, Sparkles, Users } from 'lucide-react'
+import { ChevronDown, SearchX, Sparkles, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -113,8 +113,11 @@ export default async function SearchPage({
         <div className="mb-3 lg:hidden">
           <ScopeSwitcher active={scope} counts={counts} q={sp.q} sort={sp.sort} lang={lang} basePath={BASE} orientation="horizontal" />
           {scope === 'lists' && (
-            <details className="mt-2 rounded-md border border-border bg-surface-2 px-3 py-2">
-              <summary className="cursor-pointer list-none text-[13px] font-semibold text-ink-2">{t('filters', lang)}</summary>
+            <details className="group mt-2 rounded-md border border-border bg-surface-2 px-3 py-2">
+              <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[13px] font-semibold text-ink-2">
+                <ChevronDown size={14} className="text-muted transition-transform group-open:rotate-180" />
+                {t('filters', lang)}
+              </summary>
               <div className="mt-3">
                 <AdvancedFacets initialQ={sp.q ?? ''} tags={tags} lang={lang} basePath={BASE} showHeader={false} />
               </div>
