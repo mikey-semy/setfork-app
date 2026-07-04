@@ -108,7 +108,20 @@ export default async function SearchPage({
         {scope === 'lists' && <AdvancedFacets initialQ={sp.q ?? ''} tags={tags} lang={lang} basePath={BASE} />}
       </aside>
 
-      <section className="min-w-0 flex-1 px-6 py-4">
+      <section className="min-w-0 flex-1 px-4 py-4 md:px-6">
+        {/* Мобильный доступ к scope и фильтрам (сайдбар скрыт < lg) */}
+        <div className="mb-3 lg:hidden">
+          <ScopeSwitcher active={scope} counts={counts} q={sp.q} sort={sp.sort} lang={lang} basePath={BASE} orientation="horizontal" />
+          {scope === 'lists' && (
+            <details className="mt-2 rounded-md border border-border bg-surface-2 px-3 py-2">
+              <summary className="cursor-pointer list-none text-[13px] font-semibold text-ink-2">{t('filters', lang)}</summary>
+              <div className="mt-3">
+                <AdvancedFacets initialQ={sp.q ?? ''} tags={tags} lang={lang} basePath={BASE} showHeader={false} />
+              </div>
+            </details>
+          )}
+        </div>
+
         <div className="mb-1 flex items-center justify-between border-b border-border pb-1.5">
           <div className="flex gap-4 text-[13.5px] font-semibold">
             {scope === 'lists' &&

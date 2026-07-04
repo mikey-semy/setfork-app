@@ -18,11 +18,13 @@ export function AdvancedFacets({
   tags,
   lang,
   basePath = '/search',
+  showHeader = true,
 }: {
   initialQ: string
   tags: { tag: string; count: number }[]
   lang: Lang
   basePath?: string
+  showHeader?: boolean
 }) {
   const router = useRouter()
   const sp = useSearchParams()
@@ -73,7 +75,7 @@ export function AdvancedFacets({
 
   return (
     <div>
-      <div className="mb-4 text-[13px] font-semibold text-ink">{t('filters', lang)}</div>
+      {showHeader && <div className="mb-4 text-[13px] font-semibold text-ink">{t('filters', lang)}</div>}
 
       {/* Тип списка — аналог фасета «Languages» */}
       <div className="mb-4">
