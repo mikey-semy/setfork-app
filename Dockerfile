@@ -6,7 +6,9 @@ WORKDIR /app
 
 # ── deps: полный установ (вкл. devDeps для сборки/миграций) ──
 FROM base AS deps
-COPY package.json package-lock.json ./
+# .npmrc обязателен: в нём legacy-peer-deps=true — иначе строгий `npm ci` падает на
+# конфликте peer-deps (@emoji-mart/react хочет react<=18, у нас react 19).
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 # ── builder: сборка standalone ──
