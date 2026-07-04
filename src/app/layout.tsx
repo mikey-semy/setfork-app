@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Chakra_Petch, Hanken_Grotesk, IBM_Plex_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
@@ -28,9 +28,48 @@ const logoFont = Chakra_Petch({
   variable: '--font-logo',
 })
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://setfork.com'
+const DESCRIPTION = 'Canonical, runnable, versioned reference lists — run them, check off steps, and fork from the library.'
+
 export const metadata: Metadata = {
-  title: 'SetFork — runnable checklists',
-  description: 'Запускаемые версионируемые чек-листы: прогоняй, отмечай шаги, форкай из библиотеки.',
+  metadataBase: new URL(SITE_URL),
+  title: { default: 'SetFork — runnable checklists', template: '%s · SetFork' },
+  description: DESCRIPTION,
+  applicationName: 'SetFork',
+  manifest: '/site.webmanifest',
+  // Crawl-доступные иконки: браузерная вкладка + результаты поиска Google (favicon в выдаче).
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/favicon-96x96.png', type: 'image/png', sizes: '96x96' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+    other: [{ rel: 'mask-icon', url: '/safari-pinned-tab.svg', color: '#0f172a' }],
+  },
+  // Помогаем поисковикам индексировать (favicon в выдаче требует индексируемой главной).
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: 'website',
+    siteName: 'SetFork',
+    title: 'SetFork — runnable checklists',
+    description: DESCRIPTION,
+    url: SITE_URL,
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'SetFork' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SetFork — runnable checklists',
+    description: DESCRIPTION,
+    images: ['/og-image.png'],
+  },
+  other: { 'msapplication-config': '/browserconfig.xml' },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#0f172a',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
