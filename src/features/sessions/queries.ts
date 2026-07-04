@@ -1,9 +1,10 @@
 import 'server-only'
-import { desc, eq, gte, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import { db, sessions, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
 
 const ONLINE_WINDOW_MS = 5 * 60_000
+const SESSION_MAX_AGE_MS = 30 * 24 * 3600 * 1000
 
 /** UA → короткая метка «Chrome · Windows». */
 export function parseUA(ua: string | null): string {
@@ -44,7 +45,13 @@ export interface UserSession {
 }
 
 export async function getUserSessions(userId: string, currentSid?: string): Promise<UserSession[]> {
-  const rows = await db.select().from(sessions).where(eq(sessions.userId, userId)).orderBy(desc(sessions.lastSeenAt))
+  // Только не протухшие (протухшие вычищаются при следующем входе).
+  const fresh = new Date(Date.now() - SESSION_MAX_AGE_MS)
+  const rows = await db
+    .select()
+    .from(sessions)
+    .where(and(eq(sessions.userId, userId), gte(sessions.lastSeenAt, fresh)))
+    .orderBy(desc(sessions.lastSeenAt))
   const now = Date.now()
   return rows.map((r) => ({
     id: r.id,

@@ -27,6 +27,7 @@ type Dict = Record<string, LocaleText>
 const DICT = {
   explore: { en: 'Explore', ru: 'Обзор' },
   home: { en: 'Home', ru: 'Главная' },
+  dashboard: { en: 'Dashboard', ru: 'Дашборд' },
   menu: { en: 'Menu', ru: 'Меню' },
   myLists: { en: 'My lists', ru: 'Мои списки' },
   runs: { en: 'Runs', ru: 'Прогоны' },

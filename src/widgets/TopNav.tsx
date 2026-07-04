@@ -60,7 +60,7 @@ export function TopNav({
 
   // Контекстный заголовок страницы (в шапке — только он, навигация ушла в боковое меню).
   const title = pathname === '/'
-    ? t('home', lang)
+    ? t('dashboard', lang)
     : pathname.startsWith('/explore')
       ? t('explore', lang)
       : pathname.startsWith('/my-lists')
