@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, BadgeCheck, CircleDot, GitFork, GitPullRequest, ListChecks, Lock, Pencil, PlayCircle, Settings, Star, Tag } from 'lucide-react'
+import { BadgeCheck, CircleDot, GitFork, GitPullRequest, ListChecks, Lock, Pencil, PlayCircle, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -56,10 +56,6 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   return (
     <div className="border-b border-border">
       <div className="mx-auto w-full max-w-[1180px] px-4 pt-6">
-        <Link href="/explore" className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
-          <ArrowLeft size={15} /> {t('backToExplore', lang)}
-        </Link>
-
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <Link href={`/${meta.ownerHandle}`} className="flex-shrink-0">
