@@ -89,6 +89,15 @@
   background: color-mix(in srgb, var(--muted) 60%, transparent);
 }
 
+/* Прокрутка без видимой полосы (напр. блок команды скроллится, но чисто). */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* старый Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
 html {
   -webkit-font-smoothing: antialiased;
 }
