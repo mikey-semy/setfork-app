@@ -46,7 +46,9 @@ export async function uploadImageFile(dir: string, file: File): Promise<string> 
 
 const ATTACH_MAX_BYTES = 25 * 1024 * 1024 // 25 МБ на вложение
 // Разрешённые расширения вложений (не-картинки). Исполняемое/скриптовое — не пускаем.
-const ATTACH_EXT = new Set(['pdf', 'txt', 'md', 'csv', 'json', 'log', 'zip', 'gz', 'tar', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'svg'])
+// SVG НАМЕРЕННО исключён: файл отдаётся инлайн с того же origin, а `<script>` внутри SVG
+// → хранимый XSS. Векторные картинки не нужны для чек-листов.
+const ATTACH_EXT = new Set(['pdf', 'txt', 'md', 'csv', 'json', 'log', 'zip', 'gz', 'tar', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'])
 
 /**
  * Загрузка произвольного вложения (не-картинки) на диск (`/uploads/files/...`).
