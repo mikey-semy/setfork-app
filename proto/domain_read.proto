@@ -183,6 +183,88 @@ service ListWrite {
   rpc Create(CreateListRequest) returns (List);
 }
 
+// ── CollabWrite: issues/suggestions/comments (write) ─────────────────
+// Зеркалит src/features/collab-store/adapter.ts. Даты — unix-ms (0 = null).
+// Шаги suggestion — NewStep (n позиционный). status: open|closed для issue,
+// open|accepted|rejected для suggestion.
+message Issue {
+  string id = 1;
+  string list_id = 2;
+  int32 number = 3;
+  string author_id = 4;
+  string title = 5;
+  string body = 6;
+  string status = 7;
+  repeated string labels = 8;
+  int64 created_at = 9;
+  int64 updated_at = 10;
+  int64 closed_at = 11; // 0 = null
+}
+
+message IssueComment {
+  string id = 1;
+  string issue_id = 2;
+  string author_id = 3;
+  string body = 4;
+  int64 created_at = 5;
+}
+
+message Suggestion {
+  string id = 1;
+  string list_id = 2;
+  string author_id = 3;
+  string status = 4;
+  string note = 5;
+  int32 base_version = 6;
+  repeated NewStep steps = 7;
+  int64 created_at = 8;
+  int64 resolved_at = 9; // 0 = null
+}
+
+message SuggestionComment {
+  string id = 1;
+  string suggestion_id = 2;
+  string author_id = 3;
+  string body = 4;
+  int64 created_at = 5;
+}
+
+message OpenIssueRequest {
+  string list_id = 1;
+  string author_id = 2;
+  string title = 3;
+  string body = 4;
+  repeated string labels = 5;
+}
+message AddIssueCommentRequest {
+  string issue_id = 1;
+  string author_id = 2;
+  string body = 3;
+}
+message SetIssueStatusRequest {
+  string issue_id = 1;
+  string status = 2; // open | closed
+}
+message CreateSuggestionRequest {
+  string list_id = 1;
+  string author_id = 2;
+  string note = 3;
+  repeated NewStep steps = 4;
+}
+message AddSuggestionCommentRequest {
+  string suggestion_id = 1;
+  string author_id = 2;
+  string body = 3;
+}
+
+service CollabWrite {
+  rpc OpenIssue(OpenIssueRequest) returns (Issue);
+  rpc AddIssueComment(AddIssueCommentRequest) returns (IssueComment);
+  rpc SetIssueStatus(SetIssueStatusRequest) returns (BoolResponse);
+  rpc CreateSuggestion(CreateSuggestionRequest) returns (Suggestion);
+  rpc AddSuggestionComment(AddSuggestionCommentRequest) returns (SuggestionComment);
+}
+
 // Create: список + первая версия + шаги (одной транзакцией). Возврат — полный List.
 message CreateListRequest {
   string owner_id = 1;
