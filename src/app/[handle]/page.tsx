@@ -7,7 +7,8 @@ import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
-import { getContributions, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { getContributions, getOwnListsLight, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { PinsPicker } from '@/features/profile/PinsPicker'
 import { getFollowers, getFollowing } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
 import { getFolderTemplateIds, getUserFolders } from '@/features/star-folders/queries'
@@ -70,6 +71,9 @@ export default async function ProfilePage({
     getOwnerCatalogs(user.id),
   ])
   const people = tab === 'followers' ? await getFollowers(user.id) : tab === 'following' ? await getFollowing(user.id) : []
+
+  // Пикер пинов («Customize your pins») — только владельцу на Overview.
+  const ownLight = tab === 'overview' && isOwner ? await getOwnListsLight(user.id) : []
 
   // Папки для звёзд (как GitHub Lists): чипы-фильтры на вкладке Stars.
   const starFolders = tab === 'starred' ? await getUserFolders(user.id) : []
@@ -183,10 +187,13 @@ export default async function ProfilePage({
           {/* Overview: закреплённые (Popular) + граф активности. */}
           {tab === 'overview' && (
             <>
-              {pinned.length > 0 && (
+              {(pinned.length > 0 || (isOwner && ownLight.length > 0)) && (
                 <div className="mb-6">
-                  <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-2">
-                    <Pin size={13} className="text-muted" /> {t('pinnedLabel', lang)}
+                  <div className="mb-2 flex items-center justify-between gap-2 text-[12.5px] font-semibold text-ink-2">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Pin size={13} className="text-muted" /> {t('pinnedLabel', lang)}
+                    </span>
+                    {isOwner && <PinsPicker lists={ownLight} lang={lang} />}
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {pinned.map((it) => {

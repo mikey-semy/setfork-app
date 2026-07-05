@@ -1,6 +1,6 @@
 'use server'
 
-import { and, asc, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
@@ -53,6 +53,21 @@ export async function setListVisibility(templateId: string, visibility: 'public'
   }
   revalidatePath(`/${session.handle}/${tpl.slug}`)
   revalidatePath('/explore')
+}
+
+/** «Customize your pins»: закрепить ровно выбранный набор своих списков (кап 6). */
+export async function updatePins(templateIds: string[]): Promise<void> {
+  const session = await requireSession()
+  const ids = templateIds.slice(0, 6)
+  // Сначала снимаем все свои пины, затем ставим выбранные — итог точно равен выбору.
+  await db.update(templates).set({ pinned: false }).where(eq(templates.ownerId, session.userId))
+  if (ids.length) {
+    await db
+      .update(templates)
+      .set({ pinned: true })
+      .where(and(eq(templates.ownerId, session.userId), inArray(templates.id, ids)))
+  }
+  revalidatePath(`/${session.handle}`)
 }
 
 export async function setListPinned(templateId: string, pinned: boolean): Promise<void> {
