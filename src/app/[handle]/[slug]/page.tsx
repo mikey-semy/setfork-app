@@ -1,9 +1,10 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, Info, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, Info, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
+import { openBranchPr } from '@/features/library/actions'
 import { gitCore } from '@/features/git/core'
 import { BranchPicker } from '@/features/git/BranchPicker'
 import { isCollaborator } from '@/features/collab/queries'
@@ -208,9 +209,21 @@ export default async function ListPage({
                   {lang === 'ru' ? 'Ветка' : 'Branch'} <b className="font-mono">{refBranch}</b> · +{branchInfo.ahead}/-{branchInfo.behind}{' '}
                   {lang === 'ru' ? 'относительно main (черновик, версии не создаются)' : 'vs main (draft — no versions projected)'}
                 </span>
-                <Link href={base} className="ml-auto font-semibold text-accent hover:underline">
-                  {lang === 'ru' ? '← на main' : '← back to main'}
-                </Link>
+                <span className="ml-auto flex items-center gap-3">
+                  {viewer && branchInfo.ahead > 0 && (
+                    <form action={openBranchPr.bind(null, tpl.id, refBranch)}>
+                      <button
+                        type="submit"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 font-semibold text-ink hover:border-border-strong"
+                      >
+                        <GitPullRequest size={12} /> {lang === 'ru' ? 'Открыть pull request' : 'Open pull request'}
+                      </button>
+                    </form>
+                  )}
+                  <Link href={base} className="font-semibold text-accent hover:underline">
+                    {lang === 'ru' ? '← на main' : '← back to main'}
+                  </Link>
+                </span>
               </div>
             )}
             {/* Результат поиска внутри списка (?find=). */}

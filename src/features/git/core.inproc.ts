@@ -163,4 +163,57 @@ export const gitCoreInproc: GitCore = {
       throw new BranchOpError('internal')
     })
   },
+
+  async mergeBranch(repo, name) {
+    if (badBranch(name) || name === 'main') throw new BranchOpError('bad-name')
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) throw new BranchOpError('not-found')
+    const listId = await resolveListId(repo.owner, repo.slug)
+    if (!listId) throw new BranchOpError('not-found')
+    const tipOf = (ref: string) =>
+      exec('git', ['--git-dir', bare, 'rev-parse', '--verify', `refs/heads/${ref}`]).then(
+        (r) => r.stdout.trim(),
+        () => null,
+      )
+    const branchTip = await tipOf(name)
+    if (!branchTip) throw new BranchOpError('not-found')
+    // Merge двигает main → под тем же локом, что и push (merge + проекция атомарно).
+    return gitStore.withRepoLock(listId, async () => {
+      const { stdout: lr } = await exec('git', ['--git-dir', bare, 'rev-list', '--left-right', '--count', `main...${name}`])
+      const ahead = Number(lr.trim().split(/\s+/)[1] || 0)
+      if (!ahead) throw new BranchOpError('nothing-to-merge')
+      const isAncestor = await exec('git', ['--git-dir', bare, 'merge-base', '--is-ancestor', 'main', name]).then(() => true, () => false)
+      let tipSha: string
+      let fastForward = false
+      if (isAncestor) {
+        await exec('git', ['--git-dir', bare, 'update-ref', 'refs/heads/main', branchTip])
+        tipSha = branchTip
+        fastForward = true
+      } else {
+        // Bare-friendly merge: merge-tree --write-tree (exit 1 = конфликт) + commit-tree.
+        const tree = await exec('git', ['--git-dir', bare, 'merge-tree', '--write-tree', 'main', name]).then(
+          (r) => r.stdout.split('\n')[0].trim(),
+          () => null,
+        )
+        if (!tree) throw new BranchOpError('conflict')
+        const env = {
+          ...process.env,
+          GIT_AUTHOR_NAME: 'SetFork',
+          GIT_AUTHOR_EMAIL: 'git@setfork.com',
+          GIT_COMMITTER_NAME: 'SetFork',
+          GIT_COMMITTER_EMAIL: 'git@setfork.com',
+        }
+        const { stdout: commit } = await exec(
+          'git',
+          ['--git-dir', bare, 'commit-tree', tree, '-p', 'main', '-p', name, '-m', `Merge branch '${name}'`],
+          { env },
+        )
+        tipSha = commit.trim()
+        await exec('git', ['--git-dir', bare, 'update-ref', 'refs/heads/main', tipSha])
+      }
+      // main сдвинулся → проекция (null = list.json не менялся).
+      const newVersion = await gitStore.projectPushedCommit(listId, bare).catch(() => null)
+      return { tipSha, newVersion, fastForward }
+    })
+  },
 }

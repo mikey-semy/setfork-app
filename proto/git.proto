@@ -43,6 +43,21 @@ service GitCore {
   // already_exists, not_found, failed_precondition (main защищён от удаления).
   rpc CreateBranch(CreateBranchRequest) returns (BranchOpResponse);
   rpc DeleteBranch(DeleteBranchRequest) returns (BranchOpResponse);
+  // A3: merge ветки в main (ff или merge-commit) + проекция новой версии.
+  // Ошибки: failed_precondition c message 'conflict' (не сливается чисто)
+  // или 'nothing-to-merge' (ветка не впереди main); not_found; invalid_argument.
+  rpc MergeBranch(MergeBranchRequest) returns (MergeBranchResponse);
+}
+
+message MergeBranchRequest {
+  RepoRef repo = 1;
+  string name = 2; // ветка, вливаемая в main
+}
+
+message MergeBranchResponse {
+  string tip_sha = 1;    // новый tip main
+  int32 new_version = 2; // спроецированная версия (0 = не создана)
+  bool fast_forward = 3;
 }
 
 message CreateBranchRequest {

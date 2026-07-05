@@ -350,6 +350,9 @@ export const suggestions = pgTable('suggestions', {
   note: text('note').notNull().default(''),
   baseVersion: integer('base_version').notNull(),
   items: jsonb('items').notNull().default([]).$type<ProposedItem[]>(),
+  // A3 (PR-модель): PR = «ветка → main». Задан branch_ref → items пустые,
+  // предлагаемые шаги материализуются из tip ветки (gitCore.branchSnapshot).
+  branchRef: text('branch_ref'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 })

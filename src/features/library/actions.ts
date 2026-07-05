@@ -192,6 +192,71 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions`)
 }
 
+// ── A3: PR из ветки («ветка → main») ─────────────────────────────────
+export async function openBranchPr(templateId: string, branch: string): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl) return
+  const { gitCore } = await import('@/features/git/core')
+  const owner = await ownerHandle(tpl.ownerId)
+  // Ветка должна существовать и содержать list.json (иначе PR не из чего собрать).
+  const snap = await gitCore.branchSnapshot({ owner, slug: tpl.slug }, branch).catch(() => null)
+  if (!snap) redirect(`/${owner}/${tpl.slug}`)
+  // Один открытый PR на ветку: повторное «Open PR» ведёт на существующий.
+  const dup = await db.query.suggestions.findFirst({
+    where: (s) => and(eq(s.templateId, tpl.id), eq(s.branchRef, branch), eq(s.status, 'open')),
+  })
+  if (dup) redirect(`/${owner}/${tpl.slug}/suggestions/${dup.id}`)
+
+  const [created] = await db
+    .insert(suggestions)
+    .values({
+      templateId: tpl.id,
+      authorId: session.userId,
+      note: `Merge branch '${branch}'`,
+      baseVersion: tpl.currentVersion,
+      items: [], // источник правды — tip ветки, материализуется при просмотре
+      branchRef: branch,
+    })
+    .returning({ id: suggestions.id })
+  await ensureWatch(session.userId, tpl.id)
+  if (tpl.ownerId !== session.userId) {
+    await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+  }
+  redirect(`/${owner}/${tpl.slug}/suggestions/${created.id}`)
+}
+
+/** Владелец/коллаборатор: влить branch-PR (ff или merge-commit + проекция). */
+export async function mergeBranchPr(suggestionId: string): Promise<void> {
+  const session = await requireSession()
+  const sug = await db.query.suggestions.findFirst({
+    where: (s) => eq(s.id, suggestionId),
+    with: { template: true },
+  })
+  if (!sug || sug.status !== 'open' || !sug.branchRef) return
+  const tpl = sug.template
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+
+  const owner = await ownerHandle(tpl.ownerId)
+  const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
+  const { gitCore } = await import('@/features/git/core')
+  const { BranchOpError } = await import('@/core')
+  try {
+    await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef)
+  } catch (e) {
+    const code = e instanceof BranchOpError ? e.code : 'internal'
+    redirect(`${path}?e=${code}`)
+  }
+  await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
+  if (sug.authorId !== session.userId) {
+    await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
+  }
+  await notifyWatchersNewVersion(tpl.id, session.userId)
+  await enqueueReindex(tpl.id)
+  revalidatePath('/', 'layout')
+  redirect(`/${owner}/${tpl.slug}`)
+}
+
 // ── Автор списка: принять предложение → новая версия ─────────────────
 export async function acceptSuggestion(suggestionId: string): Promise<void> {
   const session = await requireSession()
