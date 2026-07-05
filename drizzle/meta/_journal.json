@@ -92,6 +92,41 @@
       "when": 1783223004442,
       "tag": "0012_red_kang",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783223005442,
+      "tag": "0013_suggestions_branch_ref",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1783223006442,
+      "tag": "0014_releases",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1783223007442,
+      "tag": "0015_templates_is_template",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1783223008442,
+      "tag": "0016_totp_2fa",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1783223009442,
+      "tag": "0017_email_verified",
+      "breakpoints": true
     }
   ]
 }
