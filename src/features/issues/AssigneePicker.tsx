@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import { Check, UserPlus, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { SearchField } from '@/shared/ui/SearchField'
+import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { toggleIssueAssignee } from './actions'
 
 type Person = { handle: string; avatarUrl: string | null }
@@ -24,7 +25,6 @@ export function AssigneePicker({
   lang?: string
 }) {
   const [pending, start] = useTransition()
-  const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [found, setFound] = useState<Person[]>([])
   const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
@@ -46,19 +46,22 @@ export function AssigneePicker({
       <div className="flex items-center justify-between">
         <span className="text-[12px] font-semibold uppercase tracking-[0.04em] text-muted">{L('Исполнители', 'Assignees')}</span>
         {canEdit && (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              aria-label={L('назначить', 'assign')}
-              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-ink"
-            >
-              <UserPlus size={14} />
-            </button>
-            {open && (
+          <AnchoredMenu
+            align="right"
+            width={240}
+            button={(toggleMenu) => (
+              <button
+                type="button"
+                onClick={toggleMenu}
+                aria-label={L('назначить', 'assign')}
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-ink"
+              >
+                <UserPlus size={14} />
+              </button>
+            )}
+          >
+            {() => (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-                <div className="absolute right-0 z-20 mt-1 w-60 overflow-hidden rounded-md border border-border bg-surface shadow-lg">
                   <SearchField
                     variant="bare"
                     size="sm"
@@ -92,10 +95,9 @@ export function AssigneePicker({
                       ))
                     )}
                   </div>
-                </div>
               </>
             )}
-          </div>
+          </AnchoredMenu>
         )}
       </div>
 
