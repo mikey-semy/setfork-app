@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Globe, Loader2, Lock, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Button } from '@/shared/ui/button'
 import { t, type Lang } from '@/shared/i18n'
 import { deleteListAction, setListPinned, setListVisibility } from './actions'
 
@@ -81,13 +82,15 @@ export function ListSettingsDanger({
             placeholder={slug}
             className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-danger"
           />
-          <button
+          <Button
+            variant="dangerSolid"
+            size="md"
             onClick={() => start(() => deleteListAction(templateId))}
             disabled={!matches || pending}
-            className="inline-flex items-center gap-2 rounded-md bg-danger px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
+            className="gap-2"
           >
             <Trash2 size={14} /> {t('deleteList', lang)}
-          </button>
+          </Button>
         </div>
       </div>
     </section>

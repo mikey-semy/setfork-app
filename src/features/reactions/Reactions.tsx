@@ -1,9 +1,9 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
 import { SmilePlus } from 'lucide-react'
+import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import emojiData from '@emoji-mart/data'
 import type { ReactionAgg } from './constants'
 import { toggleReaction } from './actions'
@@ -64,15 +64,9 @@ export function Reactions({
           >
             <SmilePlus size={14} />
           </button>
-          {open &&
-            createPortal(
-              // Портал в body + fixed по центру: пикер не привязан к кнопке (не едет
-              // со скроллом) и не обрезается overflow/z-index карточки комментария.
-              <div
-                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4"
-                onClick={() => setOpen(false)}
-              >
-                <div onClick={(e) => e.stopPropagation()}>
+          {/* Портал по центру (OverlayPanel): пикер не едет со скроллом и не
+              обрезается overflow/z-index карточки комментария. */}
+          <OverlayPanel open={open} onClose={() => setOpen(false)} width={0} className="border-0 bg-transparent shadow-none">
                   <EmojiPicker
                     data={emojiData}
                     locale={lang === 'ru' ? 'ru' : 'en'}
@@ -88,10 +82,7 @@ export function Reactions({
                       setOpen(false)
                     }}
                   />
-                </div>
-              </div>,
-              document.body,
-            )}
+          </OverlayPanel>
         </div>
       )}
     </div>

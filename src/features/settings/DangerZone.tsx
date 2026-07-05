@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { Trash2 } from 'lucide-react'
+import { Button } from '@/shared/ui/button'
 import { t, type Lang } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
 import { deleteAccount, type ActionResult } from './actions'
@@ -28,12 +29,9 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
             autoComplete="off"
             className="w-[240px] px-3 py-2 font-mono text-[13px] focus:border-danger"
           />
-          <button
-            disabled={!matches || pending}
-            className="inline-flex items-center gap-2 rounded-md bg-danger px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
-          >
+          <Button type="submit" variant="dangerSolid" size="md" disabled={!matches || pending} className="gap-2">
             <Trash2 size={14} /> {t('deleteAccount', lang)}
-          </button>
+          </Button>
           {state?.error && <span className="text-[13px] text-danger">{state.error}</span>}
         </div>
       </form>
