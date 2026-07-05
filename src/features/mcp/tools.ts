@@ -5,7 +5,7 @@ import { tr } from '@/shared/i18n'
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { canViewList } from '@/features/library/access'
 import { dialectExt, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
-import { listStore } from '@/features/library/list-store.adapter'
+import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')

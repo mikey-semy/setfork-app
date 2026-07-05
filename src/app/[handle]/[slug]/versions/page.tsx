@@ -4,7 +4,7 @@ import { GitCompare, Tag } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { getListMeta } from '@/features/library/queries'
-import { listStore } from '@/features/library/list-store.adapter'
+import { listStore } from '@/features/library/list-store'
 import { ListHeader } from '@/features/library/ListHeader'
 
 export default async function VersionsPage({

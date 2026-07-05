@@ -20,7 +20,7 @@ import { curationStore } from '@/features/curation/adapter'
 import { collabStore, suggestionCommenterIds } from '@/features/collab-store/adapter'
 import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
-import { listStore } from './list-store.adapter'
+import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
 
 /** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */

@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 import type { StepLevel } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
-import { listStore } from '@/features/library/list-store.adapter'
+import { listStore } from '@/features/library/list-store'
 
 const exec = promisify(execFile)
 
