@@ -76,7 +76,7 @@ export function ConflictResolver({
   const chosen = Object.keys(stepChoices).length + Object.keys(metaChoices).length
   const ready = chosen === total
 
-  const oursLabel = ru ? 'main (ours)' : 'main (ours)'
+  const oursLabel = ru ? 'main (наша)' : 'main (ours)'
   const theirsLabel = branch
 
   return (
