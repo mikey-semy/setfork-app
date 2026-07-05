@@ -138,6 +138,7 @@ export const templates = pgTable(
     moderationReason: text('moderation_reason'),
     verified: boolean('verified').notNull().default(false),
     pinned: boolean('pinned').notNull().default(false), // закреплён владельцем на профиле
+    isTemplate: boolean('is_template').notNull().default(false), // «Use this template» (копия без fork-связи)
     repositoryId: uuid('repository_id'), // каталог-репозиторий (FK задаётся в relations); null = solo
     forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
     runsCount: integer('runs_count').notNull().default(0),

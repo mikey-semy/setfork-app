@@ -1,10 +1,10 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, Info, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, Info, LayoutTemplate, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
-import { openBranchPr } from '@/features/library/actions'
+import { openBranchPr, useTemplate } from '@/features/library/actions'
 import { gitCore } from '@/features/git/core'
 import { BranchPicker } from '@/features/git/BranchPicker'
 import { isCollaborator } from '@/features/collab/queries'
@@ -176,6 +176,17 @@ export default async function ListPage({
                   <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
                 </Link>
                 <span className="inline-flex shrink-0 items-center gap-2 border-l border-border pl-2">
+                  {tpl.isTemplate && viewer && (
+                    <form action={useTemplate.bind(null, tpl.id)} className="inline-flex">
+                      <button
+                        type="submit"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ok-solid)] px-2.5 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90"
+                        title={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}
+                      >
+                        <LayoutTemplate size={13} /> <span className="hidden md:inline">{lang === 'ru' ? 'Использовать шаблон' : 'Use this template'}</span>
+                      </button>
+                    </form>
+                  )}
                   <CloneDropdown
                     base={base}
                     slug={slug}
