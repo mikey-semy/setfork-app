@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, FolderPlus, Plus } from 'lucide-react'
+import { Check, ChevronDown, Plus } from 'lucide-react'
 import { createStarFolder, toggleListInFolder } from './actions'
 import type { StarFolder } from './queries'
 
-/** Кнопка «в папку» рядом со звездой: чекбоксы папок + создать новую (как GitHub Lists). */
+/** Правая половина split-кнопки звезды (▾): чекбоксы папок + создать новую —
+ *  как выпадашка у Star на GitHub (Lists). Рендерится вплотную к StarButton. */
 export function StarFolderMenu({
   templateId,
   folders,
@@ -55,9 +56,9 @@ export function StarFolderMenu({
         onClick={() => setOpen((o) => !o)}
         aria-label={ru ? 'В папку' : 'Add to folder'}
         title={ru ? 'В папку' : 'Add to folder'}
-        className="inline-flex items-center rounded-md border border-border bg-surface-2 px-2 py-1.5 text-muted hover:text-ink"
+        className="inline-flex h-full items-center rounded-r-md border border-l-0 border-border px-1.5 py-1.5 text-muted hover:bg-surface-2 hover:text-ink"
       >
-        <FolderPlus size={14} />
+        <ChevronDown size={14} />
       </button>
       {open &&
         createPortal(

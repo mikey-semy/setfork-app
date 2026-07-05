@@ -349,6 +349,10 @@ const DICT = {
   joined: { en: 'joined', ru: 'на сайте с' },
   noStars: { en: 'No starred lists yet.', ru: 'Пока ничего в избранном.' },
   allStars: { en: 'All', ru: 'Все' },
+  foldersLabel: { en: 'Folders', ru: 'Папки' },
+  byCount: { en: 'By count', ru: 'По числу' },
+  searchStarsPh: { en: 'Search stars…', ru: 'Поиск по избранному…' },
+  sortRecent: { en: 'Recent', ru: 'Недавние' },
   noProfileLists: { en: 'No lists yet.', ru: 'Пока нет списков.' },
   // ── Settings / профиль ──
   settings: { en: 'Settings', ru: 'Настройки' },

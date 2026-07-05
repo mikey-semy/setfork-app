@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { FolderGit2, Link2, MapPin, Pin } from 'lucide-react'
+import { BookOpen, FolderGit2, Link2, ListChecks, MapPin, Pin, Star, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
@@ -41,7 +41,7 @@ export default async function ProfilePage({
   searchParams,
 }: {
   params: Promise<{ handle: string }>
-  searchParams: Promise<{ tab?: string; folder?: string }>
+  searchParams: Promise<{ tab?: string; folder?: string; q?: string; sort?: string; fsort?: string }>
 }) {
   const [{ handle }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
   const user = await getUserByHandle(handle)
@@ -75,13 +75,49 @@ export default async function ProfilePage({
   // Пикер пинов («Customize your pins») — только владельцу на Overview.
   const ownLight = tab === 'overview' && isOwner ? await getOwnListsLight(user.id) : []
 
-  // Папки для звёзд (как GitHub Lists): чипы-фильтры на вкладке Stars.
-  const starFolders = tab === 'starred' ? await getUserFolders(user.id) : []
+  // Папки для звёзд (как GitHub Lists): карточки + сорт; звёзды — поиск + сорт.
+  const rawFolders = tab === 'starred' ? await getUserFolders(user.id) : []
+  const fsort = sp.fsort === 'name' ? 'name' : sp.fsort === 'count' ? 'count' : 'name'
+  const starFolders = [...rawFolders].sort((a, b) => (fsort === 'count' ? b.count - a.count : a.name.localeCompare(b.name)))
   const folderIds = tab === 'starred' && sp.folder ? await getFolderTemplateIds(user.id, sp.folder) : null
-  const items = folderIds ? rawItems.filter((it) => folderIds.includes(it.id)) : rawItems
+  const starQ = (sp.q ?? '').trim().toLowerCase()
+  const starSort = sp.sort === 'name' ? 'name' : sp.sort === 'stars' ? 'stars' : 'recent'
+  let items = folderIds ? rawItems.filter((it) => folderIds.includes(it.id)) : rawItems
+  if (tab === 'starred') {
+    if (starQ) {
+      items = items.filter(
+        (it) => it.slug.toLowerCase().includes(starQ) || Object.values(it.title).some((v) => v?.toLowerCase().includes(starQ)),
+      )
+    }
+    if (starSort === 'name') items = [...items].sort((a, b) => a.slug.localeCompare(b.slug))
+    else if (starSort === 'stars') items = [...items].sort((a, b) => b.starsCount - a.starsCount)
+    // recent = порядок из запроса (по дате звезды/обновления)
+  }
 
   return (
-    <div className="w-full px-6 py-8 lg:px-8">
+    <div className="w-full">
+      {/* Табы профиля — full-width под шапкой, с иконками (как GitHub). */}
+      <div className="border-b border-border px-6 lg:px-8">
+        <nav className="no-scrollbar mx-auto flex max-w-[980px] gap-1 overflow-x-auto text-[14px]">
+          {isPeopleTab ? (
+            <>
+              <TopTab href={`/${handle}?tab=followers`} on={tab === 'followers'} icon={<Users size={15} />} label={t('followersLabel', lang)} count={followCounts.followers} />
+              <TopTab href={`/${handle}?tab=following`} on={tab === 'following'} icon={<Users size={15} />} label={t('followingLabel', lang)} count={followCounts.following} />
+            </>
+          ) : (
+            <>
+              <TopTab href={`/${handle}`} on={tab === 'overview'} icon={<BookOpen size={15} />} label={t('overviewTab', lang)} />
+              <TopTab href={`/${handle}?tab=lists`} on={tab === 'lists'} icon={<ListChecks size={15} />} label={t('lists', lang)} count={counts.lists} />
+              <TopTab href={`/${handle}?tab=starred`} on={tab === 'starred'} icon={<Star size={15} />} label={t('starredTab', lang)} count={counts.stars} />
+              {catalogs.length > 0 && (
+                <TopTab href={`/${handle}?tab=catalogs`} on={tab === 'catalogs'} icon={<FolderGit2 size={15} />} label={t('catalogsTab', lang)} count={catalogs.length} />
+              )}
+            </>
+          )}
+        </nav>
+      </div>
+
+      <div className="px-6 py-8 lg:px-8">
       <div className="mx-auto flex max-w-[980px] flex-col gap-8 md:flex-row">
         <aside className="flex-shrink-0 md:w-[280px]">
           <Avatar handle={user.handle} avatarUrl={bigAvatar} size={180} rounded="rounded-2xl" />
@@ -166,24 +202,6 @@ export default async function ProfilePage({
 
         <section className="min-w-0 flex-1">
           {/* Топ-табы профиля как в GitHub: Overview / Lists / Stars / Catalogs. */}
-          <div className="mb-6 flex gap-5 border-b border-border text-[14px] font-semibold">
-            {isPeopleTab ? (
-              <>
-                <TabLink handle={handle} tab="followers" active={tab} label={`${t('followersLabel', lang)} ${followCounts.followers}`} />
-                <TabLink handle={handle} tab="following" active={tab} label={`${t('followingLabel', lang)} ${followCounts.following}`} />
-              </>
-            ) : (
-              <>
-                <TabLink handle={handle} tab="overview" active={tab} label={t('overviewTab', lang)} />
-                <TabLink handle={handle} tab="lists" active={tab} label={`${t('lists', lang)} ${counts.lists}`} />
-                <TabLink handle={handle} tab="starred" active={tab} label={`${t('starredTab', lang)} ${counts.stars}`} />
-                {catalogs.length > 0 && (
-                  <TabLink handle={handle} tab="catalogs" active={tab} label={`${t('catalogsTab', lang)} ${catalogs.length}`} />
-                )}
-              </>
-            )}
-          </div>
-
           {/* Overview: закреплённые (Popular) + граф активности. */}
           {tab === 'overview' && (
             <>
@@ -255,14 +273,66 @@ export default async function ProfilePage({
             )
           ) : (
             <>
-              {/* Папки-фильтры на вкладке Stars (как GitHub Lists). */}
+              {/* Stars как у GitHub: секция папок (карточки + сорт), ниже поиск+сорт звёзд. */}
               {tab === 'starred' && starFolders.length > 0 && (
-                <div className="no-scrollbar mb-4 flex gap-2 overflow-x-auto text-[13px]">
-                  <FolderChip handle={handle} name={null} active={sp.folder} label={t('allStars', lang)} count={counts.stars} />
-                  {starFolders.map((f) => (
-                    <FolderChip key={f.id} handle={handle} name={f.name} active={sp.folder} label={f.name} count={f.count} />
-                  ))}
+                <div className="mb-6">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-[15px] font-semibold text-ink">
+                      {t('foldersLabel', lang)} <span className="font-mono text-[12px] text-muted">{starFolders.length}</span>
+                    </div>
+                    <div className="flex gap-1 text-[12px]">
+                      {(['name', 'count'] as const).map((s) => (
+                        <Link
+                          key={s}
+                          href={`/${handle}?tab=starred&fsort=${s}`}
+                          className={`rounded px-2 py-0.5 ${fsort === s ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
+                        >
+                          {s === 'name' ? 'A-Z' : t('byCount', lang)}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {starFolders.map((f) => {
+                      const on = sp.folder === f.name
+                      return (
+                        <Link
+                          key={f.id}
+                          href={on ? `/${handle}?tab=starred` : `/${handle}?tab=starred&folder=${encodeURIComponent(f.name)}`}
+                          className={`rounded-lg border px-4 py-3 ${on ? 'border-accent bg-accent/10' : 'border-border bg-surface hover:border-border-strong'}`}
+                        >
+                          <div className="truncate text-[14px] font-semibold text-ink">{f.name}</div>
+                          <div className="mt-1 font-mono text-[11.5px] text-muted">
+                            {f.count} {t('lists', lang).toLowerCase()}
+                          </div>
+                        </Link>
+                      )
+                    })}
+                  </div>
                 </div>
+              )}
+              {tab === 'starred' && (
+                <form action={`/${handle}`} className="mb-4 flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="tab" value="starred" />
+                  {sp.folder && <input type="hidden" name="folder" value={sp.folder} />}
+                  <input
+                    name="q"
+                    defaultValue={sp.q ?? ''}
+                    placeholder={t('searchStarsPh', lang)}
+                    className="min-w-[180px] flex-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-ink outline-none focus:border-border-strong"
+                  />
+                  <div className="flex gap-1 text-[12px]">
+                    {(['recent', 'name', 'stars'] as const).map((s) => (
+                      <Link
+                        key={s}
+                        href={`/${handle}?tab=starred${sp.folder ? `&folder=${encodeURIComponent(sp.folder)}` : ''}${starQ ? `&q=${encodeURIComponent(sp.q ?? '')}` : ''}&sort=${s}`}
+                        className={`rounded px-2 py-0.5 ${starSort === s ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
+                      >
+                        {s === 'recent' ? t('sortRecent', lang) : s === 'name' ? 'A-Z' : '★'}
+                      </Link>
+                    ))}
+                  </div>
+                </form>
               )}
               {items.length === 0 ? (
                 <Empty text={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
@@ -273,31 +343,22 @@ export default async function ProfilePage({
           )}
         </section>
       </div>
+      </div>
     </div>
   )
 }
 
-function FolderChip({ handle, name, active, label, count }: { handle: string; name: string | null; active?: string; label: string; count: number }) {
-  const on = name ? active === name : !active
-  const href = name ? `/${handle}?tab=starred&folder=${encodeURIComponent(name)}` : `/${handle}?tab=starred`
+/** Таб под шапкой (GitHub-стиль): иконка + подпись + счётчик-бейдж. */
+function TopTab({ href, on, icon, label, count }: { href: string; on: boolean; icon: React.ReactNode; label: string; count?: number }) {
   return (
     <Link
       href={href}
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 ${on ? 'border-accent bg-accent/10 text-ink' : 'border-border bg-surface-2 text-ink-2 hover:text-ink'}`}
+      className={`-mb-px inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 ${
+        on ? 'border-accent font-semibold text-ink' : 'border-transparent text-ink-2 hover:text-ink'
+      }`}
     >
-      {label} <span className="font-mono text-[11px] text-muted">{count}</span>
-    </Link>
-  )
-}
-
-function TabLink({ handle, tab, active, label }: { handle: string; tab: Tab; active: Tab; label: string }) {
-  const href = tab === 'overview' ? `/${handle}` : `/${handle}?tab=${tab}`
-  return (
-    <Link
-      href={href}
-      className={`pb-2.5 ${active === tab ? 'border-b-2 border-ink text-ink' : 'text-ink-2 hover:text-ink'}`}
-    >
-      {label}
+      <span className={on ? 'text-ink' : 'text-muted'}>{icon}</span> {label}
+      {count != null && <span className="rounded-full bg-surface-2 px-1.5 text-[11.5px] text-ink-2">{count}</span>}
     </Link>
   )
 }
