@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import type { Metadata, Viewport } from 'next'
-import { Chakra_Petch, Hanken_Grotesk, IBM_Plex_Mono } from 'next/font/google'
+import { Chakra_Petch, Hanken_Grotesk, IBM_Plex_Mono, Inter, Manrope } from 'next/font/google'
 import { ThemeProvider } from '@/shared/providers/theme-provider'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
@@ -29,6 +29,10 @@ const logoFont = Chakra_Petch({
   weight: ['700'],
   variable: '--font-logo',
 })
+// Альтернативные шрифты интерфейса (Настройки → Appearance, data-font на html).
+// С кириллицей — интерфейс двуязычный.
+const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-inter' })
+const manrope = Manrope({ subsets: ['latin', 'cyrillic'], variable: '--font-manrope' })
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://setfork.com'
 const DESCRIPTION = 'Canonical, runnable, versioned reference lists — run them, check off steps, and fork from the library.'
@@ -89,9 +93,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Резолвим аватар для шапки: сессия может хранить storage_key — превращаем в imgproxy-URL.
   const navUser = user ? { ...user, avatarUrl: (await avatarSrc(user.avatarUrl, 60)) ?? undefined } : null
   return (
-    <html lang={lang} className={`${sans.variable} ${mono.variable} ${logoFont.variable}`} suppressHydrationWarning>
+    <html lang={lang} className={`${sans.variable} ${mono.variable} ${logoFont.variable} ${inter.variable} ${manrope.variable}`} suppressHydrationWarning>
       <body>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+        {/* Акцент/шрифт из localStorage до первой отрисовки (no-flash; mode ставит next-themes). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var d=document.documentElement,a=localStorage.getItem('sf-accent'),f=localStorage.getItem('sf-font');if(a)d.setAttribute('data-accent',a);if(f)d.setAttribute('data-font',f)}catch(e){}",
+          }}
+        />
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <div className="flex min-h-screen flex-col bg-canvas">
             <Suspense>
               <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} topLists={topLists} />
