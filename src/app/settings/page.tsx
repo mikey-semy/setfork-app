@@ -7,6 +7,7 @@ import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { getUserUsage } from '@/shared/ai/usage'
+import { aiQuota, listQuota } from '@/shared/quota'
 import { getApiTokens } from '@/features/mcp/queries'
 import { ApiTokensSection } from '@/features/mcp/ApiTokensSection'
 import { SettingsForm } from '@/features/settings/SettingsForm'
@@ -32,6 +33,7 @@ export default async function SettingsPage() {
   const avatar = await avatarSrc(user.avatarUrl, 144)
   const userSessions = await getUserSessions(session.userId, session.sid)
   const usage = await getUserUsage(session.userId)
+  const [lists, aiMonth] = await Promise.all([listQuota(session.userId, session.handle), aiQuota(session.userId, session.handle)])
   const tokens = await getApiTokens(session.userId)
   const h = await headers()
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
@@ -168,6 +170,19 @@ export default async function SettingsPage() {
                 <div className="mt-1 text-[17px] font-bold text-ink">{x.v}</div>
               </div>
             ))}
+          </div>
+          {/* Квоты (мягкие лимиты; админ — без лимитов). */}
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 text-[13px]">
+            <div className="flex items-center justify-between">
+              <span className="text-ink-2">{lang === 'ru' ? 'Списков' : 'Lists'}</span>
+              <span className="font-mono text-ink">{lists.unlimited ? '∞' : `${lists.used} / ${lists.limit}`}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-ink-2">{lang === 'ru' ? 'AI за этот месяц' : 'AI this month'}</span>
+              <span className="font-mono text-ink">
+                {aiMonth.unlimited ? '∞' : `$${aiMonth.used.toFixed(2)} / $${aiMonth.limit.toFixed(2)}`}
+              </span>
+            </div>
           </div>
         </section>
       ),

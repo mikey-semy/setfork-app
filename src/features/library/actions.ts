@@ -11,6 +11,7 @@ import { tr } from '@/shared/i18n'
 import { imageUrl, uploadImageFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
+import { aiQuota, listQuota } from '@/shared/quota'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { enqueueReindex } from '@/features/search/adapter'
 import { ensureWatch } from '@/features/watch/actions'
@@ -123,6 +124,8 @@ export async function createTemplate(formData: FormData): Promise<void> {
   const ordered = formData.get('ordered') !== 'unordered'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   if (!title) return
+  // Квота на число списков (мягкая защита от абьюза; админ без лимита).
+  if (!(await listQuota(session.userId, session.handle)).ok) redirect('/new?e=list_quota')
 
   let slug = slugify(title)
   const owned = await db
@@ -416,6 +419,7 @@ export async function refineList(input: {
 
   const { allowed } = checkRateLimit(`refine:${session.userId}`)
   if (!allowed) return { error: 'ratelimited' }
+  if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
 
   const current = {
     title: input.title || '',
@@ -534,6 +538,7 @@ export async function useTemplate(templateId: string): Promise<void> {
   // Только помеченные шаблоном и видимые (публичные или свои).
   if (!src || !src.isTemplate) return
   if (src.visibility === 'private' && src.ownerId !== session.userId) return
+  if (!(await listQuota(session.userId, session.handle)).ok) redirect(`/${session.handle}?e=list_quota`)
 
   const owned = await db
     .select({ slug: templates.slug })
@@ -581,6 +586,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
     with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
   })
   if (!src) return
+  if (!(await listQuota(session.userId, session.handle)).ok) redirect(`/${session.handle}?e=list_quota`)
 
   const owned = await db
     .select({ slug: templates.slug })

@@ -140,7 +140,9 @@ export function ListEditor({
       setRefineErr(
         res.error === 'ratelimited'
           ? ru ? 'Слишком часто — подожди.' : 'Too many requests — wait a bit.'
-          : ru ? 'Не удалось. Переформулируй.' : 'Failed. Try rephrasing.',
+          : res.error === 'ai_quota'
+            ? ru ? 'Исчерпан месячный лимит AI.' : 'Monthly AI limit reached.'
+            : ru ? 'Не удалось. Переформулируй.' : 'Failed. Try rephrasing.',
       )
       return
     }

@@ -114,6 +114,16 @@ export function GenerationReview({ generationId, query, lang, candidates, status
             : 'You’ve hit the 6-variant limit. Pick one of the existing variants — or start a new generation.'}
         </div>
       )}
+      {error === 'ai_quota' && (
+        <div className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[13px] text-warn">
+          {ru ? 'Исчерпан месячный лимит AI-генерации.' : 'Monthly AI generation limit reached.'}
+        </div>
+      )}
+      {error === 'list_quota' && (
+        <div className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[13px] text-warn">
+          {ru ? 'Достигнут лимит списков — удали ненужные, чтобы сохранить черновик.' : 'List limit reached — delete some to save this draft.'}
+        </div>
+      )}
       {stalled && (
         <div className="mb-4 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-[13px] text-warn">
           {ru

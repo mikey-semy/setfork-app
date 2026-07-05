@@ -44,7 +44,7 @@ export default async function ProfilePage({
   searchParams,
 }: {
   params: Promise<{ handle: string }>
-  searchParams: Promise<{ tab?: string; folder?: string; q?: string; sort?: string; fsort?: string; month?: string; year?: string }>
+  searchParams: Promise<{ tab?: string; folder?: string; q?: string; sort?: string; fsort?: string; month?: string; year?: string; e?: string }>
 }) {
   const [{ handle }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
   const user = await getUserByHandle(handle)
@@ -146,6 +146,16 @@ export default async function ProfilePage({
           </>
         )}
       </TabNav>
+
+      {sp.e === 'list_quota' && isOwner && (
+        <div className="mx-auto mt-4 max-w-[980px] px-6 lg:px-8">
+          <div className="rounded-md border border-warn/50 bg-surface px-3 py-2.5 text-[13px] text-warn">
+            {lang === 'ru'
+              ? 'Достигнут лимит списков — удали ненужные, чтобы создать/форкнуть новый.'
+              : 'List limit reached — delete some to create or fork another.'}
+          </div>
+        </div>
+      )}
 
       <div className="px-6 py-8 lg:px-8">
       <div className="mx-auto flex max-w-[980px] flex-col gap-8 md:flex-row">

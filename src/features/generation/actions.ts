@@ -9,6 +9,7 @@ import { getLang } from '@/shared/i18n/server'
 import type { Lang } from '@/shared/i18n'
 import { sanitizeCommand } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
+import { aiQuota, listQuota } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { enqueueReindex } from '@/features/search/adapter'
 import { toProposedItems } from '@/features/library/editor'
@@ -35,6 +36,7 @@ export async function startGeneration(formData: FormData): Promise<void> {
 
   const { allowed } = checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/search?q=${encodeURIComponent(query)}&e=ratelimited`)
+  if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate?e=ai_quota&q=${encodeURIComponent(query)}`)
 
   const [gen] = await db.insert(generations).values({ userId: session.userId, query, lang }).returning()
   await enqueueGenerate(gen.id, session.userId, query, lang, 1)
@@ -49,6 +51,7 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
 
   const { allowed } = checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
+  if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
   const [{ max }] = await db
     .select({ max: sql<number>`coalesce(max(${generationCandidates.idx}), 0)::int` })
@@ -73,6 +76,7 @@ export async function regenerateWithQuery(generationId: string, newQuery: string
 
   const { allowed } = checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
+  if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
   const [{ max }] = await db
     .select({ max: sql<number>`coalesce(max(${generationCandidates.idx}), 0)::int` })
@@ -105,6 +109,8 @@ export async function acceptCandidate(generationId: string, candidateId: string)
     where: (c) => eq(c.id, candidateId),
   })
   if (!cand || cand.generationId !== generationId) redirect(`/generate/${generationId}`)
+  // Принятие кандидата создаёт список — та же квота, что у обычного создания.
+  if (!(await listQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=list_quota`)
 
   // Ключ locale-JSON = язык, на котором СГЕНЕРИРОВАН контент (а не текущий UI-язык).
   const genLang: Lang = gen.lang === 'ru' ? 'ru' : 'en'
