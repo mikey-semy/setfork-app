@@ -75,7 +75,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               ? lang === 'ru'
                 ? 'GitHub OAuth не настроен — используйте demo-вход.'
                 : 'GitHub OAuth is not configured — use the demo sign-in.'
-              : `Auth error: ${sp.e}`}
+              : sp.e === '2fa_throttled'
+                ? lang === 'ru'
+                  ? 'Слишком много попыток кода 2FA — войди заново через несколько минут.'
+                  : 'Too many 2FA attempts — sign in again in a few minutes.'
+                : `Auth error: ${sp.e}`}
           </div>
         )}
 

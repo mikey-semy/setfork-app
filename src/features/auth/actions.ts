@@ -4,7 +4,9 @@ import { redirect } from 'next/navigation'
 import { eq } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
 import { startSession } from '@/shared/auth/session'
-import { hashPassword, verifyPassword } from '@/shared/auth/password'
+import { dummyVerify, hashPassword, verifyPassword } from '@/shared/auth/password'
+import { clientIpFromHeaders } from '@/shared/auth/app-origin'
+import { rateLimit } from '@/shared/rate-limit'
 import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -60,8 +62,16 @@ export async function loginWithPassword(_prev: AuthResult | null, formData: Form
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
 
+  // Троттлинг перебора паролей: 10 попыток / 15 мин на ip+email.
+  const ip = await clientIpFromHeaders()
+  if (!rateLimit(`login:${ip}:${email}`, 10, 15 * 60_000).ok) return { error: t('invalidCredentials', lang) }
+
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
-  if (!user || !verifyPassword(password, user.passwordHash)) return { error: t('invalidCredentials', lang) }
+  if (!user) {
+    dummyVerify(password) // выравниваем время ответа — не выдаём отсутствие аккаунта
+    return { error: t('invalidCredentials', lang) }
+  }
+  if (!verifyPassword(password, user.passwordHash)) return { error: t('invalidCredentials', lang) }
 
   // Включён 2FA → сессию НЕ создаём: pending-кука (5 мин) и шаг с кодом.
   if (user.totpEnabled) {

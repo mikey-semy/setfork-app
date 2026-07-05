@@ -17,3 +17,10 @@ export function verifyPassword(password: string, stored: string | null | undefin
   const actual = scryptSync(password, Buffer.from(saltHex, 'hex'), expected.length)
   return actual.length === expected.length && timingSafeEqual(actual, expected)
 }
+
+// Фиктивная проверка той же стоимости — гоняем, когда пользователя нет, чтобы
+// время ответа логина не выдавало существование аккаунта (тайминг-энумерация).
+const DUMMY_HASH = hashPassword('setfork-timing-equalizer')
+export function dummyVerify(password: string): void {
+  verifyPassword(password, DUMMY_HASH)
+}
