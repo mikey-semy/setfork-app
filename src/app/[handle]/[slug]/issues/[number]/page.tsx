@@ -4,7 +4,6 @@ import { CircleDot, CircleCheck } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta } from '@/features/library/queries'
@@ -18,6 +17,7 @@ import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
+import { CommentCard } from '@/features/collab/CommentCard'
 
 export default async function IssueThreadPage({
   params,
@@ -53,14 +53,6 @@ export default async function IssueThreadPage({
   const isAuthor = session?.userId === issue.authorId
   const canToggle = isOwner || isAuthor
   const closed = issue.status === 'closed'
-  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' })
-
-  const Header = ({ handle, avatarUrl, date, verb }: { handle: string; avatarUrl: string | null; date: Date; verb: string }) => (
-    <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px] text-ink-2">
-      <Avatar handle={handle} avatarUrl={avatarUrl} size={22} />
-      <span className="font-semibold text-ink">{handle}</span> {verb} · {fmt.format(new Date(date))}
-    </div>
-  )
 
   return (
     <>
@@ -102,28 +94,31 @@ export default async function IssueThreadPage({
         </div>
 
         {/* Тело issue */}
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
-          <Header handle={issue.authorHandle} avatarUrl={issue.authorAvatarUrl} date={issue.createdAt} verb={t('openedThis', lang)} />
-          <div className="px-4 py-3">
-            {issue.body ? <Markdown refBase={`/${owner}/${slug}/issues`}>{issue.body}</Markdown> : <p className="text-[13px] italic text-muted">—</p>}
-            <div className="mt-2">
-              <Reactions targetType="issue" targetId={issue.id} reactions={issueR[issue.id] ?? []} canReact={!!session} path={path} lang={lang} />
-            </div>
-          </div>
-        </div>
+        <CommentCard
+          handle={issue.authorHandle}
+          avatarUrl={issue.authorAvatarUrl}
+          date={issue.createdAt}
+          meta={t('openedThis', lang)}
+          body={issue.body}
+          refBase={`/${owner}/${slug}/issues`}
+          lang={lang}
+          reactions={<Reactions targetType="issue" targetId={issue.id} reactions={issueR[issue.id] ?? []} canReact={!!session} path={path} lang={lang} />}
+        />
 
         {/* Комментарии */}
         <div className="mt-3 flex flex-col gap-3">
           {comments.map((c) => (
-            <div key={c.id} className="overflow-hidden rounded-lg border border-border bg-surface">
-              <Header handle={c.authorHandle} avatarUrl={c.authorAvatarUrl} date={c.createdAt} verb={t('commentedOn', lang)} />
-              <div className="px-4 py-3">
-                <Markdown refBase={`/${owner}/${slug}/issues`}>{c.body}</Markdown>
-                <div className="mt-2">
-                  <Reactions targetType="issue_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />
-                </div>
-              </div>
-            </div>
+            <CommentCard
+              key={c.id}
+              handle={c.authorHandle}
+              avatarUrl={c.authorAvatarUrl}
+              date={c.createdAt}
+              meta={t('commentedOn', lang)}
+              body={c.body}
+              refBase={`/${owner}/${slug}/issues`}
+              lang={lang}
+              reactions={<Reactions targetType="issue_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />}
+            />
           ))}
         </div>
 
