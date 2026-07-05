@@ -168,6 +168,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed) })
   // tags/ordered — атрибуты списка, не версии; обновляем отдельно.
   await db.update(templates).set({ tags, ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // новая версия могла внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
 
@@ -197,6 +198,9 @@ export async function openBranchPr(templateId: string, branch: string): Promise<
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return
+  // Ветки пушит только владелец/коллаборатор → и PR из ветки открывают они же
+  // (push-концепт). Заодно закрывает открытие PR на чужом приватном списке.
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
   const { gitCore } = await import('@/features/git/core')
   const owner = await ownerHandle(tpl.ownerId)
   // Ветка должна существовать и содержать list.json (иначе PR не из чего собрать).
@@ -251,6 +255,7 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
+  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // merge мог внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
@@ -320,6 +325,7 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
+  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // merge мог внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
@@ -338,6 +344,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
   await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items) })
+  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // принятая правка могла внести нарушающий контент
   await db
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })

@@ -129,10 +129,14 @@ export const gitCoreInproc: GitCore = {
         (r) => r.stdout.trim(),
         () => null,
       )
-    const branchTip = await tipOf(name)
-    if (!branchTip) throw new BranchOpError('not-found')
+    if (!(await tipOf(name))) throw new BranchOpError('not-found') // ранняя проверка вне лока
     // Merge двигает main → под тем же локом, что и push (merge + проекция атомарно).
     return gitStore.withRepoLock(listId, async () => {
+      // tip ветки перечитываем ВНУТРИ лока: конкурентный push в эту ветку между
+      // проверкой выше и захватом лока иначе сделал бы ff на устаревший коммит
+      // и потерял только что запушенное (совпадает с Rust: tip читается под guard).
+      const branchTip = await tipOf(name)
+      if (!branchTip) throw new BranchOpError('not-found')
       const { stdout: lr } = await exec('git', ['--git-dir', bare, 'rev-list', '--left-right', '--count', `main...${name}`])
       const ahead = Number(lr.trim().split(/\s+/)[1] || 0)
       if (!ahead) throw new BranchOpError('nothing-to-merge')

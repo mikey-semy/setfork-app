@@ -5,6 +5,9 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { getListMeta, getSuggestions } from '@/features/library/queries'
+import { canViewList } from '@/features/library/access'
+import { getSession } from '@/shared/auth/session'
+import { isAdminHandle } from '@/shared/auth/admin'
 import { ListHeader } from '@/features/library/ListHeader'
 import type { ProposedItem } from '@/shared/db'
 
@@ -14,9 +17,11 @@ export default async function SuggestionsPage({
   params: Promise<{ handle: string; slug: string }>
 }) {
   const { handle: owner, slug } = await params
-  const lang = await getLang()
+  const [lang, viewer] = await Promise.all([getLang(), getSession()])
   const meta = await getListMeta(owner, slug)
   if (!meta) notFound()
+  // Приватный/draft/скрытый список — PR-контент виден только владельцу/админу.
+  if (!canViewList(meta, { isOwner: viewer?.userId === meta.ownerId, isAdmin: isAdminHandle(viewer?.handle) })) notFound()
   const list = await getSuggestions(meta.id)
   const base = `/${owner}/${slug}/suggestions`
 
