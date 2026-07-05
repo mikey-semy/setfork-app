@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { eq } from 'drizzle-orm'
-import { BarChart3, Bell, KeyRound, Monitor, TriangleAlert, User } from 'lucide-react'
+import { BarChart3, Bell, KeyRound, Monitor, Palette, TriangleAlert, User } from 'lucide-react'
 import { db, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
@@ -10,6 +10,7 @@ import { getUserUsage } from '@/shared/ai/usage'
 import { getApiTokens } from '@/features/mcp/queries'
 import { ApiTokensSection } from '@/features/mcp/ApiTokensSection'
 import { SettingsForm } from '@/features/settings/SettingsForm'
+import { AppearanceSettings } from '@/features/settings/AppearanceSettings'
 import { DangerZone } from '@/features/settings/DangerZone'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
 import { NotifyPrefsForm } from '@/features/notifications/NotifyPrefsForm'
@@ -54,6 +55,21 @@ export default async function SettingsPage() {
             website={user.website ?? ''}
             socials={user.socials}
           />
+        </section>
+      ),
+    },
+    {
+      id: 'appearance',
+      title: lang === 'ru' ? 'Внешний вид' : 'Appearance',
+      icon: <Palette size={15} />,
+      keywords: ['appearance', 'theme', 'dark', 'light', 'system', 'font', 'accent', 'color', 'тема', 'тёмная', 'светлая', 'шрифт', 'цвет', 'акцент'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{lang === 'ru' ? 'Внешний вид' : 'Appearance'}</div>
+          <p className="mb-4 text-[13px] text-ink-2">
+            {lang === 'ru' ? 'Тема, акцентный цвет и шрифт интерфейса.' : 'Theme, accent color and interface font.'}
+          </p>
+          <AppearanceSettings lang={lang} />
         </section>
       ),
     },

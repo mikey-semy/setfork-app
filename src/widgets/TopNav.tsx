@@ -8,7 +8,7 @@ import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
 import { MobileSearch } from './MobileSearch'
 import type { NotificationItem } from '@/features/notifications/queries'
-import { ThemeToggle } from '@/shared/ui/controls'
+import { ThemeModeSwitch, ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
 import { ListsPanel } from './ListsPanel'
 import {
@@ -273,9 +273,9 @@ export function TopNav({
                   </>
                 )}
                 <DropdownMenuSeparator />
-                <div className="flex items-center justify-between px-2.5 py-1.5">
+                <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
                   <span className="text-[13px] text-ink-2">{t('theme', lang)}</span>
-                  <ThemeToggle />
+                  <ThemeModeSwitch />
                 </div>
                 <DropdownMenuSeparator />
                 {/* Логаут через fetch, а НЕ форму: Radix закрывает меню и размонтирует
