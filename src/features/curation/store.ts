@@ -1,6 +1,6 @@
 import 'server-only'
 import { createClient } from '@connectrpc/connect'
-import { createGrpcTransport } from '@connectrpc/connect-node'
+import { coreTransport } from '@/shared/core-transport'
 import type { CurationStore } from '@/core'
 import { CurationRead } from '@/features/git/gen/domain_read_pb'
 import { curationStore as drizzleStore } from './adapter'
@@ -13,8 +13,7 @@ import { curationStore as drizzleStore } from './adapter'
 const remoteReads = !!process.env.SETFORK_CORE_URL && process.env.SETFORK_DOMAIN_READS === '1'
 
 function remote(): Partial<CurationStore> {
-  const addr = process.env.SETFORK_CORE_ADDR ?? '127.0.0.1:50051'
-  const client = createClient(CurationRead, createGrpcTransport({ baseUrl: `http://${addr}` }))
+  const client = createClient(CurationRead, coreTransport())
   return {
     async isStarred(listId, userId) {
       return (await client.isStarred({ listId, userId })).value
