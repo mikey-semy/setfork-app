@@ -127,6 +127,13 @@
       "when": 1783223009442,
       "tag": "0017_email_verified",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1783223010442,
+      "tag": "0018_hot_path_indexes",
+      "breakpoints": true
     }
   ]
 }
