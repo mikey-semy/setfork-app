@@ -35,8 +35,9 @@ export function WatchButton({
         opt.watching ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink hover:border-border-strong'
       }`}
     >
+      {/* Watch — единственная кнопка с текстом на узких экранах (как GitHub). */}
       {opt.watching ? <EyeOff size={14} /> : <Eye size={14} />}
-      <span className="hidden sm:inline">{opt.watching ? unwatchLabel : watchLabel}</span>
+      <span>{opt.watching ? unwatchLabel : watchLabel}</span>
       <span className="font-mono text-[12px] text-muted">{opt.count}</span>
     </button>
   )

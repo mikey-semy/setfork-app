@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BadgeCheck, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, Pencil, PlayCircle, Settings, Star, Tag } from 'lucide-react'
+import { BadgeCheck, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, PlayCircle, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -13,7 +13,6 @@ import { StarFolderMenu } from '@/features/star-folders/StarFolderMenu'
 import { getFoldersForTemplate, getUserFolders } from '@/features/star-folders/queries'
 import { ShareButton } from '@/features/library/ShareButton'
 import { WatchButton } from '@/features/watch/WatchButton'
-import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/library/queries'
 import { getOpenIssueCount } from '@/features/issues/queries'
 import { getWatchCount, isWatching } from '@/features/watch/queries'
@@ -48,8 +47,8 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   const tab = (key: Tab, href: string, icon: React.ReactNode, label: string, count?: number) => (
     <Link
       href={href}
-      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap pb-2.5 ${
-        active === key ? 'border-b-2 border-ink text-ink' : 'text-ink-2 hover:text-ink'
+      className={`-mb-px inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 ${
+        active === key ? 'border-accent font-semibold text-ink' : 'border-transparent font-medium text-ink-2 hover:text-ink'
       }`}
     >
       {icon} {label}
@@ -60,14 +59,26 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   )
 
   return (
-    <div className="border-b border-border">
-      <div className="mx-auto w-full max-w-[1180px] px-4 pt-6">
+    <div>
+      {/* Табы — full-width СРАЗУ под шапкой (как GitHub), затем название и кнопки. */}
+      <div className="border-b border-border">
+        <nav className="no-scrollbar mx-auto flex w-full max-w-[1180px] gap-1 overflow-x-auto px-4 text-[14px]">
+          {/* Первый таб — сам список (как «Code» у GitHub-репо), не «Overview». */}
+          {tab('overview', base, <ListChecks size={15} />, t('listTab', lang))}
+          {tab('issues', `${base}/issues`, <CircleDot size={15} />, t('issuesTab', lang), issueCount)}
+          {tab('suggestions', `${base}/suggestions`, <GitPullRequest size={15} />, t('suggestions', lang), suggCount)}
+          {tab('versions', `${base}/versions`, <Tag size={15} />, t('versionsTab', lang))}
+          {isOwner && tab('settings', `${base}/settings`, <Settings size={15} />, t('settings', lang))}
+        </nav>
+      </div>
+
+      <div className="mx-auto w-full max-w-[1180px] px-4 pt-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5">
+          {/* Название скрыто на узких экранах — оно уже в бредкрамбе шапки. */}
+          <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
             <Link href={`/${meta.ownerHandle}`} className="flex-shrink-0">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
-            {/* Только название списка (владелец — в бредкрамбе шапки и на аватаре). */}
             <h1 className="min-w-0 truncate text-[19px] font-bold text-ink">{meta.slug}</h1>
             <span className="shrink-0 rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[11px] text-accent">
               v{meta.currentVersion}
@@ -138,33 +149,10 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
               qrHint={t('qrHint', lang)}
               className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong"
             />
-            <CloneDropdown base={base} slug={meta.slug} lang={lang} />
-            {canWrite ? (
-              <Link
-                href={`${base}/edit`}
-                className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong"
-              >
-                <Pencil size={14} /> {t('edit', lang)}
-              </Link>
-            ) : (
-              <Link
-                href={`${base}/suggest`}
-                className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong"
-              >
-                <Pencil size={14} /> {t('suggestEdit', lang)}
-              </Link>
-            )}
+            {/* Use (клон) и Edit/Suggest переехали в область списка (version-bar) — как
+                зелёная Code и карандаш у GitHub живут в контенте, не в шапке. */}
           </div>
         </div>
-
-        <nav className="no-scrollbar mt-3 flex gap-5 overflow-x-auto text-[14px] font-semibold">
-          {/* Первый таб — сам список (как «Code» у GitHub-репо), не «Overview». */}
-          {tab('overview', base, <ListChecks size={15} />, t('listTab', lang))}
-          {tab('issues', `${base}/issues`, <CircleDot size={15} />, t('issuesTab', lang), issueCount)}
-          {tab('suggestions', `${base}/suggestions`, <GitPullRequest size={15} />, t('suggestions', lang), suggCount)}
-          {tab('versions', `${base}/versions`, <Tag size={15} />, t('versionsTab', lang))}
-          {isOwner && tab('settings', `${base}/settings`, <Settings size={15} />, t('settings', lang))}
-        </nav>
 
         {meta.moderation !== 'active' && (isOwner || isAdmin) && (
           <div

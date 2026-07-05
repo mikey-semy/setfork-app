@@ -1,7 +1,8 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, Info, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, Info, Pencil, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
+import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -69,11 +70,24 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
               </p>
             </div>
 
-            {/* Показатели наверху на мобиле; на десктопе они в About-сайдбаре справа. */}
-            <div className="mb-4 flex items-center gap-4 text-[13px] text-ink-2 lg:hidden print:hidden">
-              <span className="inline-flex items-center gap-1"><Star size={14} /> {tpl.starsCount}</span>
-              <span className="inline-flex items-center gap-1"><GitFork size={14} /> {tpl.forksCount}</span>
-              <span className="inline-flex items-center gap-1"><Tag size={14} /> v{currentVersion?.version ?? tpl.currentVersion}</span>
+            {/* About на мобиле — НАВЕРХУ (как GitHub): описание, теги, статы со словами.
+                На десктопе всё это в About-сайдбаре справа. */}
+            <div className="mb-4 lg:hidden print:hidden">
+              {tr(tpl.desc, lang) && <p className="text-[13.5px] leading-snug text-ink-2">{tr(tpl.desc, lang)}</p>}
+              {tpl.tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {tpl.tags.map((tg) => (
+                    <Link key={tg} href={`/search?q=${encodeURIComponent(`tag:${tg}`)}`} className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-[12px] text-accent">
+                      {tg}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-2">
+                <span className="inline-flex items-center gap-1.5"><Star size={14} className="text-muted" /> <b className="text-ink">{tpl.starsCount}</b> {t('starsLabel', lang)}</span>
+                <span className="inline-flex items-center gap-1.5"><GitFork size={14} className="text-muted" /> <b className="text-ink">{tpl.forksCount}</b> {t('forksLabel', lang)}</span>
+                <Link href={`${base}/versions`} className="inline-flex items-center gap-1.5 hover:text-accent"><Tag size={14} className="text-muted" /> v{currentVersion?.version ?? tpl.currentVersion}</Link>
+              </div>
             </div>
 
             {tpl.status === 'draft' && isOwner && (
@@ -97,10 +111,10 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
               </div>
             )}
 
-            {/* Последняя версия (как строка «последнего коммита» на GitHub):
-                КТО опубликовал · КАКУЮ (note/номер) · КОГДА · сколько версий всего. */}
+            {/* Панель над списком (как у GitHub над файлами): слева — последняя версия
+                (КТО · vN · note · КОГДА · всего), справа — Use (=Code) и Edit/Suggest. */}
             {currentVersion && (
-              <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
                 <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
                 <Link href={`/${tpl.owner.handle}`} className="shrink-0 font-semibold text-ink hover:text-accent">
                   {tpl.owner.handle}
@@ -113,6 +127,16 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
                 <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent" title={t('versionsTab', lang)}>
                   <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
                 </Link>
+                <span className="inline-flex shrink-0 items-center gap-2 border-l border-border pl-2">
+                  <CloneDropdown base={base} slug={slug} lang={lang} />
+                  <Link
+                    href={isOwner ? `${base}/edit` : `${base}/suggest`}
+                    title={isOwner ? t('edit', lang) : t('suggestEdit', lang)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
+                  >
+                    <Pencil size={13} /> <span className="hidden md:inline">{isOwner ? t('edit', lang) : t('suggestEdit', lang)}</span>
+                  </Link>
+                </span>
               </div>
             )}
 
