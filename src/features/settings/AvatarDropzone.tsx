@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ImageUp, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { t, type Lang } from '@/shared/i18n'
@@ -16,6 +16,17 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [removed, setRemoved] = useState(false) // помечен на удаление существующий аватар
+
+  // Отзываем последний objectURL при размонтировании (переход со страницы без
+  // сохранения/очистки иначе держит blob до GC). previewRef всегда = текущий preview.
+  const previewRef = useRef<string | null>(null)
+  previewRef.current = preview
+  useEffect(
+    () => () => {
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+    },
+    [],
+  )
 
   const accept = (file: File): boolean => {
     if (!ACCEPT.includes(file.type)) {
