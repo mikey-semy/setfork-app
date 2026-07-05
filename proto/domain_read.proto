@@ -147,6 +147,16 @@ service CurationRead {
   rpc WatcherIds(ListId) returns (IdsResponse);
 }
 
+// ── CurationWrite: WRITE-часть порта (звёзды/watch) ────────────────────
+// Полная семантика TS-адаптера: toggle возвращает НОВОЕ состояние; звезда
+// двигает templates.stars_count (+1 / GREATEST(-1,0)) в одной транзакции;
+// ensure_watch — идемпотентный insert (не критичный путь).
+service CurationWrite {
+  rpc ToggleStar(UserList) returns (BoolResponse); // → теперь со звездой?
+  rpc ToggleWatch(UserList) returns (BoolResponse); // → теперь наблюдает?
+  rpc EnsureWatch(UserList) returns (BoolResponse); // value игнорируется
+}
+
 // ── ListWrite: первая WRITE-операция домена (addVersion) ──────────────
 // Полная семантика TS-адаптера: LocaleText как есть, imageRef → has_image/image_key,
 // bump current_version + updated_at в одной транзакции.
