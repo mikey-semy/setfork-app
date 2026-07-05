@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
+import { Input } from '@/shared/ui/input'
 import { deleteAccount, type ActionResult } from './actions'
 
 export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
@@ -20,12 +21,12 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
           {t('deleteConfirmLabel', lang)} <span className="font-mono text-ink">{handle}</span>
         </label>
         <div className="flex flex-wrap items-center gap-3">
-          <input
+          <Input
             name="confirm"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="off"
-            className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-danger"
+            className="w-[240px] px-3 py-2 font-mono text-[13px] focus:border-danger"
           />
           <button
             disabled={!matches || pending}

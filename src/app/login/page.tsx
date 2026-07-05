@@ -3,6 +3,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { redirect } from 'next/navigation'
+import { Button } from '@/shared/ui/button'
 import { LoginForm } from '@/features/auth/AuthForms'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
@@ -53,13 +54,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </a>
         ) : (
           <form action="/api/auth/demo" method="post">
-            <button
-              className={`flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-[14px] font-semibold ${
-                hasGithub ? 'border border-border text-ink' : 'bg-primary text-primary-fg'
-              }`}
+            <Button
+              type="submit"
+              variant={hasGithub ? 'outline' : 'primary'}
+              className={`w-full gap-2 px-4 py-3 text-[14px] ${hasGithub ? 'bg-transparent' : ''}`}
             >
               {t('signInDemo', lang)}
-            </button>
+            </Button>
           </form>
         )}
 

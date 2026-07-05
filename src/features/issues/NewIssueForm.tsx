@@ -1,11 +1,13 @@
 'use client'
 import { useRef, useState } from 'react'
+import { Input } from '@/shared/ui/input'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
+import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { t, type Lang } from '@/shared/i18n'
 import { createIssue } from './actions'
 import { LabelPicker } from './LabelPicker'
 
-const inputCls = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
+const inputCls = 'px-3 py-2 text-[14px]'
 
 // Клиентская форма нового issue: валидация заголовка БЕЗ потери тела (никаких server-redirect
 // со стиранием текста). Ошибка появляется анимированно (grid 0fr→1fr), без резкого сдвига.
@@ -28,7 +30,7 @@ export function NewIssueForm({ owner, slug, lang }: { owner: string; slug: strin
       <input type="hidden" name="owner" value={owner} />
       <input type="hidden" name="slug" value={slug} />
       <div>
-        <input
+        <Input
           ref={titleRef}
           name="title"
           required
@@ -52,9 +54,9 @@ export function NewIssueForm({ owner, slug, lang }: { owner: string; slug: strin
       </div>
 
       <div className="flex justify-end">
-        <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13.5px] font-semibold text-primary-fg">
+        <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13.5px] font-semibold text-primary-fg">
           {t('submitNewIssue', lang)}
-        </button>
+        </SubmitButton>
       </div>
     </form>
   )
