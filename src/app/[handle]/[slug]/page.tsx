@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation'
 import { ExternalLink, FileText, GitCommitHorizontal, GitFork, Info, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
+import { gitCore } from '@/features/git/core'
+import { BranchPicker } from '@/features/git/BranchPicker'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -35,13 +37,36 @@ export default async function ListPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ find?: string }>
+  searchParams: Promise<{ find?: string; ref?: string }>
 }) {
   const [{ handle: owner, slug }, sp] = await Promise.all([params, searchParams])
   const lang = await getLang()
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
-  const { tpl, currentVersion, steps: allSteps } = detail
+  const { tpl, currentVersion, steps: dbSteps } = detail
+
+  // Ветки (A1 read-only): селектор + просмотр снапшота ветки по ?ref=.
+  const branches = await gitCore.listBranches({ owner, slug }).catch(() => [])
+  const refBranch = sp.ref && sp.ref !== 'main' && branches.some((b) => b.name === sp.ref) ? sp.ref : null
+  const snapshot = refBranch ? await gitCore.branchSnapshot({ owner, slug }, refBranch) : null
+  const branchInfo = refBranch ? branches.find((b) => b.name === refBranch) : null
+  // На ветке рендерим её шаги (маппинг plain→LocaleText-шейп; картинок у снапшота нет).
+  const allSteps = snapshot
+    ? snapshot.steps.map((s) => ({
+        id: `br-${s.n}`,
+        n: s.n,
+        title: { en: s.title } as (typeof dbSteps)[number]['title'],
+        desc: { en: s.desc } as (typeof dbSteps)[number]['desc'],
+        command: s.command,
+        level: s.level as (typeof dbSteps)[number]['level'],
+        why: { en: s.why } as (typeof dbSteps)[number]['why'],
+        section: { en: s.section } as (typeof dbSteps)[number]['section'],
+        subtasks: s.subtasks.map((t) => ({ en: t })),
+        refs: s.refs.map((r) => ({ label: { en: r.label }, ...(r.url ? { url: r.url } : {}) })),
+        imageKey: null,
+        hasImage: false,
+      }))
+    : dbSteps
 
   // Поиск ВНУТРИ списка (?find= из поиска в шапке): фильтр шагов по подстроке —
   // аналог поиска по файлам в GitHub-репо, для больших списков.
@@ -131,6 +156,7 @@ export default async function ListPage({
                 (КТО · vN · note · КОГДА · всего), справа — Use (=Code) и Edit/Suggest. */}
             {currentVersion && (
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
+                {branches.length > 1 && <BranchPicker base={base} branches={branches} current={refBranch ?? 'main'} lang={lang} />}
                 <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
                 <Link href={`/${tpl.owner.handle}`} className="shrink-0 font-semibold text-ink hover:text-accent">
                   {tpl.owner.handle}
@@ -169,6 +195,19 @@ export default async function ListPage({
               </div>
             )}
 
+            {/* Просмотр «на ветке» (A1 read-only): черновик без версий. */}
+            {refBranch && branchInfo && (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-[12.5px] text-ink print:hidden">
+                <GitCommitHorizontal size={13} className="shrink-0 text-warn" />
+                <span>
+                  {lang === 'ru' ? 'Ветка' : 'Branch'} <b className="font-mono">{refBranch}</b> · +{branchInfo.ahead}/-{branchInfo.behind}{' '}
+                  {lang === 'ru' ? 'относительно main (черновик, версии не создаются)' : 'vs main (draft — no versions projected)'}
+                </span>
+                <Link href={base} className="ml-auto font-semibold text-accent hover:underline">
+                  {lang === 'ru' ? '← на main' : '← back to main'}
+                </Link>
+              </div>
+            )}
             {/* Результат поиска внутри списка (?find=). */}
             {find && (
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-[var(--accent)]/50 bg-[var(--accent-soft)] px-3 py-2 text-[12.5px] text-ink print:hidden">

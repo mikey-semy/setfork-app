@@ -64,4 +64,38 @@ export const gitCoreRemote: GitCore = {
     const res = await client.createBundle(toRepoRef(repo))
     return res.data
   },
+
+  async listBranches(repo) {
+    const res = await client.listBranches(toRepoRef(repo))
+    return res.branches.map((b) => ({
+      name: b.name,
+      tipSha: b.tipSha,
+      isDefault: b.isDefault,
+      ahead: b.ahead,
+      behind: b.behind,
+    }))
+  },
+
+  async branchSnapshot(repo, branch) {
+    const res = await client.getBranchSnapshot({ repo: toRepoRef(repo), branch }).catch(() => null)
+    if (!res || !res.found) return null
+    return {
+      tipSha: res.tipSha,
+      title: res.title,
+      desc: res.desc,
+      tags: res.tags,
+      ordered: res.ordered,
+      steps: res.steps.map((s) => ({
+        n: s.n,
+        title: s.title,
+        desc: s.desc,
+        command: s.command,
+        level: s.level,
+        why: s.why,
+        section: s.section,
+        subtasks: s.subtasks,
+        refs: s.refs.map((r) => ({ label: r.label, ...(r.url ? { url: r.url } : {}) })),
+      })),
+    }
+  },
 }
