@@ -8,7 +8,7 @@
 // Прод:          на сервере в контейнере app/migrate с тем же DATABASE_URL.
 import 'dotenv/config'
 import { inArray, eq, sql } from 'drizzle-orm'
-import { db, users, templates, templateVersions, steps, issues, stars, watches, follows } from '../src/shared/db'
+import { db, users, templates, templateVersions, steps, issues, stars, watches, follows, repositories } from '../src/shared/db'
 
 type Step = { t: string; d?: string; c?: string }
 type List = { owner: string; slug: string; title: string; desc: string; ordered?: boolean; tags: string[]; steps: Step[] }
@@ -239,6 +239,25 @@ const LISTS: List[] = [
 // Форк: evan форкает базовый security-список dana.
 const FORKS = [{ owner: 'evan-sre', slug: 'web-app-security-baseline', from: 'dana-sec/web-app-security-baseline' }]
 
+// Каталоги (репозитории списков) — витрина Collections в Explore.
+const CATALOGS: { owner: string; name: string; title: string; desc: string; lists: string[] }[] = [
+  {
+    owner: 'evan-sre', name: 'sre-playbooks',
+    title: 'SRE playbooks', desc: 'On-call, SLOs and incident response — the whole reliability kit.',
+    lists: ['evan-sre/on-call-onboarding', 'evan-sre/defining-good-slos'],
+  },
+  {
+    owner: 'dana-sec', name: 'security-baseline',
+    title: 'Security baseline', desc: 'The non-negotiable security controls, from web apps to secrets.',
+    lists: ['dana-sec/web-app-security-baseline', 'dana-sec/secrets-management'],
+  },
+  {
+    owner: 'ranger-rae', name: 'outdoor-basics',
+    title: 'Outdoor basics', desc: 'Campfires, ethics and everything before you head into the woods.',
+    lists: ['ranger-rae/building-a-campfire-safely', 'ranger-rae/leave-no-trace-basics'],
+  },
+]
+
 const ISSUES: Issue[] = [
   { list: 'alice-ops/kubernetes-deployment-checklist', by: 'bob-backend', title: 'Add an example for topologySpreadConstraints', body: 'Spreading replicas across zones deserves a step.', labels: ['enhancement'] },
   { list: 'alice-ops/kubernetes-deployment-checklist', by: 'dana-sec', title: 'readinessProbe has no concrete example', body: 'A YAML snippet would make step 2 actionable.', labels: ['docs'] },
@@ -322,6 +341,17 @@ async function main() {
     await db.update(templates).set({ forksCount: sql`${templates.forksCount} + 1` }).where(eq(templates.id, tid.get(f.from)!))
   }
   console.log(`  forks: ${FORKS.length}`)
+
+  // (3b) Каталоги: создаём и привязываем списки (templates.repositoryId).
+  for (const c of CATALOGS) {
+    const [repo] = await db
+      .insert(repositories)
+      .values({ ownerId: uid.get(c.owner)!, name: c.name, title: { en: c.title }, desc: { en: c.desc } })
+      .returning({ id: repositories.id })
+    const ids = c.lists.map((l) => tid.get(l)!).filter(Boolean)
+    if (ids.length) await db.update(templates).set({ repositoryId: repo.id }).where(inArray(templates.id, ids))
+  }
+  console.log(`  catalogs: ${CATALOGS.length}`)
 
   // (4) Issues (номер — по порядку в рамках списка)
   const nextNum = new Map<string, number>()
