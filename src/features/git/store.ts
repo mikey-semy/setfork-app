@@ -58,10 +58,23 @@ async function writeFiles(dir: string, files: RepoFile[]): Promise<void> {
   }
 }
 
+// main — канон версий: запрещаем удаление и non-fast-forward (перезапись
+// истории), при этом обычные ветки-черновики остаются force-push'абельными.
+// Плюс прежнее правило: каждый пушнутый коммит несёт list.json в корне.
 const PRE_RECEIVE = `#!/bin/sh
-# SetFork: каждый пушнутый коммит обязан содержать list.json в корне.
+zero=0000000000000000000000000000000000000000
 while read old new ref; do
-  case "$new" in *0000000000000000000000000000000000000000) continue ;; esac
+  if [ "$ref" = "refs/heads/main" ]; then
+    if [ "$new" = "$zero" ]; then
+      echo "SetFork: ветка main защищена от удаления" >&2
+      exit 1
+    fi
+    if [ "$old" != "$zero" ] && ! git merge-base --is-ancestor "$old" "$new"; then
+      echo "SetFork: non-fast-forward push в main запрещён (перезапись истории)" >&2
+      exit 1
+    fi
+  fi
+  case "$new" in *$zero) continue ;; esac
   if ! git cat-file -e "$new:list.json" 2>/dev/null; then
     echo "SetFork: list.json is required at the repo root" >&2
     exit 1
@@ -152,7 +165,9 @@ export async function ensureRepo(owner: string, slug: string): Promise<string | 
       return bare
     }
 
-    // репо есть → дописать недостающие веб-версии (сохраняя запушенные коммиты)
+    // репо есть → освежаем hook (идемпотентно; так обновление правил pre-receive
+    // докатывается и до уже созданных на диске репо), затем дописываем версии.
+    await installHook(bare)
     const have = await maxTagVersion(bare)
     if (meta.currentVersion > have) {
       const versions = await loadListVersions(owner, slug)
