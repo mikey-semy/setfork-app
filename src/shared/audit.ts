@@ -18,6 +18,8 @@ export type AuditAction =
   | '2fa.disable'
   | '2fa.recovery-regenerate'
   | 'password.reset'
+  | 'email.change-request'
+  | 'email.change'
 
 export async function recordAudit(
   action: AuditAction,
