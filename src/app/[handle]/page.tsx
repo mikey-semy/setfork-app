@@ -7,7 +7,8 @@ import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
-import { getContributions, getOwnListsLight, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { getContributions, getMonthActivity, getOwnListsLight, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { ContributionActivity } from '@/features/profile/ContributionActivity'
 import { PinsPicker } from '@/features/profile/PinsPicker'
 import { getFollowers, getFollowing } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
@@ -75,6 +76,14 @@ export default async function ProfilePage({
 
   // Пикер пинов («Customize your pins») — только владельцу на Overview.
   const ownLight = tab === 'overview' && isOwner ? await getOwnListsLight(user.id) : []
+
+  // Лента активности за текущий месяц (Contribution activity) — на Overview.
+  const monthStart = new Date()
+  monthStart.setDate(1)
+  monthStart.setHours(0, 0, 0, 0)
+  const monthEnd = new Date(monthStart)
+  monthEnd.setMonth(monthEnd.getMonth() + 1)
+  const monthActivity = tab === 'overview' ? await getMonthActivity(user.id, monthStart, monthEnd) : null
 
   // Папки для звёзд (как GitHub Lists): карточки + сорт; звёзды — поиск + сорт.
   const rawFolders = tab === 'starred' ? await getUserFolders(user.id) : []
@@ -239,6 +248,9 @@ export default async function ProfilePage({
                 forksReceived={received.forks}
                 lang={lang}
               />
+              {monthActivity && (
+                <ContributionActivity activity={monthActivity} monthStart={monthStart} handle={handle} lang={lang} />
+              )}
             </>
           )}
 
