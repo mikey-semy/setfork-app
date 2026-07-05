@@ -1,7 +1,9 @@
+import Link from 'next/link'
 import { GitFork, Star } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 
-// GitHub-стайл граф активности (contribution-хитмап) за ~год.
+// GitHub-стайл граф активности (contribution-хитмап). Без year — скользящее
+// окно ~год; с year — календарный год (Jan–Dec) + селектор годов.
 const LEVEL = ['bg-border', 'bg-ok/25', 'bg-ok/50', 'bg-ok/75', 'bg-ok']
 const level = (c: number): number => (c === 0 ? 0 : c <= 2 ? 1 : c <= 4 ? 2 : c <= 6 ? 3 : 4)
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -11,20 +13,39 @@ export function ActivityGraph({
   starsReceived,
   forksReceived,
   lang,
+  year,
+  years = [],
+  base,
 }: {
   contributions: { date: string; count: number }[]
   starsReceived: number
   forksReceived: number
   lang: Lang
+  /** Выбранный календарный год; undefined = скользящее окно (последний год). */
+  year?: number
+  /** Доступные годы (регистрация…сейчас), новые сверху; пусто = без селектора. */
+  years?: number[]
+  /** База профиля для ссылок селектора (например `/mike`). */
+  base?: string
 }) {
   const map = new Map(contributions.map((c) => [c.date, c.count]))
   const total = contributions.reduce((s, c) => s + c.count, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
-  const end = new Date()
-  end.setHours(0, 0, 0, 0)
-  const start = new Date(end)
-  start.setDate(start.getDate() - 364)
-  start.setDate(start.getDate() - start.getDay()) // выравниваем на начало недели (вс)
+  // Диапазон сетки: год Jan1–Dec31 (для текущего года — до сегодня), иначе rolling.
+  let end: Date
+  let start: Date
+  if (year != null) {
+    end = year === today.getFullYear() ? today : new Date(year, 11, 31)
+    start = new Date(year, 0, 1)
+    start.setDate(start.getDate() - start.getDay())
+  } else {
+    end = new Date(today)
+    start = new Date(end)
+    start.setDate(start.getDate() - 364)
+    start.setDate(start.getDate() - start.getDay()) // выравниваем на начало недели (вс)
+  }
 
   const weeks: { date: string; count: number; future: boolean }[][] = []
   const cur = new Date(start)
@@ -54,7 +75,8 @@ export function ActivityGraph({
     <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink-2">
         <span>
-          <b className="text-ink">{total}</b> {t('contributions', lang)} {t('inLastYear', lang)}
+          <b className="text-ink">{total}</b> {t('contributions', lang)}{' '}
+          {year != null ? (lang === 'ru' ? `за ${year}` : `in ${year}`) : t('inLastYear', lang)}
         </span>
         <span className="inline-flex items-center gap-1">
           <Star size={13} className="text-muted" /> <b className="text-ink">{starsReceived}</b> {t('starsReceived', lang)}
@@ -63,6 +85,27 @@ export function ActivityGraph({
           <GitFork size={13} className="text-muted" /> <b className="text-ink">{forksReceived}</b> {t('forksReceived', lang)}
         </span>
       </div>
+
+      {/* Селектор года (как GitHub): «Последний год» + годы регистрации…сейчас. */}
+      {years.length > 0 && base && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <Link
+            href={base}
+            className={`rounded-md border px-2 py-0.5 text-[12px] ${year == null ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+          >
+            {lang === 'ru' ? 'Последний год' : 'Last year'}
+          </Link>
+          {years.map((y) => (
+            <Link
+              key={y}
+              href={`${base}?year=${y}`}
+              className={`rounded-md border px-2 py-0.5 font-mono text-[12px] ${year === y ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+            >
+              {y}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Колонка дней недели вынесена ИЗ скролл-контейнера: при горизонтальном скролле
           она остаётся видимой слева, скроллятся только месяцы и квадратики. */}

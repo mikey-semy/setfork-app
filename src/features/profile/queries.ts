@@ -64,7 +64,13 @@ export async function getOwnListsLight(userId: string): Promise<{ id: string; sl
 }
 
 /** Активность по дням за ~год: версии списков (правки) + предложения правок. */
-export async function getContributions(userId: string): Promise<{ date: string; count: number }[]> {
+// Вклад по дням: без year — скользящее окно ~год (дефолтный граф);
+// с year — весь календарный год (для выбора года, как GitHub).
+export async function getContributions(userId: string, year?: number): Promise<{ date: string; count: number }[]> {
+  const range =
+    year != null
+      ? sql`day >= ${`${year}-01-01`}::date and day < ${`${year + 1}-01-01`}::date`
+      : sql`day >= now() - interval '371 days'`
   const res = await db.execute(sql`
     select (day::date)::text as date, count(*)::int as count
     from (
@@ -75,7 +81,7 @@ export async function getContributions(userId: string): Promise<{ date: string; 
       union all
       select s.created_at from ${suggestions} s where s.author_id = ${userId}
     ) x
-    where day >= now() - interval '371 days'
+    where ${range}
     group by 1
   `)
   return res.rows as unknown as { date: string; count: number }[]
