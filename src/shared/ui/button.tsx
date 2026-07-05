@@ -8,14 +8,15 @@ import { cn } from '@/shared/lib/cn'
 //   danger  — деструктивная (текст/hover в danger)
 // Размеры: xs (плотные тулбары/поповеры), sm (обычные панели), md (формы).
 
-export type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'danger'
+export type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'danger' | 'dangerSolid'
 export type ButtonSize = 'xs' | 'sm' | 'md'
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-primary text-primary-fg hover:opacity-90',
   outline: 'border border-border bg-surface-2 text-ink hover:border-border-strong',
   ghost: 'text-ink-2 hover:bg-surface-2 hover:text-ink',
-  danger: 'text-muted hover:bg-danger/10 hover:text-danger',
+  danger: 'text-muted hover:bg-danger/10 hover:text-danger', // «тихая» (иконка-корзинка)
+  dangerSolid: 'bg-danger text-white hover:opacity-90', // залитая деструктивная (удалить аккаунт/список)
 }
 
 const SIZES: Record<ButtonSize, string> = {

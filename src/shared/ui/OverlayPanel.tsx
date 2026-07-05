@@ -25,6 +25,7 @@ export function OverlayPanel({
   onClose: () => void
   children: React.ReactNode
   title?: React.ReactNode
+  /** Фикс-ширина панели; 0/undefined — по содержимому (эмодзи-пикер и т.п.). */
   width?: number
   /** center — по центру экрана; top — вверху (для поиска/списков, как GitHub). */
   align?: 'center' | 'top'
@@ -48,7 +49,7 @@ export function OverlayPanel({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width }}
+        style={width ? { width } : undefined}
         className={`max-w-full rounded-lg border border-border bg-surface shadow-card ${className}`}
       >
         {title !== undefined && (
