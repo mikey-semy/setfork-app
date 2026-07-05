@@ -480,6 +480,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       verified: templates.verified,
       starsCount: templates.starsCount,
       forksCount: templates.forksCount,
+      runsCount: templates.runsCount,
       createdAt: templates.createdAt,
       updatedAt: templates.updatedAt,
     })
