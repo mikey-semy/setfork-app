@@ -1,9 +1,10 @@
 import 'server-only'
 import { createClient } from '@connectrpc/connect'
 import { createGrpcTransport } from '@connectrpc/connect-node'
-import type { Contributor, List, LocaleText, Step, StepRef, Version } from '@/core'
+import type { Contributor, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
 import {
   ListRead,
+  ListWrite,
   type List as PbList,
   type LocaleText as PbLoc,
   type Step as PbStep,
@@ -17,6 +18,7 @@ import {
 const addr = process.env.SETFORK_CORE_ADDR ?? '127.0.0.1:50051'
 const transport = createGrpcTransport({ baseUrl: `http://${addr}` })
 const client = createClient(ListRead, transport)
+const writeClient = createClient(ListWrite, transport)
 
 const loc = (l?: PbLoc): LocaleText => (l?.v ?? {}) as LocaleText
 const orNull = (s: string): string | null => (s === '' ? null : s)
@@ -97,5 +99,29 @@ export const listReadRemote = {
   async getContributors(listId: string): Promise<Contributor[]> {
     const res = await client.getContributors({ id: listId })
     return res.contributors.map((c) => ({ handle: c.handle, avatarRef: orNull(c.avatarRef), accepted: c.accepted }))
+  },
+}
+
+const toPbLoc = (l: LocaleText) => ({ v: Object.fromEntries(Object.entries(l).filter(([, v]) => typeof v === 'string')) as Record<string, string> })
+
+/** WRITE-методы порта ListStore поверх Rust ListWrite (фаза write, отдельный флаг). */
+export const listWriteRemote = {
+  async addVersion(listId: string, input: NewVersionInput): Promise<Version> {
+    const res = await writeClient.addVersion({
+      listId,
+      note: input.note,
+      steps: input.steps.map((s) => ({
+        title: toPbLoc(s.title),
+        desc: toPbLoc(s.desc),
+        command: s.command,
+        level: s.level,
+        why: toPbLoc(s.why),
+        section: toPbLoc(s.section),
+        subtasks: s.subtasks.map(toPbLoc),
+        refs: s.refs.map((r) => ({ label: toPbLoc(r.label), url: r.url ?? '' })),
+        imageRef: s.imageRef ?? '',
+      })),
+    })
+    return toVersion(res)
   },
 }
