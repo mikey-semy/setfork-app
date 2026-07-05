@@ -47,7 +47,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   return (
     <div>
       {/* Табы — full-width СРАЗУ под шапкой (как GitHub); единый TabNav из shared/ui. */}
-      <TabNav>
+      <TabNav scope="list">
         {/* Первый таб — сам список (как «Code» у GitHub-репо), не «Overview». */}
         <TabItem href={base} on={active === 'overview'} icon={<ListChecks size={15} />} label={t('listTab', lang)} />
         <TabItem href={`${base}/issues`} on={active === 'issues'} icon={<CircleDot size={15} />} label={t('issuesTab', lang)} count={issueCount} />

@@ -1,33 +1,46 @@
 'use client'
 
 import Link from 'next/link'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // Единый таб-бар под шапкой (GitHub-стиль) — ОДИН источник правды для профиля,
 // страницы списка, Explore и любых будущих разделов. Активная вкладка подчёркнута
-// ПЕРЕЕЗЖАЮЩЕЙ полоской (плавный transition при переключении на той же странице).
+// ПЕРЕЕЗЖАЮЩЕЙ полоской.
+//
+// Плавность «везде»: SPA-переходы Next не перегружают страницу, но между РАЗНЫМИ
+// маршрутами (вкладки списка) компонент ремоунтится. Поэтому последняя позиция
+// полоски хранится на уровне модуля (переживает ремоунт в том же JS-контексте):
+// первый кадр рисуем на старом месте, затем rAF → переезд к новой вкладке.
+const lastPos = new Map<string, { left: number; width: number }>()
 
 export function TabNav({
   children,
   maxWidthClass = 'max-w-[1180px]',
+  scope = 'default',
 }: {
   children: React.ReactNode
   maxWidthClass?: string
+  /** Ключ памяти позиции: табы одного раздела (напр. 'list') анимируются между маршрутами. */
+  scope?: string
 }) {
   const ref = useRef<HTMLElement>(null)
-  const [bar, setBar] = useState<{ left: number; width: number } | null>(null)
+  const [bar, setBar] = useState<{ left: number; width: number } | null>(() => lastPos.get(scope) ?? null)
 
-  // Позиция полоски = позиция активного таба ([data-active="true"]).
-  useLayoutEffect(() => {
+  useEffect(() => {
     const nav = ref.current
     const el = nav?.querySelector<HTMLElement>('[data-active="true"]')
     if (!nav || !el) {
       setBar(null)
+      lastPos.delete(scope)
       return
     }
-    const left = el.offsetLeft
-    const width = el.offsetWidth
-    setBar((prev) => (prev && prev.left === left && prev.width === width ? prev : { left, width }))
+    const next = { left: el.offsetLeft, width: el.offsetWidth }
+    lastPos.set(scope, next)
+    // rAF: первый кадр успевает отрисоваться со старой позицией → CSS-transition едет.
+    const raf = requestAnimationFrame(() =>
+      setBar((prev) => (prev && prev.left === next.left && prev.width === next.width ? prev : next)),
+    )
+    return () => cancelAnimationFrame(raf)
   })
 
   return (

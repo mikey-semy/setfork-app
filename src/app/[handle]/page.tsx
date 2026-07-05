@@ -107,7 +107,7 @@ export default async function ProfilePage({
   return (
     <div className="w-full">
       {/* Табы профиля — full-width под шапкой; единый TabNav из shared/ui. */}
-      <TabNav maxWidthClass="max-w-[980px]">
+      <TabNav maxWidthClass="max-w-[980px]" scope="profile">
         {isPeopleTab ? (
           <>
             <TabItem href={`/${handle}?tab=followers`} on={tab === 'followers'} icon={<Users size={15} />} label={t('followersLabel', lang)} count={followCounts.followers} />
