@@ -55,7 +55,8 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
     .from(generationCandidates)
     .where(eq(generationCandidates.generationId, generationId))
   const nextIdx = (max ?? 0) + 1
-  if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}`) // разумный потолок вариантов
+  // Потолок вариантов: не молча, а с флагом — UI покажет причину.
+  if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}&e=variantcap`)
 
   await enqueueGenerate(generationId, session.userId, gen.query, gen.lang, nextIdx)
   redirect(`/generate/${generationId}?v=${nextIdx}`)
@@ -78,7 +79,7 @@ export async function regenerateWithQuery(generationId: string, newQuery: string
     .from(generationCandidates)
     .where(eq(generationCandidates.generationId, generationId))
   const nextIdx = (max ?? 0) + 1
-  if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}`)
+  if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}&e=variantcap`)
 
   // Обновляем запрос генерации: заголовок и будущие «ещё вариант» пойдут по нему.
   // Прежние кандидаты НЕ трогаем — пользователь сам решит, какой оставить.

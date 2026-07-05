@@ -36,14 +36,30 @@ export function GenerationReview({ generationId, query, lang, candidates, status
   }
 
   // Пока идёт фоновая генерация — поллим страницу, чтобы подхватить готовый кандидат.
+  // Кап на поллинг: ~2 минуты (48×2.5s). Дольше = воркер завис/умер — перестаём жечь
+  // запросы и показываем честное состояние «долго» с ручным повтором.
+  const [stalled, setStalled] = useState(false)
   useEffect(() => {
-    if (status !== 'pending') return
-    const t = setInterval(() => router.refresh(), 2500)
+    if (status !== 'pending') {
+      setStalled(false)
+      return
+    }
+    let ticks = 0
+    const t = setInterval(() => {
+      ticks += 1
+      if (ticks > 48) {
+        setStalled(true)
+        clearInterval(t)
+        return
+      }
+      router.refresh()
+    }, 2500)
     return () => clearInterval(t)
   }, [status, router])
 
   const cand = candidates.find((c) => c.idx === selIdx)
-  const waiting = status === 'pending'
+  const waiting = status === 'pending' && !stalled
+  const atCap = candidates.length >= 6 // синхронно с потолком в actions (idx > 6)
   const genFailed = status === 'failed'
   const acceptSpinner = pending && mode === 'accept'
   const showGnome = (pending && mode === 'regen') || (waiting && !cand)
@@ -89,6 +105,30 @@ export function GenerationReview({ generationId, query, lang, candidates, status
       {error === 'ratelimited' && (
         <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-warn">
           {ru ? 'Слишком часто — подожди немного.' : 'Too many requests — please wait a bit.'}
+        </div>
+      )}
+      {error === 'variantcap' && (
+        <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-warn">
+          {ru
+            ? 'Достигнут предел в 6 вариантов. Выбери один из готовых — или начни новую генерацию.'
+            : 'You’ve hit the 6-variant limit. Pick one of the existing variants — or start a new generation.'}
+        </div>
+      )}
+      {stalled && (
+        <div className="mb-4 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-[13px] text-warn">
+          {ru
+            ? 'Генерация занимает дольше обычного. Возможно, очередь занята — можно подождать и обновить, или попробовать ещё раз.'
+            : 'Generation is taking longer than usual. The queue may be busy — refresh in a bit, or try again.'}{' '}
+          <button
+            type="button"
+            onClick={() => {
+              setStalled(false)
+              router.refresh()
+            }}
+            className="font-semibold underline hover:text-ink"
+          >
+            {ru ? 'Обновить' : 'Refresh'}
+          </button>
         </div>
       )}
 
@@ -246,7 +286,8 @@ export function GenerationReview({ generationId, query, lang, candidates, status
         </button>
         <button
           onClick={regen}
-          disabled={pending || waiting}
+          disabled={pending || waiting || atCap}
+          title={atCap ? (ru ? 'Достигнут предел вариантов' : 'Variant limit reached') : undefined}
           className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-4 py-2.5 text-[13.5px] font-medium text-ink hover:border-border-strong disabled:opacity-50"
         >
           <RotateCw size={15} /> {ru ? 'Ещё вариант' : 'Another variant'}
@@ -254,11 +295,17 @@ export function GenerationReview({ generationId, query, lang, candidates, status
         <button
           type="button"
           onClick={openEdit}
-          disabled={pending || waiting}
+          disabled={pending || waiting || atCap}
+          title={atCap ? (ru ? 'Достигнут предел вариантов' : 'Variant limit reached') : undefined}
           className="inline-flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[13px] text-ink-2 hover:text-ink disabled:opacity-50"
         >
           <Pencil size={14} /> {ru ? 'Изменить запрос' : 'Edit query'}
         </button>
+        {atCap && (
+          <span className="text-[12px] text-muted">
+            {ru ? 'Предел: 6 вариантов на генерацию.' : 'Limit: 6 variants per generation.'}
+          </span>
+        )}
       </div>
     </div>
   )

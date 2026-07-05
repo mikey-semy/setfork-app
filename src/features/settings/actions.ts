@@ -15,7 +15,17 @@ const ALLOWED_SOCIAL = new Set(['github', 'x', 'telegram', 'youtube', 'linkedin'
 function normalizeUrl(raw: string): string {
   const v = raw.trim()
   if (!v) return ''
-  return /^https?:\/\//i.test(v) ? v : `https://${v}`
+  const withScheme = /^https?:\/\//i.test(v) ? v : `https://${v}`
+  // Валидация: парсится как URL, схема http(s), хост с точкой (домен) или localhost.
+  // Мусор («не адрес», «javascript:…») не сохраняем — вернём '' → поле очистится.
+  try {
+    const u = new URL(withScheme)
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return ''
+    if (!u.hostname.includes('.') && u.hostname !== 'localhost') return ''
+    return u.toString()
+  } catch {
+    return ''
+  }
 }
 
 function parseSocials(raw: string): Social[] {
