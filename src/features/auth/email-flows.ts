@@ -1,13 +1,14 @@
 'use server'
 
 import { eq } from 'drizzle-orm'
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { SignJWT, jwtVerify } from 'jose'
 import { db, sessions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { hashPassword } from '@/shared/auth/password'
+import { appOrigin, clientIpFromHeaders } from '@/shared/auth/app-origin'
+import { rateLimit } from '@/shared/rate-limit'
 import { sendMail } from '@/shared/email/mailer'
 import { recordAudit } from '@/shared/audit'
 import { getLang } from '@/shared/i18n/server'
@@ -20,13 +21,6 @@ function secretKey(): Uint8Array {
   const s = process.env.AUTH_SECRET
   if (!s) throw new Error('AUTH_SECRET is not set')
   return new TextEncoder().encode(s)
-}
-
-async function origin(): Promise<string> {
-  const h = await headers()
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
-  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
-  return `${proto}://${host}`
 }
 
 async function signToken(payload: Record<string, string>, ttl: string): Promise<string> {
@@ -52,7 +46,7 @@ export async function sendVerificationEmail(userId: string): Promise<boolean> {
   const lang = await getLang()
   const ru = lang === 'ru'
   const token = await signToken({ uid: userId, email: u.email, purpose: 'verify-email' }, '24h')
-  const link = `${await origin()}/verify-email?token=${encodeURIComponent(token)}`
+  const link = `${appOrigin()}/verify-email?token=${encodeURIComponent(token)}`
   return sendMail({
     to: u.email,
     subject: ru ? 'Подтверди почту — SetFork' : 'Verify your email — SetFork',
@@ -62,6 +56,8 @@ export async function sendVerificationEmail(userId: string): Promise<boolean> {
 
 export async function resendVerification(): Promise<{ sent: boolean }> {
   const session = await requireSession()
+  // Не чаще 3 писем за 10 минут на пользователя (анти-спам SMTP).
+  if (!rateLimit(`verifysend:${session.userId}`, 3, 10 * 60_000).ok) return { sent: false }
   return { sent: await sendVerificationEmail(session.userId) }
 }
 
@@ -87,13 +83,17 @@ const pwTail = (hash: string | null) => (hash ?? 'nopw').slice(-16)
 
 export async function requestPasswordReset(_prev: { done?: boolean } | null, formData: FormData): Promise<{ done: boolean }> {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  const ip = await clientIpFromHeaders()
+  // Троттлинг по ip и по адресу (анти-бомбинг чужой почты); ответ всегда одинаковый.
+  const okIp = rateLimit(`pwreset:ip:${ip}`, 5, 15 * 60_000).ok
+  const okEmail = rateLimit(`pwreset:email:${email}`, 3, 60 * 60_000).ok
   const [u] = await db.select({ id: users.id, handle: users.handle, hash: users.passwordHash }).from(users).where(eq(users.email, email)).limit(1)
   // Ответ всегда одинаковый — не раскрываем существование почты.
-  if (u) {
+  if (u && okIp && okEmail) {
     const lang = await getLang()
     const ru = lang === 'ru'
     const token = await signToken({ uid: u.id, purpose: 'reset-password', pw: pwTail(u.hash) }, '1h')
-    const link = `${await origin()}/reset-password?token=${encodeURIComponent(token)}`
+    const link = `${appOrigin()}/reset-password?token=${encodeURIComponent(token)}`
     await sendMail({
       to: email,
       subject: ru ? 'Сброс пароля — SetFork' : 'Reset your password — SetFork',

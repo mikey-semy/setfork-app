@@ -1,6 +1,6 @@
 'use server'
 
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -8,6 +8,8 @@ import { SignJWT, jwtVerify } from 'jose'
 import QRCode from 'qrcode'
 import { db, recoveryCodes, users } from '@/shared/db'
 import { requireSession, startSession } from '@/shared/auth/session'
+import { clientIpFromHeaders } from '@/shared/auth/app-origin'
+import { rateLimit } from '@/shared/rate-limit'
 import { recordAudit } from '@/shared/audit'
 import { avatarSrc } from '@/shared/media'
 import {
@@ -33,8 +35,10 @@ function secretKey(): Uint8Array {
   return new TextEncoder().encode(s)
 }
 
-async function setSigned(name: string, payload: Record<string, string>): Promise<void> {
-  const token = await new SignJWT(payload)
+// purpose в клейме привязывает токен к назначению — исключает подмену enroll↔pending
+// (и любых будущих потребителей), даже если совпадёт имя куки.
+async function setSigned(name: string, purpose: string, payload: Record<string, string>): Promise<void> {
+  const token = await new SignJWT({ ...payload, purpose })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${TTL_SEC}s`)
@@ -43,13 +47,13 @@ async function setSigned(name: string, payload: Record<string, string>): Promise
   c.set(name, token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: TTL_SEC })
 }
 
-async function readSigned(name: string): Promise<Record<string, string> | null> {
+async function readSigned(name: string, purpose: string): Promise<Record<string, string> | null> {
   const c = await cookies()
   const raw = c.get(name)?.value
   if (!raw) return null
   try {
     const { payload } = await jwtVerify(raw, secretKey())
-    return payload as Record<string, string>
+    return payload.purpose === purpose ? (payload as Record<string, string>) : null
   } catch {
     return null
   }
@@ -69,7 +73,8 @@ export interface EnrollStart {
 export async function beginTotpEnroll(): Promise<EnrollStart> {
   const session = await requireSession()
   const secret = generateTotpSecret()
-  await setSigned(ENROLL_COOKIE, { uid: session.userId, secret })
+  // Секрет в куке — ЗАШИФРОВАН (не только подписан): payload JWS читается base64.
+  await setSigned(ENROLL_COOKIE, 'enroll', { uid: session.userId, secret: encryptSecret(secret) })
   const qrDataUrl = await QRCode.toDataURL(otpauthUrl(session.handle, secret), { margin: 1, width: 220 })
   return { qrDataUrl, secret }
 }
@@ -78,13 +83,14 @@ export type TwoFaResult = { ok: true; recovery?: string[] } | { ok: false; error
 
 export async function confirmTotpEnroll(code: string): Promise<TwoFaResult> {
   const session = await requireSession()
-  const pending = await readSigned(ENROLL_COOKIE)
-  if (!pending || pending.uid !== session.userId || !pending.secret) return { ok: false, error: 'expired' }
-  if (!verifyTotp(pending.secret, code)) return { ok: false, error: 'bad-code' }
+  const pending = await readSigned(ENROLL_COOKIE, 'enroll')
+  const secret = pending?.secret ? decryptSecret(pending.secret) : null
+  if (!pending || pending.uid !== session.userId || !secret) return { ok: false, error: 'expired' }
+  if (!verifyTotp(secret, code)) return { ok: false, error: 'bad-code' }
 
   const codes = generateRecoveryCodes()
   await db.transaction(async (tx) => {
-    await tx.update(users).set({ totpSecret: encryptSecret(pending.secret), totpEnabled: true }).where(eq(users.id, session.userId))
+    await tx.update(users).set({ totpSecret: encryptSecret(secret), totpEnabled: true }).where(eq(users.id, session.userId))
     await tx.delete(recoveryCodes).where(eq(recoveryCodes.userId, session.userId))
     await tx.insert(recoveryCodes).values(codes.map((c) => ({ userId: session.userId, codeHash: hashRecoveryCode(c) })))
   })
@@ -100,16 +106,15 @@ async function checkUserCode(userId: string, code: string): Promise<boolean> {
   if (!u?.enabled || !u.secret) return false
   const secret = decryptSecret(u.secret)
   if (secret && verifyTotp(secret, code)) return true
-  // recovery-код (формат xxxxx-xxxxx)
+  // recovery-код (формат xxxxx-xxxxx): АТОМАРНО помечаем used в одном UPDATE —
+  // условие usedAt IS NULL в самом UPDATE закрывает TOCTOU-гонку двойного зачёта.
   const hash = hashRecoveryCode(code)
-  const [rc] = await db
-    .select({ id: recoveryCodes.id })
-    .from(recoveryCodes)
+  const marked = await db
+    .update(recoveryCodes)
+    .set({ usedAt: new Date() })
     .where(and(eq(recoveryCodes.userId, userId), eq(recoveryCodes.codeHash, hash), isNull(recoveryCodes.usedAt)))
-    .limit(1)
-  if (!rc) return false
-  await db.update(recoveryCodes).set({ usedAt: new Date() }).where(eq(recoveryCodes.id, rc.id))
-  return true
+    .returning({ id: recoveryCodes.id })
+  return marked.length > 0
 }
 
 export async function disableTotp(code: string): Promise<TwoFaResult> {
@@ -139,13 +144,20 @@ export async function regenerateRecoveryCodes(code: string): Promise<TwoFaResult
 // ── Шаг логина ───────────────────────────────────────────────────────
 /** Пароль верен, но включён 2FA → ставим pending-куку и ведём на /login/2fa. */
 export async function startPendingLogin(userId: string): Promise<void> {
-  await setSigned(PENDING_COOKIE, { uid: userId })
+  await setSigned(PENDING_COOKIE, 'pending', { uid: userId })
 }
 
 export async function verify2faLogin(_prev: { error?: string } | null, formData: FormData): Promise<{ error?: string }> {
   const code = String(formData.get('code') ?? '').trim()
-  const pending = await readSigned(PENDING_COOKIE)
+  const pending = await readSigned(PENDING_COOKIE, 'pending')
   if (!pending?.uid) redirect('/login')
+  // Брутфорс 6-значного кода: 10 попыток за 5 минут на пользователя+ip; исчерпал —
+  // гасим pending (нужно заново вводить пароль), окно перебора не продлевается.
+  const ip = await clientIpFromHeaders()
+  if (!rateLimit(`2fa:${pending.uid}:${ip}`, 10, 5 * 60_000).ok) {
+    await clearCookie(PENDING_COOKIE)
+    redirect('/login?e=2fa_throttled')
+  }
   if (!(await checkUserCode(pending.uid, code))) return { error: 'bad-code' }
 
   const [user] = await db.select().from(users).where(eq(users.id, pending.uid)).limit(1)
@@ -162,5 +174,5 @@ export async function verify2faLogin(_prev: { error?: string } | null, formData:
 
 /** Есть ли живой pending (для guard страницы /login/2fa). */
 export async function hasPendingLogin(): Promise<boolean> {
-  return !!(await readSigned(PENDING_COOKIE))?.uid
+  return !!(await readSigned(PENDING_COOKIE, 'pending'))?.uid
 }
