@@ -54,15 +54,22 @@ export function totpAt(secretB32: string, epochMs: number, stepSec = 30, digits 
   return String(code % 10 ** digits).padStart(digits, '0')
 }
 
+/** Проверка с окном ±window шагов; возвращает совпавший счётчик времени (step)
+ *  для anti-replay или -1, если код неверен. Часы клиента могут плыть → окно. */
+export function verifyTotpStep(secretB32: string, code: string, window = 1, nowMs = Date.now()): number {
+  const clean = code.replace(/\s+/g, '')
+  if (!/^\d{6}$/.test(clean)) return -1
+  for (let w = -window; w <= window; w++) {
+    const ms = nowMs + w * 30_000
+    const expected = totpAt(secretB32, ms)
+    if (timingSafeEqual(Buffer.from(expected), Buffer.from(clean))) return Math.floor(ms / 1000 / 30)
+  }
+  return -1
+}
+
 /** Проверка с окном ±window шагов (часы клиента могут плыть). */
 export function verifyTotp(secretB32: string, code: string, window = 1, nowMs = Date.now()): boolean {
-  const clean = code.replace(/\s+/g, '')
-  if (!/^\d{6}$/.test(clean)) return false
-  for (let w = -window; w <= window; w++) {
-    const expected = totpAt(secretB32, nowMs + w * 30_000)
-    if (timingSafeEqual(Buffer.from(expected), Buffer.from(clean))) return true
-  }
-  return false
+  return verifyTotpStep(secretB32, code, window, nowMs) >= 0
 }
 
 export function otpauthUrl(handle: string, secretB32: string): string {
