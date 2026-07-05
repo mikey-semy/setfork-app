@@ -1,38 +1,33 @@
-import { Award, Flame, GitFork, PlayCircle, Sparkles, Star, Trophy } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Award } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import type { Lang } from '@/shared/i18n'
-import { computeAchievements, type AchievementInput, type AchievementKey } from './achievements'
+import { computeAchievements, type AchievementInput } from './achievements'
+import { ACH_META } from './achievement-meta'
+import type { AchDisplayMap } from './achievement-config'
 
-const META: Record<AchievementKey, { icon: LucideIcon; ru: string; en: string; color: string }> = {
-  'first-list': { icon: Sparkles, ru: 'Первый список', en: 'First list', color: 'text-accent' },
-  prolific: { icon: Trophy, ru: 'Плодовитый (10+ списков)', en: 'Prolific (10+ lists)', color: 'text-warn' },
-  starred: { icon: Star, ru: 'Со звёздами', en: 'Starstruck', color: 'text-warn' },
-  forked: { icon: GitFork, ru: 'Форкнутый', en: 'Forked', color: 'text-ink-2' },
-  runner: { icon: PlayCircle, ru: 'Раннер', en: 'Runner', color: 'text-ok' },
-  streak: { icon: Flame, ru: 'Серия дней', en: 'On a streak', color: 'text-danger' },
-}
-
-/** Достижения на Overview профиля: заработанные ярко, прочие — приглушённо с прогрессом. */
-export function AchievementsCard({ input, lang }: { input: AchievementInput; lang: Lang }) {
+/** Достижения на профиле (левый сайдбар): заработанные ярко, прочие приглушённо
+ *  с прогрессом. Админ может выключить достижение или задать свою картинку. */
+export function AchievementsCard({ input, lang, config }: { input: AchievementInput; lang: Lang; config?: AchDisplayMap }) {
   const ru = lang === 'ru'
-  const all = computeAchievements(input)
+  // Выключенные админом — не показываем вовсе (даже заработанные).
+  const all = computeAchievements(input).filter((a) => config?.[a.key]?.enabled !== false)
   const earned = all.filter((a) => a.earned)
   if (earned.length === 0) return null // пустому профилю не показываем
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className="mt-6 rounded-lg border border-border bg-surface p-4">
       <div className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-ink">
         <Award size={14} className="text-muted" /> {ru ? 'Достижения' : 'Achievements'}
         <Badge variant="soft" className="ml-1">
           {earned.length}
         </Badge>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2">
         {all.map((a) => {
-          const m = META[a.key]
+          const m = ACH_META[a.key]
           const Icon = m.icon
           const label = ru ? m.ru : m.en
+          const img = config?.[a.key]?.imageUrl
           return (
             <div
               key={a.key}
@@ -41,7 +36,12 @@ export function AchievementsCard({ input, lang }: { input: AchievementInput; lan
                 a.earned ? 'border-border bg-surface-2' : 'border-dashed border-border opacity-55'
               }`}
             >
-              <Icon size={16} className={a.earned ? m.color : 'text-muted'} />
+              {img ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={img} alt="" className={`h-4 w-4 shrink-0 rounded-sm object-cover ${a.earned ? '' : 'grayscale'}`} />
+              ) : (
+                <Icon size={16} className={`shrink-0 ${a.earned ? m.color : 'text-muted'}`} />
+              )}
               <span className="min-w-0">
                 <span className="block truncate text-[12px] font-semibold text-ink">{label}</span>
                 {a.earned && a.tier > 1 ? (
