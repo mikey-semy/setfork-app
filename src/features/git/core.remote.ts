@@ -116,14 +116,29 @@ export const gitCoreRemote: GitCore = {
       throw toBranchOpError(e)
     }
   },
+
+  async mergeBranch(repo, name) {
+    try {
+      const res = await client.mergeBranch({ repo: toRepoRef(repo), name })
+      return { tipSha: res.tipSha, newVersion: toNewVersion(res.newVersion), fastForward: res.fastForward }
+    } catch (e) {
+      throw toBranchOpError(e)
+    }
+  },
 }
 
 // gRPC-статусы ядра → машиночитаемые коды порта (см. proto: комментарий у CreateBranch).
+// failed_precondition различаем по message: merge шлёт 'conflict'/'nothing-to-merge',
+// delete — 'main is protected'.
 function toBranchOpError(e: unknown): BranchOpError {
-  const code = e instanceof ConnectError ? e.code : null
-  if (code === Code.InvalidArgument) return new BranchOpError('bad-name')
-  if (code === Code.AlreadyExists) return new BranchOpError('exists')
-  if (code === Code.NotFound) return new BranchOpError('not-found')
-  if (code === Code.FailedPrecondition) return new BranchOpError('protected')
+  if (!(e instanceof ConnectError)) return new BranchOpError('internal')
+  if (e.code === Code.InvalidArgument) return new BranchOpError('bad-name')
+  if (e.code === Code.AlreadyExists) return new BranchOpError('exists')
+  if (e.code === Code.NotFound) return new BranchOpError('not-found')
+  if (e.code === Code.FailedPrecondition) {
+    if (e.rawMessage.includes('conflict')) return new BranchOpError('conflict')
+    if (e.rawMessage.includes('nothing-to-merge')) return new BranchOpError('nothing-to-merge')
+    return new BranchOpError('protected')
+  }
   return new BranchOpError('internal')
 }

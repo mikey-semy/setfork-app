@@ -162,11 +162,20 @@ export interface GitCore {
   createBranch(repo: GitRepoRef, name: string, from?: string): Promise<string>
   /** A2: удалить ветку (main защищён). Бросает BranchOpError. */
   deleteBranch(repo: GitRepoRef, name: string): Promise<void>
+  /** A3: влить ветку в main (ff или merge-commit) + проекция новой версии.
+   *  Конфликт/нечего вливать → BranchOpError('conflict'|'nothing-to-merge'). */
+  mergeBranch(repo: GitRepoRef, name: string): Promise<MergeResult>
+}
+
+export interface MergeResult {
+  tipSha: string
+  newVersion: number | null // спроецированная версия (null — list.json не менялся)
+  fastForward: boolean
 }
 
 /** Ошибка операций над ветками с машиночитаемой причиной (для UI-сообщений). */
 export class BranchOpError extends Error {
-  constructor(public code: 'bad-name' | 'exists' | 'not-found' | 'protected' | 'internal') {
+  constructor(public code: 'bad-name' | 'exists' | 'not-found' | 'protected' | 'conflict' | 'nothing-to-merge' | 'internal') {
     super(code)
     this.name = 'BranchOpError'
   }

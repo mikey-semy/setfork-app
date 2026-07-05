@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Check, GitPullRequest, X } from 'lucide-react'
+import { Check, GitBranch, GitMerge, GitPullRequest, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -9,7 +9,9 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta, getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
-import { acceptSuggestion, addSuggestionComment, rejectSuggestion } from '@/features/library/actions'
+import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion } from '@/features/library/actions'
+import { isCollaborator } from '@/features/collab/queries'
+import { gitCore } from '@/features/git/core'
 import { ListHeader } from '@/features/library/ListHeader'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
 import { diffSteps } from '@/features/library/suggestion-diff'
@@ -19,10 +21,12 @@ import type { ProposedItem } from '@/shared/db'
 
 export default async function SuggestionThreadPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ handle: string; slug: string; id: string }>
+  searchParams: Promise<{ e?: string }>
 }) {
-  const { handle: owner, slug, id } = await params
+  const [{ handle: owner, slug, id }, sp] = await Promise.all([params, searchParams])
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const meta = await getListMeta(owner, slug)
   if (!meta) notFound()
@@ -36,8 +40,36 @@ export default async function SuggestionThreadPage({
   ])
 
   const isOwner = session?.userId === meta.ownerId
-  const items = sug.items as ProposedItem[]
-  const diff = diffSteps(base?.steps ?? [], items, lang)
+  const canMerge = isOwner || (!!session && (await isCollaborator(meta.id, session.userId)))
+
+  // A3: branch-PR — предлагаемые шаги живут в tip ветки, а не в items;
+  // diff строим против ТЕКУЩЕЙ версии main (PR = «ветка → main»).
+  const snapshot = sug.branchRef ? await gitCore.branchSnapshot({ owner, slug }, sug.branchRef).catch(() => null) : null
+  const branchMissing = !!sug.branchRef && !snapshot
+  const items: ProposedItem[] = snapshot
+    ? snapshot.steps.map((st) => ({
+        title: { en: st.title },
+        desc: { en: st.desc },
+        command: st.command,
+        hasImage: false,
+        level: st.level as ProposedItem['level'],
+        why: { en: st.why },
+        section: { en: st.section },
+        subtasks: st.subtasks.map((x) => ({ en: x })),
+        refs: st.refs.map((r) => ({ label: { en: r.label }, ...(r.url ? { url: r.url } : {}) })),
+      }))
+    : (sug.items as ProposedItem[])
+  const diffBase = sug.branchRef ? (await getVersionSteps(meta.id, meta.currentVersion))?.steps ?? [] : base?.steps ?? []
+  const diff = diffSteps(diffBase, items, lang)
+
+  const MERGE_ERR: Record<string, { ru: string; en: string }> = {
+    conflict: {
+      ru: 'Конфликт: main ушёл вперёд и не сливается автоматически. Обнови ветку (влей main в неё) и попробуй снова.',
+      en: 'Conflict: main has diverged and cannot be merged automatically. Update the branch (merge main into it) and retry.',
+    },
+    'nothing-to-merge': { ru: 'Ветка не содержит новых коммитов относительно main.', en: 'The branch has no new commits over main.' },
+  }
+  const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? { ru: 'Не удалось выполнить merge.', en: 'Merge failed.' }) : null
 
   // Участники для @mention: автор правки + комментаторы, без дублей.
   const sugSeen = new Set<string>()
@@ -63,9 +95,32 @@ export default async function SuggestionThreadPage({
             <Link href={`/${sug.author.handle}`} className="font-semibold text-ink hover:text-accent">
               {sug.author.handle}
             </Link>{' '}
-            · {fmt.format(new Date(sug.createdAt))} · {lang === 'ru' ? `на основе v${sug.baseVersion}` : `based on v${sug.baseVersion}`}
+            · {fmt.format(new Date(sug.createdAt))} ·{' '}
+            {sug.branchRef ? (
+              <>
+                <Link href={`/${owner}/${slug}?ref=${encodeURIComponent(sug.branchRef)}`} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[12px] text-ink hover:text-accent">
+                  <GitBranch size={11} /> {sug.branchRef}
+                </Link>{' '}
+                → <span className="font-mono text-[12px]">main</span>
+              </>
+            ) : (
+              <>{lang === 'ru' ? `на основе v${sug.baseVersion}` : `based on v${sug.baseVersion}`}</>
+            )}
           </span>
         </div>
+
+        {mergeErr && (
+          <div className="mb-3 rounded-md border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">
+            {lang === 'ru' ? mergeErr.ru : mergeErr.en}
+          </div>
+        )}
+        {branchMissing && (
+          <div className="mb-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[13px] text-warn">
+            {lang === 'ru'
+              ? `Ветка «${sug.branchRef}» удалена — PR неактуален, можно только отклонить.`
+              : `Branch “${sug.branchRef}” was deleted — this PR is stale and can only be closed.`}
+          </div>
+        )}
 
         {sug.note && (
           <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface">
@@ -87,7 +142,7 @@ export default async function SuggestionThreadPage({
           <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
         </div>
 
-        {isOwner && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
+        {isOwner && !sug.branchRef && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
           <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">
             {lang === 'ru'
               ? `Правка основана на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
@@ -95,13 +150,23 @@ export default async function SuggestionThreadPage({
           </div>
         )}
 
-        {isOwner && sug.status === 'open' && (
+        {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open') && (
           <div className="mt-3 flex gap-2.5">
+            {sug.branchRef ? (
+              !branchMissing && (
+                <form action={mergeBranchPr.bind(null, sug.id)}>
+                  <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+                    <GitMerge size={14} /> {lang === 'ru' ? 'Влить в main' : 'Merge to main'}
+                  </SubmitButton>
+                </form>
+              )
+            ) : (
             <form action={acceptSuggestion.bind(null, sug.id)}>
               <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
                 <Check size={14} /> {t('accept', lang)}
               </SubmitButton>
             </form>
+            )}
             <form action={rejectSuggestion.bind(null, sug.id)}>
               <SubmitButton className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
                 <X size={14} /> {t('reject', lang)}
