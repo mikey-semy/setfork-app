@@ -120,6 +120,33 @@ export interface GitProjection {
 // Совпадает с proto/git.proto: сервис резолвит/лочит/проецирует репо ВНУТРИ.
 // Реализации: inproc (поверх GitStore) сейчас; remote (Connect→Rust) в Фазе 2.
 // Возвращает null, если репо недоступно; auth — на стороне вызывающего (BFF-роут).
+export interface GitBranch {
+  name: string
+  tipSha: string
+  isDefault: boolean // main
+  ahead: number // коммитов впереди main
+  behind: number
+}
+
+export interface BranchSnapshot {
+  tipSha: string
+  title: string
+  desc: string
+  tags: string[]
+  ordered: boolean
+  steps: {
+    n: number
+    title: string
+    desc: string
+    command: string
+    level: string
+    why: string
+    section: string
+    subtasks: string[]
+    refs: { label: string; url?: string }[]
+  }[]
+}
+
 export interface GitCore {
   infoRefsUploadPack(repo: GitRepoRef, gitProtocol?: string): Promise<Uint8Array | null>
   infoRefsReceivePack(repo: GitRepoRef, gitProtocol?: string): Promise<Uint8Array | null>
@@ -127,6 +154,10 @@ export interface GitCore {
   /** receive-pack + проекция в версию (атомарно под локом). newVersion — созданная версия. */
   receivePack(repo: GitRepoRef, body: Uint8Array, gitProtocol?: string): Promise<{ data: Uint8Array; newVersion: number | null } | null>
   bundle(repo: GitRepoRef): Promise<Uint8Array | null>
+  /** Ветки (A1 read-only): main первым; прочие — черновики без проекции. */
+  listBranches(repo: GitRepoRef): Promise<GitBranch[]>
+  /** Материализация tip ветки (просмотр «на ветке»). null — ветки/list.json нет. */
+  branchSnapshot(repo: GitRepoRef, branch: string): Promise<BranchSnapshot | null>
 }
 
 // ── AI (генерация/refine/эмбеддинги + учёт стоимости) ────────────────

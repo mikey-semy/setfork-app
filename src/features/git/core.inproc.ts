@@ -1,8 +1,16 @@
 import 'server-only'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { and, eq } from 'drizzle-orm'
-import type { GitCore } from '@/core'
+import type { BranchSnapshot, GitBranch, GitCore } from '@/core'
 import { db, templates, users } from '@/shared/db'
 import { gitStore } from './adapter'
+
+const exec = promisify(execFile)
+
+// Только простые имена веток (защита от ref-инъекций) — зеркало проверки в Rust-ядре.
+const BRANCH_RE = /^[A-Za-z0-9._-]+$/
+const badBranch = (b: string) => !b || !BRANCH_RE.test(b) || b.includes('..')
 
 // In-process реализация GitCore поверх низкоуровневого GitStore (shell → git).
 // Пост-MVP этот же порт закрывает remote-реализация (Connect → Rust git-core).
@@ -47,4 +55,80 @@ export const gitCoreInproc: GitCore = {
   },
 
   bundle: (repo) => gitStore.bundle(repo),
+
+  async listBranches(repo) {
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) return []
+    const { stdout } = await exec('git', ['--git-dir', bare, 'for-each-ref', 'refs/heads', '--format=%(refname:short) %(objectname)'])
+    const out: GitBranch[] = []
+    for (const line of stdout.split('\n')) {
+      const [name, tip] = line.trim().split(' ')
+      if (!name || !tip) continue
+      let ahead = 0
+      let behind = 0
+      if (name !== 'main') {
+        // left-right main...branch: left = только в main (behind), right = только в ветке (ahead).
+        const { stdout: lr } = await exec('git', ['--git-dir', bare, 'rev-list', '--left-right', '--count', `main...${name}`]).catch(() => ({ stdout: '0\t0' }))
+        const [l, r] = lr.trim().split(/\s+/).map(Number)
+        behind = l || 0
+        ahead = r || 0
+      }
+      out.push({ name, tipSha: tip, isDefault: name === 'main', ahead, behind })
+    }
+    out.sort((a, b) => Number(b.isDefault) - Number(a.isDefault) || a.name.localeCompare(b.name))
+    return out
+  },
+
+  async branchSnapshot(repo, branch) {
+    if (badBranch(branch)) return null
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) return null
+    let raw: string
+    let tip: string
+    try {
+      ;[{ stdout: raw }, { stdout: tip }] = await Promise.all([
+        exec('git', ['--git-dir', bare, 'show', `${branch}:list.json`], { maxBuffer: 8 * 1024 * 1024 }),
+        exec('git', ['--git-dir', bare, 'rev-parse', branch]),
+      ])
+    } catch {
+      return null
+    }
+    let parsed: {
+      title?: string
+      desc?: string
+      tags?: string[]
+      ordered?: boolean
+      steps?: { title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
+    }
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      return null
+    }
+    // Набор/порядок шагов — из list.json (источник истины). Per-step md-оверрайды
+    // применяет только Rust-канон; inproc — dev/demo-фолбэк без них.
+    const steps: BranchSnapshot['steps'] = (parsed.steps ?? [])
+      .filter((s) => (s.title ?? '').trim())
+      .map((s, i) => ({
+        n: i + 1,
+        title: s.title ?? '',
+        desc: s.desc ?? '',
+        command: s.command ?? '',
+        level: s.level || 'required',
+        why: s.why ?? '',
+        section: s.section ?? '',
+        subtasks: s.subtasks ?? [],
+        refs: (s.refs ?? [])
+          .filter((r) => (r.label ?? '').trim())
+          .map((r) => ({ label: r.label ?? '', ...(r.url ? { url: r.url } : {}) })),
+      }))
+    return {
+      tipSha: tip.trim(),
+      title: parsed.title ?? '',
+      desc: parsed.desc ?? '',
+      tags: parsed.tags ?? [],
+      ordered: parsed.ordered ?? true,
+      steps,
+    }
+  },
 }
