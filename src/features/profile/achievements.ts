@@ -11,6 +11,9 @@ export interface AchievementInput {
 
 export type AchievementKey = 'first-list' | 'prolific' | 'starred' | 'forked' | 'runner' | 'streak'
 
+/** Канонический порядок ключей (совпадает с порядком computeAchievements). */
+export const ACHIEVEMENT_KEYS: AchievementKey[] = ['first-list', 'prolific', 'starred', 'forked', 'runner', 'streak']
+
 export interface Achievement {
   key: AchievementKey
   earned: boolean

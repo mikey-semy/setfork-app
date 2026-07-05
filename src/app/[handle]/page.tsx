@@ -17,6 +17,7 @@ import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { ActivityGraph } from '@/features/profile/ActivityGraph'
 import { AchievementsCard } from '@/features/profile/AchievementsCard'
+import { getAchievementDisplay } from '@/features/profile/achievement-config'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { FollowButton } from '@/features/follows/FollowButton'
 import { avatarSrc } from '@/shared/media'
@@ -74,10 +75,11 @@ export default async function ProfilePage({
     getContributions(user.id, graphYear),
     getReceivedStats(user.id),
   ])
-  const [rawItems, pinned, catalogs] = await Promise.all([
+  const [rawItems, pinned, catalogs, achDisplay] = await Promise.all([
     !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
     getOwnerCatalogs(user.id),
+    getAchievementDisplay(),
   ])
   const people = tab === 'followers' ? await getFollowers(user.id) : tab === 'following' ? await getFollowing(user.id) : []
 
@@ -238,6 +240,19 @@ export default async function ProfilePage({
               ))}
             </div>
           )}
+
+          {/* Достижения — в левом сайдбаре (как у GitHub), отдельно от ленты активности. */}
+          <AchievementsCard
+            input={{
+              listsAuthored: counts.lists,
+              starsReceived: received.stars,
+              forksReceived: received.forks,
+              runsStarted: counts.runs,
+              contributions,
+            }}
+            lang={lang}
+            config={achDisplay}
+          />
         </aside>
 
         <section className="min-w-0 flex-1">
@@ -286,16 +301,6 @@ export default async function ProfilePage({
               {monthActivity && (
                 <ContributionActivity activity={monthActivity} monthStart={monthStart} handle={handle} lang={lang} nav={activityNav} />
               )}
-              <AchievementsCard
-                input={{
-                  listsAuthored: counts.lists,
-                  starsReceived: received.stars,
-                  forksReceived: received.forks,
-                  runsStarted: counts.runs,
-                  contributions,
-                }}
-                lang={lang}
-              />
             </>
           )}
 

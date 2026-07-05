@@ -19,6 +19,8 @@ import { MediaSettingsForm } from '@/features/admin/MediaSettingsForm'
 import { EmailSettingsForm } from '@/features/admin/EmailSettingsForm'
 import { PushSettingsForm } from '@/features/admin/PushSettingsForm'
 import { ReindexPanel } from '@/features/admin/ReindexPanel'
+import { AchievementsAdmin } from '@/features/admin/AchievementsAdmin'
+import { getAchievementDisplay } from '@/features/profile/achievement-config'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
@@ -66,6 +68,7 @@ export default async function AdminPage() {
     getOnlineUsers(),
   ])
   const vapid = await getVapid()
+  const achDisplay = await getAchievementDisplay()
   const pushValues = { publicKey: vapid.publicKey, subject: vapid.subject, configured: Boolean(vapid.publicKey && vapid.privateKey) }
   const emailValues = {
     host: email.host,
@@ -264,6 +267,16 @@ export default async function AdminPage() {
             : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'}
         </p>
         <SearchSettingsForm current={search} ru={ru} />
+      </section>
+
+      <section className="rounded-lg border border-border bg-surface p-5">
+        <div className="mb-1 font-semibold text-ink">{ru ? 'Достижения профиля' : 'Profile achievements'}</div>
+        <p className="mb-4 text-[13px] text-ink-2">
+          {ru
+            ? 'Включай/выключай достижения и задавай свою картинку вместо иконки (перетаскиванием). Действует на всех профилях.'
+            : 'Enable/disable achievements and set a custom image instead of the icon (drag-and-drop). Applies to all profiles.'}
+        </p>
+        <AchievementsAdmin initial={achDisplay} ru={ru} />
       </section>
 
       <ReindexPanel ru={ru} />
