@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { Check, Tag } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { ISSUE_LABELS, labelText } from './labels'
@@ -24,7 +25,6 @@ export function LabelEditor({
   lang: Lang
 }) {
   const [pending, start] = useTransition()
-  const [open, setOpen] = useState(false)
   const [sel, setSel] = useState<string[]>(labels)
   const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
 
@@ -38,19 +38,23 @@ export function LabelEditor({
     <div className="flex flex-wrap items-center gap-1.5">
       <IssueLabelChips labels={sel} lang={lang} />
       {canEdit ? (
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            aria-label={L('изменить метки', 'edit labels')}
-            className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted hover:text-ink"
-          >
-            <Tag size={11} /> {L('метки', 'labels')}
-          </button>
-          {open && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-              <div className="absolute left-0 z-20 mt-1 w-56 overflow-hidden rounded-md border border-border bg-surface p-1 shadow-lg">
+        <AnchoredMenu
+          align="left"
+          width={224}
+          className="p-1"
+          button={(toggleMenu) => (
+            <button
+              type="button"
+              onClick={toggleMenu}
+              aria-label={L('изменить метки', 'edit labels')}
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted hover:text-ink"
+            >
+              <Tag size={11} /> {L('метки', 'labels')}
+            </button>
+          )}
+        >
+          {() => (
+              <>
                 {ISSUE_LABELS.map((l) => {
                   const on = sel.includes(l.key)
                   return (
@@ -67,10 +71,9 @@ export function LabelEditor({
                     </button>
                   )
                 })}
-              </div>
-            </>
+              </>
           )}
-        </div>
+        </AnchoredMenu>
       ) : (
         sel.length === 0 && <span className="text-[11px] text-muted">{L('нет меток', 'no labels')}</span>
       )}
