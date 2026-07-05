@@ -64,44 +64,50 @@ export function ActivityGraph({
         </span>
       </div>
 
-      {/* direction:rtl на скролл-контейнере = старт прокрутки СПРАВА (видны последние
-          дни), без JS; внутренний ltr возвращает нормальный порядок недель. Скролл —
-          тонкий полупрозрачный (.scroll-thin), не пугает на узких экранах. */}
-      <div className="scroll-thin overflow-x-auto pb-1" style={{ direction: 'rtl' }}>
-        <div className="inline-flex flex-col gap-1" style={{ direction: 'ltr' }}>
-          <div className="flex gap-[3px] text-[10px] leading-none text-muted">
-            {/* spacer под колонку дней недели слева */}
-            <div className="w-[26px] shrink-0" />
-            {months.map((m, i) => (
-              <div key={i} className="w-[11px] whitespace-nowrap">
-                {m ?? ''}
+      {/* Колонка дней недели вынесена ИЗ скролл-контейнера: при горизонтальном скролле
+          она остаётся видимой слева, скроллятся только месяцы и квадратики. */}
+      <div className="flex">
+        {/* Дни недели слева (Mon/Wed/Fri), как у GitHub. */}
+        <div className="flex w-[26px] shrink-0 flex-col gap-1 bg-surface">
+          {/* spacer под строку месяцев (её высота = 10px, leading-none) */}
+          <div className="h-[10px]" />
+          <div className="flex flex-col gap-[3px] text-[9px] leading-[11px] text-muted">
+            {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+              <div key={d} className="h-[11px]">
+                {d === 1 ? (lang === 'ru' ? 'пн' : 'Mon') : d === 3 ? (lang === 'ru' ? 'ср' : 'Wed') : d === 5 ? (lang === 'ru' ? 'пт' : 'Fri') : ''}
               </div>
             ))}
           </div>
-          <div className="flex gap-[3px]">
-            {/* Дни недели слева (Mon/Wed/Fri), как у GitHub. */}
-            <div className="flex w-[26px] shrink-0 flex-col gap-[3px] text-[9px] leading-[11px] text-muted">
-              {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-                <div key={d} className="h-[11px]">
-                  {d === 1 ? (lang === 'ru' ? 'пн' : 'Mon') : d === 3 ? (lang === 'ru' ? 'ср' : 'Wed') : d === 5 ? (lang === 'ru' ? 'пт' : 'Fri') : ''}
+        </div>
+        {/* direction:rtl на скролл-контейнере = старт прокрутки СПРАВА (видны последние
+            дни), без JS; внутренний ltr возвращает нормальный порядок недель. Скролл —
+            тонкий полупрозрачный (.scroll-thin), не пугает на узких экранах. */}
+        <div className="scroll-thin min-w-0 flex-1 overflow-x-auto pb-1" style={{ direction: 'rtl' }}>
+          <div className="inline-flex flex-col gap-1" style={{ direction: 'ltr' }}>
+            <div className="flex gap-[3px] text-[10px] leading-none text-muted">
+              {months.map((m, i) => (
+                <div key={i} className="w-[11px] whitespace-nowrap">
+                  {m ?? ''}
                 </div>
               ))}
             </div>
-            {weeks.map((week, wi) => (
-              <div key={wi} className="flex flex-col gap-[3px]">
-                {week.map((cell, di) =>
-                  cell.future ? (
-                    <div key={di} className="h-[11px] w-[11px]" />
-                  ) : (
-                    <div
-                      key={di}
-                      title={`${cell.count} ${t('contributions', lang)} · ${cell.date}`}
-                      className={`h-[11px] w-[11px] rounded-[2px] ${LEVEL[level(cell.count)]}`}
-                    />
-                  ),
-                )}
-              </div>
-            ))}
+            <div className="flex gap-[3px]">
+              {weeks.map((week, wi) => (
+                <div key={wi} className="flex flex-col gap-[3px]">
+                  {week.map((cell, di) =>
+                    cell.future ? (
+                      <div key={di} className="h-[11px] w-[11px]" />
+                    ) : (
+                      <div
+                        key={di}
+                        title={`${cell.count} ${t('contributions', lang)} · ${cell.date}`}
+                        className={`h-[11px] w-[11px] rounded-[2px] ${LEVEL[level(cell.count)]}`}
+                      />
+                    ),
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
