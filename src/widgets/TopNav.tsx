@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { ChevronDown, Compass, Home, ListChecks, Menu, PlayCircle, Plus, Search, Sparkles, X } from 'lucide-react'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
+import { MobileSearch } from './MobileSearch'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
@@ -169,10 +170,9 @@ export function TopNav({
                 }
               />
             </div>
-            {/* Мобильный поиск — иконка ведёт на страницу поиска */}
-            <Link href="/search" aria-label={t('searchLists', lang)} className={`${iconBtn} md:hidden`}>
-              <Search size={17} />
-            </Link>
+            {/* Мобильный поиск — оверлей на месте (не редирект); на странице списка
+                предлагает «искать в этом списке» (?find= — фильтр шагов). */}
+            <MobileSearch crumb={crumb} lang={lang} className={`${iconBtn} md:hidden`} />
           </>
         )}
 

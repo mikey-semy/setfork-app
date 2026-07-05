@@ -29,12 +29,27 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
   return { title: `${handle}/${slug}` }
 }
 
-export default async function ListPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle: owner, slug } = await params
+export default async function ListPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ handle: string; slug: string }>
+  searchParams: Promise<{ find?: string }>
+}) {
+  const [{ handle: owner, slug }, sp] = await Promise.all([params, searchParams])
   const lang = await getLang()
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
-  const { tpl, currentVersion, steps } = detail
+  const { tpl, currentVersion, steps: allSteps } = detail
+
+  // Поиск ВНУТРИ списка (?find= из поиска в шапке): фильтр шагов по подстроке —
+  // аналог поиска по файлам в GitHub-репо, для больших списков.
+  const find = (sp.find ?? '').trim().toLowerCase()
+  const matches = (s: (typeof allSteps)[number]) =>
+    Object.values(s.title).some((v) => v?.toLowerCase().includes(find)) ||
+    Object.values(s.desc ?? {}).some((v) => v?.toLowerCase().includes(find)) ||
+    (s.command ?? '').toLowerCase().includes(find)
+  const steps = find ? allSteps.filter(matches) : allSteps
   const viewer = await getSession()
   const isOwner = viewer?.userId === tpl.ownerId
   if (!canViewList(tpl, { isOwner, isAdmin: isAdminHandle(viewer?.handle) })) notFound()
@@ -140,6 +155,19 @@ export default async function ListPage({ params }: { params: Promise<{ handle: s
               </div>
             )}
 
+            {/* Результат поиска внутри списка (?find=). */}
+            {find && (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-[var(--accent)]/50 bg-[var(--accent-soft)] px-3 py-2 text-[12.5px] text-ink print:hidden">
+                <Info size={13} className="shrink-0 text-accent" />
+                <span>
+                  <b>{steps.length}</b> / {allSteps.length} {lang === 'ru' ? 'шагов по запросу' : 'steps match'}{' '}
+                  <span className="font-mono">“{sp.find}”</span>
+                </span>
+                <Link href={base} className="ml-auto font-semibold text-accent hover:underline">
+                  {lang === 'ru' ? 'Показать все' : 'Show all'}
+                </Link>
+              </div>
+            )}
             <div className="flex flex-col gap-3">
               {steps.map((s, si) => {
                 const subs = (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean)
