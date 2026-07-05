@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, KeyRound, ShieldCheck, ShieldX, Trash2, GitCommitVertical, LogOut, Ban } from 'lucide-react'
+import { ArrowLeft, KeyRound, ShieldCheck, ShieldX, Trash2, GitCommitVertical, LogOut, Ban, Mail, AtSign } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getAuditLog, type AuditEntry } from '@/features/admin/audit-queries'
@@ -20,6 +20,8 @@ const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string;
   '2fa.disable': { icon: ShieldX, ru: 'Отключена 2FA', en: '2FA disabled', cls: 'text-warn' },
   '2fa.recovery-regenerate': { icon: KeyRound, ru: 'Новые recovery-коды', en: 'Recovery codes regenerated', cls: 'text-ink-2' },
   'password.reset': { icon: KeyRound, ru: 'Сброс пароля', en: 'Password reset', cls: 'text-warn' },
+  'email.change-request': { icon: Mail, ru: 'Запрос смены почты', en: 'Email change requested', cls: 'text-ink-2' },
+  'email.change': { icon: AtSign, ru: 'Смена почты', en: 'Email changed', cls: 'text-warn' },
 }
 
 function fmt(d: Date, ru: boolean): string {

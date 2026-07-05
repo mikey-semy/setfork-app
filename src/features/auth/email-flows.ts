@@ -77,6 +77,68 @@ export async function consumeVerifyToken(token: string): Promise<VerifyOutcome> 
   return 'ok'
 }
 
+// ── Смена почты ──────────────────────────────────────────────────────
+// Подтверждение шлём на НОВЫЙ адрес (доказательство владения); старый адрес
+// остаётся активным до подтверждения. Токен привязан к текущей почте (cur):
+// если её сменили после выпуска ссылки — ссылка мертва.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export type EmailChangeResult =
+  | { ok: true }
+  | { ok: false; error: 'invalid' | 'same' | 'taken' | 'throttled' | 'no-email' | 'smtp' }
+
+export async function requestEmailChange(_prev: EmailChangeResult | null, formData: FormData): Promise<EmailChangeResult> {
+  const session = await requireSession()
+  const newEmail = String(formData.get('email') ?? '').trim().toLowerCase()
+  if (!EMAIL_RE.test(newEmail)) return { ok: false, error: 'invalid' }
+  const [u] = await db.select({ email: users.email, handle: users.handle }).from(users).where(eq(users.id, session.userId)).limit(1)
+  if (!u?.email) return { ok: false, error: 'no-email' } // github-аккаунт без почты — сменить нечего
+  if (u.email === newEmail) return { ok: false, error: 'same' }
+  if (!rateLimit(`emailchange:${session.userId}`, 3, 15 * 60_000).ok) return { ok: false, error: 'throttled' }
+  // Мягкая проверка занятости; гонку добьёт unique-констрейнт при подтверждении.
+  const [taken] = await db.select({ id: users.id }).from(users).where(eq(users.email, newEmail)).limit(1)
+  if (taken) return { ok: false, error: 'taken' }
+
+  const lang = await getLang()
+  const ru = lang === 'ru'
+  const token = await signToken({ uid: session.userId, newEmail, cur: u.email, purpose: 'change-email' }, '1h')
+  const link = `${appOrigin()}/change-email?token=${encodeURIComponent(token)}`
+  const sent = await sendMail({
+    to: newEmail,
+    subject: ru ? 'Подтверди новый адрес — SetFork' : 'Confirm your new email — SetFork',
+    html: `<p>${ru ? `Привет, ${u.handle}! Подтверди этот адрес как новую почту аккаунта SetFork.` : `Hi ${u.handle}! Confirm this address as the new email for your SetFork account.`}</p>${button(link, ru ? 'Подтвердить новый адрес' : 'Confirm new email')}<p style="color:#6b6b66;font-size:13px">${ru ? 'Ссылка действует 1 час. Пока не подтвердишь — вход остаётся на старом адресе.' : 'The link is valid for 1 hour. Until you confirm, sign-in keeps using your old address.'}</p>`,
+  })
+  if (!sent) return { ok: false, error: 'smtp' }
+  // Уведомляем СТАРЫЙ адрес — на случай, если запрос инициирован не владельцем (best-effort).
+  await sendMail({
+    to: u.email,
+    subject: ru ? 'Запрошена смена почты — SetFork' : 'Email change requested — SetFork',
+    html: `<p>${ru ? `Для аккаунта ${u.handle} запрошена смена почты на <b>${newEmail}</b>. Если это не ты — смени пароль, адрес не изменится без подтверждения по ссылке из другого письма.` : `An email change to <b>${newEmail}</b> was requested for ${u.handle}. If this wasn’t you, change your password — the address won’t change without confirming the link in the other email.`}</p>`,
+  }).catch(() => {})
+  await recordAudit('email.change-request', { actorId: session.userId, meta: { to: newEmail } })
+  return { ok: true }
+}
+
+export type EmailChangeOutcome = 'ok' | 'invalid' | 'mismatch' | 'taken'
+
+/** Обработка ссылки из письма (страница /change-email). */
+export async function confirmEmailChange(token: string): Promise<EmailChangeOutcome> {
+  const p = await readToken(token)
+  if (!p || p.purpose !== 'change-email' || !p.uid || !p.newEmail || !p.cur) return 'invalid'
+  const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, p.uid)).limit(1)
+  if (!u) return 'invalid'
+  if (u.email !== p.cur) return 'mismatch' // почта менялась после выпуска ссылки
+  try {
+    // Новый адрес считаем подтверждённым (ссылку открыли из него).
+    await db.update(users).set({ email: p.newEmail, emailVerifiedAt: new Date() }).where(eq(users.id, p.uid))
+  } catch {
+    return 'taken' // unique-констрейнт: адрес заняли между запросом и подтверждением
+  }
+  await recordAudit('email.change', { actorId: p.uid, meta: { to: p.newEmail } })
+  revalidatePath('/settings')
+  return 'ok'
+}
+
 // ── Сброс пароля ─────────────────────────────────────────────────────
 /** Хвост хеша пароля в клейме: смена пароля инвалидирует все старые ссылки. */
 const pwTail = (hash: string | null) => (hash ?? 'nopw').slice(-16)
