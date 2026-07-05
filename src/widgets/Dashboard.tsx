@@ -5,7 +5,8 @@ import { getFeedEvents, getRecommended, getStarredIds, type FeedEvent } from '@/
 import { Feed } from '@/features/feed/Feed'
 import { CreateWithAI } from '@/features/feed/CreateWithAI'
 import type { Lang } from '@/shared/i18n'
-import { YourListsPanel } from './YourListsPanel'
+import { ListsPanel } from './ListsPanel'
+import { t } from '@/shared/i18n'
 import { PromoCard } from './PromoCard'
 import { ChangelogCard } from './ChangelogCard'
 
@@ -47,9 +48,13 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
     <div className="grid w-full gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[300px_minmax(0,1fr)_300px] lg:px-8">
       {/* Слева: твои списки (переиспользуемая панель) */}
       <aside className="lg:sticky lg:top-[68px] lg:self-start">
-        <YourListsPanel
+        <ListsPanel
           lang={lang}
+          title={t('yourLists', lang)}
           items={mine.map((m) => ({ handle: m.ownerHandle, slug: m.slug, avatarUrl: m.ownerAvatarUrl, version: m.version }))}
+          showNew
+          showVersion
+          emptyText={t('emptyMyLists', lang)}
         />
       </aside>
 
