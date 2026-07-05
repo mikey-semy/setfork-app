@@ -19,6 +19,7 @@ const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string;
   '2fa.enable': { icon: ShieldCheck, ru: 'Включена 2FA', en: '2FA enabled', cls: 'text-ok' },
   '2fa.disable': { icon: ShieldX, ru: 'Отключена 2FA', en: '2FA disabled', cls: 'text-warn' },
   '2fa.recovery-regenerate': { icon: KeyRound, ru: 'Новые recovery-коды', en: 'Recovery codes regenerated', cls: 'text-ink-2' },
+  'password.reset': { icon: KeyRound, ru: 'Сброс пароля', en: 'Password reset', cls: 'text-warn' },
 }
 
 function fmt(d: Date, ru: boolean): string {

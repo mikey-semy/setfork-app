@@ -26,6 +26,7 @@ import type { SessionUser } from '@/shared/auth/session'
 const RESERVED_TOP = new Set([
   'explore', 'search', 'settings', 'new', 'login', 'register', 'admin', 'runs',
   'notifications', 'api', 'about', 'terms', 'privacy', 'my-lists', 'catalogs',
+  'verify-email', 'forgot-password', 'reset-password', 'changelog',
 ])
 
 /** Списки пользователя для секции «Top lists» в боковом меню (минимум данных). */

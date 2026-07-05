@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { Button } from '@/shared/ui/button'
 import { LoginForm } from '@/features/auth/AuthForms'
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ e?: string; reset?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (session) redirect('/')
   const hasGithub = !!process.env.GITHUB_CLIENT_ID
@@ -22,6 +22,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="font-logo mb-1 text-[38px] leading-none text-ink">SF</div>
         <div className="mb-6 text-[13.5px] text-ink-2">{t('loginRequired', lang)}</div>
 
+        {sp.reset === '1' && (
+          <div className="mb-4 rounded-md border border-ok/40 bg-ok/10 px-3 py-2 text-left text-[13px] text-ink">
+            {lang === 'ru' ? 'Пароль изменён — войди с новым.' : 'Password changed — sign in with the new one.'}
+          </div>
+        )}
         <LoginForm lang={lang} />
         <div className="mt-4 text-[12.5px] text-ink-2">
           {t('noAccount', lang)}{' '}

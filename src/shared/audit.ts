@@ -17,6 +17,7 @@ export type AuditAction =
   | '2fa.enable'
   | '2fa.disable'
   | '2fa.recovery-regenerate'
+  | 'password.reset'
 
 export async function recordAudit(
   action: AuditAction,
