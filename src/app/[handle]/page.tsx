@@ -12,6 +12,7 @@ import { PinsPicker } from '@/features/profile/PinsPicker'
 import { getFollowers, getFollowing } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
 import { getFolderTemplateIds, getUserFolders } from '@/features/star-folders/queries'
+import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { ActivityGraph } from '@/features/profile/ActivityGraph'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
@@ -96,26 +97,24 @@ export default async function ProfilePage({
 
   return (
     <div className="w-full">
-      {/* Табы профиля — full-width под шапкой, с иконками (как GitHub). */}
-      <div className="border-b border-border px-6 lg:px-8">
-        <nav className="no-scrollbar mx-auto flex max-w-[980px] gap-1 overflow-x-auto text-[14px]">
-          {isPeopleTab ? (
-            <>
-              <TopTab href={`/${handle}?tab=followers`} on={tab === 'followers'} icon={<Users size={15} />} label={t('followersLabel', lang)} count={followCounts.followers} />
-              <TopTab href={`/${handle}?tab=following`} on={tab === 'following'} icon={<Users size={15} />} label={t('followingLabel', lang)} count={followCounts.following} />
-            </>
-          ) : (
-            <>
-              <TopTab href={`/${handle}`} on={tab === 'overview'} icon={<BookOpen size={15} />} label={t('overviewTab', lang)} />
-              <TopTab href={`/${handle}?tab=lists`} on={tab === 'lists'} icon={<ListChecks size={15} />} label={t('lists', lang)} count={counts.lists} />
-              <TopTab href={`/${handle}?tab=starred`} on={tab === 'starred'} icon={<Star size={15} />} label={t('starredTab', lang)} count={counts.stars} />
-              {catalogs.length > 0 && (
-                <TopTab href={`/${handle}?tab=catalogs`} on={tab === 'catalogs'} icon={<FolderGit2 size={15} />} label={t('catalogsTab', lang)} count={catalogs.length} />
-              )}
-            </>
-          )}
-        </nav>
-      </div>
+      {/* Табы профиля — full-width под шапкой; единый TabNav из shared/ui. */}
+      <TabNav maxWidthClass="max-w-[980px]">
+        {isPeopleTab ? (
+          <>
+            <TabItem href={`/${handle}?tab=followers`} on={tab === 'followers'} icon={<Users size={15} />} label={t('followersLabel', lang)} count={followCounts.followers} />
+            <TabItem href={`/${handle}?tab=following`} on={tab === 'following'} icon={<Users size={15} />} label={t('followingLabel', lang)} count={followCounts.following} />
+          </>
+        ) : (
+          <>
+            <TabItem href={`/${handle}`} on={tab === 'overview'} icon={<BookOpen size={15} />} label={t('overviewTab', lang)} />
+            <TabItem href={`/${handle}?tab=lists`} on={tab === 'lists'} icon={<ListChecks size={15} />} label={t('lists', lang)} count={counts.lists} />
+            <TabItem href={`/${handle}?tab=starred`} on={tab === 'starred'} icon={<Star size={15} />} label={t('starredTab', lang)} count={counts.stars} />
+            {catalogs.length > 0 && (
+              <TabItem href={`/${handle}?tab=catalogs`} on={tab === 'catalogs'} icon={<FolderGit2 size={15} />} label={t('catalogsTab', lang)} count={catalogs.length} />
+            )}
+          </>
+        )}
+      </TabNav>
 
       <div className="px-6 py-8 lg:px-8">
       <div className="mx-auto flex max-w-[980px] flex-col gap-8 md:flex-row">
@@ -345,21 +344,6 @@ export default async function ProfilePage({
       </div>
       </div>
     </div>
-  )
-}
-
-/** Таб под шапкой (GitHub-стиль): иконка + подпись + счётчик-бейдж. */
-function TopTab({ href, on, icon, label, count }: { href: string; on: boolean; icon: React.ReactNode; label: string; count?: number }) {
-  return (
-    <Link
-      href={href}
-      className={`-mb-px inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 ${
-        on ? 'border-accent font-semibold text-ink' : 'border-transparent text-ink-2 hover:text-ink'
-      }`}
-    >
-      <span className={on ? 'text-ink' : 'text-muted'}>{icon}</span> {label}
-      {count != null && <span className="rounded-full bg-surface-2 px-1.5 text-[11.5px] text-ink-2">{count}</span>}
-    </Link>
   )
 }
 
