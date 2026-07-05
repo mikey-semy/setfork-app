@@ -70,6 +70,8 @@ export function ActivityGraph({
       <div className="scroll-thin overflow-x-auto pb-1" style={{ direction: 'rtl' }}>
         <div className="inline-flex flex-col gap-1" style={{ direction: 'ltr' }}>
           <div className="flex gap-[3px] text-[10px] leading-none text-muted">
+            {/* spacer под колонку дней недели слева */}
+            <div className="w-[26px] shrink-0" />
             {months.map((m, i) => (
               <div key={i} className="w-[11px] whitespace-nowrap">
                 {m ?? ''}
@@ -77,6 +79,14 @@ export function ActivityGraph({
             ))}
           </div>
           <div className="flex gap-[3px]">
+            {/* Дни недели слева (Mon/Wed/Fri), как у GitHub. */}
+            <div className="flex w-[26px] shrink-0 flex-col gap-[3px] text-[9px] leading-[11px] text-muted">
+              {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+                <div key={d} className="h-[11px]">
+                  {d === 1 ? (lang === 'ru' ? 'пн' : 'Mon') : d === 3 ? (lang === 'ru' ? 'ср' : 'Wed') : d === 5 ? (lang === 'ru' ? 'пт' : 'Fri') : ''}
+                </div>
+              ))}
+            </div>
             {weeks.map((week, wi) => (
               <div key={wi} className="flex flex-col gap-[3px]">
                 {week.map((cell, di) =>

@@ -1,8 +1,9 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, Info, Pencil, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, Info, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
+import { startRun } from '@/features/runs/actions'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -143,7 +144,20 @@ export default async function ListPage({
                   <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
                 </Link>
                 <span className="inline-flex shrink-0 items-center gap-2 border-l border-border pl-2">
-                  <CloneDropdown base={base} slug={slug} lang={lang} />
+                  <CloneDropdown
+                    base={base}
+                    slug={slug}
+                    lang={lang}
+                    startRunSlot={
+                      viewer ? (
+                        <form action={startRun.bind(null, tpl.id)}>
+                          <button className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+                            <PlayCircle size={15} /> {t('runStart', lang)}
+                          </button>
+                        </form>
+                      ) : undefined
+                    }
+                  />
                   <Link
                     href={isOwner ? `${base}/edit` : `${base}/suggest`}
                     title={isOwner ? t('edit', lang) : t('suggestEdit', lang)}

@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { FolderGit2, Star, Users } from 'lucide-react'
+import { Compass, Flame, FolderGit2, Hash, Star, Users } from 'lucide-react'
+import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
@@ -20,6 +21,12 @@ const TABS: { id: Tab; key: TKey }[] = [
   { id: 'collections', key: 'catalogsTab' },
 ]
 const RANGES: TrendRange[] = ['day', 'week', 'month', 'all']
+const TAB_ICON: Record<Tab, React.ReactNode> = {
+  explore: <Compass size={15} />,
+  topics: <Hash size={15} />,
+  trending: <Flame size={15} />,
+  collections: <FolderGit2 size={15} />,
+}
 const RANGE_LABEL: Record<TrendRange, { en: string; ru: string }> = {
   day: { en: 'Today', ru: 'Сегодня' },
   week: { en: 'This week', ru: 'Неделя' },
@@ -49,23 +56,14 @@ export default async function ExplorePage({
   const tabHref = (id: Tab) => (id === 'explore' ? '/explore' : `/explore?tab=${id}`)
 
   return (
-    <div className="mx-auto w-full max-w-[1080px] px-6 py-8">
-      <nav className="no-scrollbar mb-6 flex justify-center gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((tb) => {
-          const on = tb.id === active
-          return (
-            <Link
-              key={tb.id}
-              href={tabHref(tb.id)}
-              className={`-mb-px shrink-0 border-b-2 px-4 py-2.5 text-[14px] font-medium transition-colors ${
-                on ? 'border-accent text-ink' : 'border-transparent text-ink-2 hover:text-ink'
-              }`}
-            >
-              {t(tb.key, lang)}
-            </Link>
-          )
-        })}
-      </nav>
+    <div className="w-full">
+      {/* Единый TabNav (как профиль/список): переезжающая полоска активной вкладки. */}
+      <TabNav maxWidthClass="max-w-[1080px]">
+        {TABS.map((tb) => (
+          <TabItem key={tb.id} href={tabHref(tb.id)} on={tb.id === active} icon={TAB_ICON[tb.id]} label={t(tb.key, lang)} />
+        ))}
+      </TabNav>
+      <div className="mx-auto w-full max-w-[1080px] px-6 py-6">
 
       {/* ── Explore: лента + сайдбар виджетов ── */}
       {active === 'explore' && (
@@ -182,6 +180,7 @@ export default async function ExplorePage({
             ))}
           </div>
         ))}
+      </div>
     </div>
   )
 }
@@ -192,7 +191,8 @@ function Widget({ title, icon, children }: { title: string; icon: React.ReactNod
       <div className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-ink">
         {icon} {title}
       </div>
-      <div className="divide-y divide-border/60">{children}</div>
+      {/* Разделители строк — приглушённые, не ярче границ карточки. */}
+      <div className="divide-y divide-border/40">{children}</div>
     </section>
   )
 }

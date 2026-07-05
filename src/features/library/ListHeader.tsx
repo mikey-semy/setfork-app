@@ -1,13 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BadgeCheck, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, PlayCircle, Settings, Star, Tag } from 'lucide-react'
+import { BadgeCheck, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { forkTemplate } from '@/features/library/actions'
-import { startRun } from '@/features/runs/actions'
 import { StarButton } from '@/features/library/StarButton'
 import { StarFolderMenu } from '@/features/star-folders/StarFolderMenu'
 import { getFoldersForTemplate, getUserFolders } from '@/features/star-folders/queries'
@@ -88,13 +87,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {session && active === 'overview' && (
-              <form action={startRun.bind(null, meta.id)}>
-                <button className="inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-primary-fg">
-                  <PlayCircle size={15} /> <span className="hidden sm:inline">{t('runStart', lang)}</span>
-                </button>
-              </form>
-            )}
+            {/* Start run переехал в Use-дропдаун (version-bar) — тоже «исполнение». */}
             {session && (
               <WatchButton
                 templateId={meta.id}

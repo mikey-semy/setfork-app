@@ -6,8 +6,19 @@ import { Check, ChevronDown, Code2, Copy, FileCode, FileDown, GitBranch, ListChe
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { t, type Lang } from '@/shared/i18n'
 
-/** Кнопка «Use»: как использовать список — git-clone, экспорт, MCP для агентов, embed. */
-export function CloneDropdown({ base, slug, lang }: { base: string; slug: string; lang: Lang }) {
+/** Кнопка «Use»: КАК использовать список — прогон (startRunSlot), git-clone,
+ *  экспорт, MCP для агентов, embed. Start run живёт здесь же — тоже исполнение. */
+export function CloneDropdown({
+  base,
+  slug,
+  lang,
+  startRunSlot,
+}: {
+  base: string
+  slug: string
+  lang: Lang
+  startRunSlot?: React.ReactNode
+}) {
   const [origin, setOrigin] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   useEffect(() => setOrigin(window.location.origin), [])
@@ -47,11 +58,14 @@ export function CloneDropdown({ base, slug, lang }: { base: string; slug: string
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ok-solid)] px-3.5 py-1.5 text-[13px] font-semibold text-white hover:opacity-90">
+        {/* Тот же габарит, что split-Star (px-3.5 py-2 text-[13px]) — единый стиль. */}
+        <button className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ok-solid)] px-3.5 py-2 text-[13px] font-semibold text-white hover:opacity-90">
           <ListChecks size={15} /> {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-[80vh] w-[340px] overflow-auto p-3">
+        {/* Прогон — первым: главный сценарий использования. */}
+        {startRunSlot && <div className="mb-3 border-b border-border pb-3">{startRunSlot}</div>}
         {/* Clone / Git */}
         {heading(<Terminal size={12} />, t('cloneGitHeading', lang))}
         {copyField('clone', cloneUrl)}

@@ -1,7 +1,11 @@
+'use client'
+
 import Link from 'next/link'
+import { useLayoutEffect, useRef, useState } from 'react'
 
 // Единый таб-бар под шапкой (GitHub-стиль) — ОДИН источник правды для профиля,
-// страницы списка и любых будущих разделов. Не плодить локальные копии.
+// страницы списка, Explore и любых будущих разделов. Активная вкладка подчёркнута
+// ПЕРЕЕЗЖАЮЩЕЙ полоской (плавный transition при переключении на той же странице).
 
 export function TabNav({
   children,
@@ -10,10 +14,33 @@ export function TabNav({
   children: React.ReactNode
   maxWidthClass?: string
 }) {
+  const ref = useRef<HTMLElement>(null)
+  const [bar, setBar] = useState<{ left: number; width: number } | null>(null)
+
+  // Позиция полоски = позиция активного таба ([data-active="true"]).
+  useLayoutEffect(() => {
+    const nav = ref.current
+    const el = nav?.querySelector<HTMLElement>('[data-active="true"]')
+    if (!nav || !el) {
+      setBar(null)
+      return
+    }
+    const left = el.offsetLeft
+    const width = el.offsetWidth
+    setBar((prev) => (prev && prev.left === left && prev.width === width ? prev : { left, width }))
+  })
+
   return (
     <div className="border-b border-border">
-      <nav className={`no-scrollbar mx-auto flex w-full gap-1 overflow-x-auto px-4 text-[14px] ${maxWidthClass}`}>
+      <nav ref={ref} className={`no-scrollbar relative mx-auto flex w-full gap-1 overflow-x-auto px-4 text-[14px] ${maxWidthClass}`}>
         {children}
+        {bar && (
+          <span
+            aria-hidden
+            className="absolute bottom-0 h-[2px] rounded-full bg-accent transition-all duration-200 ease-out"
+            style={{ left: bar.left, width: bar.width }}
+          />
+        )}
       </nav>
     </div>
   )
@@ -35,8 +62,9 @@ export function TabItem({
   return (
     <Link
       href={href}
-      className={`-mb-px inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 ${
-        on ? 'border-accent font-semibold text-ink' : 'border-transparent font-medium text-ink-2 hover:text-ink'
+      data-active={on || undefined}
+      className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-2.5 ${
+        on ? 'font-semibold text-ink' : 'font-medium text-ink-2 hover:text-ink'
       }`}
     >
       <span className={on ? 'text-ink' : 'text-muted'}>{icon}</span> {label}
