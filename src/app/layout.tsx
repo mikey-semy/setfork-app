@@ -7,6 +7,7 @@ import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { avatarSrc } from '@/shared/media'
 import { getBrowserNotifyEnabled, getNotifications, getUnreadCount } from '@/features/notifications/queries'
+import { getUserTemplates } from '@/features/library/queries'
 import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
 import { TopNav } from '@/widgets/TopNav'
 import { Footer } from '@/widgets/Footer'
@@ -75,9 +76,16 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [lang, user] = await Promise.all([getLang(), getSession()])
-  const [unread, notifications, browserNotify] = user
-    ? await Promise.all([getUnreadCount(user.userId), getNotifications(user.userId, 8), getBrowserNotifyEnabled(user.userId)])
-    : [0, [], false]
+  const [unread, notifications, browserNotify, ownLists] = user
+    ? await Promise.all([
+        getUnreadCount(user.userId),
+        getNotifications(user.userId, 8),
+        getBrowserNotifyEnabled(user.userId),
+        getUserTemplates(user.userId, user.userId),
+      ])
+    : [0, [], false, []]
+  // «Top lists» в боковом меню: недавние списки пользователя (по updatedAt), минимум полей.
+  const topLists = ownLists.slice(0, 10).map((l) => ({ handle: l.ownerHandle, slug: l.slug, avatarUrl: l.ownerAvatarUrl }))
   // Резолвим аватар для шапки: сессия может хранить storage_key — превращаем в imgproxy-URL.
   const navUser = user ? { ...user, avatarUrl: (await avatarSrc(user.avatarUrl, 60)) ?? undefined } : null
   return (
@@ -86,7 +94,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <div className="flex min-h-screen flex-col bg-canvas">
             <Suspense>
-              <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
+              <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} topLists={topLists} />
             </Suspense>
             <main className="flex flex-1 flex-col">{children}</main>
             <Footer lang={lang} />

@@ -10,6 +10,7 @@ import { MobileSearch } from './MobileSearch'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
+import { SearchField } from '@/shared/ui/SearchField'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,22 +28,50 @@ const RESERVED_TOP = new Set([
   'notifications', 'api', 'about', 'terms', 'privacy', 'my-lists', 'catalogs',
 ])
 
+/** Списки пользователя для секции «Top lists» в боковом меню (минимум данных). */
+export interface TopListItem {
+  handle: string
+  slug: string
+  avatarUrl: string | null
+}
+
+// localStorage-ключ свёрнутости секции «Top lists» ('0' = свёрнута).
+const TOP_LISTS_LS = 'sf.drawer.topLists'
+
 export function TopNav({
   lang,
   user,
   isAdmin,
   unread = 0,
   notifications = [],
+  topLists = [],
 }: {
   lang: Lang
   user: SessionUser | null
   isAdmin?: boolean
   unread?: number
   notifications?: NotificationItem[]
+  topLists?: TopListItem[]
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [menuOpen, setMenuOpen] = useState(false)
+  // «Top lists»: свёрнутость (помним между сессиями) + клиентский фильтр по подстроке.
+  // Ленивая инициализация из localStorage безопасна: до клика по бургеру секция
+  // не рендерится вовсе, поэтому расхождения с SSR-разметкой не будет.
+  const [topListsOpen, setTopListsOpen] = useState(
+    () => typeof window === 'undefined' || localStorage.getItem(TOP_LISTS_LS) !== '0',
+  )
+  const [listFilter, setListFilter] = useState('')
+  const toggleTopLists = () =>
+    setTopListsOpen((v) => {
+      localStorage.setItem(TOP_LISTS_LS, v ? '0' : '1')
+      return !v
+    })
+  const filterQ = listFilter.trim().toLowerCase()
+  const visibleLists = filterQ
+    ? topLists.filter((l) => `${l.handle}/${l.slug}`.toLowerCase().includes(filterQ))
+    : topLists
   // На странице поиска поле в шапке = полноценный квалификатор-поиск во всю ширину.
   const isSearch = pathname.startsWith('/search')
   // Бредкрамб в шапке (как GitHub owner/repo): показываем чей это профиль/список.
@@ -94,18 +123,37 @@ export function TopNav({
                     : ''
 
   // Пункты бокового меню (глобальная навигация; аккаунт — в меню аватара).
-  const navItems: { href: string; label: string; icon: typeof Home }[] = [
+  // Основной блок — навигация; действия (создать/сгенерировать) — отдельной
+  // секцией после разделителя, как «create new» у GitHub.
+  type NavItem = { href: string; label: string; icon: typeof Home }
+  const navItems: NavItem[] = [
     { href: '/', label: t('home', lang), icon: Home },
     { href: '/explore', label: t('explore', lang), icon: Compass },
     ...(user
       ? [
           { href: '/my-lists', label: t('myLists', lang), icon: ListChecks },
           { href: '/runs', label: t('myRuns', lang), icon: PlayCircle },
-          { href: '/new', label: t('newList', lang), icon: Plus },
-          { href: '/generate', label: t('generateWithAi', lang), icon: Sparkles },
         ]
       : []),
   ]
+  const actionItems: NavItem[] = user
+    ? [
+        { href: '/new', label: t('newList', lang), icon: Plus },
+        { href: '/generate', label: t('generateWithAi', lang), icon: Sparkles },
+      ]
+    : []
+  const navLink = (it: NavItem) => (
+    <Link
+      key={it.href}
+      href={it.href}
+      onClick={() => setMenuOpen(false)}
+      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[14px] ${
+        isActive(it.href) ? 'bg-surface-2 font-semibold text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
+      }`}
+    >
+      <it.icon size={16} className="shrink-0 text-muted" /> {it.label}
+    </Link>
+  )
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5 print:hidden">
@@ -284,20 +332,69 @@ export function TopNav({
                 <X size={18} />
               </button>
             </div>
-            <nav className="flex flex-col gap-0.5">
-              {navItems.map((it) => (
-                <Link
-                  key={it.href}
-                  href={it.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[14px] ${
-                    isActive(it.href) ? 'bg-surface-2 font-semibold text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
-                  }`}
-                >
-                  <it.icon size={16} className="shrink-0 text-muted" /> {it.label}
-                </Link>
-              ))}
-            </nav>
+            <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
+              {/* Основная навигация */}
+              <nav className="flex flex-col gap-0.5">{navItems.map(navLink)}</nav>
+
+              {/* Действия (создать/сгенерировать) — отдельной секцией после разделителя */}
+              {actionItems.length > 0 && (
+                <>
+                  <div className="my-2 border-t border-border/60" />
+                  <nav className="flex flex-col gap-0.5">{actionItems.map(navLink)}</nav>
+                </>
+              )}
+
+              {/* «Top lists» — недавние списки пользователя (как Top repositories у GitHub):
+                  сворачиваемая секция + клиентский фильтр по подстроке. */}
+              {user && topLists.length > 0 && (
+                <>
+                  <div className="my-2 border-t border-border/60" />
+                  <section>
+                    <button
+                      type="button"
+                      onClick={toggleTopLists}
+                      aria-expanded={topListsOpen}
+                      className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-[12px] font-semibold text-muted hover:text-ink ${focusRing}`}
+                    >
+                      {t('topLists', lang)}
+                      <ChevronDown size={14} className={`shrink-0 transition-transform ${topListsOpen ? '' : '-rotate-90'}`} />
+                    </button>
+                    {topListsOpen && (
+                      <>
+                        <SearchField
+                          value={listFilter}
+                          onValueChange={setListFilter}
+                          placeholder={t('findList', lang)}
+                          clearLabel={t('clear', lang)}
+                          size="xs"
+                          className="mx-1 mb-1.5"
+                        />
+                        <nav className="flex flex-col gap-0.5">
+                          {visibleLists.map((l) => (
+                            <Link
+                              key={`${l.handle}/${l.slug}`}
+                              href={`/${l.handle}/${l.slug}`}
+                              onClick={() => setMenuOpen(false)}
+                              className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+                            >
+                              {l.avatarUrl ? (
+                                <Avatar handle={l.handle} avatarUrl={l.avatarUrl} size={18} />
+                              ) : (
+                                <ListChecks size={16} className="shrink-0 text-muted" />
+                              )}
+                              <span className="min-w-0 truncate">
+                                <span className="text-muted">{l.handle}/</span>
+                                {l.slug}
+                              </span>
+                            </Link>
+                          ))}
+                        </nav>
+                      </>
+                    )}
+                  </section>
+                </>
+              )}
+            </div>
           </aside>
         </>
       )}
