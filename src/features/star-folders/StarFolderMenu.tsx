@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { createPortal } from 'react-dom'
 import { Check, ChevronDown, Plus } from 'lucide-react'
+import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { createStarFolder, toggleListInFolder } from './actions'
 import type { StarFolder } from './queries'
 
@@ -60,16 +60,7 @@ export function StarFolderMenu({
       >
         <ChevronDown size={14} />
       </button>
-      {open &&
-        createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4" onClick={() => setOpen(false)}>
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-[280px] max-w-full rounded-lg border border-border bg-surface p-2 shadow-card"
-            >
-              <div className="px-2 py-1.5 text-[12px] font-semibold uppercase tracking-wide text-muted">
-                {ru ? 'В папку' : 'Add to folder'}
-              </div>
+      <OverlayPanel open={open} onClose={() => setOpen(false)} width={280} className="p-2" title={ru ? 'В папку' : 'Add to folder'}>
               <div className="max-h-[240px] overflow-y-auto">
                 {items.map((f) => {
                   const on = inSet.has(f.id)
@@ -107,10 +98,7 @@ export function StarFolderMenu({
                   <Plus size={13} /> {ru ? 'Создать' : 'Create'}
                 </button>
               </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      </OverlayPanel>
     </div>
   )
 }

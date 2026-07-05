@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { createPortal } from 'react-dom'
 import { Check, Pencil } from 'lucide-react'
+import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { updatePins } from '@/features/library/actions'
 import type { Lang } from '@/shared/i18n'
 
@@ -46,20 +46,20 @@ export function PinsPicker({
       >
         <Pencil size={11} /> {ru ? 'Настроить' : 'Customize your pins'}
       </button>
-      {open &&
-        createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4" onClick={() => setOpen(false)}>
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="flex max-h-[70vh] w-[340px] max-w-full flex-col rounded-lg border border-border bg-surface shadow-card"
-            >
-              <div className="border-b border-border px-3.5 py-2.5 text-[13px] font-semibold text-ink">
-                {ru ? 'Закреплённые списки' : 'Pinned lists'}{' '}
-                <span className="font-mono text-[11px] text-muted">
-                  {sel.size}/{MAX_PINS}
-                </span>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+      <OverlayPanel
+        open={open}
+        onClose={() => setOpen(false)}
+        className="flex max-h-[70vh] flex-col"
+        title={
+          <span>
+            {ru ? 'Закреплённые списки' : 'Pinned lists'}{' '}
+            <span className="font-mono text-[11px] text-muted">
+              {sel.size}/{MAX_PINS}
+            </span>
+          </span>
+        }
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
                 {lists.map((l) => {
                   const on = sel.has(l.id)
                   const full = !on && sel.size >= MAX_PINS
@@ -91,11 +91,8 @@ export function PinsPicker({
                 >
                   {ru ? 'Сохранить' : 'Save pins'}
                 </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+        </div>
+      </OverlayPanel>
     </>
   )
 }
