@@ -64,8 +64,11 @@ export function ActivityGraph({
         </span>
       </div>
 
-      <div className="scroll-thin overflow-x-auto pb-1">
-        <div className="inline-flex flex-col gap-1">
+      {/* direction:rtl на скролл-контейнере = старт прокрутки СПРАВА (видны последние
+          дни), без JS; внутренний ltr возвращает нормальный порядок недель. Скролл —
+          тонкий полупрозрачный (.scroll-thin), не пугает на узких экранах. */}
+      <div className="scroll-thin overflow-x-auto pb-1" style={{ direction: 'rtl' }}>
+        <div className="inline-flex flex-col gap-1" style={{ direction: 'ltr' }}>
           <div className="flex gap-[3px] text-[10px] leading-none text-muted">
             {months.map((m, i) => (
               <div key={i} className="w-[11px] whitespace-nowrap">

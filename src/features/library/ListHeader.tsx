@@ -109,10 +109,11 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
               />
             )}
             {session ? (
-              <>
-                <StarButton templateId={meta.id} starred={starred} count={meta.starsCount} label={t('star', lang)} />
+              // Split-кнопка как у GitHub: [★ Star N | ▾-папки] одной группой.
+              <span className="inline-flex items-stretch">
+                <StarButton templateId={meta.id} starred={starred} count={meta.starsCount} label={t('star', lang)} grouped />
                 <StarFolderMenu templateId={meta.id} folders={folders} inFolders={inFolders} lang={lang} />
-              </>
+              </span>
             ) : (
               <Link
                 href="/login"
