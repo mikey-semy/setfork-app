@@ -1,27 +1,70 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, GitBranch, ChevronDown } from 'lucide-react'
+import { Check, GitBranch, ChevronDown, Plus, Trash2 } from 'lucide-react'
 import type { GitBranch as Branch } from '@/core'
 import type { Lang } from '@/shared/i18n'
+import { createBranchAction, deleteBranchAction, type BranchActionResult } from './actions'
 
-/** Селектор веток (как GitHub branch-picker) в version-bar. Выбор → ?ref=<branch>. */
+const ERR: Record<string, { ru: string; en: string }> = {
+  'bad-name': { ru: 'Только буквы/цифры и .-_', en: 'Letters/digits and .-_ only' },
+  exists: { ru: 'Ветка уже есть', en: 'Branch already exists' },
+  'not-found': { ru: 'Не найдено', en: 'Not found' },
+  protected: { ru: 'main защищена', en: 'main is protected' },
+  internal: { ru: 'Ошибка, попробуйте ещё раз', en: 'Something went wrong' },
+}
+
+/** Селектор веток (как GitHub branch-picker) в version-bar. Выбор → ?ref=<branch>.
+ *  canManage: владелец/коллаборатор — создание (от текущей) и удаление не-main. */
 export function BranchPicker({
   base,
+  owner,
+  slug,
   branches,
   current,
   lang,
+  canManage = false,
 }: {
   base: string
+  owner: string
+  slug: string
   branches: Branch[]
   current: string // активная ветка ('main' = дефолт)
   lang: Lang
+  canManage?: boolean
 }) {
   const ru = lang === 'ru'
   const [open, setOpen] = useState(false)
-  if (branches.length === 0) return null
+  const [name, setName] = useState('')
+  const [err, setErr] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+  if (branches.length === 0 && !canManage) return null
+
+  const fail = (r: BranchActionResult) => {
+    if (!r.ok) setErr(ERR[r.code]?.[ru ? 'ru' : 'en'] ?? ERR.internal[ru ? 'ru' : 'en'])
+  }
+
+  const create = () => {
+    const n = name.trim()
+    if (!n || pending) return
+    setErr(null)
+    startTransition(async () => {
+      // redirect на ?ref= при успехе; сюда возвращаемся только при ошибке.
+      fail(await createBranchAction(owner, slug, n, current))
+    })
+  }
+
+  const remove = (branch: string) => {
+    if (pending) return
+    setErr(null)
+    startTransition(async () => {
+      const r = await deleteBranchAction(owner, slug, branch)
+      fail(r)
+      if (r.ok && branch === current) window.location.href = base
+    })
+  }
 
   return (
     <>
@@ -46,25 +89,61 @@ export function BranchPicker({
                 {branches.map((b) => {
                   const on = b.name === current
                   return (
-                    <Link
-                      key={b.name}
-                      href={b.isDefault ? base : `${base}?ref=${encodeURIComponent(b.name)}`}
-                      onClick={() => setOpen(false)}
-                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-[13px] text-ink hover:bg-surface-2"
-                    >
-                      <span className="grid w-4 place-items-center">{on && <Check size={13} className="text-accent" />}</span>
-                      <span className="min-w-0 truncate">{b.name}</span>
-                      {b.isDefault ? (
-                        <span className="ml-auto rounded-full border border-border px-1.5 text-[10.5px] text-muted">default</span>
-                      ) : (
-                        <span className="ml-auto font-mono text-[10.5px] text-muted">
-                          +{b.ahead}/-{b.behind}
-                        </span>
+                    <div key={b.name} className="group flex items-center rounded hover:bg-surface-2">
+                      <Link
+                        href={b.isDefault ? base : `${base}?ref=${encodeURIComponent(b.name)}`}
+                        onClick={() => setOpen(false)}
+                        className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px] text-ink"
+                      >
+                        <span className="grid w-4 shrink-0 place-items-center">{on && <Check size={13} className="text-accent" />}</span>
+                        <span className="min-w-0 truncate">{b.name}</span>
+                        {b.isDefault ? (
+                          <span className="ml-auto rounded-full border border-border px-1.5 text-[10.5px] text-muted">default</span>
+                        ) : (
+                          <span className="ml-auto font-mono text-[10.5px] text-muted">
+                            +{b.ahead}/-{b.behind}
+                          </span>
+                        )}
+                      </Link>
+                      {canManage && !b.isDefault && (
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => remove(b.name)}
+                          className="mr-1 hidden shrink-0 rounded p-1 text-muted hover:bg-danger/10 hover:text-danger group-hover:block"
+                          title={ru ? 'Удалить ветку' : 'Delete branch'}
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       )}
-                    </Link>
+                    </div>
                   )
                 })}
               </div>
+              {canManage && (
+                <div className="mt-1 border-t border-border px-1 pt-1.5">
+                  <div className="flex items-center gap-1">
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && create()}
+                      placeholder={ru ? 'Новая ветка…' : 'New branch…'}
+                      className="min-w-0 flex-1 rounded border border-border bg-surface-2 px-2 py-1 text-[12.5px] text-ink outline-none placeholder:text-muted focus:border-border-strong"
+                    />
+                    <button
+                      type="button"
+                      disabled={pending || !name.trim()}
+                      onClick={create}
+                      className="inline-flex shrink-0 items-center gap-1 rounded border border-border px-2 py-1 text-[12px] font-semibold text-ink hover:bg-surface-2 disabled:opacity-50"
+                    >
+                      <Plus size={12} /> {ru ? 'Создать' : 'Create'}
+                    </button>
+                  </div>
+                  <p className="px-1 pt-1 text-[11px] text-muted">
+                    {err ?? (ru ? `от ${current}` : `from ${current}`)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>,
           document.body,

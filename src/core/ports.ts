@@ -158,6 +158,18 @@ export interface GitCore {
   listBranches(repo: GitRepoRef): Promise<GitBranch[]>
   /** Материализация tip ветки (просмотр «на ветке»). null — ветки/list.json нет. */
   branchSnapshot(repo: GitRepoRef, branch: string): Promise<BranchSnapshot | null>
+  /** A2: создать ветку от базы (''=main). → tip sha; бросает BranchOpError. */
+  createBranch(repo: GitRepoRef, name: string, from?: string): Promise<string>
+  /** A2: удалить ветку (main защищён). Бросает BranchOpError. */
+  deleteBranch(repo: GitRepoRef, name: string): Promise<void>
+}
+
+/** Ошибка операций над ветками с машиночитаемой причиной (для UI-сообщений). */
+export class BranchOpError extends Error {
+  constructor(public code: 'bad-name' | 'exists' | 'not-found' | 'protected' | 'internal') {
+    super(code)
+    this.name = 'BranchOpError'
+  }
 }
 
 // ── AI (генерация/refine/эмбеддинги + учёт стоимости) ────────────────

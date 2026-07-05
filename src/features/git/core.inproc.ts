@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { and, eq } from 'drizzle-orm'
 import type { BranchSnapshot, GitBranch, GitCore } from '@/core'
+import { BranchOpError } from '@/core'
 import { db, templates, users } from '@/shared/db'
 import { gitStore } from './adapter'
 
@@ -130,5 +131,36 @@ export const gitCoreInproc: GitCore = {
       ordered: parsed.ordered ?? true,
       steps,
     }
+  },
+
+  async createBranch(repo, name, from) {
+    const base = from || 'main'
+    if (badBranch(name) || badBranch(base)) throw new BranchOpError('bad-name')
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) throw new BranchOpError('not-found')
+    // База должна существовать (различаем от «ветка уже есть»).
+    const tip = await exec('git', ['--git-dir', bare, 'rev-parse', '--verify', `refs/heads/${base}`])
+      .then((r) => r.stdout.trim())
+      .catch(() => null)
+    if (!tip) throw new BranchOpError('not-found')
+    const exists = await exec('git', ['--git-dir', bare, 'rev-parse', '--verify', `refs/heads/${name}`]).then(() => true, () => false)
+    if (exists) throw new BranchOpError('exists')
+    await exec('git', ['--git-dir', bare, 'branch', name, base]).catch(() => {
+      throw new BranchOpError('internal')
+    })
+    return tip
+  },
+
+  async deleteBranch(repo, name) {
+    if (badBranch(name)) throw new BranchOpError('bad-name')
+    if (name === 'main') throw new BranchOpError('protected') // main — канон
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) throw new BranchOpError('not-found')
+    const exists = await exec('git', ['--git-dir', bare, 'rev-parse', '--verify', `refs/heads/${name}`]).then(() => true, () => false)
+    if (!exists) throw new BranchOpError('not-found')
+    // -D: черновики удаляем без merged-проверки (в main они не вливаются проекцией).
+    await exec('git', ['--git-dir', bare, 'branch', '-D', name]).catch(() => {
+      throw new BranchOpError('internal')
+    })
   },
 }
