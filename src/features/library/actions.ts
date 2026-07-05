@@ -257,6 +257,75 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   redirect(`/${owner}/${tpl.slug}`)
 }
 
+/** A4: merge branch-PR c ручным разрешением конфликтов по шагам.
+ *  Сервер пересчитывает three-way детерминированно и применяет выбор —
+ *  клиентскому результату не доверяем. */
+export async function resolveBranchPr(suggestionId: string, formData: FormData): Promise<void> {
+  const session = await requireSession()
+  const sug = await db.query.suggestions.findFirst({
+    where: (s) => eq(s.id, suggestionId),
+    with: { template: true },
+  })
+  if (!sug || sug.status !== 'open' || !sug.branchRef) return
+  const tpl = sug.template
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+
+  const owner = await ownerHandle(tpl.ownerId)
+  const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
+
+  const isChoice = (v: unknown): v is 'ours' | 'theirs' => v === 'ours' || v === 'theirs'
+  let stepChoices: Record<string, 'ours' | 'theirs'> = {}
+  let metaChoices: Record<string, 'ours' | 'theirs'> = {}
+  try {
+    const sc = JSON.parse(String(formData.get('stepChoices') ?? '{}')) as Record<string, unknown>
+    const mc = JSON.parse(String(formData.get('metaChoices') ?? '{}')) as Record<string, unknown>
+    stepChoices = Object.fromEntries(Object.entries(sc).filter(([, v]) => isChoice(v))) as typeof stepChoices
+    metaChoices = Object.fromEntries(Object.entries(mc).filter(([, v]) => isChoice(v))) as typeof metaChoices
+  } catch {
+    redirect(`${path}?e=unresolved`)
+  }
+
+  const { gitCore } = await import('@/features/git/core')
+  const { threeWayMerge, applyChoices } = await import('@/features/git/three-way')
+  const { BranchOpError } = await import('@/core')
+
+  const state = await gitCore.mergeState({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
+  if (!state) redirect(`${path}?e=not-found`)
+  const res = threeWayMerge(state.base, state.ours, state.theirs)
+  const final = applyChoices(res, stepChoices, metaChoices)
+  if (!final) redirect(`${path}?e=unresolved`) // выбраны не все конфликты (или state изменился)
+
+  // Каноничный формат list.json — как versionFiles (serialize.ts).
+  const listJson =
+    JSON.stringify(
+      {
+        title: final.title,
+        desc: final.desc,
+        tags: final.tags,
+        ordered: final.ordered,
+        version: tpl.currentVersion + 1,
+        steps: final.steps.map((s, i) => ({ n: i + 1, ...s })),
+      },
+      null,
+      2,
+    ) + '\n'
+
+  try {
+    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, listJson)
+  } catch (e) {
+    const code = e instanceof BranchOpError ? e.code : 'internal'
+    redirect(`${path}?e=${code}`)
+  }
+  await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
+  if (sug.authorId !== session.userId) {
+    await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
+  }
+  await notifyWatchersNewVersion(tpl.id, session.userId)
+  await enqueueReindex(tpl.id)
+  revalidatePath('/', 'layout')
+  redirect(`/${owner}/${tpl.slug}`)
+}
+
 // ── Автор списка: принять предложение → новая версия ─────────────────
 export async function acceptSuggestion(suggestionId: string): Promise<void> {
   const session = await requireSession()

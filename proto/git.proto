@@ -47,6 +47,33 @@ service GitCore {
   // Ошибки: failed_precondition c message 'conflict' (не сливается чисто)
   // или 'nothing-to-merge' (ветка не впереди main); not_found; invalid_argument.
   rpc MergeBranch(MergeBranchRequest) returns (MergeBranchResponse);
+  // A4: вход конфликтного merge — три материализации для трёхстороннего
+  // сравнения по шагам (base = merge-base, ours = main, theirs = ветка).
+  rpc GetMergeState(MergeStateRequest) returns (MergeStateResponse);
+  // A4: merge c ручным резолвом — клиент присылает ФИНАЛЬНЫЙ list.json.
+  // Дерево результата = дерево main c заменённым list.json и БЕЗ steps/
+  // (md-оверрайды сбрасываются: канон разрешённых шагов — list.json).
+  // Коммит с двумя родителями (main, ветка) → main → проекция версии.
+  rpc MergeResolved(MergeResolvedRequest) returns (MergeBranchResponse);
+}
+
+message MergeStateRequest {
+  RepoRef repo = 1;
+  string branch = 2;
+}
+
+message MergeStateResponse {
+  bool found = 1; // ветка и merge-base существуют
+  string merge_base_sha = 2;
+  BranchSnapshotResponse base = 3;
+  BranchSnapshotResponse ours = 4;   // main
+  BranchSnapshotResponse theirs = 5; // ветка
+}
+
+message MergeResolvedRequest {
+  RepoRef repo = 1;
+  string branch = 2;
+  bytes list_json = 3; // финальный resolved list.json
 }
 
 message MergeBranchRequest {

@@ -165,12 +165,25 @@ export interface GitCore {
   /** A3: влить ветку в main (ff или merge-commit) + проекция новой версии.
    *  Конфликт/нечего вливать → BranchOpError('conflict'|'nothing-to-merge'). */
   mergeBranch(repo: GitRepoRef, name: string): Promise<MergeResult>
+  /** A4: вход конфликтного merge — base (merge-base), ours (main), theirs (ветка).
+   *  null — ветки/merge-base/материализаций нет. */
+  mergeState(repo: GitRepoRef, branch: string): Promise<MergeState | null>
+  /** A4: merge с ручным резолвом — финальный list.json (строка). Дерево =
+   *  main c заменённым list.json без steps/ (md-оверрайды сбрасываются). */
+  mergeResolved(repo: GitRepoRef, branch: string, listJson: string): Promise<MergeResult>
 }
 
 export interface MergeResult {
   tipSha: string
   newVersion: number | null // спроецированная версия (null — list.json не менялся)
   fastForward: boolean
+}
+
+export interface MergeState {
+  mergeBaseSha: string
+  base: BranchSnapshot
+  ours: BranchSnapshot // main
+  theirs: BranchSnapshot // ветка
 }
 
 /** Ошибка операций над ветками с машиночитаемой причиной (для UI-сообщений). */

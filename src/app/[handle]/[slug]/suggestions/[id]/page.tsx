@@ -9,7 +9,9 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta, getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
-import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion } from '@/features/library/actions'
+import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr } from '@/features/library/actions'
+import { ConflictResolver } from '@/features/git/ConflictResolver'
+import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
 import { ListHeader } from '@/features/library/ListHeader'
@@ -62,12 +64,22 @@ export default async function SuggestionThreadPage({
   const diffBase = sug.branchRef ? (await getVersionSteps(meta.id, meta.currentVersion))?.steps ?? [] : base?.steps ?? []
   const diff = diffSteps(diffBase, items, lang)
 
+  // A4: для открытого branch-PR заранее считаем трёхсторонний merge — при
+  // конфликте вместо кнопки Merge показываем резолвер (выбор по шагам).
+  const mergeState =
+    sug.branchRef && sug.status === 'open' && canMerge && !branchMissing
+      ? await gitCore.mergeState({ owner, slug }, sug.branchRef).catch(() => null)
+      : null
+  const threeWay = mergeState ? threeWayMerge(mergeState.base, mergeState.ours, mergeState.theirs) : null
+  const hasConflicts = !!threeWay && (threeWay.conflicts.length > 0 || threeWay.metaConflicts.length > 0)
+
   const MERGE_ERR: Record<string, { ru: string; en: string }> = {
     conflict: {
       ru: 'Конфликт: main ушёл вперёд и не сливается автоматически. Обнови ветку (влей main в неё) и попробуй снова.',
       en: 'Conflict: main has diverged and cannot be merged automatically. Update the branch (merge main into it) and retry.',
     },
     'nothing-to-merge': { ru: 'Ветка не содержит новых коммитов относительно main.', en: 'The branch has no new commits over main.' },
+    unresolved: { ru: 'Разрешены не все конфликты (или ветка изменилась) — выбери версии заново.', en: 'Not all conflicts were resolved (or the branch changed) — pick again.' },
   }
   const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? { ru: 'Не удалось выполнить merge.', en: 'Merge failed.' }) : null
 
@@ -153,7 +165,8 @@ export default async function SuggestionThreadPage({
         {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open') && (
           <div className="mt-3 flex gap-2.5">
             {sug.branchRef ? (
-              !branchMissing && (
+              !branchMissing &&
+              !hasConflicts && (
                 <form action={mergeBranchPr.bind(null, sug.id)}>
                   <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
                     <GitMerge size={14} /> {lang === 'ru' ? 'Влить в main' : 'Merge to main'}
@@ -173,6 +186,16 @@ export default async function SuggestionThreadPage({
               </SubmitButton>
             </form>
           </div>
+        )}
+
+        {hasConflicts && threeWay && sug.branchRef && (
+          <ConflictResolver
+            conflicts={threeWay.conflicts}
+            metaConflicts={threeWay.metaConflicts}
+            branch={sug.branchRef}
+            lang={lang}
+            action={resolveBranchPr.bind(null, sug.id)}
+          />
         )}
 
         {/* Обсуждение */}
