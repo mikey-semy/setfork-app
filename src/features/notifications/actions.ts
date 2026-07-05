@@ -21,7 +21,9 @@ export async function updateNotifyPrefs(formData: FormData): Promise<void> {
     email: on('email'),
     browser: on('browser'),
   }
-  await db.update(users).set({ notifyPrefs: prefs }).where(eq(users.id, session.userId))
+  // Язык доставки (email/push); интерфейс пока English-only.
+  const lang = formData.get('notifyLang') === 'ru' ? ('ru' as const) : ('en' as const)
+  await db.update(users).set({ notifyPrefs: prefs, lang }).where(eq(users.id, session.userId))
   revalidatePath('/settings')
 }
 

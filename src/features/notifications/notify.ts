@@ -48,7 +48,7 @@ export async function notify(params: {
   if (params.actorId && params.actorId === params.recipientId) return
   try {
     const [u] = await db
-      .select({ prefs: users.notifyPrefs, email: users.email })
+      .select({ prefs: users.notifyPrefs, email: users.email, lang: users.lang })
       .from(users)
       .where(eq(users.id, params.recipientId))
       .limit(1)
@@ -64,7 +64,7 @@ export async function notify(params: {
       suggestionId: params.suggestionId ?? null,
     })
     const refPayload = {
-      lang: 'en' as const, // язык получателя в БД не хранится (только кука актора) → пока 'en'
+      lang: (u?.lang === 'ru' ? 'ru' : 'en') as 'en' | 'ru', // язык ДОСТАВКИ = язык получателя (users.lang)
       actorId: params.actorId ?? null,
       type: params.type,
       templateId: params.templateId ?? null,
