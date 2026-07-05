@@ -150,7 +150,7 @@ export const templates = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ ownerSlug: unique('templates_owner_slug').on(t.ownerId, t.slug) }),
+  (t) => ({ ownerSlug: unique('templates_owner_slug').on(t.ownerId, t.slug), forkedFrom: index('templates_forked_from_idx').on(t.forkedFromId) }),
 )
 
 // ── Template versions (лёгкое версионирование) ───────────────────────
@@ -165,7 +165,7 @@ export const templateVersions = pgTable(
     note: text('note').notNull().default(''), // что изменилось (для «истории»)
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ tplVersion: unique('template_versions_tpl_version').on(t.templateId, t.version) }),
+  (t) => ({ tplVersion: unique('template_versions_tpl_version').on(t.templateId, t.version), created: index('template_versions_created_idx').on(t.createdAt) }),
 )
 
 // ── Releases (публикация версии как релиза, как GitHub Releases) ─────
@@ -228,7 +228,7 @@ export const runs = pgTable('runs', {
   doneCount: integer('done_count').notNull().default(0),
   startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+}, (t) => [index('runs_tpl_idx').on(t.templateId), index('runs_user_idx').on(t.userId)])
 
 // ── Состояние шага в прогоне ─────────────────────────────────────────
 export const runStepState = pgTable(
@@ -263,7 +263,7 @@ export const stars = pgTable(
       .references(() => templates.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ userTpl: unique('stars_user_tpl').on(t.userId, t.templateId) }),
+  (t) => ({ userTpl: unique('stars_user_tpl').on(t.userId, t.templateId), tpl: index('stars_tpl_idx').on(t.templateId) }),
 )
 
 // ── Star folders (папки для организации starred-списков, как GitHub Lists) ──
@@ -381,7 +381,7 @@ export const suggestions = pgTable('suggestions', {
   branchRef: text('branch_ref'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
-})
+}, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status)])
 
 // Комментарии-обсуждение к правке (review-комментарии, как в PR).
 export const suggestionComments = pgTable(
@@ -511,7 +511,7 @@ export const watches = pgTable(
       .references(() => templates.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ userTpl: unique('watches_user_tpl').on(t.userId, t.templateId) }),
+  (t) => ({ userTpl: unique('watches_user_tpl').on(t.userId, t.templateId), tpl: index('watches_tpl_idx').on(t.templateId) }),
 )
 
 // ── Collaborators (совместная запись — push/правки не только владельцем) ─
