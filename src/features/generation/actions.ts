@@ -12,7 +12,7 @@ import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { enqueueReindex } from '@/features/search/adapter'
 import { toProposedItems } from '@/features/library/editor'
-import { listStore } from '@/features/library/list-store.adapter'
+import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
 
 async function ownerHandle(userId: string): Promise<string> {

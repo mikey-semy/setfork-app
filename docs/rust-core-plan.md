@@ -106,8 +106,12 @@ CurationStore/CollabStore/SearchIndex/CatalogStore/Notifier/AiPort). Следу�
   **Rust-реализация `src/domain_read.rs` (sqlx) + golden-сверка С TS-адаптером — 6/6 списков OK**
   (вкл. форк, MCP-созданный, ordered/unordered): CLI `domain-read <owner> <slug> <out.json>` ↔
   `scripts/golden-domain-read.ts` (запуск: `NODE_OPTIONS=--conditions=react-server npx tsx …`;
-  avatarRef нормализуется — TS подписывает imgproxy). Осталось: Connect-ES клиент + флип за флагом,
-  затем Curation/Collab reads.
+  avatarRef нормализуется — TS подписывает imgproxy). **Connect-ES клиент — СДЕЛАН:**
+  `gen/domain_read_pb.ts` (buf) + `list-store.remote.ts` (READ-методы порта) + фасад
+  `list-store.ts` с флагом **`SETFORK_DOMAIN_READS=1`** (writes всегда Drizzle; потребители
+  импортируют только фасад). **Remote-golden через провод (Connect→Rust vs Drizzle) — OK**
+  на 2 списках (list/versions/getVersion/contributors). Осталось: Curation/Collab reads,
+  затем WRITE-порты.
 
 ## Фаза 2 — Rust git-ядро (git-first)
 
