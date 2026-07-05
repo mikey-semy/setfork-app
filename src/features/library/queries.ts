@@ -4,7 +4,7 @@ import { db, embeddings, stars, steps, suggestionComments, suggestions, template
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
-import { curationStore } from '@/features/curation/adapter'
+import { curationStore } from '@/features/curation/store'
 
 /** Резолвит скриншоты шагов: imageKey → подписанный URL. Для префилла редактора и показа. */
 export async function getStepPreviews(

@@ -121,3 +121,28 @@ service ListRead {
   rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
   rpc GetContributors(ListId) returns (ContributorsResponse);
 }
+
+// ── CurationRead: READ-часть порта CurationStore ──────────────────────
+message UserList {
+  string list_id = 1;
+  string user_id = 2;
+}
+
+message BoolResponse {
+  bool value = 1;
+}
+
+message CountResponse {
+  int32 value = 1;
+}
+
+message IdsResponse {
+  repeated string ids = 1;
+}
+
+service CurationRead {
+  rpc IsStarred(UserList) returns (BoolResponse);
+  rpc IsWatching(UserList) returns (BoolResponse);
+  rpc WatchCount(ListId) returns (CountResponse);
+  rpc WatcherIds(ListId) returns (IdsResponse);
+}
