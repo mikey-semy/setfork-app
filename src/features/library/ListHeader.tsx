@@ -17,6 +17,7 @@ import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/libra
 import { getOpenIssueCount } from '@/features/issues/queries'
 import { getWatchCount, isWatching } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
+import { TabItem, TabNav } from '@/shared/ui/TabNav'
 
 type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'settings'
 
@@ -44,33 +45,17 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   const base = `/${owner}/${slug}`
   const forkBound = forkTemplate.bind(null, meta.id)
 
-  const tab = (key: Tab, href: string, icon: React.ReactNode, label: string, count?: number) => (
-    <Link
-      href={href}
-      className={`-mb-px inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 ${
-        active === key ? 'border-accent font-semibold text-ink' : 'border-transparent font-medium text-ink-2 hover:text-ink'
-      }`}
-    >
-      {icon} {label}
-      {count != null && count > 0 && (
-        <span className="rounded-full bg-surface-2 px-1.5 text-[11px] text-ink-2">{count}</span>
-      )}
-    </Link>
-  )
-
   return (
     <div>
-      {/* Табы — full-width СРАЗУ под шапкой (как GitHub), затем название и кнопки. */}
-      <div className="border-b border-border">
-        <nav className="no-scrollbar mx-auto flex w-full max-w-[1180px] gap-1 overflow-x-auto px-4 text-[14px]">
-          {/* Первый таб — сам список (как «Code» у GitHub-репо), не «Overview». */}
-          {tab('overview', base, <ListChecks size={15} />, t('listTab', lang))}
-          {tab('issues', `${base}/issues`, <CircleDot size={15} />, t('issuesTab', lang), issueCount)}
-          {tab('suggestions', `${base}/suggestions`, <GitPullRequest size={15} />, t('suggestions', lang), suggCount)}
-          {tab('versions', `${base}/versions`, <Tag size={15} />, t('versionsTab', lang))}
-          {isOwner && tab('settings', `${base}/settings`, <Settings size={15} />, t('settings', lang))}
-        </nav>
-      </div>
+      {/* Табы — full-width СРАЗУ под шапкой (как GitHub); единый TabNav из shared/ui. */}
+      <TabNav>
+        {/* Первый таб — сам список (как «Code» у GitHub-репо), не «Overview». */}
+        <TabItem href={base} on={active === 'overview'} icon={<ListChecks size={15} />} label={t('listTab', lang)} />
+        <TabItem href={`${base}/issues`} on={active === 'issues'} icon={<CircleDot size={15} />} label={t('issuesTab', lang)} count={issueCount} />
+        <TabItem href={`${base}/suggestions`} on={active === 'suggestions'} icon={<GitPullRequest size={15} />} label={t('suggestions', lang)} count={suggCount} />
+        <TabItem href={`${base}/versions`} on={active === 'versions'} icon={<Tag size={15} />} label={t('versionsTab', lang)} />
+        {isOwner && <TabItem href={`${base}/settings`} on={active === 'settings'} icon={<Settings size={15} />} label={t('settings', lang)} />}
+      </TabNav>
 
       <div className="mx-auto w-full max-w-[1180px] px-4 pt-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
