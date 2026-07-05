@@ -164,6 +164,28 @@ export const templateVersions = pgTable(
   (t) => ({ tplVersion: unique('template_versions_tpl_version').on(t.templateId, t.version) }),
 )
 
+// ── Releases (публикация версии как релиза, как GitHub Releases) ─────
+// Версии создаются автоматически (каждая правка); релиз — осознанная
+// публикация конкретной версии с тегом, заголовком и notes (markdown).
+export const releases = pgTable(
+  'releases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(), // публикуемая версия списка
+    tag: text('tag').notNull(), // человекочитаемый тег (дефолт vN)
+    title: text('title').notNull().default(''),
+    notes: text('notes').notNull().default(''), // markdown
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('releases_tpl_tag').on(t.templateId, t.tag), index('releases_tpl_idx').on(t.templateId, t.createdAt)],
+)
+
 // ── Steps ────────────────────────────────────────────────────────────
 export const steps = pgTable('steps', {
   id: uuid('id').primaryKey().defaultRandom(),
