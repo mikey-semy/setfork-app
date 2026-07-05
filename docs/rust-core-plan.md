@@ -112,7 +112,10 @@ CurationStore/CollabStore/SearchIndex/CatalogStore/Notifier/AiPort). Следу�
   импортируют только фасад). **Remote-golden через провод (Connect→Rust vs Drizzle) — OK**
   на 2 списках (list/versions/getVersion/contributors). **CurationRead — СДЕЛАН** тем же
   паттерном (IsStarred/IsWatching/WatchCount/WatcherIds; фасад `curation/store.ts`, тот же
-  флаг; golden через провод 4/4). Осталось: Collab reads (по потребности), затем WRITE-порты.
+  флаг; golden через провод 4/4). **WRITE-фаза НАЧАТА: ListWrite.AddVersion** — полная
+  семантика адаптера (LocaleText/imageRef/jsonb, bump в одной tx, `for update`), фасад за
+  ОТДЕЛЬНЫМ флагом `SETFORK_DOMAIN_WRITES=1`; write-golden round-trip идентичен. Осталось:
+  `create` на Rust, Collab reads (по потребности), затем катовер write на dev/проде.
 
 ## Фаза 2 — Rust git-ядро (git-first)
 
