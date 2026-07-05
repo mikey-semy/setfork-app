@@ -350,6 +350,8 @@ const DICT = {
   noStars: { en: 'No starred lists yet.', ru: 'Пока ничего в избранном.' },
   allStars: { en: 'All', ru: 'Все' },
   foldersLabel: { en: 'Folders', ru: 'Папки' },
+  starsLabel: { en: 'stars', ru: 'звёзд' },
+  forksLabel: { en: 'forks', ru: 'форков' },
   byCount: { en: 'By count', ru: 'По числу' },
   searchStarsPh: { en: 'Search stars…', ru: 'Поиск по избранному…' },
   sortRecent: { en: 'Recent', ru: 'Недавние' },
