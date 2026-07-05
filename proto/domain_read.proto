@@ -170,4 +170,21 @@ message AddVersionRequest {
 
 service ListWrite {
   rpc AddVersion(AddVersionRequest) returns (Version);
+  rpc Create(CreateListRequest) returns (List);
+}
+
+// Create: список + первая версия + шаги (одной транзакцией). Возврат — полный List.
+message CreateListRequest {
+  string owner_id = 1;
+  string slug = 2;
+  LocaleText title = 3;
+  LocaleText desc = 4;
+  repeated string tags = 5;
+  bool ordered = 6;
+  string visibility = 7; // public | private
+  string status = 8;     // draft | published
+  string origin = 9;     // authored | forked | ai_draft
+  string forked_from_id = 10; // '' = null
+  string note = 11;      // заметка первой версии
+  repeated NewStep steps = 12;
 }

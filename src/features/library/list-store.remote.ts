@@ -1,7 +1,7 @@
 import 'server-only'
 import { createClient } from '@connectrpc/connect'
 import { createGrpcTransport } from '@connectrpc/connect-node'
-import type { Contributor, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
+import type { Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
 import {
   ListRead,
   ListWrite,
@@ -123,5 +123,32 @@ export const listWriteRemote = {
       })),
     })
     return toVersion(res)
+  },
+  async create(input: CreateListInput): Promise<List> {
+    const res = await writeClient.create({
+      ownerId: input.ownerId,
+      slug: input.slug,
+      title: toPbLoc(input.title),
+      desc: toPbLoc(input.desc),
+      tags: input.tags,
+      ordered: input.ordered,
+      visibility: input.visibility,
+      status: input.status,
+      origin: input.origin,
+      forkedFromId: input.forkedFromId ?? '',
+      note: input.note,
+      steps: input.steps.map((s) => ({
+        title: toPbLoc(s.title),
+        desc: toPbLoc(s.desc),
+        command: s.command,
+        level: s.level,
+        why: toPbLoc(s.why),
+        section: toPbLoc(s.section),
+        subtasks: s.subtasks.map(toPbLoc),
+        refs: s.refs.map((r) => ({ label: toPbLoc(r.label), url: r.url ?? '' })),
+        imageRef: s.imageRef ?? '',
+      })),
+    })
+    return toList(res)
   },
 }
