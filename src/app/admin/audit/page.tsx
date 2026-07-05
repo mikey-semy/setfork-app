@@ -16,6 +16,9 @@ const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string;
   'git.push': { icon: GitCommitVertical, ru: 'Push в список', en: 'Push to list', cls: 'text-ink-2' },
   'session.revoke': { icon: LogOut, ru: 'Отозвана сессия', en: 'Session revoked', cls: 'text-ink-2' },
   'session.revoke_others': { icon: LogOut, ru: 'Выход с др. устройств', en: 'Signed out others', cls: 'text-ink-2' },
+  '2fa.enable': { icon: ShieldCheck, ru: 'Включена 2FA', en: '2FA enabled', cls: 'text-ok' },
+  '2fa.disable': { icon: ShieldX, ru: 'Отключена 2FA', en: '2FA disabled', cls: 'text-warn' },
+  '2fa.recovery-regenerate': { icon: KeyRound, ru: 'Новые recovery-коды', en: 'Recovery codes regenerated', cls: 'text-ink-2' },
 }
 
 function fmt(d: Date, ru: boolean): string {
