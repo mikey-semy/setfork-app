@@ -85,6 +85,13 @@
       "when": 1783222560252,
       "tag": "0011_long_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783223004442,
+      "tag": "0012_red_kang",
+      "breakpoints": true
     }
   ]
 }

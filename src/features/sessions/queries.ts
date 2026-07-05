@@ -39,6 +39,7 @@ export interface UserSession {
   id: string
   device: string
   ip: string | null
+  geo: string | null // «City, CC» (best-effort, как «Seen in …» у GitHub)
   createdAt: Date
   lastSeenAt: Date
   current: boolean
@@ -60,6 +61,7 @@ export async function getUserSessions(userId: string, currentSid?: string): Prom
     id: r.id,
     device: parseUA(r.userAgent),
     ip: r.ip,
+    geo: r.geo,
     createdAt: r.createdAt,
     lastSeenAt: r.lastSeenAt,
     current: r.id === currentSid,

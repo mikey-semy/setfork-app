@@ -40,7 +40,8 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
               ) : null}
             </div>
             <div className="text-[12px] text-muted">
-              {s.ip ?? '—'} · {t('lastSeen', lang)} {fmt.format(new Date(s.lastSeenAt))} · {t('signedInLabel', lang)} {day.format(new Date(s.createdAt))}
+              {/* Гео как «Seen in …» у GitHub; IP оставляем для точности. */}
+              {s.geo ? `${s.geo} · ${s.ip ?? '—'}` : (s.ip ?? '—')} · {t('lastSeen', lang)} {fmt.format(new Date(s.lastSeenAt))} · {t('signedInLabel', lang)} {day.format(new Date(s.createdAt))}
             </div>
           </div>
           {!s.current && (

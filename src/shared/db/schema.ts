@@ -641,6 +641,7 @@ export const sessions = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     userAgent: text('user_agent'),
     ip: text('ip'),
+    geo: text('geo'), // «City, CC» по IP (best-effort, как «Seen in …» у GitHub)
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
   },

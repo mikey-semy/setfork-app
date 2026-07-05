@@ -5,6 +5,7 @@ import { cache } from 'react'
 import { SignJWT, jwtVerify } from 'jose'
 import { and, desc, eq, gte, isNull, lt, notInArray } from 'drizzle-orm'
 import { db, sessions } from '@/shared/db'
+import { lookupGeo } from '@/shared/geo'
 
 const COOKIE_NAME = 'setfork_session'
 const SESSION_DURATION_DAYS = 30
@@ -101,6 +102,10 @@ export async function startSession(payload: SessionUser): Promise<void> {
   } else {
     const [row] = await db.insert(sessions).values({ userId: payload.userId, userAgent, ip }).returning({ id: sessions.id })
     sid = row.id
+    // Гео по IP — fire-and-forget (не задерживаем вход; провал просто оставит null).
+    void lookupGeo(ip)
+      .then((geo) => (geo ? db.update(sessions).set({ geo }).where(eq(sessions.id, row.id)) : null))
+      .catch(() => {})
   }
   await pruneStaleSessions(payload.userId)
   await signCookie({ ...payload, sid })
