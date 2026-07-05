@@ -100,7 +100,14 @@ CurationStore/CollabStore/SearchIndex/CatalogStore/Notifier/AiPort). Следу�
 - [x] **Feature-flag** `features/git/core.ts`: `SETFORK_CORE_URL` → inproc/remote (адрес `SETFORK_CORE_ADDR`).
 - [x] **TS-клиент Connect-ES** из `proto/git.proto` (`buf.gen.yaml` + `gen/git_pb.ts`, protobuf-es v2) +
   `gitCoreRemote` (`core.remote.ts`, gRPC h2c). `tsc` зелёный. **e2e clone через Rust core сверен ✅.**
-- [ ] Контракты доменных портов (ListStore/Curation/Collab/…) в proto — ПОСЛЕ git-ядра.
+- [x] **Контракты доменных портов — НАЧАТО: `proto/domain_read.proto`** (`service ListRead`:
+  GetList/ListVersions/GetVersion/GetContributors — READ-часть ListStore). Конвенции: LocaleText =
+  map-обёртка, даты = unix-ms (`floor(epoch*1000)`), nullable = '', not-found = `found=false`.
+  **Rust-реализация `src/domain_read.rs` (sqlx) + golden-сверка С TS-адаптером — 6/6 списков OK**
+  (вкл. форк, MCP-созданный, ordered/unordered): CLI `domain-read <owner> <slug> <out.json>` ↔
+  `scripts/golden-domain-read.ts` (запуск: `NODE_OPTIONS=--conditions=react-server npx tsx …`;
+  avatarRef нормализуется — TS подписывает imgproxy). Осталось: Connect-ES клиент + флип за флагом,
+  затем Curation/Collab reads.
 
 ## Фаза 2 — Rust git-ядро (git-first)
 
