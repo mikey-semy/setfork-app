@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+// SetFork domain READ-порты — контракт провода Rust↔Next (Connect/gRPC).
+// Первый шаг миграции домена: ListRead зеркалит READ-часть порта @/core ListStore
+// (getBySlug / listVersions / getVersion / getContributors). WRITE — отдельным
+// сервисом позже (после golden-сверки чтения).
+//
+// Конвенции сериализации (для golden-сверки байт-в-байт с TS):
+// - LocaleText = map<string,string> в обёртке (repeated map нельзя);
+// - даты = int64 unix МИЛЛИСЕКУНДЫ (Date.getTime() на TS-стороне);
+// - nullable-строки = '' (пустая строка = null у TS);
+// - «не найдено» = found=false, НЕ ошибка транспорта.
+
+package setfork.domain.v1;
+
+// ── Примитивы ─────────────────────────────────────────────────────────
+message LocaleText {
+  map<string, string> v = 1; // код языка → строка (en, ru, …)
+}
+
+message ListRef {
+  string owner = 1; // handle владельца
+  string slug = 2;
+}
+
+message ListId {
+  string id = 1; // uuid списка (templates.id)
+}
+
+// ── Сущности (зеркало @/core entities) ────────────────────────────────
+message List {
+  string id = 1;
+  string owner_id = 2;
+  string slug = 3;
+  LocaleText title = 4;
+  LocaleText desc = 5;
+  repeated string tags = 6;
+  bool ordered = 7;
+  string status = 8;      // draft | published
+  string visibility = 9;  // public | private
+  string moderation = 10; // active | flagged | hidden
+  string moderation_reason = 11; // '' = null
+  bool verified = 12;
+  bool pinned = 13;
+  string origin = 14;          // authored | forked | ai_draft
+  string forked_from_id = 15;  // '' = null
+  int32 current_version = 16;
+  int32 stars_count = 17;
+  int32 forks_count = 18;
+  int32 runs_count = 19;
+  string repository_id = 20; // '' = null (solo-список)
+  int64 created_at_ms = 21;
+  int64 updated_at_ms = 22;
+}
+
+message Version {
+  string id = 1;
+  string list_id = 2;
+  int32 version = 3;
+  string note = 4;
+  string commit_sha = 5; // '' = null
+  int64 created_at_ms = 6;
+}
+
+message StepRef {
+  LocaleText label = 1;
+  string url = 2; // '' = отсутствует
+}
+
+message Step {
+  string id = 1;
+  string version_id = 2;
+  int32 n = 3;
+  LocaleText title = 4;
+  LocaleText desc = 5;
+  string command = 6;
+  string level = 7; // required | recommended | optional
+  LocaleText why = 8;
+  LocaleText section = 9;
+  repeated LocaleText subtasks = 10;
+  repeated StepRef refs = 11;
+  string image_ref = 12; // '' = null
+}
+
+message Contributor {
+  string handle = 1;
+  string avatar_ref = 2; // '' = null
+  int32 accepted = 3;    // принятых предложений (владелец = версии)
+}
+
+// ── Запросы/ответы ────────────────────────────────────────────────────
+message GetListResponse {
+  bool found = 1;
+  List list = 2;
+}
+
+message VersionsResponse {
+  repeated Version versions = 1; // по убыванию version (как TS listVersions)
+}
+
+message GetVersionRequest {
+  string list_id = 1;
+  int32 version = 2;
+}
+
+message GetVersionResponse {
+  bool found = 1;
+  Version version = 2;
+  repeated Step steps = 3; // по возрастанию n
+}
+
+message ContributorsResponse {
+  repeated Contributor contributors = 1; // по убыванию accepted
+}
+
+// READ-часть порта ListStore. Резолв/фильтрация видимости — на BFF (как сейчас):
+// сервис отдаёт данные как есть, приватность решает вызывающий слой.
+service ListRead {
+  rpc GetList(ListRef) returns (GetListResponse);
+  rpc ListVersions(ListId) returns (VersionsResponse);
+  rpc GetVersion(GetVersionRequest) returns (GetVersionResponse);
+  rpc GetContributors(ListId) returns (ContributorsResponse);
+}
