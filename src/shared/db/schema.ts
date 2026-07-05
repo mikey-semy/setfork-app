@@ -101,6 +101,8 @@ export const users = pgTable('users', {
   website: text('website'),
   socials: jsonb('socials').notNull().default([]).$type<Social[]>(),
   notifyPrefs: jsonb('notify_prefs').notNull().default({}).$type<NotifyPrefs>(),
+  // Язык ДОСТАВКИ (email/push-уведомления) — интерфейс пока English-only.
+  lang: text('lang').notNull().default('en').$type<'en' | 'ru'>(),
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })

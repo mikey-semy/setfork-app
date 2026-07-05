@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { Switch } from '@/shared/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { t, type Lang } from '@/shared/i18n'
 import type { NotifyPrefs } from '@/shared/db/schema'
 import { updateNotifyPrefs } from './actions'
@@ -19,9 +21,20 @@ const ROWS: {
   { key: 'forks', labelKey: 'prefForks' },
 ]
 
-export function NotifyPrefsForm({ prefs, lang, hasEmail }: { prefs: NotifyPrefs; lang: Lang; hasEmail: boolean }) {
+export function NotifyPrefsForm({
+  prefs,
+  lang,
+  hasEmail,
+  notifyLang = 'en',
+}: {
+  prefs: NotifyPrefs
+  lang: Lang
+  hasEmail: boolean
+  notifyLang?: 'en' | 'ru'
+}) {
   // Отсутствие ключа = включено (события); доставка (email/browser) — по умолчанию выключена.
   const isOn = (k: keyof NotifyPrefs) => prefs[k] !== false
+  const [nl, setNl] = useState<'en' | 'ru'>(notifyLang)
 
   return (
     <form action={updateNotifyPrefs} className="flex flex-col gap-4">
@@ -57,6 +70,23 @@ export function NotifyPrefsForm({ prefs, lang, hasEmail }: { prefs: NotifyPrefs;
               else void unsubscribeFromPush()
             }}
           />
+        </div>
+        {/* Язык писем/пушей (интерфейс пока English-only). */}
+        <div className="mt-3 flex items-center justify-between gap-4">
+          <div>
+            <span className="text-[14px] text-ink">{t('prefLang', lang)}</span>
+            <p className="text-[12px] text-muted">{t('prefLangHint', lang)}</p>
+          </div>
+          <input type="hidden" name="notifyLang" value={nl} />
+          <Select value={nl} onValueChange={(v) => setNl(v === 'ru' ? 'ru' : 'en')}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="ru">Русский</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
