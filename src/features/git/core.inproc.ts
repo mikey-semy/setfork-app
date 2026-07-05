@@ -84,53 +84,7 @@ export const gitCoreInproc: GitCore = {
     if (badBranch(branch)) return null
     const bare = await gitStore.ensureRepo(repo)
     if (!bare) return null
-    let raw: string
-    let tip: string
-    try {
-      ;[{ stdout: raw }, { stdout: tip }] = await Promise.all([
-        exec('git', ['--git-dir', bare, 'show', `${branch}:list.json`], { maxBuffer: 8 * 1024 * 1024 }),
-        exec('git', ['--git-dir', bare, 'rev-parse', branch]),
-      ])
-    } catch {
-      return null
-    }
-    let parsed: {
-      title?: string
-      desc?: string
-      tags?: string[]
-      ordered?: boolean
-      steps?: { title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
-    }
-    try {
-      parsed = JSON.parse(raw)
-    } catch {
-      return null
-    }
-    // Набор/порядок шагов — из list.json (источник истины). Per-step md-оверрайды
-    // применяет только Rust-канон; inproc — dev/demo-фолбэк без них.
-    const steps: BranchSnapshot['steps'] = (parsed.steps ?? [])
-      .filter((s) => (s.title ?? '').trim())
-      .map((s, i) => ({
-        n: i + 1,
-        title: s.title ?? '',
-        desc: s.desc ?? '',
-        command: s.command ?? '',
-        level: s.level || 'required',
-        why: s.why ?? '',
-        section: s.section ?? '',
-        subtasks: s.subtasks ?? [],
-        refs: (s.refs ?? [])
-          .filter((r) => (r.label ?? '').trim())
-          .map((r) => ({ label: r.label ?? '', ...(r.url ? { url: r.url } : {}) })),
-      }))
-    return {
-      tipSha: tip.trim(),
-      title: parsed.title ?? '',
-      desc: parsed.desc ?? '',
-      tags: parsed.tags ?? [],
-      ordered: parsed.ordered ?? true,
-      steps,
-    }
+    return snapshotAt(bare, branch)
   },
 
   async createBranch(repo, name, from) {
@@ -216,4 +170,129 @@ export const gitCoreInproc: GitCore = {
       return { tipSha, newVersion, fastForward }
     })
   },
+
+  async mergeState(repo, branch) {
+    if (badBranch(branch) || branch === 'main') return null
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) return null
+    const baseSha = await exec('git', ['--git-dir', bare, 'merge-base', 'main', `refs/heads/${branch}`]).then(
+      (r) => r.stdout.trim(),
+      () => null,
+    )
+    if (!baseSha) return null
+    const [base, ours, theirs] = await Promise.all([
+      snapshotAt(bare, baseSha),
+      snapshotAt(bare, 'main'),
+      snapshotAt(bare, `refs/heads/${branch}`),
+    ])
+    if (!base || !ours || !theirs) return null
+    return { mergeBaseSha: baseSha, base, ours, theirs }
+  },
+
+  async mergeResolved(repo, branch, listJson) {
+    if (badBranch(branch) || branch === 'main') throw new BranchOpError('bad-name')
+    try {
+      JSON.parse(listJson)
+    } catch {
+      throw new BranchOpError('bad-name')
+    }
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) throw new BranchOpError('not-found')
+    const listId = await resolveListId(repo.owner, repo.slug)
+    if (!listId) throw new BranchOpError('not-found')
+    const branchTip = await exec('git', ['--git-dir', bare, 'rev-parse', '--verify', `refs/heads/${branch}`]).then(
+      (r) => r.stdout.trim(),
+      () => null,
+    )
+    if (!branchTip) throw new BranchOpError('not-found')
+    return gitStore.withRepoLock(listId, async () => {
+      const mainTip = (await exec('git', ['--git-dir', bare, 'rev-parse', 'refs/heads/main'])).stdout.trim()
+      if (mainTip === branchTip) throw new BranchOpError('nothing-to-merge')
+      // Блоб resolved list.json — контент через stdin, не через argv.
+      const hash = await execStdin(['--git-dir', bare, 'hash-object', '-w', '--stdin'], listJson.endsWith('\n') ? listJson : listJson + '\n')
+      // Дерево = дерево main без steps/ и с новым list.json (md-оверрайды сбрасываются, канон — list.json).
+      const { stdout: lsTree } = await exec('git', ['--git-dir', bare, 'ls-tree', 'main'])
+      const entries = lsTree
+        .split('\n')
+        .filter(Boolean)
+        .filter((l) => !l.endsWith('\tsteps') && !l.endsWith('\tlist.json'))
+      entries.push(`100644 blob ${hash}\tlist.json`)
+      const tree = await execStdin(['--git-dir', bare, 'mktree'], entries.join('\n') + '\n')
+      const env = {
+        ...process.env,
+        GIT_AUTHOR_NAME: 'SetFork',
+        GIT_AUTHOR_EMAIL: 'git@setfork.com',
+        GIT_COMMITTER_NAME: 'SetFork',
+        GIT_COMMITTER_EMAIL: 'git@setfork.com',
+      }
+      const { stdout: commit } = await exec(
+        'git',
+        ['--git-dir', bare, 'commit-tree', tree, '-p', 'main', '-p', `refs/heads/${branch}`, '-m', `Merge branch '${branch}' (resolved)`],
+        { env },
+      )
+      const tipSha = commit.trim()
+      await exec('git', ['--git-dir', bare, 'update-ref', 'refs/heads/main', tipSha])
+      const newVersion = await gitStore.projectPushedCommit(listId, bare).catch(() => null)
+      return { tipSha, newVersion, fastForward: false }
+    })
+  },
+}
+
+// git-команда с данными на stdin (hash-object/mktree).
+function execStdin(args: string[], input: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = execFile('git', args, (err, stdout) => (err ? reject(err) : resolve(String(stdout).trim())))
+    child.stdin!.end(input)
+  })
+}
+
+// Материализация произвольного rev (ветка/sha): list.json → BranchSnapshot.
+// Набор/порядок шагов — из list.json; per-step md-оверрайды применяет только
+// Rust-канон, inproc — dev/demo-фолбэк без них.
+async function snapshotAt(bare: string, rev: string): Promise<BranchSnapshot | null> {
+  let raw: string
+  let tip: string
+  try {
+    ;[{ stdout: raw }, { stdout: tip }] = await Promise.all([
+      exec('git', ['--git-dir', bare, 'show', `${rev}:list.json`], { maxBuffer: 8 * 1024 * 1024 }),
+      exec('git', ['--git-dir', bare, 'rev-parse', rev]),
+    ])
+  } catch {
+    return null
+  }
+  let parsed: {
+    title?: string
+    desc?: string
+    tags?: string[]
+    ordered?: boolean
+    steps?: { title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
+  }
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
+  const steps: BranchSnapshot['steps'] = (parsed.steps ?? [])
+    .filter((st) => (st.title ?? '').trim())
+    .map((st, i) => ({
+      n: i + 1,
+      title: st.title ?? '',
+      desc: st.desc ?? '',
+      command: st.command ?? '',
+      level: st.level || 'required',
+      why: st.why ?? '',
+      section: st.section ?? '',
+      subtasks: st.subtasks ?? [],
+      refs: (st.refs ?? [])
+        .filter((r) => (r.label ?? '').trim())
+        .map((r) => ({ label: r.label ?? '', ...(r.url ? { url: r.url } : {}) })),
+    }))
+  return {
+    tipSha: tip.trim(),
+    title: parsed.title ?? '',
+    desc: parsed.desc ?? '',
+    tags: parsed.tags ?? [],
+    ordered: parsed.ordered ?? true,
+    steps,
+  }
 }

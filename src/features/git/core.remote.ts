@@ -80,24 +80,7 @@ export const gitCoreRemote: GitCore = {
   async branchSnapshot(repo, branch) {
     const res = await client.getBranchSnapshot({ repo: toRepoRef(repo), branch }).catch(() => null)
     if (!res || !res.found) return null
-    return {
-      tipSha: res.tipSha,
-      title: res.title,
-      desc: res.desc,
-      tags: res.tags,
-      ordered: res.ordered,
-      steps: res.steps.map((s) => ({
-        n: s.n,
-        title: s.title,
-        desc: s.desc,
-        command: s.command,
-        level: s.level,
-        why: s.why,
-        section: s.section,
-        subtasks: s.subtasks,
-        refs: s.refs.map((r) => ({ label: r.label, ...(r.url ? { url: r.url } : {}) })),
-      })),
-    }
+    return toSnapshot(res)
   },
 
   async createBranch(repo, name, from) {
@@ -125,6 +108,55 @@ export const gitCoreRemote: GitCore = {
       throw toBranchOpError(e)
     }
   },
+
+  async mergeState(repo, branch) {
+    const res = await client.getMergeState({ repo: toRepoRef(repo), branch }).catch(() => null)
+    if (!res || !res.found || !res.base || !res.ours || !res.theirs) return null
+    return {
+      mergeBaseSha: res.mergeBaseSha,
+      base: toSnapshot(res.base),
+      ours: toSnapshot(res.ours),
+      theirs: toSnapshot(res.theirs),
+    }
+  },
+
+  async mergeResolved(repo, branch, listJson) {
+    try {
+      const res = await client.mergeResolved({ repo: toRepoRef(repo), branch, listJson: new TextEncoder().encode(listJson) })
+      return { tipSha: res.tipSha, newVersion: toNewVersion(res.newVersion), fastForward: res.fastForward }
+    } catch (e) {
+      throw toBranchOpError(e)
+    }
+  },
+}
+
+// pb-снапшот → форма порта (общий маппинг branchSnapshot/mergeState).
+function toSnapshot(res: {
+  tipSha: string
+  title: string
+  desc: string
+  tags: string[]
+  ordered: boolean
+  steps: { n: number; title: string; desc: string; command: string; level: string; why: string; section: string; subtasks: string[]; refs: { label: string; url: string }[] }[]
+}) {
+  return {
+    tipSha: res.tipSha,
+    title: res.title,
+    desc: res.desc,
+    tags: res.tags,
+    ordered: res.ordered,
+    steps: res.steps.map((s) => ({
+      n: s.n,
+      title: s.title,
+      desc: s.desc,
+      command: s.command,
+      level: s.level,
+      why: s.why,
+      section: s.section,
+      subtasks: s.subtasks,
+      refs: s.refs.map((r) => ({ label: r.label, ...(r.url ? { url: r.url } : {}) })),
+    })),
+  }
 }
 
 // gRPC-статусы ядра → машиночитаемые коды порта (см. proto: комментарий у CreateBranch).
