@@ -110,8 +110,9 @@ CurationStore/CollabStore/SearchIndex/CatalogStore/Notifier/AiPort). Следу�
   `gen/domain_read_pb.ts` (buf) + `list-store.remote.ts` (READ-методы порта) + фасад
   `list-store.ts` с флагом **`SETFORK_DOMAIN_READS=1`** (writes всегда Drizzle; потребители
   импортируют только фасад). **Remote-golden через провод (Connect→Rust vs Drizzle) — OK**
-  на 2 списках (list/versions/getVersion/contributors). Осталось: Curation/Collab reads,
-  затем WRITE-порты.
+  на 2 списках (list/versions/getVersion/contributors). **CurationRead — СДЕЛАН** тем же
+  паттерном (IsStarred/IsWatching/WatchCount/WatcherIds; фасад `curation/store.ts`, тот же
+  флаг; golden через провод 4/4). Осталось: Collab reads (по потребности), затем WRITE-порты.
 
 ## Фаза 2 — Rust git-ядро (git-first)
 
