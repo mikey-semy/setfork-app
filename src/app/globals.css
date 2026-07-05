@@ -136,6 +136,16 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Radix-оверлеи (Select/Dropdown/Dialog через react-remove-scroll) при открытии
+   вешают на body[data-scroll-locked] `margin-right: <ширина скроллбара> !important`,
+   компенсируя якобы исчезающую полосу прокрутки. Но наш скроллер — html со
+   scrollbar-gutter: stable, гаттер не схлопывается → эта компенсация лишняя и
+   даёт горизонтальный «прыжок» страницы при каждом открытии/закрытии. Гасим её
+   правилом выше по специфичности (html body… > body…), чтобы бить их !important. */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+}
+
 ::selection {
   background: #cfe0ff;
   color: #0b2a6b;
