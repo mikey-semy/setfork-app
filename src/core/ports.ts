@@ -171,6 +171,15 @@ export interface GitCore {
   /** A4: merge с ручным резолвом — финальный list.json (строка). Дерево =
    *  main c заменённым list.json без steps/ (md-оверрайды сбрасываются). */
   mergeResolved(repo: GitRepoRef, branch: string, listJson: string): Promise<MergeResult>
+  /** Git-тег релиза на коммит версии (у версии уже есть тег vN). → sha коммита. */
+  createTag(repo: GitRepoRef, name: string, version: number): Promise<string>
+  /** Все git-теги репо (vN + релизные), по имени. */
+  listTags(repo: GitRepoRef): Promise<GitTag[]>
+}
+
+export interface GitTag {
+  name: string
+  targetSha: string
 }
 
 export interface MergeResult {

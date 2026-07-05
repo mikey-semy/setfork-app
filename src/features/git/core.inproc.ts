@@ -240,6 +240,37 @@ export const gitCoreInproc: GitCore = {
       return { tipSha, newVersion, fastForward: false }
     })
   },
+
+  async createTag(repo, name, version) {
+    if (badBranch(name)) throw new BranchOpError('bad-name')
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) throw new BranchOpError('not-found')
+    // Коммит версии — по существующему тегу vN.
+    const target = await exec('git', ['--git-dir', bare, 'rev-parse', '--verify', `refs/tags/v${version}`]).then(
+      (r) => r.stdout.trim(),
+      () => null,
+    )
+    if (!target) throw new BranchOpError('not-found')
+    await exec('git', ['--git-dir', bare, 'tag', '-f', name, target]).catch(() => {
+      throw new BranchOpError('internal')
+    })
+    return target
+  },
+
+  async listTags(repo) {
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) return []
+    const { stdout } = await exec('git', ['--git-dir', bare, 'for-each-ref', 'refs/tags', '--format=%(refname:short) %(objectname)']).catch(() => ({ stdout: '' }))
+    return stdout
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => {
+        const [name, targetSha] = l.split(' ')
+        return { name, targetSha }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+  },
 }
 
 // git-команда с данными на stdin (hash-object/mktree).

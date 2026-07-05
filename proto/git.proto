@@ -55,6 +55,25 @@ service GitCore {
   // (md-оверрайды сбрасываются: канон разрешённых шагов — list.json).
   // Коммит с двумя родителями (main, ветка) → main → проекция версии.
   rpc MergeResolved(MergeResolvedRequest) returns (MergeBranchResponse);
+  // Теги релизов: CreateTag ставит git-тег name на коммит версии (тег vN уже
+  // есть у каждой версии), чтобы clone привозил и человекочитаемый тег релиза.
+  rpc CreateTag(CreateTagRequest) returns (BranchOpResponse); // tip_sha = коммит тега
+  rpc ListTags(RepoRef) returns (TagsResponse);
+}
+
+message CreateTagRequest {
+  RepoRef repo = 1;
+  string name = 2;    // имя тега релиза (человекочитаемое)
+  int32 version = 3;  // версия, на чей коммит вешаем (коммит = тег vN)
+}
+
+message Tag {
+  string name = 1;
+  string target_sha = 2;
+}
+
+message TagsResponse {
+  repeated Tag tags = 1; // по имени
 }
 
 message MergeStateRequest {

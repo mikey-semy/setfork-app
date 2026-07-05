@@ -45,6 +45,10 @@ export async function createRelease(templateId: string, formData: FormData): Pro
   if (dup) redirect(`${base}/new?e=tagtaken`)
 
   await db.insert(releases).values({ templateId: tpl.id, version, tag, title, notes, authorId: session.userId })
+  // Git-тег релиза на коммит версии (best-effort): чтобы clone привозил и
+  // человекочитаемый тег, а не только авто-vN. Ошибку git не роняем на релиз.
+  const { gitCore } = await import('@/features/git/core')
+  await gitCore.createTag({ owner, slug: tpl.slug }, tag, version).catch(() => {})
   revalidatePath(base)
   redirect(base)
 }

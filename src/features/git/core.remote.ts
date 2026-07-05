@@ -126,6 +126,20 @@ export const gitCoreRemote: GitCore = {
       throw toBranchOpError(e)
     }
   },
+
+  async createTag(repo, name, version) {
+    try {
+      const res = await client.createTag({ repo: toRepoRef(repo), name, version })
+      return res.tipSha
+    } catch (e) {
+      throw toBranchOpError(e)
+    }
+  },
+
+  async listTags(repo) {
+    const res = await client.listTags(toRepoRef(repo)).catch(() => null)
+    return res ? res.tags.map((t) => ({ name: t.name, targetSha: t.targetSha })) : []
+  },
 }
 
 // pb-снапшот → форма порта (общий маппинг branchSnapshot/mergeState).
