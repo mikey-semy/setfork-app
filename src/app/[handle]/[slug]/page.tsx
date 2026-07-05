@@ -187,20 +187,16 @@ export default async function ListPage({
                       </button>
                     </form>
                   )}
-                  <CloneDropdown
-                    base={base}
-                    slug={slug}
-                    lang={lang}
-                    startRunSlot={
-                      viewer ? (
-                        <form action={startRun.bind(null, tpl.id)}>
-                          <button className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
-                            <PlayCircle size={15} /> {t('runStart', lang)}
-                          </button>
-                        </form>
-                      ) : undefined
-                    }
-                  />
+                  {/* Run — отдельной кнопкой РЯДОМ с Use (как просили): главный
+                      сценарий исполнения, не прячем внутрь дропдауна. */}
+                  {viewer && (
+                    <form action={startRun.bind(null, tpl.id)} className="inline-flex">
+                      <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg hover:opacity-90">
+                        <PlayCircle size={15} /> <span className="hidden md:inline">{t('runStart', lang)}</span>
+                      </button>
+                    </form>
+                  )}
+                  <CloneDropdown base={base} lang={lang} />
                   <Link
                     href={isOwner ? `${base}/edit` : `${base}/suggest`}
                     title={isOwner ? t('edit', lang) : t('suggestEdit', lang)}
