@@ -35,20 +35,9 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   const [val, setVal] = useState(defaultValue)
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [emojiOpen, setEmojiOpen] = useState(false)
-  const [emojiPos, setEmojiPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
-  const emojiBtn = useRef<HTMLButtonElement>(null)
-  // Пикер эмодзи рендерим порталом в body: корневой контейнер редактора —
-  // overflow-hidden, он бы обрезал абсолютный поповер по границе карточки.
-  const EMOJI_W = 300
-  const toggleEmoji = () => {
-    if (emojiOpen) return setEmojiOpen(false)
-    const r = emojiBtn.current?.getBoundingClientRect()
-    if (r) {
-      const left = Math.max(8, Math.min(r.right - EMOJI_W, window.innerWidth - EMOJI_W - 8))
-      setEmojiPos({ top: r.bottom + 6, left })
-    }
-    setEmojiOpen(true)
-  }
+  // Пикер эмодзи — портал в body + centered-fixed overlay (не привязан к кнопке,
+  // не уезжает со скроллом, всегда на экране; корневой контейнер overflow-hidden).
+  const toggleEmoji = () => setEmojiOpen((o) => !o)
   const [busy, setBusy] = useState(0)
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
   const [users, setUsers] = useState<MentionUser[]>([])
@@ -421,14 +410,18 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
               <AtSign size={15} />
             </button>
             <span className="inline-flex">
-              <button ref={emojiBtn} type="button" title={L('эмодзи', 'emoji')} aria-label={L('эмодзи', 'emoji')} onClick={toggleEmoji} className={btn}>
+              <button type="button" title={L('эмодзи', 'emoji')} aria-label={L('эмодзи', 'emoji')} onClick={toggleEmoji} className={btn}>
                 <SmilePlus size={15} />
               </button>
               {emojiOpen &&
                 createPortal(
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setEmojiOpen(false)} />
-                    <div className="fixed z-50" style={{ top: emojiPos.top, left: emojiPos.left }}>
+                  // Centered-fixed overlay: не привязан к кнопке, не уезжает со скроллом,
+                  // всегда на экране (важно на мобиле). Клик по фону закрывает.
+                  <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4"
+                    onClick={() => setEmojiOpen(false)}
+                  >
+                    <div onClick={(e) => e.stopPropagation()}>
                       <EmojiPicker
                         data={emojiData}
                         locale={lang === 'ru' ? 'ru' : 'en'}
@@ -445,7 +438,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
                         }}
                       />
                     </div>
-                  </>,
+                  </div>,
                   document.body,
                 )}
             </span>
