@@ -12,6 +12,16 @@ export const getUserByHandle = cache(async (handle: string) => {
   return u ?? null
 })
 
+/** Лёгкий список своих списков для пикера пинов («Customize your pins»). */
+export async function getOwnListsLight(userId: string): Promise<{ id: string; slug: string; pinned: boolean }[]> {
+  return db
+    .select({ id: templates.id, slug: templates.slug, pinned: templates.pinned })
+    .from(templates)
+    .where(eq(templates.ownerId, userId))
+    .orderBy(desc(templates.pinned), desc(templates.updatedAt))
+    .limit(100)
+}
+
 /** Активность по дням за ~год: версии списков (правки) + предложения правок. */
 export async function getContributions(userId: string): Promise<{ date: string; count: number }[]> {
   const res = await db.execute(sql`
