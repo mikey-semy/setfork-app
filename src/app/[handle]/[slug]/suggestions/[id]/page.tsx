@@ -21,6 +21,7 @@ import { SuggestionDiff } from '@/features/library/SuggestionDiff'
 import { diffSteps } from '@/features/library/suggestion-diff'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
+import { CommentCard } from '@/features/collab/CommentCard'
 import type { ProposedItem } from '@/shared/db'
 
 export default async function SuggestionThreadPage({
@@ -209,18 +210,16 @@ export default async function SuggestionThreadPage({
         ) : (
           <div className="flex flex-col gap-3">
             {comments.map((c) => (
-              <div key={c.id} className="overflow-hidden rounded-lg border border-border bg-surface">
-                <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px] text-ink-2">
-                  <Avatar handle={c.authorHandle} avatarUrl={c.authorAvatarUrl} size={22} />
-                  <span className="font-semibold text-ink">{c.authorHandle}</span> · {fmt.format(new Date(c.createdAt))}
-                </div>
-                <div className="px-4 py-3">
-                  <Markdown refBase={`/${owner}/${slug}/issues`}>{c.body}</Markdown>
-                  <div className="mt-2">
-                    <Reactions targetType="suggestion_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />
-                  </div>
-                </div>
-              </div>
+              <CommentCard
+                key={c.id}
+                handle={c.authorHandle}
+                avatarUrl={c.authorAvatarUrl}
+                date={c.createdAt}
+                body={c.body}
+                refBase={`/${owner}/${slug}/issues`}
+                lang={lang}
+                reactions={<Reactions targetType="suggestion_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />}
+              />
             ))}
           </div>
         )}
