@@ -1,6 +1,6 @@
 'use server'
 
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -19,7 +19,7 @@ import {
   generateTotpSecret,
   hashRecoveryCode,
   otpauthUrl,
-  verifyTotp,
+  verifyTotpStep,
 } from '@/shared/auth/totp'
 
 // 2FA-флоу. Промежуточные состояния — короткоживущие подписанные куки
@@ -86,11 +86,13 @@ export async function confirmTotpEnroll(code: string): Promise<TwoFaResult> {
   const pending = await readSigned(ENROLL_COOKIE, 'enroll')
   const secret = pending?.secret ? decryptSecret(pending.secret) : null
   if (!pending || pending.uid !== session.userId || !secret) return { ok: false, error: 'expired' }
-  if (!verifyTotp(secret, code)) return { ok: false, error: 'bad-code' }
+  const step = verifyTotpStep(secret, code)
+  if (step < 0) return { ok: false, error: 'bad-code' }
 
   const codes = generateRecoveryCodes()
   await db.transaction(async (tx) => {
-    await tx.update(users).set({ totpSecret: encryptSecret(secret), totpEnabled: true }).where(eq(users.id, session.userId))
+    // totpLastStep = шаг enroll-кода: тот же код нельзя переиграть в первый логин.
+    await tx.update(users).set({ totpSecret: encryptSecret(secret), totpEnabled: true, totpLastStep: step }).where(eq(users.id, session.userId))
     await tx.delete(recoveryCodes).where(eq(recoveryCodes.userId, session.userId))
     await tx.insert(recoveryCodes).values(codes.map((c) => ({ userId: session.userId, codeHash: hashRecoveryCode(c) })))
   })
@@ -102,10 +104,23 @@ export async function confirmTotpEnroll(code: string): Promise<TwoFaResult> {
 
 /** Проверка кода владельца: TOTP или неиспользованный recovery (помечается used). */
 async function checkUserCode(userId: string, code: string): Promise<boolean> {
-  const [u] = await db.select({ secret: users.totpSecret, enabled: users.totpEnabled }).from(users).where(eq(users.id, userId)).limit(1)
+  const [u] = await db.select({ secret: users.totpSecret, enabled: users.totpEnabled, lastStep: users.totpLastStep }).from(users).where(eq(users.id, userId)).limit(1)
   if (!u?.enabled || !u.secret) return false
   const secret = decryptSecret(u.secret)
-  if (secret && verifyTotp(secret, code)) return true
+  if (secret) {
+    const step = verifyTotpStep(secret, code)
+    if (step >= 0) {
+      // anti-replay: код шага ≤ последнего использованного уже засчитан (перехват в
+      // пределах ~90с-окна). Двигаем last_step вперёд АТОМАРНО (condition в самом
+      // UPDATE) — конкурентный повтор того же кода получит 0 строк и не пройдёт.
+      const moved = await db
+        .update(users)
+        .set({ totpLastStep: step })
+        .where(and(eq(users.id, userId), or(isNull(users.totpLastStep), lt(users.totpLastStep, step))))
+        .returning({ id: users.id })
+      return moved.length > 0
+    }
+  }
   // recovery-код (формат xxxxx-xxxxx): АТОМАРНО помечаем used в одном UPDATE —
   // условие usedAt IS NULL в самом UPDATE закрывает TOCTOU-гонку двойного зачёта.
   const hash = hashRecoveryCode(code)

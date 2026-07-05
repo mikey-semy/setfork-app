@@ -10,6 +10,7 @@ import {
   otpauthUrl,
   totpAt,
   verifyTotp,
+  verifyTotpStep,
 } from './totp'
 
 // RFC 6238 Appendix B (SHA1): секрет ASCII '12345678901234567890';
@@ -56,6 +57,26 @@ describe('verifyTotp', () => {
   it('rejects garbage', () => {
     expect(verifyTotp(RFC_SECRET_B32, 'abc123')).toBe(false)
     expect(verifyTotp(RFC_SECRET_B32, '12345')).toBe(false)
+  })
+})
+
+describe('verifyTotpStep (anti-replay)', () => {
+  const now = 1_111_111_109_000
+  const expectedStep = Math.floor(now / 1000 / 30)
+  it('returns the matched time step for a valid code', () => {
+    const code = totpAt(RFC_SECRET_B32, now)
+    expect(verifyTotpStep(RFC_SECRET_B32, code, 1, now)).toBe(expectedStep)
+  })
+  it('returns the ORIGINAL step even when validated one window later', () => {
+    // код из шага N, проверяемый через 30с, должен вернуть N (не N+1) —
+    // иначе anti-replay-счётчик двигался бы вперёд от повторного показа.
+    const code = totpAt(RFC_SECRET_B32, now)
+    expect(verifyTotpStep(RFC_SECRET_B32, code, 1, now + 30_000)).toBe(expectedStep)
+  })
+  it('returns -1 for invalid / out-of-window / garbage', () => {
+    const code = totpAt(RFC_SECRET_B32, now)
+    expect(verifyTotpStep(RFC_SECRET_B32, code, 1, now + 90_000)).toBe(-1)
+    expect(verifyTotpStep(RFC_SECRET_B32, 'abc123', 1, now)).toBe(-1)
   })
 })
 

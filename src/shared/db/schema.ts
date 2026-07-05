@@ -96,6 +96,7 @@ export const users = pgTable('users', {
   emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }), // null = не подтверждена
   totpSecret: text('totp_secret'), // AES-256-GCM(base32-секрет), см. shared/auth/totp
   totpEnabled: boolean('totp_enabled').notNull().default(false),
+  totpLastStep: integer('totp_last_step'), // последний использованный TOTP-шаг (anti-replay): код с step ≤ этого отвергается
   handle: text('handle').notNull().unique(),
   name: text('name'),
   avatarUrl: text('avatar_url'),
