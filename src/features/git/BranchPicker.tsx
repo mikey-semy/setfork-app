@@ -1,9 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
-import { createPortal } from 'react-dom'
-import { Check, GitBranch, ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useState, useTransition } from 'react'
+import { Check, GitBranch, ChevronDown, Plus, Trash2, X } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -40,6 +39,13 @@ export function BranchPicker({
 }) {
   const ru = lang === 'ru'
   const [open, setOpen] = useState(false)
+  // Esc закрывает дропдаун (клик-мимо ловит прозрачный слой ниже).
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
   const [name, setName] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -70,18 +76,24 @@ export function BranchPicker({
   }
 
   return (
-    <>
-      <Button onClick={() => setOpen(true)} title={ru ? 'Ветки' : 'Branches'}>
+    <div className="relative inline-block">
+      <Button onClick={() => setOpen((v) => !v)} title={ru ? 'Ветки' : 'Branches'} aria-expanded={open}>
         <GitBranch size={13} className="text-muted" />
         <span className="max-w-[140px] truncate">{current}</span>
-        <ChevronDown size={12} className="text-muted" />
+        <ChevronDown size={12} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </Button>
-      {open &&
-        createPortal(
-          <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/30 p-4 pt-24" onClick={() => setOpen(false)}>
-            <div onClick={(e) => e.stopPropagation()} className="w-[300px] max-w-full rounded-lg border border-border bg-surface p-1.5 shadow-card">
-              <div className="px-2 py-1.5 text-[12px] font-semibold uppercase tracking-wide text-muted">
-                {ru ? 'Ветки' : 'Branches'} <span className="font-mono">{branches.length}</span>
+      {open && (
+        <>
+          {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
+          <div className="fixed inset-0 z-[99]" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-[100] mt-1.5 w-[300px] max-w-[calc(100vw-24px)] rounded-lg border border-border bg-surface p-1.5 shadow-card">
+              <div className="flex items-center justify-between px-2 py-1.5">
+                <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">
+                  {ru ? 'Ветки' : 'Branches'} <span className="font-mono">{branches.length}</span>
+                </span>
+                <Button variant="ghost" size="xs" onClick={() => setOpen(false)} className="p-0.5" aria-label={ru ? 'Закрыть' : 'Close'}>
+                  <X size={13} />
+                </Button>
               </div>
               <div className="max-h-[300px] overflow-y-auto">
                 {branches.map((b) => {
@@ -139,10 +151,9 @@ export function BranchPicker({
                   </p>
                 </div>
               )}
-            </div>
-          </div>,
-          document.body,
-        )}
-    </>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
