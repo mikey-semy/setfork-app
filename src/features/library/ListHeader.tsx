@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BadgeCheck, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, Settings, Star, Tag } from 'lucide-react'
+import { BadgeCheck, BarChart3, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -18,7 +18,7 @@ import { getWatchCount, isWatching } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { TabItem, TabNav } from '@/shared/ui/TabNav'
 
-type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'settings'
+type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'insights' | 'settings'
 
 /** Общая шапка страницы списка (= «репозиторий»): back, owner/name, действия, вкладки. */
 export async function ListHeader({ owner, slug, active }: { owner: string; slug: string; active: Tab }) {
@@ -53,6 +53,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
         <TabItem href={`${base}/issues`} on={active === 'issues'} icon={<CircleDot size={15} />} label={t('issuesTab', lang)} count={issueCount} />
         <TabItem href={`${base}/suggestions`} on={active === 'suggestions'} icon={<GitPullRequest size={15} />} label={t('suggestions', lang)} count={suggCount} />
         <TabItem href={`${base}/versions`} on={active === 'versions'} icon={<Tag size={15} />} label={t('versionsTab', lang)} />
+        <TabItem href={`${base}/insights`} on={active === 'insights'} icon={<BarChart3 size={15} />} label="Insights" />
         {isOwner && <TabItem href={`${base}/settings`} on={active === 'settings'} icon={<Settings size={15} />} label={t('settings', lang)} />}
       </TabNav>
 
