@@ -44,7 +44,7 @@ export default async function ProfilePage({
   searchParams,
 }: {
   params: Promise<{ handle: string }>
-  searchParams: Promise<{ tab?: string; folder?: string; q?: string; sort?: string; fsort?: string; month?: string }>
+  searchParams: Promise<{ tab?: string; folder?: string; q?: string; sort?: string; fsort?: string; month?: string; year?: string }>
 }) {
   const [{ handle }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
   const user = await getUserByHandle(handle)
@@ -60,12 +60,18 @@ export default async function ProfilePage({
   const isPeopleTab = tab === 'followers' || tab === 'following'
   const isListsTab = tab === 'lists' || tab === 'starred'
   const isOwner = viewer?.userId === user.id
+  // Год графа активности (?year=YYYY): валиден в диапазоне регистрация…сейчас.
+  const nowY = new Date().getFullYear()
+  const regY = new Date(user.createdAt).getFullYear()
+  const graphYears = Array.from({ length: nowY - regY + 1 }, (_, i) => nowY - i) // новые сверху
+  const rawYear = sp.year ? Number(sp.year) : NaN
+  const graphYear = graphYears.includes(rawYear) ? rawYear : undefined
   const [counts, followCounts, following, bigAvatar, contributions, received] = await Promise.all([
     getProfileCounts(user.id),
     getFollowCounts(user.id),
     viewer && !isOwner ? isFollowing(viewer.userId, user.id) : Promise.resolve(false),
     avatarSrc(user.avatarUrl, 180),
-    getContributions(user.id),
+    getContributions(user.id, graphYear),
     getReceivedStats(user.id),
   ])
   const [rawItems, pinned, catalogs] = await Promise.all([
@@ -263,6 +269,9 @@ export default async function ProfilePage({
                 starsReceived={received.stars}
                 forksReceived={received.forks}
                 lang={lang}
+                year={graphYear}
+                years={graphYears}
+                base={`/${handle}`}
               />
               {monthActivity && (
                 <ContributionActivity activity={monthActivity} monthStart={monthStart} handle={handle} lang={lang} nav={activityNav} />
