@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { GitFork, Heart, ListChecks, MessageSquare, SlidersHorizontal, Star, Tag, UserPlus, X } from 'lucide-react'
+import { GitFork, Heart, ListChecks, MessageSquare, SlidersHorizontal, Star, Tag, UserPlus } from 'lucide-react'
+import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { Button } from '@/shared/ui/button'
 import { CheckboxRow } from '@/shared/ui/checkbox'
 import type { Lang } from '@/shared/i18n'
@@ -51,16 +51,7 @@ export function FeedFilter({ lang, onChange }: { lang: Lang; onChange: (p: FeedP
       <Button onClick={() => setOpen(true)}>
         <SlidersHorizontal size={13} /> {ru ? 'Фильтр' : 'Filter'}
       </Button>
-      {open &&
-        createPortal(
-          <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/30 p-4 pt-24 sm:justify-end sm:pr-8" onClick={() => setOpen(false)}>
-            <div onClick={(e) => e.stopPropagation()} className="flex max-h-[70vh] w-[340px] max-w-full flex-col rounded-lg border border-border bg-surface shadow-card">
-              <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
-                <span className="text-[13.5px] font-semibold text-ink">{ru ? 'Фильтр' : 'Filter'}</span>
-                <Button variant="ghost" size="xs" onClick={() => setOpen(false)} className="p-1" aria-label="Close">
-                  <X size={14} />
-                </Button>
-              </div>
+      <OverlayPanel open={open} onClose={() => setOpen(false)} align="top" title={ru ? 'Фильтр' : 'Filter'} className="flex max-h-[70vh] flex-col">
               <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-2.5">
                 <div className="text-[12.5px] font-semibold text-ink">{ru ? 'События' : 'Events'}</div>
                 <p className="mb-2 text-[11.5px] text-muted">
@@ -102,10 +93,7 @@ export function FeedFilter({ lang, onChange }: { lang: Lang; onChange: (p: FeedP
                   OK
                 </Button>
               </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      </OverlayPanel>
     </>
   )
 }
