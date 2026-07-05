@@ -14,6 +14,9 @@ export type AuditAction =
   | 'git.push'
   | 'session.revoke'
   | 'session.revoke_others'
+  | '2fa.enable'
+  | '2fa.disable'
+  | '2fa.recovery-regenerate'
 
 export async function recordAudit(
   action: AuditAction,

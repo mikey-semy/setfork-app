@@ -93,6 +93,8 @@ export const users = pgTable('users', {
   githubId: bigint('github_id', { mode: 'number' }).unique(), // null для demo-пользователя и ghost
   email: text('email').unique(), // вход по паролю (null у github/demo/ghost)
   passwordHash: text('password_hash'), // scrypt-хеш (null у oauth)
+  totpSecret: text('totp_secret'), // AES-256-GCM(base32-секрет), см. shared/auth/totp
+  totpEnabled: boolean('totp_enabled').notNull().default(false),
   handle: text('handle').notNull().unique(),
   name: text('name'),
   avatarUrl: text('avatar_url'),
@@ -619,6 +621,21 @@ export const follows = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique('follows_pair').on(t.followerId, t.followingId), index('follows_following_idx').on(t.followingId)],
+)
+
+// ── 2FA recovery-коды: показываются один раз, храним только sha256 ────
+export const recoveryCodes = pgTable(
+  'recovery_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('recovery_codes_user_idx').on(t.userId)],
 )
 
 // ── API tokens (доступ по MCP / API — Bearer) ────────────────────────

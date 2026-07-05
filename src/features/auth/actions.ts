@@ -59,6 +59,13 @@ export async function loginWithPassword(_prev: AuthResult | null, formData: Form
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
   if (!user || !verifyPassword(password, user.passwordHash)) return { error: t('invalidCredentials', lang) }
 
+  // Включён 2FA → сессию НЕ создаём: pending-кука (5 мин) и шаг с кодом.
+  if (user.totpEnabled) {
+    const { startPendingLogin } = await import('./twofa')
+    await startPendingLogin(user.id)
+    redirect('/login/2fa')
+  }
+
   await beginSession(user)
   redirect('/')
 }

@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { eq } from 'drizzle-orm'
-import { BarChart3, Bell, KeyRound, Monitor, Palette, TriangleAlert, User } from 'lucide-react'
+import { BarChart3, Bell, KeyRound, Monitor, Palette, ShieldCheck, TriangleAlert, User } from 'lucide-react'
 import { db, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
@@ -10,6 +10,7 @@ import { getUserUsage } from '@/shared/ai/usage'
 import { getApiTokens } from '@/features/mcp/queries'
 import { ApiTokensSection } from '@/features/mcp/ApiTokensSection'
 import { SettingsForm } from '@/features/settings/SettingsForm'
+import { TwoFactorSection } from '@/features/settings/TwoFactorSection'
 import { AppearanceSettings } from '@/features/settings/AppearanceSettings'
 import { DangerZone } from '@/features/settings/DangerZone'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
@@ -96,6 +97,23 @@ export default async function SettingsPage() {
           <div className="mb-1 font-semibold text-ink">{t('sessionsTitle', lang)}</div>
           <p className="mb-4 text-[13px] text-ink-2">{t('sessionsIntro', lang)}</p>
           <SessionsList sessions={userSessions} lang={lang} />
+        </section>
+      ),
+    },
+    {
+      id: '2fa',
+      title: lang === 'ru' ? 'Двухфакторная аутентификация' : 'Two-factor authentication',
+      icon: <ShieldCheck size={15} />,
+      keywords: ['2fa', 'totp', 'two-factor', 'authenticator', 'recovery', 'security', 'двухфакторная', 'код', 'аутентификатор', 'безопасность'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{lang === 'ru' ? 'Двухфакторная аутентификация' : 'Two-factor authentication'}</div>
+          <p className="mb-4 text-[13px] text-ink-2">
+            {lang === 'ru'
+              ? 'Второй фактор при входе по паролю: код из приложения-аутентификатора (TOTP). Вход через GitHub защищает сам GitHub.'
+              : 'A second factor for password sign-in: a code from your authenticator app (TOTP). GitHub sign-in is protected by GitHub itself.'}
+          </p>
+          <TwoFactorSection enabled={user.totpEnabled} lang={lang} />
         </section>
       ),
     },
