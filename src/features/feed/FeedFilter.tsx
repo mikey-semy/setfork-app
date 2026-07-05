@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GitFork, Heart, ListChecks, MessageSquare, SlidersHorizontal, Star, Tag, UserPlus, X } from 'lucide-react'
+import { Button } from '@/shared/ui/button'
+import { CheckboxRow } from '@/shared/ui/checkbox'
 import type { Lang } from '@/shared/i18n'
 import type { FeedEventType } from './prefs'
 import { DEFAULT_PREFS, loadPrefs, savePrefs, type FeedPrefs } from './prefs'
@@ -46,22 +48,18 @@ export function FeedFilter({ lang, onChange }: { lang: Lang; onChange: (p: FeedP
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
-      >
+      <Button onClick={() => setOpen(true)}>
         <SlidersHorizontal size={13} /> {ru ? 'Фильтр' : 'Filter'}
-      </button>
+      </Button>
       {open &&
         createPortal(
           <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/30 p-4 pt-24 sm:justify-end sm:pr-8" onClick={() => setOpen(false)}>
             <div onClick={(e) => e.stopPropagation()} className="flex max-h-[70vh] w-[340px] max-w-full flex-col rounded-lg border border-border bg-surface shadow-card">
               <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
                 <span className="text-[13.5px] font-semibold text-ink">{ru ? 'Фильтр' : 'Filter'}</span>
-                <button type="button" onClick={() => setOpen(false)} className="rounded p-1 text-muted hover:text-ink">
+                <Button variant="ghost" size="xs" onClick={() => setOpen(false)} className="p-1" aria-label="Close">
                   <X size={14} />
-                </button>
+                </Button>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-2.5">
                 <div className="text-[12.5px] font-semibold text-ink">{ru ? 'События' : 'Events'}</div>
@@ -73,57 +71,36 @@ export function FeedFilter({ lang, onChange }: { lang: Lang; onChange: (p: FeedP
                     const Icon = e.icon
                     const [title, sub] = ru ? e.ru : e.en
                     return (
-                      <label key={e.key} className="flex cursor-pointer items-start gap-2.5 rounded-md px-1.5 py-1.5 hover:bg-surface-2">
-                        <input
-                          type="checkbox"
-                          checked={prefs.events[e.key]}
-                          onChange={() => toggle(e.key)}
-                          className="mt-0.5 accent-[var(--accent)]"
-                        />
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
-                            <Icon size={13} className="text-muted" /> {title}
-                          </span>
-                          <span className="block text-[11.5px] leading-snug text-muted">{sub}</span>
-                        </span>
-                      </label>
+                      <CheckboxRow
+                        key={e.key}
+                        checked={prefs.events[e.key]}
+                        onChange={() => toggle(e.key)}
+                        icon={<Icon size={13} className="text-muted" />}
+                        title={title}
+                        sub={sub}
+                      />
                     )
                   })}
                 </div>
-                <label className="mt-2 flex cursor-pointer items-start gap-2.5 border-t border-border px-1.5 pb-1 pt-2.5 hover:bg-surface-2">
-                  <input
-                    type="checkbox"
-                    checked={prefs.includeStarred}
-                    onChange={() => apply({ ...prefs, includeStarred: !prefs.includeStarred })}
-                    className="mt-0.5 accent-[var(--accent)]"
-                  />
-                  <span className="min-w-0">
-                    <span className="text-[13px] font-semibold text-ink">
-                      {ru ? 'События из starred-списков' : 'Include events from starred lists'}
-                    </span>
-                    <span className="block text-[11.5px] leading-snug text-muted">
-                      {ru
-                        ? 'По умолчанию — только отслеживаемые списки и люди из подписок.'
-                        : 'By default, the feed shows lists you watch and people you follow.'}
-                    </span>
-                  </span>
-                </label>
+                <CheckboxRow
+                  checked={prefs.includeStarred}
+                  onChange={() => apply({ ...prefs, includeStarred: !prefs.includeStarred })}
+                  title={ru ? 'События из starred-списков' : 'Include events from starred lists'}
+                  sub={
+                    ru
+                      ? 'По умолчанию — только отслеживаемые списки и люди из подписок.'
+                      : 'By default, the feed shows lists you watch and people you follow.'
+                  }
+                  className="mt-2 rounded-none border-t border-border pb-1 pt-2.5"
+                />
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-border px-3.5 py-2.5">
-                <button
-                  type="button"
-                  onClick={() => apply(DEFAULT_PREFS)}
-                  className="rounded-md px-2.5 py-1.5 text-[12.5px] font-semibold text-ink-2 hover:text-ink"
-                >
+                <Button variant="ghost" onClick={() => apply(DEFAULT_PREFS)}>
                   {ru ? 'Сбросить' : 'Reset to default'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="rounded-md bg-accent px-3 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90"
-                >
+                </Button>
+                <Button variant="primary" onClick={() => setOpen(false)} className="px-3">
                   OK
-                </button>
+                </Button>
               </div>
             </div>
           </div>,

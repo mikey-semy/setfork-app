@@ -7,6 +7,7 @@ import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { Badge } from '@/shared/ui/badge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getListMeta } from '@/features/library/queries'
 import { isCollaborator } from '@/features/collab/queries'
@@ -66,10 +67,10 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
             {rels.map((r, i) => (
               <div key={r.id} className="rounded-lg border border-border bg-surface p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-0.5 font-mono text-[12px] font-semibold text-ink">
+                  <Badge className="px-2.5 font-mono text-[12px] text-ink">
                     <Tag size={12} className="text-muted" /> {r.tag}
-                  </span>
-                  {i === 0 && <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[11px] font-semibold text-ok">{t('latest', lang)}</span>}
+                  </Badge>
+                  {i === 0 && <Badge variant="ok">{t('latest', lang)}</Badge>}
                   <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-2">
                     <Avatar handle={r.authorHandle} avatarUrl={r.authorAvatarUrl} size={16} />
                     <Link href={`/${r.authorHandle}`} className="hover:text-accent">{r.authorHandle}</Link>
