@@ -7,7 +7,9 @@ import { Badge } from '@/shared/ui/badge'
 import { TrendChart } from '@/shared/ui/TrendChart'
 import { getContributors, getListMeta } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
+import { headers } from 'next/headers'
 import { getInsightTotals, getWeeklySeries, WEEKS } from '@/features/insights/queries'
+import { BadgesCard } from '@/features/badges/BadgesCard'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -22,6 +24,10 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
   const ru = lang === 'ru'
   const meta = await getListMeta(owner, slug)
   if (!meta) notFound()
+  const h = await headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
+  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
+  const origin = `${proto}://${host}`
   const [series, totals, contributors] = await Promise.all([
     getWeeklySeries(meta.id),
     getInsightTotals(meta.id),
@@ -122,6 +128,8 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
                 ))}
               </div>
             </div>
+
+            {meta.visibility === 'public' && <BadgesCard owner={owner} slug={slug} origin={origin} lang={lang} />}
           </aside>
         </div>
       </div>
