@@ -1,7 +1,8 @@
 import 'server-only'
-import { createClient } from '@connectrpc/connect'
+import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { createGrpcTransport } from '@connectrpc/connect-node'
 import type { GitCore, GitRepoRef } from '@/core'
+import { BranchOpError } from '@/core'
 import { GitCore as GitCoreService, type RepoRef } from './gen/git_pb'
 
 // Remote-реализация GitCore: Connect-ES → Rust git-core по gRPC (h2c, plaintext).
@@ -98,4 +99,31 @@ export const gitCoreRemote: GitCore = {
       })),
     }
   },
+
+  async createBranch(repo, name, from) {
+    try {
+      const res = await client.createBranch({ repo: toRepoRef(repo), name, from: from ?? '' })
+      return res.tipSha
+    } catch (e) {
+      throw toBranchOpError(e)
+    }
+  },
+
+  async deleteBranch(repo, name) {
+    try {
+      await client.deleteBranch({ repo: toRepoRef(repo), name })
+    } catch (e) {
+      throw toBranchOpError(e)
+    }
+  },
+}
+
+// gRPC-статусы ядра → машиночитаемые коды порта (см. proto: комментарий у CreateBranch).
+function toBranchOpError(e: unknown): BranchOpError {
+  const code = e instanceof ConnectError ? e.code : null
+  if (code === Code.InvalidArgument) return new BranchOpError('bad-name')
+  if (code === Code.AlreadyExists) return new BranchOpError('exists')
+  if (code === Code.NotFound) return new BranchOpError('not-found')
+  if (code === Code.FailedPrecondition) return new BranchOpError('protected')
+  return new BranchOpError('internal')
 }

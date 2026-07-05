@@ -6,6 +6,7 @@ import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { gitCore } from '@/features/git/core'
 import { BranchPicker } from '@/features/git/BranchPicker'
+import { isCollaborator } from '@/features/collab/queries'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -79,6 +80,8 @@ export default async function ListPage({
   const viewer = await getSession()
   const isOwner = viewer?.userId === tpl.ownerId
   if (!canViewList(tpl, { isOwner, isAdmin: isAdminHandle(viewer?.handle) })) notFound()
+  // Ветками управляют те, кто может пушить: владелец или коллаборатор.
+  const canManageBranches = isOwner || (!!viewer && (await isCollaborator(tpl.id, viewer.userId)))
   // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.
   const previews = await getStepPreviews(steps, 'rs:fit:1400:1400')
   const stepImages: Record<string, string> = Object.fromEntries(
@@ -156,7 +159,9 @@ export default async function ListPage({
                 (КТО · vN · note · КОГДА · всего), справа — Use (=Code) и Edit/Suggest. */}
             {currentVersion && (
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
-                {branches.length > 1 && <BranchPicker base={base} branches={branches} current={refBranch ?? 'main'} lang={lang} />}
+                {(branches.length > 1 || (canManageBranches && branches.length > 0)) && (
+                  <BranchPicker base={base} owner={owner} slug={slug} branches={branches} current={refBranch ?? 'main'} lang={lang} canManage={canManageBranches} />
+                )}
                 <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
                 <Link href={`/${tpl.owner.handle}`} className="shrink-0 font-semibold text-ink hover:text-accent">
                   {tpl.owner.handle}

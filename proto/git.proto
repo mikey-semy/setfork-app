@@ -39,6 +39,25 @@ service GitCore {
   // Ветки (фаза A: read-only срез). main — канон, прочие — черновики без проекции.
   rpc ListBranches(RepoRef) returns (BranchesResponse);
   rpc GetBranchSnapshot(BranchSnapshotRequest) returns (BranchSnapshotResponse);
+  // A2: управление ветками. Ошибки — gRPC-статусами: invalid_argument (имя),
+  // already_exists, not_found, failed_precondition (main защищён от удаления).
+  rpc CreateBranch(CreateBranchRequest) returns (BranchOpResponse);
+  rpc DeleteBranch(DeleteBranchRequest) returns (BranchOpResponse);
+}
+
+message CreateBranchRequest {
+  RepoRef repo = 1;
+  string name = 2; // новая ветка (без refs/heads/)
+  string from = 3; // база ('' = main)
+}
+
+message DeleteBranchRequest {
+  RepoRef repo = 1;
+  string name = 2;
+}
+
+message BranchOpResponse {
+  string tip_sha = 1; // create: tip новой ветки; delete: ''
 }
 
 message Branch {
