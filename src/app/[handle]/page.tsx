@@ -43,7 +43,7 @@ export default async function ProfilePage({
   searchParams,
 }: {
   params: Promise<{ handle: string }>
-  searchParams: Promise<{ tab?: string; folder?: string; q?: string; sort?: string; fsort?: string }>
+  searchParams: Promise<{ tab?: string; folder?: string; q?: string; sort?: string; fsort?: string; month?: string }>
 }) {
   const [{ handle }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
   const user = await getUserByHandle(handle)
@@ -77,13 +77,28 @@ export default async function ProfilePage({
   // Пикер пинов («Customize your pins») — только владельцу на Overview.
   const ownLight = tab === 'overview' && isOwner ? await getOwnListsLight(user.id) : []
 
-  // Лента активности за текущий месяц (Contribution activity) — на Overview.
-  const monthStart = new Date()
-  monthStart.setDate(1)
-  monthStart.setHours(0, 0, 0, 0)
+  // Лента активности (Contribution activity) — на Overview; ?month=YYYY-MM листает историю.
+  const nowMonth = new Date()
+  nowMonth.setDate(1)
+  nowMonth.setHours(0, 0, 0, 0)
+  const mMatch = /^(\d{4})-(\d{2})$/.exec(sp.month ?? '')
+  let monthStart = nowMonth
+  if (mMatch) {
+    const cand = new Date(Number(mMatch[1]), Number(mMatch[2]) - 1, 1)
+    // не в будущем и не раньше регистрации
+    if (cand <= nowMonth && cand >= new Date(user.createdAt.getFullYear(), user.createdAt.getMonth(), 1)) monthStart = cand
+  }
   const monthEnd = new Date(monthStart)
   monthEnd.setMonth(monthEnd.getMonth() + 1)
   const monthActivity = tab === 'overview' ? await getMonthActivity(user.id, monthStart, monthEnd) : null
+  const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  const prevMonth = new Date(monthStart)
+  prevMonth.setMonth(prevMonth.getMonth() - 1)
+  const nextMonth = new Date(monthEnd)
+  const activityNav = {
+    prev: prevMonth >= new Date(user.createdAt.getFullYear(), user.createdAt.getMonth(), 1) ? `/${handle}?month=${monthKey(prevMonth)}` : null,
+    next: nextMonth <= nowMonth ? (monthKey(nextMonth) === monthKey(nowMonth) ? `/${handle}` : `/${handle}?month=${monthKey(nextMonth)}`) : null,
+  }
 
   // Папки для звёзд (как GitHub Lists): карточки + сорт; звёзды — поиск + сорт.
   const rawFolders = tab === 'starred' ? await getUserFolders(user.id) : []
@@ -249,7 +264,7 @@ export default async function ProfilePage({
                 lang={lang}
               />
               {monthActivity && (
-                <ContributionActivity activity={monthActivity} monthStart={monthStart} handle={handle} lang={lang} />
+                <ContributionActivity activity={monthActivity} monthStart={monthStart} handle={handle} lang={lang} nav={activityNav} />
               )}
             </>
           )}

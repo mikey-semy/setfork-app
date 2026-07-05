@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CircleDot, GitCommitHorizontal, GitPullRequest, Rocket } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleDot, GitCommitHorizontal, GitPullRequest, Rocket } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { MonthActivity } from './queries'
 
@@ -10,21 +10,44 @@ export function ContributionActivity({
   monthStart,
   handle,
   lang,
+  nav,
 }: {
   activity: MonthActivity
   monthStart: Date
   handle: string
   lang: Lang
+  nav?: { prev: string | null; next: string | null }
 }) {
   const ru = lang === 'ru'
   const month = new Intl.DateTimeFormat(ru ? 'ru' : 'en', { month: 'long', year: 'numeric' }).format(monthStart)
+  const navBtn = 'grid h-6 w-6 place-items-center rounded border border-border text-muted hover:text-ink'
   const { versions, versionsTotal, listsCreated, issuesOpened, issuesLists, suggestionsCreated } = activity
   const empty = versionsTotal === 0 && listsCreated.length === 0 && issuesOpened === 0 && suggestionsCreated === 0
 
   return (
     <section className="mt-6">
       <div className="mb-3 text-[15px] font-semibold text-ink">{ru ? 'Активность' : 'Contribution activity'}</div>
-      <div className="mb-4 border-b border-border pb-1 text-[12.5px] font-semibold uppercase tracking-wide text-muted">{month}</div>
+      <div className="mb-4 flex items-center justify-between border-b border-border pb-1">
+        <span className="text-[12.5px] font-semibold uppercase tracking-wide text-muted">{month}</span>
+        {nav && (nav.prev || nav.next) && (
+          <span className="flex items-center gap-1">
+            {nav.prev ? (
+              <Link href={nav.prev} className={navBtn} aria-label={ru ? 'Предыдущий месяц' : 'Previous month'}>
+                <ChevronLeft size={13} />
+              </Link>
+            ) : (
+              <span className={`${navBtn} opacity-40`}><ChevronLeft size={13} /></span>
+            )}
+            {nav.next ? (
+              <Link href={nav.next} className={navBtn} aria-label={ru ? 'Следующий месяц' : 'Next month'}>
+                <ChevronRight size={13} />
+              </Link>
+            ) : (
+              <span className={`${navBtn} opacity-40`}><ChevronRight size={13} /></span>
+            )}
+          </span>
+        )}
+      </div>
 
       {empty ? (
         <p className="text-[13px] text-muted">{ru ? 'В этом месяце активности пока нет.' : 'No activity this month yet.'}</p>
