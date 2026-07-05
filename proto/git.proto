@@ -1,16 +1,10 @@
 syntax = "proto3";
 
 // SetFork git-core — контракт провода Rust↔Next (Connect/gRPC).
-// Аналог Gitaly SmartHTTP: BFF (Next) отдаёт клиентам smart-HTTP, а тяжёлые
-// git-операции зовёт здесь. Сервис резолвит/лочит/проецирует репо ВНУТРИ.
-// Соответствует порту @/core GitCore и features/git/core.inproc.ts.
-//
-// Фаза 2: реализовать на Rust (tonic/connect + gix read / git2 write),
-// сгенерировать TS-клиент (Connect-ES) и включить через SETFORK_CORE_URL.
+// Каноничная копия — sethub-app/proto/git.proto. Соответствует @/core GitCore.
 
 package setfork.git.v1;
 
-// Ссылка на репозиторий-список. Сервис резолвит owner/slug → внутренний repo.
 message RepoRef {
   string owner = 1;
   string slug = 2;
@@ -18,34 +12,75 @@ message RepoRef {
 
 message InfoRefsRequest {
   RepoRef repo = 1;
-  string git_protocol = 2; // значение заголовка Git-Protocol (напр. "version=2")
+  string git_protocol = 2;
 }
 
 message PostRequest {
   RepoRef repo = 1;
-  bytes body = 2;          // тело запроса клиента (pkt-lines), уже раз-gzip-нутое
+  bytes body = 2;
   string git_protocol = 3;
 }
 
 message BytesResponse {
-  bytes data = 1;          // сырой ответ git (advertisement / packfile / bundle)
+  bytes data = 1;
 }
 
-// Ответ на push: сырой report-status + номер созданной проекцией версии (0 = нет).
 message ReceivePackResponse {
   bytes data = 1;
   int32 new_version = 2;
 }
 
 service GitCore {
-  // GET /info/refs?service=git-upload-pack  (реклама для clone/pull)
   rpc InfoRefsUploadPack(InfoRefsRequest) returns (BytesResponse);
-  // GET /info/refs?service=git-receive-pack (реклама для push; auth — на BFF)
   rpc InfoRefsReceivePack(InfoRefsRequest) returns (BytesResponse);
-  // POST /git-upload-pack  (clone/pull: negotiation → packfile)
   rpc UploadPack(PostRequest) returns (BytesResponse);
-  // POST /git-receive-pack (push: приём пака + проекция list.json → версия, атомарно)
   rpc ReceivePack(PostRequest) returns (ReceivePackResponse);
-  // Скачать весь репозиторий одним bundle-файлом
   rpc CreateBundle(RepoRef) returns (BytesResponse);
+  // Ветки (фаза A: read-only срез). main — канон, прочие — черновики без проекции.
+  rpc ListBranches(RepoRef) returns (BranchesResponse);
+  rpc GetBranchSnapshot(BranchSnapshotRequest) returns (BranchSnapshotResponse);
+}
+
+message Branch {
+  string name = 1;      // без префикса refs/heads/
+  string tip_sha = 2;
+  bool is_default = 3;  // main
+  int32 ahead = 4;      // коммитов впереди main
+  int32 behind = 5;     // коммитов позади main
+}
+
+message BranchesResponse {
+  repeated Branch branches = 1; // main первым, остальные по имени
+}
+
+message BranchSnapshotRequest {
+  RepoRef repo = 1;
+  string branch = 2; // имя ветки (без refs/heads/)
+}
+
+message SnapshotStep {
+  int32 n = 1;
+  string title = 2;
+  string desc = 3;
+  string command = 4;
+  string level = 5;
+  string why = 6;
+  string section = 7;
+  repeated string subtasks = 8;
+  repeated SnapshotRef refs = 9;
+}
+
+message SnapshotRef {
+  string label = 1;
+  string url = 2; // '' = нет
+}
+
+message BranchSnapshotResponse {
+  bool found = 1;
+  string tip_sha = 2;
+  string title = 3;
+  string desc = 4;
+  repeated string tags = 5;
+  bool ordered = 6;
+  repeated SnapshotStep steps = 7;
 }
