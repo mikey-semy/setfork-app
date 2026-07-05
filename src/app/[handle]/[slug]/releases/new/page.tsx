@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { Input } from '@/shared/ui/input'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { getListMeta, getVersions } from '@/features/library/queries'
@@ -66,22 +67,12 @@ export default async function NewReleasePage({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-[12.5px] font-semibold text-ink">{ru ? 'Тег' : 'Tag'}</span>
-              <input
-                name="tag"
-                placeholder={`v${meta.currentVersion}`}
-                maxLength={40}
-                className="rounded-md border border-border bg-surface-2 px-2.5 py-2 font-mono text-[13.5px] text-ink outline-none placeholder:text-muted focus:border-border-strong"
-              />
+              <Input name="tag" placeholder={`v${meta.currentVersion}`} maxLength={40} className="font-mono" />
             </label>
           </div>
           <label className="flex flex-col gap-1.5">
             <span className="text-[12.5px] font-semibold text-ink">{ru ? 'Заголовок' : 'Title'}</span>
-            <input
-              name="title"
-              maxLength={200}
-              placeholder={ru ? 'Что вошло в релиз' : 'What’s in this release'}
-              className="rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[13.5px] text-ink outline-none placeholder:text-muted focus:border-border-strong"
-            />
+            <Input name="title" maxLength={200} placeholder={ru ? 'Что вошло в релиз' : 'What’s in this release'} />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-[12.5px] font-semibold text-ink">Notes</span>

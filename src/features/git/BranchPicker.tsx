@@ -4,6 +4,9 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, GitBranch, ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
 import type { GitBranch as Branch } from '@/core'
 import type { Lang } from '@/shared/i18n'
 import { createBranchAction, deleteBranchAction, type BranchActionResult } from './actions'
@@ -68,16 +71,11 @@ export function BranchPicker({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
-        title={ru ? 'Ветки' : 'Branches'}
-      >
+      <Button onClick={() => setOpen(true)} title={ru ? 'Ветки' : 'Branches'}>
         <GitBranch size={13} className="text-muted" />
         <span className="max-w-[140px] truncate">{current}</span>
         <ChevronDown size={12} className="text-muted" />
-      </button>
+      </Button>
       {open &&
         createPortal(
           <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/30 p-4 pt-24" onClick={() => setOpen(false)}>
@@ -98,7 +96,7 @@ export function BranchPicker({
                         <span className="grid w-4 shrink-0 place-items-center">{on && <Check size={13} className="text-accent" />}</span>
                         <span className="min-w-0 truncate">{b.name}</span>
                         {b.isDefault ? (
-                          <span className="ml-auto rounded-full border border-border px-1.5 text-[10.5px] text-muted">default</span>
+                          <Badge className="ml-auto px-1.5 text-[10.5px] font-normal">default</Badge>
                         ) : (
                           <span className="ml-auto font-mono text-[10.5px] text-muted">
                             +{b.ahead}/-{b.behind}
@@ -106,15 +104,16 @@ export function BranchPicker({
                         )}
                       </Link>
                       {canManage && !b.isDefault && (
-                        <button
-                          type="button"
+                        <Button
+                          variant="danger"
+                          size="xs"
                           disabled={pending}
                           onClick={() => remove(b.name)}
-                          className="mr-1 hidden shrink-0 rounded p-1 text-muted hover:bg-danger/10 hover:text-danger group-hover:block"
+                          className="mr-1 hidden shrink-0 p-1 group-hover:inline-flex"
                           title={ru ? 'Удалить ветку' : 'Delete branch'}
                         >
                           <Trash2 size={12} />
-                        </button>
+                        </Button>
                       )}
                     </div>
                   )
@@ -123,21 +122,17 @@ export function BranchPicker({
               {canManage && (
                 <div className="mt-1 border-t border-border px-1 pt-1.5">
                   <div className="flex items-center gap-1">
-                    <input
+                    <Input
+                      size="xs"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && create()}
                       placeholder={ru ? 'Новая ветка…' : 'New branch…'}
-                      className="min-w-0 flex-1 rounded border border-border bg-surface-2 px-2 py-1 text-[12.5px] text-ink outline-none placeholder:text-muted focus:border-border-strong"
+                      className="min-w-0 flex-1"
                     />
-                    <button
-                      type="button"
-                      disabled={pending || !name.trim()}
-                      onClick={create}
-                      className="inline-flex shrink-0 items-center gap-1 rounded border border-border px-2 py-1 text-[12px] font-semibold text-ink hover:bg-surface-2 disabled:opacity-50"
-                    >
+                    <Button size="xs" disabled={pending || !name.trim()} onClick={create} className="shrink-0">
                       <Plus size={12} /> {ru ? 'Создать' : 'Create'}
-                    </button>
+                    </Button>
                   </div>
                   <p className="px-1 pt-1 text-[11px] text-muted">
                     {err ?? (ru ? `от ${current}` : `from ${current}`)}
