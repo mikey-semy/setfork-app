@@ -1,7 +1,7 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db, watches } from '@/shared/db'
-import { curationStore } from '@/features/curation/adapter'
+import { curationStore } from '@/features/curation/store'
 
 // Тонкие обёртки над портом CurationStore — потребители не меняются, логика в адаптере.
 export const isWatching = (userId: string, templateId: string) => curationStore.isWatching(templateId, userId)

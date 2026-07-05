@@ -21,7 +21,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file domain_read.proto.
  */
 export const file_domain_read: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb21haW5fcmVhZC5wcm90bxIRc2V0Zm9yay5kb21haW4udjEiZwoKTG9jYWxlVGV4dBIvCgF2GAEgAygLMiQuc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dC5WRW50cnkaKAoGVkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiJgoHTGlzdFJlZhINCgVvd25lchgBIAEoCRIMCgRzbHVnGAIgASgJIhQKBkxpc3RJZBIKCgJpZBgBIAEoCSLlAwoETGlzdBIKCgJpZBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIMCgRzbHVnGAMgASgJEiwKBXRpdGxlGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAUgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAYgAygJEg8KB29yZGVyZWQYByABKAgSDgoGc3RhdHVzGAggASgJEhIKCnZpc2liaWxpdHkYCSABKAkSEgoKbW9kZXJhdGlvbhgKIAEoCRIZChFtb2RlcmF0aW9uX3JlYXNvbhgLIAEoCRIQCgh2ZXJpZmllZBgMIAEoCBIOCgZwaW5uZWQYDSABKAgSDgoGb3JpZ2luGA4gASgJEhYKDmZvcmtlZF9mcm9tX2lkGA8gASgJEhcKD2N1cnJlbnRfdmVyc2lvbhgQIAEoBRITCgtzdGFyc19jb3VudBgRIAEoBRITCgtmb3Jrc19jb3VudBgSIAEoBRISCgpydW5zX2NvdW50GBMgASgFEhUKDXJlcG9zaXRvcnlfaWQYFCABKAkSFQoNY3JlYXRlZF9hdF9tcxgVIAEoAxIVCg11cGRhdGVkX2F0X21zGBYgASgDInAKB1ZlcnNpb24SCgoCaWQYASABKAkSDwoHbGlzdF9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEgwKBG5vdGUYBCABKAkSEgoKY29tbWl0X3NoYRgFIAEoCRIVCg1jcmVhdGVkX2F0X21zGAYgASgDIkQKB1N0ZXBSZWYSLAoFbGFiZWwYASABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EgsKA3VybBgCIAEoCSL2AgoEU3RlcBIKCgJpZBgBIAEoCRISCgp2ZXJzaW9uX2lkGAIgASgJEgkKAW4YAyABKAUSLAoFdGl0bGUYBCABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EisKBGRlc2MYBSABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Eg8KB2NvbW1hbmQYBiABKAkSDQoFbGV2ZWwYByABKAkSKgoDd2h5GAggASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIuCgdzZWN0aW9uGAkgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIvCghzdWJ0YXNrcxgKIAMoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKAoEcmVmcxgLIAMoCzIaLnNldGZvcmsuZG9tYWluLnYxLlN0ZXBSZWYSEQoJaW1hZ2VfcmVmGAwgASgJIkMKC0NvbnRyaWJ1dG9yEg4KBmhhbmRsZRgBIAEoCRISCgphdmF0YXJfcmVmGAIgASgJEhAKCGFjY2VwdGVkGAMgASgFIkcKD0dldExpc3RSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRsaXN0GAIgASgLMhcuc2V0Zm9yay5kb21haW4udjEuTGlzdCJAChBWZXJzaW9uc1Jlc3BvbnNlEiwKCHZlcnNpb25zGAEgAygLMhouc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbiI1ChFHZXRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3ZlcnNpb24YAiABKAUieAoSR2V0VmVyc2lvblJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEisKB3ZlcnNpb24YAiABKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uEiYKBXN0ZXBzGAMgAygLMhcuc2V0Zm9yay5kb21haW4udjEuU3RlcCJMChRDb250cmlidXRvcnNSZXNwb25zZRI0Cgxjb250cmlidXRvcnMYASADKAsyHi5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvcjLXAgoITGlzdFJlYWQSSQoHR2V0TGlzdBIaLnNldGZvcmsuZG9tYWluLnYxLkxpc3RSZWYaIi5zZXRmb3JrLmRvbWFpbi52MS5HZXRMaXN0UmVzcG9uc2USTgoMTGlzdFZlcnNpb25zEhkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGiMuc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbnNSZXNwb25zZRJZCgpHZXRWZXJzaW9uEiQuc2V0Zm9yay5kb21haW4udjEuR2V0VmVyc2lvblJlcXVlc3QaJS5zZXRmb3JrLmRvbWFpbi52MS5HZXRWZXJzaW9uUmVzcG9uc2USVQoPR2V0Q29udHJpYnV0b3JzEhkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGicuc2V0Zm9yay5kb21haW4udjEuQ29udHJpYnV0b3JzUmVzcG9uc2ViBnByb3RvMw");
+  fileDesc("ChFkb21haW5fcmVhZC5wcm90bxIRc2V0Zm9yay5kb21haW4udjEiZwoKTG9jYWxlVGV4dBIvCgF2GAEgAygLMiQuc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dC5WRW50cnkaKAoGVkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiJgoHTGlzdFJlZhINCgVvd25lchgBIAEoCRIMCgRzbHVnGAIgASgJIhQKBkxpc3RJZBIKCgJpZBgBIAEoCSLlAwoETGlzdBIKCgJpZBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIMCgRzbHVnGAMgASgJEiwKBXRpdGxlGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAUgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAYgAygJEg8KB29yZGVyZWQYByABKAgSDgoGc3RhdHVzGAggASgJEhIKCnZpc2liaWxpdHkYCSABKAkSEgoKbW9kZXJhdGlvbhgKIAEoCRIZChFtb2RlcmF0aW9uX3JlYXNvbhgLIAEoCRIQCgh2ZXJpZmllZBgMIAEoCBIOCgZwaW5uZWQYDSABKAgSDgoGb3JpZ2luGA4gASgJEhYKDmZvcmtlZF9mcm9tX2lkGA8gASgJEhcKD2N1cnJlbnRfdmVyc2lvbhgQIAEoBRITCgtzdGFyc19jb3VudBgRIAEoBRITCgtmb3Jrc19jb3VudBgSIAEoBRISCgpydW5zX2NvdW50GBMgASgFEhUKDXJlcG9zaXRvcnlfaWQYFCABKAkSFQoNY3JlYXRlZF9hdF9tcxgVIAEoAxIVCg11cGRhdGVkX2F0X21zGBYgASgDInAKB1ZlcnNpb24SCgoCaWQYASABKAkSDwoHbGlzdF9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEgwKBG5vdGUYBCABKAkSEgoKY29tbWl0X3NoYRgFIAEoCRIVCg1jcmVhdGVkX2F0X21zGAYgASgDIkQKB1N0ZXBSZWYSLAoFbGFiZWwYASABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EgsKA3VybBgCIAEoCSL2AgoEU3RlcBIKCgJpZBgBIAEoCRISCgp2ZXJzaW9uX2lkGAIgASgJEgkKAW4YAyABKAUSLAoFdGl0bGUYBCABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EisKBGRlc2MYBSABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Eg8KB2NvbW1hbmQYBiABKAkSDQoFbGV2ZWwYByABKAkSKgoDd2h5GAggASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIuCgdzZWN0aW9uGAkgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIvCghzdWJ0YXNrcxgKIAMoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKAoEcmVmcxgLIAMoCzIaLnNldGZvcmsuZG9tYWluLnYxLlN0ZXBSZWYSEQoJaW1hZ2VfcmVmGAwgASgJIkMKC0NvbnRyaWJ1dG9yEg4KBmhhbmRsZRgBIAEoCRISCgphdmF0YXJfcmVmGAIgASgJEhAKCGFjY2VwdGVkGAMgASgFIkcKD0dldExpc3RSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRsaXN0GAIgASgLMhcuc2V0Zm9yay5kb21haW4udjEuTGlzdCJAChBWZXJzaW9uc1Jlc3BvbnNlEiwKCHZlcnNpb25zGAEgAygLMhouc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbiI1ChFHZXRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3ZlcnNpb24YAiABKAUieAoSR2V0VmVyc2lvblJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEisKB3ZlcnNpb24YAiABKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uEiYKBXN0ZXBzGAMgAygLMhcuc2V0Zm9yay5kb21haW4udjEuU3RlcCJMChRDb250cmlidXRvcnNSZXNwb25zZRI0Cgxjb250cmlidXRvcnMYASADKAsyHi5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvciIsCghVc2VyTGlzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkiHQoMQm9vbFJlc3BvbnNlEg0KBXZhbHVlGAEgASgIIh4KDUNvdW50UmVzcG9uc2USDQoFdmFsdWUYASABKAUiGgoLSWRzUmVzcG9uc2USCwoDaWRzGAEgAygJMtcCCghMaXN0UmVhZBJJCgdHZXRMaXN0Ehouc2V0Zm9yay5kb21haW4udjEuTGlzdFJlZhoiLnNldGZvcmsuZG9tYWluLnYxLkdldExpc3RSZXNwb25zZRJOCgxMaXN0VmVyc2lvbnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaIy5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uc1Jlc3BvbnNlElkKCkdldFZlcnNpb24SJC5zZXRmb3JrLmRvbWFpbi52MS5HZXRWZXJzaW9uUmVxdWVzdBolLnNldGZvcmsuZG9tYWluLnYxLkdldFZlcnNpb25SZXNwb25zZRJVCg9HZXRDb250cmlidXRvcnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaJy5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvcnNSZXNwb25zZTK5AgoMQ3VyYXRpb25SZWFkEkkKCUlzU3RhcnJlZBIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEkoKCklzV2F0Y2hpbmcSGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZRJJCgpXYXRjaENvdW50Ehkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGiAuc2V0Zm9yay5kb21haW4udjEuQ291bnRSZXNwb25zZRJHCgpXYXRjaGVySWRzEhkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGh4uc2V0Zm9yay5kb21haW4udjEuSWRzUmVzcG9uc2ViBnByb3RvMw");
 
 /**
  * ── Примитивы ─────────────────────────────────────────────────────────
@@ -514,6 +514,81 @@ export const ContributorsResponseSchema: GenMessage<ContributorsResponse> = /*@_
   messageDesc(file_domain_read, 12);
 
 /**
+ * ── CurationRead: READ-часть порта CurationStore ──────────────────────
+ *
+ * @generated from message setfork.domain.v1.UserList
+ */
+export type UserList = Message<"setfork.domain.v1.UserList"> & {
+  /**
+   * @generated from field: string list_id = 1;
+   */
+  listId: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+};
+
+/**
+ * Describes the message setfork.domain.v1.UserList.
+ * Use `create(UserListSchema)` to create a new message.
+ */
+export const UserListSchema: GenMessage<UserList> = /*@__PURE__*/
+  messageDesc(file_domain_read, 13);
+
+/**
+ * @generated from message setfork.domain.v1.BoolResponse
+ */
+export type BoolResponse = Message<"setfork.domain.v1.BoolResponse"> & {
+  /**
+   * @generated from field: bool value = 1;
+   */
+  value: boolean;
+};
+
+/**
+ * Describes the message setfork.domain.v1.BoolResponse.
+ * Use `create(BoolResponseSchema)` to create a new message.
+ */
+export const BoolResponseSchema: GenMessage<BoolResponse> = /*@__PURE__*/
+  messageDesc(file_domain_read, 14);
+
+/**
+ * @generated from message setfork.domain.v1.CountResponse
+ */
+export type CountResponse = Message<"setfork.domain.v1.CountResponse"> & {
+  /**
+   * @generated from field: int32 value = 1;
+   */
+  value: number;
+};
+
+/**
+ * Describes the message setfork.domain.v1.CountResponse.
+ * Use `create(CountResponseSchema)` to create a new message.
+ */
+export const CountResponseSchema: GenMessage<CountResponse> = /*@__PURE__*/
+  messageDesc(file_domain_read, 15);
+
+/**
+ * @generated from message setfork.domain.v1.IdsResponse
+ */
+export type IdsResponse = Message<"setfork.domain.v1.IdsResponse"> & {
+  /**
+   * @generated from field: repeated string ids = 1;
+   */
+  ids: string[];
+};
+
+/**
+ * Describes the message setfork.domain.v1.IdsResponse.
+ * Use `create(IdsResponseSchema)` to create a new message.
+ */
+export const IdsResponseSchema: GenMessage<IdsResponse> = /*@__PURE__*/
+  messageDesc(file_domain_read, 16);
+
+/**
  * READ-часть порта ListStore. Резолв/фильтрация видимости — на BFF (как сейчас):
  * сервис отдаёт данные как есть, приватность решает вызывающий слой.
  *
@@ -554,4 +629,43 @@ export const ListRead: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_domain_read, 0);
+
+/**
+ * @generated from service setfork.domain.v1.CurationRead
+ */
+export const CurationRead: GenService<{
+  /**
+   * @generated from rpc setfork.domain.v1.CurationRead.IsStarred
+   */
+  isStarred: {
+    methodKind: "unary";
+    input: typeof UserListSchema;
+    output: typeof BoolResponseSchema;
+  },
+  /**
+   * @generated from rpc setfork.domain.v1.CurationRead.IsWatching
+   */
+  isWatching: {
+    methodKind: "unary";
+    input: typeof UserListSchema;
+    output: typeof BoolResponseSchema;
+  },
+  /**
+   * @generated from rpc setfork.domain.v1.CurationRead.WatchCount
+   */
+  watchCount: {
+    methodKind: "unary";
+    input: typeof ListIdSchema;
+    output: typeof CountResponseSchema;
+  },
+  /**
+   * @generated from rpc setfork.domain.v1.CurationRead.WatcherIds
+   */
+  watcherIds: {
+    methodKind: "unary";
+    input: typeof ListIdSchema;
+    output: typeof IdsResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_domain_read, 1);
 
