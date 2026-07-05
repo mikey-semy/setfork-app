@@ -17,7 +17,9 @@ const config: Config = {
         canvas: 'var(--canvas)',
         surface: 'var(--surface)',
         'surface-2': 'var(--surface-2)',
-        border: 'var(--border)',
+        // rgb-триплет + <alpha-value>: иначе Tailwind молча игнорирует модификатор
+        // прозрачности (divide-border/40 и т.п. рисовались полной яркостью).
+        border: 'rgb(var(--border-rgb) / <alpha-value>)',
         'border-strong': 'var(--border-strong)',
         ink: 'var(--ink)',
         'ink-2': 'var(--ink-2)',

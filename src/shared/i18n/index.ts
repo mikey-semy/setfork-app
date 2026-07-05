@@ -30,6 +30,8 @@ const DICT = {
   dashboard: { en: 'Dashboard', ru: 'Дашборд' },
   menu: { en: 'Menu', ru: 'Меню' },
   myLists: { en: 'My lists', ru: 'Мои списки' },
+  topLists: { en: 'Top lists', ru: 'Топ списков' },
+  findList: { en: 'Find a list…', ru: 'Найти список…' },
   runs: { en: 'Runs', ru: 'Прогоны' },
   newList: { en: 'New list', ru: 'Новый список' },
   searchLists: { en: 'Search lists, topics or people…', ru: 'Поиск списков, тем, людей…' },
