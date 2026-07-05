@@ -38,6 +38,11 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
           {t('rateLimited', lang)}
         </div>
       )}
+      {sp.e === 'ai_quota' && (
+        <div className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2.5 text-[13px] text-warn">
+          {ru ? 'Исчерпан месячный лимит AI-генерации. Попробуй в следующем месяце.' : 'Monthly AI generation limit reached. Try again next month.'}
+        </div>
+      )}
 
       <GenerateForm lang={lang} aiOn={aiOn} defaultQuery={sp.q ?? ''} />
     </div>

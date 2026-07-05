@@ -6,16 +6,27 @@ import { Input } from '@/shared/ui/input'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
+import { listQuota } from '@/shared/quota'
 
-export default async function NewListPage() {
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+export default async function NewListPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
+  const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (!session) redirect('/login')
   const ru = lang === 'ru'
+  const quotaHit = sp.e === 'list_quota'
+  const q = quotaHit ? await listQuota(session.userId, session.handle) : null
 
   return (
     <div className="mx-auto w-full max-w-[720px] px-6 py-8">
       <form action={createTemplate}>
         <h1 className="mb-6 text-[18px] font-bold text-ink">{t('newList', lang)}</h1>
+
+        {quotaHit && q && (
+          <div className="mb-5 rounded-md border border-warn/50 bg-surface px-3 py-2.5 text-[13px] text-warn">
+            {ru
+              ? `Достигнут лимит списков (${q.limit}). Удали ненужные, чтобы создать новый.`
+              : `You’ve reached the list limit (${q.limit}). Delete some to create a new one.`}
+          </div>
+        )}
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{ru ? 'Название' : 'Title'}</label>
         <Input
