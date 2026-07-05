@@ -1,6 +1,6 @@
 import 'server-only'
 import { Code, ConnectError, createClient } from '@connectrpc/connect'
-import { createGrpcTransport } from '@connectrpc/connect-node'
+import { coreTransport } from '@/shared/core-transport'
 import type { GitCore, GitRepoRef } from '@/core'
 import { BranchOpError } from '@/core'
 import { GitCore as GitCoreService, type RepoRef } from './gen/git_pb'
@@ -10,10 +10,8 @@ import { GitCore as GitCoreService, type RepoRef } from './gen/git_pb'
 // Семантика 1:1 с core.inproc.ts: сервис резолвит/лочит/проецирует репо ВНУТРИ,
 // а тут только маппинг форм порт ↔ proto-сообщения.
 
-// h2c: gRPC поверх http/2 без TLS. По умолчанию — локальный dev-сервер.
-const addr = process.env.SETFORK_CORE_ADDR ?? '127.0.0.1:50051'
-const transport = createGrpcTransport({ baseUrl: `http://${addr}` })
-const client = createClient(GitCoreService, transport)
+// Единый транспорт к ядру (h2c + Bearer-токен канала, см. shared/core-transport).
+const client = createClient(GitCoreService, coreTransport())
 
 // Порт разделяет owner/slug; в proto это вложенный RepoRef.
 function toRepoRef(repo: GitRepoRef): RepoRef {

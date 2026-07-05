@@ -1,6 +1,6 @@
 import 'server-only'
 import { createClient } from '@connectrpc/connect'
-import { createGrpcTransport } from '@connectrpc/connect-node'
+import { coreTransport } from '@/shared/core-transport'
 import type { Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
 import {
   ListRead,
@@ -15,8 +15,7 @@ import {
 // что git-ядро; включается тем же флагом SETFORK_CORE_URL/ADDR). Маппинг proto→домен
 // зеркалит конвенции domain_read.proto: '' = null, unix-ms = Date, LocaleText-обёртка.
 
-const addr = process.env.SETFORK_CORE_ADDR ?? '127.0.0.1:50051'
-const transport = createGrpcTransport({ baseUrl: `http://${addr}` })
+const transport = coreTransport()
 const client = createClient(ListRead, transport)
 const writeClient = createClient(ListWrite, transport)
 

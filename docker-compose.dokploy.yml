@@ -97,6 +97,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@setfork-db:5432/${POSTGRES_DB:-sethub}
       SETFORK_CORE_URL: '1' # включить remote-режим git-ядра
       SETFORK_CORE_ADDR: setfork-core:50051 # контейнер ядра из отдельного проекта setfork-core
+      SETFORK_CORE_TOKEN: ${SETFORK_CORE_TOKEN:-} # Bearer-токен канала (тот же в проекте ядра)
     depends_on:
       setfork-db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
