@@ -93,6 +93,7 @@ export const users = pgTable('users', {
   githubId: bigint('github_id', { mode: 'number' }).unique(), // null для demo-пользователя и ghost
   email: text('email').unique(), // вход по паролю (null у github/demo/ghost)
   passwordHash: text('password_hash'), // scrypt-хеш (null у oauth)
+  emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }), // null = не подтверждена
   totpSecret: text('totp_secret'), // AES-256-GCM(base32-секрет), см. shared/auth/totp
   totpEnabled: boolean('totp_enabled').notNull().default(false),
   handle: text('handle').notNull().unique(),

@@ -13,7 +13,7 @@ export type AuthResult = { error?: string }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 const HANDLE_RE = /^[a-z0-9-]{3,30}$/
-const RESERVED = new Set(['explore', 'new', 'settings', 'admin', 'login', 'register', 'notifications', 'my-lists', 'api', 'generate', 'ghost'])
+const RESERVED = new Set(['explore', 'new', 'settings', 'admin', 'login', 'register', 'notifications', 'my-lists', 'api', 'generate', 'ghost', 'verify-email', 'forgot-password', 'reset-password', 'changelog'])
 
 async function beginSession(user: { id: string; handle: string; name: string | null; avatarUrl: string | null }) {
   await startSession({
@@ -46,6 +46,10 @@ export async function registerWithPassword(_prev: AuthResult | null, formData: F
   } catch {
     return { error: t('emailTaken', lang) } // гонка по unique
   }
+
+  // Письмо-подтверждение — best-effort, регистрацию не блокирует.
+  const { sendVerificationEmail } = await import('./email-flows')
+  void sendVerificationEmail(created.id).catch(() => {})
 
   await beginSession(created)
   redirect('/')

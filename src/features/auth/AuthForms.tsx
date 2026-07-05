@@ -20,6 +20,9 @@ export function LoginForm({ lang }: { lang: Lang }) {
       <Button type="submit" variant="primary" disabled={pending} className={btn}>
         {t('signIn', lang)}
       </Button>
+      <a href="/forgot-password" className="text-center text-[12.5px] text-ink-2 hover:text-ink">
+        {lang === 'ru' ? 'Забыл пароль?' : 'Forgot password?'}
+      </a>
     </form>
   )
 }
