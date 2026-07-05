@@ -3,12 +3,7 @@
 /* eslint-disable */
 
 // SetFork git-core — контракт провода Rust↔Next (Connect/gRPC).
-// Аналог Gitaly SmartHTTP: BFF (Next) отдаёт клиентам smart-HTTP, а тяжёлые
-// git-операции зовёт здесь. Сервис резолвит/лочит/проецирует репо ВНУТРИ.
-// Соответствует порту @/core GitCore и features/git/core.inproc.ts.
-//
-// Фаза 2: реализовать на Rust (tonic/connect + gix read / git2 write),
-// сгенерировать TS-клиент (Connect-ES) и включить через SETFORK_CORE_URL.
+// Каноничная копия — sethub-app/proto/git.proto. Соответствует @/core GitCore.
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
@@ -18,11 +13,9 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file git.proto.
  */
 export const file_git: GenFile = /*@__PURE__*/
-  fileDesc("CglnaXQucHJvdG8SDnNldGZvcmsuZ2l0LnYxIiYKB1JlcG9SZWYSDQoFb3duZXIYASABKAkSDAoEc2x1ZxgCIAEoCSJOCg9JbmZvUmVmc1JlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSFAoMZ2l0X3Byb3RvY29sGAIgASgJIlgKC1Bvc3RSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBGJvZHkYAiABKAwSFAoMZ2l0X3Byb3RvY29sGAMgASgJIh0KDUJ5dGVzUmVzcG9uc2USDAoEZGF0YRgBIAEoDCI4ChNSZWNlaXZlUGFja1Jlc3BvbnNlEgwKBGRhdGEYASABKAwSEwoLbmV3X3ZlcnNpb24YAiABKAUymQMKB0dpdENvcmUSVAoSSW5mb1JlZnNVcGxvYWRQYWNrEh8uc2V0Zm9yay5naXQudjEuSW5mb1JlZnNSZXF1ZXN0Gh0uc2V0Zm9yay5naXQudjEuQnl0ZXNSZXNwb25zZRJVChNJbmZvUmVmc1JlY2VpdmVQYWNrEh8uc2V0Zm9yay5naXQudjEuSW5mb1JlZnNSZXF1ZXN0Gh0uc2V0Zm9yay5naXQudjEuQnl0ZXNSZXNwb25zZRJICgpVcGxvYWRQYWNrEhsuc2V0Zm9yay5naXQudjEuUG9zdFJlcXVlc3QaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlEk8KC1JlY2VpdmVQYWNrEhsuc2V0Zm9yay5naXQudjEuUG9zdFJlcXVlc3QaIy5zZXRmb3JrLmdpdC52MS5SZWNlaXZlUGFja1Jlc3BvbnNlEkYKDENyZWF0ZUJ1bmRsZRIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlYgZwcm90bzM");
+  fileDesc("CglnaXQucHJvdG8SDnNldGZvcmsuZ2l0LnYxIiYKB1JlcG9SZWYSDQoFb3duZXIYASABKAkSDAoEc2x1ZxgCIAEoCSJOCg9JbmZvUmVmc1JlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSFAoMZ2l0X3Byb3RvY29sGAIgASgJIlgKC1Bvc3RSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBGJvZHkYAiABKAwSFAoMZ2l0X3Byb3RvY29sGAMgASgJIh0KDUJ5dGVzUmVzcG9uc2USDAoEZGF0YRgBIAEoDCI4ChNSZWNlaXZlUGFja1Jlc3BvbnNlEgwKBGRhdGEYASABKAwSEwoLbmV3X3ZlcnNpb24YAiABKAUiWgoGQnJhbmNoEgwKBG5hbWUYASABKAkSDwoHdGlwX3NoYRgCIAEoCRISCgppc19kZWZhdWx0GAMgASgIEg0KBWFoZWFkGAQgASgFEg4KBmJlaGluZBgFIAEoBSI8ChBCcmFuY2hlc1Jlc3BvbnNlEigKCGJyYW5jaGVzGAEgAygLMhYuc2V0Zm9yay5naXQudjEuQnJhbmNoIk4KFUJyYW5jaFNuYXBzaG90UmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIOCgZicmFuY2gYAiABKAkisQEKDFNuYXBzaG90U3RlcBIJCgFuGAEgASgFEg0KBXRpdGxlGAIgASgJEgwKBGRlc2MYAyABKAkSDwoHY29tbWFuZBgEIAEoCRINCgVsZXZlbBgFIAEoCRILCgN3aHkYBiABKAkSDwoHc2VjdGlvbhgHIAEoCRIQCghzdWJ0YXNrcxgIIAMoCRIpCgRyZWZzGAkgAygLMhsuc2V0Zm9yay5naXQudjEuU25hcHNob3RSZWYiKQoLU25hcHNob3RSZWYSDQoFbGFiZWwYASABKAkSCwoDdXJsGAIgASgJIqEBChZCcmFuY2hTbmFwc2hvdFJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEg8KB3RpcF9zaGEYAiABKAkSDQoFdGl0bGUYAyABKAkSDAoEZGVzYxgEIAEoCRIMCgR0YWdzGAUgAygJEg8KB29yZGVyZWQYBiABKAgSKwoFc3RlcHMYByADKAsyHC5zZXRmb3JrLmdpdC52MS5TbmFwc2hvdFN0ZXAyyAQKB0dpdENvcmUSVAoSSW5mb1JlZnNVcGxvYWRQYWNrEh8uc2V0Zm9yay5naXQudjEuSW5mb1JlZnNSZXF1ZXN0Gh0uc2V0Zm9yay5naXQudjEuQnl0ZXNSZXNwb25zZRJVChNJbmZvUmVmc1JlY2VpdmVQYWNrEh8uc2V0Zm9yay5naXQudjEuSW5mb1JlZnNSZXF1ZXN0Gh0uc2V0Zm9yay5naXQudjEuQnl0ZXNSZXNwb25zZRJICgpVcGxvYWRQYWNrEhsuc2V0Zm9yay5naXQudjEuUG9zdFJlcXVlc3QaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlEk8KC1JlY2VpdmVQYWNrEhsuc2V0Zm9yay5naXQudjEuUG9zdFJlcXVlc3QaIy5zZXRmb3JrLmdpdC52MS5SZWNlaXZlUGFja1Jlc3BvbnNlEkYKDENyZWF0ZUJ1bmRsZRIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlEkkKDExpc3RCcmFuY2hlcxIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYaIC5zZXRmb3JrLmdpdC52MS5CcmFuY2hlc1Jlc3BvbnNlEmIKEUdldEJyYW5jaFNuYXBzaG90EiUuc2V0Zm9yay5naXQudjEuQnJhbmNoU25hcHNob3RSZXF1ZXN0GiYuc2V0Zm9yay5naXQudjEuQnJhbmNoU25hcHNob3RSZXNwb25zZWIGcHJvdG8z");
 
 /**
- * Ссылка на репозиторий-список. Сервис резолвит owner/slug → внутренний repo.
- *
  * @generated from message setfork.git.v1.RepoRef
  */
 export type RepoRef = Message<"setfork.git.v1.RepoRef"> & {
@@ -54,8 +47,6 @@ export type InfoRefsRequest = Message<"setfork.git.v1.InfoRefsRequest"> & {
   repo?: RepoRef | undefined;
 
   /**
-   * значение заголовка Git-Protocol (напр. "version=2")
-   *
    * @generated from field: string git_protocol = 2;
    */
   gitProtocol: string;
@@ -78,8 +69,6 @@ export type PostRequest = Message<"setfork.git.v1.PostRequest"> & {
   repo?: RepoRef | undefined;
 
   /**
-   * тело запроса клиента (pkt-lines), уже раз-gzip-нутое
-   *
    * @generated from field: bytes body = 2;
    */
   body: Uint8Array;
@@ -102,8 +91,6 @@ export const PostRequestSchema: GenMessage<PostRequest> = /*@__PURE__*/
  */
 export type BytesResponse = Message<"setfork.git.v1.BytesResponse"> & {
   /**
-   * сырой ответ git (advertisement / packfile / bundle)
-   *
    * @generated from field: bytes data = 1;
    */
   data: Uint8Array;
@@ -117,8 +104,6 @@ export const BytesResponseSchema: GenMessage<BytesResponse> = /*@__PURE__*/
   messageDesc(file_git, 3);
 
 /**
- * Ответ на push: сырой report-status + номер созданной проекцией версии (0 = нет).
- *
  * @generated from message setfork.git.v1.ReceivePackResponse
  */
 export type ReceivePackResponse = Message<"setfork.git.v1.ReceivePackResponse"> & {
@@ -141,12 +126,226 @@ export const ReceivePackResponseSchema: GenMessage<ReceivePackResponse> = /*@__P
   messageDesc(file_git, 4);
 
 /**
+ * @generated from message setfork.git.v1.Branch
+ */
+export type Branch = Message<"setfork.git.v1.Branch"> & {
+  /**
+   * без префикса refs/heads/
+   *
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string tip_sha = 2;
+   */
+  tipSha: string;
+
+  /**
+   * main
+   *
+   * @generated from field: bool is_default = 3;
+   */
+  isDefault: boolean;
+
+  /**
+   * коммитов впереди main
+   *
+   * @generated from field: int32 ahead = 4;
+   */
+  ahead: number;
+
+  /**
+   * коммитов позади main
+   *
+   * @generated from field: int32 behind = 5;
+   */
+  behind: number;
+};
+
+/**
+ * Describes the message setfork.git.v1.Branch.
+ * Use `create(BranchSchema)` to create a new message.
+ */
+export const BranchSchema: GenMessage<Branch> = /*@__PURE__*/
+  messageDesc(file_git, 5);
+
+/**
+ * @generated from message setfork.git.v1.BranchesResponse
+ */
+export type BranchesResponse = Message<"setfork.git.v1.BranchesResponse"> & {
+  /**
+   * main первым, остальные по имени
+   *
+   * @generated from field: repeated setfork.git.v1.Branch branches = 1;
+   */
+  branches: Branch[];
+};
+
+/**
+ * Describes the message setfork.git.v1.BranchesResponse.
+ * Use `create(BranchesResponseSchema)` to create a new message.
+ */
+export const BranchesResponseSchema: GenMessage<BranchesResponse> = /*@__PURE__*/
+  messageDesc(file_git, 6);
+
+/**
+ * @generated from message setfork.git.v1.BranchSnapshotRequest
+ */
+export type BranchSnapshotRequest = Message<"setfork.git.v1.BranchSnapshotRequest"> & {
+  /**
+   * @generated from field: setfork.git.v1.RepoRef repo = 1;
+   */
+  repo?: RepoRef | undefined;
+
+  /**
+   * имя ветки (без refs/heads/)
+   *
+   * @generated from field: string branch = 2;
+   */
+  branch: string;
+};
+
+/**
+ * Describes the message setfork.git.v1.BranchSnapshotRequest.
+ * Use `create(BranchSnapshotRequestSchema)` to create a new message.
+ */
+export const BranchSnapshotRequestSchema: GenMessage<BranchSnapshotRequest> = /*@__PURE__*/
+  messageDesc(file_git, 7);
+
+/**
+ * @generated from message setfork.git.v1.SnapshotStep
+ */
+export type SnapshotStep = Message<"setfork.git.v1.SnapshotStep"> & {
+  /**
+   * @generated from field: int32 n = 1;
+   */
+  n: number;
+
+  /**
+   * @generated from field: string title = 2;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string desc = 3;
+   */
+  desc: string;
+
+  /**
+   * @generated from field: string command = 4;
+   */
+  command: string;
+
+  /**
+   * @generated from field: string level = 5;
+   */
+  level: string;
+
+  /**
+   * @generated from field: string why = 6;
+   */
+  why: string;
+
+  /**
+   * @generated from field: string section = 7;
+   */
+  section: string;
+
+  /**
+   * @generated from field: repeated string subtasks = 8;
+   */
+  subtasks: string[];
+
+  /**
+   * @generated from field: repeated setfork.git.v1.SnapshotRef refs = 9;
+   */
+  refs: SnapshotRef[];
+};
+
+/**
+ * Describes the message setfork.git.v1.SnapshotStep.
+ * Use `create(SnapshotStepSchema)` to create a new message.
+ */
+export const SnapshotStepSchema: GenMessage<SnapshotStep> = /*@__PURE__*/
+  messageDesc(file_git, 8);
+
+/**
+ * @generated from message setfork.git.v1.SnapshotRef
+ */
+export type SnapshotRef = Message<"setfork.git.v1.SnapshotRef"> & {
+  /**
+   * @generated from field: string label = 1;
+   */
+  label: string;
+
+  /**
+   * '' = нет
+   *
+   * @generated from field: string url = 2;
+   */
+  url: string;
+};
+
+/**
+ * Describes the message setfork.git.v1.SnapshotRef.
+ * Use `create(SnapshotRefSchema)` to create a new message.
+ */
+export const SnapshotRefSchema: GenMessage<SnapshotRef> = /*@__PURE__*/
+  messageDesc(file_git, 9);
+
+/**
+ * @generated from message setfork.git.v1.BranchSnapshotResponse
+ */
+export type BranchSnapshotResponse = Message<"setfork.git.v1.BranchSnapshotResponse"> & {
+  /**
+   * @generated from field: bool found = 1;
+   */
+  found: boolean;
+
+  /**
+   * @generated from field: string tip_sha = 2;
+   */
+  tipSha: string;
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string desc = 4;
+   */
+  desc: string;
+
+  /**
+   * @generated from field: repeated string tags = 5;
+   */
+  tags: string[];
+
+  /**
+   * @generated from field: bool ordered = 6;
+   */
+  ordered: boolean;
+
+  /**
+   * @generated from field: repeated setfork.git.v1.SnapshotStep steps = 7;
+   */
+  steps: SnapshotStep[];
+};
+
+/**
+ * Describes the message setfork.git.v1.BranchSnapshotResponse.
+ * Use `create(BranchSnapshotResponseSchema)` to create a new message.
+ */
+export const BranchSnapshotResponseSchema: GenMessage<BranchSnapshotResponse> = /*@__PURE__*/
+  messageDesc(file_git, 10);
+
+/**
  * @generated from service setfork.git.v1.GitCore
  */
 export const GitCore: GenService<{
   /**
-   * GET /info/refs?service=git-upload-pack  (реклама для clone/pull)
-   *
    * @generated from rpc setfork.git.v1.GitCore.InfoRefsUploadPack
    */
   infoRefsUploadPack: {
@@ -155,8 +354,6 @@ export const GitCore: GenService<{
     output: typeof BytesResponseSchema;
   },
   /**
-   * GET /info/refs?service=git-receive-pack (реклама для push; auth — на BFF)
-   *
    * @generated from rpc setfork.git.v1.GitCore.InfoRefsReceivePack
    */
   infoRefsReceivePack: {
@@ -165,8 +362,6 @@ export const GitCore: GenService<{
     output: typeof BytesResponseSchema;
   },
   /**
-   * POST /git-upload-pack  (clone/pull: negotiation → packfile)
-   *
    * @generated from rpc setfork.git.v1.GitCore.UploadPack
    */
   uploadPack: {
@@ -175,8 +370,6 @@ export const GitCore: GenService<{
     output: typeof BytesResponseSchema;
   },
   /**
-   * POST /git-receive-pack (push: приём пака + проекция list.json → версия, атомарно)
-   *
    * @generated from rpc setfork.git.v1.GitCore.ReceivePack
    */
   receivePack: {
@@ -185,14 +378,30 @@ export const GitCore: GenService<{
     output: typeof ReceivePackResponseSchema;
   },
   /**
-   * Скачать весь репозиторий одним bundle-файлом
-   *
    * @generated from rpc setfork.git.v1.GitCore.CreateBundle
    */
   createBundle: {
     methodKind: "unary";
     input: typeof RepoRefSchema;
     output: typeof BytesResponseSchema;
+  },
+  /**
+   * Ветки (фаза A: read-only срез). main — канон, прочие — черновики без проекции.
+   *
+   * @generated from rpc setfork.git.v1.GitCore.ListBranches
+   */
+  listBranches: {
+    methodKind: "unary";
+    input: typeof RepoRefSchema;
+    output: typeof BranchesResponseSchema;
+  },
+  /**
+   * @generated from rpc setfork.git.v1.GitCore.GetBranchSnapshot
+   */
+  getBranchSnapshot: {
+    methodKind: "unary";
+    input: typeof BranchSnapshotRequestSchema;
+    output: typeof BranchSnapshotResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_git, 0);
