@@ -146,3 +146,28 @@ service CurationRead {
   rpc WatchCount(ListId) returns (CountResponse);
   rpc WatcherIds(ListId) returns (IdsResponse);
 }
+
+// ── ListWrite: первая WRITE-операция домена (addVersion) ──────────────
+// Полная семантика TS-адаптера: LocaleText как есть, imageRef → has_image/image_key,
+// bump current_version + updated_at в одной транзакции.
+message NewStep {
+  LocaleText title = 1;
+  LocaleText desc = 2;
+  string command = 3;
+  string level = 4; // required | recommended | optional
+  LocaleText why = 5;
+  LocaleText section = 6;
+  repeated LocaleText subtasks = 7;
+  repeated StepRef refs = 8;
+  string image_ref = 9; // '' = нет
+}
+
+message AddVersionRequest {
+  string list_id = 1;
+  string note = 2;
+  repeated NewStep steps = 3;
+}
+
+service ListWrite {
+  rpc AddVersion(AddVersionRequest) returns (Version);
+}

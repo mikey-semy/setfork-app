@@ -21,7 +21,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file domain_read.proto.
  */
 export const file_domain_read: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb21haW5fcmVhZC5wcm90bxIRc2V0Zm9yay5kb21haW4udjEiZwoKTG9jYWxlVGV4dBIvCgF2GAEgAygLMiQuc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dC5WRW50cnkaKAoGVkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiJgoHTGlzdFJlZhINCgVvd25lchgBIAEoCRIMCgRzbHVnGAIgASgJIhQKBkxpc3RJZBIKCgJpZBgBIAEoCSLlAwoETGlzdBIKCgJpZBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIMCgRzbHVnGAMgASgJEiwKBXRpdGxlGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAUgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAYgAygJEg8KB29yZGVyZWQYByABKAgSDgoGc3RhdHVzGAggASgJEhIKCnZpc2liaWxpdHkYCSABKAkSEgoKbW9kZXJhdGlvbhgKIAEoCRIZChFtb2RlcmF0aW9uX3JlYXNvbhgLIAEoCRIQCgh2ZXJpZmllZBgMIAEoCBIOCgZwaW5uZWQYDSABKAgSDgoGb3JpZ2luGA4gASgJEhYKDmZvcmtlZF9mcm9tX2lkGA8gASgJEhcKD2N1cnJlbnRfdmVyc2lvbhgQIAEoBRITCgtzdGFyc19jb3VudBgRIAEoBRITCgtmb3Jrc19jb3VudBgSIAEoBRISCgpydW5zX2NvdW50GBMgASgFEhUKDXJlcG9zaXRvcnlfaWQYFCABKAkSFQoNY3JlYXRlZF9hdF9tcxgVIAEoAxIVCg11cGRhdGVkX2F0X21zGBYgASgDInAKB1ZlcnNpb24SCgoCaWQYASABKAkSDwoHbGlzdF9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEgwKBG5vdGUYBCABKAkSEgoKY29tbWl0X3NoYRgFIAEoCRIVCg1jcmVhdGVkX2F0X21zGAYgASgDIkQKB1N0ZXBSZWYSLAoFbGFiZWwYASABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EgsKA3VybBgCIAEoCSL2AgoEU3RlcBIKCgJpZBgBIAEoCRISCgp2ZXJzaW9uX2lkGAIgASgJEgkKAW4YAyABKAUSLAoFdGl0bGUYBCABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EisKBGRlc2MYBSABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Eg8KB2NvbW1hbmQYBiABKAkSDQoFbGV2ZWwYByABKAkSKgoDd2h5GAggASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIuCgdzZWN0aW9uGAkgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIvCghzdWJ0YXNrcxgKIAMoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKAoEcmVmcxgLIAMoCzIaLnNldGZvcmsuZG9tYWluLnYxLlN0ZXBSZWYSEQoJaW1hZ2VfcmVmGAwgASgJIkMKC0NvbnRyaWJ1dG9yEg4KBmhhbmRsZRgBIAEoCRISCgphdmF0YXJfcmVmGAIgASgJEhAKCGFjY2VwdGVkGAMgASgFIkcKD0dldExpc3RSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRsaXN0GAIgASgLMhcuc2V0Zm9yay5kb21haW4udjEuTGlzdCJAChBWZXJzaW9uc1Jlc3BvbnNlEiwKCHZlcnNpb25zGAEgAygLMhouc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbiI1ChFHZXRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3ZlcnNpb24YAiABKAUieAoSR2V0VmVyc2lvblJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEisKB3ZlcnNpb24YAiABKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uEiYKBXN0ZXBzGAMgAygLMhcuc2V0Zm9yay5kb21haW4udjEuU3RlcCJMChRDb250cmlidXRvcnNSZXNwb25zZRI0Cgxjb250cmlidXRvcnMYASADKAsyHi5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvciIsCghVc2VyTGlzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkiHQoMQm9vbFJlc3BvbnNlEg0KBXZhbHVlGAEgASgIIh4KDUNvdW50UmVzcG9uc2USDQoFdmFsdWUYASABKAUiGgoLSWRzUmVzcG9uc2USCwoDaWRzGAEgAygJMtcCCghMaXN0UmVhZBJJCgdHZXRMaXN0Ehouc2V0Zm9yay5kb21haW4udjEuTGlzdFJlZhoiLnNldGZvcmsuZG9tYWluLnYxLkdldExpc3RSZXNwb25zZRJOCgxMaXN0VmVyc2lvbnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaIy5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uc1Jlc3BvbnNlElkKCkdldFZlcnNpb24SJC5zZXRmb3JrLmRvbWFpbi52MS5HZXRWZXJzaW9uUmVxdWVzdBolLnNldGZvcmsuZG9tYWluLnYxLkdldFZlcnNpb25SZXNwb25zZRJVCg9HZXRDb250cmlidXRvcnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaJy5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvcnNSZXNwb25zZTK5AgoMQ3VyYXRpb25SZWFkEkkKCUlzU3RhcnJlZBIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEkoKCklzV2F0Y2hpbmcSGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZRJJCgpXYXRjaENvdW50Ehkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGiAuc2V0Zm9yay5kb21haW4udjEuQ291bnRSZXNwb25zZRJHCgpXYXRjaGVySWRzEhkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGh4uc2V0Zm9yay5kb21haW4udjEuSWRzUmVzcG9uc2ViBnByb3RvMw");
+  fileDesc("ChFkb21haW5fcmVhZC5wcm90bxIRc2V0Zm9yay5kb21haW4udjEiZwoKTG9jYWxlVGV4dBIvCgF2GAEgAygLMiQuc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dC5WRW50cnkaKAoGVkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiJgoHTGlzdFJlZhINCgVvd25lchgBIAEoCRIMCgRzbHVnGAIgASgJIhQKBkxpc3RJZBIKCgJpZBgBIAEoCSLlAwoETGlzdBIKCgJpZBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIMCgRzbHVnGAMgASgJEiwKBXRpdGxlGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAUgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAYgAygJEg8KB29yZGVyZWQYByABKAgSDgoGc3RhdHVzGAggASgJEhIKCnZpc2liaWxpdHkYCSABKAkSEgoKbW9kZXJhdGlvbhgKIAEoCRIZChFtb2RlcmF0aW9uX3JlYXNvbhgLIAEoCRIQCgh2ZXJpZmllZBgMIAEoCBIOCgZwaW5uZWQYDSABKAgSDgoGb3JpZ2luGA4gASgJEhYKDmZvcmtlZF9mcm9tX2lkGA8gASgJEhcKD2N1cnJlbnRfdmVyc2lvbhgQIAEoBRITCgtzdGFyc19jb3VudBgRIAEoBRITCgtmb3Jrc19jb3VudBgSIAEoBRISCgpydW5zX2NvdW50GBMgASgFEhUKDXJlcG9zaXRvcnlfaWQYFCABKAkSFQoNY3JlYXRlZF9hdF9tcxgVIAEoAxIVCg11cGRhdGVkX2F0X21zGBYgASgDInAKB1ZlcnNpb24SCgoCaWQYASABKAkSDwoHbGlzdF9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEgwKBG5vdGUYBCABKAkSEgoKY29tbWl0X3NoYRgFIAEoCRIVCg1jcmVhdGVkX2F0X21zGAYgASgDIkQKB1N0ZXBSZWYSLAoFbGFiZWwYASABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EgsKA3VybBgCIAEoCSL2AgoEU3RlcBIKCgJpZBgBIAEoCRISCgp2ZXJzaW9uX2lkGAIgASgJEgkKAW4YAyABKAUSLAoFdGl0bGUYBCABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EisKBGRlc2MYBSABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Eg8KB2NvbW1hbmQYBiABKAkSDQoFbGV2ZWwYByABKAkSKgoDd2h5GAggASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIuCgdzZWN0aW9uGAkgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIvCghzdWJ0YXNrcxgKIAMoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKAoEcmVmcxgLIAMoCzIaLnNldGZvcmsuZG9tYWluLnYxLlN0ZXBSZWYSEQoJaW1hZ2VfcmVmGAwgASgJIkMKC0NvbnRyaWJ1dG9yEg4KBmhhbmRsZRgBIAEoCRISCgphdmF0YXJfcmVmGAIgASgJEhAKCGFjY2VwdGVkGAMgASgFIkcKD0dldExpc3RSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRsaXN0GAIgASgLMhcuc2V0Zm9yay5kb21haW4udjEuTGlzdCJAChBWZXJzaW9uc1Jlc3BvbnNlEiwKCHZlcnNpb25zGAEgAygLMhouc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbiI1ChFHZXRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3ZlcnNpb24YAiABKAUieAoSR2V0VmVyc2lvblJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEisKB3ZlcnNpb24YAiABKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uEiYKBXN0ZXBzGAMgAygLMhcuc2V0Zm9yay5kb21haW4udjEuU3RlcCJMChRDb250cmlidXRvcnNSZXNwb25zZRI0Cgxjb250cmlidXRvcnMYASADKAsyHi5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvciIsCghVc2VyTGlzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkiHQoMQm9vbFJlc3BvbnNlEg0KBXZhbHVlGAEgASgIIh4KDUNvdW50UmVzcG9uc2USDQoFdmFsdWUYASABKAUiGgoLSWRzUmVzcG9uc2USCwoDaWRzGAEgAygJIs4CCgdOZXdTdGVwEiwKBXRpdGxlGAEgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAIgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIPCgdjb21tYW5kGAMgASgJEg0KBWxldmVsGAQgASgJEioKA3doeRgFIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSLgoHc2VjdGlvbhgGIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSLwoIc3VidGFza3MYByADKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EigKBHJlZnMYCCADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5TdGVwUmVmEhEKCWltYWdlX3JlZhgJIAEoCSJdChFBZGRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEgwKBG5vdGUYAiABKAkSKQoFc3RlcHMYAyADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5OZXdTdGVwMtcCCghMaXN0UmVhZBJJCgdHZXRMaXN0Ehouc2V0Zm9yay5kb21haW4udjEuTGlzdFJlZhoiLnNldGZvcmsuZG9tYWluLnYxLkdldExpc3RSZXNwb25zZRJOCgxMaXN0VmVyc2lvbnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaIy5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uc1Jlc3BvbnNlElkKCkdldFZlcnNpb24SJC5zZXRmb3JrLmRvbWFpbi52MS5HZXRWZXJzaW9uUmVxdWVzdBolLnNldGZvcmsuZG9tYWluLnYxLkdldFZlcnNpb25SZXNwb25zZRJVCg9HZXRDb250cmlidXRvcnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaJy5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvcnNSZXNwb25zZTK5AgoMQ3VyYXRpb25SZWFkEkkKCUlzU3RhcnJlZBIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEkoKCklzV2F0Y2hpbmcSGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZRJJCgpXYXRjaENvdW50Ehkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGiAuc2V0Zm9yay5kb21haW4udjEuQ291bnRSZXNwb25zZRJHCgpXYXRjaGVySWRzEhkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGh4uc2V0Zm9yay5kb21haW4udjEuSWRzUmVzcG9uc2UyWwoJTGlzdFdyaXRlEk4KCkFkZFZlcnNpb24SJC5zZXRmb3JrLmRvbWFpbi52MS5BZGRWZXJzaW9uUmVxdWVzdBoaLnNldGZvcmsuZG9tYWluLnYxLlZlcnNpb25iBnByb3RvMw");
 
 /**
  * ── Примитивы ─────────────────────────────────────────────────────────
@@ -589,6 +589,98 @@ export const IdsResponseSchema: GenMessage<IdsResponse> = /*@__PURE__*/
   messageDesc(file_domain_read, 16);
 
 /**
+ * ── ListWrite: первая WRITE-операция домена (addVersion) ──────────────
+ * Полная семантика TS-адаптера: LocaleText как есть, imageRef → has_image/image_key,
+ * bump current_version + updated_at в одной транзакции.
+ *
+ * @generated from message setfork.domain.v1.NewStep
+ */
+export type NewStep = Message<"setfork.domain.v1.NewStep"> & {
+  /**
+   * @generated from field: setfork.domain.v1.LocaleText title = 1;
+   */
+  title?: LocaleText | undefined;
+
+  /**
+   * @generated from field: setfork.domain.v1.LocaleText desc = 2;
+   */
+  desc?: LocaleText | undefined;
+
+  /**
+   * @generated from field: string command = 3;
+   */
+  command: string;
+
+  /**
+   * required | recommended | optional
+   *
+   * @generated from field: string level = 4;
+   */
+  level: string;
+
+  /**
+   * @generated from field: setfork.domain.v1.LocaleText why = 5;
+   */
+  why?: LocaleText | undefined;
+
+  /**
+   * @generated from field: setfork.domain.v1.LocaleText section = 6;
+   */
+  section?: LocaleText | undefined;
+
+  /**
+   * @generated from field: repeated setfork.domain.v1.LocaleText subtasks = 7;
+   */
+  subtasks: LocaleText[];
+
+  /**
+   * @generated from field: repeated setfork.domain.v1.StepRef refs = 8;
+   */
+  refs: StepRef[];
+
+  /**
+   * '' = нет
+   *
+   * @generated from field: string image_ref = 9;
+   */
+  imageRef: string;
+};
+
+/**
+ * Describes the message setfork.domain.v1.NewStep.
+ * Use `create(NewStepSchema)` to create a new message.
+ */
+export const NewStepSchema: GenMessage<NewStep> = /*@__PURE__*/
+  messageDesc(file_domain_read, 17);
+
+/**
+ * @generated from message setfork.domain.v1.AddVersionRequest
+ */
+export type AddVersionRequest = Message<"setfork.domain.v1.AddVersionRequest"> & {
+  /**
+   * @generated from field: string list_id = 1;
+   */
+  listId: string;
+
+  /**
+   * @generated from field: string note = 2;
+   */
+  note: string;
+
+  /**
+   * @generated from field: repeated setfork.domain.v1.NewStep steps = 3;
+   */
+  steps: NewStep[];
+};
+
+/**
+ * Describes the message setfork.domain.v1.AddVersionRequest.
+ * Use `create(AddVersionRequestSchema)` to create a new message.
+ */
+export const AddVersionRequestSchema: GenMessage<AddVersionRequest> = /*@__PURE__*/
+  messageDesc(file_domain_read, 18);
+
+/**
  * READ-часть порта ListStore. Резолв/фильтрация видимости — на BFF (как сейчас):
  * сервис отдаёт данные как есть, приватность решает вызывающий слой.
  *
@@ -668,4 +760,19 @@ export const CurationRead: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_domain_read, 1);
+
+/**
+ * @generated from service setfork.domain.v1.ListWrite
+ */
+export const ListWrite: GenService<{
+  /**
+   * @generated from rpc setfork.domain.v1.ListWrite.AddVersion
+   */
+  addVersion: {
+    methodKind: "unary";
+    input: typeof AddVersionRequestSchema;
+    output: typeof VersionSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_domain_read, 2);
 
