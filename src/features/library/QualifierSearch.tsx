@@ -106,13 +106,14 @@ export function QualifierSearch({
       return
     }
     let cancelled = false
+    const ctrl = new AbortController() // отменяем висящие фетчи при новом вводе/размонтировании
     // Дебаунс сетевых запросов (печать — не спамим API).
     const timer = setTimeout(async () => {
       let list: Suggestion[] = []
       if (tok && (tok.key === 'tag' || tok.key === 'topic')) {
         if (!tagsRef.current) {
           // Кэшируем только успешный ответ; при ошибке оставляем null → повторим позже.
-          const fetched = (await fetch('/api/tags/popular')
+          const fetched = (await fetch('/api/tags/popular', { signal: ctrl.signal })
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null)) as { tag: string; count: number }[] | null
           if (fetched) tagsRef.current = fetched
@@ -123,7 +124,7 @@ export function QualifierSearch({
           .map((tg) => ({ action: 'insert', label: tg.tag, value: tg.tag, group: t('tags', lang), kind: 'tag', count: tg.count }))
       } else if (tok && (tok.key === 'by' || tok.key === 'owner' || tok.key === 'author')) {
         if (tok.partial.length >= 1) {
-          const rows = (await fetch(`/api/users/search?q=${encodeURIComponent(tok.partial)}`, { cache: 'no-store' })
+          const rows = (await fetch(`/api/users/search?q=${encodeURIComponent(tok.partial)}`, { cache: 'no-store', signal: ctrl.signal })
             .then((r) => (r.ok ? r.json() : []))
             .catch(() => [])) as { handle: string; avatarUrl?: string }[]
           list = rows.slice(0, 8).map((u) => ({ action: 'insert', label: u.handle, value: u.handle, group: t('people', lang), kind: 'user', avatarUrl: u.avatarUrl }))
@@ -142,8 +143,8 @@ export function QualifierSearch({
         list = [{ action: 'search', label: trimmed, value: trimmed, group: '', kind: 'search' }]
         if (term.length >= 1) {
           const [lists, users] = await Promise.all([
-            fetch(`/api/lists/search?q=${encodeURIComponent(term)}`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
-            fetch(`/api/users/search?q=${encodeURIComponent(term)}`).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+            fetch(`/api/lists/search?q=${encodeURIComponent(term)}`, { signal: ctrl.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+            fetch(`/api/users/search?q=${encodeURIComponent(term)}`, { signal: ctrl.signal }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
           ])
           for (const l of (lists as { handle: string; slug: string; title: string }[]).slice(0, 5)) {
             list.push({ action: 'navigate', label: l.title || l.slug, value: `${l.handle}/${l.slug}`, sub: `${l.handle}/${l.slug}`, href: `/${l.handle}/${l.slug}`, group: t('scopeLists', lang), kind: 'list' })
@@ -161,6 +162,7 @@ export function QualifierSearch({
     return () => {
       cancelled = true
       clearTimeout(timer)
+      ctrl.abort() // отменяем незавершённые запросы предыдущего ввода
     }
   }, [value, lang])
 
