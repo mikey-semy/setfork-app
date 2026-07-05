@@ -71,7 +71,7 @@ export default async function SettingsPage() {
           <p className="mb-4 text-[13px] text-ink-2">
             {lang === 'ru' ? 'Тема, акцентный цвет и шрифт интерфейса.' : 'Theme, accent color and interface font.'}
           </p>
-          <AppearanceSettings lang={lang} />
+          <AppearanceSettings lang={lang} initialAccent={user.uiAccent ?? ''} initialFont={user.uiFont ?? ''} />
         </section>
       ),
     },

@@ -141,6 +141,13 @@
       "when": 1783223011442,
       "tag": "0019_totp_last_step",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1783223012442,
+      "tag": "0020_ui_appearance",
+      "breakpoints": true
     }
   ]
 }

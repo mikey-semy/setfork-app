@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 import { ThemeModeSwitch } from '@/shared/ui/controls'
 import type { Lang } from '@/shared/i18n'
+import { saveAppearance } from './appearance-actions'
 
 // Настройки внешнего вида (по образцу aep-fullstack):
 //   режим — next-themes (light/dark/system);
@@ -45,21 +46,35 @@ const pickCls = (on: boolean) =>
     on ? 'border-accent bg-[var(--accent-soft)]' : 'border-border hover:border-border-strong'
   }`
 
-export function AppearanceSettings({ lang }: { lang: Lang }) {
+export function AppearanceSettings({ lang, initialAccent = '', initialFont = '' }: { lang: Lang; initialAccent?: string; initialFont?: string }) {
   const ru = lang === 'ru'
   const [mounted, setMounted] = useState(false)
-  const [accent, setAccent] = useState('')
-  const [font, setFont] = useState('')
+  const [accent, setAccent] = useState(initialAccent)
+  const [font, setFont] = useState(initialFont)
 
   useEffect(() => {
     setMounted(true)
     try {
-      setAccent(localStorage.getItem('sf-accent') ?? '')
-      setFont(localStorage.getItem('sf-font') ?? '')
+      // Локальный выбор приоритетнее (мгновенная реакция на этом устройстве);
+      // при пустом localStorage берём значение из аккаунта (новое устройство).
+      setAccent(localStorage.getItem('sf-accent') ?? initialAccent)
+      setFont(localStorage.getItem('sf-font') ?? initialFont)
     } catch {
       // ignore
     }
-  }, [])
+  }, [initialAccent, initialFont])
+
+  // Меняем локально (мгновенно, no-flash) и синхронизируем в аккаунт (fire-and-forget).
+  function pickAccent(v: string) {
+    setAccent(v)
+    applyAttr('data-accent', 'sf-accent', v)
+    void saveAppearance(v, font)
+  }
+  function pickFont(v: string) {
+    setFont(v)
+    applyAttr('data-font', 'sf-font', v)
+    void saveAppearance(accent, v)
+  }
 
   if (!mounted) return <div className="h-[240px]" /> // резерв места до гидрации
 
@@ -77,10 +92,7 @@ export function AppearanceSettings({ lang }: { lang: Lang }) {
             <button
               key={a.value}
               type="button"
-              onClick={() => {
-                setAccent(a.value)
-                applyAttr('data-accent', 'sf-accent', a.value)
-              }}
+              onClick={() => pickAccent(a.value)}
               className={pickCls(accent === a.value)}
             >
               <span className="h-4 w-4 shrink-0 rounded-full border border-border/50" style={{ backgroundColor: a.swatch }} />
@@ -98,10 +110,7 @@ export function AppearanceSettings({ lang }: { lang: Lang }) {
             <button
               key={f.value}
               type="button"
-              onClick={() => {
-                setFont(f.value)
-                applyAttr('data-font', 'sf-font', f.value)
-              }}
+              onClick={() => pickFont(f.value)}
               style={{ fontFamily: f.css }}
               className={pickCls(font === f.value)}
             >
@@ -112,8 +121,8 @@ export function AppearanceSettings({ lang }: { lang: Lang }) {
         </div>
         <p className="mt-2 text-[12px] text-muted">
           {ru
-            ? 'Настройки вида хранятся в этом браузере (localStorage), не в аккаунте.'
-            : 'Appearance is stored in this browser (localStorage), not in your account.'}
+            ? 'Акцент и шрифт сохраняются в аккаунте и следуют за тобой между устройствами. Тема (светлая/тёмная) — в этом браузере.'
+            : 'Accent and font are saved to your account and follow you across devices. Theme (light/dark) stays in this browser.'}
         </p>
       </div>
     </div>

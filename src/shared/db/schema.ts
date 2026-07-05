@@ -97,6 +97,8 @@ export const users = pgTable('users', {
   totpSecret: text('totp_secret'), // AES-256-GCM(base32-секрет), см. shared/auth/totp
   totpEnabled: boolean('totp_enabled').notNull().default(false),
   totpLastStep: integer('totp_last_step'), // последний использованный TOTP-шаг (anti-replay): код с step ≤ этого отвергается
+  uiAccent: text('ui_accent'), // Appearance: акцентный пресет ('' / null = синий), синхрон между устройствами
+  uiFont: text('ui_font'), // Appearance: шрифт интерфейса ('' / null = Hanken Grotesk)
   handle: text('handle').notNull().unique(),
   name: text('name'),
   avatarUrl: text('avatar_url'),

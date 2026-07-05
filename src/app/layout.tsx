@@ -8,6 +8,7 @@ import { getLang } from '@/shared/i18n/server'
 import { avatarSrc } from '@/shared/media'
 import { getBrowserNotifyEnabled, getNotifications, getUnreadCount } from '@/features/notifications/queries'
 import { getUserTemplates } from '@/features/library/queries'
+import { getUserAppearance } from '@/features/settings/appearance'
 import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
 import { TopNav } from '@/widgets/TopNav'
 import { Footer } from '@/widgets/Footer'
@@ -80,26 +81,36 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [lang, user] = await Promise.all([getLang(), getSession()])
-  const [unread, notifications, browserNotify, ownLists] = user
+  const [unread, notifications, browserNotify, ownLists, appearance] = user
     ? await Promise.all([
         getUnreadCount(user.userId),
         getNotifications(user.userId, 8),
         getBrowserNotifyEnabled(user.userId),
         getUserTemplates(user.userId, user.userId),
+        getUserAppearance(user.userId),
       ])
-    : [0, [], false, []]
+    : [0, [], false, [], { accent: '', font: '' }]
   // «Top lists» в боковом меню: недавние списки пользователя (по updatedAt), минимум полей.
   const topLists = ownLists.slice(0, 10).map((l) => ({ handle: l.ownerHandle, slug: l.slug, avatarUrl: l.ownerAvatarUrl }))
   // Резолвим аватар для шапки: сессия может хранить storage_key — превращаем в imgproxy-URL.
   const navUser = user ? { ...user, avatarUrl: (await avatarSrc(user.avatarUrl, 60)) ?? undefined } : null
   return (
-    <html lang={lang} className={`${sans.variable} ${mono.variable} ${logoFont.variable} ${inter.variable} ${manrope.variable}`} suppressHydrationWarning>
+    <html
+      lang={lang}
+      className={`${sans.variable} ${mono.variable} ${logoFont.variable} ${inter.variable} ${manrope.variable}`}
+      // Аккаунтный вид применяем на SSR (no-flash на новом устройстве); на своём
+      // браузере localStorage-скрипт ниже перекроет, если выбор там уже есть.
+      data-accent={appearance.accent || undefined}
+      data-font={appearance.font || undefined}
+      suppressHydrationWarning
+    >
       <body>
-        {/* Акцент/шрифт из localStorage до первой отрисовки (no-flash; mode ставит next-themes). */}
+        {/* Локальный выбор (localStorage) приоритетнее аккаунтного SSR — мгновенная
+            реакция на этом устройстве; иначе остаются data-атрибуты из аккаунта. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var d=document.documentElement,a=localStorage.getItem('sf-accent'),f=localStorage.getItem('sf-font');if(a)d.setAttribute('data-accent',a);if(f)d.setAttribute('data-font',f)}catch(e){}",
+              "try{var d=document.documentElement,a=localStorage.getItem('sf-accent'),f=localStorage.getItem('sf-font');if(a)d.setAttribute('data-accent',a);else if(a==='')d.removeAttribute('data-accent');if(f)d.setAttribute('data-font',f);else if(f==='')d.removeAttribute('data-font')}catch(e){}",
           }}
         />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
