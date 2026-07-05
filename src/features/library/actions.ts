@@ -506,6 +506,67 @@ export async function toggleStar(templateId: string): Promise<void> {
 }
 
 // ── Форк ──────────────────────────────────────────────────────────────
+// ── «Use this template»: копия списка БЕЗ fork-связи ─────────────────
+export async function setListTemplate(templateId: string, isTemplate: boolean): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  await db.update(templates).set({ isTemplate }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}`)
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+}
+
+/** Создать свой список на основе шаблона: копия текущей версии, origin
+ *  authored, без forked_from (в этом отличие от форка). */
+export async function useTemplate(templateId: string): Promise<void> {
+  const session = await requireSession()
+  const src = await db.query.templates.findFirst({
+    where: (t) => eq(t.id, templateId),
+    with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
+  })
+  // Только помеченные шаблоном и видимые (публичные или свои).
+  if (!src || !src.isTemplate) return
+  if (src.visibility === 'private' && src.ownerId !== session.userId) return
+
+  const owned = await db
+    .select({ slug: templates.slug })
+    .from(templates)
+    .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, src.slug)))
+  const slug = owned.length ? `${src.slug}-copy` : src.slug
+
+  const srcCurrent = src.versions.find((v) => v.version === src.currentVersion) ?? src.versions[0]
+  const srcSteps = srcCurrent
+    ? await db.select().from(steps).where(eq(steps.versionId, srcCurrent.id)).orderBy(asc(steps.n))
+    : []
+  await listStore.create({
+    ownerId: session.userId,
+    slug,
+    title: src.title,
+    desc: src.desc,
+    tags: src.tags,
+    ordered: src.ordered,
+    visibility: 'public',
+    status: 'published',
+    origin: 'authored', // шаблон — стартовая точка, не fork-связь
+    forkedFromId: null,
+    note: `from template ${src.slug}`,
+    steps: srcSteps.map((s, i) => ({
+      n: i + 1,
+      title: s.title,
+      desc: s.desc,
+      command: s.command,
+      level: s.level,
+      why: s.why,
+      section: s.section,
+      subtasks: s.subtasks,
+      refs: s.refs,
+      imageRef: s.imageKey ?? null,
+    })),
+  })
+  revalidatePath('/', 'layout')
+  redirect(`/${session.handle}/${slug}`)
+}
+
 export async function forkTemplate(templateId: string): Promise<void> {
   const session = await requireSession()
   const src = await db.query.templates.findFirst({

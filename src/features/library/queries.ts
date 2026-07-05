@@ -472,6 +472,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       status: templates.status,
       ordered: templates.ordered,
       pinned: templates.pinned,
+      isTemplate: templates.isTemplate,
       repositoryId: templates.repositoryId,
       visibility: templates.visibility,
       moderation: templates.moderation,
