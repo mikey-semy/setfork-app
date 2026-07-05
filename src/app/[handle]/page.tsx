@@ -16,6 +16,7 @@ import { getFolderTemplateIds, getUserFolders } from '@/features/star-folders/qu
 import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { ActivityGraph } from '@/features/profile/ActivityGraph'
+import { AchievementsCard } from '@/features/profile/AchievementsCard'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { FollowButton } from '@/features/follows/FollowButton'
 import { avatarSrc } from '@/shared/media'
@@ -266,6 +267,16 @@ export default async function ProfilePage({
               {monthActivity && (
                 <ContributionActivity activity={monthActivity} monthStart={monthStart} handle={handle} lang={lang} nav={activityNav} />
               )}
+              <AchievementsCard
+                input={{
+                  listsAuthored: counts.lists,
+                  starsReceived: received.stars,
+                  forksReceived: received.forks,
+                  runsStarted: counts.runs,
+                  contributions,
+                }}
+                lang={lang}
+              />
             </>
           )}
 
