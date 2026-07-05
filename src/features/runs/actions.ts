@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { db, runStepState, runs, steps, templates } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { tr, type LocaleText } from '@/shared/i18n'
-import { collabStore } from '@/features/collab-store/adapter'
+import { collabStore } from '@/features/collab-store/store'
 
 async function ownedRun(runId: string, userId: string) {
   const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })

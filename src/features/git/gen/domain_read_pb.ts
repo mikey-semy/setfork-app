@@ -21,7 +21,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file domain_read.proto.
  */
 export const file_domain_read: GenFile = /*@__PURE__*/
-  fileDesc("ChFkb21haW5fcmVhZC5wcm90bxIRc2V0Zm9yay5kb21haW4udjEiZwoKTG9jYWxlVGV4dBIvCgF2GAEgAygLMiQuc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dC5WRW50cnkaKAoGVkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiJgoHTGlzdFJlZhINCgVvd25lchgBIAEoCRIMCgRzbHVnGAIgASgJIhQKBkxpc3RJZBIKCgJpZBgBIAEoCSLlAwoETGlzdBIKCgJpZBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIMCgRzbHVnGAMgASgJEiwKBXRpdGxlGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAUgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAYgAygJEg8KB29yZGVyZWQYByABKAgSDgoGc3RhdHVzGAggASgJEhIKCnZpc2liaWxpdHkYCSABKAkSEgoKbW9kZXJhdGlvbhgKIAEoCRIZChFtb2RlcmF0aW9uX3JlYXNvbhgLIAEoCRIQCgh2ZXJpZmllZBgMIAEoCBIOCgZwaW5uZWQYDSABKAgSDgoGb3JpZ2luGA4gASgJEhYKDmZvcmtlZF9mcm9tX2lkGA8gASgJEhcKD2N1cnJlbnRfdmVyc2lvbhgQIAEoBRITCgtzdGFyc19jb3VudBgRIAEoBRITCgtmb3Jrc19jb3VudBgSIAEoBRISCgpydW5zX2NvdW50GBMgASgFEhUKDXJlcG9zaXRvcnlfaWQYFCABKAkSFQoNY3JlYXRlZF9hdF9tcxgVIAEoAxIVCg11cGRhdGVkX2F0X21zGBYgASgDInAKB1ZlcnNpb24SCgoCaWQYASABKAkSDwoHbGlzdF9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEgwKBG5vdGUYBCABKAkSEgoKY29tbWl0X3NoYRgFIAEoCRIVCg1jcmVhdGVkX2F0X21zGAYgASgDIkQKB1N0ZXBSZWYSLAoFbGFiZWwYASABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EgsKA3VybBgCIAEoCSL2AgoEU3RlcBIKCgJpZBgBIAEoCRISCgp2ZXJzaW9uX2lkGAIgASgJEgkKAW4YAyABKAUSLAoFdGl0bGUYBCABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EisKBGRlc2MYBSABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Eg8KB2NvbW1hbmQYBiABKAkSDQoFbGV2ZWwYByABKAkSKgoDd2h5GAggASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIuCgdzZWN0aW9uGAkgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIvCghzdWJ0YXNrcxgKIAMoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKAoEcmVmcxgLIAMoCzIaLnNldGZvcmsuZG9tYWluLnYxLlN0ZXBSZWYSEQoJaW1hZ2VfcmVmGAwgASgJIkMKC0NvbnRyaWJ1dG9yEg4KBmhhbmRsZRgBIAEoCRISCgphdmF0YXJfcmVmGAIgASgJEhAKCGFjY2VwdGVkGAMgASgFIkcKD0dldExpc3RSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRsaXN0GAIgASgLMhcuc2V0Zm9yay5kb21haW4udjEuTGlzdCJAChBWZXJzaW9uc1Jlc3BvbnNlEiwKCHZlcnNpb25zGAEgAygLMhouc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbiI1ChFHZXRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3ZlcnNpb24YAiABKAUieAoSR2V0VmVyc2lvblJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEisKB3ZlcnNpb24YAiABKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uEiYKBXN0ZXBzGAMgAygLMhcuc2V0Zm9yay5kb21haW4udjEuU3RlcCJMChRDb250cmlidXRvcnNSZXNwb25zZRI0Cgxjb250cmlidXRvcnMYASADKAsyHi5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvciIsCghVc2VyTGlzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkiHQoMQm9vbFJlc3BvbnNlEg0KBXZhbHVlGAEgASgIIh4KDUNvdW50UmVzcG9uc2USDQoFdmFsdWUYASABKAUiGgoLSWRzUmVzcG9uc2USCwoDaWRzGAEgAygJIs4CCgdOZXdTdGVwEiwKBXRpdGxlGAEgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAIgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIPCgdjb21tYW5kGAMgASgJEg0KBWxldmVsGAQgASgJEioKA3doeRgFIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSLgoHc2VjdGlvbhgGIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSLwoIc3VidGFza3MYByADKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EigKBHJlZnMYCCADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5TdGVwUmVmEhEKCWltYWdlX3JlZhgJIAEoCSJdChFBZGRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEgwKBG5vdGUYAiABKAkSKQoFc3RlcHMYAyADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5OZXdTdGVwIrICChFDcmVhdGVMaXN0UmVxdWVzdBIQCghvd25lcl9pZBgBIAEoCRIMCgRzbHVnGAIgASgJEiwKBXRpdGxlGAMgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAUgAygJEg8KB29yZGVyZWQYBiABKAgSEgoKdmlzaWJpbGl0eRgHIAEoCRIOCgZzdGF0dXMYCCABKAkSDgoGb3JpZ2luGAkgASgJEhYKDmZvcmtlZF9mcm9tX2lkGAogASgJEgwKBG5vdGUYCyABKAkSKQoFc3RlcHMYDCADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5OZXdTdGVwMtcCCghMaXN0UmVhZBJJCgdHZXRMaXN0Ehouc2V0Zm9yay5kb21haW4udjEuTGlzdFJlZhoiLnNldGZvcmsuZG9tYWluLnYxLkdldExpc3RSZXNwb25zZRJOCgxMaXN0VmVyc2lvbnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaIy5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uc1Jlc3BvbnNlElkKCkdldFZlcnNpb24SJC5zZXRmb3JrLmRvbWFpbi52MS5HZXRWZXJzaW9uUmVxdWVzdBolLnNldGZvcmsuZG9tYWluLnYxLkdldFZlcnNpb25SZXNwb25zZRJVCg9HZXRDb250cmlidXRvcnMSGS5zZXRmb3JrLmRvbWFpbi52MS5MaXN0SWQaJy5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvcnNSZXNwb25zZTK5AgoMQ3VyYXRpb25SZWFkEkkKCUlzU3RhcnJlZBIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEkoKCklzV2F0Y2hpbmcSGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZRJJCgpXYXRjaENvdW50Ehkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGiAuc2V0Zm9yay5kb21haW4udjEuQ291bnRSZXNwb25zZRJHCgpXYXRjaGVySWRzEhkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGh4uc2V0Zm9yay5kb21haW4udjEuSWRzUmVzcG9uc2Uy9QEKDUN1cmF0aW9uV3JpdGUSSgoKVG9nZ2xlU3RhchIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEksKC1RvZ2dsZVdhdGNoEhsuc2V0Zm9yay5kb21haW4udjEuVXNlckxpc3QaHy5zZXRmb3JrLmRvbWFpbi52MS5Cb29sUmVzcG9uc2USSwoLRW5zdXJlV2F0Y2gSGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZTKkAQoJTGlzdFdyaXRlEk4KCkFkZFZlcnNpb24SJC5zZXRmb3JrLmRvbWFpbi52MS5BZGRWZXJzaW9uUmVxdWVzdBoaLnNldGZvcmsuZG9tYWluLnYxLlZlcnNpb24SRwoGQ3JlYXRlEiQuc2V0Zm9yay5kb21haW4udjEuQ3JlYXRlTGlzdFJlcXVlc3QaFy5zZXRmb3JrLmRvbWFpbi52MS5MaXN0YgZwcm90bzM");
+  fileDesc("ChFkb21haW5fcmVhZC5wcm90bxIRc2V0Zm9yay5kb21haW4udjEiZwoKTG9jYWxlVGV4dBIvCgF2GAEgAygLMiQuc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dC5WRW50cnkaKAoGVkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiJgoHTGlzdFJlZhINCgVvd25lchgBIAEoCRIMCgRzbHVnGAIgASgJIhQKBkxpc3RJZBIKCgJpZBgBIAEoCSLlAwoETGlzdBIKCgJpZBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIMCgRzbHVnGAMgASgJEiwKBXRpdGxlGAQgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAUgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIMCgR0YWdzGAYgAygJEg8KB29yZGVyZWQYByABKAgSDgoGc3RhdHVzGAggASgJEhIKCnZpc2liaWxpdHkYCSABKAkSEgoKbW9kZXJhdGlvbhgKIAEoCRIZChFtb2RlcmF0aW9uX3JlYXNvbhgLIAEoCRIQCgh2ZXJpZmllZBgMIAEoCBIOCgZwaW5uZWQYDSABKAgSDgoGb3JpZ2luGA4gASgJEhYKDmZvcmtlZF9mcm9tX2lkGA8gASgJEhcKD2N1cnJlbnRfdmVyc2lvbhgQIAEoBRITCgtzdGFyc19jb3VudBgRIAEoBRITCgtmb3Jrc19jb3VudBgSIAEoBRISCgpydW5zX2NvdW50GBMgASgFEhUKDXJlcG9zaXRvcnlfaWQYFCABKAkSFQoNY3JlYXRlZF9hdF9tcxgVIAEoAxIVCg11cGRhdGVkX2F0X21zGBYgASgDInAKB1ZlcnNpb24SCgoCaWQYASABKAkSDwoHbGlzdF9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEgwKBG5vdGUYBCABKAkSEgoKY29tbWl0X3NoYRgFIAEoCRIVCg1jcmVhdGVkX2F0X21zGAYgASgDIkQKB1N0ZXBSZWYSLAoFbGFiZWwYASABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EgsKA3VybBgCIAEoCSL2AgoEU3RlcBIKCgJpZBgBIAEoCRISCgp2ZXJzaW9uX2lkGAIgASgJEgkKAW4YAyABKAUSLAoFdGl0bGUYBCABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EisKBGRlc2MYBSABKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0Eg8KB2NvbW1hbmQYBiABKAkSDQoFbGV2ZWwYByABKAkSKgoDd2h5GAggASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIuCgdzZWN0aW9uGAkgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIvCghzdWJ0YXNrcxgKIAMoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKAoEcmVmcxgLIAMoCzIaLnNldGZvcmsuZG9tYWluLnYxLlN0ZXBSZWYSEQoJaW1hZ2VfcmVmGAwgASgJIkMKC0NvbnRyaWJ1dG9yEg4KBmhhbmRsZRgBIAEoCRISCgphdmF0YXJfcmVmGAIgASgJEhAKCGFjY2VwdGVkGAMgASgFIkcKD0dldExpc3RSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIlCgRsaXN0GAIgASgLMhcuc2V0Zm9yay5kb21haW4udjEuTGlzdCJAChBWZXJzaW9uc1Jlc3BvbnNlEiwKCHZlcnNpb25zGAEgAygLMhouc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbiI1ChFHZXRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3ZlcnNpb24YAiABKAUieAoSR2V0VmVyc2lvblJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEisKB3ZlcnNpb24YAiABKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uEiYKBXN0ZXBzGAMgAygLMhcuc2V0Zm9yay5kb21haW4udjEuU3RlcCJMChRDb250cmlidXRvcnNSZXNwb25zZRI0Cgxjb250cmlidXRvcnMYASADKAsyHi5zZXRmb3JrLmRvbWFpbi52MS5Db250cmlidXRvciIsCghVc2VyTGlzdBIPCgdsaXN0X2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkiHQoMQm9vbFJlc3BvbnNlEg0KBXZhbHVlGAEgASgIIh4KDUNvdW50UmVzcG9uc2USDQoFdmFsdWUYASABKAUiGgoLSWRzUmVzcG9uc2USCwoDaWRzGAEgAygJIs4CCgdOZXdTdGVwEiwKBXRpdGxlGAEgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIrCgRkZXNjGAIgASgLMh0uc2V0Zm9yay5kb21haW4udjEuTG9jYWxlVGV4dBIPCgdjb21tYW5kGAMgASgJEg0KBWxldmVsGAQgASgJEioKA3doeRgFIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSLgoHc2VjdGlvbhgGIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSLwoIc3VidGFza3MYByADKAsyHS5zZXRmb3JrLmRvbWFpbi52MS5Mb2NhbGVUZXh0EigKBHJlZnMYCCADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5TdGVwUmVmEhEKCWltYWdlX3JlZhgJIAEoCSJdChFBZGRWZXJzaW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEgwKBG5vdGUYAiABKAkSKQoFc3RlcHMYAyADKAsyGi5zZXRmb3JrLmRvbWFpbi52MS5OZXdTdGVwIr8BCgVJc3N1ZRIKCgJpZBgBIAEoCRIPCgdsaXN0X2lkGAIgASgJEg4KBm51bWJlchgDIAEoBRIRCglhdXRob3JfaWQYBCABKAkSDQoFdGl0bGUYBSABKAkSDAoEYm9keRgGIAEoCRIOCgZzdGF0dXMYByABKAkSDgoGbGFiZWxzGAggAygJEhIKCmNyZWF0ZWRfYXQYCSABKAMSEgoKdXBkYXRlZF9hdBgKIAEoAxIRCgljbG9zZWRfYXQYCyABKAMiYQoMSXNzdWVDb21tZW50EgoKAmlkGAEgASgJEhAKCGlzc3VlX2lkGAIgASgJEhEKCWF1dGhvcl9pZBgDIAEoCRIMCgRib2R5GAQgASgJEhIKCmNyZWF0ZWRfYXQYBSABKAMixAEKClN1Z2dlc3Rpb24SCgoCaWQYASABKAkSDwoHbGlzdF9pZBgCIAEoCRIRCglhdXRob3JfaWQYAyABKAkSDgoGc3RhdHVzGAQgASgJEgwKBG5vdGUYBSABKAkSFAoMYmFzZV92ZXJzaW9uGAYgASgFEikKBXN0ZXBzGAcgAygLMhouc2V0Zm9yay5kb21haW4udjEuTmV3U3RlcBISCgpjcmVhdGVkX2F0GAggASgDEhMKC3Jlc29sdmVkX2F0GAkgASgDImsKEVN1Z2dlc3Rpb25Db21tZW50EgoKAmlkGAEgASgJEhUKDXN1Z2dlc3Rpb25faWQYAiABKAkSEQoJYXV0aG9yX2lkGAMgASgJEgwKBGJvZHkYBCABKAkSEgoKY3JlYXRlZF9hdBgFIAEoAyJjChBPcGVuSXNzdWVSZXF1ZXN0Eg8KB2xpc3RfaWQYASABKAkSEQoJYXV0aG9yX2lkGAIgASgJEg0KBXRpdGxlGAMgASgJEgwKBGJvZHkYBCABKAkSDgoGbGFiZWxzGAUgAygJIksKFkFkZElzc3VlQ29tbWVudFJlcXVlc3QSEAoIaXNzdWVfaWQYASABKAkSEQoJYXV0aG9yX2lkGAIgASgJEgwKBGJvZHkYAyABKAkiOQoVU2V0SXNzdWVTdGF0dXNSZXF1ZXN0EhAKCGlzc3VlX2lkGAEgASgJEg4KBnN0YXR1cxgCIAEoCSJ2ChdDcmVhdGVTdWdnZXN0aW9uUmVxdWVzdBIPCgdsaXN0X2lkGAEgASgJEhEKCWF1dGhvcl9pZBgCIAEoCRIMCgRub3RlGAMgASgJEikKBXN0ZXBzGAQgAygLMhouc2V0Zm9yay5kb21haW4udjEuTmV3U3RlcCJVChtBZGRTdWdnZXN0aW9uQ29tbWVudFJlcXVlc3QSFQoNc3VnZ2VzdGlvbl9pZBgBIAEoCRIRCglhdXRob3JfaWQYAiABKAkSDAoEYm9keRgDIAEoCSKyAgoRQ3JlYXRlTGlzdFJlcXVlc3QSEAoIb3duZXJfaWQYASABKAkSDAoEc2x1ZxgCIAEoCRIsCgV0aXRsZRgDIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSKwoEZGVzYxgEIAEoCzIdLnNldGZvcmsuZG9tYWluLnYxLkxvY2FsZVRleHQSDAoEdGFncxgFIAMoCRIPCgdvcmRlcmVkGAYgASgIEhIKCnZpc2liaWxpdHkYByABKAkSDgoGc3RhdHVzGAggASgJEg4KBm9yaWdpbhgJIAEoCRIWCg5mb3JrZWRfZnJvbV9pZBgKIAEoCRIMCgRub3RlGAsgASgJEikKBXN0ZXBzGAwgAygLMhouc2V0Zm9yay5kb21haW4udjEuTmV3U3RlcDLXAgoITGlzdFJlYWQSSQoHR2V0TGlzdBIaLnNldGZvcmsuZG9tYWluLnYxLkxpc3RSZWYaIi5zZXRmb3JrLmRvbWFpbi52MS5HZXRMaXN0UmVzcG9uc2USTgoMTGlzdFZlcnNpb25zEhkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGiMuc2V0Zm9yay5kb21haW4udjEuVmVyc2lvbnNSZXNwb25zZRJZCgpHZXRWZXJzaW9uEiQuc2V0Zm9yay5kb21haW4udjEuR2V0VmVyc2lvblJlcXVlc3QaJS5zZXRmb3JrLmRvbWFpbi52MS5HZXRWZXJzaW9uUmVzcG9uc2USVQoPR2V0Q29udHJpYnV0b3JzEhkuc2V0Zm9yay5kb21haW4udjEuTGlzdElkGicuc2V0Zm9yay5kb21haW4udjEuQ29udHJpYnV0b3JzUmVzcG9uc2UyuQIKDEN1cmF0aW9uUmVhZBJJCglJc1N0YXJyZWQSGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZRJKCgpJc1dhdGNoaW5nEhsuc2V0Zm9yay5kb21haW4udjEuVXNlckxpc3QaHy5zZXRmb3JrLmRvbWFpbi52MS5Cb29sUmVzcG9uc2USSQoKV2F0Y2hDb3VudBIZLnNldGZvcmsuZG9tYWluLnYxLkxpc3RJZBogLnNldGZvcmsuZG9tYWluLnYxLkNvdW50UmVzcG9uc2USRwoKV2F0Y2hlcklkcxIZLnNldGZvcmsuZG9tYWluLnYxLkxpc3RJZBoeLnNldGZvcmsuZG9tYWluLnYxLklkc1Jlc3BvbnNlMvUBCg1DdXJhdGlvbldyaXRlEkoKClRvZ2dsZVN0YXISGy5zZXRmb3JrLmRvbWFpbi52MS5Vc2VyTGlzdBofLnNldGZvcmsuZG9tYWluLnYxLkJvb2xSZXNwb25zZRJLCgtUb2dnbGVXYXRjaBIbLnNldGZvcmsuZG9tYWluLnYxLlVzZXJMaXN0Gh8uc2V0Zm9yay5kb21haW4udjEuQm9vbFJlc3BvbnNlEksKC0Vuc3VyZVdhdGNoEhsuc2V0Zm9yay5kb21haW4udjEuVXNlckxpc3QaHy5zZXRmb3JrLmRvbWFpbi52MS5Cb29sUmVzcG9uc2UypAEKCUxpc3RXcml0ZRJOCgpBZGRWZXJzaW9uEiQuc2V0Zm9yay5kb21haW4udjEuQWRkVmVyc2lvblJlcXVlc3QaGi5zZXRmb3JrLmRvbWFpbi52MS5WZXJzaW9uEkcKBkNyZWF0ZRIkLnNldGZvcmsuZG9tYWluLnYxLkNyZWF0ZUxpc3RSZXF1ZXN0Ghcuc2V0Zm9yay5kb21haW4udjEuTGlzdDLiAwoLQ29sbGFiV3JpdGUSSgoJT3Blbklzc3VlEiMuc2V0Zm9yay5kb21haW4udjEuT3Blbklzc3VlUmVxdWVzdBoYLnNldGZvcmsuZG9tYWluLnYxLklzc3VlEl0KD0FkZElzc3VlQ29tbWVudBIpLnNldGZvcmsuZG9tYWluLnYxLkFkZElzc3VlQ29tbWVudFJlcXVlc3QaHy5zZXRmb3JrLmRvbWFpbi52MS5Jc3N1ZUNvbW1lbnQSWwoOU2V0SXNzdWVTdGF0dXMSKC5zZXRmb3JrLmRvbWFpbi52MS5TZXRJc3N1ZVN0YXR1c1JlcXVlc3QaHy5zZXRmb3JrLmRvbWFpbi52MS5Cb29sUmVzcG9uc2USXQoQQ3JlYXRlU3VnZ2VzdGlvbhIqLnNldGZvcmsuZG9tYWluLnYxLkNyZWF0ZVN1Z2dlc3Rpb25SZXF1ZXN0Gh0uc2V0Zm9yay5kb21haW4udjEuU3VnZ2VzdGlvbhJsChRBZGRTdWdnZXN0aW9uQ29tbWVudBIuLnNldGZvcmsuZG9tYWluLnYxLkFkZFN1Z2dlc3Rpb25Db21tZW50UmVxdWVzdBokLnNldGZvcmsuZG9tYWluLnYxLlN1Z2dlc3Rpb25Db21tZW50YgZwcm90bzM");
 
 /**
  * ── Примитивы ─────────────────────────────────────────────────────────
@@ -681,6 +681,360 @@ export const AddVersionRequestSchema: GenMessage<AddVersionRequest> = /*@__PURE_
   messageDesc(file_domain_read, 18);
 
 /**
+ * ── CollabWrite: issues/suggestions/comments (write) ─────────────────
+ * Зеркалит src/features/collab-store/adapter.ts. Даты — unix-ms (0 = null).
+ * Шаги suggestion — NewStep (n позиционный). status: open|closed для issue,
+ * open|accepted|rejected для suggestion.
+ *
+ * @generated from message setfork.domain.v1.Issue
+ */
+export type Issue = Message<"setfork.domain.v1.Issue"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string list_id = 2;
+   */
+  listId: string;
+
+  /**
+   * @generated from field: int32 number = 3;
+   */
+  number: number;
+
+  /**
+   * @generated from field: string author_id = 4;
+   */
+  authorId: string;
+
+  /**
+   * @generated from field: string title = 5;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string body = 6;
+   */
+  body: string;
+
+  /**
+   * @generated from field: string status = 7;
+   */
+  status: string;
+
+  /**
+   * @generated from field: repeated string labels = 8;
+   */
+  labels: string[];
+
+  /**
+   * @generated from field: int64 created_at = 9;
+   */
+  createdAt: bigint;
+
+  /**
+   * @generated from field: int64 updated_at = 10;
+   */
+  updatedAt: bigint;
+
+  /**
+   * 0 = null
+   *
+   * @generated from field: int64 closed_at = 11;
+   */
+  closedAt: bigint;
+};
+
+/**
+ * Describes the message setfork.domain.v1.Issue.
+ * Use `create(IssueSchema)` to create a new message.
+ */
+export const IssueSchema: GenMessage<Issue> = /*@__PURE__*/
+  messageDesc(file_domain_read, 19);
+
+/**
+ * @generated from message setfork.domain.v1.IssueComment
+ */
+export type IssueComment = Message<"setfork.domain.v1.IssueComment"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string issue_id = 2;
+   */
+  issueId: string;
+
+  /**
+   * @generated from field: string author_id = 3;
+   */
+  authorId: string;
+
+  /**
+   * @generated from field: string body = 4;
+   */
+  body: string;
+
+  /**
+   * @generated from field: int64 created_at = 5;
+   */
+  createdAt: bigint;
+};
+
+/**
+ * Describes the message setfork.domain.v1.IssueComment.
+ * Use `create(IssueCommentSchema)` to create a new message.
+ */
+export const IssueCommentSchema: GenMessage<IssueComment> = /*@__PURE__*/
+  messageDesc(file_domain_read, 20);
+
+/**
+ * @generated from message setfork.domain.v1.Suggestion
+ */
+export type Suggestion = Message<"setfork.domain.v1.Suggestion"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string list_id = 2;
+   */
+  listId: string;
+
+  /**
+   * @generated from field: string author_id = 3;
+   */
+  authorId: string;
+
+  /**
+   * @generated from field: string status = 4;
+   */
+  status: string;
+
+  /**
+   * @generated from field: string note = 5;
+   */
+  note: string;
+
+  /**
+   * @generated from field: int32 base_version = 6;
+   */
+  baseVersion: number;
+
+  /**
+   * @generated from field: repeated setfork.domain.v1.NewStep steps = 7;
+   */
+  steps: NewStep[];
+
+  /**
+   * @generated from field: int64 created_at = 8;
+   */
+  createdAt: bigint;
+
+  /**
+   * 0 = null
+   *
+   * @generated from field: int64 resolved_at = 9;
+   */
+  resolvedAt: bigint;
+};
+
+/**
+ * Describes the message setfork.domain.v1.Suggestion.
+ * Use `create(SuggestionSchema)` to create a new message.
+ */
+export const SuggestionSchema: GenMessage<Suggestion> = /*@__PURE__*/
+  messageDesc(file_domain_read, 21);
+
+/**
+ * @generated from message setfork.domain.v1.SuggestionComment
+ */
+export type SuggestionComment = Message<"setfork.domain.v1.SuggestionComment"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string suggestion_id = 2;
+   */
+  suggestionId: string;
+
+  /**
+   * @generated from field: string author_id = 3;
+   */
+  authorId: string;
+
+  /**
+   * @generated from field: string body = 4;
+   */
+  body: string;
+
+  /**
+   * @generated from field: int64 created_at = 5;
+   */
+  createdAt: bigint;
+};
+
+/**
+ * Describes the message setfork.domain.v1.SuggestionComment.
+ * Use `create(SuggestionCommentSchema)` to create a new message.
+ */
+export const SuggestionCommentSchema: GenMessage<SuggestionComment> = /*@__PURE__*/
+  messageDesc(file_domain_read, 22);
+
+/**
+ * @generated from message setfork.domain.v1.OpenIssueRequest
+ */
+export type OpenIssueRequest = Message<"setfork.domain.v1.OpenIssueRequest"> & {
+  /**
+   * @generated from field: string list_id = 1;
+   */
+  listId: string;
+
+  /**
+   * @generated from field: string author_id = 2;
+   */
+  authorId: string;
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string body = 4;
+   */
+  body: string;
+
+  /**
+   * @generated from field: repeated string labels = 5;
+   */
+  labels: string[];
+};
+
+/**
+ * Describes the message setfork.domain.v1.OpenIssueRequest.
+ * Use `create(OpenIssueRequestSchema)` to create a new message.
+ */
+export const OpenIssueRequestSchema: GenMessage<OpenIssueRequest> = /*@__PURE__*/
+  messageDesc(file_domain_read, 23);
+
+/**
+ * @generated from message setfork.domain.v1.AddIssueCommentRequest
+ */
+export type AddIssueCommentRequest = Message<"setfork.domain.v1.AddIssueCommentRequest"> & {
+  /**
+   * @generated from field: string issue_id = 1;
+   */
+  issueId: string;
+
+  /**
+   * @generated from field: string author_id = 2;
+   */
+  authorId: string;
+
+  /**
+   * @generated from field: string body = 3;
+   */
+  body: string;
+};
+
+/**
+ * Describes the message setfork.domain.v1.AddIssueCommentRequest.
+ * Use `create(AddIssueCommentRequestSchema)` to create a new message.
+ */
+export const AddIssueCommentRequestSchema: GenMessage<AddIssueCommentRequest> = /*@__PURE__*/
+  messageDesc(file_domain_read, 24);
+
+/**
+ * @generated from message setfork.domain.v1.SetIssueStatusRequest
+ */
+export type SetIssueStatusRequest = Message<"setfork.domain.v1.SetIssueStatusRequest"> & {
+  /**
+   * @generated from field: string issue_id = 1;
+   */
+  issueId: string;
+
+  /**
+   * open | closed
+   *
+   * @generated from field: string status = 2;
+   */
+  status: string;
+};
+
+/**
+ * Describes the message setfork.domain.v1.SetIssueStatusRequest.
+ * Use `create(SetIssueStatusRequestSchema)` to create a new message.
+ */
+export const SetIssueStatusRequestSchema: GenMessage<SetIssueStatusRequest> = /*@__PURE__*/
+  messageDesc(file_domain_read, 25);
+
+/**
+ * @generated from message setfork.domain.v1.CreateSuggestionRequest
+ */
+export type CreateSuggestionRequest = Message<"setfork.domain.v1.CreateSuggestionRequest"> & {
+  /**
+   * @generated from field: string list_id = 1;
+   */
+  listId: string;
+
+  /**
+   * @generated from field: string author_id = 2;
+   */
+  authorId: string;
+
+  /**
+   * @generated from field: string note = 3;
+   */
+  note: string;
+
+  /**
+   * @generated from field: repeated setfork.domain.v1.NewStep steps = 4;
+   */
+  steps: NewStep[];
+};
+
+/**
+ * Describes the message setfork.domain.v1.CreateSuggestionRequest.
+ * Use `create(CreateSuggestionRequestSchema)` to create a new message.
+ */
+export const CreateSuggestionRequestSchema: GenMessage<CreateSuggestionRequest> = /*@__PURE__*/
+  messageDesc(file_domain_read, 26);
+
+/**
+ * @generated from message setfork.domain.v1.AddSuggestionCommentRequest
+ */
+export type AddSuggestionCommentRequest = Message<"setfork.domain.v1.AddSuggestionCommentRequest"> & {
+  /**
+   * @generated from field: string suggestion_id = 1;
+   */
+  suggestionId: string;
+
+  /**
+   * @generated from field: string author_id = 2;
+   */
+  authorId: string;
+
+  /**
+   * @generated from field: string body = 3;
+   */
+  body: string;
+};
+
+/**
+ * Describes the message setfork.domain.v1.AddSuggestionCommentRequest.
+ * Use `create(AddSuggestionCommentRequestSchema)` to create a new message.
+ */
+export const AddSuggestionCommentRequestSchema: GenMessage<AddSuggestionCommentRequest> = /*@__PURE__*/
+  messageDesc(file_domain_read, 27);
+
+/**
  * Create: список + первая версия + шаги (одной транзакцией). Возврат — полный List.
  *
  * @generated from message setfork.domain.v1.CreateListRequest
@@ -762,7 +1116,7 @@ export type CreateListRequest = Message<"setfork.domain.v1.CreateListRequest"> &
  * Use `create(CreateListRequestSchema)` to create a new message.
  */
 export const CreateListRequestSchema: GenMessage<CreateListRequest> = /*@__PURE__*/
-  messageDesc(file_domain_read, 19);
+  messageDesc(file_domain_read, 28);
 
 /**
  * READ-часть порта ListStore. Резолв/фильтрация видимости — на BFF (как сейчас):
@@ -909,4 +1263,51 @@ export const ListWrite: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_domain_read, 3);
+
+/**
+ * @generated from service setfork.domain.v1.CollabWrite
+ */
+export const CollabWrite: GenService<{
+  /**
+   * @generated from rpc setfork.domain.v1.CollabWrite.OpenIssue
+   */
+  openIssue: {
+    methodKind: "unary";
+    input: typeof OpenIssueRequestSchema;
+    output: typeof IssueSchema;
+  },
+  /**
+   * @generated from rpc setfork.domain.v1.CollabWrite.AddIssueComment
+   */
+  addIssueComment: {
+    methodKind: "unary";
+    input: typeof AddIssueCommentRequestSchema;
+    output: typeof IssueCommentSchema;
+  },
+  /**
+   * @generated from rpc setfork.domain.v1.CollabWrite.SetIssueStatus
+   */
+  setIssueStatus: {
+    methodKind: "unary";
+    input: typeof SetIssueStatusRequestSchema;
+    output: typeof BoolResponseSchema;
+  },
+  /**
+   * @generated from rpc setfork.domain.v1.CollabWrite.CreateSuggestion
+   */
+  createSuggestion: {
+    methodKind: "unary";
+    input: typeof CreateSuggestionRequestSchema;
+    output: typeof SuggestionSchema;
+  },
+  /**
+   * @generated from rpc setfork.domain.v1.CollabWrite.AddSuggestionComment
+   */
+  addSuggestionComment: {
+    methodKind: "unary";
+    input: typeof AddSuggestionCommentRequestSchema;
+    output: typeof SuggestionCommentSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_domain_read, 4);
 

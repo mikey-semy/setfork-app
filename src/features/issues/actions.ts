@@ -9,7 +9,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
-import { collabStore, issueCommenterIds } from '@/features/collab-store/adapter'
+import { collabStore, issueCommenterIds } from '@/features/collab-store/store'
 import { isLabelKey } from './labels'
 
 async function resolveTemplate(owner: string, slug: string) {
