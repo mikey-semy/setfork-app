@@ -162,6 +162,13 @@
       "when": 1783223014442,
       "tag": "0022_list_labels",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1783223015442,
+      "tag": "0023_discussions",
+      "breakpoints": true
     }
   ]
 }
