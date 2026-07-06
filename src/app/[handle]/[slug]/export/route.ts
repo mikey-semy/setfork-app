@@ -30,6 +30,8 @@ export async function GET(
     slug: tpl.slug,
     steps: steps.map((s) => ({
       n: s.n,
+      type: s.type,
+      content: s.content,
       title: s.title,
       desc: s.desc,
       command: s.command,

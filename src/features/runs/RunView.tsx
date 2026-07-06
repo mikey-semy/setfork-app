@@ -14,6 +14,9 @@ import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep,
 export interface RunStepVM {
   id: string
   n: number
+  type: string // 'step' (чекается) | 'text' | 'image' (контекст)
+  text: string // markdown text-блока
+  caption: string // подпись image-блока
   title: string
   desc: string
   command: string
@@ -49,9 +52,12 @@ export function RunView({
   const [, start] = useTransition()
   const [blockingId, setBlockingId] = useState<string | null>(null)
   const [reasonDraft, setReasonDraft] = useState('')
-  const done = steps.filter((s) => s.done).length
-  const blockedCount = steps.filter((s) => s.blocked).length
-  const pct = steps.length ? Math.round((done / steps.length) * 100) : 0
+  // Прогресс — только по шаг-блокам (text/image — контекст, не чекаются).
+  const isStep = (s: RunStepVM) => !s.type || s.type === 'step'
+  const total = steps.filter(isStep).length
+  const done = steps.filter((s) => isStep(s) && s.done).length
+  const blockedCount = steps.filter((s) => isStep(s) && s.blocked).length
+  const pct = total ? Math.round((done / total) * 100) : 0
   const closed = status === 'done' || status === 'failed' || status === 'abandoned'
 
   const patch = (i: number, p: Partial<RunStepVM>) => setSteps((xs) => xs.map((s, idx) => (idx === i ? { ...s, ...p } : s)))
@@ -101,7 +107,7 @@ export function RunView({
                   {blockedCount > 0 && ` · ${blockedCount} ${t('runBlockedLabel', lang)}`}
                 </span>
               ) : (
-                `${done} / ${steps.length} · ${pct}%${blockedCount > 0 ? ` · ${blockedCount} ${t('runBlockedLabel', lang)}` : ''}`
+                `${done} / ${total} · ${pct}%${blockedCount > 0 ? ` · ${blockedCount} ${t('runBlockedLabel', lang)}` : ''}`
               )}
             </div>
           </div>
@@ -156,7 +162,23 @@ export function RunView({
 
       {/* Шаги */}
       <div className="flex flex-col gap-3">
-        {steps.map((s, i) => (
+        {steps.map((s, i) => {
+          // Презентационные блоки — контекст: без чекбокса и контролов.
+          if (!isStep(s)) {
+            if (s.type === 'text') {
+              return s.text ? (
+                <div key={s.id} className="px-1">
+                  <Markdown className="text-[14px] leading-relaxed text-ink-2">{s.text}</Markdown>
+                </div>
+              ) : null
+            }
+            return s.caption ? (
+              <div key={s.id} className="px-1 text-[13px] italic text-muted">🖼 {s.caption}</div>
+            ) : null
+          }
+          // Порядковый номер шага (только по шаг-блокам).
+          const stepNo = steps.slice(0, i).filter(isStep).length + 1
+          return (
           <div
             key={s.id}
             className={`rounded-lg border p-4 transition-colors ${
@@ -174,7 +196,7 @@ export function RunView({
               </button>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-2">
-                  {ordered && <span className="font-mono text-[12px] text-muted">{s.n}</span>}
+                  {ordered && <span className="font-mono text-[12px] text-muted">{stepNo}</span>}
                   <span className={`text-[14.5px] font-semibold ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
                   <StepLevelBadge level={s.level} lang={lang} />
                 </div>
@@ -312,7 +334,8 @@ export function RunView({
               </div>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

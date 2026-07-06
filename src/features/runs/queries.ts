@@ -26,10 +26,11 @@ export async function getUserRuns(userId: string): Promise<UserRunRow[]> {
   // Кол-во шагов в версиях прогонов — одним запросом (без relation `version`,
   // чтобы не конфликтовать с одноимённой колонкой runs.version).
   const versionIds = [...new Set(rows.map((r) => r.versionId))]
+  // total = только шаг-блоки (чекаемые); text/image в прогрессе не считаются.
   const counts = await db
     .select({ versionId: steps.versionId, c: sql<number>`count(*)::int` })
     .from(steps)
-    .where(inArray(steps.versionId, versionIds))
+    .where(and(inArray(steps.versionId, versionIds), eq(steps.type, 'step')))
     .groupBy(steps.versionId)
   const totalByVersion = new Map(counts.map((c) => [c.versionId, c.c]))
   return rows.map((r) => ({
@@ -69,6 +70,8 @@ export async function getRun(runId: string, userId: string) {
     steps: run.version.steps.map((s) => ({
       id: s.id,
       n: s.n,
+      type: s.type,
+      content: s.content,
       title: s.title,
       desc: s.desc,
       command: s.command,
