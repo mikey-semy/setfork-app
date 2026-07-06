@@ -169,6 +169,13 @@
       "when": 1783223015442,
       "tag": "0023_discussions",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783223016442,
+      "tag": "0024_passkeys",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { eq } from 'drizzle-orm'
-import { BarChart3, Bell, KeyRound, Mail, Monitor, Palette, ShieldCheck, TriangleAlert, User } from 'lucide-react'
+import { BarChart3, Bell, Fingerprint, KeyRound, Mail, Monitor, Palette, ShieldCheck, TriangleAlert, User } from 'lucide-react'
 import { db, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
@@ -12,6 +12,8 @@ import { getApiTokens } from '@/features/mcp/queries'
 import { ApiTokensSection } from '@/features/mcp/ApiTokensSection'
 import { SettingsForm } from '@/features/settings/SettingsForm'
 import { TwoFactorSection } from '@/features/settings/TwoFactorSection'
+import { PasskeysSection } from '@/features/settings/PasskeysSection'
+import { listPasskeys } from '@/features/auth/passkeys'
 import { EmailSection } from '@/features/settings/EmailSection'
 import { AppearanceSettings } from '@/features/settings/AppearanceSettings'
 import { DangerZone } from '@/features/settings/DangerZone'
@@ -33,7 +35,7 @@ export default async function SettingsPage() {
   const avatar = await avatarSrc(user.avatarUrl, 144)
   const userSessions = await getUserSessions(session.userId, session.sid)
   const usage = await getUserUsage(session.userId)
-  const [lists, aiMonth] = await Promise.all([listQuota(session.userId, session.handle), aiQuota(session.userId, session.handle)])
+  const [lists, aiMonth, userPasskeys] = await Promise.all([listQuota(session.userId, session.handle), aiQuota(session.userId, session.handle), listPasskeys()])
   const tokens = await getApiTokens(session.userId)
   const h = await headers()
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
@@ -134,6 +136,23 @@ export default async function SettingsPage() {
               : 'A second factor for password sign-in: a code from your authenticator app (TOTP). GitHub sign-in is protected by GitHub itself.'}
           </p>
           <TwoFactorSection enabled={user.totpEnabled} lang={lang} />
+        </section>
+      ),
+    },
+    {
+      id: 'passkeys',
+      title: 'Passkeys',
+      icon: <Fingerprint size={15} />,
+      keywords: ['passkey', 'passkeys', 'webauthn', 'fido', 'touch id', 'face id', 'biometric', 'passwordless', 'passkey', 'ключ', 'беспарольный', 'биометрия', 'безопасность'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">Passkeys</div>
+          <p className="mb-4 text-[13px] text-ink-2">
+            {lang === 'ru'
+              ? 'Беспарольный вход по passkey (Touch/Face ID, ключ безопасности). Работает рядом с паролем и 2FA.'
+              : 'Passwordless sign-in with a passkey (Touch/Face ID, a security key). Works alongside your password and 2FA.'}
+          </p>
+          <PasskeysSection initial={userPasskeys} lang={lang} />
         </section>
       ),
     },
