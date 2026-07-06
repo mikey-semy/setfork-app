@@ -57,6 +57,8 @@ export default async function ListPage({
     ? snapshot.steps.map((s) => ({
         id: `br-${s.n}`,
         n: s.n,
+        type: 'step', // снапшот ветки (Rust) — пока только шаг-блоки
+        content: {} as Record<string, unknown>,
         title: { en: s.title } as (typeof dbSteps)[number]['title'],
         desc: { en: s.desc } as (typeof dbSteps)[number]['desc'],
         command: s.command,
@@ -88,6 +90,15 @@ export default async function ListPage({
   const stepImages: Record<string, string> = Object.fromEntries(
     steps.filter((s) => s.imageKey && previews[s.imageKey]).map((s) => [s.id, previews[s.imageKey as string]]),
   )
+  // Картинки image-блоков (storage_key в content.ref) резолвим так же, как скриншоты шагов.
+  const isStepBlock = (s: (typeof steps)[number]) => !s.type || s.type === 'step'
+  const imageRefs = steps
+    .filter((s) => s.type === 'image' && typeof s.content?.ref === 'string' && s.content.ref)
+    .map((s) => (s.content as { ref: string }).ref)
+  const blockImages = imageRefs.length ? await getStepPreviews(imageRefs.map((ref) => ({ imageKey: ref })), 'rs:fit:1400:1400') : {}
+  // Порядковый номер показываем только по шаг-блокам (презентационные вне нумерации).
+  let stepSeq = 0
+  const displayNum = steps.map((s) => (isStepBlock(s) ? ++stepSeq : 0))
   const contributors = await getContributors(tpl.id, tpl.ownerId)
   const base = `/${owner}/${slug}`
   // Показываем note версии, только если он осмысленный (не служебный boilerplate).
@@ -251,13 +262,38 @@ export default async function ListPage({
             )}
             <div className="flex flex-col gap-3">
               {steps.map((s, si) => {
+                // Презентационные блоки (text/image) — вне карточки-шага, без номера и секции.
+                if (!isStepBlock(s)) {
+                  if (s.type === 'text') {
+                    const md = typeof s.content?.md === 'string' ? s.content.md : ''
+                    return md ? (
+                      <div key={s.id} className="break-inside-avoid px-1 py-1">
+                        <Markdown className="text-[14px] leading-relaxed text-ink-2">{md}</Markdown>
+                      </div>
+                    ) : null
+                  }
+                  if (s.type === 'image') {
+                    const ref = typeof s.content?.ref === 'string' ? s.content.ref : ''
+                    const url = ref ? blockImages[ref] : ''
+                    const caption = typeof s.content?.caption === 'string' ? s.content.caption : ''
+                    return url ? (
+                      <figure key={s.id} className="break-inside-avoid">
+                        <SmartImage src={url} alt={caption || t('screenshot', lang)} className="max-h-[520px] w-auto rounded-lg border border-border" />
+                        {caption && <figcaption className="mt-1.5 text-[12.5px] text-muted">{caption}</figcaption>}
+                      </figure>
+                    ) : null
+                  }
+                  return null
+                }
                 const subs = (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean)
                 const refs = (s.refs as { label: LocaleText; url?: string }[]).map((x) => ({
                   label: tr(x.label, lang),
                   url: x.url,
                 }))
                 const section = tr(s.section, lang)
-                const prevSection = si > 0 ? tr(steps[si - 1].section, lang) : ''
+                // Заголовок секции — относительно предыдущего ШАГ-блока (не презентационного).
+                const prevStep = steps.slice(0, si).reverse().find((p) => isStepBlock(p))
+                const prevSection = prevStep ? tr(prevStep.section, lang) : ''
                 const showHeader = !!section && section !== prevSection
                 return (
                   <Fragment key={s.id}>
@@ -268,7 +304,7 @@ export default async function ListPage({
                     )}
                   <div className="break-inside-avoid rounded-lg border border-border bg-surface p-4">
                     <div className="flex gap-3">
-                      <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? s.n : '•'}</span>
+                      <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? displayNum[si] : '•'}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</span>
