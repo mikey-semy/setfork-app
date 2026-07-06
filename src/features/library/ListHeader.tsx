@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BadgeCheck, BarChart3, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, Settings, Star, Tag } from 'lucide-react'
+import { BadgeCheck, BarChart3, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, MessagesSquare, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -14,11 +14,12 @@ import { ShareButton } from '@/features/library/ShareButton'
 import { WatchButton } from '@/features/watch/WatchButton'
 import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/library/queries'
 import { getOpenIssueCount } from '@/features/issues/queries'
+import { getDiscussionCount } from '@/features/discussions/queries'
 import { getWatchCount, isWatching } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { TabItem, TabNav } from '@/shared/ui/TabNav'
 
-type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'insights' | 'settings'
+type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'discussions' | 'insights' | 'settings'
 
 /** Общая шапка страницы списка (= «репозиторий»): back, owner/name, действия, вкладки. */
 export async function ListHeader({ owner, slug, active }: { owner: string; slug: string; active: Tab }) {
@@ -36,10 +37,11 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   const [folders, inFolders] = session
     ? await Promise.all([getUserFolders(session.userId), getFoldersForTemplate(session.userId, meta.id)])
     : [[], []]
-  const [suggCount, issueCount, watchCount] = await Promise.all([
+  const [suggCount, issueCount, watchCount, discCount] = await Promise.all([
     getOpenSuggestionCount(meta.id),
     getOpenIssueCount(meta.id),
     getWatchCount(meta.id),
+    getDiscussionCount(meta.id),
   ])
   const base = `/${owner}/${slug}`
   const forkBound = forkTemplate.bind(null, meta.id)
@@ -52,6 +54,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
         <TabItem href={base} on={active === 'overview'} icon={<ListChecks size={15} />} label={t('listTab', lang)} />
         <TabItem href={`${base}/issues`} on={active === 'issues'} icon={<CircleDot size={15} />} label={t('issuesTab', lang)} count={issueCount} />
         <TabItem href={`${base}/suggestions`} on={active === 'suggestions'} icon={<GitPullRequest size={15} />} label={t('suggestions', lang)} count={suggCount} />
+        <TabItem href={`${base}/discussions`} on={active === 'discussions'} icon={<MessagesSquare size={15} />} label={lang === 'ru' ? 'Обсуждения' : 'Discussions'} count={discCount} />
         <TabItem href={`${base}/versions`} on={active === 'versions'} icon={<Tag size={15} />} label={t('versionsTab', lang)} />
         <TabItem href={`${base}/insights`} on={active === 'insights'} icon={<BarChart3 size={15} />} label="Insights" />
         {isOwner && <TabItem href={`${base}/settings`} on={active === 'settings'} icon={<Settings size={15} />} label={t('settings', lang)} />}

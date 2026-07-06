@@ -534,6 +534,47 @@ export const issueComments = pgTable(
   (t) => [index('issue_comments_issue_idx').on(t.issueId)],
 )
 
+// ── Discussions (форум-треды на список, как GitHub Discussions) ──────
+// Категория — app-level пресет (general | ideas | q-a | show), не enum БД.
+export const discussions = pgTable(
+  'discussions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    number: integer('number').notNull(), // порядковый номер в рамках списка
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    category: text('category').notNull().default('general'),
+    title: text('title').notNull(),
+    body: text('body').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('discussions_tpl_number').on(t.templateId, t.number), index('discussions_tpl_idx').on(t.templateId, t.createdAt)],
+)
+
+export const discussionComments = pgTable(
+  'discussion_comments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    discussionId: uuid('discussion_id')
+      .notNull()
+      .references(() => discussions.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('discussion_comments_discussion_idx').on(t.discussionId)],
+)
+export type Discussion = typeof discussions.$inferSelect
+export type DiscussionComment = typeof discussionComments.$inferSelect
+
 // ── Watches (подписка на список — как Watch на GitHub) ───────────────
 export const watches = pgTable(
   'watches',
