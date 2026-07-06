@@ -69,7 +69,7 @@ export default async function ExplorePage({
       {active === 'explore' && (
         <div className="flex flex-col gap-8 lg:flex-row">
           <div className="min-w-0 flex-1">
-            <FeedList items={feed.slice(0, 12)} lang={lang} viewerId={uid} className="space-y-3" />
+            <FeedList items={feed.slice(0, 12)} lang={lang} viewerId={uid} tile />
           </div>
           <aside className="w-full shrink-0 space-y-6 lg:w-[300px]">
             <Widget title={t('trending', lang)} icon={<Star size={14} className="text-accent" />}>
