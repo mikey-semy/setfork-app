@@ -14,6 +14,8 @@ const lvl = (v: unknown): StepLevel => (LEVELS.includes(v as StepLevel) ? (v as 
 const L = (s?: string): LocaleText => (s && s.trim() ? { en: s.trim() } : {})
 
 type ParsedStep = {
+  type?: string
+  content?: Record<string, unknown>
   title?: string
   desc?: string
   command?: string
@@ -23,6 +25,7 @@ type ParsedStep = {
   subtasks?: string[]
   refs?: { label?: string; url?: string }[]
 }
+const isStepBlock = (s: ParsedStep) => !s.type || s.type === 'step'
 type ParsedList = { title?: string; desc?: string; tags?: string[]; ordered?: boolean; steps?: ParsedStep[] }
 
 /** Проецирует запушенный коммит (main tip bare-репо) в новую версию списка.
@@ -47,10 +50,14 @@ export async function projectPushedCommit(templateId: string, bare: string): Pro
   // Версия+шаги — через доменный порт ListStore (write-seam под Rust).
   const ver = await listStore.addVersion(templateId, {
     note,
+    // Шаг-блок без title — мусор (отбрасываем); не-step блоки (text/image)
+    // валидны и без title — сохраняем их type/content, чтобы push не терял контент.
     steps: parsed.steps
-      .filter((s) => (s.title ?? '').trim())
+      .filter((s) => !isStepBlock(s) || (s.title ?? '').trim())
       .map((s, i) => ({
         n: i + 1,
+        type: isStepBlock(s) ? 'step' : s.type!,
+        content: !isStepBlock(s) && s.content && typeof s.content === 'object' ? s.content : {},
         title: L(s.title),
         desc: L(s.desc),
         command: (s.command ?? '').trim(),

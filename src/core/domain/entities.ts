@@ -84,6 +84,10 @@ export interface Step {
   id: Id
   versionId: Id
   n: number
+  // Блочная модель: 'step' (дефолт, runnable/чекаемый) | 'text' | 'image'.
+  // content — payload не-step блоков (см. features/library/blocks.ts); для шага {}.
+  type: string
+  content: Record<string, unknown>
   title: LocaleText
   desc: LocaleText
   command: string
@@ -93,6 +97,13 @@ export interface Step {
   subtasks: LocaleText[]
   refs: StepRef[]
   imageRef: string | null
+}
+
+/** Вход шага на ЗАПИСИ: type/content опциональны — хранилище дефолтит их
+ *  в 'step'/{}. На чтении (Step) они всегда заполнены. */
+export type NewStepInput = Omit<Step, 'id' | 'versionId' | 'type' | 'content'> & {
+  type?: string
+  content?: Record<string, unknown>
 }
 
 // ── Коллаборация ─────────────────────────────────────────────────────
@@ -126,8 +137,8 @@ export interface Suggestion {
   status: SuggestionStatus
   note: string
   baseVersion: number
-  /** снимок предложенных шагов (в БД — jsonb) */
-  steps: Omit<Step, 'id' | 'versionId'>[]
+  /** снимок предложенных шагов/блоков (в БД — jsonb); type/content опциональны */
+  steps: NewStepInput[]
   createdAt: Date
   resolvedAt: Date | null
 }

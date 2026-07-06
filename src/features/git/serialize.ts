@@ -5,6 +5,11 @@ export type RepoFile = { path: string; content: string }
 
 export type SerStep = {
   n: number
+  // type/content — блочная модель. Для шага (дефолт) НЕ сериализуем эти поля,
+  // чтобы старые списки давали БАЙТ-В-БАЙТ тот же list.json (golden с Rust).
+  // Не-step блоки (text/image) несут type + content, .md-файл им не пишется.
+  type?: string // 'step' (или undefined) | 'text' | 'image'
+  content?: Record<string, unknown>
   title: string
   desc: string
   command: string
@@ -14,6 +19,8 @@ export type SerStep = {
   subtasks: string[]
   refs: { label: string; url?: string }[]
 }
+
+const isStepBlock = (s: SerStep): boolean => !s.type || s.type === 'step'
 
 export type SerVersion = {
   title: string
@@ -42,15 +49,30 @@ function readme(v: SerVersion): string {
   lines.push(`# ${v.title}`, '')
   if (v.desc) lines.push(v.desc, '')
   if (v.tags.length) lines.push(v.tags.map((t) => `\`${t}\``).join(' '), '')
-  lines.push(`> ${v.ordered ? 'Ordered list' : 'Unordered set'} · v${v.version} · ${v.steps.length} items`, '')
+  // Счётчик «items» и нумерация — только по шаг-блокам (презентационные не в счёт).
+  const stepCount = v.steps.filter(isStepBlock).length
+  lines.push(`> ${v.ordered ? 'Ordered list' : 'Unordered set'} · v${v.version} · ${stepCount} items`, '')
 
   let section = ''
-  v.steps.forEach((s, i) => {
+  let stepNum = 0
+  for (const s of v.steps) {
+    if (!isStepBlock(s)) {
+      // Презентационные блоки — inline в README.
+      if (s.type === 'text') {
+        const md = String(s.content?.md ?? '')
+        if (md) lines.push('', md, '')
+      } else if (s.type === 'image') {
+        const ref = String(s.content?.ref ?? '')
+        if (ref) lines.push('', `![${String(s.content?.caption ?? '')}](${ref})`, '')
+      }
+      continue
+    }
     if (s.section && s.section !== section) {
       section = s.section
       lines.push('', `## ${section}`, '')
     }
-    const marker = v.ordered ? `${i + 1}.` : '-'
+    stepNum++
+    const marker = v.ordered ? `${stepNum}.` : '-'
     const lvl = s.level && s.level !== 'required' ? ` _(${s.level})_` : ''
     lines.push(`${marker} **${s.title}**${lvl}`)
     if (s.desc) lines.push(`   ${s.desc.replace(/\n/g, '\n   ')}`)
@@ -59,7 +81,7 @@ function readme(v: SerVersion): string {
     s.subtasks.forEach((st) => lines.push(`   - [ ] ${st}`))
     s.refs.forEach((r) => lines.push(`   - ${r.url ? `[${r.label}](${r.url})` : r.label}`))
     lines.push('')
-  })
+  }
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n'
 }
 
@@ -89,6 +111,52 @@ export function versionFiles(v: SerVersion): RepoFile[] {
     path: 'list.json',
     content: JSON.stringify({ title: v.title, desc: v.desc, tags: v.tags, ordered: v.ordered, version: v.version, steps: v.steps }, null, 2) + '\n',
   })
-  for (const s of v.steps) files.push(stepFile(s, width))
+  // .md пишем ТОЛЬКО шаг-блокам; text/image живут в README + list.json.
+  for (const s of v.steps) if (isStepBlock(s)) files.push(stepFile(s, width))
   return files
+}
+
+/** Обратный разбор list.json → SerVersion (чистый, для diff/merge и импорта).
+ *  Возвращает null на невалидном JSON/структуре. */
+export function parseList(json: string): SerVersion | null {
+  let o: unknown
+  try {
+    o = JSON.parse(json)
+  } catch {
+    return null
+  }
+  if (!o || typeof o !== 'object') return null
+  const r = o as Record<string, unknown>
+  if (!Array.isArray(r.steps)) return null
+  const asStr = (x: unknown, d = '') => (typeof x === 'string' ? x : d)
+  return {
+    title: asStr(r.title),
+    desc: asStr(r.desc),
+    tags: Array.isArray(r.tags) ? r.tags.map((t) => asStr(t)) : [],
+    ordered: !!r.ordered,
+    version: typeof r.version === 'number' ? r.version : 0,
+    steps: r.steps.map((raw, i) => {
+      const s = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+      const type = typeof s.type === 'string' && s.type !== 'step' ? s.type : undefined
+      const content = type && s.content && typeof s.content === 'object' ? (s.content as Record<string, unknown>) : undefined
+      return {
+        n: typeof s.n === 'number' ? s.n : i + 1,
+        ...(type ? { type } : {}),
+        ...(content ? { content } : {}),
+        title: asStr(s.title),
+        desc: asStr(s.desc),
+        command: asStr(s.command),
+        level: asStr(s.level, 'required'),
+        why: asStr(s.why),
+        section: asStr(s.section),
+        subtasks: Array.isArray(s.subtasks) ? s.subtasks.map((x) => asStr(x)) : [],
+        refs: Array.isArray(s.refs)
+          ? s.refs.map((raw) => {
+              const rr = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+              return { label: asStr(rr.label), ...(typeof rr.url === 'string' ? { url: rr.url } : {}) }
+            })
+          : [],
+      }
+    }),
+  }
 }

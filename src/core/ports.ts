@@ -14,6 +14,7 @@ import type {
   ListOrigin,
   ListStatus,
   LocaleText,
+  NewStepInput,
   NotificationType,
   Step,
   Suggestion,
@@ -33,7 +34,7 @@ export interface IdGen {
 // ── Списки / версии / шаги ───────────────────────────────────────────
 export interface NewVersionInput {
   note: string
-  steps: Omit<Step, 'id' | 'versionId'>[]
+  steps: NewStepInput[]
 }
 
 export interface CreateListInput {
@@ -48,7 +49,7 @@ export interface CreateListInput {
   origin: ListOrigin
   forkedFromId?: Id | null
   note: string // заметка первой версии
-  steps: Omit<Step, 'id' | 'versionId'>[]
+  steps: NewStepInput[]
 }
 
 export interface ListStore {

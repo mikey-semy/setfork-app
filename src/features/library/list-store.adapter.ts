@@ -49,6 +49,8 @@ function toStep(s: StepRow): Step {
     id: s.id,
     versionId: s.versionId,
     n: s.n,
+    type: s.type ?? 'step',
+    content: (s.content ?? {}) as Record<string, unknown>,
     title: loc(s.title),
     desc: loc(s.desc),
     command: s.command,
@@ -116,6 +118,8 @@ export const listStore: ListStore = {
         input.steps.map((s, i) => ({
           versionId: ver.id,
           n: i + 1,
+          type: s.type ?? 'step',
+          content: s.content ?? {},
           title: s.title,
           desc: s.desc,
           command: s.command,
@@ -145,6 +149,8 @@ export const listStore: ListStore = {
         input.steps.map((s, i) => ({
           versionId: ver.id,
           n: i + 1,
+          type: s.type ?? 'step',
+          content: s.content ?? {},
           title: s.title,
           desc: s.desc,
           command: s.command,
