@@ -19,12 +19,25 @@ export async function getStepPreviews(
   return Object.fromEntries(entries.filter(([, u]) => u)) as Record<string, string>
 }
 
-// Резолвим ownerAvatarUrl (storage_key → подписанный imgproxy-URL) для ленты.
-async function withAvatar<T extends { ownerAvatarUrl: string | null }>(rows: T[]): Promise<T[]> {
-  return Promise.all(rows.map(async (r) => ({ ...r, ownerAvatarUrl: await avatarSrc(r.ownerAvatarUrl, 96) })))
+// Резолвим ownerAvatarUrl + обложку (storage_key → подписанный imgproxy-URL) в
+// том же поле (как аватар): после withAvatar coverImage хранит готовый URL.
+async function withAvatar<T extends { ownerAvatarUrl: string | null; coverImage?: string | null }>(rows: T[]): Promise<T[]> {
+  return Promise.all(
+    rows.map(async (r) => ({
+      ...r,
+      ownerAvatarUrl: await avatarSrc(r.ownerAvatarUrl, 96),
+      ...(('coverImage' in r) ? { coverImage: r.coverImage ? await imageUrl(r.coverImage, 'rs:fill:640:200') : null } : {}),
+    })),
+  )
 }
 
 export type FeedSort = 'trending' | 'newest' | 'mostStarred'
+
+/** Обложка+акцент списка (для настроек и шапки). coverUrl — готовый URL или null. */
+export async function getListCover(templateId: string): Promise<{ coverUrl: string | null; accent: string | null }> {
+  const [r] = await db.select({ cover: templates.coverImage, accent: templates.accent }).from(templates).where(eq(templates.id, templateId)).limit(1)
+  return { coverUrl: r?.cover ? await imageUrl(r.cover, 'rs:fill:1200:400') : null, accent: r?.accent ?? null }
+}
 
 export interface FeedItem {
   id: string
@@ -43,6 +56,8 @@ export interface FeedItem {
   visibility: 'public' | 'private'
   verified: boolean
   updatedAt: Date
+  accent?: string | null
+  coverImage?: string | null // после withAvatar — готовый URL обложки (null/undef → авто-баннер)
 }
 
 export interface TagRow {
@@ -81,6 +96,8 @@ const FEED_COLS = {
   visibility: templates.visibility,
   verified: templates.verified,
   updatedAt: templates.updatedAt,
+  accent: templates.accent,
+  coverImage: templates.coverImage,
 }
 
 const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${tag}]::text[]`

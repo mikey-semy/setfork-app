@@ -176,6 +176,13 @@
       "when": 1783223016442,
       "tag": "0024_passkeys",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1783223017442,
+      "tag": "0025_list_cover",
+      "breakpoints": true
     }
   ]
 }
