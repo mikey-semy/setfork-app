@@ -716,6 +716,29 @@ export const recoveryCodes = pgTable(
   (t) => [index('recovery_codes_user_idx').on(t.userId)],
 )
 
+// ── Passkeys (WebAuthn — беспарольный вход) ──────────────────────────
+// Публичный ключ (COSE) и credentialId храним base64url; counter — anti-replay.
+export const passkeys = pgTable(
+  'passkeys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    credentialId: text('credential_id').notNull().unique(), // base64url
+    publicKey: text('public_key').notNull(), // base64url COSE-ключа
+    counter: bigint('counter', { mode: 'number' }).notNull().default(0),
+    transports: text('transports'), // usb,nfc,ble,internal — через запятую
+    deviceType: text('device_type'), // singleDevice | multiDevice
+    backedUp: boolean('backed_up').notNull().default(false),
+    name: text('name').notNull().default('Passkey'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  },
+  (t) => [index('passkeys_user_idx').on(t.userId)],
+)
+export type Passkey = typeof passkeys.$inferSelect
+
 // ── API tokens (доступ по MCP / API — Bearer) ────────────────────────
 // Храним только sha256-хеш токена; полный токен показываем один раз при создании.
 export const apiTokens = pgTable(

@@ -20,6 +20,9 @@ export type AuditAction =
   | 'password.reset'
   | 'email.change-request'
   | 'email.change'
+  | 'passkey.add'
+  | 'passkey.remove'
+  | 'passkey.login'
 
 export async function recordAudit(
   action: AuditAction,

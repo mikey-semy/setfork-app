@@ -5,6 +5,7 @@ import { t } from '@/shared/i18n'
 import { redirect } from 'next/navigation'
 import { Button } from '@/shared/ui/button'
 import { LoginForm } from '@/features/auth/AuthForms'
+import { PasskeyLoginButton } from '@/features/auth/PasskeyLoginButton'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ e?: string; reset?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
@@ -37,6 +38,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
         <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-muted">
           <span className="h-px flex-1 bg-border" /> {t('orSep', lang)} <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <div className="mb-3">
+          <PasskeyLoginButton lang={lang} />
         </div>
 
         {hasGithub && (
