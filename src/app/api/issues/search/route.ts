@@ -1,6 +1,8 @@
 import { and, desc, eq, ilike, sql } from 'drizzle-orm'
 import { getSession } from '@/shared/auth/session'
+import { isAdminHandle } from '@/shared/auth/admin'
 import { db, issues, templates, users } from '@/shared/db'
+import { canViewList } from '@/features/library/access'
 import { rateLimit, tooMany } from '@/shared/rate-limit'
 
 // Поиск issue репо для #-reference в редакторе. Только залогиненным.
@@ -19,12 +21,21 @@ export async function GET(req: Request) {
   const q = (url.searchParams.get('q') ?? '').trim()
 
   const [tpl] = await db
-    .select({ id: templates.id })
+    .select({
+      id: templates.id,
+      ownerId: templates.ownerId,
+      visibility: templates.visibility,
+      status: templates.status,
+      moderation: templates.moderation,
+    })
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(eq(users.handle, owner), eq(templates.slug, slug)))
     .limit(1)
-  if (!tpl) return Response.json([])
+  // Не отдаём issue приватного/скрытого списка тому, кто его не видит.
+  if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === session.userId, isAdmin: isAdminHandle(session.handle) })) {
+    return Response.json([])
+  }
 
   const conds = [eq(issues.templateId, tpl.id)]
   if (q) conds.push(/^\d+$/.test(q) ? sql`${issues.number}::text like ${q + '%'}` : ilike(issues.title, `%${q}%`))

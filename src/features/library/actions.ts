@@ -23,6 +23,7 @@ import { autoModerateList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
+import { canViewList } from './access'
 
 /** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
 function toStepInput(items: ProposedItem[]) {
@@ -184,6 +185,9 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   const lang = await getLang()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return
+  // Нельзя предлагать правки к приватному/скрытому списку, которого не видишь
+  // (иначе — запись в чужую очередь + пинг владельцу + оракул существования).
+  if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return
 
   const note = String(formData.get('note') ?? '').trim()
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
@@ -508,11 +512,16 @@ export async function publishList(templateId: string): Promise<void> {
 // ── Star (сигнал качества + личная коллекция) ────────────────────────
 export async function toggleStar(templateId: string): Promise<void> {
   const session = await requireSession()
+  // Видимость проверяем ДО тоггла: нельзя звездить (и пинговать владельца)
+  // приватный/скрытый список, которого не видишь.
+  const [t] = await db
+    .select({ ownerId: templates.ownerId, visibility: templates.visibility, status: templates.status, moderation: templates.moderation })
+    .from(templates)
+    .where(eq(templates.id, templateId))
+    .limit(1)
+  if (!t || !canViewList(t, { isOwner: t.ownerId === session.userId })) return
   const nowStarred = await curationStore.toggleStar(templateId, session.userId)
-  if (nowStarred) {
-    const [t] = await db.select({ ownerId: templates.ownerId }).from(templates).where(eq(templates.id, templateId))
-    if (t) await notify({ recipientId: t.ownerId, actorId: session.userId, type: 'star', templateId })
-  }
+  if (nowStarred) await notify({ recipientId: t.ownerId, actorId: session.userId, type: 'star', templateId })
   revalidatePath('/', 'layout')
 }
 
@@ -586,6 +595,10 @@ export async function forkTemplate(templateId: string): Promise<void> {
     with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
   })
   if (!src) return
+  // Видимость: форк раскрывает ВСЁ содержимое списка (шаги/команды) — приватные
+  // и скрытые модерацией доступны только владельцу (как в useTemplate). Иначе
+  // любой залогиненный мог бы склонировать чужой приватный список по его id.
+  if (!canViewList(src, { isOwner: src.ownerId === session.userId })) return
   if (!(await listQuota(session.userId, session.handle)).ok) redirect(`/${session.handle}?e=list_quota`)
 
   const owned = await db
