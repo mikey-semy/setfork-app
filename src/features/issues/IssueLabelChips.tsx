@@ -1,15 +1,19 @@
 import type { Lang } from '@/shared/i18n'
-import { labelMeta, labelText } from './labels'
+import { resolveChip, type CustomLabel } from './labels'
 
-export function IssueLabelChips({ labels, lang }: { labels: string[]; lang: Lang }) {
+export function IssueLabelChips({ labels, lang, custom = [] }: { labels: string[]; lang: Lang; custom?: CustomLabel[] }) {
   if (!labels.length) return null
   return (
     <>
       {labels.map((k) => {
-        const m = labelMeta(k)
+        const c = resolveChip(k, custom, lang)
         return (
-          <span key={k} className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${m?.cls ?? 'border-border text-ink-2'}`}>
-            {labelText(k, lang)}
+          <span
+            key={k}
+            style={c.style}
+            className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${c.cls ?? (c.style ? '' : 'border-border text-ink-2')}`}
+          >
+            {c.text}
           </span>
         )
       })}

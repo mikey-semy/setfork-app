@@ -6,6 +6,7 @@ import { t } from '@/shared/i18n'
 import { getListMeta } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 import { NewIssueForm } from '@/features/issues/NewIssueForm'
+import { getListLabels } from '@/features/issues/queries'
 
 export default async function NewIssuePage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle: owner, slug } = await params
@@ -13,6 +14,7 @@ export default async function NewIssuePage({ params }: { params: Promise<{ handl
   if (!session) redirect(`/login?next=/${owner}/${slug}/issues/new`)
   const meta = await getListMeta(owner, slug)
   if (!meta) notFound()
+  const custom = await getListLabels(meta.id)
 
   return (
     <>
@@ -21,7 +23,7 @@ export default async function NewIssuePage({ params }: { params: Promise<{ handl
         <h1 className="mb-4 flex items-center gap-2 text-[17px] font-bold text-ink">
           <CircleDot size={18} className="text-ok" /> {t('newIssue', lang)}
         </h1>
-        <NewIssueForm owner={owner} slug={slug} lang={lang} />
+        <NewIssueForm owner={owner} slug={slug} lang={lang} custom={custom} />
       </div>
     </>
   )

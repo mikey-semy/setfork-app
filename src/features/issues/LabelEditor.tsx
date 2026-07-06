@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { Check, Tag } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
-import { ISSUE_LABELS, labelText } from './labels'
+import { ISSUE_LABELS, customKey, labelText, type CustomLabel } from './labels'
 import { IssueLabelChips } from './IssueLabelChips'
 import { setIssueLabels } from './actions'
 
@@ -16,6 +16,7 @@ export function LabelEditor({
   labels,
   canEdit,
   lang,
+  custom = [],
 }: {
   owner: string
   slug: string
@@ -23,6 +24,7 @@ export function LabelEditor({
   labels: string[]
   canEdit: boolean
   lang: Lang
+  custom?: CustomLabel[]
 }) {
   const [pending, start] = useTransition()
   const [sel, setSel] = useState<string[]>(labels)
@@ -36,7 +38,7 @@ export function LabelEditor({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <IssueLabelChips labels={sel} lang={lang} />
+      <IssueLabelChips labels={sel} lang={lang} custom={custom} />
       {canEdit ? (
         <AnchoredMenu
           align="left"
@@ -67,6 +69,23 @@ export function LabelEditor({
                     >
                       <span className={`h-3 w-3 shrink-0 rounded-full border ${l.cls}`} />
                       <span className="flex-1 truncate">{labelText(l.key, lang)}</span>
+                      {on && <Check size={13} className="shrink-0 text-accent" />}
+                    </button>
+                  )
+                })}
+                {custom.map((c) => {
+                  const key = customKey(c.id)
+                  const on = sel.includes(key)
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => toggle(key)}
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2 disabled:opacity-60"
+                    >
+                      <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: c.color }} />
+                      <span className="flex-1 truncate">{c.name}</span>
                       {on && <Check size={13} className="shrink-0 text-accent" />}
                     </button>
                   )

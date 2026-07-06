@@ -6,12 +6,13 @@ import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { t, type Lang } from '@/shared/i18n'
 import { createIssue } from './actions'
 import { LabelPicker } from './LabelPicker'
+import type { CustomLabel } from './labels'
 
 const inputCls = 'px-3 py-2 text-[14px]'
 
 // Клиентская форма нового issue: валидация заголовка БЕЗ потери тела (никаких server-redirect
 // со стиранием текста). Ошибка появляется анимированно (grid 0fr→1fr), без резкого сдвига.
-export function NewIssueForm({ owner, slug, lang }: { owner: string; slug: string; lang: Lang }) {
+export function NewIssueForm({ owner, slug, lang, custom = [] }: { owner: string; slug: string; lang: Lang; custom?: CustomLabel[] }) {
   const [error, setError] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
 
@@ -50,7 +51,7 @@ export function NewIssueForm({ owner, slug, lang }: { owner: string; slug: strin
 
       <div>
         <div className="mb-1.5 text-[12px] font-semibold text-ink-2">{t('labelsLabel', lang)}</div>
-        <LabelPicker lang={lang} />
+        <LabelPicker lang={lang} custom={custom} />
       </div>
 
       <div className="flex justify-end">
