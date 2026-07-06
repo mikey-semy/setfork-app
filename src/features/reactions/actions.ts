@@ -2,27 +2,46 @@
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { requireSession } from '@/shared/auth/session'
-import { db, issueComments, issues, reactions, suggestionComments, suggestions } from '@/shared/db'
+import { db, issueComments, issues, reactions, suggestionComments, suggestions, templates } from '@/shared/db'
+import { canViewList } from '@/features/library/access'
 import { MAX_EMOJI_LEN, REACTION_TARGETS, type ReactionTarget } from './constants'
 
-// Проверка, что цель реально существует (лёгкая целостность/скоуп).
-async function targetExists(targetType: ReactionTarget, id: string): Promise<boolean> {
-  const one = async (table: typeof issues | typeof issueComments | typeof suggestions | typeof suggestionComments) => {
-    const [r] = await db.select({ id: table.id }).from(table).where(eq(table.id, id)).limit(1)
-    return !!r
-  }
+// Доступ к списку-владельцу цели (issue/comment/suggestion → его template).
+// Заодно проверяет существование цели (null = нет). Реакция на цель приватного
+// списка, который зритель не видит, запрещена — как и вся модель видимости.
+type ListAccessRow = { ownerId: string; visibility: 'public' | 'private'; status: 'draft' | 'published'; moderation: string }
+async function targetListAccess(targetType: ReactionTarget, id: string): Promise<ListAccessRow | null> {
+  const cols = { ownerId: templates.ownerId, visibility: templates.visibility, status: templates.status, moderation: templates.moderation }
+  let rows: ListAccessRow[] = []
   switch (targetType) {
     case 'issue':
-      return one(issues)
+      rows = await db.select(cols).from(issues).innerJoin(templates, eq(issues.templateId, templates.id)).where(eq(issues.id, id)).limit(1)
+      break
     case 'issue_comment':
-      return one(issueComments)
+      rows = await db
+        .select(cols)
+        .from(issueComments)
+        .innerJoin(issues, eq(issueComments.issueId, issues.id))
+        .innerJoin(templates, eq(issues.templateId, templates.id))
+        .where(eq(issueComments.id, id))
+        .limit(1)
+      break
     case 'suggestion':
-      return one(suggestions)
+      rows = await db.select(cols).from(suggestions).innerJoin(templates, eq(suggestions.templateId, templates.id)).where(eq(suggestions.id, id)).limit(1)
+      break
     case 'suggestion_comment':
-      return one(suggestionComments)
+      rows = await db
+        .select(cols)
+        .from(suggestionComments)
+        .innerJoin(suggestions, eq(suggestionComments.suggestionId, suggestions.id))
+        .innerJoin(templates, eq(suggestions.templateId, templates.id))
+        .where(eq(suggestionComments.id, id))
+        .limit(1)
+      break
     default:
-      return false
+      return null
   }
+  return rows[0] ?? null
 }
 
 /** Тоггл реакции текущего пользователя (эмодзи на цель). Ревалидирует переданный путь. */
@@ -38,7 +57,8 @@ export async function toggleReaction(input: {
   if (!REACTION_TARGETS.includes(targetType as ReactionTarget)) return
   if (!emoji || emoji.length > MAX_EMOJI_LEN) return // любое эмодзи из пикера; защита от мусора
   if (!targetId) return
-  if (!(await targetExists(targetType as ReactionTarget, targetId))) return
+  const access = await targetListAccess(targetType as ReactionTarget, targetId)
+  if (!access || !canViewList(access, { isOwner: access.ownerId === session.userId })) return
 
   const [existing] = await db
     .select({ id: reactions.id })
