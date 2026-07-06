@@ -14,6 +14,9 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   const steps: RunStepVM[] = data.steps.map((s) => ({
     id: s.id,
     n: s.n,
+    type: s.type ?? 'step',
+    text: s.type === 'text' && typeof s.content?.md === 'string' ? s.content.md : '',
+    caption: s.type === 'image' && typeof s.content?.caption === 'string' ? s.content.caption : '',
     title: tr(s.title, lang),
     desc: tr(s.desc, lang),
     command: s.command,

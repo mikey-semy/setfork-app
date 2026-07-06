@@ -53,7 +53,8 @@ export async function startRun(templateId: string): Promise<void> {
       .values({ templateId: tpl.id, versionId: cur.id, version: cur.version, userId: session.userId })
       .returning()
     runId = r.id
-    const stepRows = await db.select({ id: steps.id }).from(steps).where(eq(steps.versionId, cur.id))
+    // Чекаются только шаг-блоки; text/image — контекст, состояние прогона им не нужно.
+    const stepRows = await db.select({ id: steps.id }).from(steps).where(and(eq(steps.versionId, cur.id), eq(steps.type, 'step')))
     if (stepRows.length) await db.insert(runStepState).values(stepRows.map((s) => ({ runId: r.id, stepId: s.id })))
     await db.update(templates).set({ runsCount: sql`${templates.runsCount} + 1` }).where(eq(templates.id, tpl.id))
   }

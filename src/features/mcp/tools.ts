@@ -146,6 +146,8 @@ export async function mcpGetScript(userId: string, handle: string, slug: string,
     slug,
     steps: steps.map((s) => ({
       n: s.n,
+      type: s.type,
+      content: s.content,
       title: s.title,
       desc: s.desc,
       command: s.command,
@@ -259,13 +261,15 @@ async function mcpRunState(userId: string, runId: string) {
     .innerJoin(users, eq(users.id, templates.ownerId))
     .where(eq(templates.id, run.templateId))
     .limit(1)
-  const stepRows = await db.select({ id: steps.id, n: steps.n, title: steps.title }).from(steps).where(eq(steps.versionId, run.versionId)).orderBy(steps.n)
+  // Только шаг-блоки, перенумерованные 1..K (индекс среди шагов) — это и есть N
+  // для check_step. text/image в прогон не входят.
+  const stepRows = await db.select({ id: steps.id, title: steps.title }).from(steps).where(and(eq(steps.versionId, run.versionId), eq(steps.type, 'step'))).orderBy(steps.n)
   const states = await db.select({ stepId: runStepState.stepId, status: runStepState.status, note: runStepState.note }).from(runStepState).where(eq(runStepState.runId, runId))
   const byStep = new Map(states.map((s) => [s.stepId, s]))
-  const stepsOut = stepRows.map((s) => {
+  const stepsOut = stepRows.map((s, i) => {
     const st = byStep.get(s.id)
     return {
-      n: s.n,
+      n: i + 1,
       title: tr(s.title, 'en'),
       done: st?.status === 'done',
       blocked: st?.status === 'blocked',
@@ -303,7 +307,8 @@ export async function mcpStartRun(userId: string, handle: string, slug: string) 
   if (!runId) {
     const [r] = await db.insert(runs).values({ templateId: tpl.id, versionId: cur.id, version: cur.version, userId }).returning()
     runId = r.id
-    const stepRows = await db.select({ id: steps.id }).from(steps).where(eq(steps.versionId, cur.id))
+    // Чекаются только шаг-блоки; text/image — контекст, состояние им не заводим.
+    const stepRows = await db.select({ id: steps.id }).from(steps).where(and(eq(steps.versionId, cur.id), eq(steps.type, 'step')))
     if (stepRows.length) await db.insert(runStepState).values(stepRows.map((s) => ({ runId: r.id, stepId: s.id })))
     await db.update(templates).set({ runsCount: sql`${templates.runsCount} + 1` }).where(eq(templates.id, tpl.id))
   }
@@ -322,7 +327,9 @@ export async function mcpGetRun(userId: string, runId: string) {
 export async function mcpCheckStep(userId: string, runId: string, stepN: number, opts?: { done?: boolean; blocked?: boolean; reason?: string }) {
   const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
   if (!run || run.userId !== userId) return { error: 'run not found' }
-  const [st] = await db.select({ id: steps.id }).from(steps).where(and(eq(steps.versionId, run.versionId), eq(steps.n, stepN))).limit(1)
+  // N — индекс среди ШАГ-блоков (1..K), а не steps.n (тот включает text/image).
+  const stepBlocks = await db.select({ id: steps.id }).from(steps).where(and(eq(steps.versionId, run.versionId), eq(steps.type, 'step'))).orderBy(steps.n)
+  const st = stepBlocks[stepN - 1]
   if (!st) return { error: 'step not found' }
   const [state] = await db.select().from(runStepState).where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, st.id))).limit(1)
   if (!state) return { error: 'step state not found' }

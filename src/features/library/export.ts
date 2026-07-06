@@ -4,6 +4,10 @@ import type { StepLevel } from '@/shared/db'
 
 export interface ExportStep {
   n: number
+  // Блочная модель: 'step' (дефолт/undefined) | 'text' | 'image'. Не-step блоки
+  // презентационные: в скрипте — комментарий, не исполняются.
+  type?: string
+  content?: Record<string, unknown>
   title: LocaleText
   desc: LocaleText
   command: string
@@ -12,6 +16,13 @@ export interface ExportStep {
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
 }
+
+const isStepBlk = (s: ExportStep): boolean => !s.type || s.type === 'step'
+const blockMd = (s: ExportStep): string => (typeof s.content?.md === 'string' ? s.content.md : '')
+const blockImg = (s: ExportStep): { ref: string; caption: string } => ({
+  ref: typeof s.content?.ref === 'string' ? s.content.ref : '',
+  caption: typeof s.content?.caption === 'string' ? s.content.caption : '',
+})
 export interface ExportList {
   title: LocaleText
   desc: LocaleText
@@ -36,8 +47,16 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
   if (list.tags.length) out.push(`*${list.tags.map((t) => `#${t}`).join(' ')}*`, '')
   out.push(`> ${list.ownerHandle}/${list.slug} · v${list.version}`, '')
 
-  list.steps.forEach((s, i) => {
-    const marker = list.ordered ? `${i + 1}.` : '-'
+  let stepNo = 0
+  list.steps.forEach((s) => {
+    if (!isStepBlk(s)) {
+      // Картинки в экспорт не идут (ключ хранилища не подписан) — оставляем подпись.
+      if (s.type === 'text') { const md = blockMd(s); if (md) out.push(md, '') }
+      else if (s.type === 'image') { const { caption } = blockImg(s); if (caption) out.push(`_🖼 ${caption}_`, '') }
+      return
+    }
+    stepNo++
+    const marker = list.ordered ? `${stepNo}.` : '-'
     const lvl = s.level !== 'required' ? ` _(${s.level})_` : ''
     out.push(`${marker} **${tr(s.title, lang)}**${lvl}`)
     const d = tr(s.desc, lang)
@@ -62,13 +81,19 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
  *  футер-ссылка назад. Для вставки в <iframe> на внешних сайтах. */
 export function embedHtml(list: ExportList, lang: Lang, backUrl: string): string {
   const title = esc(tr(list.title, lang))
-  const count = list.steps.length
+  const count = list.steps.filter(isStepBlk).length
   const itemsWord = lang === 'ru' ? 'пунктов' : 'items'
   const openWord = lang === 'ru' ? 'Открыть на SetFork' : 'Open on SetFork'
 
+  let embedNo = 0
   const steps = list.steps
-    .map((s, i) => {
-      const marker = list.ordered ? `${i + 1}` : '•'
+    .map((s) => {
+      if (!isStepBlk(s)) {
+        const txt = s.type === 'text' ? esc(blockMd(s)) : esc(blockImg(s).caption)
+        return txt ? `<li class="step ctx"><span class="n">•</span><div class="body"><p class="d">${txt}</p></div></li>` : ''
+      }
+      embedNo++
+      const marker = list.ordered ? `${embedNo}` : '•'
       const d = esc(tr(s.desc, lang))
       const badge = s.level !== 'required' ? `<span class="lvl">${esc(s.level)}</span>` : ''
       const cmd = s.command ? `<code class="cmd">${esc(s.command)}</code>` : ''
@@ -125,9 +150,16 @@ export function toHtml(list: ExportList, lang: Lang): string {
   const desc = esc(tr(list.desc, lang))
   const tags = list.tags.map((t) => `<span class="tag">#${esc(t)}</span>`).join(' ')
 
+  let htmlNo = 0
   const steps = list.steps
-    .map((s, i) => {
-      const marker = list.ordered ? `${i + 1}` : '•'
+    .map((s) => {
+      if (!isStepBlk(s)) {
+        if (s.type === 'text') { const md = esc(blockMd(s)); return md ? `<div class="block-text"><p>${md}</p></div>` : '' }
+        const { caption } = blockImg(s)
+        return caption ? `<div class="block-text"><p>🖼 ${esc(caption)}</p></div>` : ''
+      }
+      htmlNo++
+      const marker = list.ordered ? `${htmlNo}` : '•'
       const d = esc(tr(s.desc, lang))
       const badge = s.level !== 'required' ? `<span class="lvl">${s.level}</span>` : ''
       const why = esc(tr(s.why, lang))
@@ -174,6 +206,7 @@ export function toHtml(list: ExportList, lang: Lang): string {
   .lvl { border: 1px solid #d1a000; color: #a67c00; border-radius: 4px; padding: 0 .35rem; font-size: .68rem; text-transform: capitalize; }
   .why { color: #555; font-size: .85rem; margin: .25rem 0 .1rem; }
   .d { color: #444; margin: .3rem 0 .1rem; }
+  .block-text { color: #444; margin: .7rem .2rem; line-height: 1.55; }
   pre { background: #f5f5f3; border-radius: 6px; padding: .5rem .7rem; overflow-x: auto; font-size: .82rem; }
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   ul.subs, ul.refs { margin: .35rem 0 0; padding-left: 1.1rem; }
@@ -288,8 +321,17 @@ export function toRunnableScript(list: ExportList, lang: Lang, url: string, dial
     if (dialect !== 'py') out.push('')
   }
 
-  list.steps.forEach((s, i) => {
-    const n = i + 1
+  let scriptNo = 0
+  list.steps.forEach((s) => {
+    // Не-step блоки — только контекст: комментарий (text) / подпись (image),
+    // ничего не исполняется. Нумерация идёт только по шаг-блокам.
+    if (!isStepBlk(s)) {
+      if (s.type === 'text') { const md = blockMd(s); if (md) out.push(hashComment(md), '') }
+      else if (s.type === 'image') { const { caption } = blockImg(s); if (caption) out.push(hashComment(`🖼 ${caption}`), '') }
+      return
+    }
+    scriptNo++
+    const n = scriptNo
     const st = tr(s.title, lang)
     out.push(`# ── ${n}. ${st} ${'─'.repeat(Math.max(3, 50 - st.length))}`)
     const dd = tr(s.desc, lang)
