@@ -1,7 +1,7 @@
 import 'server-only'
 import { captureError, log } from '@/shared/observability'
 import { claimJob, completeJob, failJob, type Job } from './queue'
-import { runEmailJob, runGenerateJob, runPushJob, runReindexJob } from './handlers'
+import { runDigestJob, runEmailJob, runGenerateJob, runPushJob, runReindexJob } from './handlers'
 
 // Реестр обработчиков по типу задачи.
 const HANDLERS: Record<string, (payload: unknown) => Promise<void>> = {
@@ -9,6 +9,7 @@ const HANDLERS: Record<string, (payload: unknown) => Promise<void>> = {
   generate: runGenerateJob,
   reindex: runReindexJob,
   push: runPushJob,
+  digest: runDigestJob,
 }
 
 const POLL_MS = 3000
@@ -57,4 +58,9 @@ export function startWorker(): void {
 
   setInterval(() => void tick(), POLL_MS)
   log.info('jobs worker started', { pollMs: POLL_MS })
+
+  // Недельный дайджест самоподдерживается; на старте гарантируем первую джобу.
+  void import('@/features/digest/service')
+    .then((m) => m.ensureDigestScheduled())
+    .catch((e) => captureError(e, { where: 'digest.ensure' }))
 }

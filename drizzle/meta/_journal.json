@@ -204,6 +204,13 @@
       "when": 1783223020442,
       "tag": "0028_search_fts",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1783223021442,
+      "tag": "0029_digest",
+      "breakpoints": true
     }
   ]
 }
