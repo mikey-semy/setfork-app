@@ -1,25 +1,33 @@
 'use client'
 
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   ChevronDown,
   ChevronsDown,
   ChevronsUp,
   ChevronUp,
+  Footprints,
   GripVertical,
   Heading,
+  Image as ImageIcon,
   ImageUp,
   Loader2,
   Plus,
   Redo2,
   Sparkles,
+  Text as TextIcon,
   Trash2,
   Undo2,
   X,
 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
-import { emptyItem, type EditorItem } from './editor'
+import { emptyItem, emptyBlock, type EditorItem } from './editor'
+import { BLOCK_TYPES, type BlockType } from './blocks'
 import { refineList, uploadStepImage } from './actions'
+
+const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon }
+const blockLabel = (t: BlockType, ru: boolean): string =>
+  t === 'step' ? (ru ? 'Шаг' : 'Step') : t === 'text' ? (ru ? 'Текст' : 'Text') : ru ? 'Картинка' : 'Image'
 
 const input =
   'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-none focus:border-border-strong'
@@ -161,9 +169,23 @@ export function ListEditor({
     if ('error' in res) alert(res.error)
     else patch(i, { imageKey: res.key, imagePreview: res.url })
   }
-  const addItem = () => commit([...items, emptyItem()], [...uids, newUid()])
+  // Тип последнего добавленного блока — «повтор предыдущего» в инсертере.
+  const [lastType, setLastType] = useState<BlockType>('step')
+  // Вставка блока на позицию index (0..len). index === len → в конец.
+  const insertAt = (index: number, type: BlockType) => {
+    const at = Math.max(0, Math.min(index, items.length))
+    const nextI = [...items.slice(0, at), emptyBlock(type), ...items.slice(at)]
+    const nextU = [...uids.slice(0, at), newUid(), ...uids.slice(at)]
+    setLastType(type)
+    commit(nextI, nextU)
+  }
   const removeItem = (i: number) => {
     if (items.length > 1) commit(items.filter((_, idx) => idx !== i), uids.filter((_, idx) => idx !== i))
+  }
+  // Смена типа блока на месте (для /-команды в пустом блоке).
+  const setType = (i: number, type: BlockType) => {
+    setLastType(type)
+    commit(items.map((it, idx) => (idx === i ? { ...emptyBlock(type), section: it.section } : it)), uids)
   }
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir
@@ -308,7 +330,19 @@ export function ListEditor({
             >
               <GripVertical size={15} />
             </span>
-            <span className="font-mono text-[12px] text-muted">{ordered ? `${ru ? 'Пункт' : 'Item'} ${i + 1}` : '•'}</span>
+            {it.type === 'step' ? (
+              <span className="font-mono text-[12px] text-muted">
+                {ordered ? `${ru ? 'Пункт' : 'Item'} ${items.slice(0, i).filter((x) => x.type === 'step').length + 1}` : '•'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 font-mono text-[12px] text-muted">
+                {(() => {
+                  const Icon = BLOCK_ICON[it.type]
+                  return <Icon size={13} />
+                })()}
+                {blockLabel(it.type, ru)}
+              </span>
+            )}
             <div className="ml-auto flex items-center gap-1">
               <button
                 type="button"
@@ -357,6 +391,7 @@ export function ListEditor({
             </div>
           </div>
 
+          {it.type === 'step' && (
           <div className="flex flex-col gap-2">
             {/* Заголовок секции-группы: если задан — начинает новую группу пунктов */}
             <div className={`flex items-center gap-1.5 ${it.section.trim() ? 'text-accent' : 'text-muted'}`}>
@@ -519,16 +554,197 @@ export function ListEditor({
               </button>
             </div>
           </div>
+          )}
+
+          {/* Text-блок: markdown-врезка. Пустой + '/' → меню смены типа. */}
+          {it.type === 'text' && (
+            <TextBlockBody
+              value={it.text}
+              onChange={(v) => patch(i, { text: v })}
+              onSlash={(type) => setType(i, type)}
+              ru={ru}
+            />
+          )}
+
+          {/* Image-блок: картинка + подпись. */}
+          {it.type === 'image' && (
+            <div className="flex flex-col gap-2">
+              {it.imagePreview ? (
+                <div className="relative w-fit">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.imagePreview} alt="" className="max-h-[320px] rounded-md border border-border" />
+                  <button
+                    type="button"
+                    onClick={() => patch(i, { imageKey: '', imagePreview: '' })}
+                    aria-label="remove image"
+                    className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-md bg-black/60 text-white hover:bg-black/80"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <StepImageInput uploading={uploading === i} onFile={(f) => uploadFor(i, f)} ru={ru} />
+              )}
+              <input
+                className={input}
+                aria-label={ru ? 'Подпись картинки' : 'Image caption'}
+                placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'}
+                value={it.caption}
+                onChange={(e) => patch(i, { caption: e.target.value })}
+              />
+            </div>
+          )}
+
+          {/* Инсертер между блоками: вставить после текущего блока. */}
+          <BlockInserter onInsert={(type) => insertAt(i + 1, type)} repeatType={lastType} ru={ru} between />
         </div>
       ))}
       </div>
 
+      {/* Главный инсертер — добавить блок в конец списка. */}
+      <div className="flex justify-center pt-1">
+        <BlockInserter onInsert={(type) => insertAt(items.length, type)} repeatType={lastType} ru={ru} />
+      </div>
+    </div>
+  )
+}
+
+/** Text-блок: авто-растущая textarea. Пустое поле + ввод «/» открывает меню
+ *  смены типа блока (быстрый /-командой заменить пустой text на step/image). */
+function TextBlockBody({ value, onChange, onSlash, ru }: { value: string; onChange: (v: string) => void; onSlash: (t: BlockType) => void; ru: boolean }) {
+  const [menu, setMenu] = useState(false)
+  return (
+    <div className="relative flex flex-col gap-1">
+      <textarea
+        className="min-h-[72px] w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] leading-relaxed text-ink outline-none focus:border-border-strong"
+        aria-label={ru ? 'Текстовый блок (Markdown)' : 'Text block (Markdown)'}
+        placeholder={ru ? 'Текст (Markdown). Введите «/» в пустом блоке для выбора типа…' : 'Text (Markdown). Type “/” in an empty block to pick a type…'}
+        value={value}
+        onChange={(e) => {
+          const v = e.target.value
+          if (v === '/' && value === '') { setMenu(true); return }
+          setMenu(false)
+          onChange(v)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' && menu) { e.preventDefault(); setMenu(false) }
+        }}
+      />
+      {menu && (
+        <div className="absolute left-3 top-9 z-10 flex flex-col overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+          {BLOCK_TYPES.map((t) => {
+            const Icon = BLOCK_ICON[t]
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => { setMenu(false); onSlash(t) }}
+                className="flex items-center gap-2 px-3 py-1.5 text-left text-[13px] text-ink hover:bg-surface-2"
+              >
+                <Icon size={14} className="text-muted" /> {blockLabel(t, ru)}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      <span className="pl-1 text-[11px] text-muted">{ru ? 'Markdown: **жирный**, [ссылка](url), списки' : 'Markdown: **bold**, [link](url), lists'}</span>
+    </div>
+  )
+}
+
+/** Радиальный «+»-инсертер: по клику из кнопки веером («улыбкой») вылетают
+ *  кружки типов блоков; нижний-центральный (primary) = повтор предыдущего типа.
+ *  between=true — тонкая линия-разделитель, появляется при наведении. */
+function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert: (t: BlockType) => void; repeatType: BlockType; ru: boolean; between?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  // Клик вне — закрыть.
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onEsc)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onEsc)
+    }
+  }, [open])
+
+  // Веер: типы блоков распределяем по дуге ~150° над кнопкой.
+  const arc = BLOCK_TYPES
+  const R = 62
+  const spread = 150 // градусов
+  const start = 90 + spread / 2 // слева
+  const pick = (t: BlockType) => { onInsert(t); setOpen(false) }
+
+  return (
+    <div ref={rootRef} className={`relative flex items-center justify-center ${between ? 'group h-4 w-full' : ''}`}>
+      {between && !open && (
+        <span className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border opacity-0 transition-opacity group-hover:opacity-100" />
+      )}
+      {/* Кружки-типы (веером). Появляются при open. */}
+      {arc.map((t, k) => {
+        const ang = arc.length > 1 ? start - (spread / (arc.length - 1)) * k : 90
+        const rad = (ang * Math.PI) / 180
+        const x = Math.cos(rad) * R
+        const y = -Math.sin(rad) * R
+        const Icon = BLOCK_ICON[t]
+        return (
+          <button
+            key={t}
+            type="button"
+            aria-label={blockLabel(t, ru)}
+            title={blockLabel(t, ru)}
+            onClick={() => pick(t)}
+            tabIndex={open ? 0 : -1}
+            className="absolute grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink shadow-md transition-all duration-200 hover:border-accent hover:text-accent motion-reduce:transition-none"
+            style={{
+              transform: open ? `translate(${x}px, ${y}px) scale(1)` : 'translate(0,0) scale(0.3)',
+              opacity: open ? 1 : 0,
+              pointerEvents: open ? 'auto' : 'none',
+              zIndex: open ? 20 : undefined,
+            }}
+          >
+            <Icon size={16} />
+          </button>
+        )
+      })}
+      {/* Повтор предыдущего типа — нижний-центральный, чуть под кнопкой. */}
+      {(() => {
+        const Icon = BLOCK_ICON[repeatType]
+        return (
+          <button
+            type="button"
+            aria-label={`${ru ? 'Повторить' : 'Repeat'}: ${blockLabel(repeatType, ru)}`}
+            title={`${ru ? 'Как предыдущий' : 'Same as previous'}: ${blockLabel(repeatType, ru)}`}
+            onClick={() => pick(repeatType)}
+            tabIndex={open ? 0 : -1}
+            className="absolute grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-fg shadow-md transition-all duration-200 hover:opacity-90 motion-reduce:transition-none"
+            style={{
+              transform: open ? `translate(0, ${R + 6}px) scale(1)` : 'translate(0,0) scale(0.3)',
+              opacity: open ? 1 : 0,
+              pointerEvents: open ? 'auto' : 'none',
+              zIndex: open ? 20 : undefined,
+            }}
+          >
+            <Icon size={15} />
+          </button>
+        )
+      })()}
+      {/* Центральная «+» кнопка. */}
       <button
         type="button"
-        onClick={addItem}
-        className="inline-flex items-center justify-center gap-2 rounded-lg border border-dashed border-border py-3 text-[13px] font-semibold text-ink-2 hover:border-border-strong hover:text-ink"
+        aria-label={ru ? 'Добавить блок' : 'Add block'}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={`z-[1] grid place-items-center rounded-full border transition-all ${
+          between ? 'h-7 w-7 opacity-0 group-hover:opacity-100' : 'h-11 w-11'
+        } ${open ? 'rotate-45 border-accent bg-accent text-white' : 'border-border bg-surface text-ink-2 hover:border-border-strong hover:text-ink'} ${open ? 'opacity-100' : ''}`}
       >
-        <Plus size={15} /> {ru ? 'Добавить пункт' : 'Add item'}
+        <Plus size={between ? 15 : 20} />
       </button>
     </div>
   )

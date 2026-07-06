@@ -59,6 +59,10 @@ export const issueStatus = pgEnum('issue_status', ['open', 'closed'])
 // Предложенный пункт (снимок правки внутри suggestion).
 export type StepLevel = 'required' | 'recommended' | 'optional'
 export type ProposedItem = {
+  // Блочная модель: 'step' (дефолт, undefined тоже = шаг) | 'text' | 'image'.
+  // content — payload не-step блоков (text:{md}, image:{ref,caption}); шагу не нужен.
+  type?: string
+  content?: Record<string, unknown>
   title: LocaleText
   desc: LocaleText
   command: string
