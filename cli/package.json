@@ -1,0 +1,11 @@
+{
+  "name": "@setfork/cli",
+  "version": "0.1.0",
+  "description": "Minimal SetFork CLI — clone, run-script, open lists from the terminal.",
+  "type": "module",
+  "bin": { "sf": "./sf.mjs" },
+  "scripts": { "test": "node --test" },
+  "engines": { "node": ">=18" },
+  "files": ["sf.mjs", "lib.mjs", "README.md"],
+  "license": "MIT"
+}
