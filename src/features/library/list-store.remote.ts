@@ -132,6 +132,9 @@ export const listWriteRemote = {
         subtasks: s.subtasks.map(toPbLoc),
         refs: s.refs.map((r) => ({ label: toPbLoc(r.label), url: r.url ?? '' })),
         imageRef: s.imageRef ?? '',
+        // Блочная модель: type/content_json — только у не-step блоков.
+        type: s.type && s.type !== 'step' ? s.type : '',
+        contentJson: s.type && s.type !== 'step' ? JSON.stringify(s.content ?? {}) : '',
       })),
     })
     return toVersion(res)
@@ -159,6 +162,9 @@ export const listWriteRemote = {
         subtasks: s.subtasks.map(toPbLoc),
         refs: s.refs.map((r) => ({ label: toPbLoc(r.label), url: r.url ?? '' })),
         imageRef: s.imageRef ?? '',
+        // Блочная модель: type/content_json — только у не-step блоков.
+        type: s.type && s.type !== 'step' ? s.type : '',
+        contentJson: s.type && s.type !== 'step' ? JSON.stringify(s.content ?? {}) : '',
       })),
     })
     return toList(res)
