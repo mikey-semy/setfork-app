@@ -449,6 +449,7 @@ export async function refineList(input: {
   // Refine переписывает текстовое содержимое шагов; скриншоты не переносятся, ссылки — да.
   const items: EditorItem[] = refined.items.map((it) => ({
     type: 'step' as const,
+    bid: '',
     text: '',
     caption: '',
     title: it.title,

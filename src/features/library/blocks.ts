@@ -6,6 +6,16 @@ export type BlockType = (typeof BLOCK_TYPES)[number]
 
 export const isBlockType = (t: string): t is BlockType => (BLOCK_TYPES as readonly string[]).includes(t)
 
+/** Стабильный id блока — живёт ВНУТРИ content (content.bid) у не-step блоков.
+ *  Даёт идентичность для three-way merge: правка text/image — modify, а не add+remove.
+ *  Хранение внутри content = ноль правок схемы/proto/Rust (content round-trip'ится
+ *  опрозрачно). Генерится один раз при создании блока в редакторе. */
+export function newBlockId(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto
+  if (c?.randomUUID) return c.randomUUID()
+  return 'b' + Math.random().toString(36).slice(2, 12)
+}
+
 // Две РАЗНЫЕ оси «исполнения» (уточнение от юзера):
 //  1) Ручной прогон/использование — проходим список руками. Чек-действия — шаги;
 //     text/image — контекст (показываются, отметки не требуют).

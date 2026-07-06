@@ -118,6 +118,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
   const proposed = toProposedItems(
     cand.items.map((it) => ({
       type: 'step' as const,
+      bid: '',
       text: '',
       caption: '',
       title: it.title,

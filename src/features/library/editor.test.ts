@@ -24,9 +24,26 @@ describe('editor block converters', () => {
     expect(out.content).toBeUndefined()
   })
 
-  it('empty image caption is omitted from content', () => {
+  it('empty image caption is omitted from content (bid present)', () => {
     const [out] = toProposedItems([{ ...emptyBlock('image'), imageKey: 'k/2' }], 'en')
-    expect(out.content).toEqual({ ref: 'k/2' })
+    expect(out.content).toMatchObject({ ref: 'k/2' })
+    expect(out.content).not.toHaveProperty('caption')
+    expect(typeof out.content?.bid).toBe('string') // стабильный id блока
+  })
+
+  it('non-step blocks carry a stable content.bid; step blocks do not', () => {
+    const items = [step({ title: 'x' }), { ...emptyBlock('text'), text: 'hi' }]
+    const out = toProposedItems(items, 'en')
+    expect(out[0].content).toBeUndefined() // шаг — без content/bid
+    expect(out[1].content?.bid).toBeTruthy()
+  })
+
+  it('bid survives editor → proposed → editor round-trip', () => {
+    const block = { ...emptyBlock('text'), text: 'note' }
+    const [proposed] = toProposedItems([block], 'en')
+    const bid = proposed.content?.bid
+    const [back] = toEditorItems([proposed], 'en')
+    expect(back.bid).toBe(bid) // тот же id → merge увидит правку как modify
   })
 
   it('toEditorItems round-trips text/image blocks back to flat form', () => {
