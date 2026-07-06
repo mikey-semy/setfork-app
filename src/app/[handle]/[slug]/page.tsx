@@ -1,7 +1,7 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, Info, LayoutTemplate, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, useTemplate } from '@/features/library/actions'
@@ -174,6 +174,9 @@ export default async function ListPage({
                 <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
                 <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent" title={t('versionsTab', lang)}>
                   <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
+                </Link>
+                <Link href={`${base}/blame`} className="inline-flex shrink-0 items-center gap-1 text-muted hover:text-accent" title="Blame">
+                  <History size={14} />
                 </Link>
                 <span className="inline-flex shrink-0 items-center gap-2 border-l border-border pl-2">
                   {tpl.isTemplate && viewer && (
