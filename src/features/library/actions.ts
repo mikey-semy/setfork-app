@@ -29,6 +29,8 @@ import { canViewList } from './access'
 function toStepInput(items: ProposedItem[]) {
   return items.map((it, i) => ({
     n: i + 1,
+    type: it.type ?? 'step',
+    content: it.content ?? {},
     title: it.title,
     desc: it.desc,
     command: it.command,
@@ -446,6 +448,9 @@ export async function refineList(input: {
 
   // Refine переписывает текстовое содержимое шагов; скриншоты не переносятся, ссылки — да.
   const items: EditorItem[] = refined.items.map((it) => ({
+    type: 'step' as const,
+    text: '',
+    caption: '',
     title: it.title,
     desc: it.desc,
     command: it.command,

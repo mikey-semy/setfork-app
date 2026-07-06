@@ -117,6 +117,9 @@ export async function acceptCandidate(generationId: string, candidateId: string)
   const slug = await uniqueSlug(cand.title || gen.query, session.userId)
   const proposed = toProposedItems(
     cand.items.map((it) => ({
+      type: 'step' as const,
+      text: '',
+      caption: '',
       title: it.title,
       desc: it.desc,
       command: sanitizeCommand(it.command ?? ''),
