@@ -6,10 +6,10 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
-import { FeedTile } from '@/features/library/FeedTile'
+import { FeedCard } from '@/features/library/FeedCard'
 import { getFeed, getPopularTags, getStarredIds, getTrendingFeed, type TrendRange } from '@/features/library/queries'
 import { getPublicCatalogs } from '@/features/catalogs/queries'
-import { CatalogTile } from '@/features/catalogs/CatalogTile'
+import { CatalogRow } from '@/features/catalogs/CatalogRow'
 import { searchPeople } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
 import { getCollections } from '@/features/collections/queries'
@@ -77,13 +77,15 @@ export default async function ExplorePage({
       {active === 'explore' && (
         <div className="flex flex-col gap-8 lg:flex-row">
           <div className="min-w-0 flex-1">
-            {/* Единая сетка: каталоги (до 4) рядом со списками-плитками. */}
-            <div className="grid gap-4 sm:grid-cols-2">
+            {/* Единая лента в ОДИН столбец (как список репозиториев GitHub):
+                каталоги (до 4) строками рядом со списками. Обложки — только у тех,
+                у кого они реально есть; синтетических баннеров нет. */}
+            <div className="flex flex-col gap-3">
               {exploreCatalogs.slice(0, 4).map((cat) => (
-                <CatalogTile key={cat.id} c={cat} lang={lang} />
+                <CatalogRow key={cat.id} c={cat} lang={lang} />
               ))}
               {feedTop.map((it) => (
-                <FeedTile key={it.id} item={it} lang={lang} starred={feedStarred.has(it.id)} />
+                <FeedCard key={it.id} item={it} lang={lang} starred={feedStarred.has(it.id)} />
               ))}
             </div>
           </div>
