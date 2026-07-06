@@ -16,6 +16,14 @@ const badBranch = (b: string) => !b || !BRANCH_RE.test(b) || b.includes('..')
 // In-process реализация GitCore поверх низкоуровневого GitStore (shell → git).
 // Пост-MVP этот же порт закрывает remote-реализация (Connect → Rust git-core).
 
+/** Текущий tip main (или null, если ветки ещё нет). */
+async function mainTip(bare: string): Promise<string | null> {
+  return exec('git', ['--git-dir', bare, 'rev-parse', '--verify', 'refs/heads/main']).then(
+    (r) => r.stdout.trim(),
+    () => null,
+  )
+}
+
 async function resolveListId(owner: string, slug: string): Promise<string | null> {
   const [r] = await db
     .select({ id: templates.id })
@@ -49,8 +57,13 @@ export const gitCoreInproc: GitCore = {
     if (!listId) return null
     // receive-pack + проекция под одним локом (ленивый append не вклинивается).
     return gitStore.withRepoLock(listId, async () => {
+      const before = await mainTip(bare)
       const data = await gitStore.receivePackRpc(bare, body, gitProtocol)
-      const newVersion = await gitStore.projectPushedCommit(listId, bare).catch(() => null)
+      const after = await mainTip(bare)
+      // Проецируем в версию ТОЛЬКО если push сдвинул main. Пуш в ветку-черновик
+      // main не двигает → иначе из неизменного main плодились бы дубли версий.
+      const moved = !!after && after !== before
+      const newVersion = moved ? await gitStore.projectPushedCommit(listId, bare).catch(() => null) : null
       return { data, newVersion }
     })
   },
