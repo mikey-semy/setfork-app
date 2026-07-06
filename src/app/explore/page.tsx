@@ -6,7 +6,10 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
-import { getFeed, getPopularTags, getTrendingFeed, type TrendRange } from '@/features/library/queries'
+import { FeedTile } from '@/features/library/FeedTile'
+import { getFeed, getPopularTags, getStarredIds, getTrendingFeed, type TrendRange } from '@/features/library/queries'
+import { getPublicCatalogs } from '@/features/catalogs/queries'
+import { CatalogTile } from '@/features/catalogs/CatalogTile'
 import { searchPeople } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
 import { getCollections } from '@/features/collections/queries'
@@ -48,6 +51,10 @@ export default async function ExplorePage({
 
   // Данные только активной вкладки.
   const feed = active === 'explore' ? await getFeed({ sort: 'trending' }, uid) : []
+  const feedTop = feed.slice(0, 12)
+  // Каталоги идут в ОСНОВНОЙ ленте Explore рядом со списками (не своя вкладка).
+  const exploreCatalogs = active === 'explore' ? await getPublicCatalogs(6) : []
+  const feedStarred = active === 'explore' && uid ? await getStarredIds(uid, feedTop.map((i) => i.id)) : new Set<string>()
   const sidePeople = active === 'explore' ? await searchPeople({ sort: 'followers', limit: 5 }) : []
   const tags = active === 'topics' ? await getPopularTags(60) : []
   const trendLists = active === 'trending' && trendView === 'lists' ? await getTrendingFeed(trendRange, uid) : []
@@ -70,7 +77,15 @@ export default async function ExplorePage({
       {active === 'explore' && (
         <div className="flex flex-col gap-8 lg:flex-row">
           <div className="min-w-0 flex-1">
-            <FeedList items={feed.slice(0, 12)} lang={lang} viewerId={uid} tile />
+            {/* Единая сетка: каталоги (до 4) рядом со списками-плитками. */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {exploreCatalogs.slice(0, 4).map((cat) => (
+                <CatalogTile key={cat.id} c={cat} lang={lang} />
+              ))}
+              {feedTop.map((it) => (
+                <FeedTile key={it.id} item={it} lang={lang} starred={feedStarred.has(it.id)} />
+              ))}
+            </div>
           </div>
           <aside className="w-full shrink-0 space-y-6 lg:w-[300px]">
             <Widget title={t('trending', lang)} icon={<Star size={14} className="text-accent" />}>
