@@ -58,7 +58,7 @@ export default async function ExplorePage({
   return (
     <div className="w-full">
       {/* Единый TabNav (как профиль/список): переезжающая полоска активной вкладки. */}
-      <TabNav maxWidthClass="max-w-[1080px]" scope="explore">
+      <TabNav maxWidthClass="max-w-[1080px]" scope="explore" center>
         {TABS.map((tb) => (
           <TabItem key={tb.id} href={tabHref(tb.id)} on={tb.id === active} icon={TAB_ICON[tb.id]} label={t(tb.key, lang)} />
         ))}

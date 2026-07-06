@@ -17,11 +17,14 @@ export function TabNav({
   children,
   maxWidthClass = 'max-w-[1180px]',
   scope = 'default',
+  center = false,
 }: {
   children: React.ReactNode
   maxWidthClass?: string
   /** Ключ памяти позиции: табы одного раздела (напр. 'list') анимируются между маршрутами. */
   scope?: string
+  /** Центрировать вкладки (витрина Explore); по умолчанию слева (GitHub-стиль). */
+  center?: boolean
 }) {
   const ref = useRef<HTMLElement>(null)
   const [bar, setBar] = useState<{ left: number; width: number } | null>(() => lastPos.get(scope) ?? null)
@@ -45,7 +48,7 @@ export function TabNav({
 
   return (
     <div className="border-b border-border">
-      <nav ref={ref} className={`no-scrollbar relative mx-auto flex w-full gap-1 overflow-x-auto px-4 text-[14px] ${maxWidthClass}`}>
+      <nav ref={ref} className={`no-scrollbar relative mx-auto flex w-full gap-1 overflow-x-auto px-4 text-[14px] ${center ? 'justify-center' : ''} ${maxWidthClass}`}>
         {children}
         {bar && (
           <span
