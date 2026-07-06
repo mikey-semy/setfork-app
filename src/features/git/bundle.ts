@@ -30,17 +30,22 @@ async function loadVersions(templateId: string, ordered: boolean, title: LocaleT
   const out: VersionData[] = []
   for (const v of versions) {
     const rows = await db.select().from(stepsTable).where(eq(stepsTable.versionId, v.id)).orderBy(asc(stepsTable.n))
-    const serSteps: SerStep[] = rows.map((s) => ({
-      n: s.n,
-      title: pick(s.title),
-      desc: pick(s.desc),
-      command: s.command ?? '',
-      level: s.level,
-      why: pick(s.why),
-      section: pick(s.section),
-      subtasks: (s.subtasks as LocaleText[]).map(pick).filter(Boolean),
-      refs: (s.refs as { label: LocaleText; url?: string }[]).map((r) => ({ label: pick(r.label), url: r.url })),
-    }))
+    const serSteps: SerStep[] = rows.map((s) => {
+      const isStep = !s.type || s.type === 'step'
+      return {
+        n: s.n,
+        // type/content — только у не-step блоков, сразу после n (порядок ключей = Rust bundle.rs).
+        ...(isStep ? {} : { type: s.type, content: (s.content ?? {}) as Record<string, unknown> }),
+        title: pick(s.title),
+        desc: pick(s.desc),
+        command: s.command ?? '',
+        level: s.level,
+        why: pick(s.why),
+        section: pick(s.section),
+        subtasks: (s.subtasks as LocaleText[]).map(pick).filter(Boolean),
+        refs: (s.refs as { label: LocaleText; url?: string }[]).map((r) => ({ label: pick(r.label), url: r.url })),
+      }
+    })
     out.push({
       version: v.version,
       note: v.note,
