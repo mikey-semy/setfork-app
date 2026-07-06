@@ -100,3 +100,49 @@ describe('threeWayMerge', () => {
     expect(r.merged.tags).toEqual(['x', 'y'])
   })
 })
+
+// Блочная модель: text/image блоки не должны ломать/терять merge.
+const textBlk = (md: string): TwStep => ({ ...step(''), type: 'text', content: { md } })
+const imgBlk = (ref: string, caption = ''): TwStep => ({ ...step(''), type: 'image', content: { ref, caption } })
+
+describe('threeWayMerge — блоки', () => {
+  it('несколько text-блоков не коллапсируют в один ключ', () => {
+    const base = list([step('a'), textBlk('one'), textBlk('two')])
+    const ours = list([step('a'), textBlk('one'), textBlk('two')])
+    const theirs = list([step('a'), textBlk('one'), textBlk('two')])
+    const r = threeWayMerge(base, ours, theirs)
+    expect(r.conflicts).toHaveLength(0)
+    // оба text-блока сохранены (не схлопнулись по пустому title)
+    expect(r.merged.steps.filter((s) => s.type === 'text')).toHaveLength(2)
+  })
+
+  it('добавленный в theirs image-блок попадает в merged после якоря', () => {
+    const base = list([step('a'), step('b')])
+    const ours = list([step('a'), step('b')])
+    const theirs = list([step('a'), imgBlk('img/1', 'shot'), step('b')])
+    const r = threeWayMerge(base, ours, theirs)
+    expect(r.conflicts).toHaveLength(0)
+    const kinds = r.merged.steps.map((s) => s.type ?? 'step')
+    expect(kinds).toEqual(['step', 'image', 'step'])
+  })
+
+  it('step-блоки по-прежнему ключуются по title (byte-compat)', () => {
+    const base = list([step('a'), textBlk('note'), step('b')])
+    const ours = list([step('a', { desc: 'ours' }), textBlk('note'), step('b')])
+    const theirs = list([step('a'), textBlk('note'), step('b', { desc: 'theirs' })])
+    const r = threeWayMerge(base, ours, theirs)
+    expect(r.conflicts).toHaveLength(0)
+    expect(r.merged.steps.find((s) => s.title === 'a')?.desc).toBe('ours')
+    expect(r.merged.steps.find((s) => s.title === 'b')?.desc).toBe('theirs')
+    expect(r.merged.steps.some((s) => s.type === 'text' && s.content?.md === 'note')).toBe(true)
+  })
+
+  it('удалённый в theirs text-блок исчезает без конфликта', () => {
+    const base = list([step('a'), textBlk('gone'), step('b')])
+    const ours = list([step('a'), textBlk('gone'), step('b')])
+    const theirs = list([step('a'), step('b')])
+    const r = threeWayMerge(base, ours, theirs)
+    expect(r.conflicts).toHaveLength(0)
+    expect(r.merged.steps.some((s) => s.type === 'text')).toBe(false)
+  })
+})

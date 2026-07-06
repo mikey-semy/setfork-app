@@ -313,17 +313,21 @@ async function snapshotAt(bare: string, rev: string): Promise<BranchSnapshot | n
     desc?: string
     tags?: string[]
     ordered?: boolean
-    steps?: { title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
+    steps?: { type?: string; content?: Record<string, unknown>; title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
   }
   try {
     parsed = JSON.parse(raw)
   } catch {
     return null
   }
+  const isStep = (st: { type?: string }) => !st.type || st.type === 'step'
+  // Шаг-блок без title — мусор; не-step блоки (text/image) валидны и без title.
   const steps: BranchSnapshot['steps'] = (parsed.steps ?? [])
-    .filter((st) => (st.title ?? '').trim())
+    .filter((st) => !isStep(st) || (st.title ?? '').trim())
     .map((st, i) => ({
       n: i + 1,
+      // type/content несём только у не-step блоков (у шага — undefined, byte-compat).
+      ...(isStep(st) ? {} : { type: st.type, content: st.content && typeof st.content === 'object' ? st.content : {} }),
       title: st.title ?? '',
       desc: st.desc ?? '',
       command: st.command ?? '',

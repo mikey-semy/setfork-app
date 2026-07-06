@@ -57,8 +57,8 @@ export default async function ListPage({
     ? snapshot.steps.map((s) => ({
         id: `br-${s.n}`,
         n: s.n,
-        type: 'step', // снапшот ветки (Rust) — пока только шаг-блоки
-        content: {} as Record<string, unknown>,
+        type: s.type ?? 'step', // не-step блоки снапшота (inproc); Rust пока только шаги
+        content: (s.content ?? {}) as Record<string, unknown>,
         title: { en: s.title } as (typeof dbSteps)[number]['title'],
         desc: { en: s.desc } as (typeof dbSteps)[number]['desc'],
         command: s.command,
