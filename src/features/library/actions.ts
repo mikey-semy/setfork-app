@@ -578,6 +578,8 @@ export async function useTemplate(templateId: string): Promise<void> {
     note: `from template ${src.slug}`,
     steps: srcSteps.map((s, i) => ({
       n: i + 1,
+      type: s.type ?? 'step', // блочная модель: копия не должна терять text/image блоки
+      content: s.content ?? {},
       title: s.title,
       desc: s.desc,
       command: s.command,
@@ -604,6 +606,16 @@ export async function forkTemplate(templateId: string): Promise<void> {
   // и скрытые модерацией доступны только владельцу (как в useTemplate). Иначе
   // любой залогиненный мог бы склонировать чужой приватный список по его id.
   if (!canViewList(src, { isOwner: src.ownerId === session.userId })) return
+
+  // Дедуп: этот пользователь уже форкал этот список → ведём на существующий форк,
+  // не плодим дубли (двойной клик по кнопке Fork создавал два форка + двойной счётчик).
+  const [existingFork] = await db
+    .select({ slug: templates.slug })
+    .from(templates)
+    .where(and(eq(templates.ownerId, session.userId), eq(templates.forkedFromId, src.id)))
+    .limit(1)
+  if (existingFork) redirect(`/${session.handle}/${existingFork.slug}`)
+
   if (!(await listQuota(session.userId, session.handle)).ok) redirect(`/${session.handle}?e=list_quota`)
 
   const owned = await db
@@ -630,6 +642,8 @@ export async function forkTemplate(templateId: string): Promise<void> {
     note: `forked from ${src.slug} v${srcCurrent?.version ?? 1}`,
     steps: srcSteps.map((s, i) => ({
       n: i + 1,
+      type: s.type ?? 'step', // блочная модель: копия не должна терять text/image блоки
+      content: s.content ?? {},
       title: s.title,
       desc: s.desc,
       command: s.command,
