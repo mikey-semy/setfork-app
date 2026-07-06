@@ -208,13 +208,18 @@ export const releases = pgTable(
   (t) => [unique('releases_tpl_tag').on(t.templateId, t.tag), index('releases_tpl_idx').on(t.templateId, t.createdAt)],
 )
 
-// ── Steps ────────────────────────────────────────────────────────────
+// ── Steps (= блоки списка) ───────────────────────────────────────────
+// Всё-блочная модель: каждая строка — БЛОК с полем type. 'step' — исполняемый
+// пункт (историческое поведение, дефолт для всех старых строк); 'text'/'image'
+// — презентационные блоки (payload в content). Прогон чекает только type='step'.
 export const steps = pgTable('steps', {
   id: uuid('id').primaryKey().defaultRandom(),
   versionId: uuid('version_id')
     .notNull()
     .references(() => templateVersions.id, { onDelete: 'cascade' }),
-  n: integer('n').notNull(), // порядковый номер (1..)
+  n: integer('n').notNull(), // порядковый номер блока в версии (1..)
+  type: text('type').notNull().default('step'), // 'step' | 'text' | 'image'
+  content: jsonb('content').notNull().default({}).$type<Record<string, unknown>>(), // payload не-step блоков
   title: jsonb('title').notNull().$type<LocaleText>(),
   desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
   command: text('command').notNull().default(''),
