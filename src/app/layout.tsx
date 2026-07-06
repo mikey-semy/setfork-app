@@ -10,6 +10,7 @@ import { getBrowserNotifyEnabled, getNotifications, getUnreadCount } from '@/fea
 import { getUserTemplates } from '@/features/library/queries'
 import { getUserAppearance } from '@/features/settings/appearance'
 import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
+import { HydrationSignal } from '@/shared/ui/HydrationSignal'
 import { TopNav } from '@/widgets/TopNav'
 import { Footer } from '@/widgets/Footer'
 import './globals.css'
@@ -105,6 +106,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <body>
+        <HydrationSignal />
         {/* Локальный выбор (localStorage) приоритетнее аккаунтного SSR — мгновенная
             реакция на этом устройстве; иначе остаются data-атрибуты из аккаунта. */}
         <script
