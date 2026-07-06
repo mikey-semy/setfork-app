@@ -197,6 +197,13 @@
       "when": 1783223019442,
       "tag": "0027_step_blocks",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1783223020442,
+      "tag": "0028_search_fts",
+      "breakpoints": true
     }
   ]
 }

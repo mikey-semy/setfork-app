@@ -102,6 +102,26 @@ const FEED_COLS = {
 
 const tagFilter = (tag: string): SQL => sql`${templates.tags} @> ARRAY[${tag}]::text[]`
 
+// ── Keyword-поиск ────────────────────────────────────────────────────
+// Выражения ДОЛЖНЫ буквально совпадать с индексами 0027_search_fts.sql,
+// иначе Postgres не сможет использовать trgm/FTS GIN и уйдёт в seq scan.
+const titleText = sql`(coalesce(${templates.title}->>'en','') || ' ' || coalesce(${templates.title}->>'ru',''))`
+const descText = sql`(coalesce(${templates.desc}->>'en','') || ' ' || coalesce(${templates.desc}->>'ru',''))`
+
+/** Условие поиска: подстрока (ILIKE через trgm-GIN) + мультисловный FTS
+ *  (websearch_to_tsquery, 'simple' — без стемминга, контент EN/RU) +
+ *  word_similarity (<%) — устойчивость к опечаткам в заголовке. */
+function searchCondition(q: string): SQL {
+  const like = `%${q}%`
+  return or(
+    ilike(titleText, like),
+    ilike(descText, like),
+    ilike(templates.slug, like),
+    sql`to_tsvector('simple', ${titleText} || ' ' || ${descText} || ' ' || ${templates.slug}) @@ websearch_to_tsquery('simple', ${q})`,
+    sql`${q} <% ${titleText}`,
+  )!
+}
+
 // В публичном доступе — только published + public + moderation='active'
 // (черновики/flagged/hidden не публикуются). Владелец видит свои списки в любом статусе.
 function visibleFilter(viewerId?: string): SQL {
@@ -134,10 +154,7 @@ function extraFilters(opts: {
 async function keywordFeed(order: SQL, viewerId?: string, tag?: string, q?: string, extra: SQL[] = []): Promise<FeedItem[]> {
   const filters: SQL[] = [visibleFilter(viewerId), ...extra]
   if (tag) filters.push(tagFilter(tag))
-  if (q) {
-    const like = `%${q}%`
-    filters.push(or(ilike(sql`${templates.title}::text`, like), ilike(sql`${templates.desc}::text`, like), ilike(templates.slug, like))!)
-  }
+  if (q) filters.push(searchCondition(q))
   const rows = await db
     .select(FEED_COLS)
     .from(templates)
@@ -250,12 +267,7 @@ export async function countLists(
   const filters: SQL[] = [visibleFilter(viewerId), ...extraFilters(opts)]
   if (opts.tag) filters.push(tagFilter(opts.tag))
   const q = opts.q?.trim()
-  if (q) {
-    const like = `%${q}%`
-    filters.push(
-      or(ilike(sql`${templates.title}::text`, like), ilike(sql`${templates.desc}::text`, like), ilike(templates.slug, like))!,
-    )
-  }
+  if (q) filters.push(searchCondition(q))
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(templates)
@@ -284,7 +296,7 @@ export async function searchListSuggestions(q: string, limit = 6): Promise<ListS
         eq(templates.status, 'published'),
         eq(templates.visibility, 'public'),
         eq(templates.moderation, 'active'),
-        or(ilike(sql`${templates.title}::text`, like), ilike(templates.slug, like))!,
+        or(ilike(titleText, like), ilike(templates.slug, like), sql`${term} <% ${titleText}`)!,
       ),
     )
     .orderBy(desc(sql`${templates.starsCount} + ${templates.forksCount}`))
