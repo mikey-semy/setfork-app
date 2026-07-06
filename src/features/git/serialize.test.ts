@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { versionFiles, type SerStep, type SerVersion } from './serialize'
+import { parseList, versionFiles, type SerStep, type SerVersion } from './serialize'
 
 const step = (over: Partial<SerStep> = {}): SerStep => ({
   n: 1,
@@ -70,5 +70,62 @@ describe('versionFiles — golden serialization (must match Rust git-core)', () 
     expect(md).toContain('level: optional')
     expect(md).toContain('section: "Setup"')
     expect(md).toContain('command: "echo \\"x\\""')
+  })
+})
+
+describe('block model — byte-compat for step-only + non-step blocks', () => {
+  // Инвариант golden: список из одних шагов (без type/content) должен давать
+  // ТОТ ЖЕ выхлоп, что и до введения блоков — иначе ломается SHA-совместимость с Rust.
+  it('step-only list: type/content omitted from list.json (no diff-noise)', () => {
+    const listJson = versionFiles(version()).find((f) => f.path === 'list.json')!.content
+    expect(listJson).not.toContain('"type"')
+    expect(listJson).not.toContain('"content"')
+  })
+
+  it('explicit type:"step" serializes identically to undefined type', () => {
+    const withType = versionFiles(version({ steps: [step({ n: 1, type: 'step' })] }))
+    const without = versionFiles(version({ steps: [step({ n: 1 })] }))
+    // NB: type:'step' попадает в list.json, но НЕ должен ломать README/шаги.
+    expect(withType.find((f) => f.path === 'README.md')!.content).toBe(without.find((f) => f.path === 'README.md')!.content)
+    expect(withType.map((f) => f.path)).toEqual(without.map((f) => f.path))
+  })
+
+  it('non-step blocks get NO steps/*.md and render inline in README', () => {
+    const v = version({
+      ordered: true,
+      steps: [
+        step({ n: 1, title: 'First' }),
+        { n: 2, type: 'text', content: { md: 'Some **intro** copy.' }, title: '', desc: '', command: '', level: 'required', why: '', section: '', subtasks: [], refs: [] },
+        { n: 3, type: 'image', content: { ref: 'img/abc', caption: 'Diagram' }, title: '', desc: '', command: '', level: 'required', why: '', section: '', subtasks: [], refs: [] },
+        step({ n: 4, title: 'Second' }),
+      ],
+    })
+    const files = versionFiles(v)
+    // только 2 шаг-блока дают .md
+    expect(files.filter((f) => f.path.startsWith('steps/')).map((f) => f.path)).toEqual(['steps/01-first.md', 'steps/04-second.md'])
+    const readme = files.find((f) => f.path === 'README.md')!.content
+    expect(readme).toContain('Some **intro** copy.')
+    expect(readme).toContain('![Diagram](img/abc)')
+    // нумерация и счётчик — только по шагам (2 шага, помечены 1. и 2.)
+    expect(readme).toContain('· 2 items')
+    expect(readme).toContain('1. **First**')
+    expect(readme).toContain('2. **Second**')
+  })
+
+  it('parseList round-trips list.json back to the same SerVersion (with blocks)', () => {
+    const v = version({
+      steps: [
+        step({ n: 1, title: 'First', desc: 'do it', command: 'echo hi', subtasks: ['a'], refs: [{ label: 'docs', url: 'https://x' }] }),
+        { n: 2, type: 'text', content: { md: 'note' }, title: '', desc: '', command: '', level: 'required', why: '', section: '', subtasks: [], refs: [] },
+      ],
+    })
+    const listJson = versionFiles(v).find((f) => f.path === 'list.json')!.content
+    expect(parseList(listJson)).toEqual(v)
+  })
+
+  it('parseList tolerates garbage', () => {
+    expect(parseList('not json')).toBeNull()
+    expect(parseList('{}')).toBeNull()
+    expect(parseList('[]')).toBeNull()
   })
 })

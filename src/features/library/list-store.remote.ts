@@ -65,6 +65,10 @@ function toStep(s: PbStep): Step {
     id: s.id,
     versionId: s.versionId,
     n: s.n,
+    // TODO(block-mirror): proto Step пока без type/content — Rust ListRead отдаёт
+    // только шаг-блоки. До зеркала блоков в ядре дефолтим в 'step'/{}.
+    type: 'step',
+    content: {},
     title: loc(s.title),
     desc: loc(s.desc),
     command: s.command,
