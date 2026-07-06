@@ -30,12 +30,26 @@ function toPbStep(s: Suggestion['steps'][number]): PbStep {
     subtasks: s.subtasks.map((t) => ({ v: t })),
     refs: s.refs.map((r) => ({ label: { v: r.label }, url: r.url ?? '' })),
     imageRef: s.imageRef ?? '',
+    // Блочная модель: type/content_json — только у не-step блоков.
+    type: s.type && s.type !== 'step' ? s.type : '',
+    contentJson: s.type && s.type !== 'step' ? JSON.stringify(s.content ?? {}) : '',
   } as PbStep
 }
 
 function fromPbStep(s: PbStep, i: number): Suggestion['steps'][number] {
+  const isStep = !s.type || s.type === 'step'
+  let content: Record<string, unknown> = {}
+  if (!isStep && s.contentJson) {
+    try {
+      const o = JSON.parse(s.contentJson)
+      if (o && typeof o === 'object') content = o as Record<string, unknown>
+    } catch {
+      content = {}
+    }
+  }
   return {
     n: i + 1,
+    ...(isStep ? {} : { type: s.type, content }),
     title: s.title?.v ?? {},
     desc: s.desc?.v ?? {},
     command: s.command,

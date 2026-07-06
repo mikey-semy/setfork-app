@@ -173,6 +173,9 @@ message NewStep {
   repeated LocaleText subtasks = 7;
   repeated StepRef refs = 8;
   string image_ref = 9; // '' = нет
+  // Блочная модель: '' | 'step' = шаг; 'text'|'image' — презентационный блок.
+  string type = 10;
+  string content_json = 11; // JSON payload не-step блока ('' = нет)
 }
 
 message AddVersionRequest {
