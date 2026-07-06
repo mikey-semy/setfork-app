@@ -155,6 +155,13 @@
       "when": 1783223013442,
       "tag": "0021_perf_indexes_round2",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1783223014442,
+      "tag": "0022_list_labels",
+      "breakpoints": true
     }
   ]
 }

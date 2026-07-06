@@ -469,6 +469,22 @@ export const issues = pgTable(
   ],
 )
 
+// Кастомные метки списка (сверх встроенной палитры): имя + hex-цвет, задаёт
+// владелец. На issue хранятся ключом `c:<id>` (см. features/issues/labels).
+export const listLabels = pgTable(
+  'list_labels',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    color: text('color').notNull(), // hex #rrggbb
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('list_labels_tpl_name').on(t.templateId, t.name), index('list_labels_tpl_idx').on(t.templateId)],
+)
+
 // Вехи (milestones) — группировка issue по цели/срокам, как в GitHub.
 export const milestones = pgTable(
   'milestones',

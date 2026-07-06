@@ -10,7 +10,8 @@ import { notify, notifyMany, notifyMentions } from '@/features/notifications/not
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { collabStore, issueCommenterIds } from '@/features/collab-store/store'
-import { isLabelKey } from './labels'
+import { customId, isCustomKey, isLabelKey } from './labels'
+import { getListLabels } from './queries'
 
 async function resolveTemplate(owner: string, slug: string) {
   const [row] = await db
@@ -27,7 +28,10 @@ async function resolveTemplate(owner: string, slug: string) {
   return row ?? null
 }
 
-const cleanLabels = (raw: string[]) => [...new Set(raw.filter(isLabelKey))]
+// Оставляем встроенные ключи + кастомные `c:<id>`, чьи id реально есть у списка.
+const cleanLabels = (raw: string[], validCustom: Set<string>) =>
+  [...new Set(raw.filter((k) => isLabelKey(k) || (isCustomKey(k) && validCustom.has(customId(k)))))]
+const customIdSet = async (templateId: string) => new Set((await getListLabels(templateId)).map((l) => l.id))
 
 /** Открыть issue. Любой залогиненный на публичном списке; на приватном — только владелец. */
 export async function createIssue(formData: FormData): Promise<void> {
@@ -36,7 +40,7 @@ export async function createIssue(formData: FormData): Promise<void> {
   const slug = String(formData.get('slug') ?? '')
   const title = String(formData.get('title') ?? '').trim().slice(0, 200)
   const body = String(formData.get('body') ?? '').trim().slice(0, 20000)
-  const labels = cleanLabels(formData.getAll('labels').map(String))
+  const rawLabels = formData.getAll('labels').map(String)
   if (!title) redirect(`/${owner}/${slug}/issues/new?e=empty`)
 
   const tpl = await resolveTemplate(owner, slug)
@@ -45,6 +49,7 @@ export async function createIssue(formData: FormData): Promise<void> {
   if (tpl.visibility === 'private' && !isOwner) redirect(`/${owner}/${slug}`)
   if (tpl.moderation !== 'active' && !isOwner) redirect(`/${owner}/${slug}`)
 
+  const labels = cleanLabels(rawLabels, await customIdSet(tpl.id))
   const ins = await collabStore.openIssue(tpl.id, session.userId, title, body, labels)
 
   await ensureWatch(session.userId, tpl.id) // автор issue следит за списком
@@ -114,7 +119,8 @@ export async function setIssueLabels(owner: string, slug: string, number: number
   const { tpl, iss } = loaded
   const canManage = session.userId === tpl.ownerId || (await isCollaborator(tpl.id, session.userId))
   if (!canManage) redirect(`/${owner}/${slug}/issues/${number}`)
-  await db.update(issues).set({ labels: cleanLabels(labels), updatedAt: new Date() }).where(eq(issues.id, iss.id))
+  const cleaned = cleanLabels(labels, await customIdSet(tpl.id))
+  await db.update(issues).set({ labels: cleaned, updatedAt: new Date() }).where(eq(issues.id, iss.id))
   revalidatePath(`/${owner}/${slug}/issues/${number}`)
 }
 

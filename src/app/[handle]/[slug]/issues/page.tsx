@@ -8,10 +8,14 @@ import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { getListMeta } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
-import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, type IssueFilter, type IssueSort } from '@/features/issues/queries'
+import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, getListLabels, type IssueFilter, type IssueSort } from '@/features/issues/queries'
 import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
+import { LabelsManager } from '@/features/issues/LabelsManager'
 import { FilterMenu } from '@/features/issues/FilterMenu'
+import { resolveChip } from '@/features/issues/labels'
+import { isCollaborator } from '@/features/collab/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
+import { Tag } from 'lucide-react'
 
 export default async function IssuesPage({
   params,
@@ -32,13 +36,15 @@ export default async function IssuesPage({
   const milestone = sp.milestone || undefined
   const sort: IssueSort = sp.sort === 'oldest' ? 'oldest' : 'newest'
 
-  const [counts, list, labels, mstones] = await Promise.all([
+  const [counts, list, labels, mstones, custom] = await Promise.all([
     getIssueCounts(meta.id),
     getIssues(meta.id, { status, q, label, milestone, sort }),
     getIssueLabelsInUse(meta.id),
     getMilestonesForPicker(meta.id),
+    getListLabels(meta.id),
   ])
   const assigneesByIssue = await getIssueAssigneesFor(list.map((i) => i.id))
+  const canManage = !!session && (session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId)))
   const base = `/${owner}/${slug}/issues`
   const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short' })
 
@@ -91,7 +97,7 @@ export default async function IssuesPage({
                 label={t('labelsLabel', lang)}
                 items={[
                   { label: lang === 'ru' ? 'Все метки' : 'All labels', href: hrefWith({ label: undefined }), active: !label },
-                  ...labels.map((l) => ({ label: l, href: hrefWith({ label: l }), active: label === l })),
+                  ...labels.map((l) => ({ label: resolveChip(l, custom, lang).text, href: hrefWith({ label: l }), active: label === l })),
                 ]}
               />
             )}
@@ -114,6 +120,19 @@ export default async function IssuesPage({
           </div>
         </div>
 
+        {/* Управление кастомными метками — владельцу/коллаборатору (свёрнуто). */}
+        {canManage && (
+          <details className="mb-3 rounded-md border border-border bg-surface">
+            <summary className="flex cursor-pointer items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-ink-2 hover:text-ink">
+              <Tag size={14} /> {lang === 'ru' ? 'Кастомные метки' : 'Custom labels'}
+              <span className="font-mono text-[11px] text-muted">{custom.length}</span>
+            </summary>
+            <div className="border-t border-border p-3">
+              <LabelsManager templateId={meta.id} initial={custom} lang={lang} />
+            </div>
+          </details>
+        )}
+
         {list.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
             {filtered ? t('noIssuesMatch', lang) : status === 'open' ? t('noOpenIssues', lang) : t('noClosedIssues', lang)}
@@ -132,7 +151,7 @@ export default async function IssuesPage({
                     <Link href={`${base}/${it.number}`} className="text-[14.5px] font-semibold text-ink hover:text-accent">
                       {it.title}
                     </Link>
-                    <IssueLabelChips labels={it.labels} lang={lang} />
+                    <IssueLabelChips labels={it.labels} lang={lang} custom={custom} />
                     {it.milestoneTitle && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[11.5px] text-ink-2">
                         <MilestoneIcon size={11} className="text-accent" /> {it.milestoneTitle}

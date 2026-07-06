@@ -8,7 +8,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getListMeta } from '@/features/library/queries'
 import { ListHeader } from '@/features/library/ListHeader'
-import { getIssue, getIssueAssignees, getIssueComments } from '@/features/issues/queries'
+import { getIssue, getIssueAssignees, getIssueComments, getListLabels } from '@/features/issues/queries'
 import { LabelEditor } from '@/features/issues/LabelEditor'
 import { AssigneePicker } from '@/features/issues/AssigneePicker'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
@@ -33,11 +33,12 @@ export default async function IssueThreadPage({
   if (!issue) notFound()
   const comments = await getIssueComments(issue.id)
   const path = `/${owner}/${slug}/issues/${issue.number}`
-  const [issueR, cmtR, assignees, milestoneOpts] = await Promise.all([
+  const [issueR, cmtR, assignees, milestoneOpts, custom] = await Promise.all([
     getReactionsFor('issue', [issue.id], session?.userId),
     getReactionsFor('issue_comment', comments.map((c) => c.id), session?.userId),
     getIssueAssignees(issue.id),
     getMilestonesForPicker(meta.id),
+    getListLabels(meta.id),
   ])
 
   const isOwner = session?.userId === meta.ownerId
@@ -76,7 +77,7 @@ export default async function IssueThreadPage({
             <span className="font-semibold text-ink">{issue.authorHandle}</span> {t('openedThis', lang)} ·{' '}
             {comments.length} {t('commentBtn', lang).toLowerCase()}
           </span>
-          <LabelEditor owner={owner} slug={slug} number={issue.number} labels={issue.labels} canEdit={canManage} lang={lang} />
+          <LabelEditor owner={owner} slug={slug} number={issue.number} labels={issue.labels} canEdit={canManage} lang={lang} custom={custom} />
         </div>
 
         {/* Исполнители + веха */}

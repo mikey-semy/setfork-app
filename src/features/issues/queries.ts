@@ -1,7 +1,17 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
-import { db, issueAssignees, issueComments, issues, milestones, users } from '@/shared/db'
+import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
+import type { CustomLabel } from './labels'
+
+/** Кастомные метки списка (для пикеров/чипов/менеджера). */
+export async function getListLabels(templateId: string): Promise<CustomLabel[]> {
+  return db
+    .select({ id: listLabels.id, name: listLabels.name, color: listLabels.color })
+    .from(listLabels)
+    .where(eq(listLabels.templateId, templateId))
+    .orderBy(asc(listLabels.name))
+}
 
 export type IssueFilter = 'open' | 'closed'
 export type IssueSort = 'newest' | 'oldest'
