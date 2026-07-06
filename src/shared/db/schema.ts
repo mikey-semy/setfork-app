@@ -153,7 +153,20 @@ export const templates = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ ownerSlug: unique('templates_owner_slug').on(t.ownerId, t.slug), forkedFrom: index('templates_forked_from_idx').on(t.forkedFromId) }),
+  (t) => ({
+    ownerSlug: unique('templates_owner_slug').on(t.ownerId, t.slug),
+    forkedFrom: index('templates_forked_from_idx').on(t.forkedFromId),
+    // Публичная лента: сорт по updatedAt / starsCount под фильтром видимости —
+    // частичные индексы точно под visibleFilter (published+public+active).
+    pubUpdated: index('templates_pub_updated_idx')
+      .on(t.updatedAt.desc())
+      .where(sql`status = 'published' and visibility = 'public' and moderation = 'active'`),
+    pubStars: index('templates_pub_stars_idx')
+      .on(t.starsCount.desc())
+      .where(sql`status = 'published' and visibility = 'public' and moderation = 'active'`),
+    ownerUpdated: index('templates_owner_updated_idx').on(t.ownerId, t.updatedAt.desc()), // списки профиля
+    repository: index('templates_repository_idx').on(t.repositoryId), // списки каталога
+  }),
 )
 
 // ── Template versions (лёгкое версионирование) ───────────────────────
@@ -266,7 +279,11 @@ export const stars = pgTable(
       .references(() => templates.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ userTpl: unique('stars_user_tpl').on(t.userId, t.templateId), tpl: index('stars_tpl_idx').on(t.templateId) }),
+  (t) => ({
+    userTpl: unique('stars_user_tpl').on(t.userId, t.templateId),
+    tpl: index('stars_tpl_idx').on(t.templateId),
+    userCreated: index('stars_user_created_idx').on(t.userId, t.createdAt.desc()), // вкладка «starred» профиля
+  }),
 )
 
 // ── Star folders (папки для организации starred-списков, как GitHub Lists) ──
@@ -711,7 +728,10 @@ export const notifications = pgTable(
     read: boolean('read').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('notifications_recipient_idx').on(t.recipientId, t.read)],
+  (t) => [
+    index('notifications_recipient_idx').on(t.recipientId, t.read),
+    index('notifications_recipient_created_idx').on(t.recipientId, t.createdAt.desc()), // колокол: последние N
+  ],
 )
 
 // ── Relations ────────────────────────────────────────────────────────
