@@ -148,6 +148,9 @@ message SnapshotStep {
   string section = 7;
   repeated string subtasks = 8;
   repeated SnapshotRef refs = 9;
+  // Блочная модель: '' | 'step' = шаг; 'text'|'image' — презентационный блок.
+  string type = 10;
+  string content_json = 11; // JSON payload не-step блока ('' = нет)
 }
 
 message SnapshotRef {

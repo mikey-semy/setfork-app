@@ -149,8 +149,17 @@ function toSnapshot(res: {
   desc: string
   tags: string[]
   ordered: boolean
-  steps: { n: number; title: string; desc: string; command: string; level: string; why: string; section: string; subtasks: string[]; refs: { label: string; url: string }[] }[]
+  steps: { n: number; type: string; contentJson: string; title: string; desc: string; command: string; level: string; why: string; section: string; subtasks: string[]; refs: { label: string; url: string }[] }[]
 }) {
+  const parseContent = (json: string): Record<string, unknown> => {
+    if (!json) return {}
+    try {
+      const o = JSON.parse(json)
+      return o && typeof o === 'object' ? (o as Record<string, unknown>) : {}
+    } catch {
+      return {}
+    }
+  }
   return {
     tipSha: res.tipSha,
     title: res.title,
@@ -159,6 +168,8 @@ function toSnapshot(res: {
     ordered: res.ordered,
     steps: res.steps.map((s) => ({
       n: s.n,
+      // Блочная модель: type/content_json из ядра (R2); '' = шаг (поля опускаем).
+      ...(s.type && s.type !== 'step' ? { type: s.type, content: parseContent(s.contentJson) } : {}),
       title: s.title,
       desc: s.desc,
       command: s.command,

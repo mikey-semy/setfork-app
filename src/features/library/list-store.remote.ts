@@ -21,6 +21,16 @@ const writeClient = createClient(ListWrite, transport)
 
 const loc = (l?: PbLoc): LocaleText => (l?.v ?? {}) as LocaleText
 const orNull = (s: string): string | null => (s === '' ? null : s)
+// content_json ('' = нет) → объект payload не-step блока.
+const parseContent = (json: string): Record<string, unknown> => {
+  if (!json) return {}
+  try {
+    const o = JSON.parse(json)
+    return o && typeof o === 'object' ? (o as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}
 
 function toList(l: PbList): List {
   return {
@@ -65,10 +75,9 @@ function toStep(s: PbStep): Step {
     id: s.id,
     versionId: s.versionId,
     n: s.n,
-    // TODO(block-mirror): proto Step пока без type/content — Rust ListRead отдаёт
-    // только шаг-блоки. До зеркала блоков в ядре дефолтим в 'step'/{}.
-    type: 'step',
-    content: {},
+    // Блочная модель: type/content_json приходят из ядра (R2); '' = шаг.
+    type: s.type || 'step',
+    content: parseContent(s.contentJson),
     title: loc(s.title),
     desc: loc(s.desc),
     command: s.command,
