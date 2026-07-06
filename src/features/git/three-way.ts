@@ -65,10 +65,13 @@ const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
 const stepEq = (a: TwStep | null, b: TwStep | null): boolean => JSON.stringify(a) === JSON.stringify(b)
 
-/** Ключ идентичности блока: шаг — по title; text/image — по типу+контенту. */
+/** Ключ идентичности блока: шаг — по title; text/image — по стабильному
+ *  content.bid (правка блока = modify, а не add+remove). Без bid (старые данные)
+ *  — фолбэк по типу+контенту. */
 function blockKey(s: TwStep): string {
   if (!s.type || s.type === 'step') return norm(s.title)
   const c = s.content ?? {}
+  if (typeof c.bid === 'string' && c.bid) return `${s.type}#${c.bid}`
   if (s.type === 'text') return `text:${norm(String(c.md ?? ''))}`
   if (s.type === 'image') return `image:${String(c.ref ?? '')}:${norm(String(c.caption ?? ''))}`
   return `${s.type}:${norm(JSON.stringify(c))}`

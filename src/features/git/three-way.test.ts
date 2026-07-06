@@ -145,4 +145,27 @@ describe('threeWayMerge — блоки', () => {
     expect(r.conflicts).toHaveLength(0)
     expect(r.merged.steps.some((s) => s.type === 'text')).toBe(false)
   })
+
+  // Стабильный content.bid: правка text-блока — modify, а не add+remove.
+  const textWithBid = (md: string, bid: string): TwStep => ({ ...step(''), type: 'text', content: { md, bid } })
+
+  it('правка text-блока с тем же bid только в одной стороне → берём правку (не дубль)', () => {
+    const base = list([step('a'), textWithBid('v1', 'B1')])
+    const ours = list([step('a'), textWithBid('v1', 'B1')])
+    const theirs = list([step('a'), textWithBid('v2 edited', 'B1')])
+    const r = threeWayMerge(base, ours, theirs)
+    expect(r.conflicts).toHaveLength(0)
+    const texts = r.merged.steps.filter((s) => s.type === 'text')
+    expect(texts).toHaveLength(1) // один блок, не add+remove
+    expect(texts[0].content?.md).toBe('v2 edited')
+  })
+
+  it('разная правка одного bid в обеих сторонах → КОНФЛИКТ modify/modify', () => {
+    const base = list([textWithBid('v1', 'B1')])
+    const ours = list([textWithBid('ours edit', 'B1')])
+    const theirs = list([textWithBid('theirs edit', 'B1')])
+    const r = threeWayMerge(base, ours, theirs)
+    expect(r.conflicts).toHaveLength(1)
+    expect(r.conflicts[0].kind).toBe('modified')
+  })
 })
