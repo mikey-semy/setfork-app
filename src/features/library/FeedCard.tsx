@@ -67,6 +67,12 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
         </div>
       </div>
 
+      {/* Обложка — ТОЛЬКО если у списка она реально есть (без синтетических баннеров). */}
+      {item.coverImage && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.coverImage} alt="" className="hidden h-14 w-24 flex-shrink-0 rounded-md border border-border object-cover sm:block" />
+      )}
+
       {/* единственное действие — Star */}
       <form action={star} className="flex-shrink-0">
         <button
