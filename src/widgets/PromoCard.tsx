@@ -9,7 +9,7 @@ import type { Lang } from '@/shared/i18n'
 // Одна активная кампания; id — для повторного показа после смены кампании.
 const PROMO = {
   id: 'mcp-2026-07',
-  href: '/settings',
+  href: '/settings#mcp', // якорь прямо к секции MCP (scroll-mt в SettingsShell)
   en: { badge: 'New', title: 'Run checklists from your IDE', cta: 'Set up MCP access' },
   ru: { badge: 'Новое', title: 'Прогоняй чек-листы прямо из IDE', cta: 'Настроить MCP-доступ' },
 }
