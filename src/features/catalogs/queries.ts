@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, repositories, templates, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc } from '@/shared/media'
@@ -38,6 +38,30 @@ export async function getPublicCatalogs(limit = 60): Promise<PublicCatalog[]> {
     .limit(limit)
   const nonEmpty = rows.filter((r) => r.listCount > 0)
   return Promise.all(nonEmpty.map(async (r) => ({ ...r, ownerAvatarUrl: await avatarSrc(r.ownerAvatarUrl, 64) })))
+}
+
+/** Карточки каталогов по id (для подборок). Порядок не гарантирован. */
+export async function getCatalogCardsByIds(ids: string[]): Promise<PublicCatalog[]> {
+  if (!ids.length) return []
+  const pubCount = sql<number>`(
+    select count(*)::int from ${templates} t
+    where t.repository_id = ${repositories.id}
+      and t.status = 'published' and t.visibility = 'public' and t.moderation = 'active'
+  )`
+  const rows = await db
+    .select({
+      id: repositories.id,
+      name: repositories.name,
+      title: repositories.title,
+      desc: repositories.desc,
+      ownerHandle: users.handle,
+      ownerAvatarUrl: users.avatarUrl,
+      listCount: pubCount,
+    })
+    .from(repositories)
+    .innerJoin(users, eq(repositories.ownerId, users.id))
+    .where(inArray(repositories.id, ids))
+  return Promise.all(rows.map(async (r) => ({ ...r, ownerAvatarUrl: await avatarSrc(r.ownerAvatarUrl, 64) })))
 }
 
 export interface CatalogRow {

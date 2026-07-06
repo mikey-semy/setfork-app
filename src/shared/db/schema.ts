@@ -630,6 +630,43 @@ export const repositories = pgTable(
   (t) => ({ ownerName: unique('repo_owner_name').on(t.ownerId, t.name) }),
 )
 
+// ── Collections (админ-курируемые кросс-авторские подборки) ───────────
+// В отличие от Catalogs (репозиторий СВОИХ списков одного владельца),
+// Collection собирает элементы РАЗНЫХ авторов — и списки, и каталоги.
+export const collections = pgTable('collections', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  slug: text('slug').notNull().unique(),
+  title: jsonb('title').notNull().$type<LocaleText>(),
+  desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
+  coverImage: text('cover_image'),
+  accent: text('accent'),
+  curatorId: uuid('curator_id').references(() => users.id, { onDelete: 'set null' }),
+  published: boolean('published').notNull().default(false),
+  position: integer('position').notNull().default(0), // порядок на витрине Explore
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// Полиморфные элементы: kind 'list' → templates.id, 'catalog' → repositories.id.
+// FK нет (полиморфизм) — осиротевшие ссылки отфильтровываются при чтении.
+export const collectionItems = pgTable(
+  'collection_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    collectionId: uuid('collection_id')
+      .notNull()
+      .references(() => collections.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(), // 'list' | 'catalog'
+    refId: uuid('ref_id').notNull(),
+    position: integer('position').notNull().default(0),
+  },
+  (t) => [
+    unique('collection_items_uq').on(t.collectionId, t.kind, t.refId),
+    index('collection_items_coll_idx').on(t.collectionId, t.position),
+  ],
+)
+export type Collection = typeof collections.$inferSelect
+
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.

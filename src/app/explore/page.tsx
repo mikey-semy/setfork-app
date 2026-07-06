@@ -9,7 +9,8 @@ import { FeedList } from '@/features/library/FeedList'
 import { getFeed, getPopularTags, getTrendingFeed, type TrendRange } from '@/features/library/queries'
 import { searchPeople } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
-import { getPublicCatalogs } from '@/features/catalogs/queries'
+import { getCollections } from '@/features/collections/queries'
+import { CollectionCard } from '@/features/collections/CollectionCard'
 
 // Витрина-открытие (не поиск!) вкладками, как GitHub Explore. Без заголовка под шапкой.
 type Tab = 'explore' | 'topics' | 'trending' | 'collections'
@@ -51,7 +52,7 @@ export default async function ExplorePage({
   const tags = active === 'topics' ? await getPopularTags(60) : []
   const trendLists = active === 'trending' && trendView === 'lists' ? await getTrendingFeed(trendRange, uid) : []
   const trendPeople = active === 'trending' && trendView === 'people' ? await searchPeople({ sort: 'followers', limit: 30 }) : []
-  const catalogs = active === 'collections' ? await getPublicCatalogs() : []
+  const collectionCards = active === 'collections' ? await getCollections() : []
 
   const tabHref = (id: Tab) => (id === 'explore' ? '/explore' : `/explore?tab=${id}`)
 
@@ -154,29 +155,14 @@ export default async function ExplorePage({
         </>
       )}
 
-      {/* ── Collections: публичные каталоги ── */}
+      {/* ── Collections: курируемые подборки ── */}
       {active === 'collections' &&
-        (catalogs.length === 0 ? (
-          <Empty text={t('noCatalogsYet', lang)} />
+        (collectionCards.length === 0 ? (
+          <Empty text={lang === 'ru' ? 'Подборок пока нет.' : 'No collections yet.'} />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {catalogs.map((c) => (
-              <Link
-                key={c.id}
-                href={`/${c.ownerHandle}/catalogs/${c.name}`}
-                className="group rounded-lg border border-border bg-surface px-4 py-3 hover:border-border-strong"
-              >
-                <div className="flex items-center gap-2">
-                  <FolderGit2 size={15} className="text-muted" />
-                  <span className="truncate font-semibold text-accent group-hover:underline">{tr(c.title, lang) || c.name}</span>
-                </div>
-                {tr(c.desc, lang) && <p className="mt-1 line-clamp-2 text-[12.5px] text-ink-2">{tr(c.desc, lang)}</p>}
-                <div className="mt-2 flex items-center gap-2 text-[11.5px] text-muted">
-                  <Avatar handle={c.ownerHandle} avatarUrl={c.ownerAvatarUrl} size={16} />
-                  <span>{c.ownerHandle}</span>
-                  <span className="font-mono">· {c.listCount} {t('lists', lang).toLowerCase()}</span>
-                </div>
-              </Link>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {collectionCards.map((c) => (
+              <CollectionCard key={c.id} c={c} lang={lang} />
             ))}
           </div>
         ))}

@@ -183,6 +183,13 @@
       "when": 1783223017442,
       "tag": "0025_list_cover",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1783223018442,
+      "tag": "0026_collections",
+      "breakpoints": true
     }
   ]
 }

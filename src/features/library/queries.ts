@@ -147,6 +147,17 @@ async function keywordFeed(order: SQL, viewerId?: string, tag?: string, q?: stri
   return rows as FeedItem[]
 }
 
+/** Карточки списков по id (для подборок): только видимые публичные, порядок не гарантирован. */
+export async function getListCardsByIds(ids: string[]): Promise<FeedItem[]> {
+  if (!ids.length) return []
+  const rows = await db
+    .select(FEED_COLS)
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(and(inArray(templates.id, ids), visibleFilter()))
+  return withAvatar(rows as FeedItem[])
+}
+
 /** Семантический поиск (pgvector cosine) с порогом схожести. null, если запрос нельзя векторизовать. */
 async function semanticFeed(
   q: string,
