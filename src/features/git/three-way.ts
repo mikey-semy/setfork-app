@@ -1,8 +1,12 @@
 // Трёхсторонний merge списка по шагам (A4): base = merge-base, ours = main,
 // theirs = ветка. Чистая функция без server-only — тестируется в node напрямую.
 //
-// Идентичность шага — нормализованный title (стабильных id в list.json нет).
-// Дубликаты title внутри одной стороны различаются порядковым суффиксом.
+// Идентичность блока — нормализованный title для шага; для не-step блоков
+// (text/image) — по типу+контенту (стабильных id в list.json пока нет).
+// Дубликаты ключа внутри одной стороны различаются порядковым суффиксом.
+// NB: без персистентного blockId правка text/image меняет её идентичность →
+//     видна как add+remove, а не modify/modify. Полноценный edit-conflict для
+//     презентационных блоков потребует стабильного id (будущий срез + Rust).
 // Правила (классика three-way, но единица — шаг целиком):
 //   изменён только в одной стороне → берём её; в обеих одинаково → берём;
 //   в обеих по-разному → КОНФЛИКТ (modified/modified);
@@ -12,6 +16,9 @@
 // theirs-предшественника (или в конец).
 
 export interface TwStep {
+  // Не-step блоки несут type/content; у шага — undefined (byte-compat).
+  type?: string
+  content?: Record<string, unknown>
   title: string
   desc: string
   command: string
@@ -58,12 +65,21 @@ const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
 const stepEq = (a: TwStep | null, b: TwStep | null): boolean => JSON.stringify(a) === JSON.stringify(b)
 
-/** key → step, с суффиксами для дубликатов title внутри стороны. */
+/** Ключ идентичности блока: шаг — по title; text/image — по типу+контенту. */
+function blockKey(s: TwStep): string {
+  if (!s.type || s.type === 'step') return norm(s.title)
+  const c = s.content ?? {}
+  if (s.type === 'text') return `text:${norm(String(c.md ?? ''))}`
+  if (s.type === 'image') return `image:${String(c.ref ?? '')}:${norm(String(c.caption ?? ''))}`
+  return `${s.type}:${norm(JSON.stringify(c))}`
+}
+
+/** key → block, с суффиксами для дубликатов ключа внутри стороны. */
 function keyed(steps: TwStep[]): Map<string, TwStep> {
   const out = new Map<string, TwStep>()
   const seen = new Map<string, number>()
   for (const s of steps) {
-    const base = norm(s.title)
+    const base = blockKey(s)
     const n = (seen.get(base) ?? 0) + 1
     seen.set(base, n)
     out.set(n === 1 ? base : `${base}#${n}`, s)

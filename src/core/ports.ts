@@ -137,6 +137,9 @@ export interface BranchSnapshot {
   ordered: boolean
   steps: {
     n: number
+    // Блочная модель: не-step блоки несут type/content (у step — undefined).
+    type?: string
+    content?: Record<string, unknown>
     title: string
     desc: string
     command: string
