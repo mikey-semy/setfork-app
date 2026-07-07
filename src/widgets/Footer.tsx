@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { t, type Lang } from '@/shared/i18n'
 
-const REPO_URL = 'https://github.com/mikey-semy/setfork-frontend'
+// Репозиторий приватный — публичная ссылка на него отдаёт 404. Ведём в доки;
+// когда репо откроется, вернуть REPO_URL на github.
+const REPO_URL = 'https://docs.setfork.com'
 
 /** Плоский подвал (как в GitHub): один ряд приглушённых ссылок, без границ и колонок. */
 export function Footer({ lang }: { lang: Lang }) {
