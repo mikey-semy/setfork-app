@@ -150,6 +150,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
   const tags = parseTags(formData.get('tags'))
   const visibility = formData.get('visibility') === 'private' ? 'private' : 'public'
   const ordered = formData.get('ordered') !== 'unordered'
+  const gated = formData.get('gated') === 'on'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
   if (!title) return
   // Квота на число списков (мягкая защита от абьюза; админ без лимита).
@@ -175,6 +176,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
     note: 'initial',
     steps: toStepInput(proposed),
   })
+  if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
   await ensureWatch(session.userId, list.id) // владелец следит за своим списком
   if (visibility === 'public') await autoModerateList(list.id) // приватные не модерируем
   await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
@@ -193,12 +195,13 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   const note = String(formData.get('note') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
   const ordered = formData.get('ordered') !== 'unordered'
+  const gated = formData.get('gated') === 'on'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
   // Создание версии+шагов идёт через доменный порт ListStore (write-seam под Rust).
   await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed) })
-  // tags/ordered — атрибуты списка, не версии; обновляем отдельно.
-  await db.update(templates).set({ tags, ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+  // tags/ordered/gated — атрибуты списка, не версии; обновляем отдельно.
+  await db.update(templates).set({ tags, ordered, gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   if (tpl.visibility === 'public') await autoModerateList(tpl.id) // новая версия могла внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)

@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, useTemplate } from '@/features/library/actions'
@@ -117,7 +117,9 @@ export default async function ListPage({
   const quizBids = steps.filter((s) => s.type === 'quiz' && typeof s.content?.bid === 'string').map((s) => (s.content as { bid: string }).bid)
   const quizStates = quizBids.length ? await getQuizState(tpl.id, quizBids, viewer?.userId) : {}
   // Уроки курса = секции блоков (в порядке). Собираем оглавление + прогресс тестов по уроку.
+  // lessonOfBlock[si] = индекс урока блока si (−1 = до первого урока).
   const lessons: OutlineLesson[] = []
+  const lessonOfBlock: number[] = []
   {
     let cur: OutlineLesson | null = null
     for (const s of steps) {
@@ -126,6 +128,7 @@ export default async function ListPage({
         cur = { title: sec, anchor: sectionAnchor(sec), quizTotal: 0, quizPassed: 0 }
         lessons.push(cur)
       }
+      lessonOfBlock.push(cur ? lessons.length - 1 : -1)
       if (s.type === 'quiz' && cur) {
         const bid = typeof s.content?.bid === 'string' ? s.content.bid : ''
         cur.quizTotal++
@@ -133,6 +136,15 @@ export default async function ListPage({
       }
     }
   }
+  // Quiz-gate: последовательный доступ. Первый урок с несданными тестами гейтит —
+  // всё, что ПОСЛЕ него, заблокировано. Только для ученика (не владельца, не анона).
+  const isOwnerViewer = !!viewer && viewer.userId === tpl.ownerId
+  let gatedFromLesson = -1
+  if (tpl.gated && viewer && !isOwnerViewer) {
+    const g = lessons.findIndex((l) => l.quizTotal > 0 && l.quizPassed < l.quizTotal)
+    if (g >= 0) gatedFromLesson = g + 1
+  }
+  const firstLockedIdx = gatedFromLesson >= 0 ? steps.findIndex((_, si) => lessonOfBlock[si] >= gatedFromLesson) : -1
   // eslint-disable-next-line react-hooks/purity -- серверный компонент, one-shot рендер: время для дедлайнов опросов
   const nowMs = Date.now()
   // Порядковый номер показываем только по шаг-блокам (презентационные вне нумерации).
@@ -314,6 +326,23 @@ export default async function ListPage({
                     {section}
                   </h2>
                 ) : null
+
+                // Quiz-gate: блоки заблокированного урока не показываем; на первом —
+                // карточка-замок «пройдите тесты предыдущего урока».
+                if (firstLockedIdx >= 0 && lessonOfBlock[si] >= gatedFromLesson) {
+                  if (si !== firstLockedIdx) return null
+                  const prevLesson = lessons[gatedFromLesson - 1]
+                  return (
+                    <div key={s.id} className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-surface-2 px-4 py-5 text-[13px] text-ink-2">
+                      <Lock size={18} className="shrink-0 text-muted" />
+                      <span>
+                        {lang === 'ru' ? 'Дальше откроется, когда сдадите тесты урока' : 'Unlocks once you pass the tests of'}{' '}
+                        <b className="text-ink">«{prevLesson?.title}»</b>
+                        {prevLesson ? ` (${prevLesson.quizPassed}/${prevLesson.quizTotal})` : ''}.
+                      </span>
+                    </div>
+                  )
+                }
 
                 // Презентационные блоки (text/image/video/poll/quiz) — вне карточки-шага.
                 if (!isStepBlock(s)) {
