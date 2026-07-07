@@ -114,6 +114,8 @@ export const users = pgTable('users', {
   // Язык ДОСТАВКИ (email/push-уведомления) — интерфейс пока English-only.
   lang: text('lang').notNull().default('en').$type<'en' | 'ru'>(),
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
+  // Кураторский аккаунт библиотеки: правки садовника на его списках автопринимаются.
+  curated: boolean('curated').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 

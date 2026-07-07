@@ -1,6 +1,11 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, jobs, steps, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
+import { listStore } from '@/features/library/list-store'
+import { autoModerateList } from '@/features/moderation/moderate-list'
+import { notifyMany } from '@/features/notifications/notify'
+import { getWatcherIds } from '@/features/watch/queries'
+import { enqueueReindex } from '@/features/search/adapter'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { generateListRefine, type GeneratedItem } from '@/shared/ai/generate'
 import { isAiAvailable } from '@/shared/settings/ai'
@@ -61,8 +66,9 @@ export async function ensureGardenerScheduled(): Promise<void> {
  *  (refine пока не сохраняет section) — сначала популярные и давно не обновлявшиеся. */
 async function pickCandidates(gardenerId: string, limit: number) {
   return db
-    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion })
+    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, ownerCurated: users.curated })
     .from(templates)
+    .innerJoin(users, eq(users.id, templates.ownerId))
     .where(
       and(
         eq(templates.status, 'published'),
@@ -76,6 +82,25 @@ async function pickCandidates(gardenerId: string, limit: number) {
     )
     .orderBy(desc(templates.starsCount), asc(templates.updatedAt))
     .limit(limit)
+}
+
+
+// Форма шагов для listStore.addVersion (та же, что toStepInput в library/actions).
+function toStepInput(items: ProposedItem[]) {
+  return items.map((it, i) => ({
+    n: i + 1,
+    type: it.type ?? 'step',
+    content: it.content ?? {},
+    title: it.title,
+    desc: it.desc,
+    command: it.command,
+    level: it.level,
+    why: it.why,
+    section: it.section,
+    subtasks: it.subtasks,
+    refs: it.refs,
+    imageRef: it.imageKey ?? null,
+  }))
 }
 
 function toProposed(items: GeneratedItem[]): ProposedItem[] {
@@ -146,6 +171,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       continue
     }
 
+    const items = toProposed(refined.items)
     const [created] = await db
       .insert(suggestions)
       .values({
@@ -153,12 +179,24 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         authorId: gardener.id,
         note: '\u{1F916} Gardener: clarified steps, added checks and rationale. Review and merge if useful.',
         baseVersion: tpl.currentVersion,
-        items: toProposed(refined.items),
+        items,
       })
       .returning({ id: suggestions.id })
-    await notify({ recipientId: tpl.ownerId, actorId: gardener.id, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+
+    if (tpl.ownerCurated) {
+      // Кураторская библиотека — контент сайта: правка садовника применяется сразу
+      // (та же механика, что acceptSuggestion), с атрибуцией в истории и модерацией.
+      await listStore.addVersion(tpl.id, { note: '\u{1F916} gardener: refreshed steps', steps: toStepInput(items) })
+      await autoModerateList(tpl.id)
+      await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, created.id))
+      await notifyMany(await getWatcherIds(tpl.id), { actorId: gardener.id, type: 'new_version', templateId: tpl.id })
+      await enqueueReindex(tpl.id)
+      log.info('gardener: auto-merged on curated list', { slug: tpl.slug })
+    } else {
+      await notify({ recipientId: tpl.ownerId, actorId: gardener.id, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+      log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id })
+    }
     proposed++
-    log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id })
   }
   log.info('gardener sweep done', { candidates: candidates.length, proposed, skipped })
   return { proposed, skipped }
