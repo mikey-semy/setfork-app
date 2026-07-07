@@ -232,6 +232,13 @@
       "when": 1783226000000,
       "tag": "0032_course_completions",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783226001000,
+      "tag": "0033_users_curated",
+      "breakpoints": true
     }
   ]
 }
