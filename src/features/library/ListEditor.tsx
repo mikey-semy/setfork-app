@@ -393,12 +393,16 @@ export function ListEditor({
               (урок курса), объединяющую блоки ниже до следующего заголовка. */}
           <div className={`mb-2 flex items-center gap-1.5 ${it.section.trim() ? 'text-accent' : 'text-muted'}`}>
             <Heading size={13} className="shrink-0" />
-            <input
-              className="w-full bg-transparent text-[12.5px] font-semibold outline-none placeholder:font-normal placeholder:text-muted"
-              aria-label={ru ? `Урок/секция блока ${i + 1}` : `Block ${i + 1} lesson/section`}
-              placeholder={ru ? 'Урок/секция (необязательно) — группирует блоки ниже' : 'Lesson/section (optional) — groups the blocks below'}
+            <BubbleTextEditor
               value={it.section}
-              onChange={(e) => patch(i, { section: e.target.value })}
+              onChange={(v) => patch(i, { section: v })}
+              singleLine
+              bare
+              className="flex-1"
+              textareaClassName="text-[12.5px] font-semibold placeholder:font-normal placeholder:text-muted"
+              lang={ru ? 'ru' : 'en'}
+              ariaLabel={ru ? `Урок/секция блока ${i + 1}` : `Block ${i + 1} lesson/section`}
+              placeholder={ru ? 'Урок/секция (необязательно) — группирует блоки ниже' : 'Lesson/section (optional) — groups the blocks below'}
             />
           </div>
 

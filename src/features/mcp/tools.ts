@@ -210,7 +210,8 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     version: currentVersion?.version ?? tpl.currentVersion,
     verified: tpl.verified,
     // Все блоки списка (шаги + текст/картинки/опросы/видео/тесты) — полный контекст.
-    steps: steps.map(blockForMcp),
+    // section = заголовок урока/секции (для контекста границ уроков у AI).
+    steps: steps.map((s) => ({ ...blockForMcp(s), section: tr(s.section, 'en') || undefined })),
   }
 }
 

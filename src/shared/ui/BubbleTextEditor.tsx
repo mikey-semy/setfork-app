@@ -25,7 +25,9 @@ export function BubbleTextEditor({
   ariaLabel,
   singleLine = false,
   mono = false,
+  bare = false,
   className,
+  textareaClassName,
 }: {
   value: string
   onChange: (v: string) => void
@@ -35,7 +37,9 @@ export function BubbleTextEditor({
   ariaLabel?: string
   singleLine?: boolean // одно-строчное поле (заголовок/команда/…) — Enter не переносит
   mono?: boolean // моноширинный (для команды)
+  bare?: boolean // без рамки/фона (для инлайн-заголовка секции)
   className?: string // для обёртки (напр. flex-1 в строке)
+  textareaClassName?: string // доп. классы поля (напр. font-semibold у секции)
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [bubble, setBubble] = useState<{ top: number; left: number } | null>(null)
@@ -201,9 +205,9 @@ export function BubbleTextEditor({
         onScroll={refresh}
         onKeyDown={onKeyDown}
         onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null) } }, 150)}
-        className={`w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] leading-relaxed text-ink outline-none focus:border-border-strong ${
-          singleLine ? 'resize-none overflow-hidden' : 'min-h-[72px] resize-y'
-        } ${mono ? 'font-mono text-[12px]' : ''}`}
+        className={`w-full text-[13.5px] leading-relaxed text-ink outline-none ${
+          bare ? 'resize-none overflow-hidden bg-transparent' : 'rounded-md border border-border bg-surface-2 px-3 py-2 focus:border-border-strong'
+        } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[72px] resize-y'} ${mono ? 'font-mono text-[12px]' : ''} ${textareaClassName ?? ''}`}
       />
 
       {bubble && !mention && (
