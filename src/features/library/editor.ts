@@ -16,7 +16,8 @@ export type EditorItem = {
   type: BlockType
   bid: string // стабильный id не-step блока (для merge); '' у шага. Живёт в content.bid.
   text: string // markdown text-блока ('' для не-text)
-  caption: string // подпись image-блока
+  caption: string // подпись image/video-блока
+  videoUrl: string // ссылка video-блока ('' для не-video)
   poll: EditorPoll // данные poll-блока (пусто для не-poll)
   title: string
   desc: string
@@ -33,7 +34,7 @@ export type EditorItem = {
 const emptyPoll = (): EditorPoll => ({ question: '', options: [], multi: false, deadline: '' })
 
 export function emptyItem(): EditorItem {
-  return { type: 'step', bid: '', text: '', caption: '', poll: emptyPoll(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
+  return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', poll: emptyPoll(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
 }
 
 /** Пустой блок заданного типа (для инсертера). Не-step получает стабильный bid;
@@ -60,6 +61,9 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
       }
       if (it.type === 'image') {
         return { ...base, type: 'image', hasImage: !!it.imageKey, content: { ref: it.imageKey || '', ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
+      }
+      if (it.type === 'video') {
+        return { ...base, type: 'video', content: { url: it.videoUrl.trim(), ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
       }
       if (it.type === 'poll') {
         const options = it.poll.options
@@ -123,6 +127,9 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
       const ref = typeof it.content?.ref === 'string' ? it.content.ref : ''
       return { ...emptyItem(), type: 'image', bid, imageKey: ref, imagePreview: ref ? (previews[ref] ?? '') : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
     }
+    if (type === 'video') {
+      return { ...emptyItem(), type: 'video', bid, videoUrl: typeof it.content?.url === 'string' ? it.content.url : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
+    }
     if (type === 'poll') {
       const c = it.content ?? {}
       const rawOpts = Array.isArray(c.options) ? (c.options as unknown[]) : []
@@ -147,6 +154,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
       bid: '',
       text: '',
       caption: '',
+      videoUrl: '',
       poll: emptyPoll(),
       title: tr(it.title, lang),
       desc: tr(it.desc, lang),
@@ -173,6 +181,7 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
       bid: String(it?.bid ?? ''),
       text: String(it?.text ?? ''),
       caption: String(it?.caption ?? ''),
+      videoUrl: String(it?.videoUrl ?? ''),
       poll: {
         question: String(it?.poll?.question ?? ''),
         options: Array.isArray(it?.poll?.options)

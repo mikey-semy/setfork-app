@@ -19,6 +19,10 @@ export interface ExportStep {
 
 const isStepBlk = (s: ExportStep): boolean => !s.type || s.type === 'step'
 const blockMd = (s: ExportStep): string => (typeof s.content?.md === 'string' ? s.content.md : '')
+const blockVideo = (s: ExportStep): { url: string; caption: string } => ({
+  url: typeof s.content?.url === 'string' ? s.content.url : '',
+  caption: typeof s.content?.caption === 'string' ? s.content.caption : '',
+})
 const blockPoll = (s: ExportStep): { question: string; options: string[] } => ({
   question: typeof s.content?.question === 'string' ? s.content.question : '',
   options: Array.isArray(s.content?.options) ? (s.content!.options as { text?: unknown }[]).map((o) => String(o?.text ?? '')) : [],
@@ -58,6 +62,7 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
       if (s.type === 'text') { const md = blockMd(s); if (md) out.push(md, '') }
       else if (s.type === 'image') { const { caption } = blockImg(s); if (caption) out.push(`_🖼 ${caption}_`, '') }
       else if (s.type === 'poll') { const p = blockPoll(s); if (p.question || p.options.length) out.push(`**📊 ${p.question}**`, ...p.options.map((o) => `- ${o}`), '') }
+      else if (s.type === 'video') { const v = blockVideo(s); if (v.url) out.push(`🎬 [${v.caption || v.url}](${v.url})`, '') }
       return
     }
     stepNo++
@@ -334,6 +339,7 @@ export function toRunnableScript(list: ExportList, lang: Lang, url: string, dial
       if (s.type === 'text') { const md = blockMd(s); if (md) out.push(hashComment(md), '') }
       else if (s.type === 'image') { const { caption } = blockImg(s); if (caption) out.push(hashComment(`🖼 ${caption}`), '') }
       else if (s.type === 'poll') { const p = blockPoll(s); if (p.question || p.options.length) out.push(hashComment(`📊 ${p.question}`), ...p.options.map((o) => hashComment(`  - ${o}`)), '') }
+      else if (s.type === 'video') { const v = blockVideo(s); if (v.url) out.push(hashComment(`🎬 ${v.caption ? v.caption + ': ' : ''}${v.url}`), '') }
       return
     }
     scriptNo++

@@ -121,6 +121,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       bid: '',
       text: '',
       caption: '',
+      videoUrl: '',
       poll: { question: '', options: [], multi: false, deadline: '' },
       title: it.title,
       desc: it.desc,

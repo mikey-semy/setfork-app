@@ -1,7 +1,7 @@
 // Типы блоков списка (всё-блочная модель). Чистый модуль без server-only —
 // используется и на сервере, и в редакторе. См. дизайн-док по блочному редактору.
 
-export const BLOCK_TYPES = ['step', 'text', 'image', 'poll'] as const
+export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video'] as const
 export type BlockType = (typeof BLOCK_TYPES)[number]
 
 export const isBlockType = (t: string): t is BlockType => (BLOCK_TYPES as readonly string[]).includes(t)
@@ -51,12 +51,32 @@ export interface PollBlockContent {
   multi?: boolean // мульти-выбор (иначе один вариант)
   deadline?: string // ISO-дата; после неё голосование закрыто ('' / отсутствует — бессрочно)
 }
+// Video-блок: ссылка на видео (YouTube/Vimeo/прямой файл) + подпись.
+export interface VideoBlockContent {
+  bid?: string
+  url: string
+  caption?: string
+}
+
+/** Разбор video-URL в БЕЗОПАСНУЮ встройку: iframe только для известных
+ *  провайдеров (YouTube/Vimeo — не встраиваем произвольный src, это XSS-риск);
+ *  прямой файл (.mp4/.webm/.ogg) → <video>; иначе — просто ссылка. */
+export function parseVideoEmbed(url: string): { kind: 'youtube' | 'vimeo' | 'file' | 'link'; src: string } {
+  const u = (url ?? '').trim()
+  const yt = u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/)
+  if (yt) return { kind: 'youtube', src: `https://www.youtube.com/embed/${yt[1]}` }
+  const vm = u.match(/vimeo\.com\/(?:video\/)?(\d+)/)
+  if (vm) return { kind: 'vimeo', src: `https://player.vimeo.com/video/${vm[1]}` }
+  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(u)) return { kind: 'file', src: u }
+  return { kind: 'link', src: u }
+}
 
 export const BLOCK_META: Record<BlockType, { icon: string; en: string; ru: string }> = {
   step: { icon: '👣', en: 'Step', ru: 'Шаг' },
   text: { icon: '📝', en: 'Text', ru: 'Текст' },
   image: { icon: '🖼️', en: 'Image', ru: 'Картинка' },
   poll: { icon: '📊', en: 'Poll', ru: 'Опрос' },
+  video: { icon: '🎬', en: 'Video', ru: 'Видео' },
 }
 
 /** Стабильный id варианта опроса (на него ссылаются голоса). */

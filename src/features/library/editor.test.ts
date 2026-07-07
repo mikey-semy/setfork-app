@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyBlock, emptyItem, parseEditorItems, toEditorItems, toProposedItems, type EditorItem } from './editor'
+import { parseVideoEmbed } from './blocks'
 
 const step = (over: Partial<EditorItem> = {}): EditorItem => ({ ...emptyItem(), ...over })
 
@@ -86,6 +87,25 @@ describe('editor block converters', () => {
     expect(back.type).toBe('poll')
     expect(back.poll.question).toBe('Q')
     expect(back.poll.options).toEqual([{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }])
+  })
+
+  it('video block: url/caption ride in content; round-trips', () => {
+    const v = { ...emptyBlock('video'), videoUrl: 'https://youtu.be/dQw4w9WgXcQ', caption: 'demo' }
+    const [out] = toProposedItems([v], 'en')
+    expect(out.type).toBe('video')
+    expect(out.content).toMatchObject({ url: 'https://youtu.be/dQw4w9WgXcQ', caption: 'demo' })
+    const [back] = toEditorItems([out], 'en')
+    expect(back.type).toBe('video')
+    expect(back.videoUrl).toBe('https://youtu.be/dQw4w9WgXcQ')
+    expect(back.caption).toBe('demo')
+  })
+
+  it('parseVideoEmbed: YouTube/Vimeo → iframe src, .mp4 → file, прочее → link', () => {
+    expect(parseVideoEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toEqual({ kind: 'youtube', src: 'https://www.youtube.com/embed/dQw4w9WgXcQ' })
+    expect(parseVideoEmbed('https://youtu.be/dQw4w9WgXcQ')).toEqual({ kind: 'youtube', src: 'https://www.youtube.com/embed/dQw4w9WgXcQ' })
+    expect(parseVideoEmbed('https://vimeo.com/123456789')).toEqual({ kind: 'vimeo', src: 'https://player.vimeo.com/video/123456789' })
+    expect(parseVideoEmbed('https://cdn.example.com/clip.mp4').kind).toBe('file')
+    expect(parseVideoEmbed('https://example.com/watch').kind).toBe('link') // произвольный src НЕ идёт в iframe
   })
 
   it('full round-trip: editor → proposed → editor keeps block kinds', () => {

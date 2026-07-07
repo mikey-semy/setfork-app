@@ -21,6 +21,7 @@ import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
+import { VideoEmbed } from '@/features/library/VideoEmbed'
 import { canViewList } from '@/features/library/access'
 import { ListHeader } from '@/features/library/ListHeader'
 import { publishList } from '@/features/library/actions'
@@ -288,6 +289,11 @@ export default async function ListPage({
                         {caption && <figcaption className="mt-1.5 text-[12.5px] text-muted">{caption}</figcaption>}
                       </figure>
                     ) : null
+                  }
+                  if (s.type === 'video') {
+                    const url = typeof s.content?.url === 'string' ? s.content.url : ''
+                    const cap = typeof s.content?.caption === 'string' ? s.content.caption : ''
+                    return url ? <div key={s.id}><VideoEmbed url={url} caption={cap} /></div> : null
                   }
                   if (s.type === 'poll') {
                     const c = (s.content ?? {}) as unknown as PollContent & { bid?: string }
