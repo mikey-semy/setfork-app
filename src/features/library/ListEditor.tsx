@@ -250,24 +250,26 @@ export function ListEditor({
 
       {/* Тулбар: undo/redo + подсказка */}
       <div className="flex items-center gap-2 text-[12px] text-muted">
-        <button
-          type="button"
-          onClick={undo}
-          disabled={!canUndo}
-          title={ru ? 'Отменить (Ctrl+Z)' : 'Undo (Ctrl+Z)'}
-          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2"
-        >
-          <Undo2 size={13} /> {ru ? 'Отменить' : 'Undo'}
-        </button>
-        <button
-          type="button"
-          onClick={redo}
-          disabled={!canRedo}
-          title={ru ? 'Повторить (Ctrl+Shift+Z)' : 'Redo (Ctrl+Shift+Z)'}
-          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2"
-        >
-          <Redo2 size={13} /> {ru ? 'Повторить' : 'Redo'}
-        </button>
+        <Tooltip label={ru ? 'Отменить (Ctrl+Z)' : 'Undo (Ctrl+Z)'}>
+          <button
+            type="button"
+            onClick={undo}
+            disabled={!canUndo}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2"
+          >
+            <Undo2 size={13} /> {ru ? 'Отменить' : 'Undo'}
+          </button>
+        </Tooltip>
+        <Tooltip label={ru ? 'Повторить (Ctrl+Shift+Z)' : 'Redo (Ctrl+Shift+Z)'}>
+          <button
+            type="button"
+            onClick={redo}
+            disabled={!canRedo}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2"
+          >
+            <Redo2 size={13} /> {ru ? 'Повторить' : 'Redo'}
+          </button>
+        </Tooltip>
         <span className="ml-1 hidden sm:inline">{ru ? 'перетаскивай ⠿, Alt+↑/↓ — двигать' : 'drag ⠿, Alt+↑/↓ to move'}</span>
       </div>
 
@@ -332,18 +334,19 @@ export function ListEditor({
           } ${dragI === i ? 'opacity-50' : ''}`}
         >
           <div className="mb-2.5 flex items-center gap-2">
-            <span
-              draggable
-              onDragStart={() => setDragI(i)}
-              onDragEnd={() => {
-                setDragI(null)
-                setOverI(null)
-              }}
-              title={ru ? 'Перетащить' : 'Drag to reorder'}
-              className="cursor-grab rounded p-0.5 text-muted hover:text-ink active:cursor-grabbing"
-            >
-              <GripVertical size={15} />
-            </span>
+            <Tooltip label={ru ? 'Перетащить' : 'Drag to reorder'}>
+              <span
+                draggable
+                onDragStart={() => setDragI(i)}
+                onDragEnd={() => {
+                  setDragI(null)
+                  setOverI(null)
+                }}
+                className="cursor-grab rounded p-0.5 text-muted hover:text-ink active:cursor-grabbing"
+              >
+                <GripVertical size={15} />
+              </span>
+            </Tooltip>
             {it.type === 'step' ? (
               <span className="font-mono text-[12px] text-muted">
                 {ordered ? `${ru ? 'Пункт' : 'Item'} ${items.slice(0, i).filter((x) => x.type === 'step').length + 1}` : '•'}
