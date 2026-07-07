@@ -64,13 +64,15 @@ export async function completeJob(id: string): Promise<void> {
  * `attempts` уже инкрементнут при claim — повторного двойного расхода не создаём.
  */
 export async function reapStalledJobs(olderThanSec = 300): Promise<number> {
+  // status — enum job_status: результат CASE имеет тип text и НЕ приводится к enum
+  // неявно (одиночный литерал приводится, CASE — нет), поэтому явный ::job_status.
   const res = await db.execute(sql`
     UPDATE jobs
-    SET status = CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END,
+    SET status = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,
         run_at = now(),
         updated_at = now(),
         last_error = coalesce(last_error, 'reaped: stalled in processing')
-    WHERE status = 'processing' AND updated_at < now() - (${olderThanSec} * interval '1 second')
+    WHERE status = 'processing' AND updated_at < now() - (${olderThanSec}::int * interval '1 second')
     RETURNING id
   `)
   return (res as { rows?: unknown[] }).rows?.length ?? 0

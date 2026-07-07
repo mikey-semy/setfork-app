@@ -84,7 +84,7 @@ async function pickCandidates(gardenerId: string, limit: number) {
         // кураторских списков: их правка авто-мёрджится (status='accepted', не 'open'),
         // и без учёта свежести список попадал бы в выборку снова → повторный refine.
         sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = ${gardenerId}
-             and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS} * interval '1 day')))`,
+             and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS}::int * interval '1 day')))`,
         sql`not exists (select 1 from ${steps} st join ${templateVersions} v on v.id = st.version_id
              where v.template_id = ${templates.id} and coalesce(st.section->>'en','') <> '')`,
       ),
