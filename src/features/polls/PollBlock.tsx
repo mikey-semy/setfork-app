@@ -81,7 +81,7 @@ export function PollBlock({
         {content.deadline && (
           <span className="inline-flex items-center gap-1">
             <Clock size={11} />
-            {closed ? (ru ? 'закрыт' : 'closed') : `${ru ? 'до' : 'until'} ${new Date(content.deadline).toLocaleString(ru ? 'ru' : 'en')}`}
+            {closed ? (ru ? 'закрыт' : 'closed') : `${ru ? 'до' : 'until'} ${new Date(content.deadline).toLocaleDateString(ru ? 'ru' : 'en')}`}
           </span>
         )}
         {!canVote && <span>· {ru ? 'войдите, чтобы голосовать' : 'log in to vote'}</span>}
