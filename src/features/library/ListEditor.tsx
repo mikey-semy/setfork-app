@@ -711,6 +711,7 @@ const QUIZ_KIND_OPTS: { k: QuizKind; ru: string; en: string }[] = [
   { k: 'text', ru: 'Текст', en: 'Text' },
   { k: 'number', ru: 'Число', en: 'Number' },
   { k: 'blank', ru: 'Пропуски', en: 'Blanks' },
+  { k: 'match', ru: 'Пары', en: 'Match' },
 ]
 
 function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q: EditorQuiz) => void; ru: boolean }) {
@@ -902,6 +903,55 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
           </label>
         </>
       )}
+
+      {quiz.kind === 'match' && (() => {
+        const pairs = quiz.pairs.length ? quiz.pairs : [{ left: '', right: '' }, { left: '', right: '' }]
+        const setPairs = (p: { left: string; right: string }[]) => set({ pairs: p })
+        return (
+          <>
+            <div className="flex flex-col gap-1.5">
+              {pairs.map((p, pi) => (
+                <div key={pi} className="flex items-center gap-2">
+                  <input
+                    className={input}
+                    aria-label={ru ? `Слева ${pi + 1}` : `Left ${pi + 1}`}
+                    placeholder={ru ? 'Слева' : 'Left'}
+                    value={p.left}
+                    onChange={(e) => setPairs(pairs.map((x, xi) => (xi === pi ? { ...x, left: e.target.value } : x)))}
+                  />
+                  <span className="shrink-0 text-muted">→</span>
+                  <input
+                    className={input}
+                    aria-label={ru ? `Справа ${pi + 1}` : `Right ${pi + 1}`}
+                    placeholder={ru ? 'Справа' : 'Right'}
+                    value={p.right}
+                    onChange={(e) => setPairs(pairs.map((x, xi) => (xi === pi ? { ...x, right: e.target.value } : x)))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPairs(pairs.filter((_, xi) => xi !== pi))}
+                    disabled={pairs.length <= 2}
+                    className="text-muted hover:text-danger disabled:opacity-30"
+                    aria-label={ru ? 'Удалить пару' : 'Remove pair'}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[12px]">
+              <button type="button" onClick={() => setPairs([...pairs, { left: '', right: '' }])} className="text-accent hover:underline">
+                + {ru ? 'пара' : 'pair'}
+              </button>
+              <label className="inline-flex cursor-pointer items-center gap-1.5 text-ink-2">
+                <Checkbox checked={quiz.caseSensitive} onChange={(e) => set({ caseSensitive: e.target.checked })} />
+                {ru ? 'Учитывать регистр' : 'Case-sensitive'}
+              </label>
+            </div>
+            <span className="text-[11px] text-muted">{ru ? 'Правые части ученику показываются перемешанными.' : 'Right sides are shuffled for the learner.'}</span>
+          </>
+        )
+      })()}
 
       <textarea
         className="min-h-[52px] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[12.5px] leading-relaxed text-ink outline-none focus:border-border-strong"

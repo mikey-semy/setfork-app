@@ -5,7 +5,8 @@ import { Check, GraduationCap, Loader2, RotateCcw, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { submitQuiz } from '@/features/quizzes/actions'
 import type { QuizState } from '@/features/quizzes/queries'
-import { blankCount, blankParts, gradeBlank, gradeNumber, gradeText, quizKind, type QuizBlockContent } from './blocks'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeText, matchRights, quizKind, type QuizBlockContent } from './blocks'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -33,9 +34,13 @@ export function QuizBlock({
   const clientMode = !canSubmit
 
   const nBlanks = blankCount(content.template ?? '')
+  // match: левые/правые части (у авторизованного — из stripped lefts/rights; у анонима — из pairs).
+  const matchLefts = clientMode ? (content.pairs ?? []).map((p) => p.left) : (content.lefts ?? [])
+  const matchRightOpts = clientMode ? matchRights(content.pairs ?? []) : (content.rights ?? [])
   const [picked, setPicked] = useState<Set<string>>(() => new Set(initial.selected))
   const [textInput, setTextInput] = useState(() => (kind === 'text' || kind === 'number' ? (initial.selected[0] ?? '') : ''))
   const [blankInputs, setBlankInputs] = useState<string[]>(() => Array.from({ length: nBlanks }, (_, i) => initial.selected[i] ?? ''))
+  const [matchPick, setMatchPick] = useState<string[]>(() => Array.from({ length: matchLefts.length }, (_, i) => initial.selected[i] ?? ''))
   const [checked, setChecked] = useState(initial.submitted)
   const [serverCorrect, setServerCorrect] = useState<string[] | null>(null)
   const [reveal, setReveal] = useState<string | null>(null)
@@ -56,9 +61,17 @@ export function QuizBlock({
         ? typeof content.answer === 'number'
         : kind === 'blank'
           ? (content.blanks?.length ?? 0) > 0
-          : clientCorrect.size > 0
+          : kind === 'match'
+            ? (content.pairs?.length ?? 0) > 0
+            : clientCorrect.size > 0
   const hasInput =
-    kind === 'choice' ? picked.size > 0 : kind === 'blank' ? nBlanks > 0 && blankInputs.every((b) => b.trim() !== '') : textInput.trim() !== ''
+    kind === 'choice'
+      ? picked.size > 0
+      : kind === 'blank'
+        ? nBlanks > 0 && blankInputs.every((b) => b.trim() !== '')
+        : kind === 'match'
+          ? matchLefts.length > 0 && matchPick.every((m) => m !== '')
+          : textInput.trim() !== ''
 
   function toggle(id: string) {
     if (checked || pending) return
@@ -76,6 +89,7 @@ export function QuizBlock({
     if (kind === 'text') return gradeText(textInput, content.accept ?? [], content.caseSensitive)
     if (kind === 'number') return gradeNumber(Number(textInput), content.answer ?? NaN, content.tolerance)
     if (kind === 'blank') return gradeBlank(blankInputs, content.blanks ?? [], content.caseSensitive)
+    if (kind === 'match') return gradeMatch(matchPick, content.pairs ?? [], content.caseSensitive)
     return picked.size === clientCorrect.size && [...picked].every((id) => clientCorrect.has(id))
   }
 
@@ -87,7 +101,8 @@ export function QuizBlock({
       return
     }
     start(async () => {
-      const answer = kind === 'choice' ? { options: [...picked] } : kind === 'blank' ? { blanks: blankInputs } : { text: textInput }
+      const answer =
+        kind === 'choice' ? { options: [...picked] } : kind === 'blank' ? { blanks: blankInputs } : kind === 'match' ? { match: matchPick } : { text: textInput }
       const res = await submitQuiz(templateId, bid, answer)
       if ('error' in res) {
         setErr(res.error === 'no_answer' ? (ru ? 'У теста не задан верный ответ.' : 'No correct answer is set.') : ru ? 'Не удалось отправить.' : 'Could not submit.')
@@ -105,6 +120,7 @@ export function QuizBlock({
     setPicked(new Set())
     setTextInput('')
     setBlankInputs(Array.from({ length: nBlanks }, () => ''))
+    setMatchPick(Array.from({ length: matchLefts.length }, () => ''))
     setChecked(false)
     setServerCorrect(null)
     setReveal(null)
@@ -119,7 +135,9 @@ export function QuizBlock({
         ? String(content.answer ?? '')
         : kind === 'blank'
           ? (content.blanks ?? []).map((b) => b[0] ?? '').join(', ')
-          : ''
+          : kind === 'match'
+            ? (content.pairs ?? []).map((p) => `${p.left} → ${p.right}`).join('; ')
+            : ''
     : (reveal ?? '')
 
   return (
@@ -201,6 +219,35 @@ export function QuizBlock({
             </span>
           ))}
         </p>
+      )}
+
+      {kind === 'match' && (
+        <div className="flex flex-col gap-2">
+          {matchLefts.map((left, i) => {
+            // Подсветка после проверки доступна только когда эталон у клиента (аноним).
+            const rowGood = checked && content.pairs ? matchPick[i] === content.pairs[i]?.right : undefined
+            return (
+              <div key={i} className="flex items-center gap-2 text-[13px]">
+                <span className="min-w-0 flex-1 truncate text-ink">{left}</span>
+                <span className="shrink-0 text-muted">→</span>
+                <div className="w-[45%] shrink-0">
+                  <Select value={matchPick[i] || undefined} onValueChange={(v) => setMatchPick((xs) => xs.map((m, xi) => (xi === i ? v : m)))} disabled={checked || pending}>
+                    <SelectTrigger className={rowGood === true ? 'border-ok' : rowGood === false ? 'border-danger' : ''}>
+                      <SelectValue placeholder={ru ? 'выбрать…' : 'pick…'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {matchRightOpts.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       )}
 
       <div className="mt-3 flex items-center gap-2">

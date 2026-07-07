@@ -49,6 +49,7 @@ export interface McpItemInput {
   tolerance?: number // quiz number
   template?: string // quiz blank — текст с '___'
   blanks?: string[][] // quiz blank — принимаемые ответы на каждый пропуск
+  pairs?: { left: string; right: string }[] // quiz match — пары для сопоставления
 }
 
 // MCP-контент нейтрален к языку → кладём под 'en' (locale-JSON, tr с фолбэком читает).
@@ -64,7 +65,8 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
     if (type === 'poll')
       return { ...b, poll: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim() })), multi: it.multi === true, deadline: (it.deadline ?? '').trim() } }
     if (type === 'quiz') {
-      const kind = it.quizKind === 'text' ? 'text' : it.quizKind === 'number' ? 'number' : it.quizKind === 'blank' ? 'blank' : 'choice'
+      const kind =
+        it.quizKind === 'text' ? 'text' : it.quizKind === 'number' ? 'number' : it.quizKind === 'blank' ? 'blank' : it.quizKind === 'match' ? 'match' : 'choice'
       return {
         ...b,
         quiz: {
@@ -79,6 +81,7 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
           tolerance: typeof it.tolerance === 'number' ? String(it.tolerance) : '',
           template: (it.template ?? '').toString(),
           blanks: (it.blanks ?? []).map((b2) => (Array.isArray(b2) ? b2.map((x) => String(x)).join(', ') : String(b2))),
+          pairs: (it.pairs ?? []).map((p) => ({ left: String(p?.left ?? ''), right: String(p?.right ?? '') })),
           explain: (it.explain ?? '').trim(),
         },
       }
@@ -167,12 +170,14 @@ function blockForMcp(s: DetailStep) {
     return { n: s.n, type, question: str(c.question), options: opts.map((o) => ({ text: str(o.text) })), multi: c.multi === true || undefined, deadline: str(c.deadline) || undefined }
   }
   if (type === 'quiz') {
-    const kind = c.kind === 'text' ? 'text' : c.kind === 'number' ? 'number' : c.kind === 'blank' ? 'blank' : 'choice'
+    const kind = c.kind === 'text' ? 'text' : c.kind === 'number' ? 'number' : c.kind === 'blank' ? 'blank' : c.kind === 'match' ? 'match' : 'choice'
     const base = { n: s.n, type, quizKind: kind, question: str(c.question), explain: str(c.explain) || undefined }
     if (kind === 'text') return { ...base, accept: Array.isArray(c.accept) ? (c.accept as unknown[]).map((a) => str(a)) : [], caseSensitive: c.caseSensitive === true || undefined }
     if (kind === 'number') return { ...base, answer: typeof c.answer === 'number' ? c.answer : undefined, tolerance: typeof c.tolerance === 'number' ? c.tolerance : undefined }
     if (kind === 'blank')
       return { ...base, template: str(c.template), blanks: Array.isArray(c.blanks) ? (c.blanks as unknown[]).map((b) => (Array.isArray(b) ? b.map((x) => str(x)) : [str(b)])) : [], caseSensitive: c.caseSensitive === true || undefined }
+    if (kind === 'match')
+      return { ...base, pairs: Array.isArray(c.pairs) ? (c.pairs as Record<string, unknown>[]).map((p) => ({ left: str(p.left), right: str(p.right) })) : [], caseSensitive: c.caseSensitive === true || undefined }
     const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
     return { ...base, options: opts.map((o) => ({ text: str(o.text), correct: o.correct === true })), multi: c.multi === true || undefined }
   }
