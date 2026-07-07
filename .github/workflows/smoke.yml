@@ -48,8 +48,8 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Apply DB schema (drizzle push, чистая БД → без промптов)
-        run: npm run db:push
+      - name: Apply DB schema (drizzle migrate — неинтерактивно, применяет 0000..NNNN)
+        run: npm run db:migrate
 
       - name: Build
         run: npm run build
@@ -59,8 +59,9 @@ jobs:
           git config --global user.email "sim@setfork.com"
           git config --global user.name "SetFork Sim"
           npm start > "$RUNNER_TEMP/frontend.log" 2>&1 &
+          # Готовность = сервер принимает соединения (любой HTTP-статус), не только 2xx.
           for i in $(seq 1 45); do
-            curl -sf http://localhost:3000 >/dev/null && { echo "frontend up"; exit 0; }
+            curl -s -o /dev/null http://localhost:3000 && { echo "frontend up"; exit 0; }
             sleep 2
           done
           echo "frontend did not come up in time"; cat "$RUNNER_TEMP/frontend.log"; exit 1
