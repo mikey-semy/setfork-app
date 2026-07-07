@@ -389,19 +389,21 @@ export function ListEditor({
             </div>
           </div>
 
+          {/* Урок/секция: у ЛЮБОГО блока — если задан, начинает новую группу
+              (урок курса), объединяющую блоки ниже до следующего заголовка. */}
+          <div className={`mb-2 flex items-center gap-1.5 ${it.section.trim() ? 'text-accent' : 'text-muted'}`}>
+            <Heading size={13} className="shrink-0" />
+            <input
+              className="w-full bg-transparent text-[12.5px] font-semibold outline-none placeholder:font-normal placeholder:text-muted"
+              aria-label={ru ? `Урок/секция блока ${i + 1}` : `Block ${i + 1} lesson/section`}
+              placeholder={ru ? 'Урок/секция (необязательно) — группирует блоки ниже' : 'Lesson/section (optional) — groups the blocks below'}
+              value={it.section}
+              onChange={(e) => patch(i, { section: e.target.value })}
+            />
+          </div>
+
           {it.type === 'step' && (
           <div className="flex flex-col gap-2">
-            {/* Заголовок секции-группы: если задан — начинает новую группу пунктов */}
-            <div className={`flex items-center gap-1.5 ${it.section.trim() ? 'text-accent' : 'text-muted'}`}>
-              <Heading size={13} className="shrink-0" />
-              <input
-                className="w-full bg-transparent text-[12.5px] font-semibold outline-none placeholder:font-normal placeholder:text-muted"
-                aria-label={ru ? `Секция пункта ${i + 1}` : `Item ${i + 1} section`}
-                placeholder={ru ? 'Секция (необязательно) — группирует пункты ниже' : 'Section (optional) — groups the items below'}
-                value={it.section}
-                onChange={(e) => patch(i, { section: e.target.value })}
-              />
-            </div>
             <input
               className={input}
               aria-label={ru ? `Заголовок пункта ${i + 1}` : `Item ${i + 1} title`}

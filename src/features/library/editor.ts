@@ -60,15 +60,17 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
   return items
     .filter((it) => !isStepItem(it) || it.title.trim())
     .map((it): ProposedItem => {
+      // Секция/урок — у любого блока (группирует блоки ниже в урок курса).
+      const sec: LocaleText = it.section.trim() ? { [lang]: it.section.trim() } : {}
       // bid — стабильный id блока (для merge), кладём в content; гарантируем наличие.
       if (it.type === 'text') {
-        return { ...base, type: 'text', content: { md: it.text.trim(), bid: it.bid || newBlockId() } }
+        return { ...base, section: sec, type: 'text', content: { md: it.text.trim(), bid: it.bid || newBlockId() } }
       }
       if (it.type === 'image') {
-        return { ...base, type: 'image', hasImage: !!it.imageKey, content: { ref: it.imageKey || '', ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
+        return { ...base, section: sec, type: 'image', hasImage: !!it.imageKey, content: { ref: it.imageKey || '', ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
       }
       if (it.type === 'video') {
-        return { ...base, type: 'video', content: { url: it.videoUrl.trim(), ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
+        return { ...base, section: sec, type: 'video', content: { url: it.videoUrl.trim(), ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
       }
       if (it.type === 'poll') {
         const options = it.poll.options
@@ -76,6 +78,7 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
           .map((o) => ({ id: o.id || newOptionId(), text: o.text.trim() }))
         return {
           ...base,
+          section: sec,
           type: 'poll',
           content: {
             bid: it.bid || newBlockId(),
@@ -92,6 +95,7 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
           .map((o) => ({ id: o.id || newOptionId(), text: o.text.trim(), ...(o.correct ? { correct: true } : {}) }))
         return {
           ...base,
+          section: sec,
           type: 'quiz',
           content: {
             bid: it.bid || newBlockId(),
@@ -141,15 +145,16 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
   return items.map((it): EditorItem => {
     const type = asType(it.type)
     const bid = typeof it.content?.bid === 'string' ? it.content.bid : ''
+    const section = it.section ? tr(it.section, lang) : '' // секция/урок — у любого блока
     if (type === 'text') {
-      return { ...emptyItem(), type: 'text', bid, text: typeof it.content?.md === 'string' ? it.content.md : '' }
+      return { ...emptyItem(), type: 'text', bid, section, text: typeof it.content?.md === 'string' ? it.content.md : '' }
     }
     if (type === 'image') {
       const ref = typeof it.content?.ref === 'string' ? it.content.ref : ''
-      return { ...emptyItem(), type: 'image', bid, imageKey: ref, imagePreview: ref ? (previews[ref] ?? '') : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
+      return { ...emptyItem(), type: 'image', bid, section, imageKey: ref, imagePreview: ref ? (previews[ref] ?? '') : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
     }
     if (type === 'video') {
-      return { ...emptyItem(), type: 'video', bid, videoUrl: typeof it.content?.url === 'string' ? it.content.url : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
+      return { ...emptyItem(), type: 'video', bid, section, videoUrl: typeof it.content?.url === 'string' ? it.content.url : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
     }
     if (type === 'poll') {
       const c = it.content ?? {}
@@ -162,6 +167,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
         ...emptyItem(),
         type: 'poll',
         bid,
+        section,
         poll: {
           question: typeof c.question === 'string' ? c.question : '',
           options: options.length ? options : [{ id: newOptionId(), text: '' }, { id: newOptionId(), text: '' }],
@@ -181,6 +187,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
         ...emptyItem(),
         type: 'quiz',
         bid,
+        section,
         quiz: {
           question: typeof c.question === 'string' ? c.question : '',
           options: options.length ? options : [{ id: newOptionId(), text: '', correct: false }, { id: newOptionId(), text: '', correct: false }],

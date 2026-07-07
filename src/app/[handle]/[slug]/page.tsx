@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
@@ -26,6 +26,7 @@ import { QuizBlock } from '@/features/library/QuizBlock'
 import type { QuizBlockContent } from '@/features/library/blocks'
 import { getQuizState } from '@/features/quizzes/queries'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
+import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
 import { pollDeadlineMs } from '@/features/library/blocks'
 import { canViewList } from '@/features/library/access'
 import { ListHeader } from '@/features/library/ListHeader'
@@ -34,6 +35,11 @@ import { publishList } from '@/features/library/actions'
 function fmt(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0) + 'k'
   return String(n)
+}
+
+// Стабильный anchor-id для заголовка урока/секции (для оглавления курса).
+function sectionAnchor(s: string): string {
+  return 'lesson-' + s.toLowerCase().trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 60)
 }
 
 // Заголовок вкладки как в GitHub: owner/slug (layout добавит « · SetFork»).
@@ -110,6 +116,23 @@ export default async function ListPage({
   // Состояние quiz-блоков (последняя попытка зрителя — по content.bid).
   const quizBids = steps.filter((s) => s.type === 'quiz' && typeof s.content?.bid === 'string').map((s) => (s.content as { bid: string }).bid)
   const quizStates = quizBids.length ? await getQuizState(tpl.id, quizBids, viewer?.userId) : {}
+  // Уроки курса = секции блоков (в порядке). Собираем оглавление + прогресс тестов по уроку.
+  const lessons: OutlineLesson[] = []
+  {
+    let cur: OutlineLesson | null = null
+    for (const s of steps) {
+      const sec = tr(s.section, lang)
+      if (sec && (!cur || cur.title !== sec)) {
+        cur = { title: sec, anchor: sectionAnchor(sec), quizTotal: 0, quizPassed: 0 }
+        lessons.push(cur)
+      }
+      if (s.type === 'quiz' && cur) {
+        const bid = typeof s.content?.bid === 'string' ? s.content.bid : ''
+        cur.quizTotal++
+        if (quizStates[bid]?.correct) cur.quizPassed++
+      }
+    }
+  }
   // eslint-disable-next-line react-hooks/purity -- серверный компонент, one-shot рендер: время для дедлайнов опросов
   const nowMs = Date.now()
   // Порядковый номер показываем только по шаг-блокам (презентационные вне нумерации).
@@ -281,37 +304,46 @@ export default async function ListPage({
             )}
             <div className="flex flex-col gap-3">
               {steps.map((s, si) => {
-                // Презентационные блоки (text/image) — вне карточки-шага, без номера и секции.
+                // Заголовок урока/секции — у ЛЮБОГО блока: показываем, когда секция
+                // отличается от секции ПРЕДЫДУЩЕГО блока (начинается новый урок).
+                const section = tr(s.section, lang)
+                const prevSection = si > 0 ? tr(steps[si - 1].section, lang) : ''
+                const showHeader = !!section && section !== prevSection
+                const header = showHeader ? (
+                  <h2 id={sectionAnchor(section)} className={`scroll-mt-24 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-2 ${si > 0 ? 'mt-3' : ''}`}>
+                    {section}
+                  </h2>
+                ) : null
+
+                // Презентационные блоки (text/image/video/poll/quiz) — вне карточки-шага.
                 if (!isStepBlock(s)) {
+                  let el: ReactNode = null
                   if (s.type === 'text') {
                     const md = typeof s.content?.md === 'string' ? s.content.md : ''
-                    return md ? (
-                      <div key={s.id} className="break-inside-avoid px-1 py-1">
+                    el = md ? (
+                      <div className="break-inside-avoid px-1 py-1">
                         <Markdown className="text-[14px] leading-relaxed text-ink-2">{md}</Markdown>
                       </div>
                     ) : null
-                  }
-                  if (s.type === 'image') {
+                  } else if (s.type === 'image') {
                     const ref = typeof s.content?.ref === 'string' ? s.content.ref : ''
                     const url = ref ? blockImages[ref] : ''
                     const caption = typeof s.content?.caption === 'string' ? s.content.caption : ''
-                    return url ? (
-                      <figure key={s.id} className="break-inside-avoid">
+                    el = url ? (
+                      <figure className="break-inside-avoid">
                         <SmartImage src={url} alt={caption || t('screenshot', lang)} className="max-h-[520px] w-auto rounded-lg border border-border" />
                         {caption && <figcaption className="mt-1.5 text-[12.5px] text-muted">{caption}</figcaption>}
                       </figure>
                     ) : null
-                  }
-                  if (s.type === 'video') {
+                  } else if (s.type === 'video') {
                     const url = typeof s.content?.url === 'string' ? s.content.url : ''
                     const cap = typeof s.content?.caption === 'string' ? s.content.caption : ''
-                    return url ? <div key={s.id}><VideoEmbed url={url} caption={cap} /></div> : null
-                  }
-                  if (s.type === 'poll') {
+                    el = url ? <div><VideoEmbed url={url} caption={cap} /></div> : null
+                  } else if (s.type === 'poll') {
                     const c = (s.content ?? {}) as unknown as PollContent & { bid?: string }
                     const bid = typeof c.bid === 'string' ? c.bid : ''
-                    return Array.isArray(c.options) && c.options.length ? (
-                      <div key={s.id} className="break-inside-avoid">
+                    el = Array.isArray(c.options) && c.options.length ? (
+                      <div className="break-inside-avoid">
                         <PollBlock
                           templateId={tpl.id}
                           bid={bid}
@@ -323,16 +355,15 @@ export default async function ListPage({
                         />
                       </div>
                     ) : null
-                  }
-                  if (s.type === 'quiz') {
+                  } else if (s.type === 'quiz') {
                     const c = (s.content ?? {}) as unknown as QuizBlockContent
                     const bid = typeof c.bid === 'string' ? c.bid : ''
                     // Авторизованному оценивает сервер → НЕ отдаём correct-флаги в разметку.
                     const safe: QuizBlockContent = viewer
                       ? { ...c, options: (c.options ?? []).map((o) => ({ id: o.id, text: o.text })) }
                       : c
-                    return Array.isArray(c.options) && c.options.length ? (
-                      <div key={s.id} className="break-inside-avoid">
+                    el = Array.isArray(c.options) && c.options.length ? (
+                      <div className="break-inside-avoid">
                         <QuizBlock
                           content={safe}
                           lang={lang}
@@ -344,25 +375,22 @@ export default async function ListPage({
                       </div>
                     ) : null
                   }
-                  return null
+                  if (!el && !header) return null
+                  return (
+                    <Fragment key={s.id}>
+                      {header}
+                      {el}
+                    </Fragment>
+                  )
                 }
                 const subs = (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean)
                 const refs = (s.refs as { label: LocaleText; url?: string }[]).map((x) => ({
                   label: tr(x.label, lang),
                   url: x.url,
                 }))
-                const section = tr(s.section, lang)
-                // Заголовок секции — относительно предыдущего ШАГ-блока (не презентационного).
-                const prevStep = steps.slice(0, si).reverse().find((p) => isStepBlock(p))
-                const prevSection = prevStep ? tr(prevStep.section, lang) : ''
-                const showHeader = !!section && section !== prevSection
                 return (
                   <Fragment key={s.id}>
-                    {showHeader && (
-                      <h2 className={`text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-2 ${si > 0 ? 'mt-3' : ''}`}>
-                        {section}
-                      </h2>
-                    )}
+                    {header}
                   <div className="break-inside-avoid rounded-lg border border-border bg-surface p-4">
                     <div className="flex gap-3">
                       <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? displayNum[si] : '•'}</span>
@@ -433,7 +461,8 @@ export default async function ListPage({
           </main>
 
           {/* About-сайдбар */}
-          <aside className="flex-shrink-0 print:hidden lg:w-[300px]">
+          <aside className="flex flex-shrink-0 flex-col gap-4 print:hidden lg:w-[300px]">
+            <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
             <div className="rounded-lg border border-border bg-surface p-4">
               <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
                 {t('about', lang)}

@@ -129,6 +129,16 @@ describe('editor block converters', () => {
     expect(back.quiz.options).toEqual([{ id: 'a', text: 'A', correct: true }, { id: 'b', text: 'B', correct: false }])
   })
 
+  it('section (урок) carries through non-step blocks and round-trips', () => {
+    const vid = { ...emptyBlock('video'), videoUrl: 'https://youtu.be/dQw4w9WgXcQ', section: 'Урок 1' }
+    const [out] = toProposedItems([vid], 'en')
+    expect(out.type).toBe('video')
+    expect(out.section).toEqual({ en: 'Урок 1' })
+    const [back] = toEditorItems([out], 'en')
+    expect(back.type).toBe('video')
+    expect(back.section).toBe('Урок 1')
+  })
+
   it('parseVideoEmbed: YouTube/Vimeo → iframe src, .mp4 → file, прочее → link', () => {
     expect(parseVideoEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toEqual({ kind: 'youtube', src: 'https://www.youtube.com/embed/dQw4w9WgXcQ' })
     expect(parseVideoEmbed('https://youtu.be/dQw4w9WgXcQ')).toEqual({ kind: 'youtube', src: 'https://www.youtube.com/embed/dQw4w9WgXcQ' })
