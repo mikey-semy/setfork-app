@@ -32,7 +32,7 @@ import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorQuiz } from './editor'
 import { blankCount, BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType, type QuizKind } from './blocks'
-import { refineList, uploadStepFile, uploadStepImage, uploadStepVideo } from './actions'
+import { fetchLinkTitleAction, refineList, uploadStepFile, uploadStepImage, uploadStepVideo } from './actions'
 
 const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap, file: Paperclip }
 const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
@@ -41,6 +41,32 @@ const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru
 // обслуживать объёмы без дохода). Код загрузки на месте — включается флагом,
 // когда появится хостинг (S3/Cloudflare Stream). Видео по ссылке работает всегда.
 const VIDEO_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_VIDEO_UPLOAD === '1'
+
+// Кнопка внутри поля подписи ссылки: по URL тянет <title> страницы и подставляет
+// его в название. Своё busy-состояние на строку. Неактивна без валидного URL.
+function LinkTitleButton({ url, onLabel, ru }: { url: string; onLabel: (v: string) => void; ru: boolean }) {
+  const [busy, setBusy] = useState(false)
+  const ok = /^https?:\/\/\S+/i.test(url.trim())
+  async function gen() {
+    if (busy || !ok) return
+    setBusy(true)
+    const res = await fetchLinkTitleAction(url.trim())
+    setBusy(false)
+    if ('label' in res) onLabel(res.label)
+  }
+  return (
+    <button
+      type="button"
+      onClick={gen}
+      disabled={busy || !ok}
+      title={ru ? 'Название из ссылки' : 'Get title from link'}
+      aria-label={ru ? 'Название из ссылки' : 'Get title from link'}
+      className="grid h-6 w-6 place-items-center rounded text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-2"
+    >
+      {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+    </button>
+  )
+}
 
 const input =
   'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-none focus:border-border-strong'
@@ -514,12 +540,20 @@ export function ListEditor({
                       onChange={(v) => patch(i, { refs: it.refs.map((x, xi) => (xi === ri ? { ...x, label: v } : x)) })}
                       singleLine
                       className="w-[200px] shrink-0"
+                      textareaClassName="leading-normal"
                       lang={ru ? 'ru' : 'en'}
                       ariaLabel={ru ? 'Название ссылки' : 'Link label'}
                       placeholder={ru ? 'Название ссылки' : 'Link label'}
+                      trailing={
+                        <LinkTitleButton
+                          url={r.url}
+                          ru={ru}
+                          onLabel={(v) => patch(i, { refs: it.refs.map((x, xi) => (xi === ri ? { ...x, label: v } : x)) })}
+                        />
+                      }
                     />
                     <input
-                      className={`${input} font-mono`}
+                      className={`${input} font-mono leading-normal`}
                       aria-label={ru ? 'URL ссылки' : 'Link URL'}
                       placeholder="https://…"
                       value={r.url}

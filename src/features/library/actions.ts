@@ -537,6 +537,59 @@ export async function generateChangeNoteAction(
   return { note }
 }
 
+// ── Автозаголовок ссылки: тянем <title>/og:title со страницы по URL ──────────
+// Кнопка «сгенерировать» в ref-блоке редактора: пользователь вставил URL — по нему
+// достаём человекочитаемое название страницы в подпись. Требуем сессию + rate-limit;
+// отсекаем не-http и приватные адреса (базовый SSRF-guard по исходному хосту).
+const PRIVATE_HOST_RE =
+  /^(localhost$|127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0$|::1$|\[::1\]$|172\.(1[6-9]|2\d|3[01])\.)/i
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0*39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, n) => { try { return String.fromCodePoint(Number(n)) } catch { return '' } })
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function extractTitle(html: string): string {
+  const og = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)
+    ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i)
+  const tt = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
+  return decodeEntities(og?.[1] ?? tt?.[1] ?? '').slice(0, 120)
+}
+
+export async function fetchLinkTitleAction(url: string): Promise<{ label: string } | { error: string }> {
+  const session = await requireSession()
+  const { allowed } = checkRateLimit(`linktitle:${session.userId}`)
+  if (!allowed) return { error: 'ratelimited' }
+
+  let u: URL
+  try { u = new URL(url.trim()) } catch { return { error: 'badurl' } }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return { error: 'badurl' }
+  if (PRIVATE_HOST_RE.test(u.hostname)) return { error: 'badurl' }
+
+  try {
+    const res = await fetch(u, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(6000),
+      headers: { 'user-agent': 'SetForkBot/1.0 (+https://setfork.com)', accept: 'text/html,application/xhtml+xml' },
+    })
+    if (!res.ok || !(res.headers.get('content-type') ?? '').includes('html')) return { error: 'fetchfail' }
+    const html = (await res.text()).slice(0, 200_000)
+    const label = extractTitle(html)
+    return label ? { label } : { error: 'fetchfail' }
+  } catch {
+    return { error: 'fetchfail' }
+  }
+}
+
 // ── Публикация черновика (draft → published) ─────────────────────────
 export async function publishList(templateId: string): Promise<void> {
   const session = await requireSession()
