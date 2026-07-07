@@ -1,7 +1,7 @@
 // Типы блоков списка (всё-блочная модель). Чистый модуль без server-only —
 // используется и на сервере, и в редакторе. См. дизайн-док по блочному редактору.
 
-export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video'] as const
+export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video', 'quiz'] as const
 export type BlockType = (typeof BLOCK_TYPES)[number]
 
 export const isBlockType = (t: string): t is BlockType => (BLOCK_TYPES as readonly string[]).includes(t)
@@ -57,6 +57,22 @@ export interface VideoBlockContent {
   url: string
   caption?: string
 }
+// Quiz-блок (тест как на Stepik): вопрос + варианты с пометкой правильных.
+// Проверка — на КЛИЕНТЕ (self-check): ответы лежат в content и версионируются
+// в git вместе со списком (список всё равно форкается целиком — прятать ответы
+// на сервере в v0 бессмысленно). Серверная оценка/прогресс — отдельный слайс (runs).
+export interface QuizOption {
+  id: string
+  text: string
+  correct?: boolean // помечен как верный (используется при проверке)
+}
+export interface QuizBlockContent {
+  bid?: string
+  question: string
+  options: QuizOption[]
+  multi?: boolean // несколько верных (иначе ровно один)
+  explain?: string // пояснение, показывается после проверки
+}
 
 /** Разбор video-URL в БЕЗОПАСНУЮ встройку: iframe только для известных
  *  провайдеров (YouTube/Vimeo — не встраиваем произвольный src, это XSS-риск);
@@ -77,6 +93,7 @@ export const BLOCK_META: Record<BlockType, { icon: string; en: string; ru: strin
   image: { icon: '🖼️', en: 'Image', ru: 'Картинка' },
   poll: { icon: '📊', en: 'Poll', ru: 'Опрос' },
   video: { icon: '🎬', en: 'Video', ru: 'Видео' },
+  quiz: { icon: '🎓', en: 'Quiz', ru: 'Тест' },
 }
 
 /** Стабильный id варианта опроса (на него ссылаются голоса). */

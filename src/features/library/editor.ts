@@ -11,6 +11,8 @@ const asType = (v: unknown): BlockType => (typeof v === 'string' && isBlockType(
 export type EditorRef = { label: string; url: string }
 export type EditorOption = { id: string; text: string }
 export type EditorPoll = { question: string; options: EditorOption[]; multi: boolean; deadline: string }
+export type EditorQuizOption = { id: string; text: string; correct: boolean }
+export type EditorQuiz = { question: string; options: EditorQuizOption[]; multi: boolean; explain: string }
 export type EditorItem = {
   // Блочная модель: 'step' (runnable/чекаемый) | 'text' (markdown) | 'image' | 'poll'.
   type: BlockType
@@ -19,6 +21,7 @@ export type EditorItem = {
   caption: string // подпись image/video-блока
   videoUrl: string // ссылка video-блока ('' для не-video)
   poll: EditorPoll // данные poll-блока (пусто для не-poll)
+  quiz: EditorQuiz // данные quiz-блока (пусто для не-quiz)
   title: string
   desc: string
   command: string
@@ -32,16 +35,18 @@ export type EditorItem = {
 }
 
 const emptyPoll = (): EditorPoll => ({ question: '', options: [], multi: false, deadline: '' })
+const emptyQuiz = (): EditorQuiz => ({ question: '', options: [], multi: false, explain: '' })
 
 export function emptyItem(): EditorItem {
-  return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', poll: emptyPoll(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
+  return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', poll: emptyPoll(), quiz: emptyQuiz(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
 }
 
 /** Пустой блок заданного типа (для инсертера). Не-step получает стабильный bid;
- *  poll заводится с двумя пустыми вариантами. */
+ *  poll/quiz заводятся с двумя пустыми вариантами. */
 export function emptyBlock(type: BlockType): EditorItem {
   const base = { ...emptyItem(), type, bid: type === 'step' ? '' : newBlockId() }
   if (type === 'poll') base.poll = { question: '', options: [{ id: newOptionId(), text: '' }, { id: newOptionId(), text: '' }], multi: false, deadline: '' }
+  if (type === 'quiz') base.quiz = { question: '', options: [{ id: newOptionId(), text: '', correct: false }, { id: newOptionId(), text: '', correct: false }], multi: false, explain: '' }
   return base
 }
 
@@ -78,6 +83,22 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
             options,
             ...(it.poll.multi ? { multi: true } : {}),
             ...(it.poll.deadline.trim() ? { deadline: it.poll.deadline.trim() } : {}),
+          },
+        }
+      }
+      if (it.type === 'quiz') {
+        const options = it.quiz.options
+          .filter((o) => o.text.trim())
+          .map((o) => ({ id: o.id || newOptionId(), text: o.text.trim(), ...(o.correct ? { correct: true } : {}) }))
+        return {
+          ...base,
+          type: 'quiz',
+          content: {
+            bid: it.bid || newBlockId(),
+            question: it.quiz.question.trim(),
+            options,
+            ...(it.quiz.multi ? { multi: true } : {}),
+            ...(it.quiz.explain.trim() ? { explain: it.quiz.explain.trim() } : {}),
           },
         }
       }
@@ -149,6 +170,25 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
         },
       }
     }
+    if (type === 'quiz') {
+      const c = it.content ?? {}
+      const rawOpts = Array.isArray(c.options) ? (c.options as unknown[]) : []
+      const options = rawOpts.map((o) => {
+        const oo = (o && typeof o === 'object' ? o : {}) as Record<string, unknown>
+        return { id: typeof oo.id === 'string' ? oo.id : newOptionId(), text: typeof oo.text === 'string' ? oo.text : '', correct: oo.correct === true }
+      })
+      return {
+        ...emptyItem(),
+        type: 'quiz',
+        bid,
+        quiz: {
+          question: typeof c.question === 'string' ? c.question : '',
+          options: options.length ? options : [{ id: newOptionId(), text: '', correct: false }, { id: newOptionId(), text: '', correct: false }],
+          multi: c.multi === true,
+          explain: typeof c.explain === 'string' ? c.explain : '',
+        },
+      }
+    }
     return {
       type: 'step',
       bid: '',
@@ -156,6 +196,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
       caption: '',
       videoUrl: '',
       poll: emptyPoll(),
+      quiz: emptyQuiz(),
       title: tr(it.title, lang),
       desc: tr(it.desc, lang),
       command: it.command ?? '',
@@ -189,6 +230,14 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
           : [],
         multi: it?.poll?.multi === true,
         deadline: String(it?.poll?.deadline ?? ''),
+      },
+      quiz: {
+        question: String(it?.quiz?.question ?? ''),
+        options: Array.isArray(it?.quiz?.options)
+          ? it.quiz.options.map((o: { id?: unknown; text?: unknown; correct?: unknown }) => ({ id: String(o?.id ?? '') || newOptionId(), text: String(o?.text ?? ''), correct: o?.correct === true }))
+          : [],
+        multi: it?.quiz?.multi === true,
+        explain: String(it?.quiz?.explain ?? ''),
       },
       title: String(it?.title ?? ''),
       desc: String(it?.desc ?? ''),

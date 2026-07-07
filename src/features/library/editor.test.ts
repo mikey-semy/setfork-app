@@ -100,6 +100,35 @@ describe('editor block converters', () => {
     expect(back.caption).toBe('demo')
   })
 
+  it('quiz block: correct flags/multi/explain ride in content; empty options dropped', () => {
+    const quiz = { ...emptyBlock('quiz') }
+    quiz.quiz = {
+      question: '2+2?',
+      options: [{ id: 'a', text: '3', correct: false }, { id: 'b', text: '', correct: false }, { id: 'c', text: '4', correct: true }],
+      multi: false,
+      explain: 'basic arithmetic',
+    }
+    const [out] = toProposedItems([quiz], 'en')
+    expect(out.type).toBe('quiz')
+    expect(out.content).toMatchObject({ question: '2+2?', explain: 'basic arithmetic' })
+    // пустой вариант отброшен; correct:false НЕ сериализуется, correct:true — да
+    expect(out.content?.options).toEqual([{ id: 'a', text: '3' }, { id: 'c', text: '4', correct: true }])
+    // multi:false опущен
+    expect((out.content as { multi?: boolean }).multi).toBeUndefined()
+  })
+
+  it('quiz round-trips editor → proposed → editor (correct flags preserved)', () => {
+    const quiz = {
+      ...emptyBlock('quiz'),
+      quiz: { question: 'Q', options: [{ id: 'a', text: 'A', correct: true }, { id: 'b', text: 'B', correct: false }], multi: true, explain: '' },
+    }
+    const [proposed] = toProposedItems([quiz], 'en')
+    const [back] = toEditorItems([proposed], 'en')
+    expect(back.type).toBe('quiz')
+    expect(back.quiz.multi).toBe(true)
+    expect(back.quiz.options).toEqual([{ id: 'a', text: 'A', correct: true }, { id: 'b', text: 'B', correct: false }])
+  })
+
   it('parseVideoEmbed: YouTube/Vimeo → iframe src, .mp4 → file, прочее → link', () => {
     expect(parseVideoEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toEqual({ kind: 'youtube', src: 'https://www.youtube.com/embed/dQw4w9WgXcQ' })
     expect(parseVideoEmbed('https://youtu.be/dQw4w9WgXcQ')).toEqual({ kind: 'youtube', src: 'https://www.youtube.com/embed/dQw4w9WgXcQ' })
