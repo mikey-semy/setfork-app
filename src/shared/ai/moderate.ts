@@ -51,16 +51,22 @@ export async function moderateContent(
     appUrl: process.env.APP_URL || 'http://localhost:3000',
   })
   const model = await pickChatModel(settings)
+  let result: Awaited<ReturnType<typeof generateText>>
   try {
-    const result = await generateText({
+    result = await generateText({
       model: openrouter.chat(model, { usage: { include: true } }),
       system: SYSTEM,
       prompt: `Classify this list:\n${text.slice(0, 4000)}`,
       temperature: 0,
       maxOutputTokens: 200,
     })
-    const u = extractUsage(result)
-    await recordUsage({ userId: meta.userId, feature: 'moderate', model, ...u, refType: 'template', refId: meta.refId })
+  } catch {
+    // ИИ недоступен (сеть/5xx) — транзиентная ошибка, вызывающий вправе ретраить.
+    return null
+  }
+  const u = extractUsage(result)
+  await recordUsage({ userId: meta.userId, feature: 'moderate', model, ...u, refType: 'template', refId: meta.refId })
+  try {
     const cleaned = result.text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
     const obj = JSON.parse(cleaned) as { flagged?: unknown; category?: unknown; reason?: unknown; confidence?: unknown }
     const conf = Number(obj.confidence)
@@ -72,6 +78,10 @@ export async function moderateContent(
       confidence: Number.isFinite(conf) ? Math.min(1, Math.max(0, conf)) : 0.9,
     }
   } catch {
-    return null
+    // Модель ответила, но не JSON: это НЕ транзиентная ошибка — при temperature=0 повторный
+    // вызов даст тот же мусор, а деньги спишутся снова. Поэтому не ретраим (не бросаем null,
+    // на который вызывающий делает retry), а отдаём неуверенный вердикт: на гейте он уйдёт
+    // к человеку (hold), живой список при пере-проверке не тронем.
+    return { flagged: false, category: '', reason: 'classifier returned unparseable output', confidence: 0 }
   }
 }

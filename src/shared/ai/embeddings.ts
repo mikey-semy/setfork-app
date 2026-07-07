@@ -1,5 +1,13 @@
 import 'server-only'
 import { getApiKey } from '@/shared/settings/ai'
+import { recordUsage } from './usage'
+
+/** Кто/зачем зовёт эмбеддинги — для учёта расхода в ai_usage (feature 'embed'). */
+export interface EmbedMeta {
+  userId?: string | null
+  refType?: string
+  refId?: string
+}
 
 // Эмбеддинги через OpenRouter (openai/text-embedding-3-small → 1536 dims,
 // под колонку embeddings.embedding). Один OPENROUTER_API_KEY на чат и эмбеддинги.
@@ -23,7 +31,7 @@ function headers(key: string): Record<string, string> {
   }
 }
 
-export async function embedTexts(texts: string[], model?: string): Promise<number[][] | null> {
+export async function embedTexts(texts: string[], model?: string, meta?: EmbedMeta): Promise<number[][] | null> {
   const key = await getApiKey()
   if (!key || texts.length === 0) return null
   const usedModel = model || DEFAULT_EMBEDDING_MODEL
@@ -38,8 +46,25 @@ export async function embedTexts(texts: string[], model?: string): Promise<numbe
       console.warn(`[embeddings] HTTP ${res.status} (model=${usedModel})`)
       return null
     }
-    const data = (await res.json()) as { data?: { embedding: number[] }[] }
+    const data = (await res.json()) as {
+      data?: { embedding: number[] }[]
+      usage?: { prompt_tokens?: number; total_tokens?: number }
+    }
     if (!Array.isArray(data.data)) return null
+    // Учёт расхода: раньше эмбеддинги вообще не писались в ai_usage (слепая зона).
+    // Стоимость эмбеддингов провайдер в теле не возвращает — пишем токены, cost 0.
+    const tokens = data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0
+    await recordUsage({
+      userId: meta?.userId ?? null,
+      feature: 'embed',
+      model: usedModel,
+      input: tokens,
+      output: 0,
+      total: tokens,
+      cost: 0,
+      refType: meta?.refType,
+      refId: meta?.refId,
+    })
     return data.data.map((d) => d.embedding)
   } catch (e) {
     console.warn('[embeddings] failed', e instanceof Error ? e.message : e)
@@ -47,7 +72,7 @@ export async function embedTexts(texts: string[], model?: string): Promise<numbe
   }
 }
 
-export async function embedOne(text: string, model?: string): Promise<number[] | null> {
-  const result = await embedTexts([text], model)
+export async function embedOne(text: string, model?: string, meta?: EmbedMeta): Promise<number[] | null> {
+  const result = await embedTexts([text], model, meta)
   return result ? result[0] : null
 }

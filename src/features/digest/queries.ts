@@ -56,7 +56,7 @@ export async function buildDigest(userId: string, since: Date): Promise<Digest> 
      and sg.resolved_at > greatest(s.created_at, ${since})
     left join users au on au.id = sg.author_id
     where s.user_id = ${userId}
-      and t.visibility = 'public' and t.moderation = 'active'
+      and t.visibility = 'public' and t.status = 'published' and t.moderation = 'active'
       and t.owner_id <> ${userId}
     group by t.slug, u.handle
     order by count(v.id) desc
@@ -71,7 +71,7 @@ export async function buildDigest(userId: string, since: Date): Promise<Digest> 
     join template_versions v
       on v.template_id = p.id and v.created_at > greatest(f.created_at, ${since})
     where f.owner_id = ${userId}
-      and p.visibility = 'public' and p.moderation = 'active'
+      and p.visibility = 'public' and p.status = 'published' and p.moderation = 'active'
     group by p.slug, u.handle
     order by count(v.id) desc
     limit 10`)

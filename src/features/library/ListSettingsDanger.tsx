@@ -10,12 +10,14 @@ export function ListSettingsDanger({
   templateId,
   slug,
   visibility,
+  moderation,
   pinned,
   lang,
 }: {
   templateId: string
   slug: string
   visibility: 'public' | 'private'
+  moderation: string
   pinned: boolean
   lang: Lang
 }) {
@@ -24,6 +26,9 @@ export function ListSettingsDanger({
   const [confirm, setConfirm] = useState('')
   const isPrivate = visibility === 'private'
   const matches = confirm.trim() === slug
+  // Снятый модерацией список владелец удалить не может (сервер блокирует — стирание
+  // fingerprint'а открывало бы отмывку повторной заливкой). Показываем причину.
+  const lockedByModeration = moderation === 'flagged' || moderation === 'hidden'
 
   return (
     <>
@@ -74,24 +79,30 @@ export function ListSettingsDanger({
       {/* Удаление */}
       <div className="pt-4">
         <div className="mb-1 text-[14px] font-medium text-ink">{t('deleteList', lang)}</div>
-        <p className="mb-3 text-[12.5px] text-ink-2">{t('deleteListHint', lang)}</p>
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            placeholder={slug}
-            className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-danger"
-          />
-          <Button
-            variant="dangerSolid"
-            size="md"
-            onClick={() => start(() => deleteListAction(templateId))}
-            disabled={!matches || pending}
-            className="gap-2"
-          >
-            <Trash2 size={14} /> {t('deleteList', lang)}
-          </Button>
-        </div>
+        {lockedByModeration ? (
+          <p className="text-[12.5px] text-ink-2">{t('deleteLockedModeration', lang)}</p>
+        ) : (
+          <>
+            <p className="mb-3 text-[12.5px] text-ink-2">{t('deleteListHint', lang)}</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder={slug}
+                className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-danger"
+              />
+              <Button
+                variant="dangerSolid"
+                size="md"
+                onClick={() => start(() => deleteListAction(templateId))}
+                disabled={!matches || pending}
+                className="gap-2"
+              >
+                <Trash2 size={14} /> {t('deleteList', lang)}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </section>
     </>

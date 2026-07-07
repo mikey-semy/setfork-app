@@ -42,7 +42,9 @@ interface ScopedRow {
   ownerId?: string
 }
 
-const visible = (): SQL => sql`${templates.visibility} = 'public' and ${templates.moderation} = 'active'`
+// Публичный + опубликованный + активный. Без status='published' в ленту/рекомендации
+// просачивались публичные черновики (title/slug/note/версии).
+const visible = (): SQL => sql`${templates.visibility} = 'public' and ${templates.status} = 'published' and ${templates.moderation} = 'active'`
 
 async function withAvatars<T extends { actorAvatarUrl: string | null }>(rows: T[]): Promise<T[]> {
   return Promise.all(

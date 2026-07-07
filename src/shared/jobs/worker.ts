@@ -1,6 +1,6 @@
 import 'server-only'
 import { captureError, log } from '@/shared/observability'
-import { claimJob, completeJob, failJob, type Job } from './queue'
+import { claimJob, completeJob, failJob, reapStalledJobs, type Job } from './queue'
 import { runDigestJob, runEmailJob, runGardenerJob, runGenerateJob, runModerateJobHandler, runPushJob, runReindexJob } from './handlers'
 
 // Реестр обработчиков по типу задачи. Второй аргумент — сама джоба (attempts/maxAttempts)
@@ -42,10 +42,17 @@ export function startWorker(): void {
   started = true
 
   let running = false
+  let ticks = 0
   const tick = async () => {
     if (running) return
     running = true
     try {
+      // Раз в ~минуту (20 тиков × 3с) возвращаем в очередь джобы, зависшие в
+      // `processing` после падения воркера, — иначе они терялись навсегда.
+      if (ticks++ % 20 === 0) {
+        const reaped = await reapStalledJobs()
+        if (reaped) log.info('jobs reaped from stalled processing', { reaped })
+      }
       for (let i = 0; i < BATCH; i++) {
         const job = await claimJob()
         if (!job) break

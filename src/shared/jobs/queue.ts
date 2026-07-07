@@ -57,6 +57,25 @@ export async function completeJob(id: string): Promise<void> {
   await db.update(jobs).set({ status: 'done', updatedAt: new Date() }).where(eq(jobs.id, id))
 }
 
+/**
+ * Возвращает «зависшие» задачи (упавший посреди работы воркер оставил их в
+ * `processing`): либо снова в очередь (attempts < maxAttempts), либо в `failed`.
+ * Без этого claim берёт только `pending`, и зависшая джоба терялась навсегда.
+ * `attempts` уже инкрементнут при claim — повторного двойного расхода не создаём.
+ */
+export async function reapStalledJobs(olderThanSec = 300): Promise<number> {
+  const res = await db.execute(sql`
+    UPDATE jobs
+    SET status = CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END,
+        run_at = now(),
+        updated_at = now(),
+        last_error = coalesce(last_error, 'reaped: stalled in processing')
+    WHERE status = 'processing' AND updated_at < now() - (${olderThanSec} * interval '1 second')
+    RETURNING id
+  `)
+  return (res as { rows?: unknown[] }).rows?.length ?? 0
+}
+
 /** Ошибка — ретрай с backoff, либо `failed` после исчерпания попыток (attempts уже инкрементнут в claim). */
 export async function failJob(job: Job, error: string): Promise<void> {
   const permanent = job.attempts >= job.maxAttempts
