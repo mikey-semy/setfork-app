@@ -27,7 +27,7 @@ import {
 import type { Lang } from '@/shared/i18n'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { DatePicker } from '@/shared/ui/DatePicker'
-import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
+import { RichTextArea } from '@/shared/ui/RichTextArea'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorQuiz } from './editor'
 import { blankCount, BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType, type QuizKind } from './blocks'
@@ -413,7 +413,7 @@ export function ListEditor({
             />
             {/* Описание пункта — Markdown со всплывающей панелью форматирования
                 (выдели текст → мини-тулбар). Картинки/файлы — отдельными блоками. */}
-            <BubbleTextEditor
+            <RichTextArea
               value={it.desc}
               onChange={(v) => patch(i, { desc: v })}
               rows={3}
@@ -977,7 +977,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
 // мини-тулбар). Картинки/файлы — отдельными блоками, не в тулбаре.
 function TextBlockBody({ value, onChange, ru }: { value: string; onChange: (v: string) => void; ru: boolean }) {
   return (
-    <BubbleTextEditor
+    <RichTextArea
       value={value}
       onChange={onChange}
       rows={4}
