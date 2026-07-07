@@ -123,7 +123,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       caption: '',
       videoUrl: '',
       poll: { question: '', options: [], multi: false, deadline: '' },
-      quiz: { question: '', options: [], multi: false, explain: '' },
+      quiz: { kind: 'choice' as const, question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', explain: '' },
       title: it.title,
       desc: it.desc,
       command: sanitizeCommand(it.command ?? ''),

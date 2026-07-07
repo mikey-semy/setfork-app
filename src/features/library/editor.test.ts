@@ -103,6 +103,7 @@ describe('editor block converters', () => {
   it('quiz block: correct flags/multi/explain ride in content; empty options dropped', () => {
     const quiz = { ...emptyBlock('quiz') }
     quiz.quiz = {
+      ...quiz.quiz,
       question: '2+2?',
       options: [{ id: 'a', text: '3', correct: false }, { id: 'b', text: '', correct: false }, { id: 'c', text: '4', correct: true }],
       multi: false,
@@ -118,15 +119,44 @@ describe('editor block converters', () => {
   })
 
   it('quiz round-trips editor → proposed → editor (correct flags preserved)', () => {
+    const base = emptyBlock('quiz')
     const quiz = {
-      ...emptyBlock('quiz'),
-      quiz: { question: 'Q', options: [{ id: 'a', text: 'A', correct: true }, { id: 'b', text: 'B', correct: false }], multi: true, explain: '' },
+      ...base,
+      quiz: { ...base.quiz, question: 'Q', options: [{ id: 'a', text: 'A', correct: true }, { id: 'b', text: 'B', correct: false }], multi: true, explain: '' },
     }
     const [proposed] = toProposedItems([quiz], 'en')
     const [back] = toEditorItems([proposed], 'en')
     expect(back.type).toBe('quiz')
     expect(back.quiz.multi).toBe(true)
     expect(back.quiz.options).toEqual([{ id: 'a', text: 'A', correct: true }, { id: 'b', text: 'B', correct: false }])
+  })
+
+  it('quiz text-kind: accept/caseSensitive ride in content; round-trips', () => {
+    const base = emptyBlock('quiz')
+    const quiz = { ...base, quiz: { ...base.quiz, kind: 'text' as const, question: 'Capital of France?', accept: ['Paris', 'paris', ''], caseSensitive: false } }
+    const [out] = toProposedItems([quiz], 'en')
+    expect(out.content).toMatchObject({ kind: 'text', accept: ['Paris', 'paris'] })
+    const [back] = toEditorItems([out], 'en')
+    expect(back.quiz.kind).toBe('text')
+    expect(back.quiz.accept).toEqual(['Paris', 'paris'])
+  })
+
+  it('quiz number-kind: answer/tolerance ride in content as numbers; round-trips', () => {
+    const base = emptyBlock('quiz')
+    const quiz = { ...base, quiz: { ...base.quiz, kind: 'number' as const, question: 'Pi?', answer: '3.14', tolerance: '0.01' } }
+    const [out] = toProposedItems([quiz], 'en')
+    expect(out.content).toMatchObject({ kind: 'number', answer: 3.14, tolerance: 0.01 })
+    const [back] = toEditorItems([out], 'en')
+    expect(back.quiz.kind).toBe('number')
+    expect(back.quiz.answer).toBe('3.14')
+    expect(back.quiz.tolerance).toBe('0.01')
+  })
+
+  it('choice quiz omits kind for byte-compat (undefined = choice)', () => {
+    const base = emptyBlock('quiz')
+    const quiz = { ...base, quiz: { ...base.quiz, question: 'Q', options: [{ id: 'a', text: 'A', correct: true }, { id: 'b', text: 'B', correct: false }] } }
+    const [out] = toProposedItems([quiz], 'en')
+    expect((out.content as { kind?: string }).kind).toBeUndefined()
   })
 
   it('section (урок) carries through non-step blocks and round-trips', () => {

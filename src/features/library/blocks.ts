@@ -66,12 +66,67 @@ export interface QuizOption {
   text: string
   correct?: boolean // помечен как верный (используется при проверке)
 }
+// Тип теста. undefined = 'choice' (обратная совместимость со старыми quiz).
+export type QuizKind = 'choice' | 'text' | 'number'
 export interface QuizBlockContent {
   bid?: string
+  kind?: QuizKind
   question: string
-  options: QuizOption[]
-  multi?: boolean // несколько верных (иначе ровно один)
   explain?: string // пояснение, показывается после проверки
+  // choice — выбор варианта(ов)
+  options?: QuizOption[]
+  multi?: boolean // несколько верных (иначе ровно один)
+  // text — свободный короткий ответ (сверяется со списком принимаемых)
+  accept?: string[]
+  caseSensitive?: boolean
+  // number — числовой ответ с допуском
+  answer?: number
+  tolerance?: number
+}
+
+export const quizKind = (c: QuizBlockContent): QuizKind => c.kind ?? 'choice'
+
+// Ответ ученика (одна форма на все типы): options — для choice; text — для text/number.
+export interface QuizAnswer {
+  options?: string[]
+  text?: string
+}
+
+/** Убрать правильные ответы из контента перед отдачей авторизованному (сервер
+ *  оценивает сам). choice → без флагов correct; text → без accept; number → без answer/tolerance. */
+export function stripQuizAnswers(c: QuizBlockContent): QuizBlockContent {
+  switch (quizKind(c)) {
+    case 'text': {
+      const o = { ...c }
+      delete o.accept
+      return o
+    }
+    case 'number': {
+      const o = { ...c }
+      delete o.answer
+      delete o.tolerance
+      return o
+    }
+    default:
+      return { ...c, options: (c.options ?? []).map((o) => ({ id: o.id, text: o.text })) }
+  }
+}
+
+/** Нормализация текстового ответа: тримминг, схлопывание пробелов, регистр. */
+export function normalizeAnswer(s: string, caseSensitive?: boolean): string {
+  const t = (s ?? '').trim().replace(/\s+/g, ' ')
+  return caseSensitive ? t : t.toLowerCase()
+}
+
+/** Оценка текстового ответа: совпал ли (после нормализации) с любым принимаемым. */
+export function gradeText(input: string, accept: string[], caseSensitive?: boolean): boolean {
+  const n = normalizeAnswer(input, caseSensitive)
+  return !!n && accept.some((a) => normalizeAnswer(a, caseSensitive) === n)
+}
+
+/** Оценка числового ответа: |input − answer| ≤ tolerance. */
+export function gradeNumber(input: number, answer: number, tolerance = 0): boolean {
+  return Number.isFinite(input) && Math.abs(input - answer) <= Math.abs(tolerance)
 }
 
 /** Разбор video-URL в БЕЗОПАСНУЮ встройку: iframe только для известных

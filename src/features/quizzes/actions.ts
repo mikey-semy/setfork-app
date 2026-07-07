@@ -5,24 +5,26 @@ import { revalidatePath } from 'next/cache'
 import { courseCompletions, db, quizAttempts, steps, templates, templateVersions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/features/library/access'
+import { gradeNumber, gradeText, quizKind, type QuizAnswer, type QuizBlockContent } from '@/features/library/blocks'
 
 export interface QuizVerdict {
-  ok: boolean // прошёл (точное совпадение с верными)
-  correctIds: string[] // верные варианты — раскрываются ТОЛЬКО после отправки
+  ok: boolean // прошёл
+  correctIds: string[] // верные варианты (choice) — раскрываются ТОЛЬКО после отправки
+  reveal?: string // верный ответ (text/number) — раскрывается после отправки
   attempts: number // сколько попыток сделал (для UI «попытка N»)
   completed?: boolean // этой отправкой пройден ПОСЛЕДНИЙ тест → курс завершён
 }
 
-/** Отправка ответа на quiz-блок. Оценка на СЕРВЕРЕ (correct-флаги берём из
- *  git-content текущей версии, а не с клиента). Результат — одна строка на
- *  (user, tpl, bid), пересдача перезаписывает её и инкрементит attempts. */
-export async function submitQuiz(templateId: string, bid: string, selectedIds: string[]): Promise<QuizVerdict | { error: string }> {
+/** Отправка ответа на quiz-блок. Оценка на СЕРВЕРЕ (эталон берём из git-content
+ *  текущей версии, а не с клиента). Поддержаны типы choice/text/number. Результат —
+ *  одна строка на (user, tpl, bid), пересдача перезаписывает её и инкрементит attempts. */
+export async function submitQuiz(templateId: string, bid: string, answer: QuizAnswer): Promise<QuizVerdict | { error: string }> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return { error: 'not_found' }
   if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return { error: 'forbidden' }
 
-  // Quiz-блок текущей версии по стабильному bid → варианты с флагами correct.
+  // Quiz-блок текущей версии по стабильному bid → эталонный ответ.
   const [ver] = await db
     .select({ id: templateVersions.id })
     .from(templateVersions)
@@ -36,23 +38,42 @@ export async function submitQuiz(templateId: string, bid: string, selectedIds: s
     .limit(1)
   if (!block) return { error: 'not_found' }
 
-  const content = block.content as { options?: { id: string; correct?: boolean }[]; multi?: boolean }
-  const options = content.options ?? []
-  const validIds = new Set(options.map((o) => o.id))
-  // Отбрасываем неизвестные id (клиент мог прислать мусор), дедуплицируем.
-  const picked = [...new Set(selectedIds)].filter((id) => validIds.has(id))
-  const correctIds = options.filter((o) => o.correct).map((o) => o.id)
-  if (!correctIds.length) return { error: 'no_answer' } // нельзя оценить без верных вариантов
+  const content = block.content as unknown as QuizBlockContent
+  const kind = quizKind(content)
+  let ok = false
+  let selected: string[] = []
+  let correctIds: string[] = []
+  let reveal: string | undefined
 
-  const correctSet = new Set(correctIds)
-  const ok = picked.length === correctSet.size && picked.every((id) => correctSet.has(id))
+  if (kind === 'text') {
+    const accept = (content.accept ?? []).map((a) => String(a))
+    if (!accept.length) return { error: 'no_answer' }
+    const input = (answer.text ?? '').trim()
+    selected = [input]
+    ok = gradeText(input, accept, content.caseSensitive)
+    reveal = accept.join(' / ')
+  } else if (kind === 'number') {
+    if (typeof content.answer !== 'number') return { error: 'no_answer' }
+    const input = (answer.text ?? '').trim()
+    selected = [input]
+    ok = gradeNumber(Number(input), content.answer, content.tolerance)
+    reveal = String(content.answer)
+  } else {
+    const options = content.options ?? []
+    const validIds = new Set(options.map((o) => o.id))
+    selected = [...new Set(answer.options ?? [])].filter((id) => validIds.has(id))
+    correctIds = options.filter((o) => o.correct).map((o) => o.id)
+    if (!correctIds.length) return { error: 'no_answer' }
+    const correctSet = new Set(correctIds)
+    ok = selected.length === correctSet.size && selected.every((id) => correctSet.has(id))
+  }
 
   const [row] = await db
     .insert(quizAttempts)
-    .values({ templateId, bid, userId: session.userId, selected: picked, correct: ok })
+    .values({ templateId, bid, userId: session.userId, selected, correct: ok })
     .onConflictDoUpdate({
       target: [quizAttempts.userId, quizAttempts.templateId, quizAttempts.bid],
-      set: { selected: picked, correct: ok, attempts: sql`${quizAttempts.attempts} + 1`, updatedAt: sql`now()` },
+      set: { selected, correct: ok, attempts: sql`${quizAttempts.attempts} + 1`, updatedAt: sql`now()` },
     })
     .returning({ attempts: quizAttempts.attempts })
 
@@ -80,5 +101,5 @@ export async function submitQuiz(templateId: string, bid: string, selectedIds: s
   const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
   if (owner) revalidatePath(`/${owner.handle}/${tpl.slug}`)
 
-  return { ok, correctIds, attempts: row?.attempts ?? 1, completed }
+  return { ok, correctIds, reveal, attempts: row?.attempts ?? 1, completed }
 }

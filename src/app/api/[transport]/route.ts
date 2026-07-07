@@ -85,12 +85,17 @@ const handler = createMcpHandler(
       // poll / quiz
       question: z.string().optional().describe('poll/quiz: the question'),
       options: z
-        .array(z.object({ text: z.string(), correct: z.boolean().optional().describe('quiz only: mark this option correct') }))
+        .array(z.object({ text: z.string(), correct: z.boolean().optional().describe('quiz choice only: mark this option correct') }))
         .optional()
-        .describe('poll/quiz: answer options'),
-      multi: z.boolean().optional().describe('poll/quiz: allow multiple selections / multiple correct'),
+        .describe('poll / quiz(choice): answer options'),
+      multi: z.boolean().optional().describe('poll / quiz(choice): allow multiple selections / multiple correct'),
       deadline: z.string().optional().describe('poll: ISO date after which voting closes'),
       explain: z.string().optional().describe('quiz: explanation shown after checking'),
+      quizKind: z.enum(['choice', 'text', 'number']).optional().describe('quiz answer type (default "choice")'),
+      accept: z.array(z.string()).optional().describe('quiz(text): accepted answers (any match counts)'),
+      caseSensitive: z.boolean().optional().describe('quiz(text): match case exactly'),
+      answer: z.number().optional().describe('quiz(number): the correct number'),
+      tolerance: z.number().optional().describe('quiz(number): allowed +/- tolerance'),
     })
 
     server.registerTool(
