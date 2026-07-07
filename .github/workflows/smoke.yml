@@ -1,0 +1,92 @@
+name: Smoke (setfork-sim)
+
+# ОТДЕЛЬНЫЙ workflow, НЕ входит в required-checks основного CI (ci.yml) —
+# полный стек + Playwright склонны к флаки, и они не должны блокировать чужие PR.
+# Гоняет сценарии c1–c6 из репо setfork-sim против свежесобранного фронта
+# (POLYGON_URL=localhost, inproc-git через системный git — Rust-ядро не нужно).
+#
+# ТРЕБУЕТ секрет репозитория SIM_REPO_TOKEN — fine-grained PAT с read-доступом к
+# contents репо mikey-semy/setfork-sim (кросс-репо checkout приватного репо;
+# дефолтный GITHUB_TOKEN туда не ходит). Без него шаг checkout sim упадёт.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sf
+          POSTGRES_PASSWORD: sf
+          POSTGRES_DB: sf
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sf"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://sf:sf@localhost:5432/sf
+      AUTH_SECRET: ci-placeholder-secret-at-least-32-characters-long
+      POLYGON_URL: http://localhost:3000
+      SIM_PROXY: 'off' # прокси нужен только для демо-стенда; локалхост — напрямую
+      # SETFORK_CORE_URL НЕ задаём → фронт использует inproc-git (системный git)
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Apply DB schema (drizzle push, чистая БД → без промптов)
+        run: npm run db:push
+
+      - name: Build
+        run: npm run build
+
+      - name: Start frontend
+        run: |
+          git config --global user.email "sim@setfork.com"
+          git config --global user.name "SetFork Sim"
+          npm start > "$RUNNER_TEMP/frontend.log" 2>&1 &
+          for i in $(seq 1 45); do
+            curl -sf http://localhost:3000 >/dev/null && { echo "frontend up"; exit 0; }
+            sleep 2
+          done
+          echo "frontend did not come up in time"; cat "$RUNNER_TEMP/frontend.log"; exit 1
+
+      - name: Checkout setfork-sim
+        uses: actions/checkout@v4
+        with:
+          repository: mikey-semy/setfork-sim
+          token: ${{ secrets.SIM_REPO_TOKEN }}
+          path: _sim
+
+      - name: Run smoke (c1–c6)
+        working-directory: _sim
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run smoke
+
+      - name: Frontend log (on failure)
+        if: failure()
+        run: cat "$RUNNER_TEMP/frontend.log" || true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: _sim/playwright-report
+          if-no-files-found: ignore
