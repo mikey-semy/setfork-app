@@ -1,4 +1,7 @@
+import Link from 'next/link'
+import { Sparkles } from 'lucide-react'
 import { getActivity, getUserTemplates } from '@/features/library/queries'
+import { getImprovementFeed } from '@/features/improve/queries'
 import { getFollowingIds } from '@/features/follows/queries'
 import { getWatchedIds } from '@/features/watch/queries'
 import { getFeedEvents, getRecommended, getStarredIds, type FeedEvent } from '@/features/feed/queries'
@@ -6,7 +9,7 @@ import { Feed } from '@/features/feed/Feed'
 import { CreateWithAI } from '@/features/feed/CreateWithAI'
 import type { Lang } from '@/shared/i18n'
 import { ListsPanel } from './ListsPanel'
-import { t } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { PromoCard } from './PromoCard'
 import { ChangelogCard } from './ChangelogCard'
 
@@ -43,6 +46,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
     }))
   }
   const recommended = await getRecommended(userId, starred, 4)
+  const improve = await getImprovementFeed(userId, 3)
 
   return (
     <div className="grid w-full gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[300px_minmax(0,1fr)_300px] lg:px-8">
@@ -61,6 +65,27 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
       {/* Центр: AI-area + лента */}
       <div className="min-w-0">
         <CreateWithAI lang={lang} />
+        {improve.length > 0 && (
+          <div className="mb-4 rounded-lg border border-border bg-surface p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-2">
+                <Sparkles size={14} className="text-accent" /> {lang === 'ru' ? 'Что улучшить' : 'What to improve'}
+              </span>
+              <Link href="/improve" className="text-[12px] text-accent hover:underline">{lang === 'ru' ? 'все' : 'all'}</Link>
+            </div>
+            <ul className="flex flex-col gap-1.5">
+              {improve.map((it) => (
+                <li key={it.id} className="flex items-center justify-between gap-2 text-[13px]">
+                  <Link href={`/${it.ownerHandle}/${it.slug}`} className="min-w-0 truncate text-accent hover:underline">{tr(it.title, lang)}</Link>
+                  <span className="shrink-0 font-mono text-[11px] text-muted">
+                    {it.openSuggestions > 0 && <span className="text-accent">⑂{it.openSuggestions} </span>}
+                    {it.openIssues > 0 && <span className="text-warn">◍{it.openIssues}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <Feed events={events} recommended={recommended} lang={lang} emptyHint={emptyHint} />
       </div>
 
