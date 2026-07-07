@@ -636,9 +636,12 @@ export function ListEditor({
             </div>
           )}
 
-          {/* Инсертер между блоками: вставить после текущего блока.
+          {/* Инсертер между блоками: вставить после текущего блока. После ПОСЛЕДНЕГО
+              не рисуем — конец списка покрывает главный инсертер ниже (без дубля).
               «Повторить предыдущий» = тип блока, ПОД которым стоит инсертер. */}
-          <BlockInserter onInsert={(type) => insertAt(i + 1, type)} repeatType={it.type} ru={ru} between />
+          {i < items.length - 1 && (
+            <BlockInserter onInsert={(type) => insertAt(i + 1, type)} repeatType={it.type} ru={ru} between />
+          )}
         </div>
       ))}
       </div>
