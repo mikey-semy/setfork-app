@@ -38,6 +38,8 @@ export type EditorItem = {
   text: string // markdown text-блока ('' для не-text)
   caption: string // подпись image/video-блока
   videoUrl: string // ссылка video-блока ('' для не-video)
+  fileUrl: string // ссылка file-блока ('' для не-file)
+  fileName: string // имя файла file-блока
   poll: EditorPoll // данные poll-блока (пусто для не-poll)
   quiz: EditorQuiz // данные quiz-блока (пусто для не-quiz)
   title: string
@@ -56,7 +58,7 @@ const emptyPoll = (): EditorPoll => ({ question: '', options: [], multi: false, 
 const emptyQuiz = (): EditorQuiz => ({ kind: 'choice', question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], explain: '' })
 
 export function emptyItem(): EditorItem {
-  return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', poll: emptyPoll(), quiz: emptyQuiz(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
+  return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', fileUrl: '', fileName: '', poll: emptyPoll(), quiz: emptyQuiz(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
 }
 
 /** Пустой блок заданного типа (для инсертера). Не-step получает стабильный bid;
@@ -89,6 +91,9 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
       }
       if (it.type === 'video') {
         return { ...base, section: sec, type: 'video', content: { url: it.videoUrl.trim(), ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
+      }
+      if (it.type === 'file') {
+        return { ...base, section: sec, type: 'file', content: { url: it.fileUrl.trim(), name: it.fileName.trim(), bid: it.bid || newBlockId() } }
       }
       if (it.type === 'poll') {
         const options = it.poll.options
@@ -202,6 +207,9 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     if (type === 'video') {
       return { ...emptyItem(), type: 'video', bid, section, videoUrl: typeof it.content?.url === 'string' ? it.content.url : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
     }
+    if (type === 'file') {
+      return { ...emptyItem(), type: 'file', bid, section, fileUrl: typeof it.content?.url === 'string' ? it.content.url : '', fileName: typeof it.content?.name === 'string' ? it.content.name : '' }
+    }
     if (type === 'poll') {
       const c = it.content ?? {}
       const rawOpts = Array.isArray(c.options) ? (c.options as unknown[]) : []
@@ -266,6 +274,8 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
       text: '',
       caption: '',
       videoUrl: '',
+      fileUrl: '',
+      fileName: '',
       poll: emptyPoll(),
       quiz: emptyQuiz(),
       title: tr(it.title, lang),
@@ -294,6 +304,8 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
       text: String(it?.text ?? ''),
       caption: String(it?.caption ?? ''),
       videoUrl: String(it?.videoUrl ?? ''),
+      fileUrl: String(it?.fileUrl ?? ''),
+      fileName: String(it?.fileName ?? ''),
       poll: {
         question: String(it?.poll?.question ?? ''),
         options: Array.isArray(it?.poll?.options)

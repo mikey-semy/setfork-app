@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, useTemplate } from '@/features/library/actions'
@@ -339,6 +339,15 @@ export default async function ListPage({
                     const url = typeof s.content?.url === 'string' ? s.content.url : ''
                     const cap = typeof s.content?.caption === 'string' ? s.content.caption : ''
                     el = url ? <div><VideoEmbed url={url} caption={cap} /></div> : null
+                  } else if (s.type === 'file') {
+                    const url = typeof s.content?.url === 'string' ? s.content.url : ''
+                    const name = typeof s.content?.name === 'string' ? s.content.name : ''
+                    el = url ? (
+                      <a href={url} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-2 break-inside-avoid rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-accent hover:border-border-strong">
+                        <Paperclip size={15} className="shrink-0 text-muted" />
+                        <span className="min-w-0 truncate">{name || url}</span>
+                      </a>
+                    ) : null
                   } else if (s.type === 'poll') {
                     const c = (s.content ?? {}) as unknown as PollContent & { bid?: string }
                     const bid = typeof c.bid === 'string' ? c.bid : ''

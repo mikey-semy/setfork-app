@@ -1,7 +1,7 @@
 // Типы блоков списка (всё-блочная модель). Чистый модуль без server-only —
 // используется и на сервере, и в редакторе. См. дизайн-док по блочному редактору.
 
-export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video', 'quiz'] as const
+export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video', 'quiz', 'file'] as const
 export type BlockType = (typeof BLOCK_TYPES)[number]
 
 export const isBlockType = (t: string): t is BlockType => (BLOCK_TYPES as readonly string[]).includes(t)
@@ -56,6 +56,13 @@ export interface VideoBlockContent {
   bid?: string
   url: string
   caption?: string
+}
+// File-блок: вложение (PDF/архив/…) — ссылка + имя файла. Загрузка через
+// uploadAttachmentFile (диск, 25МБ, белый список расширений). Отдаётся ссылкой на скачивание.
+export interface FileBlockContent {
+  bid?: string
+  url: string
+  name: string
 }
 // Quiz-блок (тест как на Stepik): вопрос + варианты с пометкой правильных.
 // Проверка — на КЛИЕНТЕ (self-check): ответы лежат в content и версионируются
@@ -208,6 +215,7 @@ export const BLOCK_META: Record<BlockType, { icon: string; en: string; ru: strin
   poll: { icon: '📊', en: 'Poll', ru: 'Опрос' },
   video: { icon: '🎬', en: 'Video', ru: 'Видео' },
   quiz: { icon: '🎓', en: 'Quiz', ru: 'Тест' },
+  file: { icon: '📎', en: 'File', ru: 'Файл' },
 }
 
 /** Стабильный id варианта опроса (на него ссылаются голоса). */

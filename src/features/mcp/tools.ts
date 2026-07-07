@@ -37,6 +37,7 @@ export interface McpItemInput {
   caption?: string
   imageRef?: string
   url?: string
+  fileName?: string // file — имя вложения (url = ссылка на уже загруженный файл)
   question?: string
   options?: McpBlockOption[]
   multi?: boolean
@@ -62,6 +63,7 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
     if (type === 'text') return { ...b, text: (it.text ?? '').trim() }
     if (type === 'image') return { ...b, imageKey: (it.imageRef ?? '').trim(), caption: (it.caption ?? '').trim() }
     if (type === 'video') return { ...b, videoUrl: (it.url ?? '').trim(), caption: (it.caption ?? '').trim() }
+    if (type === 'file') return { ...b, fileUrl: (it.url ?? '').trim(), fileName: (it.fileName ?? '').trim() }
     if (type === 'poll')
       return { ...b, poll: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim() })), multi: it.multi === true, deadline: (it.deadline ?? '').trim() } }
     if (type === 'quiz') {
@@ -165,6 +167,7 @@ function blockForMcp(s: DetailStep) {
   if (type === 'text') return { n: s.n, type, text: str(c.md) }
   if (type === 'image') return { n: s.n, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
   if (type === 'video') return { n: s.n, type, url: str(c.url), caption: str(c.caption) || undefined }
+  if (type === 'file') return { n: s.n, type, url: str(c.url), name: str(c.name) }
   if (type === 'poll') {
     const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
     return { n: s.n, type, question: str(c.question), options: opts.map((o) => ({ text: str(o.text) })), multi: c.multi === true || undefined, deadline: str(c.deadline) || undefined }

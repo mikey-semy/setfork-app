@@ -81,7 +81,8 @@ const handler = createMcpHandler(
       // image / video
       caption: z.string().optional().describe('image/video: caption'),
       imageRef: z.string().optional().describe('image: storage key of an already-uploaded image (rarely set via API)'),
-      url: z.string().optional().describe('video: link to YouTube/Vimeo or a direct .mp4/.webm — for type "video"'),
+      url: z.string().optional().describe('video: link to YouTube/Vimeo or a direct .mp4/.webm; file: link to the attachment'),
+      fileName: z.string().optional().describe('file: display name of the attachment — for type "file"'),
       // poll / quiz
       question: z.string().optional().describe('poll/quiz: the question'),
       options: z

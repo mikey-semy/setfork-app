@@ -8,7 +8,7 @@ import { requireSession } from '@/shared/auth/session'
 import { recordAudit } from '@/shared/audit'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
-import { imageUrl, uploadImageFile, uploadVideoFile } from '@/shared/media'
+import { imageUrl, uploadAttachmentFile, uploadImageFile, uploadVideoFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { aiQuota, listQuota } from '@/shared/quota'
@@ -114,6 +114,18 @@ export async function uploadStepVideo(formData: FormData): Promise<{ url: string
   try {
     const url = await uploadVideoFile(`videos/${session.userId}`, file)
     return { url }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Не удалось загрузить.' }
+  }
+}
+
+/** Загрузка вложения (file-блок): PDF/архив/… → путь /uploads/files/... + имя. */
+export async function uploadStepFile(formData: FormData): Promise<{ url: string; name: string } | { error: string }> {
+  await requireSession()
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.size === 0) return { error: 'Файл не выбран.' }
+  try {
+    return await uploadAttachmentFile(file)
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Не удалось загрузить.' }
   }
@@ -466,6 +478,8 @@ export async function refineList(input: {
     text: '',
     caption: '',
     videoUrl: '',
+    fileUrl: '',
+    fileName: '',
     poll: { question: '', options: [], multi: false, deadline: '' },
     quiz: { kind: 'choice' as const, question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], explain: '' },
     title: it.title,
