@@ -1,8 +1,8 @@
 'use server'
 
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { db, quizAttempts, steps, templates, templateVersions, users } from '@/shared/db'
+import { courseCompletions, db, quizAttempts, steps, templates, templateVersions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/features/library/access'
 
@@ -10,6 +10,7 @@ export interface QuizVerdict {
   ok: boolean // прошёл (точное совпадение с верными)
   correctIds: string[] // верные варианты — раскрываются ТОЛЬКО после отправки
   attempts: number // сколько попыток сделал (для UI «попытка N»)
+  completed?: boolean // этой отправкой пройден ПОСЛЕДНИЙ тест → курс завершён
 }
 
 /** Отправка ответа на quiz-блок. Оценка на СЕРВЕРЕ (correct-флаги берём из
@@ -55,8 +56,29 @@ export async function submitQuiz(templateId: string, bid: string, selectedIds: s
     })
     .returning({ attempts: quizAttempts.attempts })
 
+  // Завершение курса: если этой сдачей пройдены ВСЕ тесты текущей версии — фиксируем.
+  let completed = false
+  if (ok) {
+    const quizRows = await db.select({ content: steps.content }).from(steps).where(and(eq(steps.versionId, ver.id), eq(steps.type, 'quiz')))
+    const allBids = quizRows.map((r) => (r.content as { bid?: string }).bid).filter((b): b is string => !!b)
+    if (allBids.length) {
+      const passed = await db
+        .select({ bid: quizAttempts.bid })
+        .from(quizAttempts)
+        .where(and(eq(quizAttempts.userId, session.userId), eq(quizAttempts.templateId, templateId), eq(quizAttempts.correct, true), inArray(quizAttempts.bid, allBids)))
+      const passedSet = new Set(passed.map((r) => r.bid))
+      if (allBids.every((b) => passedSet.has(b))) {
+        await db
+          .insert(courseCompletions)
+          .values({ templateId, userId: session.userId, version: tpl.currentVersion })
+          .onConflictDoNothing({ target: [courseCompletions.userId, courseCompletions.templateId] })
+        completed = true
+      }
+    }
+  }
+
   const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
   if (owner) revalidatePath(`/${owner.handle}/${tpl.slug}`)
 
-  return { ok, correctIds, attempts: row?.attempts ?? 1 }
+  return { ok, correctIds, attempts: row?.attempts ?? 1, completed }
 }

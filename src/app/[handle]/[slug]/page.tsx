@@ -300,7 +300,7 @@ export default async function ListPage({
               </div>
             )}
             {viewer && quizBids.length > 0 && (
-              <CourseProgress passed={quizBids.filter((b) => quizStates[b]?.correct).length} total={quizBids.length} lang={lang} />
+              <CourseProgress passed={quizBids.filter((b) => quizStates[b]?.correct).length} total={quizBids.length} lang={lang} certificateHref={`${base}/certificate`} />
             )}
             <div className="flex flex-col gap-3">
               {steps.map((s, si) => {
