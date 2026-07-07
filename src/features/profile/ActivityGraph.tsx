@@ -15,6 +15,7 @@ export function ActivityGraph({
   lang,
   year,
   years = [],
+  showRolling = true,
   base,
 }: {
   contributions: { date: string; count: number }[]
@@ -25,6 +26,8 @@ export function ActivityGraph({
   year?: number
   /** Доступные годы (регистрация…сейчас), новые сверху; пусто = без селектора. */
   years?: number[]
+  /** Показывать пилюлю «Последний год» (скользящее окно). Ложь → только годы. */
+  showRolling?: boolean
   /** База профиля для ссылок селектора (например `/mike`). */
   base?: string
 }) {
@@ -33,13 +36,13 @@ export function ActivityGraph({
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Диапазон сетки. С year — ВЕСЬ календарный год Jan1–Dec31 (даже текущий: будущие
-  // дни и «хвосты» соседних лет остаются пустыми клетками, но ширина — целый год).
-  // Без year — скользящее окно ~52 недели до сегодня.
+  // Диапазон сетки. С year — календарный год: прошлый рисуем целиком Jan1–Dec31,
+  // текущий — только до сегодня (чтобы правый край сетки = «сейчас», а не пустой
+  // хвост будущих месяцев). Без year — скользящее окно ~52 недели до сегодня.
   let gridEnd: Date
   let start: Date
   if (year != null) {
-    gridEnd = new Date(year, 11, 31)
+    gridEnd = year === today.getFullYear() ? new Date(today) : new Date(year, 11, 31)
     start = new Date(year, 0, 1)
     start.setDate(start.getDate() - start.getDay())
   } else {
@@ -91,15 +94,18 @@ export function ActivityGraph({
         </span>
       </div>
 
-      {/* Селектор года (как GitHub): «Последний год» + годы регистрации…сейчас. */}
-      {years.length > 0 && base && (
+      {/* Селектор года (как GitHub): «Последний год» + годы регистрации…сейчас.
+          Прячем целиком, если переключать не на что (нет rolling и один год). */}
+      {years.length > 0 && base && (showRolling || years.length > 1) && (
         <div className="mb-3 flex flex-wrap gap-1.5">
-          <Link
-            href={base}
-            className={`rounded-md border px-2 py-0.5 text-[12px] ${year == null ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
-          >
-            {lang === 'ru' ? 'Последний год' : 'Last year'}
-          </Link>
+          {showRolling && (
+            <Link
+              href={base}
+              className={`rounded-md border px-2 py-0.5 text-[12px] ${year == null ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+            >
+              {lang === 'ru' ? 'Последний год' : 'Last year'}
+            </Link>
+          )}
           {years.map((y) => (
             <Link
               key={y}
@@ -115,13 +121,14 @@ export function ActivityGraph({
       {/* Колонка дней недели вынесена ИЗ скролл-контейнера: при горизонтальном скролле
           она остаётся видимой слева, скроллятся только месяцы и квадратики. */}
       <div className="flex">
-        {/* Дни недели слева (Mon/Wed/Fri), как у GitHub. */}
+        {/* Дни недели слева (Mon/Wed/Fri), как у GitHub. Высота spacer'а ЖЁСТКО равна
+            высоте строки месяцев (h-[13px]), а каждая подпись центрируется в h-[11px]
+            строке — той же, что и квадратик-ячейка, — иначе метки уезжают на пол-клетки. */}
         <div className="flex w-[26px] shrink-0 flex-col gap-1 bg-surface">
-          {/* spacer под строку месяцев (её высота = 10px, leading-none) */}
-          <div className="h-[10px]" />
-          <div className="flex flex-col gap-[3px] text-[9px] leading-[11px] text-muted">
+          <div className="h-[13px]" />
+          <div className="flex flex-col gap-[3px] text-[9px] text-muted">
             {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-              <div key={d} className="h-[11px]">
+              <div key={d} className="flex h-[11px] items-center leading-none">
                 {d === 1 ? (lang === 'ru' ? 'пн' : 'Mon') : d === 3 ? (lang === 'ru' ? 'ср' : 'Wed') : d === 5 ? (lang === 'ru' ? 'пт' : 'Fri') : ''}
               </div>
             ))}
@@ -132,7 +139,8 @@ export function ActivityGraph({
             тонкий полупрозрачный (.scroll-thin), не пугает на узких экранах. */}
         <div className="scroll-thin min-w-0 flex-1 overflow-x-auto pb-1" style={{ direction: 'rtl' }}>
           <div className="inline-flex flex-col gap-1" style={{ direction: 'ltr' }}>
-            <div className="flex gap-[3px] text-[10px] leading-none text-muted">
+            {/* Строка месяцев ровно h-[13px] (= spacer колонки дней), текст прижат вниз к клеткам. */}
+            <div className="flex h-[13px] items-end gap-[3px] text-[10px] leading-none text-muted">
               {months.map((m, i) => (
                 <div key={i} className="w-[11px] whitespace-nowrap">
                   {m ?? ''}
