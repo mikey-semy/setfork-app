@@ -12,6 +12,8 @@ function StatusBadge({ s, lang }: { s: ModItem['moderation']; lang: Lang }) {
     return <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[11px] font-semibold text-danger">{t('hiddenLabel', lang)}</span>
   if (s === 'flagged')
     return <span className="rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-semibold text-warn">{t('flaggedLabel', lang)}</span>
+  if (s === 'pending')
+    return <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">{t('pendingLabel', lang)}</span>
   return <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">{t('statusActive', lang)}</span>
 }
 
@@ -22,7 +24,7 @@ export function ModerationTable({
   lang,
 }: {
   items: ModItem[]
-  counts: { flagged: number; hidden: number }
+  counts: { pending: number; flagged: number; hidden: number }
   filter: ModFilter
   lang: Lang
 }) {
@@ -31,8 +33,10 @@ export function ModerationTable({
 
   const tabs: { key: ModFilter; label: string; n?: number }[] = [
     { key: 'all', label: t('filterAll', lang) },
+    { key: 'pending', label: t('pendingLabel', lang), n: counts.pending },
     { key: 'flagged', label: t('flaggedLabel', lang), n: counts.flagged },
     { key: 'hidden', label: t('hiddenLabel', lang), n: counts.hidden },
+    { key: 'sample', label: t('sampleLabel', lang) },
   ]
 
   const runAi = (id: string) => {
@@ -73,6 +77,12 @@ export function ModerationTable({
                   </Link>
                   {it.verified && <BadgeCheck size={15} className="text-ok" />}
                   <StatusBadge s={it.moderation} lang={lang} />
+                  {it.appealedAt && (
+                    <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">{t('appealedLabel', lang)}</span>
+                  )}
+                  {it.moderationSeverity >= 3 && (
+                    <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[11px] font-semibold text-danger">{t('severeLabel', lang)}</span>
+                  )}
                   {it.visibility === 'private' && <span className="text-[11px] text-muted">private</span>}
                   <span className="font-mono text-[11px] text-muted">★{it.starsCount}</span>
                 </div>

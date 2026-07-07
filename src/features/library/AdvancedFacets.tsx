@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { BadgeCheck, Check, ChevronDown, Layers, List, ListOrdered, Plus } from 'lucide-react'
+import { Check, ChevronDown, Layers, List, ListOrdered, Plus } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { SearchField } from '@/shared/ui/SearchField'
 import { buildSearchQuery, parseSearchQuery, type ParsedQuery } from './search-query'
@@ -56,7 +56,6 @@ export function AdvancedFacets({
   }
 
   const setType = (type: ParsedQuery['type']) => go({ ...parsed, type: parsed.type === type ? undefined : type })
-  const toggleVerified = () => go({ ...parsed, verified: parsed.verified ? undefined : true })
   const toggleTag = (tag: string) =>
     go({ ...parsed, tags: parsed.tags.includes(tag) ? parsed.tags.filter((x) => x !== tag) : [...parsed.tags, tag] })
 
@@ -91,14 +90,6 @@ export function AdvancedFacets({
             <List size={14} className="shrink-0 text-muted" /> {t('unorderedLabel', lang)}
           </button>
         </div>
-      </div>
-
-      {/* Проверенные */}
-      <div className="mb-4">
-        <button type="button" onClick={toggleVerified} className={row(Boolean(parsed.verified))}>
-          <BadgeCheck size={14} className={`shrink-0 ${parsed.verified ? 'text-ok' : 'text-muted'}`} /> {t('filterVerified', lang)}
-          {parsed.verified && <Check size={13} className="ml-auto text-accent" />}
-        </button>
       </div>
 
       {/* Теги — сворачиваемый фасет с поиском (тегов может быть очень много) */}

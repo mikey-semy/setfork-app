@@ -2,13 +2,13 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BadgeCheck, Hash, List, ListChecks, ListOrdered, Search } from 'lucide-react'
+import { Hash, List, ListChecks, ListOrdered, Search } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { SearchField } from '@/shared/ui/SearchField'
 import { t, type Lang } from '@/shared/i18n'
 import { parseSearchQuery } from './search-query'
 
-type SugKind = 'user' | 'tag' | 'verified' | 'ordered' | 'unordered' | 'list' | 'search'
+type SugKind = 'user' | 'tag' | 'ordered' | 'unordered' | 'list' | 'search'
 type SugAction = 'insert' | 'navigate' | 'search'
 interface Suggestion {
   action: SugAction
@@ -129,10 +129,6 @@ export function QualifierSearch({
             .catch(() => [])) as { handle: string; avatarUrl?: string }[]
           list = rows.slice(0, 8).map((u) => ({ action: 'insert', label: u.handle, value: u.handle, group: t('people', lang), kind: 'user', avatarUrl: u.avatarUrl }))
         }
-      } else if (tok && tok.key === 'is') {
-        list = ['verified']
-          .filter((v) => v.startsWith(tok.partial))
-          .map((v) => ({ action: 'insert', label: v, value: v, group: t('filterState', lang), kind: 'verified' }))
       } else if (tok && tok.key === 'type') {
         list = (['ordered', 'unordered'] as const)
           .filter((v) => v.startsWith(tok.partial))
@@ -233,7 +229,6 @@ export function QualifierSearch({
     if (s.kind === 'user') return <Avatar handle={s.value} avatarUrl={s.avatarUrl} size={16} />
     if (s.kind === 'list') return <ListChecks size={14} className="shrink-0 text-muted" />
     if (s.kind === 'tag') return <Hash size={14} className="shrink-0 text-muted" />
-    if (s.kind === 'verified') return <BadgeCheck size={14} className="shrink-0 text-ok" />
     if (s.kind === 'ordered') return <ListOrdered size={14} className="shrink-0 text-muted" />
     return <List size={14} className="shrink-0 text-muted" />
   }

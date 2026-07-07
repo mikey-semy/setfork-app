@@ -9,6 +9,7 @@ export interface ModerationVerdict {
   flagged: boolean
   category: string // S-код + название по таксономии MLCommons, или '' если безопасно
   reason: string
+  confidence: number // 0..1 — уверенность классификатора в вердикте
 }
 
 // Промт на базе стандартной таксономии опасностей MLCommons (как в Llama Guard, S1–S14).
@@ -31,8 +32,10 @@ education, cooking, fitness, productivity, everyday legal tasks, general knowled
 Bias toward SAFE for ambiguous, defensive, or educational content — this is a checklist site, not a weapons manual.
 
 Return ONLY strict JSON, no markdown:
-{"flagged": boolean, "category": string, "reason": string}
-category = the matching "Sx Name" (e.g. "S9 Indiscriminate Weapons") or "" when safe. reason = one short sentence.`
+{"flagged": boolean, "category": string, "reason": string, "confidence": number}
+category = the matching "Sx Name" (e.g. "S9 Indiscriminate Weapons") or "" when safe. reason = one short sentence.
+confidence = 0..1, how certain you are in this verdict. Use < 0.7 when the content is ambiguous,
+borderline, satire/fiction, or you lack context — such cases go to a human reviewer.`
 
 /** ИИ-классификатор безопасности (MLCommons-таксономия). null — если ИИ недоступен/ошибка. */
 export async function moderateContent(
@@ -59,11 +62,14 @@ export async function moderateContent(
     const u = extractUsage(result)
     await recordUsage({ userId: meta.userId, feature: 'moderate', model, ...u, refType: 'template', refId: meta.refId })
     const cleaned = result.text.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
-    const obj = JSON.parse(cleaned) as { flagged?: unknown; category?: unknown; reason?: unknown }
+    const obj = JSON.parse(cleaned) as { flagged?: unknown; category?: unknown; reason?: unknown; confidence?: unknown }
+    const conf = Number(obj.confidence)
     return {
       flagged: !!obj.flagged,
       category: String(obj.category ?? '').slice(0, 60),
       reason: String(obj.reason ?? '').slice(0, 300),
+      // модель не вернула число → считаем уверенным (поведение старого бинарного вердикта)
+      confidence: Number.isFinite(conf) ? Math.min(1, Math.max(0, conf)) : 0.9,
     }
   } catch {
     return null

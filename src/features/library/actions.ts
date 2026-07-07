@@ -19,7 +19,7 @@ import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { curationStore } from '@/features/curation/store'
 import { collabStore, suggestionCommenterIds } from '@/features/collab-store/store'
-import { autoModerateList } from '@/features/moderation/moderate-list'
+import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
@@ -49,11 +49,16 @@ export async function setListVisibility(templateId: string, visibility: 'public'
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl || tpl.ownerId !== session.userId) return
   if (visibility === 'private') {
-    // приватному модерация не нужна — сбрасываем статус
-    await db.update(templates).set({ visibility, moderation: 'active', moderationReason: null }).where(eq(templates.id, templateId))
+    // приватному гейт не нужен — сбрасываем ТОЛЬКО pending; flagged/hidden не
+    // «отмываются» toggle'ом видимости — админский takedown снимает только админ.
+    const reset =
+      tpl.moderation === 'pending'
+        ? { moderation: 'active' as const, moderationReason: null, moderationSeverity: 0 }
+        : {}
+    await db.update(templates).set({ visibility, ...reset }).where(eq(templates.id, templateId))
   } else {
     await db.update(templates).set({ visibility }).where(eq(templates.id, templateId))
-    await autoModerateList(templateId) // публикация → проверяем
+    await gateListPublication(templateId) // публикация → гейт: pending до авто-проверки
   }
   revalidatePath(`/${session.handle}/${tpl.slug}`)
   revalidatePath('/explore')
@@ -178,7 +183,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
   })
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
   await ensureWatch(session.userId, list.id) // владелец следит за своим списком
-  if (visibility === 'public') await autoModerateList(list.id) // приватные не модерируем
+  if (visibility === 'public') await gateListPublication(list.id) // приватные не модерируем
   await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
@@ -202,7 +207,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed) })
   // tags/ordered/gated — атрибуты списка, не версии; обновляем отдельно.
   await db.update(templates).set({ tags, ordered, gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // новая версия могла внести нарушающий контент
+  if (tpl.visibility === 'public') await recheckList(tpl.id) // новая версия могла внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
 
@@ -292,7 +297,7 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // merge мог внести нарушающий контент
+  if (tpl.visibility === 'public') await recheckList(tpl.id) // merge мог внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
@@ -362,7 +367,7 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // merge мог внести нарушающий контент
+  if (tpl.visibility === 'public') await recheckList(tpl.id) // merge мог внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
@@ -381,7 +386,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
   await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items) })
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // принятая правка могла внести нарушающий контент
+  if (tpl.visibility === 'public') await recheckList(tpl.id) // принятая правка могла внести нарушающий контент
   await db
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })
@@ -597,8 +602,8 @@ export async function publishList(templateId: string): Promise<void> {
   if (!tpl || tpl.ownerId !== session.userId || tpl.status !== 'draft') return
 
   await db.update(templates).set({ status: 'published', updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-  // Публикуем публичный список → авто-модерация (приватный не трогаем).
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id)
+  // Публикуем публичный список → гейт: pending до авто-проверки (приватный не трогаем).
+  if (tpl.visibility === 'public') await gateListPublication(tpl.id)
 
   revalidatePath('/', 'layout')
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
@@ -654,7 +659,7 @@ export async function useTemplate(templateId: string): Promise<void> {
   const srcSteps = srcCurrent
     ? await db.select().from(steps).where(eq(steps.versionId, srcCurrent.id)).orderBy(asc(steps.n))
     : []
-  await listStore.create({
+  const created = await listStore.create({
     ownerId: session.userId,
     slug,
     title: src.title,
@@ -681,6 +686,7 @@ export async function useTemplate(templateId: string): Promise<void> {
       imageRef: s.imageKey ?? null,
     })),
   })
+  await gateListPublication(created.id) // копия публикуется — гейт как у любой публикации
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}/${slug}`)
 }
@@ -751,6 +757,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
     .set({ forksCount: sql`${templates.forksCount} + 1` })
     .where(eq(templates.id, src.id))
   await notify({ recipientId: src.ownerId, actorId: session.userId, type: 'fork', templateId: src.id })
+  if (src.visibility === 'public') await gateListPublication(forked.id) // форк — тоже публикация
   await enqueueReindex(forked.id)
 
   revalidatePath('/explore')

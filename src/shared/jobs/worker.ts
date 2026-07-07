@@ -1,16 +1,18 @@
 import 'server-only'
 import { captureError, log } from '@/shared/observability'
 import { claimJob, completeJob, failJob, type Job } from './queue'
-import { runDigestJob, runEmailJob, runGardenerJob, runGenerateJob, runPushJob, runReindexJob } from './handlers'
+import { runDigestJob, runEmailJob, runGardenerJob, runGenerateJob, runModerateJobHandler, runPushJob, runReindexJob } from './handlers'
 
-// Реестр обработчиков по типу задачи.
-const HANDLERS: Record<string, (payload: unknown) => Promise<void>> = {
+// Реестр обработчиков по типу задачи. Второй аргумент — сама джоба (attempts/maxAttempts)
+// для обработчиков, которым важен номер попытки (moderate: fail-open на последней).
+const HANDLERS: Record<string, (payload: unknown, job: Job) => Promise<void>> = {
   email: runEmailJob,
   generate: runGenerateJob,
   reindex: runReindexJob,
   push: runPushJob,
   digest: runDigestJob,
   gardener: runGardenerJob,
+  moderate: runModerateJobHandler,
 }
 
 const POLL_MS = 3000
@@ -22,7 +24,7 @@ async function processOne(job: Job): Promise<void> {
   const handler = HANDLERS[job.type]
   try {
     if (!handler) throw new Error(`no handler for job type: ${job.type}`)
-    await handler(job.payload)
+    await handler(job.payload, job)
     await completeJob(job.id)
   } catch (e) {
     captureError(e, { where: 'jobs.handle', jobType: job.type, jobId: job.id })
@@ -67,4 +69,8 @@ export function startWorker(): void {
   void import('@/features/gardener/service')
     .then((m) => m.ensureGardenerScheduled())
     .catch((e) => captureError(e, { where: 'gardener.ensure' }))
+  // Отпечатки ранее скрытого/flagged — база для ловли повторных заливок.
+  void import('@/features/moderation/moderate-list')
+    .then((m) => m.ensureModerationFingerprints())
+    .catch((e) => captureError(e, { where: 'moderation.fingerprints' }))
 }

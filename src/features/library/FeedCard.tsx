@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BadgeCheck, GitFork, Lock, Star } from 'lucide-react'
+import { GitFork, Lock, Star } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
@@ -29,7 +29,6 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             <Link href={`/${item.ownerHandle}/${item.slug}`} className="font-semibold text-ink hover:text-accent hover:underline">
               {item.slug}
             </Link>
-            {item.verified && <BadgeCheck size={14} className="ml-1 inline text-ok" />}
           </span>
           <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">
             v{item.version}

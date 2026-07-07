@@ -498,12 +498,19 @@ const DICT = {
   unhideAction: { en: 'Unhide', ru: 'Показать' },
   approveAction: { en: 'Approve', ru: 'Одобрить' },
   aiCheck: { en: 'AI check', ru: 'Проверка ИИ' },
-  flaggedLabel: { en: 'Flagged', ru: 'На проверке' },
+  flaggedLabel: { en: 'Flagged', ru: 'Помечен' },
+  pendingLabel: { en: 'Pending review', ru: 'На проверке' },
+  sampleLabel: { en: 'Spot-check', ru: 'Выборочный контроль' },
+  appealedLabel: { en: 'Appealed', ru: 'Апелляция' },
+  severeLabel: { en: 'Severe', ru: 'Тяжёлое' },
+  requestReview: { en: 'Request review', ru: 'Запросить пересмотр' },
+  appealSent: { en: 'Review requested — a human will take a look.', ru: 'Пересмотр запрошен — посмотрит человек.' },
   hiddenLabel: { en: 'Hidden', ru: 'Скрыт' },
   statusActive: { en: 'Active', ru: 'Активен' },
   filterAll: { en: 'All', ru: 'Все' },
   hiddenNotice: { en: 'Hidden by moderation — not shown publicly.', ru: 'Скрыт модерацией — не виден публично.' },
-  flaggedNotice: { en: 'Under review — not public yet. Only you can see it.', ru: 'На проверке — пока не публичен. Виден только вам.' },
+  pendingNotice: { en: 'Under review — visible only to you until automatic checks pass.', ru: 'На проверке — виден только вам, пока не пройдут автоматические проверки.' },
+  flaggedNotice: { en: 'Flagged by moderation — removed from public view. You can request a review below.', ru: 'Помечен модерацией — снят с публичного показа. Можно запросить пересмотр.' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT
