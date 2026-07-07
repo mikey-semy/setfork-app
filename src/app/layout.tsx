@@ -42,7 +42,7 @@ const DESCRIPTION = 'Canonical, runnable, versioned reference lists — run them
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: 'SetFork — runnable checklists', template: '%s · SetFork' },
+  title: { default: 'SetFork — versioned, runnable lists', template: '%s · SetFork' },
   description: DESCRIPTION,
   applicationName: 'SetFork',
   manifest: '/site.webmanifest',
@@ -63,14 +63,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     siteName: 'SetFork',
-    title: 'SetFork — runnable checklists',
+    title: 'SetFork — versioned, runnable lists',
     description: DESCRIPTION,
     url: SITE_URL,
     images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'SetFork' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SetFork — runnable checklists',
+    title: 'SetFork — versioned, runnable lists',
     description: DESCRIPTION,
     images: ['/og-image.png'],
   },
