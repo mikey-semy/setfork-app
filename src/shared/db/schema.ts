@@ -717,6 +717,33 @@ export const pollVotes = pgTable(
   ],
 )
 
+// ── Quiz-попытки (курсы): результат прохождения quiz-блока пользователем ──
+// В отличие от poll (агрегируем голоса) — здесь ОДНА строка на (user, tpl, bid) =
+// последняя попытка: что выбрал, верно ли, сколько попыток. Оценка на СЕРВЕРЕ
+// (correct-флаги живут в git-content). Пересдача перезаписывает строку (attempts++).
+export const quizAttempts = pgTable(
+  'quiz_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    bid: text('bid').notNull(), // content.bid quiz-блока
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    selected: jsonb('selected').$type<string[]>().notNull(), // optionId, которые выбрал
+    correct: boolean('correct').notNull(), // прошёл ли (точное совпадение с верными)
+    attempts: integer('attempts').notNull().default(1), // число попыток (пересдачи)
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('quiz_attempts_uq').on(t.userId, t.templateId, t.bid),
+    index('quiz_attempts_bid_idx').on(t.templateId, t.bid),
+  ],
+)
+
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.

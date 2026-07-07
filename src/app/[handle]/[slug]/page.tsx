@@ -24,6 +24,7 @@ import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
 import { QuizBlock } from '@/features/library/QuizBlock'
 import type { QuizBlockContent } from '@/features/library/blocks'
+import { getQuizState } from '@/features/quizzes/queries'
 import { pollDeadlineMs } from '@/features/library/blocks'
 import { canViewList } from '@/features/library/access'
 import { ListHeader } from '@/features/library/ListHeader'
@@ -105,6 +106,9 @@ export default async function ListPage({
   // Результаты poll-блоков (голоса вне git — по стабильному content.bid).
   const pollBids = steps.filter((s) => s.type === 'poll' && typeof s.content?.bid === 'string').map((s) => (s.content as { bid: string }).bid)
   const pollResults = pollBids.length ? await getPollResults(tpl.id, pollBids, viewer?.userId) : {}
+  // Состояние quiz-блоков (последняя попытка зрителя — по content.bid).
+  const quizBids = steps.filter((s) => s.type === 'quiz' && typeof s.content?.bid === 'string').map((s) => (s.content as { bid: string }).bid)
+  const quizStates = quizBids.length ? await getQuizState(tpl.id, quizBids, viewer?.userId) : {}
   // eslint-disable-next-line react-hooks/purity -- серверный компонент, one-shot рендер: время для дедлайнов опросов
   const nowMs = Date.now()
   // Порядковый номер показываем только по шаг-блокам (презентационные вне нумерации).
@@ -318,9 +322,21 @@ export default async function ListPage({
                   }
                   if (s.type === 'quiz') {
                     const c = (s.content ?? {}) as unknown as QuizBlockContent
+                    const bid = typeof c.bid === 'string' ? c.bid : ''
+                    // Авторизованному оценивает сервер → НЕ отдаём correct-флаги в разметку.
+                    const safe: QuizBlockContent = viewer
+                      ? { ...c, options: (c.options ?? []).map((o) => ({ id: o.id, text: o.text })) }
+                      : c
                     return Array.isArray(c.options) && c.options.length ? (
                       <div key={s.id} className="break-inside-avoid">
-                        <QuizBlock content={c} lang={lang} />
+                        <QuizBlock
+                          content={safe}
+                          lang={lang}
+                          templateId={tpl.id}
+                          bid={bid}
+                          canSubmit={!!viewer}
+                          initial={quizStates[bid] ?? { selected: [], correct: false, attempts: 0, submitted: false }}
+                        />
                       </div>
                     ) : null
                   }
