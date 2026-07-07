@@ -12,6 +12,7 @@ const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string;
   'token.revoke': { icon: Ban, ru: 'Отозван токен', en: 'Token revoked', cls: 'text-warn' },
   'list.delete': { icon: Trash2, ru: 'Удалён список', en: 'List deleted', cls: 'text-danger' },
   'list.moderate': { icon: ShieldX, ru: 'Модерация списка', en: 'List moderated', cls: 'text-warn' },
+  'list.appeal': { icon: ShieldCheck, ru: 'Апелляция владельца', en: 'Moderation appeal', cls: 'text-accent' },
   'list.verify': { icon: ShieldCheck, ru: 'Верификация списка', en: 'List verified', cls: 'text-ok' },
   'git.push': { icon: GitCommitVertical, ru: 'Push в список', en: 'Push to list', cls: 'text-ink-2' },
   'session.revoke': { icon: LogOut, ru: 'Отозвана сессия', en: 'Session revoked', cls: 'text-ink-2' },

@@ -10,6 +10,7 @@ export type AuditAction =
   | 'token.revoke'
   | 'list.delete'
   | 'list.moderate'
+  | 'list.appeal'
   | 'list.verify'
   | 'git.push'
   | 'session.revoke'

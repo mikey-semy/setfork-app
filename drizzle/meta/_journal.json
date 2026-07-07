@@ -253,6 +253,13 @@
       "when": 1783300000000,
       "tag": "0035_moderation_pending",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1783310000000,
+      "tag": "0036_moderation_automation",
+      "breakpoints": true
     }
   ]
 }

@@ -69,4 +69,8 @@ export function startWorker(): void {
   void import('@/features/gardener/service')
     .then((m) => m.ensureGardenerScheduled())
     .catch((e) => captureError(e, { where: 'gardener.ensure' }))
+  // Отпечатки ранее скрытого/flagged — база для ловли повторных заливок.
+  void import('@/features/moderation/moderate-list')
+    .then((m) => m.ensureModerationFingerprints())
+    .catch((e) => captureError(e, { where: 'moderation.fingerprints' }))
 }

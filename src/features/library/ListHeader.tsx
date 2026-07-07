@@ -145,6 +145,26 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
                 ? t('pendingNotice', lang)
                 : t('flaggedNotice', lang)}
             {meta.moderationReason && ` — ${meta.moderationReason}`}
+            {meta.moderation === 'flagged' && isOwner && (
+              <span className="ml-2">
+                {meta.appealedAt ? (
+                  <span className="font-medium">{t('appealSent', lang)}</span>
+                ) : (
+                  <form
+                    action={async () => {
+                      'use server'
+                      const { requestModerationReview } = await import('@/features/moderation/actions')
+                      await requestModerationReview(meta.id)
+                    }}
+                    className="inline"
+                  >
+                    <button type="submit" className="font-medium underline underline-offset-2 hover:opacity-80">
+                      {t('requestReview', lang)}
+                    </button>
+                  </form>
+                )}
+              </span>
+            )}
           </div>
         )}
       </div>

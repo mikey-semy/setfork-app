@@ -36,6 +36,7 @@ export function ModerationTable({
     { key: 'pending', label: t('pendingLabel', lang), n: counts.pending },
     { key: 'flagged', label: t('flaggedLabel', lang), n: counts.flagged },
     { key: 'hidden', label: t('hiddenLabel', lang), n: counts.hidden },
+    { key: 'sample', label: t('sampleLabel', lang) },
   ]
 
   const runAi = (id: string) => {
@@ -76,6 +77,12 @@ export function ModerationTable({
                   </Link>
                   {it.verified && <BadgeCheck size={15} className="text-ok" />}
                   <StatusBadge s={it.moderation} lang={lang} />
+                  {it.appealedAt && (
+                    <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">{t('appealedLabel', lang)}</span>
+                  )}
+                  {it.moderationSeverity >= 3 && (
+                    <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[11px] font-semibold text-danger">{t('severeLabel', lang)}</span>
+                  )}
                   {it.visibility === 'private' && <span className="text-[11px] text-muted">private</span>}
                   <span className="font-mono text-[11px] text-muted">★{it.starsCount}</span>
                 </div>

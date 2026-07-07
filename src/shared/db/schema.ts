@@ -17,6 +17,7 @@ import {
   numeric,
   pgEnum,
   pgTable,
+  smallint,
   text,
   timestamp,
   unique,
@@ -152,6 +153,12 @@ export const templates = pgTable(
     visibility: listVisibility('visibility').notNull().default('public'),
     moderation: moderationStatus('moderation').notNull().default('active'),
     moderationReason: text('moderation_reason'),
+    // Приоритет очереди модерации: 3 — тяжёлые категории/повторная заливка, 2 — прочие
+    // нарушения/спам-эвристика, 1 — «ИИ не уверен», 0 — норма.
+    moderationSeverity: smallint('moderation_severity').notNull().default(0),
+    // Нормализованный sha256 контента — ловля повторной заливки удалённого.
+    contentFingerprint: text('content_fingerprint'),
+    appealedAt: timestamp('appealed_at', { withTimezone: true }), // апелляция владельца flagged-списка
     verified: boolean('verified').notNull().default(false),
     pinned: boolean('pinned').notNull().default(false), // закреплён владельцем на профиле
     isTemplate: boolean('is_template').notNull().default(false), // «Use this template» (копия без fork-связи)
