@@ -1,7 +1,8 @@
 import 'server-only'
 import { cache } from 'react'
 import { and, desc, eq, or, sql } from 'drizzle-orm'
-import { db, runs, stars, suggestions, templateVersions, templates, users } from '@/shared/db'
+import { courseCompletions, db, runs, stars, suggestions, templateVersions, templates, users } from '@/shared/db'
+import type { LocaleText } from '@/shared/i18n'
 import type { FeedItem } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
 
@@ -97,6 +98,42 @@ export async function getReceivedStats(userId: string): Promise<{ stars: number;
     .from(templates)
     .where(eq(templates.ownerId, userId))
   return { stars: r?.stars ?? 0, forks: r?.forks ?? 0 }
+}
+
+export interface CompletedCourse {
+  templateId: string
+  title: LocaleText
+  slug: string
+  ownerHandle: string
+  version: number
+  completedAt: Date
+}
+
+/** Курсы, пройденные пользователем (для секции профиля). Только публично видимые
+ *  списки — приватные/черновики/скрытые не светим на публичном профиле. */
+export async function getUserCompletions(userId: string): Promise<CompletedCourse[]> {
+  return db
+    .select({
+      templateId: courseCompletions.templateId,
+      title: templates.title,
+      slug: templates.slug,
+      ownerHandle: users.handle,
+      version: courseCompletions.version,
+      completedAt: courseCompletions.completedAt,
+    })
+    .from(courseCompletions)
+    .innerJoin(templates, eq(templates.id, courseCompletions.templateId))
+    .innerJoin(users, eq(users.id, templates.ownerId))
+    .where(
+      and(
+        eq(courseCompletions.userId, userId),
+        eq(templates.visibility, 'public'),
+        eq(templates.status, 'published'),
+        eq(templates.moderation, 'active'),
+      ),
+    )
+    .orderBy(desc(courseCompletions.completedAt))
+    .limit(24)
 }
 
 export async function getProfileCounts(userId: string) {

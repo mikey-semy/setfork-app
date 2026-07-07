@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BookOpen, FolderGit2, Link2, ListChecks, MapPin, Pin, Star, Users } from 'lucide-react'
+import { Award, BookOpen, FolderGit2, GraduationCap, Link2, ListChecks, MapPin, Pin, Star, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
-import { getContributions, getMonthActivity, getOwnListsLight, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle } from '@/features/profile/queries'
+import { getContributions, getMonthActivity, getOwnListsLight, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle, getUserCompletions } from '@/features/profile/queries'
 import { ContributionActivity } from '@/features/profile/ContributionActivity'
 import { PinsPicker } from '@/features/profile/PinsPicker'
 import { getFollowers, getFollowing } from '@/features/profile/search'
@@ -85,6 +85,8 @@ export default async function ProfilePage({
 
   // Пикер пинов («Customize your pins») — только владельцу на Overview.
   const ownLight = tab === 'overview' && isOwner ? await getOwnListsLight(user.id) : []
+  // Пройденные курсы (публично видимые) — на Overview.
+  const completions = tab === 'overview' ? await getUserCompletions(user.id) : []
 
   // Лента активности (Contribution activity) — на Overview; ?month=YYYY-MM листает историю.
   const nowMonth = new Date()
@@ -286,6 +288,33 @@ export default async function ProfilePage({
                         </Link>
                       )
                     })}
+                  </div>
+                </div>
+              )}
+              {completions.length > 0 && (
+                <div className="mb-6">
+                  <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-2">
+                    <GraduationCap size={14} className="text-muted" /> {lang === 'ru' ? 'Пройденные курсы' : 'Completed courses'}
+                    <span className="font-mono text-[11px] text-muted">{completions.length}</span>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {completions.map((c) => (
+                      <div key={c.templateId} className="rounded-lg border border-border bg-surface px-3.5 py-3">
+                        <Link href={`/${c.ownerHandle}/${c.slug}`} className="block truncate text-[13.5px] font-semibold text-accent hover:underline">
+                          {tr(c.title, lang)}
+                        </Link>
+                        <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[11px] text-muted">
+                          <span className="inline-flex items-center gap-1 text-ok">
+                            <GraduationCap size={11} /> {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(c.completedAt))}
+                          </span>
+                          {isOwner && (
+                            <Link href={`/${c.ownerHandle}/${c.slug}/certificate`} className="inline-flex items-center gap-1 text-accent hover:underline">
+                              <Award size={11} /> {lang === 'ru' ? 'сертификат' : 'certificate'}
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
