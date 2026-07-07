@@ -28,7 +28,7 @@ import { DatePicker } from '@/shared/ui/DatePicker'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll } from './editor'
 import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType } from './blocks'
-import { refineList, uploadStepImage } from './actions'
+import { refineList, uploadStepImage, uploadStepVideo } from './actions'
 
 const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon }
 const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
@@ -172,6 +172,16 @@ export function ListEditor({
     setUploading(null)
     if ('error' in res) alert(res.error)
     else patch(i, { imageKey: res.key, imagePreview: res.url })
+  }
+  const [videoUploading, setVideoUploading] = useState<number | null>(null)
+  async function uploadVideoFor(i: number, file: File) {
+    setVideoUploading(i)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await uploadStepVideo(fd)
+    setVideoUploading(null)
+    if ('error' in res) alert(res.error)
+    else patch(i, { videoUrl: res.url })
   }
   // Тип последнего добавленного блока — «повтор предыдущего» в инсертере.
   const [lastType, setLastType] = useState<BlockType>('step')
@@ -593,6 +603,12 @@ export function ListEditor({
                 value={it.videoUrl}
                 onChange={(e) => patch(i, { videoUrl: e.target.value })}
               />
+              <div className="flex items-center gap-2 text-[11px] text-muted">
+                <span className="h-px flex-1 bg-border" />
+                {ru ? 'или' : 'or'}
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <VideoFileInput uploading={videoUploading === i} onFile={(f) => uploadVideoFor(i, f)} ru={ru} />
               <input
                 className={input}
                 aria-label={ru ? 'Подпись видео' : 'Video caption'}
@@ -850,6 +866,52 @@ function StepImageInput({ uploading, onFile, ru }: { uploading: boolean; onFile:
         ref={ref}
         type="file"
         accept="image/png,image/jpeg,image/webp,image/gif"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) onFile(f)
+          e.target.value = ''
+        }}
+      />
+    </div>
+  )
+}
+
+function VideoFileInput({ uploading, onFile, ru }: { uploading: boolean; onFile: (f: File) => void; ru: boolean }) {
+  const ref = useRef<HTMLInputElement>(null)
+  const [over, setOver] = useState(false)
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => ref.current?.click()}
+      onDragOver={(e) => {
+        e.preventDefault()
+        setOver(true)
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault()
+        setOver(false)
+        const f = e.dataTransfer.files?.[0]
+        if (f) onFile(f)
+      }}
+      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
+        over ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'
+      }`}
+    >
+      {uploading ? <Loader2 size={14} className="animate-spin" /> : <VideoIcon size={14} />}
+      {uploading
+        ? ru
+          ? 'Загрузка…'
+          : 'Uploading…'
+        : ru
+          ? 'Свой файл: перетащите или нажмите (MP4/WEBM, до 50 МБ)'
+          : 'Own file: drag or click (MP4/WEBM, up to 50 MB)'}
+      <input
+        ref={ref}
+        type="file"
+        accept="video/mp4,video/webm,video/ogg"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0]
