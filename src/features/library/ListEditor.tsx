@@ -27,7 +27,7 @@ import {
 import type { Lang } from '@/shared/i18n'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { DatePicker } from '@/shared/ui/DatePicker'
-import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
+import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorQuiz } from './editor'
 import { blankCount, BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType, type QuizKind } from './blocks'
@@ -411,14 +411,14 @@ export function ListEditor({
               value={it.title}
               onChange={(e) => patch(i, { title: e.target.value })}
             />
-            {/* Описание пункта — тот же богатый редактор, что и в комментариях
-                (тулбар, эмодзи, картинки, Markdown). Рендерится Markdown'ом на странице. */}
-            <MarkdownEditor
-              name=""
-              defaultValue={it.desc}
-              onValueChange={(v) => patch(i, { desc: v })}
+            {/* Описание пункта — Markdown со всплывающей панелью форматирования
+                (выдели текст → мини-тулбар). Картинки/файлы — отдельными блоками. */}
+            <BubbleTextEditor
+              value={it.desc}
+              onChange={(v) => patch(i, { desc: v })}
               rows={3}
               lang={ru ? 'ru' : 'en'}
+              ariaLabel={ru ? `Описание пункта ${i + 1}` : `Item ${i + 1} description`}
               placeholder={ru ? 'Описание (Markdown, необязательно)' : 'Description (Markdown, optional)'}
             />
             <input
@@ -973,17 +973,16 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
   )
 }
 
-// Text-блок использует тот же богатый редактор, что и комментарии (тулбар,
-// эмодзи, картинки/вложения, undo/redo). Значение течёт наверх через onValueChange
-// (сериализуется в общий JSON списка); name="" — textarea не отправляется формой.
+// Text-блок: Markdown со всплывающей панелью форматирования (выдели текст →
+// мини-тулбар). Картинки/файлы — отдельными блоками, не в тулбаре.
 function TextBlockBody({ value, onChange, ru }: { value: string; onChange: (v: string) => void; ru: boolean }) {
   return (
-    <MarkdownEditor
-      name=""
-      defaultValue={value}
-      onValueChange={onChange}
+    <BubbleTextEditor
+      value={value}
+      onChange={onChange}
       rows={4}
       lang={ru ? 'ru' : 'en'}
+      ariaLabel={ru ? 'Текстовый блок (Markdown)' : 'Text block (Markdown)'}
       placeholder={ru ? 'Текст в разметке Markdown…' : 'Markdown text…'}
     />
   )
