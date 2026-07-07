@@ -72,6 +72,9 @@ function readme(v: SerVersion): string {
           opts.forEach((o) => lines.push(`- ${String(o?.text ?? '')}`))
           lines.push('')
         }
+      } else if (s.type === 'video') {
+        const url = String(s.content?.url ?? '')
+        if (url) lines.push('', `🎬 [${String(s.content?.caption ?? '') || url}](${url})`, '')
       }
       continue
     }

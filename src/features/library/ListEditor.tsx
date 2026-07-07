@@ -19,14 +19,15 @@ import {
   Text as TextIcon,
   Trash2,
   Undo2,
+  Video as VideoIcon,
   X,
 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll } from './editor'
-import { BLOCK_TYPES, BLOCK_META, newOptionId, type BlockType } from './blocks'
+import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType } from './blocks'
 import { refineList, uploadStepImage } from './actions'
 
-const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3 }
+const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon }
 const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
 
 const input =
@@ -597,6 +598,38 @@ export function ListEditor({
 
           {/* Poll-блок: вопрос + варианты + мульти + дедлайн. */}
           {it.type === 'poll' && <PollBlockBody poll={it.poll} onChange={(poll) => patch(i, { poll })} ru={ru} />}
+
+          {/* Video-блок: ссылка (YouTube/Vimeo/mp4) + подпись; хинт распознанного типа. */}
+          {it.type === 'video' && (
+            <div className="flex flex-col gap-2">
+              <input
+                className={input}
+                aria-label={ru ? 'Ссылка на видео' : 'Video URL'}
+                placeholder={ru ? 'Ссылка: YouTube / Vimeo / .mp4' : 'URL: YouTube / Vimeo / .mp4'}
+                value={it.videoUrl}
+                onChange={(e) => patch(i, { videoUrl: e.target.value })}
+              />
+              <input
+                className={input}
+                aria-label={ru ? 'Подпись видео' : 'Video caption'}
+                placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'}
+                value={it.caption}
+                onChange={(e) => patch(i, { caption: e.target.value })}
+              />
+              {it.videoUrl.trim() &&
+                (() => {
+                  const kind = parseVideoEmbed(it.videoUrl).kind
+                  return (
+                    <span className={`text-[11.5px] ${kind === 'link' ? 'text-warn' : 'text-muted'}`}>
+                      {kind === 'youtube' && '▶ YouTube'}
+                      {kind === 'vimeo' && '▶ Vimeo'}
+                      {kind === 'file' && (ru ? '▶ Видеофайл' : '▶ Video file')}
+                      {kind === 'link' && (ru ? '⚠ Не распознано — будет показано ссылкой' : '⚠ Not recognized — shown as a link')}
+                    </span>
+                  )
+                })()}
+            </div>
+          )}
 
           {/* Инсертер между блоками: вставить после текущего блока. */}
           <BlockInserter onInsert={(type) => insertAt(i + 1, type)} repeatType={lastType} ru={ru} between />

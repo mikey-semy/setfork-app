@@ -1,0 +1,32 @@
+import { parseVideoEmbed } from './blocks'
+
+/** Безопасная встройка видео: iframe ТОЛЬКО для YouTube/Vimeo (известные src),
+ *  прямой файл → <video>, иначе — ссылка. Произвольный src в iframe не пускаем. */
+export function VideoEmbed({ url, caption }: { url: string; caption?: string }) {
+  const { kind, src } = parseVideoEmbed(url)
+  if (!src) return null
+  return (
+    <figure className="break-inside-avoid">
+      {kind === 'youtube' || kind === 'vimeo' ? (
+        <div className="relative w-full overflow-hidden rounded-lg border border-border" style={{ aspectRatio: '16 / 9' }}>
+          <iframe
+            src={src}
+            title={caption || 'video'}
+            className="absolute inset-0 h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+      ) : kind === 'file' ? (
+        <video src={src} controls className="max-h-[520px] w-full rounded-lg border border-border" />
+      ) : (
+        <a href={src} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[13px] text-accent hover:underline">
+          🎬 {src}
+        </a>
+      )}
+      {caption && <figcaption className="mt-1.5 text-[12.5px] text-muted">{caption}</figcaption>}
+    </figure>
+  )
+}
