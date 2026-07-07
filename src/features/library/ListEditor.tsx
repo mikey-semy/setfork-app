@@ -404,12 +404,13 @@ export function ListEditor({
 
           {it.type === 'step' && (
           <div className="flex flex-col gap-2">
-            <input
-              className={input}
-              aria-label={ru ? `Заголовок пункта ${i + 1}` : `Item ${i + 1} title`}
-              placeholder={ru ? 'Заголовок пункта' : 'Item title'}
+            <BubbleTextEditor
               value={it.title}
-              onChange={(e) => patch(i, { title: e.target.value })}
+              onChange={(v) => patch(i, { title: v })}
+              singleLine
+              lang={ru ? 'ru' : 'en'}
+              ariaLabel={ru ? `Заголовок пункта ${i + 1}` : `Item ${i + 1} title`}
+              placeholder={ru ? 'Заголовок пункта' : 'Item title'}
             />
             {/* Описание пункта — Markdown со всплывающей панелью форматирования
                 (выдели текст → мини-тулбар). Картинки/файлы — отдельными блоками. */}
@@ -421,12 +422,14 @@ export function ListEditor({
               ariaLabel={ru ? `Описание пункта ${i + 1}` : `Item ${i + 1} description`}
               placeholder={ru ? 'Описание (Markdown, необязательно)' : 'Description (Markdown, optional)'}
             />
-            <input
-              className={`${input} font-mono`}
-              aria-label={ru ? `Команда пункта ${i + 1}` : `Item ${i + 1} command`}
-              placeholder={ru ? 'Команда (необязательно)' : 'Command (optional)'}
+            <BubbleTextEditor
               value={it.command}
-              onChange={(e) => patch(i, { command: e.target.value })}
+              onChange={(v) => patch(i, { command: v })}
+              singleLine
+              mono
+              lang={ru ? 'ru' : 'en'}
+              ariaLabel={ru ? `Команда пункта ${i + 1}` : `Item ${i + 1} command`}
+              placeholder={ru ? 'Команда (необязательно)' : 'Command (optional)'}
             />
 
             {/* Уровень + «зачем» */}
@@ -449,11 +452,13 @@ export function ListEditor({
                 </button>
               ))}
             </div>
-            <input
-              className={input}
-              placeholder={ru ? 'Зачем этот шаг (необязательно)' : 'Why this step matters (optional)'}
+            <BubbleTextEditor
               value={it.why}
-              onChange={(e) => patch(i, { why: e.target.value })}
+              onChange={(v) => patch(i, { why: v })}
+              singleLine
+              lang={ru ? 'ru' : 'en'}
+              ariaLabel={ru ? 'Зачем этот шаг' : 'Why this step matters'}
+              placeholder={ru ? 'Зачем этот шаг (необязательно)' : 'Why this step matters (optional)'}
             />
 
             {/* Подпункты */}
@@ -462,14 +467,14 @@ export function ListEditor({
                 {it.subtasks.map((s, si) => (
                   <div key={si} className="flex items-center gap-2">
                     <span className="text-muted">–</span>
-                    <input
-                      className={input}
-                      aria-label={ru ? `Подпункт ${si + 1}` : `Sub-item ${si + 1}`}
-                      placeholder={ru ? 'Подпункт' : 'Sub-item'}
+                    <BubbleTextEditor
                       value={s}
-                      onChange={(e) =>
-                        patch(i, { subtasks: it.subtasks.map((x, xi) => (xi === si ? e.target.value : x)) })
-                      }
+                      onChange={(v) => patch(i, { subtasks: it.subtasks.map((x, xi) => (xi === si ? v : x)) })}
+                      singleLine
+                      className="flex-1"
+                      lang={ru ? 'ru' : 'en'}
+                      ariaLabel={ru ? `Подпункт ${si + 1}` : `Sub-item ${si + 1}`}
+                      placeholder={ru ? 'Подпункт' : 'Sub-item'}
                     />
                     <button
                       type="button"
@@ -489,16 +494,14 @@ export function ListEditor({
               <div className="flex flex-col gap-1.5">
                 {it.refs.map((r, ri) => (
                   <div key={ri} className="flex items-center gap-2">
-                    <input
-                      className={`${input} max-w-[200px]`}
-                      aria-label={ru ? 'Название ссылки' : 'Link label'}
-                      placeholder={ru ? 'Название ссылки' : 'Link label'}
+                    <BubbleTextEditor
                       value={r.label}
-                      onChange={(e) =>
-                        patch(i, {
-                          refs: it.refs.map((x, xi) => (xi === ri ? { ...x, label: e.target.value } : x)),
-                        })
-                      }
+                      onChange={(v) => patch(i, { refs: it.refs.map((x, xi) => (xi === ri ? { ...x, label: v } : x)) })}
+                      singleLine
+                      className="w-[200px] shrink-0"
+                      lang={ru ? 'ru' : 'en'}
+                      ariaLabel={ru ? 'Название ссылки' : 'Link label'}
+                      placeholder={ru ? 'Название ссылки' : 'Link label'}
                     />
                     <input
                       className={`${input} font-mono`}
@@ -581,12 +584,13 @@ export function ListEditor({
               ) : (
                 <StepImageInput uploading={uploading === i} onFile={(f) => uploadFor(i, f)} ru={ru} />
               )}
-              <input
-                className={input}
-                aria-label={ru ? 'Подпись картинки' : 'Image caption'}
-                placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'}
+              <BubbleTextEditor
                 value={it.caption}
-                onChange={(e) => patch(i, { caption: e.target.value })}
+                onChange={(v) => patch(i, { caption: v })}
+                singleLine
+                lang={ru ? 'ru' : 'en'}
+                ariaLabel={ru ? 'Подпись картинки' : 'Image caption'}
+                placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'}
               />
             </div>
           )}
@@ -617,12 +621,13 @@ export function ListEditor({
                   <VideoFileInput uploading={videoUploading === i} onFile={(f) => uploadVideoFor(i, f)} ru={ru} />
                 </>
               )}
-              <input
-                className={input}
-                aria-label={ru ? 'Подпись видео' : 'Video caption'}
-                placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'}
+              <BubbleTextEditor
                 value={it.caption}
-                onChange={(e) => patch(i, { caption: e.target.value })}
+                onChange={(v) => patch(i, { caption: v })}
+                singleLine
+                lang={ru ? 'ru' : 'en'}
+                ariaLabel={ru ? 'Подпись видео' : 'Video caption'}
+                placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'}
               />
               {it.videoUrl.trim() &&
                 (() => {
@@ -663,23 +668,26 @@ function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p:
   const set = (p: Partial<EditorPoll>) => onChange({ ...poll, ...p })
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
-      <input
-        className={input}
-        aria-label={ru ? 'Вопрос опроса' : 'Poll question'}
-        placeholder={ru ? 'Вопрос опроса' : 'Poll question'}
+      <BubbleTextEditor
         value={poll.question}
-        onChange={(e) => set({ question: e.target.value })}
+        onChange={(v) => set({ question: v })}
+        singleLine
+        lang={ru ? 'ru' : 'en'}
+        ariaLabel={ru ? 'Вопрос опроса' : 'Poll question'}
+        placeholder={ru ? 'Вопрос опроса' : 'Poll question'}
       />
       <div className="flex flex-col gap-1.5">
         {poll.options.map((o, oi) => (
           <div key={o.id} className="flex items-center gap-2">
             <span className="w-4 text-right text-[11px] text-muted">{oi + 1}</span>
-            <input
-              className={input}
-              aria-label={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
-              placeholder={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+            <BubbleTextEditor
               value={o.text}
-              onChange={(e) => set({ options: poll.options.map((x, xi) => (xi === oi ? { ...x, text: e.target.value } : x)) })}
+              onChange={(v) => set({ options: poll.options.map((x, xi) => (xi === oi ? { ...x, text: v } : x)) })}
+              singleLine
+              className="flex-1"
+              lang={ru ? 'ru' : 'en'}
+              ariaLabel={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+              placeholder={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
             />
             <button
               type="button"
@@ -745,12 +753,13 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
         ))}
       </div>
 
-      <input
-        className={input}
-        aria-label={ru ? 'Вопрос теста' : 'Quiz question'}
-        placeholder={ru ? 'Вопрос теста' : 'Quiz question'}
+      <BubbleTextEditor
         value={quiz.question}
-        onChange={(e) => set({ question: e.target.value })}
+        onChange={(v) => set({ question: v })}
+        singleLine
+        lang={ru ? 'ru' : 'en'}
+        ariaLabel={ru ? 'Вопрос теста' : 'Quiz question'}
+        placeholder={ru ? 'Вопрос теста' : 'Quiz question'}
       />
 
       {quiz.kind === 'choice' && (
@@ -771,12 +780,14 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
                     <Check size={13} />
                   </button>
                 </Tooltip>
-                <input
-                  className={input}
-                  aria-label={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
-                  placeholder={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+                <BubbleTextEditor
                   value={o.text}
-                  onChange={(e) => set({ options: quiz.options.map((x, xi) => (xi === oi ? { ...x, text: e.target.value } : x)) })}
+                  onChange={(v) => set({ options: quiz.options.map((x, xi) => (xi === oi ? { ...x, text: v } : x)) })}
+                  singleLine
+                  className="flex-1"
+                  lang={ru ? 'ru' : 'en'}
+                  ariaLabel={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+                  placeholder={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
                 />
                 <button
                   type="button"
@@ -812,12 +823,14 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
             {accept.map((a, ai) => (
               <div key={ai} className="flex items-center gap-2">
                 <span className="w-4 text-right text-[11px] text-muted">✓</span>
-                <input
-                  className={input}
-                  aria-label={ru ? `Принимаемый ответ ${ai + 1}` : `Accepted answer ${ai + 1}`}
-                  placeholder={ru ? `Принимаемый ответ ${ai + 1}` : `Accepted answer ${ai + 1}`}
+                <BubbleTextEditor
                   value={a}
-                  onChange={(e) => set({ accept: accept.map((x, xi) => (xi === ai ? e.target.value : x)) })}
+                  onChange={(v) => set({ accept: accept.map((x, xi) => (xi === ai ? v : x)) })}
+                  singleLine
+                  className="flex-1"
+                  lang={ru ? 'ru' : 'en'}
+                  ariaLabel={ru ? `Принимаемый ответ ${ai + 1}` : `Accepted answer ${ai + 1}`}
+                  placeholder={ru ? `Принимаемый ответ ${ai + 1}` : `Accepted answer ${ai + 1}`}
                 />
                 <button
                   type="button"
@@ -888,15 +901,14 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
                 {Array.from({ length: n }, (_, bi) => (
                   <div key={bi} className="flex items-center gap-2">
                     <span className="w-5 shrink-0 text-right font-mono text-[11px] text-muted">#{bi + 1}</span>
-                    <input
-                      className={input}
-                      aria-label={ru ? `Ответы для пропуска ${bi + 1}` : `Answers for blank ${bi + 1}`}
-                      placeholder={ru ? 'Принимаемые ответы через запятую' : 'Accepted answers, comma-separated'}
+                    <BubbleTextEditor
                       value={quiz.blanks[bi] ?? ''}
-                      onChange={(e) => {
-                        const next = Array.from({ length: n }, (_, i) => (i === bi ? e.target.value : quiz.blanks[i] ?? ''))
-                        set({ blanks: next })
-                      }}
+                      onChange={(v) => set({ blanks: Array.from({ length: n }, (_, i) => (i === bi ? v : quiz.blanks[i] ?? '')) })}
+                      singleLine
+                      className="flex-1"
+                      lang={ru ? 'ru' : 'en'}
+                      ariaLabel={ru ? `Ответы для пропуска ${bi + 1}` : `Answers for blank ${bi + 1}`}
+                      placeholder={ru ? 'Принимаемые ответы через запятую' : 'Accepted answers, comma-separated'}
                     />
                   </div>
                 ))}
@@ -918,20 +930,24 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
             <div className="flex flex-col gap-1.5">
               {pairs.map((p, pi) => (
                 <div key={pi} className="flex items-center gap-2">
-                  <input
-                    className={input}
-                    aria-label={ru ? `Слева ${pi + 1}` : `Left ${pi + 1}`}
-                    placeholder={ru ? 'Слева' : 'Left'}
+                  <BubbleTextEditor
                     value={p.left}
-                    onChange={(e) => setPairs(pairs.map((x, xi) => (xi === pi ? { ...x, left: e.target.value } : x)))}
+                    onChange={(v) => setPairs(pairs.map((x, xi) => (xi === pi ? { ...x, left: v } : x)))}
+                    singleLine
+                    className="flex-1"
+                    lang={ru ? 'ru' : 'en'}
+                    ariaLabel={ru ? `Слева ${pi + 1}` : `Left ${pi + 1}`}
+                    placeholder={ru ? 'Слева' : 'Left'}
                   />
                   <span className="shrink-0 text-muted">→</span>
-                  <input
-                    className={input}
-                    aria-label={ru ? `Справа ${pi + 1}` : `Right ${pi + 1}`}
-                    placeholder={ru ? 'Справа' : 'Right'}
+                  <BubbleTextEditor
                     value={p.right}
-                    onChange={(e) => setPairs(pairs.map((x, xi) => (xi === pi ? { ...x, right: e.target.value } : x)))}
+                    onChange={(v) => setPairs(pairs.map((x, xi) => (xi === pi ? { ...x, right: v } : x)))}
+                    singleLine
+                    className="flex-1"
+                    lang={ru ? 'ru' : 'en'}
+                    ariaLabel={ru ? `Справа ${pi + 1}` : `Right ${pi + 1}`}
+                    placeholder={ru ? 'Справа' : 'Right'}
                   />
                   <button
                     type="button"
