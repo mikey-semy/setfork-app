@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { GitFork, ListChecks, MessageSquare, PencilLine, Star, Tag, UserPlus } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Markdown } from '@/shared/ui/Markdown'
 import { tr, type Lang } from '@/shared/i18n'
 import type { FeedEvent } from './queries'
 import type { RecommendedList } from './queries'
@@ -80,6 +81,8 @@ export function Feed({
       ) : (
         <div className="flex flex-col gap-2.5">
           {shown.map((e, i) => {
+            // Версия/релиз — богатая карточка с содержимым (заметка = changelog), как на GitHub.
+            if (e.type === 'version') return <ReleaseCard key={`version-${e.createdAt}-${i}`} e={e} lang={lang} ru={ru} />
             const Icon = ICONS[e.type as keyof typeof ICONS] ?? Tag
             return (
               <div key={`${e.type}-${e.createdAt}-${i}`} className="flex gap-3 rounded-lg border border-border bg-surface p-3.5">
@@ -106,9 +109,6 @@ export function Feed({
                   {e.title && <div className="mt-0.5 truncate text-[13px] text-ink-2">{tr(e.title, lang)}</div>}
                   {e.type === 'issue' && e.itemTitle && (
                     <div className="mt-1 truncate text-[12.5px] text-muted">“{e.itemTitle}”</div>
-                  )}
-                  {e.type === 'version' && e.note && !['initial', 'edit', 'seeded'].includes(e.note) && (
-                    <div className="mt-1 text-[12.5px] text-muted">“{e.note}”</div>
                   )}
                 </div>
                 <span className="flex-shrink-0 font-mono text-[11px] text-muted">
@@ -154,5 +154,56 @@ export function Feed({
         {ru ? 'Ещё' : 'More'}
       </Link>
     </section>
+  )
+}
+
+/** Карточка релиза (событие version): шапка + бейдж vN + заголовок списка +
+ *  заметка версии (changelog) в врезке + ссылки. Аналог release-карточки GitHub. */
+function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean }) {
+  const base = `/${e.ownerHandle}/${e.slug}`
+  const note = e.note && !['initial', 'edit', 'seeded'].includes(e.note) ? e.note : ''
+  const date = new Intl.DateTimeFormat(ru ? 'ru' : 'en', { month: 'short', day: 'numeric' }).format(new Date(e.createdAt))
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      {/* Шапка: кто выпустил + когда */}
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-[13px]">
+        <Link href={`/${e.actorHandle}`} className="flex-shrink-0">
+          <Avatar handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size={22} />
+        </Link>
+        <Link href={`/${e.actorHandle}`} className="font-medium text-ink-2 hover:text-accent">
+          {e.actorHandle}
+        </Link>
+        <span className="text-ink-2">{ru ? 'выпустил' : 'released'}</span>
+        <Tag size={13} className="shrink-0 text-muted" />
+        <span className="ml-auto flex-shrink-0 font-mono text-[11px] text-muted">{date}</span>
+      </div>
+      {/* Тело: версия + заголовок + changelog */}
+      <div className="px-4 py-3.5">
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <span className="rounded-md border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[12px] font-semibold text-accent">
+            v{e.version}
+          </span>
+          <Link href={base} className="min-w-0 truncate text-[15px] font-semibold text-ink hover:text-accent">
+            {tr(e.title, lang) || `${e.ownerHandle}/${e.slug}`}
+          </Link>
+        </div>
+        <div className="mb-2.5 font-mono text-[11px] text-muted">
+          {e.ownerHandle}/{e.slug}
+        </div>
+        {note ? (
+          <Markdown className="border-l-2 border-border pl-3 text-[13px] text-ink-2">{note}</Markdown>
+        ) : (
+          <p className="text-[12.5px] italic text-muted">{ru ? 'Без заметок к версии' : 'No release notes'}</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
+          <Link href={`${base}/versions`} className="font-medium text-accent hover:underline">
+            {ru ? 'Изменения' : 'Changes'} →
+          </Link>
+          <Link href={base} className="text-ink-2 hover:text-ink">
+            {ru ? 'Открыть список' : 'Open list'}
+          </Link>
+        </div>
+      </div>
+    </div>
   )
 }
