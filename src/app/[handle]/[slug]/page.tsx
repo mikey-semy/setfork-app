@@ -22,6 +22,8 @@ import { getContributors, getStepPreviews, getTemplateDetail } from '@/features/
 import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
+import { QuizBlock } from '@/features/library/QuizBlock'
+import type { QuizBlockContent } from '@/features/library/blocks'
 import { pollDeadlineMs } from '@/features/library/blocks'
 import { canViewList } from '@/features/library/access'
 import { ListHeader } from '@/features/library/ListHeader'
@@ -311,6 +313,14 @@ export default async function ListPage({
                           closed={(() => { const dm = pollDeadlineMs(c.deadline); return dm !== null && dm < nowMs })()}
                           lang={lang}
                         />
+                      </div>
+                    ) : null
+                  }
+                  if (s.type === 'quiz') {
+                    const c = (s.content ?? {}) as unknown as QuizBlockContent
+                    return Array.isArray(c.options) && c.options.length ? (
+                      <div key={s.id} className="break-inside-avoid">
+                        <QuizBlock content={c} lang={lang} />
                       </div>
                     ) : null
                   }

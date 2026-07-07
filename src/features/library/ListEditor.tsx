@@ -3,11 +3,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   BarChart3,
+  Check,
   ChevronDown,
   ChevronsDown,
   ChevronsUp,
   ChevronUp,
   Footprints,
+  GraduationCap,
   GripVertical,
   Heading,
   Image as ImageIcon,
@@ -26,11 +28,11 @@ import type { Lang } from '@/shared/i18n'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { DatePicker } from '@/shared/ui/DatePicker'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { emptyItem, emptyBlock, type EditorItem, type EditorPoll } from './editor'
+import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorQuiz } from './editor'
 import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType } from './blocks'
 import { refineList, uploadStepImage, uploadStepVideo } from './actions'
 
-const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon }
+const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap }
 const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
 
 const input =
@@ -596,6 +598,9 @@ export function ListEditor({
           {/* Poll-блок: вопрос + варианты + мульти + дедлайн. */}
           {it.type === 'poll' && <PollBlockBody poll={it.poll} onChange={(poll) => patch(i, { poll })} ru={ru} />}
 
+          {/* Quiz-блок: вопрос + варианты с пометкой верных + пояснение. */}
+          {it.type === 'quiz' && <QuizBlockBody quiz={it.quiz} onChange={(quiz) => patch(i, { quiz })} ru={ru} />}
+
           {/* Video-блок: ссылка (YouTube/Vimeo/mp4) + подпись; хинт распознанного типа. */}
           {it.type === 'video' && (
             <div className="flex flex-col gap-2">
@@ -697,6 +702,87 @@ function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p:
           <DatePicker value={poll.deadline} onChange={(v) => set({ deadline: v })} lang={ru ? 'ru' : 'en'} />
         </span>
       </div>
+    </div>
+  )
+}
+
+/** Quiz-блок в редакторе: вопрос + варианты с пометкой «верный» + пояснение.
+ *  При одиночном режиме пометка «верный» эксклюзивна (снимает у остальных). */
+function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q: EditorQuiz) => void; ru: boolean }) {
+  const set = (q: Partial<EditorQuiz>) => onChange({ ...quiz, ...q })
+  const toggleCorrect = (oi: number) =>
+    set({
+      options: quiz.options.map((x, xi) =>
+        xi === oi ? { ...x, correct: !x.correct } : quiz.multi ? x : { ...x, correct: false },
+      ),
+    })
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
+      <input
+        className={input}
+        aria-label={ru ? 'Вопрос теста' : 'Quiz question'}
+        placeholder={ru ? 'Вопрос теста' : 'Quiz question'}
+        value={quiz.question}
+        onChange={(e) => set({ question: e.target.value })}
+      />
+      <div className="flex flex-col gap-1.5">
+        {quiz.options.map((o, oi) => (
+          <div key={o.id} className="flex items-center gap-2">
+            <Tooltip label={o.correct ? (ru ? 'Верный ответ' : 'Correct answer') : ru ? 'Отметить верным' : 'Mark correct'}>
+              <button
+                type="button"
+                onClick={() => toggleCorrect(oi)}
+                aria-pressed={o.correct}
+                aria-label={ru ? 'Отметить верным' : 'Mark correct'}
+                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors ${
+                  o.correct ? 'border-ok bg-ok/15 text-ok' : 'border-border-strong text-transparent hover:border-ok'
+                }`}
+              >
+                <Check size={13} />
+              </button>
+            </Tooltip>
+            <input
+              className={input}
+              aria-label={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+              placeholder={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+              value={o.text}
+              onChange={(e) => set({ options: quiz.options.map((x, xi) => (xi === oi ? { ...x, text: e.target.value } : x)) })}
+            />
+            <button
+              type="button"
+              onClick={() => set({ options: quiz.options.filter((_, xi) => xi !== oi) })}
+              disabled={quiz.options.length <= 2}
+              className="text-muted hover:text-danger disabled:opacity-30"
+              aria-label={ru ? 'Удалить вариант' : 'Remove option'}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[12px]">
+        <button
+          type="button"
+          onClick={() => set({ options: [...quiz.options, { id: newOptionId(), text: '', correct: false }] })}
+          className="text-accent hover:underline"
+        >
+          + {ru ? 'вариант' : 'option'}
+        </button>
+        <label className="inline-flex cursor-pointer items-center gap-1.5 text-ink-2">
+          <Checkbox checked={quiz.multi} onChange={(e) => set({ multi: e.target.checked })} />
+          {ru ? 'Несколько верных' : 'Multiple correct'}
+        </label>
+      </div>
+      <textarea
+        className="min-h-[52px] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[12.5px] leading-relaxed text-ink outline-none focus:border-border-strong"
+        aria-label={ru ? 'Пояснение (после проверки)' : 'Explanation (after check)'}
+        placeholder={ru ? 'Пояснение — покажется после проверки (необязательно)' : 'Explanation — shown after checking (optional)'}
+        value={quiz.explain}
+        onChange={(e) => set({ explain: e.target.value })}
+      />
+      <span className="text-[11px] text-muted">
+        {ru ? 'Отметьте ✓ верные варианты. Проверка — на странице списка.' : 'Mark ✓ correct options. Checking happens on the list page.'}
+      </span>
     </div>
   )
 }

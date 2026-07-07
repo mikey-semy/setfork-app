@@ -467,6 +467,7 @@ export async function refineList(input: {
     caption: '',
     videoUrl: '',
     poll: { question: '', options: [], multi: false, deadline: '' },
+    quiz: { question: '', options: [], multi: false, explain: '' },
     title: it.title,
     desc: it.desc,
     command: it.command,
