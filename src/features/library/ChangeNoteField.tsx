@@ -20,6 +20,7 @@ export function ChangeNoteField({
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [invalid, setInvalid] = useState(false)
   const ref = useRef<HTMLInputElement>(null)
 
   async function generate() {
@@ -35,6 +36,7 @@ export function ChangeNoteField({
       return
     }
     setNote(res.note)
+    setInvalid(false)
   }
 
   return (
@@ -43,10 +45,24 @@ export function ChangeNoteField({
         <input
           ref={ref}
           name="note"
+          required
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(e) => {
+            setNote(e.target.value)
+            if (e.target.value.trim()) setInvalid(false)
+          }}
+          // Гасим нативный пузырёк валидации и показываем свой: подсветка + плавный скролл.
+          onInvalid={(e) => {
+            e.preventDefault()
+            setInvalid(true)
+            ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            ref.current?.focus({ preventScroll: true })
+          }}
+          aria-invalid={invalid}
           placeholder={placeholder}
-          className="w-full rounded-md border border-border bg-surface-2 py-2.5 pl-3 pr-11 text-[14px] text-ink outline-none focus:border-border-strong"
+          className={`w-full rounded-md border bg-surface-2 py-2.5 pl-3 pr-11 text-[14px] text-ink outline-none ${
+            invalid ? 'border-danger focus:border-danger' : 'border-border focus:border-border-strong'
+          }`}
         />
         {/* Иконка-генерация внутри инпута справа, как commit-message в VSCode */}
         <button
@@ -60,6 +76,7 @@ export function ChangeNoteField({
           {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
         </button>
       </div>
+      {invalid && <p className="mt-1 text-[12px] text-danger">{ru ? 'Опишите, что изменили и почему.' : 'Describe what you changed and why.'}</p>}
       {err && <p className="mt-1 text-[12px] text-danger">{err}</p>}
     </div>
   )
