@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { identiconCells } from '@/shared/lib/identicon'
 
 const COLORS = ['#2563eb', '#dc2626', '#7c3aed', '#0891b2', '#e11d48', '#16a34a', '#4f46e5', '#d97706']
@@ -29,11 +29,21 @@ export function Avatar({
   rounded?: string
 }) {
   const [failed, setFailed] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  // Если картинка упала ДО гидрации (SSR отрендерил битый src, браузер словил
+  // error раньше, чем React привязал onError) — onError в React не сработает.
+  // Ловим уже-упавший img на маунте: complete && naturalWidth === 0 = ошибка.
+  useEffect(() => {
+    const img = imgRef.current
+    if (img && img.complete && img.naturalWidth === 0) setFailed(true)
+  }, [avatarUrl])
 
   if (avatarUrl && !failed) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
+        ref={imgRef}
         src={avatarUrl}
         alt={handle}
         onError={() => setFailed(true)}
