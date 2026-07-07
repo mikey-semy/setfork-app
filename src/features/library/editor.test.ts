@@ -68,6 +68,26 @@ describe('editor block converters', () => {
     expect(items[2].type).toBe('step')
   })
 
+  it('poll block: options/multi/deadline ride in content; empty options dropped', () => {
+    const poll = { ...emptyBlock('poll') }
+    poll.poll = { question: 'Best DB?', options: [{ id: 'o1', text: 'Postgres' }, { id: 'o2', text: '' }, { id: 'o3', text: 'SQLite' }], multi: true, deadline: '2026-08-01T10:00' }
+    const [out] = toProposedItems([poll], 'en')
+    expect(out.type).toBe('poll')
+    expect(out.content).toMatchObject({ question: 'Best DB?', multi: true, deadline: '2026-08-01T10:00' })
+    // пустой вариант отброшен, id сохранены
+    expect(out.content?.options).toEqual([{ id: 'o1', text: 'Postgres' }, { id: 'o3', text: 'SQLite' }])
+    expect(typeof out.content?.bid).toBe('string')
+  })
+
+  it('poll round-trips editor → proposed → editor (ids/multi preserved)', () => {
+    const poll = { ...emptyBlock('poll'), poll: { question: 'Q', options: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }], multi: false, deadline: '' } }
+    const [proposed] = toProposedItems([poll], 'en')
+    const [back] = toEditorItems([proposed], 'en')
+    expect(back.type).toBe('poll')
+    expect(back.poll.question).toBe('Q')
+    expect(back.poll.options).toEqual([{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }])
+  })
+
   it('full round-trip: editor → proposed → editor keeps block kinds', () => {
     const original = [
       step({ title: 'Install', command: 'apt install x' }),

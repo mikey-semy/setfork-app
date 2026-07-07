@@ -452,6 +452,7 @@ export async function refineList(input: {
     bid: '',
     text: '',
     caption: '',
+    poll: { question: '', options: [], multi: false, deadline: '' },
     title: it.title,
     desc: it.desc,
     command: it.command,

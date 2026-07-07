@@ -692,6 +692,31 @@ export const collectionItems = pgTable(
 )
 export type Collection = typeof collections.$inferSelect
 
+// ── Poll votes (голоса за варианты poll-блока; ВНЕ git-проекции) ──────
+// Poll-блок хранит варианты в steps.content (версионируется в git), а голоса —
+// здесь, отдельно (как обложки: живут вне контента списка). Якорь — стабильный
+// bid блока (переживает версии) + option_id. Единичный выбор чистит прошлые
+// голоса юзера по этому bid перед вставкой; мульти — тоггл по варианту.
+export const pollVotes = pgTable(
+  'poll_votes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    bid: text('bid').notNull(), // content.bid poll-блока
+    optionId: text('option_id').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('poll_votes_uq').on(t.userId, t.templateId, t.bid, t.optionId),
+    index('poll_votes_bid_idx').on(t.templateId, t.bid),
+  ],
+)
+
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
