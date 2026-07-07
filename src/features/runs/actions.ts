@@ -7,6 +7,7 @@ import { db, runStepState, runs, steps, templates } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { tr, type LocaleText } from '@/shared/i18n'
 import { collabStore } from '@/features/collab-store/store'
+import { recordRunCompletionIfDone } from '@/features/library/completion'
 
 async function ownedRun(runId: string, userId: string) {
   const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
@@ -78,6 +79,8 @@ export async function toggleStep(runId: string, stepId: string): Promise<void> {
     .set({ status: next, doneAt: next === 'done' ? new Date() : null })
     .where(eq(runStepState.id, st.id))
   await recountDone(runId)
+  // Отметили шаг → возможно, пройдены все шаги курса (веха прохождения).
+  if (next === 'done') await recordRunCompletionIfDone(session.userId, run)
 }
 
 // ── Отметить/снять подпункт (по индексу) ──────────────────────────────
@@ -106,6 +109,8 @@ export async function finishRun(runId: string): Promise<void> {
   const run = await ownedRun(runId, session.userId)
   if (!run) return
   await db.update(runs).set({ status: 'done', updatedAt: new Date() }).where(eq(runs.id, runId))
+  // Завершение прогона со всеми сделанными шагами = прохождение курса.
+  await recordRunCompletionIfDone(session.userId, run)
   revalidatePath(`/runs/${runId}`)
 }
 

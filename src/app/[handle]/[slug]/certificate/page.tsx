@@ -37,7 +37,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
           </p>
         ) : !completion ? (
           <div className="rounded-lg border border-border bg-surface p-6 text-center">
-            <p className="text-[14px] text-ink-2">{ru ? 'Вы ещё не прошли все тесты этого курса.' : 'You have not passed all quizzes in this course yet.'}</p>
+            <p className="text-[14px] text-ink-2">{ru ? 'Вы ещё не завершили этот курс.' : 'You have not completed this course yet.'}</p>
             <Link href={base} className="mt-3 inline-block text-[13px] text-accent hover:underline">
               {ru ? '← К курсу' : '← Back to the course'}
             </Link>

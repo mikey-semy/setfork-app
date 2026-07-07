@@ -9,6 +9,8 @@ import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
+import { recordRunCompletionIfDone } from '@/features/library/completion'
+import { getCourseCompletion } from '@/features/quizzes/queries'
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')
 
@@ -328,12 +330,15 @@ async function mcpRunState(userId: string, runId: string) {
       reason: st?.status === 'blocked' && st.note ? st.note : undefined,
     }
   })
+  const completion = await getCourseCompletion(run.templateId, userId)
   return {
     runId,
     ref: meta ? `${meta.ownerHandle}/${meta.slug}` : undefined,
     version: run.version,
     status: run.status,
     progress: { done: stepsOut.filter((s) => s.done).length, total: stepsOut.length },
+    // Курс пройден (веха): все шаги отмечены (или пройдены все тесты списка).
+    courseCompleted: !!completion,
     steps: stepsOut,
   }
 }
@@ -401,5 +406,7 @@ export async function mcpCheckStep(userId: string, runId: string, stepN: number,
     .from(runStepState)
     .where(and(eq(runStepState.runId, runId), eq(runStepState.status, 'done')))
   await db.update(runs).set({ doneCount: c, updatedAt: new Date() }).where(eq(runs.id, runId))
+  // Все шаги отмечены → фиксируем прохождение курса (та же веха, что на сайте).
+  await recordRunCompletionIfDone(userId, run)
   return mcpRunState(userId, runId)
 }
