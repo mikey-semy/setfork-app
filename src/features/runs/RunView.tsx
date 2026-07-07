@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Ban, Check, CircleAlert, CircleCheckBig, Flag, Info, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
+import { ArrowLeft, Award, Ban, Check, CircleAlert, CircleCheckBig, Flag, GraduationCap, Info, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
@@ -38,6 +38,7 @@ export function RunView({
   backHref,
   steps: initial,
   lang,
+  certificateHref,
 }: {
   runId: string
   status: 'active' | 'done' | 'abandoned' | 'failed'
@@ -46,6 +47,7 @@ export function RunView({
   backHref: string
   steps: RunStepVM[]
   lang: Lang
+  certificateHref?: string
 }) {
   const ru = lang === 'ru'
   const [steps, setSteps] = useState(initial)
@@ -159,6 +161,17 @@ export function RunView({
           <div className="h-full rounded-full bg-ok transition-all" style={{ width: `${pct}%` }} />
         </div>
       </div>
+
+      {/* Все шаги сделаны → курс пройден: ссылка на сертификат. */}
+      {certificateHref && total > 0 && done === total && blockedCount === 0 && (
+        <div className="mb-5 flex items-center gap-3 rounded-lg border border-ok/40 bg-ok/10 px-4 py-3">
+          <GraduationCap size={18} className="shrink-0 text-ok" />
+          <span className="min-w-0 flex-1 text-[13px] font-medium text-ink">{ru ? 'Курс пройден — все шаги выполнены' : 'Course complete — all steps done'}</span>
+          <Link href={certificateHref} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ok/40 bg-surface px-2.5 py-1.5 text-[12.5px] font-medium text-ok hover:bg-ok/15">
+            <Award size={14} /> {ru ? 'Сертификат' : 'Certificate'}
+          </Link>
+        </div>
+      )}
 
       {/* Шаги */}
       <div className="flex flex-col gap-3">

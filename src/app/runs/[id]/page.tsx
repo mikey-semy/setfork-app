@@ -39,6 +39,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       backHref={`/${data.template.handle}/${data.template.slug}`}
       steps={steps}
       lang={lang}
+      certificateHref={`/${data.template.handle}/${data.template.slug}/certificate`}
     />
   )
 }
