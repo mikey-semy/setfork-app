@@ -67,7 +67,7 @@ export interface QuizOption {
   correct?: boolean // помечен как верный (используется при проверке)
 }
 // Тип теста. undefined = 'choice' (обратная совместимость со старыми quiz).
-export type QuizKind = 'choice' | 'text' | 'number'
+export type QuizKind = 'choice' | 'text' | 'number' | 'blank'
 export interface QuizBlockContent {
   bid?: string
   kind?: QuizKind
@@ -78,22 +78,35 @@ export interface QuizBlockContent {
   multi?: boolean // несколько верных (иначе ровно один)
   // text — свободный короткий ответ (сверяется со списком принимаемых)
   accept?: string[]
-  caseSensitive?: boolean
+  caseSensitive?: boolean // общий для text/blank
   // number — числовой ответ с допуском
   answer?: number
   tolerance?: number
+  // blank — текст с пропусками ('___'); blanks[i] = принимаемые ответы i-го пропуска
+  template?: string
+  blanks?: string[][]
 }
 
 export const quizKind = (c: QuizBlockContent): QuizKind => c.kind ?? 'choice'
 
-// Ответ ученика (одна форма на все типы): options — для choice; text — для text/number.
+// Маркер пропуска в blank-шаблоне (три подчёркивания).
+export const BLANK_MARK = '___'
+/** Текст blank-шаблона → сегменты между пропусками (длина = число пропусков + 1). */
+export function blankParts(template: string): string[] {
+  return (template ?? '').split(BLANK_MARK)
+}
+export const blankCount = (template: string): number => Math.max(0, blankParts(template).length - 1)
+
+// Ответ ученика (одна форма на все типы): options — choice; text — text/number; blanks — blank.
 export interface QuizAnswer {
   options?: string[]
   text?: string
+  blanks?: string[]
 }
 
 /** Убрать правильные ответы из контента перед отдачей авторизованному (сервер
- *  оценивает сам). choice → без флагов correct; text → без accept; number → без answer/tolerance. */
+ *  оценивает сам). choice → без correct; text → без accept; number → без answer;
+ *  blank → без blanks (шаблон остаётся). */
 export function stripQuizAnswers(c: QuizBlockContent): QuizBlockContent {
   switch (quizKind(c)) {
     case 'text': {
@@ -105,6 +118,11 @@ export function stripQuizAnswers(c: QuizBlockContent): QuizBlockContent {
       const o = { ...c }
       delete o.answer
       delete o.tolerance
+      return o
+    }
+    case 'blank': {
+      const o = { ...c }
+      delete o.blanks
       return o
     }
     default:
@@ -127,6 +145,16 @@ export function gradeText(input: string, accept: string[], caseSensitive?: boole
 /** Оценка числового ответа: |input − answer| ≤ tolerance. */
 export function gradeNumber(input: number, answer: number, tolerance = 0): boolean {
   return Number.isFinite(input) && Math.abs(input - answer) <= Math.abs(tolerance)
+}
+
+/** Оценка fill-in-the-blank: каждый пропуск i должен совпасть (после нормализации)
+ *  с любым из blanks[i]. Пустой ввод не засчитывается. */
+export function gradeBlank(inputs: string[], blanks: string[][], caseSensitive?: boolean): boolean {
+  if (!blanks.length) return false
+  return blanks.every((acc, i) => {
+    const n = normalizeAnswer(inputs[i] ?? '', caseSensitive)
+    return !!n && acc.some((a) => normalizeAnswer(a, caseSensitive) === n)
+  })
 }
 
 /** Разбор video-URL в БЕЗОПАСНУЮ встройку: iframe только для известных

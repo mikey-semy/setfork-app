@@ -152,6 +152,17 @@ describe('editor block converters', () => {
     expect(back.quiz.tolerance).toBe('0.01')
   })
 
+  it('quiz blank-kind: template + per-blank accepted answers round-trip', () => {
+    const base = emptyBlock('quiz')
+    const quiz = { ...base, quiz: { ...base.quiz, kind: 'blank' as const, template: 'Roses are ___ and sky is ___.', blanks: ['red, crimson', 'blue'] } }
+    const [out] = toProposedItems([quiz], 'en')
+    expect(out.content).toMatchObject({ kind: 'blank', template: 'Roses are ___ and sky is ___.' })
+    expect((out.content as { blanks: string[][] }).blanks).toEqual([['red', 'crimson'], ['blue']])
+    const [back] = toEditorItems([out], 'en')
+    expect(back.quiz.kind).toBe('blank')
+    expect(back.quiz.blanks).toEqual(['red, crimson', 'blue'])
+  })
+
   it('choice quiz omits kind for byte-compat (undefined = choice)', () => {
     const base = emptyBlock('quiz')
     const quiz = { ...base, quiz: { ...base.quiz, question: 'Q', options: [{ id: 'a', text: 'A', correct: true }, { id: 'b', text: 'B', correct: false }] } }

@@ -359,7 +359,8 @@ export default async function ListPage({
                     const c = (s.content ?? {}) as unknown as QuizBlockContent
                     const bid = typeof c.bid === 'string' ? c.bid : ''
                     const kind = quizKind(c)
-                    const renderable = kind === 'choice' ? Array.isArray(c.options) && c.options.length > 0 : c.question !== undefined || kind === 'text' || kind === 'number'
+                    const renderable =
+                      kind === 'choice' ? Array.isArray(c.options) && c.options.length > 0 : kind === 'blank' ? typeof c.template === 'string' && c.template.includes('___') : true
                     // Авторизованному оценивает сервер → НЕ отдаём ответы в разметку.
                     const safe: QuizBlockContent = viewer ? stripQuizAnswers(c) : c
                     el = renderable ? (

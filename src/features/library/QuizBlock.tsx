@@ -5,7 +5,7 @@ import { Check, GraduationCap, Loader2, RotateCcw, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { submitQuiz } from '@/features/quizzes/actions'
 import type { QuizState } from '@/features/quizzes/queries'
-import { gradeNumber, gradeText, quizKind, type QuizBlockContent } from './blocks'
+import { blankCount, blankParts, gradeBlank, gradeNumber, gradeText, quizKind, type QuizBlockContent } from './blocks'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -32,8 +32,10 @@ export function QuizBlock({
   const multi = content.multi === true
   const clientMode = !canSubmit
 
+  const nBlanks = blankCount(content.template ?? '')
   const [picked, setPicked] = useState<Set<string>>(() => new Set(initial.selected))
-  const [textInput, setTextInput] = useState(() => (kind !== 'choice' ? (initial.selected[0] ?? '') : ''))
+  const [textInput, setTextInput] = useState(() => (kind === 'text' || kind === 'number' ? (initial.selected[0] ?? '') : ''))
+  const [blankInputs, setBlankInputs] = useState<string[]>(() => Array.from({ length: nBlanks }, (_, i) => initial.selected[i] ?? ''))
   const [checked, setChecked] = useState(initial.submitted)
   const [serverCorrect, setServerCorrect] = useState<string[] | null>(null)
   const [reveal, setReveal] = useState<string | null>(null)
@@ -48,8 +50,15 @@ export function QuizBlock({
   const revealCorrect = checked && (clientMode || correctSet.size > 0)
 
   const clientHasAnswer =
-    kind === 'text' ? (content.accept?.length ?? 0) > 0 : kind === 'number' ? typeof content.answer === 'number' : clientCorrect.size > 0
-  const hasInput = kind === 'choice' ? picked.size > 0 : textInput.trim() !== ''
+    kind === 'text'
+      ? (content.accept?.length ?? 0) > 0
+      : kind === 'number'
+        ? typeof content.answer === 'number'
+        : kind === 'blank'
+          ? (content.blanks?.length ?? 0) > 0
+          : clientCorrect.size > 0
+  const hasInput =
+    kind === 'choice' ? picked.size > 0 : kind === 'blank' ? nBlanks > 0 && blankInputs.every((b) => b.trim() !== '') : textInput.trim() !== ''
 
   function toggle(id: string) {
     if (checked || pending) return
@@ -66,6 +75,7 @@ export function QuizBlock({
   function localGrade(): boolean {
     if (kind === 'text') return gradeText(textInput, content.accept ?? [], content.caseSensitive)
     if (kind === 'number') return gradeNumber(Number(textInput), content.answer ?? NaN, content.tolerance)
+    if (kind === 'blank') return gradeBlank(blankInputs, content.blanks ?? [], content.caseSensitive)
     return picked.size === clientCorrect.size && [...picked].every((id) => clientCorrect.has(id))
   }
 
@@ -77,7 +87,7 @@ export function QuizBlock({
       return
     }
     start(async () => {
-      const answer = kind === 'choice' ? { options: [...picked] } : { text: textInput }
+      const answer = kind === 'choice' ? { options: [...picked] } : kind === 'blank' ? { blanks: blankInputs } : { text: textInput }
       const res = await submitQuiz(templateId, bid, answer)
       if ('error' in res) {
         setErr(res.error === 'no_answer' ? (ru ? 'У теста не задан верный ответ.' : 'No correct answer is set.') : ru ? 'Не удалось отправить.' : 'Could not submit.')
@@ -94,15 +104,23 @@ export function QuizBlock({
   function reset() {
     setPicked(new Set())
     setTextInput('')
+    setBlankInputs(Array.from({ length: nBlanks }, () => ''))
     setChecked(false)
     setServerCorrect(null)
     setReveal(null)
     setErr(null)
   }
 
-  // Текст «верного ответа» для text/number после проверки (когда ответ неверный).
-  const revealText =
-    clientMode ? (kind === 'text' ? (content.accept ?? []).join(' / ') : kind === 'number' ? String(content.answer ?? '') : '') : (reveal ?? '')
+  // Текст «верного ответа» для text/number/blank после проверки (когда неверно).
+  const revealText = clientMode
+    ? kind === 'text'
+      ? (content.accept ?? []).join(' / ')
+      : kind === 'number'
+        ? String(content.answer ?? '')
+        : kind === 'blank'
+          ? (content.blanks ?? []).map((b) => b[0] ?? '').join(', ')
+          : ''
+    : (reveal ?? '')
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
@@ -161,6 +179,28 @@ export function QuizBlock({
             checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2 focus:border-border-strong'
           }`}
         />
+      )}
+
+      {kind === 'blank' && (
+        <p className={`text-[14px] leading-8 text-ink ${checked ? (ok ? 'text-ok' : '') : ''}`}>
+          {blankParts(content.template ?? '').map((part, i) => (
+            <span key={i}>
+              {part}
+              {i < nBlanks && (
+                <input
+                  type="text"
+                  disabled={checked || pending}
+                  value={blankInputs[i] ?? ''}
+                  onChange={(e) => setBlankInputs((xs) => xs.map((v, xi) => (xi === i ? e.target.value : v)))}
+                  aria-label={`${ru ? 'Пропуск' : 'Blank'} ${i + 1}`}
+                  className={`mx-1 inline-block w-28 rounded border px-2 py-0.5 text-[13px] text-ink outline-none ${
+                    checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border-strong bg-surface-2 focus:border-accent'
+                  }`}
+                />
+              )}
+            </span>
+          ))}
+        </p>
       )}
 
       <div className="mt-3 flex items-center gap-2">

@@ -30,7 +30,7 @@ import { DatePicker } from '@/shared/ui/DatePicker'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorQuiz } from './editor'
-import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType, type QuizKind } from './blocks'
+import { blankCount, BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType, type QuizKind } from './blocks'
 import { refineList, uploadStepImage, uploadStepVideo } from './actions'
 
 const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap }
@@ -710,6 +710,7 @@ const QUIZ_KIND_OPTS: { k: QuizKind; ru: string; en: string }[] = [
   { k: 'choice', ru: 'Выбор', en: 'Choice' },
   { k: 'text', ru: 'Текст', en: 'Text' },
   { k: 'number', ru: 'Число', en: 'Number' },
+  { k: 'blank', ru: 'Пропуски', en: 'Blanks' },
 ]
 
 function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q: EditorQuiz) => void; ru: boolean }) {
@@ -861,6 +862,45 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
             />
           </label>
         </div>
+      )}
+
+      {quiz.kind === 'blank' && (
+        <>
+          <textarea
+            className="min-h-[52px] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[13px] leading-relaxed text-ink outline-none focus:border-border-strong"
+            aria-label={ru ? 'Текст с пропусками' : 'Text with blanks'}
+            placeholder={ru ? 'Текст с пропусками. Пишите ___ там, где пропуск.' : 'Text with blanks. Write ___ where a blank goes.'}
+            value={quiz.template}
+            onChange={(e) => set({ template: e.target.value })}
+          />
+          {(() => {
+            const n = blankCount(quiz.template)
+            if (n === 0) return <span className="text-[11px] text-muted">{ru ? 'Добавьте ___ в текст, чтобы задать пропуски.' : 'Add ___ to the text to create blanks.'}</span>
+            return (
+              <div className="flex flex-col gap-1.5">
+                {Array.from({ length: n }, (_, bi) => (
+                  <div key={bi} className="flex items-center gap-2">
+                    <span className="w-5 shrink-0 text-right font-mono text-[11px] text-muted">#{bi + 1}</span>
+                    <input
+                      className={input}
+                      aria-label={ru ? `Ответы для пропуска ${bi + 1}` : `Answers for blank ${bi + 1}`}
+                      placeholder={ru ? 'Принимаемые ответы через запятую' : 'Accepted answers, comma-separated'}
+                      value={quiz.blanks[bi] ?? ''}
+                      onChange={(e) => {
+                        const next = Array.from({ length: n }, (_, i) => (i === bi ? e.target.value : quiz.blanks[i] ?? ''))
+                        set({ blanks: next })
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+          <label className="inline-flex cursor-pointer items-center gap-1.5 self-start text-[12px] text-ink-2">
+            <Checkbox checked={quiz.caseSensitive} onChange={(e) => set({ caseSensitive: e.target.checked })} />
+            {ru ? 'Учитывать регистр' : 'Case-sensitive'}
+          </label>
+        </>
       )}
 
       <textarea

@@ -2,9 +2,9 @@
 // (текущий UI-язык), контент сохраняется как locale-JSON под этот код.
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
-import { isBlockType, newBlockId, newOptionId, type BlockType, type QuizKind } from './blocks'
+import { blankCount, isBlockType, newBlockId, newOptionId, type BlockType, type QuizKind } from './blocks'
 
-const QUIZ_KINDS: QuizKind[] = ['choice', 'text', 'number']
+const QUIZ_KINDS: QuizKind[] = ['choice', 'text', 'number', 'blank']
 const asQuizKind = (v: unknown): QuizKind => (QUIZ_KINDS.includes(v as QuizKind) ? (v as QuizKind) : 'choice')
 
 const LEVELS: StepLevel[] = ['required', 'recommended', 'optional']
@@ -26,6 +26,8 @@ export type EditorQuiz = {
   caseSensitive: boolean
   answer: string
   tolerance: string
+  template: string // blank: текст с пропусками '___'
+  blanks: string[] // blank: на каждый пропуск — принимаемые ответы через запятую
   explain: string
 }
 export type EditorItem = {
@@ -50,7 +52,7 @@ export type EditorItem = {
 }
 
 const emptyPoll = (): EditorPoll => ({ question: '', options: [], multi: false, deadline: '' })
-const emptyQuiz = (): EditorQuiz => ({ kind: 'choice', question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', explain: '' })
+const emptyQuiz = (): EditorQuiz => ({ kind: 'choice', question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], explain: '' })
 
 export function emptyItem(): EditorItem {
   return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', poll: emptyPoll(), quiz: emptyQuiz(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
@@ -125,6 +127,15 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
             ...common,
             answer: Number(q.answer),
             ...(q.tolerance.trim() && Number(q.tolerance) ? { tolerance: Number(q.tolerance) } : {}),
+          }
+        } else if (q.kind === 'blank') {
+          const n = blankCount(q.template)
+          content = {
+            ...common,
+            template: q.template,
+            // По пропуску — принимаемые ответы (через запятую → массив).
+            blanks: Array.from({ length: n }, (_, i) => (q.blanks[i] ?? '').split(',').map((s) => s.trim()).filter(Boolean)),
+            ...(q.caseSensitive ? { caseSensitive: true } : {}),
           }
         } else {
           const options = q.options
@@ -213,6 +224,8 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
         return { id: typeof oo.id === 'string' ? oo.id : newOptionId(), text: typeof oo.text === 'string' ? oo.text : '', correct: oo.correct === true }
       })
       const accept = Array.isArray(c.accept) ? (c.accept as unknown[]).map((a) => String(a)) : []
+      const rawBlanks = Array.isArray(c.blanks) ? (c.blanks as unknown[]) : []
+      const blanks = rawBlanks.map((b) => (Array.isArray(b) ? (b as unknown[]).map((x) => String(x)).join(', ') : String(b)))
       return {
         ...emptyItem(),
         type: 'quiz',
@@ -227,6 +240,8 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
           caseSensitive: c.caseSensitive === true,
           answer: typeof c.answer === 'number' ? String(c.answer) : '',
           tolerance: typeof c.tolerance === 'number' ? String(c.tolerance) : '',
+          template: typeof c.template === 'string' ? c.template : '',
+          blanks,
           explain: typeof c.explain === 'string' ? c.explain : '',
         },
       }
@@ -284,6 +299,8 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
         caseSensitive: it?.quiz?.caseSensitive === true,
         answer: String(it?.quiz?.answer ?? ''),
         tolerance: String(it?.quiz?.tolerance ?? ''),
+        template: String(it?.quiz?.template ?? ''),
+        blanks: Array.isArray(it?.quiz?.blanks) ? it.quiz.blanks.map((b: unknown) => String(b)) : [],
         explain: String(it?.quiz?.explain ?? ''),
       },
       title: String(it?.title ?? ''),
