@@ -30,7 +30,8 @@ const handler = createMcpHandler(
       'get_list',
       {
         title: 'Get a checklist',
-        description: 'Fetch a full checklist (steps, commands, subtasks, links) by its ref: owner handle + slug.',
+        description:
+          'Fetch a full checklist by ref (owner handle + slug). Returns ALL blocks with their type — steps (title/command/subtasks/links) plus text, image, poll, video and quiz blocks with their content — so you get the complete context, not just text.',
         inputSchema: {
           handle: z.string().describe('Owner handle, e.g. "acme"'),
           slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
@@ -64,27 +65,46 @@ const handler = createMcpHandler(
       },
     )
 
+    // Блок списка. type по умолчанию 'step'. Для не-step заполняй поля своего типа.
     const itemShape = z.object({
-      title: z.string().describe('Step title (short imperative)'),
-      desc: z.string().optional().describe('One or two clarifying sentences (light markdown ok)'),
-      command: z.string().optional().describe('Shell command, if any'),
-      level: z.enum(['required', 'recommended', 'optional']).optional().describe('How essential the step is'),
-      why: z.string().optional().describe('Why this step matters (rationale)'),
-      section: z.string().optional().describe('Optional section header; consecutive steps sharing it are grouped under it'),
-      subtasks: z.array(z.string()).optional().describe('Verification checks'),
+      type: z.enum(['step', 'text', 'image', 'poll', 'video', 'quiz']).optional().describe('Block type (default "step")'),
+      // step
+      title: z.string().optional().describe('Step title (short imperative) — for type "step"'),
+      desc: z.string().optional().describe('Step: one or two clarifying sentences (light markdown ok)'),
+      command: z.string().optional().describe('Step: shell command, if any'),
+      level: z.enum(['required', 'recommended', 'optional']).optional().describe('Step: how essential it is'),
+      why: z.string().optional().describe('Step: why this step matters (rationale)'),
+      section: z.string().optional().describe('Step: optional section header; consecutive steps sharing it are grouped'),
+      subtasks: z.array(z.string()).optional().describe('Step: verification checks'),
+      // text
+      text: z.string().optional().describe('Text block: markdown content — for type "text"'),
+      // image / video
+      caption: z.string().optional().describe('image/video: caption'),
+      imageRef: z.string().optional().describe('image: storage key of an already-uploaded image (rarely set via API)'),
+      url: z.string().optional().describe('video: link to YouTube/Vimeo or a direct .mp4/.webm — for type "video"'),
+      // poll / quiz
+      question: z.string().optional().describe('poll/quiz: the question'),
+      options: z
+        .array(z.object({ text: z.string(), correct: z.boolean().optional().describe('quiz only: mark this option correct') }))
+        .optional()
+        .describe('poll/quiz: answer options'),
+      multi: z.boolean().optional().describe('poll/quiz: allow multiple selections / multiple correct'),
+      deadline: z.string().optional().describe('poll: ISO date after which voting closes'),
+      explain: z.string().optional().describe('quiz: explanation shown after checking'),
     })
 
     server.registerTool(
       'create_list',
       {
         title: 'Create a checklist',
-        description: 'Create a new checklist owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site.',
+        description:
+          'Create a new checklist owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type".',
         inputSchema: {
           title: z.string().describe('List title'),
           desc: z.string().optional().describe('One-line description'),
           tags: z.array(z.string()).optional().describe('3-6 short tags'),
           ordered: z.boolean().optional().describe('true = ordered steps, false = unordered set (default true)'),
-          items: z.array(itemShape).min(1).describe('The steps'),
+          items: z.array(itemShape).min(1).describe('The blocks (steps and optionally text/image/poll/video/quiz)'),
         },
       },
       async (args, extra) => {
@@ -99,11 +119,11 @@ const handler = createMcpHandler(
       'update_list',
       {
         title: 'Update a checklist',
-        description: 'Replace the steps of a checklist you own. A draft is edited in place; a published list gets a new version.',
+        description: 'Replace the blocks of a checklist you own (steps and/or text/image/poll/video/quiz). A draft is edited in place; a published list gets a new version.',
         inputSchema: {
           handle: z.string().describe('Owner handle (must be you)'),
           slug: z.string().describe('List slug'),
-          items: z.array(itemShape).min(1).describe('The new full set of steps'),
+          items: z.array(itemShape).min(1).describe('The new full set of blocks'),
           note: z.string().optional().describe('Change note (for published lists)'),
           tags: z.array(z.string()).optional(),
           ordered: z.boolean().optional(),
