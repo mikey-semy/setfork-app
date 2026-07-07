@@ -33,27 +33,31 @@ export function ActivityGraph({
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Диапазон сетки: год Jan1–Dec31 (для текущего года — до сегодня), иначе rolling.
-  let end: Date
+  // Диапазон сетки. С year — ВЕСЬ календарный год Jan1–Dec31 (даже текущий: будущие
+  // дни и «хвосты» соседних лет остаются пустыми клетками, но ширина — целый год).
+  // Без year — скользящее окно ~52 недели до сегодня.
+  let gridEnd: Date
   let start: Date
   if (year != null) {
-    end = year === today.getFullYear() ? today : new Date(year, 11, 31)
+    gridEnd = new Date(year, 11, 31)
     start = new Date(year, 0, 1)
     start.setDate(start.getDate() - start.getDay())
   } else {
-    end = new Date(today)
-    start = new Date(end)
+    gridEnd = new Date(today)
+    start = new Date(gridEnd)
     start.setDate(start.getDate() - 364)
     start.setDate(start.getDate() - start.getDay()) // выравниваем на начало недели (вс)
   }
 
-  const weeks: { date: string; count: number; future: boolean }[][] = []
+  const weeks: { date: string; count: number; blank: boolean }[][] = []
   const cur = new Date(start)
-  while (cur <= end) {
-    const week: { date: string; count: number; future: boolean }[] = []
+  while (cur <= gridEnd) {
+    const week: { date: string; count: number; blank: boolean }[] = []
     for (let d = 0; d < 7; d++) {
       const ds = iso(cur)
-      week.push({ date: ds, count: map.get(ds) ?? 0, future: cur > end })
+      // Пустая (без квадратика) клетка: будущее ИЛИ день не из выбранного года.
+      const blank = cur > today || (year != null && cur.getFullYear() !== year)
+      week.push({ date: ds, count: map.get(ds) ?? 0, blank })
       cur.setDate(cur.getDate() + 1)
     }
     weeks.push(week)
@@ -61,14 +65,15 @@ export function ActivityGraph({
   const fmtMonth = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { month: 'short' })
   let lastLabel = -3
   const months = weeks.map((w, i) => {
-    const m = new Date(w[0].date).getMonth()
-    const prev = i > 0 ? new Date(weeks[i - 1][0].date).getMonth() : -1
-    // Метку месяца показываем только если она не впритык к предыдущей (иначе накладываются).
-    if (m !== prev && i - lastLabel >= 3) {
-      lastLabel = i
-      return fmtMonth.format(new Date(w[0].date))
-    }
-    return null
+    // Метку месяца ставим над колонкой, в которую попало 1-е число месяца — тогда
+    // ведущий огрызок недели из декабря прошлого года не подписывается «Dec».
+    const first = w.find((c) => new Date(c.date).getDate() === 1)
+    if (!first) return null
+    const dt = new Date(first.date)
+    if (year != null && dt.getFullYear() !== year) return null // хвост соседнего года
+    if (i - lastLabel < 3) return null // не впритык к предыдущей метке
+    lastLabel = i
+    return fmtMonth.format(dt)
   })
 
   return (
@@ -138,7 +143,7 @@ export function ActivityGraph({
               {weeks.map((week, wi) => (
                 <div key={wi} className="flex flex-col gap-[3px]">
                   {week.map((cell, di) =>
-                    cell.future ? (
+                    cell.blank ? (
                       <div key={di} className="h-[11px] w-[11px]" />
                     ) : (
                       <div
