@@ -225,6 +225,13 @@
       "when": 1783225000000,
       "tag": "0031_quiz_attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1783226000000,
+      "tag": "0032_course_completions",
+      "breakpoints": true
     }
   ]
 }

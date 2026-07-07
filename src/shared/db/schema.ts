@@ -744,6 +744,28 @@ export const quizAttempts = pgTable(
   ],
 )
 
+// ── Прохождение курса: пользователь сдал ВСЕ тесты списка ──────────────
+// Одна строка на (user, tpl) = факт завершения + версия и дата (для сертификата).
+// Пишется автоматически из submitQuiz, когда пройден последний тест.
+export const courseCompletions = pgTable(
+  'course_completions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(), // версия списка на момент завершения
+    completedAt: timestamp('completed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('course_completions_uq').on(t.userId, t.templateId),
+    index('course_completions_tpl_idx').on(t.templateId),
+  ],
+)
+
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
