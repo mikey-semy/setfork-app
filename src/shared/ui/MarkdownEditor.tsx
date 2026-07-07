@@ -23,6 +23,9 @@ type Props = {
   refScope?: { owner: string; slug: string }
   /** Участники (автор/исполнители/комментаторы) — показываются в @mention сразу, первыми. */
   people?: MentionUser[]
+  /** Колбэк значения — для контролируемого использования (напр. редактор списков,
+   *  где текст сериализуется в общий JSON). Форма-режим (`name`) работает и без него. */
+  onValueChange?: (value: string) => void
 }
 
 type MentionUser = { handle: string; avatarUrl: string | null }
@@ -31,8 +34,13 @@ const btn = 'inline-flex h-7 w-7 items-center justify-center rounded text-muted 
 
 // Богатый markdown-редактор: тулбар (группы+разделители), Write/Preview, эмодзи, @mention,
 // картинки+вложения, Tab-отступ, undo/redo + горячие клавиши. Управляемая <textarea name>.
-export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6, maxLength, autoFocus, lang = 'en', className, refScope, people = [] }: Props) {
+export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6, maxLength, autoFocus, lang = 'en', className, refScope, people = [], onValueChange }: Props) {
   const [val, setVal] = useState(defaultValue)
+  // Единая точка изменения значения: state + колбэк наружу (контролируемый режим).
+  const emit = (v: string) => {
+    setVal(v)
+    onValueChange?.(v)
+  }
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [emojiOpen, setEmojiOpen] = useState(false)
   // Пикер эмодзи — портал в body + centered-fixed overlay (не привязан к кнопке,
@@ -85,7 +93,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   // Программное изменение (тулбар/эмодзи/вставка): в состояние + историю (+ каретка).
   function apply(next: string, sel?: [number, number]) {
     valRef.current = next
-    setVal(next)
+    emit(next)
     record(next, false)
     if (sel) restore(sel[0], sel[1])
   }
@@ -96,7 +104,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
     h.idx--
     const v = h.stack[h.idx]
     valRef.current = v
-    setVal(v)
+    emit(v)
     h.typing = false
     restore(v.length, v.length)
   }
@@ -106,7 +114,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
     h.idx++
     const v = h.stack[h.idx]
     valRef.current = v
-    setVal(v)
+    emit(v)
     h.typing = false
     restore(v.length, v.length)
   }
@@ -229,7 +237,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
 
   function onChange(value: string) {
     valRef.current = value
-    setVal(value)
+    emit(value)
     record(value, true)
     const caret = ref.current?.selectionStart ?? value.length
     const m = detectMention(value, caret)
