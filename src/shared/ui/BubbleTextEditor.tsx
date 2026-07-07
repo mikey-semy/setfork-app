@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
@@ -28,6 +28,7 @@ export function BubbleTextEditor({
   bare = false,
   className,
   textareaClassName,
+  trailing,
 }: {
   value: string
   onChange: (v: string) => void
@@ -40,6 +41,7 @@ export function BubbleTextEditor({
   bare?: boolean // без рамки/фона (для инлайн-заголовка секции)
   className?: string // для обёртки (напр. flex-1 в строке)
   textareaClassName?: string // доп. классы поля (напр. font-semibold у секции)
+  trailing?: ReactNode // кнопка/иконка внутри поля справа (напр. авто-генерация)
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [bubble, setBubble] = useState<{ top: number; left: number } | null>(null)
@@ -207,8 +209,9 @@ export function BubbleTextEditor({
         onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null) } }, 150)}
         className={`w-full text-[13.5px] leading-relaxed text-ink outline-none ${
           bare ? 'resize-none overflow-hidden bg-transparent' : 'rounded-md border border-border bg-surface-2 px-3 py-2 focus:border-border-strong'
-        } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[72px] resize-y'} ${mono ? 'font-mono text-[12px]' : ''} ${textareaClassName ?? ''}`}
+        } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[72px] resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? 'font-mono text-[12px]' : ''} ${textareaClassName ?? ''}`}
       />
+      {trailing && <div className="absolute right-1.5 top-1.5">{trailing}</div>}
 
       {bubble && !mention && (
         <div
