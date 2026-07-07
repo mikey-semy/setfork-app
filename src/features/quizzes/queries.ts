@@ -1,6 +1,25 @@
 import 'server-only'
-import { and, eq, inArray } from 'drizzle-orm'
-import { courseCompletions, db, quizAttempts } from '@/shared/db'
+import { and, asc, eq, inArray } from 'drizzle-orm'
+import { courseCompletions, db, quizAttempts, users } from '@/shared/db'
+
+export interface LeaderboardEntry {
+  handle: string
+  name: string | null
+  avatarUrl: string | null
+  completedAt: Date
+  version: number
+}
+
+/** Лидерборд курса: кто прошёл, в порядке завершения (раньше = выше). */
+export async function getCourseLeaderboard(templateId: string): Promise<LeaderboardEntry[]> {
+  return db
+    .select({ handle: users.handle, name: users.name, avatarUrl: users.avatarUrl, completedAt: courseCompletions.completedAt, version: courseCompletions.version })
+    .from(courseCompletions)
+    .innerJoin(users, eq(users.id, courseCompletions.userId))
+    .where(eq(courseCompletions.templateId, templateId))
+    .orderBy(asc(courseCompletions.completedAt))
+    .limit(100)
+}
 
 export interface QuizState {
   selected: string[] // что зритель выбрал в последней попытке ([] — не проходил)
