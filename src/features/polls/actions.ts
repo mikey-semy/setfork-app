@@ -3,9 +3,10 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, pollVotes, steps, templates, templateVersions, users } from '@/shared/db'
-import { requireSession } from '@/shared/auth/session'
+import { getSession, requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/features/library/access'
 import { pollDeadlineMs } from '@/features/library/blocks'
+import { getPollHistory, type PollHistoryEvent } from './queries'
 
 /** Голос за вариант poll-блока. Авторизованные; дедлайн уважается; одиночный
  *  выбор заменяет прошлый голос (клик по выбранному — снимает), мульти — тоггл. */
@@ -49,4 +50,14 @@ export async function votePoll(templateId: string, bid: string, optionId: string
 
   const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
   if (owner) revalidatePath(`/${owner.handle}/${tpl.slug}`)
+}
+
+/** Хронология голосов poll-блока для графика динамики. Доступна всем, кто может
+ *  видеть список (в т.ч. анониму на публичном). */
+export async function pollHistory(templateId: string, bid: string): Promise<{ events: PollHistoryEvent[] } | { error: string }> {
+  const session = await getSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl) return { error: 'not_found' }
+  if (!canViewList(tpl, { isOwner: tpl.ownerId === session?.userId })) return { error: 'forbidden' }
+  return getPollHistory(templateId, bid)
 }

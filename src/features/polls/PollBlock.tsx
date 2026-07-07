@@ -1,10 +1,11 @@
 'use client'
 
-import { useTransition } from 'react'
-import { BarChart3, Check, Clock } from 'lucide-react'
+import { useState, useTransition } from 'react'
+import { BarChart3, Check, Clock, LineChart } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
-import { votePoll } from './actions'
-import type { PollResult } from './queries'
+import { pollHistory, votePoll } from './actions'
+import type { PollHistoryEvent, PollResult } from './queries'
+import { PollHistoryChart } from './PollHistoryChart'
 
 export interface PollContent {
   question: string
@@ -37,6 +38,21 @@ export function PollBlock({
   const total = result.voters
   const votable = canVote && !closed && !pending
   const showResults = result.myVotes.length > 0 || closed || !canVote
+
+  // Динамика голосов во времени (грузим по клику).
+  const [histOpen, setHistOpen] = useState(false)
+  const [hist, setHist] = useState<PollHistoryEvent[] | null>(null)
+  const [histPending, startHist] = useTransition()
+  const toggleHistory = () => {
+    const next = !histOpen
+    setHistOpen(next)
+    if (next && hist === null) {
+      startHist(async () => {
+        const res = await pollHistory(templateId, bid)
+        setHist('error' in res ? [] : res.events)
+      })
+    }
+  }
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
@@ -85,7 +101,22 @@ export function PollBlock({
           </span>
         )}
         {!canVote && <span>· {ru ? 'войдите, чтобы голосовать' : 'log in to vote'}</span>}
+        {total > 0 && (
+          <button type="button" onClick={toggleHistory} className="ml-auto inline-flex items-center gap-1 text-muted hover:text-accent">
+            <LineChart size={12} />
+            {ru ? 'динамика' : 'dynamics'}
+          </button>
+        )}
       </div>
+      {histOpen && (
+        <div className="mt-2.5 border-t border-border pt-2.5">
+          {histPending || hist === null ? (
+            <p className="py-2 text-center text-[12px] text-muted">{ru ? 'Загрузка…' : 'Loading…'}</p>
+          ) : (
+            <PollHistoryChart events={hist} options={content.options} lang={lang} />
+          )}
+        </div>
+      )}
     </div>
   )
 }
