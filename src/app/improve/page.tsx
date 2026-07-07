@@ -1,0 +1,75 @@
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { CircleDot, GitPullRequest, Sparkles, Star } from 'lucide-react'
+import { getSession } from '@/shared/auth/session'
+import { getLang } from '@/shared/i18n/server'
+import { tr } from '@/shared/i18n'
+import { getImprovementFeed } from '@/features/improve/queries'
+
+export const metadata = { title: 'Improve' }
+
+export default async function ImprovePage() {
+  const [lang, session] = await Promise.all([getLang(), getSession()])
+  if (!session) redirect('/login?next=/improve')
+  const ru = lang === 'ru'
+  const items = await getImprovementFeed(session.userId)
+
+  return (
+    <div className="mx-auto w-full max-w-[760px] px-4 py-6">
+      <h1 className="mb-1 flex items-center gap-2 text-[17px] font-bold text-ink">
+        <Sparkles size={18} className="text-accent" /> {ru ? 'Что улучшить' : 'What to improve'}
+      </h1>
+      <p className="mb-5 text-[13px] text-ink-2">
+        {ru
+          ? 'Списки, которыми вы пользуетесь и которым нужна доводка — открытые вопросы и предложенные правки. Помогите довести их до безупречности.'
+          : 'Lists you use that need polish — open issues and pending edits. Help bring them to perfection.'}
+      </p>
+
+      {items.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border py-14 text-center text-[13.5px] text-muted">
+          {ru
+            ? 'Пока нечего улучшать — отмечайте звёздами и прогоняйте списки, и здесь появятся те, что ждут вашего вклада.'
+            : 'Nothing to improve yet — star and run lists, and the ones awaiting your contribution will show up here.'}
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {items.map((it) => {
+            const base = `/${it.ownerHandle}/${it.slug}`
+            return (
+              <li key={it.id} className="rounded-lg border border-border bg-surface px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link href={base} className="truncate text-[14px] font-semibold text-accent hover:underline">
+                      {tr(it.title, lang)}
+                    </Link>
+                    {tr(it.desc, lang) && <p className="mt-0.5 line-clamp-1 text-[12.5px] text-ink-2">{tr(it.desc, lang)}</p>}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11.5px] text-muted">
+                      <span className="inline-flex items-center gap-1"><Star size={12} /> {it.starsCount}</span>
+                      {it.openSuggestions > 0 && (
+                        <span className="inline-flex items-center gap-1 text-accent"><GitPullRequest size={12} /> {it.openSuggestions} {ru ? 'правок' : 'edits'}</span>
+                      )}
+                      {it.openIssues > 0 && (
+                        <span className="inline-flex items-center gap-1 text-warn"><CircleDot size={12} /> {it.openIssues} {ru ? 'вопросов' : 'issues'}</span>
+                      )}
+                      <span>· {it.reason === 'starred' ? (ru ? 'в избранном' : 'starred') : ru ? 'вы прогоняли' : 'you ran it'}</span>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col gap-1.5">
+                    <Link href={`${base}/suggest`} className="rounded-md bg-primary px-3 py-1.5 text-center text-[12px] font-medium text-primary-fg hover:opacity-90">
+                      {ru ? 'Предложить правку' : 'Suggest edit'}
+                    </Link>
+                    {it.openIssues > 0 && (
+                      <Link href={`${base}/issues`} className="rounded-md border border-border px-3 py-1.5 text-center text-[12px] text-ink-2 hover:border-border-strong">
+                        {ru ? 'Вопросы' : 'Issues'}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
