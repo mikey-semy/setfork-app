@@ -122,6 +122,8 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       text: '',
       caption: '',
       videoUrl: '',
+      fileUrl: '',
+      fileName: '',
       poll: { question: '', options: [], multi: false, deadline: '' },
       quiz: { kind: 'choice' as const, question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], explain: '' },
       title: it.title,

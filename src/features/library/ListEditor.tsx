@@ -15,6 +15,7 @@ import {
   Image as ImageIcon,
   ImageUp,
   Loader2,
+  Paperclip,
   Plus,
   Redo2,
   Sparkles,
@@ -31,9 +32,9 @@ import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorQuiz } from './editor'
 import { blankCount, BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType, type QuizKind } from './blocks'
-import { refineList, uploadStepImage, uploadStepVideo } from './actions'
+import { refineList, uploadStepFile, uploadStepImage, uploadStepVideo } from './actions'
 
-const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap }
+const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap, file: Paperclip }
 const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
 
 // Загрузка СВОИХ видеофайлов на наш хостинг выключена по умолчанию (нет ресурса
@@ -190,6 +191,16 @@ export function ListEditor({
     setVideoUploading(null)
     if ('error' in res) alert(res.error)
     else patch(i, { videoUrl: res.url })
+  }
+  const [fileUploading, setFileUploading] = useState<number | null>(null)
+  async function uploadFileFor(i: number, file: File) {
+    setFileUploading(i)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await uploadStepFile(fd)
+    setFileUploading(null)
+    if ('error' in res) alert(res.error)
+    else patch(i, { fileUrl: res.url, fileName: res.name })
   }
   // Вставка блока на позицию index (0..len). index === len → в конец.
   const insertAt = (index: number, type: BlockType) => {
@@ -645,6 +656,25 @@ export function ListEditor({
                     </span>
                   )
                 })()}
+            </div>
+          )}
+
+          {/* File-блок: вложение (PDF/архив/…) — загрузка или ссылка на скачивание. */}
+          {it.type === 'file' && (
+            <div className="flex flex-col gap-2">
+              {it.fileUrl ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px]">
+                  <Paperclip size={14} className="shrink-0 text-muted" />
+                  <a href={it.fileUrl} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-accent hover:underline">
+                    {it.fileName || it.fileUrl}
+                  </a>
+                  <button type="button" onClick={() => patch(i, { fileUrl: '', fileName: '' })} className="text-muted hover:text-danger" aria-label={ru ? 'Удалить' : 'Remove'}>
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <FileDropInput uploading={fileUploading === i} onFile={(f) => uploadFileFor(i, f)} ru={ru} />
+              )}
             </div>
           )}
 
@@ -1182,6 +1212,42 @@ function VideoFileInput({ uploading, onFile, ru }: { uploading: boolean; onFile:
         ref={ref}
         type="file"
         accept="video/mp4,video/webm,video/ogg"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) onFile(f)
+          e.target.value = ''
+        }}
+      />
+    </div>
+  )
+}
+
+function FileDropInput({ uploading, onFile, ru }: { uploading: boolean; onFile: (f: File) => void; ru: boolean }) {
+  const ref = useRef<HTMLInputElement>(null)
+  const [over, setOver] = useState(false)
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => ref.current?.click()}
+      onDragOver={(e) => { e.preventDefault(); setOver(true) }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault()
+        setOver(false)
+        const f = e.dataTransfer.files?.[0]
+        if (f) onFile(f)
+      }}
+      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
+        over ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'
+      }`}
+    >
+      {uploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} />}
+      {uploading ? (ru ? 'Загрузка…' : 'Uploading…') : ru ? 'Файл: перетащите или нажмите (PDF/док/архив, до 25 МБ)' : 'File: drag or click (PDF/doc/archive, up to 25 MB)'}
+      <input
+        ref={ref}
+        type="file"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0]

@@ -223,6 +223,17 @@ describe('editor block converters', () => {
     expect(back.section).toBe('Урок 1')
   })
 
+  it('file block: url/name ride in content; round-trips', () => {
+    const f = { ...emptyBlock('file'), fileUrl: '/uploads/files/abc.pdf', fileName: 'guide.pdf' }
+    const [out] = toProposedItems([f], 'en')
+    expect(out.type).toBe('file')
+    expect(out.content).toMatchObject({ url: '/uploads/files/abc.pdf', name: 'guide.pdf' })
+    const [back] = toEditorItems([out], 'en')
+    expect(back.type).toBe('file')
+    expect(back.fileUrl).toBe('/uploads/files/abc.pdf')
+    expect(back.fileName).toBe('guide.pdf')
+  })
+
   it('parseVideoEmbed: YouTube/Vimeo → iframe src, .mp4 → file, прочее → link', () => {
     expect(parseVideoEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toEqual({ kind: 'youtube', src: 'https://www.youtube.com/embed/dQw4w9WgXcQ' })
     expect(parseVideoEmbed('https://youtu.be/dQw4w9WgXcQ')).toEqual({ kind: 'youtube', src: 'https://www.youtube.com/embed/dQw4w9WgXcQ' })
