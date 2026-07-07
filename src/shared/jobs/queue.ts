@@ -61,9 +61,13 @@ export async function completeJob(id: string): Promise<void> {
  * Возвращает «зависшие» задачи (упавший посреди работы воркер оставил их в
  * `processing`): либо снова в очередь (attempts < maxAttempts), либо в `failed`.
  * Без этого claim берёт только `pending`, и зависшая джоба терялась навсегда.
- * `attempts` уже инкрементнут при claim — повторного двойного расхода не создаём.
+ *
+ * Порог намеренно щедрый (дефолт 30 мин, env SETFORK_JOB_STALL_SEC): в мульти-инстанс
+ * реапе НЕ должен переотдать ЖИВУЮ, но долгую джобу (sweep digest/gardener, refine с
+ * web-search) второму воркеру — иначе двойное исполнение и двойной расход LLM. Порог
+ * обязан превышать самый долгий хендлер; полноценное решение — heartbeat updated_at.
  */
-export async function reapStalledJobs(olderThanSec = 300): Promise<number> {
+export async function reapStalledJobs(olderThanSec = Number(process.env.SETFORK_JOB_STALL_SEC ?? 1800)): Promise<number> {
   // status — enum job_status: результат CASE имеет тип text и НЕ приводится к enum
   // неявно (одиночный литерал приводится, CASE — нет), поэтому явный ::job_status.
   const res = await db.execute(sql`

@@ -171,6 +171,13 @@ export async function gateListPublication(templateId: string): Promise<void> {
  */
 export async function recheckList(templateId: string): Promise<void> {
   try {
+    // Правка контента снимает флаг поданной апелляции: владелец изменил список и
+    // вправе подать новую (иначе после отказа админа, который не сбрасывает appealedAt,
+    // он оставался бы заблокирован навсегда). Дешёвый апдейт только когда флаг стоит.
+    await db
+      .update(templates)
+      .set({ appealedAt: null })
+      .where(and(eq(templates.id, templateId), sql`${templates.appealedAt} is not null`))
     if (!(await getApiKey())) return
     const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
     if (!tpl) return

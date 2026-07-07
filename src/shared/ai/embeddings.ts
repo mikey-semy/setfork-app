@@ -51,6 +51,9 @@ export async function embedTexts(texts: string[], model?: string, meta?: EmbedMe
       usage?: { prompt_tokens?: number; total_tokens?: number }
     }
     if (!Array.isArray(data.data)) return null
+    // Эмбеддинги готовы — фиксируем их ДО учёта расхода, чтобы результат не зависел
+    // от записи в ai_usage (recordUsage к тому же гасит свои ошибки и не бросает).
+    const out = data.data.map((d) => d.embedding)
     // Учёт расхода: раньше эмбеддинги вообще не писались в ai_usage (слепая зона).
     // Стоимость эмбеддингов провайдер в теле не возвращает — пишем токены, cost 0.
     const tokens = data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0
@@ -65,7 +68,7 @@ export async function embedTexts(texts: string[], model?: string, meta?: EmbedMe
       refType: meta?.refType,
       refId: meta?.refId,
     })
-    return data.data.map((d) => d.embedding)
+    return out
   } catch (e) {
     console.warn('[embeddings] failed', e instanceof Error ? e.message : e)
     return null
