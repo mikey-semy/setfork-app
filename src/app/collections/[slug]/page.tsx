@@ -44,7 +44,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
           <h2 className="mb-3 text-[15px] font-semibold text-ink">
             {ru ? 'Списки' : 'Lists'} <span className="font-mono text-[12px] text-muted">{c.lists.length}</span>
           </h2>
-          <FeedList items={c.lists} lang={lang} viewerId={session?.userId} tile />
+          <FeedList items={c.lists} lang={lang} viewerId={session?.userId} className="flex flex-col gap-3" />
         </section>
       )}
 
