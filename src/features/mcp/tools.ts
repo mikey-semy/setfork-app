@@ -7,36 +7,57 @@ import { canViewList } from '@/features/library/access'
 import { dialectExt, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
+import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
+import { isBlockType, newOptionId } from '@/features/library/blocks'
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')
 
+export interface McpBlockOption {
+  text: string
+  correct?: boolean // только для quiz — верный вариант
+}
+
+// Один блок списка через MCP. type по умолчанию 'step'. Поля по типу:
+//  step  — title(+desc/command/level/why/section/subtasks); text — text(markdown);
+//  image — caption(+imageRef); video — url(+caption); poll — question/options/multi/deadline;
+//  quiz  — question/options(correct)/multi/explain.
 export interface McpItemInput {
-  title: string
+  type?: string
+  title?: string
   desc?: string
   command?: string
   level?: 'required' | 'recommended' | 'optional'
   why?: string
   section?: string
   subtasks?: string[]
+  text?: string
+  caption?: string
+  imageRef?: string
+  url?: string
+  question?: string
+  options?: McpBlockOption[]
+  multi?: boolean
+  deadline?: string
+  explain?: string
 }
 
-const LEVELS = ['required', 'recommended', 'optional']
-
 // MCP-контент нейтрален к языку → кладём под 'en' (locale-JSON, tr с фолбэком читает).
+// Строим EditorItem-ы и прогоняем через общий сериализатор блоков (bid, poll/quiz/video
+// content — та же логика, что у веб-редактора). Ноль дублирования блочной модели.
 function toProposed(items: McpItemInput[]): ProposedItem[] {
-  return items
-    .filter((it) => it.title?.trim())
-    .map((it) => ({
-      title: { en: it.title.trim() },
-      desc: it.desc?.trim() ? { en: it.desc.trim() } : {},
-      command: it.command?.trim() ?? '',
-      hasImage: false,
-      level: (LEVELS.includes(it.level as string) ? it.level : 'required') as ProposedItem['level'],
-      why: it.why?.trim() ? { en: it.why.trim() } : {},
-      section: it.section?.trim() ? { en: it.section.trim() } : {},
-      subtasks: (it.subtasks ?? []).filter((s) => s.trim()).map((s) => ({ en: s.trim() })),
-      refs: [],
-    }))
+  const editor: EditorItem[] = (items ?? []).map((it): EditorItem => {
+    const type = isBlockType(it.type ?? '') ? (it.type as EditorItem['type']) : 'step'
+    const b = emptyBlock(type)
+    if (type === 'text') return { ...b, text: (it.text ?? '').trim() }
+    if (type === 'image') return { ...b, imageKey: (it.imageRef ?? '').trim(), caption: (it.caption ?? '').trim() }
+    if (type === 'video') return { ...b, videoUrl: (it.url ?? '').trim(), caption: (it.caption ?? '').trim() }
+    if (type === 'poll')
+      return { ...b, poll: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim() })), multi: it.multi === true, deadline: (it.deadline ?? '').trim() } }
+    if (type === 'quiz')
+      return { ...b, quiz: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim(), correct: o.correct === true })), multi: it.multi === true, explain: (it.explain ?? '').trim() } }
+    return { ...b, title: (it.title ?? '').trim(), desc: (it.desc ?? '').trim(), command: it.command?.trim() ?? '', level: it.level ?? 'required', why: (it.why ?? '').trim(), section: (it.section ?? '').trim(), subtasks: (it.subtasks ?? []).filter((s) => s.trim()) }
+  })
+  return toProposedItems(editor, 'en')
 }
 
 // Прямая перезапись шагов версии (для in-place правки черновика; порт addVersion создаёт НОВУЮ).
@@ -47,11 +68,13 @@ async function insertSteps(versionId: string, items: ProposedItem[]): Promise<vo
     items.map((it, i) => ({
       versionId,
       n: i + 1,
+      type: it.type ?? 'step',
+      content: it.content ?? {},
       title: it.title,
       desc: it.desc,
       command: it.command,
-      hasImage: false,
-      imageKey: null,
+      hasImage: !!it.imageKey,
+      imageKey: it.imageKey ?? null,
       level: it.level,
       why: it.why,
       section: it.section,
@@ -61,10 +84,13 @@ async function insertSteps(versionId: string, items: ProposedItem[]): Promise<vo
   )
 }
 
-/** ProposedItem[] → доменный вход шагов для ListStore.create/addVersion. */
+/** ProposedItem[] → доменный вход шагов для ListStore.create/addVersion.
+ *  Несёт type/content — иначе не-step блоки (poll/video/quiz/text/image) теряются. */
 function stepInput(items: ProposedItem[]) {
   return items.map((it, i) => ({
     n: i + 1,
+    type: it.type ?? 'step',
+    content: it.content ?? {},
     title: it.title,
     desc: it.desc,
     command: it.command,
@@ -98,6 +124,40 @@ export async function mcpSearch(userId: string, query: string, limit: number) {
   }
 }
 
+// Один блок списка → представление для MCP-контекста нейросети. Отдаём ВСЕ типы
+// (не только шаги): текст/картинка/опрос/видео/тест — иначе AI видит лишь часть.
+type DetailStep = NonNullable<Awaited<ReturnType<typeof getTemplateDetail>>>['steps'][number]
+function blockForMcp(s: DetailStep) {
+  const type = (s.type ?? 'step') as string
+  const c = (s.content ?? {}) as Record<string, unknown>
+  const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+  if (type === 'text') return { n: s.n, type, text: str(c.md) }
+  if (type === 'image') return { n: s.n, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
+  if (type === 'video') return { n: s.n, type, url: str(c.url), caption: str(c.caption) || undefined }
+  if (type === 'poll' || type === 'quiz') {
+    const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
+    return {
+      n: s.n,
+      type,
+      question: str(c.question),
+      options: opts.map((o) => (type === 'quiz' ? { text: str(o.text), correct: o.correct === true } : { text: str(o.text) })),
+      multi: c.multi === true || undefined,
+      ...(type === 'poll' ? { deadline: str(c.deadline) || undefined } : { explain: str(c.explain) || undefined }),
+    }
+  }
+  return {
+    n: s.n,
+    type: 'step',
+    title: tr(s.title, 'en'),
+    desc: tr(s.desc, 'en'),
+    command: s.command || undefined,
+    level: s.level,
+    why: tr(s.why, 'en') || undefined,
+    subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
+    refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label),
+  }
+}
+
 export async function mcpGetList(userId: string, handle: string, slug: string) {
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return null
@@ -113,16 +173,8 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     ordered: tpl.ordered,
     version: currentVersion?.version ?? tpl.currentVersion,
     verified: tpl.verified,
-    steps: steps.map((s) => ({
-      n: s.n,
-      title: tr(s.title, 'en'),
-      desc: tr(s.desc, 'en'),
-      command: s.command || undefined,
-      level: s.level,
-      why: tr(s.why, 'en') || undefined,
-      subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
-      refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label),
-    })),
+    // Все блоки списка (шаги + текст/картинки/опросы/видео/тесты) — полный контекст.
+    steps: steps.map(blockForMcp),
   }
 }
 
