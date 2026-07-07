@@ -23,6 +23,9 @@ export function BubbleTextEditor({
   rows = 3,
   lang = 'en',
   ariaLabel,
+  singleLine = false,
+  mono = false,
+  className,
 }: {
   value: string
   onChange: (v: string) => void
@@ -30,6 +33,9 @@ export function BubbleTextEditor({
   rows?: number
   lang?: 'ru' | 'en'
   ariaLabel?: string
+  singleLine?: boolean // одно-строчное поле (заголовок/команда/…) — Enter не переносит
+  mono?: boolean // моноширинный (для команды)
+  className?: string // для обёртки (напр. flex-1 в строке)
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [bubble, setBubble] = useState<{ top: number; left: number } | null>(null)
@@ -152,6 +158,7 @@ export function BubbleTextEditor({
       if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickMention(users[mIdx]); return }
       if (e.key === 'Escape') { setMention(null); setUsers([]); return }
     }
+    if (singleLine && e.key === 'Enter') { e.preventDefault(); return } // одно-строчное поле
     if (!(e.metaKey || e.ctrlKey)) return
     const k = e.key.toLowerCase()
     if (k === 'b') { e.preventDefault(); surround('**', '**', L('текст', 'text')) }
@@ -179,13 +186,13 @@ export function BubbleTextEditor({
   ]
 
   return (
-    <div className="relative">
+    <div className={`relative ${className ?? ''}`}>
       <textarea
         ref={ref}
         value={value}
         aria-label={ariaLabel}
         placeholder={placeholder}
-        rows={rows}
+        rows={singleLine ? 1 : rows}
         onChange={(e) => onChangeText(e.target.value)}
         onFocus={refresh}
         onClick={refresh}
@@ -194,7 +201,9 @@ export function BubbleTextEditor({
         onScroll={refresh}
         onKeyDown={onKeyDown}
         onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null) } }, 150)}
-        className="min-h-[72px] w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] leading-relaxed text-ink outline-none focus:border-border-strong"
+        className={`w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] leading-relaxed text-ink outline-none focus:border-border-strong ${
+          singleLine ? 'resize-none overflow-hidden' : 'min-h-[72px] resize-y'
+        } ${mono ? 'font-mono text-[12px]' : ''}`}
       />
 
       {bubble && !mention && (
