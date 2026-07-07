@@ -17,6 +17,8 @@ import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { ActivityGraph } from '@/features/profile/ActivityGraph'
 import { AchievementsCard } from '@/features/profile/AchievementsCard'
+import { ListsToolbar } from '@/features/profile/ListsToolbar'
+import { Pagination } from '@/shared/ui/Pagination'
 import { getAchievementDisplay } from '@/features/profile/achievement-config'
 import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { FollowButton } from '@/features/follows/FollowButton'
@@ -45,7 +47,7 @@ export default async function ProfilePage({
   searchParams,
 }: {
   params: Promise<{ handle: string }>
-  searchParams: Promise<{ tab?: string; folder?: string; q?: string; sort?: string; fsort?: string; month?: string; year?: string; e?: string }>
+  searchParams: Promise<{ tab?: string; folder?: string; q?: string; sort?: string; fsort?: string; month?: string; year?: string; e?: string; type?: string; page?: string }>
 }) {
   const [{ handle }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
   const user = await getUserByHandle(handle)
@@ -123,15 +125,39 @@ export default async function ProfilePage({
   const starQ = (sp.q ?? '').trim().toLowerCase()
   const starSort = sp.sort === 'name' ? 'name' : sp.sort === 'stars' ? 'stars' : 'recent'
   let items = folderIds ? rawItems.filter((it) => folderIds.includes(it.id)) : rawItems
+  const matchesQ = (it: (typeof items)[number]) =>
+    it.slug.toLowerCase().includes(starQ) || Object.values(it.title).some((v) => v?.toLowerCase().includes(starQ))
   if (tab === 'starred') {
-    if (starQ) {
-      items = items.filter(
-        (it) => it.slug.toLowerCase().includes(starQ) || Object.values(it.title).some((v) => v?.toLowerCase().includes(starQ)),
-      )
-    }
+    if (starQ) items = items.filter(matchesQ)
     if (starSort === 'name') items = [...items].sort((a, b) => a.slug.localeCompare(b.slug))
     else if (starSort === 'stars') items = [...items].sort((a, b) => b.starsCount - a.starsCount)
     // recent = порядок из запроса (по дате звезды/обновления)
+  }
+  // Вкладка «Списки»: поиск + фильтр по типу + сортировка (тулбар как у репо GitHub).
+  const listType = (['public', 'private', 'forks'] as const).find((tt) => tt === sp.type) ?? 'all'
+  const listSort = starSort // тот же ?sort=recent|name|stars
+  if (tab === 'lists') {
+    if (starQ) items = items.filter(matchesQ)
+    if (listType === 'public') items = items.filter((it) => it.visibility === 'public')
+    else if (listType === 'private') items = items.filter((it) => it.visibility === 'private')
+    else if (listType === 'forks') items = items.filter((it) => it.origin === 'forked')
+    if (listSort === 'name') items = [...items].sort((a, b) => a.slug.localeCompare(b.slug))
+    else if (listSort === 'stars') items = [...items].sort((a, b) => b.starsCount - a.starsCount)
+  }
+  // Пагинация вкладок со списками (много репозиториев = боль без страниц).
+  const PER_PAGE = 20
+  const totalPages = Math.max(1, Math.ceil(items.length / PER_PAGE))
+  const curPage = Math.min(Math.max(1, Number(sp.page) || 1), totalPages)
+  const pageItems = isListsTab ? items.slice((curPage - 1) * PER_PAGE, curPage * PER_PAGE) : items
+  const listPageHref = (p: number) => {
+    const qs = new URLSearchParams()
+    qs.set('tab', tab)
+    if (sp.folder) qs.set('folder', sp.folder)
+    if (sp.q) qs.set('q', sp.q)
+    if (sp.sort) qs.set('sort', sp.sort)
+    if (sp.type) qs.set('type', sp.type)
+    if (p > 1) qs.set('page', String(p))
+    return `/${handle}?${qs.toString()}`
   }
 
   return (
@@ -429,10 +455,16 @@ export default async function ProfilePage({
                   </div>
                 </form>
               )}
+              {tab === 'lists' && (
+                <ListsToolbar lang={lang} isOwner={isOwner} q={sp.q ?? ''} type={listType} sort={listSort} />
+              )}
               {items.length === 0 ? (
                 <Empty text={tab === 'starred' ? t('noStars', lang) : t('noProfileLists', lang)} />
               ) : (
-                <FeedList items={items} lang={lang} viewerId={viewer?.userId} />
+                <>
+                  <FeedList items={pageItems} lang={lang} viewerId={viewer?.userId} />
+                  <Pagination page={curPage} totalPages={totalPages} makeHref={listPageHref} lang={lang} />
+                </>
               )}
             </>
           )}
