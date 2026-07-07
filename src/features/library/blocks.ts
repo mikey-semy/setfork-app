@@ -74,7 +74,7 @@ export interface QuizOption {
   correct?: boolean // помечен как верный (используется при проверке)
 }
 // Тип теста. undefined = 'choice' (обратная совместимость со старыми quiz).
-export type QuizKind = 'choice' | 'text' | 'number' | 'blank' | 'match'
+export type QuizKind = 'choice' | 'text' | 'number' | 'blank' | 'match' | 'sort' | 'code'
 export interface QuizPair {
   left: string
   right: string
@@ -101,9 +101,25 @@ export interface QuizBlockContent {
   pairs?: QuizPair[]
   lefts?: string[]
   rights?: string[]
+  // sort — расставить в правильном порядке. items = эталонный порядок; после стрипа
+  // для клиента шлём shuffled (перемешанные), items прячем. code — как text (accept),
+  // но моноширинный ввод; caseSensitive по умолчанию учитывается автором.
+  items?: string[]
+  shuffled?: string[]
 }
 
 export const quizKind = (c: QuizBlockContent): QuizKind => c.kind ?? 'choice'
+
+/** Детерминированное «перемешивание» для показа sort-элементов (без Math.random,
+ *  чтобы SSR был стабилен): сортировка по длине+тексту — порядок не совпадает с эталоном
+ *  в большинстве случаев, но стабилен и не выдаёт правильную последовательность как есть. */
+export const shuffleSort = (items: string[]): string[] => [...items].sort((a, b) => a.length - b.length || a.localeCompare(b))
+
+/** Оценка сортировки: последовательность ответа совпадает с эталонным порядком. */
+export function gradeSort(order: string[], items: string[], caseSensitive?: boolean): boolean {
+  if (!items.length || order.length !== items.length) return false
+  return items.every((it, i) => normalizeAnswer(order[i] ?? '', caseSensitive) === normalizeAnswer(it, caseSensitive))
+}
 
 // Маркер пропуска в blank-шаблоне (три подчёркивания).
 export const BLANK_MARK = '___'
@@ -124,6 +140,7 @@ export interface QuizAnswer {
   text?: string
   blanks?: string[]
   match?: string[]
+  order?: string[] // sort — расставленная учеником последовательность
 }
 
 /** Убрать правильные ответы из контента перед отдачей авторизованному (сервер
@@ -151,6 +168,16 @@ export function stripQuizAnswers(c: QuizBlockContent): QuizBlockContent {
       const pairs = c.pairs ?? []
       const o = { ...c, lefts: pairs.map((p) => p.left), rights: matchRights(pairs) }
       delete o.pairs
+      return o
+    }
+    case 'sort': {
+      const o = { ...c, shuffled: shuffleSort(c.items ?? []) }
+      delete o.items
+      return o
+    }
+    case 'code': {
+      const o = { ...c }
+      delete o.accept
       return o
     }
     default:
