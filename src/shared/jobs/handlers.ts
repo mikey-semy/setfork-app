@@ -63,3 +63,15 @@ export async function runPushJob(payload: unknown): Promise<void> {
   const d = await resolveNotificationDisplay(p)
   await sendPushToUser(p.userId, { title: 'SetFork', body: d.text, url: d.url })
 }
+
+/** Недельный дайджест «сохранённое дорожает»: проход по получателям + самоперепланирование.
+ *  ensure — в finally: следующий запуск встаёт в очередь даже при сбое прохода
+ *  (ретраи текущей джобы дублей не создают — ensure видит pending). */
+export async function runDigestJob(): Promise<void> {
+  const { runWeeklyDigestSweep, ensureDigestScheduled } = await import('@/features/digest/service')
+  try {
+    await runWeeklyDigestSweep()
+  } finally {
+    await ensureDigestScheduled()
+  }
+}

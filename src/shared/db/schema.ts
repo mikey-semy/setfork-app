@@ -356,7 +356,7 @@ export const appSettings = pgTable('app_settings', {
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
-export type JobType = 'email' | 'generate' | 'reindex' | 'push'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest'
 
 export const jobs = pgTable(
   'jobs',
@@ -392,6 +392,22 @@ export const pushSubscriptions = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ byUser: index('push_subs_user_idx').on(t.userId) }),
+)
+
+// ── Digests (журнал недельного дайджеста «сохранённое дорожает») ─────
+// Одна строка = одно отправленное письмо; sent_at последней строки — точка
+// отсчёта следующего дайджеста пользователя (пустой дайджест не пишется).
+export const digests = pgTable(
+  'digests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+    items: integer('items').notNull().default(0),
+  },
+  (t) => [index('digests_user_idx').on(t.userId, t.sentAt)],
 )
 
 // ── Suggestions (предложения правок, PR) ─────────────────────────────
