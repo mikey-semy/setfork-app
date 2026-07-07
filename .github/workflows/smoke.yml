@@ -48,8 +48,13 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Apply DB schema (drizzle migrate — неинтерактивно, применяет 0000..NNNN)
-        run: npm run db:migrate
+      - name: Apply DB schema (drizzle export → psql)
+        # push интерактивен (TTY), migrate падает на журнале миграций (известная
+        # хрупкость) — детерминированно дампим полный DDL из schema.ts и накатываем.
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+          npx drizzle-kit export > "$RUNNER_TEMP/schema.sql"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/schema.sql"
 
       - name: Build
         run: npm run build
