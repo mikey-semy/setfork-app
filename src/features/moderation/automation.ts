@@ -24,7 +24,9 @@ export interface ListSignals {
 export function extractHosts(text: string): string[] {
   const out = new Set<string>()
   for (const m of text.matchAll(/https?:\/\/([^\s/)"'<>]+)/gi)) {
-    out.add(m[1].toLowerCase().replace(/^www\./, ''))
+    // хвостовая пунктуация («…bit.ly, потом…») — не часть хоста
+    const host = m[1].toLowerCase().replace(/^www\./, '').replace(/[.,;:!?'\]]+$/, '')
+    if (host) out.add(host)
   }
   return [...out]
 }
@@ -41,12 +43,21 @@ export function checkSpamHeuristics(s: ListSignals): { spam: boolean; reason: st
   return { spam: false, reason: '' }
 }
 
-/** Нормализованный отпечаток контента: одинаковая суть → одинаковый хэш,
+// Минимальная длина нормализованного тела: короче — отпечаток вырожден
+// (пустой/односложный контент на любом алфавите схлопнулся бы в один хэш).
+export const MIN_FINGERPRINT_BODY = 20
+
+/** Нормализованное тело контента (для отпечатка): без регистра/пунктуации/пробелов,
+ *  любой алфавит (\p{L}), чтобы CJK/арабский не вырождались в пустую строку. */
+export function fingerprintBody(title: string, stepTitles: string[]): string {
+  const norm = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+  return [norm(title), ...stepTitles.map(norm)].filter(Boolean).join('|')
+}
+
+/** Отпечаток контента: одинаковая суть → одинаковый хэш,
  *  косметические правки (регистр/пунктуация/пробелы) его не меняют. */
 export function contentFingerprint(title: string, stepTitles: string[]): string {
-  const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9Ѐ-ӿ]+/g, '')
-  const body = [norm(title), ...stepTitles.map(norm)].filter(Boolean).join('|')
-  return createHash('sha256').update(body).digest('hex')
+  return createHash('sha256').update(fingerprintBody(title, stepTitles)).digest('hex')
 }
 
 export type GateAction =

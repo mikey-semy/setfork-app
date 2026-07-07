@@ -4,6 +4,7 @@ import {
   contentFingerprint,
   categorySeverity,
   extractHosts,
+  fingerprintBody,
   routeVerdict,
 } from './automation'
 
@@ -39,6 +40,9 @@ describe('extractHosts', () => {
   it('dedupes and strips www', () => {
     expect(extractHosts('https://www.go.dev/doc https://go.dev/tour http://nodejs.org')).toEqual(['go.dev', 'nodejs.org'])
   })
+  it('strips trailing punctuation (shortener followed by comma is still caught)', () => {
+    expect(extractHosts('see https://bit.ly, then https://site.com. done')).toEqual(['bit.ly', 'site.com'])
+  })
 })
 
 describe('contentFingerprint', () => {
@@ -51,6 +55,9 @@ describe('contentFingerprint', () => {
     expect(contentFingerprint('Deploy to VPS', ['Install Docker'])).not.toBe(
       contentFingerprint('Deploy to VPS', ['Install Podman']),
     )
+  })
+  it('non-latin scripts do not degenerate to one hash', () => {
+    expect(contentFingerprint('日本語のリスト', ['手順を実行'])).not.toBe(contentFingerprint('中文清单', ['执行步骤']))
   })
 })
 
@@ -82,3 +89,11 @@ describe('routeVerdict', () => {
     expect(routeVerdict(v(false, 0.95), false).action).toBe('none')
   })
 })
+
+describe('fingerprintBody', () => {
+  it('keeps any alphabet, drops punctuation/spacing', () => {
+    expect(fingerprintBody('Список Дел!', ['шаг №1'])).toBe('списокдел|шаг1')
+    expect(fingerprintBody('', [])).toBe('')
+  })
+})
+

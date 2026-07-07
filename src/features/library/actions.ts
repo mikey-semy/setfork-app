@@ -49,8 +49,13 @@ export async function setListVisibility(templateId: string, visibility: 'public'
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl || tpl.ownerId !== session.userId) return
   if (visibility === 'private') {
-    // приватному модерация не нужна — сбрасываем статус
-    await db.update(templates).set({ visibility, moderation: 'active', moderationReason: null }).where(eq(templates.id, templateId))
+    // приватному гейт не нужен — сбрасываем ТОЛЬКО pending; flagged/hidden не
+    // «отмываются» toggle'ом видимости — админский takedown снимает только админ.
+    const reset =
+      tpl.moderation === 'pending'
+        ? { moderation: 'active' as const, moderationReason: null, moderationSeverity: 0 }
+        : {}
+    await db.update(templates).set({ visibility, ...reset }).where(eq(templates.id, templateId))
   } else {
     await db.update(templates).set({ visibility }).where(eq(templates.id, templateId))
     await gateListPublication(templateId) // публикация → гейт: pending до авто-проверки
@@ -654,7 +659,7 @@ export async function useTemplate(templateId: string): Promise<void> {
   const srcSteps = srcCurrent
     ? await db.select().from(steps).where(eq(steps.versionId, srcCurrent.id)).orderBy(asc(steps.n))
     : []
-  await listStore.create({
+  const created = await listStore.create({
     ownerId: session.userId,
     slug,
     title: src.title,
@@ -681,6 +686,7 @@ export async function useTemplate(templateId: string): Promise<void> {
       imageRef: s.imageKey ?? null,
     })),
   })
+  await gateListPublication(created.id) // копия публикуется — гейт как у любой публикации
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}/${slug}`)
 }
@@ -751,6 +757,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
     .set({ forksCount: sql`${templates.forksCount} + 1` })
     .where(eq(templates.id, src.id))
   await notify({ recipientId: src.ownerId, actorId: session.userId, type: 'fork', templateId: src.id })
+  if (src.visibility === 'public') await gateListPublication(forked.id) // форк — тоже публикация
   await enqueueReindex(forked.id)
 
   revalidatePath('/explore')

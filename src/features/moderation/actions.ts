@@ -31,7 +31,8 @@ export async function setModeration(
   if (!admin) return { error: 'Доступ запрещён.' }
   await db
     .update(templates)
-    .set({ moderation, moderationReason: reason ?? null })
+    // решение принято: апелляция закрыта, severity актуален только для нового нарушения
+    .set({ moderation, moderationReason: reason ?? null, moderationSeverity: 0, appealedAt: null })
     .where(eq(templates.id, templateId))
   await recordAudit('list.moderate', { actorId: admin.userId, targetType: 'list', targetId: templateId, meta: { moderation, reason: reason ?? null } })
   revalidatePath('/admin/moderation')

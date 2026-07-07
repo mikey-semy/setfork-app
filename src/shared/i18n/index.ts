@@ -510,7 +510,7 @@ const DICT = {
   filterAll: { en: 'All', ru: 'Все' },
   hiddenNotice: { en: 'Hidden by moderation — not shown publicly.', ru: 'Скрыт модерацией — не виден публично.' },
   pendingNotice: { en: 'Under review — visible only to you until automatic checks pass.', ru: 'На проверке — виден только вам, пока не пройдут автоматические проверки.' },
-  flaggedNotice: { en: 'Under review — not public yet. Only you can see it.', ru: 'На проверке — пока не публичен. Виден только вам.' },
+  flaggedNotice: { en: 'Flagged by moderation — removed from public view. You can request a review below.', ru: 'Помечен модерацией — снят с публичного показа. Можно запросить пересмотр.' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT
