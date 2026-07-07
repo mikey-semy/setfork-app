@@ -22,6 +22,10 @@ export interface Achievement {
   goal: number
   /** Достигнутый «уровень» (для многоуровневых) — сколько порогов пройдено. */
   tier: number
+  /** Сырое значение метрики (звёзд/форков/прогонов/дней/списков) — для истории. */
+  value: number
+  /** Пороги уровней (для одноуровневых — `[1]`) — для истории в модалке. */
+  tiers: number[]
 }
 
 /** Самая длинная серия подряд идущих дней с count>0. */
@@ -54,11 +58,11 @@ function tiered(key: AchievementKey, value: number): Achievement {
   const tiers = TIERS[key]!
   const tier = tiers.filter((t) => value >= t).length
   const goal = tiers[Math.min(tier, tiers.length - 1)]
-  return { key, earned: tier > 0, progress: Math.min(value, goal), goal, tier }
+  return { key, earned: tier > 0, progress: Math.min(value, goal), goal, tier, value, tiers }
 }
 
 function once(key: AchievementKey, ok: boolean, value = ok ? 1 : 0): Achievement {
-  return { key, earned: ok, progress: value, goal: 1, tier: ok ? 1 : 0 }
+  return { key, earned: ok, progress: value, goal: 1, tier: ok ? 1 : 0, value, tiers: [1] }
 }
 
 export function computeAchievements(input: AchievementInput): Achievement[] {
