@@ -75,3 +75,14 @@ export async function runDigestJob(): Promise<void> {
     await ensureDigestScheduled()
   }
 }
+
+/** ИИ-садовник: предлагает улучшения публичных списков обычными правками (PR-модель).
+ *  Самоперепланируется в finally — как digest. */
+export async function runGardenerJob(): Promise<void> {
+  const { runGardenerSweep, ensureGardenerScheduled } = await import('@/features/gardener/service')
+  try {
+    await runGardenerSweep()
+  } finally {
+    await ensureGardenerScheduled()
+  }
+}

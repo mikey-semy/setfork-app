@@ -1,7 +1,7 @@
 import 'server-only'
 import { captureError, log } from '@/shared/observability'
 import { claimJob, completeJob, failJob, type Job } from './queue'
-import { runDigestJob, runEmailJob, runGenerateJob, runPushJob, runReindexJob } from './handlers'
+import { runDigestJob, runEmailJob, runGardenerJob, runGenerateJob, runPushJob, runReindexJob } from './handlers'
 
 // Реестр обработчиков по типу задачи.
 const HANDLERS: Record<string, (payload: unknown) => Promise<void>> = {
@@ -10,6 +10,7 @@ const HANDLERS: Record<string, (payload: unknown) => Promise<void>> = {
   reindex: runReindexJob,
   push: runPushJob,
   digest: runDigestJob,
+  gardener: runGardenerJob,
 }
 
 const POLL_MS = 3000
@@ -63,4 +64,7 @@ export function startWorker(): void {
   void import('@/features/digest/service')
     .then((m) => m.ensureDigestScheduled())
     .catch((e) => captureError(e, { where: 'digest.ensure' }))
+  void import('@/features/gardener/service')
+    .then((m) => m.ensureGardenerScheduled())
+    .catch((e) => captureError(e, { where: 'gardener.ensure' }))
 }
