@@ -27,6 +27,7 @@ import {
 import type { Lang } from '@/shared/i18n'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { DatePicker } from '@/shared/ui/DatePicker'
+import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorQuiz } from './editor'
 import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType } from './blocks'
@@ -199,10 +200,6 @@ export function ListEditor({
   }
   const removeItem = (i: number) => {
     if (items.length > 1) commit(items.filter((_, idx) => idx !== i), uids.filter((_, idx) => idx !== i))
-  }
-  // Смена типа блока на месте (для /-команды в пустом блоке).
-  const setType = (i: number, type: BlockType) => {
-    commit(items.map((it, idx) => (idx === i ? { ...emptyBlock(type), section: it.section } : it)), uids)
   }
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir
@@ -557,15 +554,8 @@ export function ListEditor({
           </div>
           )}
 
-          {/* Text-блок: markdown-врезка. Пустой + '/' → меню смены типа. */}
-          {it.type === 'text' && (
-            <TextBlockBody
-              value={it.text}
-              onChange={(v) => patch(i, { text: v })}
-              onSlash={(type) => setType(i, type)}
-              ru={ru}
-            />
-          )}
+          {/* Text-блок: богатый markdown-редактор (как в комментариях). */}
+          {it.type === 'text' && <TextBlockBody value={it.text} onChange={(v) => patch(i, { text: v })} ru={ru} />}
 
           {/* Image-блок: картинка + подпись. */}
           {it.type === 'image' && (
@@ -793,44 +783,19 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
   )
 }
 
-function TextBlockBody({ value, onChange, onSlash, ru }: { value: string; onChange: (v: string) => void; onSlash: (t: BlockType) => void; ru: boolean }) {
-  const [menu, setMenu] = useState(false)
+// Text-блок использует тот же богатый редактор, что и комментарии (тулбар,
+// эмодзи, картинки/вложения, undo/redo). Значение течёт наверх через onValueChange
+// (сериализуется в общий JSON списка); name="" — textarea не отправляется формой.
+function TextBlockBody({ value, onChange, ru }: { value: string; onChange: (v: string) => void; ru: boolean }) {
   return (
-    <div className="relative flex flex-col gap-1">
-      <textarea
-        className="min-h-[72px] w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] leading-relaxed text-ink outline-none focus:border-border-strong"
-        aria-label={ru ? 'Текстовый блок (Markdown)' : 'Text block (Markdown)'}
-        placeholder={ru ? 'Текст (Markdown). Введите «/» в пустом блоке для выбора типа…' : 'Text (Markdown). Type “/” in an empty block to pick a type…'}
-        value={value}
-        onChange={(e) => {
-          const v = e.target.value
-          if (v === '/' && value === '') { setMenu(true); return }
-          setMenu(false)
-          onChange(v)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' && menu) { e.preventDefault(); setMenu(false) }
-        }}
-      />
-      {menu && (
-        <div className="absolute left-3 top-9 z-10 flex flex-col overflow-hidden rounded-md border border-border bg-surface shadow-lg">
-          {BLOCK_TYPES.map((t) => {
-            const Icon = BLOCK_ICON[t]
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => { setMenu(false); onSlash(t) }}
-                className="flex items-center gap-2 px-3 py-1.5 text-left text-[13px] text-ink hover:bg-surface-2"
-              >
-                <Icon size={14} className="text-muted" /> {blockLabel(t, ru)}
-              </button>
-            )
-          })}
-        </div>
-      )}
-      <span className="pl-1 text-[11px] text-muted">{ru ? 'Markdown: **жирный**, [ссылка](url), списки' : 'Markdown: **bold**, [link](url), lists'}</span>
-    </div>
+    <MarkdownEditor
+      name=""
+      defaultValue={value}
+      onValueChange={onChange}
+      rows={4}
+      lang={ru ? 'ru' : 'en'}
+      placeholder={ru ? 'Текст в разметке Markdown…' : 'Markdown text…'}
+    />
   )
 }
 
