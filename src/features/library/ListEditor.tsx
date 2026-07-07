@@ -35,6 +35,11 @@ import { refineList, uploadStepImage, uploadStepVideo } from './actions'
 const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap }
 const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
 
+// Загрузка СВОИХ видеофайлов на наш хостинг выключена по умолчанию (нет ресурса
+// обслуживать объёмы без дохода). Код загрузки на месте — включается флагом,
+// когда появится хостинг (S3/Cloudflare Stream). Видео по ссылке работает всегда.
+const VIDEO_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_VIDEO_UPLOAD === '1'
+
 const input =
   'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-none focus:border-border-strong'
 
@@ -185,14 +190,11 @@ export function ListEditor({
     if ('error' in res) alert(res.error)
     else patch(i, { videoUrl: res.url })
   }
-  // Тип последнего добавленного блока — «повтор предыдущего» в инсертере.
-  const [lastType, setLastType] = useState<BlockType>('step')
   // Вставка блока на позицию index (0..len). index === len → в конец.
   const insertAt = (index: number, type: BlockType) => {
     const at = Math.max(0, Math.min(index, items.length))
     const nextI = [...items.slice(0, at), emptyBlock(type), ...items.slice(at)]
     const nextU = [...uids.slice(0, at), newUid(), ...uids.slice(at)]
-    setLastType(type)
     commit(nextI, nextU)
   }
   const removeItem = (i: number) => {
@@ -200,7 +202,6 @@ export function ListEditor({
   }
   // Смена типа блока на месте (для /-команды в пустом блоке).
   const setType = (i: number, type: BlockType) => {
-    setLastType(type)
     commit(items.map((it, idx) => (idx === i ? { ...emptyBlock(type), section: it.section } : it)), uids)
   }
   const move = (i: number, dir: -1 | 1) => {
@@ -611,12 +612,16 @@ export function ListEditor({
                 value={it.videoUrl}
                 onChange={(e) => patch(i, { videoUrl: e.target.value })}
               />
-              <div className="flex items-center gap-2 text-[11px] text-muted">
-                <span className="h-px flex-1 bg-border" />
-                {ru ? 'или' : 'or'}
-                <span className="h-px flex-1 bg-border" />
-              </div>
-              <VideoFileInput uploading={videoUploading === i} onFile={(f) => uploadVideoFor(i, f)} ru={ru} />
+              {VIDEO_UPLOAD_ENABLED && (
+                <>
+                  <div className="flex items-center gap-2 text-[11px] text-muted">
+                    <span className="h-px flex-1 bg-border" />
+                    {ru ? 'или' : 'or'}
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                  <VideoFileInput uploading={videoUploading === i} onFile={(f) => uploadVideoFor(i, f)} ru={ru} />
+                </>
+              )}
               <input
                 className={input}
                 aria-label={ru ? 'Подпись видео' : 'Video caption'}
@@ -639,15 +644,16 @@ export function ListEditor({
             </div>
           )}
 
-          {/* Инсертер между блоками: вставить после текущего блока. */}
-          <BlockInserter onInsert={(type) => insertAt(i + 1, type)} repeatType={lastType} ru={ru} between />
+          {/* Инсертер между блоками: вставить после текущего блока.
+              «Повторить предыдущий» = тип блока, ПОД которым стоит инсертер. */}
+          <BlockInserter onInsert={(type) => insertAt(i + 1, type)} repeatType={it.type} ru={ru} between />
         </div>
       ))}
       </div>
 
-      {/* Главный инсертер — добавить блок в конец списка. */}
+      {/* Главный инсертер — добавить блок в конец списка. Повтор = тип последнего блока. */}
       <div className="flex justify-center pt-1">
-        <BlockInserter onInsert={(type) => insertAt(items.length, type)} repeatType={lastType} ru={ru} />
+        <BlockInserter onInsert={(type) => insertAt(items.length, type)} repeatType={items[items.length - 1]?.type ?? 'step'} ru={ru} />
       </div>
     </div>
   )
