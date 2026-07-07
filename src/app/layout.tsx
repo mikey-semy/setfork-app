@@ -125,6 +125,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {user && browserNotify && <BrowserNotifier enabled />}
           </div>
         </ThemeProvider>
+        {process.env.NEXT_PUBLIC_UMAMI_URL && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <script
+            defer
+            src={`${process.env.NEXT_PUBLIC_UMAMI_URL}/script.js`}
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+          />
+        )}
       </body>
     </html>
   )
