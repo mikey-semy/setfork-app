@@ -25,6 +25,7 @@ import { VideoEmbed } from '@/features/library/VideoEmbed'
 import { QuizBlock } from '@/features/library/QuizBlock'
 import type { QuizBlockContent } from '@/features/library/blocks'
 import { getQuizState } from '@/features/quizzes/queries'
+import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { pollDeadlineMs } from '@/features/library/blocks'
 import { canViewList } from '@/features/library/access'
 import { ListHeader } from '@/features/library/ListHeader'
@@ -274,6 +275,9 @@ export default async function ListPage({
                   {lang === 'ru' ? 'Показать все' : 'Show all'}
                 </Link>
               </div>
+            )}
+            {viewer && quizBids.length > 0 && (
+              <CourseProgress passed={quizBids.filter((b) => quizStates[b]?.correct).length} total={quizBids.length} lang={lang} />
             )}
             <div className="flex flex-col gap-3">
               {steps.map((s, si) => {
