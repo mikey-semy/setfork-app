@@ -493,7 +493,10 @@ export async function generateChangeNoteAction(
     where: (t) => eq(t.id, templateId),
     with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
   })
-  if (!tpl || tpl.ownerId !== session.userId) return { error: 'forbidden' }
+  // Доступно всем, кто может видеть список: владельцу на /edit и предлагающему на
+  // /suggest. Генерация читает публичный контент + их черновик; стоимость метрится
+  // per-user и rate-limited, так что абьюза нет.
+  if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return { error: 'forbidden' }
 
   const { allowed } = checkRateLimit(`note:${session.userId}`)
   if (!allowed) return { error: 'ratelimited' }

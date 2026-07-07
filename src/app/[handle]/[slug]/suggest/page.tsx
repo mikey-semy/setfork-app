@@ -7,6 +7,7 @@ import { t, tr } from '@/shared/i18n'
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { submitSuggestion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
+import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
 
 export default async function SuggestPage({
@@ -42,12 +43,9 @@ export default async function SuggestPage({
             : 'Edit the items. The maintainer will accept it as a new version or reject it.'}
         </p>
 
-        <input
-          name="note"
-          required
-          placeholder={t('changeNote', lang)}
-          className="mb-6 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
-        />
+        <div className="mb-6">
+          <ChangeNoteField templateId={tpl.id} lang={lang} placeholder={t('changeNote', lang)} />
+        </div>
 
         <ListEditor name="items" initialItems={initial} lang={lang} />
 
