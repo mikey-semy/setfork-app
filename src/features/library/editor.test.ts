@@ -1,8 +1,40 @@
 import { describe, expect, it } from 'vitest'
 import { emptyBlock, emptyItem, parseEditorItems, toEditorItems, toProposedItems, type EditorItem } from './editor'
-import { parseVideoEmbed } from './blocks'
+import { gradeBlank, gradeMatch, gradeNumber, gradeText, parseVideoEmbed, stripQuizAnswers } from './blocks'
 
 const step = (over: Partial<EditorItem> = {}): EditorItem => ({ ...emptyItem(), ...over })
+
+describe('quiz grading', () => {
+  it('gradeText normalizes whitespace/case; caseSensitive respected', () => {
+    expect(gradeText(' Paris ', ['paris'])).toBe(true)
+    expect(gradeText('paris', ['Paris'], true)).toBe(false)
+    expect(gradeText('', ['x'])).toBe(false)
+  })
+  it('gradeNumber honors tolerance', () => {
+    expect(gradeNumber(3.14, 3.1, 0.05)).toBe(true)
+    expect(gradeNumber(3.2, 3.1, 0.05)).toBe(false)
+    expect(gradeNumber(NaN, 1)).toBe(false)
+  })
+  it('gradeBlank requires every blank filled and matching', () => {
+    expect(gradeBlank(['red', 'blue'], [['red', 'crimson'], ['blue']])).toBe(true)
+    expect(gradeBlank(['red', ''], [['red'], ['blue']])).toBe(false)
+  })
+  it('gradeMatch requires each left mapped to its right', () => {
+    const pairs = [{ left: 'Fr', right: 'Paris' }, { left: 'De', right: 'Berlin' }]
+    expect(gradeMatch(['Paris', 'Berlin'], pairs)).toBe(true)
+    expect(gradeMatch(['Berlin', 'Paris'], pairs)).toBe(false)
+  })
+  it('stripQuizAnswers hides answers per kind', () => {
+    expect(stripQuizAnswers({ kind: 'text', question: 'q', accept: ['a'] }).accept).toBeUndefined()
+    expect(stripQuizAnswers({ kind: 'number', question: 'q', answer: 5 }).answer).toBeUndefined()
+    const m = stripQuizAnswers({ kind: 'match', question: 'q', pairs: [{ left: 'a', right: 'b' }] })
+    expect(m.pairs).toBeUndefined()
+    expect(m.lefts).toEqual(['a'])
+    expect(m.rights).toEqual(['b'])
+    const c = stripQuizAnswers({ kind: 'choice', question: 'q', options: [{ id: 'a', text: 'A', correct: true }] })
+    expect(c.options?.[0]).toEqual({ id: 'a', text: 'A' })
+  })
+})
 
 describe('editor block converters', () => {
   it('toProposedItems: step without title is dropped, non-step blocks are kept', () => {
@@ -161,6 +193,17 @@ describe('editor block converters', () => {
     const [back] = toEditorItems([out], 'en')
     expect(back.quiz.kind).toBe('blank')
     expect(back.quiz.blanks).toEqual(['red, crimson', 'blue'])
+  })
+
+  it('quiz match-kind: pairs ride in content; empty pairs dropped; round-trips', () => {
+    const base = emptyBlock('quiz')
+    const quiz = { ...base, quiz: { ...base.quiz, kind: 'match' as const, pairs: [{ left: 'Fr', right: 'Paris' }, { left: 'De', right: 'Berlin' }, { left: '', right: 'x' }] } }
+    const [out] = toProposedItems([quiz], 'en')
+    expect(out.content).toMatchObject({ kind: 'match' })
+    expect((out.content as { pairs: unknown[] }).pairs).toEqual([{ left: 'Fr', right: 'Paris' }, { left: 'De', right: 'Berlin' }])
+    const [back] = toEditorItems([out], 'en')
+    expect(back.quiz.kind).toBe('match')
+    expect(back.quiz.pairs).toEqual([{ left: 'Fr', right: 'Paris' }, { left: 'De', right: 'Berlin' }])
   })
 
   it('choice quiz omits kind for byte-compat (undefined = choice)', () => {

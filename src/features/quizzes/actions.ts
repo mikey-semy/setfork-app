@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { courseCompletions, db, quizAttempts, steps, templates, templateVersions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/features/library/access'
-import { gradeBlank, gradeNumber, gradeText, quizKind, type QuizAnswer, type QuizBlockContent } from '@/features/library/blocks'
+import { gradeBlank, gradeMatch, gradeNumber, gradeText, quizKind, type QuizAnswer, type QuizBlockContent } from '@/features/library/blocks'
 
 export interface QuizVerdict {
   ok: boolean // прошёл
@@ -65,6 +65,13 @@ export async function submitQuiz(templateId: string, bid: string, answer: QuizAn
     selected = inputs
     ok = gradeBlank(inputs, blanks, content.caseSensitive)
     reveal = blanks.map((b) => b[0] ?? '').join(', ')
+  } else if (kind === 'match') {
+    const pairs = Array.isArray(content.pairs) ? content.pairs : []
+    if (!pairs.length) return { error: 'no_answer' }
+    const assignment = (answer.match ?? []).map((s) => String(s))
+    selected = assignment
+    ok = gradeMatch(assignment, pairs, content.caseSensitive)
+    reveal = pairs.map((p) => `${p.left} → ${p.right}`).join('; ')
   } else {
     const options = content.options ?? []
     const validIds = new Set(options.map((o) => o.id))

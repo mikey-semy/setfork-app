@@ -67,7 +67,11 @@ export interface QuizOption {
   correct?: boolean // помечен как верный (используется при проверке)
 }
 // Тип теста. undefined = 'choice' (обратная совместимость со старыми quiz).
-export type QuizKind = 'choice' | 'text' | 'number' | 'blank'
+export type QuizKind = 'choice' | 'text' | 'number' | 'blank' | 'match'
+export interface QuizPair {
+  left: string
+  right: string
+}
 export interface QuizBlockContent {
   bid?: string
   kind?: QuizKind
@@ -78,13 +82,18 @@ export interface QuizBlockContent {
   multi?: boolean // несколько верных (иначе ровно один)
   // text — свободный короткий ответ (сверяется со списком принимаемых)
   accept?: string[]
-  caseSensitive?: boolean // общий для text/blank
+  caseSensitive?: boolean // общий для text/blank/match
   // number — числовой ответ с допуском
   answer?: number
   tolerance?: number
   // blank — текст с пропусками ('___'); blanks[i] = принимаемые ответы i-го пропуска
   template?: string
   blanks?: string[][]
+  // match — сопоставление пар (эталон). После стрипа для клиента: lefts + rights
+  // (rights отсортированы, чтобы не выдавать правильную привязку).
+  pairs?: QuizPair[]
+  lefts?: string[]
+  rights?: string[]
 }
 
 export const quizKind = (c: QuizBlockContent): QuizKind => c.kind ?? 'choice'
@@ -97,11 +106,17 @@ export function blankParts(template: string): string[] {
 }
 export const blankCount = (template: string): number => Math.max(0, blankParts(template).length - 1)
 
-// Ответ ученика (одна форма на все типы): options — choice; text — text/number; blanks — blank.
+/** Правые части пар для показа ученику — отсортированы, чтобы порядок не выдавал
+ *  правильную привязку (эталон lefts↔rights мы клиенту не отдаём). */
+export const matchRights = (pairs: QuizPair[]): string[] => [...new Set(pairs.map((p) => p.right))].sort((a, b) => a.localeCompare(b))
+
+// Ответ ученика (одна форма на все типы): options — choice; text — text/number;
+// blanks — blank; match — выбранная правая часть для каждой левой (по порядку lefts).
 export interface QuizAnswer {
   options?: string[]
   text?: string
   blanks?: string[]
+  match?: string[]
 }
 
 /** Убрать правильные ответы из контента перед отдачей авторизованному (сервер
@@ -123,6 +138,12 @@ export function stripQuizAnswers(c: QuizBlockContent): QuizBlockContent {
     case 'blank': {
       const o = { ...c }
       delete o.blanks
+      return o
+    }
+    case 'match': {
+      const pairs = c.pairs ?? []
+      const o = { ...c, lefts: pairs.map((p) => p.left), rights: matchRights(pairs) }
+      delete o.pairs
       return o
     }
     default:
@@ -154,6 +175,16 @@ export function gradeBlank(inputs: string[], blanks: string[][], caseSensitive?:
   return blanks.every((acc, i) => {
     const n = normalizeAnswer(inputs[i] ?? '', caseSensitive)
     return !!n && acc.some((a) => normalizeAnswer(a, caseSensitive) === n)
+  })
+}
+
+/** Оценка сопоставления: для каждой левой i выбранная правая должна совпасть с
+ *  эталонной pairs[i].right (по нормализованному тексту). */
+export function gradeMatch(assignment: string[], pairs: QuizPair[], caseSensitive?: boolean): boolean {
+  if (!pairs.length) return false
+  return pairs.every((p, i) => {
+    const n = normalizeAnswer(assignment[i] ?? '', caseSensitive)
+    return !!n && n === normalizeAnswer(p.right, caseSensitive)
   })
 }
 
