@@ -411,12 +411,15 @@ export function ListEditor({
               value={it.title}
               onChange={(e) => patch(i, { title: e.target.value })}
             />
-            <input
-              className={input}
-              aria-label={ru ? `Описание пункта ${i + 1}` : `Item ${i + 1} description`}
-              placeholder={ru ? 'Описание (необязательно)' : 'Description (optional)'}
-              value={it.desc}
-              onChange={(e) => patch(i, { desc: e.target.value })}
+            {/* Описание пункта — тот же богатый редактор, что и в комментариях
+                (тулбар, эмодзи, картинки, Markdown). Рендерится Markdown'ом на странице. */}
+            <MarkdownEditor
+              name=""
+              defaultValue={it.desc}
+              onValueChange={(v) => patch(i, { desc: v })}
+              rows={3}
+              lang={ru ? 'ru' : 'en'}
+              placeholder={ru ? 'Описание (Markdown, необязательно)' : 'Description (Markdown, optional)'}
             />
             <input
               className={`${input} font-mono`}
