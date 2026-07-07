@@ -145,6 +145,9 @@ export const templates = pgTable(
     status: listStatus('status').notNull().default('published'),
     // true — упорядоченный (шаги 1..N); false — набор/чек-лист (порядок неважен).
     ordered: boolean('ordered').notNull().default(true),
+    // true — курс с последовательным доступом: следующий урок открывается только
+    // после сдачи тестов предыдущего (quiz-gate).
+    gated: boolean('gated').notNull().default(false),
     visibility: listVisibility('visibility').notNull().default('public'),
     moderation: moderationStatus('moderation').notNull().default('active'),
     moderationReason: text('moderation_reason'),

@@ -239,6 +239,13 @@
       "when": 1783226001000,
       "tag": "0033_users_curated",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1783227000000,
+      "tag": "0034_gated",
+      "breakpoints": true
     }
   ]
 }
