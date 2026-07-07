@@ -19,6 +19,8 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews, getTemplateDetail } from '@/features/library/queries'
+import { getPollResults } from '@/features/polls/queries'
+import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { canViewList } from '@/features/library/access'
 import { ListHeader } from '@/features/library/ListHeader'
 import { publishList } from '@/features/library/actions'
@@ -96,6 +98,10 @@ export default async function ListPage({
     .filter((s) => s.type === 'image' && typeof s.content?.ref === 'string' && s.content.ref)
     .map((s) => (s.content as { ref: string }).ref)
   const blockImages = imageRefs.length ? await getStepPreviews(imageRefs.map((ref) => ({ imageKey: ref })), 'rs:fit:1400:1400') : {}
+  // Результаты poll-блоков (голоса вне git — по стабильному content.bid).
+  const pollBids = steps.filter((s) => s.type === 'poll' && typeof s.content?.bid === 'string').map((s) => (s.content as { bid: string }).bid)
+  const pollResults = pollBids.length ? await getPollResults(tpl.id, pollBids, viewer?.userId) : {}
+  const nowMs = Date.now() // серверный рендер — время фиксируем один раз для дедлайнов опросов
   // Порядковый номер показываем только по шаг-блокам (презентационные вне нумерации).
   let stepSeq = 0
   const displayNum = steps.map((s) => (isStepBlock(s) ? ++stepSeq : 0))
@@ -281,6 +287,23 @@ export default async function ListPage({
                         <SmartImage src={url} alt={caption || t('screenshot', lang)} className="max-h-[520px] w-auto rounded-lg border border-border" />
                         {caption && <figcaption className="mt-1.5 text-[12.5px] text-muted">{caption}</figcaption>}
                       </figure>
+                    ) : null
+                  }
+                  if (s.type === 'poll') {
+                    const c = (s.content ?? {}) as unknown as PollContent & { bid?: string }
+                    const bid = typeof c.bid === 'string' ? c.bid : ''
+                    return Array.isArray(c.options) && c.options.length ? (
+                      <div key={s.id} className="break-inside-avoid">
+                        <PollBlock
+                          templateId={tpl.id}
+                          bid={bid}
+                          content={c}
+                          result={pollResults[bid] ?? { counts: {}, voters: 0, myVotes: [] }}
+                          canVote={!!viewer}
+                          closed={!!c.deadline && new Date(c.deadline).getTime() < nowMs}
+                          lang={lang}
+                        />
+                      </div>
                     ) : null
                   }
                   return null

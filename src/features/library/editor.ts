@@ -2,19 +2,22 @@
 // (текущий UI-язык), контент сохраняется как locale-JSON под этот код.
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
-import { isBlockType, newBlockId, type BlockType } from './blocks'
+import { isBlockType, newBlockId, newOptionId, type BlockType } from './blocks'
 
 const LEVELS: StepLevel[] = ['required', 'recommended', 'optional']
 const asLevel = (v: unknown): StepLevel => (LEVELS.includes(v as StepLevel) ? (v as StepLevel) : 'required')
 const asType = (v: unknown): BlockType => (typeof v === 'string' && isBlockType(v) ? v : 'step')
 
 export type EditorRef = { label: string; url: string }
+export type EditorOption = { id: string; text: string }
+export type EditorPoll = { question: string; options: EditorOption[]; multi: boolean; deadline: string }
 export type EditorItem = {
-  // Блочная модель: 'step' (runnable/чекаемый) | 'text' (markdown) | 'image'.
+  // Блочная модель: 'step' (runnable/чекаемый) | 'text' (markdown) | 'image' | 'poll'.
   type: BlockType
   bid: string // стабильный id не-step блока (для merge); '' у шага. Живёт в content.bid.
   text: string // markdown text-блока ('' для не-text)
   caption: string // подпись image-блока
+  poll: EditorPoll // данные poll-блока (пусто для не-poll)
   title: string
   desc: string
   command: string
@@ -27,13 +30,18 @@ export type EditorItem = {
   refs: EditorRef[]
 }
 
+const emptyPoll = (): EditorPoll => ({ question: '', options: [], multi: false, deadline: '' })
+
 export function emptyItem(): EditorItem {
-  return { type: 'step', bid: '', text: '', caption: '', title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
+  return { type: 'step', bid: '', text: '', caption: '', poll: emptyPoll(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
 }
 
-/** Пустой блок заданного типа (для инсертера). Не-step получает стабильный bid. */
+/** Пустой блок заданного типа (для инсертера). Не-step получает стабильный bid;
+ *  poll заводится с двумя пустыми вариантами. */
 export function emptyBlock(type: BlockType): EditorItem {
-  return { ...emptyItem(), type, bid: type === 'step' ? '' : newBlockId() }
+  const base = { ...emptyItem(), type, bid: type === 'step' ? '' : newBlockId() }
+  if (type === 'poll') base.poll = { question: '', options: [{ id: newOptionId(), text: '' }, { id: newOptionId(), text: '' }], multi: false, deadline: '' }
+  return base
 }
 
 /** Шаг-блок ли (у него собственные поля; у text/image — content). */
@@ -52,6 +60,22 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
       }
       if (it.type === 'image') {
         return { ...base, type: 'image', hasImage: !!it.imageKey, content: { ref: it.imageKey || '', ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
+      }
+      if (it.type === 'poll') {
+        const options = it.poll.options
+          .filter((o) => o.text.trim())
+          .map((o) => ({ id: o.id || newOptionId(), text: o.text.trim() }))
+        return {
+          ...base,
+          type: 'poll',
+          content: {
+            bid: it.bid || newBlockId(),
+            question: it.poll.question.trim(),
+            options,
+            ...(it.poll.multi ? { multi: true } : {}),
+            ...(it.poll.deadline.trim() ? { deadline: it.poll.deadline.trim() } : {}),
+          },
+        }
       }
       return {
         title: { [lang]: it.title.trim() },
@@ -99,11 +123,31 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
       const ref = typeof it.content?.ref === 'string' ? it.content.ref : ''
       return { ...emptyItem(), type: 'image', bid, imageKey: ref, imagePreview: ref ? (previews[ref] ?? '') : '', caption: typeof it.content?.caption === 'string' ? it.content.caption : '' }
     }
+    if (type === 'poll') {
+      const c = it.content ?? {}
+      const rawOpts = Array.isArray(c.options) ? (c.options as unknown[]) : []
+      const options = rawOpts.map((o) => {
+        const oo = (o && typeof o === 'object' ? o : {}) as Record<string, unknown>
+        return { id: typeof oo.id === 'string' ? oo.id : newOptionId(), text: typeof oo.text === 'string' ? oo.text : '' }
+      })
+      return {
+        ...emptyItem(),
+        type: 'poll',
+        bid,
+        poll: {
+          question: typeof c.question === 'string' ? c.question : '',
+          options: options.length ? options : [{ id: newOptionId(), text: '' }, { id: newOptionId(), text: '' }],
+          multi: c.multi === true,
+          deadline: typeof c.deadline === 'string' ? c.deadline : '',
+        },
+      }
+    }
     return {
       type: 'step',
       bid: '',
       text: '',
       caption: '',
+      poll: emptyPoll(),
       title: tr(it.title, lang),
       desc: tr(it.desc, lang),
       command: it.command ?? '',
@@ -129,6 +173,14 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
       bid: String(it?.bid ?? ''),
       text: String(it?.text ?? ''),
       caption: String(it?.caption ?? ''),
+      poll: {
+        question: String(it?.poll?.question ?? ''),
+        options: Array.isArray(it?.poll?.options)
+          ? it.poll.options.map((o: { id?: unknown; text?: unknown }) => ({ id: String(o?.id ?? '') || newOptionId(), text: String(o?.text ?? '') }))
+          : [],
+        multi: it?.poll?.multi === true,
+        deadline: String(it?.poll?.deadline ?? ''),
+      },
       title: String(it?.title ?? ''),
       desc: String(it?.desc ?? ''),
       command: String(it?.command ?? ''),

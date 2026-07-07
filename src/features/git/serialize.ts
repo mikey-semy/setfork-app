@@ -64,6 +64,14 @@ function readme(v: SerVersion): string {
       } else if (s.type === 'image') {
         const ref = String(s.content?.ref ?? '')
         if (ref) lines.push('', `![${String(s.content?.caption ?? '')}](${ref})`, '')
+      } else if (s.type === 'poll') {
+        const q = String(s.content?.question ?? '')
+        const opts = Array.isArray(s.content?.options) ? (s.content!.options as { text?: unknown }[]) : []
+        if (q || opts.length) {
+          lines.push('', `**📊 ${q}**`)
+          opts.forEach((o) => lines.push(`- ${String(o?.text ?? '')}`))
+          lines.push('')
+        }
       }
       continue
     }

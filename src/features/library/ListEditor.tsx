@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
+  BarChart3,
   ChevronDown,
   ChevronsDown,
   ChevronsUp,
@@ -21,13 +22,12 @@ import {
   X,
 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
-import { emptyItem, emptyBlock, type EditorItem } from './editor'
-import { BLOCK_TYPES, type BlockType } from './blocks'
+import { emptyItem, emptyBlock, type EditorItem, type EditorPoll } from './editor'
+import { BLOCK_TYPES, BLOCK_META, newOptionId, type BlockType } from './blocks'
 import { refineList, uploadStepImage } from './actions'
 
-const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon }
-const blockLabel = (t: BlockType, ru: boolean): string =>
-  t === 'step' ? (ru ? 'Шаг' : 'Step') : t === 'text' ? (ru ? 'Текст' : 'Text') : ru ? 'Картинка' : 'Image'
+const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3 }
+const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
 
 const input =
   'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-none focus:border-border-strong'
@@ -595,6 +595,9 @@ export function ListEditor({
             </div>
           )}
 
+          {/* Poll-блок: вопрос + варианты + мульти + дедлайн. */}
+          {it.type === 'poll' && <PollBlockBody poll={it.poll} onChange={(poll) => patch(i, { poll })} ru={ru} />}
+
           {/* Инсертер между блоками: вставить после текущего блока. */}
           <BlockInserter onInsert={(type) => insertAt(i + 1, type)} repeatType={lastType} ru={ru} between />
         </div>
@@ -611,6 +614,62 @@ export function ListEditor({
 
 /** Text-блок: авто-растущая textarea. Пустое поле + ввод «/» открывает меню
  *  смены типа блока (быстрый /-командой заменить пустой text на step/image). */
+function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p: EditorPoll) => void; ru: boolean }) {
+  const set = (p: Partial<EditorPoll>) => onChange({ ...poll, ...p })
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
+      <input
+        className={input}
+        aria-label={ru ? 'Вопрос опроса' : 'Poll question'}
+        placeholder={ru ? 'Вопрос опроса' : 'Poll question'}
+        value={poll.question}
+        onChange={(e) => set({ question: e.target.value })}
+      />
+      <div className="flex flex-col gap-1.5">
+        {poll.options.map((o, oi) => (
+          <div key={o.id} className="flex items-center gap-2">
+            <span className="w-4 text-right text-[11px] text-muted">{oi + 1}</span>
+            <input
+              className={input}
+              aria-label={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+              placeholder={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+              value={o.text}
+              onChange={(e) => set({ options: poll.options.map((x, xi) => (xi === oi ? { ...x, text: e.target.value } : x)) })}
+            />
+            <button
+              type="button"
+              onClick={() => set({ options: poll.options.filter((_, xi) => xi !== oi) })}
+              disabled={poll.options.length <= 2}
+              className="text-muted hover:text-danger disabled:opacity-30"
+              aria-label={ru ? 'Удалить вариант' : 'Remove option'}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[12px]">
+        <button type="button" onClick={() => set({ options: [...poll.options, { id: newOptionId(), text: '' }] })} className="text-accent hover:underline">
+          + {ru ? 'вариант' : 'option'}
+        </button>
+        <label className="inline-flex items-center gap-1.5 text-ink-2">
+          <input type="checkbox" checked={poll.multi} onChange={(e) => set({ multi: e.target.checked })} />
+          {ru ? 'Мультивыбор' : 'Multi-select'}
+        </label>
+        <label className="inline-flex items-center gap-1.5 text-ink-2">
+          {ru ? 'Дедлайн' : 'Deadline'}:
+          <input
+            type="datetime-local"
+            value={poll.deadline}
+            onChange={(e) => set({ deadline: e.target.value })}
+            className="rounded border border-border bg-surface px-2 py-1 text-[12px] text-ink"
+          />
+        </label>
+      </div>
+    </div>
+  )
+}
+
 function TextBlockBody({ value, onChange, onSlash, ru }: { value: string; onChange: (v: string) => void; onSlash: (t: BlockType) => void; ru: boolean }) {
   const [menu, setMenu] = useState(false)
   return (
