@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { Award, GraduationCap } from 'lucide-react'
+import { Award, GraduationCap, Trophy } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 
 /** Прогресс прохождения тестов списка для текущего зрителя (сервер-компонент).
  *  Показываем, только когда в списке есть quiz-блоки и зритель авторизован.
- *  При 100% — ссылка на сертификат. */
-export function CourseProgress({ passed, total, lang, certificateHref }: { passed: number; total: number; lang: Lang; certificateHref?: string }) {
+ *  При 100% — ссылка на сертификат; всегда — ссылка на лидерборд. */
+export function CourseProgress({ passed, total, lang, certificateHref, leaderboardHref }: { passed: number; total: number; lang: Lang; certificateHref?: string; leaderboardHref?: string }) {
   if (total <= 0) return null
   const ru = lang === 'ru'
   const pct = Math.round((passed / total) * 100)
@@ -26,6 +26,11 @@ export function CourseProgress({ passed, total, lang, certificateHref }: { passe
           <div className={`h-full rounded-full ${done ? 'bg-ok' : 'bg-accent'}`} style={{ width: `${pct}%` }} aria-hidden />
         </div>
       </div>
+      {leaderboardHref && (
+        <Link href={leaderboardHref} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:border-border-strong hover:text-ink" title={ru ? 'Лидерборд' : 'Leaderboard'}>
+          <Trophy size={14} />
+        </Link>
+      )}
       {done && certificateHref && (
         <Link
           href={certificateHref}
