@@ -8,7 +8,7 @@ import { requireSession } from '@/shared/auth/session'
 import { recordAudit } from '@/shared/audit'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
-import { imageUrl, uploadImageFile } from '@/shared/media'
+import { imageUrl, uploadImageFile, uploadVideoFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { aiQuota, listQuota } from '@/shared/quota'
@@ -101,6 +101,19 @@ export async function uploadStepImage(formData: FormData): Promise<{ key: string
   try {
     const key = await uploadImageFile(`steps/${session.userId}`, file)
     return { key, url: (await imageUrl(key, 'rs:fit:960:960')) ?? '' }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Не удалось загрузить.' }
+  }
+}
+
+/** Загрузка своего видео-файла (video-блок) → путь /uploads/videos/... для <video>. */
+export async function uploadStepVideo(formData: FormData): Promise<{ url: string } | { error: string }> {
+  const session = await requireSession()
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.size === 0) return { error: 'Файл не выбран.' }
+  try {
+    const url = await uploadVideoFile(`videos/${session.userId}`, file)
+    return { url }
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Не удалось загрузить.' }
   }

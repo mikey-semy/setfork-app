@@ -44,6 +44,31 @@ export async function uploadImageFile(dir: string, file: File): Promise<string> 
   return `/uploads/${dir}/${name}`
 }
 
+const VIDEO_MAX_BYTES = 50 * 1024 * 1024 // 50 МБ на клип (без транскодинга; часовые лекции — Cloudflare Stream позже)
+const VIDEO_EXT: Record<string, string> = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/ogg': 'ogv' }
+/** Тип видео по сигнатуре (magic bytes), НЕ по client-mime. */
+function sniffVideo(b: Buffer): string | null {
+  if (b.length >= 12 && b.toString('ascii', 4, 8) === 'ftyp') return 'video/mp4' // ISO-BMFF (mp4/mov)
+  if (b.length >= 4 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3) return 'video/webm' // EBML
+  if (b.length >= 4 && b.toString('ascii', 0, 4) === 'OggS') return 'video/ogg'
+  return null
+}
+
+/** Загрузка видео-файла (свой клип) на диск (`/uploads/videos/...`), отдаётся <video>.
+ *  Тип — по содержимому. Всегда диск (S3-стриминг видео = отдельный роут/Cloudflare). */
+export async function uploadVideoFile(dir: string, file: File): Promise<string> {
+  if (file.size > VIDEO_MAX_BYTES) throw new Error('Файл больше 50 МБ.')
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const mime = sniffVideo(buffer)
+  const ext = mime ? VIDEO_EXT[mime] : undefined
+  if (!ext) throw new Error('Файл не похож на видео (MP4, WEBM или OGG).')
+  const name = `${randomUUID()}.${ext}`
+  const diskDir = join(process.cwd(), 'public', 'uploads', dir)
+  await mkdir(diskDir, { recursive: true })
+  await writeFile(join(diskDir, name), buffer)
+  return `/uploads/${dir}/${name}`
+}
+
 const ATTACH_MAX_BYTES = 25 * 1024 * 1024 // 25 МБ на вложение
 // Разрешённые расширения вложений (не-картинки). Исполняемое/скриптовое — не пускаем.
 // SVG НАМЕРЕННО исключён: файл отдаётся инлайн с того же origin, а `<script>` внутри SVG
