@@ -19,7 +19,7 @@ import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { curationStore } from '@/features/curation/store'
 import { collabStore, suggestionCommenterIds } from '@/features/collab-store/store'
-import { autoModerateList } from '@/features/moderation/moderate-list'
+import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
@@ -53,7 +53,7 @@ export async function setListVisibility(templateId: string, visibility: 'public'
     await db.update(templates).set({ visibility, moderation: 'active', moderationReason: null }).where(eq(templates.id, templateId))
   } else {
     await db.update(templates).set({ visibility }).where(eq(templates.id, templateId))
-    await autoModerateList(templateId) // публикация → проверяем
+    await gateListPublication(templateId) // публикация → гейт: pending до авто-проверки
   }
   revalidatePath(`/${session.handle}/${tpl.slug}`)
   revalidatePath('/explore')
@@ -178,7 +178,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
   })
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
   await ensureWatch(session.userId, list.id) // владелец следит за своим списком
-  if (visibility === 'public') await autoModerateList(list.id) // приватные не модерируем
+  if (visibility === 'public') await gateListPublication(list.id) // приватные не модерируем
   await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
@@ -202,7 +202,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed) })
   // tags/ordered/gated — атрибуты списка, не версии; обновляем отдельно.
   await db.update(templates).set({ tags, ordered, gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // новая версия могла внести нарушающий контент
+  if (tpl.visibility === 'public') await recheckList(tpl.id) // новая версия могла внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
 
@@ -292,7 +292,7 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // merge мог внести нарушающий контент
+  if (tpl.visibility === 'public') await recheckList(tpl.id) // merge мог внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
@@ -362,7 +362,7 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // merge мог внести нарушающий контент
+  if (tpl.visibility === 'public') await recheckList(tpl.id) // merge мог внести нарушающий контент
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
@@ -381,7 +381,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
   await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items) })
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id) // принятая правка могла внести нарушающий контент
+  if (tpl.visibility === 'public') await recheckList(tpl.id) // принятая правка могла внести нарушающий контент
   await db
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })
@@ -597,8 +597,8 @@ export async function publishList(templateId: string): Promise<void> {
   if (!tpl || tpl.ownerId !== session.userId || tpl.status !== 'draft') return
 
   await db.update(templates).set({ status: 'published', updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-  // Публикуем публичный список → авто-модерация (приватный не трогаем).
-  if (tpl.visibility === 'public') await autoModerateList(tpl.id)
+  // Публикуем публичный список → гейт: pending до авто-проверки (приватный не трогаем).
+  if (tpl.visibility === 'public') await gateListPublication(tpl.id)
 
   revalidatePath('/', 'layout')
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)

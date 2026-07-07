@@ -9,7 +9,7 @@ import { ModerationTable } from '@/features/moderation/ModerationTable'
 export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   await requireAdmin()
   const [{ filter: f }, lang] = await Promise.all([searchParams, getLang()])
-  const filter: ModFilter = f === 'flagged' || f === 'hidden' ? f : 'all'
+  const filter: ModFilter = f === 'pending' || f === 'flagged' || f === 'hidden' ? f : 'all'
   const [items, counts] = await Promise.all([getModerationList(filter), getModerationCounts()])
 
   return (

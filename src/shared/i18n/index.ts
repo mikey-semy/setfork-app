@@ -498,11 +498,13 @@ const DICT = {
   unhideAction: { en: 'Unhide', ru: 'Показать' },
   approveAction: { en: 'Approve', ru: 'Одобрить' },
   aiCheck: { en: 'AI check', ru: 'Проверка ИИ' },
-  flaggedLabel: { en: 'Flagged', ru: 'На проверке' },
+  flaggedLabel: { en: 'Flagged', ru: 'Помечен' },
+  pendingLabel: { en: 'Pending review', ru: 'На проверке' },
   hiddenLabel: { en: 'Hidden', ru: 'Скрыт' },
   statusActive: { en: 'Active', ru: 'Активен' },
   filterAll: { en: 'All', ru: 'Все' },
   hiddenNotice: { en: 'Hidden by moderation — not shown publicly.', ru: 'Скрыт модерацией — не виден публично.' },
+  pendingNotice: { en: 'Under review — visible only to you until automatic checks pass.', ru: 'На проверке — виден только вам, пока не пройдут автоматические проверки.' },
   flaggedNotice: { en: 'Under review — not public yet. Only you can see it.', ru: 'На проверке — пока не публичен. Виден только вам.' },
 } satisfies Dict
 

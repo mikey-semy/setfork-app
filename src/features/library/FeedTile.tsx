@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BadgeCheck, GitFork, Lock, Star } from 'lucide-react'
+import { GitFork, Lock, Star } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
 import { tr, type Lang } from '@/shared/i18n'
@@ -29,7 +29,6 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
         <div className="flex min-w-0 items-center gap-2">
           <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={20} />
           <Link href={`/${item.ownerHandle}`} className="min-w-0 truncate text-[12.5px] text-muted hover:text-accent">{item.ownerHandle}</Link>
-          {item.verified && <BadgeCheck size={13} className="shrink-0 text-ok" />}
           {item.visibility === 'private' && <Lock size={11} className="shrink-0 text-muted" />}
         </div>
         <Link href={base} className="truncate text-[15px] font-semibold text-ink group-hover:text-accent">{item.slug}</Link>

@@ -76,6 +76,13 @@ export async function runDigestJob(): Promise<void> {
   }
 }
 
+/** Авто-проверка списка (гейт публикации / пере-проверка после правки).
+ *  ИИ недоступен → исключение → ретрай с backoff; детали в runModerateJob. */
+export async function runModerateJobHandler(payload: unknown, job: { attempts: number; maxAttempts: number }): Promise<void> {
+  const { runModerateJob } = await import('@/features/moderation/moderate-list')
+  await runModerateJob(payload, job)
+}
+
 /** ИИ-садовник: предлагает улучшения публичных списков обычными правками (PR-модель).
  *  Самоперепланируется в finally — как digest. */
 export async function runGardenerJob(): Promise<void> {

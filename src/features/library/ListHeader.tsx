@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BadgeCheck, BarChart3, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, MessagesSquare, Settings, Star, Tag } from 'lucide-react'
+import { BarChart3, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, MessagesSquare, Settings, Star, Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -83,11 +83,6 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
                 </>
               )}
             </span>
-            {meta.verified && (
-              <span className="inline-flex items-center gap-1 rounded-md border border-ok/40 bg-ok/10 px-2 py-0.5 text-[11px] font-medium text-ok">
-                <BadgeCheck size={12} /> {t('verifiedLabel', lang)}
-              </span>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -144,7 +139,11 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
                 : 'border-warn/40 bg-warn/10 text-warn'
             }`}
           >
-            {meta.moderation === 'hidden' ? t('hiddenNotice', lang) : t('flaggedNotice', lang)}
+            {meta.moderation === 'hidden'
+              ? t('hiddenNotice', lang)
+              : meta.moderation === 'pending'
+                ? t('pendingNotice', lang)
+                : t('flaggedNotice', lang)}
             {meta.moderationReason && ` — ${meta.moderationReason}`}
           </div>
         )}

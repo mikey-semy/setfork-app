@@ -3,7 +3,7 @@ import { desc, eq, sql } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 
-export type ModFilter = 'all' | 'flagged' | 'hidden'
+export type ModFilter = 'all' | 'pending' | 'flagged' | 'hidden'
 
 export interface ModItem {
   id: string
@@ -11,7 +11,7 @@ export interface ModItem {
   slug: string
   title: LocaleText
   visibility: 'public' | 'private'
-  moderation: 'active' | 'flagged' | 'hidden'
+  moderation: 'active' | 'pending' | 'flagged' | 'hidden'
   moderationReason: string | null
   verified: boolean
   starsCount: number
@@ -43,12 +43,13 @@ export async function getModerationList(filter: ModFilter = 'all', limit = 200):
   return rows as ModItem[]
 }
 
-export async function getModerationCounts(): Promise<{ flagged: number; hidden: number }> {
+export async function getModerationCounts(): Promise<{ pending: number; flagged: number; hidden: number }> {
   const [r] = await db
     .select({
+      pending: sql<number>`count(*) filter (where ${templates.moderation} = 'pending')::int`,
       flagged: sql<number>`count(*) filter (where ${templates.moderation} = 'flagged')::int`,
       hidden: sql<number>`count(*) filter (where ${templates.moderation} = 'hidden')::int`,
     })
     .from(templates)
-  return { flagged: r?.flagged ?? 0, hidden: r?.hidden ?? 0 }
+  return { pending: r?.pending ?? 0, flagged: r?.flagged ?? 0, hidden: r?.hidden ?? 0 }
 }

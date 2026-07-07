@@ -30,8 +30,9 @@ export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', '
 export const listVisibility = pgEnum('list_visibility', ['public', 'private'])
 // draft — черновик (не опубликован, виден только владельцу); published — опубликован (виден по visibility).
 export const listStatus = pgEnum('list_status', ['draft', 'published'])
-// active — норма; flagged — на проверку (репорт/ИИ); hidden — скрыт админом (не публичен).
-export const moderationStatus = pgEnum('moderation_status', ['active', 'flagged', 'hidden'])
+// active — норма; pending — ждёт авто-проверку публикации (виден только владельцу);
+// flagged — на проверку (репорт/ИИ); hidden — скрыт админом (не публичен).
+export const moderationStatus = pgEnum('moderation_status', ['active', 'pending', 'flagged', 'hidden'])
 export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned', 'failed'])
 export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done', 'blocked'])
 // Уровень важности шага (как в стандартах: MUST / SHOULD / MAY).
@@ -361,7 +362,7 @@ export const appSettings = pgTable('app_settings', {
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate'
 
 export const jobs = pgTable(
   'jobs',

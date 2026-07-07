@@ -112,10 +112,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
       const watchers = await getWatcherIds(meta.id)
       await notifyMany(watchers, { type: 'new_version', templateId: meta.id }).catch(() => {})
       await recordAudit('git.push', { actorId: az, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } })
-      // push меняет title/desc/tags минуя формы → пере-модерируем публичный список.
+      // push меняет title/desc/tags минуя формы → пере-проверяем публичный список в фоне.
       if (meta.visibility === 'public') {
-        const { autoModerateList } = await import('@/features/moderation/moderate-list')
-        await autoModerateList(meta.id).catch(() => {})
+        const { recheckList } = await import('@/features/moderation/moderate-list')
+        await recheckList(meta.id).catch(() => {})
       }
     }
     return new Response(new Uint8Array(res.data), { headers: { 'Content-Type': 'application/x-git-receive-pack-result', ...noCache } })
