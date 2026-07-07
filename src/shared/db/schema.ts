@@ -356,7 +356,7 @@ export const appSettings = pgTable('app_settings', {
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener'
 
 export const jobs = pgTable(
   'jobs',

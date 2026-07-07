@@ -1,0 +1,165 @@
+import 'server-only'
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
+import { db, jobs, steps, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
+import { enqueueJob } from '@/shared/jobs/queue'
+import { generateListRefine, type GeneratedItem } from '@/shared/ai/generate'
+import { isAiAvailable } from '@/shared/settings/ai'
+import { notify } from '@/features/notifications/notify'
+import { log } from '@/shared/observability'
+import type { LocaleText } from '@/shared/i18n'
+
+// ── ИИ-садовник (Э2) ─────────────────────────────────────────────────
+// Прозрачный ИИ-участник: раз в GARDENER_EVERY_DAYS выбирает несколько публичных
+// списков и предлагает улучшения ОБЫЧНОЙ правкой (PR-модель) от сервисного
+// аккаунта `gardener` — владелец ревьюит и принимает/отклоняет. Ничего не
+// публикуется автоматически. Расход пишется в ai_usage (feature 'refine').
+
+const GARDENER_HANDLE = 'gardener'
+const GARDENER_EVERY_DAYS = 2
+const BATCH = Number(process.env.GARDENER_BATCH ?? 3)
+
+const INSTRUCTION =
+  'You are the site gardener improving a community checklist. ' +
+  'Clarify vague steps, add missing verification sub-tasks, add a short "why" where the reason is non-obvious, ' +
+  'and fix factual or ordering issues. Keep the author’s voice and structure. ' +
+  'Add at most 2 new steps and do not remove existing ones unless clearly wrong.'
+
+const locEn = (v: LocaleText | null | undefined): string => {
+  if (!v) return ''
+  return v.en ?? Object.values(v).find(Boolean) ?? ''
+}
+
+/** Сервисный аккаунт садовника (создаётся при первом прогоне; входа у него нет). */
+export async function ensureGardenerUser(): Promise<{ id: string }> {
+  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.handle, GARDENER_HANDLE))
+  if (existing) return existing
+  const [created] = await db
+    .insert(users)
+    .values({
+      handle: GARDENER_HANDLE,
+      name: 'SetFork Gardener',
+      bio: '\u{1F916} AI gardener. I propose improvements to public lists; humans review and merge.',
+    })
+    .returning({ id: users.id })
+  log.info('gardener user created', { id: created.id })
+  return created
+}
+
+/** Одна pending/processing джоба садовника в очереди — самоподдержание без cron. */
+export async function ensureGardenerScheduled(): Promise<void> {
+  const pending = await db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(and(eq(jobs.type, 'gardener'), inArray(jobs.status, ['pending', 'processing'])))
+    .limit(1)
+  if (pending.length) return
+  await enqueueJob('gardener', {}, { delayMs: GARDENER_EVERY_DAYS * 24 * 60 * 60 * 1000, maxAttempts: 3 })
+  log.info('gardener scheduled', { inDays: GARDENER_EVERY_DAYS })
+}
+
+/** Кандидаты: публичные активные, без открытой правки садовника, без секций
+ *  (refine пока не сохраняет section) — сначала популярные и давно не обновлявшиеся. */
+async function pickCandidates(gardenerId: string, limit: number) {
+  return db
+    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion })
+    .from(templates)
+    .where(
+      and(
+        eq(templates.status, 'published'),
+        eq(templates.visibility, 'public'),
+        eq(templates.moderation, 'active'),
+        sql`${templates.ownerId} <> ${gardenerId}`,
+        sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = ${gardenerId} and sg.status = 'open')`,
+        sql`not exists (select 1 from ${steps} st join ${templateVersions} v on v.id = st.version_id
+             where v.template_id = ${templates.id} and coalesce(st.section->>'en','') <> '')`,
+      ),
+    )
+    .orderBy(desc(templates.starsCount), asc(templates.updatedAt))
+    .limit(limit)
+}
+
+function toProposed(items: GeneratedItem[]): ProposedItem[] {
+  return items.map((it) => ({
+    title: { en: it.title.trim() },
+    desc: it.desc.trim() ? { en: it.desc.trim() } : {},
+    command: (it.command ?? '').trim(),
+    hasImage: false,
+    level: it.level ?? 'required',
+    why: it.why?.trim() ? { en: it.why.trim() } : {},
+    section: {},
+    subtasks: (it.subtasks ?? []).filter((s) => s.trim()).map((s) => ({ en: s.trim() })),
+    refs: (it.refs ?? [])
+      .filter((r) => r.label?.trim())
+      .map((r) => ({ label: { en: r.label.trim() }, ...(r.url?.trim() ? { url: r.url.trim() } : {}) })),
+  }))
+}
+
+/** Прогон садовника: до BATCH списков за раз, каждый — refine → suggestion. */
+export async function runGardenerSweep(): Promise<{ proposed: number; skipped: number }> {
+  if (!(await isAiAvailable())) {
+    log.info('gardener: AI unavailable, skipping')
+    return { proposed: 0, skipped: 0 }
+  }
+  const gardener = await ensureGardenerUser()
+  const candidates = await pickCandidates(gardener.id, BATCH)
+
+  let proposed = 0
+  let skipped = 0
+  for (const tpl of candidates) {
+    const [ver] = await db
+      .select({ id: templateVersions.id })
+      .from(templateVersions)
+      .where(and(eq(templateVersions.templateId, tpl.id), eq(templateVersions.version, tpl.currentVersion)))
+    const rows = ver
+      ? await db.select().from(steps).where(eq(steps.versionId, ver.id)).orderBy(asc(steps.n))
+      : []
+
+    const current = {
+      title: locEn(tpl.title),
+      desc: locEn(tpl.desc),
+      tags: tpl.tags,
+      items: rows.map((s) => ({
+        title: locEn(s.title),
+        desc: locEn(s.desc),
+        command: s.command,
+        level: s.level,
+        why: locEn(s.why),
+        subtasks: (s.subtasks ?? []).map(locEn).filter(Boolean),
+        refs: (s.refs ?? []).map((r) => ({ label: locEn(r.label), url: r.url ?? '' })),
+      })),
+    }
+
+    const refined = await generateListRefine(current, INSTRUCTION, 'en', {
+      userId: gardener.id,
+      feature: 'refine',
+      refType: 'template',
+      refId: tpl.id,
+    })
+    if (!refined || !refined.items.length) {
+      skipped++
+      continue
+    }
+    // Без изменений — правку не открываем (сравнение по нормализованному контенту).
+    const norm = (xs: GeneratedItem[]) => JSON.stringify(toProposed(xs))
+    if (norm(refined.items) === norm(current.items as GeneratedItem[])) {
+      skipped++
+      continue
+    }
+
+    const [created] = await db
+      .insert(suggestions)
+      .values({
+        templateId: tpl.id,
+        authorId: gardener.id,
+        note: '\u{1F916} Gardener: clarified steps, added checks and rationale. Review and merge if useful.',
+        baseVersion: tpl.currentVersion,
+        items: toProposed(refined.items),
+      })
+      .returning({ id: suggestions.id })
+    await notify({ recipientId: tpl.ownerId, actorId: gardener.id, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+    proposed++
+    log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id })
+  }
+  log.info('gardener sweep done', { candidates: candidates.length, proposed, skipped })
+  return { proposed, skipped }
+}
