@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { db, pollVotes, steps, templates, templateVersions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/features/library/access'
+import { pollDeadlineMs } from '@/features/library/blocks'
 
 /** Голос за вариант poll-блока. Авторизованные; дедлайн уважается; одиночный
  *  выбор заменяет прошлый голос (клик по выбранному — снимает), мульти — тоггл. */
@@ -29,7 +30,8 @@ export async function votePoll(templateId: string, bid: string, optionId: string
   if (!block) return
   const content = block.content as { options?: { id: string }[]; multi?: boolean; deadline?: string }
   if (!(content.options ?? []).some((o) => o.id === optionId)) return // невалидный вариант
-  if (content.deadline && new Date(content.deadline).getTime() < Date.now()) return // голосование закрыто
+  const dm = pollDeadlineMs(content.deadline)
+  if (dm !== null && dm < Date.now()) return // голосование закрыто
   const multi = content.multi === true
 
   await db.transaction(async (tx) => {

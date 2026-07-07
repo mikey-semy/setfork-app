@@ -23,6 +23,9 @@ import {
   X,
 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { Checkbox } from '@/shared/ui/checkbox'
+import { DatePicker } from '@/shared/ui/DatePicker'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll } from './editor'
 import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType } from './blocks'
 import { refineList, uploadStepImage } from './actions'
@@ -345,50 +348,31 @@ export function ListEditor({
               </span>
             )}
             <div className="ml-auto flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => moveToEdge(i, 'top')}
-                disabled={i === 0}
-                className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
-                title={ru ? 'В начало' : 'Move to top'}
-              >
-                <ChevronsUp size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={() => move(i, -1)}
-                disabled={i === 0}
-                className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
-                title={ru ? 'Выше' : 'Move up'}
-              >
-                <ChevronUp size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={() => move(i, 1)}
-                disabled={i === items.length - 1}
-                className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
-                title={ru ? 'Ниже' : 'Move down'}
-              >
-                <ChevronDown size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={() => moveToEdge(i, 'bottom')}
-                disabled={i === items.length - 1}
-                className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted"
-                title={ru ? 'В конец' : 'Move to bottom'}
-              >
-                <ChevronsDown size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={() => removeItem(i)}
-                className="rounded p-1 text-muted hover:text-danger"
-                title={ru ? 'Удалить' : 'Remove'}
-              >
-                <Trash2 size={15} />
-              </button>
+              <Tooltip label={ru ? 'В начало' : 'Move to top'}>
+                <button type="button" onClick={() => moveToEdge(i, 'top')} disabled={i === 0} className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
+                  <ChevronsUp size={15} />
+                </button>
+              </Tooltip>
+              <Tooltip label={ru ? 'Выше' : 'Move up'}>
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
+                  <ChevronUp size={15} />
+                </button>
+              </Tooltip>
+              <Tooltip label={ru ? 'Ниже' : 'Move down'}>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
+                  <ChevronDown size={15} />
+                </button>
+              </Tooltip>
+              <Tooltip label={ru ? 'В конец' : 'Move to bottom'}>
+                <button type="button" onClick={() => moveToEdge(i, 'bottom')} disabled={i === items.length - 1} className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
+                  <ChevronsDown size={15} />
+                </button>
+              </Tooltip>
+              <Tooltip label={ru ? 'Удалить' : 'Remove'}>
+                <button type="button" onClick={() => removeItem(i)} className="rounded p-1 text-muted hover:text-danger">
+                  <Trash2 size={15} />
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -685,19 +669,14 @@ function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p:
         <button type="button" onClick={() => set({ options: [...poll.options, { id: newOptionId(), text: '' }] })} className="text-accent hover:underline">
           + {ru ? 'вариант' : 'option'}
         </button>
-        <label className="inline-flex items-center gap-1.5 text-ink-2">
-          <input type="checkbox" checked={poll.multi} onChange={(e) => set({ multi: e.target.checked })} />
+        <label className="inline-flex cursor-pointer items-center gap-1.5 text-ink-2">
+          <Checkbox checked={poll.multi} onChange={(e) => set({ multi: e.target.checked })} />
           {ru ? 'Мультивыбор' : 'Multi-select'}
         </label>
-        <label className="inline-flex items-center gap-1.5 text-ink-2">
+        <span className="inline-flex items-center gap-1.5 text-ink-2">
           {ru ? 'Дедлайн' : 'Deadline'}:
-          <input
-            type="datetime-local"
-            value={poll.deadline}
-            onChange={(e) => set({ deadline: e.target.value })}
-            className="rounded border border-border bg-surface px-2 py-1 text-[12px] text-ink"
-          />
-        </label>
+          <DatePicker value={poll.deadline} onChange={(v) => set({ deadline: v })} lang={ru ? 'ru' : 'en'} />
+        </span>
       </div>
     </div>
   )

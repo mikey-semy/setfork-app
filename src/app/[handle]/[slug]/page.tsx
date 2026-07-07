@@ -22,6 +22,7 @@ import { getContributors, getStepPreviews, getTemplateDetail } from '@/features/
 import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
+import { pollDeadlineMs } from '@/features/library/blocks'
 import { canViewList } from '@/features/library/access'
 import { ListHeader } from '@/features/library/ListHeader'
 import { publishList } from '@/features/library/actions'
@@ -102,7 +103,8 @@ export default async function ListPage({
   // Результаты poll-блоков (голоса вне git — по стабильному content.bid).
   const pollBids = steps.filter((s) => s.type === 'poll' && typeof s.content?.bid === 'string').map((s) => (s.content as { bid: string }).bid)
   const pollResults = pollBids.length ? await getPollResults(tpl.id, pollBids, viewer?.userId) : {}
-  const nowMs = Date.now() // серверный рендер — время фиксируем один раз для дедлайнов опросов
+  // eslint-disable-next-line react-hooks/purity -- серверный компонент, one-shot рендер: время для дедлайнов опросов
+  const nowMs = Date.now()
   // Порядковый номер показываем только по шаг-блокам (презентационные вне нумерации).
   let stepSeq = 0
   const displayNum = steps.map((s) => (isStepBlock(s) ? ++stepSeq : 0))
@@ -306,7 +308,7 @@ export default async function ListPage({
                           content={c}
                           result={pollResults[bid] ?? { counts: {}, voters: 0, myVotes: [] }}
                           canVote={!!viewer}
-                          closed={!!c.deadline && new Date(c.deadline).getTime() < nowMs}
+                          closed={(() => { const dm = pollDeadlineMs(c.deadline); return dm !== null && dm < nowMs })()}
                           lang={lang}
                         />
                       </div>

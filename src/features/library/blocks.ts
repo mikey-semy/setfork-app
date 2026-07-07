@@ -81,3 +81,11 @@ export const BLOCK_META: Record<BlockType, { icon: string; en: string; ru: strin
 
 /** Стабильный id варианта опроса (на него ссылаются голоса). */
 export const newOptionId = newBlockId
+
+/** Дедлайн опроса → ms. Дата ('YYYY-MM-DD') трактуется как КОНЕЦ дня; полный
+ *  datetime ('...T..') — как есть. null — нет/битый. Общий для рендера/votePoll. */
+export function pollDeadlineMs(deadline?: string): number | null {
+  if (!deadline) return null
+  const t = new Date(deadline.includes('T') ? deadline : `${deadline}T23:59:59`).getTime()
+  return Number.isNaN(t) ? null : t
+}
