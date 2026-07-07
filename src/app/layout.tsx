@@ -13,6 +13,7 @@ import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
 import { HydrationSignal } from '@/shared/ui/HydrationSignal'
 import { TopNav } from '@/widgets/TopNav'
 import { Footer } from '@/widgets/Footer'
+import { ScrollToTop } from '@/shared/ui/ScrollToTop'
 import './globals.css'
 
 const sans = Hanken_Grotesk({
@@ -122,6 +123,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </Suspense>
             <main className="flex flex-1 flex-col">{children}</main>
             <Footer lang={lang} />
+            <ScrollToTop label={lang === 'ru' ? 'Наверх' : 'Back to top'} />
             {user && browserNotify && <BrowserNotifier enabled />}
           </div>
         </ThemeProvider>
