@@ -218,6 +218,13 @@
       "when": 1783224000000,
       "tag": "0030_poll_votes",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1783225000000,
+      "tag": "0031_quiz_attempts",
+      "breakpoints": true
     }
   ]
 }
