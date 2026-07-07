@@ -206,6 +206,17 @@ describe('editor block converters', () => {
     expect(back.quiz.pairs).toEqual([{ left: 'Fr', right: 'Paris' }, { left: 'De', right: 'Berlin' }])
   })
 
+  it('quiz sort-kind: items ride in content as correct order; round-trips', () => {
+    const base = emptyBlock('quiz')
+    const quiz = { ...base, quiz: { ...base.quiz, kind: 'sort' as const, items: ['first', 'second', '', 'third'] } }
+    const [out] = toProposedItems([quiz], 'en')
+    expect(out.content).toMatchObject({ kind: 'sort' })
+    expect((out.content as { items: string[] }).items).toEqual(['first', 'second', 'third'])
+    const [back] = toEditorItems([out], 'en')
+    expect(back.quiz.kind).toBe('sort')
+    expect(back.quiz.items).toEqual(['first', 'second', 'third'])
+  })
+
   it('choice quiz omits kind for byte-compat (undefined = choice)', () => {
     const base = emptyBlock('quiz')
     const quiz = { ...base, quiz: { ...base.quiz, question: 'Q', options: [{ id: 'a', text: 'A', correct: true }, { id: 'b', text: 'B', correct: false }] } }

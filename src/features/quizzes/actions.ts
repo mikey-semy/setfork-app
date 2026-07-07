@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { courseCompletions, db, quizAttempts, steps, templates, templateVersions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/features/library/access'
-import { gradeBlank, gradeMatch, gradeNumber, gradeText, quizKind, type QuizAnswer, type QuizBlockContent } from '@/features/library/blocks'
+import { gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, quizKind, type QuizAnswer, type QuizBlockContent } from '@/features/library/blocks'
 
 export interface QuizVerdict {
   ok: boolean // прошёл
@@ -45,13 +45,20 @@ export async function submitQuiz(templateId: string, bid: string, answer: QuizAn
   let correctIds: string[] = []
   let reveal: string | undefined
 
-  if (kind === 'text') {
+  if (kind === 'text' || kind === 'code') {
     const accept = (content.accept ?? []).map((a) => String(a))
     if (!accept.length) return { error: 'no_answer' }
     const input = (answer.text ?? '').trim()
     selected = [input]
     ok = gradeText(input, accept, content.caseSensitive)
     reveal = accept.join(' / ')
+  } else if (kind === 'sort') {
+    const items = Array.isArray(content.items) ? content.items.map((s) => String(s)) : []
+    if (!items.length) return { error: 'no_answer' }
+    const order = (answer.order ?? []).map((s) => String(s))
+    selected = order
+    ok = gradeSort(order, items, content.caseSensitive)
+    reveal = items.join(' → ')
   } else if (kind === 'number') {
     if (typeof content.answer !== 'number') return { error: 'no_answer' }
     const input = (answer.text ?? '').trim()

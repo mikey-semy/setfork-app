@@ -484,7 +484,7 @@ export async function refineList(input: {
     fileUrl: '',
     fileName: '',
     poll: { question: '', options: [], multi: false, deadline: '' },
-    quiz: { kind: 'choice' as const, question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], explain: '' },
+    quiz: { kind: 'choice' as const, question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], items: [], explain: '' },
     title: it.title,
     desc: it.desc,
     command: it.command,

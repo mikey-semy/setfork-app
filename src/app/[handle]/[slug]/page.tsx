@@ -404,7 +404,9 @@ export default async function ListPage({
                           ? typeof c.template === 'string' && c.template.includes('___')
                           : kind === 'match'
                             ? (Array.isArray(c.pairs) && c.pairs.length > 0) || (Array.isArray(c.lefts) && c.lefts.length > 0)
-                            : true
+                            : kind === 'sort'
+                              ? (Array.isArray(c.items) && c.items.length > 0) || (Array.isArray(c.shuffled) && c.shuffled.length > 0)
+                              : true
                     // Авторизованному оценивает сервер → НЕ отдаём ответы в разметку.
                     const safe: QuizBlockContent = viewer ? stripQuizAnswers(c) : c
                     el = renderable ? (

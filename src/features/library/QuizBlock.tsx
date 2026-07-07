@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, GraduationCap, Loader2, RotateCcw, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, GraduationCap, Loader2, RotateCcw, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { submitQuiz } from '@/features/quizzes/actions'
 import type { QuizState } from '@/features/quizzes/queries'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeText, matchRights, quizKind, type QuizBlockContent } from './blocks'
+import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, matchRights, shuffleSort, quizKind, type QuizBlockContent } from './blocks'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
@@ -37,10 +37,14 @@ export function QuizBlock({
   // match: левые/правые части (у авторизованного — из stripped lefts/rights; у анонима — из pairs).
   const matchLefts = clientMode ? (content.pairs ?? []).map((p) => p.left) : (content.lefts ?? [])
   const matchRightOpts = clientMode ? matchRights(content.pairs ?? []) : (content.rights ?? [])
+  // sort: элементы для расстановки (перемешанные). У анонима — из content.items,
+  // у авторизованного — из content.shuffled (эталон-порядок не приходит).
+  const sortStart = clientMode ? shuffleSort(content.items ?? []) : (content.shuffled ?? [])
   const [picked, setPicked] = useState<Set<string>>(() => new Set(initial.selected))
-  const [textInput, setTextInput] = useState(() => (kind === 'text' || kind === 'number' ? (initial.selected[0] ?? '') : ''))
+  const [textInput, setTextInput] = useState(() => (kind === 'text' || kind === 'number' || kind === 'code' ? (initial.selected[0] ?? '') : ''))
   const [blankInputs, setBlankInputs] = useState<string[]>(() => Array.from({ length: nBlanks }, (_, i) => initial.selected[i] ?? ''))
   const [matchPick, setMatchPick] = useState<string[]>(() => Array.from({ length: matchLefts.length }, (_, i) => initial.selected[i] ?? ''))
+  const [sortOrder, setSortOrder] = useState<string[]>(() => (initial.submitted && initial.selected.length ? initial.selected : sortStart))
   const [checked, setChecked] = useState(initial.submitted)
   const [serverCorrect, setServerCorrect] = useState<string[] | null>(null)
   const [reveal, setReveal] = useState<string | null>(null)
@@ -63,7 +67,11 @@ export function QuizBlock({
           ? (content.blanks?.length ?? 0) > 0
           : kind === 'match'
             ? (content.pairs?.length ?? 0) > 0
-            : clientCorrect.size > 0
+            : kind === 'code'
+              ? (content.accept?.length ?? 0) > 0
+              : kind === 'sort'
+                ? (content.items?.length ?? 0) > 0 || sortStart.length > 0
+                : clientCorrect.size > 0
   const hasInput =
     kind === 'choice'
       ? picked.size > 0
@@ -71,7 +79,9 @@ export function QuizBlock({
         ? nBlanks > 0 && blankInputs.every((b) => b.trim() !== '')
         : kind === 'match'
           ? matchLefts.length > 0 && matchPick.every((m) => m !== '')
-          : textInput.trim() !== ''
+          : kind === 'sort'
+            ? sortOrder.length > 0
+            : textInput.trim() !== ''
 
   function toggle(id: string) {
     if (checked || pending) return
@@ -86,11 +96,22 @@ export function QuizBlock({
   }
 
   function localGrade(): boolean {
-    if (kind === 'text') return gradeText(textInput, content.accept ?? [], content.caseSensitive)
+    if (kind === 'text' || kind === 'code') return gradeText(textInput, content.accept ?? [], content.caseSensitive)
     if (kind === 'number') return gradeNumber(Number(textInput), content.answer ?? NaN, content.tolerance)
     if (kind === 'blank') return gradeBlank(blankInputs, content.blanks ?? [], content.caseSensitive)
     if (kind === 'match') return gradeMatch(matchPick, content.pairs ?? [], content.caseSensitive)
+    if (kind === 'sort') return gradeSort(sortOrder, content.items ?? [], content.caseSensitive)
     return picked.size === clientCorrect.size && [...picked].every((id) => clientCorrect.has(id))
+  }
+
+  function moveSort(i: number, d: -1 | 1) {
+    const j = i + d
+    if (j < 0 || j >= sortOrder.length) return
+    setSortOrder((xs) => {
+      const next = [...xs]
+      ;[next[i], next[j]] = [next[j], next[i]]
+      return next
+    })
   }
 
   function check() {
@@ -102,7 +123,15 @@ export function QuizBlock({
     }
     start(async () => {
       const answer =
-        kind === 'choice' ? { options: [...picked] } : kind === 'blank' ? { blanks: blankInputs } : kind === 'match' ? { match: matchPick } : { text: textInput }
+        kind === 'choice'
+          ? { options: [...picked] }
+          : kind === 'blank'
+            ? { blanks: blankInputs }
+            : kind === 'match'
+              ? { match: matchPick }
+              : kind === 'sort'
+                ? { order: sortOrder }
+                : { text: textInput }
       const res = await submitQuiz(templateId, bid, answer)
       if ('error' in res) {
         setErr(res.error === 'no_answer' ? (ru ? 'У теста не задан верный ответ.' : 'No correct answer is set.') : ru ? 'Не удалось отправить.' : 'Could not submit.')
@@ -121,21 +150,24 @@ export function QuizBlock({
     setTextInput('')
     setBlankInputs(Array.from({ length: nBlanks }, () => ''))
     setMatchPick(Array.from({ length: matchLefts.length }, () => ''))
+    setSortOrder(sortStart)
     setChecked(false)
     setServerCorrect(null)
     setReveal(null)
     setErr(null)
   }
 
-  // Текст «верного ответа» для text/number/blank после проверки (когда неверно).
+  // Текст «верного ответа» после проверки (когда неверно).
   const revealText = clientMode
-    ? kind === 'text'
+    ? kind === 'text' || kind === 'code'
       ? (content.accept ?? []).join(' / ')
       : kind === 'number'
         ? String(content.answer ?? '')
-        : kind === 'blank'
-          ? (content.blanks ?? []).map((b) => b[0] ?? '').join(', ')
-          : kind === 'match'
+        : kind === 'sort'
+          ? (content.items ?? []).join(' → ')
+          : kind === 'blank'
+            ? (content.blanks ?? []).map((b) => b[0] ?? '').join(', ')
+            : kind === 'match'
             ? (content.pairs ?? []).map((p) => `${p.left} → ${p.right}`).join('; ')
             : ''
     : (reveal ?? '')
@@ -197,6 +229,36 @@ export function QuizBlock({
             checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2 focus:border-border-strong'
           }`}
         />
+      )}
+
+      {kind === 'code' && (
+        <textarea
+          disabled={checked || pending}
+          value={textInput}
+          onChange={(e) => setTextInput(e.target.value)}
+          rows={4}
+          placeholder={ru ? 'Ваш код' : 'Your code'}
+          className={`w-full resize-y rounded-md border px-3 py-2 font-mono text-[12.5px] text-ink outline-none ${
+            checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2 focus:border-border-strong'
+          }`}
+        />
+      )}
+
+      {kind === 'sort' && (
+        <div className="flex flex-col gap-1.5">
+          {sortOrder.map((it2, i) => (
+            <div key={`${it2}-${i}`} className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[13px] ${checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2'}`}>
+              <span className="w-4 shrink-0 text-right font-mono text-[11px] text-muted">{i + 1}</span>
+              <span className="min-w-0 flex-1 text-ink">{it2}</span>
+              {!checked && (
+                <span className="flex shrink-0 flex-col">
+                  <button type="button" onClick={() => moveSort(i, -1)} disabled={i === 0} className="text-muted hover:text-ink disabled:opacity-20" aria-label="up"><ChevronUp size={14} /></button>
+                  <button type="button" onClick={() => moveSort(i, 1)} disabled={i === sortOrder.length - 1} className="text-muted hover:text-ink disabled:opacity-20" aria-label="down"><ChevronDown size={14} /></button>
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
       {kind === 'blank' && (

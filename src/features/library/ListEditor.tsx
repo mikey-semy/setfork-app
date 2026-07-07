@@ -760,6 +760,8 @@ const QUIZ_KIND_OPTS: { k: QuizKind; ru: string; en: string }[] = [
   { k: 'number', ru: 'Число', en: 'Number' },
   { k: 'blank', ru: 'Пропуски', en: 'Blanks' },
   { k: 'match', ru: 'Пары', en: 'Match' },
+  { k: 'sort', ru: 'Порядок', en: 'Sort' },
+  { k: 'code', ru: 'Код', en: 'Code' },
 ]
 
 function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q: EditorQuiz) => void; ru: boolean }) {
@@ -851,8 +853,9 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
         </>
       )}
 
-      {quiz.kind === 'text' && (
+      {(quiz.kind === 'text' || quiz.kind === 'code') && (
         <>
+          {quiz.kind === 'code' && <span className="text-[11px] text-muted">{ru ? 'Ответ вводится моноширинно; сверяется с принимаемыми (регистр обычно важен).' : 'Answer is entered monospace; matched against accepted (case usually matters).'}</span>}
           <div className="flex flex-col gap-1.5">
             {accept.map((a, ai) => (
               <div key={ai} className="flex items-center gap-2">
@@ -1005,6 +1008,49 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
               </label>
             </div>
             <span className="text-[11px] text-muted">{ru ? 'Правые части ученику показываются перемешанными.' : 'Right sides are shuffled for the learner.'}</span>
+          </>
+        )
+      })()}
+
+      {quiz.kind === 'sort' && (() => {
+        const items = quiz.items.length ? quiz.items : ['', '']
+        const setItems = (xs: string[]) => set({ items: xs })
+        const move = (i: number, d: -1 | 1) => {
+          const j = i + d
+          if (j < 0 || j >= items.length) return
+          const next = [...items]
+          ;[next[i], next[j]] = [next[j], next[i]]
+          setItems(next)
+        }
+        return (
+          <>
+            <div className="flex flex-col gap-1.5">
+              {items.map((it2, ii) => (
+                <div key={ii} className="flex items-center gap-1.5">
+                  <span className="w-4 text-right font-mono text-[11px] text-muted">{ii + 1}</span>
+                  <div className="flex flex-col">
+                    <button type="button" onClick={() => move(ii, -1)} disabled={ii === 0} className="text-muted hover:text-ink disabled:opacity-20" aria-label="up"><ChevronUp size={13} /></button>
+                    <button type="button" onClick={() => move(ii, 1)} disabled={ii === items.length - 1} className="text-muted hover:text-ink disabled:opacity-20" aria-label="down"><ChevronDown size={13} /></button>
+                  </div>
+                  <BubbleTextEditor
+                    value={it2}
+                    onChange={(v) => setItems(items.map((x, xi) => (xi === ii ? v : x)))}
+                    singleLine
+                    className="flex-1"
+                    lang={ru ? 'ru' : 'en'}
+                    ariaLabel={ru ? `Элемент ${ii + 1}` : `Item ${ii + 1}`}
+                    placeholder={ru ? `Элемент ${ii + 1}` : `Item ${ii + 1}`}
+                  />
+                  <button type="button" onClick={() => setItems(items.filter((_, xi) => xi !== ii))} disabled={items.length <= 2} className="text-muted hover:text-danger disabled:opacity-30" aria-label={ru ? 'Удалить' : 'Remove'}>
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-4 pt-0.5 text-[12px]">
+              <button type="button" onClick={() => setItems([...items, ''])} className="text-accent hover:underline">+ {ru ? 'элемент' : 'item'}</button>
+              <span className="text-[11px] text-muted">{ru ? 'Задайте ПРАВИЛЬНЫЙ порядок (сверху вниз). Ученику покажем перемешанными.' : 'Set the CORRECT order (top to bottom). Shuffled for the learner.'}</span>
+            </div>
           </>
         )
       })()}
