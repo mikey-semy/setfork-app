@@ -29,12 +29,26 @@ export function BubbleTextEditor({
   function refresh() {
     const el = ref.current
     if (!el) return
-    if (el.selectionStart === el.selectionEnd) {
+    const s = el.selectionStart
+    const e = el.selectionEnd
+    if (s === e) {
       setBubble(null)
       return
     }
-    const c = caretCoords(el, el.selectionStart)
-    setBubble({ top: c.top - el.scrollTop, left: Math.max(4, Math.min(c.left, el.clientWidth - 244)) })
+    const TOOLBAR_H = 34
+    const GAP = 6
+    const start = caretCoords(el, s)
+    const startTop = start.top - el.scrollTop
+    // Есть место сверху — панель НАД выделением; иначе — ПОД выделением (под
+    // последней строкой), чтобы не перекрывать сам выделенный текст.
+    let top: number
+    if (startTop >= TOOLBAR_H + GAP) {
+      top = startTop - TOOLBAR_H - GAP
+    } else {
+      const end = caretCoords(el, e)
+      top = end.top - el.scrollTop + end.height + GAP
+    }
+    setBubble({ top, left: Math.max(4, Math.min(start.left, el.clientWidth - 244)) })
   }
 
   function apply(next: string, selStart: number, selEnd: number) {
