@@ -212,7 +212,7 @@ export function BubbleTextEditor({
 
       {bubble && !mention && (
         <div
-          className="absolute z-30 flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 shadow-lg"
+          className="absolute z-30 flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 shadow-lg transition-[top,left] duration-150 ease-out motion-reduce:transition-none"
           style={{ top: Math.max(0, bubble.top), left: bubble.left }}
           onMouseDown={(e) => e.preventDefault()}
         >
