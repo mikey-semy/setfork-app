@@ -1090,6 +1090,7 @@ function TextBlockBody({ value, onChange, ru }: { value: string; onChange: (v: s
  *  between=true — тонкая линия-разделитель, появляется при наведении. */
 function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert: (t: BlockType) => void; repeatType: BlockType; ru: boolean; between?: boolean }) {
   const [open, setOpen] = useState(false)
+  const [hoverK, setHoverK] = useState<number | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   // Клик вне — закрыть.
   useEffect(() => {
@@ -1106,10 +1107,11 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
     }
   }, [open])
 
-  // Веер: типы блоков распределяем по дуге ~150° над кнопкой.
+  // Веер: типы блоков распределяем по дуге над кнопкой. Радиус/разброс с запасом,
+  // чтобы 7 кружков не липли друг к другу.
   const arc = BLOCK_TYPES
-  const R = 62
-  const spread = 150 // градусов
+  const R = 88
+  const spread = 172 // градусов
   const start = 90 + spread / 2 // слева
   const pick = (t: BlockType) => { onInsert(t); setOpen(false) }
 
@@ -1122,8 +1124,10 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
       {arc.map((t, k) => {
         const ang = arc.length > 1 ? start - (spread / (arc.length - 1)) * k : 90
         const rad = (ang * Math.PI) / 180
-        const x = Math.cos(rad) * R
-        const y = -Math.sin(rad) * R
+        const hovered = hoverK === k
+        const rr = hovered ? R + 14 : R // при наведении — «выдвигаем» наружу
+        const x = Math.cos(rad) * rr
+        const y = -Math.sin(rad) * rr
         const Icon = BLOCK_ICON[t]
         return (
           <button
@@ -1132,13 +1136,19 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
             aria-label={blockLabel(t, ru)}
             title={blockLabel(t, ru)}
             onClick={() => pick(t)}
+            onMouseEnter={() => setHoverK(k)}
+            onMouseLeave={() => setHoverK((h) => (h === k ? null : h))}
+            onFocus={() => setHoverK(k)}
+            onBlur={() => setHoverK((h) => (h === k ? null : h))}
             tabIndex={open ? 0 : -1}
-            className="absolute grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink shadow-md transition-all duration-200 hover:border-accent hover:text-accent motion-reduce:transition-none"
+            className={`absolute grid h-10 w-10 place-items-center rounded-full border shadow-md transition-all duration-200 motion-reduce:transition-none ${
+              hovered ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border bg-surface text-ink'
+            }`}
             style={{
-              transform: open ? `translate(${x}px, ${y}px) scale(1)` : 'translate(0,0) scale(0.3)',
+              transform: open ? `translate(${x}px, ${y}px) scale(${hovered ? 1.18 : 1})` : 'translate(0,0) scale(0.3)',
               opacity: open ? 1 : 0,
               pointerEvents: open ? 'auto' : 'none',
-              zIndex: open ? 20 : undefined,
+              zIndex: open ? (hovered ? 22 : 20) : undefined,
             }}
           >
             <Icon size={16} />
