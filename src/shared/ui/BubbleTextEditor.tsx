@@ -4,16 +4,18 @@ import { useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
-import { Bold, Code, Heading, Italic, Link2, List, ListOrdered, Quote, SmilePlus, Strikethrough } from 'lucide-react'
+import { AtSign, Bold, Code, Heading, Italic, Link2, List, ListChecks, ListOrdered, Quote, SmilePlus, Strikethrough } from 'lucide-react'
 import emojiData from '@emoji-mart/data'
 import { caretCoords } from './caret-coords'
 
 const EmojiPicker = dynamic(() => import('@emoji-mart/react'), { ssr: false })
 const tbtn = 'grid h-7 w-7 place-items-center rounded text-muted hover:bg-surface-2 hover:text-ink'
+type MentionUser = { handle: string; avatarUrl: string | null }
 
 // Редактор текста со ВСПЛЫВАЮЩЕЙ (bubble) панелью: появляется, пока работаешь с
-// текстом блока (фокус/выделение), плавает у курсора и НЕ перекрывает текст.
-// Форматирование + эмодзи. БЕЗ картинок/файлов (для них отдельные блоки).
+// текстом (фокус/выделение), плавает у курсора и НЕ перекрывает текст. Полный набор
+// форматирования + чек-лист + эмодзи + @упоминания. БЕЗ картинок/файлов — для них
+// отдельные блоки. Управляемый (value/onChange), рендерится Markdown'ом.
 export function BubbleTextEditor({
   value,
   onChange,
@@ -32,14 +34,27 @@ export function BubbleTextEditor({
   const ref = useRef<HTMLTextAreaElement>(null)
   const [bubble, setBubble] = useState<{ top: number; left: number } | null>(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
-  const savedSel = useRef<[number, number]>([0, 0]) // выделение до открытия эмодзи-пикера
+  const savedSel = useRef<[number, number]>([0, 0])
+  const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
+  const [users, setUsers] = useState<MentionUser[]>([])
+  const [mIdx, setMIdx] = useState(0)
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null)
+  const searchSeq = useRef(0)
   const { resolvedTheme } = useTheme()
   const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
+
+  function coordsAt(pos: number): { top: number; left: number } | null {
+    const el = ref.current
+    if (!el) return null
+    const c = caretCoords(el, pos)
+    return { top: c.top - el.scrollTop, left: Math.min(Math.max(0, c.left), Math.max(0, el.clientWidth - 240)) }
+  }
 
   // Позиция панели у текущего курсора/выделения (флип: над строкой либо под ней).
   function refresh() {
     const el = ref.current
     if (!el) return
+    if (mention) { setBubble(null); return } // при активном @-меню панель прячем
     const TOOLBAR_H = 34
     const GAP = 6
     const start = caretCoords(el, el.selectionStart)
@@ -51,7 +66,7 @@ export function BubbleTextEditor({
       const end = caretCoords(el, el.selectionEnd)
       top = end.top - el.scrollTop + end.height + GAP
     }
-    setBubble({ top, left: Math.max(4, Math.min(start.left, el.clientWidth - 280)) })
+    setBubble({ top, left: Math.max(4, Math.min(start.left, el.clientWidth - 300)) })
   }
 
   function apply(next: string, selStart: number, selEnd: number) {
@@ -89,7 +104,54 @@ export function BubbleTextEditor({
     apply(value.slice(0, s) + text + value.slice(e), s + text.length, s + text.length)
   }
 
+  // ── @mention ──
+  function detectMention(v: string, caret: number) {
+    const m = /(?:^|\s)@([\w-]{0,30})$/.exec(v.slice(0, caret))
+    return m ? { start: caret - m[1].length - 1, query: m[1] } : null
+  }
+  async function runMentionSearch(query: string) {
+    const seq = ++searchSeq.current
+    try {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
+      const data = (await res.json()) as MentionUser[]
+      if (seq === searchSeq.current) {
+        setUsers(Array.isArray(data) ? data.slice(0, 8) : [])
+        setMIdx(0)
+      }
+    } catch {
+      /* игнор */
+    }
+  }
+  function pickMention(u: MentionUser) {
+    if (!mention) return
+    const end = mention.start + 1 + mention.query.length
+    const caret = mention.start + u.handle.length + 2
+    apply(value.slice(0, mention.start) + `@${u.handle} ` + value.slice(end), caret, caret)
+    setMention(null)
+    setUsers([])
+  }
+
+  function onChangeText(v: string) {
+    onChange(v)
+    const caret = ref.current?.selectionStart ?? v.length
+    const m = detectMention(v, caret)
+    setMention(m)
+    if (m) {
+      setAnchor(coordsAt(caret))
+      void runMentionSearch(m.query)
+      setBubble(null)
+    } else {
+      setUsers([])
+    }
+  }
+
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (mention && users.length) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setMIdx((i) => (i + 1) % users.length); return }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setMIdx((i) => (i - 1 + users.length) % users.length); return }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickMention(users[mIdx]); return }
+      if (e.key === 'Escape') { setMention(null); setUsers([]); return }
+    }
     if (!(e.metaKey || e.ctrlKey)) return
     const k = e.key.toLowerCase()
     if (k === 'b') { e.preventDefault(); surround('**', '**', L('текст', 'text')) }
@@ -112,6 +174,7 @@ export function BubbleTextEditor({
     [
       { icon: List, t: L('список', 'bulleted list'), run: () => linePrefix(() => '- ') },
       { icon: ListOrdered, t: L('нумерованный', 'numbered list'), run: () => linePrefix((i) => `${i + 1}. `) },
+      { icon: ListChecks, t: L('чек-лист', 'task list'), run: () => linePrefix(() => '- [ ] ') },
     ],
   ]
 
@@ -123,21 +186,22 @@ export function BubbleTextEditor({
         aria-label={ariaLabel}
         placeholder={placeholder}
         rows={rows}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChangeText(e.target.value)}
         onFocus={refresh}
         onClick={refresh}
         onSelect={refresh}
         onKeyUp={refresh}
         onScroll={refresh}
         onKeyDown={onKeyDown}
-        onBlur={() => setTimeout(() => { if (!emojiOpen) setBubble(null) }, 150)}
+        onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null) } }, 150)}
         className="min-h-[72px] w-full resize-y rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] leading-relaxed text-ink outline-none focus:border-border-strong"
       />
-      {bubble && (
+
+      {bubble && !mention && (
         <div
           className="absolute z-30 flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 shadow-lg"
           style={{ top: Math.max(0, bubble.top), left: bubble.left }}
-          onMouseDown={(e) => e.preventDefault()} // не терять фокус/выделение при клике по кнопке
+          onMouseDown={(e) => e.preventDefault()}
         >
           {groups.map((group, gi) => (
             <div key={gi} className="flex items-center gap-0.5">
@@ -150,6 +214,9 @@ export function BubbleTextEditor({
             </div>
           ))}
           <span className="mx-0.5 h-4 w-px bg-border" />
+          <button type="button" title={L('упомянуть', 'mention')} aria-label={L('упомянуть', 'mention')} onClick={() => insertAtRange('@', ref.current?.selectionStart ?? value.length, ref.current?.selectionEnd ?? value.length)} className={tbtn}>
+            <AtSign size={14} />
+          </button>
           <button
             type="button"
             title={L('эмодзи', 'emoji')}
@@ -165,6 +232,26 @@ export function BubbleTextEditor({
           </button>
         </div>
       )}
+
+      {/* @mention автодополнение */}
+      {mention && users.length > 0 && (
+        <div className="absolute z-40 max-h-52 w-64 overflow-y-auto rounded-md border border-border bg-surface shadow-lg" style={{ top: (anchor?.top ?? 0) + 20, left: anchor?.left ?? 8 }}>
+          {users.map((u, i) => (
+            <button
+              key={u.handle}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); pickMention(u) }}
+              onMouseEnter={() => setMIdx(i)}
+              className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[13px] ${i === mIdx ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="h-5 w-5 rounded-full" /> : <span className="h-5 w-5 rounded-full bg-surface-2" />}
+              <span className="font-medium">@{u.handle}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {emojiOpen &&
         createPortal(
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4" onClick={() => setEmojiOpen(false)}>

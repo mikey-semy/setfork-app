@@ -959,12 +959,13 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
         )
       })()}
 
-      <textarea
-        className="min-h-[52px] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[12.5px] leading-relaxed text-ink outline-none focus:border-border-strong"
-        aria-label={ru ? 'Пояснение (после проверки)' : 'Explanation (after check)'}
-        placeholder={ru ? 'Пояснение — покажется после проверки (необязательно)' : 'Explanation — shown after checking (optional)'}
+      <BubbleTextEditor
         value={quiz.explain}
-        onChange={(e) => set({ explain: e.target.value })}
+        onChange={(v) => set({ explain: v })}
+        rows={2}
+        lang={ru ? 'ru' : 'en'}
+        ariaLabel={ru ? 'Пояснение (после проверки)' : 'Explanation (after check)'}
+        placeholder={ru ? 'Пояснение — покажется после проверки (необязательно)' : 'Explanation — shown after checking (optional)'}
       />
       <span className="text-[11px] text-muted">
         {ru ? 'Проверка — на странице списка.' : 'Checking happens on the list page.'}
