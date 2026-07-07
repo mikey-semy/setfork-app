@@ -2,7 +2,10 @@
 // (текущий UI-язык), контент сохраняется как locale-JSON под этот код.
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
-import { isBlockType, newBlockId, newOptionId, type BlockType } from './blocks'
+import { isBlockType, newBlockId, newOptionId, type BlockType, type QuizKind } from './blocks'
+
+const QUIZ_KINDS: QuizKind[] = ['choice', 'text', 'number']
+const asQuizKind = (v: unknown): QuizKind => (QUIZ_KINDS.includes(v as QuizKind) ? (v as QuizKind) : 'choice')
 
 const LEVELS: StepLevel[] = ['required', 'recommended', 'optional']
 const asLevel = (v: unknown): StepLevel => (LEVELS.includes(v as StepLevel) ? (v as StepLevel) : 'required')
@@ -12,7 +15,19 @@ export type EditorRef = { label: string; url: string }
 export type EditorOption = { id: string; text: string }
 export type EditorPoll = { question: string; options: EditorOption[]; multi: boolean; deadline: string }
 export type EditorQuizOption = { id: string; text: string; correct: boolean }
-export type EditorQuiz = { question: string; options: EditorQuizOption[]; multi: boolean; explain: string }
+// В редакторе держим поля ВСЕХ типов теста; сериализуем по kind. Числа — строками
+// (парсим при сохранении); accept — список принимаемых текстовых ответов.
+export type EditorQuiz = {
+  kind: QuizKind
+  question: string
+  options: EditorQuizOption[]
+  multi: boolean
+  accept: string[]
+  caseSensitive: boolean
+  answer: string
+  tolerance: string
+  explain: string
+}
 export type EditorItem = {
   // Блочная модель: 'step' (runnable/чекаемый) | 'text' (markdown) | 'image' | 'poll'.
   type: BlockType
@@ -35,7 +50,7 @@ export type EditorItem = {
 }
 
 const emptyPoll = (): EditorPoll => ({ question: '', options: [], multi: false, deadline: '' })
-const emptyQuiz = (): EditorQuiz => ({ question: '', options: [], multi: false, explain: '' })
+const emptyQuiz = (): EditorQuiz => ({ kind: 'choice', question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', explain: '' })
 
 export function emptyItem(): EditorItem {
   return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', poll: emptyPoll(), quiz: emptyQuiz(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
@@ -46,7 +61,7 @@ export function emptyItem(): EditorItem {
 export function emptyBlock(type: BlockType): EditorItem {
   const base = { ...emptyItem(), type, bid: type === 'step' ? '' : newBlockId() }
   if (type === 'poll') base.poll = { question: '', options: [{ id: newOptionId(), text: '' }, { id: newOptionId(), text: '' }], multi: false, deadline: '' }
-  if (type === 'quiz') base.quiz = { question: '', options: [{ id: newOptionId(), text: '', correct: false }, { id: newOptionId(), text: '', correct: false }], multi: false, explain: '' }
+  if (type === 'quiz') base.quiz = { ...emptyQuiz(), options: [{ id: newOptionId(), text: '', correct: false }, { id: newOptionId(), text: '', correct: false }], accept: [''] }
   return base
 }
 
@@ -90,21 +105,34 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
         }
       }
       if (it.type === 'quiz') {
-        const options = it.quiz.options
-          .filter((o) => o.text.trim())
-          .map((o) => ({ id: o.id || newOptionId(), text: o.text.trim(), ...(o.correct ? { correct: true } : {}) }))
-        return {
-          ...base,
-          section: sec,
-          type: 'quiz',
-          content: {
-            bid: it.bid || newBlockId(),
-            question: it.quiz.question.trim(),
-            options,
-            ...(it.quiz.multi ? { multi: true } : {}),
-            ...(it.quiz.explain.trim() ? { explain: it.quiz.explain.trim() } : {}),
-          },
+        const q = it.quiz
+        const common = {
+          bid: it.bid || newBlockId(),
+          question: q.question.trim(),
+          // kind опускаем для 'choice' — байт-совместимость со старыми quiz.
+          ...(q.kind !== 'choice' ? { kind: q.kind } : {}),
+          ...(q.explain.trim() ? { explain: q.explain.trim() } : {}),
         }
+        let content: Record<string, unknown>
+        if (q.kind === 'text') {
+          content = {
+            ...common,
+            accept: q.accept.map((a) => a.trim()).filter(Boolean),
+            ...(q.caseSensitive ? { caseSensitive: true } : {}),
+          }
+        } else if (q.kind === 'number') {
+          content = {
+            ...common,
+            answer: Number(q.answer),
+            ...(q.tolerance.trim() && Number(q.tolerance) ? { tolerance: Number(q.tolerance) } : {}),
+          }
+        } else {
+          const options = q.options
+            .filter((o) => o.text.trim())
+            .map((o) => ({ id: o.id || newOptionId(), text: o.text.trim(), ...(o.correct ? { correct: true } : {}) }))
+          content = { ...common, options, ...(q.multi ? { multi: true } : {}) }
+        }
+        return { ...base, section: sec, type: 'quiz', content }
       }
       return {
         title: { [lang]: it.title.trim() },
@@ -178,20 +206,27 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     }
     if (type === 'quiz') {
       const c = it.content ?? {}
+      const kind = asQuizKind(c.kind)
       const rawOpts = Array.isArray(c.options) ? (c.options as unknown[]) : []
       const options = rawOpts.map((o) => {
         const oo = (o && typeof o === 'object' ? o : {}) as Record<string, unknown>
         return { id: typeof oo.id === 'string' ? oo.id : newOptionId(), text: typeof oo.text === 'string' ? oo.text : '', correct: oo.correct === true }
       })
+      const accept = Array.isArray(c.accept) ? (c.accept as unknown[]).map((a) => String(a)) : []
       return {
         ...emptyItem(),
         type: 'quiz',
         bid,
         section,
         quiz: {
+          kind,
           question: typeof c.question === 'string' ? c.question : '',
           options: options.length ? options : [{ id: newOptionId(), text: '', correct: false }, { id: newOptionId(), text: '', correct: false }],
           multi: c.multi === true,
+          accept: accept.length ? accept : [''],
+          caseSensitive: c.caseSensitive === true,
+          answer: typeof c.answer === 'number' ? String(c.answer) : '',
+          tolerance: typeof c.tolerance === 'number' ? String(c.tolerance) : '',
           explain: typeof c.explain === 'string' ? c.explain : '',
         },
       }
@@ -239,11 +274,16 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
         deadline: String(it?.poll?.deadline ?? ''),
       },
       quiz: {
+        kind: asQuizKind(it?.quiz?.kind),
         question: String(it?.quiz?.question ?? ''),
         options: Array.isArray(it?.quiz?.options)
           ? it.quiz.options.map((o: { id?: unknown; text?: unknown; correct?: unknown }) => ({ id: String(o?.id ?? '') || newOptionId(), text: String(o?.text ?? ''), correct: o?.correct === true }))
           : [],
         multi: it?.quiz?.multi === true,
+        accept: Array.isArray(it?.quiz?.accept) ? it.quiz.accept.map((a: unknown) => String(a)) : [],
+        caseSensitive: it?.quiz?.caseSensitive === true,
+        answer: String(it?.quiz?.answer ?? ''),
+        tolerance: String(it?.quiz?.tolerance ?? ''),
         explain: String(it?.quiz?.explain ?? ''),
       },
       title: String(it?.title ?? ''),

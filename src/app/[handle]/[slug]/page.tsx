@@ -23,7 +23,7 @@ import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
 import { QuizBlock } from '@/features/library/QuizBlock'
-import type { QuizBlockContent } from '@/features/library/blocks'
+import { quizKind, stripQuizAnswers, type QuizBlockContent } from '@/features/library/blocks'
 import { getQuizState } from '@/features/quizzes/queries'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
@@ -358,11 +358,11 @@ export default async function ListPage({
                   } else if (s.type === 'quiz') {
                     const c = (s.content ?? {}) as unknown as QuizBlockContent
                     const bid = typeof c.bid === 'string' ? c.bid : ''
-                    // Авторизованному оценивает сервер → НЕ отдаём correct-флаги в разметку.
-                    const safe: QuizBlockContent = viewer
-                      ? { ...c, options: (c.options ?? []).map((o) => ({ id: o.id, text: o.text })) }
-                      : c
-                    el = Array.isArray(c.options) && c.options.length ? (
+                    const kind = quizKind(c)
+                    const renderable = kind === 'choice' ? Array.isArray(c.options) && c.options.length > 0 : c.question !== undefined || kind === 'text' || kind === 'number'
+                    // Авторизованному оценивает сервер → НЕ отдаём ответы в разметку.
+                    const safe: QuizBlockContent = viewer ? stripQuizAnswers(c) : c
+                    el = renderable ? (
                       <div className="break-inside-avoid">
                         <QuizBlock
                           content={safe}

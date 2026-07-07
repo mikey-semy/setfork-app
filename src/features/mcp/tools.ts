@@ -22,7 +22,8 @@ export interface McpBlockOption {
 // Один блок списка через MCP. type по умолчанию 'step'. Поля по типу:
 //  step  — title(+desc/command/level/why/section/subtasks); text — text(markdown);
 //  image — caption(+imageRef); video — url(+caption); poll — question/options/multi/deadline;
-//  quiz  — question/options(correct)/multi/explain.
+//  quiz  — question/explain + по quizKind: choice=options(correct)/multi;
+//          text=accept/caseSensitive; number=answer/tolerance.
 export interface McpItemInput {
   type?: string
   title?: string
@@ -41,6 +42,11 @@ export interface McpItemInput {
   multi?: boolean
   deadline?: string
   explain?: string
+  quizKind?: string // 'choice'(default)|'text'|'number'
+  accept?: string[] // quiz text
+  caseSensitive?: boolean // quiz text
+  answer?: number // quiz number
+  tolerance?: number // quiz number
 }
 
 // MCP-контент нейтрален к языку → кладём под 'en' (locale-JSON, tr с фолбэком читает).
@@ -55,8 +61,24 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
     if (type === 'video') return { ...b, videoUrl: (it.url ?? '').trim(), caption: (it.caption ?? '').trim() }
     if (type === 'poll')
       return { ...b, poll: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim() })), multi: it.multi === true, deadline: (it.deadline ?? '').trim() } }
-    if (type === 'quiz')
-      return { ...b, quiz: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim(), correct: o.correct === true })), multi: it.multi === true, explain: (it.explain ?? '').trim() } }
+    if (type === 'quiz') {
+      const kind = it.quizKind === 'text' ? 'text' : it.quizKind === 'number' ? 'number' : 'choice'
+      return {
+        ...b,
+        quiz: {
+          ...b.quiz,
+          kind,
+          question: (it.question ?? '').trim(),
+          options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim(), correct: o.correct === true })),
+          multi: it.multi === true,
+          accept: (it.accept ?? []).map((a) => String(a)),
+          caseSensitive: it.caseSensitive === true,
+          answer: typeof it.answer === 'number' ? String(it.answer) : '',
+          tolerance: typeof it.tolerance === 'number' ? String(it.tolerance) : '',
+          explain: (it.explain ?? '').trim(),
+        },
+      }
+    }
     return { ...b, title: (it.title ?? '').trim(), desc: (it.desc ?? '').trim(), command: it.command?.trim() ?? '', level: it.level ?? 'required', why: (it.why ?? '').trim(), section: (it.section ?? '').trim(), subtasks: (it.subtasks ?? []).filter((s) => s.trim()) }
   })
   return toProposedItems(editor, 'en')
@@ -136,16 +158,17 @@ function blockForMcp(s: DetailStep) {
   if (type === 'text') return { n: s.n, type, text: str(c.md) }
   if (type === 'image') return { n: s.n, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
   if (type === 'video') return { n: s.n, type, url: str(c.url), caption: str(c.caption) || undefined }
-  if (type === 'poll' || type === 'quiz') {
+  if (type === 'poll') {
     const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
-    return {
-      n: s.n,
-      type,
-      question: str(c.question),
-      options: opts.map((o) => (type === 'quiz' ? { text: str(o.text), correct: o.correct === true } : { text: str(o.text) })),
-      multi: c.multi === true || undefined,
-      ...(type === 'poll' ? { deadline: str(c.deadline) || undefined } : { explain: str(c.explain) || undefined }),
-    }
+    return { n: s.n, type, question: str(c.question), options: opts.map((o) => ({ text: str(o.text) })), multi: c.multi === true || undefined, deadline: str(c.deadline) || undefined }
+  }
+  if (type === 'quiz') {
+    const kind = c.kind === 'text' ? 'text' : c.kind === 'number' ? 'number' : 'choice'
+    const base = { n: s.n, type, quizKind: kind, question: str(c.question), explain: str(c.explain) || undefined }
+    if (kind === 'text') return { ...base, accept: Array.isArray(c.accept) ? (c.accept as unknown[]).map((a) => str(a)) : [], caseSensitive: c.caseSensitive === true || undefined }
+    if (kind === 'number') return { ...base, answer: typeof c.answer === 'number' ? c.answer : undefined, tolerance: typeof c.tolerance === 'number' ? c.tolerance : undefined }
+    const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
+    return { ...base, options: opts.map((o) => ({ text: str(o.text), correct: o.correct === true })), multi: c.multi === true || undefined }
   }
   return {
     n: s.n,
