@@ -131,13 +131,13 @@ function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: CmpStep[];
         <span className="text-danger">−{removed}</span>
       </div>
       <div className="overflow-x-auto rounded-lg border border-border font-mono text-[12px] leading-[1.55]">
-        {rows.map((r, i) => {
+        {rows.map((r) => {
           const clr = r.type === 'add' ? 'var(--ok)' : r.type === 'del' ? 'var(--danger)' : ''
           const rowStyle = clr ? { backgroundColor: `color-mix(in srgb, ${clr} 13%, transparent)` } : undefined
           const sign = r.type === 'add' ? '+' : r.type === 'del' ? '−' : ''
           const signColor = r.type === 'add' ? 'text-ok' : r.type === 'del' ? 'text-danger' : 'text-transparent'
           return (
-            <div key={i} style={rowStyle} className="flex">
+            <div key={`${r.oldNo ?? ''}:${r.newNo ?? ''}`} style={rowStyle} className="flex">
               <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] text-muted">
                 {r.oldNo ?? ''}
               </span>
@@ -179,13 +179,13 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
         {summary.moved > 0 && <span className="text-ink-2">⇅{summary.moved}</span>}
       </div>
       <div className="flex flex-col gap-2.5">
-        {entries.map((e, i) => {
+        {entries.map((e) => {
           const st = STATUS[e.status]
           const cardStyle = st.color
             ? { borderColor: mix(st.color, 55, 'var(--border)'), backgroundColor: mix(st.color, 6) }
             : undefined
           return (
-            <div key={i} style={cardStyle} className={`rounded-lg border p-4 ${st.color ? '' : 'border-border opacity-60'}`}>
+            <div key={`${e.status}:${e.title}`} style={cardStyle} className={`rounded-lg border p-4 ${st.color ? '' : 'border-border opacity-60'}`}>
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`text-[14.5px] font-semibold text-ink ${e.status === 'removed' ? 'line-through opacity-70' : ''}`}>{e.title}</span>
                 <StepLevelBadge level={e.level} lang={lang} />

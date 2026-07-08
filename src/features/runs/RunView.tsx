@@ -258,10 +258,10 @@ export function RunView({
 
                 {s.refs.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {s.refs.map((r, idx) =>
+                    {s.refs.map((r) =>
                       r.url ? (
                         <SafeLink
-                          key={idx}
+                          key={`${r.label}:${r.url}`}
                           href={r.href ?? r.url}
                           rel="nofollow noreferrer"
                           className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent"
@@ -269,7 +269,7 @@ export function RunView({
                           {r.label}
                         </SafeLink>
                       ) : (
-                        <span key={idx} className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-ink-2">
+                        <span key={`${r.label}:`} className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-ink-2">
                           {r.label}
                         </span>
                       ),

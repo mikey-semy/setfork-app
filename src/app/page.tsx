@@ -38,9 +38,9 @@ export default async function HomePage() {
           <HeroSearch placeholder={t('searchPh', lang)} clearLabel={t('clear', lang)} />
 
           <div className="flex max-w-[640px] flex-wrap justify-center gap-2.5">
-            {CHIPS.map((c, i) => (
+            {CHIPS.map((c) => (
               <Link
-                key={i}
+                key={c.en}
                 href={`/search?q=${encodeURIComponent(ru ? c.ru : c.en)}`}
                 className="rounded-full border border-border bg-surface-2 px-3.5 py-[7px] text-[13px] text-ink-2 hover:text-ink"
               >

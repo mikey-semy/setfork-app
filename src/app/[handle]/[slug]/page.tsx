@@ -488,15 +488,15 @@ export default async function ListPage({
                         )}
                         {refs.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {refs.map((r, i) => {
+                            {refs.map((r) => {
                               const cls =
                                 'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent'
                               return r.url ? (
-                                <SafeLink key={i} href={r.href ?? r.url} rel="nofollow noreferrer" className={cls}>
+                                <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className={cls}>
                                   <ExternalLink size={11} /> {r.label}
                                 </SafeLink>
                               ) : (
-                                <span key={i} className={cls}>
+                                <span key={`${r.label}:`} className={cls}>
                                   <ExternalLink size={11} /> {r.label}
                                 </span>
                               )

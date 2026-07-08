@@ -259,9 +259,9 @@ export default async function ProfilePage({
                   <Link2 size={15} className="shrink-0 text-muted" /> <span className="truncate">{displayUrl(user.website)}</span>
                 </a>
               )}
-              {user.socials.map((s, i) => (
+              {user.socials.map((s) => (
                 <a
-                  key={i}
+                  key={`${s.type}:${s.url}`}
                   href={s.url}
                   target="_blank"
                   rel="noopener noreferrer nofollow"

@@ -12,8 +12,8 @@ export function FilterMenu({ label, items }: { label: string; items: { label: st
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[180px]">
         <DropdownMenuLabel>{label}</DropdownMenuLabel>
-        {items.map((it, i) => (
-          <DropdownMenuItem key={i} asChild>
+        {items.map((it) => (
+          <DropdownMenuItem key={it.href} asChild>
             <Link href={it.href} className="flex cursor-pointer items-center justify-between gap-2">
               <span className="truncate">{it.label}</span>
               {it.active && <Check size={14} className="shrink-0 text-accent" />}

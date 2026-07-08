@@ -24,6 +24,13 @@ const ICONS = {
   suggestion: PencilLine,
 } as const
 
+// Стабильный ключ события: лента фильтруется на клиенте (prefs), поэтому ключ с
+// индексом «переезжает» между карточками при смене фильтра. Собираем ключ из полей
+// самого события — их комбинация однозначно его идентифицирует.
+function eventKey(e: FeedEvent): string {
+  return [e.type, new Date(e.createdAt).getTime(), e.actorHandle, e.targetHandle ?? '', e.ownerHandle ?? '', e.slug ?? '', e.version ?? '', e.itemId ?? ''].join(':')
+}
+
 function verb(e: FeedEvent, ru: boolean): string {
   switch (e.type) {
     case 'version':
@@ -80,12 +87,12 @@ export function Feed({
         </div>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {shown.map((e, i) => {
+          {shown.map((e) => {
             // Версия/релиз — богатая карточка с содержимым (заметка = changelog), как на GitHub.
-            if (e.type === 'version') return <ReleaseCard key={`version-${e.createdAt}-${i}`} e={e} lang={lang} ru={ru} />
+            if (e.type === 'version') return <ReleaseCard key={eventKey(e)} e={e} lang={lang} ru={ru} />
             const Icon = ICONS[e.type as keyof typeof ICONS] ?? Tag
             return (
-              <div key={`${e.type}-${e.createdAt}-${i}`} className="flex gap-3 rounded-lg border border-border bg-surface p-3.5">
+              <div key={eventKey(e)} className="flex gap-3 rounded-lg border border-border bg-surface p-3.5">
                 <Link href={`/${e.actorHandle}`} className="flex-shrink-0">
                   <Avatar handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size={34} />
                 </Link>

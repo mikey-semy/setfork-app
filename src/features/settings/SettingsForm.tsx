@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import type { Social } from '@/shared/db/schema'
@@ -15,6 +15,10 @@ import { updateProfile, type ActionResult } from './actions'
 // Поля настроек чуть крупнее стандартного md (px-3, text-14) — доводка поверх примитивов.
 const field = 'px-3 py-2 text-[14px]'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
+
+// Строка соцсети редактируется (type/url меняются) и удаляется из середины списка,
+// поэтому ни индекс, ни содержимое не годятся как key — генерируем id при создании строки.
+type SocialRow = Social & { _k: number }
 
 export function SettingsForm({
   lang,
@@ -36,9 +40,13 @@ export function SettingsForm({
   socials: Social[]
 }) {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(updateProfile, null)
-  const [rows, setRows] = useState<Social[]>(socials.length ? socials : [])
+  const [rows, setRows] = useState<SocialRow[]>(() => socials.map((s, i) => ({ ...s, _k: i })))
+  const seq = useRef(socials.length)
 
-  const addRow = () => setRows((r) => [...r, { type: 'github', url: '' }])
+  const addRow = () => {
+    const k = seq.current++
+    setRows((r) => [...r, { type: 'github', url: '', _k: k }])
+  }
   const setRow = (i: number, patch: Partial<Social>) => setRows((r) => r.map((s, j) => (j === i ? { ...s, ...patch } : s)))
   const removeRow = (i: number) => setRows((r) => r.filter((_, j) => j !== i))
 
@@ -77,10 +85,10 @@ export function SettingsForm({
       {/* Socials */}
       <div>
         <label className={lbl}>{t('socials', lang)}</label>
-        <input type="hidden" name="socials" value={JSON.stringify(rows.filter((r) => r.url.trim()))} />
+        <input type="hidden" name="socials" value={JSON.stringify(rows.flatMap((r) => (r.url.trim() ? [{ type: r.type, url: r.url }] : [])))} />
         <div className="flex flex-col gap-2">
           {rows.map((row, i) => (
-            <div key={i} className="flex items-center gap-2">
+            <div key={row._k} className="flex items-center gap-2">
               <Select value={row.type} onValueChange={(v) => setRow(i, { type: v })}>
                 <SelectTrigger className="w-[160px] shrink-0">
                   <SelectValue />
