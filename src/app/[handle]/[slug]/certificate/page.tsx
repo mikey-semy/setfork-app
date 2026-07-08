@@ -4,8 +4,7 @@ import { Award } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
-import { getListMeta } from '@/features/library/queries'
-import { canViewList } from '@/features/library/access'
+import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { CertificatePrintButton } from '@/features/quizzes/CertificatePrintButton'
@@ -14,9 +13,8 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
   const { handle: owner, slug } = await params
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const ru = lang === 'ru'
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  if (!canViewList(meta, { isOwner: meta.ownerId === session?.userId })) notFound()
 
   const base = `/${owner}/${slug}`
   const completion = await getCourseCompletion(meta.id, session?.userId)

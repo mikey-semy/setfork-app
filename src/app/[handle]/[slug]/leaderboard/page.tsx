@@ -1,22 +1,19 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Trophy } from 'lucide-react'
-import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
-import { getListMeta } from '@/features/library/queries'
-import { canViewList } from '@/features/library/access'
+import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getCourseLeaderboard } from '@/features/quizzes/queries'
 
 export default async function LeaderboardPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle: owner, slug } = await params
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const lang = await getLang()
   const ru = lang === 'ru'
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  if (!canViewList(meta, { isOwner: meta.ownerId === session?.userId })) notFound()
 
   const rows = await getCourseLeaderboard(meta.id)
   const medal = ['🥇', '🥈', '🥉']
