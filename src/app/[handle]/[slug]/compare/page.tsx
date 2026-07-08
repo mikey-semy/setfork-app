@@ -11,6 +11,7 @@ import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { ListHeader } from '@/features/library/ListHeader'
 import { VersionPicker } from '@/features/library/VersionPicker'
 import { getListMeta, getVersions, getVersionSteps } from '@/features/library/queries'
+import { canViewList } from '@/features/library/access'
 import { safeHref } from '@/shared/lib/safe-url'
 import { diffSteps, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from '@/features/library/diff'
 
@@ -62,9 +63,7 @@ export default async function ComparePage({
   if (!meta) notFound()
   const isOwner = viewer?.userId === meta.ownerId
   const isAdmin = isAdminHandle(viewer?.handle)
-  if (meta.visibility === 'private' && !isOwner) notFound()
-  if (meta.status === 'draft' && !isOwner) notFound()
-  if (meta.moderation !== 'active' && !isOwner && !isAdmin) notFound()
+  if (!canViewList(meta, { isOwner, isAdmin })) notFound()
 
   const view = sp.view === 'list' ? 'list' : 'code'
   const versions = await getVersions(meta.id)

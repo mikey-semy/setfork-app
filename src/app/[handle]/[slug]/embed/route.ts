@@ -1,5 +1,6 @@
 import { getLang } from '@/shared/i18n/server'
 import { getTemplateDetail } from '@/features/library/queries'
+import { isPubliclyVisible } from '@/features/library/access'
 import { embedHtml, type ExportList } from '@/features/library/export'
 
 // GET /{handle}/{slug}/embed — самодостаточный HTML списка для вставки в <iframe>.
@@ -13,8 +14,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   if (!detail) return new Response('Not found', { status: 404 })
 
   const { tpl, currentVersion, steps } = detail
-  if (tpl.visibility !== 'public' || tpl.status !== 'published' || tpl.moderation !== 'active')
-    return new Response('Not found', { status: 404 })
+  if (!isPubliclyVisible(tpl)) return new Response('Not found', { status: 404 })
 
   const list: ExportList = {
     title: tpl.title,

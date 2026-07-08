@@ -1,6 +1,7 @@
 import { getListMeta } from '@/features/library/queries'
 import { getReleases } from '@/features/releases/queries'
 import { escapeHtml as esc } from '@/shared/lib/escape'
+import { isPubliclyVisible } from '@/features/library/access'
 
 // GET /{handle}/{slug}/releases.atom — Atom-фид релизов (как у GitHub).
 // Только для публичных списков: фид анонимный, приватное не отдаём.
@@ -10,8 +11,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const meta = await getListMeta(handle, slug)
   // Публичный + опубликованный + не снят модерацией. Раньше проверялась только
   // видимость → release notes flagged/hidden/pending и публичных черновиков утекали.
-  if (!meta || meta.visibility !== 'public' || meta.status !== 'published' || meta.moderation !== 'active')
-    return new Response('Not found', { status: 404 })
+  if (!meta || !isPubliclyVisible(meta)) return new Response('Not found', { status: 404 })
 
   const origin = new URL(req.url).origin
   const base = `${origin}/${handle}/${slug}`
