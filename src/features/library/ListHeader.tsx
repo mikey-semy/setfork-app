@@ -12,7 +12,8 @@ import { StarFolderMenu } from '@/features/star-folders/StarFolderMenu'
 import { getFoldersForTemplate, getUserFolders } from '@/features/star-folders/queries'
 import { ShareButton } from '@/features/library/ShareButton'
 import { WatchButton } from '@/features/watch/WatchButton'
-import { getListMeta, getOpenSuggestionCount, isStarred } from '@/features/library/queries'
+import { getOpenSuggestionCount, isStarred } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { getOpenIssueCount } from '@/features/issues/queries'
 import { getDiscussionCount } from '@/features/discussions/queries'
 import { getWatchCount, isWatching } from '@/features/watch/queries'
@@ -24,14 +25,13 @@ type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'discussions' | 
 /** Общая шапка страницы списка (= «репозиторий»): back, owner/name, действия, вкладки. */
 export async function ListHeader({ owner, slug, active }: { owner: string; slug: string; active: Tab }) {
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const meta = await getListMeta(owner, slug)
-  if (!meta) return null
+  // Шапка = defense-in-depth: страницы уже гейтят через requireViewable*, но и здесь
+  // не рендерим чужой приватный/черновик/снятый модерацией — через тот же чокпоинт (canViewList).
+  const meta = await requireViewableMeta(owner, slug)
+  if (!meta) notFound()
   const isOwner = session?.userId === meta.ownerId
   const canWrite = isOwner || (session ? await isCollaborator(meta.id, session.userId) : false)
   const isAdmin = isAdminHandle(session?.handle)
-  if (meta.visibility === 'private' && !isOwner) notFound() // приватный — только владельцу
-  if (meta.status === 'draft' && !isOwner) notFound() // черновик (в т.ч. созданный через MCP) — только владельцу
-  if (meta.moderation !== 'active' && !isOwner && !isAdmin) notFound() // flagged/hidden не публичны
   const starred = session ? await isStarred(meta.id, session.userId) : false
   const watching = session ? await isWatching(session.userId, meta.id) : false
   // Папки для звёзд (организация starred по папкам, как GitHub Lists).

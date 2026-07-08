@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { verifyApiToken } from '@/shared/auth/api-token'

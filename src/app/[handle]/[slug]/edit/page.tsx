@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
+// eslint-disable-next-line no-restricted-imports -- write-доступ (canWriteList) строже просмотра; редиректит не-редакторов
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { canWriteList } from '@/features/collab/queries'
 import { saveNewVersion } from '@/features/library/actions'
