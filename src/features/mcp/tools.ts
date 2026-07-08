@@ -4,6 +4,7 @@ import { db, runs, runStepState, steps, templates, users, type ProposedItem } fr
 import { tr } from '@/shared/i18n'
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { canViewList } from '@/features/library/access'
+import { listQuota } from '@/shared/quota'
 import { dialectExt, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
@@ -279,6 +280,8 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   if (!proposed.length) return { error: 'at least one item with a title is required' }
 
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
+  // Тот же лимит на число списков, что и в вебе (createTemplate) — MCP-путь его обходил.
+  if (!(await listQuota(userId, u?.handle)).ok) return { error: 'list quota reached — delete a list first' }
   const slug = await uniqueSlug(title, userId)
   const tags = (input.tags ?? []).map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
 

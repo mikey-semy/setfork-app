@@ -5,6 +5,9 @@ import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getListMeta } from '@/features/library/queries'
+import { canViewList } from '@/features/library/access'
+import { getSession } from '@/shared/auth/session'
+import { isAdminHandle } from '@/shared/auth/admin'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getListBlame } from '@/features/library/blame'
 
@@ -16,6 +19,10 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
   const ru = lang === 'ru'
   const meta = await getListMeta(owner, slug)
   if (!meta) notFound()
+  // Явная проверка видимости, а не побочный notFound() внутри ListHeader (хрупко):
+  // приватный/черновой/снятый список не отдаёт blame по owner/slug.
+  const session = await getSession()
+  if (!canViewList(meta, { isOwner: meta.ownerId === session?.userId, isAdmin: isAdminHandle(session?.handle) })) notFound()
   const blame = await getListBlame(meta.id)
   if (!blame) notFound()
   const base = `/${owner}/${slug}`
