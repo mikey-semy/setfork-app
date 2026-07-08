@@ -198,20 +198,5 @@
     "boundaries/dependencies": {
       "count": 1
     }
-  },
-  "src/shared/ai/index-run.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/shared/jobs/handlers.ts": {
-    "boundaries/dependencies": {
-      "count": 8
-    }
-  },
-  "src/shared/jobs/worker.ts": {
-    "boundaries/dependencies": {
-      "count": 3
-    }
   }
 }

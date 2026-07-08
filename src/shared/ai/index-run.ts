@@ -3,11 +3,41 @@ import { inArray } from 'drizzle-orm'
 import { db, embeddings } from '@/shared/db'
 import { getSettings, saveSettings } from '@/shared/settings/kv'
 import { getAiSettings } from '@/shared/settings/ai'
-import { collectItems, purgeStaleEmbeddings } from '@/features/library/reindex'
 import { embedTexts } from './embeddings'
 
 // «Умная» переиндексация: батчами, разнесёнными по времени, с кулдауном.
 // Состояние персистентно (app_settings JSON, ключ index_run) — переживает рестарт.
+// Раннер универсален: ЧТО индексировать, решает источник, зарегистрированный
+// composition root'ом (instrumentation.ts) — shared не знает про фичи.
+
+/** Элемент индексации (структурно совпадает с Item из features/library/reindex). */
+export interface IndexItem {
+  kind: string
+  refId: string
+  content: string
+  metadata: Record<string, unknown>
+}
+
+export interface IndexSource {
+  /** Полный корпус для индексации (порядок элементов = сегменты прогресса). */
+  collectItems(): Promise<IndexItem[]>
+  /** Чистка эмбеддингов, чьих refId больше нет среди живых. */
+  purgeStaleEmbeddings(activeRefIds: Set<string>): Promise<unknown>
+}
+
+// Реестр на globalThis: в dev модуль может пере-инициализироваться (HMR),
+// а регистрация из instrumentation происходит один раз на процесс.
+const reg = globalThis as unknown as { __shIndexSource?: IndexSource }
+
+export function registerIndexSource(s: IndexSource): void {
+  reg.__shIndexSource = s
+}
+
+function indexSource(): IndexSource {
+  const s = reg.__shIndexSource
+  if (!s) throw new Error('index source не зарегистрирован (см. instrumentation.ts)')
+  return s
+}
 
 const STATE_KEY = 'index_run'
 const BATCH = 32
@@ -139,7 +169,7 @@ async function runLoop(spreadMs: number, startDone: number): Promise<void> {
   g.__shLoopActive = true
   try {
     const { embeddingModel } = await getAiSettings()
-    const items = await collectItems()
+    const items = await indexSource().collectItems()
     const total = items.length
     const segments = computeSegments(items)
     const nBatches = Math.max(1, Math.ceil(total / BATCH))
@@ -196,7 +226,7 @@ async function runLoop(spreadMs: number, startDone: number): Promise<void> {
     }
 
     try {
-      await purgeStaleEmbeddings(new Set(items.map((it) => it.refId)))
+      await indexSource().purgeStaleEmbeddings(new Set(items.map((it) => it.refId)))
     } catch (e) {
       console.warn('[reindex] purge failed:', e instanceof Error ? e.message : e)
     }
