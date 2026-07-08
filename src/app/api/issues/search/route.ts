@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 export async function GET(req: Request) {
   const session = await getSession()
   if (!session) return Response.json([])
-  const rl = rateLimit(`isearch:${session.userId}`, 60, 60_000)
+  const rl = await rateLimit(`isearch:${session.userId}`, 60, 60_000)
   if (!rl.ok) return tooMany(rl)
 
   const url = new URL(req.url)

@@ -48,7 +48,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ step: string; r
   // журнал пропускаем, но редиректим всегда — UX важнее строки статистики.
   const ip = clientIp(req)
   const ua = req.headers.get('user-agent')
-  if (!isBot(ua) && !isOwner && rateLimit(`go:${ip}`, 120, 60_000).ok) {
+  if (!isBot(ua) && !isOwner && (await rateLimit(`go:${ip}`, 120, 60_000)).ok) {
     await recordClick({
       templateId: row.templateId,
       stepId,

@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 
 export async function GET(req: Request) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anon'
-  const rl = rateLimit(`lsearch:ip:${ip}`, 60, 60_000)
+  const rl = await rateLimit(`lsearch:ip:${ip}`, 60, 60_000)
   if (!rl.ok) return tooMany(rl)
   const q = (new URL(req.url).searchParams.get('q') ?? '').trim()
   if (!q) return Response.json([])

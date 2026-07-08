@@ -53,7 +53,7 @@ async function authorizeWrite(req: Request, meta: Meta): Promise<string | 401> {
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
-  const rl = rateLimit(`git:${clientIp(req)}`, 240, 60_000)
+  const rl = await rateLimit(`git:${clientIp(req)}`, 240, 60_000)
   if (!rl.ok) return tooMany(rl)
   const { handle, slug: rawSlug, git } = await params
   if ((git ?? []).join('/') !== 'info/refs') return new Response('Not found', { status: 404 })
@@ -83,7 +83,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
-  const rl = rateLimit(`git:${clientIp(req)}`, 240, 60_000)
+  const rl = await rateLimit(`git:${clientIp(req)}`, 240, 60_000)
   if (!rl.ok) return tooMany(rl)
   const { handle, slug: rawSlug, git } = await params
   const path = (git ?? []).join('/')

@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   if (blocked) return blocked
   const session = await getSession()
   if (!session) return Response.json({ error: 'unauthorized' }, { status: 401 })
-  const rl = rateLimit(`upload:${session.userId}`, 40, 5 * 60_000) // 40 загрузок / 5 мин
+  const rl = await rateLimit(`upload:${session.userId}`, 40, 5 * 60_000) // 40 загрузок / 5 мин
   if (!rl.ok) return tooMany(rl)
 
   const form = await req.formData().catch(() => null)
