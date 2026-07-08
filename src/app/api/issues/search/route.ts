@@ -1,7 +1,8 @@
 import { and, desc, eq, ilike, sql } from 'drizzle-orm'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
-import { db, issues, templates, users } from '@/shared/db'
+import { db, issues } from '@/shared/db'
+import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { canViewList } from '@/core'
 import { rateLimit, tooMany } from '@/shared/rate-limit'
 
@@ -20,18 +21,7 @@ export async function GET(req: Request) {
   const slug = url.searchParams.get('slug') ?? ''
   const q = (url.searchParams.get('q') ?? '').trim()
 
-  const [tpl] = await db
-    .select({
-      id: templates.id,
-      ownerId: templates.ownerId,
-      visibility: templates.visibility,
-      status: templates.status,
-      moderation: templates.moderation,
-    })
-    .from(templates)
-    .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(and(eq(users.handle, owner), eq(templates.slug, slug)))
-    .limit(1)
+  const tpl = await resolveListBySlug(owner, slug)
   // Не отдаём issue приватного/скрытого списка тому, кто его не видит.
   if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === session.userId, isAdmin: isAdminHandle(session.handle) })) {
     return Response.json([])

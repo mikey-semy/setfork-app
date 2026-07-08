@@ -44,6 +44,35 @@ export interface ExportList {
   steps: ExportStep[]
 }
 
+type TemplateDetail = NonNullable<Awaited<ReturnType<typeof import('./queries').getTemplateDetail>>>
+
+/** Детали списка → ExportList. Единый маппинг для raw/export/embed-роутов
+ *  (был скопипащен в каждом; MCP пока держит свою копию — см. boundaries-todo). */
+export function toExportList(detail: TemplateDetail): ExportList {
+  const { tpl, currentVersion, steps } = detail
+  return {
+    title: tpl.title,
+    desc: tpl.desc,
+    tags: tpl.tags,
+    ordered: tpl.ordered,
+    version: currentVersion?.version ?? tpl.currentVersion,
+    ownerHandle: tpl.owner.handle,
+    slug: tpl.slug,
+    steps: steps.map((s) => ({
+      n: s.n,
+      type: s.type,
+      content: s.content,
+      title: s.title,
+      desc: s.desc,
+      command: s.command,
+      level: s.level,
+      why: s.why,
+      subtasks: s.subtasks,
+      refs: s.refs,
+    })),
+  }
+}
+
 /** Markdown-версия списка. */
 export function toMarkdown(list: ExportList, lang: Lang): string {
   const out: string[] = []

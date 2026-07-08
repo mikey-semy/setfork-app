@@ -4,7 +4,8 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
-import { AtSign, Bold, Code, Heading, Italic, Link2, List, ListChecks, ListOrdered, Quote, SmilePlus, Strikethrough } from 'lucide-react'
+import { AtSign, SmilePlus } from 'lucide-react'
+import { markdownToolbarGroups } from './markdown-toolbar'
 import emojiData from '@emoji-mart/data'
 import { caretCoords } from './caret-coords'
 
@@ -172,24 +173,7 @@ export function BubbleTextEditor({
     else if (k === 'k') { e.preventDefault(); surround('[', '](url)', L('текст', 'text')) }
   }
 
-  const groups: { icon: typeof Bold; t: string; run: () => void }[][] = [
-    [
-      { icon: Heading, t: L('заголовок', 'heading'), run: () => linePrefix(() => '### ') },
-      { icon: Bold, t: `${L('жирный', 'bold')} (Ctrl+B)`, run: () => surround('**', '**', L('текст', 'text')) },
-      { icon: Italic, t: `${L('курсив', 'italic')} (Ctrl+I)`, run: () => surround('_', '_', L('текст', 'text')) },
-      { icon: Strikethrough, t: L('зачёркнутый', 'strikethrough'), run: () => surround('~~', '~~', L('текст', 'text')) },
-    ],
-    [
-      { icon: Code, t: L('код', 'code'), run: () => surround('`', '`', 'code') },
-      { icon: Link2, t: `${L('ссылка', 'link')} (Ctrl+K)`, run: () => surround('[', '](url)', L('текст', 'text')) },
-      { icon: Quote, t: L('цитата', 'quote'), run: () => linePrefix(() => '> ') },
-    ],
-    [
-      { icon: List, t: L('список', 'bulleted list'), run: () => linePrefix(() => '- ') },
-      { icon: ListOrdered, t: L('нумерованный', 'numbered list'), run: () => linePrefix((i) => `${i + 1}. `) },
-      { icon: ListChecks, t: L('чек-лист', 'task list'), run: () => linePrefix(() => '- [ ] ') },
-    ],
-  ]
+  const groups = markdownToolbarGroups({ L, surround, linePrefix })
 
   return (
     <div className={`relative ${className ?? ''}`}>

@@ -3,7 +3,8 @@
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, issueAssignees, issues, templates, users } from '@/shared/db'
+import { db, issueAssignees, issues, users } from '@/shared/db'
+import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
@@ -13,22 +14,6 @@ import { getWatcherIds } from '@/features/watch/queries'
 import { collabStore, issueCommenterIds } from '@/features/collab-store/store'
 import { customId, isCustomKey, isLabelKey } from './labels'
 import { getListLabels } from './queries'
-
-async function resolveTemplate(owner: string, slug: string) {
-  const [row] = await db
-    .select({
-      id: templates.id,
-      ownerId: templates.ownerId,
-      visibility: templates.visibility,
-      status: templates.status,
-      moderation: templates.moderation,
-    })
-    .from(templates)
-    .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(and(eq(users.handle, owner), eq(templates.slug, slug)))
-    .limit(1)
-  return row ?? null
-}
 
 // Оставляем встроенные ключи + кастомные `c:<id>`, чьи id реально есть у списка.
 const cleanLabels = (raw: string[], validCustom: Set<string>) =>
@@ -45,7 +30,7 @@ export async function createIssue(formData: FormData): Promise<void> {
   const rawLabels = formData.getAll('labels').map(String)
   if (!title) redirect(`/${owner}/${slug}/issues/new?e=empty`)
 
-  const tpl = await resolveTemplate(owner, slug)
+  const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
   const isOwner = tpl.ownerId === session.userId
   if (tpl.visibility === 'private' && !isOwner) redirect(`/${owner}/${slug}`)
@@ -63,7 +48,7 @@ export async function createIssue(formData: FormData): Promise<void> {
 }
 
 async function loadIssue(owner: string, slug: string, number: number) {
-  const tpl = await resolveTemplate(owner, slug)
+  const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) return null
   const [iss] = await db
     .select({ id: issues.id, authorId: issues.authorId, status: issues.status })
