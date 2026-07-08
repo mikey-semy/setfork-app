@@ -1,0 +1,217 @@
+{
+  "src/features/admin/AchievementsAdmin.tsx": {
+    "boundaries/dependencies": {
+      "count": 3
+    }
+  },
+  "src/features/admin/achievement-actions.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/admin/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/admin/collection-actions.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/catalogs/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/collab-store/store.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/collections/queries.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/curation/store.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/discussions/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/follows/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/gardener/service.ts": {
+    "boundaries/dependencies": {
+      "count": 6
+    }
+  },
+  "src/features/generation/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 4
+    }
+  },
+  "src/features/generation/service.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/git/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/git/project.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/issues/MilestonePicker.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/issues/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 6
+    }
+  },
+  "src/features/issues/label-actions.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/library/ListHeader.tsx": {
+    "boundaries/dependencies": {
+      "count": 8
+    }
+  },
+  "src/features/library/QuizBlock.tsx": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/library/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 12
+    }
+  },
+  "src/features/library/cover-actions.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/library/list-store.remote.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/library/queries.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/mcp/tools.ts": {
+    "boundaries/dependencies": {
+      "count": 11
+    }
+  },
+  "src/features/milestones/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/polls/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/profile/PinsPicker.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/profile/queries.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/quizzes/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/reactions/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/releases/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/runs/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 3
+    }
+  },
+  "src/features/search/adapter.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/settings/EmailSection.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/settings/PasskeysSection.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/settings/TwoFactorSection.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/star-folders/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/watch/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/watch/queries.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/shared/ai/index-run.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/shared/jobs/handlers.ts": {
+    "boundaries/dependencies": {
+      "count": 8
+    }
+  },
+  "src/shared/jobs/worker.ts": {
+    "boundaries/dependencies": {
+      "count": 3
+    }
+  }
+}

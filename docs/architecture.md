@@ -84,3 +84,24 @@ core       ДОМЕН: сущности (pure types) + порты        │  �
 Замороженное намеренно (Rust это перепишет — не золотим TS): настоящие git-ветки/merge,
 git-LFS, распределённый лок push. TS-git остаётся «рабочим прототипом» (clone/pull/push
 уже проверены).
+
+## Границы слоёв (enforcement, 2026-07-08)
+
+Направление зависимостей форсируется линтом (`eslint-plugin-boundaries`,
+см. eslint.config.mjs):
+
+```
+app → widgets → features → { core, shared }
+```
+
+- фичи не импортируют друг друга (каждая видит только себя + core/shared);
+- `shared` не знает про фичи; `core` не знает ни про кого (правило выше);
+- 107 существующих нарушений (95 фича→фича, 12 shared→фичи) заморожены в
+  `eslint-suppressions.json` — это ratchet-baseline: НОВОЕ нарушение падает
+  ошибкой сразу, починил старое — запусти `npx eslint . --prune-suppressions`;
+- легитимные исключения сегодня в baseline: чокпоинт
+  `@/features/library/guard` (барьер видимости, см. правило
+  no-restricted-imports) — при декомпозиции library переедет в shared;
+- план разбора baseline: сначала 12 инверсий shared→features
+  (jobs/handlers, ai/index-run), затем декомпозиция god-slice
+  `features/library` (все 7 циклов замкнуты на него).
