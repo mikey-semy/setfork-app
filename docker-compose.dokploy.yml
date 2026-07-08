@@ -103,6 +103,33 @@ services:
       migrate: { condition: service_completed_successfully }
     networks: [dokploy-network]
 
+  # Бэкап Postgres → S3 (те же Selectel-креды, что у медиа). Единственный хост:
+  # потеря диска = потеря всего, поэтому бэкап ОБЯЗАН быть offsite (в объектном S3),
+  # а не в локальный том. Ежедневный pg_dump, ротация BACKUP_KEEP_DAYS.
+  # ⚠️ После первого деплоя ОБЯЗАТЕЛЬНО проверь: (1) в логах db-backup успешный дамп;
+  #    (2) объект появился в бакете; (3) сделай ТЕСТОВЫЙ restore на пустую БД.
+  #    Runbook: setfork-docs/internal/runbooks/backups.md
+  db-backup:
+    image: eeshugerman/postgres-backup-s3:16
+    restart: always
+    environment:
+      SCHEDULE: ${BACKUP_SCHEDULE:-@daily}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      S3_ENDPOINT: ${S3_ENDPOINT} # полный URL со схемой (как у медиа)
+      S3_REGION: ${S3_REGION}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${BACKUP_S3_BUCKET:-${S3_BUCKET}}
+      S3_PREFIX: ${BACKUP_S3_DB_PREFIX:-setfork/db}
+      POSTGRES_HOST: setfork-db
+      POSTGRES_DATABASE: ${POSTGRES_DB:-sethub}
+      POSTGRES_USER: ${POSTGRES_USER:-sethub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PASSPHRASE: ${BACKUP_PASSPHRASE:-} # если задан — дамп GPG-шифруется (restore требует его)
+    depends_on:
+      setfork-db: { condition: service_healthy }
+    networks: [dokploy-network]
+
 volumes:
   pgdata:
   stalwart:
