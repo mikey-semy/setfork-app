@@ -1,8 +1,5 @@
-import { getSession } from '@/shared/auth/session'
-import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { getTemplateDetail } from '@/features/library/queries'
-import { canViewList } from '@/features/library/access'
+import { requireViewableDetail } from '@/features/library/guard'
 import { dialectExt, dialectMime, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
 
 // GET /{handle}/{slug}/raw[?lang=sh|ps1|py] — список как исполняемый скрипт (gist-стиль).
@@ -12,13 +9,10 @@ export const runtime = 'nodejs'
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
-  const [lang, detail, viewer] = await Promise.all([getLang(), getTemplateDetail(handle, slug), getSession()])
+  const [lang, detail] = await Promise.all([getLang(), requireViewableDetail(handle, slug)])
   if (!detail) return new Response('# Not found\n', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
 
   const { tpl, currentVersion, steps } = detail
-  // Единый предикат приватности (тот же, что на странице списка/export).
-  if (!canViewList(tpl, { isOwner: viewer?.userId === tpl.ownerId, isAdmin: isAdminHandle(viewer?.handle) }))
-    return new Response('# Not found\n', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
 
   const u = new URL(req.url)
   const rawUrl = `${u.origin}${u.pathname}`
