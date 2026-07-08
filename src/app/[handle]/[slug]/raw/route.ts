@@ -1,6 +1,6 @@
 import { getLang } from '@/shared/i18n/server'
 import { requireViewableDetail } from '@/features/library/guard'
-import { dialectExt, dialectMime, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
+import { dialectExt, dialectMime, normalizeDialect, toRunnableScript, toExportList } from '@/features/library/export'
 
 // GET /{handle}/{slug}/raw[?lang=sh|ps1|py] — список как исполняемый скрипт (gist-стиль).
 //   curl -fsSL https://host/{owner}/{slug}/raw | bash
@@ -17,27 +17,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const u = new URL(req.url)
   const rawUrl = `${u.origin}${u.pathname}`
   const dialect = normalizeDialect(u.searchParams.get('lang'))
-  const list: ExportList = {
-    title: tpl.title,
-    desc: tpl.desc,
-    tags: tpl.tags,
-    ordered: tpl.ordered,
-    version: currentVersion?.version ?? tpl.currentVersion,
-    ownerHandle: tpl.owner.handle,
-    slug: tpl.slug,
-    steps: steps.map((s) => ({
-      n: s.n,
-      type: s.type,
-      content: s.content,
-      title: s.title,
-      desc: s.desc,
-      command: s.command,
-      level: s.level,
-      why: s.why,
-      subtasks: s.subtasks,
-      refs: s.refs,
-    })),
-  }
+  const list = toExportList(detail)
 
   return new Response(toRunnableScript(list, lang, rawUrl, dialect), {
     headers: {

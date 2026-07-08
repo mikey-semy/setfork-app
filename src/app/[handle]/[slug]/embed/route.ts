@@ -2,7 +2,7 @@ import { getLang } from '@/shared/i18n/server'
 // eslint-disable-next-line no-restricted-imports -- анонимный embed на внешние сайты: гейт isPubliclyVisible, не cookie-сессия
 import { getTemplateDetail } from '@/features/library/queries'
 import { isPubliclyVisible } from '@/core'
-import { embedHtml, type ExportList } from '@/features/library/export'
+import { embedHtml, toExportList } from '@/features/library/export'
 
 // GET /{handle}/{slug}/embed — самодостаточный HTML списка для вставки в <iframe>.
 // Только публичные опубликованные списки (embed идёт на внешние сайты).
@@ -17,27 +17,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const { tpl, currentVersion, steps } = detail
   if (!isPubliclyVisible(tpl)) return new Response('Not found', { status: 404 })
 
-  const list: ExportList = {
-    title: tpl.title,
-    desc: tpl.desc,
-    tags: tpl.tags,
-    ordered: tpl.ordered,
-    version: currentVersion?.version ?? tpl.currentVersion,
-    ownerHandle: tpl.owner.handle,
-    slug: tpl.slug,
-    steps: steps.map((s) => ({
-      n: s.n,
-      type: s.type,
-      content: s.content,
-      title: s.title,
-      desc: s.desc,
-      command: s.command,
-      level: s.level,
-      why: s.why,
-      subtasks: s.subtasks,
-      refs: s.refs,
-    })),
-  }
+  const list = toExportList(detail)
 
   const origin = new URL(req.url).origin
   const html = embedHtml(list, lang, `${origin}/${handle}/${slug}`)

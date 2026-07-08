@@ -3,27 +3,12 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, discussionComments, discussions, templates, users } from '@/shared/db'
+import { db, discussionComments, discussions } from '@/shared/db'
+import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
 import { ensureWatch } from '@/features/watch/actions'
 import { isCategory } from './constants'
-
-async function resolveTemplate(owner: string, slug: string) {
-  const [row] = await db
-    .select({
-      id: templates.id,
-      ownerId: templates.ownerId,
-      visibility: templates.visibility,
-      status: templates.status,
-      moderation: templates.moderation,
-    })
-    .from(templates)
-    .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(and(eq(users.handle, owner), eq(templates.slug, slug)))
-    .limit(1)
-  return row ?? null
-}
 
 /** Открыть тред. Любой залогиненный, кто видит список. */
 export async function createDiscussion(formData: FormData): Promise<void> {
@@ -36,7 +21,7 @@ export async function createDiscussion(formData: FormData): Promise<void> {
   const category = isCategory(catRaw) ? catRaw : 'general'
   if (!title) redirect(`/${owner}/${slug}/discussions/new?e=empty`)
 
-  const tpl = await resolveTemplate(owner, slug)
+  const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
   if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
 
@@ -67,7 +52,7 @@ export async function addDiscussionComment(formData: FormData): Promise<void> {
   const body = String(formData.get('body') ?? '').trim().slice(0, 20000)
   if (!body) redirect(`/${owner}/${slug}/discussions/${number}`)
 
-  const tpl = await resolveTemplate(owner, slug)
+  const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
   if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
 
