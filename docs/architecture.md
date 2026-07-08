@@ -99,8 +99,9 @@ app → widgets → features → { core, shared }
 - ratchet-baseline в `eslint-suppressions.json` (сейчас 70 нарушений; стартовало
   со 107): НОВОЕ нарушение падает ошибкой сразу, починил старое — запусти
   `npx eslint . --prune-suppressions`;
-- `features/mcp` — delivery-слой (внешний API продукта, зеркало app/): ему,
-  как и app, можно оркестрировать фичи (элемент mcp в eslint-границах);
+- `features/mcp` и `features/admin` — delivery-слои (внешний API и
+  админ-консоль над продуктом, зеркала app/): им, как и app, можно
+  оркестрировать фичи (элементы mcp/admin в eslint-границах);
 - composition root — `src/instrumentation.ts` (вне слоёв): единственное место
   связывания shared ↔ features (реестры джоб, источник индексации);
 - чистые доменные модули живут в `core/domain` (entities, access — предикат

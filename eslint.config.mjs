@@ -48,10 +48,11 @@ export default [
       'boundaries/elements': [
         { type: 'core', pattern: 'src/core' },
         { type: 'shared', pattern: 'src/shared' },
-        // mcp — delivery-поверхность (внешний API продукта, зеркало app/),
-        // а не фича: ему, как и app, можно оркестрировать фичи. Идёт ДО
-        // features/* — первый матч по пути выигрывает.
+        // mcp и admin — delivery-поверхности (внешний API и админ-консоль над
+        // всем продуктом, зеркала app/), а не фичи: им, как и app, можно
+        // оркестрировать фичи. Идут ДО features/* — первый матч выигрывает.
         { type: 'mcp', pattern: 'src/features/mcp' },
+        { type: 'admin', pattern: 'src/features/admin' },
         { type: 'features', pattern: 'src/features/*', capture: ['feature'] },
         { type: 'widgets', pattern: 'src/widgets' },
         { type: 'app', pattern: 'src/app' },
@@ -73,9 +74,10 @@ export default [
             { from: { type: 'features' }, allow: { to: [{ type: 'shared' }, { type: 'core' }] } },
             { from: { type: 'widgets' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
             { from: { type: 'mcp' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
+            { from: { type: 'admin' }, allow: { to: [{ type: 'features' }, { type: 'shared' }, { type: 'core' }] } },
             {
               from: { type: 'app' },
-              allow: { to: [{ type: 'mcp' }, { type: 'widgets' }, { type: 'features' }, { type: 'shared' }, { type: 'core' }] },
+              allow: { to: [{ type: 'mcp' }, { type: 'admin' }, { type: 'widgets' }, { type: 'features' }, { type: 'shared' }, { type: 'core' }] },
             },
           ],
         },
