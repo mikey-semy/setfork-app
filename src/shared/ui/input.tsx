@@ -12,17 +12,14 @@ const SIZES: Record<InputSize, string> = {
   md: 'px-2.5 py-2 text-[13.5px]',
 }
 
-export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+// React 19: ref — обычный проп (ComponentProps его включает), forwardRef не нужен.
+export interface InputProps extends Omit<React.ComponentProps<'input'>, 'size'> {
   size?: InputSize
 }
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(
-  { size = 'md', className, ...props },
-  ref,
-) {
+export function Input({ size = 'md', className, ...props }: InputProps) {
   return (
     <input
-      ref={ref}
       className={cn(
         'w-full rounded-md border border-border bg-surface-2 text-ink outline-none placeholder:text-muted focus:border-border-strong disabled:opacity-50',
         SIZES[size],
@@ -31,4 +28,4 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
       {...props}
     />
   )
-})
+}

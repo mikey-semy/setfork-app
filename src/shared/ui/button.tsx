@@ -25,18 +25,15 @@ const SIZES: Record<ButtonSize, string> = {
   md: 'px-3.5 py-2 text-[13px] gap-1.5',
 }
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+// React 19: ref — обычный проп (ComponentProps его включает), forwardRef не нужен.
+export interface ButtonProps extends React.ComponentProps<'button'> {
   variant?: ButtonVariant
   size?: ButtonSize
 }
 
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'outline', size = 'sm', className, type = 'button', ...props },
-  ref,
-) {
+export function Button({ variant = 'outline', size = 'sm', className, type = 'button', ...props }: ButtonProps) {
   return (
     <button
-      ref={ref}
       type={type}
       className={cn(
         'inline-flex items-center justify-center rounded-md font-semibold outline-none transition-colors focus-visible:ring-1 focus-visible:ring-border-strong disabled:pointer-events-none disabled:opacity-50',
@@ -47,4 +44,4 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
       {...props}
     />
   )
-})
+}
