@@ -1,0 +1,10 @@
+# Конфиг gitleaks (см. .github/workflows/audit.yml, job secrets).
+# Дефолтные правила + аллоулист заведомо НЕ секретов.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "CI-плейсхолдеры (AUTH_SECRET в workflow'ах) — фиксированные фейковые значения, не реальные секреты"
+regexes = [
+  '''ci-placeholder-secret-at-least-32-characters(-long)?''',
+]
