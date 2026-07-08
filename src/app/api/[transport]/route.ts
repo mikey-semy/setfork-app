@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto'
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js'
 import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { z } from 'zod'
 import { verifyApiToken } from '@/shared/auth/api-token'
+import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 import { mcpCheckStep, mcpCreateList, mcpGetList, mcpGetRun, mcpGetScript, mcpSearch, mcpStartRun, mcpUpdateList } from '@/features/mcp/tools'
 
 const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
@@ -231,4 +233,20 @@ const verifyToken = async (_req: Request, bearer?: string): Promise<AuthInfo | u
 
 const authHandler = withMcpAuth(handler, verifyToken, { required: true })
 
-export { authHandler as GET, authHandler as POST }
+// HTTP-рейтлимит перед авторизацией/диспатчем: у git-роута такой есть, у MCP не было —
+// один токен = один клиент, ключ по SHA-256 токена (сам токен в памяти не держим),
+// иначе по IP. Кап на минуту (SETFORK_MCP_RATE_PER_MIN, дефолт 120 — щедро для агента,
+// но режет абуз). In-memory, как остальные лимитеры (мульти-инстанс → Redis).
+const MCP_RATE_PER_MIN = Number(process.env.SETFORK_MCP_RATE_PER_MIN ?? 120)
+
+async function rateLimited(req: Request): Promise<Response> {
+  const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim() ?? ''
+  const key = bearer
+    ? `mcp:tok:${createHash('sha256').update(bearer).digest('hex').slice(0, 16)}`
+    : `mcp:ip:${clientIp(req)}`
+  const r = rateLimit(key, MCP_RATE_PER_MIN, 60_000)
+  if (!r.ok) return tooMany(r)
+  return authHandler(req)
+}
+
+export { rateLimited as GET, rateLimited as POST }
