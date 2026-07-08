@@ -7,15 +7,41 @@ import { mcpCheckStep, mcpCreateList, mcpGetList, mcpGetRun, mcpGetScript, mcpSe
 const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
 
-// Токен несёт scope (read | read+write). Мутирующие инструменты требуют write —
-// иначе read-токен мог писать (scope был декоративным: хендлеры проверяли только userId).
-const userIdOf = (extra: { authInfo?: AuthInfo }) => extra.authInfo?.extra?.userId as string | undefined
-const canWrite = (extra: { authInfo?: AuthInfo }) => (extra.authInfo?.scopes ?? []).includes('write')
+type Extra = { authInfo?: AuthInfo }
+const userIdOf = (extra: Extra) => extra.authInfo?.extra?.userId as string | undefined
+const canWrite = (extra: Extra) => (extra.authInfo?.scopes ?? []).includes('write')
 const READONLY = 'This token is read-only. Use an API token with write scope for this action.'
 
 const handler = createMcpHandler(
   (server) => {
-    server.registerTool(
+    // Регистрация с ВШИТОЙ авторизацией. Токен несёт scope (read | read+write).
+    // readTool требует только userId; writeTool — userId + write-scope. Скоуп — часть
+    // СПОСОБА регистрации: новый мутирующий инструмент нельзя завести без проверки (раньше
+    // проверка была отдельной строкой в каждом хендлере — её легко забыть, и read-токен писал).
+    type ToolFn = (userId: string, args: any, extra: Extra) => Promise<ReturnType<typeof json> | ReturnType<typeof err>>
+    // registerTool перегружен (с/без inputSchema) — оборачиваем через приведённую сигнатуру,
+    // чтобы навесить проверку scope единообразно. Зод-схема валидирует args в рантайме.
+    const register = server.registerTool.bind(server) as unknown as (
+      name: string,
+      config: unknown,
+      cb: (args: any, extra: Extra) => unknown,
+    ) => void
+    const readTool = (name: string, config: unknown, fn: ToolFn) =>
+      register(name, config, async (args, extra) => {
+        const userId = userIdOf(extra)
+        if (!userId) return err('Unauthorized')
+        return fn(userId, args, extra)
+      })
+    const writeTool = (name: string, config: unknown, fn: ToolFn) =>
+      register(name, config, async (args, extra) => {
+        const userId = userIdOf(extra)
+        if (!userId) return err('Unauthorized')
+        if (!canWrite(extra)) return err(READONLY)
+        return fn(userId, args, extra)
+      })
+
+    // ── READ-инструменты (только userId) ─────────────────────────────
+    readTool(
       'search_lists',
       {
         title: 'Search checklists',
@@ -25,14 +51,10 @@ const handler = createMcpHandler(
           limit: z.number().int().min(1).max(50).optional().describe('Max results (default 10)'),
         },
       },
-      async ({ query, limit }, extra) => {
-        const userId = extra.authInfo?.extra?.userId as string | undefined
-        if (!userId) return err('Unauthorized')
-        return json(await mcpSearch(userId, query, limit ?? 10))
-      },
+      async (userId, { query, limit }) => json(await mcpSearch(userId, query, limit ?? 10)),
     )
 
-    server.registerTool(
+    readTool(
       'get_list',
       {
         title: 'Get a checklist',
@@ -43,15 +65,13 @@ const handler = createMcpHandler(
           slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
         },
       },
-      async ({ handle, slug }, extra) => {
-        const userId = extra.authInfo?.extra?.userId as string | undefined
-        if (!userId) return err('Unauthorized')
+      async (userId, { handle, slug }) => {
         const list = await mcpGetList(userId, handle, slug)
         return list ? json(list) : err('List not found or not accessible')
       },
     )
 
-    server.registerTool(
+    readTool(
       'get_script',
       {
         title: 'Get a runnable script',
@@ -63,11 +83,22 @@ const handler = createMcpHandler(
           dialect: z.enum(['sh', 'ps1', 'py']).optional().describe('Script dialect (default "sh")'),
         },
       },
-      async ({ handle, slug, dialect }, extra) => {
-        const userId = extra.authInfo?.extra?.userId as string | undefined
-        if (!userId) return err('Unauthorized')
+      async (userId, { handle, slug, dialect }) => {
         const r = await mcpGetScript(userId, handle, slug, dialect)
         return r ? json(r) : err('List not found or not accessible')
+      },
+    )
+
+    readTool(
+      'get_run',
+      {
+        title: 'Get run progress',
+        description: 'Fetch a run by its id: steps with done/not-done and overall progress.',
+        inputSchema: { runId: z.string().describe('The run id from start_run') },
+      },
+      async (userId, { runId }) => {
+        const res = await mcpGetRun(userId, runId)
+        return 'error' in res ? err(res.error as string) : json(res)
       },
     )
 
@@ -109,7 +140,8 @@ const handler = createMcpHandler(
       blanks: z.array(z.array(z.string())).optional().describe('quiz(blank): accepted answers per blank, in order'),
     })
 
-    server.registerTool(
+    // ── WRITE-инструменты (userId + write-scope, вшито в writeTool) ────
+    writeTool(
       'create_list',
       {
         title: 'Create a checklist',
@@ -123,16 +155,13 @@ const handler = createMcpHandler(
           items: z.array(itemShape).min(1).describe('The blocks (steps and optionally text/image/poll/video/quiz)'),
         },
       },
-      async (args, extra) => {
-        const userId = userIdOf(extra)
-        if (!userId) return err('Unauthorized')
-        if (!canWrite(extra)) return err(READONLY)
+      async (userId, args) => {
         const res = await mcpCreateList(userId, args)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )
 
-    server.registerTool(
+    writeTool(
       'update_list',
       {
         title: 'Update a checklist',
@@ -146,16 +175,13 @@ const handler = createMcpHandler(
           ordered: z.boolean().optional(),
         },
       },
-      async ({ handle, slug, ...rest }, extra) => {
-        const userId = userIdOf(extra)
-        if (!userId) return err('Unauthorized')
-        if (!canWrite(extra)) return err(READONLY)
+      async (userId, { handle, slug, ...rest }) => {
         const res = await mcpUpdateList(userId, handle, slug, rest)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )
 
-    server.registerTool(
+    writeTool(
       'start_run',
       {
         title: 'Start a run',
@@ -165,31 +191,13 @@ const handler = createMcpHandler(
           slug: z.string().describe('List slug'),
         },
       },
-      async ({ handle, slug }, extra) => {
-        const userId = userIdOf(extra)
-        if (!userId) return err('Unauthorized')
-        if (!canWrite(extra)) return err(READONLY)
+      async (userId, { handle, slug }) => {
         const res = await mcpStartRun(userId, handle, slug)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )
 
-    server.registerTool(
-      'get_run',
-      {
-        title: 'Get run progress',
-        description: 'Fetch a run by its id: steps with done/not-done and overall progress.',
-        inputSchema: { runId: z.string().describe('The run id from start_run') },
-      },
-      async ({ runId }, extra) => {
-        const userId = extra.authInfo?.extra?.userId as string | undefined
-        if (!userId) return err('Unauthorized')
-        const res = await mcpGetRun(userId, runId)
-        return 'error' in res ? err(res.error as string) : json(res)
-      },
-    )
-
-    server.registerTool(
+    writeTool(
       'check_step',
       {
         title: 'Check off a run step',
@@ -203,10 +211,7 @@ const handler = createMcpHandler(
           reason: z.string().optional().describe('Why it failed (used with blocked)'),
         },
       },
-      async ({ runId, step, done, blocked, reason }, extra) => {
-        const userId = userIdOf(extra)
-        if (!userId) return err('Unauthorized')
-        if (!canWrite(extra)) return err(READONLY)
+      async (userId, { runId, step, done, blocked, reason }) => {
         const res = await mcpCheckStep(userId, runId, step, { done, blocked, reason })
         return 'error' in res ? err(res.error as string) : json(res)
       },
