@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, eq, gte, sql } from 'drizzle-orm'
-import { db, runs, stars, templates, templateVersions, watches } from '@/shared/db'
+import { db, linkClicks, runs, stars, templates, templateVersions, templateViews, watches } from '@/shared/db'
 
 // Insights списка: недельные серии и итоги. Серии считаем на фиксированной
 // сетке последних N недель (date_trunc('week')) — пустые недели заполняем нулями.
@@ -13,6 +13,8 @@ export interface WeeklySeries {
   forks: number[]
   runs: number[]
   versions: number[]
+  views: number[] // уникальные дневные просмотры (см. template_views)
+  clicks: number[] // клики по внешним ссылкам (/api/go)
 }
 
 export interface InsightTotals {
@@ -23,6 +25,8 @@ export interface InsightTotals {
   versions: number
   uniqueRunners: number
   runsDone: number
+  views: number
+  clicks: number
 }
 
 function weekGrid(n: number): string[] {
@@ -51,7 +55,7 @@ export async function getWeeklySeries(templateId: string): Promise<WeeklySeries>
   const grid = weekGrid(WEEKS)
   const since = new Date(grid[0] + 'T00:00:00Z')
 
-  const [starRows, forkRows, runRows, versionRows] = await Promise.all([
+  const [starRows, forkRows, runRows, versionRows, viewRows, clickRows] = await Promise.all([
     db
       .select({ week: weekExpr(stars.createdAt), c: sql<number>`count(*)::int` })
       .from(stars)
@@ -72,6 +76,16 @@ export async function getWeeklySeries(templateId: string): Promise<WeeklySeries>
       .from(templateVersions)
       .where(and(eq(templateVersions.templateId, templateId), gte(templateVersions.createdAt, since)))
       .groupBy(sql`1`),
+    db
+      .select({ week: weekExpr(templateViews.createdAt), c: sql<number>`count(*)::int` })
+      .from(templateViews)
+      .where(and(eq(templateViews.templateId, templateId), gte(templateViews.createdAt, since)))
+      .groupBy(sql`1`),
+    db
+      .select({ week: weekExpr(linkClicks.createdAt), c: sql<number>`count(*)::int` })
+      .from(linkClicks)
+      .where(and(eq(linkClicks.templateId, templateId), gte(linkClicks.createdAt, since)))
+      .groupBy(sql`1`),
   ])
 
   return {
@@ -80,11 +94,13 @@ export async function getWeeklySeries(templateId: string): Promise<WeeklySeries>
     forks: toGrid(grid, forkRows),
     runs: toGrid(grid, runRows),
     versions: toGrid(grid, versionRows),
+    views: toGrid(grid, viewRows),
+    clicks: toGrid(grid, clickRows),
   }
 }
 
 export async function getInsightTotals(templateId: string): Promise<InsightTotals> {
-  const [[star], [fork], [run], [watch], [ver]] = await Promise.all([
+  const [[star], [fork], [run], [watch], [ver], [view], [click]] = await Promise.all([
     db.select({ c: sql<number>`count(*)::int` }).from(stars).where(eq(stars.templateId, templateId)),
     db.select({ c: sql<number>`count(*)::int` }).from(templates).where(eq(templates.forkedFromId, templateId)),
     db
@@ -97,6 +113,8 @@ export async function getInsightTotals(templateId: string): Promise<InsightTotal
       .where(eq(runs.templateId, templateId)),
     db.select({ c: sql<number>`count(*)::int` }).from(watches).where(eq(watches.templateId, templateId)),
     db.select({ c: sql<number>`count(*)::int` }).from(templateVersions).where(eq(templateVersions.templateId, templateId)),
+    db.select({ c: sql<number>`count(*)::int` }).from(templateViews).where(eq(templateViews.templateId, templateId)),
+    db.select({ c: sql<number>`count(*)::int` }).from(linkClicks).where(eq(linkClicks.templateId, templateId)),
   ])
   return {
     stars: star?.c ?? 0,
@@ -106,5 +124,7 @@ export async function getInsightTotals(templateId: string): Promise<InsightTotal
     runsDone: run?.d ?? 0,
     watchers: watch?.c ?? 0,
     versions: ver?.c ?? 0,
+    views: view?.c ?? 0,
+    clicks: click?.c ?? 0,
   }
 }

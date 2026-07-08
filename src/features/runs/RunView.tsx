@@ -24,7 +24,8 @@ export interface RunStepVM {
   level: StepLevel
   why: string
   subtasks: string[]
-  refs: { label: string; url?: string }[]
+  // href — трекинговый /api/go/<stepId>/<i> (журнал кликов); url — прямая ссылка.
+  refs: { label: string; url?: string; href?: string }[]
   done: boolean
   blocked: boolean
   reason: string
@@ -261,7 +262,8 @@ export function RunView({
                       r.url ? (
                         <SafeLink
                           key={idx}
-                          href={r.url}
+                          href={r.href ?? r.url}
+                          rel="nofollow noreferrer"
                           className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent"
                         >
                           {r.label}
