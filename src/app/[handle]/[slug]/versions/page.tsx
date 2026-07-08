@@ -3,10 +3,7 @@ import { notFound } from 'next/navigation'
 import { GitCompare, Tag } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { getListMeta } from '@/features/library/queries'
-import { canViewList } from '@/features/library/access'
-import { getSession } from '@/shared/auth/session'
-import { isAdminHandle } from '@/shared/auth/admin'
+import { requireViewableMeta } from '@/features/library/guard'
 import { listStore } from '@/features/library/list-store'
 import { ListHeader } from '@/features/library/ListHeader'
 
@@ -17,10 +14,8 @@ export default async function VersionsPage({
 }) {
   const { handle: owner, slug } = await params
   const lang = await getLang()
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  const session = await getSession()
-  if (!canViewList(meta, { isOwner: meta.ownerId === session?.userId, isAdmin: isAdminHandle(session?.handle) })) notFound()
   const versions = await listStore.listVersions(meta.id)
 
   return (

@@ -5,10 +5,8 @@ import { getLang } from '@/shared/i18n/server'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/badge'
 import { TrendChart } from '@/shared/ui/TrendChart'
-import { getContributors, getListMeta } from '@/features/library/queries'
-import { canViewList } from '@/features/library/access'
-import { getSession } from '@/shared/auth/session'
-import { isAdminHandle } from '@/shared/auth/admin'
+import { getContributors } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/features/library/ListHeader'
 import { headers } from 'next/headers'
 import { getInsightTotals, getWeeklySeries, WEEKS } from '@/features/insights/queries'
@@ -25,10 +23,8 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
   const { handle: owner, slug } = await params
   const lang = await getLang()
   const ru = lang === 'ru'
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  const session = await getSession()
-  if (!canViewList(meta, { isOwner: meta.ownerId === session?.userId, isAdmin: isAdminHandle(session?.handle) })) notFound()
   const h = await headers()
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
