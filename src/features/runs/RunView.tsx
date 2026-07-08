@@ -9,6 +9,7 @@ import type { StepLevel } from '@/shared/db'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
+import { SafeLink } from '@/shared/ui/SafeLink'
 import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 
 export interface RunStepVM {
@@ -258,15 +259,13 @@ export function RunView({
                   <div className="mt-3 flex flex-wrap gap-2">
                     {s.refs.map((r, idx) =>
                       r.url ? (
-                        <a
+                        <SafeLink
                           key={idx}
                           href={r.url}
-                          target="_blank"
-                          rel="noreferrer"
                           className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent"
                         >
                           {r.label}
-                        </a>
+                        </SafeLink>
                       ) : (
                         <span key={idx} className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-ink-2">
                           {r.label}

@@ -29,6 +29,7 @@ import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
 import { pollDeadlineMs } from '@/features/library/blocks'
 import { canViewList } from '@/features/library/access'
+import { SafeLink } from '@/shared/ui/SafeLink'
 import { ListHeader } from '@/features/library/ListHeader'
 import { publishList } from '@/features/library/actions'
 
@@ -372,10 +373,10 @@ export default async function ListPage({
                     const url = typeof s.content?.url === 'string' ? s.content.url : ''
                     const name = typeof s.content?.name === 'string' ? s.content.name : ''
                     el = url ? (
-                      <a href={url} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-2 break-inside-avoid rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-accent hover:border-border-strong">
+                      <SafeLink href={url} className="inline-flex max-w-full items-center gap-2 break-inside-avoid rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-accent hover:border-border-strong">
                         <Paperclip size={15} className="shrink-0 text-muted" />
                         <span className="min-w-0 truncate">{name || url}</span>
-                      </a>
+                      </SafeLink>
                     ) : null
                   } else if (s.type === 'poll') {
                     const c = (s.content ?? {}) as unknown as PollContent & { bid?: string }
@@ -487,9 +488,9 @@ export default async function ListPage({
                               const cls =
                                 'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent'
                               return r.url ? (
-                                <a key={i} href={r.url} target="_blank" rel="noreferrer" className={cls}>
+                                <SafeLink key={i} href={r.url} className={cls}>
                                   <ExternalLink size={11} /> {r.label}
-                                </a>
+                                </SafeLink>
                               ) : (
                                 <span key={i} className={cls}>
                                   <ExternalLink size={11} /> {r.label}
