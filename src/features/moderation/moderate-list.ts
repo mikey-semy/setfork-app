@@ -18,6 +18,17 @@ import {
 
 const flat = (x: LocaleText | null | undefined) => (x ? Object.values(x).filter(Boolean).join(' / ') : '')
 
+/** Все строковые листья произвольного JSON: md text-блока, вопрос/варианты/explain
+ *  квиза, question/options поллинга, caption/url видео, элементы subtasks и т.п.
+ *  Нужно, чтобы контент rich-блоков (steps.content) попадал в модерацию, а не только
+ *  title/desc/command шага — иначе опасное how-to прячется в markdown-блоке мимо гейта. */
+function contentStrings(v: unknown): string[] {
+  if (typeof v === 'string') return [v]
+  if (Array.isArray(v)) return v.flatMap(contentStrings)
+  if (v && typeof v === 'object') return Object.values(v).flatMap(contentStrings)
+  return []
+}
+
 // Кап LLM-проверок на автора в сутки: защита от расхода OpenRouter циклом
 // publish/save (git push пропускает до 240 запросов/мин — без капа это деньги).
 const MODERATE_DAILY_CAP = 20
@@ -43,15 +54,17 @@ async function loadListSignals(templateId: string): Promise<LoadedList | null> {
     .orderBy(desc(templateVersions.version))
     .limit(1)
   const stepRows = ver ? await db.select().from(steps).where(eq(steps.versionId, ver.id)).orderBy(asc(steps.n)) : []
-  const refUrls = stepRows.flatMap((s) =>
-    Array.isArray(s.refs) ? (s.refs as { url?: string }[]).map((r) => r?.url).filter(Boolean) : [],
-  )
-  const text = [
-    flat(tpl.title),
-    flat(tpl.desc),
-    ...(refUrls as string[]),
-    ...stepRows.map((s, i) => `${i + 1}. ${flat(s.title)} — ${flat(s.desc)} ${s.command}`),
-  ]
+  const refs = stepRows.flatMap((s) => (Array.isArray(s.refs) ? (s.refs as { url?: string; label?: LocaleText }[]) : []))
+  const refUrls = refs.map((r) => r?.url).filter(Boolean) as string[]
+  const refLabels = refs.map((r) => flat(r?.label)).filter(Boolean)
+  // Полный текст шага для модерации: заголовок/описание/команда + why/section/subtasks
+  // + ВСЕ строки контент-блока (steps.content). Так классификатор видит и rich-блоки.
+  const stepBody = (s: (typeof stepRows)[number], i: number) =>
+    `${i + 1}. ` +
+    [flat(s.title), flat(s.desc), s.command, ...contentStrings(s.why), ...contentStrings(s.section), ...contentStrings(s.subtasks), ...contentStrings(s.content)]
+      .filter(Boolean)
+      .join(' ')
+  const text = [flat(tpl.title), flat(tpl.desc), ...refUrls, ...refLabels, ...stepRows.map(stepBody)]
     .filter(Boolean)
     .join('\n')
   return {

@@ -7,6 +7,12 @@ import { mcpCheckStep, mcpCreateList, mcpGetList, mcpGetRun, mcpGetScript, mcpSe
 const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
 
+// Токен несёт scope (read | read+write). Мутирующие инструменты требуют write —
+// иначе read-токен мог писать (scope был декоративным: хендлеры проверяли только userId).
+const userIdOf = (extra: { authInfo?: AuthInfo }) => extra.authInfo?.extra?.userId as string | undefined
+const canWrite = (extra: { authInfo?: AuthInfo }) => (extra.authInfo?.scopes ?? []).includes('write')
+const READONLY = 'This token is read-only. Use an API token with write scope for this action.'
+
 const handler = createMcpHandler(
   (server) => {
     server.registerTool(
@@ -118,8 +124,9 @@ const handler = createMcpHandler(
         },
       },
       async (args, extra) => {
-        const userId = extra.authInfo?.extra?.userId as string | undefined
+        const userId = userIdOf(extra)
         if (!userId) return err('Unauthorized')
+        if (!canWrite(extra)) return err(READONLY)
         const res = await mcpCreateList(userId, args)
         return 'error' in res ? err(res.error as string) : json(res)
       },
@@ -140,8 +147,9 @@ const handler = createMcpHandler(
         },
       },
       async ({ handle, slug, ...rest }, extra) => {
-        const userId = extra.authInfo?.extra?.userId as string | undefined
+        const userId = userIdOf(extra)
         if (!userId) return err('Unauthorized')
+        if (!canWrite(extra)) return err(READONLY)
         const res = await mcpUpdateList(userId, handle, slug, rest)
         return 'error' in res ? err(res.error as string) : json(res)
       },
@@ -158,8 +166,9 @@ const handler = createMcpHandler(
         },
       },
       async ({ handle, slug }, extra) => {
-        const userId = extra.authInfo?.extra?.userId as string | undefined
+        const userId = userIdOf(extra)
         if (!userId) return err('Unauthorized')
+        if (!canWrite(extra)) return err(READONLY)
         const res = await mcpStartRun(userId, handle, slug)
         return 'error' in res ? err(res.error as string) : json(res)
       },
@@ -195,8 +204,9 @@ const handler = createMcpHandler(
         },
       },
       async ({ runId, step, done, blocked, reason }, extra) => {
-        const userId = extra.authInfo?.extra?.userId as string | undefined
+        const userId = userIdOf(extra)
         if (!userId) return err('Unauthorized')
+        if (!canWrite(extra)) return err(READONLY)
         const res = await mcpCheckStep(userId, runId, step, { done, blocked, reason })
         return 'error' in res ? err(res.error as string) : json(res)
       },
