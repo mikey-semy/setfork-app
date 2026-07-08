@@ -417,6 +417,9 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
     with: { template: true },
   })
   if (!sug) return
+  // Комментарий к правке — запись в тред списка: только если список видим комментатору
+  // (список мог стать приватным/скрытым после публикации PR; reactions уже так гейтят).
+  if (!canViewList(sug.template, { isOwner: sug.template.ownerId === session.userId })) return
   const handle = await ownerHandle(sug.template.ownerId)
   const path = `/${handle}/${sug.template.slug}/suggestions/${sug.id}`
   if (!body) redirect(path)

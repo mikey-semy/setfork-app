@@ -2,8 +2,9 @@
 
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { db, starFolders, starFolderItems } from '@/shared/db'
+import { db, starFolders, starFolderItems, templates } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { canViewList } from '@/features/library/access'
 
 /** Создать папку для звёзд. Уникальна по (user, name). */
 export async function createStarFolder(name: string): Promise<{ id: string } | { error: string }> {
@@ -47,7 +48,18 @@ export async function toggleListInFolder(folderId: string, templateId: string): 
     .from(starFolderItems)
     .where(and(eq(starFolderItems.folderId, folderId), eq(starFolderItems.templateId, templateId)))
     .limit(1)
-  if (existing) await db.delete(starFolderItems).where(eq(starFolderItems.id, existing.id))
-  else await db.insert(starFolderItems).values({ folderId, templateId })
+  if (existing) {
+    await db.delete(starFolderItems).where(eq(starFolderItems.id, existing.id)) // убрать можно всегда
+  } else {
+    // Добавить можно только видимый список — нельзя класть в папку чужой приватный/скрытый
+    // (иначе оракул существования по рендеру папки).
+    const [tpl] = await db
+      .select({ ownerId: templates.ownerId, visibility: templates.visibility, status: templates.status, moderation: templates.moderation })
+      .from(templates)
+      .where(eq(templates.id, templateId))
+      .limit(1)
+    if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === s.userId })) return
+    await db.insert(starFolderItems).values({ folderId, templateId })
+  }
   revalidatePath('/', 'layout')
 }
