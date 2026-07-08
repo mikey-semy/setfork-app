@@ -60,3 +60,23 @@ export async function register() {
     .then((m) => m.ensureModerationFingerprints())
     .catch((e) => captureError(e, { where: 'moderation.fingerprints' }))
 }
+
+// Глобальный перехват НЕ пойманных серверных ошибок (server actions, route handlers,
+// RSC-рендер) — идиоматичный хук Next. ЕДИНСТВЕННАЯ точка, где все такие ошибки уходят
+// в captureError (структурный лог + Sentry). Раньше сбой экшена был виден только если
+// всплывал в error-boundary; фоновые/мутационные ошибки терялись.
+export async function onRequestError(
+  error: unknown,
+  request: { path?: string; method?: string },
+  context: { routerKind?: string; routePath?: string; routeType?: string; renderSource?: string },
+): Promise<void> {
+  const { captureError } = await import('@/shared/observability')
+  captureError(error, {
+    where: 'request',
+    path: request?.path,
+    method: request?.method,
+    routePath: context?.routePath,
+    routeType: context?.routeType,
+    renderSource: context?.renderSource,
+  })
+}
