@@ -3,6 +3,7 @@
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
 import { blankCount, isBlockType, newBlockId, newOptionId, type BlockType, type QuizKind } from './blocks'
+import { safeHref } from '@/shared/lib/safe-url'
 
 const QUIZ_KINDS: QuizKind[] = ['choice', 'text', 'number', 'blank', 'match', 'sort', 'code']
 const asQuizKind = (v: unknown): QuizKind => (QUIZ_KINDS.includes(v as QuizKind) ? (v as QuizKind) : 'choice')
@@ -91,10 +92,11 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
         return { ...base, section: sec, type: 'image', hasImage: !!it.imageKey, content: { ref: it.imageKey || '', ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
       }
       if (it.type === 'video') {
-        return { ...base, section: sec, type: 'video', content: { url: it.videoUrl.trim(), ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
+        // Санитизируем схему на записи (второй рубеж к SafeLink на рендере): javascript:/data: → ''.
+        return { ...base, section: sec, type: 'video', content: { url: safeHref(it.videoUrl), ...(it.caption.trim() ? { caption: it.caption.trim() } : {}), bid: it.bid || newBlockId() } }
       }
       if (it.type === 'file') {
-        return { ...base, section: sec, type: 'file', content: { url: it.fileUrl.trim(), name: it.fileName.trim(), bid: it.bid || newBlockId() } }
+        return { ...base, section: sec, type: 'file', content: { url: safeHref(it.fileUrl), name: it.fileName.trim(), bid: it.bid || newBlockId() } }
       }
       if (it.type === 'poll') {
         const options = it.poll.options
