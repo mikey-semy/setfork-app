@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, discussionComments, discussions, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
-import { canViewList } from '@/features/library/access'
+import { canViewList } from '@/core'
 import { ensureWatch } from '@/features/watch/actions'
 import { isCategory } from './constants'
 

@@ -9,7 +9,7 @@ import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { getVersions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
-import { ListHeader } from '@/features/library/ListHeader'
+import { ListHeader } from '@/widgets/ListHeader'
 import { createRelease } from '@/features/releases/actions'
 import { VersionSelect } from '@/features/releases/VersionSelect'
 

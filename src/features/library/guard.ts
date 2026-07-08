@@ -1,7 +1,7 @@
 import 'server-only'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
-import { canViewList } from './access'
+import { canViewList } from '@/core'
 import { getListMeta, getTemplateDetail } from './queries'
 
 // «Безопасно по умолчанию» для ЧТЕНИЯ списка: загрузка + проверка видимости атомарно.

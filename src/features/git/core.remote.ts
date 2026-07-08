@@ -3,7 +3,7 @@ import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
 import type { GitCore, GitRepoRef } from '@/core'
 import { BranchOpError } from '@/core'
-import { GitCore as GitCoreService, type RepoRef } from './gen/git_pb'
+import { GitCore as GitCoreService, type RepoRef } from '@/shared/gen/git_pb'
 
 // Remote-реализация GitCore: Connect-ES → Rust git-core по gRPC (h2c, plaintext).
 // Включается из core.ts по SETFORK_CORE_URL; адрес — SETFORK_CORE_ADDR.

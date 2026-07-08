@@ -14,7 +14,7 @@ import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { aiQuota, listQuota } from '@/shared/quota'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
-import { enqueueReindex } from '@/features/search/adapter'
+import { enqueueReindex } from './jobs'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
@@ -24,7 +24,7 @@ import { gateListPublication, recheckList } from '@/features/moderation/moderate
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
-import { canViewList } from './access'
+import { canViewList } from '@/core'
 
 /** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
 function toStepInput(items: ProposedItem[]) {

@@ -11,7 +11,7 @@ import { Badge } from '@/shared/ui/badge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
-import { ListHeader } from '@/features/library/ListHeader'
+import { ListHeader } from '@/widgets/ListHeader'
 import { getReleases } from '@/features/releases/queries'
 import { deleteRelease } from '@/features/releases/actions'
 

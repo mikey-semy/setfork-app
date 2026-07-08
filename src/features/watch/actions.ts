@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
-import { canViewList } from '@/features/library/access'
+import { canViewList } from '@/core'
 import { curationStore } from '@/features/curation/store'
 
 /** Тихо подписать пользователя на список (идемпотентно). Для авто-watch. */

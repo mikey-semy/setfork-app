@@ -24,24 +24,14 @@
       "count": 1
     }
   },
-  "src/features/collab-store/store.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/features/collections/queries.ts": {
     "boundaries/dependencies": {
       "count": 2
     }
   },
-  "src/features/curation/store.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/features/discussions/actions.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/features/follows/actions.ts": {
@@ -81,7 +71,7 @@
   },
   "src/features/issues/actions.ts": {
     "boundaries/dependencies": {
-      "count": 6
+      "count": 5
     }
   },
   "src/features/issues/label-actions.ts": {
@@ -89,27 +79,12 @@
       "count": 1
     }
   },
-  "src/features/library/ListHeader.tsx": {
-    "boundaries/dependencies": {
-      "count": 8
-    }
-  },
-  "src/features/library/QuizBlock.tsx": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
   "src/features/library/actions.ts": {
     "boundaries/dependencies": {
-      "count": 12
+      "count": 11
     }
   },
   "src/features/library/cover-actions.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/features/library/list-store.remote.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
@@ -121,7 +96,7 @@
   },
   "src/features/mcp/tools.ts": {
     "boundaries/dependencies": {
-      "count": 11
+      "count": 10
     }
   },
   "src/features/milestones/actions.ts": {
@@ -131,7 +106,7 @@
   },
   "src/features/polls/actions.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/features/profile/PinsPicker.tsx": {
@@ -144,16 +119,6 @@
       "count": 1
     }
   },
-  "src/features/quizzes/actions.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/features/reactions/actions.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/features/releases/actions.ts": {
     "boundaries/dependencies": {
       "count": 2
@@ -161,7 +126,7 @@
   },
   "src/features/runs/actions.ts": {
     "boundaries/dependencies": {
-      "count": 3
+      "count": 2
     }
   },
   "src/features/search/adapter.ts": {
@@ -184,14 +149,9 @@
       "count": 1
     }
   },
-  "src/features/star-folders/actions.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/features/watch/actions.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 1
     }
   },
   "src/features/watch/queries.ts": {

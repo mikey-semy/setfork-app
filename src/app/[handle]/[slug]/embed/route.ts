@@ -1,7 +1,7 @@
 import { getLang } from '@/shared/i18n/server'
 // eslint-disable-next-line no-restricted-imports -- анонимный embed на внешние сайты: гейт isPubliclyVisible, не cookie-сессия
 import { getTemplateDetail } from '@/features/library/queries'
-import { isPubliclyVisible } from '@/features/library/access'
+import { isPubliclyVisible } from '@/core'
 import { embedHtml, type ExportList } from '@/features/library/export'
 
 // GET /{handle}/{slug}/embed — самодостаточный HTML списка для вставки в <iframe>.

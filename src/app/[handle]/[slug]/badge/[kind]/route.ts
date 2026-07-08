@@ -1,6 +1,6 @@
 // eslint-disable-next-line no-restricted-imports -- анонимный ассет: гейт isPubliclyVisible (строже canViewList), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
-import { isPubliclyVisible } from '@/features/library/access'
+import { isPubliclyVisible } from '@/core'
 import { badgeFor, isBadgeKind } from '@/features/badges/svg'
 
 // GET /{handle}/{slug}/badge/{stars|forks|runs|version}.svg — SVG-шилд для README.

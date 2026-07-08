@@ -4,7 +4,7 @@ import { db, runs, runStepState, steps, templates, users, type ProposedItem } fr
 import { tr } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
-import { canViewList } from '@/features/library/access'
+import { canViewList } from '@/core'
 import { listQuota } from '@/shared/quota'
 import { dialectExt, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
@@ -351,7 +351,7 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
     const { recheckList } = await import('@/features/moderation/moderate-list')
     await recheckList(tpl.id)
   }
-  const { enqueueReindex } = await import('@/features/search/adapter')
+  const { enqueueReindex } = await import('@/features/library/jobs')
   await enqueueReindex(tpl.id)
   return { ref: `${handle}/${slug}`, status: 'published', version: ver.version }
 }

@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, starFolders, starFolderItems, templates } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
-import { canViewList } from '@/features/library/access'
+import { canViewList } from '@/core'
 
 /** Создать папку для звёзд. Уникальна по (user, name). */
 export async function createStarFolder(name: string): Promise<{ id: string } | { error: string }> {

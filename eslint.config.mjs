@@ -5,7 +5,7 @@ import boundaries from 'eslint-plugin-boundaries'
 // Экспериментальные react-compiler-правила Next 16 приглушены до warn: они агрессивно
 // флагают валидные паттерны (guard-эффекты, запись cookie); чистка под них — отдельная задача.
 export default [
-  { ignores: ['.next/**', 'node_modules/**', 'src/features/git/gen/**', 'drizzle/**', 'public/**'] },
+  { ignores: ['.next/**', 'node_modules/**', 'src/shared/gen/**', 'drizzle/**', 'public/**'] },
   ...next,
   {
     rules: {

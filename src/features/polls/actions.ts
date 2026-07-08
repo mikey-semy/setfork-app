@@ -4,7 +4,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, pollVotes, steps, templates, templateVersions, users } from '@/shared/db'
 import { getSession, requireSession } from '@/shared/auth/session'
-import { canViewList } from '@/features/library/access'
+import { canViewList } from '@/core'
 import { pollDeadlineMs } from '@/features/library/blocks'
 import { getPollHistory, type PollHistoryEvent } from './queries'
 

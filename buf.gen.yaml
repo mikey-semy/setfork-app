@@ -6,7 +6,7 @@ inputs:
   - directory: proto
 plugins:
   - local: protoc-gen-es
-    out: src/features/git/gen
+    out: src/shared/gen
     opt:
       - target=ts
       - import_extension=none

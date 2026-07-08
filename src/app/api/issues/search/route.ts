@@ -2,7 +2,7 @@ import { and, desc, eq, ilike, sql } from 'drizzle-orm'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { db, issues, templates, users } from '@/shared/db'
-import { canViewList } from '@/features/library/access'
+import { canViewList } from '@/core'
 import { rateLimit, tooMany } from '@/shared/rate-limit'
 
 // Поиск issue репо для #-reference в редакторе. Только залогиненным.

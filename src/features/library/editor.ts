@@ -2,7 +2,8 @@
 // (текущий UI-язык), контент сохраняется как locale-JSON под этот код.
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
-import { blankCount, isBlockType, newBlockId, newOptionId, type BlockType, type QuizKind } from './blocks'
+import { blankCount, type QuizKind } from '@/core'
+import { isBlockType, newBlockId, newOptionId, type BlockType } from './blocks'
 import { safeHref } from '@/shared/lib/safe-url'
 
 const QUIZ_KINDS: QuizKind[] = ['choice', 'text', 'number', 'blank', 'match', 'sort', 'code']

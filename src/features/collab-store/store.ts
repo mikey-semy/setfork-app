@@ -2,7 +2,7 @@ import 'server-only'
 import { createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
 import type { CollabStore, Issue, IssueComment, Suggestion, SuggestionComment } from '@/core'
-import { CollabWrite, type NewStep as PbStep } from '@/features/git/gen/domain_read_pb'
+import { CollabWrite, type NewStep as PbStep } from '@/shared/gen/domain_read_pb'
 import { collabStore as drizzleStore } from './adapter'
 
 // Фасад порта CollabStore — точка катовера WRITE-мутаций issues/suggestions/

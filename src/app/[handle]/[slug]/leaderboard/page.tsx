@@ -5,7 +5,7 @@ import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/features/library/ListHeader'
+import { ListHeader } from '@/widgets/ListHeader'
 import { getCourseLeaderboard } from '@/features/quizzes/queries'
 
 export default async function LeaderboardPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {

@@ -9,7 +9,7 @@ import {
   type LocaleText as PbLoc,
   type Step as PbStep,
   type Version as PbVersion,
-} from '@/features/git/gen/domain_read_pb'
+} from '@/shared/gen/domain_read_pb'
 
 // Remote READ-часть порта ListStore: Connect-ES → Rust ListRead (тот же сервер,
 // что git-ядро; включается тем же флагом SETFORK_CORE_URL/ADDR). Маппинг proto→домен

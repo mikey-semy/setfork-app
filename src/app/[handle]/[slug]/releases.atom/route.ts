@@ -2,7 +2,7 @@
 import { getListMeta } from '@/features/library/queries'
 import { getReleases } from '@/features/releases/queries'
 import { escapeHtml as esc } from '@/shared/lib/escape'
-import { isPubliclyVisible } from '@/features/library/access'
+import { isPubliclyVisible } from '@/core'
 
 // GET /{handle}/{slug}/releases.atom — Atom-фид релизов (как у GitHub).
 // Только для публичных списков: фид анонимный, приватное не отдаём.

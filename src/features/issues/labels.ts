@@ -1,4 +1,6 @@
 import type { Lang } from '@/shared/i18n'
+import { isHexColor } from '@/shared/lib/color'
+export { isHexColor }
 
 // Фиксированная палитра меток (как стандартные labels на GitHub).
 export const ISSUE_LABELS = [
@@ -39,10 +41,6 @@ export const customKey = (id: string): string => CUSTOM_PREFIX + id
 export const isCustomKey = (k: string): boolean => k.startsWith(CUSTOM_PREFIX)
 export const customId = (k: string): string => k.slice(CUSTOM_PREFIX.length)
 
-/** #RRGGBB (регистр любой). Пустое/битое отбрасываем на валидации. */
-export function isHexColor(s: string): boolean {
-  return /^#[0-9a-fA-F]{6}$/.test(s)
-}
 
 export interface ChipColors {
   backgroundColor: string
