@@ -1,24 +1,4 @@
 {
-  "src/features/admin/AchievementsAdmin.tsx": {
-    "boundaries/dependencies": {
-      "count": 3
-    }
-  },
-  "src/features/admin/achievement-actions.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
-  "src/features/admin/actions.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/features/admin/collection-actions.ts": {
-    "boundaries/dependencies": {
-      "count": 2
-    }
-  },
   "src/features/catalogs/actions.ts": {
     "boundaries/dependencies": {
       "count": 1
