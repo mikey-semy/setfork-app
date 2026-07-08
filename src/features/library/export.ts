@@ -2,6 +2,7 @@
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
+import { escapeHtml as esc } from '@/shared/lib/escape'
 
 export interface ExportStep {
   n: number
@@ -41,17 +42,6 @@ export interface ExportList {
   ownerHandle: string
   slug: string
   steps: ExportStep[]
-}
-
-function esc(s: string): string {
-  // Экранируем и кавычки: значения попадают в т.ч. в атрибуты (href="…") — без этого
-  // возможен attribute-breakout (r.url = 'x" onmouseover="…').
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }
 
 /** Markdown-версия списка. */

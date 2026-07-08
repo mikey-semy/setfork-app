@@ -1,12 +1,9 @@
 import { getListMeta } from '@/features/library/queries'
 import { getReleases } from '@/features/releases/queries'
+import { escapeHtml as esc } from '@/shared/lib/escape'
 
 // GET /{handle}/{slug}/releases.atom — Atom-фид релизов (как у GitHub).
 // Только для публичных списков: фид анонимный, приватное не отдаём.
-
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params

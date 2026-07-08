@@ -3,8 +3,8 @@ import { t, type Lang } from '@/shared/i18n'
 import { sendMail } from '@/shared/email/mailer'
 import { resolveNotificationDisplay } from './display'
 import type { NotificationType } from './queries'
+import { escapeHtml as esc } from '@/shared/lib/escape'
 
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
 /** Собирает и шлёт письмо по одному уведомлению на языке получателя. true = отправлено. */
 export async function sendNotificationEmail(p: {
