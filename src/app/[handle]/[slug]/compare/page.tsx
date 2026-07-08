@@ -2,16 +2,14 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { Code2, List } from 'lucide-react'
-import { getSession } from '@/shared/auth/session'
-import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { ListHeader } from '@/features/library/ListHeader'
 import { VersionPicker } from '@/features/library/VersionPicker'
-import { getListMeta, getVersions, getVersionSteps } from '@/features/library/queries'
-import { canViewList } from '@/features/library/access'
+import { getVersions, getVersionSteps } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { safeHref } from '@/shared/lib/safe-url'
 import { diffSteps, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from '@/features/library/diff'
 
@@ -58,12 +56,9 @@ export default async function ComparePage({
   params: Promise<{ handle: string; slug: string }>
   searchParams: Promise<{ from?: string; to?: string; view?: string }>
 }) {
-  const [{ handle: owner, slug }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
-  const meta = await getListMeta(owner, slug)
+  const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  const isOwner = viewer?.userId === meta.ownerId
-  const isAdmin = isAdminHandle(viewer?.handle)
-  if (!canViewList(meta, { isOwner, isAdmin })) notFound()
 
   const view = sp.view === 'list' ? 'list' : 'code'
   const versions = await getVersions(meta.id)

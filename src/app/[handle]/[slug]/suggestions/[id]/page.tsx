@@ -8,13 +8,12 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
-import { getListMeta, getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
+import { getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr } from '@/features/library/actions'
 import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
-import { canViewList } from '@/features/library/access'
-import { isAdminHandle } from '@/shared/auth/admin'
 import { gitCore } from '@/features/git/core'
 import { ListHeader } from '@/features/library/ListHeader'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
@@ -33,10 +32,8 @@ export default async function SuggestionThreadPage({
 }) {
   const [{ handle: owner, slug, id }, sp] = await Promise.all([params, searchParams])
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  // Приватный/draft/скрытый список — PR виден только владельцу/админу.
-  if (!canViewList(meta, { isOwner: session?.userId === meta.ownerId, isAdmin: isAdminHandle(session?.handle) })) notFound()
   const sug = await getSuggestion(meta.id, id)
   if (!sug) notFound()
   const [comments, base] = await Promise.all([getSuggestionComments(sug.id), getVersionSteps(meta.id, sug.baseVersion)])
