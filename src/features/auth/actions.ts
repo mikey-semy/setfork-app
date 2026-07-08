@@ -50,7 +50,7 @@ export async function registerWithPassword(_prev: AuthResult | null, formData: F
   }
 
   // Письмо-подтверждение — best-effort, регистрацию не блокирует.
-  const { sendVerificationEmail } = await import('./email-flows')
+  const { sendVerificationEmail } = await import('./token-helpers')
   void sendVerificationEmail(created.id).catch(() => {})
 
   await beginSession(created)

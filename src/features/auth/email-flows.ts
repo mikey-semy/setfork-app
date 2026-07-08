@@ -3,7 +3,6 @@
 import { eq } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { SignJWT, jwtVerify } from 'jose'
 import { db, sessions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { hashPassword } from '@/shared/auth/password'
@@ -12,47 +11,13 @@ import { rateLimit } from '@/shared/rate-limit'
 import { sendMail } from '@/shared/email/mailer'
 import { recordAudit } from '@/shared/audit'
 import { getLang } from '@/shared/i18n/server'
+import { button, readToken, sendVerificationEmail, signToken } from './token-helpers'
 
 // Верификация почты и сброс пароля. Токены — подписанные JWT в ссылке
 // (БД-токены не нужны): verify 24ч; reset 1ч + хвост password_hash в
 // клейме — после смены пароля старые reset-ссылки умирают сами.
-
-function secretKey(): Uint8Array {
-  const s = process.env.AUTH_SECRET
-  if (!s) throw new Error('AUTH_SECRET is not set')
-  return new TextEncoder().encode(s)
-}
-
-async function signToken(payload: Record<string, string>, ttl: string): Promise<string> {
-  return new SignJWT(payload).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime(ttl).sign(secretKey())
-}
-
-async function readToken(token: string): Promise<Record<string, string> | null> {
-  try {
-    const { payload } = await jwtVerify(token, secretKey())
-    return payload as Record<string, string>
-  } catch {
-    return null
-  }
-}
-
-const button = (href: string, label: string) =>
-  `<p style="margin:20px 0"><a href="${href}" style="background:#1c1c1a;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">${label}</a></p><p style="color:#6b6b66;font-size:13px">${href}</p>`
-
-// ── Верификация почты ────────────────────────────────────────────────
-export async function sendVerificationEmail(userId: string): Promise<boolean> {
-  const [u] = await db.select({ email: users.email, handle: users.handle, verified: users.emailVerifiedAt }).from(users).where(eq(users.id, userId)).limit(1)
-  if (!u?.email || u.verified) return false
-  const lang = await getLang()
-  const ru = lang === 'ru'
-  const token = await signToken({ uid: userId, email: u.email, purpose: 'verify-email' }, '24h')
-  const link = `${appOrigin()}/verify-email?token=${encodeURIComponent(token)}`
-  return sendMail({
-    to: u.email,
-    subject: ru ? 'Подтверди почту — SetFork' : 'Verify your email — SetFork',
-    html: `<p>${ru ? `Привет, ${u.handle}! Подтверди адрес почты для аккаунта SetFork.` : `Hi ${u.handle}! Please verify the email address for your SetFork account.`}</p>${button(link, ru ? 'Подтвердить почту' : 'Verify email')}<p style="color:#6b6b66;font-size:13px">${ru ? 'Ссылка действует 24 часа. Если это не ты — просто проигнорируй письмо.' : 'The link is valid for 24 hours. If this wasn’t you, just ignore this email.'}</p>`,
-  })
-}
+// ВНИМАНИЕ: это 'use server'-модуль — каждый export здесь публичный endpoint.
+// Не-endpoint хелперы (JWT, отправка верификации) живут в ./token-helpers.
 
 export async function resendVerification(): Promise<{ sent: boolean }> {
   const session = await requireSession()
