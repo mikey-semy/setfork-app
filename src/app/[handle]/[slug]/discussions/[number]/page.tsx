@@ -7,7 +7,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import { getListMeta } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getDiscussion, getDiscussionComments } from '@/features/discussions/queries'
 import { addDiscussionComment } from '@/features/discussions/actions'
@@ -18,7 +18,7 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
   const number = Number(numStr)
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const ru = lang === 'ru'
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   const disc = number > 0 ? await getDiscussion(meta.id, number) : null
   if (!disc) notFound()

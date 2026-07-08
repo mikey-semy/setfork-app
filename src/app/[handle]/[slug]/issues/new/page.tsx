@@ -3,7 +3,7 @@ import { CircleDot } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { getListMeta } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/features/library/ListHeader'
 import { NewIssueForm } from '@/features/issues/NewIssueForm'
 import { getListLabels } from '@/features/issues/queries'
@@ -12,7 +12,7 @@ export default async function NewIssuePage({ params }: { params: Promise<{ handl
   const { handle: owner, slug } = await params
   const [lang, session] = await Promise.all([getLang(), getSession()])
   if (!session) redirect(`/login?next=/${owner}/${slug}/issues/new`)
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   const custom = await getListLabels(meta.id)
 

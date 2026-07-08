@@ -9,7 +9,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Badge } from '@/shared/ui/badge'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import { getListMeta } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getReleases } from '@/features/releases/queries'
@@ -19,7 +19,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
   const { handle: owner, slug } = await params
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const ru = lang === 'ru'
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   const rels = await getReleases(meta.id)
   const canManage = !!session && (session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId)))
