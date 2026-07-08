@@ -5,7 +5,7 @@
 Починил файл → `npx eslint . --prune-suppressions` уберёт его из baseline; обнови и этот файл.
 Разбирать не обязательно подряд: boy-scout-правилом (трогаешь файл — почисти) либо пластами.
 
-## Файлы (32, нарушений всего: 70)
+## Файлы (31, нарушений всего: 60)
 
 - [ ] `src/features/admin/AchievementsAdmin.tsx` — 3 шт. → profile×3
 - [ ] `src/features/admin/achievement-actions.ts` — 2 шт. → profile×2
@@ -26,7 +26,6 @@
 - [ ] `src/features/library/actions.ts` — 11 шт. → collab×1, collab-store×1, curation×1, git×4, moderation×1, notifications×1, watch×2
 - [ ] `src/features/library/cover-actions.ts` — 1 шт. → collab×1
 - [ ] `src/features/library/queries.ts` — 1 шт. → curation×1
-- [ ] `src/features/mcp/tools.ts` — 10 шт. → library×8, moderation×1, quizzes×1
 - [ ] `src/features/milestones/actions.ts` — 1 шт. → collab×1
 - [ ] `src/features/polls/actions.ts` — 1 шт. → library×1
 - [ ] `src/features/profile/PinsPicker.tsx` — 1 шт. → library×1

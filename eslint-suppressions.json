@@ -94,11 +94,6 @@
       "count": 1
     }
   },
-  "src/features/mcp/tools.ts": {
-    "boundaries/dependencies": {
-      "count": 10
-    }
-  },
   "src/features/milestones/actions.ts": {
     "boundaries/dependencies": {
       "count": 1
