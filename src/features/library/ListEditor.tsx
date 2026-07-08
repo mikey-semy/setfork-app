@@ -31,7 +31,8 @@ import { DatePicker } from '@/shared/ui/DatePicker'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorQuiz } from './editor'
-import { blankCount, BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType, type QuizKind } from './blocks'
+import { blankCount, type QuizKind } from '@/core'
+import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType } from './blocks'
 import { fetchLinkTitleAction, refineList, uploadStepFile, uploadStepImage, uploadStepVideo } from './actions'
 
 const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap, file: Paperclip }

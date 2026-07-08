@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { requireSession } from '@/shared/auth/session'
 import { db, issueComments, issues, reactions, suggestionComments, suggestions, templates } from '@/shared/db'
-import { canViewList } from '@/features/library/access'
+import { canViewList } from '@/core'
 import { MAX_EMOJI_LEN, REACTION_TARGETS, type ReactionTarget } from './constants'
 
 // Доступ к списку-владельцу цели (issue/comment/suggestion → его template).

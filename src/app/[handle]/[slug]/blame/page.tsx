@@ -5,7 +5,7 @@ import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/features/library/ListHeader'
+import { ListHeader } from '@/widgets/ListHeader'
 import { getListBlame } from '@/features/library/blame'
 
 // «Blame» по шагам: видно, что давно не трогали, а что свежее. Автор версий

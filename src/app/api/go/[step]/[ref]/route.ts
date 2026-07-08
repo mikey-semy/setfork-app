@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { db, steps, templates, templateVersions } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
-import { canViewList } from '@/features/library/access'
+import { canViewList } from '@/core'
 import { isBot, recordClick, visitorKey } from '@/features/analytics/service'
 import { clientIp, rateLimit } from '@/shared/rate-limit'
 

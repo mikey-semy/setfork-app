@@ -3,10 +3,10 @@
 import { useState, useTransition } from 'react'
 import { Check, ChevronDown, ChevronUp, GraduationCap, Loader2, RotateCcw, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
-import { submitQuiz } from '@/features/quizzes/actions'
-import type { QuizState } from '@/features/quizzes/queries'
+import { submitQuiz } from './actions'
+import type { QuizState } from './queries'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, matchRights, shuffleSort, quizKind, type QuizBlockContent } from './blocks'
+import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, matchRights, shuffleSort, quizKind, type QuizBlockContent } from '@/core'
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).

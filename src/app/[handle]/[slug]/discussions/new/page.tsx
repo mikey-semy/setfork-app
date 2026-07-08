@@ -6,7 +6,7 @@ import { Input } from '@/shared/ui/input'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/features/library/ListHeader'
+import { ListHeader } from '@/widgets/ListHeader'
 import { createDiscussion } from '@/features/discussions/actions'
 import { DISCUSSION_CATEGORIES } from '@/features/discussions/constants'
 

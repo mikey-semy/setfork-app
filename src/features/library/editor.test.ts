@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { emptyBlock, emptyItem, parseEditorItems, toEditorItems, toProposedItems, type EditorItem } from './editor'
-import { gradeBlank, gradeMatch, gradeNumber, gradeText, parseVideoEmbed, stripQuizAnswers } from './blocks'
+import { gradeBlank, gradeMatch, gradeNumber, gradeText, stripQuizAnswers } from '@/core'
+import { parseVideoEmbed } from './blocks'
 
 const step = (over: Partial<EditorItem> = {}): EditorItem => ({ ...emptyItem(), ...over })
 

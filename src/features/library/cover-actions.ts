@@ -7,7 +7,7 @@ import { requireSession } from '@/shared/auth/session'
 import { isCollaborator } from '@/features/collab/queries'
 import { imageUrl } from '@/shared/media'
 import { removeImageFile, uploadImageFile } from '@/shared/media/upload'
-import { isHexColor } from '@/features/issues/labels'
+import { isHexColor } from '@/shared/lib/color'
 
 // Обложка списка (list-level, не версионируется — вне git-проекции). Владелец
 // или коллаборатор. Обложка/акцент используются на витрине и авто-баннере.

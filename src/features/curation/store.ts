@@ -2,7 +2,7 @@ import 'server-only'
 import { createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
 import type { CurationStore } from '@/core'
-import { CurationRead, CurationWrite } from '@/features/git/gen/domain_read_pb'
+import { CurationRead, CurationWrite } from '@/shared/gen/domain_read_pb'
 import { curationStore as drizzleStore } from './adapter'
 
 // Фасад порта CurationStore — точка катовера на Rust (как library/list-store.ts).

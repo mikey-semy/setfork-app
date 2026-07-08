@@ -6,7 +6,7 @@ import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { getSuggestions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/features/library/ListHeader'
+import { ListHeader } from '@/widgets/ListHeader'
 import type { ProposedItem } from '@/shared/db'
 
 export default async function SuggestionsPage({

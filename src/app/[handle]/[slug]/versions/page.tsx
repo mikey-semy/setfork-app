@@ -5,7 +5,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
 import { listStore } from '@/features/library/list-store'
-import { ListHeader } from '@/features/library/ListHeader'
+import { ListHeader } from '@/widgets/ListHeader'
 
 export default async function VersionsPage({
   params,

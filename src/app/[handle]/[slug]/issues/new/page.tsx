@@ -4,7 +4,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/features/library/ListHeader'
+import { ListHeader } from '@/widgets/ListHeader'
 import { NewIssueForm } from '@/features/issues/NewIssueForm'
 import { getListLabels } from '@/features/issues/queries'
 
