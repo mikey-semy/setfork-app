@@ -16,8 +16,7 @@ import { getReleases } from '@/features/releases/queries'
 import { deleteRelease } from '@/features/releases/actions'
 
 export default async function ReleasesPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle: owner, slug } = await params
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()

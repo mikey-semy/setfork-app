@@ -17,8 +17,7 @@ export default async function EditPage({
 }: {
   params: Promise<{ handle: string; slug: string }>
 }) {
-  const { handle: owner, slug } = await params
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   if (!session) redirect('/login')
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()

@@ -13,8 +13,7 @@ import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
 
 export default async function ListSettingsPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle: owner, slug } = await params
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const meta = await getListMeta(owner, slug)
   if (!meta) notFound()
   if (!session || session.userId !== meta.ownerId) notFound() // только владелец

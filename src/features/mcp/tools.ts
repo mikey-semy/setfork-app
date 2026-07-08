@@ -343,16 +343,18 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
 async function mcpRunState(userId: string, runId: string) {
   const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
   if (!run || run.userId !== userId) return { error: 'run not found' }
-  const [meta] = await db
-    .select({ slug: templates.slug, ownerHandle: users.handle })
-    .from(templates)
-    .innerJoin(users, eq(users.id, templates.ownerId))
-    .where(eq(templates.id, run.templateId))
-    .limit(1)
   // Только шаг-блоки, перенумерованные 1..K (индекс среди шагов) — это и есть N
-  // для check_step. text/image в прогон не входят.
-  const stepRows = await db.select({ id: steps.id, title: steps.title }).from(steps).where(and(eq(steps.versionId, run.versionId), eq(steps.type, 'step'))).orderBy(steps.n)
-  const states = await db.select({ stepId: runStepState.stepId, status: runStepState.status, note: runStepState.note }).from(runStepState).where(eq(runStepState.runId, runId))
+  // для check_step. text/image в прогон не входят. Три независимых чтения — параллельно.
+  const [[meta], stepRows, states] = await Promise.all([
+    db
+      .select({ slug: templates.slug, ownerHandle: users.handle })
+      .from(templates)
+      .innerJoin(users, eq(users.id, templates.ownerId))
+      .where(eq(templates.id, run.templateId))
+      .limit(1),
+    db.select({ id: steps.id, title: steps.title }).from(steps).where(and(eq(steps.versionId, run.versionId), eq(steps.type, 'step'))).orderBy(steps.n),
+    db.select({ stepId: runStepState.stepId, status: runStepState.status, note: runStepState.note }).from(runStepState).where(eq(runStepState.runId, runId)),
+  ])
   const byStep = new Map(states.map((s) => [s.stepId, s]))
   const stepsOut = stepRows.map((s, i) => {
     const st = byStep.get(s.id)

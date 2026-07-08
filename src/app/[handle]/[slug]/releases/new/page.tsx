@@ -26,8 +26,7 @@ export default async function NewReleasePage({
   params: Promise<{ handle: string; slug: string }>
   searchParams: Promise<{ e?: string }>
 }) {
-  const [{ handle: owner, slug }, sp] = await Promise.all([params, searchParams])
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()

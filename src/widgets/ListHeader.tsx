@@ -24,10 +24,9 @@ type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'discussions' | 
 
 /** Общая шапка страницы списка (= «репозиторий»): back, owner/name, действия, вкладки. */
 export async function ListHeader({ owner, slug, active }: { owner: string; slug: string; active: Tab }) {
-  const [lang, session] = await Promise.all([getLang(), getSession()])
   // Шапка = defense-in-depth: страницы уже гейтят через requireViewable*, но и здесь
   // не рендерим чужой приватный/черновик/снятый модерацией — через тот же чокпоинт (canViewList).
-  const meta = await requireViewableMeta(owner, slug)
+  const [lang, session, meta] = await Promise.all([getLang(), getSession(), requireViewableMeta(owner, slug)])
   if (!meta) notFound()
   const isOwner = session?.userId === meta.ownerId
   const canWrite = isOwner || (session ? await isCollaborator(meta.id, session.userId) : false)

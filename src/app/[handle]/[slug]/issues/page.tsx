@@ -24,9 +24,7 @@ export default async function IssuesPage({
   params: Promise<{ handle: string; slug: string }>
   searchParams: Promise<{ status?: string; q?: string; label?: string; milestone?: string; sort?: string }>
 }) {
-  const { handle: owner, slug } = await params
-  const sp = await searchParams
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
 

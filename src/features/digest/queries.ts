@@ -39,8 +39,10 @@ export function digestSize(d: Digest): number {
 
 /** Собрать дайджест пользователя с момента since. Пустой = письмо не шлём. */
 export async function buildDigest(userId: string, since: Date): Promise<Digest> {
-  // 1) «Твои сохранения стали лучше»: новые версии застаренных списков после звезды.
-  const starred = await db.execute(sql`
+  // Три секции независимы — читаем параллельно.
+  const [starred, upstream, ownLists] = await Promise.all([
+    // 1) «Твои сохранения стали лучше»: новые версии застаренных списков после звезды.
+    db.execute(sql`
     select t.slug,
            u.handle as owner,
            count(v.id)::int as new_versions,
@@ -60,10 +62,10 @@ export async function buildDigest(userId: string, since: Date): Promise<Digest> 
       and t.owner_id <> ${userId}
     group by t.slug, u.handle
     order by count(v.id) desc
-    limit 10`)
+    limit 10`),
 
-  // 2) «Апстрим твоего форка ушёл вперёд»: версии оригинала после момента форка.
-  const upstream = await db.execute(sql`
+    // 2) «Апстрим твоего форка ушёл вперёд»: версии оригинала после момента форка.
+    db.execute(sql`
     select p.slug, u.handle as owner, count(v.id)::int as new_versions
     from templates f
     join templates p on p.id = f.forked_from_id
@@ -74,10 +76,10 @@ export async function buildDigest(userId: string, since: Date): Promise<Digest> 
       and p.visibility = 'public' and p.status = 'published' and p.moderation = 'active'
     group by p.slug, u.handle
     order by count(v.id) desc
-    limit 10`)
+    limit 10`),
 
-  // 3) «На твои списки пришло внимание»: правки за период (открытые = call-to-action).
-  const ownLists = await db.execute(sql`
+    // 3) «На твои списки пришло внимание»: правки за период (открытые = call-to-action).
+    db.execute(sql`
     select t.slug,
            count(*) filter (where sg.status = 'open')::int as open,
            count(*) filter (where sg.status = 'accepted')::int as accepted,
@@ -88,7 +90,8 @@ export async function buildDigest(userId: string, since: Date): Promise<Digest> 
     where t.owner_id = ${userId}
     group by t.slug
     order by count(*) desc
-    limit 10`)
+    limit 10`),
+  ])
 
   return {
     starred: starred.rows.map((r) => ({

@@ -26,18 +26,21 @@ const card = 'rounded-lg border border-border bg-surface p-5'
 
 export default async function SettingsPage() {
   const session = await requireSession()
-  const lang = await getLang()
-  const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1)
+  const [lang, [user]] = await Promise.all([getLang(), db.select().from(users).where(eq(users.id, session.userId)).limit(1)])
   if (!user) {
     const { redirect } = await import('next/navigation')
     redirect('/login')
   }
-  const avatar = await avatarSrc(user.avatarUrl, 144)
-  const userSessions = await getUserSessions(session.userId, session.sid)
-  const usage = await getUserUsage(session.userId)
-  const [lists, aiMonth, userPasskeys] = await Promise.all([listQuota(session.userId, session.handle), aiQuota(session.userId, session.handle), listPasskeys()])
-  const tokens = await getApiTokens(session.userId)
-  const h = await headers()
+  const [avatar, userSessions, usage, lists, aiMonth, userPasskeys, tokens, h] = await Promise.all([
+    avatarSrc(user.avatarUrl, 144),
+    getUserSessions(session.userId, session.sid),
+    getUserUsage(session.userId),
+    listQuota(session.userId, session.handle),
+    aiQuota(session.userId, session.handle),
+    listPasskeys(),
+    getApiTokens(session.userId),
+    headers(),
+  ])
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
   const mcpUrl = `${proto}://${host}/api/mcp`

@@ -79,8 +79,7 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   await ensureWatch(tpl.id) // комментатор начинает следить
 
   // Участники: автор issue + владелец + прежние комментаторы + наблюдатели.
-  const commenters = await issueCommenterIds(iss.id)
-  const watchers = await getWatcherIds(tpl.id)
+  const [commenters, watchers] = await Promise.all([issueCommenterIds(iss.id), getWatcherIds(tpl.id)])
   const recipients = [iss.authorId, tpl.ownerId, ...commenters, ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'issue_comment', templateId: tpl.id, issueId: iss.id })
   await notifyMentions({ text: body, actorId: session.userId, templateId: tpl.id, issueId: iss.id })

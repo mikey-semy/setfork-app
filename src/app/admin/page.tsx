@@ -57,18 +57,18 @@ function ensure(opts: Option[], current: string): Option[] {
 
 export default async function AdminPage() {
   await requireAdmin()
-  const lang = await getLang()
-  const ru = lang === 'ru'
-  const [settings, apiKey, media, search, email, online] = await Promise.all([
+  const [lang, settings, apiKey, media, search, email, online, vapid, achDisplay] = await Promise.all([
+    getLang(),
     getAiSettings(),
     getApiKey(),
     getMediaSettings(),
     getSearchSettings(),
     getEmailSettings(),
     getOnlineUsers(),
+    getVapid(),
+    getAchievementDisplay(),
   ])
-  const vapid = await getVapid()
-  const achDisplay = await getAchievementDisplay()
+  const ru = lang === 'ru'
   const pushValues = { publicKey: vapid.publicKey, subject: vapid.subject, configured: Boolean(vapid.publicKey && vapid.privateKey) }
   const emailValues = {
     host: email.host,

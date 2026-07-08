@@ -17,8 +17,7 @@ export default async function NewDiscussionPage({
   params: Promise<{ handle: string; slug: string }>
   searchParams: Promise<{ e?: string }>
 }) {
-  const { handle: owner, slug } = await params
-  const [{ e }, lang, session] = await Promise.all([searchParams, getLang(), getSession()])
+  const [{ handle: owner, slug }, { e }, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const ru = lang === 'ru'
   if (!session) redirect(`/login?next=/${owner}/${slug}/discussions/new`)
   const meta = await requireViewableMeta(owner, slug)

@@ -10,11 +10,12 @@ export async function register() {
   const { validateEnv } = await import('@/shared/env')
   validateEnv()
 
-  const { captureError } = await import('@/shared/observability')
-
   // Источник полной переиндексации для shared/ai/index-run (админка «переиндексировать всё»).
-  const { registerIndexSource } = await import('@/shared/ai/index-run')
-  const { collectItems, purgeStaleEmbeddings } = await import('@/features/library/reindex')
+  const [{ captureError }, { registerIndexSource }, { collectItems, purgeStaleEmbeddings }] = await Promise.all([
+    import('@/shared/observability'),
+    import('@/shared/ai/index-run'),
+    import('@/features/library/reindex'),
+  ])
   registerIndexSource({ collectItems, purgeStaleEmbeddings })
 
   // Фоновый воркер очереди задач. Idempotent, безопасен между инстансами.

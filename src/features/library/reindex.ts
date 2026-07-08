@@ -65,8 +65,7 @@ export async function reindexList(templateId: string): Promise<void> {
   const item = items.find((i) => i.refId === templateId)
   await db.delete(embeddings).where(eq(embeddings.refId, templateId))
   if (!item) return
-  const { getAiSettings } = await import('@/shared/settings/ai')
-  const { embedOne } = await import('@/shared/ai/embeddings')
+  const [{ getAiSettings }, { embedOne }] = await Promise.all([import('@/shared/settings/ai'), import('@/shared/ai/embeddings')])
   const { embeddingModel } = await getAiSettings()
   const vec = await embedOne(item.content, embeddingModel)
   await db.insert(embeddings).values({

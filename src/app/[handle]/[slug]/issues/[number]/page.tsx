@@ -26,8 +26,7 @@ export default async function IssueThreadPage({
 }) {
   const { handle: owner, slug, number: numStr } = await params
   const number = Number(numStr)
-  const [lang, session] = await Promise.all([getLang(), getSession()])
-  const meta = await requireViewableMeta(owner, slug)
+  const [lang, session, meta] = await Promise.all([getLang(), getSession(), requireViewableMeta(owner, slug)])
   if (!meta) notFound()
   const issue = number > 0 ? await getIssue(meta.id, number) : null
   if (!issue) notFound()
