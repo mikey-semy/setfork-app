@@ -1,0 +1,23 @@
+name: Audit
+
+# Аудит зависимостей: на PR/пуш в master + еженедельно (новые advisory всплывают
+# и без изменений кода). Блокирует на high/critical; moderate (транзитивные dev/build,
+# требуют мажорных апгрейдов) пока пропускаем — поднять планку отдельной задачей.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: '17 6 * * 1' # понедельник, еженедельно
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm audit --audit-level=high
