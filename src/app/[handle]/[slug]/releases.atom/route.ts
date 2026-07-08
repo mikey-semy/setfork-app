@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports -- анонимный Atom-фид: гейт isPubliclyVisible (строже canViewList), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
 import { getReleases } from '@/features/releases/queries'
 import { escapeHtml as esc } from '@/shared/lib/escape'

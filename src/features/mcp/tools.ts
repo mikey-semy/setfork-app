@@ -2,6 +2,7 @@ import 'server-only'
 import { and, eq, sql } from 'drizzle-orm'
 import { db, runs, runStepState, steps, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
+// eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { canViewList } from '@/features/library/access'
 import { listQuota } from '@/shared/quota'

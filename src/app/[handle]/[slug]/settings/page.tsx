@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+// eslint-disable-next-line no-restricted-imports -- owner-only: доступ строже canViewList (session.userId === ownerId)
 import { getListCover, getListMeta } from '@/features/library/queries'
 import { getCollaborators } from '@/features/collab/queries'
 import { CollaboratorsSection } from '@/features/collab/CollaboratorsSection'

@@ -9,7 +9,6 @@ import { gitCore } from '@/features/git/core'
 import { BranchPicker } from '@/features/git/BranchPicker'
 import { isCollaborator } from '@/features/collab/queries'
 import { getSession } from '@/shared/auth/session'
-import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
@@ -18,7 +17,7 @@ import { SmartImage } from '@/shared/ui/SmartImage'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import { getContributors, getStepPreviews, getTemplateDetail } from '@/features/library/queries'
+import { getContributors, getStepPreviews } from '@/features/library/queries'
 import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
@@ -28,7 +27,7 @@ import { getQuizState } from '@/features/quizzes/queries'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
 import { pollDeadlineMs } from '@/features/library/blocks'
-import { canViewList } from '@/features/library/access'
+import { requireViewableDetail } from '@/features/library/guard'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ListHeader } from '@/features/library/ListHeader'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
@@ -59,7 +58,7 @@ export default async function ListPage({
 }) {
   const [{ handle: owner, slug }, sp] = await Promise.all([params, searchParams])
   const lang = await getLang()
-  const detail = await getTemplateDetail(owner, slug)
+  const detail = await requireViewableDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, currentVersion, steps: dbSteps } = detail
 
@@ -98,7 +97,6 @@ export default async function ListPage({
   const steps = find ? allSteps.filter(matches) : allSteps
   const viewer = await getSession()
   const isOwner = viewer?.userId === tpl.ownerId
-  if (!canViewList(tpl, { isOwner, isAdmin: isAdminHandle(viewer?.handle) })) notFound()
   // Ветками управляют те, кто может пушить: владелец или коллаборатор.
   const canManageBranches = isOwner || (!!viewer && (await isCollaborator(tpl.id, viewer.userId)))
   // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.

@@ -1,4 +1,5 @@
 import { getLang } from '@/shared/i18n/server'
+// eslint-disable-next-line no-restricted-imports -- анонимный embed на внешние сайты: гейт isPubliclyVisible, не cookie-сессия
 import { getTemplateDetail } from '@/features/library/queries'
 import { isPubliclyVisible } from '@/features/library/access'
 import { embedHtml, type ExportList } from '@/features/library/export'

@@ -4,7 +4,8 @@ import { ArrowLeft } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
+import { getStepPreviews } from '@/features/library/queries'
+import { requireViewableDetail } from '@/features/library/guard'
 import { submitSuggestion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
@@ -18,10 +19,12 @@ export default async function SuggestPage({
   const { handle: owner, slug } = await params
   const [lang, session] = await Promise.all([getLang(), getSession()])
   if (!session) redirect('/login')
-  const detail = await getTemplateDetail(owner, slug)
+  // Чокпоинт: полный canViewList (не только visibility — ещё draft/flagged/hidden).
+  // Раньше проверялось только visibility==='private' → черновик/снятый модерацией список
+  // был доступен для /suggest любому залогиненному.
+  const detail = await requireViewableDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, steps } = detail
-  if (tpl.visibility === 'private' && session.userId !== tpl.ownerId) notFound()
 
   const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
   const action = submitSuggestion.bind(null, tpl.id)
