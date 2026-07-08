@@ -21,3 +21,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm audit --audit-level=high
+
+  # Скан секретов в дереве (не в истории — ловим впервые закоммиченный секрет). Сейчас
+  # чисто; любой добавленный ключ/токен уронит проверку. Барьер против «залил .env/ключ».
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: gitleaks (secret scan)
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect --source=/repo --no-git --redact --exit-code 1
