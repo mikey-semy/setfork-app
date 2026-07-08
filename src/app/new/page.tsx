@@ -54,14 +54,14 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('listKind', lang)}</label>
         <div className="mb-6 grid grid-cols-2 gap-2">
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
             <input type="radio" name="ordered" value="ordered" defaultChecked className="mt-0.5" />
             <span>
               <span className="block text-[13.5px] font-medium text-ink">{t('orderedLabel', lang)}</span>
               <span className="block text-[12px] text-ink-2">{t('orderedHint', lang)}</span>
             </span>
           </label>
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
             <input type="radio" name="ordered" value="unordered" className="mt-0.5" />
             <span>
               <span className="block text-[13.5px] font-medium text-ink">{t('unorderedLabel', lang)}</span>
@@ -72,14 +72,14 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('visibility', lang)}</label>
         <div className="mb-6 flex flex-col gap-2">
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
             <input type="radio" name="visibility" value="public" defaultChecked className="mt-0.5" />
             <span>
               <span className="block text-[13.5px] font-medium text-ink">{t('publicLabel', lang)}</span>
               <span className="block text-[12px] text-ink-2">{t('publicHint', lang)}</span>
             </span>
           </label>
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
             <input type="radio" name="visibility" value="private" className="mt-0.5" />
             <span>
               <span className="block text-[13.5px] font-medium text-ink">{t('privateLabel', lang)}</span>
@@ -88,7 +88,7 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
           </label>
         </div>
 
-        <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+        <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
           <input type="checkbox" name="gated" className="mt-0.5" />
           <span>
             <span className="block text-[13.5px] font-medium text-ink">{ru ? 'Последовательный курс' : 'Sequential course'}</span>

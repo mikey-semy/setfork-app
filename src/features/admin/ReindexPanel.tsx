@@ -96,7 +96,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
           value={spread}
           disabled={running}
           onChange={(e) => setSpread(Math.max(0, Math.min(120, Number(e.target.value) || 0)))}
-          className="w-24 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none"
+          className="w-24 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden"
         />
       </div>
 
@@ -139,7 +139,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
               <span
                 key={i}
                 className={`h-3 w-full rounded-[2px] transition-colors ${
-                  filled ? 'animate-cell-pop bg-ok' : errored ? 'bg-danger' : 'bg-[var(--border)]'
+                  filled ? 'animate-cell-pop bg-ok' : errored ? 'bg-danger' : 'bg-(--border)'
                 }`}
               />
             )

@@ -14,7 +14,7 @@ function SelectTrigger({ className, children, ...props }: React.ComponentProps<t
   return (
     <SelectPrimitive.Trigger
       className={cn(
-      'flex h-[42px] w-full items-center justify-between rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong data-[placeholder]:text-muted',
+      'flex h-[42px] w-full items-center justify-between rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong data-placeholder:text-muted',
       className,
     )}
       {...props}
@@ -32,7 +32,7 @@ function SelectContent({ className, children, position = 'popper', ...props }: R
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       className={cn(
-        'relative z-50 max-h-[320px] min-w-[10rem] overflow-hidden rounded-md border border-border bg-surface text-ink shadow-card',
+        'relative z-50 max-h-[320px] min-w-40 overflow-hidden rounded-md border border-border bg-surface text-ink shadow-card',
         position === 'popper' && 'data-[side=bottom]:translate-y-1',
         className,
       )}
@@ -43,7 +43,7 @@ function SelectContent({ className, children, position = 'popper', ...props }: R
         <ChevronUp size={14} />
       </SelectPrimitive.ScrollUpButton>
       <SelectPrimitive.Viewport
-        className={cn('p-1', position === 'popper' && 'w-full min-w-[var(--radix-select-trigger-width)]')}
+        className={cn('p-1', position === 'popper' && 'w-full min-w-(--radix-select-trigger-width)')}
       >
         {children}
       </SelectPrimitive.Viewport>
@@ -64,7 +64,7 @@ function SelectItem({
   return (
   <SelectPrimitive.Item
     className={cn(
-      'relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-[13.5px] text-ink outline-none data-[highlighted]:bg-[var(--accent-soft)] data-[highlighted]:text-accent data-[disabled]:opacity-50',
+      'relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-[13.5px] text-ink outline-hidden data-highlighted:bg-(--accent-soft) data-highlighted:text-accent data-disabled:opacity-50',
       className,
     )}
     {...props}

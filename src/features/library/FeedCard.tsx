@@ -16,7 +16,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
   const star = toggleStar.bind(null, item.id)
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border bg-surface px-3.5 py-3 transition-colors hover:border-border-strong">
-      <Link href={`/${item.ownerHandle}`} className="flex-shrink-0">
+      <Link href={`/${item.ownerHandle}`} className="shrink-0">
         <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={32} />
       </Link>
       <div className="min-w-0 flex-1">
@@ -47,7 +47,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             <Link
               key={tag}
               href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-              className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11px] font-medium text-accent hover:underline"
+              className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11px] font-medium text-accent hover:underline"
             >
               {tag}
             </Link>
@@ -69,11 +69,11 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
       {/* Обложка — ТОЛЬКО если у списка она реально есть (без синтетических баннеров). */}
       {item.coverImage && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.coverImage} alt="" className="hidden h-14 w-24 flex-shrink-0 rounded-md border border-border object-cover sm:block" />
+        <img src={item.coverImage} alt="" className="hidden h-14 w-24 shrink-0 rounded-md border border-border object-cover sm:block" />
       )}
 
       {/* единственное действие — Star */}
-      <form action={star} className="flex-shrink-0">
+      <form action={star} className="shrink-0">
         <button
           title="star"
           className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors hover:border-border-strong ${

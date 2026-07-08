@@ -98,7 +98,7 @@ export function RunView({
       </Link>
 
       {/* Прогресс */}
-      <div className="sticky top-[64px] z-10 mb-5 rounded-lg border border-border bg-surface/95 p-4 backdrop-blur">
+      <div className="sticky top-[64px] z-10 mb-5 rounded-lg border border-border bg-surface/95 p-4 backdrop-blur-sm">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="truncate text-[15px] font-semibold text-ink">{title}</div>
@@ -299,7 +299,7 @@ export function RunView({
                       rows={2}
                       aria-label={t('runReasonPh', lang)}
                       placeholder={t('runReasonPh', lang)}
-                      className="w-full resize-none rounded border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none focus:border-border-strong"
+                      className="w-full resize-none rounded border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
                     />
                     <div className="mt-2 flex items-center gap-2">
                       <button

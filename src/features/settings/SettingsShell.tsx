@@ -54,7 +54,7 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
 
   return (
     <div className="mx-auto flex w-full max-w-[920px] flex-col gap-8 px-6 py-8 md:flex-row">
-      <aside className="flex-shrink-0 md:sticky md:top-[70px] md:h-fit md:w-[220px]">
+      <aside className="shrink-0 md:sticky md:top-[70px] md:h-fit md:w-[220px]">
         <SearchField
           value={q}
           onValueChange={setQ}

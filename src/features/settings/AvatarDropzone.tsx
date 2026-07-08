@@ -83,7 +83,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
         className={`flex cursor-pointer items-center gap-4 rounded-lg border border-dashed p-4 transition-colors ${
-          dragOver ? 'border-accent bg-[var(--accent-soft)]' : 'border-border-strong hover:border-accent hover:bg-surface-2'
+          dragOver ? 'border-accent bg-(--accent-soft)' : 'border-border-strong hover:border-accent hover:bg-surface-2'
         }`}
       >
         {preview ? (

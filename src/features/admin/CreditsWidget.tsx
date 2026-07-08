@@ -68,7 +68,7 @@ export function CreditsWidget({ ru }: { ru: boolean }) {
         </div>
         {refresh}
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-[var(--border)]">
+      <div className="h-2 overflow-hidden rounded-full bg-(--border)">
         <div className="h-full transition-all" style={{ width: `${pctUsed}%`, background: barColor }} />
       </div>
       <p className="text-[12px] text-muted">

@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { SearchMode, SearchSettings } from '@/shared/settings/search'
 import { setSearchSettings } from './actions'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
+const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export function SearchSettingsForm({ current, ru }: { current: SearchSettings; ru: boolean }) {

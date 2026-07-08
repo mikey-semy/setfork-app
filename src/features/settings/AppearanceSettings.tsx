@@ -43,7 +43,7 @@ function applyAttr(attr: 'data-accent' | 'data-font', key: string, value: string
 
 const pickCls = (on: boolean) =>
   `flex items-center gap-2 rounded-md border px-3 py-2 text-[13px] text-ink transition-colors ${
-    on ? 'border-accent bg-[var(--accent-soft)]' : 'border-border hover:border-border-strong'
+    on ? 'border-accent bg-(--accent-soft)' : 'border-border hover:border-border-strong'
   }`
 
 export function AppearanceSettings({ lang, initialAccent = '', initialFont = '' }: { lang: Lang; initialAccent?: string; initialFont?: string }) {

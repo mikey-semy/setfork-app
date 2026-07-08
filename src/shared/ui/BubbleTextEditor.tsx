@@ -191,7 +191,7 @@ export function BubbleTextEditor({
         onScroll={refresh}
         onKeyDown={onKeyDown}
         onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null) } }, 150)}
-        className={`w-full text-[13.5px] leading-relaxed text-ink outline-none ${
+        className={`w-full text-[13.5px] leading-relaxed text-ink outline-hidden ${
           bare ? 'resize-none overflow-hidden bg-transparent' : 'rounded-md border border-border bg-surface-2 px-3 py-2 focus:border-border-strong'
         } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[72px] resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? 'font-mono text-[12px]' : ''} ${textareaClassName ?? ''}`}
       />
@@ -254,7 +254,7 @@ export function BubbleTextEditor({
 
       {emojiOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4" onClick={() => setEmojiOpen(false)}>
+          <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/30 p-4" onClick={() => setEmojiOpen(false)}>
             <div onClick={(e) => e.stopPropagation()}>
               <EmojiPicker
                 data={emojiData}

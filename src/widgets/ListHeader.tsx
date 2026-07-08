@@ -64,11 +64,11 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
         <div className="flex flex-wrap items-start justify-between gap-3">
           {/* Название скрыто на узких экранах — оно уже в бредкрамбе шапки. */}
           <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
-            <Link href={`/${meta.ownerHandle}`} className="flex-shrink-0">
+            <Link href={`/${meta.ownerHandle}`} className="shrink-0">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
             <h1 className="min-w-0 truncate text-[19px] font-bold text-ink">{meta.slug}</h1>
-            <span className="shrink-0 rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[11px] text-accent">
+            <span className="shrink-0 rounded-md border border-(--accent) bg-(--accent-soft) px-2 py-0.5 font-mono text-[11px] text-accent">
               v{meta.currentVersion}
             </span>
             {/* Индикатор видимости: приватный или публичный (как Public/Private у GitHub). */}

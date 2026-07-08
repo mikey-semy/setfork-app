@@ -34,7 +34,7 @@ export function StarButton({
       disabled={pending}
       className={`inline-flex items-center gap-2 ${grouped ? 'rounded-l-md' : 'rounded-md'} border px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:opacity-60 ${
         opt.starred
-          ? 'border-warn bg-[var(--accent-soft)] text-warn'
+          ? 'border-warn bg-(--accent-soft) text-warn'
           : 'border-border text-ink hover:border-border-strong'
       }`}
     >

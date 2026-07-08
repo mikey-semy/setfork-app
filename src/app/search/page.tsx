@@ -102,7 +102,7 @@ export default async function SearchPage({
 
   return (
     <div className="flex w-full flex-1 items-stretch">
-      <aside className="hidden w-[260px] flex-shrink-0 border-r border-border bg-surface-2 px-3 py-5 lg:block">
+      <aside className="hidden w-[260px] shrink-0 border-r border-border bg-surface-2 px-3 py-5 lg:block">
         <ScopeSwitcher active={scope} counts={counts} q={sp.q} sort={sp.sort} lang={lang} basePath={BASE} />
         {/* List-специфичные фасеты — только для scope=lists */}
         {scope === 'lists' && <AdvancedFacets initialQ={sp.q ?? ''} tags={tags} lang={lang} basePath={BASE} />}
@@ -174,7 +174,7 @@ export default async function SearchPage({
         {scope === 'lists' && (
           <>
             {canGenerate && feed.length === 0 && (
-              <form action={startGeneration} className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3">
+              <form action={startGeneration} className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3">
                 <Sparkles size={16} className="text-accent" />
                 <span className="text-[13px] text-ink">
                   {t('cantFind', lang)} <span className="font-semibold">“{parsed.text}”</span>
@@ -229,7 +229,7 @@ export default async function SearchPage({
           <div className="rounded-md border border-border bg-surface-2 p-3">
             <div className="mb-1.5 text-[12px] font-semibold text-ink">{t('proTip', lang)}</div>
             <p className="text-[12px] leading-relaxed text-muted">{t('proTipBody', lang)}</p>
-            <div className="mt-2 break-words font-mono text-[11px] text-ink-2">
+            <div className="mt-2 wrap-break-word font-mono text-[11px] text-ink-2">
               by:handle · tag:redis · is:verified · type:ordered · stars:&gt;100
             </div>
           </div>

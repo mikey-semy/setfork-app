@@ -76,7 +76,7 @@ export function PollBlock({
               } ${votable ? 'hover:border-border-strong' : 'cursor-default'}`}
             >
               {showResults && (
-                <span className="absolute inset-y-0 left-0 bg-[var(--accent-soft)]" style={{ width: `${pct}%` }} aria-hidden />
+                <span className="absolute inset-y-0 left-0 bg-(--accent-soft)" style={{ width: `${pct}%` }} aria-hidden />
               )}
               <span className="relative flex items-center justify-between gap-2">
                 <span className="inline-flex min-w-0 items-center gap-1.5 text-ink">

@@ -93,7 +93,7 @@ export function Feed({
             const Icon = ICONS[e.type as keyof typeof ICONS] ?? Tag
             return (
               <div key={eventKey(e)} className="flex gap-3 rounded-lg border border-border bg-surface p-3.5">
-                <Link href={`/${e.actorHandle}`} className="flex-shrink-0">
+                <Link href={`/${e.actorHandle}`} className="shrink-0">
                   <Avatar handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size={34} />
                 </Link>
                 <div className="min-w-0 flex-1">
@@ -118,7 +118,7 @@ export function Feed({
                     <div className="mt-1 truncate text-[12.5px] text-muted">“{e.itemTitle}”</div>
                   )}
                 </div>
-                <span className="flex-shrink-0 font-mono text-[11px] text-muted">
+                <span className="shrink-0 font-mono text-[11px] text-muted">
                   {new Intl.DateTimeFormat(ru ? 'ru' : 'en', { month: 'short', day: 'numeric' }).format(new Date(e.createdAt))}
                 </span>
               </div>
@@ -174,7 +174,7 @@ function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean })
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
       {/* Шапка: кто выпустил + когда */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-[13px]">
-        <Link href={`/${e.actorHandle}`} className="flex-shrink-0">
+        <Link href={`/${e.actorHandle}`} className="shrink-0">
           <Avatar handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size={22} />
         </Link>
         <Link href={`/${e.actorHandle}`} className="font-medium text-ink-2 hover:text-accent">
@@ -182,12 +182,12 @@ function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean })
         </Link>
         <span className="text-ink-2">{ru ? 'выпустил' : 'released'}</span>
         <Tag size={13} className="shrink-0 text-muted" />
-        <span className="ml-auto flex-shrink-0 font-mono text-[11px] text-muted">{date}</span>
+        <span className="ml-auto shrink-0 font-mono text-[11px] text-muted">{date}</span>
       </div>
       {/* Тело: версия + заголовок + changelog */}
       <div className="px-4 py-3.5">
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-2 py-0.5 font-mono text-[12px] font-semibold text-accent">
+          <span className="rounded-md border border-(--accent)/40 bg-(--accent-soft) px-2 py-0.5 font-mono text-[12px] font-semibold text-accent">
             v{e.version}
           </span>
           <Link href={base} className="min-w-0 truncate text-[15px] font-semibold text-ink hover:text-accent">

@@ -225,7 +225,7 @@ export function QuizBlock({
             }
           }}
           placeholder={kind === 'number' ? (ru ? 'Ваш ответ (число)' : 'Your answer (number)') : ru ? 'Ваш ответ' : 'Your answer'}
-          className={`w-full rounded-md border px-3 py-2 text-[13px] text-ink outline-none ${
+          className={`w-full rounded-md border px-3 py-2 text-[13px] text-ink outline-hidden ${
             checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2 focus:border-border-strong'
           }`}
         />
@@ -238,7 +238,7 @@ export function QuizBlock({
           onChange={(e) => setTextInput(e.target.value)}
           rows={4}
           placeholder={ru ? 'Ваш код' : 'Your code'}
-          className={`w-full resize-y rounded-md border px-3 py-2 font-mono text-[12.5px] text-ink outline-none ${
+          className={`w-full resize-y rounded-md border px-3 py-2 font-mono text-[12.5px] text-ink outline-hidden ${
             checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border bg-surface-2 focus:border-border-strong'
           }`}
         />
@@ -274,7 +274,7 @@ export function QuizBlock({
                   value={blankInputs[i] ?? ''}
                   onChange={(e) => setBlankInputs((xs) => xs.map((v, xi) => (xi === i ? e.target.value : v)))}
                   aria-label={`${ru ? 'Пропуск' : 'Blank'} ${i + 1}`}
-                  className={`mx-1 inline-block w-28 rounded border px-2 py-0.5 text-[13px] text-ink outline-none ${
+                  className={`mx-1 inline-block w-28 rounded border px-2 py-0.5 text-[13px] text-ink outline-hidden ${
                     checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border-strong bg-surface-2 focus:border-accent'
                   }`}
                 />

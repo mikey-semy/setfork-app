@@ -52,7 +52,7 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
                     href={`${base}/versions`}
                     title={ru ? 'история версий' : 'version history'}
                     className={`shrink-0 rounded border px-1.5 font-mono text-[11px] ${
-                      fresh ? 'border-[var(--accent)]/50 bg-[var(--accent-soft)] text-accent' : 'border-border bg-surface-2 text-ink-2'
+                      fresh ? 'border-(--accent)/50 bg-(--accent-soft) text-accent' : 'border-border bg-surface-2 text-ink-2'
                     }`}
                   >
                     v{s.lastVersion}

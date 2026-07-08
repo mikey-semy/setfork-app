@@ -32,12 +32,12 @@ export default async function VersionsPage({
         <div className="flex flex-col gap-2.5">
           {versions.map((v) => (
             <div key={v.id} className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
-              <Tag size={16} className="mt-0.5 flex-shrink-0 text-muted" />
+              <Tag size={16} className="mt-0.5 shrink-0 text-muted" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-[14px] font-semibold text-ink">v{v.version}</span>
                   {v.version === meta.currentVersion && (
-                    <span className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11px] font-semibold text-accent">
+                    <span className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11px] font-semibold text-accent">
                       {t('currentVersion', lang)}
                     </span>
                   )}
@@ -54,7 +54,7 @@ export default async function VersionsPage({
                   <div className="mt-1 text-[13px] text-ink-2">{v.note}</div>
                 )}
               </div>
-              <span className="flex-shrink-0 font-mono text-[11.5px] text-muted">
+              <span className="shrink-0 font-mono text-[11.5px] text-muted">
                 {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', {
                   year: 'numeric',
                   month: 'short',

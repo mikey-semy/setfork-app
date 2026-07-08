@@ -68,7 +68,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
         </div>
         <div className="rounded-lg border border-border bg-surface p-4">
           <div className="text-[11px] uppercase tracking-wide text-muted">{ru ? 'Стоимость' : 'Cost'}</div>
-          <div className="mt-1 text-[20px] font-bold text-[var(--accent)]">{money(totals.costUsd)}</div>
+          <div className="mt-1 text-[20px] font-bold text-(--accent)">{money(totals.costUsd)}</div>
         </div>
       </div>
 

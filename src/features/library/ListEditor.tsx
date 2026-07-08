@@ -70,7 +70,7 @@ function LinkTitleButton({ url, onLabel, ru }: { url: string; onLabel: (v: strin
 }
 
 const input =
-  'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-none focus:border-border-strong'
+  'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong'
 
 export function ListEditor({
   name = 'items',
@@ -312,7 +312,7 @@ export function ListEditor({
       </div>
 
       {aiRefine && (
-        <div className="rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] p-3">
+        <div className="rounded-lg border border-(--accent) bg-(--accent-soft) p-3">
           <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-accent">
             <Sparkles size={14} /> {ru ? 'Улучшить с ИИ' : 'Improve with AI'}
           </div>
@@ -959,7 +959,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
       {quiz.kind === 'blank' && (
         <>
           <textarea
-            className="min-h-[52px] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[13px] leading-relaxed text-ink outline-none focus:border-border-strong"
+            className="min-h-[52px] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[13px] leading-relaxed text-ink outline-hidden focus:border-border-strong"
             aria-label={ru ? 'Текст с пропусками' : 'Text with blanks'}
             placeholder={ru ? 'Текст с пропусками. Пишите ___ там, где пропуск.' : 'Text with blanks. Write ___ where a blank goes.'}
             value={quiz.template}
@@ -1177,7 +1177,7 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
             onBlur={() => setHoverK((h) => (h === k ? null : h))}
             tabIndex={open ? 0 : -1}
             className={`absolute grid h-10 w-10 place-items-center rounded-full border shadow-md transition-all duration-200 motion-reduce:transition-none ${
-              hovered ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border bg-surface text-ink'
+              hovered ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border bg-surface text-ink'
             }`}
             style={{
               transform: open ? `translate(${x}px, ${y}px) scale(${hovered ? 1.18 : 1})` : 'translate(0,0) scale(0.3)',
@@ -1218,7 +1218,7 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
         aria-label={ru ? 'Добавить блок' : 'Add block'}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className={`z-[1] grid place-items-center rounded-full border transition-all ${
+        className={`z-1 grid place-items-center rounded-full border transition-all ${
           between ? 'h-7 w-7 opacity-0 group-hover:opacity-100' : 'h-11 w-11'
         } ${open ? 'rotate-45 border-accent bg-accent text-white' : 'border-border bg-surface text-ink-2 hover:border-border-strong hover:text-ink'} ${open ? 'opacity-100' : ''}`}
       >
@@ -1248,7 +1248,7 @@ function StepImageInput({ uploading, onFile, ru }: { uploading: boolean; onFile:
         if (f) onFile(f)
       }}
       className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
-        over ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'
+        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >
       {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImageUp size={14} />}
@@ -1288,7 +1288,7 @@ function VideoFileInput({ uploading, onFile, ru }: { uploading: boolean; onFile:
         if (f) onFile(f)
       }}
       className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
-        over ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'
+        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >
       {uploading ? <Loader2 size={14} className="animate-spin" /> : <VideoIcon size={14} />}
@@ -1331,7 +1331,7 @@ function FileDropInput({ uploading, onFile, ru }: { uploading: boolean; onFile: 
         if (f) onFile(f)
       }}
       className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
-        over ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'
+        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >
       {uploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} />}

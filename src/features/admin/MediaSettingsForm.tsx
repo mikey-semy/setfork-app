@@ -3,7 +3,7 @@
 import { Switch } from '@/shared/ui/switch'
 import { setMediaSettings } from './actions'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong'
+const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface MediaFormValues {

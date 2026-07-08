@@ -145,7 +145,7 @@ function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: CmpStep[];
                 {r.newNo ?? ''}
               </span>
               <span className={`w-4 shrink-0 select-none text-center ${signColor}`}>{sign}</span>
-              <span className="whitespace-pre-wrap break-words px-2 text-ink">
+              <span className="whitespace-pre-wrap wrap-break-word px-2 text-ink">
                 {r.segs
                   ? r.segs.map((seg, k) =>
                       seg.changed ? (

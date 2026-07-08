@@ -37,7 +37,7 @@ export function MobileSearch({
       </button>
       {open &&
         createPortal(
-          <div className="fixed inset-0 z-[100] bg-black/40 p-3 pt-14" onClick={() => setOpen(false)}>
+          <div className="fixed inset-0 z-100 bg-black/40 p-3 pt-14" onClick={() => setOpen(false)}>
             <div onClick={(e) => e.stopPropagation()} className="mx-auto max-w-[560px] rounded-lg border border-border bg-surface p-2 shadow-card">
               <div className="flex items-center gap-2">
                 <Search size={15} className="shrink-0 text-muted" />
@@ -50,7 +50,7 @@ export function MobileSearch({
                     if (e.key === 'Escape') setOpen(false)
                   }}
                   placeholder={ru ? 'Поиск…' : 'Search…'}
-                  className="min-w-0 flex-1 bg-transparent py-1.5 text-[15px] text-ink outline-none placeholder:text-muted"
+                  className="min-w-0 flex-1 bg-transparent py-1.5 text-[15px] text-ink outline-hidden placeholder:text-muted"
                 />
                 <button type="button" aria-label="close" onClick={() => setOpen(false)} className="shrink-0 rounded p-1 text-muted hover:text-ink">
                   <X size={16} />

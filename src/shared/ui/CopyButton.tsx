@@ -18,7 +18,7 @@ export function CopyButton({ text }: { text: string }) {
             /* noop */
           }
         }}
-        className="flex-shrink-0 text-muted hover:text-ink"
+        className="shrink-0 text-muted hover:text-ink"
       >
         {done ? <Check size={14} /> : <Copy size={14} />}
       </button>

@@ -163,7 +163,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
 
       {/* Идёт генерация ещё одного варианта, но текущий уже виден */}
       {waiting && cand && !acceptSpinner && (
-        <div className="mb-3 flex items-center gap-2 rounded-md border border-[var(--accent)] bg-[var(--accent-soft)] px-3 py-2 text-[12.5px] text-accent">
+        <div className="mb-3 flex items-center gap-2 rounded-md border border-(--accent) bg-(--accent-soft) px-3 py-2 text-[12.5px] text-accent">
           <Loader2 size={13} className="animate-spin" /> {ru ? 'Генерируем ещё вариант…' : 'Generating another variant…'}
         </div>
       )}
@@ -249,7 +249,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
 
       {/* Инлайн-правка запроса: добавляет новый вариант, прежние остаются */}
       {editing && !pending && (
-        <div className="mt-4 rounded-lg border border-accent bg-[var(--accent-soft)] p-3">
+        <div className="mt-4 rounded-lg border border-accent bg-(--accent-soft) p-3">
           <div className="mb-2 text-[12.5px] text-ink-2">
             {ru
               ? 'Подправь запрос — добавим новый вариант, прежние останутся.'
@@ -266,7 +266,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
                   submitEdit()
                 }
               }}
-              className="min-w-[240px] flex-1 rounded-md border border-border bg-surface px-3 py-2 text-[13.5px] text-ink outline-none focus:border-border-strong"
+              className="min-w-[240px] flex-1 rounded-md border border-border bg-surface px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
             />
             <button
               onClick={submitEdit}

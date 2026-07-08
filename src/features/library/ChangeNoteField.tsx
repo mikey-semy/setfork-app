@@ -60,7 +60,7 @@ export function ChangeNoteField({
           }}
           aria-invalid={invalid}
           placeholder={placeholder}
-          className={`w-full rounded-md border bg-surface-2 py-2.5 pl-3 pr-11 text-[14px] text-ink outline-none ${
+          className={`w-full rounded-md border bg-surface-2 py-2.5 pl-3 pr-11 text-[14px] text-ink outline-hidden ${
             invalid ? 'border-danger focus:border-danger' : 'border-border focus:border-border-strong'
           }`}
         />

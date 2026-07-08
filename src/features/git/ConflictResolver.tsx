@@ -44,7 +44,7 @@ function Side({
       type="button"
       onClick={onSelect}
       className={`min-w-0 flex-1 rounded-md border text-left transition-colors ${
-        selected ? (tone === 'ours' ? 'border-accent bg-[var(--accent-soft)]' : 'border-ok bg-ok/10') : 'border-border bg-surface hover:border-border-strong'
+        selected ? (tone === 'ours' ? 'border-accent bg-(--accent-soft)' : 'border-ok bg-ok/10') : 'border-border bg-surface hover:border-border-strong'
       }`}
     >
       <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5">
@@ -95,7 +95,7 @@ export function ConflictResolver({
       <div className="flex flex-col gap-3 px-3.5 py-3">
         {metaConflicts.map((m) => (
           <div key={m.field}>
-            <div className="mb-1 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
+            <div className="mb-1 font-mono text-[10.5px] uppercase tracking-widest text-muted">
               {ru ? 'поле' : 'field'}: {m.field}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -111,7 +111,7 @@ export function ConflictResolver({
 
         {conflicts.map((c) => (
           <div key={c.key}>
-            <div className="mb-1 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
+            <div className="mb-1 font-mono text-[10.5px] uppercase tracking-widest text-muted">
               {c.kind === 'modified'
                 ? ru ? 'изменён в обеих' : 'modified in both'
                 : c.kind === 'delete-ours'

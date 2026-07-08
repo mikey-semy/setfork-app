@@ -39,7 +39,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
             onClick={() => setOpen(a)}
             title={a.tier > 1 ? `${a.label} ×${a.tier}` : a.label}
             aria-label={a.label}
-            className="relative aspect-square overflow-hidden rounded-md border border-border bg-surface-2 outline-none transition-transform hover:scale-[1.04] focus-visible:ring-2 focus-visible:ring-accent"
+            className="relative aspect-square overflow-hidden rounded-md border border-border bg-surface-2 outline-hidden transition-transform hover:scale-[1.04] focus-visible:ring-2 focus-visible:ring-accent"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={a.imageUrl} alt="" className="h-full w-full object-cover" />
@@ -65,7 +65,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
             onClick={(e) => e.stopPropagation()}
           >
             {/* Шапка с большой картинкой на акцентном фоне. */}
-            <div className="relative flex items-center justify-center bg-gradient-to-b from-[var(--accent-soft)] to-surface py-6">
+            <div className="relative flex items-center justify-center bg-linear-to-b from-(--accent-soft) to-surface py-6">
               <button
                 type="button"
                 onClick={() => setOpen(null)}

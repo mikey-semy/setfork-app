@@ -14,7 +14,7 @@ export function CatalogRow({ c, lang }: { c: PublicCatalog; lang: Lang }) {
       href={`/${c.ownerHandle}/catalogs/${c.name}`}
       className="flex items-start gap-3 rounded-lg border border-border bg-surface px-3.5 py-3 transition-colors hover:border-border-strong"
     >
-      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-md bg-[var(--accent-soft)] text-accent">
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-md bg-(--accent-soft) text-accent">
         <FolderGit2 size={16} />
       </span>
       <div className="min-w-0 flex-1">

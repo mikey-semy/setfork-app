@@ -36,7 +36,7 @@ export function Button({ variant = 'outline', size = 'sm', className, type = 'bu
     <button
       type={type}
       className={cn(
-        'inline-flex items-center justify-center rounded-md font-semibold outline-none transition-colors focus-visible:ring-1 focus-visible:ring-border-strong disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex items-center justify-center rounded-md font-semibold outline-hidden transition-colors focus-visible:ring-1 focus-visible:ring-border-strong disabled:pointer-events-none disabled:opacity-50',
         VARIANTS[variant],
         SIZES[size],
         className,

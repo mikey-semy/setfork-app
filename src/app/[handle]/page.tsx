@@ -191,7 +191,7 @@ export default async function ProfilePage({
 
       <div className="px-6 py-8 lg:px-8">
       <div className="mx-auto flex max-w-[980px] flex-col gap-8 md:flex-row">
-        <aside className="flex-shrink-0 md:w-[280px]">
+        <aside className="shrink-0 md:w-[280px]">
           <Avatar handle={user.handle} avatarUrl={bigAvatar} size={180} rounded="rounded-2xl" />
           <div className="mt-4">
             {user.name && <div className="text-[22px] font-bold leading-tight text-ink">{user.name}</div>}
@@ -438,7 +438,7 @@ export default async function ProfilePage({
                     name="q"
                     defaultValue={sp.q ?? ''}
                     placeholder={t('searchStarsPh', lang)}
-                    className="min-w-[180px] flex-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-ink outline-none focus:border-border-strong"
+                    className="min-w-[180px] flex-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
                   />
                   <div className="flex gap-1 text-[12px]">
                     {(['recent', 'name', 'stars'] as const).map((s) => (

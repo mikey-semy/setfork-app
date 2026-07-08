@@ -32,7 +32,7 @@ export default async function AdminCollectionsPage() {
           required
           maxLength={120}
           placeholder={ru ? 'Название новой подборки' : 'New collection title'}
-          className="flex-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none"
+          className="flex-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden"
         />
         <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
           <Plus size={14} /> {ru ? 'Создать' : 'Create'}

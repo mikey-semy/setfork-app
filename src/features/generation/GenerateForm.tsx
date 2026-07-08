@@ -38,7 +38,7 @@ export function GenerateForm({ lang, aiOn, defaultQuery }: { lang: Lang; aiOn: b
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder={ru ? 'напр. Настроить nginx reverse proxy с TLS' : 'e.g. Set up an nginx reverse proxy with TLS'}
-        className="w-full rounded-md border border-border bg-surface-2 px-3.5 py-3 text-[14px] text-ink outline-none focus:border-border-strong"
+        className="w-full rounded-md border border-border bg-surface-2 px-3.5 py-3 text-[14px] text-ink outline-hidden focus:border-border-strong"
       />
       <button
         disabled={!aiOn || !q.trim()}
