@@ -402,9 +402,7 @@ export async function mcpStartRun(userId: string, handle: string, slug: string) 
   if (!detail) return { error: 'list not found' }
   const { tpl, currentVersion } = detail
   const isOwner = tpl.ownerId === userId
-  if (tpl.visibility === 'private' && !isOwner) return { error: 'forbidden' }
-  if (tpl.status === 'draft' && !isOwner) return { error: 'forbidden' }
-  if (tpl.moderation !== 'active' && !isOwner) return { error: 'forbidden' }
+  if (!canViewList(tpl, { isOwner })) return { error: 'forbidden' }
   const cur = currentVersion
   if (!cur) return { error: 'list has no version' }
 

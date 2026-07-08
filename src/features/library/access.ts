@@ -26,3 +26,10 @@ export function canViewList(list: ListAccess, viewer: ListViewer): boolean {
   if (list.moderation !== 'active' && !viewer.isOwner && !viewer.isAdmin) return false
   return true
 }
+
+/** Публично видимый список: public + published + active. Единый предикат для анонимных
+ *  поверхностей (embed/atom/badge/git-clone) — та же логика, что canViewList без владельца
+ *  и админа, но в одном месте, чтобы «public-only»-копии не разошлись при смене правила. */
+export function isPubliclyVisible(list: ListAccess): boolean {
+  return canViewList(list, { isOwner: false, isAdmin: false })
+}

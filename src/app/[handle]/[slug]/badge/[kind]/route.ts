@@ -1,4 +1,5 @@
 import { getListMeta } from '@/features/library/queries'
+import { isPubliclyVisible } from '@/features/library/access'
 import { badgeFor, isBadgeKind } from '@/features/badges/svg'
 
 // GET /{handle}/{slug}/badge/{stars|forks|runs|version}.svg — SVG-шилд для README.
@@ -10,8 +11,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ handle:
   const meta = await getListMeta(handle, slug)
   // Публичный + опубликованный + не снят модерацией: иначе бейдж выдавал счётчики
   // (и факт существования) черновика/flagged/hidden списка анониму.
-  if (!meta || meta.visibility !== 'public' || meta.status !== 'published' || meta.moderation !== 'active')
-    return new Response('Not found', { status: 404 })
+  if (!meta || !isPubliclyVisible(meta)) return new Response('Not found', { status: 404 })
 
   const svg = badgeFor(kind, {
     starsCount: meta.starsCount,
