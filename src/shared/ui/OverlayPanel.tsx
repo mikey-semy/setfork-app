@@ -44,7 +44,7 @@ export function OverlayPanel({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[100] flex justify-center bg-black/30 p-4 ${align === 'center' ? 'items-center' : 'items-start pt-20'}`}
+      className={`fixed inset-0 z-100 flex justify-center bg-black/30 p-4 ${align === 'center' ? 'items-center' : 'items-start pt-20'}`}
       onClick={onClose}
     >
       <div

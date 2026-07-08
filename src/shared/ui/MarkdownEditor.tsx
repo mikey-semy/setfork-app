@@ -410,7 +410,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
                   // Centered-fixed overlay: не привязан к кнопке, не уезжает со скроллом,
                   // всегда на экране (важно на мобиле). Клик по фону закрывает.
                   <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4"
+                    className="fixed inset-0 z-100 flex items-center justify-center bg-black/30 p-4"
                     onClick={() => setEmojiOpen(false)}
                   >
                     <div onClick={(e) => e.stopPropagation()}>
@@ -468,7 +468,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
               uploadFiles(files)
             }
           }}
-          className="w-full resize-y bg-surface px-3 py-2.5 text-[14px] text-ink outline-none placeholder:text-muted"
+          className="w-full resize-y bg-surface px-3 py-2.5 text-[14px] text-ink outline-hidden placeholder:text-muted"
         />
 
         {mention && users.length > 0 && (

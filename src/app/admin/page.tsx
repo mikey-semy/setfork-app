@@ -22,7 +22,7 @@ import { ReindexPanel } from '@/features/admin/ReindexPanel'
 import { AchievementsAdmin } from '@/features/admin/AchievementsAdmin'
 import { getAchievementDisplay } from '@/features/profile/achievement-config'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none'
+const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 // OpenRouter возвращает отрицательную цену (-1/токен) у авто-роутеров — она «плавающая».

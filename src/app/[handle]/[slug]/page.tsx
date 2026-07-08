@@ -185,7 +185,7 @@ export default async function ListPage({
               {tpl.tags.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {tpl.tags.map((tg) => (
-                    <Link key={tg} href={`/search?q=${encodeURIComponent(`tag:${tg}`)}`} className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-[12px] text-accent">
+                    <Link key={tg} href={`/search?q=${encodeURIComponent(`tag:${tg}`)}`} className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[12px] text-accent">
                       {tg}
                     </Link>
                   ))}
@@ -214,8 +214,8 @@ export default async function ListPage({
               </div>
             )}
             {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
-              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3 text-[13px] text-accent print:hidden">
-                <Sparkles size={15} className="flex-shrink-0" /> {t('aiVerifyHint', lang)}
+              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3 text-[13px] text-accent print:hidden">
+                <Sparkles size={15} className="shrink-0" /> {t('aiVerifyHint', lang)}
               </div>
             )}
 
@@ -230,7 +230,7 @@ export default async function ListPage({
                 <Link href={`/${tpl.owner.handle}`} className="shrink-0 font-semibold text-ink hover:text-accent">
                   {tpl.owner.handle}
                 </Link>
-                <span className="shrink-0 rounded border border-[var(--accent)]/50 bg-[var(--accent-soft)] px-1.5 font-mono text-[11px] text-accent">
+                <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">
                   v{currentVersion.version}
                 </span>
                 {latestNote && <span className="min-w-0 flex-1 truncate text-ink-2">{latestNote}</span>}
@@ -246,7 +246,7 @@ export default async function ListPage({
                     <form action={useTemplate.bind(null, tpl.id)} className="inline-flex">
                       <button
                         type="submit"
-                        className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ok-solid)] px-2.5 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-(--ok-solid) px-2.5 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90"
                         title={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}
                       >
                         <LayoutTemplate size={13} /> <span className="hidden md:inline">{lang === 'ru' ? 'Использовать шаблон' : 'Use this template'}</span>
@@ -301,7 +301,7 @@ export default async function ListPage({
             )}
             {/* Результат поиска внутри списка (?find=). */}
             {find && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-[var(--accent)]/50 bg-[var(--accent-soft)] px-3 py-2 text-[12.5px] text-ink print:hidden">
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-(--accent)/50 bg-(--accent-soft) px-3 py-2 text-[12.5px] text-ink print:hidden">
                 <Info size={13} className="shrink-0 text-accent" />
                 <span>
                   <b>{steps.length}</b> / {allSteps.length} {lang === 'ru' ? 'шагов по запросу' : 'steps match'}{' '}
@@ -512,7 +512,7 @@ export default async function ListPage({
           </main>
 
           {/* About-сайдбар */}
-          <aside className="flex flex-shrink-0 flex-col gap-4 print:hidden lg:w-[300px]">
+          <aside className="flex shrink-0 flex-col gap-4 print:hidden lg:w-[300px]">
             <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
             <div className="rounded-lg border border-border bg-surface p-4">
               <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
@@ -525,7 +525,7 @@ export default async function ListPage({
                     <Link
                       key={tag}
                       href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-                      className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-[12px] font-medium text-accent hover:underline"
+                      className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[12px] font-medium text-accent hover:underline"
                     >
                       {tag}
                     </Link>

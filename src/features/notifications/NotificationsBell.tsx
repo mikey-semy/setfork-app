@@ -40,7 +40,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
       <DropdownMenuTrigger asChild>
         <button
           aria-label={t('notifications', lang)}
-          className="relative grid h-[30px] w-[30px] place-items-center rounded-md text-ink-2 outline-none hover:text-ink"
+          className="relative grid h-[30px] w-[30px] place-items-center rounded-md text-ink-2 outline-hidden hover:text-ink"
         >
           <Bell size={17} />
           {count > 0 && (
@@ -71,7 +71,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
                 <Link
                   key={n.id}
                   href={href}
-                  className={`flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-2 ${n.read ? '' : 'bg-[var(--accent-soft)]'}`}
+                  className={`flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-2 ${n.read ? '' : 'bg-(--accent-soft)'}`}
                 >
                   <Avatar handle={n.actorHandle ?? '?'} avatarUrl={n.actorAvatarUrl} size={26} />
                   <div className="min-w-0 flex-1 text-[12.5px] leading-snug text-ink-2">

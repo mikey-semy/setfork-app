@@ -12,7 +12,7 @@ export type BadgeVariant = 'outline' | 'ok' | 'accent' | 'soft'
 const VARIANTS: Record<BadgeVariant, string> = {
   outline: 'border border-border text-muted',
   ok: 'bg-ok/15 text-ok',
-  accent: 'bg-[var(--accent-soft)] text-accent',
+  accent: 'bg-(--accent-soft) text-accent',
   soft: 'bg-surface-2 text-ink-2',
 }
 

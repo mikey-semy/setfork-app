@@ -10,7 +10,7 @@ export default function Loading() {
             <Skeleton key={i} className="h-28 w-full rounded-lg" />
           ))}
         </div>
-        <div className="hidden w-[300px] flex-shrink-0 lg:block">
+        <div className="hidden w-[300px] shrink-0 lg:block">
           <Skeleton className="h-64 w-full rounded-lg" />
         </div>
       </div>

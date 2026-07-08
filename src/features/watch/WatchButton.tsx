@@ -32,7 +32,7 @@ export function WatchButton({
       }
       disabled={pending}
       className={`inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:opacity-60 ${
-        opt.watching ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink hover:border-border-strong'
+        opt.watching ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink hover:border-border-strong'
       }`}
     >
       {/* Watch — единственная кнопка с текстом на узких экранах (как GitHub). */}

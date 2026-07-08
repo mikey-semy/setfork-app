@@ -85,8 +85,8 @@ export function BranchPicker({
       {open && (
         <>
           {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
-          <div className="fixed inset-0 z-[99]" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-[100] mt-1.5 w-[300px] max-w-[calc(100vw-24px)] rounded-lg border border-border bg-surface p-1.5 shadow-card">
+          <div className="fixed inset-0 z-99" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-100 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] rounded-lg border border-border bg-surface p-1.5 shadow-card">
               <div className="flex items-center justify-between px-2 py-1.5">
                 <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">
                   {ru ? 'Ветки' : 'Branches'} <span className="font-mono">{branches.length}</span>

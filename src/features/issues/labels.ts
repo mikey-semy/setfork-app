@@ -5,7 +5,7 @@ export { isHexColor }
 // Фиксированная палитра меток (как стандартные labels на GitHub).
 export const ISSUE_LABELS = [
   { key: 'bug', en: 'bug', ru: 'баг', cls: 'border-danger/40 bg-danger/10 text-danger' },
-  { key: 'enhancement', en: 'enhancement', ru: 'улучшение', cls: 'border-accent/40 bg-[var(--accent-soft)] text-accent' },
+  { key: 'enhancement', en: 'enhancement', ru: 'улучшение', cls: 'border-accent/40 bg-(--accent-soft) text-accent' },
   { key: 'question', en: 'question', ru: 'вопрос', cls: 'border-warn/40 bg-warn/10 text-warn' },
   { key: 'docs', en: 'docs', ru: 'документация', cls: 'border-ok/40 bg-ok/10 text-ok' },
   { key: 'help', en: 'help wanted', ru: 'нужна помощь', cls: 'border-ok/40 bg-ok/10 text-ok' },

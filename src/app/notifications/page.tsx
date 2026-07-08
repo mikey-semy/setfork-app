@@ -52,7 +52,7 @@ export default async function NotificationsPage() {
               <div
                 key={n.id}
                 className={`flex items-start gap-3 rounded-lg border border-border px-3.5 py-3 ${
-                  n.read ? 'bg-surface' : 'bg-[var(--accent-soft)]'
+                  n.read ? 'bg-surface' : 'bg-(--accent-soft)'
                 }`}
               >
                 <Avatar handle={n.actorHandle ?? '?'} avatarUrl={n.actorAvatarUrl} size={30} />

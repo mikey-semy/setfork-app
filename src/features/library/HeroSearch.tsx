@@ -31,7 +31,7 @@ export function HeroSearch({ placeholder, clearLabel }: { placeholder: string; c
         clearLabel={clearLabel}
         autoFocus
       />
-      <button type="submit" className="grid h-[34px] w-[34px] flex-shrink-0 place-items-center rounded-md bg-primary text-primary-fg" aria-label="Search">
+      <button type="submit" className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-md bg-primary text-primary-fg" aria-label="Search">
         <ArrowRight size={16} />
       </button>
     </form>

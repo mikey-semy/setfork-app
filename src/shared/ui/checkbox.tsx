@@ -10,7 +10,7 @@ import { cn } from '@/shared/lib/cn'
 export type CheckboxProps = React.ComponentProps<'input'>
 
 export function Checkbox({ className, ...props }: CheckboxProps) {
-  return <input type="checkbox" className={cn('accent-[var(--accent)]', className)} {...props} />
+  return <input type="checkbox" className={cn('accent-(--accent)', className)} {...props} />
 }
 
 /** Строка «чекбокс + заголовок + подпись» — форма чекбокс-списков (фильтры, настройки). */

@@ -13,7 +13,7 @@ export function Textarea({ variant = 'box', className, ...props }: TextareaProps
   return (
     <textarea
       className={cn(
-        'w-full text-[13.5px] text-ink outline-none placeholder:text-muted disabled:opacity-50',
+        'w-full text-[13.5px] text-ink outline-hidden placeholder:text-muted disabled:opacity-50',
         variant === 'box'
           ? 'rounded-md border border-border bg-surface-2 px-2.5 py-2 focus:border-border-strong'
           : 'resize-none bg-transparent',

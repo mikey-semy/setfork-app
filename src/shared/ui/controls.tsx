@@ -88,7 +88,7 @@ export function ThemeModeSwitch({ labels = false, lang }: { labels?: boolean; la
           type="button"
           onClick={() => setTheme(value)}
           className={`flex items-center gap-2 rounded-md border px-3 py-2 text-[13px] text-ink transition-colors ${
-            current === value ? 'border-accent bg-[var(--accent-soft)]' : 'border-border hover:border-border-strong'
+            current === value ? 'border-accent bg-(--accent-soft)' : 'border-border hover:border-border-strong'
           }`}
         >
           <Icon size={14} className="text-muted" /> {label}

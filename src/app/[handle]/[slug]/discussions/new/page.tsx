@@ -40,7 +40,7 @@ export default async function NewDiscussionPage({
               {DISCUSSION_CATEGORIES.map((c, i) => (
                 <label
                   key={c.key}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-ink has-[:checked]:border-accent has-[:checked]:bg-[var(--accent-soft)]"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-ink has-checked:border-accent has-checked:bg-(--accent-soft)"
                 >
                   <input type="radio" name="category" value={c.key} defaultChecked={i === 0} className="sr-only" />
                   {c.icon} {ru ? c.ru : c.en}

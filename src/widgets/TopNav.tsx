@@ -81,7 +81,7 @@ export function TopNav({
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
   // Убираем дефолтный аутлайн (Radix возвращает фокус на триггер после закрытия —
   // из-за этого «залипало» выделение); кольцо оставляем только для клавиатуры.
-  const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-border-strong'
+  const focusRing = 'outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong'
   const iconBtn = `grid h-8 w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`
 
   // Контекстный заголовок страницы (в шапке — только он, навигация ушла в боковое меню).
@@ -141,7 +141,7 @@ export function TopNav({
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5 print:hidden">
       {/* Бургер + SF = логотип на одном уровне: ☰ читается как «список», линии жирные */}
-      <div className="flex flex-shrink-0 items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         <button
           type="button"
           aria-label={t('menu', lang)}

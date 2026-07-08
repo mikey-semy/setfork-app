@@ -26,7 +26,7 @@ export function GnomeLoader({ query, lang, label }: { query: string; lang: Lang;
   const q = query.length > 60 ? query.slice(0, 60) + '…' : query
 
   return (
-    <div className="rounded-lg border border-[var(--accent)] bg-[var(--accent-soft)] px-5 py-6">
+    <div className="rounded-lg border border-(--accent) bg-(--accent-soft) px-5 py-6">
       <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-accent">
         <Sparkles size={15} className="animate-pulse" />
         {label ?? (lang === 'ru' ? 'Генерируем…' : 'Generating…')}

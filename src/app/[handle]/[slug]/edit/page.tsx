@@ -48,19 +48,19 @@ export default async function EditPage({
           name="tags"
           defaultValue={tpl.tags.join(' ')}
           placeholder={t('tagsHint', lang)}
-          className="mb-6 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none"
+          className="mb-6 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-hidden"
         />
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('listKind', lang)}</label>
         <div className="mb-6 grid grid-cols-2 gap-2">
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
             <input type="radio" name="ordered" value="ordered" defaultChecked={tpl.ordered} className="mt-0.5" />
             <span>
               <span className="block text-[13.5px] font-medium text-ink">{t('orderedLabel', lang)}</span>
               <span className="block text-[12px] text-ink-2">{t('orderedHint', lang)}</span>
             </span>
           </label>
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
             <input type="radio" name="ordered" value="unordered" defaultChecked={!tpl.ordered} className="mt-0.5" />
             <span>
               <span className="block text-[13.5px] font-medium text-ink">{t('unorderedLabel', lang)}</span>
@@ -69,7 +69,7 @@ export default async function EditPage({
           </label>
         </div>
 
-        <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
+        <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
           <input type="checkbox" name="gated" defaultChecked={tpl.gated} className="mt-0.5" />
           <span>
             <span className="block text-[13.5px] font-medium text-ink">{lang === 'ru' ? 'Последовательный курс' : 'Sequential course'}</span>

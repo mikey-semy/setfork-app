@@ -56,7 +56,7 @@ export function AiKeyAndSwitch({
             placeholder={hasKey ? maskedKey : 'sk-or-v1-…'}
             autoComplete="off"
             spellCheck={false}
-            className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 pr-10 font-mono text-[13px] text-ink outline-none focus:border-border-strong"
+            className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 pr-10 font-mono text-[13px] text-ink outline-hidden focus:border-border-strong"
           />
           <button
             type="button"

@@ -89,7 +89,7 @@ export function ModelSelect({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] outline-none focus:border-border-strong"
+        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] outline-hidden focus:border-border-strong"
       >
         <span className={triggerLabel ? 'truncate font-mono text-[13px] text-ink' : 'text-muted'}>
           {triggerLabel || placeholder}
@@ -110,7 +110,7 @@ export function ModelSelect({
               }}
               onKeyDown={onKeyDown}
               placeholder="Поиск модели…"
-              className="w-full bg-transparent text-[13px] text-ink outline-none placeholder:text-muted"
+              className="w-full bg-transparent text-[13px] text-ink outline-hidden placeholder:text-muted"
             />
             {query && (
               <button
@@ -172,7 +172,7 @@ function Row({
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-left text-[13.5px] text-ink ${
-        highlighted ? 'bg-[var(--accent-soft)] text-accent' : ''
+        highlighted ? 'bg-(--accent-soft) text-accent' : ''
       }`}
     >
       {selected && (

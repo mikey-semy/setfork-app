@@ -18,7 +18,7 @@ export default async function ChangelogPage() {
       <div className="relative flex flex-col gap-7 pl-5 before:absolute before:bottom-2 before:left-[5px] before:top-2 before:w-px before:bg-border">
         {CHANGELOG.map((e) => (
           <div key={e.date + e.en} className="relative">
-            <span className="absolute -left-[19px] top-[6px] h-[9px] w-[9px] rounded-full border border-border-strong bg-surface-2" />
+            <span className="absolute left-[-19px] top-[6px] h-[9px] w-[9px] rounded-full border border-border-strong bg-surface-2" />
             <div className="font-mono text-[11.5px] text-muted">{fmt.format(new Date(e.date))}</div>
             <div className="mt-0.5 text-[14.5px] leading-relaxed text-ink">{ru ? e.ru : e.en}</div>
           </div>

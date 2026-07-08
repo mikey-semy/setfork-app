@@ -32,7 +32,7 @@ function DropdownMenuItem({
   return (
   <DropdownMenuPrimitive.Item
     className={cn(
-      'relative flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] text-ink outline-none data-[highlighted]:bg-surface-2 data-[disabled]:opacity-50',
+      'relative flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] text-ink outline-hidden data-highlighted:bg-surface-2 data-disabled:opacity-50',
       inset && 'pl-8',
       className,
     )}

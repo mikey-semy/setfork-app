@@ -2,7 +2,7 @@ import { cn } from '@/shared/lib/cn'
 
 /** Пульсирующая заглушка под контент (loading-состояния). */
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-[var(--border)]', className)} />
+  return <div className={cn('animate-pulse rounded-md bg-(--border)', className)} />
 }
 
 /** Заглушка карточки списка (лента/профиль). */

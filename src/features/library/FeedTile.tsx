@@ -39,7 +39,7 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
               <Link
                 key={tag}
                 href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-                className="rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11px] font-medium text-accent hover:underline"
+                className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11px] font-medium text-accent hover:underline"
               >
                 {tag}
               </Link>

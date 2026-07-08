@@ -96,7 +96,7 @@ function AchRow({
         }}
         title={ru ? 'Перетащи или выбери картинку' : 'Drag or pick an image'}
         className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border ${
-          over ? 'border-accent bg-[var(--accent-soft)]' : 'border-dashed border-border'
+          over ? 'border-accent bg-(--accent-soft)' : 'border-dashed border-border'
         }`}
       >
         {d.imageUrl ? (

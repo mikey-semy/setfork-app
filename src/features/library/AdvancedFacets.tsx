@@ -68,7 +68,7 @@ export function AdvancedFacets({
   }, [tags, tagFilter, parsed.tags])
 
   const row = (active: boolean) =>
-    `flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-border-strong ${
+    `flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong ${
       active ? 'bg-surface font-semibold text-ink' : 'text-ink-2 hover:bg-surface hover:text-ink'
     }`
 
@@ -97,7 +97,7 @@ export function AdvancedFacets({
         <button
           type="button"
           onClick={() => setTagsOpen((v) => !v)}
-          className="mb-1 flex w-full items-center gap-2 rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted outline-none hover:text-ink-2 focus-visible:ring-2 focus-visible:ring-border-strong"
+          className="mb-1 flex w-full items-center gap-2 rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted outline-hidden hover:text-ink-2 focus-visible:ring-2 focus-visible:ring-border-strong"
         >
           {t('tags', lang)}
           {parsed.tags.length > 0 && <span className="rounded-full bg-surface px-1.5 text-[10px] normal-case text-ink-2">{parsed.tags.length}</span>}
@@ -150,4 +150,4 @@ export function AdvancedFacets({
 }
 
 const advRow =
-  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-ink-2 outline-none hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong'
+  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-ink-2 outline-hidden hover:bg-surface hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong'

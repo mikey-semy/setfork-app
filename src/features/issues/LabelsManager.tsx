@@ -67,7 +67,7 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
               onClick={() => setColor(c)}
               aria-label={c}
               style={{ backgroundColor: c }}
-              className={`h-5 w-5 rounded-full border ${color === c ? 'ring-2 ring-offset-1 ring-[var(--accent)]' : 'border-black/10'}`}
+              className={`h-5 w-5 rounded-full border ${color === c ? 'ring-2 ring-offset-1 ring-(--accent)' : 'border-black/10'}`}
             />
           ))}
         </div>
@@ -77,7 +77,7 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
           maxLength={30}
           placeholder={ru ? 'имя метки' : 'label name'}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())}
-          className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink outline-none"
+          className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink outline-hidden"
         />
         <button
           type="button"

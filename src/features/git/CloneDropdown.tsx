@@ -39,7 +39,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
         readOnly
         value={value}
         onFocus={(e) => e.currentTarget.select()}
-        className={`min-w-0 flex-1 bg-transparent text-[12px] text-ink outline-none ${mono ? 'font-mono' : ''}`}
+        className={`min-w-0 flex-1 bg-transparent text-[12px] text-ink outline-hidden ${mono ? 'font-mono' : ''}`}
       />
       <button onClick={() => copy(key, value)} aria-label={t('copyUrl', lang)} className="shrink-0 text-muted hover:text-ink">
         {copied === key ? <Check size={14} className="text-ok" /> : <Copy size={14} />}
@@ -59,7 +59,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {/* Тот же габарит, что split-Star (px-3.5 py-2 text-[13px]) — единый стиль. */}
-        <button className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ok-solid)] px-3.5 py-2 text-[13px] font-semibold text-white hover:opacity-90">
+        <button className="inline-flex items-center gap-1.5 rounded-md bg-(--ok-solid) px-3.5 py-2 text-[13px] font-semibold text-white hover:opacity-90">
           <ListChecks size={15} /> {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>
       </DropdownMenuTrigger>
@@ -135,7 +135,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
                     value={embedCode}
                     rows={3}
                     onFocus={(e) => e.currentTarget.select()}
-                    className="min-w-0 flex-1 resize-none bg-transparent font-mono text-[11px] leading-snug text-ink outline-none"
+                    className="min-w-0 flex-1 resize-none bg-transparent font-mono text-[11px] leading-snug text-ink outline-hidden"
                   />
                   <button onClick={() => copy('embed', embedCode)} aria-label={t('copyUrl', lang)} className="shrink-0 text-muted hover:text-ink">
                     {copied === 'embed' ? <Check size={14} className="text-ok" /> : <Copy size={14} />}

@@ -10,7 +10,7 @@ import { addCollectionItem, deleteCollection, removeCollectionItem, setCollectio
 
 export const dynamic = 'force-dynamic'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none'
+const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 const card = 'rounded-lg border border-border bg-surface p-5'
 
@@ -84,10 +84,10 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         <form action={addCollectionItem} className="mb-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="collectionId" value={c.id} />
           <div className="inline-flex overflow-hidden rounded-md border border-border">
-            <label className="cursor-pointer px-3 py-2 text-[13px] text-ink-2 has-[:checked]:bg-surface-2 has-[:checked]:font-semibold has-[:checked]:text-ink">
+            <label className="cursor-pointer px-3 py-2 text-[13px] text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
               <input type="radio" name="kind" value="list" defaultChecked className="sr-only" /> {ru ? 'Список' : 'List'}
             </label>
-            <label className="cursor-pointer border-l border-border px-3 py-2 text-[13px] text-ink-2 has-[:checked]:bg-surface-2 has-[:checked]:font-semibold has-[:checked]:text-ink">
+            <label className="cursor-pointer border-l border-border px-3 py-2 text-[13px] text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
               <input type="radio" name="kind" value="catalog" className="sr-only" /> {ru ? 'Каталог' : 'Catalog'}
             </label>
           </div>

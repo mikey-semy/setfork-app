@@ -89,7 +89,7 @@ export function ListSettingsDanger({
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder={slug}
-                className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-none focus:border-danger"
+                className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-hidden focus:border-danger"
               />
               <Button
                 variant="dangerSolid"

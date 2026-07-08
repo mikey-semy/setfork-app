@@ -101,7 +101,7 @@ export function ActivityGraph({
           {showRolling && (
             <Link
               href={base}
-              className={`rounded-md border px-2 py-0.5 text-[12px] ${year == null ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+              className={`rounded-md border px-2 py-0.5 text-[12px] ${year == null ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
             >
               {lang === 'ru' ? 'Последний год' : 'Last year'}
             </Link>
@@ -110,7 +110,7 @@ export function ActivityGraph({
             <Link
               key={y}
               href={`${base}?year=${y}`}
-              className={`rounded-md border px-2 py-0.5 font-mono text-[12px] ${year === y ? 'border-accent bg-[var(--accent-soft)] text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+              className={`rounded-md border px-2 py-0.5 font-mono text-[12px] ${year === y ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
             >
               {y}
             </Link>

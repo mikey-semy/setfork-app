@@ -108,7 +108,7 @@ export function CoverSection({
               onClick={() => pickAccent(a)}
               aria-label={a || 'default'}
               style={a ? { backgroundColor: a } : undefined}
-              className={`h-5 w-5 rounded-full border ${a ? '' : 'bg-surface-2'} ${accent === a ? 'ring-2 ring-offset-1 ring-[var(--accent)]' : 'border-black/10'}`}
+              className={`h-5 w-5 rounded-full border ${a ? '' : 'bg-surface-2'} ${accent === a ? 'ring-2 ring-offset-1 ring-(--accent)' : 'border-black/10'}`}
             >
               {!a && <span className="text-[10px] text-muted">×</span>}
             </button>

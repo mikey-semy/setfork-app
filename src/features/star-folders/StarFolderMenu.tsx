@@ -87,7 +87,7 @@ export function StarFolderMenu({
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && create()}
                   placeholder={ru ? 'Новая папка' : 'New folder'}
-                  className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2 py-1.5 text-[13px] text-ink outline-none focus:border-border-strong"
+                  className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2 py-1.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
                 />
                 <button
                   type="button"

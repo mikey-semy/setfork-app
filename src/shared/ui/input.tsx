@@ -21,7 +21,7 @@ export function Input({ size = 'md', className, ...props }: InputProps) {
   return (
     <input
       className={cn(
-        'w-full rounded-md border border-border bg-surface-2 text-ink outline-none placeholder:text-muted focus:border-border-strong disabled:opacity-50',
+        'w-full rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus:border-border-strong disabled:opacity-50',
         SIZES[size],
         className,
       )}

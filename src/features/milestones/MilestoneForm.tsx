@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { createMilestone } from './actions'
 
-const inputCls = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-none focus:border-border-strong'
+const inputCls = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong'
 
 // Создание вехи: сворачиваемая форма с клиентской валидацией заголовка (без потери ввода).
 export function MilestoneForm({ owner, slug, lang }: { owner: string; slug: string; lang: Lang }) {

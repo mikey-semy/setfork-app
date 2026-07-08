@@ -4,7 +4,7 @@ export default function Loading() {
   return (
     <div className="w-full px-6 py-8 lg:px-8">
       <div className="mx-auto flex max-w-[980px] flex-col gap-8 md:flex-row">
-        <aside className="flex-shrink-0 space-y-4 md:w-[280px]">
+        <aside className="shrink-0 space-y-4 md:w-[280px]">
           <Skeleton className="h-[180px] w-[180px] rounded-2xl" />
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-4 w-24" />
