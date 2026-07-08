@@ -60,6 +60,6 @@ jobs:
       - run: npx drizzle-kit push --force
       - run: npm run test:integration
       # Redis-бэкенд rate-limit против настоящего Redis (Lua fixedWindow/tokenBucket).
-      - run: npx vitest run src/shared/rate-limit-store.redis.test.ts
+      - run: npx vitest run tests/shared/rate-limit-store.redis.test.ts
         env:
           REDIS_URL: redis://localhost:6379

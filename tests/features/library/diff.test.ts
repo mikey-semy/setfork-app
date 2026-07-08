@@ -1,0 +1,153 @@
+import { describe, it, expect } from 'vitest'
+import { diffSteps, serializeSteps, lineDiff, type CmpStep } from '@/features/library/diff'
+
+const step = (title: string, over: Partial<CmpStep> = {}): CmpStep => ({
+  title,
+  desc: '',
+  command: '',
+  level: 'required',
+  why: '',
+  subtasks: [],
+  ...over,
+})
+
+describe('diffSteps summary', () => {
+  it('counts a pure reorder as moved (not "nothing changed")', () => {
+    const from = [step('a'), step('b'), step('c')]
+    const to = [step('c'), step('a'), step('b')]
+    const { summary } = diffSteps(from, to)
+    expect(summary).toMatchObject({ added: 0, removed: 0, changed: 0 })
+    expect(summary.moved).toBeGreaterThan(0)
+  })
+
+  it('identical lists → all zeros', () => {
+    const same = [step('a'), step('b')]
+    expect(diffSteps(same, same).summary).toEqual({ added: 0, removed: 0, changed: 0, moved: 0 })
+  })
+
+  it('add / remove / change are counted', () => {
+    const from = [step('a'), step('b')]
+    const to = [step('a', { desc: 'now with desc' }), step('c')]
+    const { summary } = diffSteps(from, to)
+    expect(summary.added).toBe(1) // c
+    expect(summary.removed).toBe(1) // b
+    expect(summary.changed).toBe(1) // a
+  })
+})
+
+describe('diffSteps entries', () => {
+  it('помечает статусы и заполняет changes/before у changed', () => {
+    const from = [step('keep'), step('mod', { command: 'old' }), step('gone')]
+    const to = [step('keep'), step('mod', { command: 'new' }), step('fresh')]
+    const { entries } = diffSteps(from, to)
+    const byTitle = Object.fromEntries(entries.map((e) => [e.title, e]))
+    expect(byTitle['keep'].status).toBe('unchanged')
+    expect(byTitle['mod'].status).toBe('changed')
+    expect(byTitle['mod'].changes).toContain('command')
+    expect(byTitle['mod'].before?.command).toBe('old')
+    expect(byTitle['fresh'].status).toBe('added')
+    expect(byTitle['gone'].status).toBe('removed')
+  })
+
+  it('ловит каждый тип изменения поля', () => {
+    const base = step('s', { desc: 'd', command: 'c', why: 'w', level: 'required', subtasks: ['x'], refs: [{ label: 'L', url: 'https://a' }] })
+    const cases: [Partial<CmpStep>, string][] = [
+      [{ desc: 'd2' }, 'desc'],
+      [{ command: 'c2' }, 'command'],
+      [{ level: 'optional' }, 'level'],
+      [{ why: 'w2' }, 'why'],
+      [{ subtasks: ['x', 'y'] }, 'subtasks'],
+      [{ refs: [{ label: 'L', url: 'https://b' }] }, 'refs'],
+    ]
+    for (const [over, field] of cases) {
+      const { entries } = diffSteps([base], [{ ...base, ...over }])
+      expect(entries[0].changes, field).toEqual([field])
+      expect(entries[0].status).toBe('changed')
+    }
+  })
+
+  it('ключ пункта регистронезависим (title "A" == "a")', () => {
+    const { summary } = diffSteps([step('Deploy')], [step('deploy')])
+    expect(summary).toMatchObject({ added: 0, removed: 0, changed: 0 })
+  })
+})
+
+describe('serializeSteps', () => {
+  it('нумерует ordered и маркирует unordered', () => {
+    const s = [step('first'), step('second')]
+    expect(serializeSteps(s, true).find((l) => l.head)?.text).toBe('1. first')
+    expect(serializeSteps(s, false).find((l) => l.head)?.text).toBe('• first')
+  })
+
+  it('бейдж уровня только для не-required', () => {
+    const [line] = serializeSteps([step('t', { level: 'optional' })], true)
+    expect(line.text).toContain('[optional]')
+    expect(serializeSteps([step('t')], true)[0].text).not.toContain('[')
+  })
+
+  it('заголовок секции — при смене, не при повторе', () => {
+    const s = [step('a', { section: 'Setup' }), step('b', { section: 'Setup' }), step('c', { section: 'Deploy' })]
+    const headers = serializeSteps(s, true).filter((l) => l.text.startsWith('## '))
+    expect(headers.map((h) => h.text)).toEqual(['## Setup', '## Deploy'])
+  })
+
+  it('desc/command/why/subtasks/refs раскрываются в строки с привязкой к пункту', () => {
+    const s = [step('t', { desc: 'line1\nline2', command: 'npm i', why: 'because', subtasks: ['ck'], refs: [{ label: 'Doc', url: 'https://d' }] })]
+    const lines = serializeSteps(s, true)
+    const texts = lines.map((l) => l.text)
+    expect(texts).toContain('    line1')
+    expect(texts).toContain('    line2')
+    expect(texts).toContain('    $ npm i')
+    expect(texts).toContain('    why: because')
+    expect(texts).toContain('    - [ ] ck')
+    expect(texts).toContain('    → Doc — https://d')
+    expect(lines.every((l) => l.step === 1)).toBe(true) // все строки принадлежат пункту 1
+    expect(lines.filter((l) => l.head)).toHaveLength(1) // ровно один заголовок
+  })
+
+  it('ref: только label / только url / пустой', () => {
+    const only = (refs: CmpStep['refs']) => serializeSteps([step('t', { refs })], true).map((l) => l.text)
+    expect(only([{ label: 'Name', url: '' }])).toContain('    → Name')
+    expect(only([{ label: '', url: 'https://u' }])).toContain('    → https://u')
+    expect(only([{ label: '', url: '' }]).some((t) => t.startsWith('    →'))).toBe(false)
+  })
+})
+
+describe('lineDiff', () => {
+  const S = (title: string) => serializeSteps([step(title)], true)
+
+  it('идентичные → всё ctx, 0 add/del', () => {
+    const r = lineDiff(S('same'), S('same'))
+    expect(r.added).toBe(0)
+    expect(r.removed).toBe(0)
+    expect(r.rows.every((x) => x.type === 'ctx')).toBe(true)
+  })
+
+  it('вставка → add-строки с newNo', () => {
+    const r = lineDiff([], S('brand new'))
+    expect(r.added).toBeGreaterThan(0)
+    expect(r.removed).toBe(0)
+    expect(r.rows.every((x) => x.type === 'add')).toBe(true)
+  })
+
+  it('удаление → del-строки', () => {
+    const r = lineDiff(S('going away'), [])
+    expect(r.removed).toBeGreaterThan(0)
+    expect(r.added).toBe(0)
+    expect(r.rows.every((x) => x.type === 'del')).toBe(true)
+  })
+
+  it('изменённая строка → пара del/add с пословной подсветкой (segs)', () => {
+    const a = serializeSteps([step('deploy the app')], true)
+    const b = serializeSteps([step('deploy the service')], true)
+    const r = lineDiff(a, b)
+    const del = r.rows.find((x) => x.type === 'del' && x.head)
+    const add = r.rows.find((x) => x.type === 'add' && x.head)
+    expect(del?.segs, 'del segs').toBeDefined()
+    expect(add?.segs, 'add segs').toBeDefined()
+    // общий префикс не помечен изменённым, различающееся слово — помечено
+    expect(del!.segs!.some((s) => s.changed && /app/.test(s.text))).toBe(true)
+    expect(add!.segs!.some((s) => s.changed && /service/.test(s.text))).toBe(true)
+    expect(del!.segs!.some((s) => !s.changed)).toBe(true) // "deploy the " общее
+  })
+})

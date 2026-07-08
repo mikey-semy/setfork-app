@@ -1,28 +1,30 @@
+import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
-// Юнит-тесты чистой логики в node; компонентные (.test.tsx) — в jsdom через докблок
-// `// @vitest-environment jsdom` в самом файле. globals:true → авто-cleanup Testing
-// Library + jest-dom матчеры (setup ниже). Алиасы: '@'→src; server/client-only →
-// пустышка (чтобы тестировать модули, которые их транзитивно тянут).
+// Все тесты живут в корневом tests/ (зеркалит src/), не рядом с кодом — единая
+// конвенция с другими проектами. jsdom глобально (компонентные тесты работают без
+// докблока; node-логика в jsdom тоже ок). server/client-only → пустышка (чтобы
+// тестировать модули, транзитивно их тянущие). Интеграция с БД — vitest.integration.config.
 export default defineConfig({
+  plugins: [react()],
   test: {
-    environment: 'node',
+    environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.test.{ts,tsx}'],
-    setupFiles: ['./test/setup.ts'],
+    include: ['tests/**/*.test.{ts,tsx}'],
+    setupFiles: ['./tests/setup.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/**/gen/**', 'src/**/*.d.ts'],
+      exclude: ['src/**/*.d.ts', 'src/shared/gen/**', 'src/**/*.stories.tsx'],
       reporter: ['text-summary', 'html'],
     },
   },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      'server-only': fileURLToPath(new URL('./test/empty.ts', import.meta.url)),
-      'client-only': fileURLToPath(new URL('./test/empty.ts', import.meta.url)),
+      'server-only': fileURLToPath(new URL('./tests/empty.ts', import.meta.url)),
+      'client-only': fileURLToPath(new URL('./tests/empty.ts', import.meta.url)),
     },
   },
 })
