@@ -12,6 +12,7 @@ import { tr } from '@/shared/i18n'
 import { imageUrl, uploadAttachmentFile, uploadImageFile, uploadVideoFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
+import { rateLimit } from '@/shared/rate-limit'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { aiQuota, listQuota } from '@/shared/quota'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
@@ -230,6 +231,10 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   // Нельзя предлагать правки к приватному/скрытому списку, которого не видишь
   // (иначе — запись в чужую очередь + пинг владельцу + оракул существования).
   if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return
+  // Анти-спам: правки — запись в чужую очередь + пинг владельца/упомянутых. Кап на автора.
+  if (!rateLimit(`suggest:${session.userId}`, 10, 10 * 60_000).ok) {
+    redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions?e=ratelimited`)
+  }
 
   const note = String(formData.get('note') ?? '').trim()
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
@@ -421,6 +426,8 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   if (!canViewList(sug.template, { isOwner: sug.template.ownerId === session.userId })) return
   const handle = await ownerHandle(sug.template.ownerId)
   const path = `/${handle}/${sug.template.slug}/suggestions/${sug.id}`
+  // Анти-спам: комментарий рассылает уведомления автору+владельцу+комментаторам+watcher'ам.
+  if (!rateLimit(`sugcomment:${session.userId}`, 20, 5 * 60_000).ok) redirect(`${path}?e=ratelimited`)
   if (!body) redirect(path)
 
   await collabStore.addSuggestionComment(sug.id, session.userId, body)
