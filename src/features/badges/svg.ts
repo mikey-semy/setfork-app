@@ -4,13 +4,11 @@
 // Ширина текста считаем эвристикой (нет доступа к метрикам шрифта на сервере):
 // ~7px на символ для 11px Verdana-подобного + запас. Достаточно точно для шилдов.
 
+import { escapeHtml as esc } from '@/shared/lib/escape'
+
 const FONT = 11
 const PAD = 6 // горизонтальный отступ в каждой половине
 const CHAR_W = 6.7 // средняя ширина символа
-
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
 
 const textWidth = (s: string) => Math.ceil(s.length * CHAR_W)
 

@@ -4,6 +4,7 @@ import { db, digests, jobs, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { sendMail } from '@/shared/email/mailer'
 import { appOrigin } from '@/shared/auth/app-origin'
+import { escapeHtml as esc } from '@/shared/lib/escape'
 import { log } from '@/shared/observability'
 import { buildDigest, digestSize, type Digest } from './queries'
 
@@ -82,7 +83,6 @@ function digestSubject(d: Digest): string {
   return 'Your forks have upstream updates'
 }
 
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
 function renderDigestEmail(recipientHandle: string, d: Digest): string {
   const origin = appOrigin()
