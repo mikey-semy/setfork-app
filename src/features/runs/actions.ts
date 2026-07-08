@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { db, runStepState, runs, steps, templates } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { canViewList } from '@/features/library/access'
 import { tr, type LocaleText } from '@/shared/i18n'
 import { collabStore } from '@/features/collab-store/store'
 import { recordRunCompletionIfDone } from '@/features/library/completion'
@@ -196,9 +197,11 @@ export async function reportBlockedStep(runId: string, stepId: string): Promise<
   })
   if (!run || run.userId !== session.userId) return
   const tpl = run.template
-  // issue открываем только там, где это в принципе доступно (активная модерация или свой список).
+  // issue открываем только там, где список доступен пишущему: свой, либо публичный+
+  // активный. Раньше проверялась только модерация — приватный список (ставший приватным
+  // после старта прогона) пропускался. canViewList закрывает private/draft/moderation.
   const isOwner = tpl.ownerId === session.userId
-  if (tpl.moderation !== 'active' && !isOwner) redirect(`/runs/${runId}`)
+  if (!canViewList(tpl, { isOwner })) redirect(`/runs/${runId}`)
 
   const [st] = await db
     .select({ n: steps.n, title: steps.title, state: runStepState.note })

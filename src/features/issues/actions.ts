@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, issueAssignees, issues, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { canViewList } from '@/features/library/access'
 import { isCollaborator } from '@/features/collab/queries'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { ensureWatch } from '@/features/watch/actions'
@@ -19,6 +20,7 @@ async function resolveTemplate(owner: string, slug: string) {
       id: templates.id,
       ownerId: templates.ownerId,
       visibility: templates.visibility,
+      status: templates.status,
       moderation: templates.moderation,
     })
     .from(templates)
@@ -84,6 +86,9 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   const loaded = await loadIssue(owner, slug, number)
   if (!loaded) redirect(`/${owner}/${slug}`)
   const { tpl, iss } = loaded
+  // Комментарий — запись в тред списка: нельзя к issue приватного/скрытого/черновика
+  // (иначе инъекция в приватную ветку + пинги владельцу + оракул по перебору номеров).
+  if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
 
   await collabStore.addIssueComment(iss.id, session.userId, body)
   await ensureWatch(session.userId, tpl.id) // комментатор начинает следить
