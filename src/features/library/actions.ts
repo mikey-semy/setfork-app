@@ -12,6 +12,7 @@ import { tr } from '@/shared/i18n'
 import { imageUrl, uploadAttachmentFile, uploadImageFile, uploadVideoFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
+import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { aiQuota, listQuota } from '@/shared/quota'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { enqueueReindex } from './jobs'
@@ -556,9 +557,7 @@ export async function generateChangeNoteAction(
 // ── Автозаголовок ссылки: тянем <title>/og:title со страницы по URL ──────────
 // Кнопка «сгенерировать» в ref-блоке редактора: пользователь вставил URL — по нему
 // достаём человекочитаемое название страницы в подпись. Требуем сессию + rate-limit;
-// отсекаем не-http и приватные адреса (базовый SSRF-guard по исходному хосту).
-const PRIVATE_HOST_RE =
-  /^(localhost$|127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0$|::1$|\[::1\]$|172\.(1[6-9]|2\d|3[01])\.)/i
+// SSRF-гейт (протоколы, приватные хосты, redirect-hop, DNS-rebind) — в fetchPublicUrl.
 
 function decodeEntities(s: string): string {
   return s
@@ -589,14 +588,13 @@ export async function fetchLinkTitleAction(url: string): Promise<{ label: string
   let u: URL
   try { u = new URL(url.trim()) } catch { return { error: 'badurl' } }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') return { error: 'badurl' }
-  if (PRIVATE_HOST_RE.test(u.hostname)) return { error: 'badurl' }
 
   try {
-    const res = await fetch(u, {
-      redirect: 'follow',
+    const res = await fetchPublicUrl(u, {
       signal: AbortSignal.timeout(6000),
       headers: { 'user-agent': 'SetForkBot/1.0 (+https://setfork.com)', accept: 'text/html,application/xhtml+xml' },
     })
+    if (!res) return { error: 'badurl' }
     if (!res.ok || !(res.headers.get('content-type') ?? '').includes('html')) return { error: 'fetchfail' }
     const html = (await res.text()).slice(0, 200_000)
     const label = extractTitle(html)
