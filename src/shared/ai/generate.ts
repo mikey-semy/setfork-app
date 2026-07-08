@@ -6,6 +6,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { sanitizeCommand } from './sanitize-command'
+import { spotlight } from './spotlight'
 import type { Lang } from '@/shared/i18n'
 
 // Потолок размера входного промта (символы). Спасает от раздувания input-токенов
@@ -159,12 +160,14 @@ export async function generateListDraft(query: string, lang: Lang, opts: Generat
     opts.variant && opts.variant > 1
       ? `\nThis is regeneration attempt #${opts.variant}: produce a MEANINGFULLY DIFFERENT take (different angle, ordering or scope) from a typical answer.`
       : ''
+  const sp = spotlight()
   const system = `You generate a canonical, high-quality, community-grade reference checklist as STRICT JSON.
 All content MUST be in ${langName}.
 ${web ? 'Use up-to-date web search results to make the checklist accurate and current.\n' : ''}${JSON_SHAPE}
-- Be accurate and practical. Everything in ${langName}.${variantHint}`
+- Be accurate and practical. Everything in ${langName}.${variantHint}
+${sp.rule()}`
   const feature: AiFeature = opts.feature ?? (opts.variant && opts.variant > 1 ? 'regenerate' : 'generate')
-  return runListModel(system, `Create the reference list for: ${query}`, query, feature, { ...opts, web })
+  return runListModel(system, `Create the reference checklist for the topic below.\n${sp.wrap('TOPIC', query)}`, query, feature, { ...opts, web })
 }
 
 type NoteItem = { title: string; desc: string; command: string; subtasks: string[] }
@@ -191,12 +194,14 @@ export async function generateChangeNote(
   const langName = lang === 'ru' ? 'Russian' : 'English'
   const compact = (xs: NoteItem[]) =>
     xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n').slice(0, MAX_PROMPT_CHARS)
+  const sp = spotlight()
 
   try {
     const result = await generateText({
       model: openrouter.chat(model, { usage: { include: true } }),
-      system: `You write a SHORT changelog note (like a git commit message) describing what changed between two versions of a checklist, and why it matters. One concise line, imperative mood, in ${langName}. No quotes, no markdown, max ~90 characters.`,
-      prompt: `BEFORE:\n${compact(base) || '(empty)'}\n\nAFTER:\n${compact(next) || '(empty)'}\n\nWrite the change note.`,
+      system: `You write a SHORT changelog note (like a git commit message) describing what changed between two versions of a checklist, and why it matters. One concise line, imperative mood, in ${langName}. No quotes, no markdown, max ~90 characters.
+${sp.rule()}`,
+      prompt: `${sp.wrap('BEFORE', compact(base) || '(empty)')}\n\n${sp.wrap('AFTER', compact(next) || '(empty)')}\n\nWrite the change note.`,
       temperature: 0.3,
       maxOutputTokens: 60,
     })
@@ -219,14 +224,17 @@ export async function generateListRefine(
 ): Promise<GeneratedList | null> {
   const langName = lang === 'ru' ? 'Russian' : 'English'
   const web = opts.web ?? false
+  const sp = spotlight()
   const system = `You REFINE an existing checklist per the user's instruction, returning the FULL updated list as STRICT JSON.
 All content MUST be in ${langName}.
 Preserve good existing content and ordering; change only what the instruction requires. Do not drop unrelated steps.
 ${web ? 'You may use web search to ground new content.\n' : ''}${JSON_SHAPE}
-- Everything in ${langName}.`
-  const prompt = `Current list (JSON):
-${JSON.stringify(current).slice(0, MAX_PROMPT_CHARS)}
+- Everything in ${langName}.
+${sp.rule()}`
+  const prompt = `${sp.wrap('CURRENT LIST (JSON)', JSON.stringify(current).slice(0, MAX_PROMPT_CHARS))}
 
-Instruction: ${instruction.slice(0, 2_000)}`
+${sp.wrap('INSTRUCTION', instruction.slice(0, 2_000))}
+
+Apply the instruction to the current list and return the full updated JSON list.`
   return runListModel(system, prompt, current.title, 'refine', { ...opts, web })
 }
