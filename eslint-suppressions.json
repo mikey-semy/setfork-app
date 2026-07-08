@@ -21,7 +21,7 @@
   },
   "src/features/gardener/service.ts": {
     "boundaries/dependencies": {
-      "count": 6
+      "count": 5
     }
   },
   "src/features/generation/actions.ts": {

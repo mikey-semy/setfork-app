@@ -2,7 +2,6 @@ import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, jobs, steps, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
 import { listStore } from '@/features/library/list-store'
-import { recheckList } from '@/features/moderation/moderate-list'
 import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
 import { enqueueReindex } from '@/features/library/jobs'
@@ -200,8 +199,8 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     if (tpl.ownerCurated) {
       // Кураторская библиотека — контент сайта: правка садовника применяется сразу
       // (та же механика, что acceptSuggestion), с атрибуцией в истории и модерацией.
+      // recheck публичного списка — в фасаде listStore.addVersion (барьер), здесь не дублируем.
       await listStore.addVersion(tpl.id, { note: '\u{1F916} gardener: refreshed steps', steps: toStepInput(items) })
-      await recheckList(tpl.id)
       await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, created.id))
       await notifyMany(await getWatcherIds(tpl.id), { actorId: gardener.id, type: 'new_version', templateId: tpl.id })
       await enqueueReindex(tpl.id)

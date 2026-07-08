@@ -184,6 +184,13 @@ export async function gateListPublication(templateId: string): Promise<void> {
  */
 export async function recheckList(templateId: string): Promise<void> {
   try {
+    const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+    if (!tpl) return
+    // Самозащита по видимости: приватный список наружу не выставлен — модерировать
+    // нечего (и не жжём LLM). Раньше это был внешний `if (public)` на КАЖДОМ месте
+    // вызова; теперь гейт внутри → recheckList безопасно звать безусловно (в т.ч. из
+    // фасада listStore.addVersion — единой точки, которую нельзя забыть).
+    if (tpl.visibility !== 'public') return
     // Правка контента снимает флаг поданной апелляции: владелец изменил список и
     // вправе подать новую (иначе после отказа админа, который не сбрасывает appealedAt,
     // он оставался бы заблокирован навсегда). Дешёвый апдейт только когда флаг стоит.
@@ -192,8 +199,6 @@ export async function recheckList(templateId: string): Promise<void> {
       .set({ appealedAt: null })
       .where(and(eq(templates.id, templateId), sql`${templates.appealedAt} is not null`))
     if (!(await getApiKey())) return
-    const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
-    if (!tpl) return
     await enqueueModerate(templateId, false, tpl.ownerId)
   } catch (e) {
     captureError(e, { where: 'moderation.recheck', templateId })
