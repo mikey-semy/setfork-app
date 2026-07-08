@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (blocked) return blocked
 
   const ip = clientIp(req)
-  const rl = rateLimit(`track-view:${ip}`, 120, 60_000)
+  const rl = await rateLimit(`track-view:${ip}`, 120, 60_000)
   if (!rl.ok) return tooMany(rl)
 
   const ua = req.headers.get('user-agent')

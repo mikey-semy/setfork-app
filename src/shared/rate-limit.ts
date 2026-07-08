@@ -1,30 +1,14 @@
-// Лёгкий in-memory rate-limiter (фиксированное окно). Достаточно для одного инстанса;
-// для мульти-инстанс-прода заменить на Redis/Upstash (тот же интерфейс).
+import 'server-only'
+import { rateStore, type FixedWindowResult } from './rate-limit-store'
 
-type Bucket = { count: number; reset: number }
-const store = new Map<string, Bucket>()
+// Фиксированное окно поверх пуллинг-бэкенда (in-memory или Redis, см. rate-limit-store).
+// async — потому что Redis async; на 1 инстансе бэкенд in-memory, поведение прежнее.
 
-function prune(now: number) {
-  for (const [k, b] of store) if (b.reset <= now) store.delete(k)
-}
-
-export type RateResult = { ok: boolean; remaining: number; retryAfter: number }
+export type RateResult = FixedWindowResult
 
 /** Учитывает попытку под ключом `key`. `limit` попыток за `windowMs`. */
-export function rateLimit(key: string, limit: number, windowMs: number): RateResult {
-  const now = Date.now()
-  if (store.size > 5000) prune(now)
-  let b = store.get(key)
-  if (!b || b.reset <= now) {
-    b = { count: 0, reset: now + windowMs }
-    store.set(key, b)
-  }
-  b.count++
-  return {
-    ok: b.count <= limit,
-    remaining: Math.max(0, limit - b.count),
-    retryAfter: Math.max(1, Math.ceil((b.reset - now) / 1000)),
-  }
+export function rateLimit(key: string, limit: number, windowMs: number): Promise<RateResult> {
+  return rateStore().fixedWindow(key, limit, windowMs)
 }
 
 /** IP клиента из заголовков прокси (Traefik/dokploy). */

@@ -244,7 +244,7 @@ async function rateLimited(req: Request): Promise<Response> {
   const key = bearer
     ? `mcp:tok:${createHash('sha256').update(bearer).digest('hex').slice(0, 16)}`
     : `mcp:ip:${clientIp(req)}`
-  const r = rateLimit(key, MCP_RATE_PER_MIN, 60_000)
+  const r = await rateLimit(key, MCP_RATE_PER_MIN, 60_000)
   if (!r.ok) return tooMany(r)
   return authHandler(req)
 }

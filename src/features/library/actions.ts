@@ -232,7 +232,7 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   // (иначе — запись в чужую очередь + пинг владельцу + оракул существования).
   if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return
   // Анти-спам: правки — запись в чужую очередь + пинг владельца/упомянутых. Кап на автора.
-  if (!rateLimit(`suggest:${session.userId}`, 10, 10 * 60_000).ok) {
+  if (!(await rateLimit(`suggest:${session.userId}`, 10, 10 * 60_000)).ok) {
     redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions?e=ratelimited`)
   }
 
@@ -429,7 +429,7 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   const handle = await ownerHandle(sug.template.ownerId)
   const path = `/${handle}/${sug.template.slug}/suggestions/${sug.id}`
   // Анти-спам: комментарий рассылает уведомления автору+владельцу+комментаторам+watcher'ам.
-  if (!rateLimit(`sugcomment:${session.userId}`, 20, 5 * 60_000).ok) redirect(`${path}?e=ratelimited`)
+  if (!(await rateLimit(`sugcomment:${session.userId}`, 20, 5 * 60_000)).ok) redirect(`${path}?e=ratelimited`)
   if (!body) redirect(path)
 
   await collabStore.addSuggestionComment(sug.id, session.userId, body)
@@ -474,7 +474,7 @@ export async function refineList(input: {
   const instruction = String(input.instruction ?? '').trim()
   if (!instruction) return { error: 'empty' }
 
-  const { allowed } = checkRateLimit(`refine:${session.userId}`)
+  const { allowed } = await checkRateLimit(`refine:${session.userId}`)
   if (!allowed) return { error: 'ratelimited' }
   if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
 
@@ -540,7 +540,7 @@ export async function generateChangeNoteAction(
   // per-user и ограничен rate-limit'ом + месячной AI-квотой (как generate/refine).
   if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return { error: 'forbidden' }
 
-  const { allowed } = checkRateLimit(`note:${session.userId}`)
+  const { allowed } = await checkRateLimit(`note:${session.userId}`)
   if (!allowed) return { error: 'ratelimited' }
   if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
 
@@ -591,7 +591,7 @@ function extractTitle(html: string): string {
 
 export async function fetchLinkTitleAction(url: string): Promise<{ label: string } | { error: string }> {
   const session = await requireSession()
-  const { allowed } = checkRateLimit(`linktitle:${session.userId}`)
+  const { allowed } = await checkRateLimit(`linktitle:${session.userId}`)
   if (!allowed) return { error: 'ratelimited' }
 
   let u: URL

@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 export async function GET(req: Request) {
   const session = await getSession()
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anon'
-  const rl = rateLimit(session ? `usearch:${session.userId}` : `usearch:ip:${ip}`, 60, 60_000) // 60 запросов / мин
+  const rl = await rateLimit(session ? `usearch:${session.userId}` : `usearch:ip:${ip}`, 60, 60_000) // 60 запросов / мин
   if (!rl.ok) return tooMany(rl)
   const q = (new URL(req.url).searchParams.get('q') ?? '').trim()
   if (!q) return Response.json([])

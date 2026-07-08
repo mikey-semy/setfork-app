@@ -22,7 +22,7 @@ import { button, readToken, sendVerificationEmail, signToken } from './token-hel
 export async function resendVerification(): Promise<{ sent: boolean }> {
   const session = await requireSession()
   // Не чаще 3 писем за 10 минут на пользователя (анти-спам SMTP).
-  if (!rateLimit(`verifysend:${session.userId}`, 3, 10 * 60_000).ok) return { sent: false }
+  if (!(await rateLimit(`verifysend:${session.userId}`, 3, 10 * 60_000)).ok) return { sent: false }
   return { sent: await sendVerificationEmail(session.userId) }
 }
 
@@ -59,7 +59,7 @@ export async function requestEmailChange(_prev: EmailChangeResult | null, formDa
   const [u] = await db.select({ email: users.email, handle: users.handle }).from(users).where(eq(users.id, session.userId)).limit(1)
   if (!u?.email) return { ok: false, error: 'no-email' } // github-аккаунт без почты — сменить нечего
   if (u.email === newEmail) return { ok: false, error: 'same' }
-  if (!rateLimit(`emailchange:${session.userId}`, 3, 15 * 60_000).ok) return { ok: false, error: 'throttled' }
+  if (!(await rateLimit(`emailchange:${session.userId}`, 3, 15 * 60_000)).ok) return { ok: false, error: 'throttled' }
   // Мягкая проверка занятости; гонку добьёт unique-констрейнт при подтверждении.
   const [taken] = await db.select({ id: users.id }).from(users).where(eq(users.email, newEmail)).limit(1)
   if (taken) return { ok: false, error: 'taken' }
@@ -112,8 +112,8 @@ export async function requestPasswordReset(_prev: { done?: boolean } | null, for
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const ip = await clientIpFromHeaders()
   // Троттлинг по ip и по адресу (анти-бомбинг чужой почты); ответ всегда одинаковый.
-  const okIp = rateLimit(`pwreset:ip:${ip}`, 5, 15 * 60_000).ok
-  const okEmail = rateLimit(`pwreset:email:${email}`, 3, 60 * 60_000).ok
+  const okIp = (await rateLimit(`pwreset:ip:${ip}`, 5, 15 * 60_000)).ok
+  const okEmail = (await rateLimit(`pwreset:email:${email}`, 3, 60 * 60_000)).ok
   const [u] = await db.select({ id: users.id, handle: users.handle, hash: users.passwordHash }).from(users).where(eq(users.email, email)).limit(1)
   // Ответ всегда одинаковый — не раскрываем существование почты.
   if (u && okIp && okEmail) {

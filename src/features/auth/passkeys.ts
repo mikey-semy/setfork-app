@@ -110,7 +110,7 @@ export async function beginPasskeyLogin() {
 
 export async function finishPasskeyLogin(response: AuthenticationResponseJSON): Promise<PasskeyResult> {
   const ip = await clientIpFromHeaders()
-  if (!rateLimit(`pklogin:${ip}`, 10, 5 * 60_000).ok) return { error: 'throttled' }
+  if (!(await rateLimit(`pklogin:${ip}`, 10, 5 * 60_000)).ok) return { error: 'throttled' }
   const expectedChallenge = await readChallenge('auth')
   if (!expectedChallenge) return { error: 'expired' }
   const [pk] = await db.select().from(passkeys).where(eq(passkeys.credentialId, response.id)).limit(1)

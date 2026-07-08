@@ -235,7 +235,7 @@ export async function getFeed(
   // Семантика тратит embedding-вызов OpenRouter. Разрешаем её только залогиненным и
   // под rate-limit: иначе аноним в цикле GET /search?q=... жёг бы деньги без учёта.
   // Гость и превышенный лимит → keyword-поиск (0 токенов), тот же результат-фолбэк.
-  const canSemantic = mode !== 'keyword' && !!viewerId && checkRateLimit(`search:${viewerId}`).allowed
+  const canSemantic = mode !== 'keyword' && !!viewerId && (await checkRateLimit(`search:${viewerId}`)).allowed
   if (!canSemantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra))
 
   const semantic = await semanticFeed(q, opts.tag, limit, minScore, viewerId, extra)

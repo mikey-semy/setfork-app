@@ -169,7 +169,7 @@ export async function verify2faLogin(_prev: { error?: string } | null, formData:
   // Брутфорс 6-значного кода: 10 попыток за 5 минут на пользователя+ip; исчерпал —
   // гасим pending (нужно заново вводить пароль), окно перебора не продлевается.
   const ip = await clientIpFromHeaders()
-  if (!rateLimit(`2fa:${pending.uid}:${ip}`, 10, 5 * 60_000).ok) {
+  if (!(await rateLimit(`2fa:${pending.uid}:${ip}`, 10, 5 * 60_000)).ok) {
     await clearCookie(PENDING_COOKIE)
     redirect('/login?e=2fa_throttled')
   }

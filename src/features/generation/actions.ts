@@ -37,7 +37,7 @@ export async function startGeneration(formData: FormData): Promise<void> {
   const query = String(formData.get('q') ?? '').trim().slice(0, 300)
   if (!query) redirect('/search')
 
-  const { allowed } = checkRateLimit(`gen:${session.userId}`)
+  const { allowed } = await checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/search?q=${encodeURIComponent(query)}&e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate?e=ai_quota&q=${encodeURIComponent(query)}`)
 
@@ -52,7 +52,7 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
   const gen = await db.query.generations.findFirst({ where: (g) => eq(g.id, generationId) })
   if (!gen || gen.userId !== session.userId || gen.chosenTemplateId) redirect('/explore')
 
-  const { allowed } = checkRateLimit(`gen:${session.userId}`)
+  const { allowed } = await checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
@@ -77,7 +77,7 @@ export async function regenerateWithQuery(generationId: string, newQuery: string
   const query = newQuery.trim().slice(0, 300)
   if (!query) redirect(`/generate/${generationId}`)
 
-  const { allowed } = checkRateLimit(`gen:${session.userId}`)
+  const { allowed } = await checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 

@@ -40,6 +40,12 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U ci -d ci"
           --health-interval 5s --health-timeout 5s --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
     steps:
@@ -53,3 +59,7 @@ jobs:
       - run: node -e "const{Client}=require('pg');(async()=>{const c=new Client(process.env.DATABASE_URL);await c.connect();await c.query('CREATE EXTENSION IF NOT EXISTS vector');await c.end()})().catch(e=>{console.error(e);process.exit(1)})"
       - run: npx drizzle-kit push --force
       - run: npm run test:integration
+      # Redis-бэкенд rate-limit против настоящего Redis (Lua fixedWindow/tokenBucket).
+      - run: npx vitest run src/shared/rate-limit-store.redis.test.ts
+        env:
+          REDIS_URL: redis://localhost:6379

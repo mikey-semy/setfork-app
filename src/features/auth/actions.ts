@@ -64,7 +64,7 @@ export async function loginWithPassword(_prev: AuthResult | null, formData: Form
 
   // Троттлинг перебора паролей: 10 попыток / 15 мин на ip+email.
   const ip = await clientIpFromHeaders()
-  if (!rateLimit(`login:${ip}:${email}`, 10, 15 * 60_000).ok) return { error: t('invalidCredentials', lang) }
+  if (!(await rateLimit(`login:${ip}:${email}`, 10, 15 * 60_000)).ok) return { error: t('invalidCredentials', lang) }
 
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
   if (!user) {

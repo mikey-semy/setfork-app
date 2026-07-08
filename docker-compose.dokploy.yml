@@ -98,9 +98,24 @@ services:
       SETFORK_CORE_URL: '1' # включить remote-режим git-ядра
       SETFORK_CORE_ADDR: setfork-core:50051 # контейнер ядра из отдельного проекта setfork-core
       SETFORK_CORE_TOKEN: ${SETFORK_CORE_TOKEN:-} # Bearer-токен канала (тот же в проекте ядра)
+      # Rate-limit: пусто → in-memory (1 инстанс). Для >1 реплики задай REDIS_URL и
+      # подними профиль scale (redis-сервис ниже): лимит станет общим на все инстансы.
+      REDIS_URL: ${REDIS_URL:-}
     depends_on:
       setfork-db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
+    networks: [dokploy-network]
+
+  # Redis для общего rate-limit при ГОРИЗОНТАЛЬНОМ масштабе (>1 реплики app).
+  # На одном инстансе НЕ нужен (in-memory быстрее, без сети) — profile scale держит
+  # его выключенным по умолчанию. Включить: docker compose --profile scale up -d,
+  # и задать REDIS_URL=redis://setfork-redis:6379.
+  redis:
+    image: redis:7-alpine
+    container_name: setfork-redis
+    profiles: ['scale']
+    restart: always
+    command: ['redis-server', '--maxmemory', '128mb', '--maxmemory-policy', 'allkeys-lru', '--save', '']
     networks: [dokploy-network]
 
   # Бэкап Postgres → S3 (те же Selectel-креды, что у медиа). Единственный хост:
