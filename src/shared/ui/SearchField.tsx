@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useRef } from 'react'
+import { useRef } from 'react'
 import { Search, X } from 'lucide-react'
 
 type Size = 'lg' | 'md' | 'sm' | 'xs'
@@ -35,6 +35,8 @@ export interface SearchFieldProps {
   onFocus?: React.FocusEventHandler<HTMLInputElement>
   onBlur?: React.FocusEventHandler<HTMLInputElement>
   onScroll?: React.UIEventHandler<HTMLInputElement>
+  /** React 19: ref — обычный проп. Ожидается RefObject (используем .current для фокуса). */
+  ref?: React.RefObject<HTMLInputElement | null>
 }
 
 /**
@@ -43,31 +45,29 @@ export interface SearchFieldProps {
  * прозрачным), `hint` — правый слот, видимый пока поле пустое, `variant='bare'`
  * убирает рамку для вложения в свой контейнер.
  */
-export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(function SearchField(
-  {
-    value,
-    onValueChange,
-    onClear,
-    placeholder,
-    ariaLabel,
-    clearLabel = 'Clear',
-    size = 'md',
-    variant = 'box',
-    name,
-    autoFocus,
-    overlay,
-    hint,
-    className,
-    inputClassName,
-    onKeyDown,
-    onFocus,
-    onBlur,
-    onScroll,
-  },
+export function SearchField({
+  value,
+  onValueChange,
+  onClear,
+  placeholder,
+  ariaLabel,
+  clearLabel = 'Clear',
+  size = 'md',
+  variant = 'box',
+  name,
+  autoFocus,
+  overlay,
+  hint,
+  className,
+  inputClassName,
+  onKeyDown,
+  onFocus,
+  onBlur,
+  onScroll,
   ref,
-) {
+}: SearchFieldProps) {
   const innerRef = useRef<HTMLInputElement>(null)
-  const inputRef = (ref as React.RefObject<HTMLInputElement>) ?? innerRef
+  const inputRef = ref ?? innerRef
   const s = SIZES[size]
   const hasValue = value.length > 0
   const box =
@@ -116,4 +116,4 @@ export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(functi
       )}
     </div>
   )
-})
+}

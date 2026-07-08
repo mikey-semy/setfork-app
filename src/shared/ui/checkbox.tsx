@@ -6,14 +6,12 @@ import { cn } from '@/shared/lib/cn'
 // Единый чекбокс (нативный input под капотом — доступность/формы бесплатно,
 // accent-цвет из токена). Для «переключателей» — shared/ui/switch.
 
-export type CheckboxProps = React.InputHTMLAttributes<HTMLInputElement>
+// React 19: ref — обычный проп (ComponentProps его включает), forwardRef не нужен.
+export type CheckboxProps = React.ComponentProps<'input'>
 
-export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
-  { className, ...props },
-  ref,
-) {
-  return <input ref={ref} type="checkbox" className={cn('accent-[var(--accent)]', className)} {...props} />
-})
+export function Checkbox({ className, ...props }: CheckboxProps) {
+  return <input type="checkbox" className={cn('accent-[var(--accent)]', className)} {...props} />
+}
 
 /** Строка «чекбокс + заголовок + подпись» — форма чекбокс-списков (фильтры, настройки). */
 export function CheckboxRow({

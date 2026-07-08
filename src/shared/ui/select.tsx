@@ -9,33 +9,28 @@ const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
 const SelectValue = SelectPrimitive.Value
 
-const SelectTrigger = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Trigger
-    ref={ref}
-    className={cn(
+// React 19: ref — обычный проп (ComponentProps его включает), forwardRef не нужен.
+function SelectTrigger({ className, children, ...props }: React.ComponentProps<typeof SelectPrimitive.Trigger>) {
+  return (
+    <SelectPrimitive.Trigger
+      className={cn(
       'flex h-[42px] w-full items-center justify-between rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-none focus:border-border-strong data-[placeholder]:text-muted',
       className,
     )}
-    {...props}
-  >
-    {children}
-    <SelectPrimitive.Icon asChild>
-      <ChevronDown size={16} className="text-muted" />
-    </SelectPrimitive.Icon>
-  </SelectPrimitive.Trigger>
-))
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+      {...props}
+    >
+      {children}
+      <SelectPrimitive.Icon asChild>
+        <ChevronDown size={16} className="text-muted" />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  )
+}
 
-const SelectContent = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', ...props }, ref) => (
+function SelectContent({ className, children, position = 'popper', ...props }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  return (
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
-      ref={ref}
       className={cn(
         'relative z-50 max-h-[320px] min-w-[10rem] overflow-hidden rounded-md border border-border bg-surface text-ink shadow-card',
         position === 'popper' && 'data-[side=bottom]:translate-y-1',
@@ -57,15 +52,17 @@ const SelectContent = React.forwardRef<
       </SelectPrimitive.ScrollDownButton>
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
-))
-SelectContent.displayName = SelectPrimitive.Content.displayName
+  )
+}
 
-const SelectItem = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & { trailing?: React.ReactNode }
->(({ className, children, trailing, ...props }, ref) => (
+function SelectItem({
+  className,
+  children,
+  trailing,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Item> & { trailing?: React.ReactNode }) {
+  return (
   <SelectPrimitive.Item
-    ref={ref}
     className={cn(
       'relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-[13.5px] text-ink outline-none data-[highlighted]:bg-[var(--accent-soft)] data-[highlighted]:text-accent data-[disabled]:opacity-50',
       className,
@@ -81,7 +78,7 @@ const SelectItem = React.forwardRef<
     {/* Правая колонка (напр. цена) — прижата к правому краю, не уезжает в trigger. */}
     {trailing != null && <span className="ml-auto shrink-0 pl-4">{trailing}</span>}
   </SelectPrimitive.Item>
-))
-SelectItem.displayName = SelectPrimitive.Item.displayName
+  )
+}
 
 export { Select, SelectGroup, SelectValue, SelectTrigger, SelectContent, SelectItem }
