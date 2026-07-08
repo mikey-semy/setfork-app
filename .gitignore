@@ -19,3 +19,4 @@ build/
 
 # SetFork git-as-source-of-truth persistent repos
 .setfork-git/
+coverage/
