@@ -93,7 +93,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
                   {open.tiers.map((th, i) => {
                     const reached = open.value >= th
                     return (
-                      <li key={i} className="flex items-center gap-2 text-[12.5px]">
+                      <li key={th} className="flex items-center gap-2 text-[12.5px]">
                         <Trophy size={13} className={reached ? 'shrink-0 text-warn' : 'shrink-0 text-muted'} />
                         <span className={reached ? 'text-ink' : 'text-muted'}>
                           {open.tiers.length > 1 ? `${ru ? 'ур.' : 'lvl'} ${i + 1} · ` : ''}
