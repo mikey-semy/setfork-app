@@ -31,6 +31,7 @@ import { pollDeadlineMs } from '@/features/library/blocks'
 import { canViewList } from '@/features/library/access'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ListHeader } from '@/features/library/ListHeader'
+import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { publishList } from '@/features/library/actions'
 
 function fmt(n: number): string {
@@ -161,6 +162,8 @@ export default async function ListPage({
 
   return (
     <>
+      {/* Просмотр: владелец себя не накручивает, сервер дополнительно дедупит. */}
+      {!isOwner && <ViewBeacon templateId={tpl.id} />}
       <div className="print:hidden">
         <ListHeader owner={owner} slug={slug} active="overview" />
       </div>
@@ -432,9 +435,12 @@ export default async function ListPage({
                   )
                 }
                 const subs = (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean)
-                const refs = (s.refs as { label: LocaleText; url?: string }[]).map((x) => ({
+                // href — через /api/go (журнал кликов); у веток snapshot-шаги без
+                // DB-id → прямой url. Экспорт/MD не трогаем — там url как есть.
+                const refs = (s.refs as { label: LocaleText; url?: string }[]).map((x, ri) => ({
                   label: tr(x.label, lang),
                   url: x.url,
+                  href: x.url && !snapshot ? `/api/go/${s.id}/${ri}` : x.url,
                 }))
                 return (
                   <Fragment key={s.id}>
@@ -488,7 +494,7 @@ export default async function ListPage({
                               const cls =
                                 'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent'
                               return r.url ? (
-                                <SafeLink key={i} href={r.url} className={cls}>
+                                <SafeLink key={i} href={r.href ?? r.url} rel="nofollow noreferrer" className={cls}>
                                   <ExternalLink size={11} /> {r.label}
                                 </SafeLink>
                               ) : (
