@@ -6,7 +6,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
-import { getListMeta } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getIssue, getIssueAssignees, getIssueComments, getListLabels } from '@/features/issues/queries'
 import { LabelEditor } from '@/features/issues/LabelEditor'
@@ -27,7 +27,7 @@ export default async function IssueThreadPage({
   const { handle: owner, slug, number: numStr } = await params
   const number = Number(numStr)
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   const issue = number > 0 ? await getIssue(meta.id, number) : null
   if (!issue) notFound()

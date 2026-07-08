@@ -5,7 +5,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { Avatar } from '@/shared/ui/Avatar'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import { getListMeta } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getDiscussions } from '@/features/discussions/queries'
 import { DISCUSSION_CATEGORIES, categoryLabel, categoryMeta } from '@/features/discussions/constants'
@@ -21,7 +21,7 @@ export default async function DiscussionsPage({
   const sp = await searchParams
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const ru = lang === 'ru'
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
 
   const category = sp.category && DISCUSSION_CATEGORIES.some((c) => c.key === sp.category) ? sp.category : undefined

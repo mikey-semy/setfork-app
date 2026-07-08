@@ -6,7 +6,8 @@ import { getLang } from '@/shared/i18n/server'
 import { Input } from '@/shared/ui/input'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
-import { getListMeta, getVersions } from '@/features/library/queries'
+import { getVersions } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
 import { ListHeader } from '@/features/library/ListHeader'
 import { createRelease } from '@/features/releases/actions'
@@ -28,7 +29,7 @@ export default async function NewReleasePage({
   const [{ handle: owner, slug }, sp] = await Promise.all([params, searchParams])
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const ru = lang === 'ru'
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   if (!session) redirect(`/login?next=/${owner}/${slug}/releases/new`)
   const canManage = session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId))

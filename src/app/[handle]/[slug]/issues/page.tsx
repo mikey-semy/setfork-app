@@ -6,7 +6,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
-import { getListMeta } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/features/library/ListHeader'
 import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, getListLabels, type IssueFilter, type IssueSort } from '@/features/issues/queries'
 import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
@@ -27,7 +27,7 @@ export default async function IssuesPage({
   const { handle: owner, slug } = await params
   const sp = await searchParams
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
 
   const status: IssueFilter = sp.status === 'closed' ? 'closed' : 'open'

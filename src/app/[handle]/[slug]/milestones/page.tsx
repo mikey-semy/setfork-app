@@ -4,7 +4,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
-import { getListMeta } from '@/features/library/queries'
+import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/features/library/ListHeader'
 import { isCollaborator } from '@/features/collab/queries'
 import { getMilestones } from '@/features/milestones/queries'
@@ -14,7 +14,7 @@ import { deleteMilestone, toggleMilestoneClosed } from '@/features/milestones/ac
 export default async function MilestonesPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle: owner, slug } = await params
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const meta = await getListMeta(owner, slug)
+  const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   const canManage = session ? session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId)) : false
   const list = await getMilestones(meta.id)
