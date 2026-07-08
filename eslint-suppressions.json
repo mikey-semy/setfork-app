@@ -1,6 +1,276 @@
 {
+  "src/app/[handle]/[slug]/blame/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/app/[handle]/[slug]/certificate/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 12
+    }
+  },
+  "src/app/[handle]/[slug]/discussions/[number]/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/app/[handle]/[slug]/discussions/new/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/app/[handle]/[slug]/discussions/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/app/[handle]/[slug]/edit/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/app/[handle]/[slug]/insights/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 21
+    }
+  },
+  "src/app/[handle]/[slug]/issues/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/app/[handle]/[slug]/leaderboard/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/app/[handle]/[slug]/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 9
+    }
+  },
+  "src/app/[handle]/[slug]/releases/new/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 10
+    }
+  },
+  "src/app/[handle]/[slug]/releases/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/app/[handle]/[slug]/suggest/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/app/[handle]/[slug]/suggestions/[id]/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/app/[handle]/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/app/admin/audit/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/app/admin/collections/[id]/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 17
+    }
+  },
+  "src/app/admin/collections/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 8
+    }
+  },
+  "src/app/admin/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 32
+    }
+  },
+  "src/app/admin/usage/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 12
+    }
+  },
+  "src/app/change-email/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 9
+    }
+  },
+  "src/app/changelog/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/app/collections/[slug]/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/app/explore/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/app/forgot-password/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/app/generate/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/app/improve/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 9
+    }
+  },
+  "src/app/layout.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/app/login/2fa/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/app/login/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/app/new/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 9
+    }
+  },
+  "src/app/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/app/reset-password/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/app/settings/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 10
+    }
+  },
+  "src/app/verify-email/page.tsx": {
+    "no-restricted-syntax": {
+      "count": 7
+    }
+  },
+  "src/features/admin/AchievementsAdmin.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/admin/AiKeyAndSwitch.tsx": {
+    "no-restricted-syntax": {
+      "count": 6
+    }
+  },
+  "src/features/admin/CreditsWidget.tsx": {
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/features/admin/EmailSettingsForm.tsx": {
+    "no-restricted-syntax": {
+      "count": 12
+    }
+  },
+  "src/features/admin/MediaSettingsForm.tsx": {
+    "no-restricted-syntax": {
+      "count": 10
+    }
+  },
+  "src/features/admin/PushSettingsForm.tsx": {
+    "no-restricted-syntax": {
+      "count": 10
+    }
+  },
+  "src/features/admin/ReindexPanel.tsx": {
+    "no-restricted-syntax": {
+      "count": 11
+    }
+  },
+  "src/features/admin/SearchSettingsForm.tsx": {
+    "no-restricted-syntax": {
+      "count": 12
+    }
+  },
+  "src/features/admin/achievement-actions.ts": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/admin/actions.ts": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/auth/AuthForms.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/auth/PasskeyLoginButton.tsx": {
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/features/auth/PasswordResetForms.tsx": {
+    "no-restricted-syntax": {
+      "count": 6
+    }
+  },
+  "src/features/auth/TwoFaLoginForm.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/auth/email-flows.ts": {
+    "no-restricted-syntax": {
+      "count": 7
+    }
+  },
+  "src/features/auth/token-helpers.ts": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/badges/BadgesCard.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/catalogs/CatalogRow.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
   "src/features/catalogs/actions.ts": {
     "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/collections/CollectionCard.tsx": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -14,6 +284,21 @@
       "count": 1
     }
   },
+  "src/features/feed/CreateWithAI.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/feed/Feed.tsx": {
+    "no-restricted-syntax": {
+      "count": 15
+    }
+  },
+  "src/features/feed/FeedFilter.tsx": {
+    "no-restricted-syntax": {
+      "count": 7
+    }
+  },
   "src/features/follows/actions.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -22,6 +307,21 @@
   "src/features/gardener/service.ts": {
     "boundaries/dependencies": {
       "count": 5
+    }
+  },
+  "src/features/generation/GenerateForm.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/features/generation/GenerationReview.tsx": {
+    "no-restricted-syntax": {
+      "count": 25
+    }
+  },
+  "src/features/generation/GnomeLoader.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
     }
   },
   "src/features/generation/actions.ts": {
@@ -34,6 +334,21 @@
       "count": 1
     }
   },
+  "src/features/git/BranchPicker.tsx": {
+    "no-restricted-syntax": {
+      "count": 6
+    }
+  },
+  "src/features/git/CloneDropdown.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/features/git/ConflictResolver.tsx": {
+    "no-restricted-syntax": {
+      "count": 12
+    }
+  },
   "src/features/git/actions.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -42,6 +357,11 @@
   "src/features/git/project.ts": {
     "boundaries/dependencies": {
       "count": 1
+    }
+  },
+  "src/features/issues/LabelsManager.tsx": {
+    "no-restricted-syntax": {
+      "count": 7
     }
   },
   "src/features/issues/MilestonePicker.tsx": {
@@ -59,9 +379,37 @@
       "count": 1
     }
   },
+  "src/features/library/ChangeNoteField.tsx": {
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/features/library/CourseOutline.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/library/CoverSection.tsx": {
+    "no-restricted-syntax": {
+      "count": 6
+    }
+  },
+  "src/features/library/ListEditor.tsx": {
+    "no-restricted-syntax": {
+      "count": 101
+    }
+  },
+  "src/features/library/TemplateSection.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
   "src/features/library/actions.ts": {
     "boundaries/dependencies": {
       "count": 11
+    },
+    "no-restricted-syntax": {
+      "count": 3
     }
   },
   "src/features/library/cover-actions.ts": {
@@ -69,9 +417,19 @@
       "count": 1
     }
   },
+  "src/features/library/export.ts": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
   "src/features/library/queries.ts": {
     "boundaries/dependencies": {
       "count": 1
+    }
+  },
+  "src/features/mcp/ApiTokensSection.tsx": {
+    "no-restricted-syntax": {
+      "count": 21
     }
   },
   "src/features/milestones/actions.ts": {
@@ -79,14 +437,52 @@
       "count": 1
     }
   },
+  "src/features/polls/PollBlock.tsx": {
+    "no-restricted-syntax": {
+      "count": 8
+    }
+  },
+  "src/features/polls/PollHistoryChart.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
   "src/features/polls/actions.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
+  "src/features/profile/AchievementsCard.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/profile/AchievementsGrid.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/profile/ActivityGraph.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/profile/ContributionActivity.tsx": {
+    "no-restricted-syntax": {
+      "count": 15
+    }
+  },
+  "src/features/profile/ListsToolbar.tsx": {
+    "no-restricted-syntax": {
+      "count": 10
+    }
+  },
   "src/features/profile/PinsPicker.tsx": {
     "boundaries/dependencies": {
       "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 4
     }
   },
   "src/features/profile/queries.ts": {
@@ -94,8 +490,28 @@
       "count": 1
     }
   },
+  "src/features/quizzes/CourseProgress.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
+  "src/features/quizzes/QuizBlock.tsx": {
+    "no-restricted-syntax": {
+      "count": 15
+    }
+  },
+  "src/features/reactions/Reactions.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
   "src/features/releases/actions.ts": {
     "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/features/runs/RunView.tsx": {
+    "no-restricted-syntax": {
       "count": 2
     }
   },
@@ -109,19 +525,43 @@
       "count": 1
     }
   },
+  "src/features/settings/AppearanceSettings.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
+    }
+  },
   "src/features/settings/EmailSection.tsx": {
     "boundaries/dependencies": {
       "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 11
     }
   },
   "src/features/settings/PasskeysSection.tsx": {
     "boundaries/dependencies": {
       "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 9
     }
   },
   "src/features/settings/TwoFactorSection.tsx": {
     "boundaries/dependencies": {
       "count": 1
+    },
+    "no-restricted-syntax": {
+      "count": 16
+    }
+  },
+  "src/features/settings/actions.ts": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/features/star-folders/StarFolderMenu.tsx": {
+    "no-restricted-syntax": {
+      "count": 6
     }
   },
   "src/features/watch/actions.ts": {
@@ -132,6 +572,51 @@
   "src/features/watch/queries.ts": {
     "boundaries/dependencies": {
       "count": 1
+    }
+  },
+  "src/shared/ui/DatePicker.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/shared/ui/Pagination.tsx": {
+    "no-restricted-syntax": {
+      "count": 5
+    }
+  },
+  "src/shared/ui/controls.tsx": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/shared/ui/timeAgo.ts": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/widgets/ChangelogCard.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/widgets/Dashboard.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/widgets/ListHeader.tsx": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/widgets/ListsPanel.tsx": {
+    "no-restricted-syntax": {
+      "count": 2
+    }
+  },
+  "src/widgets/MobileSearch.tsx": {
+    "no-restricted-syntax": {
+      "count": 4
     }
   }
 }
