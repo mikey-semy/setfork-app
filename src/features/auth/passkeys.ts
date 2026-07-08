@@ -1,6 +1,6 @@
 'use server'
 
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { cookies } from 'next/headers'
 import { SignJWT, jwtVerify } from 'jose'
 import {
@@ -158,10 +158,4 @@ export async function deletePasskey(id: string): Promise<void> {
 export async function renamePasskey(id: string, name: string): Promise<void> {
   const session = await requireSession()
   await db.update(passkeys).set({ name: name.trim().slice(0, 40) || 'Passkey' }).where(and(eq(passkeys.id, id), eq(passkeys.userId, session.userId)))
-}
-
-/** Есть ли у пользователя passkeys (для подсказок в UI). */
-export async function hasPasskeys(userId: string): Promise<boolean> {
-  const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(passkeys).where(eq(passkeys.userId, userId))
-  return (r?.n ?? 0) > 0
 }

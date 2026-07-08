@@ -190,7 +190,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
     steps: toStepInput(proposed),
   })
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
-  await ensureWatch(session.userId, list.id) // владелец следит за своим списком
+  await ensureWatch(list.id) // владелец следит за своим списком
   if (visibility === 'public') await gateListPublication(list.id) // приватные не модерируем
   await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
 
@@ -236,7 +236,7 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
   const created = await collabStore.createSuggestion(tpl.id, session.userId, note, toStepInput(proposed))
-  await ensureWatch(session.userId, tpl.id) // автор правки следит за списком
+  await ensureWatch(tpl.id) // автор правки следит за списком
   await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
   await notifyMentions({ text: note, actorId: session.userId, templateId: tpl.id })
 
@@ -273,7 +273,7 @@ export async function openBranchPr(templateId: string, branch: string): Promise<
       branchRef: branch,
     })
     .returning({ id: suggestions.id })
-  await ensureWatch(session.userId, tpl.id)
+  await ensureWatch(tpl.id)
   if (tpl.ownerId !== session.userId) {
     await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
   }
@@ -425,7 +425,7 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   if (!body) redirect(path)
 
   await collabStore.addSuggestionComment(sug.id, session.userId, body)
-  await ensureWatch(session.userId, sug.templateId)
+  await ensureWatch(sug.templateId)
 
   const commenters = await suggestionCommenterIds(sug.id)
   const watchers = await getWatcherIds(sug.templateId)

@@ -53,7 +53,7 @@ export async function createDiscussion(formData: FormData): Promise<void> {
     })
     .returning({ number: discussions.number })
 
-  await ensureWatch(session.userId, tpl.id) // автор треда следит за списком
+  await ensureWatch(tpl.id) // автор треда следит за списком
   revalidatePath(`/${owner}/${slug}/discussions`)
   redirect(`/${owner}/${slug}/discussions/${row.number}`)
 }
@@ -79,7 +79,7 @@ export async function addDiscussionComment(formData: FormData): Promise<void> {
   if (!disc) redirect(`/${owner}/${slug}/discussions`)
 
   await db.insert(discussionComments).values({ discussionId: disc.id, authorId: session.userId, body })
-  await ensureWatch(session.userId, tpl.id)
+  await ensureWatch(tpl.id)
   revalidatePath(`/${owner}/${slug}/discussions/${number}`)
   redirect(`/${owner}/${slug}/discussions/${number}`)
 }

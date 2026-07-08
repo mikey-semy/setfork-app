@@ -7,9 +7,13 @@ import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
 import { curationStore } from '@/features/curation/store'
 
-/** Тихо подписать пользователя на список (идемпотентно). Для авто-watch. */
-export async function ensureWatch(userId: string, templateId: string): Promise<void> {
-  await curationStore.ensureWatch(templateId, userId)
+/** Тихо подписать ТЕКУЩЕГО пользователя на список (идемпотентно). Для авто-watch
+ *  из других действий (открыл issue/тред/правку → следишь за списком). userId
+ *  берём из сессии, а не из аргумента: это 'use server'-эндпоинт, произвольный
+ *  userId дал бы аноним-вектор «подписать любого» (react-doctor). */
+export async function ensureWatch(templateId: string): Promise<void> {
+  const session = await requireSession()
+  await curationStore.ensureWatch(templateId, session.userId)
 }
 
 /** Подписаться/отписаться (кнопка Watch). */
