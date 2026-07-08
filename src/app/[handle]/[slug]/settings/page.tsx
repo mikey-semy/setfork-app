@@ -27,7 +27,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
         <CatalogSection templateId={meta.id} currentId={meta.repositoryId} catalogs={catalogs} lang={lang} />
         <CollaboratorsSection templateId={meta.id} collaborators={collaborators} lang={lang} />
         <TemplateSection templateId={meta.id} isTemplate={meta.isTemplate} lang={lang} />
-        <ListSettingsDanger templateId={meta.id} slug={meta.slug} visibility={meta.visibility} pinned={meta.pinned} lang={lang} />
+        <ListSettingsDanger templateId={meta.id} slug={meta.slug} visibility={meta.visibility} moderation={meta.moderation} pinned={meta.pinned} lang={lang} />
       </div>
     </>
   )

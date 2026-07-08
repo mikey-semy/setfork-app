@@ -31,8 +31,11 @@ export async function setModeration(
   if (!admin) return { error: 'Доступ запрещён.' }
   await db
     .update(templates)
-    // решение принято: апелляция закрыта, severity актуален только для нового нарушения
-    .set({ moderation, moderationReason: reason ?? null, moderationSeverity: 0, appealedAt: null })
+    // Апелляцию закрываем (appealedAt=null) ТОЛЬКО при одобрении. Отказ (повторный
+    // flagged/hidden) оставляет пометку поданной апелляции — иначе владелец крутил бы
+    // цикл appeal→deny→appeal, забивая очередь админа. Пере-апелляция — после правки
+    // (recheck) либо решением админа снять список.
+    .set({ moderation, moderationReason: reason ?? null, moderationSeverity: 0, ...(moderation === 'active' ? { appealedAt: null } : {}) })
     .where(eq(templates.id, templateId))
   await recordAudit('list.moderate', { actorId: admin.userId, targetType: 'list', targetId: templateId, meta: { moderation, reason: reason ?? null } })
   revalidatePath('/admin/moderation')

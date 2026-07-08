@@ -11,7 +11,10 @@ function esc(s: string): string {
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
   const meta = await getListMeta(handle, slug)
-  if (!meta || meta.visibility !== 'public') return new Response('Not found', { status: 404 })
+  // Публичный + опубликованный + не снят модерацией. Раньше проверялась только
+  // видимость → release notes flagged/hidden/pending и публичных черновиков утекали.
+  if (!meta || meta.visibility !== 'public' || meta.status !== 'published' || meta.moderation !== 'active')
+    return new Response('Not found', { status: 404 })
 
   const origin = new URL(req.url).origin
   const base = `${origin}/${handle}/${slug}`
@@ -42,6 +45,7 @@ ${entries}
 </feed>
 `
   return new Response(xml, {
-    headers: { 'content-type': 'application/atom+xml; charset=utf-8', 'cache-control': 'public, max-age=300' },
+    // Короткий кэш: сокращает окно, в которое CDN отдаёт фид уже снятого модерацией списка.
+    headers: { 'content-type': 'application/atom+xml; charset=utf-8', 'cache-control': 'public, max-age=60' },
   })
 }

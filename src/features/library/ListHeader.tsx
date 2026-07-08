@@ -30,6 +30,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
   const canWrite = isOwner || (session ? await isCollaborator(meta.id, session.userId) : false)
   const isAdmin = isAdminHandle(session?.handle)
   if (meta.visibility === 'private' && !isOwner) notFound() // приватный — только владельцу
+  if (meta.status === 'draft' && !isOwner) notFound() // черновик (в т.ч. созданный через MCP) — только владельцу
   if (meta.moderation !== 'active' && !isOwner && !isAdmin) notFound() // flagged/hidden не публичны
   const starred = session ? await isStarred(meta.id, session.userId) : false
   const watching = session ? await isWatching(session.userId, meta.id) : false

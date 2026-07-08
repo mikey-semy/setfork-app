@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { db, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
@@ -92,6 +93,13 @@ export async function deleteListAction(templateId: string): Promise<void> {
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl || tpl.ownerId !== session.userId) return
+  // Снятый модерацией список владелец удалить не может: hard-delete стёр бы его
+  // contentFingerprint — единственную защиту от повторной заливки того же контента
+  // (отмывка «удалил → залил заново»). Снять/удалить takedown вправе только админ;
+  // легитимный путь для владельца — апелляция.
+  if ((tpl.moderation === 'flagged' || tpl.moderation === 'hidden') && !isAdminHandle(session.handle)) {
+    redirect(`/${session.handle}/${tpl.slug}/settings?e=locked_moderation`)
+  }
   await db.delete(templates).where(eq(templates.id, templateId)) // каскад: версии/шаги/звёзды/предложения
   await recordAudit('list.delete', { actorId: session.userId, targetType: 'list', targetId: templateId, meta: { slug: tpl.slug } })
   revalidatePath('/', 'layout')
@@ -516,12 +524,13 @@ export async function generateChangeNoteAction(
     with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
   })
   // Доступно всем, кто может видеть список: владельцу на /edit и предлагающему на
-  // /suggest. Генерация читает публичный контент + их черновик; стоимость метрится
-  // per-user и rate-limited, так что абьюза нет.
+  // /suggest. Генерация читает публичный контент + их черновик; расход считается
+  // per-user и ограничен rate-limit'ом + месячной AI-квотой (как generate/refine).
   if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return { error: 'forbidden' }
 
   const { allowed } = checkRateLimit(`note:${session.userId}`)
   if (!allowed) return { error: 'ratelimited' }
+  if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
 
   const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
   const baseSteps = cur

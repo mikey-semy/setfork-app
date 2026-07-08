@@ -57,6 +57,31 @@ export async function completeJob(id: string): Promise<void> {
   await db.update(jobs).set({ status: 'done', updatedAt: new Date() }).where(eq(jobs.id, id))
 }
 
+/**
+ * Возвращает «зависшие» задачи (упавший посреди работы воркер оставил их в
+ * `processing`): либо снова в очередь (attempts < maxAttempts), либо в `failed`.
+ * Без этого claim берёт только `pending`, и зависшая джоба терялась навсегда.
+ *
+ * Порог намеренно щедрый (дефолт 30 мин, env SETFORK_JOB_STALL_SEC): в мульти-инстанс
+ * реапе НЕ должен переотдать ЖИВУЮ, но долгую джобу (sweep digest/gardener, refine с
+ * web-search) второму воркеру — иначе двойное исполнение и двойной расход LLM. Порог
+ * обязан превышать самый долгий хендлер; полноценное решение — heartbeat updated_at.
+ */
+export async function reapStalledJobs(olderThanSec = Number(process.env.SETFORK_JOB_STALL_SEC ?? 1800)): Promise<number> {
+  // status — enum job_status: результат CASE имеет тип text и НЕ приводится к enum
+  // неявно (одиночный литерал приводится, CASE — нет), поэтому явный ::job_status.
+  const res = await db.execute(sql`
+    UPDATE jobs
+    SET status = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,
+        run_at = now(),
+        updated_at = now(),
+        last_error = coalesce(last_error, 'reaped: stalled in processing')
+    WHERE status = 'processing' AND updated_at < now() - (${olderThanSec}::int * interval '1 second')
+    RETURNING id
+  `)
+  return (res as { rows?: unknown[] }).rows?.length ?? 0
+}
+
 /** Ошибка — ретрай с backoff, либо `failed` после исчерпания попыток (attempts уже инкрементнут в claim). */
 export async function failJob(job: Job, error: string): Promise<void> {
   const permanent = job.attempts >= job.maxAttempts

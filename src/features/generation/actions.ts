@@ -24,7 +24,10 @@ async function ownerHandle(userId: string): Promise<string> {
 // Ставит задачу генерации варианта в очередь (сама генерация — в фоновом воркере,
 // см. features/generation/service.ts + shared/jobs). Страница дождётся кандидата поллингом.
 async function enqueueGenerate(generationId: string, userId: string, query: string, lang: string, idx: number): Promise<void> {
-  await enqueueJob('generate', { generationId, userId, query, lang: lang === 'ru' ? 'ru' : 'en', idx })
+  // maxAttempts:2 (одна повторная попытка) — генерация тратит токены на каждой,
+  // а квота проверяется при постановке, не на ретрае. Дефолтные 5 попыток на
+  // стабильно-неудачном ответе модели множили бы расход ×5.
+  await enqueueJob('generate', { generationId, userId, query, lang: lang === 'ru' ? 'ru' : 'en', idx }, { maxAttempts: 2 })
 }
 
 // ── Старт генерации: запрос → задача в очередь → экран ожидания ───────

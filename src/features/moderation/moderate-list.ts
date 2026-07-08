@@ -5,6 +5,7 @@ import type { LocaleText } from '@/shared/i18n'
 import { captureError } from '@/shared/observability'
 import { moderateContent, type ModerationVerdict } from '@/shared/ai/moderate'
 import { getApiKey } from '@/shared/settings/ai'
+import { globalBudgetOk } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
 import {
   checkSpamHeuristics,
@@ -71,12 +72,14 @@ export function verdictReason(v: ModerationVerdict): string {
 }
 
 /** Доверенный автор (Discourse-модель): кураторский аккаунт либо история
- *  без нарушений (≥3 живых публичных списков НЕ считая проверяемого, 0 flagged/hidden). */
+ *  без нарушений (≥3 живых публичных списков НЕ считая проверяемого, 0 flagged/hidden).
+ *  В зачёт идут только СВОИ (origin='authored') списки: иначе доверие накручивалось бы
+ *  форками чужих хороших списков (форкнул 3 популярных → мгновенно «доверенный»). */
 async function isTrustedAuthor(ownerId: string, exceptTemplateId: string): Promise<boolean> {
   const [r] = await db
     .select({
       curated: users.curated,
-      good: sql<number>`count(*) filter (where ${templates.moderation} = 'active' and ${templates.visibility} = 'public' and ${templates.status} = 'published' and ${templates.id} <> ${exceptTemplateId})::int`,
+      good: sql<number>`count(*) filter (where ${templates.moderation} = 'active' and ${templates.visibility} = 'public' and ${templates.status} = 'published' and ${templates.origin} = 'authored' and ${templates.id} <> ${exceptTemplateId})::int`,
       bad: sql<number>`count(*) filter (where ${templates.moderation} in ('flagged','hidden'))::int`,
     })
     .from(users)
@@ -114,13 +117,15 @@ async function enqueueModerate(templateId: string, gate: boolean, ownerId: strin
     )
     .limit(1)
   if (dup) return 'dup'
+  // Кап считаем по ownerId, зашитому в payload джобы, а НЕ join'ом на templates:
+  // цикл publish→delete→publish удалял шаблон, join терял его джобы и кап
+  // обнулялся. Джоба переживает удаление шаблона — счёт честный.
   const [c] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(jobs)
-    .innerJoin(templates, sql`(${jobs.payload}->>'templateId')::uuid = ${templates.id}`)
-    .where(and(eq(jobs.type, 'moderate'), eq(templates.ownerId, ownerId), sql`${jobs.createdAt} > now() - interval '24 hours'`))
+    .where(and(eq(jobs.type, 'moderate'), sql`${jobs.payload}->>'ownerId' = ${ownerId}`, sql`${jobs.createdAt} > now() - interval '24 hours'`))
   if ((c?.n ?? 0) >= MODERATE_DAILY_CAP) return 'capped'
-  await enqueueJob('moderate', { templateId, gate })
+  await enqueueJob('moderate', { templateId, gate, ownerId })
   return 'queued'
 }
 
@@ -166,6 +171,13 @@ export async function gateListPublication(templateId: string): Promise<void> {
  */
 export async function recheckList(templateId: string): Promise<void> {
   try {
+    // Правка контента снимает флаг поданной апелляции: владелец изменил список и
+    // вправе подать новую (иначе после отказа админа, который не сбрасывает appealedAt,
+    // он оставался бы заблокирован навсегда). Дешёвый апдейт только когда флаг стоит.
+    await db
+      .update(templates)
+      .set({ appealedAt: null })
+      .where(and(eq(templates.id, templateId), sql`${templates.appealedAt} is not null`))
     if (!(await getApiKey())) return
     const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
     if (!tpl) return
@@ -178,6 +190,7 @@ export async function recheckList(templateId: string): Promise<void> {
 export interface ModerateJobPayload {
   templateId: string
   gate: boolean // true — решаем судьбу pending-списка; false — фоновая пере-проверка видимого
+  ownerId?: string // автор — для суточного капа LLM-проверок (см. enqueueModerate)
 }
 
 /** Флаг с защитой от гонки: не перетираем свежее ручное решение админа (hidden
@@ -240,6 +253,18 @@ export async function runModerateJob(payload: unknown, attempt: { attempts: numb
       await setFlagged(p.templateId, 'Re-upload of previously removed content', 3)
       return
     }
+  }
+
+  // Глобальный дневной кап расхода исчерпан → не тратим LLM. Гейт: список остаётся
+  // pending (не публичен) с пометкой для человека; пере-проверка видимого — просто
+  // откладывается (список уже был одобрен ранее, ничего не меняем).
+  if (!(await globalBudgetOk())) {
+    if (gate)
+      await db
+        .update(templates)
+        .set({ moderationReason: 'AI budget exhausted — awaiting manual review', moderationSeverity: 1 })
+        .where(and(eq(templates.id, p.templateId), eq(templates.moderation, 'pending')))
+    return
   }
 
   const verdict = await moderateContent(loaded.signals.text, { refId: p.templateId })

@@ -8,6 +8,7 @@ import { getWatcherIds } from '@/features/watch/queries'
 import { enqueueReindex } from '@/features/search/adapter'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { generateListRefine, type GeneratedItem } from '@/shared/ai/generate'
+import { globalBudgetOk } from '@/shared/quota'
 import { isAiAvailable } from '@/shared/settings/ai'
 import { notify } from '@/features/notifications/notify'
 import { log } from '@/shared/observability'
@@ -58,7 +59,10 @@ export async function ensureGardenerScheduled(): Promise<void> {
     .where(and(eq(jobs.type, 'gardener'), inArray(jobs.status, ['pending', 'processing'])))
     .limit(1)
   if (pending.length) return
-  await enqueueJob('gardener', {}, { delayMs: GARDENER_EVERY_DAYS * 24 * 60 * 60 * 1000, maxAttempts: 3 })
+  // maxAttempts:1 — без ретрая всего прохода: при повторе уже авто-смёрдженные
+  // кураторские списки рефайнились бы заново (двойной расход). Пропуск одного
+  // прохода не страшен — следующий встаёт по расписанию.
+  await enqueueJob('gardener', {}, { delayMs: GARDENER_EVERY_DAYS * 24 * 60 * 60 * 1000, maxAttempts: 1 })
   log.info('gardener scheduled', { inDays: GARDENER_EVERY_DAYS })
 }
 
@@ -75,7 +79,12 @@ async function pickCandidates(gardenerId: string, limit: number) {
         eq(templates.visibility, 'public'),
         eq(templates.moderation, 'active'),
         sql`${templates.ownerId} <> ${gardenerId}`,
-        sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = ${gardenerId} and sg.status = 'open')`,
+        // Не берём список, где садовник уже оставил ОТКРЫТУЮ правку ЛИБО что-либо
+        // предлагал за последние GARDENER_EVERY_DAYS дней. Второе условие важно для
+        // кураторских списков: их правка авто-мёрджится (status='accepted', не 'open'),
+        // и без учёта свежести список попадал бы в выборку снова → повторный refine.
+        sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = ${gardenerId}
+             and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS}::int * interval '1 day')))`,
         sql`not exists (select 1 from ${steps} st join ${templateVersions} v on v.id = st.version_id
              where v.template_id = ${templates.id} and coalesce(st.section->>'en','') <> '')`,
       ),
@@ -123,6 +132,11 @@ function toProposed(items: GeneratedItem[]): ProposedItem[] {
 export async function runGardenerSweep(): Promise<{ proposed: number; skipped: number }> {
   if (!(await isAiAvailable())) {
     log.info('gardener: AI unavailable, skipping')
+    return { proposed: 0, skipped: 0 }
+  }
+  // Фоновый расход без участия человека — уважаем глобальный дневной кап инстанса.
+  if (!(await globalBudgetOk())) {
+    log.info('gardener: global AI budget exhausted, skipping')
     return { proposed: 0, skipped: 0 }
   }
   const gardener = await ensureGardenerUser()

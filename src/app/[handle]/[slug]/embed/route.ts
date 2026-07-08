@@ -44,7 +44,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'public, max-age=300',
+      // Короткий кэш: сокращает окно, в которое CDN отдаёт embed уже снятого модерацией списка.
+      'Cache-Control': 'public, max-age=60',
       'Content-Security-Policy': 'frame-ancestors *', // разрешаем вставку на любые сайты
     },
   })

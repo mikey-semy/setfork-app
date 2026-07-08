@@ -487,6 +487,10 @@ const DICT = {
   makePublic: { en: 'Make public', ru: 'Сделать публичным' },
   deleteList: { en: 'Delete this list', ru: 'Удалить список' },
   deleteListHint: { en: 'Permanently deletes the list, its versions and stars. Cannot be undone.', ru: 'Безвозвратно удаляет список, версии и звёзды.' },
+  deleteLockedModeration: {
+    en: 'A list removed by moderation cannot be deleted. Submit an appeal for review — deleting would erase the record of the removed content.',
+    ru: 'Список, снятый модерацией, удалить нельзя. Подайте апелляцию на пересмотр — удаление стёрло бы запись о снятом контенте.',
+  },
   listSettings: { en: 'List settings', ru: 'Настройки списка' },
   // ── Модерация ──
   moderation: { en: 'Moderation', ru: 'Модерация' },

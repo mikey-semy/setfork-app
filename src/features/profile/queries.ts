@@ -147,9 +147,15 @@ export async function getProfileCounts(userId: string) {
 
 /** Списки, отмеченные звездой пользователем. viewerId скрывает чужие приватные. */
 export async function getStarredTemplates(userId: string, viewerId?: string): Promise<FeedItem[]> {
-  const visible = viewerId
-    ? or(eq(templates.visibility, 'public'), eq(templates.ownerId, viewerId))!
-    : eq(templates.visibility, 'public')
+  // Публично видимый = public + published + active. Раньше фильтр смотрел только на
+  // visibility → в публичной вкладке «Starred» светились ставшие flagged/hidden списки
+  // и чужие публичные черновики. Свои (owner) видны в любом статусе.
+  const publicVisible = and(
+    eq(templates.visibility, 'public'),
+    eq(templates.status, 'published'),
+    eq(templates.moderation, 'active'),
+  )!
+  const visible = viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
   const rows = await db
     .select({
       id: templates.id,

@@ -4,6 +4,7 @@ import { db, embeddings, stars, steps, suggestionComments, suggestions, template
 import type { LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
+import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { curationStore } from '@/features/curation/store'
 
 /** Резолвит скриншоты шагов: imageKey → подписанный URL. Для префилла редактора и показа. */
@@ -187,7 +188,7 @@ async function semanticFeed(
   const { getAiSettings } = await import('@/shared/settings/ai')
   const { embedOne } = await import('@/shared/ai/embeddings')
   const { embeddingModel } = await getAiSettings()
-  const vec = await embedOne(q, embeddingModel)
+  const vec = await embedOne(q, embeddingModel, { userId: viewerId ?? null, refType: 'search' })
   if (!vec) return null
 
   const distance = cosineDistance(embeddings.embedding, vec)
@@ -232,7 +233,11 @@ export async function getFeed(
   if (!q) return withAvatar(await keywordFeed(order, viewerId, opts.tag, undefined, extra))
 
   const { mode, minScore, limit } = await getSearchSettings()
-  if (mode === 'keyword') return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra))
+  // Семантика тратит embedding-вызов OpenRouter. Разрешаем её только залогиненным и
+  // под rate-limit: иначе аноним в цикле GET /search?q=... жёг бы деньги без учёта.
+  // Гость и превышенный лимит → keyword-поиск (0 токенов), тот же результат-фолбэк.
+  const canSemantic = mode !== 'keyword' && !!viewerId && checkRateLimit(`search:${viewerId}`).allowed
+  if (!canSemantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra))
 
   const semantic = await semanticFeed(q, opts.tag, limit, minScore, viewerId, extra)
   // Нет вектора (нет ключа/эмбеддингов) → откат на ключевые слова.

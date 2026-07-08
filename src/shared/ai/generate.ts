@@ -2,10 +2,15 @@ import 'server-only'
 import { generateText } from 'ai'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { getAiSettings, getApiKey } from '@/shared/settings/ai'
+import { globalBudgetOk } from '@/shared/quota'
 import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { sanitizeCommand } from './sanitize-command'
 import type { Lang } from '@/shared/i18n'
+
+// Потолок размера входного промта (символы). Спасает от раздувания input-токенов
+// на огромных списках; middle-out у провайдера — вторая линия обороны.
+const MAX_PROMPT_CHARS = 12_000
 
 export { sanitizeCommand }
 
@@ -106,6 +111,7 @@ async function runListModel(
   if (!apiKey) return null
   const settings = await getAiSettings()
   if (!settings.enabled) return null
+  if (!(await globalBudgetOk())) return null // глобальный дневной кап расхода исчерпан
 
   const web = opts.web ?? false
   const openrouter = createOpenRouter({
@@ -174,6 +180,7 @@ export async function generateChangeNote(
   if (!apiKey) return null
   const settings = await getAiSettings()
   if (!settings.enabled) return null
+  if (!(await globalBudgetOk())) return null // глобальный дневной кап расхода исчерпан
 
   const openrouter = createOpenRouter({
     apiKey,
@@ -182,7 +189,8 @@ export async function generateChangeNote(
   })
   const model = await pickChatModel(settings)
   const langName = lang === 'ru' ? 'Russian' : 'English'
-  const compact = (xs: NoteItem[]) => xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n')
+  const compact = (xs: NoteItem[]) =>
+    xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n').slice(0, MAX_PROMPT_CHARS)
 
   try {
     const result = await generateText({
@@ -217,8 +225,8 @@ Preserve good existing content and ordering; change only what the instruction re
 ${web ? 'You may use web search to ground new content.\n' : ''}${JSON_SHAPE}
 - Everything in ${langName}.`
   const prompt = `Current list (JSON):
-${JSON.stringify(current)}
+${JSON.stringify(current).slice(0, MAX_PROMPT_CHARS)}
 
-Instruction: ${instruction}`
+Instruction: ${instruction.slice(0, 2_000)}`
   return runListModel(system, prompt, current.title, 'refine', { ...opts, web })
 }
