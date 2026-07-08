@@ -45,8 +45,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
       createdAt: a.createdAt,
     }))
   }
-  const recommended = await getRecommended(userId, starred, 4)
-  const improve = await getImprovementFeed(userId, 3)
+  const [recommended, improve] = await Promise.all([getRecommended(userId, starred, 4), getImprovementFeed(userId, 3)])
 
   return (
     <div className="grid w-full gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[300px_minmax(0,1fr)_300px] lg:px-8">

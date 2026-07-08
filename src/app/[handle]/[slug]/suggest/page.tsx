@@ -16,8 +16,7 @@ export default async function SuggestPage({
 }: {
   params: Promise<{ handle: string; slug: string }>
 }) {
-  const { handle: owner, slug } = await params
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   if (!session) redirect('/login')
   // Чокпоинт: полный canViewList (не только visibility — ещё draft/flagged/hidden).
   // Раньше проверялось только visibility==='private' → черновик/снятый модерацией список

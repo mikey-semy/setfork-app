@@ -56,8 +56,10 @@ export async function setCollectionCover(formData: FormData): Promise<void> {
   const id = String(formData.get('id') ?? '')
   const file = formData.get('file')
   if (!id || !(file instanceof File) || file.size === 0) redirect(`/admin/collections/${id}`)
-  const ref = await uploadImageFile('collections', file as File)
-  const [prev] = await db.select({ cover: collections.coverImage }).from(collections).where(eq(collections.id, id)).limit(1)
+  const [ref, [prev]] = await Promise.all([
+    uploadImageFile('collections', file as File),
+    db.select({ cover: collections.coverImage }).from(collections).where(eq(collections.id, id)).limit(1),
+  ])
   await db.update(collections).set({ coverImage: ref }).where(eq(collections.id, id))
   if (prev?.cover) await removeImageFile(prev.cover)
   revalidatePath(`/admin/collections/${id}`)

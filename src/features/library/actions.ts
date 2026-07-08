@@ -200,8 +200,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
 // ── Владелец: сохранить как новую версию ─────────────────────────────
 export async function saveNewVersion(templateId: string, formData: FormData): Promise<void> {
   const session = await requireSession()
-  const lang = await getLang()
-  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  const [lang, tpl] = await Promise.all([getLang(), db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })])
   if (!tpl) return
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
 
@@ -225,8 +224,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
 // ── Предложить правку (PR) ────────────────────────────────────────────
 export async function submitSuggestion(templateId: string, formData: FormData): Promise<void> {
   const session = await requireSession()
-  const lang = await getLang()
-  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  const [lang, tpl] = await Promise.all([getLang(), db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })])
   if (!tpl) return
   // Нельзя предлагать правки к приватному/скрытому списку, которого не видишь
   // (иначе — запись в чужую очередь + пинг владельцу + оракул существования).
@@ -251,8 +249,7 @@ export async function openBranchPr(templateId: string, branch: string): Promise<
   // Ветки пушит только владелец/коллаборатор → и PR из ветки открывают они же
   // (push-концепт). Заодно закрывает открытие PR на чужом приватном списке.
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  const { gitCore } = await import('@/features/git/core')
-  const owner = await ownerHandle(tpl.ownerId)
+  const [{ gitCore }, owner] = await Promise.all([import('@/features/git/core'), ownerHandle(tpl.ownerId)])
   // Ветка должна существовать и содержать list.json (иначе PR не из чего собрать).
   const snap = await gitCore.branchSnapshot({ owner, slug: tpl.slug }, branch).catch(() => null)
   if (!snap) redirect(`/${owner}/${tpl.slug}`)
@@ -293,8 +290,7 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
 
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
-  const { gitCore } = await import('@/features/git/core')
-  const { BranchOpError } = await import('@/core')
+  const [{ gitCore }, { BranchOpError }] = await Promise.all([import('@/features/git/core'), import('@/core')])
   try {
     await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef)
   } catch (e) {
@@ -340,9 +336,11 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
     redirect(`${path}?e=unresolved`)
   }
 
-  const { gitCore } = await import('@/features/git/core')
-  const { threeWayMerge, applyChoices } = await import('@/features/git/three-way')
-  const { BranchOpError } = await import('@/core')
+  const [{ gitCore }, { threeWayMerge, applyChoices }, { BranchOpError }] = await Promise.all([
+    import('@/features/git/core'),
+    import('@/features/git/three-way'),
+    import('@/core'),
+  ])
 
   const state = await gitCore.mergeState({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
   if (!state) redirect(`${path}?e=not-found`)
@@ -427,8 +425,7 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   await collabStore.addSuggestionComment(sug.id, session.userId, body)
   await ensureWatch(sug.templateId)
 
-  const commenters = await suggestionCommenterIds(sug.id)
-  const watchers = await getWatcherIds(sug.templateId)
+  const [commenters, watchers] = await Promise.all([suggestionCommenterIds(sug.id), getWatcherIds(sug.templateId)])
   const recipients = [sug.authorId, sug.template.ownerId, ...commenters, ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'suggestion_comment', templateId: sug.templateId, suggestionId: sug.id })
   await notifyMentions({ text: body, actorId: session.userId, templateId: sug.templateId })
@@ -521,11 +518,13 @@ export async function generateChangeNoteAction(
   itemsJson: string,
 ): Promise<{ note: string } | { error: string }> {
   const session = await requireSession()
-  const lang = await getLang()
-  const tpl = await db.query.templates.findFirst({
-    where: (t) => eq(t.id, templateId),
-    with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
-  })
+  const [lang, tpl] = await Promise.all([
+    getLang(),
+    db.query.templates.findFirst({
+      where: (t) => eq(t.id, templateId),
+      with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
+    }),
+  ])
   // Доступно всем, кто может видеть список: владельцу на /edit и предлагающему на
   // /suggest. Генерация читает публичный контент + их черновик; расход считается
   // per-user и ограничен rate-limit'ом + месячной AI-квотой (как generate/refine).

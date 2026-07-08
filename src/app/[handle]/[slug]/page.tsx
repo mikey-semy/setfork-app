@@ -56,8 +56,7 @@ export default async function ListPage({
   params: Promise<{ handle: string; slug: string }>
   searchParams: Promise<{ find?: string; ref?: string }>
 }) {
-  const [{ handle: owner, slug }, sp] = await Promise.all([params, searchParams])
-  const lang = await getLang()
+  const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const detail = await requireViewableDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, currentVersion, steps: dbSteps } = detail

@@ -73,15 +73,13 @@ export default async function ProfilePage({
   const showRolling = regY < nowY
   const rawYear = sp.year ? Number(sp.year) : NaN
   const graphYear = graphYears.includes(rawYear) ? rawYear : showRolling ? undefined : nowY
-  const [counts, followCounts, following, bigAvatar, contributions, received] = await Promise.all([
+  const [counts, followCounts, following, bigAvatar, contributions, received, rawItems, pinned, catalogs, achDisplay] = await Promise.all([
     getProfileCounts(user.id),
     getFollowCounts(user.id),
     viewer && !isOwner ? isFollowing(viewer.userId, user.id) : Promise.resolve(false),
     avatarSrc(user.avatarUrl, 180),
     getContributions(user.id, graphYear),
     getReceivedStats(user.id),
-  ])
-  const [rawItems, pinned, catalogs, achDisplay] = await Promise.all([
     !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),
     getOwnerCatalogs(user.id),

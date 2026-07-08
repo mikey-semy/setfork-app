@@ -20,8 +20,7 @@ async function ownTemplate(templateId: string, userId: string) {
 /** Создать каталог и положить в него текущий список (владелец). */
 export async function createCatalogAndAssign(templateId: string, formData: FormData): Promise<void> {
   const session = await requireSession()
-  const lang = await getLang()
-  const tpl = await ownTemplate(templateId, session.userId)
+  const [lang, tpl] = await Promise.all([getLang(), ownTemplate(templateId, session.userId)])
   if (!tpl) return
   const raw = String(formData.get('name') ?? '').trim()
   const name = slugify(raw)

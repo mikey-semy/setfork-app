@@ -19,8 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function CollectionPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const ru = lang === 'ru'
   const c = await getCollectionDetail(slug)
   if (!c) notFound()

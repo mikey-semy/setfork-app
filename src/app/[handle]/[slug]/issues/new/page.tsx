@@ -9,8 +9,7 @@ import { NewIssueForm } from '@/features/issues/NewIssueForm'
 import { getListLabels } from '@/features/issues/queries'
 
 export default async function NewIssuePage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle: owner, slug } = await params
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   if (!session) redirect(`/login?next=/${owner}/${slug}/issues/new`)
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()

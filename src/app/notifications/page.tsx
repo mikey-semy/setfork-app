@@ -25,8 +25,7 @@ const VERB: Record<NotificationItem['type'], TKey> = {
 
 export default async function NotificationsPage() {
   const session = await requireSession()
-  const lang = await getLang()
-  const items = await getNotifications(session.userId)
+  const [lang, items] = await Promise.all([getLang(), getNotifications(session.userId)])
   const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short' })
 
   return (

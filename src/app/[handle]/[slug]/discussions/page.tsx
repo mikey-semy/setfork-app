@@ -17,9 +17,7 @@ export default async function DiscussionsPage({
   params: Promise<{ handle: string; slug: string }>
   searchParams: Promise<{ category?: string }>
 }) {
-  const { handle: owner, slug } = await params
-  const sp = await searchParams
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()

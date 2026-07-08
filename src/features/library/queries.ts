@@ -185,8 +185,7 @@ async function semanticFeed(
   viewerId?: string,
   extra: SQL[] = [],
 ): Promise<FeedItem[] | null> {
-  const { getAiSettings } = await import('@/shared/settings/ai')
-  const { embedOne } = await import('@/shared/ai/embeddings')
+  const [{ getAiSettings }, { embedOne }] = await Promise.all([import('@/shared/settings/ai'), import('@/shared/ai/embeddings')])
   const { embeddingModel } = await getAiSettings()
   const vec = await embedOne(q, embeddingModel, { userId: viewerId ?? null, refType: 'search' })
   if (!vec) return null
@@ -454,19 +453,20 @@ export interface Contributor {
 
 /** Контрибьюторы списка: владелец + авторы предложений (принятые впереди). */
 export async function getContributors(templateId: string, ownerId: string): Promise<Contributor[]> {
-  const rows = await db
-    .select({
-      handle: users.handle,
-      avatarUrl: users.avatarUrl,
-      authorId: suggestions.authorId,
-      accepted: sql<number>`count(*) filter (where ${suggestions.status} = 'accepted')::int`,
-    })
-    .from(suggestions)
-    .innerJoin(users, eq(suggestions.authorId, users.id))
-    .where(eq(suggestions.templateId, templateId))
-    .groupBy(users.handle, users.avatarUrl, suggestions.authorId)
-
-  const [owner] = await db.select({ handle: users.handle, avatarUrl: users.avatarUrl }).from(users).where(eq(users.id, ownerId)).limit(1)
+  const [rows, [owner]] = await Promise.all([
+    db
+      .select({
+        handle: users.handle,
+        avatarUrl: users.avatarUrl,
+        authorId: suggestions.authorId,
+        accepted: sql<number>`count(*) filter (where ${suggestions.status} = 'accepted')::int`,
+      })
+      .from(suggestions)
+      .innerJoin(users, eq(suggestions.authorId, users.id))
+      .where(eq(suggestions.templateId, templateId))
+      .groupBy(users.handle, users.avatarUrl, suggestions.authorId),
+    db.select({ handle: users.handle, avatarUrl: users.avatarUrl }).from(users).where(eq(users.id, ownerId)).limit(1),
+  ])
   const list: Contributor[] = []
   if (owner) list.push({ handle: owner.handle, avatarUrl: owner.avatarUrl, accepted: Infinity })
   for (const r of rows) {

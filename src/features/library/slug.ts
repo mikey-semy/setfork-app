@@ -30,8 +30,7 @@ export async function uniqueSlug(
   base: string,
   ownerId: string,
 ): Promise<string> {
-  const { db, templates } = await import('@/shared/db')
-  const { and, eq } = await import('drizzle-orm')
+  const [{ db, templates }, { and, eq }] = await Promise.all([import('@/shared/db'), import('drizzle-orm')])
   const slug = slugify(base)
   const owned = await db
     .select({ slug: templates.slug })

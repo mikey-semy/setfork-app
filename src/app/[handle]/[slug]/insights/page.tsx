@@ -20,8 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 const card = 'rounded-lg border border-border bg-surface p-4'
 
 export default async function InsightsPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle: owner, slug } = await params
-  const lang = await getLang()
+  const [{ handle: owner, slug }, lang] = await Promise.all([params, getLang()])
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()

@@ -9,8 +9,7 @@ import { getListsInCatalog } from '@/features/library/queries'
 import { getCatalog } from '@/features/catalogs/queries'
 
 export default async function CatalogPage({ params }: { params: Promise<{ handle: string; name: string }> }) {
-  const { handle, name } = await params
-  const [lang, viewer] = await Promise.all([getLang(), getSession()])
+  const [{ handle, name }, lang, viewer] = await Promise.all([params, getLang(), getSession()])
   const cat = await getCatalog(handle, name)
   if (!cat) notFound()
   const lists = await getListsInCatalog(cat.id, viewer?.userId)

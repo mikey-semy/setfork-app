@@ -30,8 +30,7 @@ export default async function SuggestionThreadPage({
   params: Promise<{ handle: string; slug: string; id: string }>
   searchParams: Promise<{ e?: string }>
 }) {
-  const [{ handle: owner, slug, id }, sp] = await Promise.all([params, searchParams])
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug, id }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   const sug = await getSuggestion(meta.id, id)

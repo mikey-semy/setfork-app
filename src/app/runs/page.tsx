@@ -10,8 +10,7 @@ import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
 
 export default async function MyRunsPage() {
   const session = await requireSession()
-  const lang = await getLang()
-  const runs = await getUserRuns(session.userId)
+  const [lang, runs] = await Promise.all([getLang(), getUserRuns(session.userId)])
 
   const active = runs.filter((r) => r.status === 'active')
   const done = runs.filter((r) => r.status === 'done')

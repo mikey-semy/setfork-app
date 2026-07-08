@@ -12,8 +12,7 @@ import { MilestoneForm } from '@/features/milestones/MilestoneForm'
 import { deleteMilestone, toggleMilestoneClosed } from '@/features/milestones/actions'
 
 export default async function MilestonesPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle: owner, slug } = await params
-  const [lang, session] = await Promise.all([getLang(), getSession()])
+  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   const canManage = session ? session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId)) : false

@@ -11,8 +11,7 @@ import { getListBlame } from '@/features/library/blame'
 // «Blame» по шагам: видно, что давно не трогали, а что свежее. Автор версий
 // пока не хранится — показываем версию/дату/note изменения.
 export default async function BlamePage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle: owner, slug } = await params
-  const lang = await getLang()
+  const [{ handle: owner, slug }, lang] = await Promise.all([params, getLang()])
   const ru = lang === 'ru'
   // requireViewableMeta = загрузка + проверка видимости атомарно (не хрупкий сайд-эффект
   // ListHeader): приватный/черновой/снятый список не отдаёт blame по owner/slug.

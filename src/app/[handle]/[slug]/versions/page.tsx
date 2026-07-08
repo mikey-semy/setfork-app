@@ -12,8 +12,7 @@ export default async function VersionsPage({
 }: {
   params: Promise<{ handle: string; slug: string }>
 }) {
-  const { handle: owner, slug } = await params
-  const lang = await getLang()
+  const [{ handle: owner, slug }, lang] = await Promise.all([params, getLang()])
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   const versions = await listStore.listVersions(meta.id)

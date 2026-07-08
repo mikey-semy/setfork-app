@@ -225,10 +225,13 @@ export const gitCoreInproc: GitCore = {
     return gitStore.withRepoLock(listId, async () => {
       const mainTip = (await exec('git', ['--git-dir', bare, 'rev-parse', 'refs/heads/main'])).stdout.trim()
       if (mainTip === branchTip) throw new BranchOpError('nothing-to-merge')
-      // Блоб resolved list.json — контент через stdin, не через argv.
-      const hash = await execStdin(['--git-dir', bare, 'hash-object', '-w', '--stdin'], listJson.endsWith('\n') ? listJson : listJson + '\n')
+      // Блоб resolved list.json (контент через stdin, не через argv) и дерево main —
+      // независимы, читаем/пишем параллельно.
+      const [hash, { stdout: lsTree }] = await Promise.all([
+        execStdin(['--git-dir', bare, 'hash-object', '-w', '--stdin'], listJson.endsWith('\n') ? listJson : listJson + '\n'),
+        exec('git', ['--git-dir', bare, 'ls-tree', 'main']),
+      ])
       // Дерево = дерево main без steps/ и с новым list.json (md-оверрайды сбрасываются, канон — list.json).
-      const { stdout: lsTree } = await exec('git', ['--git-dir', bare, 'ls-tree', 'main'])
       const entries = lsTree
         .split('\n')
         .filter(Boolean)
