@@ -24,3 +24,32 @@ jobs:
           # Плейсхолдеры: build динамических роутов к БД не ходит; нужны лишь для чтения env.
           DATABASE_URL: postgres://ci:ci@localhost:5432/ci
           AUTH_SECRET: ci-placeholder-secret-at-least-32-characters
+
+  # Интеграция data-layer против реального Postgres (pgvector). Схема — drizzle-kit push
+  # (не migrate: журнал миграций хрупкий, для эфемерной БД push надёжнее).
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Расширение vector нужно схеме (embeddings). Ставим через pg (уже в deps), без psql на раннере.
+      - run: node -e "const{Client}=require('pg');(async()=>{const c=new Client(process.env.DATABASE_URL);await c.connect();await c.query('CREATE EXTENSION IF NOT EXISTS vector');await c.end()})().catch(e=>{console.error(e);process.exit(1)})"
+      - run: npx drizzle-kit push --force
+      - run: npm run test:integration
