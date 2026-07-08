@@ -325,12 +325,8 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
     .update(templates)
     .set({ tags, ordered: input.ordered ?? tpl.ordered, updatedAt: new Date() })
     .where(eq(templates.id, tpl.id))
-  // Новая версия видимого списка через API — как saveNewVersion/git-push: фоновая
-  // пере-проверка, иначе нарушающий контент, залитый через MCP, минует модерацию.
-  if (tpl.visibility === 'public') {
-    const { recheckList } = await import('@/features/moderation/moderate-list')
-    await recheckList(tpl.id)
-  }
+  // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающий
+  // контент, залитый через MCP, не минует модерацию, и здесь её дублировать не нужно.
   const { enqueueReindex } = await import('@/features/library/jobs')
   await enqueueReindex(tpl.id)
   return { ref: `${handle}/${slug}`, status: 'published', version: ver.version }

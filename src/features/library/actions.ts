@@ -216,7 +216,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed) })
   // tags/ordered/gated — атрибуты списка, не версии; обновляем отдельно.
   await db.update(templates).set({ tags, ordered, gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-  if (tpl.visibility === 'public') await recheckList(tpl.id) // новая версия могла внести нарушающий контент
+  // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
 
@@ -307,7 +307,8 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
-  if (tpl.visibility === 'public') await recheckList(tpl.id) // merge мог внести нарушающий контент
+  // git-merge создаёт версию МИМО listStore.addVersion → фасадный барьер её не ловит, recheck явно.
+  if (tpl.visibility === 'public') await recheckList(tpl.id)
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
@@ -379,7 +380,8 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
-  if (tpl.visibility === 'public') await recheckList(tpl.id) // merge мог внести нарушающий контент
+  // git-merge создаёт версию МИМО listStore.addVersion → фасадный барьер её не ловит, recheck явно.
+  if (tpl.visibility === 'public') await recheckList(tpl.id)
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
@@ -398,7 +400,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
   await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items) })
-  if (tpl.visibility === 'public') await recheckList(tpl.id) // принятая правка могла внести нарушающий контент
+  // Пере-проверку делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await db
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })

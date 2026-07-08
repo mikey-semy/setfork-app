@@ -18,6 +18,15 @@ export async function register() {
   ])
   registerIndexSource({ collectItems, purgeStaleEmbeddings })
 
+  // Барьер модерации: фасад library.addVersion после записи новой версии зовёт
+  // пере-проверку. Связываем здесь (composition root), чтобы library не импортировал
+  // moderation напрямую (границы слоёв: features не зависят друг от друга).
+  const [{ registerAfterVersion }, { recheckList }] = await Promise.all([
+    import('@/features/library/list-store'),
+    import('@/features/moderation/moderate-list'),
+  ])
+  registerAfterVersion(recheckList)
+
   // Фоновый воркер очереди задач. Idempotent, безопасен между инстансами.
   // Реестр обработчиков: по одному модулю jobs.ts на фичу-владельца.
   const [{ startWorker }, notifications, generation, library, digest, moderation, gardener] = await Promise.all([
