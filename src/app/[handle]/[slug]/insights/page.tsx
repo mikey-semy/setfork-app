@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Eye, GitFork, PlayCircle, Star, Tag, Users } from 'lucide-react'
+import { Bell, Eye, GitFork, MousePointerClick, PlayCircle, Star, Tag, Users } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/badge'
@@ -37,14 +37,18 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
   const range: [string, string] = [fmt.format(new Date(series.weeks[0])), fmt.format(new Date(series.weeks.at(-1)!))]
 
   const stats = [
+    { icon: Eye, label: ru ? 'Просмотры' : 'Views', v: totals.views },
+    { icon: MousePointerClick, label: ru ? 'Клики' : 'Link clicks', v: totals.clicks },
     { icon: Star, label: ru ? 'Звёзды' : 'Stars', v: totals.stars },
     { icon: GitFork, label: ru ? 'Форки' : 'Forks', v: totals.forks },
     { icon: PlayCircle, label: ru ? 'Прогоны' : 'Runs', v: totals.runs },
-    { icon: Eye, label: ru ? 'Наблюдатели' : 'Watchers', v: totals.watchers },
+    { icon: Bell, label: ru ? 'Наблюдатели' : 'Watchers', v: totals.watchers },
     { icon: Tag, label: ru ? 'Версии' : 'Versions', v: totals.versions },
   ]
 
   const charts = [
+    { key: 'views', title: ru ? 'Просмотры по неделям' : 'Views per week', points: series.views, color: 'accent' as const },
+    { key: 'clicks', title: ru ? 'Клики по ссылкам по неделям' : 'Link clicks per week', points: series.clicks, color: 'ok' as const },
     { key: 'stars', title: ru ? 'Звёзды по неделям' : 'Stars per week', points: series.stars, color: 'accent' as const },
     { key: 'runs', title: ru ? 'Прогоны по неделям' : 'Runs per week', points: series.runs, color: 'ok' as const },
     { key: 'forks', title: ru ? 'Форки по неделям' : 'Forks per week', points: series.forks, color: 'warn' as const },
@@ -56,7 +60,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
       <ListHeader owner={owner} slug={slug} active="insights" />
       <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
         {/* Итоги */}
-        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           {stats.map(({ icon: Icon, label, v }) => (
             <div key={label} className={card}>
               <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted">

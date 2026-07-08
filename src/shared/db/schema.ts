@@ -11,6 +11,7 @@ import { relations, sql } from 'drizzle-orm'
 import {
   bigint,
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -169,6 +170,8 @@ export const templates = pgTable(
     runsCount: integer('runs_count').notNull().default(0),
     forksCount: integer('forks_count').notNull().default(0),
     starsCount: integer('stars_count').notNull().default(0),
+    // Сумма уникальных дневных просмотров (см. template_views); владелец не считается.
+    viewsCount: integer('views_count').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -834,6 +837,55 @@ export const aiUsage = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('ai_usage_user_idx').on(t.userId, t.createdAt), index('ai_usage_created_idx').on(t.createdAt)],
+)
+
+// ── Traffic: просмотры списков ───────────────────────────────────────
+// Уникальный ДНЕВНОЙ просмотр: visitor = 'u:<userId>' для вошедших или
+// 'a:<sha256(ip|ua|день|секрет)>' для анонимов — анонимный хеш ротируется
+// ежедневно, PII не храним, кросс-дневного трекинга нет. Просмотры владельца
+// не пишутся. Это фундамент аналитики трафика (Ф-M0 монетизации).
+export const templateViews = pgTable(
+  'template_views',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }), // null — аноним
+    visitor: text('visitor').notNull(),
+    day: date('day').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('template_views_uq').on(t.templateId, t.visitor, t.day),
+    index('template_views_tpl_idx').on(t.templateId, t.createdAt),
+  ],
+)
+
+// ── Traffic: клики по внешним ссылкам (refs шагов) ───────────────────
+// Журнал переходов через /api/go/[step]/[ref] — url снапшотится на момент
+// клика (контент версионируется, ссылка может исчезнуть). Клики владельца и
+// ботов не пишутся. Задел под партнёрскую аналитику: host — для сводок по
+// магазинам/доменам.
+export const linkClicks = pgTable(
+  'link_clicks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    stepId: uuid('step_id').references(() => steps.id, { onDelete: 'set null' }),
+    refIndex: integer('ref_index').notNull().default(0),
+    url: text('url').notNull(),
+    host: text('host').notNull().default(''),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }), // null — аноним
+    visitor: text('visitor').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('link_clicks_tpl_idx').on(t.templateId, t.createdAt),
+    index('link_clicks_host_idx').on(t.templateId, t.host),
+  ],
 )
 
 // ── Follows (подписки пользователей) ─────────────────────────────────

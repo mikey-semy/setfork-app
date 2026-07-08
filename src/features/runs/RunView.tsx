@@ -9,6 +9,7 @@ import type { StepLevel } from '@/shared/db'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
+import { safeHref } from '@/shared/lib/safe-url'
 import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 
 export interface RunStepVM {
@@ -23,7 +24,8 @@ export interface RunStepVM {
   level: StepLevel
   why: string
   subtasks: string[]
-  refs: { label: string; url?: string }[]
+  // href — трекинговый /api/go/<stepId>/<i> (журнал кликов); url — прямая ссылка.
+  refs: { label: string; url?: string; href?: string }[]
   done: boolean
   blocked: boolean
   reason: string
@@ -260,9 +262,9 @@ export function RunView({
                       r.url ? (
                         <a
                           key={idx}
-                          href={r.url}
+                          href={safeHref(r.href ?? r.url) || undefined}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="nofollow noreferrer"
                           className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent"
                         >
                           {r.label}

@@ -260,6 +260,13 @@
       "when": 1783310000000,
       "tag": "0036_moderation_automation",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1783488484356,
+      "tag": "0037_traffic_analytics",
+      "breakpoints": true
     }
   ]
 }
