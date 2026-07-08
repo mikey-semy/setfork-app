@@ -6,7 +6,7 @@ import { tr } from '@/shared/i18n'
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { canViewList } from '@/core'
 import { listQuota } from '@/shared/quota'
-import { dialectExt, normalizeDialect, toRunnableScript, type ExportList } from '@/features/library/export'
+import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
@@ -229,32 +229,12 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
 export async function mcpGetScript(userId: string, handle: string, slug: string, dialectRaw?: string) {
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return null
-  const { tpl, currentVersion, steps } = detail
+  const { tpl } = detail
   if (!canViewList(tpl, { isOwner: tpl.ownerId === userId })) return null
 
   const dialect = normalizeDialect(dialectRaw)
   const url = `${SITE_URL}/${handle}/${slug}/raw`
-  const list: ExportList = {
-    title: tpl.title,
-    desc: tpl.desc,
-    tags: tpl.tags,
-    ordered: tpl.ordered,
-    version: currentVersion?.version ?? tpl.currentVersion,
-    ownerHandle: handle,
-    slug,
-    steps: steps.map((s) => ({
-      n: s.n,
-      type: s.type,
-      content: s.content,
-      title: s.title,
-      desc: s.desc,
-      command: s.command,
-      level: s.level,
-      why: s.why,
-      subtasks: s.subtasks,
-      refs: s.refs,
-    })),
-  }
+  const list = toExportList(detail)
   return {
     ref: `${handle}/${slug}`,
     dialect,
