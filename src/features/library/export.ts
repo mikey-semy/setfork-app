@@ -1,6 +1,7 @@
 // Экспорт списка в Markdown / автономный HTML (для скачивания и печати).
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
+import { safeHref } from '@/shared/lib/safe-url'
 
 export interface ExportStep {
   n: number
@@ -43,7 +44,14 @@ export interface ExportList {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  // Экранируем и кавычки: значения попадают в т.ч. в атрибуты (href="…") — без этого
+  // возможен attribute-breakout (r.url = 'x" onmouseover="…').
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 /** Markdown-версия списка. */
@@ -183,7 +191,8 @@ export function toHtml(list: ExportList, lang: Lang): string {
         .map((r) => {
           const label = esc(tr(r.label, lang))
           if (!label) return ''
-          return r.url ? `<li><a href="${esc(r.url)}">${label}</a></li>` : `<li>${label}</li>`
+          const href = safeHref(r.url)
+          return href ? `<li><a href="${esc(href)}">${label}</a></li>` : `<li>${label}</li>`
         })
         .join('')
       return `<div class="step">

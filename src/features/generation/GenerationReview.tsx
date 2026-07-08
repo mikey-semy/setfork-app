@@ -7,6 +7,7 @@ import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import type { GenerationStatus } from './queries'
 import { GnomeLoader } from './GnomeLoader'
+import { safeHref } from '@/shared/lib/safe-url'
 import { acceptCandidate, regenerateCandidate, regenerateWithQuery } from './actions'
 
 interface Props {
@@ -226,7 +227,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
                       {it.refs.map((r, k) => (
                         <a
                           key={k}
-                          href={r.url}
+                          href={safeHref(r.url) || undefined}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1 rounded border border-border bg-surface-2 px-2 py-0.5 text-[11.5px] text-accent hover:underline"

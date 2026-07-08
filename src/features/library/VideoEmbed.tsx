@@ -1,4 +1,5 @@
 import { parseVideoEmbed } from './blocks'
+import { safeHref } from '@/shared/lib/safe-url'
 
 /** Безопасная встройка видео: iframe ТОЛЬКО для YouTube/Vimeo (известные src),
  *  прямой файл → <video>, иначе — ссылка. Произвольный src в iframe не пускаем. */
@@ -22,7 +23,7 @@ export function VideoEmbed({ url, caption }: { url: string; caption?: string }) 
       ) : kind === 'file' ? (
         <video src={src} controls className="max-h-[520px] w-full rounded-lg border border-border" />
       ) : (
-        <a href={src} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[13px] text-accent hover:underline">
+        <a href={safeHref(src) || undefined} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[13px] text-accent hover:underline">
           🎬 {src}
         </a>
       )}

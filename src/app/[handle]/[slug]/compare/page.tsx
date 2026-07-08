@@ -11,6 +11,7 @@ import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { ListHeader } from '@/features/library/ListHeader'
 import { VersionPicker } from '@/features/library/VersionPicker'
 import { getListMeta, getVersions, getVersionSteps } from '@/features/library/queries'
+import { safeHref } from '@/shared/lib/safe-url'
 import { diffSteps, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from '@/features/library/diff'
 
 function toCmp(
@@ -240,7 +241,7 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
                     const cls = 'inline-flex items-center gap-1 rounded border border-border bg-surface-2 px-2 py-0.5 text-[11.5px]'
                     // Ссылка без URL — не делаем «#»-якорь на верх страницы, показываем как текст.
                     return r.url ? (
-                      <a key={k} href={r.url} target="_blank" rel="noreferrer" className={`${cls} text-accent hover:underline`}>
+                      <a key={k} href={safeHref(r.url) || undefined} target="_blank" rel="noreferrer" className={`${cls} text-accent hover:underline`}>
                         {r.label || r.url}
                       </a>
                     ) : (
