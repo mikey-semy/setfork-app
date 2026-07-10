@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { getLang } from '@/shared/i18n/server'
 import { CHANGELOG } from '@/widgets/changelog-data'
 
-export const metadata: Metadata = { title: 'Changelog · SetFork' }
+export const metadata: Metadata = { title: 'Changelog' }
 
 /** Публичный changelog продукта (полный список; сайдбар-карточка — ChangelogCard). */
 export default async function ChangelogPage() {

@@ -8,6 +8,8 @@ import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { listQuota } from '@/shared/quota'
 
+export const metadata = { title: 'New list' }
+
 export default async function NewListPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (!session) redirect('/login')

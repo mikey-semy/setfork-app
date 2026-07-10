@@ -6,6 +6,8 @@ import { t } from '@/shared/i18n'
 import { getModerationCounts, getModerationList, type ModFilter } from '@/features/moderation/queries'
 import { ModerationTable } from '@/features/moderation/ModerationTable'
 
+export const metadata = { title: 'Moderation' }
+
 export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   await requireAdmin()
   const [{ filter: f }, lang] = await Promise.all([searchParams, getLang()])

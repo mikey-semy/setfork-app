@@ -4,6 +4,8 @@ import { getLang } from '@/shared/i18n/server'
 import { consumeVerifyToken } from '@/features/auth/email-flows'
 
 /** Обработка ссылки из письма-подтверждения. */
+export const metadata = { title: 'Verify email' }
+
 export default async function VerifyEmailPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const [{ token }, lang] = await Promise.all([searchParams, getLang()])
   const ru = lang === 'ru'

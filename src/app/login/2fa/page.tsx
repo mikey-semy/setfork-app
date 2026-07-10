@@ -5,6 +5,8 @@ import { hasPendingLogin } from '@/features/auth/twofa'
 import { TwoFaLoginForm } from '@/features/auth/TwoFaLoginForm'
 
 /** Шаг 2FA после пароля: pending-кука (5 мин) уже стоит, сессии ещё нет. */
+export const metadata = { title: 'Two-factor authentication' }
+
 export default async function TwoFaLoginPage() {
   const lang = await getLang()
   if (!(await hasPendingLogin())) redirect('/login')

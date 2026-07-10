@@ -9,6 +9,11 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/widgets/ListHeader'
 import type { ProposedItem } from '@/shared/db'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Suggestions · ${handle}/${slug}` }
+}
+
 export default async function SuggestionsPage({
   params,
 }: {

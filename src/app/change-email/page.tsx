@@ -4,6 +4,8 @@ import { getLang } from '@/shared/i18n/server'
 import { confirmEmailChange } from '@/features/auth/email-flows'
 
 /** Обработка ссылки из письма-подтверждения новой почты. */
+export const metadata = { title: 'Change email' }
+
 export default async function ChangeEmailPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const [{ token }, lang] = await Promise.all([searchParams, getLang()])
   const ru = lang === 'ru'

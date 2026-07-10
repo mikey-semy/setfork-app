@@ -12,6 +12,11 @@ import { ListEditor } from '@/features/library/ListEditor'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Edit · ${handle}/${slug}` }
+}
+
 export default async function EditPage({
   params,
 }: {

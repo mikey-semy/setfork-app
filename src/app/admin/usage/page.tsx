@@ -19,6 +19,8 @@ function num(n: number): string {
   return new Intl.NumberFormat('en').format(n)
 }
 
+export const metadata = { title: 'Usage' }
+
 export default async function AdminUsagePage({ searchParams }: { searchParams: Promise<{ w?: string }> }) {
   await requireAdmin()
   const [lang, sp] = await Promise.all([getLang(), searchParams])

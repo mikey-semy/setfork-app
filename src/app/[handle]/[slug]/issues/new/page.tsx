@@ -8,6 +8,11 @@ import { ListHeader } from '@/widgets/ListHeader'
 import { NewIssueForm } from '@/features/issues/NewIssueForm'
 import { getListLabels } from '@/features/issues/queries'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `New issue · ${handle}/${slug}` }
+}
+
 export default async function NewIssuePage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   if (!session) redirect(`/login?next=/${owner}/${slug}/issues/new`)

@@ -6,6 +6,8 @@ import { hasOpenRouterKey } from '@/shared/settings/ai'
 import { t } from '@/shared/i18n'
 import { GenerateForm } from '@/features/generation/GenerateForm'
 
+export const metadata = { title: 'Generate' }
+
 export default async function GeneratePage({ searchParams }: { searchParams: Promise<{ e?: string; q?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (!session) redirect('/login')

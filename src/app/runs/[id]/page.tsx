@@ -5,6 +5,8 @@ import { tr, type LocaleText } from '@/shared/i18n'
 import { getRun } from '@/features/runs/queries'
 import { RunView, type RunStepVM } from '@/features/runs/RunView'
 
+export const metadata = { title: 'Run' }
+
 export default async function RunPage({ params }: { params: Promise<{ id: string }> }) {
   const [{ id }, session, lang] = await Promise.all([params, getSession(), getLang()])
   if (!session) redirect('/login')

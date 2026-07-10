@@ -19,6 +19,11 @@ const ERR: Record<string, { ru: string; en: string }> = {
   tagtaken: { ru: 'Тег уже занят другим релизом.', en: 'This tag is already used by another release.' },
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `New release · ${handle}/${slug}` }
+}
+
 export default async function NewReleasePage({
   params,
   searchParams,

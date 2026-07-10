@@ -10,6 +10,11 @@ import { getListBlame } from '@/features/library/blame'
 
 // «Blame» по шагам: видно, что давно не трогали, а что свежее. Автор версий
 // пока не хранится — показываем версию/дату/note изменения.
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Blame · ${handle}/${slug}` }
+}
+
 export default async function BlamePage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle: owner, slug }, lang] = await Promise.all([params, getLang()])
   const ru = lang === 'ru'

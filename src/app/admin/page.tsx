@@ -55,6 +55,8 @@ function ensure(opts: Option[], current: string): Option[] {
   return current && !opts.some((o) => o.value === current) ? [{ value: current, id: current }, ...opts] : opts
 }
 
+export const metadata = { title: 'Admin' }
+
 export default async function AdminPage() {
   await requireAdmin()
   const [lang, settings, apiKey, media, search, email, online, vapid, achDisplay] = await Promise.all([
