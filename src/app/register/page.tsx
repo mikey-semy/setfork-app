@@ -17,6 +17,17 @@ export default async function RegisterPage() {
 
         <RegisterForm lang={lang} />
 
+        <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
+          {t('agreeToTermsPrefix', lang)}{' '}
+          <a href="https://docs.setfork.com/docs/legal/terms" className="text-accent hover:underline">
+            {t('termsOfService', lang)}
+          </a>{' '}
+          {t('agreeToTermsAnd', lang)}{' '}
+          <a href="https://docs.setfork.com/docs/legal/privacy" className="text-accent hover:underline">
+            {t('privacyPolicy', lang)}
+          </a>.
+        </p>
+
         <div className="mt-4 text-[12.5px] text-ink-2">
           {t('haveAccount', lang)}{' '}
           <Link href="/login" className="font-semibold text-accent hover:underline">
