@@ -1,22 +1,20 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Globe, Loader2, Lock, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Loader2, Pin, PinOff, Trash2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { t, type Lang } from '@/shared/i18n'
-import { deleteListAction, setListPinned, setListVisibility } from './actions'
+import { deleteListAction, setListPinned } from './actions'
 
 export function ListSettingsDanger({
   templateId,
   slug,
-  visibility,
   moderation,
   pinned,
   lang,
 }: {
   templateId: string
   slug: string
-  visibility: 'public' | 'private'
   moderation: string
   pinned: boolean
   lang: Lang
@@ -24,7 +22,6 @@ export function ListSettingsDanger({
   const [pending, start] = useTransition()
   const [pinPending, startPin] = useTransition()
   const [confirm, setConfirm] = useState('')
-  const isPrivate = visibility === 'private'
   const matches = confirm.trim() === slug
   // Снятый модерацией список владелец удалить не может (сервер блокирует — стирание
   // fingerprint'а открывало бы отмывку повторной заливкой). Показываем причину.
@@ -55,29 +52,8 @@ export function ListSettingsDanger({
     <section className="rounded-lg border border-danger/40 bg-danger/5 p-5">
       <div className="mb-4 font-semibold text-danger">{t('dangerZone', lang)}</div>
 
-      {/* Смена видимости */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-        <div className="flex items-start gap-2.5">
-          {isPrivate ? <Lock size={17} className="mt-0.5 text-ink-2" /> : <Globe size={17} className="mt-0.5 text-ink-2" />}
-          <div>
-            <div className="text-[14px] font-medium text-ink">
-              {t('visibility', lang)}: {isPrivate ? t('privateLabel', lang) : t('publicLabel', lang)}
-            </div>
-            <p className="text-[12.5px] text-ink-2">{isPrivate ? t('privateHint', lang) : t('publicHint', lang)}</p>
-          </div>
-        </div>
-        <button
-          onClick={() => start(() => setListVisibility(templateId, isPrivate ? 'public' : 'private'))}
-          disabled={pending}
-          className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong disabled:opacity-60"
-        >
-          {pending && <Loader2 size={14} className="animate-spin" />}
-          {isPrivate ? t('makePublic', lang) : t('makePrivate', lang)}
-        </button>
-      </div>
-
       {/* Удаление */}
-      <div className="pt-4">
+      <div>
         <div className="mb-1 text-[14px] font-medium text-ink">{t('deleteList', lang)}</div>
         {lockedByModeration ? (
           <p className="text-[12.5px] text-ink-2">{t('deleteLockedModeration', lang)}</p>

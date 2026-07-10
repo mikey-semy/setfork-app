@@ -8,7 +8,7 @@ import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { tr, type LocaleText } from '@/shared/i18n'
 import { imageUrl, uploadAttachmentFile, uploadImageFile, uploadVideoFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
@@ -197,6 +197,33 @@ export async function createTemplate(formData: FormData): Promise<void> {
   await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
+}
+
+// ── Владелец: правка метаданных списка (название/описание/теги/порядок) ──
+// slug НЕ трогаем — он технический и авто-генерённый, пользователя не касается.
+// title/desc меняем в ТЕКУЩЕМ языке интерфейса, значения на других языках сохраняем.
+export async function updateListMeta(templateId: string, formData: FormData): Promise<void> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  const title = String(formData.get('title') ?? '').trim()
+  if (!title) return // название обязательно
+  const desc = String(formData.get('desc') ?? '').trim()
+  const tags = parseTags(formData.get('tags'))
+  const ordered = formData.get('ordered') !== 'unordered'
+  await db
+    .update(templates)
+    .set({
+      title: { ...(tpl.title as LocaleText), [lang]: title },
+      desc: { ...(tpl.desc as LocaleText), [lang]: desc },
+      tags,
+      ordered,
+      updatedAt: new Date(),
+    })
+    .where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}`)
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
 }
 
 // ── Владелец: сохранить как новую версию ─────────────────────────────

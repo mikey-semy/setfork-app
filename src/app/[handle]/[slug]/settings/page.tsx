@@ -11,6 +11,7 @@ import { ListHeader } from '@/widgets/ListHeader'
 import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
 import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
+import { GeneralSection } from '@/features/library/GeneralSection'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -28,11 +29,20 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
     <>
       <ListHeader owner={owner} slug={slug} active="settings" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+        <GeneralSection
+          templateId={meta.id}
+          title={meta.title}
+          desc={meta.desc}
+          tags={meta.tags}
+          ordered={meta.ordered}
+          visibility={meta.visibility}
+          lang={lang}
+        />
         <CoverSection templateId={meta.id} slug={meta.slug} initialCover={cover.coverUrl} initialAccent={cover.accent} lang={lang} />
         <CatalogSection templateId={meta.id} currentId={meta.repositoryId} catalogs={catalogs} lang={lang} />
         <CollaboratorsSection templateId={meta.id} collaborators={collaborators} lang={lang} />
         <TemplateSection templateId={meta.id} isTemplate={meta.isTemplate} lang={lang} />
-        <ListSettingsDanger templateId={meta.id} slug={meta.slug} visibility={meta.visibility} moderation={meta.moderation} pinned={meta.pinned} lang={lang} />
+        <ListSettingsDanger templateId={meta.id} slug={meta.slug} moderation={meta.moderation} pinned={meta.pinned} lang={lang} />
       </div>
     </>
   )
