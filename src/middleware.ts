@@ -55,6 +55,10 @@ export async function middleware(req: NextRequest) {
   if (!(await maintenanceEnabled())) return NextResponse.next()
 
   const { pathname } = req.nextUrl
+  // /api/health — liveness-проба Docker-контейнера: ДОЛЖНА отдавать 200 даже в
+  // ремонте. Иначе healthcheck валит контейнер (unhealthy → Traefik выкидывает
+  // из роутинга → 404 на весь сайт, и заглушка «ремонт» даже не показывается).
+  if (pathname === '/api/health') return NextResponse.next()
   // Дверь для админа: страница входа и auth-эндпоинты (GitHub OAuth, POST
   // server actions самого /login) остаются открыты.
   if (pathname === '/login' || pathname.startsWith('/api/auth/')) return NextResponse.next()
