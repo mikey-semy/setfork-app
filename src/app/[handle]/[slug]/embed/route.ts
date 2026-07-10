@@ -1,4 +1,5 @@
 import { getLang } from '@/shared/i18n/server'
+import { t, type Lang } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- анонимный embed на внешние сайты: гейт isPubliclyVisible, не cookie-сессия
 import { getTemplateDetail } from '@/features/library/queries'
 import { isPubliclyVisible } from '@/core'
@@ -9,13 +10,19 @@ import { embedHtml, toExportList } from '@/features/library/export'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const notFoundHtml = (lang: Lang) =>
+  new Response(
+    `<!doctype html><html lang="${lang}"><body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#faf9f7;color:#6b6b66;font:14px ui-sans-serif,system-ui,sans-serif">${t('embedNotFound', lang)}</body></html>`,
+    { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+  )
+
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
   const [lang, detail] = await Promise.all([getLang(), getTemplateDetail(handle, slug)])
-  if (!detail) return new Response('Not found', { status: 404 })
+  if (!detail) return notFoundHtml(lang)
 
   const { tpl, currentVersion, steps } = detail
-  if (!isPubliclyVisible(tpl)) return new Response('Not found', { status: 404 })
+  if (!isPubliclyVisible(tpl)) return notFoundHtml(lang)
 
   const list = toExportList(detail)
 

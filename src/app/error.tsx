@@ -1,11 +1,13 @@
 'use client'
 
+// Ошибки роутов НИЖЕ корневого layout (стили/темы доступны). Краш самого
+// корневого layout ловит app/global-error.tsx.
 import { useEffect, useState } from 'react'
 import { RotateCw, TriangleAlert } from 'lucide-react'
 import { DEFAULT_LANG, isLang, t, type Lang } from '@/shared/i18n'
 import { captureError } from '@/shared/observability'
 
-export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const [lang, setLang] = useState<Lang>(DEFAULT_LANG)
   useEffect(() => {
     const m = document.cookie.match(/(?:^|; )lang=([^;]+)/)
