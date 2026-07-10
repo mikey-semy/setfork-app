@@ -12,6 +12,11 @@ import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
 import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Settings · ${handle}/${slug}` }
+}
+
 export default async function ListSettingsPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const meta = await getListMeta(owner, slug)

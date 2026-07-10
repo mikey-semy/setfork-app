@@ -23,6 +23,8 @@ const VERB: Record<NotificationItem['type'], TKey> = {
   assigned: 'notifAssigned',
 }
 
+export const metadata = { title: 'Notifications' }
+
 export default async function NotificationsPage() {
   const session = await requireSession()
   const [lang, items] = await Promise.all([getLang(), getNotifications(session.userId)])

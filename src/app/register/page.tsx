@@ -5,6 +5,8 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { RegisterForm } from '@/features/auth/AuthForms'
 
+export const metadata = { title: 'Create account' }
+
 export default async function RegisterPage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
   if (session) redirect('/')

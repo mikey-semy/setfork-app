@@ -1,6 +1,8 @@
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 
+export const metadata = { title: 'About' }
+
 export default async function AboutPage() {
   const lang = await getLang()
   return (

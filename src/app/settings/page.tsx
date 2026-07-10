@@ -24,6 +24,8 @@ import { SessionsList } from '@/features/sessions/SessionsList'
 
 const card = 'rounded-lg border border-border bg-surface p-5'
 
+export const metadata = { title: 'Settings' }
+
 export default async function SettingsPage() {
   const session = await requireSession()
   const [lang, [user]] = await Promise.all([getLang(), db.select().from(users).where(eq(users.id, session.userId)).limit(1)])

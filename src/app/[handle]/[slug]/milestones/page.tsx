@@ -11,6 +11,11 @@ import { getMilestones } from '@/features/milestones/queries'
 import { MilestoneForm } from '@/features/milestones/MilestoneForm'
 import { deleteMilestone, toggleMilestoneClosed } from '@/features/milestones/actions'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Milestones · ${handle}/${slug}` }
+}
+
 export default async function MilestonesPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)

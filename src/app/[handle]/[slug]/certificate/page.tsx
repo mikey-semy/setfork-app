@@ -9,6 +9,11 @@ import { ListHeader } from '@/widgets/ListHeader'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { CertificatePrintButton } from '@/features/quizzes/CertificatePrintButton'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Certificate · ${handle}/${slug}` }
+}
+
 export default async function CertificatePage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const ru = lang === 'ru'

@@ -32,6 +32,8 @@ const ISSUE_STATES: { key: IssueStateFilter; tkey: 'stateOpen' | 'stateClosed' }
   { key: 'closed', tkey: 'stateClosed' },
 ]
 
+export const metadata = { title: 'Search' }
+
 export default async function SearchPage({
   searchParams,
 }: {

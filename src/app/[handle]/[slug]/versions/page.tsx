@@ -7,6 +7,11 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { listStore } from '@/features/library/list-store'
 import { ListHeader } from '@/widgets/ListHeader'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Versions · ${handle}/${slug}` }
+}
+
 export default async function VersionsPage({
   params,
 }: {

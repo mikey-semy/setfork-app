@@ -8,6 +8,8 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
 import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
 
+export const metadata = { title: 'Runs' }
+
 export default async function MyRunsPage() {
   const session = await requireSession()
   const [lang, runs] = await Promise.all([getLang(), getUserRuns(session.userId)])

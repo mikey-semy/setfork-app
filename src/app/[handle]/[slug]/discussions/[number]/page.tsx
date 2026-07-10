@@ -13,6 +13,11 @@ import { getDiscussion, getDiscussionComments } from '@/features/discussions/que
 import { addDiscussionComment } from '@/features/discussions/actions'
 import { categoryLabel, categoryMeta } from '@/features/discussions/constants'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
+  const { handle, slug, number } = await params
+  return { title: `Discussion #${number} · ${handle}/${slug}` }
+}
+
 export default async function DiscussionThreadPage({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const { handle: owner, slug, number: numStr } = await params
   const number = Number(numStr)

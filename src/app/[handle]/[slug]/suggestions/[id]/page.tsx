@@ -23,6 +23,11 @@ import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
 import type { ProposedItem } from '@/shared/db'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; id: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Suggestion · ${handle}/${slug}` }
+}
+
 export default async function SuggestionThreadPage({
   params,
   searchParams,

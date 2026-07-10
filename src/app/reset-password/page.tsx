@@ -4,6 +4,8 @@ import { getLang } from '@/shared/i18n/server'
 import { checkResetToken } from '@/features/auth/email-flows'
 import { ResetPasswordForm } from '@/features/auth/PasswordResetForms'
 
+export const metadata = { title: 'Set a new password' }
+
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const [{ token }, lang] = await Promise.all([searchParams, getLang()])
   const ru = lang === 'ru'

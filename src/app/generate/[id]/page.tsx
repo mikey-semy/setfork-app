@@ -6,6 +6,8 @@ import { getLang } from '@/shared/i18n/server'
 import { getGeneration, getGenerationStatus } from '@/features/generation/queries'
 import { GenerationReview } from '@/features/generation/GenerationReview'
 
+export const metadata = { title: 'Generating' }
+
 export default async function GenerationPage({
   params,
   searchParams,

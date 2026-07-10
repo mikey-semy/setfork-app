@@ -50,6 +50,8 @@ function metaText(e: AuditEntry): string {
     .join(' · ')
 }
 
+export const metadata = { title: 'Audit log' }
+
 export default async function AuditPage() {
   await requireAdmin()
   const lang = await getLang()

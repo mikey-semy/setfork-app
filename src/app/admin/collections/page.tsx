@@ -8,6 +8,8 @@ import { createCollection } from '@/features/admin/collection-actions'
 
 export const dynamic = 'force-dynamic'
 
+export const metadata = { title: 'Collections' }
+
 export default async function AdminCollectionsPage() {
   await requireAdmin()
   const lang = await getLang()

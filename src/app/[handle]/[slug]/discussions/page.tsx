@@ -10,6 +10,11 @@ import { ListHeader } from '@/widgets/ListHeader'
 import { getDiscussions } from '@/features/discussions/queries'
 import { DISCUSSION_CATEGORIES, categoryLabel, categoryMeta } from '@/features/discussions/constants'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Discussions · ${handle}/${slug}` }
+}
+
 export default async function DiscussionsPage({
   params,
   searchParams,

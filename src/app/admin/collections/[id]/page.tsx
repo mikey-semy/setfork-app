@@ -14,6 +14,8 @@ const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 tex
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 const card = 'rounded-lg border border-border bg-surface p-5'
 
+export const metadata = { title: 'Collection' }
+
 export default async function EditCollectionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ e?: string }> }) {
   await requireAdmin()
   const [{ id }, { e }, lang] = await Promise.all([params, searchParams, getLang()])

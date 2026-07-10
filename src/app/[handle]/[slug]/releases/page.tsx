@@ -15,6 +15,11 @@ import { ListHeader } from '@/widgets/ListHeader'
 import { getReleases } from '@/features/releases/queries'
 import { deleteRelease } from '@/features/releases/actions'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Releases · ${handle}/${slug}` }
+}
+
 export default async function ReleasesPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
   const ru = lang === 'ru'

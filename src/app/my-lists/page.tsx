@@ -5,6 +5,8 @@ import { t } from '@/shared/i18n'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 
+export const metadata = { title: 'My lists' }
+
 export default async function MyListsPage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
   const items = session ? await getUserTemplates(session.userId, session.userId) : []

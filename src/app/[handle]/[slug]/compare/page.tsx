@@ -49,6 +49,11 @@ const STATUS: Record<DiffEntry['status'], { color: string | null; key: 'diffAdde
 }
 const mix = (c: string, pct: number, base = 'transparent') => `color-mix(in srgb, ${c} ${pct}%, ${base})`
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Compare · ${handle}/${slug}` }
+}
+
 export default async function ComparePage({
   params,
   searchParams,

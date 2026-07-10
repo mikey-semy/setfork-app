@@ -7,6 +7,8 @@ import { Button } from '@/shared/ui/button'
 import { LoginForm } from '@/features/auth/AuthForms'
 import { PasskeyLoginButton } from '@/features/auth/PasskeyLoginButton'
 
+export const metadata = { title: 'Sign in' }
+
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ e?: string; reset?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (session) redirect('/')

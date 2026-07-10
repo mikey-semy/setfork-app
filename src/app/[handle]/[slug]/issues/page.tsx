@@ -17,6 +17,11 @@ import { isCollaborator } from '@/features/collab/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { Tag } from 'lucide-react'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Issues · ${handle}/${slug}` }
+}
+
 export default async function IssuesPage({
   params,
   searchParams,

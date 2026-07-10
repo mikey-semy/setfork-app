@@ -8,6 +8,11 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/widgets/ListHeader'
 import { getCourseLeaderboard } from '@/features/quizzes/queries'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
+  const { handle, slug } = await params
+  return { title: `Leaderboard · ${handle}/${slug}` }
+}
+
 export default async function LeaderboardPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle: owner, slug }, lang] = await Promise.all([params, getLang()])
   const ru = lang === 'ru'

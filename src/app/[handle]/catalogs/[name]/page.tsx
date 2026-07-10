@@ -8,6 +8,11 @@ import { FeedList } from '@/features/library/FeedList'
 import { getListsInCatalog } from '@/features/library/queries'
 import { getCatalog } from '@/features/catalogs/queries'
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string; name: string }> }) {
+  const { handle, name } = await params
+  return { title: `${decodeURIComponent(name)} · ${handle}` }
+}
+
 export default async function CatalogPage({ params }: { params: Promise<{ handle: string; name: string }> }) {
   const [{ handle, name }, lang, viewer] = await Promise.all([params, getLang(), getSession()])
   const cat = await getCatalog(handle, name)
