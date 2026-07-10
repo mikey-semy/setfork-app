@@ -4,6 +4,8 @@ import { t, type Lang } from '@/shared/i18n'
 // Репозиторий приватный — публичная ссылка на него отдаёт 404. Ведём в доки;
 // когда репо откроется, вернуть REPO_URL на github.
 const REPO_URL = 'https://docs.setfork.com'
+// Юридические страницы живут в доках; роуты /terms и /privacy редиректят туда же.
+const LEGAL_URL = `${REPO_URL}/docs/legal`
 
 /** Плоский подвал (как в GitHub): один ряд приглушённых ссылок, без границ и колонок. */
 export function Footer({ lang }: { lang: Lang }) {
@@ -18,8 +20,8 @@ export function Footer({ lang }: { lang: Lang }) {
         <Link href="/about" className={link}>{t('aboutProject', lang)}</Link>
         <a href={REPO_URL} target="_blank" rel="noreferrer" className={link}>{t('sourceCode', lang)}</a>
         <a href={`${REPO_URL}/issues`} target="_blank" rel="noreferrer" className={link}>{t('contact', lang)}</a>
-        <Link href="/terms" className={link}>{t('terms', lang)}</Link>
-        <Link href="/privacy" className={link}>{t('privacy', lang)}</Link>
+        <a href={`${LEGAL_URL}/terms`} className={link}>{t('terms', lang)}</a>
+        <a href={`${LEGAL_URL}/privacy`} className={link}>{t('privacy', lang)}</a>
       </div>
     </footer>
   )

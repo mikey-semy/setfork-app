@@ -436,14 +436,10 @@ const DICT = {
     en: 'SetFork hosts canonical, runnable and versioned developer reference lists — clone, fork, run and suggest edits, git as the source of truth.',
     ru: 'SetFork — канонические запускаемые версионируемые справочные списки для разработчиков: клонируй, форкай, прогоняй и предлагай правки; git — источник правды.',
   },
-  termsBody: {
-    en: 'This is an early MVP provided “as is”, without warranty. Content you publish stays yours; do not upload unlawful material. These terms will expand before a public release.',
-    ru: 'Это ранний MVP, предоставляемый «как есть», без гарантий. Публикуемый контент остаётся вашим; не загружайте противоправные материалы. Условия будут расширены до публичного релиза.',
-  },
-  privacyBody: {
-    en: 'We store only what the product needs: your account, lists and activity. We do not sell personal data. Details will be expanded before a public release.',
-    ru: 'Мы храним только необходимое: аккаунт, списки и активность. Мы не продаём персональные данные. Детали будут дополнены до публичного релиза.',
-  },
+  termsOfService: { en: 'Terms of Service', ru: 'Условия использования' },
+  privacyPolicy: { en: 'Privacy Policy', ru: 'Политика конфиденциальности' },
+  agreeToTermsPrefix: { en: 'By creating an account, you agree to the', ru: 'Создавая аккаунт, вы принимаете' },
+  agreeToTermsAnd: { en: 'and the', ru: 'и' },
   aList: { en: 'a list', ru: 'список' },
   notifPrefsTitle: { en: 'Notifications', ru: 'Уведомления' },
   notifPrefsIntro: { en: 'Choose what you get notified about.', ru: 'Выберите, о чём получать уведомления.' },
