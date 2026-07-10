@@ -67,12 +67,13 @@ export default async function ProfilePage({
   const nowY = new Date().getFullYear()
   const regY = new Date(user.createdAt).getFullYear()
   const graphYears = Array.from({ length: nowY - regY + 1 }, (_, i) => nowY - i) // новые сверху
-  // «Последний год» (скользящее окно) осмыслен, только если есть активность за
-  // пределами текущего года. Иначе он совпал бы с текущим годом → прячем его и по
-  // умолчанию показываем сам текущий год.
-  const showRolling = regY < nowY
+  // «Последний год» (скользящее окно) — ВСЕГДА дефолт, как у GitHub: сетка
+  // занимает полные 52 недели, даже если аккаунт моложе (прошлое — пустые
+  // клетки). Раньше для регистраций текущего года рисовали календарный год
+  // «с января по сейчас» — сетка-огрызок росла в течение года (баг-репорт Mike).
+  const showRolling = true
   const rawYear = sp.year ? Number(sp.year) : NaN
-  const graphYear = graphYears.includes(rawYear) ? rawYear : showRolling ? undefined : nowY
+  const graphYear = graphYears.includes(rawYear) ? rawYear : undefined
   const [counts, followCounts, following, bigAvatar, contributions, received, rawItems, pinned, catalogs, achDisplay] = await Promise.all([
     getProfileCounts(user.id),
     getFollowCounts(user.id),
