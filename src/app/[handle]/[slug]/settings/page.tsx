@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
+import { FolderGit2, Image as ImageIcon, Info, LayoutTemplate, TriangleAlert, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- owner-only: доступ строже canViewList (session.userId === ownerId)
 import { getListCover, getListMeta } from '@/features/library/queries'
 import { getCollaborators } from '@/features/collab/queries'
@@ -12,6 +14,7 @@ import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
 import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
 import { GeneralSection } from '@/features/library/GeneralSection'
+import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -25,10 +28,15 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
   if (!session || session.userId !== meta.ownerId) notFound() // только владелец
   const [collaborators, catalogs, cover] = await Promise.all([getCollaborators(meta.id), getOwnerCatalogs(meta.ownerId), getListCover(meta.id)])
 
-  return (
-    <>
-      <ListHeader owner={owner} slug={slug} active="settings" />
-      <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+  // Настройки списка на общем SettingsShell (как настройки пользователя/админки):
+  // липкое меню секций + scrollspy + поиск. Метка меню = имя секции.
+  const sections: SettingsSection[] = [
+    {
+      id: 'general',
+      title: t('generalTitle', lang),
+      icon: <Info size={15} />,
+      keywords: ['general', 'title', 'name', 'description', 'tags', 'visibility', 'ordered', 'основное', 'название', 'описание', 'теги', 'видимость', 'порядок'],
+      content: (
         <GeneralSection
           templateId={meta.id}
           title={meta.title}
@@ -38,12 +46,50 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           visibility={meta.visibility}
           lang={lang}
         />
-        <CoverSection templateId={meta.id} slug={meta.slug} initialCover={cover.coverUrl} initialAccent={cover.accent} lang={lang} />
-        <CatalogSection templateId={meta.id} currentId={meta.repositoryId} catalogs={catalogs} lang={lang} />
-        <CollaboratorsSection templateId={meta.id} collaborators={collaborators} lang={lang} />
-        <TemplateSection templateId={meta.id} isTemplate={meta.isTemplate} lang={lang} />
-        <ListSettingsDanger templateId={meta.id} slug={meta.slug} moderation={meta.moderation} pinned={meta.pinned} lang={lang} />
-      </div>
+      ),
+    },
+    {
+      id: 'cover',
+      title: t('coverTitle', lang),
+      icon: <ImageIcon size={15} />,
+      keywords: ['cover', 'banner', 'image', 'accent', 'gradient', 'обложка', 'баннер', 'изображение', 'акцент', 'градиент'],
+      content: <CoverSection templateId={meta.id} slug={meta.slug} initialCover={cover.coverUrl} initialAccent={cover.accent} lang={lang} />,
+    },
+    {
+      id: 'catalog',
+      title: t('catalogHeading', lang),
+      icon: <FolderGit2 size={15} />,
+      keywords: ['catalog', 'repository', 'group', 'каталог', 'репозиторий', 'группа'],
+      content: <CatalogSection templateId={meta.id} currentId={meta.repositoryId} catalogs={catalogs} lang={lang} />,
+    },
+    {
+      id: 'collaborators',
+      title: t('collaboratorsHeading', lang),
+      icon: <Users size={15} />,
+      keywords: ['collaborators', 'access', 'edit', 'team', 'соавторы', 'доступ', 'редактирование', 'команда'],
+      content: <CollaboratorsSection templateId={meta.id} collaborators={collaborators} lang={lang} />,
+    },
+    {
+      id: 'template',
+      title: t('templateTitle', lang),
+      icon: <LayoutTemplate size={15} />,
+      keywords: ['template', 'use this template', 'reuse', 'шаблон', 'использовать шаблон'],
+      content: <TemplateSection templateId={meta.id} isTemplate={meta.isTemplate} lang={lang} />,
+    },
+    {
+      id: 'danger',
+      title: t('dangerZone', lang),
+      icon: <TriangleAlert size={15} />,
+      danger: true,
+      keywords: ['danger', 'delete', 'remove', 'pin', 'опасная', 'удалить', 'закрепить'],
+      content: <ListSettingsDanger templateId={meta.id} slug={meta.slug} moderation={meta.moderation} pinned={meta.pinned} lang={lang} />,
+    },
+  ]
+
+  return (
+    <>
+      <ListHeader owner={owner} slug={slug} active="settings" />
+      <SettingsShell sections={sections} lang={lang} />
     </>
   )
 }

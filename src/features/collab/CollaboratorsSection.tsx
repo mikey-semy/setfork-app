@@ -15,11 +15,10 @@ export function CollaboratorsSection({
   lang: Lang
 }) {
   return (
-    <section className="mb-6 rounded-lg border border-border bg-surface p-5">
-      <div className="mb-1 flex items-center gap-1.5 font-semibold text-ink">
+    <section className="rounded-lg border border-border bg-surface p-5">
+      <div className="mb-3 flex items-center gap-1.5 font-semibold text-ink">
         <Users size={16} className="text-ink-2" /> {t('collaboratorsHeading', lang)}
       </div>
-      <p className="mb-3 text-[12.5px] text-ink-2">{t('collaboratorsHint', lang)}</p>
 
       <form action={addCollaborator.bind(null, templateId)} className="mb-3 flex flex-wrap items-center gap-2">
         <input

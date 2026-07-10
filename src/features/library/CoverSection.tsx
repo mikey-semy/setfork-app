@@ -62,13 +62,8 @@ export function CoverSection({
   }
 
   return (
-    <section className={`${card} mb-6`}>
-      <div className="mb-1 font-semibold text-ink">{ru ? 'Обложка' : 'Cover'}</div>
-      <p className="mb-4 text-[13px] text-ink-2">
-        {ru
-          ? 'Баннер списка на витрине и в ленте. Нет обложки — рисуется авто-градиент по акценту.'
-          : 'The banner shown on Explore and in feeds. With no cover, an auto-gradient is drawn from the accent.'}
-      </p>
+    <section className={card}>
+      <div className="mb-4 font-semibold text-ink">{ru ? 'Обложка' : 'Cover'}</div>
 
       <button
         type="button"

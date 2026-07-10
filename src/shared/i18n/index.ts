@@ -46,6 +46,8 @@ const DICT = {
   tagsHint: { en: 'Tags (space or comma separated)', ru: 'Теги (через пробел или запятую)' },
   generalTitle: { en: 'General', ru: 'Основное' },
   generalIntro: { en: 'Name, description, tags and visibility of the list.', ru: 'Название, описание, теги и видимость списка.' },
+  coverTitle: { en: 'Cover', ru: 'Обложка' },
+  templateTitle: { en: 'Template', ru: 'Шаблон' },
   listTitle: { en: 'Title', ru: 'Название' },
   listDesc: { en: 'Description', ru: 'Описание' },
   yourLists: { en: 'Your lists', ru: 'Твои списки' },
