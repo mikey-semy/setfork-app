@@ -105,7 +105,7 @@ export default async function ProfilePage({
   }
   const monthEnd = new Date(monthStart)
   monthEnd.setMonth(monthEnd.getMonth() + 1)
-  const monthActivity = tab === 'overview' ? await getMonthActivity(user.id, monthStart, monthEnd) : null
+  const monthActivity = tab === 'overview' ? await getMonthActivity(user.id, monthStart, monthEnd, viewer?.userId) : null
   const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   const prevMonth = new Date(monthStart)
   prevMonth.setMonth(prevMonth.getMonth() - 1)

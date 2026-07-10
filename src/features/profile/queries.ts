@@ -24,16 +24,23 @@ export interface MonthActivity {
 }
 
 /** Агрегаты активности пользователя за месяц [from, to) — по типам работ. */
-export async function getMonthActivity(userId: string, from: Date, to: Date): Promise<MonthActivity> {
+export async function getMonthActivity(userId: string, from: Date, to: Date, viewerId?: string): Promise<MonthActivity> {
+  // Секции versions/listsCreated отдают slug'и списков владельца. Публично видимые
+  // (public+published+active) видит любой; черновики/приватные/снятые — только сам
+  // владелец. Иначе аноним узнавал существование и slug чужого черновика по его версиям
+  // (та же утечка, что #193 закрыл в ленте/дайджесте/Starred, но профильную активность минула).
+  const vid = viewerId ?? null
+  const visV = sql`and (t.visibility = 'public' and t.status = 'published' and t.moderation = 'active' or t.owner_id = ${vid})`
+  const visC = sql`and (visibility = 'public' and status = 'published' and moderation = 'active' or owner_id = ${vid})`
   const [verRows, created, issuesAgg, suggAgg] = await Promise.all([
     db.execute(sql`
       select t.slug, count(*)::int as count
       from template_versions tv join templates t on t.id = tv.template_id
-      where t.owner_id = ${userId} and tv.created_at >= ${from} and tv.created_at < ${to}
+      where t.owner_id = ${userId} and tv.created_at >= ${from} and tv.created_at < ${to} ${visV}
       group by t.slug order by count desc, t.slug asc`),
     db.execute(sql`
       select slug from templates
-      where owner_id = ${userId} and created_at >= ${from} and created_at < ${to}
+      where owner_id = ${userId} and created_at >= ${from} and created_at < ${to} ${visC}
       order by created_at desc limit 10`),
     db.execute(sql`
       select count(*)::int as n, count(distinct template_id)::int as lists
