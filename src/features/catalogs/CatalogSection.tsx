@@ -22,11 +22,10 @@ export function CatalogSection({
   const [pending, start] = useTransition()
 
   return (
-    <section className="mb-6 rounded-lg border border-border bg-surface p-5">
-      <div className="mb-1 flex items-center gap-1.5 font-semibold text-ink">
+    <section className="rounded-lg border border-border bg-surface p-5">
+      <div className="mb-3 flex items-center gap-1.5 font-semibold text-ink">
         <FolderGit2 size={16} className="text-ink-2" /> {t('catalogHeading', lang)}
       </div>
-      <p className="mb-3 text-[12.5px] text-ink-2">{t('catalogHint', lang)}</p>
 
       {catalogs.length > 0 && (
         <Select

@@ -391,7 +391,7 @@
   },
   "src/features/library/CoverSection.tsx": {
     "no-restricted-syntax": {
-      "count": 6
+      "count": 5
     }
   },
   "src/features/library/ListEditor.tsx": {

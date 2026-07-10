@@ -29,9 +29,8 @@ export function GeneralSection({
   const toggleVisibility = setListVisibility.bind(null, templateId, visibility === 'public' ? 'private' : 'public')
 
   return (
-    <section className={`${card} mb-6`}>
-      <div className="mb-1 font-semibold text-ink">{t('generalTitle', lang)}</div>
-      <p className="mb-4 text-[13px] text-ink-2">{t('generalIntro', lang)}</p>
+    <section className={card}>
+      <div className="mb-4 font-semibold text-ink">{t('generalTitle', lang)}</div>
 
       <form action={save} className="flex flex-col gap-4">
         <div>
