@@ -97,7 +97,7 @@ export default async function ExplorePage({
                 <Link key={l.id} href={`/${l.ownerHandle}/${l.slug}`} className="flex items-center justify-between gap-2 py-1.5 hover:text-accent">
                   <span className="truncate text-[13px] text-ink-2 hover:text-accent">
                     <span className="text-muted">{l.ownerHandle}/</span>
-                    {l.slug}
+                    {tr(l.title, lang)}
                   </span>
                   <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-muted">
                     <Star size={12} /> {l.starsCount}
