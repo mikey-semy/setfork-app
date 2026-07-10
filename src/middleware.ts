@@ -1,11 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { jwtVerify } from 'jose'
 import { isLang, DEFAULT_LANG, t, type Lang } from '@/shared/i18n'
+import { isAdminHandle } from '@/shared/auth/admin-handle'
+import { maintenanceEnabled } from '@/shared/settings/maintenance'
 
-// Режим «сайт на ремонте»: SETFORK_MAINTENANCE=1 в env стенда закрывает всё
-// (страницы, API, MCP, git smart-http) честным 503 + Retry-After — браузеры
-// показывают заглушку, боты/git-клиенты понимают «времянка, приходи позже»,
-// SEO не индексирует ремонт как контент. Выключение — убрать env и рестарт.
-// Ассеты /_next пропускаем: они статичны и нужны вкладкам, открытым до ремонта.
+// Режим «сайт на ремонте»: включается админом из /admin (флаг в БД, кэш 5с)
+// либо аварийно env SETFORK_MAINTENANCE=1. Всё отвечает 503 + Retry-After,
+// КРОМЕ: ассетов /_next, страницы входа (/login и /api/auth/* — админ должен
+// смочь войти) и залогиненных админов — они ходят по сайту свободно и
+// выключают режим в /admin. Node-runtime: нужен доступ к БД для флага.
 
 const RETRY_AFTER_SEC = '1800' // подсказка клиентам: ~полчаса
 
@@ -32,10 +35,32 @@ function maintenanceHtml(lang: Lang): string {
 </html>`
 }
 
-export function middleware(req: NextRequest) {
-  if (process.env.SETFORK_MAINTENANCE !== '1') return NextResponse.next()
+/** Залогинен ли админ: верифицируем session-JWT (HS256, AUTH_SECRET) и сверяем
+ *  handle с ADMIN_HANDLES. Без похода в реестр sessions — для байпаса ремонта
+ *  достаточно валидной подписи (отзыв сессии тут не критичен). */
+async function isAdminRequest(req: NextRequest): Promise<boolean> {
+  const token = req.cookies.get('setfork_session')?.value
+  if (!token) return false
+  const secret = process.env.AUTH_SECRET
+  if (!secret) return false
+  try {
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret))
+    return isAdminHandle(typeof payload.handle === 'string' ? payload.handle : null)
+  } catch {
+    return false
+  }
+}
+
+export async function middleware(req: NextRequest) {
+  if (!(await maintenanceEnabled())) return NextResponse.next()
 
   const { pathname } = req.nextUrl
+  // Дверь для админа: страница входа и auth-эндпоинты (GitHub OAuth, POST
+  // server actions самого /login) остаются открыты.
+  if (pathname === '/login' || pathname.startsWith('/api/auth/')) return NextResponse.next()
+
+  if (await isAdminRequest(req)) return NextResponse.next()
+
   // Машинные поверхности — короткий text/plain (curl, git, MCP, ридеры фидов).
   const machine =
     pathname.startsWith('/api/') ||
@@ -59,6 +84,8 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
+  // БД-флаг и jose требуют Node (edge не умеет pg).
+  runtime: 'nodejs',
   // Всё, кроме ассетов сборки и статики корня (иконки/манифест).
   matcher: ['/((?!_next/|favicon\\.ico|icon\\.|apple-icon|manifest\\.).*)'],
 }

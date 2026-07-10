@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
+import { maintenanceFlag, setMaintenance } from '@/shared/settings/maintenance'
 import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
@@ -178,4 +179,15 @@ export async function fetchOpenRouterCredits(): Promise<
   const c = await getOpenRouterCredits({ fresh: true })
   if (!c) return { error: 'Не удалось получить баланс (нет ключа или API недоступен).' }
   return { ok: true, total: c.total, used: c.used, remaining: c.remaining }
+}
+
+/** Тумблер «сайт на ремонте» (см. shared/settings/maintenance + middleware).
+ *  Возвращает НОВОЕ состояние. Аудит — кто и когда дёрнул рубильник. */
+export async function toggleMaintenance(on: boolean): Promise<boolean> {
+  const admin = await requireAdmin()
+  await setMaintenance(on)
+  const { recordAudit } = await import('@/shared/audit')
+  await recordAudit(on ? 'maintenance.on' : 'maintenance.off', { actorId: admin.userId })
+  revalidatePath('/admin')
+  return maintenanceFlag()
 }

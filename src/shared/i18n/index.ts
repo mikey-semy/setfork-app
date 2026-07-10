@@ -409,6 +409,22 @@ const DICT = {
     ru: 'SetFork ненадолго закрыт на обслуживание. Обновите страницу через несколько минут.',
   },
   embedNotFound: { en: 'List not found or unavailable', ru: 'Список не найден или недоступен' },
+  adminMaintenance: { en: 'Maintenance', ru: 'Обслуживание' },
+  adminTitle: { en: 'Admin', ru: 'Админка' },
+  adminSubtitle: { en: 'Instance settings. Stored in DB, changeable on the fly.', ru: 'Настройки инстанса. Хранятся в БД, меняются на лету.' },
+  adminReindexTitle: { en: 'Search index', ru: 'Индексация поиска' },
+  maintenanceStateOn: { en: 'Site is CLOSED for maintenance', ru: 'Сайт ЗАКРЫТ на обслуживание' },
+  maintenanceStateOff: { en: 'Site is open', ru: 'Сайт открыт' },
+  maintenanceEnable: { en: 'Close site for maintenance', ru: 'Закрыть сайт на обслуживание' },
+  maintenanceDisable: { en: 'Open site', ru: 'Открыть сайт' },
+  maintenanceEnvNote: {
+    en: 'Forced by SETFORK_MAINTENANCE env — remove it and restart to disable.',
+    ru: 'Включён через env SETFORK_MAINTENANCE — выключается только удалением переменной и рестартом.',
+  },
+  maintenanceHint: {
+    en: 'Everyone gets a 503 page; admins keep full access and can reopen the site here. Login page stays open.',
+    ru: 'Все получают страницу 503; админы сохраняют полный доступ и открывают сайт здесь же. Страница входа остаётся доступной.',
+  },
   emptyExplore: { en: 'No lists yet — be the first to create one.', ru: 'Списков пока нет — создайте первый.' },
   // ── Уведомления ──
   notifications: { en: 'Notifications', ru: 'Уведомления' },
