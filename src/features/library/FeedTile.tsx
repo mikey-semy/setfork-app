@@ -20,9 +20,9 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
       <Link href={base} className="block">
         {item.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.coverImage} alt="" className="h-[120px] w-full object-cover" />
+          <img src={item.coverImage} alt="" className="h-[96px] w-full object-cover" />
         ) : (
-          <AutoBanner seed={item.id} accent={item.accent} label={item.slug} />
+          <AutoBanner seed={item.id} accent={item.accent} label={tr(item.title, lang)} height="h-[96px]" />
         )}
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-3.5">
@@ -31,7 +31,7 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
           <Link href={`/${item.ownerHandle}`} className="min-w-0 truncate text-[12.5px] text-muted hover:text-accent">{item.ownerHandle}</Link>
           {item.visibility === 'private' && <Lock size={11} className="shrink-0 text-muted" />}
         </div>
-        <Link href={base} className="truncate text-[15px] font-semibold text-ink group-hover:text-accent">{item.slug}</Link>
+        <Link href={base} className="truncate text-[15px] font-semibold text-ink group-hover:text-accent">{tr(item.title, lang)}</Link>
         <p className="line-clamp-2 min-h-[34px] text-[12.5px] leading-snug text-ink-2">{tr(item.desc, lang)}</p>
         {item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">

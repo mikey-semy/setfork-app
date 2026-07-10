@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { GitFork, Lock, Star } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { cardAccent } from '@/shared/ui/AutoBanner'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
 import type { FeedItem } from './queries'
@@ -10,24 +11,32 @@ function fmt(n: number): string {
   return String(n)
 }
 
-/** Карточка-строка (как список репозиториев GitHub): клик по имени открывает;
+/** Карточка-строка (как список репозиториев GitHub): слева accent-полоса (цвет
+ *  списка — идентичность без фейкового баннера), имя = title, клик открывает;
  *  единственное действие на карточке — ⭐ Star (сигнал качества + коллекция). */
 export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang: Lang; starred?: boolean }) {
   const star = toggleStar.bind(null, item.id)
+  const a = cardAccent(item.accent, item.id)
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-border bg-surface px-3.5 py-3 transition-colors hover:border-border-strong">
+    <div className="relative flex items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface py-3 pr-3.5 pl-4 transition-colors hover:border-border-strong">
+      {/* accent-полоса слева — идентичность списка (без синтетического баннера в ленте) */}
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-1"
+        style={{ background: `linear-gradient(180deg, ${a}, color-mix(in srgb, ${a} 55%, transparent))` }}
+      />
       <Link href={`/${item.ownerHandle}`} className="shrink-0">
         <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={32} />
       </Link>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[14.5px]">
-            <Link href={`/${item.ownerHandle}`} className="font-semibold text-ink hover:text-accent">
+            <Link href={`/${item.ownerHandle}`} className="font-semibold text-ink-2 hover:text-accent">
               {item.ownerHandle}
             </Link>
-            <span className="text-muted">/</span>
-            <Link href={`/${item.ownerHandle}/${item.slug}`} className="font-semibold text-ink hover:text-accent hover:underline">
-              {item.slug}
+            <span className="text-muted"> / </span>
+            <Link href={`/${item.ownerHandle}/${item.slug}`} className="font-bold text-ink hover:text-accent hover:underline">
+              {tr(item.title, lang)}
             </Link>
           </span>
           <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">
@@ -66,10 +75,10 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
         </div>
       </div>
 
-      {/* Обложка — ТОЛЬКО если у списка она реально есть (без синтетических баннеров). */}
+      {/* Обложка — компактный thumb, ТОЛЬКО если реально загружена (иначе идентичность даёт полоса слева). */}
       {item.coverImage && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.coverImage} alt="" className="hidden h-14 w-24 shrink-0 rounded-md border border-border object-cover sm:block" />
+        <img src={item.coverImage} alt="" className="hidden h-14 w-24 shrink-0 self-center rounded-md border border-border object-cover sm:block" />
       )}
 
       {/* единственное действие — Star */}

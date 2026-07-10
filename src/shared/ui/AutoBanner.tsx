@@ -1,10 +1,20 @@
-// Детерминированный авто-баннер (когда у списка нет обложки): градиент по seed
-// или заданному акценту + крупная приглушённая монограмма из slug. Без внешних
-// ресурсов — чистый CSS-градиент.
+// Детерминированный «честный» авто-баннер (когда у списка/коллекции нет обложки):
+// мягкий accent-градиент по seed/accent + компактная монограмма-чип вместо крупной
+// буквы-заглушки. Без внешних ресурсов — чистый CSS. Тот же accent карточки берут
+// для полосы слева (cardAccent), так что список узнаётся и в ленте, и в Explore.
 function hashHue(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
   return Math.abs(h) % 360
+}
+
+/** Стабильный accent карточки: заданный hex либо детерминированный оттенок по seed. */
+export function cardAccent(accent: string | null | undefined, seed: string): string {
+  return accent && /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : `hsl(${hashHue(seed)} 55% 46%)`
+}
+
+function monogram(s: string): string {
+  return s.replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || 'SF'
 }
 
 export function AutoBanner({
@@ -20,16 +30,21 @@ export function AutoBanner({
   className?: string
   height?: string
 }) {
-  const h1 = hashHue(seed)
-  const h2 = (h1 + 42) % 360
-  const bg =
-    accent && /^#[0-9a-fA-F]{6}$/.test(accent)
-      ? `linear-gradient(135deg, ${accent}, #0b0d12)`
-      : `linear-gradient(135deg, hsl(${h1} 68% 40%), hsl(${h2} 60% 24%))`
-  const mono = (label ?? seed).replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || 'SF'
+  const a = cardAccent(accent, seed)
+  const mono = monogram(label ?? seed)
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden ${height} ${className}`} style={{ background: bg }}>
-      <span className="font-logo select-none text-[52px] font-bold uppercase leading-none tracking-tight text-white/25">{mono}</span>
+    <div
+      className={`relative overflow-hidden ${height} ${className}`}
+      style={{
+        background: `radial-gradient(120% 120% at 100% 0, color-mix(in srgb, ${a} 42%, transparent), transparent 60%), repeating-linear-gradient(-45deg, color-mix(in srgb, ${a} 14%, transparent) 0 2px, transparent 2px 9px), linear-gradient(135deg, color-mix(in srgb, ${a} 20%, var(--surface)), var(--surface))`,
+      }}
+    >
+      <span
+        className="absolute right-2.5 bottom-2 rounded-md border px-2 py-0.5 text-[12px] leading-none font-extrabold tracking-wide uppercase"
+        style={{ color: a, background: 'var(--surface)', borderColor: `color-mix(in srgb, ${a} 40%, var(--border))` }}
+      >
+        {mono}
+      </span>
     </div>
   )
 }
