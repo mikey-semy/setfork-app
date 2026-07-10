@@ -1,14 +1,16 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { getAiSettings, getApiKey, maskKey } from '@/shared/settings/ai'
 import { getMediaSettings, maskSecret } from '@/shared/settings/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { getEmailSettings } from '@/shared/settings/email'
+import { maintenanceEnvOverride, maintenanceFlag } from '@/shared/settings/maintenance'
 import { getVapid } from '@/shared/push/vapid'
 import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
-import { BarChart3, FolderGit2, Shield, ScrollText } from 'lucide-react'
+import { Award, BarChart3, Bell, Bot, Database, FolderGit2, Mail, RefreshCw, ScrollText, Search, Shield, Users, Wrench } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
@@ -20,7 +22,9 @@ import { EmailSettingsForm } from '@/features/admin/EmailSettingsForm'
 import { PushSettingsForm } from '@/features/admin/PushSettingsForm'
 import { ReindexPanel } from '@/features/admin/ReindexPanel'
 import { AchievementsAdmin } from '@/features/admin/AchievementsAdmin'
+import { MaintenanceSection } from '@/features/admin/MaintenanceSection'
 import { getAchievementDisplay } from '@/features/profile/achievement-config'
+import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
@@ -59,7 +63,7 @@ export const metadata = { title: 'Admin' }
 
 export default async function AdminPage() {
   await requireAdmin()
-  const [lang, settings, apiKey, media, search, email, online, vapid, achDisplay] = await Promise.all([
+  const [lang, settings, apiKey, media, search, email, online, vapid, achDisplay, maintOn] = await Promise.all([
     getLang(),
     getAiSettings(),
     getApiKey(),
@@ -69,6 +73,7 @@ export default async function AdminPage() {
     getOnlineUsers(),
     getVapid(),
     getAchievementDisplay(),
+    maintenanceFlag(),
   ])
   const ru = lang === 'ru'
   const pushValues = { publicKey: vapid.publicKey, subject: vapid.subject, configured: Boolean(vapid.publicKey && vapid.privateKey) }
@@ -101,13 +106,249 @@ export default async function AdminPage() {
   const fallbackOpts = ensure(buildOpts(models.chat, false, ru), settings.fallbackModel)
   const embOpts = ensure(buildOpts(models.embedding, true, ru), settings.embeddingModel)
 
+  const card = 'rounded-lg border border-border bg-surface p-5'
+
+  // Заголовки секций: ровно один двуязычный литерал на строку (i18n-правило),
+  // используется и в липком меню, и в карточке.
+  const T = {
+    online: ru ? 'Сейчас онлайн' : 'Online now',
+    ai: ru ? 'Генерация и модели' : 'Generation & models',
+    media: ru ? 'Хранилище и изображения' : 'Storage & images',
+    email: ru ? 'Почта (SMTP)' : 'Email (SMTP)',
+    push: ru ? 'Push-уведомления (Web Push)' : 'Push notifications (Web Push)',
+    search: ru ? 'Поиск' : 'Search',
+    ach: ru ? 'Достижения профиля' : 'Profile achievements',
+  }
+
+  // Секции — через SettingsShell (как в настройках пользователя): липкое меню
+  // слева со scrollspy-подсветкой активного пункта + поиск по секциям.
+  const sections: SettingsSection[] = [
+    {
+      id: 'maintenance',
+      title: t('adminMaintenance', lang),
+      icon: <Wrench size={14} />,
+      keywords: ['maintenance', 'ремонт', 'обслуживание', '503'],
+      content: (
+        <section className={card}>
+          <div className="mb-3 font-semibold text-ink">{t('adminMaintenance', lang)}</div>
+          <MaintenanceSection initialOn={maintOn} envOverride={maintenanceEnvOverride()} lang={lang} />
+        </section>
+      ),
+    },
+    {
+      id: 'online',
+      title: T.online,
+      icon: <Users size={14} />,
+      keywords: ['online', 'онлайн', 'presence'],
+      content: (
+        <section className={card}>
+          <div className="mb-3 flex items-center gap-2 font-semibold text-ink">
+            <span className="h-2 w-2 rounded-full bg-ok" />
+            {T.online} <span className="font-mono text-[12px] text-muted">{online.length}</span>
+          </div>
+          {online.length === 0 ? (
+            <p className="text-[13px] text-muted">{ru ? 'Никого онлайн.' : 'No one online.'}</p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {online.map((u) => (
+                <Link key={u.userId} href={`/${u.handle}`} className="flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-1 pr-3 hover:border-border-strong">
+                  <Avatar handle={u.handle} avatarUrl={u.avatarUrl} size={24} />
+                  <span className="text-[13px] text-ink">{u.handle}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      ),
+    },
+    {
+      id: 'ai',
+      title: T.ai,
+      icon: <Bot size={14} />,
+      keywords: ['ai', 'openrouter', 'model', 'модель', 'генерация', 'температура', 'токены'],
+      content: (
+        <section className={card}>
+          <div className="mb-4 font-semibold text-ink">{T.ai}</div>
+
+          {!hasKey && (
+            <div className="mb-5 rounded-md border border-warn/40 bg-warn/10 px-3 py-2.5 text-[13px] text-warn">
+              {ru
+                ? 'Нет OPENROUTER_API_KEY в .env — генерация и списки моделей недоступны (id можно ввести вручную).'
+                : 'No OPENROUTER_API_KEY in .env — generation and model lists are unavailable (id can be typed manually).'}
+            </div>
+          )}
+
+          <form action={setAiSettings} className="flex flex-col gap-5">
+            <AiKeyAndSwitch enabled={settings.enabled} hasKey={hasKey} maskedKey={maskedKey} ru={ru} />
+
+            <div>
+              <label className={lbl}>{ru ? 'Модель генерации' : 'Chat model'}</label>
+              {chatOpts.length > 0 ? (
+                <ModelSelect name="chatModel" defaultValue={settings.chatModel} options={chatOpts} placeholder={ru ? 'Выбери модель' : 'Pick a model'} />
+              ) : (
+                <input name="chatModel" defaultValue={settings.chatModel} className={`${field} font-mono`} />
+              )}
+            </div>
+
+            <div>
+              <label className={lbl}>{ru ? 'Запасная модель (для дешёвого режима)' : 'Fallback model (cheap mode)'}</label>
+              {fallbackOpts.length > 0 ? (
+                <ModelSelect name="fallbackModel" defaultValue={settings.fallbackModel} options={fallbackOpts} allowEmpty placeholder="—" />
+              ) : (
+                <input name="fallbackModel" defaultValue={settings.fallbackModel} className={`${field} font-mono`} />
+              )}
+            </div>
+
+            <div>
+              <label className={lbl}>{ru ? 'Модель эмбеддингов (RAG, 1536-мерная)' : 'Embedding model (RAG, 1536-dim)'}</label>
+              {embOpts.length > 0 ? (
+                <ModelSelect name="embeddingModel" defaultValue={settings.embeddingModel} options={embOpts} placeholder={ru ? 'Выбери модель' : 'Pick a model'} />
+              ) : (
+                <input name="embeddingModel" defaultValue={settings.embeddingModel} className={`${field} font-mono`} />
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>Temperature</label>
+                <input type="number" name="temperature" step="any" min="0" max="2" defaultValue={settings.temperature} className={field} />
+              </div>
+              <div>
+                <label className={lbl}>Max tokens</label>
+                <input type="number" name="maxTokens" step="1" min="64" max="4000" defaultValue={settings.maxTokens} className={field} />
+              </div>
+            </div>
+
+            <p className="text-[12px] text-muted">
+              {ru
+                ? 'Цены в списках — за 1М токенов (prompt/completion). Зелёные дешевле, жёлтые средние, красные дорогие.'
+                : 'Prices are per 1M tokens (prompt/completion). Green = cheap, yellow = mid, red = expensive.'}
+            </p>
+
+            <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
+              <div className="text-[13px] font-medium text-ink">{ru ? 'Контроль расходов OpenRouter' : 'OpenRouter cost control'}</div>
+              <CreditsWidget ru={ru} />
+              <div>
+                <label className={lbl}>{ru ? 'Порог авто-fallback ($)' : 'Auto-fallback threshold ($)'}</label>
+                <input type="number" name="cheapModeThreshold" step="any" min="0" defaultValue={settings.cheapModeThreshold} className={field} />
+                <p className="mt-1.5 text-[12px] text-muted">
+                  {ru
+                    ? 'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.'
+                    : 'When the balance drops below this, generation switches to the fallback model. 0 = off.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-border pt-4">
+              <button className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
+                {ru ? 'Сохранить' : 'Save'}
+              </button>
+            </div>
+          </form>
+        </section>
+      ),
+    },
+    {
+      id: 'media',
+      title: T.media,
+      icon: <Database size={14} />,
+      keywords: ['s3', 'imgproxy', 'cdn', 'хранилище', 'картинки', 'storage'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{T.media}</div>
+          <p className="mb-4 text-[13px] text-ink-2">
+            {ru
+              ? 'S3-совместимое хранилище, imgproxy и CDN. Значения перекрывают .env; пустое поле — берётся из .env.'
+              : 'S3-compatible storage, imgproxy and CDN. Values override .env; an empty field falls back to .env.'}
+          </p>
+          <MediaSettingsForm ru={ru} v={mediaValues} />
+        </section>
+      ),
+    },
+    {
+      id: 'email',
+      title: T.email,
+      icon: <Mail size={14} />,
+      keywords: ['smtp', 'email', 'почта', 'mail'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{T.email}</div>
+          <p className="mb-4 text-[13px] text-ink-2">
+            {ru
+              ? 'Свой SMTP для уведомлений на почту. Значения перекрывают .env; пустое поле — берётся из .env.'
+              : 'Your own SMTP for email notifications. Values override .env; an empty field falls back to .env.'}
+          </p>
+          <EmailSettingsForm ru={ru} v={emailValues} />
+        </section>
+      ),
+    },
+    {
+      id: 'push',
+      title: T.push,
+      icon: <Bell size={14} />,
+      keywords: ['push', 'vapid', 'web push', 'уведомления'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{T.push}</div>
+          <p className="mb-4 text-[13px] text-ink-2">
+            {ru
+              ? 'Фоновые браузерные уведомления через service worker. Свои VAPID-ключи — без сторонних сервисов.'
+              : 'Background browser notifications via a service worker. Your own VAPID keys — no third-party service.'}
+          </p>
+          <PushSettingsForm ru={ru} v={pushValues} />
+        </section>
+      ),
+    },
+    {
+      id: 'search',
+      title: T.search,
+      icon: <Search size={14} />,
+      keywords: ['search', 'поиск', 'semantic', 'вектор', 'rag'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{T.search}</div>
+          <p className="mb-4 text-[13px] text-ink-2">
+            {ru
+              ? 'Режим строки поиска. Семантика и гибрид используют векторный индекс (нужен ключ и индексация); при недоступности — откат на ключевые слова.'
+              : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'}
+          </p>
+          <SearchSettingsForm current={search} ru={ru} />
+        </section>
+      ),
+    },
+    {
+      id: 'achievements',
+      title: T.ach,
+      icon: <Award size={14} />,
+      keywords: ['achievements', 'достижения', 'бейджи', 'badges'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{T.ach}</div>
+          <p className="mb-4 text-[13px] text-ink-2">
+            {ru
+              ? 'Включай/выключай достижения и задавай свою картинку вместо иконки (перетаскиванием). Действует на всех профилях.'
+              : 'Enable/disable achievements and set a custom image instead of the icon (drag-and-drop). Applies to all profiles.'}
+          </p>
+          <AchievementsAdmin initial={achDisplay} ru={ru} />
+        </section>
+      ),
+    },
+    {
+      id: 'reindex',
+      title: t('adminReindexTitle', lang),
+      icon: <RefreshCw size={14} />,
+      keywords: ['reindex', 'индексация', 'embeddings', 'эмбеддинги'],
+      content: <ReindexPanel ru={ru} />,
+    },
+  ]
+
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-6 py-8">
-      <div className="flex items-end justify-between gap-3">
+    <>
+      <div className="mx-auto flex w-full max-w-[920px] flex-wrap items-end justify-between gap-3 px-6 pt-8">
         <div>
-          <h1 className="mb-1 text-[18px] font-bold text-ink">{ru ? 'Настройки ИИ' : 'AI settings'}</h1>
+          <h1 className="mb-1 text-[18px] font-bold text-ink">{t('adminTitle', lang)}</h1>
           <p className="text-[13px] text-ink-2">
-            {ru ? 'Модель и параметры генерации. Хранится в БД, меняется на лету.' : 'Model & generation params. Stored in DB, changeable on the fly.'}
+            {t('adminSubtitle', lang)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -137,157 +378,7 @@ export default async function AdminPage() {
           </Link>
         </div>
       </div>
-
-      <section className="rounded-lg border border-border bg-surface p-5">
-        <div className="mb-3 flex items-center gap-2 font-semibold text-ink">
-          <span className="h-2 w-2 rounded-full bg-ok" />
-          {ru ? 'Сейчас онлайн' : 'Online now'} <span className="font-mono text-[12px] text-muted">{online.length}</span>
-        </div>
-        {online.length === 0 ? (
-          <p className="text-[13px] text-muted">{ru ? 'Никого онлайн.' : 'No one online.'}</p>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            {online.map((u) => (
-              <Link key={u.userId} href={`/${u.handle}`} className="flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-1 pr-3 hover:border-border-strong">
-                <Avatar handle={u.handle} avatarUrl={u.avatarUrl} size={24} />
-                <span className="text-[13px] text-ink">{u.handle}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-lg border border-border bg-surface p-5">
-        <div className="mb-4 font-semibold text-ink">{ru ? 'Генерация и модели' : 'Generation & models'}</div>
-
-        {!hasKey && (
-          <div className="mb-5 rounded-md border border-warn/40 bg-warn/10 px-3 py-2.5 text-[13px] text-warn">
-            {ru
-              ? 'Нет OPENROUTER_API_KEY в .env — генерация и списки моделей недоступны (id можно ввести вручную).'
-              : 'No OPENROUTER_API_KEY in .env — generation and model lists are unavailable (id can be typed manually).'}
-          </div>
-        )}
-
-        <form action={setAiSettings} className="flex flex-col gap-5">
-          <AiKeyAndSwitch enabled={settings.enabled} hasKey={hasKey} maskedKey={maskedKey} ru={ru} />
-
-          <div>
-            <label className={lbl}>{ru ? 'Модель генерации' : 'Chat model'}</label>
-            {chatOpts.length > 0 ? (
-              <ModelSelect name="chatModel" defaultValue={settings.chatModel} options={chatOpts} placeholder={ru ? 'Выбери модель' : 'Pick a model'} />
-            ) : (
-              <input name="chatModel" defaultValue={settings.chatModel} className={`${field} font-mono`} />
-            )}
-          </div>
-
-          <div>
-            <label className={lbl}>{ru ? 'Запасная модель (для дешёвого режима)' : 'Fallback model (cheap mode)'}</label>
-            {fallbackOpts.length > 0 ? (
-              <ModelSelect name="fallbackModel" defaultValue={settings.fallbackModel} options={fallbackOpts} allowEmpty placeholder="—" />
-            ) : (
-              <input name="fallbackModel" defaultValue={settings.fallbackModel} className={`${field} font-mono`} />
-            )}
-          </div>
-
-          <div>
-            <label className={lbl}>{ru ? 'Модель эмбеддингов (RAG, 1536-мерная)' : 'Embedding model (RAG, 1536-dim)'}</label>
-            {embOpts.length > 0 ? (
-              <ModelSelect name="embeddingModel" defaultValue={settings.embeddingModel} options={embOpts} placeholder={ru ? 'Выбери модель' : 'Pick a model'} />
-            ) : (
-              <input name="embeddingModel" defaultValue={settings.embeddingModel} className={`${field} font-mono`} />
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={lbl}>Temperature</label>
-              <input type="number" name="temperature" step="any" min="0" max="2" defaultValue={settings.temperature} className={field} />
-            </div>
-            <div>
-              <label className={lbl}>Max tokens</label>
-              <input type="number" name="maxTokens" step="1" min="64" max="4000" defaultValue={settings.maxTokens} className={field} />
-            </div>
-          </div>
-
-          <p className="text-[12px] text-muted">
-            {ru
-              ? 'Цены в списках — за 1М токенов (prompt/completion). Зелёные дешевле, жёлтые средние, красные дорогие.'
-              : 'Prices are per 1M tokens (prompt/completion). Green = cheap, yellow = mid, red = expensive.'}
-          </p>
-
-          <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
-            <div className="text-[13px] font-medium text-ink">{ru ? 'Контроль расходов OpenRouter' : 'OpenRouter cost control'}</div>
-            <CreditsWidget ru={ru} />
-            <div>
-              <label className={lbl}>{ru ? 'Порог авто-fallback ($)' : 'Auto-fallback threshold ($)'}</label>
-              <input type="number" name="cheapModeThreshold" step="any" min="0" defaultValue={settings.cheapModeThreshold} className={field} />
-              <p className="mt-1.5 text-[12px] text-muted">
-                {ru
-                  ? 'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.'
-                  : 'When the balance drops below this, generation switches to the fallback model. 0 = off.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-end border-t border-border pt-4">
-            <button className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
-              {ru ? 'Сохранить' : 'Save'}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section className="rounded-lg border border-border bg-surface p-5">
-        <div className="mb-1 font-semibold text-ink">{ru ? 'Хранилище и изображения' : 'Storage & images'}</div>
-        <p className="mb-4 text-[13px] text-ink-2">
-          {ru
-            ? 'S3-совместимое хранилище, imgproxy и CDN. Значения перекрывают .env; пустое поле — берётся из .env.'
-            : 'S3-compatible storage, imgproxy and CDN. Values override .env; an empty field falls back to .env.'}
-        </p>
-        <MediaSettingsForm ru={ru} v={mediaValues} />
-      </section>
-
-      <section className="rounded-lg border border-border bg-surface p-5">
-        <div className="mb-1 font-semibold text-ink">{ru ? 'Почта (SMTP)' : 'Email (SMTP)'}</div>
-        <p className="mb-4 text-[13px] text-ink-2">
-          {ru
-            ? 'Свой SMTP для уведомлений на почту. Значения перекрывают .env; пустое поле — берётся из .env.'
-            : 'Your own SMTP for email notifications. Values override .env; an empty field falls back to .env.'}
-        </p>
-        <EmailSettingsForm ru={ru} v={emailValues} />
-      </section>
-
-      <section className="rounded-lg border border-border bg-surface p-5">
-        <div className="mb-1 font-semibold text-ink">{ru ? 'Push-уведомления (Web Push)' : 'Push notifications (Web Push)'}</div>
-        <p className="mb-4 text-[13px] text-ink-2">
-          {ru
-            ? 'Фоновые браузерные уведомления через service worker. Свои VAPID-ключи — без сторонних сервисов.'
-            : 'Background browser notifications via a service worker. Your own VAPID keys — no third-party service.'}
-        </p>
-        <PushSettingsForm ru={ru} v={pushValues} />
-      </section>
-
-      <section className="rounded-lg border border-border bg-surface p-5">
-        <div className="mb-1 font-semibold text-ink">{ru ? 'Поиск' : 'Search'}</div>
-        <p className="mb-4 text-[13px] text-ink-2">
-          {ru
-            ? 'Режим строки поиска. Семантика и гибрид используют векторный индекс (нужен ключ и индексация); при недоступности — откат на ключевые слова.'
-            : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'}
-        </p>
-        <SearchSettingsForm current={search} ru={ru} />
-      </section>
-
-      <section className="rounded-lg border border-border bg-surface p-5">
-        <div className="mb-1 font-semibold text-ink">{ru ? 'Достижения профиля' : 'Profile achievements'}</div>
-        <p className="mb-4 text-[13px] text-ink-2">
-          {ru
-            ? 'Включай/выключай достижения и задавай свою картинку вместо иконки (перетаскиванием). Действует на всех профилях.'
-            : 'Enable/disable achievements and set a custom image instead of the icon (drag-and-drop). Applies to all profiles.'}
-        </p>
-        <AchievementsAdmin initial={achDisplay} ru={ru} />
-      </section>
-
-      <ReindexPanel ru={ru} />
-    </div>
+      <SettingsShell sections={sections} lang={lang} />
+    </>
   )
 }

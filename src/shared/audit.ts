@@ -18,6 +18,8 @@ export type AuditAction =
   | '2fa.enable'
   | '2fa.disable'
   | '2fa.recovery-regenerate'
+  | 'maintenance.on'
+  | 'maintenance.off'
   | 'password.reset'
   | 'email.change-request'
   | 'email.change'
