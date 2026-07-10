@@ -399,6 +399,12 @@ const DICT = {
   somethingWrong: { en: 'Something went wrong', ru: 'Что-то пошло не так' },
   somethingWrongText: { en: 'An unexpected error occurred. Try again.', ru: 'Произошла непредвиденная ошибка. Попробуйте ещё раз.' },
   tryAgain: { en: 'Try again', ru: 'Повторить' },
+  maintenanceTitle: { en: 'Down for maintenance', ru: 'Идут работы' },
+  maintenanceText: {
+    en: 'SetFork is briefly down for maintenance. Please refresh in a few minutes.',
+    ru: 'SetFork ненадолго закрыт на обслуживание. Обновите страницу через несколько минут.',
+  },
+  embedNotFound: { en: 'List not found or unavailable', ru: 'Список не найден или недоступен' },
   emptyExplore: { en: 'No lists yet — be the first to create one.', ru: 'Списков пока нет — создайте первый.' },
   // ── Уведомления ──
   notifications: { en: 'Notifications', ru: 'Уведомления' },
