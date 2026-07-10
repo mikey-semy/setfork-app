@@ -91,7 +91,7 @@
   },
   "src/app/admin/page.tsx": {
     "no-restricted-syntax": {
-      "count": 32
+      "count": 30
     }
   },
   "src/app/admin/usage/page.tsx": {
