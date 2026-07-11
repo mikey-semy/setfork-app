@@ -151,6 +151,11 @@ export const templates = pgTable(
     // true — курс с последовательным доступом: следующий урок открывается только
     // после сдачи тестов предыдущего (quiz-gate).
     gated: boolean('gated').notNull().default(false),
+    // Опциональные разделы совместной работы («Features», как в настройках репо
+    // GitHub): владелец может выключить Issues/Discussions на списке. Suggestions
+    // (≈ PR) — ядро fork-модели, не отключаются. default true — старые списки как есть.
+    issuesEnabled: boolean('issues_enabled').notNull().default(true),
+    discussionsEnabled: boolean('discussions_enabled').notNull().default(true),
     visibility: listVisibility('visibility').notNull().default('public'),
     moderation: moderationStatus('moderation').notNull().default('active'),
     moderationReason: text('moderation_reason'),

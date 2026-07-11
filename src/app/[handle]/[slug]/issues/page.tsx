@@ -32,6 +32,7 @@ export default async function IssuesPage({
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
+  if (!meta.issuesEnabled) notFound() // раздел выключен владельцем (Settings → Features)
 
   const status: IssueFilter = sp.status === 'closed' ? 'closed' : 'open'
   const q = sp.q?.trim() || undefined

@@ -25,6 +25,7 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
+  if (!meta.discussionsEnabled) notFound() // раздел выключен владельцем (Settings → Features)
   const disc = number > 0 ? await getDiscussion(meta.id, number) : null
   if (!disc) notFound()
   const comments = await getDiscussionComments(disc.id)
