@@ -52,9 +52,13 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
       <TabNav scope="list">
         {/* Первый таб — сам список (как «Code» у GitHub-репо), не «Overview». */}
         <TabItem href={base} on={active === 'overview'} icon={<ListChecks size={15} />} label={t('listTab', lang)} />
-        <TabItem href={`${base}/issues`} on={active === 'issues'} icon={<CircleDot size={15} />} label={t('issuesTab', lang)} count={issueCount} />
+        {meta.issuesEnabled && (
+          <TabItem href={`${base}/issues`} on={active === 'issues'} icon={<CircleDot size={15} />} label={t('issuesTab', lang)} count={issueCount} />
+        )}
         <TabItem href={`${base}/suggestions`} on={active === 'suggestions'} icon={<GitPullRequest size={15} />} label={t('suggestions', lang)} count={suggCount} />
-        <TabItem href={`${base}/discussions`} on={active === 'discussions'} icon={<MessagesSquare size={15} />} label={lang === 'ru' ? 'Обсуждения' : 'Discussions'} count={discCount} />
+        {meta.discussionsEnabled && (
+          <TabItem href={`${base}/discussions`} on={active === 'discussions'} icon={<MessagesSquare size={15} />} label={lang === 'ru' ? 'Обсуждения' : 'Discussions'} count={discCount} />
+        )}
         <TabItem href={`${base}/versions`} on={active === 'versions'} icon={<Tag size={15} />} label={t('versionsTab', lang)} />
         <TabItem href={`${base}/insights`} on={active === 'insights'} icon={<BarChart3 size={15} />} label="Insights" />
         {isOwner && <TabItem href={`${base}/settings`} on={active === 'settings'} icon={<Settings size={15} />} label={t('settings', lang)} />}

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { FolderGit2, Image as ImageIcon, Info, LayoutTemplate, TriangleAlert, Users } from 'lucide-react'
+import { FolderGit2, Image as ImageIcon, Info, LayoutTemplate, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -14,6 +14,7 @@ import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
 import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
 import { GeneralSection } from '@/features/library/GeneralSection'
+import { FeaturesSection } from '@/features/library/FeaturesSection'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -68,6 +69,20 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       icon: <Users size={15} />,
       keywords: ['collaborators', 'access', 'edit', 'team', 'соавторы', 'доступ', 'редактирование', 'команда'],
       content: <CollaboratorsSection templateId={meta.id} collaborators={collaborators} lang={lang} />,
+    },
+    {
+      id: 'features',
+      title: t('featuresTitle', lang),
+      icon: <SlidersHorizontal size={15} />,
+      keywords: ['features', 'issues', 'discussions', 'enable', 'disable', 'разделы', 'задачи', 'обсуждения', 'включить', 'выключить'],
+      content: (
+        <FeaturesSection
+          templateId={meta.id}
+          issuesEnabled={meta.issuesEnabled}
+          discussionsEnabled={meta.discussionsEnabled}
+          lang={lang}
+        />
+      ),
     },
     {
       id: 'template',

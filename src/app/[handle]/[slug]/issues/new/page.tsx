@@ -18,6 +18,7 @@ export default async function NewIssuePage({ params }: { params: Promise<{ handl
   if (!session) redirect(`/login?next=/${owner}/${slug}/issues/new`)
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
+  if (!meta.issuesEnabled) notFound() // раздел выключен владельцем (Settings → Features)
   const custom = await getListLabels(meta.id)
 
   return (

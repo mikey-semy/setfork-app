@@ -681,6 +681,19 @@ export async function setListTemplate(templateId: string, isTemplate: boolean): 
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
 }
 
+// Владелец включает/выключает опциональные разделы списка (Issues/Discussions).
+// Suggestions — ядро fork-модели, не отключается. Выключенный раздел прячется из
+// шапки, а его роуты отдают notFound (гейт на самих страницах).
+export async function setListFeatures(templateId: string, feature: 'issues' | 'discussions', on: boolean): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  const patch = feature === 'issues' ? { issuesEnabled: on } : { discussionsEnabled: on }
+  await db.update(templates).set(patch).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}`)
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+}
+
 /** Создать свой список на основе шаблона: копия текущей версии, origin
  *  authored, без forked_from (в этом отличие от форка). */
 export async function useTemplate(templateId: string): Promise<void> {

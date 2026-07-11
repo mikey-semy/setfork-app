@@ -26,6 +26,7 @@ export default async function DiscussionsPage({
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
+  if (!meta.discussionsEnabled) notFound() // раздел выключен владельцем (Settings → Features)
 
   const category = sp.category && DISCUSSION_CATEGORIES.some((c) => c.key === sp.category) ? sp.category : undefined
   const list = await getDiscussions(meta.id, { category })

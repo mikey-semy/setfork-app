@@ -33,6 +33,7 @@ export default async function IssueThreadPage({
   const number = Number(numStr)
   const [lang, session, meta] = await Promise.all([getLang(), getSession(), requireViewableMeta(owner, slug)])
   if (!meta) notFound()
+  if (!meta.issuesEnabled) notFound() // раздел выключен владельцем (Settings → Features)
   const issue = number > 0 ? await getIssue(meta.id, number) : null
   if (!issue) notFound()
   const comments = await getIssueComments(issue.id)

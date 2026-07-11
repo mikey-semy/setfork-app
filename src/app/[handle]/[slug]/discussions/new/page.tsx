@@ -27,6 +27,7 @@ export default async function NewDiscussionPage({
   if (!session) redirect(`/login?next=/${owner}/${slug}/discussions/new`)
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
+  if (!meta.discussionsEnabled) notFound() // раздел выключен владельцем (Settings → Features)
 
   return (
     <>
