@@ -2,8 +2,9 @@ import { eq } from 'drizzle-orm'
 import { db, steps, templates, templateVersions } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
-import { canViewList } from '@/core'
+import { applyAffiliate, canViewList } from '@/core'
 import { isBot, recordClick, visitorKey } from '@/features/analytics/service'
+import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { clientIp, rateLimit } from '@/shared/rate-limit'
 
 // Исходящий редирект по ref-ссылке шага: /api/go/<stepId>/<refIndex> → 302 на
@@ -44,6 +45,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ step: string; r
   const isOwner = viewer?.userId === row.ownerId
   if (!canViewList(row, { isOwner, isAdmin: isAdminHandle(viewer?.handle) })) return notFound()
 
+  // Партнёрский тег (правила из админки): подставляем на целевой URL. В журнал
+  // пишем итоговый URL — по нему видно, ушёл переход с тегом или без.
+  const mon = await getMonetizationSettings()
+  const target = mon.affiliateEnabled ? applyAffiliate(url, mon.affiliateRules).url : url
+
   // Журналим клик best-effort: боты и владелец — мимо; при шторме (rate limit)
   // журнал пропускаем, но редиректим всегда — UX важнее строки статистики.
   const ip = clientIp(req)
@@ -53,7 +59,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ step: string; r
       templateId: row.templateId,
       stepId,
       refIndex,
-      url,
+      url: target,
       userId: viewer?.userId ?? null,
       visitor: visitorKey(viewer?.userId, ip, ua),
     }).catch(() => {})
@@ -62,7 +68,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ step: string; r
   return new Response(null, {
     status: 302,
     headers: {
-      location: url,
+      location: target,
       'cache-control': 'no-store',
       'x-robots-tag': 'noindex, nofollow',
     },

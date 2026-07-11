@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { t, type Lang } from '@/shared/i18n'
+import { getMonetizationSettings } from '@/shared/settings/monetization'
 
 // Репозиторий приватный — публичная ссылка на него отдаёт 404. Ведём в доки;
 // когда репо откроется, вернуть REPO_URL на github.
@@ -8,9 +9,11 @@ const REPO_URL = 'https://docs.setfork.com'
 const LEGAL_URL = `${REPO_URL}/docs/legal`
 
 /** Плоский подвал (как в GitHub): один ряд приглушённых ссылок, без границ и колонок. */
-export function Footer({ lang }: { lang: Lang }) {
+export async function Footer({ lang }: { lang: Lang }) {
   const year = new Date().getFullYear()
   const link = 'text-muted hover:text-ink-2 transition-colors'
+  // Donate-ссылка задаётся в админке (Монетизация); пусто — пункта нет.
+  const { donateUrl } = await getMonetizationSettings()
 
   return (
     <footer className="mt-auto print:hidden">
@@ -22,6 +25,11 @@ export function Footer({ lang }: { lang: Lang }) {
         <a href={`${REPO_URL}/issues`} target="_blank" rel="noreferrer" className={link}>{t('contact', lang)}</a>
         <a href={`${LEGAL_URL}/terms`} className={link}>{t('terms', lang)}</a>
         <a href={`${LEGAL_URL}/privacy`} className={link}>{t('privacy', lang)}</a>
+        {donateUrl && (
+          <a href={donateUrl} target="_blank" rel="noreferrer" className={link}>
+            {t('footerSupport', lang)}
+          </a>
+        )}
       </div>
     </footer>
   )

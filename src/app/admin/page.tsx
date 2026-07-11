@@ -6,11 +6,12 @@ import { getMediaSettings, maskSecret } from '@/shared/settings/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { getEmailSettings } from '@/shared/settings/email'
 import { maintenanceEnvOverride, maintenanceFlag } from '@/shared/settings/maintenance'
+import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getVapid } from '@/shared/push/vapid'
 import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
-import { Award, BarChart3, Bell, Bot, Database, FolderGit2, Mail, RefreshCw, ScrollText, Search, Shield, Users, Wrench } from 'lucide-react'
+import { Award, BarChart3, Bell, Bot, Coins, Database, FolderGit2, Mail, RefreshCw, ScrollText, Search, Shield, Users, Wrench } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
@@ -23,6 +24,7 @@ import { PushSettingsForm } from '@/features/admin/PushSettingsForm'
 import { ReindexPanel } from '@/features/admin/ReindexPanel'
 import { AchievementsAdmin } from '@/features/admin/AchievementsAdmin'
 import { MaintenanceSection } from '@/features/admin/MaintenanceSection'
+import { MonetizationSettingsForm } from '@/features/admin/MonetizationSettingsForm'
 import { getAchievementDisplay } from '@/features/profile/achievement-config'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
 
@@ -63,7 +65,7 @@ export const metadata = { title: 'Admin' }
 
 export default async function AdminPage() {
   await requireAdmin()
-  const [lang, settings, apiKey, media, search, email, online, vapid, achDisplay, maintOn] = await Promise.all([
+  const [lang, settings, apiKey, media, search, email, online, vapid, achDisplay, maintOn, monetization] = await Promise.all([
     getLang(),
     getAiSettings(),
     getApiKey(),
@@ -74,6 +76,7 @@ export default async function AdminPage() {
     getVapid(),
     getAchievementDisplay(),
     maintenanceFlag(),
+    getMonetizationSettings(),
   ])
   const ru = lang === 'ru'
   const pushValues = { publicKey: vapid.publicKey, subject: vapid.subject, configured: Boolean(vapid.publicKey && vapid.privateKey) }
@@ -313,6 +316,19 @@ export default async function AdminPage() {
               : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'}
           </p>
           <SearchSettingsForm current={search} ru={ru} />
+        </section>
+      ),
+    },
+    {
+      id: 'monetization',
+      title: t('adminMonetization', lang),
+      icon: <Coins size={14} />,
+      keywords: ['monetization', 'монетизация', 'affiliate', 'партнёрка', 'donate', 'донат', 'клики', 'просмотры', 'ftc'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">{t('adminMonetization', lang)}</div>
+          <p className="mb-4 text-[13px] text-ink-2">{t('adminMonetizationIntro', lang)}</p>
+          <MonetizationSettingsForm lang={lang} v={monetization} />
         </section>
       ),
     },

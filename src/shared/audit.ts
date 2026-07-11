@@ -20,6 +20,7 @@ export type AuditAction =
   | '2fa.recovery-regenerate'
   | 'maintenance.on'
   | 'maintenance.off'
+  | 'monetization.settings'
   | 'password.reset'
   | 'email.change-request'
   | 'email.change'
