@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { t, type Lang } from '@/shared/i18n'
@@ -20,6 +20,11 @@ export interface MonetizationFormValues {
   donateUrl: string
 }
 
+// Строка правила с клиентским id: стабильный key для добавляемых/удаляемых
+// строк (index-as-key ломал бы фокус при удалении из середины). Начальные id
+// детерминированы (r<i>) — SSR и клиент сходятся; новые — из счётчика.
+type RuleRow = AffiliateRule & { rowId: string }
+
 function ToggleRow({ name, title, hint, defaultChecked }: { name: string; title: string; hint: string; defaultChecked: boolean }) {
   return (
     <div className="flex items-center justify-between gap-4">
@@ -33,12 +38,18 @@ function ToggleRow({ name, title, hint, defaultChecked }: { name: string; title:
 }
 
 export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: MonetizationFormValues }) {
-  const [rules, setRules] = useState<AffiliateRule[]>(v.affiliateRules)
+  // Черновик формы: state сознательно инициализируется из пропсов — после
+  // сохранения revalidatePath приносит новые значения, а незакоммиченный
+  // черновик правок терять нельзя (это форма, а не зеркало сервера).
+  const [rules, setRules] = useState<RuleRow[]>(() => v.affiliateRules.map((r, i) => ({ ...r, rowId: `r${i}` })))
   const [affiliateOn, setAffiliateOn] = useState(v.affiliateEnabled)
+  const nextRow = useRef(0)
 
-  const patch = (i: number, p: Partial<AffiliateRule>) => setRules((xs) => xs.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
+  const patch = (rowId: string, p: Partial<AffiliateRule>) => setRules((xs) => xs.map((r) => (r.rowId === rowId ? { ...r, ...p } : r)))
   // Пустые строки не сериализуем — parseAffiliateRules на сервере всё равно их отбросит.
-  const serialized = JSON.stringify(rules.filter((r) => r.match.trim() && r.param.trim() && r.value.trim()))
+  const serialized = JSON.stringify(
+    rules.filter((r) => r.match.trim() && r.param.trim() && r.value.trim()).map(({ rowId: _rowId, ...r }) => r),
+  )
 
   return (
     <form action={setMonetizationSettings} className="flex flex-col gap-5">
@@ -61,34 +72,34 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
       </div>
 
       <div className={affiliateOn ? '' : 'pointer-events-none opacity-50'}>
-        <label className={lbl}>{t('monRulesLabel', lang)}</label>
+        <div className={lbl}>{t('monRulesLabel', lang)}</div>
         <div className="flex flex-col gap-2">
-          {rules.map((r, i) => (
-            <div key={i} className="flex items-center gap-2">
+          {rules.map((r) => (
+            <div key={r.rowId} className="flex items-center gap-2">
               <input
                 value={r.match}
-                onChange={(e) => patch(i, { match: e.target.value })}
+                onChange={(e) => patch(r.rowId, { match: e.target.value })}
                 placeholder="amazon.com"
                 className={`${field} font-mono`}
                 aria-label={t('monRuleDomain', lang)}
               />
               <input
                 value={r.param}
-                onChange={(e) => patch(i, { param: e.target.value })}
+                onChange={(e) => patch(r.rowId, { param: e.target.value })}
                 placeholder="tag"
                 className={`${field} max-w-[140px] font-mono`}
                 aria-label={t('monRuleParam', lang)}
               />
               <input
                 value={r.value}
-                onChange={(e) => patch(i, { value: e.target.value })}
+                onChange={(e) => patch(r.rowId, { value: e.target.value })}
                 placeholder="setfork-20"
                 className={`${field} max-w-[180px] font-mono`}
                 aria-label={t('monRuleValue', lang)}
               />
               <button
                 type="button"
-                onClick={() => setRules((xs) => xs.filter((_, idx) => idx !== i))}
+                onClick={() => setRules((xs) => xs.filter((x) => x.rowId !== r.rowId))}
                 className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted hover:text-danger"
                 aria-label={t('monRuleRemove', lang)}
               >
@@ -99,7 +110,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         </div>
         <button
           type="button"
-          onClick={() => setRules((xs) => [...xs, { match: '', param: '', value: '' }])}
+          onClick={() => setRules((xs) => [...xs, { match: '', param: '', value: '', rowId: `n${++nextRow.current}` }])}
           className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12.5px] text-ink hover:border-border-strong"
         >
           <Plus size={13} /> {t('monRuleAdd', lang)}
@@ -109,19 +120,25 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
 
       <ToggleRow name="disclosureEnabled" title={t('monDisclosureTitle', lang)} hint={t('monDisclosureHint', lang)} defaultChecked={v.disclosureEnabled} />
       <div>
-        <label className={lbl}>{t('monDisclosureText', lang)}</label>
-        <textarea name="disclosureText" defaultValue={v.disclosureText} rows={2} className={field} />
+        <label htmlFor="mon-disclosure-text" className={lbl}>
+          {t('monDisclosureText', lang)}
+        </label>
+        <textarea id="mon-disclosure-text" name="disclosureText" defaultValue={v.disclosureText} rows={2} className={field} />
       </div>
 
       <div className="border-t border-border pt-4 text-[12.5px] font-semibold text-ink">{t('monSupportTitle', lang)}</div>
       <div>
-        <label className={lbl}>{t('monDonateLabel', lang)}</label>
-        <input name="donateUrl" defaultValue={v.donateUrl} placeholder="https://…" className={`${field} font-mono`} />
+        <label htmlFor="mon-donate-url" className={lbl}>
+          {t('monDonateLabel', lang)}
+        </label>
+        <input id="mon-donate-url" name="donateUrl" defaultValue={v.donateUrl} placeholder="https://…" className={`${field} font-mono`} />
         <p className="mt-1 text-[12px] text-muted">{t('monDonateHint', lang)}</p>
       </div>
 
       <div className="flex justify-end border-t border-border pt-4">
-        <button className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">{t('monSave', lang)}</button>
+        <button type="submit" className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
+          {t('monSave', lang)}
+        </button>
       </div>
     </form>
   )
