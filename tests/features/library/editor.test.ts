@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { emptyBlock, emptyItem, parseEditorItems, toEditorItems, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { gradeBlank, gradeMatch, gradeNumber, gradeText, stripQuizAnswers } from '@/core'
-import { parseVideoEmbed } from '@/features/library/blocks'
+import { parseVideoEmbed, productItems } from '@/features/library/blocks'
 
 const step = (over: Partial<EditorItem> = {}): EditorItem => ({ ...emptyItem(), ...over })
 
@@ -120,6 +120,51 @@ describe('editor block converters', () => {
     expect(back.type).toBe('poll')
     expect(back.poll.question).toBe('Q')
     expect(back.poll.options).toEqual([{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }])
+  })
+
+  it('product block: имя+url обязательны, tier/note опциональны, url санитизируется', () => {
+    const p = { ...emptyBlock('product'), caption: 'Ski kit' }
+    p.products = [
+      { name: 'Skis', url: 'https://amazon.com/dp/1', tier: 'mid', note: 'all-mountain' },
+      { name: '', url: 'https://x.com', tier: '', note: '' }, // без имени — мусор
+      { name: 'Wax', url: '', tier: '', note: '' }, // без url — мусор
+      { name: 'Evil', url: 'javascript:alert(1)', tier: 'budget', note: '' }, // схема → отброшен
+      { name: 'Boots', url: 'https://rei.com/b', tier: '', note: '' },
+    ]
+    const [out] = toProposedItems([p], 'en')
+    expect(out.type).toBe('product')
+    expect(out.content).toMatchObject({ title: 'Ski kit' })
+    expect(out.content?.items).toEqual([
+      { name: 'Skis', url: 'https://amazon.com/dp/1', tier: 'mid', note: 'all-mountain' },
+      { name: 'Boots', url: 'https://rei.com/b' },
+    ])
+    expect(typeof out.content?.bid).toBe('string')
+  })
+
+  it('product round-trips editor → proposed → editor (tier/note/caption сохранены)', () => {
+    const p = { ...emptyBlock('product'), caption: 'Kit' }
+    p.products = [{ name: 'A', url: 'https://a.com', tier: 'premium', note: 'top' }]
+    const [proposed] = toProposedItems([p], 'en')
+    const [back] = toEditorItems([proposed], 'en')
+    expect(back.type).toBe('product')
+    expect(back.caption).toBe('Kit')
+    expect(back.products).toEqual([{ name: 'A', url: 'https://a.com', tier: 'premium', note: 'top' }])
+  })
+
+  it('productItems сохраняет исходные индексы (на них ссылается /api/go/p<idx>)', () => {
+    const items = productItems({
+      items: [
+        { name: 'A', url: 'https://a.com' },
+        { name: '', url: 'https://skip.com' }, // отброшен, индекс 1 «сгорает»
+        { name: 'C', url: 'https://c.com', tier: 'bogus', note: '  ' },
+      ],
+    })
+    expect(items).toEqual([
+      { idx: 0, name: 'A', url: 'https://a.com' },
+      { idx: 2, name: 'C', url: 'https://c.com' }, // bogus-tier и пустой note опущены
+    ])
+    expect(productItems({})).toEqual([])
+    expect(productItems(null)).toEqual([])
   })
 
   it('video block: url/caption ride in content; round-trips', () => {

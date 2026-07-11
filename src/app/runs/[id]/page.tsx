@@ -4,6 +4,7 @@ import { getLang } from '@/shared/i18n/server'
 import { tr, type LocaleText } from '@/shared/i18n'
 import { getRun } from '@/features/runs/queries'
 import { RunView, type RunStepVM } from '@/features/runs/RunView'
+import { productItems } from '@/features/library/blocks'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 
 export const metadata = { title: 'Run' }
@@ -20,6 +21,12 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
     type: s.type ?? 'step',
     text: s.type === 'text' && typeof s.content?.md === 'string' ? s.content.md : '',
     caption: s.type === 'image' && typeof s.content?.caption === 'string' ? s.content.caption : '',
+    // Товары product-блока: href через /api/go/<step>/p<idx>, если клики включены.
+    productTitle: s.type === 'product' && typeof s.content?.title === 'string' ? s.content.title : '',
+    products:
+      s.type === 'product'
+        ? productItems(s.content).map((p) => ({ ...p, href: mon.linkTracking ? `/api/go/${s.id}/p${p.idx}` : undefined }))
+        : [],
     title: tr(s.title, lang),
     desc: tr(s.desc, lang),
     command: s.command,

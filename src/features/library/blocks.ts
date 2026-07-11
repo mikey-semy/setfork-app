@@ -1,7 +1,7 @@
 // Типы блоков списка (всё-блочная модель). Чистый модуль без server-only —
 // используется и на сервере, и в редакторе. См. дизайн-док по блочному редактору.
 
-export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video', 'quiz', 'file'] as const
+export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video', 'quiz', 'file', 'product'] as const
 export type BlockType = (typeof BLOCK_TYPES)[number]
 
 export const isBlockType = (t: string): t is BlockType => (BLOCK_TYPES as readonly string[]).includes(t)
@@ -64,6 +64,12 @@ export interface FileBlockContent {
   url: string
   name: string
 }
+// Product-домен (типы, PRODUCT_TIERS, productItems) живёт в @/core (как quiz):
+// нужен рендеру (shared/ui/ProductBlock), редактору, /api/go и экспорту.
+// Реэкспорт — чтобы блочный код импортировал всё про блоки из одного места.
+export { PRODUCT_TIERS, productItems } from '@/core'
+export type { ProductBlockContent, ProductItem, ProductTier } from '@/core'
+
 // Quiz-домен (QuizBlockContent, стрип ответов, оценка) переехал в @/core —
 // чистые функции нужны и рендеру, и server-оценке (quizzes), и MCP.
 
@@ -88,6 +94,7 @@ export const BLOCK_META: Record<BlockType, { icon: string; en: string; ru: strin
   video: { icon: '🎬', en: 'Video', ru: 'Видео' },
   quiz: { icon: '🎓', en: 'Quiz', ru: 'Тест' },
   file: { icon: '📎', en: 'File', ru: 'Файл' },
+  product: { icon: '🛒', en: 'Products', ru: 'Товары' },
 }
 
 /** Стабильный id варианта опроса (на него ссылаются голоса). */

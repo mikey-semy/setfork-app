@@ -246,7 +246,11 @@ export async function runModerateJob(payload: unknown, attempt: { attempts: numb
   const gate = p.gate || loaded.moderation === 'pending'
 
   if (gate) {
-    const h = checkSpamHeuristics(loaded.signals)
+    // Домены из партнёрских правил админки — доверенные магазины: корзина
+    // («Shop this list») не должна флажиться как link farm.
+    const { getMonetizationSettings } = await import('@/shared/settings/monetization')
+    const allowedHosts = (await getMonetizationSettings()).affiliateRules.map((r) => r.match)
+    const h = checkSpamHeuristics(loaded.signals, allowedHosts)
     if (h.spam) {
       await setFlagged(p.templateId, h.reason, 2)
       return

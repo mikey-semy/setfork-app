@@ -477,6 +477,17 @@ const DICT = {
     ru: 'Пусто — ссылки «Поддержать» в футере нет. Подойдёт Paddle-checkout или любая внешняя страница.',
   },
   footerSupport: { en: '♥ Support', ru: '♥ Поддержать' },
+  // ── Product-блок («Shop this list») ──
+  productBlockTitle: { en: 'Shop this list', ru: 'Купить по списку' },
+  productTierBudget: { en: 'Budget', ru: 'Дешевле' },
+  productTierMid: { en: 'Mid-range', ru: 'Средне' },
+  productTierPremium: { en: 'Premium', ru: 'Дороже' },
+  productTierNone: { en: 'No tier', ru: 'Без яруса' },
+  productNamePh: { en: 'Product name', ru: 'Название товара' },
+  productNotePh: { en: 'Why it’s in the kit (optional)', ru: 'Зачем это в наборе (необязательно)' },
+  productAdd: { en: 'Add product', ru: 'Добавить товар' },
+  productRemove: { en: 'Remove product', ru: 'Удалить товар' },
+  productCaptionPh: { en: 'Collection title (optional)', ru: 'Заголовок подборки (необязательно)' },
   // ── Уведомления ──
   notifications: { en: 'Notifications', ru: 'Уведомления' },
   noNotifications: { en: 'No notifications yet.', ru: 'Пока нет уведомлений.' },

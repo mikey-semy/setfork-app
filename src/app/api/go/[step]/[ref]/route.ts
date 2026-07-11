@@ -3,15 +3,17 @@ import { db, steps, templates, templateVersions } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { applyAffiliate, canViewList } from '@/core'
+import { productItems } from '@/features/library/blocks'
 import { isBot, recordClick, visitorKey } from '@/features/analytics/service'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { clientIp, rateLimit } from '@/shared/rate-limit'
 
-// Исходящий редирект по ref-ссылке шага: /api/go/<stepId>/<refIndex> → 302 на
-// внешний url. URL резолвится ТОЛЬКО из контента шага (никаких url в query) —
-// open-redirect исключён by design. Попутно журналим клик (link_clicks) —
-// фундамент партнёрской аналитики; владельца и ботов не пишем, сбой журнала
-// редирект не ломает.
+// Исходящий редирект по ссылке шага: /api/go/<stepId>/<refIndex> (refs шага)
+// или /api/go/<stepId>/p<idx> (товар product-блока) → 302 на внешний url.
+// URL резолвится ТОЛЬКО из контента шага (никаких url в query) — open-redirect
+// исключён by design. Попутно журналим клик (link_clicks) — фундамент
+// партнёрской аналитики; владельца и ботов не пишем, сбой журнала редирект
+// не ломает.
 export const runtime = 'nodejs'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -19,12 +21,15 @@ const notFound = () => new Response('Not found', { status: 404 })
 
 export async function GET(req: Request, ctx: { params: Promise<{ step: string; ref: string }> }) {
   const { step: stepId, ref } = await ctx.params
-  const refIndex = Number(ref)
+  const isProduct = ref.startsWith('p')
+  const refIndex = Number(isProduct ? ref.slice(1) : ref)
   if (!UUID_RE.test(stepId) || !Number.isInteger(refIndex) || refIndex < 0 || refIndex > 999) return notFound()
 
   const [row] = await db
     .select({
       refs: steps.refs,
+      type: steps.type,
+      content: steps.content,
       templateId: templateVersions.templateId,
       ownerId: templates.ownerId,
       visibility: templates.visibility,
@@ -38,7 +43,12 @@ export async function GET(req: Request, ctx: { params: Promise<{ step: string; r
     .limit(1)
   if (!row) return notFound()
 
-  const url = row.refs[refIndex]?.url
+  // p<idx> ссылается на ИСХОДНЫЙ индекс content.items (productItems его сохраняет).
+  const url = isProduct
+    ? row.type === 'product'
+      ? productItems(row.content).find((p) => p.idx === refIndex)?.url
+      : undefined
+    : row.refs[refIndex]?.url
   if (!url || !/^https?:\/\//i.test(url)) return notFound()
 
   const viewer = await getSession()

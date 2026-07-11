@@ -10,6 +10,7 @@ import { CopyButton } from '@/shared/ui/CopyButton'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { SafeLink } from '@/shared/ui/SafeLink'
+import { ProductBlock, type ProductLinkVM } from '@/shared/ui/ProductBlock'
 import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 
 export interface RunStepVM {
@@ -18,6 +19,8 @@ export interface RunStepVM {
   type: string // 'step' (чекается) | 'text' | 'image' (контекст)
   text: string // markdown text-блока
   caption: string // подпись image-блока
+  productTitle: string // заголовок подборки product-блока
+  products: ProductLinkVM[] // товары product-блока (href — трекинговый /api/go)
   title: string
   desc: string
   command: string
@@ -186,6 +189,9 @@ export function RunView({
                   <Markdown className="text-[14px] leading-relaxed text-ink-2">{s.text}</Markdown>
                 </div>
               ) : null
+            }
+            if (s.type === 'product') {
+              return s.products.length ? <ProductBlock key={s.id} title={s.productTitle} items={s.products} lang={lang} /> : null
             }
             return s.caption ? (
               <div key={s.id} className="px-1 text-[13px] italic text-muted">🖼 {s.caption}</div>
