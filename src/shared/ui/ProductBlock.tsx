@@ -13,6 +13,7 @@ export interface ProductLinkVM {
   href?: string
   tier?: ProductTier
   note?: string
+  idx?: number // исходный индекс в content.items (стабильный key; битый товар в середине его не сдвигает)
 }
 
 const TIER_CLS: Record<ProductTier, string> = {
@@ -36,7 +37,7 @@ export function ProductBlock({ title, items, lang }: { title?: string; items: Pr
       </div>
       <ul className="flex flex-col gap-2">
         {items.map((p, i) => (
-          <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
+          <li key={p.idx ?? `i${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
             {p.tier && (
               <span className={`shrink-0 rounded border px-1.5 py-px text-[10.5px] font-medium uppercase tracking-wide ${TIER_CLS[p.tier]}`}>
                 {tierLabel(p.tier, lang)}
