@@ -24,7 +24,7 @@ import { VideoEmbed } from '@/features/library/VideoEmbed'
 import { QuizBlock } from '@/features/quizzes/QuizBlock'
 import { hasAffiliateLink, quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
-import { getQuizState } from '@/features/quizzes/queries'
+import { getCourseCompletion, getQuizState } from '@/features/quizzes/queries'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
@@ -120,6 +120,9 @@ export default async function ListPage({
   // Состояние quiz-блоков (последняя попытка зрителя — по content.bid).
   const quizBids = steps.filter((s) => s.type === 'quiz' && typeof s.content?.bid === 'string').map((s) => (s.content as { bid: string }).bid)
   const quizStates = quizBids.length ? await getQuizState(tpl.id, quizBids, viewer?.userId) : {}
+  // Прохождение курса — ПОСТОЯННЫЙ факт: плашка с сертификатом видна и после
+  // правок тестов автором (иначе вернувшемуся «проходи заново ради бумажки»).
+  const completion = viewer ? await getCourseCompletion(tpl.id, viewer.userId) : null
   // Уроки курса = секции блоков (в порядке). Собираем оглавление + прогресс тестов по уроку.
   // lessonOfBlock[si] = индекс урока блока si (−1 = до первого урока).
   const lessons: OutlineLesson[] = []
@@ -336,8 +339,8 @@ export default async function ListPage({
                 </Link>
               </div>
             )}
-            {viewer && quizBids.length > 0 && (
-              <CourseProgress passed={quizBids.filter((b) => quizStates[b]?.correct).length} total={quizBids.length} lang={lang} certificateHref={`${base}/certificate`} leaderboardHref={`${base}/leaderboard`} />
+            {viewer && (quizBids.length > 0 || completion) && (
+              <CourseProgress passed={quizBids.filter((b) => quizStates[b]?.correct).length} total={quizBids.length} lang={lang} certificateHref={`${base}/certificate`} leaderboardHref={`${base}/leaderboard`} completed={completion} />
             )}
             <div className="flex flex-col gap-3">
               {steps.map((s, si) => {

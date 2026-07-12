@@ -1,4 +1,4 @@
-{
+﻿{
   "version": "7",
   "dialect": "postgresql",
   "entries": [
@@ -280,6 +280,13 @@
       "version": "7",
       "when": 1783840000000,
       "tag": "0039_content_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1783850000000,
+      "tag": "0040_backfill_course_completions",
       "breakpoints": true
     }
   ]
