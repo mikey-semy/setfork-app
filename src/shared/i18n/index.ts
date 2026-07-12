@@ -263,6 +263,14 @@ const DICT = {
   runFailConfirm: { en: 'Stop this run as failed? Use it when the checklist could not be completed.', ru: 'Остановить прогон как неудачу? Когда чек-лист не удалось пройти.' },
   runBlockedLabel: { en: 'blocked', ru: 'заблокировано' },
   runCantComplete: { en: "Can't complete this step", ru: 'Шаг не получается' },
+  // ── Память прохождения курса (courseCompletions — постоянный факт) ──
+  courseTestsChanged: {
+    en: 'Tests changed since your completion — your certificate stays valid.',
+    ru: 'Тесты изменились после вашего прохождения — сертификат остаётся действительным.',
+  },
+  courseCompletedEarlier: { en: 'You have already completed this course', ru: 'Вы уже проходили этот курс' },
+  courseAllStepsDone: { en: 'Course complete — all steps done', ru: 'Курс пройден — все шаги выполнены' },
+  courseCertificate: { en: 'Certificate', ru: 'Сертификат' },
   runReasonPh: { en: 'What went wrong? (optional)', ru: 'Что пошло не так? (необязательно)' },
   runBlockAction: { en: 'Mark blocked', ru: 'Заблокировать' },
   runReport: { en: 'Report to the list', ru: 'Сообщить в список' },

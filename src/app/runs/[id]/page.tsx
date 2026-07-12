@@ -5,6 +5,7 @@ import { tr, type LocaleText } from '@/shared/i18n'
 import { getRun } from '@/features/runs/queries'
 import { RunView, type RunStepVM } from '@/features/runs/RunView'
 import { productItems } from '@/features/library/blocks'
+import { getCourseCompletion } from '@/features/quizzes/queries'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 
 export const metadata = { title: 'Run' }
@@ -14,6 +15,8 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   if (!session) redirect('/login')
   const data = await getRun(id, session.userId)
   if (!data) notFound()
+  // Прохождение курса — постоянный факт: в новом прогоне сертификат уже доступен.
+  const completion = await getCourseCompletion(data.run.templateId, session.userId)
 
   const steps: RunStepVM[] = data.steps.map((s) => ({
     id: s.id,
@@ -54,6 +57,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       steps={steps}
       lang={lang}
       certificateHref={`/${data.template.handle}/${data.template.slug}/certificate`}
+      courseCompleted={!!completion}
     />
   )
 }

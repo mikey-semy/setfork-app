@@ -60,7 +60,7 @@ export async function getRun(runId: string, userId: string) {
 
   const stateByStep = new Map(run.stepStates.map((s) => [s.stepId, s]))
   return {
-    run: { id: run.id, status: run.status, doneCount: run.doneCount, version: run.version },
+    run: { id: run.id, status: run.status, doneCount: run.doneCount, version: run.version, templateId: run.templateId },
     template: {
       handle: run.template.owner.handle,
       slug: run.template.slug,

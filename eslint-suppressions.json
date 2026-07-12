@@ -510,11 +510,6 @@
       "count": 2
     }
   },
-  "src/features/runs/RunView.tsx": {
-    "no-restricted-syntax": {
-      "count": 2
-    }
-  },
   "src/features/runs/actions.ts": {
     "boundaries/dependencies": {
       "count": 2
