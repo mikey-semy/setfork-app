@@ -514,6 +514,11 @@ const DICT = {
   footerProduct: { en: 'Product', ru: 'Продукт' },
   footerResources: { en: 'Resources', ru: 'Ресурсы' },
   footerLegal: { en: 'Legal', ru: 'Правовое' },
+  notifyToLabel: { en: 'Admin notifications (feedback, reports)', ru: 'Уведомления админу (фидбек, жалобы)' },
+  notifyToHint: {
+    en: 'Comma-separated. Blank — sent to ADMIN_HANDLES admins’ emails.',
+    ru: 'Через запятую. Пусто — на email админов из ADMIN_HANDLES.',
+  },
   aboutProject: { en: 'About', ru: 'О проекте' },
   terms: { en: 'Terms', ru: 'Условия' },
   privacy: { en: 'Privacy', ru: 'Конфиденциальность' },

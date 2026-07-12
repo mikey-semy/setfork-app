@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Loader2, Send } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { t } from '@/shared/i18n'
 import { setEmailSettings, sendTestEmail } from './actions'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
@@ -68,7 +69,7 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
             <input name="from" defaultValue={v.from} placeholder="SetFork <no-reply@setfork.com>" className={`${field} font-mono`} />
           </div>
           <div className="sm:col-span-2">
-            <label className={lbl}>{ru ? 'Уведомления админу (фидбек, жалобы)' : 'Admin notifications (feedback, reports)'}</label>
+            <label className={lbl}>{t('notifyToLabel', ru ? 'ru' : 'en')}</label>
             <input
               name="notifyTo"
               defaultValue={v.notifyTo}
@@ -76,11 +77,7 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
               placeholder="admin@example.com, second@example.com"
               className={`${field} font-mono`}
             />
-            <p className="mt-1 text-[12px] text-muted">
-              {ru
-                ? 'Через запятую. Пусто — на email админов из ADMIN_HANDLES.'
-                : 'Comma-separated. Blank — sent to ADMIN_HANDLES admins’ emails.'}
-            </p>
+            <p className="mt-1 text-[12px] text-muted">{t('notifyToHint', ru ? 'ru' : 'en')}</p>
           </div>
         </div>
 
