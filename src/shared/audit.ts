@@ -11,6 +11,7 @@ export type AuditAction =
   | 'list.delete'
   | 'list.moderate'
   | 'list.appeal'
+  | 'list.report'
   | 'list.verify'
   | 'git.push'
   | 'session.revoke'

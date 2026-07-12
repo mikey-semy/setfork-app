@@ -11,7 +11,7 @@ import { getVapid } from '@/shared/push/vapid'
 import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
-import { Award, BarChart3, Bell, Bot, Coins, Database, FolderGit2, Mail, MessageSquare, RefreshCw, ScrollText, Search, Shield, Users, Wrench } from 'lucide-react'
+import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, Mail, MessageSquare, RefreshCw, ScrollText, Search, Shield, Users, Wrench } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
@@ -391,6 +391,12 @@ export default async function AdminPage() {
             className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
             <MessageSquare size={14} /> {t('feedback', lang)}
+          </Link>
+          <Link
+            href="/admin/reports"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+          >
+            <Flag size={14} /> {t('reports', lang)}
           </Link>
           <Link
             href="/admin/moderation"
