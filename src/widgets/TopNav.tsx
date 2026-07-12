@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
-import { t, type Lang, type LocaleText } from '@/shared/i18n'
+import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { SessionUser } from '@/shared/auth/session'
 
 // Роуты, чей первый сегмент — НЕ handle пользователя (для бредкрамба в шапке).
@@ -65,6 +65,30 @@ export function TopNav({
     if (segs.length === 0 || RESERVED_TOP.has(segs[0])) return null
     return { handle: segs[0], slug: segs[1] } // slug undefined на профиле
   })()
+
+  // Имя списка в бредкрамбе = человеческий title, а не slug. Крамб URL-derived (title
+  // не знает) → до-достаём по смене пути; пока грузим — показываем slug (мгновенный
+  // фолбэк), приватные title гейтит сам роут. Обновляется и на client-навигации.
+  const [crumbTitle, setCrumbTitle] = useState<LocaleText | null>(null)
+  const crumbHandle = crumb?.handle
+  const crumbSlug = crumb?.slug
+  useEffect(() => {
+    if (!crumbHandle || !crumbSlug) {
+      setCrumbTitle(null)
+      return
+    }
+    let alive = true
+    setCrumbTitle(null)
+    fetch(`/api/list-title?h=${encodeURIComponent(crumbHandle)}&s=${encodeURIComponent(crumbSlug)}`)
+      .then((r) => r.json())
+      .then((d: { title?: LocaleText | null }) => {
+        if (alive) setCrumbTitle(d.title ?? null)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [crumbHandle, crumbSlug])
   // Хоткей «/» фокусирует поле поиска в шапке (как на GitHub); Escape закрывает меню.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -166,7 +190,7 @@ export function TopNav({
             <>
               <span className="text-muted">/</span>
               <Link href={`/${crumb.handle}/${crumb.slug}`} className="truncate font-semibold text-ink hover:text-accent">
-                {crumb.slug}
+                {crumbTitle ? tr(crumbTitle, lang) : crumb.slug}
               </Link>
             </>
           )}
