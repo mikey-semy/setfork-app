@@ -390,7 +390,7 @@ export default async function AdminPage() {
             href="/admin/feedback"
             className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
-            <MessageSquare size={14} /> {ru ? 'Фидбек' : 'Feedback'}
+            <MessageSquare size={14} /> {t('feedback', lang)}
           </Link>
           <Link
             href="/admin/moderation"
