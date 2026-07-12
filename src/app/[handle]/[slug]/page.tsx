@@ -29,7 +29,7 @@ import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
-import { requireViewableDetail } from '@/features/library/guard'
+import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ListHeader } from '@/widgets/ListHeader'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
@@ -49,7 +49,9 @@ function sectionAnchor(s: string): string {
 // Заголовок вкладки как в GitHub: owner/slug (layout добавит « · SetFork»).
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
-  return { title: `${handle}/${slug}` }
+  // Вкладка браузера = человеческий title, а не slug (title гейтит requireViewableMeta).
+  const [meta, lang] = await Promise.all([requireViewableMeta(handle, slug), getLang()])
+  return { title: meta ? tr(meta.title, lang) : `${handle}/${slug}` }
 }
 
 export default async function ListPage({
