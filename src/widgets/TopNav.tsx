@@ -179,6 +179,23 @@ export function TopNav({
           SF
         </Link>
       </div>
+      {/* Десктоп (lg+): главные разделы на виду, а не только под бургером — чтобы
+          сразу было понятно, «где что» (Home = логотип). На узких — остаются в drawer. */}
+      <nav className="ml-1 hidden shrink-0 items-center gap-0.5 lg:flex" aria-label={t('menu', lang)}>
+        {navItems
+          .filter((it) => it.href !== '/')
+          .map((it) => (
+            <Link
+              key={it.href}
+              href={it.href}
+              className={`rounded-md px-2.5 py-1.5 text-[13.5px] font-medium ${
+                isActive(it.href) ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
+              }`}
+            >
+              {it.label}
+            </Link>
+          ))}
+      </nav>
       {/* Бредкрамб (как GitHub owner/repo): чей профиль/список открыт. Прячем на поиске.
           Слеша между лого и handle нет — только между handle и slug. */}
       {crumb && !isSearch && (
