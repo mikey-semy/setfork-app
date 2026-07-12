@@ -15,9 +15,9 @@ export const getUserByHandle = cache(async (handle: string) => {
 
 // ── Лента активности (Contribution activity, как GitHub) ─────────────
 export interface MonthActivity {
-  versions: { slug: string; count: number }[] // версии по спискам (top-N)
+  versions: { slug: string; title: LocaleText; count: number }[] // версии по спискам (top-N)
   versionsTotal: number
-  listsCreated: { slug: string }[]
+  listsCreated: { slug: string; title: LocaleText }[]
   issuesOpened: number
   issuesLists: number
   suggestionsCreated: number
@@ -34,12 +34,12 @@ export async function getMonthActivity(userId: string, from: Date, to: Date, vie
   const visC = sql`and (visibility = 'public' and status = 'published' and moderation = 'active' or owner_id = ${vid})`
   const [verRows, created, issuesAgg, suggAgg] = await Promise.all([
     db.execute(sql`
-      select t.slug, count(*)::int as count
+      select t.slug, t.title, count(*)::int as count
       from template_versions tv join templates t on t.id = tv.template_id
       where t.owner_id = ${userId} and tv.created_at >= ${from} and tv.created_at < ${to} ${visV}
-      group by t.slug order by count desc, t.slug asc`),
+      group by t.slug, t.title order by count desc, t.slug asc`),
     db.execute(sql`
-      select slug from templates
+      select slug, title from templates
       where owner_id = ${userId} and created_at >= ${from} and created_at < ${to} ${visC}
       order by created_at desc limit 10`),
     db.execute(sql`
@@ -49,12 +49,12 @@ export async function getMonthActivity(userId: string, from: Date, to: Date, vie
       select count(*)::int as n from suggestions
       where author_id = ${userId} and created_at >= ${from} and created_at < ${to}`),
   ])
-  const versions = (verRows.rows as { slug: string; count: number }[]) ?? []
+  const versions = (verRows.rows as { slug: string; title: LocaleText; count: number }[]) ?? []
   const ia = (issuesAgg.rows[0] ?? { n: 0, lists: 0 }) as { n: number; lists: number }
   return {
     versions: versions.slice(0, 5),
     versionsTotal: versions.reduce((s, v) => s + Number(v.count), 0),
-    listsCreated: (created.rows as { slug: string }[]) ?? [],
+    listsCreated: (created.rows as { slug: string; title: LocaleText }[]) ?? [],
     issuesOpened: Number(ia.n),
     issuesLists: Number(ia.lists),
     suggestionsCreated: Number((suggAgg.rows[0] as { n: number } | undefined)?.n ?? 0),
