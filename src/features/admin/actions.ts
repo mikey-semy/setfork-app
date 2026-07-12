@@ -84,6 +84,7 @@ export async function setEmailSettings(formData: FormData): Promise<void> {
     [EMAIL_KEYS.secure]: formData.get('secure') === 'on' ? 'true' : 'false',
     [EMAIL_KEYS.user]: str('user'),
     [EMAIL_KEYS.from]: str('from'),
+    [EMAIL_KEYS.notifyTo]: str('notifyTo'),
   }
   const pass = str('pass')
   if (pass) settings[EMAIL_KEYS.pass] = pass // пусто = не менять

@@ -11,6 +11,8 @@ export interface EmailSettings {
   user: string
   pass: string
   from: string
+  /** Адрес(а) для админ-уведомлений (фидбек, жалобы), через запятую. Пусто — email админов из ADMIN_HANDLES. */
+  notifyTo: string
 }
 
 export const EMAIL_KEYS = {
@@ -20,6 +22,7 @@ export const EMAIL_KEYS = {
   user: 'smtp.user',
   pass: 'smtp.pass',
   from: 'smtp.from',
+  notifyTo: 'email.notify_to',
 } as const
 
 let cache: EmailSettings | null = null
@@ -40,6 +43,7 @@ export async function getEmailSettings(): Promise<EmailSettings> {
     user: val(EMAIL_KEYS.user, 'SMTP_USER'),
     pass: val(EMAIL_KEYS.pass, 'SMTP_PASS'),
     from: val(EMAIL_KEYS.from, 'SMTP_FROM') || 'SetFork <no-reply@setfork.com>',
+    notifyTo: val(EMAIL_KEYS.notifyTo, 'NOTIFY_EMAIL'),
   }
   return cache
 }

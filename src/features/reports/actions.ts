@@ -2,13 +2,13 @@
 
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { eq, inArray } from 'drizzle-orm'
-import { db, contentReports, templates, users } from '@/shared/db'
+import { eq } from 'drizzle-orm'
+import { db, contentReports, templates } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { requireAdmin } from '@/shared/auth/admin'
 import { rateLimit } from '@/shared/rate-limit'
 import { recordAudit } from '@/shared/audit'
-import { sendMail } from '@/shared/email/mailer'
+import { notifyAdmins } from '@/shared/email/admin-notify'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 // Та же кросс-фичевая связка, что в library/actions.ts (перепроверка после
 // события с контентом); распутывание слоёв — docs/boundaries-todo.md.
@@ -82,38 +82,20 @@ export async function submitReport(_prev: ReportResult, formData: FormData): Pro
     // перепроверка — best-effort, жалоба уже записана
   }
 
-  await notifyAdmins(parsed.reason, parsed.body, session?.handle ?? null)
+  await notifyReport(parsed.reason, parsed.body, session?.handle ?? null)
   return { ok: true }
 }
 
-/** Письмо админам (best-effort: без SMTP тихо пропускается). */
-async function notifyAdmins(reason: string, body: string, fromHandle: string | null): Promise<void> {
-  try {
-    const handles = (process.env.ADMIN_HANDLES || '')
-      .split(',')
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean)
-    if (!handles.length) return
-    const rows = await db.select({ email: users.email }).from(users).where(inArray(users.handle, handles))
-    const emails = rows.map((r) => r.email).filter((e): e is string => !!e)
-    if (!emails.length) return
-    const excerpt = body.length > 500 ? `${body.slice(0, 500)}…` : body
-    await Promise.all(
-      emails.map((to) =>
-        sendMail({
-          to,
-          subject: `SetFork content report: ${reason}`,
-          html:
-            `<p style="font:14px/1.5 sans-serif"><b>${esc(reason)}</b>` +
-            ` — ${fromHandle ? esc(fromHandle) : 'anonymous'}</p>` +
-            `<p style="font:14px/1.5 sans-serif;white-space:pre-wrap">${esc(excerpt)}</p>` +
-            `<p style="font:12px/1.5 sans-serif;color:#888">setfork.com/admin/reports</p>`,
-        }),
-      ),
-    )
-  } catch {
-    // почта — не критичный путь: жалоба уже сохранена
-  }
+/** Письмо админам: получатели — настройка email.notify_to или ADMIN_HANDLES. */
+async function notifyReport(reason: string, body: string, fromHandle: string | null): Promise<void> {
+  const excerpt = body.length > 500 ? `${body.slice(0, 500)}…` : body
+  await notifyAdmins(
+    `SetFork content report: ${reason}`,
+    `<p style="font:14px/1.5 sans-serif"><b>${esc(reason)}</b>` +
+      ` — ${fromHandle ? esc(fromHandle) : 'anonymous'}</p>` +
+      `<p style="font:14px/1.5 sans-serif;white-space:pre-wrap">${esc(excerpt)}</p>` +
+      `<p style="font:12px/1.5 sans-serif;color:#888">setfork.com/admin/reports</p>`,
+  )
 }
 
 /** Админ: смена статуса жалобы. */

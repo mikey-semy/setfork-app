@@ -15,6 +15,7 @@ export interface EmailFormValues {
   user: string
   from: string
   passMask: string // маска пароля (реальное значение на клиент не уходит)
+  notifyTo: string // адрес(а) для админ-уведомлений (фидбек/жалобы), через запятую
 }
 
 export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }) {
@@ -65,6 +66,21 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
           <div className="sm:col-span-2">
             <label className={lbl}>From</label>
             <input name="from" defaultValue={v.from} placeholder="SetFork <no-reply@setfork.com>" className={`${field} font-mono`} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={lbl}>{ru ? 'Уведомления админу (фидбек, жалобы)' : 'Admin notifications (feedback, reports)'}</label>
+            <input
+              name="notifyTo"
+              defaultValue={v.notifyTo}
+              autoComplete="off"
+              placeholder="admin@example.com, second@example.com"
+              className={`${field} font-mono`}
+            />
+            <p className="mt-1 text-[12px] text-muted">
+              {ru
+                ? 'Через запятую. Пусто — на email админов из ADMIN_HANDLES.'
+                : 'Comma-separated. Blank — sent to ADMIN_HANDLES admins’ emails.'}
+            </p>
           </div>
         </div>
 
