@@ -3,6 +3,7 @@ import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
 import { escapeHtml as esc } from '@/shared/lib/escape'
+import { productItems } from './blocks'
 
 export interface ExportStep {
   n: number
@@ -32,6 +33,12 @@ const blockPoll = (s: ExportStep): { question: string; options: string[] } => ({
 const blockImg = (s: ExportStep): { ref: string; caption: string } => ({
   ref: typeof s.content?.ref === 'string' ? s.content.ref : '',
   caption: typeof s.content?.caption === 'string' ? s.content.caption : '',
+})
+// В экспорт идут ПРЯМЫЕ url товаров (не /api/go): партнёрские ссылки нельзя
+// в офлайн-материалы (Amazon ToS), да и трекать экспорт нечем.
+const blockProduct = (s: ExportStep): { title: string; items: { name: string; url: string; note?: string }[] } => ({
+  title: typeof s.content?.title === 'string' ? s.content.title : '',
+  items: productItems(s.content ?? {}),
 })
 export interface ExportList {
   title: LocaleText
@@ -90,6 +97,7 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
       else if (s.type === 'image') { const { caption } = blockImg(s); if (caption) out.push(`_🖼 ${caption}_`, '') }
       else if (s.type === 'poll') { const p = blockPoll(s); if (p.question || p.options.length) out.push(`**📊 ${p.question}**`, ...p.options.map((o) => `- ${o}`), '') }
       else if (s.type === 'video') { const v = blockVideo(s); if (v.url) out.push(`🎬 [${v.caption || v.url}](${v.url})`, '') }
+      else if (s.type === 'product') { const pr = blockProduct(s); if (pr.items.length) out.push(`**🛒 ${pr.title || 'Shop this list'}**`, ...pr.items.map((p) => `- [${p.name}](${p.url})${p.note ? ` — ${p.note}` : ''}`), '') }
       return
     }
     stepNo++
@@ -368,6 +376,7 @@ export function toRunnableScript(list: ExportList, lang: Lang, url: string, dial
       else if (s.type === 'image') { const { caption } = blockImg(s); if (caption) out.push(hashComment(`🖼 ${caption}`), '') }
       else if (s.type === 'poll') { const p = blockPoll(s); if (p.question || p.options.length) out.push(hashComment(`📊 ${p.question}`), ...p.options.map((o) => hashComment(`  - ${o}`)), '') }
       else if (s.type === 'video') { const v = blockVideo(s); if (v.url) out.push(hashComment(`🎬 ${v.caption ? v.caption + ': ' : ''}${v.url}`), '') }
+      else if (s.type === 'product') { const pr = blockProduct(s); if (pr.items.length) out.push(hashComment(`🛒 ${pr.title || 'Shop this list'}`), ...pr.items.map((p) => hashComment(`  - ${p.name}: ${p.url}`)), '') }
       return
     }
     scriptNo++

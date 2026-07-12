@@ -27,7 +27,8 @@ import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getQuizState } from '@/features/quizzes/queries'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
-import { pollDeadlineMs } from '@/features/library/blocks'
+import { pollDeadlineMs, productItems } from '@/features/library/blocks'
+import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail } from '@/features/library/guard'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ListHeader } from '@/widgets/ListHeader'
@@ -159,7 +160,10 @@ export default async function ListPage({
     mon.affiliateEnabled &&
     mon.disclosureEnabled &&
     hasAffiliateLink(
-      allSteps.flatMap((s) => (s.refs as { url?: string }[]).map((r) => r.url)),
+      allSteps.flatMap((s) => [
+        ...(s.refs as { url?: string }[]).map((r) => r.url),
+        ...(s.type === 'product' ? productItems(s.content).map((p) => p.url) : []),
+      ]),
       mon.affiliateRules,
     )
   // Показываем note версии, только если он осмысленный (не служебный boilerplate).
@@ -395,6 +399,15 @@ export default async function ListPage({
                         <span className="min-w-0 truncate">{name || url}</span>
                       </SafeLink>
                     ) : null
+                  } else if (s.type === 'product') {
+                    // href — через /api/go/<step>/p<idx> (клики+партнёрский тег), если
+                    // трекинг включён; у snapshot-веток нет DB-id → прямой url.
+                    const items = productItems(s.content).map((p) => ({
+                      ...p,
+                      href: !snapshot && mon.linkTracking ? `/api/go/${s.id}/p${p.idx}` : p.url,
+                    }))
+                    const title = typeof s.content?.title === 'string' ? s.content.title : ''
+                    el = items.length ? <ProductBlock title={title} items={items} lang={lang} /> : null
                   } else if (s.type === 'poll') {
                     const c = (s.content ?? {}) as unknown as PollContent & { bid?: string }
                     const bid = typeof c.bid === 'string' ? c.bid : ''

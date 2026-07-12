@@ -3,5 +3,6 @@
 export * from './domain/access'
 export * from './domain/affiliate'
 export * from './domain/entities'
+export * from './domain/product'
 export * from './domain/quiz'
 export * from './ports'

@@ -34,6 +34,14 @@ describe('checkSpamHeuristics', () => {
     const few = 'https://go.dev https://nodejs.org'
     expect(checkSpamHeuristics(signals({ text: few })).spam).toBe(false)
   })
+  it('allowedHosts (магазины из партнёрских правил) не считаются в link farm', () => {
+    // 12 поддоменов amazon + 2 обычных: с whitelist корзина легальна.
+    const cart = Array.from({ length: 12 }, (_, i) => `https://sub${i}.amazon.com/dp/${i}`).join(' ') + ' https://go.dev https://nodejs.org'
+    expect(checkSpamHeuristics(signals({ text: cart })).spam).toBe(true)
+    expect(checkSpamHeuristics(signals({ text: cart }), ['amazon.com']).spam).toBe(false)
+    // Шортенерам whitelist не помогает.
+    expect(checkSpamHeuristics(signals({ text: 'https://bit.ly/x' }), ['bit.ly']).spam).toBe(true)
+  })
 })
 
 describe('extractHosts', () => {

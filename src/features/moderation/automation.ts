@@ -2,6 +2,7 @@
 // отпечаток контента (ловля повторной заливки удалённого), маршрутизация
 // вердикта классификатора по порогам уверенности. Без БД — покрыто юнит-тестами.
 import { createHash } from 'node:crypto'
+import { hostMatches } from '@/core'
 import type { ModerationVerdict } from '@/shared/ai/moderate'
 
 // Пороги маршрутизации (T&S-паттерн: уверенное решает автомат, серая зона — человек).
@@ -31,15 +32,19 @@ export function extractHosts(text: string): string[] {
   return [...out]
 }
 
-/** Дешёвые эвристики до ИИ. Ловим только очевидное — сомнительное уходит классификатору. */
-export function checkSpamHeuristics(s: ListSignals): { spam: boolean; reason: string } {
+/** Дешёвые эвристики до ИИ. Ловим только очевидное — сомнительное уходит классификатору.
+ *  allowedHosts — домены-магазины из партнёрских правил админки: корзина
+ *  («Shop this list») легально даёт много хостов, доверенные НЕ считаем в
+ *  link-farm (шортенеры проверяются по полному набору — им скидки нет). */
+export function checkSpamHeuristics(s: ListSignals, allowedHosts: string[] = []): { spam: boolean; reason: string } {
   if (s.stepCount === 0) return { spam: true, reason: 'spam heuristic: empty list (no steps)' }
   if (s.title.trim().length < 3) return { spam: true, reason: 'spam heuristic: no meaningful title' }
   const hosts = extractHosts(s.text)
   const short = hosts.find((h) => URL_SHORTENERS.has(h))
   if (short) return { spam: true, reason: `spam heuristic: url shortener (${short})` }
-  if (hosts.length > MAX_DISTINCT_HOSTS)
-    return { spam: true, reason: `spam heuristic: link farm (${hosts.length} distinct hosts)` }
+  const counted = hosts.filter((h) => !allowedHosts.some((a) => hostMatches(h, a)))
+  if (counted.length > MAX_DISTINCT_HOSTS)
+    return { spam: true, reason: `spam heuristic: link farm (${counted.length} distinct hosts)` }
   return { spam: false, reason: '' }
 }
 

@@ -3,7 +3,7 @@
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
 import { blankCount, type QuizKind } from '@/core'
-import { isBlockType, newBlockId, newOptionId, type BlockType } from './blocks'
+import { isBlockType, newBlockId, newOptionId, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
 import { safeHref } from '@/shared/lib/safe-url'
 
 const QUIZ_KINDS: QuizKind[] = ['choice', 'text', 'number', 'blank', 'match', 'sort', 'code']
@@ -14,6 +14,8 @@ const asLevel = (v: unknown): StepLevel => (LEVELS.includes(v as StepLevel) ? (v
 const asType = (v: unknown): BlockType => (typeof v === 'string' && isBlockType(v) ? v : 'step')
 
 export type EditorRef = { label: string; url: string }
+// Товар product-блока; tier '' = без яруса.
+export type EditorProduct = { name: string; url: string; tier: '' | ProductTier; note: string }
 export type EditorOption = { id: string; text: string }
 export type EditorPoll = { question: string; options: EditorOption[]; multi: boolean; deadline: string }
 export type EditorQuizOption = { id: string; text: string; correct: boolean }
@@ -45,6 +47,7 @@ export type EditorItem = {
   fileName: string // имя файла file-блока
   poll: EditorPoll // данные poll-блока (пусто для не-poll)
   quiz: EditorQuiz // данные quiz-блока (пусто для не-quiz)
+  products: EditorProduct[] // товары product-блока (caption = заголовок подборки)
   title: string
   desc: string
   command: string
@@ -61,7 +64,7 @@ const emptyPoll = (): EditorPoll => ({ question: '', options: [], multi: false, 
 const emptyQuiz = (): EditorQuiz => ({ kind: 'choice', question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], items: [], explain: '' })
 
 export function emptyItem(): EditorItem {
-  return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', fileUrl: '', fileName: '', poll: emptyPoll(), quiz: emptyQuiz(), title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
+  return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', fileUrl: '', fileName: '', poll: emptyPoll(), quiz: emptyQuiz(), products: [], title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
 }
 
 /** Пустой блок заданного типа (для инсертера). Не-step получает стабильный bid;
@@ -70,6 +73,7 @@ export function emptyBlock(type: BlockType): EditorItem {
   const base = { ...emptyItem(), type, bid: type === 'step' ? '' : newBlockId() }
   if (type === 'poll') base.poll = { question: '', options: [{ id: newOptionId(), text: '' }, { id: newOptionId(), text: '' }], multi: false, deadline: '' }
   if (type === 'quiz') base.quiz = { ...emptyQuiz(), options: [{ id: newOptionId(), text: '', correct: false }, { id: newOptionId(), text: '', correct: false }], accept: [''] }
+  if (type === 'product') base.products = [{ name: '', url: '', tier: '', note: '' }]
   return base
 }
 
@@ -98,6 +102,25 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
       }
       if (it.type === 'file') {
         return { ...base, section: sec, type: 'file', content: { url: safeHref(it.fileUrl), name: it.fileName.trim(), bid: it.bid || newBlockId() } }
+      }
+      if (it.type === 'product') {
+        // Товар без имени или ссылки — мусор; url санитизируем на записи (второй
+        // рубеж к SafeLink). caption редактора = заголовок подборки.
+        const items = it.products
+          .map((p) => ({ name: p.name.trim(), url: safeHref(p.url), tier: p.tier, note: p.note.trim() }))
+          .filter((p) => p.name && p.url)
+          .map((p) => ({
+            name: p.name,
+            url: p.url,
+            ...(p.tier && PRODUCT_TIERS.includes(p.tier) ? { tier: p.tier } : {}),
+            ...(p.note ? { note: p.note } : {}),
+          }))
+        return {
+          ...base,
+          section: sec,
+          type: 'product',
+          content: { bid: it.bid || newBlockId(), ...(it.caption.trim() ? { title: it.caption.trim() } : {}), items },
+        }
       }
       if (it.type === 'poll') {
         const options = it.poll.options
@@ -226,6 +249,27 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     if (type === 'file') {
       return { ...emptyItem(), type: 'file', bid, section, fileUrl: typeof it.content?.url === 'string' ? it.content.url : '', fileName: typeof it.content?.name === 'string' ? it.content.name : '' }
     }
+    if (type === 'product') {
+      const c = it.content ?? {}
+      const rawItems = Array.isArray(c.items) ? (c.items as unknown[]) : []
+      const products = rawItems.map((p) => {
+        const pp = (p && typeof p === 'object' ? p : {}) as Record<string, unknown>
+        return {
+          name: typeof pp.name === 'string' ? pp.name : '',
+          url: typeof pp.url === 'string' ? pp.url : '',
+          tier: typeof pp.tier === 'string' && (PRODUCT_TIERS as string[]).includes(pp.tier) ? (pp.tier as ProductTier) : ('' as const),
+          note: typeof pp.note === 'string' ? pp.note : '',
+        }
+      })
+      return {
+        ...emptyItem(),
+        type: 'product',
+        bid,
+        section,
+        caption: typeof c.title === 'string' ? c.title : '',
+        products: products.length ? products : [{ name: '', url: '', tier: '', note: '' }],
+      }
+    }
     if (type === 'poll') {
       const c = it.content ?? {}
       const rawOpts = Array.isArray(c.options) ? (c.options as unknown[]) : []
@@ -295,6 +339,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
       fileName: '',
       poll: emptyPoll(),
       quiz: emptyQuiz(),
+      products: [],
       title: tr(it.title, lang),
       desc: tr(it.desc, lang),
       command: it.command ?? '',
@@ -350,6 +395,14 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
         items: Array.isArray(it?.quiz?.items) ? it.quiz.items.map((s: unknown) => String(s)) : [],
         explain: String(it?.quiz?.explain ?? ''),
       },
+      products: Array.isArray(it?.products)
+        ? it.products.map((p: { name?: unknown; url?: unknown; tier?: unknown; note?: unknown }) => ({
+            name: String(p?.name ?? ''),
+            url: String(p?.url ?? ''),
+            tier: typeof p?.tier === 'string' && (PRODUCT_TIERS as string[]).includes(p.tier) ? (p.tier as ProductTier) : ('' as const),
+            note: String(p?.note ?? ''),
+          }))
+        : [],
       title: String(it?.title ?? ''),
       desc: String(it?.desc ?? ''),
       command: String(it?.command ?? ''),

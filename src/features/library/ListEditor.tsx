@@ -18,6 +18,7 @@ import {
   Paperclip,
   Plus,
   Redo2,
+  ShoppingCart,
   Sparkles,
   Text as TextIcon,
   Trash2,
@@ -30,12 +31,13 @@ import { Checkbox } from '@/shared/ui/checkbox'
 import { DatePicker } from '@/shared/ui/DatePicker'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorQuiz } from './editor'
+import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorProduct, type EditorQuiz } from './editor'
+import { t } from '@/shared/i18n'
 import { blankCount, type QuizKind } from '@/core'
-import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, type BlockType } from './blocks'
+import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
 import { fetchLinkTitleAction, refineList, uploadStepFile, uploadStepImage, uploadStepVideo } from './actions'
 
-const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap, file: Paperclip }
+const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap, file: Paperclip, product: ShoppingCart }
 const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
 
 // Загрузка СВОИХ видеофайлов на наш хостинг выключена по умолчанию (нет ресурса
@@ -713,6 +715,17 @@ export function ListEditor({
             </div>
           )}
 
+          {/* Product-блок: подборка товаров (имя+ссылка+ярус+пометка) + заголовок. */}
+          {it.type === 'product' && (
+            <ProductBlockBody
+              products={it.products}
+              caption={it.caption}
+              onProducts={(products) => patch(i, { products })}
+              onCaption={(caption) => patch(i, { caption })}
+              ru={ru}
+            />
+          )}
+
           {/* Инсертер между блоками: вставить после текущего блока. После ПОСЛЕДНЕГО
               не рисуем — конец списка покрывает главный инсертер ниже (без дубля).
               «Повторить предыдущий» = тип блока, ПОД которым стоит инсертер. */}
@@ -733,6 +746,88 @@ export function ListEditor({
 
 /** Text-блок: авто-растущая textarea. Пустое поле + ввод «/» открывает меню
  *  смены типа блока (быстрый /-командой заменить пустой text на step/image). */
+/** Product-блок: заголовок подборки + строки товаров (имя, ссылка, ярус, пометка). */
+function ProductBlockBody({
+  products,
+  caption,
+  onProducts,
+  onCaption,
+  ru,
+}: {
+  products: EditorProduct[]
+  caption: string
+  onProducts: (p: EditorProduct[]) => void
+  onCaption: (c: string) => void
+  ru: boolean
+}) {
+  const lang = ru ? ('ru' as const) : ('en' as const)
+  const patchRow = (i: number, p: Partial<EditorProduct>) => onProducts(products.map((x, xi) => (xi === i ? { ...x, ...p } : x)))
+  const tierLabel = (tr: ProductTier): string =>
+    tr === 'budget' ? t('productTierBudget', lang) : tr === 'mid' ? t('productTierMid', lang) : t('productTierPremium', lang)
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
+      <input
+        className={input}
+        aria-label={t('productCaptionPh', lang)}
+        placeholder={t('productCaptionPh', lang)}
+        value={caption}
+        onChange={(e) => onCaption(e.target.value)}
+      />
+      {products.map((p, pi) => (
+        <div key={pi} className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2 sm:flex-row sm:items-center">
+          <input
+            className={`${input} sm:max-w-[180px]`}
+            aria-label={t('productNamePh', lang)}
+            placeholder={t('productNamePh', lang)}
+            value={p.name}
+            onChange={(e) => patchRow(pi, { name: e.target.value })}
+          />
+          <input
+            className={`${input} font-mono`}
+            aria-label="URL"
+            placeholder="https://…"
+            value={p.url}
+            onChange={(e) => patchRow(pi, { url: e.target.value })}
+          />
+          <select
+            className={`${input} sm:max-w-[130px]`}
+            aria-label={t('productTierNone', lang)}
+            value={p.tier}
+            onChange={(e) => patchRow(pi, { tier: e.target.value as EditorProduct['tier'] })}
+          >
+            <option value="">{t('productTierNone', lang)}</option>
+            {PRODUCT_TIERS.map((tr) => (
+              <option key={tr} value={tr}>
+                {tierLabel(tr)}
+              </option>
+            ))}
+          </select>
+          <input
+            className={input}
+            aria-label={t('productNotePh', lang)}
+            placeholder={t('productNotePh', lang)}
+            value={p.note}
+            onChange={(e) => patchRow(pi, { note: e.target.value })}
+          />
+          <button
+            type="button"
+            onClick={() => onProducts(products.filter((_, xi) => xi !== pi))}
+            className="grid h-7 w-7 shrink-0 place-items-center self-end rounded text-muted hover:text-danger sm:self-auto"
+            aria-label={t('productRemove', lang)}
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      ))}
+      <div className="text-[12.5px]">
+        <button type="button" onClick={() => onProducts([...products, { name: '', url: '', tier: '', note: '' }])} className="text-accent hover:underline">
+          + {t('productAdd', lang)}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p: EditorPoll) => void; ru: boolean }) {
   const set = (p: Partial<EditorPoll>) => onChange({ ...poll, ...p })
   return (

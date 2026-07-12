@@ -129,6 +129,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       fileName: '',
       poll: { question: '', options: [], multi: false, deadline: '' },
       quiz: { kind: 'choice' as const, question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], items: [], explain: '' },
+      products: [],
       title: it.title,
       desc: it.desc,
       command: sanitizeCommand(it.command ?? ''),
