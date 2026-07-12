@@ -71,7 +71,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
             <Link href={`/${meta.ownerHandle}`} className="shrink-0">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
-            <h1 className="min-w-0 truncate text-[19px] font-bold text-ink">{meta.slug}</h1>
+            <h1 className="min-w-0 truncate text-[19px] font-bold text-ink">{tr(meta.title, lang)}</h1>
             <span className="shrink-0 rounded-md border border-(--accent) bg-(--accent-soft) px-2 py-0.5 font-mono text-[11px] text-accent">
               v{meta.currentVersion}
             </span>
