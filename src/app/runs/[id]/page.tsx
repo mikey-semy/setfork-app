@@ -4,11 +4,12 @@ import { getLang } from '@/shared/i18n/server'
 import { tr, type LocaleText } from '@/shared/i18n'
 import { getRun } from '@/features/runs/queries'
 import { RunView, type RunStepVM } from '@/features/runs/RunView'
+import { getMonetizationSettings } from '@/shared/settings/monetization'
 
 export const metadata = { title: 'Run' }
 
 export default async function RunPage({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }, session, lang] = await Promise.all([params, getSession(), getLang()])
+  const [{ id }, session, lang, mon] = await Promise.all([params, getSession(), getLang(), getMonetizationSettings()])
   if (!session) redirect('/login')
   const data = await getRun(id, session.userId)
   if (!data) notFound()
@@ -26,8 +27,9 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
     why: tr(s.why, lang),
     subtasks: (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean),
     // Индекс для /api/go фиксируем ДО фильтра пустых меток — иначе резолв уедет.
+    // Трекинг кликов выключен в админке → прямые url.
     refs: (s.refs as { label: LocaleText; url?: string }[])
-      .map((r, ri) => ({ label: tr(r.label, lang), url: r.url, href: r.url ? `/api/go/${s.id}/${ri}` : undefined }))
+      .map((r, ri) => ({ label: tr(r.label, lang), url: r.url, href: r.url && mon.linkTracking ? `/api/go/${s.id}/${ri}` : undefined }))
       .filter((r) => r.label),
     done: s.state?.status === 'done',
     blocked: s.state?.status === 'blocked',

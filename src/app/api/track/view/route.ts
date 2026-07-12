@@ -4,6 +4,7 @@ import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { canViewList } from '@/core'
 import { isBot, recordView, visitorKey } from '@/features/analytics/service'
+import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 import { crossOriginBlock } from '@/shared/csrf'
 
@@ -18,6 +19,10 @@ const noContent = () => new Response(null, { status: 204 })
 export async function POST(req: Request) {
   const blocked = crossOriginBlock(req)
   if (blocked) return blocked
+
+  // Тумблер из админки: выключен — не пишем ничего (страница маячок и не ставит,
+  // но эндпоинт закрываем тоже — от прямых POST и закэшированных страниц).
+  if (!(await getMonetizationSettings()).viewTracking) return noContent()
 
   const ip = clientIp(req)
   const rl = await rateLimit(`track-view:${ip}`, 120, 60_000)

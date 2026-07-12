@@ -8,6 +8,8 @@ import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } f
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
 import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/email'
+import { clearMonetizationCache, DEFAULT_DISCLOSURE, MONETIZATION_KEYS, sanitizeDonateUrl } from '@/shared/settings/monetization'
+import { parseAffiliateRules } from '@/core'
 import { clearVapidCache, VAPID_KEYS } from '@/shared/push/vapid'
 import { sendMail } from '@/shared/email/mailer'
 import { db, users } from '@/shared/db'
@@ -142,6 +144,30 @@ export async function setSearchSettings(formData: FormData): Promise<void> {
   clearSearchCache()
   revalidatePath('/admin')
   revalidatePath('/explore')
+}
+
+// ── Монетизация и трафик ─────────────────────────────────────────────
+export async function setMonetizationSettings(formData: FormData): Promise<void> {
+  const admin = await requireAdmin()
+  const rules = parseAffiliateRules(String(formData.get('affiliateRules') ?? '[]'))
+  const disclosureText = String(formData.get('disclosureText') ?? '').trim()
+  const donateUrl = sanitizeDonateUrl(String(formData.get('donateUrl') ?? ''))
+  await saveSettings({
+    // Храним только отклонения от дефолтов ('' в kv = удалить ключ):
+    // дефолт-ВКЛ тумблеры пишутся как 'false', дефолт-ВЫКЛ — как 'true'.
+    [MONETIZATION_KEYS.viewTracking]: formData.get('viewTracking') === 'on' ? '' : 'false',
+    [MONETIZATION_KEYS.linkTracking]: formData.get('linkTracking') === 'on' ? '' : 'false',
+    [MONETIZATION_KEYS.affiliateEnabled]: formData.get('affiliateEnabled') === 'on' ? 'true' : '',
+    [MONETIZATION_KEYS.affiliateRules]: rules.length ? JSON.stringify(rules) : '',
+    [MONETIZATION_KEYS.disclosureEnabled]: formData.get('disclosureEnabled') === 'on' ? '' : 'false',
+    [MONETIZATION_KEYS.disclosureText]: disclosureText === DEFAULT_DISCLOSURE ? '' : disclosureText,
+    [MONETIZATION_KEYS.donateUrl]: donateUrl,
+  })
+  clearMonetizationCache()
+  // Денежные настройки — в аудит: кто и когда менял правила/тумблеры.
+  const { recordAudit } = await import('@/shared/audit')
+  await recordAudit('monetization.settings', { actorId: admin.userId })
+  revalidatePath('/admin')
 }
 
 // ── Реиндексация эмбеддингов (RAG) ───────────────────────────────────

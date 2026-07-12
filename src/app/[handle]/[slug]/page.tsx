@@ -22,7 +22,8 @@ import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
 import { QuizBlock } from '@/features/quizzes/QuizBlock'
-import { quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
+import { hasAffiliateLink, quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
+import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getQuizState } from '@/features/quizzes/queries'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
@@ -151,6 +152,16 @@ export default async function ListPage({
   const displayNum = steps.map((s) => (isStepBlock(s) ? ++stepSeq : 0))
   const contributors = await getContributors(tpl.id, tpl.ownerId)
   const base = `/${owner}/${slug}`
+  // Монетизация/трафик (админка): тумблеры трекинга + FTC-плашка, если среди
+  // ссылок списка (всех, не только отфильтрованных ?find=) есть партнёрские.
+  const mon = await getMonetizationSettings()
+  const showDisclosure =
+    mon.affiliateEnabled &&
+    mon.disclosureEnabled &&
+    hasAffiliateLink(
+      allSteps.flatMap((s) => (s.refs as { url?: string }[]).map((r) => r.url)),
+      mon.affiliateRules,
+    )
   // Показываем note версии, только если он осмысленный (не служебный boilerplate).
   const latestNote =
     currentVersion?.note && !['initial', 'edit', 'seeded', 'ai draft'].includes(currentVersion.note)
@@ -160,7 +171,7 @@ export default async function ListPage({
   return (
     <>
       {/* Просмотр: владелец себя не накручивает, сервер дополнительно дедупит. */}
-      {!isOwner && <ViewBeacon templateId={tpl.id} />}
+      {!isOwner && mon.viewTracking && <ViewBeacon templateId={tpl.id} />}
       <div className="print:hidden">
         <ListHeader owner={owner} slug={slug} active="overview" />
       </div>
@@ -216,6 +227,12 @@ export default async function ListPage({
             {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
               <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3 text-[13px] text-accent print:hidden">
                 <Sparkles size={15} className="shrink-0" /> {t('aiVerifyHint', lang)}
+              </div>
+            )}
+            {/* FTC-дисклеймер: показывается ДО ссылок (требование к affiliate-раскрытию). */}
+            {showDisclosure && (
+              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[12.5px] text-ink-2">
+                <Info size={15} className="shrink-0 text-muted" /> {mon.disclosureText}
               </div>
             )}
 
@@ -432,12 +449,12 @@ export default async function ListPage({
                   )
                 }
                 const subs = (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean)
-                // href — через /api/go (журнал кликов); у веток snapshot-шаги без
-                // DB-id → прямой url. Экспорт/MD не трогаем — там url как есть.
+                // href — через /api/go (журнал кликов), если трекинг включён в админке;
+                // у веток snapshot-шаги без DB-id → прямой url. Экспорт/MD не трогаем.
                 const refs = (s.refs as { label: LocaleText; url?: string }[]).map((x, ri) => ({
                   label: tr(x.label, lang),
                   url: x.url,
-                  href: x.url && !snapshot ? `/api/go/${s.id}/${ri}` : x.url,
+                  href: x.url && !snapshot && mon.linkTracking ? `/api/go/${s.id}/${ri}` : x.url,
                 }))
                 return (
                   <Fragment key={s.id}>

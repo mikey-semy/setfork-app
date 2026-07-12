@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, AtSign, Ban, Fingerprint, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
+import { ArrowLeft, AtSign, Ban, Coins, Fingerprint, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getAuditLog, type AuditEntry } from '@/features/admin/audit-queries'
@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic'
 const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string; cls: string }> = {
   'maintenance.on': { icon: Wrench, ru: 'Сайт закрыт на обслуживание', en: 'Site closed for maintenance', cls: 'text-warn' },
   'maintenance.off': { icon: Wrench, ru: 'Сайт открыт после обслуживания', en: 'Site reopened after maintenance', cls: 'text-ok' },
+  'monetization.settings': { icon: Coins, ru: 'Изменены настройки монетизации', en: 'Monetization settings changed', cls: 'text-warn' },
   'token.create': { icon: KeyRound, ru: 'Создан токен', en: 'Token created', cls: 'text-ink-2' },
   'token.revoke': { icon: Ban, ru: 'Отозван токен', en: 'Token revoked', cls: 'text-warn' },
   'list.delete': { icon: Trash2, ru: 'Удалён список', en: 'List deleted', cls: 'text-danger' },
