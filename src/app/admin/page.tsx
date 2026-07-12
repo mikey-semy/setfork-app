@@ -87,6 +87,7 @@ export default async function AdminPage() {
     user: email.user,
     from: email.from,
     passMask: maskSecret(email.pass),
+    notifyTo: email.notifyTo,
   }
   const hasKey = Boolean(apiKey)
   const maskedKey = maskKey(apiKey)

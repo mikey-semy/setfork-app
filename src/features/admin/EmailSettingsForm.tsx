@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Loader2, Send } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { t } from '@/shared/i18n'
 import { setEmailSettings, sendTestEmail } from './actions'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
@@ -15,6 +16,7 @@ export interface EmailFormValues {
   user: string
   from: string
   passMask: string // маска пароля (реальное значение на клиент не уходит)
+  notifyTo: string // адрес(а) для админ-уведомлений (фидбек/жалобы), через запятую
 }
 
 export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }) {
@@ -65,6 +67,17 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
           <div className="sm:col-span-2">
             <label className={lbl}>From</label>
             <input name="from" defaultValue={v.from} placeholder="SetFork <no-reply@setfork.com>" className={`${field} font-mono`} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={lbl}>{t('notifyToLabel', ru ? 'ru' : 'en')}</label>
+            <input
+              name="notifyTo"
+              defaultValue={v.notifyTo}
+              autoComplete="off"
+              placeholder="admin@example.com, second@example.com"
+              className={`${field} font-mono`}
+            />
+            <p className="mt-1 text-[12px] text-muted">{t('notifyToHint', ru ? 'ru' : 'en')}</p>
           </div>
         </div>
 

@@ -2,12 +2,12 @@
 
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { eq, inArray } from 'drizzle-orm'
-import { db, feedback, users } from '@/shared/db'
+import { eq } from 'drizzle-orm'
+import { db, feedback } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { requireAdmin } from '@/shared/auth/admin'
 import { rateLimit } from '@/shared/rate-limit'
-import { sendMail } from '@/shared/email/mailer'
+import { notifyAdmins } from '@/shared/email/admin-notify'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -50,41 +50,20 @@ export async function submitFeedback(_prev: FeedbackResult, formData: FormData):
     pageUrl: parsed.pageUrl,
   })
 
-  await notifyAdmins(parsed.category, parsed.body, session?.handle ?? null)
+  await notifyFeedback(parsed.category, parsed.body, session?.handle ?? null)
   return { ok: true }
 }
 
-/** Письмо админам (best-effort: без SMTP тихо пропускается, ошибки не роняют приём). */
-async function notifyAdmins(category: string, body: string, fromHandle: string | null): Promise<void> {
-  try {
-    const handles = (process.env.ADMIN_HANDLES || '')
-      .split(',')
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean)
-    if (!handles.length) return
-    const rows = await db
-      .select({ email: users.email })
-      .from(users)
-      .where(inArray(users.handle, handles))
-    const emails = rows.map((r) => r.email).filter((e): e is string => !!e)
-    if (!emails.length) return
-    const excerpt = body.length > 500 ? `${body.slice(0, 500)}…` : body
-    await Promise.all(
-      emails.map((to) =>
-        sendMail({
-          to,
-          subject: `SetFork feedback: ${category}`,
-          html:
-            `<p style="font:14px/1.5 sans-serif"><b>${esc(category)}</b>` +
-            ` — ${fromHandle ? esc(fromHandle) : 'anonymous'}</p>` +
-            `<p style="font:14px/1.5 sans-serif;white-space:pre-wrap">${esc(excerpt)}</p>` +
-            `<p style="font:12px/1.5 sans-serif;color:#888">setfork.com/admin/feedback</p>`,
-        }),
-      ),
-    )
-  } catch {
-    // почта — не критичный путь: фидбек уже сохранён
-  }
+/** Письмо админам: получатели — настройка email.notify_to или ADMIN_HANDLES. */
+async function notifyFeedback(category: string, body: string, fromHandle: string | null): Promise<void> {
+  const excerpt = body.length > 500 ? `${body.slice(0, 500)}…` : body
+  await notifyAdmins(
+    `SetFork feedback: ${category}`,
+    `<p style="font:14px/1.5 sans-serif"><b>${esc(category)}</b>` +
+      ` — ${fromHandle ? esc(fromHandle) : 'anonymous'}</p>` +
+      `<p style="font:14px/1.5 sans-serif;white-space:pre-wrap">${esc(excerpt)}</p>` +
+      `<p style="font:12px/1.5 sans-serif;color:#888">setfork.com/admin/feedback</p>`,
+  )
 }
 
 /** Админ: смена статуса записи (new → seen → done). */
