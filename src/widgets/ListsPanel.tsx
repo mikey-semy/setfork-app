@@ -6,7 +6,7 @@ import { ChevronDown, ListChecks, Plus } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { SearchField } from '@/shared/ui/SearchField'
-import { t, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 
 // Единый модуль «панель списков» (правило: переиспользуем и сложные модули).
 // Используется дашбордом (Your lists) и drawer'ом (Top lists) — части
@@ -21,6 +21,7 @@ import { t, type Lang } from '@/shared/i18n'
 export interface ListsPanelItem {
   handle: string
   slug: string
+  title: LocaleText
   avatarUrl: string | null
   version?: number
 }
@@ -70,7 +71,7 @@ export function ListsPanel({
     })
 
   const query = q.trim().toLowerCase()
-  const filtered = query ? items.filter((l) => `${l.handle}/${l.slug}`.toLowerCase().includes(query)) : items
+  const filtered = query ? items.filter((l) => `${tr(l.title, lang)} ${l.handle}/${l.slug}`.toLowerCase().includes(query)) : items
   // Поиск показывает все совпадения; без поиска — рез до initialLimit.
   const cut = !query && !expanded && filtered.length > initialLimit
   const shown = cut ? filtered.slice(0, initialLimit) : filtered
@@ -135,7 +136,7 @@ export function ListsPanel({
                   )}
                   <span className="min-w-0 truncate">
                     {showOwner && <span className="text-muted">{l.handle}/</span>}
-                    <span className="font-semibold text-ink">{l.slug}</span>
+                    <span className="font-semibold text-ink">{tr(l.title, lang)}</span>
                   </span>
                   {showVersion && l.version !== undefined && (
                     <span className="ml-auto shrink-0 font-mono text-[10.5px] text-muted">v{l.version}</span>

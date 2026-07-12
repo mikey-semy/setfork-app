@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
-import { t, type Lang } from '@/shared/i18n'
+import { t, type Lang, type LocaleText } from '@/shared/i18n'
 import type { SessionUser } from '@/shared/auth/session'
 
 // Роуты, чей первый сегмент — НЕ handle пользователя (для бредкрамба в шапке).
@@ -33,6 +33,7 @@ const RESERVED_TOP = new Set([
 export interface TopListItem {
   handle: string
   slug: string
+  title: LocaleText
   avatarUrl: string | null
 }
 

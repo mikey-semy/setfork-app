@@ -109,11 +109,11 @@ export function Feed({
                       </Link>
                     ) : (
                       <Link href={`/${e.ownerHandle}/${e.slug}`} className="min-w-0 truncate font-semibold text-accent hover:underline">
-                        {e.ownerHandle}/{e.slug}
+                        {tr(e.title, lang) || `${e.ownerHandle}/${e.slug}`}
                       </Link>
                     )}
                   </div>
-                  {e.title && <div className="mt-0.5 truncate text-[13px] text-ink-2">{tr(e.title, lang)}</div>}
+                  {/* заголовок списка теперь в самой строке события выше (человеческое имя, не slug) */}
                   {e.type === 'issue' && e.itemTitle && (
                     <div className="mt-1 truncate text-[12.5px] text-muted">“{e.itemTitle}”</div>
                   )}
@@ -141,9 +141,9 @@ export function Feed({
               >
                 <span className="min-w-0">
                   <span className="block truncate text-[13.5px] font-semibold text-ink group-hover:text-accent">
-                    {r.ownerHandle}/{r.slug}
+                    {tr(r.title, lang)}
                   </span>
-                  <span className="block truncate text-[12px] text-muted">{tr(r.title, lang)}</span>
+                  <span className="block truncate text-[12px] text-muted">{r.ownerHandle}</span>
                 </span>
                 <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-mono text-[11.5px] text-muted">
                   <Star size={11} /> {r.starsCount}

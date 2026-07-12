@@ -54,7 +54,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
         <ListsPanel
           lang={lang}
           title={t('yourLists', lang)}
-          items={mine.map((m) => ({ handle: m.ownerHandle, slug: m.slug, avatarUrl: m.ownerAvatarUrl, version: m.version }))}
+          items={mine.map((m) => ({ handle: m.ownerHandle, slug: m.slug, title: m.title, avatarUrl: m.ownerAvatarUrl, version: m.version }))}
           showNew
           showVersion
           emptyText={t('emptyMyLists', lang)}

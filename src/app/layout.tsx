@@ -93,7 +93,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       ])
     : [0, [], false, [], { accent: '', font: '' }]
   // «Top lists» в боковом меню: недавние списки пользователя (по updatedAt), минимум полей.
-  const topLists = ownLists.slice(0, 10).map((l) => ({ handle: l.ownerHandle, slug: l.slug, avatarUrl: l.ownerAvatarUrl }))
+  const topLists = ownLists.slice(0, 10).map((l) => ({ handle: l.ownerHandle, slug: l.slug, title: l.title, avatarUrl: l.ownerAvatarUrl }))
   // Резолвим аватар для шапки: сессия может хранить storage_key — превращаем в imgproxy-URL.
   const navUser = user ? { ...user, avatarUrl: (await avatarSrc(user.avatarUrl, 60)) ?? undefined } : null
   return (
