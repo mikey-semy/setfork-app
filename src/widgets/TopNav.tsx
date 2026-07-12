@@ -144,12 +144,6 @@ export function TopNav({
         ]
       : []),
   ]
-  const actionItems: NavItem[] = user
-    ? [
-        { href: '/new', label: t('newList', lang), icon: Plus },
-        { href: '/generate', label: t('generateWithAi', lang), icon: Sparkles },
-      ]
-    : []
   const navLink = (it: NavItem) => (
     <Link
       key={it.href}
@@ -358,16 +352,8 @@ export function TopNav({
               </button>
             </div>
             <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
-              {/* Основная навигация */}
+              {/* Основная навигация (создать/сгенерировать — в топ-баре «+», не дублируем тут) */}
               <nav className="flex flex-col gap-0.5">{navItems.map(navLink)}</nav>
-
-              {/* Действия (создать/сгенерировать) — отдельной секцией после разделителя */}
-              {actionItems.length > 0 && (
-                <>
-                  <div className="my-2 border-t border-border/60" />
-                  <nav className="flex flex-col gap-0.5">{actionItems.map(navLink)}</nav>
-                </>
-              )}
 
               {/* «Top lists» — общий модуль ListsPanel (как Top repositories у GitHub). */}
               {user && topLists.length > 0 && (
