@@ -288,6 +288,13 @@
       "when": 1783850000000,
       "tag": "0040_backfill_course_completions",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1783860000000,
+      "tag": "0041_list_feature_toggles",
+      "breakpoints": true
     }
   ]
 }
