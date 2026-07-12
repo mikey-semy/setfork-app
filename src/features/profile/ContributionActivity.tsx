@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, CircleDot, GitCommitHorizontal, GitPullRequest, Rocket } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { tr, type Lang } from '@/shared/i18n'
 import type { MonthActivity } from './queries'
 
 /** Лента активности за месяц (Contribution activity, как GitHub):
@@ -63,7 +63,7 @@ export function ContributionActivity({
                 {versions.map((v) => (
                   <li key={v.slug} className="flex items-center justify-between gap-3 text-[13px]">
                     <Link href={`/${handle}/${v.slug}`} className="truncate text-accent hover:underline">
-                      {handle}/{v.slug}
+                      {tr(v.title, lang)}
                     </Link>
                     <span className="shrink-0 font-mono text-[11.5px] text-muted">
                       {v.count} {ru ? 'версий' : v.count === 1 ? 'version' : 'versions'}
@@ -83,7 +83,7 @@ export function ContributionActivity({
                 {listsCreated.slice(0, 5).map((l) => (
                   <li key={l.slug}>
                     <Link href={`/${handle}/${l.slug}`} className="text-[13px] text-accent hover:underline">
-                      {handle}/{l.slug}
+                      {tr(l.title, lang)}
                     </Link>
                   </li>
                 ))}
