@@ -59,6 +59,10 @@ export const notificationType = pgEnum('notification_type', [
 
 export const issueStatus = pgEnum('issue_status', ['open', 'closed'])
 
+// Обратная связь с сайта: категория и статус обработки админом.
+export const feedbackCategory = pgEnum('feedback_category', ['bug', 'idea', 'content', 'legal', 'other'])
+export const feedbackStatus = pgEnum('feedback_status', ['new', 'seen', 'done'])
+
 // Предложенный пункт (снимок правки внутри suggestion).
 export type StepLevel = 'required' | 'recommended' | 'optional'
 export type ProposedItem = {
@@ -891,6 +895,25 @@ export const linkClicks = pgTable(
     index('link_clicks_tpl_idx').on(t.templateId, t.createdAt),
     index('link_clicks_host_idx').on(t.templateId, t.host),
   ],
+)
+
+// ── Feedback (обратная связь с сайта) ────────────────────────────────
+// Канал «главный пробел» (владелец, 2026-07-07): форма /feedback, разбор в
+// /admin/feedback. email — опциональный контакт для ответа (PII: только для
+// ответа, покрыт Privacy Policy «Support data»). pageUrl — откуда пришли.
+export const feedback = pgTable(
+  'feedback',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }), // null — аноним
+    category: feedbackCategory('category').notNull().default('other'),
+    body: text('body').notNull(),
+    email: text('email').notNull().default(''),
+    pageUrl: text('page_url').notNull().default(''),
+    status: feedbackStatus('status').notNull().default('new'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('feedback_status_idx').on(t.status, t.createdAt)],
 )
 
 // ── Follows (подписки пользователей) ─────────────────────────────────

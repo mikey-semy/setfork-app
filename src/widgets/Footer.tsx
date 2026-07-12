@@ -22,7 +22,8 @@ export async function Footer({ lang }: { lang: Lang }) {
         <Link href="/explore" className={link}>{t('explore', lang)}</Link>
         <Link href="/about" className={link}>{t('aboutProject', lang)}</Link>
         <a href={REPO_URL} target="_blank" rel="noreferrer" className={link}>{t('sourceCode', lang)}</a>
-        <a href={`${REPO_URL}/issues`} target="_blank" rel="noreferrer" className={link}>{t('contact', lang)}</a>
+        {/* Contact ведёт на свою форму фидбека (ссылка на issues приватного репо отдавала 404). */}
+        <Link href="/feedback" className={link}>{t('feedback', lang)}</Link>
         <a href={`${LEGAL_URL}/terms`} className={link}>{t('terms', lang)}</a>
         <a href={`${LEGAL_URL}/privacy`} className={link}>{t('privacy', lang)}</a>
         {donateUrl && (
