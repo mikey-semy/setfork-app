@@ -23,7 +23,7 @@ export function BadgesCard({ owner, slug, origin, lang }: { owner: string; slug:
     <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-1 text-[13px] font-semibold text-ink">{ru ? 'Бейджи' : 'Badges'}</div>
       <p className="mb-3 text-[12px] text-muted">
-        {ru ? 'Вставь в README списка или репозитория.' : 'Embed in your list or repo README.'}
+        {ru ? 'Живой бейдж списка — вставь в README проекта, доки или блог.' : 'A live badge for this list — drop it in your project README, docs or blog.'}
       </p>
       <div className="flex flex-col gap-2">
         {KINDS.map((kind) => {
