@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, AtSign, Ban, Coins, Fingerprint, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
+import { ArrowLeft, AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getAuditLog, type AuditEntry } from '@/features/admin/audit-queries'
@@ -16,6 +16,7 @@ const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string;
   'list.delete': { icon: Trash2, ru: 'Удалён список', en: 'List deleted', cls: 'text-danger' },
   'list.moderate': { icon: ShieldX, ru: 'Модерация списка', en: 'List moderated', cls: 'text-warn' },
   'list.appeal': { icon: ShieldCheck, ru: 'Апелляция владельца', en: 'Moderation appeal', cls: 'text-accent' },
+  'list.report': { icon: Flag, ru: 'Жалоба на список', en: 'List reported', cls: 'text-warn' },
   'list.verify': { icon: ShieldCheck, ru: 'Верификация списка', en: 'List verified', cls: 'text-ok' },
   'git.push': { icon: GitCommitVertical, ru: 'Push в список', en: 'Push to list', cls: 'text-ink-2' },
   'session.revoke': { icon: LogOut, ru: 'Отозвана сессия', en: 'Session revoked', cls: 'text-ink-2' },

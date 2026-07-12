@@ -32,6 +32,7 @@ import { requireViewableDetail } from '@/features/library/guard'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ListHeader } from '@/widgets/ListHeader'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
+import { ReportButton } from '@/features/reports/ReportButton'
 import { publishList } from '@/features/library/actions'
 
 function fmt(n: number): string {
@@ -567,6 +568,7 @@ export default async function ListPage({
                     {tpl.owner.name ?? tpl.owner.handle}
                   </Link>
                 </span>
+                {!isOwner && <ReportButton templateId={tpl.id} lang={lang} />}
               </div>
 
               {contributors.length > 0 && (

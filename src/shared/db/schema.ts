@@ -62,6 +62,9 @@ export const issueStatus = pgEnum('issue_status', ['open', 'closed'])
 // Обратная связь с сайта: категория и статус обработки админом.
 export const feedbackCategory = pgEnum('feedback_category', ['bug', 'idea', 'content', 'legal', 'other'])
 export const feedbackStatus = pgEnum('feedback_status', ['new', 'seen', 'done'])
+// Жалобы на контент (DSA notice-and-action / DMCA-интейк).
+export const reportReason = pgEnum('report_reason', ['illegal', 'spam', 'copyright', 'privacy', 'other'])
+export const reportStatus = pgEnum('report_status', ['new', 'reviewed', 'actioned', 'dismissed'])
 
 // Предложенный пункт (снимок правки внутри suggestion).
 export type StepLevel = 'required' | 'recommended' | 'optional'
@@ -914,6 +917,31 @@ export const feedback = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('feedback_status_idx').on(t.status, t.createdAt)],
+)
+
+// ── Content reports (жалобы на списки) ───────────────────────────────
+// DSA notice-and-action + приём копирайт/приватность-жалоб («Report list» на
+// странице списка). Жалоба НЕ меняет видимость списка сама по себе — только
+// запись + аудит + фоновая ИИ-перепроверка; решение принимает админ.
+// Счётчики по статусам — задел под DSA transparency-отчётность.
+export const contentReports = pgTable(
+  'content_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    reporterUserId: uuid('reporter_user_id').references(() => users.id, { onDelete: 'set null' }), // null — аноним
+    reason: reportReason('reason').notNull().default('other'),
+    body: text('body').notNull(),
+    email: text('email').notNull().default(''), // контакт для ответа (важно для DMCA)
+    status: reportStatus('status').notNull().default('new'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('content_reports_status_idx').on(t.status, t.createdAt),
+    index('content_reports_tpl_idx').on(t.templateId, t.createdAt),
+  ],
 )
 
 // ── Follows (подписки пользователей) ─────────────────────────────────
