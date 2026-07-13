@@ -76,7 +76,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             <GitFork size={12} /> {fmt(item.forksCount)}
           </span>
           <span>
-            {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { month: 'short', day: 'numeric' }).format(
+            {new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric' }).format(
               new Date(item.updatedAt),
             )}
           </span>

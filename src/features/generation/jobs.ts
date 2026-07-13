@@ -1,11 +1,12 @@
 import 'server-only'
+import type { Lang } from '@/shared/i18n'
 import { addCandidate } from './service'
 
 export interface GenerateJobPayload {
   generationId: string
   userId: string
   query: string
-  lang: 'en' | 'ru'
+  lang: Lang
   idx: number
 }
 

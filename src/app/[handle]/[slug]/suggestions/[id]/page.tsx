@@ -95,7 +95,7 @@ export default async function SuggestionThreadPage({
     { handle: sug.author.handle, avatarUrl: sug.author.avatarUrl },
     ...comments.map((c) => ({ handle: c.authorHandle, avatarUrl: c.authorAvatarUrl })),
   ].filter((p) => p.handle && !sugSeen.has(p.handle) && sugSeen.add(p.handle))
-  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' })
+  const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
   const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
   const statusCls =
     sug.status === 'accepted' ? 'bg-ok text-white' : sug.status === 'rejected' ? 'bg-surface-2 text-muted' : 'bg-accent text-white'

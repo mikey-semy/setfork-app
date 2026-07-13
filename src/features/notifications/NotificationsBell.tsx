@@ -26,7 +26,7 @@ const VERB: Record<NotificationItem['type'], TKey> = {
 
 export function NotificationsBell({ unread, items, lang }: { unread: number; items: NotificationItem[]; lang: Lang }) {
   const [count, setCount] = useState(unread)
-  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short' })
+  const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' })
 
   const onOpenChange = (open: boolean) => {
     if (open && count > 0) {

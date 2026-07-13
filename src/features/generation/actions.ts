@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { db, generationCandidates, generations, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import type { Lang } from '@/shared/i18n'
+import { DEFAULT_LANG, isLang, type Lang } from '@/shared/i18n'
 import { sanitizeCommand } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { aiQuota, listQuota } from '@/shared/quota'
@@ -27,7 +27,7 @@ async function enqueueGenerate(generationId: string, userId: string, query: stri
   // maxAttempts:2 (одна повторная попытка) — генерация тратит токены на каждой,
   // а квота проверяется при постановке, не на ретрае. Дефолтные 5 попыток на
   // стабильно-неудачном ответе модели множили бы расход ×5.
-  await enqueueJob('generate', { generationId, userId, query, lang: lang === 'ru' ? 'ru' : 'en', idx }, { maxAttempts: 2 })
+  await enqueueJob('generate', { generationId, userId, query, lang: isLang(lang) ? lang : DEFAULT_LANG, idx }, { maxAttempts: 2 })
 }
 
 // ── Старт генерации: запрос → задача в очередь → экран ожидания ───────
@@ -116,7 +116,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
   if (!(await listQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=list_quota`)
 
   // Ключ locale-JSON = язык, на котором СГЕНЕРИРОВАН контент (а не текущий UI-язык).
-  const genLang: Lang = gen.lang === 'ru' ? 'ru' : 'en'
+  const genLang: Lang = isLang(gen.lang) ? gen.lang : DEFAULT_LANG
   const slug = await uniqueSlug(cand.title || gen.query, session.userId)
   const proposed = toProposedItems(
     cand.items.map((it) => ({

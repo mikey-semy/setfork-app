@@ -60,7 +60,7 @@ export default async function VersionsPage({
                 )}
               </div>
               <span className="shrink-0 font-mono text-[11.5px] text-muted">
-                {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', {
+                {new Intl.DateTimeFormat(lang, {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',

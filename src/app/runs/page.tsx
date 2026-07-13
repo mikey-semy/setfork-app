@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { PlayCircle, ListChecks } from 'lucide-react'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
@@ -37,7 +37,7 @@ export default async function MyRunsPage() {
   )
 }
 
-function Section({ label, rows, lang, muted }: { label: string; rows: UserRunRow[]; lang: 'en' | 'ru'; muted?: boolean }) {
+function Section({ label, rows, lang, muted }: { label: string; rows: UserRunRow[]; lang: Lang; muted?: boolean }) {
   if (rows.length === 0) return null
   return (
     <section>
@@ -53,7 +53,7 @@ function Section({ label, rows, lang, muted }: { label: string; rows: UserRunRow
   )
 }
 
-function RunCard({ r, lang, muted }: { r: UserRunRow; lang: 'en' | 'ru'; muted?: boolean }) {
+function RunCard({ r, lang, muted }: { r: UserRunRow; lang: Lang; muted?: boolean }) {
   const pct = r.total > 0 ? Math.round((r.doneCount / r.total) * 100) : 0
   return (
     <div

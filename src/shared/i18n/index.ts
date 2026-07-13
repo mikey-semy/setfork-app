@@ -2,12 +2,29 @@
 // Контент (шаблоны/шаги/темы) хранится как locale-JSON (LocaleText), поэтому
 // добавить язык = только данные, без миграций схемы. UI-строки — в DICT ниже.
 
+// Список локалей — ЕДИНСТВЕННЫЙ источник правды. Добавить язык = дописать код
+// сюда + строку в LANG_META (+ переводы контента данными). Никаких бинарных
+// en/ru-допущений в коде: LangSwitch, даты (Intl) и промпт генерации читают
+// отсюда. Модель данных (LocaleText) уже держит любой код.
 export const LOCALES = ['en', 'ru'] as const
 export type Locale = (typeof LOCALES)[number]
 export type Lang = Locale
 
 export const DEFAULT_LANG: Lang = 'en'
 export const LANG_COOKIE = 'lang'
+
+/** Метаданные локали: endonym (само-название для UI) + English name (для
+ *  промпта ИИ-генерации/перевода). BCP-47-код совпадает с самим ключом Lang,
+ *  поэтому в Intl.* передаётся напрямую. */
+export const LANG_META: Record<Lang, { endonym: string; enName: string }> = {
+  en: { endonym: 'English', enName: 'English' },
+  ru: { endonym: 'Русский', enName: 'Russian' },
+}
+
+/** English-название языка для промптов ИИ (напр. «All content MUST be in Russian»). */
+export function langEnName(lang: Lang): string {
+  return LANG_META[lang]?.enName ?? lang
+}
 
 /** Переводимый контент: { en: '…', ru: '…', … }. Ключ — код языка. */
 export type LocaleText = Partial<Record<string, string>>

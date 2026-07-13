@@ -28,7 +28,7 @@ export const metadata = { title: 'Notifications' }
 export default async function NotificationsPage() {
   const session = await requireSession()
   const [lang, items] = await Promise.all([getLang(), getNotifications(session.userId)])
-  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short' })
+  const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' })
 
   return (
     <div className="mx-auto w-full max-w-[720px] px-6 py-8">

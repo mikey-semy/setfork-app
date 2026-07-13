@@ -1,4 +1,5 @@
 import 'server-only'
+import type { Lang } from '@/shared/i18n'
 import { db, generationCandidates, type CandidateItem } from '@/shared/db'
 import { generateListDraft, sanitizeCommand } from '@/shared/ai/generate'
 import { parseTags } from '@/features/library/slug'
@@ -11,7 +12,7 @@ export async function addCandidate(
   generationId: string,
   userId: string,
   query: string,
-  lang: 'en' | 'ru',
+  lang: Lang,
   idx: number,
 ): Promise<boolean> {
   const draft = await generateListDraft(query, lang, {

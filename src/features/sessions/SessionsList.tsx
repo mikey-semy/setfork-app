@@ -8,13 +8,13 @@ import { revokeOtherSessions, revokeSession } from './actions'
 
 export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang: Lang }) {
   const [pending, start] = useTransition()
-  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', {
+  const fmt = new Intl.DateTimeFormat(lang, {
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
   })
-  const day = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' })
+  const day = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
   const others = sessions.filter((s) => !s.current).length
 
   return (

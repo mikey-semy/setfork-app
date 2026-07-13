@@ -25,7 +25,7 @@ import {
   uuid,
   vector,
 } from 'drizzle-orm/pg-core'
-import type { LocaleText } from '../i18n'
+import type { Lang, LocaleText } from '../i18n'
 
 // ── Enums ────────────────────────────────────────────────────────────
 export const templateOrigin = pgEnum('template_origin', ['authored', 'forked', 'ai_draft'])
@@ -122,7 +122,7 @@ export const users = pgTable('users', {
   socials: jsonb('socials').notNull().default([]).$type<Social[]>(),
   notifyPrefs: jsonb('notify_prefs').notNull().default({}).$type<NotifyPrefs>(),
   // Язык ДОСТАВКИ (email/push-уведомления) — интерфейс пока English-only.
-  lang: text('lang').notNull().default('en').$type<'en' | 'ru'>(),
+  lang: text('lang').notNull().default('en').$type<Lang>(),
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
   // Кураторский аккаунт библиотеки: правки садовника на его списках автопринимаются.
   curated: boolean('curated').notNull().default(false),

@@ -55,7 +55,7 @@ export default async function SuggestionsPage({
                     {t('proposedBy', lang)} <span className="font-semibold text-ink">{s.author.handle}</span>
                   </span>
                   <span className="font-mono text-[11px] text-muted">
-                    {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { month: 'short', day: 'numeric' }).format(
+                    {new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric' }).format(
                       new Date(s.createdAt),
                     )}
                   </span>
