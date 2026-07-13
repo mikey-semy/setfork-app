@@ -12,6 +12,7 @@ import { getUserAppearance } from '@/features/settings/appearance'
 import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
 import { HydrationSignal } from '@/shared/ui/HydrationSignal'
 import { TopNav } from '@/widgets/TopNav'
+import { SideRail } from '@/widgets/SideRail'
 import { Footer } from '@/widgets/Footer'
 import { ScrollToTop } from '@/shared/ui/ScrollToTop'
 import './globals.css'
@@ -121,7 +122,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Suspense>
               <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} topLists={topLists} />
             </Suspense>
-            <main className="flex flex-1 flex-col">{children}</main>
+            <div className="flex flex-1">
+              <SideRail lang={lang} authed={!!navUser} />
+              <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+            </div>
             <Footer lang={lang} />
             <ScrollToTop label={lang === 'ru' ? 'Наверх' : 'Back to top'} />
             {user && browserNotify && <BrowserNotifier enabled />}
