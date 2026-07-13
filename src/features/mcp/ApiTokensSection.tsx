@@ -71,8 +71,8 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
         </div>
         <p className="mt-1.5 text-[11.5px] text-ink-2">
           {ru
-            ? 'Подключи в ИИ-клиенте как удалённый MCP-сервер, авторизация — Bearer-токеном ниже.'
-            : 'Add it to your AI client as a remote MCP server; authenticate with a Bearer token below.'}
+            ? 'Подключи в клиенте как удалённый MCP-сервер, авторизация — Bearer-токеном ниже.'
+            : 'Add it to your client as a remote MCP server; authenticate with a Bearer token below.'}
         </p>
       </div>
 

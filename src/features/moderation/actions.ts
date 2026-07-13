@@ -47,7 +47,7 @@ export async function setModeration(
 export async function aiModerate(templateId: string): Promise<{ flagged: boolean; reason: string } | { error: string }> {
   if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
   const result = await moderateContent(await buildListText(templateId))
-  if (!result) return { error: 'ИИ недоступен (нет ключа/ошибка).' }
+  if (!result) return { error: 'Проверка недоступна (нет ключа/ошибка).' }
   await db
     .update(templates)
     .set({

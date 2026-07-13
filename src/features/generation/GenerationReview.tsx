@@ -89,7 +89,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
   return (
     <div className="mx-auto w-full max-w-[720px] px-6 py-8">
       <div className="mb-1 flex items-center gap-2 text-[18px] font-bold text-ink">
-        <Sparkles size={18} className="text-accent" /> {ru ? 'Черновик от нейросети' : 'AI draft'}
+        <Sparkles size={18} className="text-accent" /> {ru ? 'Черновик от гномов' : 'Gnome draft'}
       </div>
       <p className="mb-5 text-[13.5px] text-ink-2">
         {ru ? 'По запросу' : 'For'} <span className="font-semibold text-ink">“{query}”</span>.{' '}
@@ -100,7 +100,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
 
       {error === 'aifail' && (
         <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-danger">
-          {ru ? 'Не удалось сгенерировать ещё вариант.' : 'Could not generate another variant.'}
+          {ru ? 'Не удалось придумать ещё вариант.' : 'Could not come up with another variant.'}
         </div>
       )}
       {error === 'ratelimited' && (
@@ -117,7 +117,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
       )}
       {error === 'ai_quota' && (
         <div className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[13px] text-warn">
-          {ru ? 'Исчерпан месячный лимит AI-генерации.' : 'Monthly AI generation limit reached.'}
+          {ru ? 'Исчерпан месячный лимит на черновики.' : 'Monthly draft limit reached.'}
         </div>
       )}
       {error === 'list_quota' && (
@@ -164,7 +164,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
       {/* Идёт генерация ещё одного варианта, но текущий уже виден */}
       {waiting && cand && !acceptSpinner && (
         <div className="mb-3 flex items-center gap-2 rounded-md border border-(--accent) bg-(--accent-soft) px-3 py-2 text-[12.5px] text-accent">
-          <Loader2 size={13} className="animate-spin" /> {ru ? 'Генерируем ещё вариант…' : 'Generating another variant…'}
+          <Loader2 size={13} className="animate-spin" /> {ru ? 'Придумываем ещё вариант…' : 'Drafting another variant…'}
         </div>
       )}
 
@@ -181,11 +181,11 @@ export function GenerationReview({ generationId, query, lang, candidates, status
           label={
             candidates.length === 0
               ? ru
-                ? 'Генерируем черновик…'
-                : 'Drafting your list…'
+                ? 'Гномы придумывают черновик…'
+                : 'The gnomes draft your list…'
               : ru
-                ? 'Генерируем ещё вариант…'
-                : 'Generating another variant…'
+                ? 'Придумываем ещё вариант…'
+                : 'Drafting another variant…'
           }
         />
       ) : cand ? (
@@ -243,7 +243,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
           </div>
       ) : genFailed ? (
         <div className="rounded-lg border border-danger/40 bg-danger/5 px-5 py-6 text-[13.5px] text-danger">
-          {ru ? 'Не удалось сгенерировать. Попробуйте ещё раз.' : 'Generation failed. Please try again.'}
+          {ru ? 'Не удалось придумать. Попробуйте ещё раз.' : "Couldn't draft it. Please try again."}
         </div>
       ) : null}
 
@@ -273,7 +273,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
               disabled={!editQ.trim()}
               className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg disabled:opacity-50"
             >
-              <RotateCw size={14} /> {ru ? 'Сгенерировать' : 'Generate'}
+              <RotateCw size={14} /> {ru ? 'Придумать' : 'Dream up'}
             </button>
             <button
               type="button"

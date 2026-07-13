@@ -385,7 +385,7 @@ export default async function AdminPage() {
             href="/admin/usage"
             className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
-            <BarChart3 size={14} /> {ru ? 'Расход ИИ' : 'AI usage'}
+            <BarChart3 size={14} /> {ru ? 'Расход на черновики' : 'Draft usage'}
           </Link>
           <Link
             href="/admin/feedback"

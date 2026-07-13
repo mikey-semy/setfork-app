@@ -6,7 +6,7 @@ import { hasOpenRouterKey } from '@/shared/settings/ai'
 import { t } from '@/shared/i18n'
 import { GenerateForm } from '@/features/generation/GenerateForm'
 
-export const metadata = { title: 'Generate' }
+export const metadata = { title: 'Draft a list' }
 
 export default async function GeneratePage({ searchParams }: { searchParams: Promise<{ e?: string; q?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
@@ -21,13 +21,13 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
       </div>
       <p className="mb-6 text-[13.5px] text-ink-2">
         {ru
-          ? 'Опиши, что нужно сделать — нейросеть напишет черновик списка. Дальше его проверяет и улучшает сообщество.'
-          : 'Describe what you need — AI drafts a list. The community then verifies and improves it.'}
+          ? 'Опиши, что нужно сделать — гномы напишут черновик списка. Дальше его проверяет и улучшает сообщество.'
+          : 'Describe what you need — the gnomes draft a list. The community then verifies and improves it.'}
       </p>
 
       {!aiOn && (
         <div className="mb-4 rounded-md border border-border bg-surface px-3 py-2.5 text-[13px] text-warn">
-          {ru ? 'Генерация не настроена (нет ключа).' : 'Generation is not configured (no key).'}
+          {ru ? 'Черновики не настроены (нет ключа).' : 'Drafting is not configured (no key).'}
         </div>
       )}
       {sp.e === 'aifail' && (
@@ -42,7 +42,7 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
       )}
       {sp.e === 'ai_quota' && (
         <div className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2.5 text-[13px] text-warn">
-          {ru ? 'Исчерпан месячный лимит AI-генерации. Попробуй в следующем месяце.' : 'Monthly AI generation limit reached. Try again next month.'}
+          {ru ? 'Исчерпан месячный лимит на черновики. Попробуй в следующем месяце.' : 'Monthly draft limit reached. Try again next month.'}
         </div>
       )}
 

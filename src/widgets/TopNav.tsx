@@ -24,7 +24,7 @@ import type { SessionUser } from '@/shared/auth/session'
 
 // Роуты, чей первый сегмент — НЕ handle пользователя (для бредкрамба в шапке).
 const RESERVED_TOP = new Set([
-  'explore', 'search', 'settings', 'new', 'login', 'register', 'admin', 'runs',
+  'explore', 'search', 'settings', 'new', 'generate', 'login', 'register', 'admin', 'runs',
   'notifications', 'api', 'about', 'terms', 'privacy', 'my-lists', 'catalogs',
   'verify-email', 'forgot-password', 'reset-password', 'changelog',
 ])
