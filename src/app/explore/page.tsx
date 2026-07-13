@@ -52,14 +52,14 @@ export default async function ExplorePage({
   const trendRange: TrendRange = RANGES.includes(range as TrendRange) ? (range as TrendRange) : 'week'
 
   // Данные только активной вкладки.
-  const feed = active === 'explore' ? await getFeed({ sort: 'trending' }, uid) : []
+  const feed = active === 'explore' ? await getFeed({ sort: 'trending' }, uid, lang) : []
   const feedTop = feed.slice(0, 12)
   // Каталоги идут в ОСНОВНОЙ ленте Explore рядом со списками (не своя вкладка).
   const exploreCatalogs = active === 'explore' ? await getPublicCatalogs(6) : []
   const feedStarred = active === 'explore' && uid ? await getStarredIds(uid, feedTop.map((i) => i.id)) : new Set<string>()
   const sidePeople = active === 'explore' ? await searchPeople({ sort: 'followers', limit: 5 }) : []
   const tags = active === 'topics' ? await getPopularTags(60) : []
-  const trendLists = active === 'trending' && trendView === 'lists' ? await getTrendingFeed(trendRange, uid) : []
+  const trendLists = active === 'trending' && trendView === 'lists' ? await getTrendingFeed(trendRange, uid, lang) : []
   const trendPeople = active === 'trending' && trendView === 'people' ? await searchPeople({ sort: 'followers', limit: 30 }) : []
   const collectionCards = active === 'collections' ? await getCollections() : []
 
