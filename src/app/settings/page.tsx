@@ -202,7 +202,7 @@ export default async function SettingsPage() {
               <span className="font-mono text-ink">{lists.unlimited ? '∞' : `${lists.used} / ${lists.limit}`}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-ink-2">{lang === 'ru' ? 'AI за этот месяц' : 'AI this month'}</span>
+              <span className="text-ink-2">{lang === 'ru' ? 'Черновики за этот месяц' : 'Drafts this month'}</span>
               <span className="font-mono text-ink">
                 {aiMonth.unlimited ? '∞' : `$${aiMonth.used.toFixed(2)} / $${aiMonth.limit.toFixed(2)}`}
               </span>

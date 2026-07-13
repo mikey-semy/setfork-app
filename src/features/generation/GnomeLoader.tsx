@@ -8,8 +8,8 @@ import type { Lang } from '@/shared/i18n'
 // Шаг 2 крутит шуточные фразы, адаптирован к запросу пользователя.
 // en обязателен (фолбэк для любого языка), остальные — по мере добавления.
 const STEP2: { en: string[] } & Partial<Record<Lang, string[]>> = {
-  en: ['?', 'AI magic happens here', 'the neural net ponders', 'searching the web…', 'assembling the steps', 'checking the sources', '???'],
-  ru: ['?', 'здесь магия нейросети', 'ИИ усиленно думает', 'ищем в интернете…', 'собираем шаги', 'сверяемся с источниками', '???'],
+  en: ['?', 'the gnomes confer', 'a gnome ponders hard', 'searching the web…', 'assembling the steps', 'checking the sources', '???'],
+  ru: ['?', 'гномы совещаются', 'гном усиленно думает', 'ищем в интернете…', 'собираем шаги', 'сверяемся с источниками', '???'],
 }
 
 // Фразы меняем НЕ спеша (болтанка раз в ~0.9с раздражала): спокойный переход раз в 8с.
@@ -30,7 +30,7 @@ export function GnomeLoader({ query, lang, label }: { query: string; lang: Lang;
     <div className="rounded-lg border border-(--accent) bg-(--accent-soft) px-5 py-6">
       <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-accent">
         <Sparkles size={15} className="animate-pulse" />
-        {label ?? (lang === 'ru' ? 'Генерируем…' : 'Generating…')}
+        {label ?? (lang === 'ru' ? 'Гномы за работой…' : 'The gnomes are at work…')}
       </div>
       <ol className="space-y-2 font-mono text-[13.5px] text-ink">
         <li className="flex gap-2">

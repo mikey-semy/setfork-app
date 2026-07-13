@@ -31,12 +31,12 @@ export function AiKeyAndSwitch({
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[14px] font-medium text-ink">{ru ? 'Генерация включена' : 'Generation enabled'}</div>
+          <div className="text-[14px] font-medium text-ink">{ru ? 'Черновики включены' : 'Drafting enabled'}</div>
           <p className="text-[12px] text-muted">
             {canEnable
               ? ru
-                ? 'Списки можно генерировать через ИИ.'
-                : 'Lists can be generated via AI.'
+                ? 'Гномы могут придумывать списки.'
+                : 'Gnomes can draft lists.'
               : ru
                 ? 'Сначала укажите API-ключ ниже.'
                 : 'Enter an API key below first.'}

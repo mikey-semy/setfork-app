@@ -36,7 +36,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="mb-1 text-[18px] font-bold text-ink">{ru ? 'Расход ИИ' : 'AI usage'}</h1>
+          <h1 className="mb-1 text-[18px] font-bold text-ink">{ru ? 'Расход на черновики' : 'Draft usage'}</h1>
           <p className="text-[13px] text-ink-2">
             {ru
               ? 'Кто и на сколько сгенерировал — токены и деньги (фактическая стоимость OpenRouter).'

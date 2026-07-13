@@ -191,7 +191,7 @@ export function ListEditor({
         res.error === 'ratelimited'
           ? ru ? 'Слишком часто — подожди.' : 'Too many requests — wait a bit.'
           : res.error === 'ai_quota'
-            ? ru ? 'Исчерпан месячный лимит AI.' : 'Monthly AI limit reached.'
+            ? ru ? 'Исчерпан месячный лимит на правки.' : 'Monthly refine limit reached.'
             : ru ? 'Не удалось. Переформулируй.' : 'Failed. Try rephrasing.',
       )
       return
@@ -316,7 +316,7 @@ export function ListEditor({
       {aiRefine && (
         <div className="rounded-lg border border-(--accent) bg-(--accent-soft) p-3">
           <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-accent">
-            <Sparkles size={14} /> {ru ? 'Улучшить с ИИ' : 'Improve with AI'}
+            <Sparkles size={14} /> {ru ? 'Улучшить с гномами' : 'Improve with gnomes'}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -344,8 +344,8 @@ export function ListEditor({
           </div>
           <p className="mt-1.5 text-[11.5px] text-ink-2">
             {ru
-              ? 'ИИ перепишет пункты. Скриншоты и ссылки при этом сбрасываются.'
-              : 'AI rewrites the items. Screenshots and links are reset.'}
+              ? 'Гномы перепишут пункты. Скриншоты и ссылки при этом сбрасываются.'
+              : 'The gnomes rewrite the items. Screenshots and links are reset.'}
           </p>
           {refineErr && <p className="mt-1 text-[12px] text-danger">{refineErr}</p>}
         </div>

@@ -26,7 +26,7 @@ export function GenerateForm({ lang, aiOn, defaultQuery }: { lang: Lang; aiOn: b
   }
 
   if (pending) {
-    return <GnomeLoader query={q.trim()} lang={lang} label={ru ? 'Генерируем черновик…' : 'Drafting your list…'} />
+    return <GnomeLoader query={q.trim()} lang={lang} label={ru ? 'Гномы придумывают черновик…' : 'The gnomes draft your list…'} />
   }
 
   return (
