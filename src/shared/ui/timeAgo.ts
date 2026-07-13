@@ -15,7 +15,7 @@ export function timeAgo(date: Date | string, lang: Lang): string {
   const secs = Math.round((then - Date.now()) / 1000) // отрицательное = в прошлом
   const abs = Math.abs(secs)
   if (abs < 45) return lang === 'ru' ? 'только что' : 'just now'
-  const rtf = new Intl.RelativeTimeFormat(lang === 'ru' ? 'ru' : 'en', { numeric: 'auto' })
+  const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' })
   for (const [unit, s] of UNITS) {
     if (abs >= s) return rtf.format(Math.round(secs / s), unit)
   }

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import type { Lang } from '@/shared/i18n'
 
 /** Пагинация в стиле GitHub: «‹ Назад · N/M · Вперёд ›». Серверный компонент —
  *  `makeHref(page)` строит ссылку с сохранением текущих query-параметров. */
@@ -12,7 +13,7 @@ export function Pagination({
   page: number
   totalPages: number
   makeHref: (page: number) => string
-  lang: 'ru' | 'en'
+  lang: Lang
 }) {
   if (totalPages <= 1) return null
   const ru = lang === 'ru'

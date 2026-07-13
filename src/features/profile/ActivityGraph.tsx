@@ -65,7 +65,7 @@ export function ActivityGraph({
     }
     weeks.push(week)
   }
-  const fmtMonth = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { month: 'short' })
+  const fmtMonth = new Intl.DateTimeFormat(lang, { month: 'short' })
   let lastLabel = -3
   const months = weeks.map((w, i) => {
     // Метку месяца ставим над колонкой, в которую попало 1-е число месяца — тогда

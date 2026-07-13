@@ -7,7 +7,7 @@ import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { sanitizeCommand } from './sanitize-command'
 import { spotlight } from './spotlight'
-import type { Lang } from '@/shared/i18n'
+import { langEnName, type Lang } from '@/shared/i18n'
 
 // Потолок размера входного промта (символы). Спасает от раздувания input-токенов
 // на огромных списках; middle-out у провайдера — вторая линия обороны.
@@ -154,7 +154,7 @@ async function runListModel(
 
 /** Черновик эталонного списка по запросу. null при ошибке/выкл. */
 export async function generateListDraft(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<GeneratedList | null> {
-  const langName = lang === 'ru' ? 'Russian' : 'English'
+  const langName = langEnName(lang)
   const web = opts.web ?? true
   const variantHint =
     opts.variant && opts.variant > 1
@@ -191,7 +191,7 @@ export async function generateChangeNote(
     appUrl: process.env.APP_URL || 'http://localhost:3000',
   })
   const model = await pickChatModel(settings)
-  const langName = lang === 'ru' ? 'Russian' : 'English'
+  const langName = langEnName(lang)
   const compact = (xs: NoteItem[]) =>
     xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n').slice(0, MAX_PROMPT_CHARS)
   const sp = spotlight()
@@ -222,7 +222,7 @@ export async function generateListRefine(
   lang: Lang,
   opts: GenerateOptions = {},
 ): Promise<GeneratedList | null> {
-  const langName = lang === 'ru' ? 'Russian' : 'English'
+  const langName = langEnName(lang)
   const web = opts.web ?? false
   const sp = spotlight()
   const system = `You REFINE an existing checklist per the user's instruction, returning the FULL updated list as STRICT JSON.

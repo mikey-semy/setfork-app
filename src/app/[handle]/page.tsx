@@ -228,7 +228,7 @@ export default async function ProfilePage({
 
           <div className="mt-3 font-mono text-[12px] text-muted">
             {t('joined', lang)}{' '}
-            {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { year: 'numeric', month: 'short' }).format(
+            {new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'short' }).format(
               new Date(user.createdAt),
             )}
           </div>
@@ -334,7 +334,7 @@ export default async function ProfilePage({
                         </Link>
                         <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[11px] text-muted">
                           <span className="inline-flex items-center gap-1 text-ok">
-                            <GraduationCap size={11} /> {new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(c.completedAt))}
+                            <GraduationCap size={11} /> {new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(c.completedAt))}
                           </span>
                           {isOwner && (
                             <Link href={`/${c.ownerHandle}/${c.slug}/certificate`} className="inline-flex items-center gap-1 text-accent hover:underline">

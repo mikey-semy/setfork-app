@@ -4,7 +4,7 @@ import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Monitor, Moon, Sun } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { LOCALES, type Lang } from '@/shared/i18n'
 
 export function LangSwitch({ lang }: { lang: Lang }) {
   const router = useRouter()
@@ -15,7 +15,7 @@ export function LangSwitch({ lang }: { lang: Lang }) {
   }
   return (
     <span className="inline-flex gap-0.5 rounded-full border border-border bg-surface-2 p-0.5">
-      {(['en', 'ru'] as Lang[]).map((l) => (
+      {LOCALES.map((l) => (
         <button
           key={l}
           onClick={() => set(l)}

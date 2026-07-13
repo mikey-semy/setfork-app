@@ -6,7 +6,8 @@ import type { Lang } from '@/shared/i18n'
 
 // Пасхалка South Park (Underpants Gnomes): «Collect underpants → ? → Profit!».
 // Шаг 2 крутит шуточные фразы, адаптирован к запросу пользователя.
-const STEP2: Record<Lang, string[]> = {
+// en обязателен (фолбэк для любого языка), остальные — по мере добавления.
+const STEP2: { en: string[] } & Partial<Record<Lang, string[]>> = {
   en: ['?', 'AI magic happens here', 'the neural net ponders', 'searching the web…', 'assembling the steps', 'checking the sources', '???'],
   ru: ['?', 'здесь магия нейросети', 'ИИ усиленно думает', 'ищем в интернете…', 'собираем шаги', 'сверяемся с источниками', '???'],
 }

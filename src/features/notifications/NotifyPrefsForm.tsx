@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { t, type Lang } from '@/shared/i18n'
+import { DEFAULT_LANG, isLang, LANG_META, LOCALES, t, type Lang } from '@/shared/i18n'
 import type { NotifyPrefs } from '@/shared/db/schema'
 import { updateNotifyPrefs } from './actions'
 import { subscribeToPush, unsubscribeFromPush } from './push-client'
@@ -25,16 +25,16 @@ export function NotifyPrefsForm({
   prefs,
   lang,
   hasEmail,
-  notifyLang = 'en',
+  notifyLang = DEFAULT_LANG,
 }: {
   prefs: NotifyPrefs
   lang: Lang
   hasEmail: boolean
-  notifyLang?: 'en' | 'ru'
+  notifyLang?: Lang
 }) {
   // Отсутствие ключа = включено (события); доставка (email/browser) — по умолчанию выключена.
   const isOn = (k: keyof NotifyPrefs) => prefs[k] !== false
-  const [nl, setNl] = useState<'en' | 'ru'>(notifyLang)
+  const [nl, setNl] = useState<Lang>(notifyLang)
 
   return (
     <form action={updateNotifyPrefs} className="flex flex-col gap-4">
@@ -78,13 +78,16 @@ export function NotifyPrefsForm({
             <p className="text-[12px] text-muted">{t('prefLangHint', lang)}</p>
           </div>
           <input type="hidden" name="notifyLang" value={nl} />
-          <Select value={nl} onValueChange={(v) => setNl(v === 'ru' ? 'ru' : 'en')}>
+          <Select value={nl} onValueChange={(v) => setNl(isLang(v) ? v : DEFAULT_LANG)}>
             <SelectTrigger className="w-[150px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="ru">Русский</SelectItem>
+              {LOCALES.map((l) => (
+                <SelectItem key={l} value={l}>
+                  {LANG_META[l].endonym}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

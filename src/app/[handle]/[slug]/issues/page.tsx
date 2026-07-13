@@ -50,7 +50,7 @@ export default async function IssuesPage({
   const assigneesByIssue = await getIssueAssigneesFor(list.map((i) => i.id))
   const canManage = !!session && (session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId)))
   const base = `/${owner}/${slug}/issues`
-  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short' })
+  const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' })
 
   // href с текущими параметрами + перекрытием (undefined убирает параметр).
   const hrefWith = (over: Record<string, string | undefined>) => {

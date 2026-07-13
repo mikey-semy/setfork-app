@@ -26,7 +26,7 @@ export function CommentCard({
   reactions?: ReactNode
   lang: Lang
 }) {
-  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' })
+  const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px] text-ink-2">

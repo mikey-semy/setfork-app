@@ -2,6 +2,7 @@ import 'server-only'
 import { eq, inArray } from 'drizzle-orm'
 import { db, notifications, users } from '@/shared/db'
 import type { NotifyPrefs } from '@/shared/db/schema'
+import { DEFAULT_LANG } from '@/shared/i18n'
 import { emailEnabled } from '@/shared/settings/email'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { pushEnabled } from '@/shared/push/vapid'
@@ -64,7 +65,7 @@ export async function notify(params: {
       suggestionId: params.suggestionId ?? null,
     })
     const refPayload = {
-      lang: (u?.lang === 'ru' ? 'ru' : 'en') as 'en' | 'ru', // язык ДОСТАВКИ = язык получателя (users.lang)
+      lang: u?.lang ?? DEFAULT_LANG, // язык ДОСТАВКИ = язык получателя (users.lang, тип Lang)
       actorId: params.actorId ?? null,
       type: params.type,
       templateId: params.templateId ?? null,

@@ -22,7 +22,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
   if (!meta) notFound()
   const canManage = session ? session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId)) : false
   const list = await getMilestones(meta.id)
-  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { day: 'numeric', month: 'short', year: 'numeric' })
+  const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
     <>
