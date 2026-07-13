@@ -8,7 +8,7 @@ import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
 import { MobileSearch } from './MobileSearch'
 import type { NotificationItem } from '@/features/notifications/queries'
-import { ThemeModeSwitch, ThemeToggle } from '@/shared/ui/controls'
+import { LangSwitch, ThemeModeSwitch, ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
 import { ListsPanel } from './ListsPanel'
 import {
@@ -299,6 +299,10 @@ export function TopNav({
                   <span className="text-[13px] text-ink-2">{t('theme', lang)}</span>
                   <ThemeModeSwitch />
                 </div>
+                <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
+                  <span className="text-[13px] text-ink-2">{t('language', lang)}</span>
+                  <LangSwitch lang={lang} />
+                </div>
                 <DropdownMenuSeparator />
                 {/* Логаут через fetch, а НЕ форму: Radix закрывает меню и размонтирует
                     форму раньше, чем уходит submit — из-за этого выйти не получалось. */}
@@ -317,6 +321,7 @@ export function TopNav({
           </>
         ) : (
           <>
+            <LangSwitch lang={lang} />
             <ThemeToggle />
             <Link href="/login" className="text-[13px] font-semibold text-ink">
               {t('signIn', lang)}
