@@ -33,6 +33,7 @@ import { requireViewableDetail, requireViewableMeta } from '@/features/library/g
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ListHeader } from '@/widgets/ListHeader'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
+import { TranslateButton } from '@/features/library/TranslateButton'
 import { ReportButton } from '@/features/reports/ReportButton'
 import { publishList } from '@/features/library/actions'
 
@@ -290,6 +291,11 @@ export default async function ListPage({
                     </form>
                   )}
                   <CloneDropdown base={base} lang={lang} />
+                  {/* «Перевести» — владельцу/коллаборатору, когда у списка нет
+                      заголовка на языке зрителя (перевод добавит язык, ADR-0009). */}
+                  {canManageBranches && !snapshot && !tpl.title[lang] && (
+                    <TranslateButton templateId={tpl.id} targetLang={lang} lang={lang} />
+                  )}
                   <Link
                     href={isOwner ? `${base}/edit` : `${base}/suggest`}
                     title={isOwner ? t('edit', lang) : t('suggestEdit', lang)}

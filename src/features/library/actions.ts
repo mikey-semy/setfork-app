@@ -8,9 +8,9 @@ import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
 import { getLang } from '@/shared/i18n/server'
-import { tr, type LocaleText } from '@/shared/i18n'
+import { isLang, langEnName, tr, type LocaleText } from '@/shared/i18n'
 import { imageUrl, uploadAttachmentFile, uploadImageFile, uploadVideoFile } from '@/shared/media'
-import { generateChangeNote, generateListRefine } from '@/shared/ai/generate'
+import { generateChangeNote, generateListRefine, generateListTranslation } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { rateLimit } from '@/shared/rate-limit'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
@@ -548,6 +548,86 @@ export async function refineList(input: {
     refs: (it.refs ?? []).map((r) => ({ label: r.label, url: r.url })),
   }))
   return { items }
+}
+
+// ── AI-перевод списка: добавить язык, не трогая оригинал (ADR-0009) ───
+export async function translateList(templateId: string, targetLang: string): Promise<{ ok: true } | { error: string }> {
+  const session = await requireSession()
+  if (!isLang(targetLang)) return { error: 'badlang' }
+  const tpl = await db.query.templates.findFirst({
+    where: (t) => eq(t.id, templateId),
+    with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
+  })
+  if (!tpl) return { error: 'notfound' }
+  // Перевод = правка контента: владелец или коллаборатор (как saveNewVersion).
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return { error: 'forbidden' }
+
+  const { allowed } = await checkRateLimit(`translate:${session.userId}`)
+  if (!allowed) return { error: 'ratelimited' }
+  if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
+
+  const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
+  if (!cur) return { error: 'notfound' }
+  const rows = await db.query.steps.findMany({ where: (s) => eq(s.versionId, cur.id), orderBy: (s, { asc }) => asc(s.n) })
+
+  // Исходный текст поля: значение на любом уже имеющемся языке (en → первый).
+  const pick = (lt: LocaleText | null | undefined): string => (lt ? (lt.en ?? Object.values(lt).find(Boolean) ?? '') : '')
+  const current = {
+    title: pick(tpl.title),
+    desc: pick(tpl.desc),
+    items: rows.map((s) => ({
+      title: pick(s.title),
+      desc: pick(s.desc),
+      command: s.command,
+      level: s.level,
+      why: pick(s.why),
+      subtasks: (s.subtasks as LocaleText[]).map(pick),
+      refs: (s.refs as { label: LocaleText; url?: string }[]).map((r) => ({ label: pick(r.label), url: r.url ?? '' })),
+    })),
+  }
+
+  const translated = await generateListTranslation(current, targetLang, { userId: session.userId, feature: 'translate' })
+  if (!translated) return { error: 'aifail' }
+  // Модель обязана сохранить порядок и число шагов — иначе мёрж по индексу уедет.
+  if (translated.items.length !== rows.length) return { error: 'mismatch' }
+
+  // Добавить ключ targetLang к LocaleText, СОХРАНИВ существующие языки.
+  const add = (lt: LocaleText | null | undefined, val: string): LocaleText => {
+    const base = (lt ?? {}) as LocaleText
+    return val.trim() ? { ...base, [targetLang]: val.trim() } : base
+  }
+  const proposed: ProposedItem[] = rows.map((s, i) => {
+    const t = translated.items[i]
+    const subs = s.subtasks as LocaleText[]
+    const refs = s.refs as { label: LocaleText; url?: string }[]
+    return {
+      type: s.type,
+      content: s.content, // poll/quiz/product-контент в v1 не переводим (оставляем как есть)
+      title: add(s.title, t.title),
+      desc: add(s.desc, t.desc),
+      command: s.command,
+      hasImage: s.hasImage,
+      imageKey: s.imageKey ?? undefined,
+      level: s.level,
+      why: add(s.why, t.why),
+      section: s.section as LocaleText, // секция — заголовок урока; переведём в v2
+      subtasks: subs.map((st, k) => add(st, t.subtasks[k] ?? '')),
+      refs: refs.map((r, k) => ({ label: add(r.label, t.refs[k]?.label ?? ''), ...(r.url ? { url: r.url } : {}) })),
+    }
+  })
+
+  const note = `translate → ${langEnName(targetLang)}`
+  await listStore.addVersion(tpl.id, { note, steps: toStepInput(proposed) })
+  // Также перевести title/desc самого списка (в templates, не в шагах).
+  await db
+    .update(templates)
+    .set({ title: add(tpl.title, translated.title), desc: add(tpl.desc, translated.desc), updatedAt: new Date() })
+    .where(eq(templates.id, tpl.id))
+  await notifyWatchersNewVersion(tpl.id, session.userId)
+
+  const owner = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
+  if (owner[0]) revalidatePath(`/${owner[0].handle}/${tpl.slug}`)
+  return { ok: true }
 }
 
 // ── AI: примечание к версии из диффа (What changed & why) ────────────
