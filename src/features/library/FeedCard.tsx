@@ -17,6 +17,9 @@ function fmt(n: number): string {
 export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang: Lang; starred?: boolean }) {
   const star = toggleStar.bind(null, item.id)
   const a = cardAccent(item.accent, item.id)
+  // Язык контента ≠ языку интерфейса → бейдж кода языка (ADR-0009: единый пул,
+  // иностранные списки в ленте — норма, а не ошибка). Есть перевод — бейдж не нужен.
+  const foreignLang = item.title[lang] ? null : Object.keys(item.title).find((k) => item.title[k])
   return (
     <div className="relative flex items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface py-3 pr-3.5 pl-4 transition-colors hover:border-border-strong">
       {/* accent-полоса слева — идентичность списка (без синтетического баннера в ленте) */}
@@ -42,6 +45,11 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
           <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">
             v{item.version}
           </span>
+          {foreignLang && (
+            <span className="rounded border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted" title={foreignLang}>
+              {foreignLang}
+            </span>
+          )}
           {item.status === 'draft' && (
             <span className="rounded border border-warn px-1.5 py-0.5 text-[10.5px] font-medium text-warn">
               {t('draftBadge', lang)}

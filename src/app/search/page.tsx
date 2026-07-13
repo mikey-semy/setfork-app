@@ -81,7 +81,7 @@ export default async function SearchPage({
     Promise.all([countLists(listOpts, session?.userId), countPeople(text), countIssues(text, 'all')]).then(
       ([lists, ppl, iss]) => ({ lists, people: ppl, issues: iss }),
     ),
-    scope === 'lists' ? getFeed({ ...listOpts, sort }, session?.userId) : Promise.resolve([]),
+    scope === 'lists' ? getFeed({ ...listOpts, sort }, session?.userId, lang) : Promise.resolve([]),
     scope === 'people' ? searchPeople({ q: text, sort: peopleSort }) : Promise.resolve([]),
     scope === 'issues' ? searchIssues({ q: text, state: issueState }) : Promise.resolve([]),
   ])

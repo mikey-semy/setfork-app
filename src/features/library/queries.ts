@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { db, embeddings, stars, steps, suggestionComments, suggestions, templates, templateVersions, users } from '@/shared/db'
-import type { LocaleText } from '@/shared/i18n'
+import type { Lang, LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
@@ -151,8 +151,13 @@ function extraFilters(opts: {
   return f
 }
 
+/** Предпочтение языка зрителя в выдаче (ADR-0009: один пул, язык — свойство
+ *  списка): списки, у которых есть title на языке зрителя, идут раньше —
+ *  внутри групп действует основной order. Ключ jsonb `?` = наличие перевода. */
+const langPref = (lang: Lang): SQL => desc(sql`(${templates.title} ? ${lang})::int`)
+
 /** Поиск/лента по ключевым словам (ILIKE по всем языкам сразу). q пустой = просто лента. */
-async function keywordFeed(order: SQL, viewerId?: string, tag?: string, q?: string, extra: SQL[] = []): Promise<FeedItem[]> {
+async function keywordFeed(order: SQL, viewerId?: string, tag?: string, q?: string, extra: SQL[] = [], viewerLang?: Lang): Promise<FeedItem[]> {
   const filters: SQL[] = [visibleFilter(viewerId), ...extra]
   if (tag) filters.push(tagFilter(tag))
   if (q) filters.push(searchCondition(q))
@@ -161,7 +166,7 @@ async function keywordFeed(order: SQL, viewerId?: string, tag?: string, q?: stri
     .from(templates)
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(and(...filters))
-    .orderBy(order)
+    .orderBy(...(viewerLang ? [langPref(viewerLang)] : []), order)
   return rows as FeedItem[]
 }
 
@@ -219,6 +224,7 @@ export async function getFeed(
     minStars?: number
   } = {},
   viewerId?: string,
+  viewerLang?: Lang,
 ): Promise<FeedItem[]> {
   const order =
     opts.sort === 'newest'
@@ -229,23 +235,23 @@ export async function getFeed(
 
   const extra = extraFilters(opts)
   const q = opts.q?.trim()
-  if (!q) return withAvatar(await keywordFeed(order, viewerId, opts.tag, undefined, extra))
+  if (!q) return withAvatar(await keywordFeed(order, viewerId, opts.tag, undefined, extra, viewerLang))
 
   const { mode, minScore, limit } = await getSearchSettings()
   // Семантика тратит embedding-вызов OpenRouter. Разрешаем её только залогиненным и
   // под rate-limit: иначе аноним в цикле GET /search?q=... жёг бы деньги без учёта.
   // Гость и превышенный лимит → keyword-поиск (0 токенов), тот же результат-фолбэк.
   const canSemantic = mode !== 'keyword' && !!viewerId && (await checkRateLimit(`search:${viewerId}`)).allowed
-  if (!canSemantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra))
+  if (!canSemantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra, viewerLang))
 
   const semantic = await semanticFeed(q, opts.tag, limit, minScore, viewerId, extra)
   // Нет вектора (нет ключа/эмбеддингов) → откат на ключевые слова.
-  if (!semantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra))
+  if (!semantic) return withAvatar(await keywordFeed(order, viewerId, opts.tag, q, extra, viewerLang))
   if (mode === 'semantic') return withAvatar(semantic)
 
   // hybrid: сначала ТОЧНЫЕ совпадения по словам (буквальное «ubuntu» точнее),
   // затем добираем по смыслу — чтобы семантически-похожее не всплывало над точным.
-  const keyword = await keywordFeed(order, viewerId, opts.tag, q, extra)
+  const keyword = await keywordFeed(order, viewerId, opts.tag, q, extra, viewerLang)
   const seen = new Set(keyword.map((r) => r.id))
   return withAvatar([...keyword, ...semantic.filter((r) => !seen.has(r.id))])
 }
@@ -254,12 +260,12 @@ export type TrendRange = 'day' | 'week' | 'month' | 'all'
 
 /** Тренд за период: списки с наибольшим приростом звёзд за range (day/week/month),
  *  при равенстве — по суммарным звёздам+форкам. 'all' — просто trending. */
-export async function getTrendingFeed(range: TrendRange, viewerId?: string): Promise<FeedItem[]> {
-  if (range === 'all') return getFeed({ sort: 'trending' }, viewerId)
+export async function getTrendingFeed(range: TrendRange, viewerId?: string, viewerLang?: Lang): Promise<FeedItem[]> {
+  if (range === 'all') return getFeed({ sort: 'trending' }, viewerId, viewerLang)
   const days = range === 'day' ? 1 : range === 'week' ? 7 : 30
   const gained = sql`(select count(*)::int from ${stars} s where s.template_id = ${templates.id} and s.created_at >= now() - make_interval(days => ${days}))`
   const order = desc(sql`${gained} * 1000 + ${templates.starsCount} + ${templates.forksCount}`)
-  return withAvatar(await keywordFeed(order, viewerId, undefined, undefined, []))
+  return withAvatar(await keywordFeed(order, viewerId, undefined, undefined, [], viewerLang))
 }
 
 /** Счётчик списков под текущий запрос (для бейджа scope-переключателя). По ключевым
