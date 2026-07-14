@@ -215,6 +215,29 @@ ${sp.rule()}`,
   }
 }
 
+/** Перевод существующего списка на целевой язык (кнопка «Перевести», ADR-0009).
+ *  Возвращает ТУ ЖЕ структуру (порядок/число шагов) на targetLang — вызывающий
+ *  мёржит переводы в LocaleText, добавляя ключ (оригинал не трогается). URL
+ *  ссылок НЕ переводим (label переводим, url оставляем). */
+export async function generateListTranslation(
+  current: { title: string; desc: string; items: GeneratedItem[] },
+  targetLang: Lang,
+  opts: GenerateOptions = {},
+): Promise<GeneratedList | null> {
+  const langName = langEnName(targetLang)
+  const sp = spotlight()
+  const system = `You TRANSLATE a checklist into ${langName}, returning the FULL list as STRICT JSON in EXACTLY the same shape and item order.
+Translate every text field into ${langName}. Keep technical terms and commands (git, docker, npm, tool names) as commonly used by ${langName}-speaking developers.
+Do NOT translate URLs (ref.url) — copy them verbatim; translate only ref.label.
+Do NOT add, drop, reorder, merge or split items — one-to-one translation only.
+${JSON_SHAPE}
+${sp.rule()}`
+  const prompt = `${sp.wrap('LIST TO TRANSLATE (JSON)', JSON.stringify(current).slice(0, MAX_PROMPT_CHARS))}
+
+Translate the list above into ${langName} and return the full JSON list in the same shape and order.`
+  return runListModel(system, prompt, current.title, 'translate', { ...opts, web: false })
+}
+
 /** Правка существующего списка по инструкции пользователя (AI-refine). */
 export async function generateListRefine(
   current: { title: string; desc: string; tags: string[]; items: GeneratedItem[] },

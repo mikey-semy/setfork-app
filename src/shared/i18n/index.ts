@@ -502,6 +502,10 @@ const DICT = {
     ru: 'Пусто — ссылки «Поддержать» в футере нет. Подойдёт Paddle-checkout или любая внешняя страница.',
   },
   footerSupport: { en: '♥ Support', ru: '♥ Поддержать' },
+  // ── Перевод списка (кнопка «Перевести», ADR-0009) ──
+  translateInto: { en: 'Translate to {lang}', ru: 'Перевести на {lang}' },
+  translating: { en: 'Translating…', ru: 'Перевод…' },
+  translateFailed: { en: 'Translation failed — try again.', ru: 'Не удалось перевести — попробуйте ещё раз.' },
   // ── Product-блок («Shop this list») ──
   productBlockTitle: { en: 'Shop this list', ru: 'Купить по списку' },
   productTierBudget: { en: 'Budget', ru: 'Дешевле' },
