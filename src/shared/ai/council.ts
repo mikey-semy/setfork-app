@@ -131,9 +131,17 @@ ${roster}`,
   // 2.5) Старейшина-искатель: прецеденты из НАШИХ списков (pgvector). Пусто на пустом корпусе — ок.
   const precedents = await findPrecedents(query, lang, { userId: opts.userId })
   if (precedents.length) emit('seek', say(`🔮 Elder found ${precedents.length} precedent(s) in our lists`, `🔮 Старейшина нашёл ${precedents.length} прецедент(ов) в наших списках`))
-  const lore = precedents.length
+  let lore = precedents.length
     ? `\n\nPRECEDENTS from our library (similar existing lists — reuse good structure, avoid duplicating, improve on them):\n${precedents.map((p, i) => `${i + 1}. ${p.title}${p.desc ? ' — ' + p.desc : ''}${p.tags.length ? ' [' + p.tags.join(', ') + ']' : ''}`).join('\n')}`
     : ''
+
+  // Веб-искатель (старейшина advanced-тира): интернет-прецеденты сверх наших списков (за флагом council_web_seek).
+  if (settings.councilWebSeek) {
+    emit('seek', say('🔮 Elder searches the web for precedents…', '🔮 Старейшина ищет прецеденты в интернете…'))
+    const webSys = `You are the elder loremaster with web access. Find 3-5 concise, REAL precedents/analogies for building a checklist on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
+    const webRes = await run(online(base, true), webSys, `Topic:\n${topic}`, 500)
+    if (webRes && webRes.text.trim()) lore += `\n\nWEB PRECEDENTS (from the elder's web search — verify, don't copy blindly):\n${webRes.text.trim()}`
+  }
 
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
   const draftJobs = experts.map((e, i) => {

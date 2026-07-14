@@ -22,6 +22,8 @@ export interface AiSettings {
   councilMaxGnomes: number
   /** Аудитория совета (гейт цены/раскатки): 'admin' — только админам (безопасно на проде), 'all' — всем. */
   councilAudience: 'admin' | 'all'
+  /** Старейшина advanced-тира: искать прецеденты ещё и в интернете (:online). Дороже/медленнее. OFF по умолчанию. */
+  councilWebSeek: boolean
 }
 
 const KEYS = [
@@ -36,6 +38,7 @@ const KEYS = [
   'ai.council_models',
   'ai.council_max_gnomes',
   'ai.council_audience',
+  'ai.council_web_seek',
 ] as const
 
 export function defaultChatModel(): string {
@@ -88,6 +91,7 @@ export async function getAiSettings(): Promise<AiSettings> {
     councilModels: m['ai.council_models'] != null ? csv(m['ai.council_models']) : csv(process.env.SETFORK_COUNCIL_MODELS),
     councilMaxGnomes: num(m['ai.council_max_gnomes'], Number(process.env.SETFORK_COUNCIL_MAX_GNOMES) || 3),
     councilAudience: (m['ai.council_audience'] ?? process.env.SETFORK_COUNCIL_AUDIENCE) === 'all' ? 'all' : 'admin',
+    councilWebSeek: m['ai.council_web_seek'] != null ? m['ai.council_web_seek'] === 'true' : process.env.SETFORK_COUNCIL_WEB_SEEK === 'true',
   }
 }
 
