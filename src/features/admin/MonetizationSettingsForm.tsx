@@ -17,6 +17,8 @@ export interface MonetizationFormValues {
   affiliateRules: AffiliateRule[]
   disclosureEnabled: boolean
   disclosureText: string
+  adMarkingEnabled: boolean
+  adMarkingText: string
   donateUrl: string
 }
 
@@ -75,27 +77,36 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         <div className={lbl}>{t('monRulesLabel', lang)}</div>
         <div className="flex flex-col gap-2">
           {rules.map((r) => (
-            <div key={r.rowId} className="flex items-center gap-2">
+            <div key={r.rowId} className="flex flex-wrap items-center gap-2">
               <input
                 value={r.match}
                 onChange={(e) => patch(r.rowId, { match: e.target.value })}
                 placeholder="amazon.com"
-                className={`${field} font-mono`}
+                className={`${field} min-w-[140px] flex-1 font-mono`}
                 aria-label={t('monRuleDomain', lang)}
               />
               <input
                 value={r.param}
                 onChange={(e) => patch(r.rowId, { param: e.target.value })}
                 placeholder="tag"
-                className={`${field} max-w-[140px] font-mono`}
+                className={`${field} max-w-[120px] font-mono`}
                 aria-label={t('monRuleParam', lang)}
               />
               <input
                 value={r.value}
                 onChange={(e) => patch(r.rowId, { value: e.target.value })}
                 placeholder="setfork-20"
-                className={`${field} max-w-[180px] font-mono`}
+                className={`${field} max-w-[160px] font-mono`}
                 aria-label={t('monRuleValue', lang)}
+              />
+              {/* erid (РФ-маркировка) — опционально; задан → ссылки этого домена
+                  помечаются рекламой и несут токен в /api/go. */}
+              <input
+                value={r.erid ?? ''}
+                onChange={(e) => patch(r.rowId, { erid: e.target.value })}
+                placeholder="erid"
+                className={`${field} max-w-[150px] font-mono`}
+                aria-label={t('monRuleErid', lang)}
               />
               <button
                 type="button"
@@ -124,6 +135,16 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
           {t('monDisclosureText', lang)}
         </label>
         <textarea id="mon-disclosure-text" name="disclosureText" defaultValue={v.disclosureText} rows={2} className={field} />
+      </div>
+
+      <div className="border-t border-border pt-4 text-[12.5px] font-semibold text-ink">{t('monAdMarkingTitle', lang)}</div>
+      <ToggleRow name="adMarkingEnabled" title={t('monAdMarkingApply', lang)} hint={t('monAdMarkingHint', lang)} defaultChecked={v.adMarkingEnabled} />
+      <div>
+        <label htmlFor="mon-ad-marking-text" className={lbl}>
+          {t('monAdMarkingText', lang)}
+        </label>
+        <input id="mon-ad-marking-text" name="adMarkingText" defaultValue={v.adMarkingText} placeholder="Реклама" className={field} />
+        <p className="mt-1 text-[12px] text-muted">{t('monAdMarkingTextHint', lang)}</p>
       </div>
 
       <div className="border-t border-border pt-4 text-[12.5px] font-semibold text-ink">{t('monSupportTitle', lang)}</div>

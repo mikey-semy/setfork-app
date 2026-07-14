@@ -22,7 +22,7 @@ import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
 import { QuizBlock } from '@/features/quizzes/QuizBlock'
-import { hasAffiliateLink, quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
+import { hasAffiliateLink, hasMarkedAffiliate, quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getCourseCompletion, getQuizState } from '@/features/quizzes/queries'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
@@ -33,6 +33,7 @@ import { requireViewableDetail, requireViewableMeta } from '@/features/library/g
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ListHeader } from '@/widgets/ListHeader'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
+import { TranslateButton } from '@/features/library/TranslateButton'
 import { ReportButton } from '@/features/reports/ReportButton'
 import { publishList } from '@/features/library/actions'
 
@@ -162,16 +163,14 @@ export default async function ListPage({
   // Монетизация/трафик (админка): тумблеры трекинга + FTC-плашка, если среди
   // ссылок списка (всех, не только отфильтрованных ?find=) есть партнёрские.
   const mon = await getMonetizationSettings()
-  const showDisclosure =
-    mon.affiliateEnabled &&
-    mon.disclosureEnabled &&
-    hasAffiliateLink(
-      allSteps.flatMap((s) => [
-        ...(s.refs as { url?: string }[]).map((r) => r.url),
-        ...(s.type === 'product' ? productItems(s.content).map((p) => p.url) : []),
-      ]),
-      mon.affiliateRules,
-    )
+  const affiliateUrls = allSteps.flatMap((s) => [
+    ...(s.refs as { url?: string }[]).map((r) => r.url),
+    ...(s.type === 'product' ? productItems(s.content).map((p) => p.url) : []),
+  ])
+  const showDisclosure = mon.affiliateEnabled && mon.disclosureEnabled && hasAffiliateLink(affiliateUrls, mon.affiliateRules)
+  // РФ-маркировка (ФЗ «О рекламе»): пометка «Реклама» на списках, где есть
+  // ссылка с настроенным erid. Управляется отдельным тумблером в админке.
+  const showAdMarking = mon.affiliateEnabled && mon.adMarkingEnabled && hasMarkedAffiliate(affiliateUrls, mon.affiliateRules)
   // Показываем note версии, только если он осмысленный (не служебный boilerplate).
   const latestNote =
     currentVersion?.note && !['initial', 'edit', 'seeded', 'ai draft'].includes(currentVersion.note)
@@ -239,6 +238,13 @@ export default async function ListPage({
                 <Sparkles size={15} className="shrink-0" /> {t('aiVerifyHint', lang)}
               </div>
             )}
+            {/* РФ-маркировка «Реклама» — до ссылок; компактная пометка (сам erid
+                едет в ссылке через /api/go). */}
+            {showAdMarking && (
+              <div className="mb-2 inline-flex items-center rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-ink-2">
+                {mon.adMarkingText}
+              </div>
+            )}
             {/* FTC-дисклеймер: показывается ДО ссылок (требование к affiliate-раскрытию). */}
             {showDisclosure && (
               <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[12.5px] text-ink-2">
@@ -290,6 +296,11 @@ export default async function ListPage({
                     </form>
                   )}
                   <CloneDropdown base={base} lang={lang} />
+                  {/* «Перевести» — владельцу/коллаборатору, когда у списка нет
+                      заголовка на языке зрителя (перевод добавит язык, ADR-0009). */}
+                  {canManageBranches && !snapshot && !tpl.title[lang] && (
+                    <TranslateButton templateId={tpl.id} targetLang={lang} lang={lang} />
+                  )}
                   <Link
                     href={isOwner ? `${base}/edit` : `${base}/suggest`}
                     title={isOwner ? t('edit', lang) : t('suggestEdit', lang)}

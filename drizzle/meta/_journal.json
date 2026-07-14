@@ -295,6 +295,13 @@
       "when": 1783860000000,
       "tag": "0041_list_feature_toggles",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1783870000000,
+      "tag": "0042_ai_feature_translate",
+      "breakpoints": true
     }
   ]
 }
