@@ -156,7 +156,7 @@ const DICT = {
   noCommentsYet: { en: 'No comments yet.', ru: 'Пока нет комментариев.' },
   watch: { en: 'Watch', ru: 'Следить' },
   unwatch: { en: 'Unwatch', ru: 'Не следить' },
-  cloneMenuLabel: { en: 'Use', ru: 'Использовать' },
+  cloneMenuLabel: { en: 'Get', ru: 'Получить' },
   cloneGitHeading: { en: 'Clone / Git', ru: 'Clone / Git' },
   cloneHeading: { en: 'Clone', ru: 'Клонировать' },
   cloneHttpsHint: { en: 'Clone with git or open in VS Code.', ru: 'Клонируйте через git или откройте в VS Code.' },

@@ -290,7 +290,7 @@ export default async function ListPage({
                     <form action={useTemplate.bind(null, tpl.id)} className="inline-flex">
                       <button
                         type="submit"
-                        className="inline-flex items-center gap-1.5 rounded-md bg-(--ok-solid) px-2.5 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
                         title={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}
                       >
                         <LayoutTemplate size={13} /> <span className="hidden md:inline">{lang === 'ru' ? 'Использовать шаблон' : 'Use this template'}</span>
