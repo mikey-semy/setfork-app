@@ -8,7 +8,7 @@ import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { DEFAULT_LANG, isLang, type Lang } from '@/shared/i18n'
 import { sanitizeCommand } from '@/shared/ai/generate'
-import { getClarify, clearClarify } from '@/shared/ai/council-clarify'
+import { claimClarify } from '@/shared/ai/council-clarify'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { aiQuota, listQuota } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
@@ -103,11 +103,11 @@ export async function answerClarify(generationId: string, answers: string[]): Pr
   const gen = await db.query.generations.findFirst({ where: (g) => eq(g.id, generationId) })
   if (!gen || gen.userId !== session.userId || gen.chosenTemplateId) redirect('/explore')
 
-  const questions = getClarify(generationId)
-  if (!questions.length) redirect(`/generate/${generationId}`) // нечего уточнять (протухло/уже ответили)
-  // #2: клеймим АТОМАРНО — до первого await. Параллельный double-submit (Enter+клик / две вкладки)
-  // увидит пусто и не задвоит джобу idx=1 (иначе UNIQUE(generationId,idx) → упавшая джоба).
-  clearClarify(generationId)
+  // #2: клеймим АТОМАРНО (get+delete одной операцией — GETDEL/Lua на Redis, single-thread в памяти).
+  // Параллельный double-submit (Enter+клик / две вкладки) увидит пусто и не задвоит джобу idx=1
+  // (иначе UNIQUE(generationId,idx) → упавшая джоба).
+  const questions = await claimClarify(generationId)
+  if (!questions.length) redirect(`/generate/${generationId}`) // нечего уточнять (протухло/ответили/выиграл другой submit)
 
   const { allowed } = await checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)

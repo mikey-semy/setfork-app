@@ -67,7 +67,8 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const gname = (e: GnomeSpec) => `${e.emoji} ${ru ? e.ru : e.name}`
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   // «Театр беседы»: публикуем ход совета для страницы генерации (по refId=generationId).
-  const emit = (kind: CouncilEvent['kind'], text: string) => { if (opts.refId) pushCouncilEvent(opts.refId, { kind, text }) }
+  // fire-and-forget: публикация в стор (Redis/память) не должна блокировать/ронять генерацию.
+  const emit = (kind: CouncilEvent['kind'], text: string) => { if (opts.refId) void pushCouncilEvent(opts.refId, { kind, text }).catch(() => {}) }
 
   // Один под-вызов: генерация + учёт расхода. Ошибка → null (гном «выпал»), совет продолжает.
   async function run(model: string, system: string, prompt: string, maxTokens = settings.maxTokens, temp = settings.temperature): Promise<{ text: string } | null> {

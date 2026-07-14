@@ -72,7 +72,7 @@ export async function addCandidate(
       // Диалог только на ПЕРВИЧНОЙ генерации: показываем форму (кандидата нет, ждём ответов).
       // На «ещё вариант» (idx>1) clarify игнорируем — иначе пустой экран/коллизия idx=1; падаем на одиночную.
       if (idx === 1) {
-        setClarify(generationId, res.clarify)
+        await setClarify(generationId, res.clarify)
         return true
       }
     } else {

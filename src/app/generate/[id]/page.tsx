@@ -34,6 +34,9 @@ export default async function GenerationPage({
     if (row) redirect(`/${row.handle}/${row.slug}`)
   }
 
+  // Театр беседы + уточнения (Redis или память) — читаем параллельно.
+  const [councilEvents, clarifyQuestions] = await Promise.all([getCouncilEvents(gen.id), getClarify(gen.id)])
+
   return (
     <GenerationReview
       generationId={gen.id}
@@ -43,8 +46,8 @@ export default async function GenerationPage({
       status={status}
       initialIdx={Number(sp.v) || gen.candidates[gen.candidates.length - 1]?.idx || 1}
       error={sp.e}
-      councilEvents={getCouncilEvents(gen.id)}
-      clarifyQuestions={getClarify(gen.id)}
+      councilEvents={councilEvents}
+      clarifyQuestions={clarifyQuestions}
     />
   )
 }
