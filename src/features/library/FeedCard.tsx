@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { GitFork, Lock, Star } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { TagChip } from '@/shared/ui/TagChip'
 import { cardAccent } from '@/shared/ui/AutoBanner'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
@@ -61,13 +62,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             </span>
           )}
           {item.tags.slice(0, 4).map((tag) => (
-            <Link
-              key={tag}
-              href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-              className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11px] font-medium text-accent hover:underline"
-            >
-              {tag}
-            </Link>
+            <TagChip key={tag} slug={tag} />
           ))}
         </div>
         <div className="mt-1 truncate text-[12.5px] text-ink-2">{tr(item.desc, lang)}</div>

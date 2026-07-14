@@ -7,6 +7,7 @@ import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { FeedList } from '@/features/library/FeedList'
 import { FeedCard } from '@/features/library/FeedCard'
+import { TagChip } from '@/shared/ui/TagChip'
 import { getFeed, getPopularTags, getStarredIds, getTrendingFeed, type TrendRange } from '@/features/library/queries'
 import { getPublicCatalogs } from '@/features/catalogs/queries'
 import { CatalogRow } from '@/features/catalogs/CatalogRow'
@@ -124,14 +125,7 @@ export default async function ExplorePage({
       {active === 'topics' && (
         <div className="flex flex-wrap gap-2">
           {tags.map((tg) => (
-            <Link
-              key={tg.tag}
-              href={`/search?q=${encodeURIComponent(`tag:${tg.tag}`)}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-ink-2 hover:border-border-strong hover:text-ink"
-            >
-              {tg.tag}
-              <span className="font-mono text-[11px] text-muted">{tg.count}</span>
-            </Link>
+            <TagChip key={tg.tag} slug={tg.tag} count={tg.count} className="px-3 py-1 text-[13px]" />
           ))}
         </div>
       )}

@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
+import { cn } from '@/shared/lib/cn'
+import { Badge } from '@/shared/ui/badge'
 import type { Lang } from '@/shared/i18n'
 
 // Чипы + автокомплит для тегов списка. Пишет скрытый <input name> со slug'ами
 // через пробел — серверный экшен (parseTags) работает без изменений. Подсказки
-// тянутся из реестра (/api/tags/suggest); свой тег тоже можно вписать.
+// из реестра (/api/tags/suggest); свой тег тоже можно вписать. Оформление —
+// на общих примитивах (Badge, токены Input/AnchoredMenu), без одноразовых стилей.
 type Suggestion = { slug: string; curated: boolean; usageCount: number }
 
 function normalize(s: string): string {
@@ -45,7 +48,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
     }
   }, [q, tags])
 
-  // Клик вне — закрыть выпадашку.
+  // Клик вне — закрыть выпадашку (как AnchoredMenu).
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false)
@@ -68,17 +71,17 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
       <input type="hidden" name={name} value={tags.join(' ')} />
       <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
         {tags.map((tag) => (
-          <span key={tag} className="inline-flex items-center gap-1 rounded bg-surface px-2 py-0.5 text-[12.5px] text-ink">
+          <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-[12px] font-medium text-ink">
             {tag}
             <button
               type="button"
               onClick={() => remove(tag)}
               aria-label={say('Remove', 'Убрать')}
-              className="text-muted hover:text-danger"
+              className="grid size-4 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-danger"
             >
-              <X size={12} />
+              <X size={11} />
             </button>
-          </span>
+          </Badge>
         ))}
         {tags.length < max && (
           <input
@@ -105,7 +108,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
               }
             }}
             placeholder={tags.length === 0 ? say('e.g. docker', 'напр. docker') : ''}
-            className="min-w-[90px] flex-1 bg-transparent px-1 py-0.5 text-[14px] text-ink outline-none"
+            className="min-w-[90px] flex-1 bg-transparent px-1 py-0.5 text-[13.5px] text-ink outline-hidden placeholder:text-muted"
           />
         )}
       </div>
@@ -120,10 +123,17 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
                   add(s.slug)
                 }}
                 onMouseEnter={() => setHi(i)}
-                className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] ${i === hi ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
+                className={cn(
+                  'flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px]',
+                  i === hi ? 'bg-surface-2 text-ink' : 'text-ink-2',
+                )}
               >
                 <span className="flex items-center gap-1.5">
-                  {s.curated && <span className="text-accent" title={say('Curated', 'Курируемый')}>✓</span>}
+                  {s.curated && (
+                    <span className="text-accent" title={say('Curated', 'Курируемый')}>
+                      ✓
+                    </span>
+                  )}
                   {s.slug}
                 </span>
                 <span className="font-mono text-[11px] text-muted">{s.usageCount}</span>
