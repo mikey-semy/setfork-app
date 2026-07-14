@@ -60,7 +60,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
           <TabItem href={`${base}/discussions`} on={active === 'discussions'} icon={<MessagesSquare size={15} />} label={lang === 'ru' ? 'Обсуждения' : 'Discussions'} count={discCount} />
         )}
         <TabItem href={`${base}/versions`} on={active === 'versions'} icon={<Tag size={15} />} label={t('versionsTab', lang)} />
-        <TabItem href={`${base}/insights`} on={active === 'insights'} icon={<BarChart3 size={15} />} label="Insights" />
+        <TabItem href={`${base}/insights`} on={active === 'insights'} icon={<BarChart3 size={15} />} label={t('insightsTab', lang)} />
         {isOwner && <TabItem href={`${base}/settings`} on={active === 'settings'} icon={<Settings size={15} />} label={t('settings', lang)} />}
       </TabNav>
 

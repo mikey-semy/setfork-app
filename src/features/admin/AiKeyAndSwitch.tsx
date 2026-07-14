@@ -35,8 +35,8 @@ export function AiKeyAndSwitch({
           <p className="text-[12px] text-muted">
             {canEnable
               ? ru
-                ? 'Гномы могут придумывать списки.'
-                : 'Gnomes can draft lists.'
+                ? 'Списки можно придумывать автоматически.'
+                : 'Lists can be drafted automatically.'
               : ru
                 ? 'Сначала укажите API-ключ ниже.'
                 : 'Enter an API key below first.'}
