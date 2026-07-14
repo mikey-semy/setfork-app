@@ -8,7 +8,7 @@ import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } f
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
 import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/email'
-import { clearMonetizationCache, DEFAULT_DISCLOSURE, MONETIZATION_KEYS, sanitizeDonateUrl } from '@/shared/settings/monetization'
+import { clearMonetizationCache, DEFAULT_AD_MARKING, DEFAULT_DISCLOSURE, MONETIZATION_KEYS, sanitizeDonateUrl } from '@/shared/settings/monetization'
 import { parseAffiliateRules } from '@/core'
 import { clearVapidCache, VAPID_KEYS } from '@/shared/push/vapid'
 import { sendMail } from '@/shared/email/mailer'
@@ -152,6 +152,7 @@ export async function setMonetizationSettings(formData: FormData): Promise<void>
   const admin = await requireAdmin()
   const rules = parseAffiliateRules(String(formData.get('affiliateRules') ?? '[]'))
   const disclosureText = String(formData.get('disclosureText') ?? '').trim()
+  const adMarkingText = String(formData.get('adMarkingText') ?? '').trim()
   const donateUrl = sanitizeDonateUrl(String(formData.get('donateUrl') ?? ''))
   await saveSettings({
     // Храним только отклонения от дефолтов ('' в kv = удалить ключ):
@@ -162,6 +163,8 @@ export async function setMonetizationSettings(formData: FormData): Promise<void>
     [MONETIZATION_KEYS.affiliateRules]: rules.length ? JSON.stringify(rules) : '',
     [MONETIZATION_KEYS.disclosureEnabled]: formData.get('disclosureEnabled') === 'on' ? '' : 'false',
     [MONETIZATION_KEYS.disclosureText]: disclosureText === DEFAULT_DISCLOSURE ? '' : disclosureText,
+    [MONETIZATION_KEYS.adMarkingEnabled]: formData.get('adMarkingEnabled') === 'on' ? 'true' : '',
+    [MONETIZATION_KEYS.adMarkingText]: adMarkingText === DEFAULT_AD_MARKING ? '' : adMarkingText,
     [MONETIZATION_KEYS.donateUrl]: donateUrl,
   })
   clearMonetizationCache()

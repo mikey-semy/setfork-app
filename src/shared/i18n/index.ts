@@ -483,11 +483,12 @@ const DICT = {
   monRuleDomain: { en: 'Domain', ru: 'Домен' },
   monRuleParam: { en: 'Param', ru: 'Параметр' },
   monRuleValue: { en: 'Value', ru: 'Значение' },
+  monRuleErid: { en: 'erid token (RU ad marking)', ru: 'Токен erid (маркировка РФ)' },
   monRuleRemove: { en: 'Remove rule', ru: 'Удалить правило' },
   monRuleAdd: { en: 'Add rule', ru: 'Добавить правило' },
   monRulesHint: {
-    en: 'Domain matches subdomains (amazon.com covers www/smile). The rule tag overrides one already present in the link.',
-    ru: 'Домен матчится с поддоменами (amazon.com покроет www/smile). Тег из правила перекрывает принесённый в ссылке.',
+    en: 'Domain matches subdomains (amazon.com covers www/smile). The rule tag overrides one already present in the link. erid — optional RU ad token from the ORD/network account; when set, that domain’s links are marked as advertising and carry the token.',
+    ru: 'Домен матчится с поддоменами (amazon.com покроет www/smile). Тег из правила перекрывает принесённый в ссылке. erid — необязательный токен маркировки РФ из кабинета ОРД/партнёрки; задан — ссылки этого домена помечаются рекламой и несут токен.',
   },
   monDisclosureTitle: { en: 'Disclosure banner on lists', ru: 'Плашка-дисклеймер на списках' },
   monDisclosureHint: {
@@ -495,6 +496,17 @@ const DICT = {
     ru: 'FTC-требование для US-трафика: не выключайте без юриста.',
   },
   monDisclosureText: { en: 'Disclosure text', ru: 'Текст плашки' },
+  monAdMarkingTitle: { en: 'Russian ad marking (erid)', ru: 'Маркировка рекламы РФ (erid)' },
+  monAdMarkingApply: { en: 'Mark affiliate links as advertising', ru: 'Помечать партнёрские ссылки рекламой' },
+  monAdMarkingHint: {
+    en: 'RU “On Advertising” law: shows an “Advertising” label on lists with erid-carrying links. Off by default — enable for RU traffic.',
+    ru: 'ФЗ «О рекламе»: показывает пометку «Реклама» на списках со ссылками, несущими erid. По умолчанию выкл — включайте для РФ-трафика.',
+  },
+  monAdMarkingText: { en: 'Marking label', ru: 'Текст пометки' },
+  monAdMarkingTextHint: {
+    en: 'Default “Реклама”. Add advertiser details if required: “Реклама. Advertiser …, INN …”. The erid token rides the link itself.',
+    ru: 'По умолчанию «Реклама». При необходимости добавьте рекламодателя: «Реклама. Рекламодатель …, ИНН …». Токен erid ложится на саму ссылку.',
+  },
   monSupportTitle: { en: 'Support the project', ru: 'Поддержка проекта' },
   monDonateLabel: { en: 'Donate URL (https)', ru: 'Donate-ссылка (https)' },
   monDonateHint: {
