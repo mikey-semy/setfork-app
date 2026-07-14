@@ -59,7 +59,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {/* Тот же габарит, что split-Star (px-3.5 py-2 text-[13px]) — единый стиль. */}
-        <button type="button" className="inline-flex items-center gap-1.5 rounded-md bg-(--ok-solid) px-3.5 py-2 text-[13px] font-semibold text-white hover:opacity-90">
+        <button type="button" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
           <ListChecks size={15} /> {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>
       </DropdownMenuTrigger>
