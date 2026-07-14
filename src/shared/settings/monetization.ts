@@ -14,12 +14,19 @@ export const MONETIZATION_KEYS = {
   affiliateRules: 'monetization.affiliate_rules', // JSON: AffiliateRule[]
   disclosureEnabled: 'monetization.disclosure_enabled', // FTC-плашка на списках с партнёрскими ссылками
   disclosureText: 'monetization.disclosure_text', // кастомный текст плашки ('' = дефолт)
+  adMarkingEnabled: 'monetization.ad_marking_enabled', // РФ: пометка «Реклама» на списках с erid-ссылками
+  adMarkingText: 'monetization.ad_marking_text', // текст РФ-пометки ('' = дефолт)
   donateUrl: 'monetization.donate_url', // внешняя donate-ссылка ('' = не показывать)
 } as const
 
 // FTC: плашка обязана быть заметной и до ссылок — дефолт менять осознанно.
 export const DEFAULT_DISCLOSURE =
   'This list contains affiliate links — SetFork may earn a commission if you make a purchase, at no extra cost to you.'
+
+// РФ (ФЗ «О рекламе»): маркировка рекламы. Дефолт — минимально достаточная
+// пометка; при необходимости админ дополняет сведениями о рекламодателе
+// («Реклама. Рекламодатель …, ИНН …»). erid ложится на саму ссылку в /api/go.
+export const DEFAULT_AD_MARKING = 'Реклама'
 
 export interface MonetizationSettings {
   viewTracking: boolean
@@ -28,6 +35,8 @@ export interface MonetizationSettings {
   affiliateRules: AffiliateRule[]
   disclosureEnabled: boolean
   disclosureText: string
+  adMarkingEnabled: boolean
+  adMarkingText: string
   donateUrl: string
 }
 
@@ -37,6 +46,8 @@ const DEFAULTS: Omit<MonetizationSettings, 'affiliateRules'> = {
   affiliateEnabled: false,
   disclosureEnabled: true,
   disclosureText: DEFAULT_DISCLOSURE,
+  adMarkingEnabled: false,
+  adMarkingText: DEFAULT_AD_MARKING,
   donateUrl: '',
 }
 
@@ -62,6 +73,8 @@ export async function getMonetizationSettings(): Promise<MonetizationSettings> {
       affiliateRules: parseAffiliateRules(m[MONETIZATION_KEYS.affiliateRules] ?? '[]'),
       disclosureEnabled: m[MONETIZATION_KEYS.disclosureEnabled] !== 'false',
       disclosureText: (m[MONETIZATION_KEYS.disclosureText] ?? '').trim() || DEFAULTS.disclosureText,
+      adMarkingEnabled: m[MONETIZATION_KEYS.adMarkingEnabled] === 'true',
+      adMarkingText: (m[MONETIZATION_KEYS.adMarkingText] ?? '').trim() || DEFAULTS.adMarkingText,
       donateUrl: sanitizeDonateUrl(m[MONETIZATION_KEYS.donateUrl] ?? ''),
     }
   } catch {

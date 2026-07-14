@@ -3,6 +3,7 @@ import {
   applyAffiliate,
   findAffiliateRule,
   hasAffiliateLink,
+  hasMarkedAffiliate,
   hostMatches,
   MAX_AFFILIATE_RULES,
   parseAffiliateRules,
@@ -71,9 +72,58 @@ describe('findAffiliateRule / applyAffiliate', () => {
   })
 
   it('URL вне правил и невалидный URL — без изменений', () => {
-    expect(applyAffiliate('https://example.com/x', RULES)).toEqual({ url: 'https://example.com/x', tagged: false })
-    expect(applyAffiliate('not a url', RULES)).toEqual({ url: 'not a url', tagged: false })
+    expect(applyAffiliate('https://example.com/x', RULES)).toEqual({ url: 'https://example.com/x', tagged: false, marked: false })
+    expect(applyAffiliate('not a url', RULES)).toEqual({ url: 'not a url', tagged: false, marked: false })
     expect(findAffiliateRule('not a url', RULES)).toBeNull()
+  })
+
+  it('правило без erid: tagged, но marked=false', () => {
+    const r = applyAffiliate('https://amazon.com/dp/B0', RULES)
+    expect(r.tagged).toBe(true)
+    expect(r.marked).toBe(false)
+    expect(new URL(r.url).searchParams.has('erid')).toBe(false)
+  })
+})
+
+describe('erid — РФ-маркировка (ЕРИР/ОРД)', () => {
+  const ERID_RULES: AffiliateRule[] = [{ match: 'ozon.ru', param: 'partner', value: 'sf', erid: '2Vfnxw_A-1z' }]
+
+  it('parseAffiliateRules принимает валидный erid', () => {
+    const json = JSON.stringify([{ match: 'ozon.ru', param: 'partner', value: 'sf', erid: ' 2Vfnxw_A-1z ' }])
+    expect(parseAffiliateRules(json)).toEqual([{ match: 'ozon.ru', param: 'partner', value: 'sf', erid: '2Vfnxw_A-1z' }])
+  })
+
+  it('невалидный erid отбрасывается, но правило остаётся', () => {
+    const json = JSON.stringify([
+      { match: 'ozon.ru', param: 'p', value: 'v', erid: 'bad token!' }, // пробел/восклицательный — не проходит
+      { match: 'wildberries.ru', param: 'p', value: 'v', erid: 'x'.repeat(200) }, // слишком длинный
+    ])
+    expect(parseAffiliateRules(json)).toEqual([
+      { match: 'ozon.ru', param: 'p', value: 'v' },
+      { match: 'wildberries.ru', param: 'p', value: 'v' },
+    ])
+  })
+
+  it('applyAffiliate кладёт erid в ссылку и помечает marked', () => {
+    const r = applyAffiliate('https://www.ozon.ru/product/123?x=1', ERID_RULES)
+    expect(r.tagged).toBe(true)
+    expect(r.marked).toBe(true)
+    const u = new URL(r.url)
+    expect(u.searchParams.get('partner')).toBe('sf')
+    expect(u.searchParams.get('erid')).toBe('2Vfnxw_A-1z')
+    expect(u.searchParams.get('x')).toBe('1')
+  })
+
+  it('erid из правила перекрывает принесённый в ссылке', () => {
+    const r = applyAffiliate('https://ozon.ru/p?erid=someone-else', ERID_RULES)
+    expect(new URL(r.url).searchParams.get('erid')).toBe('2Vfnxw_A-1z')
+  })
+
+  it('hasMarkedAffiliate: только правила с erid триггерят пометку', () => {
+    expect(hasMarkedAffiliate(['https://ozon.ru/p'], ERID_RULES)).toBe(true)
+    expect(hasMarkedAffiliate(['https://amazon.com/x'], RULES)).toBe(false) // affiliate, но без erid
+    expect(hasMarkedAffiliate(['https://example.com', undefined], ERID_RULES)).toBe(false)
+    expect(hasMarkedAffiliate(['https://ozon.ru/p'], [])).toBe(false)
   })
 })
 
