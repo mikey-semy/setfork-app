@@ -485,6 +485,8 @@ const DICT = {
   monRuleParam: { en: 'Param', ru: 'Параметр' },
   monRuleValue: { en: 'Value', ru: 'Значение' },
   monRuleErid: { en: 'erid token (RU ad marking)', ru: 'Токен erid (маркировка РФ)' },
+  monRuleAdvertiser: { en: 'Advertiser name', ru: 'Наименование рекламодателя' },
+  monRuleInn: { en: 'Advertiser TIN', ru: 'ИНН рекламодателя' },
   monRuleRemove: { en: 'Remove rule', ru: 'Удалить правило' },
   monRuleAdd: { en: 'Add rule', ru: 'Добавить правило' },
   monRulesHint: {
@@ -505,9 +507,12 @@ const DICT = {
   },
   monAdMarkingText: { en: 'Marking label', ru: 'Текст пометки' },
   monAdMarkingTextHint: {
-    en: 'Default “Реклама”. Add advertiser details if required: “Реклама. Advertiser …, INN …”. The erid token rides the link itself.',
-    ru: 'По умолчанию «Реклама». При необходимости добавьте рекламодателя: «Реклама. Рекламодатель …, ИНН …». Токен erid ложится на саму ссылку.',
+    en: 'Default “Реклама”. The advertiser name + TIN per rule are appended automatically; the erid token rides the link itself.',
+    ru: 'По умолчанию «Реклама». Наименование рекламодателя и ИНН из правила добавляются к пометке автоматически; токен erid ложится на саму ссылку.',
   },
+  // Пометка «Реклама» на списке (публичная): подпись рекламодателя.
+  adAdvertiser: { en: 'Advertiser', ru: 'Рекламодатель' },
+  innLabel: { en: 'TIN', ru: 'ИНН' },
   monSupportTitle: { en: 'Support the project', ru: 'Поддержка проекта' },
   monDonateLabel: { en: 'Donate URL (https)', ru: 'Donate-ссылка (https)' },
   monDonateHint: {

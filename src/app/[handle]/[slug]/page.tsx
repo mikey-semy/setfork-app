@@ -22,7 +22,7 @@ import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
 import { QuizBlock } from '@/features/quizzes/QuizBlock'
-import { hasAffiliateLink, hasMarkedAffiliate, quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
+import { hasAffiliateLink, hasMarkedAffiliate, markedAdvertisers, quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getCourseCompletion, getQuizState } from '@/features/quizzes/queries'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
@@ -171,6 +171,8 @@ export default async function ListPage({
   // РФ-маркировка (ФЗ «О рекламе»): пометка «Реклама» на списках, где есть
   // ссылка с настроенным erid. Управляется отдельным тумблером в админке.
   const showAdMarking = mon.affiliateEnabled && mon.adMarkingEnabled && hasMarkedAffiliate(affiliateUrls, mon.affiliateRules)
+  // ч. 16 ст. 18.1: пометка обязана называть рекламодателя (наименование+ИНН).
+  const adAdvertisers = showAdMarking ? markedAdvertisers(affiliateUrls, mon.affiliateRules) : []
   // Показываем note версии, только если он осмысленный (не служебный boilerplate).
   const latestNote =
     currentVersion?.note && !['initial', 'edit', 'seeded', 'ai draft'].includes(currentVersion.note)
@@ -239,10 +241,19 @@ export default async function ListPage({
               </div>
             )}
             {/* РФ-маркировка «Реклама» — до ссылок; компактная пометка (сам erid
-                едет в ссылке через /api/go). */}
+                едет в ссылке через /api/go). ч. 16 ст. 18.1 требует назвать
+                рекламодателя — добавляем наименование+ИНН из правил. */}
             {showAdMarking && (
-              <div className="mb-2 inline-flex items-center rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-ink-2">
-                {mon.adMarkingText}
+              <div className="mb-2 inline-flex flex-wrap items-center gap-x-1.5 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-ink-2">
+                <span>{mon.adMarkingText}</span>
+                {adAdvertisers.length > 0 && (
+                  <span className="font-normal text-muted">
+                    · {t('adAdvertiser', lang)}:{' '}
+                    {adAdvertisers
+                      .map((a) => (a.advertiserInn ? `${a.advertiser}, ${t('innLabel', lang)} ${a.advertiserInn}` : a.advertiser))
+                      .join('; ')}
+                  </span>
+                )}
               </div>
             )}
             {/* FTC-дисклеймер: показывается ДО ссылок (требование к affiliate-раскрытию). */}

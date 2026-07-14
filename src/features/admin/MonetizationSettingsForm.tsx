@@ -75,47 +75,71 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
 
       <div className={affiliateOn ? '' : 'pointer-events-none opacity-50'}>
         <div className={lbl}>{t('monRulesLabel', lang)}</div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {rules.map((r) => (
-            <div key={r.rowId} className="flex flex-wrap items-center gap-2">
-              <input
-                value={r.match}
-                onChange={(e) => patch(r.rowId, { match: e.target.value })}
-                placeholder="amazon.com"
-                className={`${field} min-w-[140px] flex-1 font-mono`}
-                aria-label={t('monRuleDomain', lang)}
-              />
-              <input
-                value={r.param}
-                onChange={(e) => patch(r.rowId, { param: e.target.value })}
-                placeholder="tag"
-                className={`${field} max-w-[120px] font-mono`}
-                aria-label={t('monRuleParam', lang)}
-              />
-              <input
-                value={r.value}
-                onChange={(e) => patch(r.rowId, { value: e.target.value })}
-                placeholder="setfork-20"
-                className={`${field} max-w-[160px] font-mono`}
-                aria-label={t('monRuleValue', lang)}
-              />
-              {/* erid (РФ-маркировка) — опционально; задан → ссылки этого домена
-                  помечаются рекламой и несут токен в /api/go. */}
-              <input
-                value={r.erid ?? ''}
-                onChange={(e) => patch(r.rowId, { erid: e.target.value })}
-                placeholder="erid"
-                className={`${field} max-w-[150px] font-mono`}
-                aria-label={t('monRuleErid', lang)}
-              />
-              <button
-                type="button"
-                onClick={() => setRules((xs) => xs.filter((x) => x.rowId !== r.rowId))}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted hover:text-danger"
-                aria-label={t('monRuleRemove', lang)}
-              >
-                <Trash2 size={14} />
-              </button>
+            <div key={r.rowId} className="flex flex-col gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={r.match}
+                  onChange={(e) => patch(r.rowId, { match: e.target.value })}
+                  placeholder="amazon.com"
+                  className={`${field} min-w-[140px] flex-1 font-mono`}
+                  aria-label={t('monRuleDomain', lang)}
+                />
+                <input
+                  value={r.param}
+                  onChange={(e) => patch(r.rowId, { param: e.target.value })}
+                  placeholder="tag"
+                  className={`${field} max-w-[120px] font-mono`}
+                  aria-label={t('monRuleParam', lang)}
+                />
+                <input
+                  value={r.value}
+                  onChange={(e) => patch(r.rowId, { value: e.target.value })}
+                  placeholder="setfork-20"
+                  className={`${field} max-w-[160px] font-mono`}
+                  aria-label={t('monRuleValue', lang)}
+                />
+                {/* erid (РФ-маркировка) — опционально; задан → ссылки этого домена
+                    помечаются рекламой и несут токен в /api/go. */}
+                <input
+                  value={r.erid ?? ''}
+                  onChange={(e) => patch(r.rowId, { erid: e.target.value })}
+                  placeholder="erid"
+                  className={`${field} max-w-[150px] font-mono`}
+                  aria-label={t('monRuleErid', lang)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setRules((xs) => xs.filter((x) => x.rowId !== r.rowId))}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted hover:text-danger"
+                  aria-label={t('monRuleRemove', lang)}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              {/* Идентификация рекламодателя (ч. 16 ст. 18.1) — нужна только для
+                  помеченных рекламой ссылок, поэтому показываем при заданном erid. */}
+              {r.erid?.trim() && (
+                <div className="flex flex-wrap items-center gap-2 pl-3">
+                  <span className="text-[11px] text-muted">↳</span>
+                  <input
+                    value={r.advertiser ?? ''}
+                    onChange={(e) => patch(r.rowId, { advertiser: e.target.value })}
+                    placeholder={t('monRuleAdvertiser', lang)}
+                    className={`${field} min-w-[180px] flex-1`}
+                    aria-label={t('monRuleAdvertiser', lang)}
+                  />
+                  <input
+                    value={r.advertiserInn ?? ''}
+                    onChange={(e) => patch(r.rowId, { advertiserInn: e.target.value })}
+                    placeholder={t('monRuleInn', lang)}
+                    inputMode="numeric"
+                    className={`${field} max-w-[160px] font-mono`}
+                    aria-label={t('monRuleInn', lang)}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
