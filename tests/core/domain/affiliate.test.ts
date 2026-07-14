@@ -5,6 +5,7 @@ import {
   hasAffiliateLink,
   hasMarkedAffiliate,
   hostMatches,
+  markedAdvertisers,
   MAX_AFFILIATE_RULES,
   parseAffiliateRules,
   type AffiliateRule,
@@ -124,6 +125,49 @@ describe('erid — РФ-маркировка (ЕРИР/ОРД)', () => {
     expect(hasMarkedAffiliate(['https://amazon.com/x'], RULES)).toBe(false) // affiliate, но без erid
     expect(hasMarkedAffiliate(['https://example.com', undefined], ERID_RULES)).toBe(false)
     expect(hasMarkedAffiliate(['https://ozon.ru/p'], [])).toBe(false)
+  })
+})
+
+describe('advertiser/ИНН — идентификация рекламодателя (ч. 16 ст. 18.1)', () => {
+  it('parseAffiliateRules принимает наименование (схлопывает пробелы) и валидный ИНН', () => {
+    const json = JSON.stringify([
+      { match: 'ozon.ru', param: 'p', value: 'v', erid: 'ab12', advertiser: '  ООО   «Магазин»  ', advertiserInn: ' 7701234567 ' },
+    ])
+    expect(parseAffiliateRules(json)).toEqual([
+      { match: 'ozon.ru', param: 'p', value: 'v', erid: 'ab12', advertiser: 'ООО «Магазин»', advertiserInn: '7701234567' },
+    ])
+  })
+
+  it('принимает ИНН физлица/ИП (12 цифр), отбрасывает кривой ИНН но правило остаётся', () => {
+    const json = JSON.stringify([
+      { match: 'a.ru', param: 'p', value: 'v', erid: 'x', advertiser: 'ИП Иванов', advertiserInn: '771234567890' },
+      { match: 'b.ru', param: 'p', value: 'v', erid: 'x', advertiser: 'X', advertiserInn: '12345' }, // не 10/12 цифр
+      { match: 'c.ru', param: 'p', value: 'v', erid: 'x', advertiser: 'Y', advertiserInn: '77012345AB' }, // буквы
+    ])
+    expect(parseAffiliateRules(json)).toEqual([
+      { match: 'a.ru', param: 'p', value: 'v', erid: 'x', advertiser: 'ИП Иванов', advertiserInn: '771234567890' },
+      { match: 'b.ru', param: 'p', value: 'v', erid: 'x', advertiser: 'X' },
+      { match: 'c.ru', param: 'p', value: 'v', erid: 'x', advertiser: 'Y' },
+    ])
+  })
+
+  it('markedAdvertisers: уникальные рекламодатели помеченных ссылок, дедуп, порядок', () => {
+    const rules: AffiliateRule[] = [
+      { match: 'ozon.ru', param: 'p', value: 'v', erid: 'e1', advertiser: 'ООО «О»', advertiserInn: '7701234567' },
+      { match: 'wb.ru', param: 'p', value: 'v', erid: 'e2', advertiser: 'ООО «В»' }, // без ИНН — всё равно называем
+      { match: 'noerid.ru', param: 'p', value: 'v', advertiser: 'Не реклама' }, // без erid → игнор
+    ]
+    expect(
+      markedAdvertisers(['https://ozon.ru/a', 'https://ozon.ru/b', 'https://wb.ru/x', 'https://noerid.ru/y'], rules),
+    ).toEqual([
+      { advertiser: 'ООО «О»', advertiserInn: '7701234567' },
+      { advertiser: 'ООО «В»', advertiserInn: '' },
+    ])
+  })
+
+  it('markedAdvertisers: erid без наименования — не попадает (нечего называть)', () => {
+    const rules: AffiliateRule[] = [{ match: 'ozon.ru', param: 'p', value: 'v', erid: 'e1' }]
+    expect(markedAdvertisers(['https://ozon.ru/a'], rules)).toEqual([])
   })
 })
 
