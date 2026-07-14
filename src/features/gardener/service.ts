@@ -43,7 +43,7 @@ export async function ensureGardenerUser(): Promise<{ id: string }> {
     .values({
       handle: GARDENER_HANDLE,
       name: 'SetFork Gardener',
-      bio: '\u{1F9D9} Gnome gardener. I propose improvements to public lists; humans review and merge.',
+      bio: '\u{1F9D9} Gardener. I propose improvements to public lists; humans review and merge.',
     })
     .returning({ id: users.id })
   log.info('gardener user created', { id: created.id })

@@ -135,7 +135,7 @@ ${roster}`,
     const one = await run(online(base, web), listRules, `Create the reference checklist for the topic below.\n${topic}`)
     return one ? parseList(one.text, query) : null
   }
-  emit('plan', say('Planner: convening the gnome council', 'Планировщик: собираем совет гномов'))
+  emit('plan', say('Planner: convening the expert council', 'Планировщик: собираем совет экспертов'))
 
   // 2) Созыв: эксперты по домену; пол разнообразия — минимум 2 независимых мнения (мудрость толпы).
   const experts = ids.map((id) => EXPERTS.find((e) => e.id === id)).filter((e): e is GnomeSpec => Boolean(e)).slice(0, maxGnomes)

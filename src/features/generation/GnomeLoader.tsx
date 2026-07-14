@@ -9,8 +9,8 @@ import type { CouncilEvent } from '@/shared/ai/council-progress'
 // Шаг 2 крутит шуточные фразы, адаптирован к запросу пользователя.
 // en обязателен (фолбэк для любого языка), остальные — по мере добавления.
 const STEP2: { en: string[] } & Partial<Record<Lang, string[]>> = {
-  en: ['?', 'the gnomes confer', 'a gnome ponders hard', 'searching the web…', 'assembling the steps', 'checking the sources', '???'],
-  ru: ['?', 'гномы совещаются', 'гном усиленно думает', 'ищем в интернете…', 'собираем шаги', 'сверяемся с источниками', '???'],
+  en: ['?', 'weighing the options', 'thinking it through', 'searching the web…', 'assembling the steps', 'checking the sources', '???'],
+  ru: ['?', 'взвешиваем варианты', 'обдумываем', 'ищем в интернете…', 'собираем шаги', 'сверяемся с источниками', '???'],
 }
 
 // Фразы меняем НЕ спеша (болтанка раз в ~0.9с раздражала): спокойный переход раз в 8с.
@@ -32,7 +32,7 @@ export function GnomeLoader({ query, lang, label, events }: { query: string; lan
       <div className="rounded-lg border border-(--accent) bg-(--accent-soft) px-5 py-6">
         <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-accent">
           <Sparkles size={15} className="animate-pulse" />
-          {label ?? say('The gnome council confers…', 'Совет гномов совещается…')}
+          {label ?? say('The expert council confers…', 'Совет экспертов совещается…')}
         </div>
         <ol className="space-y-1.5 text-[13px]">
           {events.map((e, idx) => {
@@ -59,7 +59,7 @@ export function GnomeLoader({ query, lang, label, events }: { query: string; lan
     <div className="rounded-lg border border-(--accent) bg-(--accent-soft) px-5 py-6">
       <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-accent">
         <Sparkles size={15} className="animate-pulse" />
-        {label ?? say('The gnomes are at work…', 'Гномы за работой…')}
+        {label ?? say('Working on it…', 'Придумываем…')}
       </div>
       <ol className="space-y-2 font-mono text-[13.5px] text-ink">
         <li className="flex gap-2">

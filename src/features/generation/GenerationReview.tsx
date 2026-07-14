@@ -100,7 +100,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
   return (
     <div className="mx-auto w-full max-w-[720px] px-6 py-8">
       <div className="mb-1 flex items-center gap-2 text-[18px] font-bold text-ink">
-        <Sparkles size={18} className="text-accent" /> {ru ? 'Черновик от гномов' : 'Gnome draft'}
+        <Sparkles size={18} className="text-accent" /> {ru ? 'Черновик' : 'Draft'}
       </div>
       <p className="mb-5 text-[13.5px] text-ink-2">
         {ru ? 'По запросу' : 'For'} <span className="font-semibold text-ink">“{query}”</span>.{' '}
@@ -193,8 +193,8 @@ export function GenerationReview({ generationId, query, lang, candidates, status
           label={
             candidates.length === 0
               ? ru
-                ? 'Гномы придумывают черновик…'
-                : 'The gnomes draft your list…'
+                ? 'Придумываем черновик…'
+                : 'Drafting your list…'
               : ru
                 ? 'Придумываем ещё вариант…'
                 : 'Drafting another variant…'
@@ -256,7 +256,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
       ) : showClarify ? (
         <div className="rounded-lg border border-accent bg-(--accent-soft) p-5">
           <div className="mb-1 flex items-center gap-2 text-[14px] font-semibold text-accent">
-            <Sparkles size={15} /> {say('The gnomes need a bit more', 'Гномам нужно чуть больше деталей')}
+            <Sparkles size={15} /> {say('A bit more detail needed', 'Нужно чуть больше деталей')}
           </div>
           <p className="mb-3 text-[12.5px] text-ink-2">
             {say('Answer to get a sharper list — or just generate as-is.', 'Ответь — список будет точнее. Или сгенерируй как есть.')}

@@ -27,7 +27,7 @@ export function CouncilFields({ v, ru }: { v: CouncilValues; ru: boolean }) {
   return (
     <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
       <div>
-        <div className="text-[13px] font-medium text-ink">{say('Gnome council (multi-model)', 'Совет гномов (мультимодельно)')}</div>
+        <div className="text-[13px] font-medium text-ink">{say('Expert council (multi-model)', 'Совет экспертов (мультимодельно)')}</div>
         <p className="mt-0.5 text-[12px] text-muted">
           {say(
             'Steward → experts + innovator → devil’s advocate → elder. ~6-7× cost and ~50s latency — keep the audience limited.',
@@ -50,7 +50,7 @@ export function CouncilFields({ v, ru }: { v: CouncilValues; ru: boolean }) {
           </select>
         </div>
         <div>
-          <label className={lbl}>{say('Max gnomes', 'Макс гномов')}</label>
+          <label className={lbl}>{say('Max experts', 'Макс экспертов')}</label>
           <input type="number" name="councilMaxGnomes" min="1" max="8" step="1" defaultValue={v.maxGnomes} className={field} />
         </div>
       </div>
