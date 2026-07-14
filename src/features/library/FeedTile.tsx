@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { GitFork, Lock, Star } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { TagChip } from '@/shared/ui/TagChip'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
 import { tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
@@ -36,13 +37,7 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
         {item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {item.tags.slice(0, 3).map((tag) => (
-              <Link
-                key={tag}
-                href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-                className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11px] font-medium text-accent hover:underline"
-              >
-                {tag}
-              </Link>
+              <TagChip key={tag} slug={tag} />
             ))}
           </div>
         )}

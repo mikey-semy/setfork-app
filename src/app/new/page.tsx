@@ -3,6 +3,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
+import { TagInput } from '@/shared/ui/TagInput'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
@@ -48,11 +49,9 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
         />
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('tags', lang)}</label>
-        <Input
-          name="tags"
-          placeholder={ru ? 'напр. docker deploy vps' : 'e.g. docker deploy vps'}
-          className="mb-6 px-3 py-2.5 text-[14px]"
-        />
+        <div className="mb-6">
+          <TagInput lang={lang} />
+        </div>
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('listKind', lang)}</label>
         <div className="mb-6 grid grid-cols-2 gap-2">

@@ -26,6 +26,7 @@ import { gateListPublication, recheckList } from '@/features/moderation/moderate
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
+import { registerTags } from '@/features/tags/service'
 import { canViewList } from '@/core'
 
 /** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
@@ -192,6 +193,7 @@ export async function createTemplate(formData: FormData): Promise<void> {
     steps: toStepInput(proposed),
   })
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
+  await registerTags(tags) // новые теги → в реестр
   await ensureWatch(list.id) // владелец следит за своим списком
   if (visibility === 'public') await gateListPublication(list.id) // приватные не модерируем
   await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
@@ -222,6 +224,7 @@ export async function updateListMeta(templateId: string, formData: FormData): Pr
       updatedAt: new Date(),
     })
     .where(eq(templates.id, templateId))
+  await registerTags(tags)
   revalidatePath(`/${session.handle}/${tpl.slug}`)
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
 }
@@ -243,6 +246,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed) })
   // tags/ordered/gated — атрибуты списка, не версии; обновляем отдельно.
   await db.update(templates).set({ tags, ordered, gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+  await registerTags(tags)
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)

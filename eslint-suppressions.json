@@ -151,7 +151,7 @@
   },
   "src/app/new/page.tsx": {
     "no-restricted-syntax": {
-      "count": 9
+      "count": 8
     }
   },
   "src/app/page.tsx": {
@@ -401,7 +401,7 @@
   },
   "src/features/library/actions.ts": {
     "boundaries/dependencies": {
-      "count": 11
+      "count": 12
     },
     "no-restricted-syntax": {
       "count": 3
