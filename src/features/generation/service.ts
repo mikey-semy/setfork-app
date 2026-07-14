@@ -7,6 +7,7 @@ import { generateListCouncil } from '@/shared/ai/council'
 import { setClarify } from '@/shared/ai/council-clarify'
 import { getAiSettings } from '@/shared/settings/ai'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
+import { rateStore } from '@/shared/rate-limit-store'
 import { parseTags } from '@/features/library/slug'
 
 /** Админ ли пользователь (по handle из ADMIN_HANDLES) — для гейта аудитории совета. */
@@ -40,7 +41,13 @@ export async function addCandidate(
   }
   // «Совет гномов» (за флагом + гейт аудитории) — мультимодельная генерация; при null фолбэк на одиночную.
   const settings = await getAiSettings()
-  const useCouncil = settings.councilEnabled && (settings.councilAudience === 'all' || (await isAdminUser(userId)))
+  const admin = await isAdminUser(userId)
+  let useCouncil = settings.councilEnabled && (settings.councilAudience === 'all' || admin)
+  // Лимит советов на пользователя за ~месяц (не для админов): исчерпал → откат на одиночную генерацию.
+  if (useCouncil && !admin && settings.councilMaxPerMonth > 0) {
+    const r = await rateStore().fixedWindow(`council-mo:${userId}`, settings.councilMaxPerMonth, 30 * 24 * 3600 * 1000)
+    if (!r.ok) useCouncil = false
+  }
   let draft: GeneratedList | null = null
   if (useCouncil) {
     const res = await generateListCouncil(query, lang, genOpts)

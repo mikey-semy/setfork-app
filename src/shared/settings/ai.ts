@@ -26,6 +26,8 @@ export interface AiSettings {
   councilWebSeek: boolean
   /** Диалог: при неоднозначном запросе совет сперва задаёт уточняющие вопросы (репортёр). OFF по умолчанию. */
   councilClarify: boolean
+  /** Лимит советов на пользователя за ~месяц (не для админов); исчерпал → откат на одиночную. 0 = безлимит. */
+  councilMaxPerMonth: number
 }
 
 const KEYS = [
@@ -42,6 +44,7 @@ const KEYS = [
   'ai.council_audience',
   'ai.council_web_seek',
   'ai.council_clarify',
+  'ai.council_max_per_month',
 ] as const
 
 export function defaultChatModel(): string {
@@ -96,6 +99,7 @@ export async function getAiSettings(): Promise<AiSettings> {
     councilAudience: (m['ai.council_audience'] ?? process.env.SETFORK_COUNCIL_AUDIENCE) === 'all' ? 'all' : 'admin',
     councilWebSeek: m['ai.council_web_seek'] != null ? m['ai.council_web_seek'] === 'true' : process.env.SETFORK_COUNCIL_WEB_SEEK === 'true',
     councilClarify: m['ai.council_clarify'] != null ? m['ai.council_clarify'] === 'true' : process.env.SETFORK_COUNCIL_CLARIFY === 'true',
+    councilMaxPerMonth: num(m['ai.council_max_per_month'], Number(process.env.SETFORK_COUNCIL_MAX_PER_MONTH) || 0),
   }
 }
 

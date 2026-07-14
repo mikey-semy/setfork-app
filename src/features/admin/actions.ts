@@ -30,6 +30,7 @@ export async function setAiSettings(formData: FormData): Promise<void> {
 
   // «Совет гномов» — мультимодельная генерация за флагами (см. shared/ai/council.ts).
   const councilMaxGnomes = Math.min(8, Math.max(1, Math.round(Number(formData.get('councilMaxGnomes')) || 3)))
+  const councilMaxPerMonth = Math.max(0, Math.round(Number(formData.get('councilMaxPerMonth')) || 0))
   const councilModels = String(formData.get('councilModels') ?? '').split(',').map((s) => s.trim()).filter(Boolean).join(',')
 
   const settings: Record<string, string> = {
@@ -45,6 +46,7 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.council_models': councilModels,
     'ai.council_web_seek': formData.get('councilWebSeek') === 'on' ? 'true' : 'false',
     'ai.council_clarify': formData.get('councilClarify') === 'on' ? 'true' : 'false',
+    'ai.council_max_per_month': String(councilMaxPerMonth),
   }
   if (apiKey) settings[API_KEY_SETTING] = apiKey
   // Включать генерацию можно только при наличии ключа.

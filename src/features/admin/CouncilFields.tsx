@@ -15,6 +15,7 @@ export interface CouncilValues {
   models: string
   webSeek: boolean
   clarify: boolean
+  maxPerMonth: number
 }
 
 export function CouncilFields({ v, ru }: { v: CouncilValues; ru: boolean }) {
@@ -57,6 +58,14 @@ export function CouncilFields({ v, ru }: { v: CouncilValues; ru: boolean }) {
       <div>
         <label className={lbl}>{say('Council models (comma-separated OpenRouter ids; empty = default)', 'Модели совета (id OpenRouter через запятую; пусто = дефолт)')}</label>
         <input name="councilModels" defaultValue={v.models} placeholder="openai/gpt-4o-mini, meta-llama/llama-3.3-70b-instruct, mistralai/mistral-nemo" className={`${field} font-mono text-[12.5px]`} />
+      </div>
+
+      <div>
+        <label className={lbl}>{say('Free councils per user / month (0 = unlimited)', 'Бесплатных советов на пользователя в месяц (0 = безлимит)')}</label>
+        <input type="number" name="councilMaxPerMonth" min="0" step="1" defaultValue={v.maxPerMonth} className={field} />
+        <p className="mt-1.5 text-[12px] text-muted">
+          {say('When audience is Everyone: after N council uses a user falls back to single generation. Admins unlimited.', 'Когда аудитория «Всем»: после N советов пользователь откатывается на одиночную генерацию. Админы — без лимита.')}
+        </p>
       </div>
 
       <div className="flex items-center justify-between gap-4">

@@ -252,6 +252,7 @@ export default async function AdminPage() {
                 models: settings.councilModels.join(', '),
                 webSeek: settings.councilWebSeek,
                 clarify: settings.councilClarify,
+                maxPerMonth: settings.councilMaxPerMonth,
               }}
               ru={ru}
             />
