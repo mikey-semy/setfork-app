@@ -1,4 +1,5 @@
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { TagInput } from '@/shared/ui/TagInput'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { updateListMeta, setListVisibility } from './actions'
 
@@ -42,8 +43,8 @@ export function GeneralSection({
           <textarea id="ls-desc" name="desc" defaultValue={tr(desc, lang)} rows={3} maxLength={500} className={`${field} resize-y`} />
         </div>
         <div>
-          <label className={label} htmlFor="ls-tags">{t('tags', lang)}</label>
-          <input id="ls-tags" name="tags" defaultValue={tags.join(' ')} placeholder={t('tagsHint', lang)} className={field} />
+          <label className={label}>{t('tags', lang)}</label>
+          <TagInput initial={tags} lang={lang} />
         </div>
 
         <fieldset>

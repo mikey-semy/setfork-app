@@ -9,6 +9,7 @@ import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { canWriteList } from '@/features/collab/queries'
 import { saveNewVersion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
+import { TagInput } from '@/shared/ui/TagInput'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
 
@@ -49,12 +50,9 @@ export default async function EditPage({
         <ChangeNoteField templateId={tpl.id} lang={lang} placeholder={t('changeNote', lang)} />
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('tags', lang)}</label>
-        <input
-          name="tags"
-          defaultValue={tpl.tags.join(' ')}
-          placeholder={t('tagsHint', lang)}
-          className="mb-6 w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-hidden"
-        />
+        <div className="mb-6">
+          <TagInput initial={tpl.tags} lang={lang} />
+        </div>
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('listKind', lang)}</label>
         <div className="mb-6 grid grid-cols-2 gap-2">

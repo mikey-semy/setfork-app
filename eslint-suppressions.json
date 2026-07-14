@@ -151,7 +151,7 @@
   },
   "src/app/new/page.tsx": {
     "no-restricted-syntax": {
-      "count": 9
+      "count": 8
     }
   },
   "src/app/page.tsx": {
