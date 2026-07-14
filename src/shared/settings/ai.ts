@@ -20,6 +20,8 @@ export interface AiSettings {
   councilModels: string[]
   /** Максимум гномов-экспертов, созываемых распорядителем (лимит цены). */
   councilMaxGnomes: number
+  /** Аудитория совета (гейт цены/раскатки): 'admin' — только админам (безопасно на проде), 'all' — всем. */
+  councilAudience: 'admin' | 'all'
 }
 
 const KEYS = [
@@ -33,6 +35,7 @@ const KEYS = [
   'ai.council_enabled',
   'ai.council_models',
   'ai.council_max_gnomes',
+  'ai.council_audience',
 ] as const
 
 export function defaultChatModel(): string {
@@ -84,6 +87,7 @@ export async function getAiSettings(): Promise<AiSettings> {
     councilEnabled: m['ai.council_enabled'] != null ? m['ai.council_enabled'] === 'true' : process.env.SETFORK_COUNCIL_ENABLED === 'true',
     councilModels: m['ai.council_models'] != null ? csv(m['ai.council_models']) : csv(process.env.SETFORK_COUNCIL_MODELS),
     councilMaxGnomes: num(m['ai.council_max_gnomes'], Number(process.env.SETFORK_COUNCIL_MAX_GNOMES) || 3),
+    councilAudience: (m['ai.council_audience'] ?? process.env.SETFORK_COUNCIL_AUDIENCE) === 'all' ? 'all' : 'admin',
   }
 }
 

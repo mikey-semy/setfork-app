@@ -1,10 +1,22 @@
 import 'server-only'
+import { eq } from 'drizzle-orm'
 import type { Lang } from '@/shared/i18n'
-import { db, generationCandidates, type CandidateItem } from '@/shared/db'
+import { db, generationCandidates, users, type CandidateItem } from '@/shared/db'
 import { generateListDraft, sanitizeCommand, type GenerateOptions } from '@/shared/ai/generate'
 import { generateListCouncil } from '@/shared/ai/council'
 import { getAiSettings } from '@/shared/settings/ai'
+import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { parseTags } from '@/features/library/slug'
+
+/** Админ ли пользователь (по handle из ADMIN_HANDLES) — для гейта аудитории совета. */
+async function isAdminUser(userId: string): Promise<boolean> {
+  try {
+    const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId)).limit(1)
+    return isAdminHandle(u?.handle ?? null)
+  } catch {
+    return false
+  }
+}
 
 /**
  * Сгенерировать один вариант и сохранить кандидатом (idx). Возвращает false при ошибке ИИ.
@@ -25,9 +37,10 @@ export async function addCandidate(
     refType: 'generation',
     refId: generationId,
   }
-  // «Совет гномов» (за флагом) — мультимодельная генерация; при null фолбэк на одиночную.
+  // «Совет гномов» (за флагом + гейт аудитории) — мультимодельная генерация; при null фолбэк на одиночную.
   const settings = await getAiSettings()
-  const draft = (settings.councilEnabled ? await generateListCouncil(query, lang, genOpts) : null) ?? (await generateListDraft(query, lang, genOpts))
+  const useCouncil = settings.councilEnabled && (settings.councilAudience === 'all' || (await isAdminUser(userId)))
+  const draft = (useCouncil ? await generateListCouncil(query, lang, genOpts) : null) ?? (await generateListDraft(query, lang, genOpts))
   if (!draft) return false
   const items: CandidateItem[] = draft.items.map((it) => ({
     title: it.title,
