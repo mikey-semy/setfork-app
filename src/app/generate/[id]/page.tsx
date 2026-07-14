@@ -4,6 +4,7 @@ import { db, templates, users } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { getGeneration, getGenerationStatus } from '@/features/generation/queries'
+import { getCouncilEvents } from '@/shared/ai/council-progress'
 import { GenerationReview } from '@/features/generation/GenerationReview'
 
 export const metadata = { title: 'Draft' }
@@ -41,6 +42,7 @@ export default async function GenerationPage({
       status={status}
       initialIdx={Number(sp.v) || gen.candidates[gen.candidates.length - 1]?.idx || 1}
       error={sp.e}
+      councilEvents={getCouncilEvents(gen.id)}
     />
   )
 }

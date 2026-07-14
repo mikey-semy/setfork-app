@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Check, Link2, Loader2, Pencil, RotateCw, Sparkles, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
+import type { CouncilEvent } from '@/shared/ai/council-progress'
 import type { GenerationStatus } from './queries'
 import { GnomeLoader } from './GnomeLoader'
 import { safeHref } from '@/shared/lib/safe-url'
@@ -18,9 +19,10 @@ interface Props {
   status: GenerationStatus
   initialIdx: number
   error?: string
+  councilEvents?: CouncilEvent[]
 }
 
-export function GenerationReview({ generationId, query, lang, candidates, status, initialIdx, error }: Props) {
+export function GenerationReview({ generationId, query, lang, candidates, status, initialIdx, error, councilEvents }: Props) {
   const ru = lang === 'ru'
   const router = useRouter()
   const [selIdx, setSelIdx] = useState(initialIdx)
@@ -178,6 +180,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
         <GnomeLoader
           query={query}
           lang={lang}
+          events={councilEvents}
           label={
             candidates.length === 0
               ? ru
