@@ -319,11 +319,6 @@
       "count": 25
     }
   },
-  "src/features/generation/GnomeLoader.tsx": {
-    "no-restricted-syntax": {
-      "count": 2
-    }
-  },
   "src/features/generation/actions.ts": {
     "boundaries/dependencies": {
       "count": 4

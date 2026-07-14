@@ -14,6 +14,20 @@ export interface AiSettings {
   maxTokens: number
   /** Порог в USD: когда остаток на счёте OpenRouter ниже — переключаемся на fallbackModel. 0 = выкл. */
   cheapModeThreshold: number
+  /** «Совет гномов»: мульти-модельная генерация (распорядитель→эксперты+новатор→критик→синтез). OFF по умолчанию. */
+  councilEnabled: boolean
+  /** Гетерогенная панель моделей для совета (id OpenRouter). Пусто → встроенный дефолт. */
+  councilModels: string[]
+  /** Максимум гномов-экспертов, созываемых распорядителем (лимит цены). */
+  councilMaxGnomes: number
+  /** Аудитория совета (гейт цены/раскатки): 'admin' — только админам (безопасно на проде), 'all' — всем. */
+  councilAudience: 'admin' | 'all'
+  /** Старейшина advanced-тира: искать прецеденты ещё и в интернете (:online). Дороже/медленнее. OFF по умолчанию. */
+  councilWebSeek: boolean
+  /** Диалог: при неоднозначном запросе совет сперва задаёт уточняющие вопросы (репортёр). OFF по умолчанию. */
+  councilClarify: boolean
+  /** Лимит советов на пользователя за ~месяц (не для админов); исчерпал → откат на одиночную. 0 = безлимит. */
+  councilMaxPerMonth: number
 }
 
 const KEYS = [
@@ -24,6 +38,13 @@ const KEYS = [
   'ai.temperature',
   'ai.max_tokens',
   'ai.cheap_mode_threshold',
+  'ai.council_enabled',
+  'ai.council_models',
+  'ai.council_max_gnomes',
+  'ai.council_audience',
+  'ai.council_web_seek',
+  'ai.council_clarify',
+  'ai.council_max_per_month',
 ] as const
 
 export function defaultChatModel(): string {
@@ -63,6 +84,7 @@ export async function getAiSettings(): Promise<AiSettings> {
     const n = Number(v)
     return Number.isFinite(n) ? n : fallback
   }
+  const csv = (v: string | undefined): string[] => (v || '').split(',').map((s) => s.trim()).filter(Boolean)
   return {
     enabled: m['ai.enabled'] != null ? m['ai.enabled'] === 'true' : hasOpenRouterKey(),
     chatModel: m['ai.chat_model'] || defaultChatModel(),
@@ -71,6 +93,13 @@ export async function getAiSettings(): Promise<AiSettings> {
     temperature: num(m['ai.temperature'], 0.3),
     maxTokens: num(m['ai.max_tokens'], 1500),
     cheapModeThreshold: num(m['ai.cheap_mode_threshold'], 0),
+    councilEnabled: m['ai.council_enabled'] != null ? m['ai.council_enabled'] === 'true' : process.env.SETFORK_COUNCIL_ENABLED === 'true',
+    councilModels: m['ai.council_models'] != null ? csv(m['ai.council_models']) : csv(process.env.SETFORK_COUNCIL_MODELS),
+    councilMaxGnomes: num(m['ai.council_max_gnomes'], Number(process.env.SETFORK_COUNCIL_MAX_GNOMES) || 3),
+    councilAudience: (m['ai.council_audience'] ?? process.env.SETFORK_COUNCIL_AUDIENCE) === 'all' ? 'all' : 'admin',
+    councilWebSeek: m['ai.council_web_seek'] != null ? m['ai.council_web_seek'] === 'true' : process.env.SETFORK_COUNCIL_WEB_SEEK === 'true',
+    councilClarify: m['ai.council_clarify'] != null ? m['ai.council_clarify'] === 'true' : process.env.SETFORK_COUNCIL_CLARIFY === 'true',
+    councilMaxPerMonth: num(m['ai.council_max_per_month'], Number(process.env.SETFORK_COUNCIL_MAX_PER_MONTH) || 0),
   }
 }
 

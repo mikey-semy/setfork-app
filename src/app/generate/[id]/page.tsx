@@ -4,6 +4,8 @@ import { db, templates, users } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { getGeneration, getGenerationStatus } from '@/features/generation/queries'
+import { getCouncilEvents } from '@/shared/ai/council-progress'
+import { getClarify } from '@/shared/ai/council-clarify'
 import { GenerationReview } from '@/features/generation/GenerationReview'
 
 export const metadata = { title: 'Draft' }
@@ -32,6 +34,9 @@ export default async function GenerationPage({
     if (row) redirect(`/${row.handle}/${row.slug}`)
   }
 
+  // Театр беседы + уточнения (Redis или память) — читаем параллельно.
+  const [councilEvents, clarifyQuestions] = await Promise.all([getCouncilEvents(gen.id), getClarify(gen.id)])
+
   return (
     <GenerationReview
       generationId={gen.id}
@@ -41,6 +46,8 @@ export default async function GenerationPage({
       status={status}
       initialIdx={Number(sp.v) || gen.candidates[gen.candidates.length - 1]?.idx || 1}
       error={sp.e}
+      councilEvents={councilEvents}
+      clarifyQuestions={clarifyQuestions}
     />
   )
 }

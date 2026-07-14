@@ -47,7 +47,7 @@ export interface GenerateOptions {
   refId?: string
 }
 
-const JSON_SHAPE = `Return ONLY valid JSON (no markdown fences), exactly this shape:
+export const JSON_SHAPE = `Return ONLY valid JSON (no markdown fences), exactly this shape:
 {"title": string, "desc": string, "tags": string[], "items": [{"title": string, "desc": string, "command": string, "level": "required"|"recommended"|"optional", "why": string, "subtasks": string[], "refs": [{"label": string, "url": string}]}]}
 Rules:
 - title: concise noun phrase naming the list.
@@ -59,7 +59,7 @@ Rules:
 - refs = 0-3 helpful links for the step (official site, docs, booking/map page). Put ALL URLs here, never in command. Each ref: label = short human name, url = full https URL. Use [] when there is no good link.
 - level = how essential the step is. why = one short sentence on WHY this step matters, or "". subtasks = 0-3 short verification checks.`
 
-function parseList(text: string, fallbackTitle: string): GeneratedList | null {
+export function parseList(text: string, fallbackTitle: string): GeneratedList | null {
   const cleaned = text
     .trim()
     .replace(/^```(?:json)?/i, '')

@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import { Check, Link2, Loader2, Pencil, RotateCw, Sparkles, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
+import type { CouncilEvent } from '@/shared/ai/council-progress'
 import type { GenerationStatus } from './queries'
 import { GnomeLoader } from './GnomeLoader'
 import { safeHref } from '@/shared/lib/safe-url'
-import { acceptCandidate, regenerateCandidate, regenerateWithQuery } from './actions'
+import { acceptCandidate, answerClarify, regenerateCandidate, regenerateWithQuery } from './actions'
 
 interface Props {
   generationId: string
@@ -18,9 +19,11 @@ interface Props {
   status: GenerationStatus
   initialIdx: number
   error?: string
+  councilEvents?: CouncilEvent[]
+  clarifyQuestions?: string[]
 }
 
-export function GenerationReview({ generationId, query, lang, candidates, status, initialIdx, error }: Props) {
+export function GenerationReview({ generationId, query, lang, candidates, status, initialIdx, error, councilEvents, clarifyQuestions }: Props) {
   const ru = lang === 'ru'
   const router = useRouter()
   const [selIdx, setSelIdx] = useState(initialIdx)
@@ -29,6 +32,8 @@ export function GenerationReview({ generationId, query, lang, candidates, status
   const [mode, setMode] = useState<'accept' | 'regen'>('regen')
   const [editing, setEditing] = useState(false)
   const [editQ, setEditQ] = useState(query)
+  const [answers, setAnswers] = useState<Record<number, string>>({})
+  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
   // Смена ?v= в URL (после «ещё вариант») → выбираем этот вариант (без setState-в-эффекте).
   if (initialIdx !== prevInitial) {
@@ -64,6 +69,11 @@ export function GenerationReview({ generationId, query, lang, candidates, status
   const genFailed = status === 'failed'
   const acceptSpinner = pending && mode === 'accept'
   const showGnome = (pending && mode === 'regen') || (waiting && !cand)
+  // Диалог: совет прислал уточняющие вопросы, кандидата ещё нет — показываем форму ответов.
+  const showClarify = !!clarifyQuestions?.length && candidates.length === 0 && !waiting && !pending
+  // Тупик: джоба завершилась без кандидата и без вопросов (уточнения истекли/мульти-инстанс) —
+  // не оставляем пустой экран, а предлагаем сгенерировать заново.
+  const showRetry = candidates.length === 0 && !waiting && !pending && !stalled && !showGnome && !acceptSpinner && !showClarify && !genFailed
 
   function accept() {
     if (!cand) return
@@ -84,6 +94,10 @@ export function GenerationReview({ generationId, query, lang, candidates, status
     setEditing(false)
     setMode('regen')
     start(() => regenerateWithQuery(generationId, q))
+  }
+  function submitClarify() {
+    setMode('regen')
+    start(() => answerClarify(generationId, (clarifyQuestions ?? []).map((_, i) => (answers[i] ?? '').trim())))
   }
 
   return (
@@ -178,6 +192,7 @@ export function GenerationReview({ generationId, query, lang, candidates, status
         <GnomeLoader
           query={query}
           lang={lang}
+          events={councilEvents}
           label={
             candidates.length === 0
               ? ru
@@ -241,9 +256,58 @@ export function GenerationReview({ generationId, query, lang, candidates, status
               ))}
             </ol>
           </div>
+      ) : showClarify ? (
+        <div className="rounded-lg border border-accent bg-(--accent-soft) p-5">
+          <div className="mb-1 flex items-center gap-2 text-[14px] font-semibold text-accent">
+            <Sparkles size={15} /> {say('A bit more detail needed', 'Нужно чуть больше деталей')}
+          </div>
+          <p className="mb-3 text-[12.5px] text-ink-2">
+            {say('Answer to get a sharper list — or just generate as-is.', 'Ответь — список будет точнее. Или сгенерируй как есть.')}
+          </p>
+          <div className="space-y-3">
+            {(clarifyQuestions ?? []).map((q, i) => (
+              <div key={i}>
+                <label className="mb-1 block text-[13px] font-medium text-ink">{q}</label>
+                <input
+                  value={answers[i] ?? ''}
+                  onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      submitClarify()
+                    }
+                  }}
+                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={submitClarify}
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-[13.5px] font-semibold text-primary-fg disabled:opacity-50"
+            >
+              <RotateCw size={15} /> {say('Answer & generate', 'Ответить и сгенерировать')}
+            </button>
+          </div>
+        </div>
       ) : genFailed ? (
         <div className="rounded-lg border border-danger/40 bg-danger/5 px-5 py-6 text-[13.5px] text-danger">
           {ru ? 'Не удалось придумать. Попробуйте ещё раз.' : "Couldn't draft it. Please try again."}
+        </div>
+      ) : showRetry ? (
+        <div className="rounded-lg border border-border bg-surface px-5 py-6 text-[13.5px] text-ink-2">
+          <p className="mb-3">
+            {say("The draft didn't come through (the clarifying step may have timed out). Try again.", 'Черновик не получился (шаг уточнения мог истечь). Попробуй ещё раз.')}
+          </p>
+          <button
+            onClick={regen}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-[13.5px] font-semibold text-primary-fg disabled:opacity-50"
+          >
+            <RotateCw size={15} /> {say('Generate', 'Сгенерировать')}
+          </button>
         </div>
       ) : null}
 

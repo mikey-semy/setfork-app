@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Loader2, Sparkles } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import type { CouncilEvent } from '@/shared/ai/council-progress'
 
 // Пасхалка South Park (Underpants Gnomes): «Collect underpants → ? → Profit!».
 // Шаг 2 крутит шуточные фразы, адаптирован к запросу пользователя.
@@ -15,7 +16,7 @@ const STEP2: { en: string[] } & Partial<Record<Lang, string[]>> = {
 // Фразы меняем НЕ спеша (болтанка раз в ~0.9с раздражала): спокойный переход раз в 8с.
 const ROTATE_MS = 8000
 
-export function GnomeLoader({ query, lang, label }: { query: string; lang: Lang; label?: string }) {
+export function GnomeLoader({ query, lang, label, events }: { query: string; lang: Lang; label?: string; events?: CouncilEvent[] }) {
   const [i, setI] = useState(0)
   const phrases = STEP2[lang] ?? STEP2.en
   useEffect(() => {
@@ -23,14 +24,42 @@ export function GnomeLoader({ query, lang, label }: { query: string; lang: Lang;
     return () => clearInterval(id)
   }, [phrases.length])
 
-  const collect = lang === 'ru' ? 'Собрать' : 'Collect'
+  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+
+  // «Театр беседы совета»: если воркер прислал ход совета — рисуем ЖИВУЮ ленту вместо мема.
+  if (events && events.length) {
+    return (
+      <div className="rounded-lg border border-(--accent) bg-(--accent-soft) px-5 py-6">
+        <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-accent">
+          <Sparkles size={15} className="animate-pulse" />
+          {label ?? say('The expert council confers…', 'Совет экспертов совещается…')}
+        </div>
+        <ol className="space-y-1.5 text-[13px]">
+          {events.map((e, idx) => {
+            const last = idx === events.length - 1
+            return (
+              <li key={`${e.ts}-${idx}`} className="flex items-start gap-2">
+                <span className="mt-px w-3.5 shrink-0 text-center text-muted">
+                  {last ? <Loader2 size={13} className="animate-spin text-accent" /> : '·'}
+                </span>
+                <span className={last ? 'text-accent' : 'text-ink-2'}>{e.text}</span>
+              </li>
+            )
+          })}
+        </ol>
+      </div>
+    )
+  }
+
+  // Фолбэк: мем-лоадер (совет выключен, или лента пока пуста / пришла на другой инстанс).
+  const collect = say('Collect', 'Собрать')
   const q = query.length > 60 ? query.slice(0, 60) + '…' : query
 
   return (
     <div className="rounded-lg border border-(--accent) bg-(--accent-soft) px-5 py-6">
       <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-accent">
         <Sparkles size={15} className="animate-pulse" />
-        {label ?? (lang === 'ru' ? 'Придумываем…' : 'Working on it…')}
+        {label ?? say('Working on it…', 'Придумываем…')}
       </div>
       <ol className="space-y-2 font-mono text-[13.5px] text-ink">
         <li className="flex gap-2">
