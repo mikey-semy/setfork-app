@@ -105,6 +105,9 @@ export async function answerClarify(generationId: string, answers: string[]): Pr
 
   const questions = getClarify(generationId)
   if (!questions.length) redirect(`/generate/${generationId}`) // нечего уточнять (протухло/уже ответили)
+  // #2: клеймим АТОМАРНО — до первого await. Параллельный double-submit (Enter+клик / две вкладки)
+  // увидит пусто и не задвоит джобу idx=1 (иначе UNIQUE(generationId,idx) → упавшая джоба).
+  clearClarify(generationId)
 
   const { allowed } = await checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
@@ -114,7 +117,6 @@ export async function answerClarify(generationId: string, answers: string[]): Pr
   // заголовок остаётся чистым). Совет с контекстом уже не спросит уточнений и сгенерирует список.
   const qa = questions.map((q, i) => `Q: ${q}\nA: ${(answers[i] ?? '').trim() || '(no answer)'}`).join('\n')
   const augmented = `${gen.query}\n\n[User clarifications]\n${qa}`.slice(0, 2000)
-  clearClarify(generationId)
   await enqueueGenerate(generationId, session.userId, augmented, gen.lang, 1)
   redirect(`/generate/${generationId}`)
 }

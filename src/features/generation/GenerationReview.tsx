@@ -71,6 +71,9 @@ export function GenerationReview({ generationId, query, lang, candidates, status
   const showGnome = (pending && mode === 'regen') || (waiting && !cand)
   // Диалог: совет прислал уточняющие вопросы, кандидата ещё нет — показываем форму ответов.
   const showClarify = !!clarifyQuestions?.length && candidates.length === 0 && !waiting && !pending
+  // Тупик: джоба завершилась без кандидата и без вопросов (уточнения истекли/мульти-инстанс) —
+  // не оставляем пустой экран, а предлагаем сгенерировать заново.
+  const showRetry = candidates.length === 0 && !waiting && !pending && !stalled && !showGnome && !acceptSpinner && !showClarify && !genFailed
 
   function accept() {
     if (!cand) return
@@ -292,6 +295,19 @@ export function GenerationReview({ generationId, query, lang, candidates, status
       ) : genFailed ? (
         <div className="rounded-lg border border-danger/40 bg-danger/5 px-5 py-6 text-[13.5px] text-danger">
           {ru ? 'Не удалось придумать. Попробуйте ещё раз.' : "Couldn't draft it. Please try again."}
+        </div>
+      ) : showRetry ? (
+        <div className="rounded-lg border border-border bg-surface px-5 py-6 text-[13.5px] text-ink-2">
+          <p className="mb-3">
+            {say("The draft didn't come through (the clarifying step may have timed out). Try again.", 'Черновик не получился (шаг уточнения мог истечь). Попробуй ещё раз.')}
+          </p>
+          <button
+            onClick={regen}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-[13.5px] font-semibold text-primary-fg disabled:opacity-50"
+          >
+            <RotateCw size={15} /> {say('Generate', 'Сгенерировать')}
+          </button>
         </div>
       ) : null}
 
