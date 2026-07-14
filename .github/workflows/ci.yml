@@ -8,7 +8,7 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, setfork]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,7 +28,7 @@ jobs:
   # Интеграция data-layer против реального Postgres (pgvector). Схема — drizzle-kit push
   # (не migrate: журнал миграций хрупкий, для эфемерной БД push надёжнее).
   integration:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, setfork]
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -67,7 +67,7 @@ jobs:
   # Барьер покрытия: честная цифра = unit + integration (unit-репорт врёт 0% на data-layer).
   # Сливаем оба coverage-final.json и держим порог, чтобы покрытие не проседало.
   coverage:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, setfork]
     services:
       postgres:
         image: pgvector/pgvector:pg16
