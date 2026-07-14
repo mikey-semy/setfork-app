@@ -17,6 +17,7 @@ import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { AiKeyAndSwitch } from '@/features/admin/AiKeyAndSwitch'
+import { CouncilFields } from '@/features/admin/CouncilFields'
 import { CreditsWidget } from '@/features/admin/CreditsWidget'
 import { MediaSettingsForm } from '@/features/admin/MediaSettingsForm'
 import { EmailSettingsForm } from '@/features/admin/EmailSettingsForm'
@@ -242,6 +243,18 @@ export default async function AdminPage() {
                 </p>
               </div>
             </div>
+
+            <CouncilFields
+              v={{
+                enabled: settings.councilEnabled,
+                audience: settings.councilAudience,
+                maxGnomes: settings.councilMaxGnomes,
+                models: settings.councilModels.join(', '),
+                webSeek: settings.councilWebSeek,
+                clarify: settings.councilClarify,
+              }}
+              ru={ru}
+            />
 
             <div className="flex justify-end border-t border-border pt-4">
               <button className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">

@@ -28,6 +28,10 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   // Ключ пишем только если поле заполнено — пустое поле значит «не менять».
   const apiKey = String(formData.get('apiKey') ?? '').trim()
 
+  // «Совет гномов» — мультимодельная генерация за флагами (см. shared/ai/council.ts).
+  const councilMaxGnomes = Math.min(8, Math.max(1, Math.round(Number(formData.get('councilMaxGnomes')) || 3)))
+  const councilModels = String(formData.get('councilModels') ?? '').split(',').map((s) => s.trim()).filter(Boolean).join(',')
+
   const settings: Record<string, string> = {
     'ai.chat_model': chatModel || defaultChatModel(),
     'ai.fallback_model': fallbackModel,
@@ -35,6 +39,12 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.temperature': String(temperature),
     'ai.max_tokens': String(maxTokens),
     'ai.cheap_mode_threshold': String(cheapModeThreshold),
+    'ai.council_enabled': formData.get('councilEnabled') === 'on' ? 'true' : 'false',
+    'ai.council_audience': formData.get('councilAudience') === 'all' ? 'all' : 'admin',
+    'ai.council_max_gnomes': String(councilMaxGnomes),
+    'ai.council_models': councilModels,
+    'ai.council_web_seek': formData.get('councilWebSeek') === 'on' ? 'true' : 'false',
+    'ai.council_clarify': formData.get('councilClarify') === 'on' ? 'true' : 'false',
   }
   if (apiKey) settings[API_KEY_SETTING] = apiKey
   // Включать генерацию можно только при наличии ключа.
