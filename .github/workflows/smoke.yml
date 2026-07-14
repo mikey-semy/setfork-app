@@ -16,7 +16,7 @@ on:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, setfork]
     services:
       postgres:
         # pgvector-образ: схема использует тип vector (embeddings), обычный postgres:16 его не имеет.
