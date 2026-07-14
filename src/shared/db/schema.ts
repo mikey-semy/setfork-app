@@ -137,6 +137,20 @@ export const topics = pgTable('topics', {
   color: text('color').notNull(), // hex, напр. #2563eb
 })
 
+// ── Tag registry (курируемый реестр тегов) ───────────────────────────
+// Источник правды для автокомплита, курирования и админ-CRUD (переименование/
+// слияние/удаление). templates.tags остаётся text[] слагов — реестр хранит
+// метаданные тега по этому slug'у. usageCount — денормализованный счётчик
+// публичных списков с тегом (обновляется при правках/фоновой пересборке).
+export const tags = pgTable('tags', {
+  slug: text('slug').primaryKey(), // нормализованный тег (как в templates.tags: lowercase, a-z0-9а-яё-)
+  label: text('label'), // необязательное отображаемое имя (для курируемых); null → показываем slug
+  description: text('description'), // необязательное описание для страницы тега
+  curated: boolean('curated').notNull().default(false), // официальный/курируемый тег
+  usageCount: integer('usage_count').notNull().default(0), // публичных активных списков с тегом
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ── Templates (список/чек-лист) ──────────────────────────────────────
 export const templates = pgTable(
   'templates',
