@@ -7,6 +7,7 @@ import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, JSON_SHAPE, type GeneratedList, type GenerateOptions } from './generate'
+import { findPrecedents } from './retrieval'
 import { langEnName, type Lang } from '@/shared/i18n'
 
 /**
@@ -117,11 +118,17 @@ ${roster}`,
     if (!experts.some((e) => e.id === g.id)) experts.push(g)
   }
 
-  // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ + гном-новатор (дивергенция, temp↑).
+  // 2.5) Старейшина-искатель: прецеденты из НАШИХ списков (pgvector). Пусто на пустом корпусе — ок.
+  const precedents = await findPrecedents(query, lang, { userId: opts.userId })
+  const lore = precedents.length
+    ? `\n\nPRECEDENTS from our library (similar existing lists — reuse good structure, avoid duplicating, improve on them):\n${precedents.map((p, i) => `${i + 1}. ${p.title}${p.desc ? ' — ' + p.desc : ''}${p.tags.length ? ' [' + p.tags.join(', ') + ']' : ''}`).join('\n')}`
+    : ''
+
+  // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
   const draftJobs = experts.map((e, i) => {
     const model = online(pool[i % pool.length], web && Boolean(e.online))
     const sys = `You are ${e.persona}. Draft a practical checklist for the topic. 6-9 ordered steps: short imperative + one clarifying sentence + a real terminal command only when the step is technical. All content in ${langName}. Return ONLY the draft text.\n${sp.rule()}`
-    return run(model, sys, `Draft the checklist.\n${topic}`)
+    return run(model, sys, `Draft the checklist.\n${topic}${lore}`)
   })
   const innovatorJob = run(
     pool[0],
@@ -146,7 +153,7 @@ ${roster}`,
   const elder = await run(
     base,
     `You are the elder synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.\n${listRules}`,
-    `${topic}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized checklist as strict JSON.`,
+    `${topic}${lore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized checklist as strict JSON.`,
   )
   if (elder) return parseList(elder.text, query)
   // Синтез упал — вернём лучший черновик, чтобы список ОБЯЗАТЕЛЬНО получился.
