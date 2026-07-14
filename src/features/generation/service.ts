@@ -1,7 +1,9 @@
 import 'server-only'
 import type { Lang } from '@/shared/i18n'
 import { db, generationCandidates, type CandidateItem } from '@/shared/db'
-import { generateListDraft, sanitizeCommand } from '@/shared/ai/generate'
+import { generateListDraft, sanitizeCommand, type GenerateOptions } from '@/shared/ai/generate'
+import { generateListCouncil } from '@/shared/ai/council'
+import { getAiSettings } from '@/shared/settings/ai'
 import { parseTags } from '@/features/library/slug'
 
 /**
@@ -15,14 +17,17 @@ export async function addCandidate(
   lang: Lang,
   idx: number,
 ): Promise<boolean> {
-  const draft = await generateListDraft(query, lang, {
+  const genOpts: GenerateOptions = {
     web: true,
     variant: idx,
     userId,
     feature: idx > 1 ? 'regenerate' : 'generate',
     refType: 'generation',
     refId: generationId,
-  })
+  }
+  // «Совет гномов» (за флагом) — мультимодельная генерация; при null фолбэк на одиночную.
+  const settings = await getAiSettings()
+  const draft = (settings.councilEnabled ? await generateListCouncil(query, lang, genOpts) : null) ?? (await generateListDraft(query, lang, genOpts))
   if (!draft) return false
   const items: CandidateItem[] = draft.items.map((it) => ({
     title: it.title,
