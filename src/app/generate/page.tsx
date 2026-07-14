@@ -21,8 +21,8 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
       </div>
       <p className="mb-6 text-[13.5px] text-ink-2">
         {ru
-          ? 'Опиши, что нужно сделать — гномы напишут черновик списка. Дальше его проверяет и улучшает сообщество.'
-          : 'Describe what you need — the gnomes draft a list. The community then verifies and improves it.'}
+          ? 'Опиши, что нужно сделать — соберём черновик списка. Дальше его проверяет и улучшает сообщество.'
+          : 'Describe what you need — we draft a list. The community then verifies and improves it.'}
       </p>
 
       {!aiOn && (
