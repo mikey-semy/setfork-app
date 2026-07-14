@@ -24,6 +24,8 @@ export interface AiSettings {
   councilAudience: 'admin' | 'all'
   /** Старейшина advanced-тира: искать прецеденты ещё и в интернете (:online). Дороже/медленнее. OFF по умолчанию. */
   councilWebSeek: boolean
+  /** Диалог: при неоднозначном запросе совет сперва задаёт уточняющие вопросы (репортёр). OFF по умолчанию. */
+  councilClarify: boolean
 }
 
 const KEYS = [
@@ -39,6 +41,7 @@ const KEYS = [
   'ai.council_max_gnomes',
   'ai.council_audience',
   'ai.council_web_seek',
+  'ai.council_clarify',
 ] as const
 
 export function defaultChatModel(): string {
@@ -92,6 +95,7 @@ export async function getAiSettings(): Promise<AiSettings> {
     councilMaxGnomes: num(m['ai.council_max_gnomes'], Number(process.env.SETFORK_COUNCIL_MAX_GNOMES) || 3),
     councilAudience: (m['ai.council_audience'] ?? process.env.SETFORK_COUNCIL_AUDIENCE) === 'all' ? 'all' : 'admin',
     councilWebSeek: m['ai.council_web_seek'] != null ? m['ai.council_web_seek'] === 'true' : process.env.SETFORK_COUNCIL_WEB_SEEK === 'true',
+    councilClarify: m['ai.council_clarify'] != null ? m['ai.council_clarify'] === 'true' : process.env.SETFORK_COUNCIL_CLARIFY === 'true',
   }
 }
 

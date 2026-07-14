@@ -8,6 +8,7 @@ import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { DEFAULT_LANG, isLang, type Lang } from '@/shared/i18n'
 import { sanitizeCommand } from '@/shared/ai/generate'
+import { getClarify, clearClarify } from '@/shared/ai/council-clarify'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { aiQuota, listQuota } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
@@ -94,6 +95,28 @@ export async function regenerateWithQuery(generationId: string, newQuery: string
 
   await enqueueGenerate(generationId, session.userId, query, gen.lang, nextIdx)
   redirect(`/generate/${generationId}?v=${nextIdx}`)
+}
+
+// ── Ответить на уточняющие вопросы совета → перезапустить генерацию с контекстом ──────
+export async function answerClarify(generationId: string, answers: string[]): Promise<void> {
+  const session = await requireSession()
+  const gen = await db.query.generations.findFirst({ where: (g) => eq(g.id, generationId) })
+  if (!gen || gen.userId !== session.userId || gen.chosenTemplateId) redirect('/explore')
+
+  const questions = getClarify(generationId)
+  if (!questions.length) redirect(`/generate/${generationId}`) // нечего уточнять (протухло/уже ответили)
+
+  const { allowed } = await checkRateLimit(`gen:${session.userId}`)
+  if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
+  if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
+
+  // Память нити: пары «вопрос→ответ» подмешиваем в ЗАПРОС ДЖОБЫ (generations.query не портим —
+  // заголовок остаётся чистым). Совет с контекстом уже не спросит уточнений и сгенерирует список.
+  const qa = questions.map((q, i) => `Q: ${q}\nA: ${(answers[i] ?? '').trim() || '(no answer)'}`).join('\n')
+  const augmented = `${gen.query}\n\n[User clarifications]\n${qa}`.slice(0, 2000)
+  clearClarify(generationId)
+  await enqueueGenerate(generationId, session.userId, augmented, gen.lang, 1)
+  redirect(`/generate/${generationId}`)
 }
 
 // ── Принять кандидата → создать черновик-список (draft) ───────────────

@@ -2,8 +2,9 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 import type { Lang } from '@/shared/i18n'
 import { db, generationCandidates, users, type CandidateItem } from '@/shared/db'
-import { generateListDraft, sanitizeCommand, type GenerateOptions } from '@/shared/ai/generate'
+import { generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
 import { generateListCouncil } from '@/shared/ai/council'
+import { setClarify } from '@/shared/ai/council-clarify'
 import { getAiSettings } from '@/shared/settings/ai'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { parseTags } from '@/features/library/slug'
@@ -40,7 +41,17 @@ export async function addCandidate(
   // «Совет гномов» (за флагом + гейт аудитории) — мультимодельная генерация; при null фолбэк на одиночную.
   const settings = await getAiSettings()
   const useCouncil = settings.councilEnabled && (settings.councilAudience === 'all' || (await isAdminUser(userId)))
-  const draft = (useCouncil ? await generateListCouncil(query, lang, genOpts) : null) ?? (await generateListDraft(query, lang, genOpts))
+  let draft: GeneratedList | null = null
+  if (useCouncil) {
+    const res = await generateListCouncil(query, lang, genOpts)
+    // Диалог: совет попросил уточнений → кладём вопросы, кандидат НЕ создаём (ждём ответов пользователя).
+    if (res && 'clarify' in res) {
+      setClarify(generationId, res.clarify)
+      return true
+    }
+    draft = res
+  }
+  draft = draft ?? (await generateListDraft(query, lang, genOpts))
   if (!draft) return false
   const items: CandidateItem[] = draft.items.map((it) => ({
     title: it.title,

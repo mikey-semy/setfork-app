@@ -43,8 +43,11 @@ function firstJson(t: string): string {
 }
 const online = (m: string, web: boolean) => (web && m ? `${m}:online` : m)
 
+/** Результат совета: готовый список, ИЛИ уточняющие вопросы (диалог), ИЛИ null (ошибка/выкл → фолбэк). */
+export type CouncilResult = GeneratedList | { clarify: string[] } | null
+
 /** Мультимодельный «совет гномов». null при ошибке/выкл — caller фолбэкает на generateListDraft. */
-export async function generateListCouncil(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<GeneratedList | null> {
+export async function generateListCouncil(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<CouncilResult> {
   const apiKey = await getApiKey()
   if (!apiKey) return null
   const settings = await getAiSettings()
@@ -85,28 +88,43 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
     }
   }
 
-  // 1) Распорядитель: глубина (single|council) + созыв экспертов по домену (адаптивная глубина = лимит цены).
+  // 1) Распорядитель: глубина (single|council|clarify) + созыв экспертов по домену (адаптивная глубина = лимит цены).
   const roster = EXPERTS.map((e) => `${e.id}: ${e.persona} [${e.domains.join(',')}]`).join('\n')
+  const clarifyLine = settings.councilClarify
+    ? '- depth "clarify": the request is too vague for a useful list — a bare fragment or pronoun ("organize it", "plan the thing", "help me"), OR the good answer hinges on unstated parameters (budget / skill level / goal / constraints). Return 2-3 short clarifying questions in "questions". PREFER clarify over single/council whenever the request is underspecified this way.\n'
+    : ''
+  const jsonShape = settings.councilClarify
+    ? '{"depth":"single|council|clarify","summon":["id",...],"questions":["...only if clarify"],"reason":"short"}'
+    : '{"depth":"single|council","summon":["id",...],"reason":"short"}'
   const steward = await run(
     base,
     `You are the steward of a council of expert "gnomes" building a reference checklist. Choose process depth and summon experts.
-- depth "single": the topic is simple/everyday (chores, basic personal routines) — no council needed.
-- depth "council": summon 1-${maxGnomes} RELEVANT, DIVERSE experts from the roster (for technical/multi-faceted/professional topics).
-Return ONLY JSON: {"depth":"single|council","summon":["id",...],"reason":"short"}.
+${clarifyLine}- depth "single": the topic is clear AND simple/everyday (chores, basic personal routines) — no council needed.
+- depth "council": the topic is clear but technical/multi-faceted/professional — summon 1-${maxGnomes} RELEVANT, DIVERSE experts from the roster.
+Return ONLY JSON: ${jsonShape}
 ${sp.rule()}
 ROSTER:
 ${roster}`,
     `REQUEST:\n${topic}`,
-    200,
+    220,
   )
-  let depth: 'single' | 'council' = 'council'
+  let depth: 'single' | 'council' | 'clarify' = 'council'
   let ids: string[] = []
+  let questions: string[] = []
   if (steward) {
     try {
-      const p = JSON.parse(firstJson(steward.text)) as { depth?: string; summon?: string[] }
+      const p = JSON.parse(firstJson(steward.text)) as { depth?: string; summon?: string[]; questions?: string[] }
       if (p.depth === 'single') depth = 'single'
+      else if (p.depth === 'clarify' && settings.councilClarify) depth = 'clarify'
       ids = Array.isArray(p.summon) ? p.summon : []
+      questions = Array.isArray(p.questions) ? p.questions.filter((q) => typeof q === 'string' && q.trim()).map((q) => q.trim()).slice(0, 3) : []
     } catch { /* дефолт council */ }
+  }
+
+  // Диалог: не хватает ключевого → возвращаем уточняющие вопросы (совет не гоним, ждём ответов пользователя).
+  if (depth === 'clarify' && questions.length) {
+    emit('plan', say('Reporter: the request is ambiguous — asking to clarify', 'Репортёр: запрос неоднозначный — уточняю'))
+    return { clarify: questions }
   }
 
   const listRules = `You produce a canonical, high-quality reference checklist. All content MUST be in ${langName}.\n${JSON_SHAPE}\n${sp.rule()}`
