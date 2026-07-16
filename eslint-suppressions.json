@@ -154,11 +154,6 @@
       "count": 8
     }
   },
-  "src/app/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/app/reset-password/page.tsx": {
     "no-restricted-syntax": {
       "count": 5
