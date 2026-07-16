@@ -10,25 +10,36 @@ export const NONE = '__none__'
  *  цветовой класс (зелёный дёшево / жёлтый средне / красный дорого). */
 export type Option = { value: string; id: string; price?: string; priceClass?: string }
 
+const parseCsv = (s: string | undefined): string[] => (s || '').split(',').map((x) => x.trim()).filter(Boolean)
+
 /** Комбобокс выбора модели: список с поиском и кнопкой очистки поиска.
- *  Значение уходит в форму через скрытый input[name]. */
+ *  Значение уходит в форму через скрытый input[name].
+ *
+ *  multiple — выбор нескольких: значение уезжает CSV, выбранное показываем чипами.
+ *  ПОРЯДОК ЗНАЧИМ и хранится как порядок выбора (у совета 1-я модель ведёт промежуточные шаги,
+ *  остальные раздаются экспертам по кругу) — поэтому список, а не множество, и чипы нумерованы. */
 export function ModelSelect({
   name,
   defaultValue,
   options,
   placeholder,
   allowEmpty,
+  multiple,
 }: {
   name: string
   defaultValue?: string
   options: Option[]
   placeholder?: string
   allowEmpty?: boolean
+  multiple?: boolean
 }) {
-  const [value, setValue] = useState(defaultValue ?? '')
+  const [values, setValues] = useState<string[]>(() => (multiple ? parseCsv(defaultValue) : defaultValue ? [defaultValue] : []))
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(0)
+
+  const value = values[0] ?? ''
+  const idOf = (v: string) => options.find((o) => o.value === v)?.id ?? v
 
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -38,8 +49,7 @@ export function ModelSelect({
     return q ? options.filter((o) => o.id.toLowerCase().includes(q)) : options
   }, [query, options])
 
-  const selected = options.find((o) => o.value === value)
-  const triggerLabel = selected?.id ?? value
+  const triggerLabel = multiple ? (values.length ? `Выбрано моделей: ${values.length}` : '') : idOf(value)
 
   // Закрытие по клику вне и фокус в поиск при открытии.
   useEffect(() => {
@@ -61,7 +71,12 @@ export function ModelSelect({
   }, [open])
 
   const pick = (v: string) => {
-    setValue(v)
+    if (multiple) {
+      // Тумблер, список НЕ закрываем: обычно отмечают несколько подряд. Новая уходит в КОНЕЦ — порядок значим.
+      setValues((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]))
+      return
+    }
+    setValues(v ? [v] : [])
     setOpen(false)
   }
 
@@ -83,70 +98,94 @@ export function ModelSelect({
   }
 
   return (
-    <div ref={rootRef} className="relative">
-      <input type="hidden" name={name} value={value} />
+    // Корень ловит клик-вне; выпадашка позиционируется от ВНУТРЕННЕЙ обёртки — иначе чипы (они тоже
+    // в корне) растят его высоту, и список уезжает вниз с каждой выбранной моделью.
+    <div ref={rootRef}>
+      <input type="hidden" name={name} value={multiple ? values.join(',') : value} />
 
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] outline-hidden focus:border-border-strong"
-      >
-        <span className={triggerLabel ? 'truncate font-mono text-[13px] text-ink' : 'text-muted'}>
-          {triggerLabel || placeholder}
-        </span>
-        <ChevronDown size={16} className="shrink-0 text-muted" />
-      </button>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] outline-hidden focus:border-border-strong"
+        >
+          <span className={triggerLabel ? 'truncate font-mono text-[13px] text-ink' : 'text-muted'}>
+            {triggerLabel || placeholder}
+          </span>
+          <ChevronDown size={16} className="shrink-0 text-muted" />
+        </button>
 
-      {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-md border border-border bg-surface shadow-card">
-          <div className="flex items-center gap-2 border-b border-border px-2.5 py-2">
-            <Search size={14} className="shrink-0 text-muted" />
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value)
-                setHighlight(0)
-              }}
-              onKeyDown={onKeyDown}
-              placeholder="Поиск модели…"
-              className="w-full bg-transparent text-[13px] text-ink outline-hidden placeholder:text-muted"
-            />
-            {query && (
+        {open && (
+          <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-md border border-border bg-surface shadow-card">
+            <div className="flex items-center gap-2 border-b border-border px-2.5 py-2">
+              <Search size={14} className="shrink-0 text-muted" />
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setHighlight(0)
+                }}
+                onKeyDown={onKeyDown}
+                placeholder="Поиск модели…"
+                className="w-full bg-transparent text-[13px] text-ink outline-hidden placeholder:text-muted"
+              />
+              {query && (
+                <button
+                  type="button"
+                  aria-label="Очистить поиск"
+                  onClick={() => {
+                    setQuery('')
+                    inputRef.current?.focus()
+                  }}
+                  className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted hover:text-ink"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="max-h-72 overflow-auto p-1">
+              {allowEmpty && !query && (
+                <Row selected={value === ''} highlighted={false} onClick={() => pick('')}>
+                  <span className="text-ink-2">—</span>
+                </Row>
+              )}
+              {filtered.map((o, i) => (
+                <Row
+                  key={o.value}
+                  selected={values.includes(o.value)}
+                  highlighted={i === highlight}
+                  onMouseEnter={() => setHighlight(i)}
+                  onClick={() => pick(o.value)}
+                >
+                  <span className="truncate font-mono text-[12px]">{o.id}</span>
+                  {o.price && <span className={`ml-auto shrink-0 pl-4 tabular-nums text-[11.5px] ${o.priceClass ?? ''}`}>{o.price}</span>}
+                </Row>
+              ))}
+              {filtered.length === 0 && <div className="px-3 py-4 text-center text-[12.5px] text-muted">Ничего не найдено</div>}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Выбранное: чипы нумерованы, потому что порядок несёт смысл (см. коммент к multiple). */}
+      {multiple && values.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {values.map((v, i) => (
+            <span key={v} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 py-1 pl-1.5 pr-1 text-[11.5px] text-ink-2">
+              <span className="grid size-4 shrink-0 place-items-center rounded bg-surface text-[10px] tabular-nums text-muted">{i + 1}</span>
+              <span className="font-mono">{idOf(v)}</span>
               <button
                 type="button"
-                aria-label="Очистить поиск"
-                onClick={() => {
-                  setQuery('')
-                  inputRef.current?.focus()
-                }}
-                className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted hover:text-ink"
+                aria-label={`Убрать ${idOf(v)}`}
+                onClick={() => pick(v)}
+                className="grid size-4 shrink-0 place-items-center rounded text-muted hover:text-ink"
               >
-                <X size={14} />
+                <X size={12} />
               </button>
-            )}
-          </div>
-
-          <div className="max-h-72 overflow-auto p-1">
-            {allowEmpty && !query && (
-              <Row selected={value === ''} highlighted={false} onClick={() => pick('')}>
-                <span className="text-ink-2">—</span>
-              </Row>
-            )}
-            {filtered.map((o, i) => (
-              <Row
-                key={o.value}
-                selected={o.value === value}
-                highlighted={i === highlight}
-                onMouseEnter={() => setHighlight(i)}
-                onClick={() => pick(o.value)}
-              >
-                <span className="truncate font-mono text-[12px]">{o.id}</span>
-                {o.price && <span className={`ml-auto shrink-0 pl-4 tabular-nums text-[11.5px] ${o.priceClass ?? ''}`}>{o.price}</span>}
-              </Row>
-            ))}
-            {filtered.length === 0 && <div className="px-3 py-4 text-center text-[12.5px] text-muted">Ничего не найдено</div>}
-          </div>
+            </span>
+          ))}
         </div>
       )}
     </div>
