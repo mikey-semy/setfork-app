@@ -8,6 +8,7 @@ import type { GenerationCandidate } from '@/shared/db'
 import type { CouncilEvent } from '@/shared/ai/council-progress'
 import type { GenerationStatus } from './queries'
 import { GnomeLoader } from './GnomeLoader'
+import { CouncilBubble } from './CouncilBubble'
 import { safeHref } from '@/shared/lib/safe-url'
 import { acceptCandidate, answerClarify, regenerateCandidate, regenerateWithQuery } from './actions'
 
@@ -261,9 +262,12 @@ export function GenerationReview({ generationId, query, lang, candidates, status
           <div className="mb-1 flex items-center gap-2 text-[14px] font-semibold text-accent">
             <Sparkles size={15} /> {say('A bit more detail needed', 'Нужно чуть больше деталей')}
           </div>
-          <p className="mb-3 text-[12.5px] text-ink-2">
-            {say('Answer to get a sharper list — or just generate as-is.', 'Ответь — список будет точнее. Или сгенерируй как есть.')}
-          </p>
+          {/* Тот же пузырь, что и в живой беседе: спрашивает тот, кто прервал совет ради уточнений. */}
+          <div className="mb-3">
+            <CouncilBubble who="reporter" name={say('Reporter', 'Репортёр')}>
+              {say('Answer to get a sharper list — or just generate as-is.', 'Ответь — список будет точнее. Или сгенерируй как есть.')}
+            </CouncilBubble>
+          </div>
           <div className="space-y-3">
             {(clarifyQuestions ?? []).map((q, i) => (
               <div key={i}>

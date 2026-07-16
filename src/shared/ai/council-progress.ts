@@ -12,6 +12,10 @@ import { getRedis } from '@/shared/redis'
 export interface CouncilEvent {
   ts: number
   kind: 'plan' | 'summon' | 'seek' | 'draft' | 'innovate' | 'critique' | 'synth'
+  /** Кто говорит: id аватарки (`public/gnomes/<who>.webp`). Нет/неизвестный → дефолтная. */
+  who?: string
+  /** Подпись говорящего в ленте. Локализуем НА СЕРВЕРЕ: ростер живёт в council.ts (server-only), клиенту не виден. */
+  name?: string
   text: string
 }
 

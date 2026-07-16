@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Switch } from '@/shared/ui/switch'
+import { ModelSelect, type Option } from './ModelSelect'
 
 // Поля «Совета гномов» внутри формы AI-настроек (submit через setAiSettings).
 // Тумблеры — controlled Switch с name (submit 'on'/выкл), как в AiKeyAndSwitch.
@@ -18,7 +19,7 @@ export interface CouncilValues {
   maxPerMonth: number
 }
 
-export function CouncilFields({ v, ru }: { v: CouncilValues; ru: boolean }) {
+export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: boolean; modelOptions: Option[] }) {
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [enabled, setEnabled] = useState(v.enabled)
   const [webSeek, setWebSeek] = useState(v.webSeek)
@@ -56,8 +57,14 @@ export function CouncilFields({ v, ru }: { v: CouncilValues; ru: boolean }) {
       </div>
 
       <div>
-        <label className={lbl}>{say('Council models (comma-separated OpenRouter ids; empty = default)', 'Модели совета (id OpenRouter через запятую; пусто = дефолт)')}</label>
-        <input name="councilModels" defaultValue={v.models} placeholder="openai/gpt-4o-mini, meta-llama/llama-3.3-70b-instruct, mistralai/mistral-nemo" className={`${field} font-mono text-[12.5px]`} />
+        <label className={lbl}>{say('Council models (empty = default)', 'Модели совета (пусто = дефолт)')}</label>
+        <ModelSelect name="councilModels" defaultValue={v.models} options={modelOptions} multiple placeholder={say('Pick models', 'Выбери модели')} />
+        <p className="mt-1.5 text-[12px] text-muted">
+          {say(
+            'Order matters: the 1st model runs the intermediate steps (planner, critic) — pick a fast one; the rest go to experts in turn. Different vendors = more diverse opinions.',
+            'Порядок важен: 1-я модель ведёт промежуточные шаги (планировщик, критик) — ставь быструю; остальные раздаются экспертам по кругу. Разные вендоры = разные мнения.',
+          )}
+        </p>
       </div>
 
       <div>

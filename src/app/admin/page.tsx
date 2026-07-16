@@ -245,6 +245,7 @@ export default async function AdminPage() {
             </div>
 
             <CouncilFields
+              modelOptions={chatOpts}
               v={{
                 enabled: settings.councilEnabled,
                 audience: settings.councilAudience,

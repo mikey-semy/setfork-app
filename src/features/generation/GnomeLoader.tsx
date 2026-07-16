@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { CouncilEvent } from '@/shared/ai/council-progress'
+import { CouncilBubble } from './CouncilBubble'
 
 // Пасхалка South Park (Underpants Gnomes): «Collect underpants → ? → Profit!».
 // Шаг 2 крутит шуточные фразы, адаптирован к запросу пользователя.
@@ -26,23 +27,31 @@ export function GnomeLoader({ query, lang, label, events }: { query: string; lan
 
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
-  // «Театр беседы совета»: если воркер прислал ход совета — рисуем ЖИВУЮ ленту вместо мема.
+  // Беседа совета: если воркер прислал ход — рисуем ЖИВОЙ чат вместо мема.
+  // Все реплики слева: пользователь в этой беседе не участник, он наблюдатель (его ход — только в уточнениях).
+  // Без карточки: рамка с акцентной заливкой шумит, беседа читается сама по себе.
   if (events && events.length) {
     return (
-      <div className="rounded-lg border border-(--accent) bg-(--accent-soft) px-5 py-6">
-        <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-accent">
-          <Sparkles size={15} className="animate-pulse" />
-          {label ?? say('The expert council confers…', 'Совет экспертов совещается…')}
+      <div>
+        <div className="mb-4 flex items-center gap-2">
+          {/* Индикатор «идёт прямо сейчас» вместо иконки-звёздочки: радар-точка спокойнее и не выглядит дёшево. */}
+          <span className="relative flex size-1.5 shrink-0">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-(--accent) opacity-75" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-(--accent)" />
+          </span>
+          <span className="text-[11px] font-medium tracking-[0.09em] text-muted uppercase">
+            {label ?? say('Council in session', 'Совет совещается')}
+          </span>
         </div>
-        <ol className="space-y-1.5 text-[13px]">
+        <ol className="space-y-3">
           {events.map((e, idx) => {
             const last = idx === events.length - 1
             return (
-              <li key={`${e.ts}-${idx}`} className="flex items-start gap-2">
-                <span className="mt-px w-3.5 shrink-0 text-center text-muted">
-                  {last ? <Loader2 size={13} className="animate-spin text-accent" /> : '·'}
-                </span>
-                <span className={last ? 'text-accent' : 'text-ink-2'}>{e.text}</span>
+              // key по ts+idx стабилен → анимация проигрывается только у НОВОЙ реплики, старые не мигают на каждом поллинге
+              <li key={`${e.ts}-${idx}`} className="animate-fadein">
+                <CouncilBubble who={e.who} name={e.name} typing={last}>
+                  {e.text}
+                </CouncilBubble>
               </li>
             )
           })}
