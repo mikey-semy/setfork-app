@@ -4,7 +4,7 @@ import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
-import { AtSign, SmilePlus } from 'lucide-react'
+import { AtSign, MoreHorizontal, SmilePlus } from 'lucide-react'
 import { markdownToolbarGroups } from './markdown-toolbar'
 import emojiData from '@emoji-mart/data'
 import { caretCoords } from './caret-coords'
@@ -47,6 +47,7 @@ export function BubbleTextEditor({
   const ref = useRef<HTMLTextAreaElement>(null)
   const [bubble, setBubble] = useState<{ top: number; left: number } | null>(null)
   const [emojiOpen, setEmojiOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false) // «⋯»: редкие инструменты — панель влезает в мобильный экран
   const savedSel = useRef<[number, number]>([0, 0])
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
   const [users, setUsers] = useState<MentionUser[]>([])
@@ -190,7 +191,7 @@ export function BubbleTextEditor({
         onKeyUp={refresh}
         onScroll={refresh}
         onKeyDown={onKeyDown}
-        onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null) } }, 150)}
+        onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null); setMoreOpen(false) } }, 150)}
         className={`w-full text-[13.5px] leading-relaxed text-ink outline-hidden ${
           bare ? 'resize-none overflow-hidden bg-transparent' : 'rounded-md border border-border bg-surface-2 px-3 py-2 focus:border-border-strong'
         } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[72px] resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? 'font-mono text-[12px]' : ''} ${textareaClassName ?? ''}`}
@@ -203,33 +204,62 @@ export function BubbleTextEditor({
           style={{ top: Math.max(0, bubble.top), left: bubble.left }}
           onMouseDown={(e) => e.preventDefault()}
         >
-          {groups.map((group, gi) => (
-            <div key={gi} className="flex items-center gap-0.5">
-              {gi > 0 && <span className="mx-0.5 h-4 w-px bg-border" />}
-              {group.map((tool, i) => (
-                <button key={i} type="button" title={tool.t} aria-label={tool.t} onClick={tool.run} className={tbtn}>
-                  <tool.icon size={14} />
-                </button>
-              ))}
-            </div>
+          {/* Инлайн — только базовое форматирование (первая группа). Остальное в «⋯»:
+              13 кнопок в ряд не влезали в мобильный экран. */}
+          {(groups[0] ?? []).map((tool, i) => (
+            <button key={i} type="button" title={tool.t} aria-label={tool.t} onClick={tool.run} className={tbtn}>
+              <tool.icon size={14} />
+            </button>
           ))}
           <span className="mx-0.5 h-4 w-px bg-border" />
-          <button type="button" title={L('упомянуть', 'mention')} aria-label={L('упомянуть', 'mention')} onClick={() => insertAtRange('@', ref.current?.selectionStart ?? value.length, ref.current?.selectionEnd ?? value.length)} className={tbtn}>
-            <AtSign size={14} />
-          </button>
-          <button
-            type="button"
-            title={L('эмодзи', 'emoji')}
-            aria-label={L('эмодзи', 'emoji')}
-            onClick={() => {
-              const el = ref.current
-              if (el) savedSel.current = [el.selectionStart, el.selectionEnd]
-              setEmojiOpen(true)
-            }}
-            className={tbtn}
-          >
-            <SmilePlus size={14} />
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              title={L('ещё', 'more')}
+              aria-label={L('ещё', 'more')}
+              aria-expanded={moreOpen}
+              onClick={() => setMoreOpen((o) => !o)}
+              className={tbtn}
+            >
+              <MoreHorizontal size={14} />
+            </button>
+            {moreOpen && (
+              // Сетка с переносом: меню тоже не должно быть шире экрана.
+              <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-[188px] flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
+                {groups.slice(1).flat().map((tool, i) => (
+                  <button key={i} type="button" title={tool.t} aria-label={tool.t} onClick={() => { tool.run(); setMoreOpen(false) }} className={tbtn}>
+                    <tool.icon size={14} />
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  title={L('упомянуть', 'mention')}
+                  aria-label={L('упомянуть', 'mention')}
+                  onClick={() => {
+                    insertAtRange('@', ref.current?.selectionStart ?? value.length, ref.current?.selectionEnd ?? value.length)
+                    setMoreOpen(false)
+                  }}
+                  className={tbtn}
+                >
+                  <AtSign size={14} />
+                </button>
+                <button
+                  type="button"
+                  title={L('эмодзи', 'emoji')}
+                  aria-label={L('эмодзи', 'emoji')}
+                  onClick={() => {
+                    const el = ref.current
+                    if (el) savedSel.current = [el.selectionStart, el.selectionEnd]
+                    setMoreOpen(false)
+                    setEmojiOpen(true)
+                  }}
+                  className={tbtn}
+                >
+                  <SmilePlus size={14} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

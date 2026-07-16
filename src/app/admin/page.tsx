@@ -383,46 +383,48 @@ export default async function AdminPage() {
             {t('adminSubtitle', lang)}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        {/* Мобилка: ряд разделов не переносим и не сжимаем — он ЕДЕТ горизонтально (свайп),
+            край-в-край за счёт -mx-6/px-6. На sm+ — обычный ряд. Паттерн как в TabNav. */}
+        <div className="no-scrollbar -mx-6 flex w-full shrink-0 items-center gap-2 overflow-x-auto px-6 sm:mx-0 sm:w-auto sm:px-0">
           <Link
             href="/admin/collections"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
             <FolderGit2 size={14} /> {ru ? 'Подборки' : 'Collections'}
           </Link>
           <Link
             href="/admin/audit"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
             <ScrollText size={14} /> {ru ? 'Аудит' : 'Audit'}
           </Link>
           <Link
             href="/admin/usage"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
             <BarChart3 size={14} /> {ru ? 'Расход на черновики' : 'Draft usage'}
           </Link>
           <Link
             href="/admin/feedback"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
             <MessageSquare size={14} /> {t('feedback', lang)}
           </Link>
           <Link
             href="/admin/reports"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
             <Flag size={14} /> {t('reports', lang)}
           </Link>
           <Link
             href="/admin/tags"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
             <Tag size={14} /> {t('tags', lang)}
           </Link>
           <Link
             href="/admin/moderation"
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg"
           >
             <Shield size={14} /> {ru ? 'Модерация' : 'Moderation'}
           </Link>
