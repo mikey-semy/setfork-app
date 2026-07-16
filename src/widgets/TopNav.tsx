@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { ChevronDown, Compass, Home, ListChecks, Menu, PlayCircle, Plus, Search, Sparkles, X } from 'lucide-react'
+import { ChevronDown, Menu, Plus, Search, Sparkles } from 'lucide-react'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
 import { MobileSearch } from './MobileSearch'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { LangSwitch, ThemeModeSwitch, ThemeToggle } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
-import { ListsPanel } from './ListsPanel'
+import { useSidebar } from './sidebar-context'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,18 +44,16 @@ export function TopNav({
   isAdmin,
   unread = 0,
   notifications = [],
-  topLists = [],
 }: {
   lang: Lang
   user: SessionUser | null
   isAdmin?: boolean
   unread?: number
   notifications?: NotificationItem[]
-  topLists?: TopListItem[]
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const { setMobileOpen } = useSidebar() // бургер открывает ОДИН сайдбар (мобилка)
   // На странице поиска поле в шапке = полноценный квалификатор-поиск во всю ширину.
   const isSearch = pathname.startsWith('/search')
   // Бредкрамб в шапке (как GitHub owner/repo): показываем чей это профиль/список.
@@ -92,7 +90,6 @@ export function TopNav({
   // Хоткей «/» фокусирует поле поиска в шапке (как на GitHub); Escape закрывает меню.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') return setMenuOpen(false)
       if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
       const el = document.activeElement as HTMLElement | null
       const tag = el?.tagName
@@ -130,33 +127,6 @@ export function TopNav({
                     ? 'Admin'
                     : ''
 
-  // Пункты бокового меню (глобальная навигация; аккаунт — в меню аватара).
-  // Основной блок — навигация; действия (создать/сгенерировать) — отдельной
-  // секцией после разделителя, как «create new» у GitHub.
-  type NavItem = { href: string; label: string; icon: typeof Home }
-  const navItems: NavItem[] = [
-    { href: '/', label: t('home', lang), icon: Home },
-    { href: '/explore', label: t('explore', lang), icon: Compass },
-    ...(user
-      ? [
-          { href: '/my-lists', label: t('myLists', lang), icon: ListChecks },
-          { href: '/runs', label: t('myRuns', lang), icon: PlayCircle },
-        ]
-      : []),
-  ]
-  const navLink = (it: NavItem) => (
-    <Link
-      key={it.href}
-      href={it.href}
-      onClick={() => setMenuOpen(false)}
-      className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[14px] ${
-        isActive(it.href) ? 'bg-surface-2 font-semibold text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
-      }`}
-    >
-      <it.icon size={16} className="shrink-0 text-muted" /> {it.label}
-    </Link>
-  )
-
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5 print:hidden">
       {/* Бургер + SF = логотип на одном уровне: ☰ читается как «список», линии жирные */}
@@ -164,8 +134,8 @@ export function TopNav({
         <button
           type="button"
           aria-label={t('menu', lang)}
-          onClick={() => setMenuOpen(true)}
-          className={`grid h-8 w-8 place-items-center rounded-md text-ink hover:bg-surface-2 ${focusRing}`}
+          onClick={() => setMobileOpen(true)}
+          className={`grid h-8 w-8 place-items-center rounded-md text-ink hover:bg-surface-2 lg:hidden ${focusRing}`}
         >
           <Menu size={21} strokeWidth={2.75} />
         </button>
@@ -330,44 +300,6 @@ export function TopNav({
         )}
       </div>
 
-      {/* Боковое меню (глобальная навигация), открывается бургером — как на GitHub */}
-      {menuOpen && (
-        <>
-          <div className="animate-fade-in fixed inset-0 z-40 bg-black/40" onClick={() => setMenuOpen(false)} />
-          <aside className="animate-slide-in-left fixed left-0 top-0 z-50 flex h-full w-[280px] max-w-[85vw] flex-col border-r border-border bg-surface p-3 shadow-xl">
-            <div className="mb-3 flex items-center justify-between px-1">
-              <span className="font-logo text-[18px] leading-none text-ink">SF</span>
-              <button type="button" aria-label={t('menu', lang)} onClick={() => setMenuOpen(false)} className={iconBtn}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
-              {/* Основная навигация (создать/сгенерировать — в топ-баре «+», не дублируем тут) */}
-              <nav className="flex flex-col gap-0.5">{navItems.map(navLink)}</nav>
-
-              {/* «Top lists» — общий модуль ListsPanel (как Top repositories у GitHub). */}
-              {user && topLists.length > 0 && (
-                <>
-                  <div className="my-2 border-t border-border/60" />
-                  <div className="px-1">
-                    <ListsPanel
-                      items={topLists}
-                      lang={lang}
-                      title={t('topLists', lang)}
-                      collapsible
-                      storageKey="sf.drawer.topLists"
-                      searchable
-                      showOwner
-                      headerStyle="plain"
-                      onNavigate={() => setMenuOpen(false)}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </aside>
-        </>
-      )}
     </header>
   )
 }
