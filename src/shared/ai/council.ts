@@ -22,17 +22,18 @@ import { langEnName, type Lang } from '@/shared/i18n'
  */
 
 // Ростер экспертов-«гномов» (фабрика ролей). persona — внутренняя инструкция; вывод — на языке пользователя.
-// name/emoji — для «театра беседы» (лента прогресса). ru — короткое имя для ленты на русском.
-interface GnomeSpec { id: string; domains: string[]; online?: boolean; persona: string; emoji: string; name: string; ru: string }
+// name/ru — подпись в беседе (ru — на русском). id — ещё и имя аватарки: `public/gnomes/<id>.webp`,
+// поэтому новому эксперту нужна картинка с тем же id (иначе UI молча возьмёт дефолтную).
+interface GnomeSpec { id: string; domains: string[]; online?: boolean; persona: string; name: string; ru: string }
 const EXPERTS: GnomeSpec[] = [
-  { id: 'devops', emoji: '🛠️', name: 'Devops', ru: 'Девопсер', domains: ['deploy', 'devops', 'ci', 'servers', 'infra', 'docker', 'kubernetes'], persona: 'a pragmatic DevOps expert: reliability, rollbacks, health-checks, real-world production gotchas' },
-  { id: 'coder', emoji: '💻', name: 'Coder', ru: 'Кодер', domains: ['programming', 'software', 'coding', 'api', 'library', 'framework'], persona: 'a meticulous software engineer: correctness, edge-cases, precise runnable steps' },
-  { id: 'chef', emoji: '🍳', name: 'Chef', ru: 'Повар', domains: ['cooking', 'food', 'recipe', 'kitchen', 'baking'], persona: 'a fast, practical chef: ingredients, order, timings' },
-  { id: 'traveler', emoji: '🧭', name: 'Wanderer', ru: 'Странник', domains: ['travel', 'trip', 'city', 'tourism', 'itinerary'], persona: 'a curious traveler: routes, budget, not-to-miss spots' },
-  { id: 'coach', emoji: '🏋️', name: 'Coach', ru: 'Тренер', domains: ['fitness', 'health', 'workout', 'sport', 'nutrition'], persona: 'a disciplined coach: progression, safety, consistency' },
-  { id: 'scholar', emoji: '📖', name: 'Scholar', ru: 'Книжник', domains: ['study', 'learning', 'research', 'course', 'exam'], persona: 'a thoughtful scholar: structure of knowledge, sources, comprehension checks' },
-  { id: 'hoarder', emoji: '🎒', name: 'Hoarder', ru: 'Барахольщик', domains: ['*'], online: true, persona: 'a resource investigator: pulls external resources, links and tools' },
-  { id: 'generalist', emoji: '🧩', name: 'Generalist', ru: 'Универсал', domains: ['*'], persona: 'a well-rounded generalist: a solid list on any topic' },
+  { id: 'devops', name: 'Devops', ru: 'Девопсер', domains: ['deploy', 'devops', 'ci', 'servers', 'infra', 'docker', 'kubernetes'], persona: 'a pragmatic DevOps expert: reliability, rollbacks, health-checks, real-world production gotchas' },
+  { id: 'coder', name: 'Coder', ru: 'Кодер', domains: ['programming', 'software', 'coding', 'api', 'library', 'framework'], persona: 'a meticulous software engineer: correctness, edge-cases, precise runnable steps' },
+  { id: 'chef', name: 'Chef', ru: 'Повар', domains: ['cooking', 'food', 'recipe', 'kitchen', 'baking'], persona: 'a fast, practical chef: ingredients, order, timings' },
+  { id: 'traveler', name: 'Wanderer', ru: 'Странник', domains: ['travel', 'trip', 'city', 'tourism', 'itinerary'], persona: 'a curious traveler: routes, budget, not-to-miss spots' },
+  { id: 'coach', name: 'Coach', ru: 'Тренер', domains: ['fitness', 'health', 'workout', 'sport', 'nutrition'], persona: 'a disciplined coach: progression, safety, consistency' },
+  { id: 'scholar', name: 'Scholar', ru: 'Книжник', domains: ['study', 'learning', 'research', 'course', 'exam'], persona: 'a thoughtful scholar: structure of knowledge, sources, comprehension checks' },
+  { id: 'hoarder', name: 'Hoarder', ru: 'Барахольщик', domains: ['*'], online: true, persona: 'a resource investigator: pulls external resources, links and tools' },
+  { id: 'generalist', name: 'Generalist', ru: 'Универсал', domains: ['*'], persona: 'a well-rounded generalist: a solid list on any topic' },
 ]
 const DEFAULT_COUNCIL_MODELS = ['openai/gpt-4o-mini', 'meta-llama/llama-3.3-70b-instruct', 'mistralai/mistral-nemo']
 const INNOVATOR_TEMP = 0.9
@@ -70,11 +71,14 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const topic = sp.wrap('TOPIC', query)
   const feature: AiFeature = opts.feature ?? 'generate'
   const ru = lang === 'ru'
-  const gname = (e: GnomeSpec) => `${e.emoji} ${ru ? e.ru : e.name}`
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+  // Подпись говорящего в беседе (идентичность роли несёт аватарка, поэтому эмодзи в ростере больше нет).
+  const gtitle = (e: GnomeSpec) => (ru ? e.ru : e.name)
   // «Театр беседы»: публикуем ход совета для страницы генерации (по refId=generationId).
   // fire-and-forget: публикация в стор (Redis/память) не должна блокировать/ронять генерацию.
-  const emit = (kind: CouncilEvent['kind'], text: string) => { if (opts.refId) void pushCouncilEvent(opts.refId, { kind, text }).catch(() => {}) }
+  const emit = (kind: CouncilEvent['kind'], text: string, who?: string, name?: string) => {
+    if (opts.refId) void pushCouncilEvent(opts.refId, { kind, text, who, name }).catch(() => {})
+  }
 
   // Один под-вызов: генерация + учёт расхода. Ошибка → null (гном «выпал»), совет продолжает.
   async function run(model: string, system: string, prompt: string, maxTokens = settings.maxTokens, temp = settings.temperature): Promise<{ text: string } | null> {
@@ -132,7 +136,7 @@ ${roster}`,
 
   // Диалог: не хватает ключевого → возвращаем уточняющие вопросы (совет не гоним, ждём ответов пользователя).
   if (depth === 'clarify' && questions.length) {
-    emit('plan', say('The request is vague — asking to clarify', 'Запрос размытый — уточняю'))
+    emit('plan', say('The request is vague — I need a couple of details', 'Запрос размытый — нужна пара деталей'), 'reporter', say('Reporter', 'Репортёр'))
     return { clarify: questions }
   }
 
@@ -140,11 +144,11 @@ ${roster}`,
 
   // Тривиально → один гном (обычная генерация, но через тот же учёт совета).
   if (depth === 'single') {
-    emit('plan', say('Simple topic — drafting directly', 'Тема простая — пишу сразу'))
+    emit('plan', say('Simple topic — writing it up right away', 'Тема простая — пишу сразу'), 'planner', say('Planner', 'Планировщик'))
     const one = await run(online(base, web), listRules, `Create the reference checklist for the topic below.\n${topic}`)
     return one ? parseList(one.text, query) : null
   }
-  emit('plan', say('Planner: convening the expert council', 'Планировщик: собираем совет экспертов'))
+  emit('plan', say('The topic is many-sided — convening the council', 'Тема многогранная — собираем совет'), 'planner', say('Planner', 'Планировщик'))
 
   // 2) Созыв: эксперты по домену; пол разнообразия — минимум 2 независимых мнения (мудрость толпы).
   const experts = ids.map((id) => EXPERTS.find((e) => e.id === id)).filter((e): e is GnomeSpec => Boolean(e)).slice(0, maxGnomes)
@@ -153,18 +157,19 @@ ${roster}`,
     const g = EXPERTS.find((e) => e.id === padId)!
     if (!experts.some((e) => e.id === g.id)) experts.push(g)
   }
-  emit('summon', say(`Consulting: ${experts.map(gname).join(', ')}`, `Созываю: ${experts.map(gname).join(', ')}`))
+  emit('summon', say(`Consulting: ${experts.map(gtitle).join(', ')}`, `Созываю: ${experts.map(gtitle).join(', ')}`), 'crier', say('Coordinator', 'Координатор'))
 
   // 2.5) Старейшина-искатель: прецеденты из НАШИХ списков (pgvector). Пусто на пустом корпусе — ок.
   const precedents = await findPrecedents(query, lang, { userId: opts.userId })
-  if (precedents.length) emit('seek', say(`Found ${precedents.length} similar list(s) in our library`, `Нашёл ${precedents.length} похожих списков в библиотеке`))
+  // Форма «X: N» — чтобы не склонять числительное (было «3 похожих списков») и не тащить плюрализацию в ленту.
+  if (precedents.length) emit('seek', say(`Similar lists in our library: ${precedents.length}`, `Похожих списков в библиотеке: ${precedents.length}`), 'seek-lists', say('Librarian', 'Библиотекарь'))
   let lore = precedents.length
     ? `\n\nPRECEDENTS from our library (similar existing lists — reuse good structure, avoid duplicating, improve on them):\n${precedents.map((p, i) => `${i + 1}. ${p.title}${p.desc ? ' — ' + p.desc : ''}${p.tags.length ? ' [' + p.tags.join(', ') + ']' : ''}`).join('\n')}`
     : ''
 
   // Веб-искатель (старейшина advanced-тира): интернет-прецеденты сверх наших списков (за флагом council_web_seek).
   if (settings.councilWebSeek) {
-    emit('seek', say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'))
+    emit('seek', say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
     const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a checklist on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
     const webRes = await run(online(fast, true), webSys, `Topic:\n${topic}`, 500)
     if (webRes && webRes.text.trim()) lore += `\n\nWEB PRECEDENTS (from the elder's web search — verify, don't copy blindly):\n${webRes.text.trim()}`
@@ -174,10 +179,10 @@ ${roster}`,
   const draftJobs = experts.map((e, i) => {
     const model = online(pool[i % pool.length], web && Boolean(e.online))
     const sys = `You are ${e.persona}. Draft a practical checklist for the topic. 6-9 ordered steps: short imperative + one clarifying sentence + a real terminal command only when the step is technical. All content in ${langName}. Return ONLY the draft text.\n${sp.rule()}`
-    emit('draft', say(`${gname(e)} is drafting…`, `${gname(e)} набрасывает…`))
+    emit('draft', say('drafting the checklist…', 'набрасывает список…'), e.id, gtitle(e))
     return run(model, sys, `Draft the checklist.\n${topic}${lore}`)
   })
-  emit('innovate', say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'))
+  emit('innovate', say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'), 'innovator', say('Innovator', 'Новатор'))
   const innovatorJob = run(
     pool[0],
     `You are an innovator (divergent thinking, Medici-effect cross-domain). Give a FRESH, non-obvious angle on the checklist: what everyone misses, which move from an adjacent field lifts quality. 4-7 bold points. All content in ${langName}. Return ONLY text.\n${sp.rule()}`,
@@ -193,7 +198,7 @@ ${roster}`,
   const anon = pooled.map((d, i) => `--- DRAFT ${String.fromCharCode(65 + i)} ---\n${d.text.trim()}`).join('\n\n')
 
   // 4) Адвокат дьявола (Janis: обязательная оппозиция).
-  emit('critique', say('Reviewing the drafts critically…', 'Критически разбираю черновики…'))
+  emit('critique', say('Reviewing the drafts critically…', 'Критически разбираю черновики…'), 'critic', say('Critic', 'Критик'))
   const critique = await run(
     fast,
     `You are a devil's advocate reviewer. Given several anonymous draft checklists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.\n${sp.rule()}`,
@@ -201,7 +206,7 @@ ${roster}`,
   )
 
   // 5) Старейшина-синтез → строгий JSON. Конвергенция, но СОХРАНИ лучшую новизну (не усредняй).
-  emit('synth', say('Synthesizing the final list…', 'Свожу финальный список…'))
+  emit('synth', say('Synthesizing the final list…', 'Свожу финальный список…'), 'elder', say('Elder', 'Старейшина'))
   const elder = await run(
     base,
     `You are the lead synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.\n${listRules}`,
