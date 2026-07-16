@@ -5,6 +5,7 @@ import { aiUsage, db, generationCandidates, users, type CandidateItem } from '@/
 import { generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
 import { generateListCouncil } from '@/shared/ai/council'
 import { setClarify } from '@/shared/ai/council-clarify'
+import { clearCouncilEvents } from '@/shared/ai/council-progress'
 import { recordUsage } from '@/shared/ai/usage'
 import { getAiSettings } from '@/shared/settings/ai'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
@@ -44,6 +45,9 @@ export async function addCandidate(
   lang: Lang,
   idx: number,
 ): Promise<boolean> {
+  // Лента театра — ПЕР-ПОПЫТКА: чистим на старте, иначе события копятся по generationId и в ленте
+  // мешаются прошлые прогоны («Ещё вариант»/ретрай джобы) — отсюда были дубли вроде «тема простая» ×2.
+  await clearCouncilEvents(generationId)
   const genOpts: GenerateOptions = {
     web: true,
     variant: idx,

@@ -36,6 +36,9 @@ const EXPERTS: GnomeSpec[] = [
 ]
 const DEFAULT_COUNCIL_MODELS = ['openai/gpt-4o-mini', 'meta-llama/llama-3.3-70b-instruct', 'mistralai/mistral-nemo']
 const INNOVATOR_TEMP = 0.9
+// Потолок на ОДИН вызов: зависшая/медленная модель не должна вешать весь совет (6-7 вызовов).
+// Превышение → вызов падает → гном «выпадает», совет продолжает без него.
+const CALL_TIMEOUT_MS = 60_000
 
 function firstJson(t: string): string {
   const s = t.indexOf('{'), e = t.lastIndexOf('}')
@@ -56,8 +59,11 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
 
   const openrouter = createOpenRouter({ apiKey, appName: 'SetFork', appUrl: process.env.APP_URL || 'http://localhost:3000' })
   const langName = langEnName(lang)
-  const base = await pickChatModel(settings) // надёжная конфигурируемая модель — мета/критик/синтез
+  const base = await pickChatModel(settings) // конфигурируемая модель — для ФИНАЛЬНОГО списка (качество)
   const pool = settings.councilModels.length ? settings.councilModels : DEFAULT_COUNCIL_MODELS
+  // Быстрая модель для ПРОМЕЖУТОЧНЫХ шагов (распорядитель-классификатор, критик, веб-поиск):
+  // reasoning-модель там не нужна, а совет из 6-7 вызовов на ней тормозит минутами. Финал — на base.
+  const fast = pool[0] || base
   const maxGnomes = Math.max(1, Math.min(settings.councilMaxGnomes || 3, EXPERTS.length))
   const web = opts.web ?? true
   const sp: Spotlight = spotlight()
@@ -79,6 +85,7 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
         prompt,
         temperature: temp,
         maxOutputTokens: maxTokens,
+        abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
       })
       const u = extractUsage(result)
       await recordUsage({ userId: opts.userId, feature, model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType ?? 'council', refId: opts.refId })
@@ -98,10 +105,11 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
     ? '{"depth":"single|council|clarify","summon":["id",...],"questions":["...only if clarify"],"reason":"short"}'
     : '{"depth":"single|council","summon":["id",...],"reason":"short"}'
   const steward = await run(
-    base,
+    fast,
     `You are the steward of a panel of domain experts building a reference checklist. Choose process depth and summon experts.
 ${clarifyLine}- depth "single": the topic is clear AND simple/everyday (chores, basic personal routines) — no council needed.
 - depth "council": the topic is clear but technical/multi-faceted/professional — summon 1-${maxGnomes} RELEVANT, DIVERSE experts from the roster.
+MATCH THE TOPIC TO THE ROSTER BY DOMAIN (the topic may be in ANY language): a recipe/dish/cooking → chef; a workout/health → coach; a trip/city → traveler; deploy/servers/CI → devops; code/API/library → coder; study/course → scholar. Use 'generalist' ONLY when nothing fits.
 Return ONLY JSON: ${jsonShape}
 ${sp.rule()}
 ROSTER:
@@ -158,7 +166,7 @@ ${roster}`,
   if (settings.councilWebSeek) {
     emit('seek', say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'))
     const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a checklist on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
-    const webRes = await run(online(base, true), webSys, `Topic:\n${topic}`, 500)
+    const webRes = await run(online(fast, true), webSys, `Topic:\n${topic}`, 500)
     if (webRes && webRes.text.trim()) lore += `\n\nWEB PRECEDENTS (from the elder's web search — verify, don't copy blindly):\n${webRes.text.trim()}`
   }
 
@@ -187,7 +195,7 @@ ${roster}`,
   // 4) Адвокат дьявола (Janis: обязательная оппозиция).
   emit('critique', say('Reviewing the drafts critically…', 'Критически разбираю черновики…'))
   const critique = await run(
-    base,
+    fast,
     `You are a devil's advocate reviewer. Given several anonymous draft checklists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.\n${sp.rule()}`,
     `${topic}\n\nDRAFTS:\n${anon}`,
   )
