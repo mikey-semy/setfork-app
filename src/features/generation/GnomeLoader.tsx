@@ -29,14 +29,21 @@ export function GnomeLoader({ query, lang, label, events }: { query: string; lan
 
   // Беседа совета: если воркер прислал ход — рисуем ЖИВОЙ чат вместо мема.
   // Все реплики слева: пользователь в этой беседе не участник, он наблюдатель (его ход — только в уточнениях).
+  // Без карточки: рамка с акцентной заливкой шумит, беседа читается сама по себе.
   if (events && events.length) {
     return (
-      <div className="rounded-lg border border-(--accent) bg-(--accent-soft) px-3 py-4 sm:px-5">
-        <div className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-accent">
-          <Sparkles size={15} className="animate-pulse" />
-          {label ?? say('The expert council confers…', 'Совет экспертов совещается…')}
+      <div>
+        <div className="mb-4 flex items-center gap-2">
+          {/* Индикатор «идёт прямо сейчас» вместо иконки-звёздочки: радар-точка спокойнее и не выглядит дёшево. */}
+          <span className="relative flex size-1.5 shrink-0">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-(--accent) opacity-75" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-(--accent)" />
+          </span>
+          <span className="text-[11px] font-medium tracking-[0.09em] text-muted uppercase">
+            {label ?? say('Council in session', 'Совет совещается')}
+          </span>
         </div>
-        <ol className="space-y-2.5">
+        <ol className="space-y-3">
           {events.map((e, idx) => {
             const last = idx === events.length - 1
             return (
