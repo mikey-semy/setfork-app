@@ -30,6 +30,7 @@ async function main() {
 
   const kind = res && 'clarify' in res ? `уточнения (${res.clarify.length})` : res ? `список (${res.items?.length ?? 0} шагов)` : 'null'
   console.log(`\nрезультат: ${kind}`)
+  // eslint-disable-next-line no-restricted-syntax -- вывод CLI-харнесса, не UI: словарь i18n тут ни при чём
   console.log(bad ? `ПРОБЛЕМА: ${bad} реплик без говорящего/аватарки` : 'все реплики с говорящим и картинка на месте')
   await clearCouncilEvents(refId)
 
