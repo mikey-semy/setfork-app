@@ -4,6 +4,7 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { Avatar } from '@/shared/ui/Avatar'
 import { getUsageByUser, getUsageTotals } from '@/shared/ai/usage'
+import { getOpenRouterCredits } from '@/shared/ai/credits'
 
 const WINDOWS = [
   { days: 1, en: '24h', ru: '24ч' },
@@ -26,7 +27,14 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
   const [lang, sp] = await Promise.all([getLang(), searchParams])
   const ru = lang === 'ru'
   const days = WINDOWS.some((w) => String(w.days) === sp.w) ? Number(sp.w) : 30
-  const [rows, totals] = await Promise.all([getUsageByUser(days), getUsageTotals(days)])
+  const [rows, totals, credits] = await Promise.all([getUsageByUser(days), getUsageTotals(days), getOpenRouterCredits()])
+
+  // Осязаемость денег: во что обходится ОДНА генерация и на сколько ещё хватит остатка OpenRouter.
+  // Средняя берётся за выбранное окно (совет = много вызовов, но один refId, поэтому делим на
+  // число генераций, а не вызовов). Остаток / средняя = «сколько генераций ещё купим».
+  const avgPerGen = totals.generations > 0 ? totals.costUsd / totals.generations : null
+  const avgTokensPerGen = totals.generations > 0 ? Math.round(totals.totalTokens / totals.generations) : null
+  const runwayGens = credits && avgPerGen && avgPerGen > 0 ? Math.floor(credits.remaining / avgPerGen) : null
 
   return (
     <div className="mx-auto flex w-full max-w-[820px] flex-col gap-5 px-6 py-8">
@@ -73,6 +81,41 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           <div className="mt-1 text-[20px] font-bold text-(--accent)">{money(totals.costUsd)}</div>
         </div>
       </div>
+
+      {/* Осязаемость: остаток OpenRouter → на сколько генераций хватит (по средней за период) */}
+      {(credits || avgPerGen != null) && (
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
+            {credits && (
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-muted">{ru ? 'Остаток OpenRouter' : 'OpenRouter balance'}</div>
+                <div className="mt-1 text-[20px] font-bold text-ink">{money(credits.remaining)}</div>
+              </div>
+            )}
+            {avgPerGen != null && (
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-muted">{ru ? 'Средняя за генерацию' : 'Avg / generation'}</div>
+                <div className="mt-1 text-[20px] font-bold text-ink">{money(avgPerGen)}</div>
+              </div>
+            )}
+            {runwayGens != null && (
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-muted">{ru ? 'Остатка хватит на' : 'Balance affords'}</div>
+                <div className="mt-1 text-[20px] font-bold text-(--accent)">
+                  ≈ {num(runwayGens)} {ru ? 'генераций' : 'generations'}
+                </div>
+              </div>
+            )}
+          </div>
+          {avgPerGen != null && (
+            <p className="mt-3 text-[12px] text-muted">
+              {ru
+                ? `По средней за выбранный период: ${num(totals.generations)} ${totals.generations === 1 ? 'генерация' : 'генераций'}${avgTokensPerGen ? `, ~${num(avgTokensPerGen)} токенов на генерацию` : ''}. Оценка грубая — на разных запросах цена гуляет.`
+                : `Based on this window's average: ${num(totals.generations)} generation${totals.generations === 1 ? '' : 's'}${avgTokensPerGen ? `, ~${num(avgTokensPerGen)} tokens each` : ''}. Rough estimate — cost varies per query.`}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* По пользователям */}
       <div className="overflow-hidden rounded-lg border border-border bg-surface">
