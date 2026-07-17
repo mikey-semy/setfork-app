@@ -8,6 +8,12 @@ export type JobHandler = (payload: unknown, job: Job) => Promise<void>
 
 const POLL_MS = 3000
 const BATCH = 50 // максимум задач за тик — чтобы не голодать event loop
+// Сколько задач обрабатываем ОДНОВРЕМЕННО. Раньше цикл был последовательным: один совет ~60с
+// держал воркер, и десятый в очереди ждал ~10 минут. Теперь N задач летят параллельно (claimJob
+// на FOR UPDATE SKIP LOCKED — параллельные клеймы не задваивают). Потолок: каждый совет и так
+// делает ~5 параллельных вызовов к OpenRouter, N×5 не должно упираться в лимиты провайдера и в пул
+// БД (job держит коннект только на короткие запросы, не на время вызова модели). Крутится env'ом.
+const CONCURRENCY = Math.max(1, Number(process.env.SETFORK_JOB_CONCURRENCY) || 4)
 
 let started = false
 
@@ -46,11 +52,19 @@ export function startWorker(handlers: Record<string, JobHandler>): void {
         const reaped = await reapStalledJobs()
         if (reaped) log.info('jobs reaped from stalled processing', { reaped })
       }
-      for (let i = 0; i < BATCH; i++) {
-        const job = await claimJob()
-        if (!job) break
-        await processOne(job)
+      // CONCURRENCY раннеров дренят очередь параллельно; каждый берёт задачу, обрабатывает, берёт
+      // следующую — пока очередь не опустеет или не выберем BATCH за тик (общий кап, чтобы огромная
+      // очередь не крутилась одним тиком бесконечно). Пустая очередь → все раннеры выходят, ждём POLL_MS.
+      let processed = 0
+      const runner = async (): Promise<void> => {
+        while (processed < BATCH) {
+          const job = await claimJob()
+          if (!job) break
+          processed++
+          await processOne(job)
+        }
       }
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => runner()))
     } catch (e) {
       // Ошибка самого цикла (напр. БД недоступна) — не роняем сервер, ждём следующий тик.
       captureError(e, { where: 'jobs.tick' })

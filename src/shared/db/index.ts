@@ -17,7 +17,17 @@ function getDb(): NodePgDatabase<typeof schema> {
   if (global.__pgDb) return global.__pgDb
   const url = process.env.DATABASE_URL
   if (!url) throw new Error('DATABASE_URL is not set')
-  const pool = global.__pgPool ?? new Pool({ connectionString: url, max: 10 })
+  // max: пул общий для веб-запросов И воркера (тот же процесс). При параллельном воркере
+  // (SETFORK_JOB_CONCURRENCY) + поллинге статуса десятками клиентов 10 коннектов насыщались.
+  // connectionTimeoutMillis: без него acquire ждал коннект БЕСКОНЕЧНО (дефолт 0) — под нагрузкой
+  // весь сайт тихо вис. Лучше быстрый явный отказ, чем зависание. Крутится env'ом.
+  const pool =
+    global.__pgPool ??
+    new Pool({
+      connectionString: url,
+      max: Math.max(10, Number(process.env.DB_POOL_MAX) || 20),
+      connectionTimeoutMillis: 10_000,
+    })
   if (!global.__pgPool) global.__pgPool = pool
   const database = drizzle(pool, { schema })
   if (process.env.NODE_ENV !== 'production') global.__pgDb = database
