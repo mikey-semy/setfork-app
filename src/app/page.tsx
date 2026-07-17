@@ -14,12 +14,22 @@ const FALLBACK_CHIPS = [
   { en: 'Set up a new Mac for dev', ru: 'Настроить новый Mac для разработки' },
   { en: 'Upgrade Postgres safely', ru: 'Безопасно обновить Postgres' },
 ]
+// Плейсхолдер поиска — тоже не одна надпись: крутим пул фраз (+ вариант с
+// примером из живого списка, он собирается ниже).
+const PLACEHOLDERS = [
+  { en: 'Describe what you need to do…', ru: 'Опиши, что нужно сделать…' },
+  { en: 'What are we setting up today?', ru: 'Что настраиваем сегодня?' },
+  { en: 'Find a proven checklist…', ru: 'Найди проверенный чек-лист…' },
+  { en: 'What needs doing — step by step?', ru: 'Что нужно сделать — по шагам?' },
+  { en: 'Ask for a list on any topic…', ru: 'Спроси список на любую тему…' },
+]
 const CHIP_POOL = 100 // из скольких вариантов тянем
 const CHIPS_SHOWN = 4 // сколько показываем за раз
 
-/** Подсказки — заголовки НАСТОЯЩИХ списков: берём до сотни популярных публичных
- *  и показываем случайные несколько, чтобы не приедались. */
-async function chipTitles(lang: Lang): Promise<string[]> {
+const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
+
+/** Заголовки НАСТОЯЩИХ публичных списков (до сотни, по популярности), перемешанные. */
+async function liveTitles(lang: Lang): Promise<string[]> {
   const rows = await db
     .select({ title: templates.title })
     .from(templates)
@@ -31,22 +41,29 @@ async function chipTitles(lang: Lang): Promise<string[]> {
     const j = Math.floor(Math.random() * (i + 1))
     ;[titles[i], titles[j]] = [titles[j], titles[i]]
   }
-  return titles.slice(0, CHIPS_SHOWN)
+  return titles
 }
 
 export default async function HomePage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
   if (session) return <Dashboard lang={lang} userId={session.userId} />
 
-  const real = await chipTitles(lang)
-  const chips = real.length >= CHIPS_SHOWN ? real : FALLBACK_CHIPS.map((c) => (lang === 'ru' ? c.ru : c.en))
+  const ru = lang === 'ru'
+  const titles = await liveTitles(lang)
+  const chips = titles.length >= CHIPS_SHOWN ? titles.slice(0, CHIPS_SHOWN) : FALLBACK_CHIPS.map((c) => (ru ? c.ru : c.en))
+  // Пул фраз + «Например: «живой заголовок»» (берём тот, что не попал в чипы).
+  const example = titles[CHIPS_SHOWN]
+  const placeholder = pick([
+    ...PLACEHOLDERS.map((p) => (ru ? p.ru : p.en)),
+    ...(example ? [ru ? `Например: «${example}»` : `e.g. “${example}”`] : []),
+  ])
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="flex w-full max-w-[640px] flex-col items-center gap-6 text-center">
         <div className="font-logo text-[44px] leading-none tracking-tight text-ink sm:text-[64px]">SetFork</div>
 
-        <HeroSearch placeholder={t('searchPh', lang)} clearLabel={t('clear', lang)} />
+        <HeroSearch placeholder={placeholder} clearLabel={t('clear', lang)} />
 
         <div className="flex max-w-[640px] flex-wrap justify-center gap-2.5">
           {chips.map((c) => (
