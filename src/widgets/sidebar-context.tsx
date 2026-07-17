@@ -10,6 +10,8 @@ type Ctx = {
   toggleCollapsed: () => void
   mobileOpen: boolean
   setMobileOpen: (v: boolean) => void
+  /** Бургер в шапке: на десктопе сворачивает сайдбар, на мобилке открывает оверлей. */
+  toggle: () => void
 }
 
 const SidebarCtx = createContext<Ctx | null>(null)
@@ -49,5 +51,12 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       return next
     })
 
-  return <SidebarCtx.Provider value={{ collapsed, toggleCollapsed, mobileOpen, setMobileOpen }}>{children}</SidebarCtx.Provider>
+  // Бургер один, а поведение зависит от ширины: десктоп — свернуть/развернуть,
+  // мобилка — открыть сайдбар оверлеем (там сворачивать нечего).
+  const toggle = () => {
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) toggleCollapsed()
+    else setMobileOpen(true)
+  }
+
+  return <SidebarCtx.Provider value={{ collapsed, toggleCollapsed, mobileOpen, setMobileOpen, toggle }}>{children}</SidebarCtx.Provider>
 }

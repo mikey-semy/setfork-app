@@ -53,7 +53,7 @@ export function TopNav({
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { setMobileOpen } = useSidebar() // бургер открывает ОДИН сайдбар (мобилка)
+  const { toggle: toggleSidebar } = useSidebar() // ☰ = лого-символ списка + тумблер сайдбара
   // На странице поиска поле в шапке = полноценный квалификатор-поиск во всю ширину.
   const isSearch = pathname.startsWith('/search')
   // Бредкрамб в шапке (как GitHub owner/repo): показываем чей это профиль/список.
@@ -138,8 +138,8 @@ export function TopNav({
         <button
           type="button"
           aria-label={t('menu', lang)}
-          onClick={() => setMobileOpen(true)}
-          className={`grid h-8 w-8 place-items-center rounded-md text-ink hover:bg-surface-2 lg:hidden ${focusRing}`}
+          onClick={toggleSidebar}
+          className={`grid h-8 w-8 place-items-center rounded-md text-ink hover:bg-surface-2 ${focusRing}`}
         >
           <Menu size={21} strokeWidth={2.75} />
         </button>
