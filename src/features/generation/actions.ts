@@ -3,13 +3,13 @@
 import { eq, sql } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { db, generationCandidates, generations, users } from '@/shared/db'
+import { db, generationCandidates, generationMessages, generations, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { DEFAULT_LANG, isLang, type Lang } from '@/shared/i18n'
 import { sanitizeCommand } from '@/shared/ai/generate'
 import { claimClarify } from '@/shared/ai/council-clarify'
-import { getMessages, pushMessage } from '@/shared/ai/generation-messages'
+import { getMessages, pushMessage, setGenerationStatus } from '@/shared/ai/generation-messages'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { aiQuota, listQuota } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
@@ -26,18 +26,34 @@ async function ownerHandle(userId: string): Promise<string> {
 // Ставит задачу генерации варианта в очередь (сама генерация — в фоновом воркере,
 // см. features/generation/service.ts + shared/jobs). Страница дождётся кандидата поллингом.
 async function enqueueGenerate(generationId: string, userId: string, query: string, lang: string, idx: number): Promise<void> {
+  // Статус ставим ЗДЕСЬ, а не ждём воркера: он опрашивает очередь раз в 3с, и до его подхвата
+  // страница рисовалась со старым 'done' — а чат следит за беседой только пока 'pending'. Отсюда
+  // была «тишина» после дополнения: задача шла, но экран об этом не знал и ничего не поллил.
+  await setGenerationStatus(generationId, 'pending')
   // maxAttempts:2 (одна повторная попытка) — генерация тратит токены на каждой,
   // а квота проверяется при постановке, не на ретрае. Дефолтные 5 попыток на
   // стабильно-неудачном ответе модели множили бы расход ×5.
   await enqueueJob('generate', { generationId, userId, query, lang: isLang(lang) ? lang : DEFAULT_LANG, idx }, { maxAttempts: 2 })
 }
 
-/** Номер последнего варианта. Тот же запрос лежал копипастой в трёх действиях. */
+/**
+ * Номер последнего витка — по кандидатам И по репликам.
+ *
+ * Только по кандидатам считать нельзя: задача в полёте кандидата ещё не создала, поэтому два
+ * «дополнить» подряд получали один и тот же номер, лезли в один слот (UNIQUE(generationId, idx) —
+ * часть джоб падала), а их реплики сваливались в один виток: в ленте было «Ход совета: 26» с тремя
+ * одинаковыми прогонами. Реплики пишутся действием сразу, поэтому виток в полёте по ним виден.
+ */
 async function maxIdx(generationId: string): Promise<number> {
   const [{ max }] = await db
-    .select({ max: sql<number>`coalesce(max(${generationCandidates.idx}), 0)::int` })
-    .from(generationCandidates)
-    .where(eq(generationCandidates.generationId, generationId))
+    .select({
+      max: sql<number>`greatest(
+        coalesce((select max(idx) from ${generationCandidates} where generation_id = ${generationId}), 0),
+        coalesce((select max(attempt) from ${generationMessages} where generation_id = ${generationId}), 0)
+      )::int`,
+    })
+    .from(generations)
+    .where(eq(generations.id, generationId))
   return max ?? 0
 }
 
