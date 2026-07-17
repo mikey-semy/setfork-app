@@ -8,7 +8,7 @@ import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, JSON_SHAPE, type GeneratedList, type GenerateOptions } from './generate'
 import { findPrecedents } from './retrieval'
-import { pushCouncilEvent, type CouncilEvent } from './council-progress'
+import { pushMessage, type GenMessageKind } from './generation-messages'
 import { langEnName, type Lang } from '@/shared/i18n'
 
 /**
@@ -74,10 +74,12 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   // Подпись говорящего в беседе (идентичность роли несёт аватарка, поэтому эмодзи в ростере больше нет).
   const gtitle = (e: GnomeSpec) => (ru ? e.ru : e.name)
-  // «Театр беседы»: публикуем ход совета для страницы генерации (по refId=generationId).
-  // fire-and-forget: публикация в стор (Redis/память) не должна блокировать/ронять генерацию.
-  const emit = (kind: CouncilEvent['kind'], text: string, who?: string, name?: string) => {
-    if (opts.refId) void pushCouncilEvent(opts.refId, { kind, text, who, name }).catch(() => {})
+  // Беседа: пишем ход совета в БД (по refId=generationId). Виток = variant (idx кандидата) —
+  // реплики разных попыток не мешаются, а группируются, поэтому ленту больше не надо стирать.
+  // fire-and-forget: запись реплики не должна блокировать/ронять генерацию.
+  const attempt = opts.variant ?? 1
+  const emit = (kind: GenMessageKind, text: string, who?: string, name?: string) => {
+    if (opts.refId) void pushMessage(opts.refId, { attempt, kind, text, who, name }).catch(() => {})
   }
 
   // Один под-вызов: генерация + учёт расхода. Ошибка → null (гном «выпал»), совет продолжает.
