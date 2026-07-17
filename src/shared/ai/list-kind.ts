@@ -89,7 +89,7 @@ const SIGNALS: { kind: ListKind; re: RegExp }[] = [
   // Варианты/сравнение: «что лучше/X или Y/топ/сравнение».
   {
     kind: 'options',
-    re: new RegExp(`${A}(что\\s+лучше|лучшие|топ[\\s-]?\\d|сравнени|which\\s+is\\s+better|best\\s+\\w+\\s+(for|to)|top\\s+\\d|compare)${Z}|${A}или${Z}.*\\?`, 'iu'),
+    re: new RegExp(`${A}(что\\s+лучше|что\\s+выбрать|лучшие|топ[\\s-]?\\d|сравнени|which\\s+is\\s+better|best\\s+\\w+\\s+(for|to)|top\\s+\\d|compare)${Z}|${A}(vs|или)${Z}`, 'iu'),
   },
   // Критерии выбора: «как выбрать/на что смотреть/критерии».
   {
