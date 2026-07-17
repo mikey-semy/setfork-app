@@ -3,6 +3,7 @@ import { and, eq, gte, sql } from 'drizzle-orm'
 import type { Lang } from '@/shared/i18n'
 import { aiUsage, db, generationCandidates, generations, users, type CandidateItem } from '@/shared/db'
 import { generateChangeNote, generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
+import { backfillRecipeSections } from '@/shared/ai/list-kind'
 import { generateListCouncil } from '@/shared/ai/council'
 import { setClarify } from '@/shared/ai/council-clarify'
 import { pushMessage, setGenerationStatus } from '@/shared/ai/generation-messages'
@@ -133,11 +134,15 @@ export async function addCandidate(
       title: it.title,
       desc: it.desc,
       command: sanitizeCommand(it.command ?? ''),
+      section: it.section,
       level: it.level,
       why: it.why,
       subtasks: it.subtasks,
       refs: it.refs,
     }))
+    // Рецепт: если модель не проставила секции (gpt-4o-mini часто не проставляет) — выводим их
+    // структурно, чтобы карточка разделила «Ингредиенты»/«Приготовление», а не рисовала всё в кучу.
+    if (genOpts.kind === 'recipe') backfillRecipeSections(items, lang === 'ru')
     // «Что поменялось ключевое» — только со 2-го витка: у первого сравнивать не с чем.
     const summary = idx > 1 ? await describeChange(generationId, idx, items, lang, genOpts) : ''
     // onConflictDoUpdate по (generationId, idx): ретрай джобы или гонка двух «дополнить» на один idx

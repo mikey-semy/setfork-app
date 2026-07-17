@@ -7,7 +7,7 @@ import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
 import type { GenerationStatus } from './queries'
-import { LIST_KINDS, kindLabel } from '@/shared/ai/list-kind'
+import { LIST_KINDS, kindLabel, refineHint } from '@/shared/ai/list-kind'
 import { CouncilBubble } from './CouncilBubble'
 import { CandidateCard } from './CandidateCard'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationKind } from './actions'
@@ -349,7 +349,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               }
             }}
             rows={1}
-            placeholder={say('Add a detail — “more about security”…', 'Дополни — «побольше про безопасность»…')}
+            placeholder={say(`Add a detail — “${refineHint(listKind, false)}”…`, `Дополни — «${refineHint(listKind, true)}»…`)}
             className="max-h-32 min-h-[42px] w-full resize-y rounded-2xl border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
           />
           <button

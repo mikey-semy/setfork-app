@@ -813,7 +813,7 @@ export const courseCompletions = pgTable(
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
-export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; level?: StepLevel; why?: string; refs?: { label: string; url: string }[] }
+export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; section?: string; level?: StepLevel; why?: string; refs?: { label: string; url: string }[] }
 
 export const generations = pgTable(
   'generations',

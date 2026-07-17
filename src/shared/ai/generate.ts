@@ -25,6 +25,9 @@ export interface GeneratedItem {
   title: string
   desc: string
   command: string
+  /** Заголовок группы-секции (напр. рецепт: «Ингредиенты»/«Приготовление»). '' — без секции.
+   *  Опционально: parseList всегда его ставит, но внешние конструкторы (напр. садовник) — нет. */
+  section?: string
   level: 'required' | 'recommended' | 'optional'
   why: string
   subtasks: string[]
@@ -58,12 +61,13 @@ export interface GenerateOptions {
  */
 export function jsonShapeFor(kind: ListKind = 'procedure'): string {
   return `Return ONLY valid JSON (no markdown fences), exactly this shape:
-{"title": string, "desc": string, "tags": string[], "items": [{"title": string, "desc": string, "command": string, "level": "required"|"recommended"|"optional", "why": string, "subtasks": string[], "refs": [{"label": string, "url": string}]}]}
+{"title": string, "desc": string, "tags": string[], "items": [{"title": string, "desc": string, "command": string, "section": string, "level": "required"|"recommended"|"optional", "why": string, "subtasks": string[], "refs": [{"label": string, "url": string}]}]}
 Rules:
 - title: concise noun phrase naming the list.
 - desc: one sentence describing it.
 - tags: 3-6 short lowercase tags, no '#'.
 - refs: put ALL URLs here (never in command). Each ref: label = short human name, url = full https URL. Use [] when there is no good link.
+- section: a group heading for the item; "" unless the list type below asks to split items into groups.
 ${shapeFor(kind)}`
 }
 
