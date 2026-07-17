@@ -72,7 +72,7 @@ export async function uploadVideoFile(dir: string, file: File): Promise<string> 
 const ATTACH_MAX_BYTES = 25 * 1024 * 1024 // 25 МБ на вложение
 // Разрешённые расширения вложений (не-картинки). Исполняемое/скриптовое — не пускаем.
 // SVG НАМЕРЕННО исключён: файл отдаётся инлайн с того же origin, а `<script>` внутри SVG
-// → хранимый XSS. Векторные картинки не нужны для чек-листов.
+// → хранимый XSS. Векторные картинки не нужны для списков.
 const ATTACH_EXT = new Set(['pdf', 'txt', 'md', 'csv', 'json', 'log', 'zip', 'gz', 'tar', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'])
 
 /**

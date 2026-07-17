@@ -15,8 +15,8 @@ export function CreateWithAI({ lang }: { lang: Lang }) {
         rows={2}
         placeholder={
           ru
-            ? 'Опиши, что нужно сделать — соберём чек-лист. Например: «подготовить Postgres к проду»'
-            : 'Describe what you need — we’ll draft a checklist. E.g. “prepare Postgres for production”'
+            ? 'Опиши, что нужно сделать — соберём список. Например: «подготовить Postgres к проду»'
+            : 'Describe what you need — we’ll draft a list. E.g. “prepare Postgres for production”'
         }
       />
       <div className="mt-1.5 flex items-center justify-between">

@@ -1,4 +1,4 @@
-// Схема БД SetFork (MVP чек-листов).
+// Схема БД SetFork (MVP списков).
 //
 // Ядро ценности: шаблон (template) — это упорядоченная последовательность шагов,
 // у него есть версии; прогон (run) — исполняемый экземпляр шаблона, привязанный
@@ -153,7 +153,7 @@ export const tags = pgTable('tags', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-// ── Templates (список/чек-лист) ──────────────────────────────────────
+// ── Templates (список) ─────────────────────────────────────────────
 export const templates = pgTable(
   'templates',
   {
@@ -169,7 +169,7 @@ export const templates = pgTable(
     currentVersion: integer('current_version').notNull().default(1),
     origin: templateOrigin('origin').notNull().default('authored'),
     status: listStatus('status').notNull().default('published'),
-    // true — упорядоченный (шаги 1..N); false — набор/чек-лист (порядок неважен).
+    // true — упорядоченный (шаги 1..N); false — набор/список (порядок неважен).
     ordered: boolean('ordered').notNull().default(true),
     // true — курс с последовательным доступом: следующий урок открывается только
     // после сдачи тестов предыдущего (quiz-gate).
