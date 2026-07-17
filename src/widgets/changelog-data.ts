@@ -41,7 +41,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: '2026-06-25',
-    en: 'MCP integration: run checklists from Claude and IDEs',
-    ru: 'Интеграция MCP: прогоняй чек-листы из Claude и IDE',
+    en: 'MCP integration: run lists from Claude and IDEs',
+    ru: 'Интеграция MCP: прогоняй списки из Claude и IDE',
   },
 ]

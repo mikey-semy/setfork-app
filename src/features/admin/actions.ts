@@ -11,8 +11,9 @@ import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/ema
 import { clearMonetizationCache, DEFAULT_AD_MARKING, DEFAULT_DISCLOSURE, MONETIZATION_KEYS, sanitizeDonateUrl } from '@/shared/settings/monetization'
 import { parseAffiliateRules } from '@/core'
 import { clearVapidCache, VAPID_KEYS } from '@/shared/push/vapid'
+import { removeImageFile, uploadImageFile } from '@/shared/media'
 import { sendMail } from '@/shared/email/mailer'
-import { db, users } from '@/shared/db'
+import { councilExperts, db, users } from '@/shared/db'
 import { eq } from 'drizzle-orm'
 
 export async function setAiSettings(formData: FormData): Promise<void> {
@@ -232,4 +233,79 @@ export async function toggleMaintenance(on: boolean): Promise<boolean> {
   await recordAudit(on ? 'maintenance.on' : 'maintenance.off', { actorId: admin.userId })
   revalidatePath('/admin')
   return maintenanceFlag()
+}
+
+// ── Менеджер ростера совета (таблица council_experts, см. shared/ai/roster.ts) ────────
+/**
+ * Сохранить эксперта. id не редактируется и приходит скрытым полем: он же имя встроенной
+ * аватарки и значение who в истории бесед — переименование осиротило бы и картинку, и историю.
+ * Поэтому же нет удаления: выключение флагом enabled.
+ */
+export async function saveExpert(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const id = String(formData.get('id') ?? '').trim()
+  if (!id) return
+
+  const domains = String(formData.get('domains') ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+  const modelRaw = String(formData.get('model') ?? '').trim()
+
+  await db
+    .update(councilExperts)
+    .set({
+      nameRu: String(formData.get('nameRu') ?? '').trim().slice(0, 40),
+      nameEn: String(formData.get('nameEn') ?? '').trim().slice(0, 40),
+      persona: String(formData.get('persona') ?? '').trim().slice(0, 2000),
+      domains,
+      model: modelRaw === '__none__' ? '' : modelRaw,
+      avatar: String(formData.get('avatar') ?? '').trim() || id,
+      online: formData.get('online') === 'on',
+      enabled: formData.get('enabled') === 'on',
+      updatedAt: new Date(),
+    })
+    .where(eq(councilExperts.id, id))
+  revalidatePath('/admin')
+}
+
+/**
+ * Загрузить свою картинку эксперту. Файл валидирует uploadImageFile — по СОДЕРЖИМОМУ
+ * (magic bytes), а не по mime от клиента; S3 не настроен → упадёт на диск (public/uploads).
+ * Прошлую загруженную удаляем: иначе S3 копит мусор, на который никто не ссылается.
+ */
+export async function uploadExpertAvatar(formData: FormData): Promise<{ ok: true } | { error: string }> {
+  await requireAdmin()
+  const id = String(formData.get('id') ?? '').trim()
+  const file = formData.get('file')
+  if (!id || !(file instanceof File) || !file.size) return { error: 'no_file' }
+
+  const [cur] = await db.select().from(councilExperts).where(eq(councilExperts.id, id)).limit(1)
+  if (!cur) return { error: 'not_found' }
+
+  try {
+    const ref = await uploadImageFile('council', file)
+    if (cur.avatarUploaded && cur.avatar) await removeImageFile(cur.avatar).catch(() => {})
+    await db
+      .update(councilExperts)
+      .set({ avatar: ref, avatarUploaded: true, updatedAt: new Date() })
+      .where(eq(councilExperts.id, id))
+    revalidatePath('/admin')
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'upload_failed' }
+  }
+}
+
+/** Вернуть эксперту встроенную картинку (и убрать загруженную из хранилища). */
+export async function resetExpertAvatar(id: string): Promise<void> {
+  await requireAdmin()
+  const [cur] = await db.select().from(councilExperts).where(eq(councilExperts.id, id)).limit(1)
+  if (!cur) return
+  if (cur.avatarUploaded && cur.avatar) await removeImageFile(cur.avatar).catch(() => {})
+  await db
+    .update(councilExperts)
+    .set({ avatar: id, avatarUploaded: false, updatedAt: new Date() })
+    .where(eq(councilExperts.id, id))
+  revalidatePath('/admin')
 }

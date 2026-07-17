@@ -7,7 +7,7 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { generateListCouncil } from '../src/shared/ai/council'
-import { getCouncilEvents, clearCouncilEvents } from '../src/shared/ai/council-progress'
+import { getMessages } from '../src/shared/ai/generation-messages'
 
 async function main() {
   const query = process.argv[2] || 'Настроить CI для монорепозитория на GitHub Actions'
@@ -18,7 +18,7 @@ async function main() {
   const res = await generateListCouncil(query, 'ru', { refId })
   const secs = ((Date.now() - t0) / 1000).toFixed(1)
 
-  const events = await getCouncilEvents(refId)
+  const events = await getMessages(refId)
   console.log(`--- лента (${events.length} реплик, ${secs}s) ---`)
   let bad = 0
   for (const e of events) {
@@ -32,7 +32,6 @@ async function main() {
   console.log(`\nрезультат: ${kind}`)
   // eslint-disable-next-line no-restricted-syntax -- вывод CLI-харнесса, не UI: словарь i18n тут ни при чём
   console.log(bad ? `ПРОБЛЕМА: ${bad} реплик без говорящего/аватарки` : 'все реплики с говорящим и картинка на месте')
-  await clearCouncilEvents(refId)
 
 }
 

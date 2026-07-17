@@ -3,10 +3,11 @@ import { eq } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { getGeneration, getGenerationStatus } from '@/features/generation/queries'
-import { getCouncilEvents } from '@/shared/ai/council-progress'
+import { getGeneration } from '@/features/generation/queries'
+import { getMessages } from '@/shared/ai/generation-messages'
+import { rosterAvatars } from '@/shared/ai/roster'
 import { getClarify } from '@/shared/ai/council-clarify'
-import { GenerationReview } from '@/features/generation/GenerationReview'
+import { GenerationChat } from '@/features/generation/GenerationChat'
 
 export const metadata = { title: 'Draft' }
 
@@ -22,7 +23,6 @@ export default async function GenerationPage({
 
   const gen = await getGeneration(id, session.userId)
   if (!gen) notFound()
-  const status = await getGenerationStatus(id)
 
   // Уже принят → открываем созданный список.
   if (gen.chosenTemplateId) {
@@ -34,19 +34,19 @@ export default async function GenerationPage({
     if (row) redirect(`/${row.handle}/${row.slug}`)
   }
 
-  // Театр беседы + уточнения (Redis или память) — читаем параллельно.
-  const [councilEvents, clarifyQuestions] = await Promise.all([getCouncilEvents(gen.id), getClarify(gen.id)])
+  // Беседа — из БД: переживает уход со страницы, перезапуск и неделю. Статус — колонка, а не
+  // догадка по таблице jobs. Уточнения пока отдельным стором.
+  const [messages, clarifyQuestions, avatars] = await Promise.all([getMessages(gen.id), getClarify(gen.id), rosterAvatars()])
 
   return (
-    <GenerationReview
+    <GenerationChat
       generationId={gen.id}
-      query={gen.query}
       lang={lang}
       candidates={gen.candidates}
-      status={status}
-      initialIdx={Number(sp.v) || gen.candidates[gen.candidates.length - 1]?.idx || 1}
+      status={gen.status}
+      messages={messages}
+      avatars={avatars}
       error={sp.e}
-      councilEvents={councilEvents}
       clarifyQuestions={clarifyQuestions}
     />
   )

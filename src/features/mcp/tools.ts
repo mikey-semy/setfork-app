@@ -225,7 +225,7 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
 }
 
 // get_script: тот же список, но как готовый исполняемый скрипт (bash/ps1/py) —
-// удобно агенту, который прогоняет чек-лист (CI-for-AI). Приватность как у get_list.
+// удобно агенту, который прогоняет список (CI-for-AI). Приватность как у get_list.
 export async function mcpGetScript(userId: string, handle: string, slug: string, dialectRaw?: string) {
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return null

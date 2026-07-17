@@ -234,7 +234,7 @@ const DICT = {
   orderedLabel: { en: 'Ordered', ru: 'Упорядоченный' },
   orderedHint: { en: 'A sequence — steps 1, 2, 3… run in order.', ru: 'Последовательность — шаги 1, 2, 3… по порядку.' },
   unorderedLabel: { en: 'Unordered', ru: 'Без порядка' },
-  unorderedHint: { en: 'A set/checklist — order doesn’t matter.', ru: 'Набор/чек-лист — порядок неважен.' },
+  unorderedHint: { en: 'A set/list — order doesn’t matter.', ru: 'Набор/список — порядок неважен.' },
   clear: { en: 'Clear', ru: 'Очистить' },
   contributions: { en: 'contributions', ru: 'вкладов' },
   inLastYear: { en: 'in the last year', ru: 'за последний год' },
@@ -278,7 +278,7 @@ const DICT = {
   runDone: { en: 'Completed 🎉', ru: 'Завершён 🎉' },
   runFailed: { en: 'Failed', ru: 'Неудача' },
   runFailAction: { en: 'Stop as failed', ru: 'Остановить как неудачу' },
-  runFailConfirm: { en: 'Stop this run as failed? Use it when the checklist could not be completed.', ru: 'Остановить прогон как неудачу? Когда чек-лист не удалось пройти.' },
+  runFailConfirm: { en: 'Stop this run as failed? Use it when the list could not be completed.', ru: 'Остановить прогон как неудачу? Когда список не удалось пройти.' },
   runBlockedLabel: { en: 'blocked', ru: 'заблокировано' },
   runCantComplete: { en: "Can't complete this step", ru: 'Шаг не получается' },
   // ── Память прохождения курса (courseCompletions — постоянный факт) ──

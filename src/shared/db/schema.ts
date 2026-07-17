@@ -1,4 +1,4 @@
-// Схема БД SetFork (MVP чек-листов).
+// Схема БД SetFork (MVP списков).
 //
 // Ядро ценности: шаблон (template) — это упорядоченная последовательность шагов,
 // у него есть версии; прогон (run) — исполняемый экземпляр шаблона, привязанный
@@ -36,6 +36,8 @@ export const listStatus = pgEnum('list_status', ['draft', 'published'])
 // flagged — на проверку (репорт/ИИ); hidden — скрыт админом (не публичен).
 export const moderationStatus = pgEnum('moderation_status', ['active', 'pending', 'flagged', 'hidden'])
 export const runStatus = pgEnum('run_status', ['active', 'done', 'abandoned', 'failed'])
+// Статус генерации. 'clarify' — совет прервался ради уточняющих вопросов: джоба завершена, но кандидата нет.
+export const generationStatus = pgEnum('generation_status', ['pending', 'done', 'failed', 'clarify'])
 export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done', 'blocked'])
 // Уровень важности шага (как в стандартах: MUST / SHOULD / MAY).
 export const stepLevel = pgEnum('step_level', ['required', 'recommended', 'optional'])
@@ -151,7 +153,7 @@ export const tags = pgTable('tags', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-// ── Templates (список/чек-лист) ──────────────────────────────────────
+// ── Templates (список) ─────────────────────────────────────────────
 export const templates = pgTable(
   'templates',
   {
@@ -167,7 +169,7 @@ export const templates = pgTable(
     currentVersion: integer('current_version').notNull().default(1),
     origin: templateOrigin('origin').notNull().default('authored'),
     status: listStatus('status').notNull().default('published'),
-    // true — упорядоченный (шаги 1..N); false — набор/чек-лист (порядок неважен).
+    // true — упорядоченный (шаги 1..N); false — набор/список (порядок неважен).
     ordered: boolean('ordered').notNull().default(true),
     // true — курс с последовательным доступом: следующий урок открывается только
     // после сдачи тестов предыдущего (quiz-gate).
@@ -813,16 +815,53 @@ export const courseCompletions = pgTable(
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
 export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; level?: StepLevel; why?: string; refs?: { label: string; url: string }[] }
 
-export const generations = pgTable('generations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  query: text('query').notNull(),
-  lang: text('lang').notNull().default('en'),
-  chosenTemplateId: uuid('chosen_template_id').references(() => templates.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const generations = pgTable(
+  'generations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    query: text('query').notNull(),
+    lang: text('lang').notNull().default('en'),
+    chosenTemplateId: uuid('chosen_template_id').references(() => templates.id, { onDelete: 'set null' }),
+    // Пишет воркер. Раньше статус ВЫВОДИЛСЯ из таблицы jobs запросом по payload->>'generationId' —
+    // без индекса, на каждый поллинг каждого смотрящего (раз в 2.5с).
+    // default 'done', а не 'pending': у старых строк джоб уже нет, и они не должны выглядеть висящими.
+    status: generationStatus('status').notNull().default('done'),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  // Для «истории прошлых генераций» — лента пользователя по свежести.
+  (t) => [index('generations_user_idx').on(t.userId, t.createdAt)],
+)
+
+/**
+ * Реплики беседы генерации: append-only, НИКОГДА не чистим — в этом весь смысл.
+ * Раньше лента жила в Redis/памяти с TTL 5 минут и стиралась в начале каждой попытки, поэтому разговор
+ * исчезал: пользователь терял не список (кандидаты всегда были в БД), а сам ход придумывания.
+ *
+ * attempt — номер витка (совпадает с generationCandidates.idx): дубли реплик лечатся группировкой по
+ * витку, а не стиранием ленты, как раньше.
+ */
+export const generationMessages = pgTable(
+  'generation_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    generationId: uuid('generation_id')
+      .notNull()
+      .references(() => generations.id, { onDelete: 'cascade' }),
+    attempt: integer('attempt').notNull().default(1),
+    // Текст, а не pg-enum: роли совета меняются на ходу (добавили эксперта — не ловить миграцию enum'а).
+    // В TS сужается до GenMessageKind.
+    kind: text('kind').notNull(),
+    who: text('who'), // id аватарки: public/gnomes/<who>.webp
+    name: text('name'), // подпись говорящего (локализуем на сервере: ростер под server-only)
+    text: text('text').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('generation_messages_gen_idx').on(t.generationId, t.createdAt)],
+)
 
 export const generationCandidates = pgTable(
   'generation_candidates',
@@ -834,6 +873,9 @@ export const generationCandidates = pgTable(
     idx: integer('idx').notNull(), // порядковый номер варианта (1..)
     title: text('title').notNull(),
     desc: text('desc').notNull().default(''),
+    // «Что поменялось ключевое» относительно предыдущего варианта — одной фразой, пишет модель.
+    // У первого варианта пусто: сравнивать не с чем.
+    summary: text('summary').notNull().default(''),
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     items: jsonb('items').notNull().default([]).$type<CandidateItem[]>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -842,6 +884,38 @@ export const generationCandidates = pgTable(
     unique('generation_candidates_gen_idx').on(t.generationId, t.idx),
     index('generation_candidates_gen_idx2').on(t.generationId),
   ],
+)
+
+/**
+ * Ростер совета: персонажи-эксперты. Раньше был константой EXPERTS в council.ts — правился только
+ * кодом и деплоем.
+ *
+ * persona — инструкция модели (манера, на что смотрит).
+ * domains — по ним распорядитель созывает; '*' = универсал, годится на любую тему.
+ * model — принудительная модель для этого эксперта; пусто → берётся из пула совета по кругу.
+ * avatar — id встроенной картинки (public/gnomes/<id>.webp) ИЛИ ключ в S3 у загруженной.
+ * enabled/sort — выключение без удаления и порядок. Удалять нельзя без нужды: id зашит в аватарку
+ * и в поле who прошлых бесед (generation_messages) — удалишь, и история осиротеет.
+ */
+export const councilExperts = pgTable(
+  'council_experts',
+  {
+    // Не uuid: id смысловой ('chef'), он же имя встроенной аватарки и значение who в беседе.
+    id: text('id').primaryKey(),
+    nameEn: text('name_en').notNull(),
+    nameRu: text('name_ru').notNull(),
+    persona: text('persona').notNull(),
+    domains: text('domains').array().notNull().default(sql`'{}'::text[]`),
+    model: text('model').notNull().default(''),
+    avatar: text('avatar').notNull().default(''),
+    // Загруженная картинка лежит в S3 — отличаем от встроенной, чтобы знать, чем её отдавать.
+    avatarUploaded: boolean('avatar_uploaded').notNull().default(false),
+    online: boolean('online').notNull().default(false), // давать ли веб-поиск (:online)
+    enabled: boolean('enabled').notNull().default(true),
+    sort: integer('sort').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('council_experts_sort_idx').on(t.enabled, t.sort)],
 )
 
 // ── AI usage (учёт токенов/денег по каждому вызову ИИ) ───────────────

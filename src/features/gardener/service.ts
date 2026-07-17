@@ -24,7 +24,7 @@ const GARDENER_EVERY_DAYS = 2
 const BATCH = Number(process.env.GARDENER_BATCH ?? 3)
 
 const INSTRUCTION =
-  'You are the site gardener improving a community checklist. ' +
+  'You are the site gardener improving a community list. ' +
   'Clarify vague steps, add missing verification sub-tasks, add a short "why" where the reason is non-obvious, ' +
   'and fix factual or ordering issues. Keep the author’s voice and structure. ' +
   'Add at most 2 new steps and do not remove existing ones unless clearly wrong.'

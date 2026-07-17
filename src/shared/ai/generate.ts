@@ -6,6 +6,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { sanitizeCommand } from './sanitize-command'
+import { lawBlock } from './list-laws'
 import { spotlight } from './spotlight'
 import { langEnName, type Lang } from '@/shared/i18n'
 
@@ -161,13 +162,15 @@ export async function generateListDraft(query: string, lang: Lang, opts: Generat
       ? `\nThis is regeneration attempt #${opts.variant}: produce a MEANINGFULLY DIFFERENT take (different angle, ordering or scope) from a typical answer.`
       : ''
   const sp = spotlight()
-  const system = `You generate a canonical, high-quality, community-grade reference checklist as STRICT JSON.
+  // Закон типа списка (напр. рецепт: ингредиенты с развесовкой отдельными шагами) — обязателен и
+  // здесь: одиночная генерация идёт мимо совета, но форма списка от этого меняться не должна.
+  const system = `You generate a canonical, high-quality, community-grade reference list as STRICT JSON.${lawBlock(query)}
 All content MUST be in ${langName}.
-${web ? 'Use up-to-date web search results to make the checklist accurate and current.\n' : ''}${JSON_SHAPE}
+${web ? 'Use up-to-date web search results to make the list accurate and current.\n' : ''}${JSON_SHAPE}
 - Be accurate and practical. Everything in ${langName}.${variantHint}
 ${sp.rule()}`
   const feature: AiFeature = opts.feature ?? (opts.variant && opts.variant > 1 ? 'regenerate' : 'generate')
-  return runListModel(system, `Create the reference checklist for the topic below.\n${sp.wrap('TOPIC', query)}`, query, feature, { ...opts, web })
+  return runListModel(system, `Create the reference list for the topic below.\n${sp.wrap('TOPIC', query)}`, query, feature, { ...opts, web })
 }
 
 type NoteItem = { title: string; desc: string; command: string; subtasks: string[] }
@@ -199,7 +202,7 @@ export async function generateChangeNote(
   try {
     const result = await generateText({
       model: openrouter.chat(model, { usage: { include: true } }),
-      system: `You write a SHORT changelog note (like a git commit message) describing what changed between two versions of a checklist, and why it matters. One concise line, imperative mood, in ${langName}. No quotes, no markdown, max ~90 characters.
+      system: `You write a SHORT changelog note (like a git commit message) describing what changed between two versions of a list, and why it matters. One concise line, imperative mood, in ${langName}. No quotes, no markdown, max ~90 characters.
 ${sp.rule()}`,
       prompt: `${sp.wrap('BEFORE', compact(base) || '(empty)')}\n\n${sp.wrap('AFTER', compact(next) || '(empty)')}\n\nWrite the change note.`,
       temperature: 0.3,
@@ -226,7 +229,7 @@ export async function generateListTranslation(
 ): Promise<GeneratedList | null> {
   const langName = langEnName(targetLang)
   const sp = spotlight()
-  const system = `You TRANSLATE a checklist into ${langName}, returning the FULL list as STRICT JSON in EXACTLY the same shape and item order.
+  const system = `You TRANSLATE a list into ${langName}, returning the FULL list as STRICT JSON in EXACTLY the same shape and item order.
 Translate every text field into ${langName}. Keep technical terms and commands (git, docker, npm, tool names) as commonly used by ${langName}-speaking developers.
 Do NOT translate URLs (ref.url) — copy them verbatim; translate only ref.label.
 Do NOT add, drop, reorder, merge or split items — one-to-one translation only.
@@ -248,7 +251,7 @@ export async function generateListRefine(
   const langName = langEnName(lang)
   const web = opts.web ?? false
   const sp = spotlight()
-  const system = `You REFINE an existing checklist per the user's instruction, returning the FULL updated list as STRICT JSON.
+  const system = `You REFINE an existing list per the user's instruction, returning the FULL updated list as STRICT JSON.
 All content MUST be in ${langName}.
 Preserve good existing content and ordering; change only what the instruction requires. Do not drop unrelated steps.
 ${web ? 'You may use web search to ground new content.\n' : ''}${JSON_SHAPE}

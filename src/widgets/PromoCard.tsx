@@ -10,8 +10,8 @@ import type { Lang } from '@/shared/i18n'
 const PROMO = {
   id: 'mcp-2026-07',
   href: '/settings#mcp', // якорь прямо к секции MCP (scroll-mt в SettingsShell)
-  en: { badge: 'New', title: 'Run checklists from your IDE', cta: 'Set up MCP access' },
-  ru: { badge: 'Новое', title: 'Прогоняй чек-листы прямо из IDE', cta: 'Настроить MCP-доступ' },
+  en: { badge: 'New', title: 'Run lists from your IDE', cta: 'Set up MCP access' },
+  ru: { badge: 'Новое', title: 'Прогоняй списки прямо из IDE', cta: 'Настроить MCP-доступ' },
 }
 
 export function PromoCard({ lang }: { lang: Lang }) {

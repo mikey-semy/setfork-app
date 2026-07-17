@@ -46,8 +46,8 @@ const handler = createMcpHandler(
     readTool(
       'search_lists',
       {
-        title: 'Search checklists',
-        description: 'Search public SetFork checklists (and your own private ones) by keywords/meaning. Returns list refs "owner/slug".',
+        title: 'Search lists',
+        description: 'Search public SetFork lists (and your own private ones) by keywords/meaning. Returns list refs "owner/slug".',
         inputSchema: {
           query: z.string().describe('Search terms — topic, tool or task'),
           limit: z.number().int().min(1).max(50).optional().describe('Max results (default 10)'),
@@ -59,9 +59,9 @@ const handler = createMcpHandler(
     readTool(
       'get_list',
       {
-        title: 'Get a checklist',
+        title: 'Get a list',
         description:
-          'Fetch a full checklist by ref (owner handle + slug). Returns ALL blocks with their type — steps (title/command/subtasks/links) plus text, image, poll, video and quiz blocks with their content — so you get the complete context, not just text.',
+          'Fetch a full list by ref (owner handle + slug). Returns ALL blocks with their type — steps (title/command/subtasks/links) plus text, image, poll, video and quiz blocks with their content — so you get the complete context, not just text.',
         inputSchema: {
           handle: z.string().describe('Owner handle, e.g. "acme"'),
           slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
@@ -78,7 +78,7 @@ const handler = createMcpHandler(
       {
         title: 'Get a runnable script',
         description:
-          'Render a checklist as a ready-to-run script (its commands, with progress echoes). dialect: "sh" bash (default), "ps1" PowerShell, "py" python. Commands come from the list authors — review before running.',
+          'Render a list as a ready-to-run script (its commands, with progress echoes). dialect: "sh" bash (default), "ps1" PowerShell, "py" python. Commands come from the list authors — review before running.',
         inputSchema: {
           handle: z.string().describe('Owner handle, e.g. "acme"'),
           slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
@@ -146,9 +146,9 @@ const handler = createMcpHandler(
     writeTool(
       'create_list',
       {
-        title: 'Create a checklist',
+        title: 'Create a list',
         description:
-          'Create a new checklist owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type".',
+          'Create a new list owned by you. It is created as a PRIVATE DRAFT — you publish it later on the site. Items can be plain steps or richer blocks (text, image, poll, video, quiz) — set each item\'s "type".',
         inputSchema: {
           title: z.string().describe('List title'),
           desc: z.string().optional().describe('One-line description'),
@@ -166,8 +166,8 @@ const handler = createMcpHandler(
     writeTool(
       'update_list',
       {
-        title: 'Update a checklist',
-        description: 'Replace the blocks of a checklist you own (steps and/or text/image/poll/video/quiz). A draft is edited in place; a published list gets a new version.',
+        title: 'Update a list',
+        description: 'Replace the blocks of a list you own (steps and/or text/image/poll/video/quiz). A draft is edited in place; a published list gets a new version.',
         inputSchema: {
           handle: z.string().describe('Owner handle (must be you)'),
           slug: z.string().describe('List slug'),
@@ -187,7 +187,7 @@ const handler = createMcpHandler(
       'start_run',
       {
         title: 'Start a run',
-        description: 'Start (or resume your active) run of a checklist by ref — a personal pass to track progress. Returns the run id, steps and progress.',
+        description: 'Start (or resume your active) run of a list by ref — a personal pass to track progress. Returns the run id, steps and progress.',
         inputSchema: {
           handle: z.string().describe('Owner handle'),
           slug: z.string().describe('List slug'),

@@ -7,7 +7,7 @@ import { courseCompletions, db, runStepState, steps } from '@/shared/db'
  * Идемпотентно (unique user+tpl → onConflictDoNothing). Возвращает true, если
  * курс теперь считается пройденным (все шаги сделаны).
  *
- * Это «веха по прогону» — для чек-листов БЕЗ тестов (у курсов с тестами есть
+ * Это «веха по прогону» — для списков БЕЗ тестов (у курсов с тестами есть
  * свой путь в submitQuiz). Любой достигнутый первым путь фиксирует прохождение.
  */
 export async function recordRunCompletionIfDone(

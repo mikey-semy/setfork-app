@@ -30,7 +30,7 @@ export function markdownToolbarGroups({ L, surround, linePrefix }: MarkdownToolb
     [
       { icon: List, t: L('список', 'bulleted list'), run: () => linePrefix(() => '- ') },
       { icon: ListOrdered, t: L('нумерованный', 'numbered list'), run: () => linePrefix((i) => `${i + 1}. `) },
-      { icon: ListChecks, t: L('чек-лист', 'task list'), run: () => linePrefix(() => '- [ ] ') },
+      { icon: ListChecks, t: L('список', 'task list'), run: () => linePrefix(() => '- [ ] ') },
     ],
   ]
 }

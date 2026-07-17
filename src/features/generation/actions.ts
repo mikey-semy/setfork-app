@@ -9,6 +9,7 @@ import { getLang } from '@/shared/i18n/server'
 import { DEFAULT_LANG, isLang, type Lang } from '@/shared/i18n'
 import { sanitizeCommand } from '@/shared/ai/generate'
 import { claimClarify } from '@/shared/ai/council-clarify'
+import { getMessages, pushMessage } from '@/shared/ai/generation-messages'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { aiQuota, listQuota } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
@@ -31,6 +32,29 @@ async function enqueueGenerate(generationId: string, userId: string, query: stri
   await enqueueJob('generate', { generationId, userId, query, lang: isLang(lang) ? lang : DEFAULT_LANG, idx }, { maxAttempts: 2 })
 }
 
+/** Номер последнего варианта. Тот же запрос лежал копипастой в трёх действиях. */
+async function maxIdx(generationId: string): Promise<number> {
+  const [{ max }] = await db
+    .select({ max: sql<number>`coalesce(max(${generationCandidates.idx}), 0)::int` })
+    .from(generationCandidates)
+    .where(eq(generationCandidates.generationId, generationId))
+  return max ?? 0
+}
+
+/**
+ * Память нити: исходный запрос + ВСЕ реплики пользователя (дополнения). Уходит в ЗАПРОС ДЖОБЫ,
+ * generations.query не портим — заголовок остаётся чистым (тот же приём, что в answerClarify).
+ * Благодаря этому «дополнить» именно дополняет, а не подменяет запрос.
+ */
+async function threadQuery(generationId: string, baseQuery: string): Promise<string> {
+  const msgs = await getMessages(generationId)
+  const notes = msgs.filter((m) => m.kind === 'user' && m.text.trim()).map((m) => m.text.trim())
+  // Первая реплика — сам запрос, она уже в baseQuery.
+  const extra = notes.slice(1)
+  if (!extra.length) return baseQuery
+  return `${baseQuery}\n\n[User refinements, newest last]\n${extra.map((t) => `- ${t}`).join('\n')}`.slice(0, 2000)
+}
+
 // ── Старт генерации: запрос → задача в очередь → экран ожидания ───────
 export async function startGeneration(formData: FormData): Promise<void> {
   const session = await requireSession()
@@ -42,7 +66,9 @@ export async function startGeneration(formData: FormData): Promise<void> {
   if (!allowed) redirect(`/search?q=${encodeURIComponent(query)}&e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate?e=ai_quota&q=${encodeURIComponent(query)}`)
 
-  const [gen] = await db.insert(generations).values({ userId: session.userId, query, lang }).returning()
+  const [gen] = await db.insert(generations).values({ userId: session.userId, query, lang, status: 'pending' }).returning()
+  // Запрос — первая реплика беседы: чат начинается с того, что сказал пользователь.
+  await pushMessage(gen.id, { attempt: 1, kind: 'user', text: query })
   await enqueueGenerate(gen.id, session.userId, query, lang, 1)
   redirect(`/generate/${gen.id}`)
 }
@@ -57,15 +83,37 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
-  const [{ max }] = await db
-    .select({ max: sql<number>`coalesce(max(${generationCandidates.idx}), 0)::int` })
-    .from(generationCandidates)
-    .where(eq(generationCandidates.generationId, generationId))
-  const nextIdx = (max ?? 0) + 1
+  const max = await maxIdx(generationId)
+  const nextIdx = max + 1
   // Потолок вариантов: не молча, а с флагом — UI покажет причину.
   if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}&e=variantcap`)
 
-  await enqueueGenerate(generationId, session.userId, gen.query, gen.lang, nextIdx)
+  // Текста у «ещё варианта» нет — намерение, а не фраза. Подпись рисует UI, поэтому она
+  // локализуется на клиенте и не протухает в БД при смене языка.
+  await pushMessage(generationId, { attempt: nextIdx, kind: 'again', text: '' })
+  await enqueueGenerate(generationId, session.userId, await threadQuery(generationId, gen.query), gen.lang, nextIdx)
+  redirect(`/generate/${generationId}?v=${nextIdx}`)
+}
+
+// ── Дополнить прямо в чате: реплика пользователя → ещё вариант с учётом ВСЕЙ нити ──────
+export async function refineInChat(generationId: string, text: string): Promise<void> {
+  const session = await requireSession()
+  const gen = await db.query.generations.findFirst({ where: (g) => eq(g.id, generationId) })
+  if (!gen || gen.userId !== session.userId || gen.chosenTemplateId) redirect('/explore')
+
+  const note = text.trim().slice(0, 300)
+  if (!note) redirect(`/generate/${generationId}`)
+
+  const { allowed } = await checkRateLimit(`gen:${session.userId}`)
+  if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
+  if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
+
+  const nextIdx = (await maxIdx(generationId)) + 1
+  if (nextIdx > 6) redirect(`/generate/${generationId}?e=variantcap`)
+
+  // Реплику пишем ДО постановки джобы: воркер соберёт нить уже вместе с ней.
+  await pushMessage(generationId, { attempt: nextIdx, kind: 'user', text: note })
+  await enqueueGenerate(generationId, session.userId, await threadQuery(generationId, gen.query), gen.lang, nextIdx)
   redirect(`/generate/${generationId}?v=${nextIdx}`)
 }
 
@@ -82,11 +130,8 @@ export async function regenerateWithQuery(generationId: string, newQuery: string
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
-  const [{ max }] = await db
-    .select({ max: sql<number>`coalesce(max(${generationCandidates.idx}), 0)::int` })
-    .from(generationCandidates)
-    .where(eq(generationCandidates.generationId, generationId))
-  const nextIdx = (max ?? 0) + 1
+  const max = await maxIdx(generationId)
+  const nextIdx = max + 1
   if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}&e=variantcap`)
 
   // Обновляем запрос генерации: заголовок и будущие «ещё вариант» пойдут по нему.

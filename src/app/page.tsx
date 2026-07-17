@@ -19,7 +19,7 @@ const FALLBACK_CHIPS = [
 const PLACEHOLDERS = [
   { en: 'Describe what you need to do…', ru: 'Опиши, что нужно сделать…' },
   { en: 'What are we setting up today?', ru: 'Что настраиваем сегодня?' },
-  { en: 'Find a proven checklist…', ru: 'Найди проверенный чек-лист…' },
+  { en: 'Find a proven list…', ru: 'Найди проверенный список…' },
   { en: 'What needs doing — step by step?', ru: 'Что нужно сделать — по шагам?' },
   { en: 'Ask for a list on any topic…', ru: 'Спроси список на любую тему…' },
 ]
