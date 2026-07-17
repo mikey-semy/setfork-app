@@ -7,9 +7,10 @@ import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
 import type { GenerationStatus } from './queries'
+import { LIST_KINDS, kindLabel, refineHint } from '@/shared/ai/list-kind'
 import { CouncilBubble } from './CouncilBubble'
 import { CandidateCard } from './CandidateCard'
-import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate } from './actions'
+import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationKind } from './actions'
 
 /**
  * Экран генерации — беседа, от первой реплики до результата.
@@ -132,13 +133,15 @@ interface Props {
   candidates: GenerationCandidate[]
   status: GenerationStatus
   messages: GenMessage[]
+  /** Тип списка (ADR-0010) — подсвечиваем в переключателе; null у старых генераций. */
+  listKind: string | null
   /** id → своя картинка эксперта (сменили в админке). Нет записи → встроенная по who. */
   avatars: Record<string, string>
   error?: string
   clarifyQuestions?: string[]
 }
 
-export function GenerationChat({ generationId, lang, candidates, status, messages, avatars, error, clarifyQuestions }: Props) {
+export function GenerationChat({ generationId, lang, candidates, status, messages, listKind, avatars, error, clarifyQuestions }: Props) {
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const router = useRouter()
@@ -237,6 +240,24 @@ export function GenerationChat({ generationId, lang, candidates, status, message
         {candidates.length > 1 && <VariantJump candidates={candidates} lang={lang} selId={selId} onPick={setSelId} />}
       </div>
 
+      {/* Переключатель типа списка (ADR-0010): не тот тип? — жми, будет новый вариант в нужной форме.
+          Дешевле и без трения, чем уточняющий вопрос; каждый клик — сигнал, что автоугадывание промахнулось. */}
+      <div className="no-scrollbar -mx-4 mb-4 flex items-center gap-1.5 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
+        {LIST_KINDS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => k !== listKind && start(() => setGenerationKind(generationId, k))}
+            disabled={working}
+            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] transition-colors disabled:opacity-40 ${
+              k === listKind ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
+            }`}
+          >
+            {kindLabel(k, ru)}
+          </button>
+        ))}
+      </div>
+
       {error && errText[error] && (
         <div className="mb-3 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[12.5px] text-warn">{errText[error]}</div>
       )}
@@ -328,7 +349,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               }
             }}
             rows={1}
-            placeholder={say('Add a detail — “more about security”…', 'Дополни — «побольше про безопасность»…')}
+            placeholder={say(`Add a detail — “${refineHint(listKind, false)}”…`, `Дополни — «${refineHint(listKind, true)}»…`)}
             className="max-h-32 min-h-[42px] w-full resize-y rounded-2xl border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
           />
           <button

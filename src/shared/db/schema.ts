@@ -813,7 +813,7 @@ export const courseCompletions = pgTable(
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
-export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; level?: StepLevel; why?: string; refs?: { label: string; url: string }[] }
+export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; section?: string; level?: StepLevel; why?: string; refs?: { label: string; url: string }[] }
 
 export const generations = pgTable(
   'generations',
@@ -829,6 +829,10 @@ export const generations = pgTable(
     // без индекса, на каждый поллинг каждого смотрящего (раз в 2.5с).
     // default 'done', а не 'pending': у старых строк джоб уже нет, и они не должны выглядеть висящими.
     status: generationStatus('status').notNull().default('done'),
+    // Тип списка (ADR-0010): определён классификатором или выбран пользователем (переключатель в чате).
+    // Свободный текст, а не pg-enum: набор типов растёт в коде (list-kind.ts), не хочется миграции enum'а.
+    // Пусто у старых генераций — там переключателя не было; UI покажет по кандидату/дефолту.
+    listKind: text('list_kind'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

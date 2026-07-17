@@ -1,3 +1,4 @@
+import { listLaw } from './list-laws'
 /**
  * Тип списка (ADR-0010): ПЕРВИЧНОЕ решение генерации — что является ЭЛЕМЕНТОМ, и потому какой формы
  * должен быть вывод. Раньше движок всегда делал процедуру («6-9 ordered steps: short imperative»), и
@@ -9,9 +10,9 @@
  * Gawande + BOM; канонической таксономии списков не существует). Структура JSON та же (CandidateItem
  * переиспользуется) — меняется СМЫСЛ элемента, задаваемый инструкцией shapeFor().
  */
-export type ListKind = 'procedure' | 'inventory' | 'checklist' | 'criteria' | 'options'
+export type ListKind = 'procedure' | 'inventory' | 'checklist' | 'criteria' | 'options' | 'recipe'
 
-export const LIST_KINDS: ListKind[] = ['procedure', 'inventory', 'checklist', 'criteria', 'options']
+export const LIST_KINDS: ListKind[] = ['procedure', 'inventory', 'checklist', 'criteria', 'options', 'recipe']
 
 /** Человеческая подпись типа — для переключателя в чате (Ф-Т2). en/ru аргументами (i18n-lint). */
 export function kindLabel(kind: ListKind, ru: boolean): string {
@@ -21,8 +22,44 @@ export function kindLabel(kind: ListKind, ru: boolean): string {
     checklist: ['Checklist', 'Чеклист'],
     criteria: ['Criteria', 'Критерии выбора'],
     options: ['Options', 'Варианты'],
+    recipe: ['Recipe', 'Рецепт'],
   }
   const [en, rus] = L[kind]
+  return ru ? rus : en
+}
+
+/**
+ * Проставить секции рецепту, если модель их не заполнила (gpt-4o-mini стабильно игнорирует поле
+ * section даже с жёстким промптом). Структура надёжна: ингредиенты с «Название — количество» идут
+ * ПРЕФИКСОМ, первый императивный шаг без тире-развесовки открывает готовку. Латч inSteps: попали в
+ * готовку — остаёмся, даже если у шага случайно есть тире. Промах безопасен: без секций карточка
+ * просто рисует плоский список, как раньше.
+ */
+export function backfillRecipeSections(items: { title: string; section?: string }[], ru: boolean): void {
+  if (items.some((it) => it.section)) return // модель проставила — уважаем
+  const [ING, STEP] = ru ? (['Ингредиенты', 'Приготовление'] as const) : (['Ingredients', 'Preparation'] as const)
+  let inSteps = false
+  for (const it of items) {
+    if (!inSteps && /\s[—–-]\s/.test(it.title)) it.section = ING
+    else {
+      inSteps = true
+      it.section = STEP
+    }
+  }
+}
+
+/** Пример для поля «дополнить» — ПО ТИПУ списка: «побольше про безопасность» не лезет к рецепту.
+ *  kind — свободная строка из БД (list_kind), невалидное молча падает на procedure. */
+export function refineHint(kind: string | null, ru: boolean): string {
+  const H: Record<ListKind, [en: string, ru: string]> = {
+    procedure: ['add more about security', 'побольше про безопасность'],
+    inventory: ['add budget options', 'добавь бюджетные варианты'],
+    checklist: ['add pre-launch checks', 'добавь проверки перед запуском'],
+    criteria: ['weigh price vs quality', 'учти цену против качества'],
+    options: ['add a cheaper option', 'добавь вариант подешевле'],
+    recipe: ['make it less sweet, add per-portion', 'сделай менее сладким, добавь на порцию'],
+  }
+  const [en, rus] = H[(kind as ListKind) in H ? (kind as ListKind) : 'procedure']
   return ru ? rus : en
 }
 
@@ -62,6 +99,10 @@ const SIGNALS: { kind: ListKind; re: RegExp }[] = [
 ]
 
 export function classifyListKind(query: string): ListKind {
+  // Рецепт — ПЕРВЫМ: он не чистая процедура, а ингредиенты (inventory) + готовка (procedure).
+  // Классифицировали бы как procedure — терялись бы ингредиенты (провал «Рецепт маршмеллоу»).
+  // Детект слов рецепта переиспользуем из list-laws, чтобы не держать два списка.
+  if (listLaw(query)?.id === 'recipe') return 'recipe'
   const q = query.toLowerCase()
   for (const { kind, re } of SIGNALS) if (re.test(q)) return kind
   return 'procedure' // дефолт — прежнее поведение, безопасный промах
@@ -92,6 +133,11 @@ export function shapeFor(kind: ListKind): string {
       return `LIST TYPE: OPTIONS — concrete OPTIONS to compare, NOT steps.
 - Each item is one option. title = the option's name. desc = its key trade-off (what it's good at, what it costs/lacks). refs = its page. command = "".
 - Order by fit for a typical user.`
+    case 'recipe':
+      return `LIST TYPE: RECIPE — TWO groups. The "section" field is MANDATORY on EVERY item and has exactly one of two literal values:
+- Ingredients come FIRST, each with section EXACTLY "Ингредиенты" (English: "Ingredients"). title = "<ingredient> — <amount>" with an exact amount ("Сахар — 400 г", "Желатин — 15 г", "Вода — 200 мл"). An ingredient without an amount is WRONG. desc = short prep note ("замочить на 10 мин") or "". command = "".
+- Cooking steps come AFTER, each with section EXACTLY "Приготовление" (English: "Preparation"). title = short imperative. desc = detail with timings and temperatures. command = "".
+- If you leave "section" empty on a recipe item, the output is WRONG. Use as many items as the recipe needs.`
     case 'procedure':
     default:
       return `LIST TYPE: PROCEDURE — an ordered how-to. The reader DOES each step in order.

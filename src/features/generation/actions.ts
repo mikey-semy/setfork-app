@@ -8,6 +8,7 @@ import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { DEFAULT_LANG, isLang, type Lang } from '@/shared/i18n'
 import { sanitizeCommand } from '@/shared/ai/generate'
+import { classifyListKind, LIST_KINDS } from '@/shared/ai/list-kind'
 import { claimClarify } from '@/shared/ai/council-clarify'
 import { getMessages, pushMessage, setGenerationStatus } from '@/shared/ai/generation-messages'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
@@ -82,7 +83,9 @@ export async function startGeneration(formData: FormData): Promise<void> {
   if (!allowed) redirect(`/search?q=${encodeURIComponent(query)}&e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate?e=ai_quota&q=${encodeURIComponent(query)}`)
 
-  const [gen] = await db.insert(generations).values({ userId: session.userId, query, lang, status: 'pending' }).returning()
+  // Тип списка (ADR-0010) — грамматический дефолт при создании; переключатель в чате его меняет.
+  const listKind = classifyListKind(query)
+  const [gen] = await db.insert(generations).values({ userId: session.userId, query, lang, status: 'pending', listKind }).returning()
   // Запрос — первая реплика беседы: чат начинается с того, что сказал пользователь.
   await pushMessage(gen.id, { attempt: 1, kind: 'user', text: query })
   await enqueueGenerate(gen.id, session.userId, query, lang, 1)
@@ -106,6 +109,27 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
 
   // Текста у «ещё варианта» нет — намерение, а не фраза. Подпись рисует UI, поэтому она
   // локализуется на клиенте и не протухает в БД при смене языка.
+  await pushMessage(generationId, { attempt: nextIdx, kind: 'again', text: '' })
+  await enqueueGenerate(generationId, session.userId, await threadQuery(generationId, gen.query), gen.lang, nextIdx)
+  redirect(`/generate/${generationId}?v=${nextIdx}`)
+}
+
+// ── Сменить тип списка → новый вариант в этой же форме ───────────────
+export async function setGenerationKind(generationId: string, kind: string): Promise<void> {
+  const session = await requireSession()
+  const gen = await db.query.generations.findFirst({ where: (g) => eq(g.id, generationId) })
+  if (!gen || gen.userId !== session.userId || gen.chosenTemplateId) redirect('/explore')
+  if (!(LIST_KINDS as string[]).includes(kind) || kind === gen.listKind) redirect(`/generate/${generationId}`)
+
+  const { allowed } = await checkRateLimit(`gen:${session.userId}`)
+  if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
+  if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
+
+  const nextIdx = (await maxIdx(generationId)) + 1
+  if (nextIdx > 6) redirect(`/generate/${generationId}?e=variantcap`)
+
+  // Новый тип — источник правды для этой генерации и всех будущих витков.
+  await db.update(generations).set({ listKind: kind }).where(eq(generations.id, generationId))
   await pushMessage(generationId, { attempt: nextIdx, kind: 'again', text: '' })
   await enqueueGenerate(generationId, session.userId, await threadQuery(generationId, gen.query), gen.lang, nextIdx)
   redirect(`/generate/${generationId}?v=${nextIdx}`)

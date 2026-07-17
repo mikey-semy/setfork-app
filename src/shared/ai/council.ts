@@ -124,14 +124,16 @@ ${roster}`,
   let depth: 'single' | 'council' | 'clarify' = 'council'
   let ids: string[] = []
   let questions: string[] = []
-  // Дефолт типа — грамматический; распорядитель уточняет своим LLM-решением, если оно валидно.
-  let kind: ListKind = classifyListKind(query)
+  // opts.kind (выбор пользователя-переключателя) — ЖЁСТКИЙ: распорядитель его не трогает.
+  // Иначе — грамматический дефолт, а распорядитель уточняет своим LLM-решением, если оно валидно.
+  const kindForced = Boolean(opts.kind)
+  let kind: ListKind = opts.kind ?? classifyListKind(query)
   if (steward) {
     try {
       const p = JSON.parse(firstJson(steward.text)) as { depth?: string; kind?: string; summon?: string[]; questions?: string[] }
       if (p.depth === 'single') depth = 'single'
       else if (p.depth === 'clarify' && settings.councilClarify) depth = 'clarify'
-      if (p.kind && (LIST_KINDS as string[]).includes(p.kind)) kind = p.kind as ListKind
+      if (!kindForced && p.kind && (LIST_KINDS as string[]).includes(p.kind)) kind = p.kind as ListKind
       ids = Array.isArray(p.summon) ? p.summon : []
       questions = Array.isArray(p.questions) ? p.questions.filter((q) => typeof q === 'string' && q.trim()).map((q) => q.trim()).slice(0, 3) : []
     } catch { /* дефолт council */ }
