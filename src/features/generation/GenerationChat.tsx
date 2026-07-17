@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowUp, Check, Loader2, RotateCw } from 'lucide-react'
+import { ArrowUp, Check, ChevronDown, ChevronRight, Loader2, RotateCw } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
@@ -27,6 +27,104 @@ import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate } fro
 const POLL_FAST_MS = 2000
 const POLL_SLOW_MS = 10_000
 const DEGRADE_AFTER_MS = 2 * 60_000
+
+/** Реплики совета — второстепенное: их сворачиваем. Реплики пользователя и карточка — нет. */
+const COUNCIL_KINDS = new Set<GenMessage['kind']>(['plan', 'summon', 'seek', 'draft', 'innovate', 'critique', 'synth'])
+
+/** Ход совета: пока виток идёт — раскрыт (это и есть лоадер), отработал — свёрнут в одну строку. */
+function CouncilTrail({ messages, lang, defaultOpen }: { messages: GenMessage[]; lang: Lang; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 rounded-md py-0.5 text-[11.5px] text-muted hover:text-ink-2"
+      >
+        <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
+        {say(`Council: ${messages.length} lines`, `Ход совета: ${messages.length}`)}
+      </button>
+      {open && (
+        <ol className="mt-2 flex flex-col gap-3">
+          {messages.map((m) => (
+            <li key={m.id} className="animate-fadein">
+              <CouncilBubble who={m.who ?? undefined} name={m.name ?? undefined}>
+                {m.text}
+              </CouncilBubble>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Прыжок по вариантам: на мобилке лента длинная, и доскроллить до нужного варианта — мучение.
+ * Заголовки в меню, потому что «Вариант 2» ни о чём не говорит, а «Настройка CI…» — говорит.
+ */
+function VariantJump({
+  candidates,
+  lang,
+  selId,
+  onPick,
+}: {
+  candidates: GenerationCandidate[]
+  lang: Lang
+  selId?: string
+  onPick: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  const jump = (c: GenerationCandidate) => {
+    onPick(c.id)
+    setOpen(false)
+    // Выбор — не только подсветка: ещё и доводим карточку до глаз.
+    document.getElementById(`cand-${c.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  return (
+    <div ref={ref} className="relative ml-auto">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] text-muted hover:text-ink"
+      >
+        {say(`Variants: ${candidates.length}`, `Вариантов: ${candidates.length}`)}
+        <ChevronDown size={13} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+4px)] z-20 w-[260px] overflow-hidden rounded-md border border-border bg-surface shadow-card">
+          {candidates.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => jump(c)}
+              className={`flex w-full items-start gap-2 px-2.5 py-2 text-left hover:bg-surface-2 ${c.id === selId ? 'bg-surface-2' : ''}`}
+            >
+              <span className="mt-px shrink-0 text-[11px] tabular-nums text-muted">{c.idx}</span>
+              <span className="min-w-0">
+                <span className="block truncate text-[12.5px] text-ink">{c.title}</span>
+                {c.summary && <span className="mt-0.5 block truncate text-[11px] text-muted">{c.summary}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface Props {
   generationId: string
@@ -103,6 +201,9 @@ export function GenerationChat({ generationId, lang, candidates, status, message
   }
 
   const byAttempt = (n: number) => candidates.find((c) => c.idx === n)
+  // Витки — по репликам И по кандидатам: кандидат без реплик (старые генерации, чужой воркер)
+  // обязан остаться видимым, иначе получается «потерял то, что сгенерировал».
+  const attempts = [...new Set([...messages.map((m) => m.attempt), ...candidates.map((c) => c.idx)])].sort((a, b) => a - b)
   const errText: Record<string, string> = {
     ratelimited: say('Too many requests — please wait a bit.', 'Слишком часто — подожди немного.'),
     variantcap: say('You’ve hit the 6-variant limit.', 'Достигнут предел в 6 вариантов.'),
@@ -131,11 +232,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
         >
           <RotateCw size={14} /> {say('Another', 'Ещё вариант')}
         </button>
-        {candidates.length > 1 && (
-          <span className="ml-auto text-[11.5px] text-muted">
-            {say(`Variants: ${candidates.length}`, `Вариантов: ${candidates.length}`)}
-          </span>
-        )}
+        {candidates.length > 1 && <VariantJump candidates={candidates} lang={lang} selId={selId} onPick={setSelId} />}
       </div>
 
       {error && errText[error] && (
@@ -144,41 +241,36 @@ export function GenerationChat({ generationId, lang, candidates, status, message
 
       {/* Беседа. flex-1 — забирает всё свободное место, чтобы поле ввода ушло вниз окна. */}
       <ol className="flex flex-1 flex-col gap-3">
-        {messages.map((m) => {
-          if (m.kind === 'user' || m.kind === 'again') {
-            return (
-              <li key={m.id} className="flex animate-fadein justify-end">
-                <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[13.5px] leading-[1.5] text-primary-fg">
-                  {m.kind === 'again' ? say('Another variant', 'Ещё вариант') : m.text}
+        {attempts.map((n) => {
+          const mine = messages.filter((m) => m.attempt === n)
+          const said = mine.filter((m) => m.kind === 'user' || m.kind === 'again')
+          const trail = mine.filter((m) => COUNCIL_KINDS.has(m.kind))
+          const failed = mine.some((m) => m.kind === 'error')
+          const cand = byAttempt(n)
+          return (
+            <li key={n} className="flex flex-col gap-3">
+              {said.map((m) => (
+                <div key={m.id} className="flex animate-fadein justify-end">
+                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[13.5px] leading-[1.5] text-primary-fg">
+                    {m.kind === 'again' ? say('Another variant', 'Ещё вариант') : m.text}
+                  </div>
                 </div>
-              </li>
-            )
-          }
-          if (m.kind === 'result') {
-            const c = byAttempt(m.attempt)
-            if (!c) return null
-            return (
-              <li key={m.id} className="animate-fadein">
-                {/* «Что поменялось ключевое» — подпись над карточкой; у первого варианта её нет. */}
-                {m.text && <div className="mb-1 pl-1 text-[11.5px] text-muted">{m.text}</div>}
-                <CandidateCard cand={c} selected={c.id === selId} onSelect={() => setSelId(c.id)} />
-              </li>
-            )
-          }
-          if (m.kind === 'error') {
-            return (
-              <li key={m.id} className="animate-fadein">
+              ))}
+              {/* Ход совета — второстепенное: свёрнут, когда виток уже отработал. Пока идёт — раскрыт. */}
+              {trail.length > 0 && <CouncilTrail messages={trail} lang={lang} defaultOpen={!cand && !failed} />}
+              {failed && (
                 <CouncilBubble who="council" name={say('Council', 'Совет')}>
                   <span className="text-warn">{say('Could not finish this one — try again.', 'Не получилось — попробуй ещё раз.')}</span>
                 </CouncilBubble>
-              </li>
-            )
-          }
-          return (
-            <li key={m.id} className="animate-fadein">
-              <CouncilBubble who={m.who ?? undefined} name={m.name ?? undefined}>
-                {m.text}
-              </CouncilBubble>
+              )}
+              {cand && (
+                <div id={`cand-${cand.id}`} className="animate-fadein">
+                  {/* «Что поменялось ключевое» — берём у самого кандидата: реплики может не быть
+                      (старые генерации), а вариант обязан быть виден всегда. */}
+                  {cand.summary && <div className="mb-1 pl-1 text-[11.5px] text-muted">{cand.summary}</div>}
+                  <CandidateCard cand={cand} selected={cand.id === selId} onSelect={() => setSelId(cand.id)} />
+                </div>
+              )}
             </li>
           )
         })}

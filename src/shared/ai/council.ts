@@ -8,6 +8,7 @@ import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, JSON_SHAPE, type GeneratedList, type GenerateOptions } from './generate'
 import { findPrecedents } from './retrieval'
+import { lawBlock } from './list-laws'
 import { pushMessage, type GenMessageKind } from './generation-messages'
 import { langEnName, type Lang } from '@/shared/i18n'
 
@@ -69,6 +70,9 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const web = opts.web ?? true
   const sp: Spotlight = spotlight()
   const topic = sp.wrap('TOPIC', query)
+  // Закон типа списка (напр. рецепт) — по ЗАПРОСУ, а не по составу совета: на простой теме
+  // распорядитель идёт одиночной генерацией и повара не зовёт, а форма всё равно обязана держаться.
+  const law = lawBlock(query)
   const feature: AiFeature = opts.feature ?? 'generate'
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
@@ -112,7 +116,7 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
     : '{"depth":"single|council","summon":["id",...],"reason":"short"}'
   const steward = await run(
     fast,
-    `You are the steward of a panel of domain experts building a reference checklist. Choose process depth and summon experts.
+    `You are the steward of a panel of domain experts building a reference list. Choose process depth and summon experts.
 ${clarifyLine}- depth "single": the topic is clear AND simple/everyday (chores, basic personal routines) — no council needed.
 - depth "council": the topic is clear but technical/multi-faceted/professional — summon 1-${maxGnomes} RELEVANT, DIVERSE experts from the roster.
 MATCH THE TOPIC TO THE ROSTER BY DOMAIN (the topic may be in ANY language): a recipe/dish/cooking → chef; a workout/health → coach; a trip/city → traveler; deploy/servers/CI → devops; code/API/library → coder; study/course → scholar. Use 'generalist' ONLY when nothing fits.
@@ -142,12 +146,12 @@ ${roster}`,
     return { clarify: questions }
   }
 
-  const listRules = `You produce a canonical, high-quality reference checklist. All content MUST be in ${langName}.\n${JSON_SHAPE}\n${sp.rule()}`
+  const listRules = `You produce a canonical, high-quality reference list. All content MUST be in ${langName}.\n${JSON_SHAPE}\n${sp.rule()}`
 
   // Тривиально → один гном (обычная генерация, но через тот же учёт совета).
   if (depth === 'single') {
     emit('plan', say('Simple topic — writing it up right away', 'Тема простая — пишу сразу'), 'planner', say('Planner', 'Планировщик'))
-    const one = await run(online(base, web), listRules, `Create the reference checklist for the topic below.\n${topic}`)
+    const one = await run(online(base, web), listRules, `Create the reference list for the topic below.\n${topic}`)
     return one ? parseList(one.text, query) : null
   }
   emit('plan', say('The topic is many-sided — convening the council', 'Тема многогранная — собираем совет'), 'planner', say('Planner', 'Планировщик'))
@@ -172,7 +176,7 @@ ${roster}`,
   // Веб-искатель (старейшина advanced-тира): интернет-прецеденты сверх наших списков (за флагом council_web_seek).
   if (settings.councilWebSeek) {
     emit('seek', say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
-    const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a checklist on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
+    const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a list on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
     const webRes = await run(online(fast, true), webSys, `Topic:\n${topic}`, 500)
     if (webRes && webRes.text.trim()) lore += `\n\nWEB PRECEDENTS (from the elder's web search — verify, don't copy blindly):\n${webRes.text.trim()}`
   }
@@ -180,14 +184,15 @@ ${roster}`,
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
   const draftJobs = experts.map((e, i) => {
     const model = online(pool[i % pool.length], web && Boolean(e.online))
-    const sys = `You are ${e.persona}. Draft a practical checklist for the topic. 6-9 ordered steps: short imperative + one clarifying sentence + a real terminal command only when the step is technical. All content in ${langName}. Return ONLY the draft text.\n${sp.rule()}`
-    emit('draft', say('drafting the checklist…', 'набрасывает список…'), e.id, gtitle(e))
-    return run(model, sys, `Draft the checklist.\n${topic}${lore}`)
+    // Закон типа списка (если есть) сильнее общего «6-9 шагов»: у рецепта своя обязательная форма.
+    const sys = `You are ${e.persona}. Draft a practical list for the topic. 6-9 ordered steps: short imperative + one clarifying sentence + a real terminal command only when the step is technical. All content in ${langName}. Return ONLY the draft text.${law}\n${sp.rule()}`
+    emit('draft', say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
+    return run(model, sys, `Draft the list.\n${topic}${lore}`)
   })
   emit('innovate', say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'), 'innovator', say('Innovator', 'Новатор'))
   const innovatorJob = run(
     pool[0],
-    `You are an innovator (divergent thinking, Medici-effect cross-domain). Give a FRESH, non-obvious angle on the checklist: what everyone misses, which move from an adjacent field lifts quality. 4-7 bold points. All content in ${langName}. Return ONLY text.\n${sp.rule()}`,
+    `You are an innovator (divergent thinking, Medici-effect cross-domain). Give a FRESH, non-obvious angle on the list: what everyone misses, which move from an adjacent field lifts quality. 4-7 bold points. All content in ${langName}. Return ONLY text.\n${sp.rule()}`,
     `Topic:\n${topic}`,
     settings.maxTokens,
     INNOVATOR_TEMP,
@@ -203,7 +208,7 @@ ${roster}`,
   emit('critique', say('Reviewing the drafts critically…', 'Критически разбираю черновики…'), 'critic', say('Critic', 'Критик'))
   const critique = await run(
     fast,
-    `You are a devil's advocate reviewer. Given several anonymous draft checklists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.\n${sp.rule()}`,
+    `You are a devil's advocate reviewer. Given several anonymous draft lists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.\n${sp.rule()}`,
     `${topic}\n\nDRAFTS:\n${anon}`,
   )
 
@@ -211,8 +216,8 @@ ${roster}`,
   emit('synth', say('Synthesizing the final list…', 'Свожу финальный список…'), 'elder', say('Elder', 'Старейшина'))
   const elder = await run(
     base,
-    `You are the lead synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.\n${listRules}`,
-    `${topic}${lore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized checklist as strict JSON.`,
+    `You are the lead synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.${law ? `${law}\nThis shape is MANDATORY in the final JSON — do not merge it away.` : ''}\n${listRules}`,
+    `${topic}${lore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
   )
   if (elder) return parseList(elder.text, query)
   // Синтез упал — вернём лучший черновик, чтобы список ОБЯЗАТЕЛЬНО получился.

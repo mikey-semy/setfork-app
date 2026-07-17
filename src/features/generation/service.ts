@@ -138,9 +138,6 @@ export async function addCandidate(
     tags: draft.tags.length ? parseTags(draft.tags.join(' ')) : parseTags(query),
     items,
   })
-  // Реплика-карточка: держит результат на своём месте в ленте времени. Сам список UI берёт по
-  // attempt (= idx кандидата) — дублировать его в текст реплики незачем.
-  await pushMessage(generationId, { attempt: idx, kind: 'result', text: summary, who: 'elder' })
   await setGenerationStatus(generationId, 'done')
   return true
 }

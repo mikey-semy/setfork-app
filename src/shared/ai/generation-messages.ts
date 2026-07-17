@@ -16,7 +16,8 @@ import { db, generationMessages, generations } from '@/shared/db'
 /**
  * Кто говорит. 'user' — реплика пользователя (запрос/дополнение); 'again' — нажал «ещё вариант»:
  * намерение без текста, подпись рисует UI (и потому не протухает в БД при смене языка);
- * 'result' — карточка варианта; 'error' — сорвалось.
+ * 'error' — сорвалось. Карточки варианта в репликах НЕТ: она рисуется от самого кандидата по
+ * витку — иначе кандидат без реплик (старые генерации) был бы в чате невидим.
  */
 export type GenMessageKind =
   | 'user'
@@ -28,7 +29,6 @@ export type GenMessageKind =
   | 'innovate'
   | 'critique'
   | 'synth'
-  | 'result'
   | 'error'
 
 export interface GenMessage {
