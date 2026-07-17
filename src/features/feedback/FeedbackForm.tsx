@@ -4,12 +4,10 @@ import { useActionState } from 'react'
 import { t, type Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
-import { Textarea } from '@/shared/ui/textarea'
+import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { FEEDBACK_BODY_MAX } from './validate'
 import { submitFeedback, type FeedbackResult } from './actions'
-
-const selectCls =
-  'h-[42px] w-full appearance-none rounded-md border border-border bg-surface-2 px-3 text-[14px] text-ink outline-hidden focus:border-border-strong'
 
 export function FeedbackForm({ lang }: { lang: Lang }) {
   const [state, action, pending] = useActionState<FeedbackResult, FormData>(submitFeedback, null)
@@ -25,25 +23,27 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
 
   return (
     <form action={action} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1.5">
+      {/* Категория — общий shadcn-Select (Radix), а не самопальный <select> со своими
+          стилями. name+defaultValue → Radix отдаёт значение форме скрытым нативным select. */}
+      <div className="flex flex-col gap-1.5">
         <span className="text-[12.5px] font-semibold text-ink-2">{t('fbCatLabel', lang)}</span>
-        <select name="category" defaultValue="other" className={selectCls}>
-          <option value="bug">{t('fbCatBug', lang)}</option>
-          <option value="idea">{t('fbCatIdea', lang)}</option>
-          <option value="content">{t('fbCatContent', lang)}</option>
-          <option value="legal">{t('fbCatLegal', lang)}</option>
-          <option value="other">{t('fbCatOther', lang)}</option>
-        </select>
-      </label>
+        <Select name="category" defaultValue="other">
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="bug">{t('fbCatBug', lang)}</SelectItem>
+            <SelectItem value="idea">{t('fbCatIdea', lang)}</SelectItem>
+            <SelectItem value="content">{t('fbCatContent', lang)}</SelectItem>
+            <SelectItem value="legal">{t('fbCatLegal', lang)}</SelectItem>
+            <SelectItem value="other">{t('fbCatOther', lang)}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Textarea
-        name="body"
-        required
-        minLength={10}
-        maxLength={FEEDBACK_BODY_MAX}
-        rows={6}
-        placeholder={t('fbBodyPlaceholder', lang)}
-      />
+      {/* Тело — тот же редактор с тулбаром, что в issues/обсуждениях (не голая textarea).
+          Пустоту/длину валидирует сервер (parseFeedback: body_short/body_long). */}
+      <MarkdownEditor name="body" rows={6} maxLength={FEEDBACK_BODY_MAX} placeholder={t('fbBodyPlaceholder', lang)} lang={lang} />
 
       <div>
         <Input name="email" type="email" autoComplete="email" placeholder={t('fbEmailPlaceholder', lang)} />
