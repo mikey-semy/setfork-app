@@ -32,7 +32,7 @@ const DEGRADE_AFTER_MS = 2 * 60_000
 const COUNCIL_KINDS = new Set<GenMessage['kind']>(['plan', 'summon', 'seek', 'draft', 'innovate', 'critique', 'synth'])
 
 /** Ход совета: пока виток идёт — раскрыт (это и есть лоадер), отработал — свёрнут в одну строку. */
-function CouncilTrail({ messages, lang, defaultOpen }: { messages: GenMessage[]; lang: Lang; defaultOpen: boolean }) {
+function CouncilTrail({ messages, lang, defaultOpen, avatars }: { messages: GenMessage[]; lang: Lang; defaultOpen: boolean; avatars: Record<string, string> }) {
   const [open, setOpen] = useState(defaultOpen)
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   return (
@@ -132,11 +132,13 @@ interface Props {
   candidates: GenerationCandidate[]
   status: GenerationStatus
   messages: GenMessage[]
+  /** id → своя картинка эксперта (сменили в админке). Нет записи → встроенная по who. */
+  avatars: Record<string, string>
   error?: string
   clarifyQuestions?: string[]
 }
 
-export function GenerationChat({ generationId, lang, candidates, status, messages, error, clarifyQuestions }: Props) {
+export function GenerationChat({ generationId, lang, candidates, status, messages, avatars, error, clarifyQuestions }: Props) {
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const router = useRouter()
@@ -257,7 +259,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 </div>
               ))}
               {/* Ход совета — второстепенное: свёрнут, когда виток уже отработал. Пока идёт — раскрыт. */}
-              {trail.length > 0 && <CouncilTrail messages={trail} lang={lang} defaultOpen={!cand && !failed} />}
+              {trail.length > 0 && <CouncilTrail messages={trail} lang={lang} defaultOpen={!cand && !failed} avatars={avatars} />}
               {failed && (
                 <CouncilBubble who="council" name={say('Council', 'Совет')}>
                   <span className="text-warn">{say('Could not finish this one — try again.', 'Не получилось — попробуй ещё раз.')}</span>

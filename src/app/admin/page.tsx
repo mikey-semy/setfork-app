@@ -13,7 +13,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
 import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, Mail, MessageSquare, RefreshCw, ScrollText, Search, Shield, Tag, Users, Wrench } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
-import { getRosterAll } from '@/shared/ai/roster'
+import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
@@ -125,7 +125,9 @@ export default async function AdminPage() {
 
   const chatOpts = ensure(buildOpts(models.chat, false, ru), settings.chatModel)
   // Ростер и галерея встроенных персонажей — читаем на сервере: клиенту не нужен доступ к БД и fs.
-  const [roster, gallery] = await Promise.all([getRosterAll(), builtinAvatars()])
+  const [rosterRows, gallery, uploaded] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars()])
+  // Загруженная картинка идёт готовым URL (imgproxy/диск) — клиент не должен знать про S3-ключи.
+  const roster = rosterRows.map((e) => ({ ...e, uploadedUrl: e.avatarUploaded ? uploaded[e.id] : undefined }))
   const fallbackOpts = ensure(buildOpts(models.chat, false, ru), settings.fallbackModel)
   const embOpts = ensure(buildOpts(models.embedding, true, ru), settings.embeddingModel)
 

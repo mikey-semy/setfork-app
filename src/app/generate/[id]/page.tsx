@@ -5,6 +5,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { getGeneration } from '@/features/generation/queries'
 import { getMessages } from '@/shared/ai/generation-messages'
+import { rosterAvatars } from '@/shared/ai/roster'
 import { getClarify } from '@/shared/ai/council-clarify'
 import { GenerationChat } from '@/features/generation/GenerationChat'
 
@@ -35,7 +36,7 @@ export default async function GenerationPage({
 
   // Беседа — из БД: переживает уход со страницы, перезапуск и неделю. Статус — колонка, а не
   // догадка по таблице jobs. Уточнения пока отдельным стором.
-  const [messages, clarifyQuestions] = await Promise.all([getMessages(gen.id), getClarify(gen.id)])
+  const [messages, clarifyQuestions, avatars] = await Promise.all([getMessages(gen.id), getClarify(gen.id), rosterAvatars()])
 
   return (
     <GenerationChat
@@ -44,6 +45,7 @@ export default async function GenerationPage({
       candidates={gen.candidates}
       status={gen.status}
       messages={messages}
+      avatars={avatars}
       error={sp.e}
       clarifyQuestions={clarifyQuestions}
     />

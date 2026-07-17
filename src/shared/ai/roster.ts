@@ -1,6 +1,7 @@
 import 'server-only'
 import { asc, eq } from 'drizzle-orm'
 import { councilExperts, db } from '@/shared/db'
+import { avatarSrc } from '@/shared/media'
 
 /**
  * Ростер совета: кто такие эксперты и как они себя ведут. Живёт в БД (council_experts), чтобы
@@ -77,6 +78,29 @@ export async function getRoster(): Promise<Expert[]> {
   } catch (e) {
     console.warn('[roster] fallback to SEED', e instanceof Error ? e.message : e)
     return SEED
+  }
+}
+
+/**
+ * id → URL картинки, ТОЛЬКО там, где она отличается от встроенной по умолчанию.
+ * Нужна чату: он строит путь из who (`/gnomes/<who>.webp`), и без этой карты смена аватарки в
+ * админке была бы видна только в админке. Пустая запись = картинка по умолчанию, путь строит UI.
+ */
+export async function rosterAvatars(): Promise<Record<string, string>> {
+  try {
+    const rows = await db.select().from(councilExperts)
+    const out: Record<string, string> = {}
+    for (const r of rows) {
+      if (r.avatarUploaded && r.avatar) {
+        const url = await avatarSrc(r.avatar, 128)
+        if (url) out[r.id] = url
+      } else if (r.avatar && r.avatar !== r.id) {
+        out[r.id] = `/gnomes/${r.avatar}.webp` // выбрали другого встроенного персонажа
+      }
+    }
+    return out
+  } catch {
+    return {} // без карты UI просто нарисует встроенные — беседа важнее аватарок
   }
 }
 
