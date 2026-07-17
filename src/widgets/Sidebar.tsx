@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Compass, Home, ListChecks, PanelLeftClose, PanelLeftOpen, PlayCircle, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Compass, Home, ListChecks, PlayCircle, X } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { t, type Lang } from '@/shared/i18n'
 import { ListsPanel, type ListsPanelItem } from './ListsPanel'
@@ -77,22 +77,29 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
 
   return (
     <>
-      {/* Desktop: один сворачиваемый сайдбар со своим тумблером */}
+      {/* Desktop: один сворачиваемый сайдбар. min-h во всю высоту экрана — иначе на
+          коротких страницах правая граница обрывалась на середине. */}
       <aside
-        className={cn('hidden shrink-0 border-r border-border bg-surface transition-[width] lg:block print:hidden', collapsed ? 'w-[60px]' : 'w-[240px]')}
+        className={cn(
+          'hidden min-h-[calc(100dvh-53px)] shrink-0 border-r border-border bg-surface transition-[width] lg:block print:hidden',
+          collapsed ? 'w-[60px]' : 'w-[240px]',
+        )}
       >
-        <div className="sticky top-[53px] flex flex-col px-2 py-2.5">
+        <div className="sticky top-[53px] flex h-[calc(100dvh-53px)] flex-col px-2 py-2.5">
+          <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
+            {nav(!collapsed)}
+            {!collapsed && lists()}
+          </div>
+          {/* Свернуть/развернуть — стрелкой ВНИЗУ сайдбара (бургер-логотип живёт в шапке). */}
           <button
             type="button"
             onClick={toggleCollapsed}
             aria-label={t('menu', lang)}
             aria-expanded={!collapsed}
-            className={cn('mb-1.5 grid h-7 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink', collapsed ? 'w-full' : 'ml-auto w-7')}
+            className="mt-2 grid h-7 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
           >
-            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
-          {nav(!collapsed)}
-          {!collapsed && lists()}
         </div>
       </aside>
 
