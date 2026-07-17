@@ -3,8 +3,9 @@
 import { useState, useTransition } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { ModelSelect, NONE, type Option } from './ModelSelect'
-import { resetExpertAvatar, saveExpert, uploadExpertAvatar } from './actions'
+import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } from './actions'
 
 /**
  * Менеджер ростера совета: кто такие эксперты, как их зовут, чем они думают.
@@ -23,6 +24,7 @@ export interface ExpertRow {
   id: string
   /** URL своей картинки (если загружена) — иначе рисуем встроенную по avatar. */
   uploadedUrl?: string
+  avatarUploaded: boolean
   nameRu: string
   nameEn: string
   persona: string
@@ -42,14 +44,12 @@ function AvatarPicker({
   id,
   value,
   uploadedUrl,
-  onPick,
   gallery,
   ru,
 }: {
   id: string
   value: string
   uploadedUrl?: string
-  onPick: (v: string) => void
   gallery: string[]
   ru: boolean
 }) {
@@ -74,8 +74,7 @@ function AvatarPicker({
   return (
     <div className="shrink-0">
       <button type="button" onClick={() => setOpen((v) => !v)} className="relative block" title={say('Change', 'Сменить')}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" width={64} height={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-(--accent)" />
+        <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-(--accent)" />
         {busy && (
           <span className="absolute inset-0 grid place-items-center rounded-full bg-black/50">
             <Loader2 size={16} className="animate-spin text-white" />
@@ -90,13 +89,12 @@ function AvatarPicker({
                 key={g}
                 type="button"
                 onClick={() => {
-                  onPick(g)
+                  void setExpertAvatar(id, g)
                   setOpen(false)
                 }}
                 className={`rounded-full ${!uploadedUrl && g === value ? 'ring-2 ring-(--accent)' : 'hover:ring-1 hover:ring-border-strong'}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/gnomes/${g}.webp`} alt="" width={32} height={32} className="size-8 rounded-full" />
+                <GnomeAvatar src={`/gnomes/${g}.webp`} size={32} className="size-8 rounded-full" />
               </button>
             ))}
           </div>
@@ -133,7 +131,6 @@ function AvatarPicker({
 function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptions: Option[]; gallery: string[]; ru: boolean }) {
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [pending, start] = useTransition()
-  const [avatar, setAvatar] = useState(e.avatar || e.id)
   const [enabled, setEnabled] = useState(e.enabled)
   const [online, setOnline] = useState(e.online)
   const [saved, setSaved] = useState(false)
@@ -149,11 +146,13 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
       }
       className={`rounded-md border border-border bg-surface-2 p-3 ${enabled ? '' : 'opacity-60'}`}
     >
+      {/* Аватарки в форме НЕТ: ею владеют setExpertAvatar/upload/reset. Иначе форма со своим
+          устаревшим значением затирала бы только что загруженную картинку — и на «вернуть
+          встроенную» экран строил путь из S3-ключа, показывая битую картинку. */}
       <input type="hidden" name="id" value={e.id} />
-      <input type="hidden" name="avatar" value={avatar} />
 
       <div className="flex gap-3">
-        <AvatarPicker id={e.id} value={avatar} uploadedUrl={e.uploadedUrl} onPick={setAvatar} gallery={gallery} ru={ru} />
+        <AvatarPicker id={e.id} value={e.avatarUploaded ? e.id : e.avatar || e.id} uploadedUrl={e.uploadedUrl} gallery={gallery} ru={ru} />
 
         <div className="min-w-0 flex-1 space-y-2.5">
           <div className="flex items-center gap-2">
@@ -179,7 +178,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
 
           <div>
             <label className={lbl}>{say('Instruction (persona)', 'Инструкция (персона)')}</label>
-            <textarea name="persona" defaultValue={e.persona} rows={2} className={`${field} resize-y`} />
+            <textarea name="persona" defaultValue={e.persona} rows={7} className={`${field} resize-y leading-[1.45]`} />
           </div>
 
           <div>
@@ -213,15 +212,10 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
 }
 
 export function CouncilRoster({ experts, modelOptions, gallery, ru }: { experts: ExpertRow[]; modelOptions: Option[]; gallery: string[]; ru: boolean }) {
-  const say = (en: string, rus: string) => (ru ? rus : en)
   return (
-    <div className="space-y-3">
-      <p className="text-[12px] text-muted">
-        {say(
-          'Who the council summons and how they think. The steward matches the topic to domains; a disabled expert is never summoned.',
-          'Кого созывает совет и чем он думает. Распорядитель подбирает по доменам; выключенного эксперта не позовут.',
-        )}
-      </p>
+    // Сетка, а не колонка: у эксперта инструкция в несколько строк, и списком они уходили в
+    // бесконечность. Пояснение к разделу живёт на странице — здесь бы оно дублировалось.
+    <div className="grid items-start gap-3 xl:grid-cols-2 min-[1800px]:grid-cols-3">
       {experts.map((e) => (
         <ExpertCard key={e.id} e={e} modelOptions={modelOptions} gallery={gallery} ru={ru} />
       ))}

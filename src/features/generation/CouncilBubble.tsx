@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 
 /**
  * Реплика участника совета: аватарка + подпись роли + пузырь. Один примитив на оба места, где
@@ -35,8 +36,7 @@ export function CouncilBubble({ who, name, typing, src, children }: { who?: stri
       {/* Декоративная (роль названа рядом текстом). 64px: персонажи ростовые и с реквизитом, а внутри белого
           кружка занимают лишь 80% диаметра — мельче роль не узнаётся, а в ней весь смысл аватарки.
           Обычный <img>: статичная webp из public/, оптимизатор next/image ни к чему (как в shared/ui/Avatar). */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src || builtinSrc(who)} alt="" aria-hidden width={64} height={64} className="size-16 shrink-0" />
+      <GnomeAvatar src={src || builtinSrc(who)} size={64} className="size-16 shrink-0" />
       <div className="min-w-0">
         {name ? <div className="mb-1 pl-3.5 text-[11px] font-medium tracking-wide text-muted">{name}</div> : null}
         {/* Без тени и рамки: контраст даёт surface поверх canvas. Скруглённый угол у аватарки — «хвостик» реплики. */}

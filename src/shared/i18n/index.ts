@@ -81,6 +81,7 @@ const DICT = {
   popularTags: { en: 'Popular tags', ru: 'Популярные теги' },
   aiDraft: { en: 'Draft', ru: 'черновик' },
   generateWithAi: { en: 'Dream up a list', ru: 'Придумать список' },
+  councilHall: { en: 'Council hall', ru: 'Зал совета' },
   cantFind: { en: "Can't find it?", ru: 'Не нашёл?' },
   aiFail: { en: "Couldn't draft a list — try rephrasing.", ru: 'Не получилось — переформулируй запрос.' },
   rateLimited: { en: 'Too many requests. Try again in a minute.', ru: 'Слишком часто. Попробуй через минуту.' },

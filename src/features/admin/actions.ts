@@ -260,7 +260,6 @@ export async function saveExpert(formData: FormData): Promise<void> {
       persona: String(formData.get('persona') ?? '').trim().slice(0, 2000),
       domains,
       model: modelRaw === '__none__' ? '' : modelRaw,
-      avatar: String(formData.get('avatar') ?? '').trim() || id,
       online: formData.get('online') === 'on',
       enabled: formData.get('enabled') === 'on',
       updatedAt: new Date(),
@@ -306,6 +305,19 @@ export async function resetExpertAvatar(id: string): Promise<void> {
   await db
     .update(councilExperts)
     .set({ avatar: id, avatarUploaded: false, updatedAt: new Date() })
+    .where(eq(councilExperts.id, id))
+  revalidatePath('/admin')
+}
+
+/** Выбрать встроенного персонажа. Загруженную картинку при этом убираем из хранилища — она больше не нужна. */
+export async function setExpertAvatar(id: string, builtin: string): Promise<void> {
+  await requireAdmin()
+  const [cur] = await db.select().from(councilExperts).where(eq(councilExperts.id, id)).limit(1)
+  if (!cur) return
+  if (cur.avatarUploaded && cur.avatar) await removeImageFile(cur.avatar).catch(() => {})
+  await db
+    .update(councilExperts)
+    .set({ avatar: builtin, avatarUploaded: false, updatedAt: new Date() })
     .where(eq(councilExperts.id, id))
   revalidatePath('/admin')
 }

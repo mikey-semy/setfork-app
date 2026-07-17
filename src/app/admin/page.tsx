@@ -285,11 +285,15 @@ export default async function AdminPage() {
             </div>
           </form>
 
-          {/* Ростер — ВНЕ формы настроек: у каждого эксперта своя форма, а вложенные формы
-              невалидны. Заодно правка одного эксперта не перетирает остальных. */}
+          {/* Ростер уехал на свою страницу: экспертов много, у каждого инструкция в несколько строк —
+              в узкой колонке настроек они не помещались. Здесь только вход. */}
           <div className="mt-6 border-t border-border pt-5">
-            <div className="mb-3 text-[13px] font-medium text-ink">{say('Council experts', 'Эксперты совета')}</div>
-            <CouncilRoster experts={roster} modelOptions={chatOpts} gallery={gallery} ru={ru} />
+            <Link
+              href="/admin/council"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[13px] text-ink-2 hover:text-ink"
+            >
+              <Bot size={14} /> {say('Council hall — experts, instructions, avatars', 'Зал совета — эксперты, инструкции, аватарки')}
+            </Link>
           </div>
         </section>
       ),
