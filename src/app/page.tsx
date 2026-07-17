@@ -1,66 +1,82 @@
 import Link from 'next/link'
-import { sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { HeroSearch } from '@/features/library/HeroSearch'
 import { Dashboard } from '@/widgets/Dashboard'
 
-const CHIPS = [
+// Запасные подсказки — только если публичных списков ещё нет (пустая база/стенд).
+const FALLBACK_CHIPS = [
   { en: 'Deploy Next.js to a VPS', ru: 'Задеплоить Next.js на VPS' },
   { en: 'Respond to a Sev-1 incident', ru: 'Отработать Sev-1 инцидент' },
   { en: 'Set up a new Mac for dev', ru: 'Настроить новый Mac для разработки' },
   { en: 'Upgrade Postgres safely', ru: 'Безопасно обновить Postgres' },
 ]
+// Плейсхолдер поиска — тоже не одна надпись: крутим пул фраз (+ вариант с
+// примером из живого списка, он собирается ниже).
+const PLACEHOLDERS = [
+  { en: 'Describe what you need to do…', ru: 'Опиши, что нужно сделать…' },
+  { en: 'What are we setting up today?', ru: 'Что настраиваем сегодня?' },
+  { en: 'Find a proven checklist…', ru: 'Найди проверенный чек-лист…' },
+  { en: 'What needs doing — step by step?', ru: 'Что нужно сделать — по шагам?' },
+  { en: 'Ask for a list on any topic…', ru: 'Спроси список на любую тему…' },
+]
+const CHIP_POOL = 100 // из скольких вариантов тянем
+const CHIPS_SHOWN = 4 // сколько показываем за раз
 
-async function stats() {
-  const [[tpl], [likes]] = await Promise.all([
-    db.select({ c: sql<number>`count(*)::int` }).from(templates),
-    db.select({ c: sql<number>`coalesce(sum(${templates.starsCount}), 0)::int` }).from(templates),
-  ])
-  return { templates: tpl?.c ?? 0, likes: likes?.c ?? 0 }
+const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
+
+/** Заголовки НАСТОЯЩИХ публичных списков (до сотни, по популярности), перемешанные. */
+async function liveTitles(lang: Lang): Promise<string[]> {
+  const rows = await db
+    .select({ title: templates.title })
+    .from(templates)
+    .where(and(eq(templates.visibility, 'public'), eq(templates.status, 'published'), eq(templates.moderation, 'active')))
+    .orderBy(desc(sql`${templates.starsCount} + ${templates.forksCount}`))
+    .limit(CHIP_POOL)
+  const titles = [...new Set(rows.map((r) => tr(r.title, lang).trim()).filter((s) => s.length > 0 && s.length <= 46))]
+  for (let i = titles.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[titles[i], titles[j]] = [titles[j], titles[i]]
+  }
+  return titles
 }
 
 export default async function HomePage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
   if (session) return <Dashboard lang={lang} userId={session.userId} />
 
-  const s = await stats()
   const ru = lang === 'ru'
+  const titles = await liveTitles(lang)
+  const chips = titles.length >= CHIPS_SHOWN ? titles.slice(0, CHIPS_SHOWN) : FALLBACK_CHIPS.map((c) => (ru ? c.ru : c.en))
+  // Пул фраз + «Например: «живой заголовок»» (берём тот, что не попал в чипы).
+  const example = titles[CHIPS_SHOWN]
+  const placeholder = pick([
+    ...PLACEHOLDERS.map((p) => (ru ? p.ru : p.en)),
+    ...(example ? [ru ? `Например: «${example}»` : `e.g. “${example}”`] : []),
+  ])
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-        <div className="flex w-full max-w-[640px] flex-col items-center gap-6 text-center">
-          <div className="text-[64px] font-bold leading-none tracking-tight text-ink">SF</div>
-          <div className="-mt-2 text-[15px] text-ink-2">{t('heroSub', lang)}</div>
+      <div className="flex w-full max-w-[640px] flex-col items-center gap-6 text-center">
+        <div className="font-logo text-[44px] leading-none tracking-tight text-ink sm:text-[64px]">SetFork</div>
 
-          <HeroSearch placeholder={t('searchPh', lang)} clearLabel={t('clear', lang)} />
+        <HeroSearch placeholder={placeholder} clearLabel={t('clear', lang)} />
 
-          <div className="flex max-w-[640px] flex-wrap justify-center gap-2.5">
-            {CHIPS.map((c) => (
-              <Link
-                key={c.en}
-                href={`/search?q=${encodeURIComponent(ru ? c.ru : c.en)}`}
-                className="rounded-full border border-border bg-surface-2 px-3.5 py-[7px] text-[13px] text-ink-2 hover:text-ink"
-              >
-                {ru ? c.ru : c.en}
-              </Link>
-            ))}
-          </div>
-
-          <div className="max-w-[600px] text-[13.5px] leading-relaxed text-ink-2">
-            {ru
-              ? 'Эталонные списки, выверенные сообществом: лучший всплывает по лайкам, а форкнуть и улучшить может каждый. Единый источник правды по теме.'
-              : 'Canonical lists, refined by the community: the best rises by likes, and anyone can fork it and make it better. One source of truth per topic.'}
-          </div>
-
-          <div className="font-mono text-[12px] text-muted">
-            {ru
-              ? `${s.templates} списков · ${s.likes.toLocaleString('ru')} лайков`
-              : `${s.templates} lists · ${s.likes.toLocaleString('en')} likes`}
-          </div>
+        <div className="flex max-w-[640px] flex-wrap justify-center gap-2.5">
+          {chips.map((c) => (
+            <Link
+              key={c}
+              href={`/search?q=${encodeURIComponent(c)}`}
+              className="rounded-full border border-border bg-surface-2 px-3.5 py-[7px] text-[13px] text-ink-2 hover:text-ink"
+            >
+              {c}
+            </Link>
+          ))}
         </div>
+      </div>
     </div>
   )
 }
