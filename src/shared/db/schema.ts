@@ -886,6 +886,38 @@ export const generationCandidates = pgTable(
   ],
 )
 
+/**
+ * Ростер совета: персонажи-эксперты. Раньше был константой EXPERTS в council.ts — правился только
+ * кодом и деплоем.
+ *
+ * persona — инструкция модели (манера, на что смотрит).
+ * domains — по ним распорядитель созывает; '*' = универсал, годится на любую тему.
+ * model — принудительная модель для этого эксперта; пусто → берётся из пула совета по кругу.
+ * avatar — id встроенной картинки (public/gnomes/<id>.webp) ИЛИ ключ в S3 у загруженной.
+ * enabled/sort — выключение без удаления и порядок. Удалять нельзя без нужды: id зашит в аватарку
+ * и в поле who прошлых бесед (generation_messages) — удалишь, и история осиротеет.
+ */
+export const councilExperts = pgTable(
+  'council_experts',
+  {
+    // Не uuid: id смысловой ('chef'), он же имя встроенной аватарки и значение who в беседе.
+    id: text('id').primaryKey(),
+    nameEn: text('name_en').notNull(),
+    nameRu: text('name_ru').notNull(),
+    persona: text('persona').notNull(),
+    domains: text('domains').array().notNull().default(sql`'{}'::text[]`),
+    model: text('model').notNull().default(''),
+    avatar: text('avatar').notNull().default(''),
+    // Загруженная картинка лежит в S3 — отличаем от встроенной, чтобы знать, чем её отдавать.
+    avatarUploaded: boolean('avatar_uploaded').notNull().default(false),
+    online: boolean('online').notNull().default(false), // давать ли веб-поиск (:online)
+    enabled: boolean('enabled').notNull().default(true),
+    sort: integer('sort').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('council_experts_sort_idx').on(t.enabled, t.sort)],
+)
+
 // ── AI usage (учёт токенов/денег по каждому вызову ИИ) ───────────────
 // Одна строка = один вызов модели. costUsd — фактическая стоимость OpenRouter
 // (usage accounting), с фолбэком на расчёт по ценам моделей.

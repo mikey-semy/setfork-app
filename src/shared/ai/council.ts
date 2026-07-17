@@ -8,6 +8,7 @@ import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, JSON_SHAPE, type GeneratedList, type GenerateOptions } from './generate'
 import { findPrecedents } from './retrieval'
+import { getRoster, type Expert } from './roster'
 import { lawBlock } from './list-laws'
 import { pushMessage, type GenMessageKind } from './generation-messages'
 import { langEnName, type Lang } from '@/shared/i18n'
@@ -22,20 +23,6 @@ import { langEnName, type Lang } from '@/shared/i18n'
  * (pgvector), диалог/уточняющие вопросы, память сессии.
  */
 
-// Ростер экспертов-«гномов» (фабрика ролей). persona — внутренняя инструкция; вывод — на языке пользователя.
-// name/ru — подпись в беседе (ru — на русском). id — ещё и имя аватарки: `public/gnomes/<id>.webp`,
-// поэтому новому эксперту нужна картинка с тем же id (иначе UI молча возьмёт дефолтную).
-interface GnomeSpec { id: string; domains: string[]; online?: boolean; persona: string; name: string; ru: string }
-const EXPERTS: GnomeSpec[] = [
-  { id: 'devops', name: 'Devops', ru: 'Девопсер', domains: ['deploy', 'devops', 'ci', 'servers', 'infra', 'docker', 'kubernetes'], persona: 'a pragmatic DevOps expert: reliability, rollbacks, health-checks, real-world production gotchas' },
-  { id: 'coder', name: 'Coder', ru: 'Кодер', domains: ['programming', 'software', 'coding', 'api', 'library', 'framework'], persona: 'a meticulous software engineer: correctness, edge-cases, precise runnable steps' },
-  { id: 'chef', name: 'Chef', ru: 'Повар', domains: ['cooking', 'food', 'recipe', 'kitchen', 'baking'], persona: 'a fast, practical chef: ingredients, order, timings' },
-  { id: 'traveler', name: 'Wanderer', ru: 'Странник', domains: ['travel', 'trip', 'city', 'tourism', 'itinerary'], persona: 'a curious traveler: routes, budget, not-to-miss spots' },
-  { id: 'coach', name: 'Coach', ru: 'Тренер', domains: ['fitness', 'health', 'workout', 'sport', 'nutrition'], persona: 'a disciplined coach: progression, safety, consistency' },
-  { id: 'scholar', name: 'Scholar', ru: 'Книжник', domains: ['study', 'learning', 'research', 'course', 'exam'], persona: 'a thoughtful scholar: structure of knowledge, sources, comprehension checks' },
-  { id: 'hoarder', name: 'Hoarder', ru: 'Барахольщик', domains: ['*'], online: true, persona: 'a resource investigator: pulls external resources, links and tools' },
-  { id: 'generalist', name: 'Generalist', ru: 'Универсал', domains: ['*'], persona: 'a well-rounded generalist: a solid list on any topic' },
-]
 const DEFAULT_COUNCIL_MODELS = ['openai/gpt-4o-mini', 'meta-llama/llama-3.3-70b-instruct', 'mistralai/mistral-nemo']
 const INNOVATOR_TEMP = 0.9
 // Потолок на ОДИН вызов: зависшая/медленная модель не должна вешать весь совет (6-7 вызовов).
@@ -66,6 +53,8 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // Быстрая модель для ПРОМЕЖУТОЧНЫХ шагов (распорядитель-классификатор, критик, веб-поиск):
   // reasoning-модель там не нужна, а совет из 6-7 вызовов на ней тормозит минутами. Финал — на base.
   const fast = pool[0] || base
+  // Ростер — из БД (админка); пустая таблица → сид исходным составом, ошибка → SEED.
+  const EXPERTS = await getRoster()
   const maxGnomes = Math.max(1, Math.min(settings.councilMaxGnomes || 3, EXPERTS.length))
   const web = opts.web ?? true
   const sp: Spotlight = spotlight()
@@ -77,7 +66,7 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   // Подпись говорящего в беседе (идентичность роли несёт аватарка, поэтому эмодзи в ростере больше нет).
-  const gtitle = (e: GnomeSpec) => (ru ? e.ru : e.name)
+  const gtitle = (e: Expert) => (ru ? e.nameRu : e.nameEn)
   // Беседа: пишем ход совета в БД (по refId=generationId). Виток = variant (idx кандидата) —
   // реплики разных попыток не мешаются, а группируются, поэтому ленту больше не надо стирать.
   // fire-and-forget: запись реплики не должна блокировать/ронять генерацию.
@@ -157,7 +146,7 @@ ${roster}`,
   emit('plan', say('The topic is many-sided — convening the council', 'Тема многогранная — собираем совет'), 'planner', say('Planner', 'Планировщик'))
 
   // 2) Созыв: эксперты по домену; пол разнообразия — минимум 2 независимых мнения (мудрость толпы).
-  const experts = ids.map((id) => EXPERTS.find((e) => e.id === id)).filter((e): e is GnomeSpec => Boolean(e)).slice(0, maxGnomes)
+  const experts = ids.map((id) => EXPERTS.find((e) => e.id === id)).filter((e): e is Expert => Boolean(e)).slice(0, maxGnomes)
   for (const padId of ['generalist', 'hoarder']) {
     if (experts.length >= 2) break
     const g = EXPERTS.find((e) => e.id === padId)!
@@ -183,7 +172,8 @@ ${roster}`,
 
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
   const draftJobs = experts.map((e, i) => {
-    const model = online(pool[i % pool.length], web && Boolean(e.online))
+    // Своя модель эксперта (если задана в админке) сильнее пула — иначе раздаём пул по кругу.
+    const model = online(e.model || pool[i % pool.length], web && Boolean(e.online))
     // Закон типа списка (если есть) сильнее общего «6-9 шагов»: у рецепта своя обязательная форма.
     const sys = `You are ${e.persona}. Draft a practical list for the topic. 6-9 ordered steps: short imperative + one clarifying sentence + a real terminal command only when the step is technical. All content in ${langName}. Return ONLY the draft text.${law}\n${sp.rule()}`
     emit('draft', say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
