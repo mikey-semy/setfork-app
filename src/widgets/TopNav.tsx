@@ -106,9 +106,13 @@ export function TopNav({
   const focusRing = 'outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong'
   const iconBtn = `grid h-8 w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`
 
-  // Контекстный заголовок страницы (в шапке — только он, навигация ушла в боковое меню).
+  // Контекстный заголовок страницы (в шапке — только он, навигация ушла в сайдбар).
+  // На «/» дашборд только у залогиненного; гостю там hero — заголовок не нужен
+  // (имя и так огромным лого на самой странице).
   const title = pathname === '/'
-    ? t('dashboard', lang)
+    ? user
+      ? t('dashboard', lang)
+      : ''
     : pathname.startsWith('/explore')
       ? t('explore', lang)
       : pathname.startsWith('/my-lists')
