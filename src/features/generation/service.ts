@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, gte, sql } from 'drizzle-orm'
 import type { Lang } from '@/shared/i18n'
-import { aiUsage, db, generationCandidates, users, type CandidateItem } from '@/shared/db'
+import { aiUsage, db, generationCandidates, generations, users, type CandidateItem } from '@/shared/db'
 import { generateChangeNote, generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
 import { generateListCouncil } from '@/shared/ai/council'
 import { setClarify } from '@/shared/ai/council-clarify'
@@ -77,11 +77,14 @@ export async function addCandidate(
 
   // settings читаем ПЕРВЫМ: от него зависит genOpts.web, обращаться к нему до объявления нельзя (TDZ).
   const settings = await getAiSettings()
+  // Тип списка — из generations.list_kind (грамматика при создании или выбор пользователя-переключателя).
+  const [genRow] = await db.select({ listKind: generations.listKind }).from(generations).where(eq(generations.id, generationId)).limit(1)
   const genOpts: GenerateOptions = {
     // Веб-поиск — по настройке, НЕ всегда: `:online` берёт флэт-фи ~$0.005/вызов (было 60% расхода,
     // включённое втихую на каждой генерации). Совет управляет вебом своим councilWebSeek отдельно.
     web: settings.webSearch,
     variant: idx,
+    kind: (genRow?.listKind as GenerateOptions['kind']) ?? undefined,
     userId,
     feature: idx > 1 ? 'regenerate' : 'generate',
     refType: 'generation',

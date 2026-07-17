@@ -829,6 +829,10 @@ export const generations = pgTable(
     // без индекса, на каждый поллинг каждого смотрящего (раз в 2.5с).
     // default 'done', а не 'pending': у старых строк джоб уже нет, и они не должны выглядеть висящими.
     status: generationStatus('status').notNull().default('done'),
+    // Тип списка (ADR-0010): определён классификатором или выбран пользователем (переключатель в чате).
+    // Свободный текст, а не pg-enum: набор типов растёт в коде (list-kind.ts), не хочется миграции enum'а.
+    // Пусто у старых генераций — там переключателя не было; UI покажет по кандидату/дефолту.
+    listKind: text('list_kind'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
