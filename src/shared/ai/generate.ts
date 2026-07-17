@@ -138,7 +138,10 @@ async function runListModel(
     await recordUsage({
       userId: opts.userId,
       feature,
-      model: base,
+      // ИМЕННО online(base), а не base: у `:online` своя флэт-надбавка ($0.005/вызов у OpenRouter),
+      // и с голым base журнал показывал «дорогой gpt-4o-mini» вместо «веб-поиск» — из-за чего 60%
+      // расхода были не видны в админке вообще. Пишем то, что реально звали.
+      model: online(base),
       input: u.input,
       output: u.output,
       total: u.total,

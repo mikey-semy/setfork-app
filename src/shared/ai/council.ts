@@ -135,21 +135,31 @@ ${roster}`,
     return { clarify: questions }
   }
 
-  const listRules = `You produce a canonical, high-quality reference list. All content MUST be in ${langName}.\n${JSON_SHAPE}\n${sp.rule()}`
+  // law — обязательная форма типа списка (напр. рецепт). Раньше её тут НЕ было, и получался парадокс:
+  // совет ВЫКЛ → рецепт правильный (generate.ts закон применяет), совет ВКЛ + «тема простая» → сломан.
+  // Закон отсутствовал ровно в single-ветке совета, ради которой он и писался.
+  const listRules = `You produce a canonical, high-quality reference list. All content MUST be in ${langName}.${law}\n${JSON_SHAPE}\n${sp.rule()}`
 
   // Тривиально → один гном (обычная генерация, но через тот же учёт совета).
   if (depth === 'single') {
     emit('plan', say('Simple topic — writing it up right away', 'Тема простая — пишу сразу'), 'planner', say('Planner', 'Планировщик'))
     const one = await run(online(base, web), listRules, `Create the reference list for the topic below.\n${topic}`)
-    return one ? parseList(one.text, query) : null
+    return one ? parseList(firstJson(one.text), query) : null
   }
   emit('plan', say('The topic is many-sided — convening the council', 'Тема многогранная — собираем совет'), 'planner', say('Planner', 'Планировщик'))
 
   // 2) Созыв: эксперты по домену; пол разнообразия — минимум 2 независимых мнения (мудрость толпы).
   const experts = ids.map((id) => EXPERTS.find((e) => e.id === id)).filter((e): e is Expert => Boolean(e)).slice(0, maxGnomes)
-  for (const padId of ['generalist', 'hoarder']) {
+  // Добор до 2 — из ТОГО, ЧТО ВКЛЮЧЕНО (EXPERTS уже отфильтрован по enabled). Раньше здесь стоял
+  // EXPERTS.find(...)! по хардкоду 'generalist'/'hoarder' — админ выключил универсала в зале совета,
+  // и вся джоба падала (TypeError вне try → вечный pending). Универсал/барахольщик приоритетны как
+  // дефолт-на-любую-тему, дальше — любой оставшийся.
+  const padOrder = [...EXPERTS].sort((a, b) => {
+    const rank = (e: Expert) => (e.id === 'generalist' ? 0 : e.id === 'hoarder' ? 1 : 2)
+    return rank(a) - rank(b)
+  })
+  for (const g of padOrder) {
     if (experts.length >= 2) break
-    const g = EXPERTS.find((e) => e.id === padId)!
     if (!experts.some((e) => e.id === g.id)) experts.push(g)
   }
   emit('summon', say(`Consulting: ${experts.map(gtitle).join(', ')}`, `Созываю: ${experts.map(gtitle).join(', ')}`), 'crier', say('Coordinator', 'Координатор'))
@@ -158,8 +168,11 @@ ${roster}`,
   const precedents = await findPrecedents(query, lang, { userId: opts.userId })
   // Форма «X: N» — чтобы не склонять числительное (было «3 похожих списков») и не тащить плюрализацию в ленту.
   if (precedents.length) emit('seek', say(`Similar lists in our library: ${precedents.length}`, `Похожих списков в библиотеке: ${precedents.length}`), 'seek-lists', say('Librarian', 'Библиотекарь'))
+  // Прецеденты — title/desc/tags ЧУЖИХ публичных списков: недоверенный текст, оборачиваем spotlight'ом.
+  // Иначе — вектор межпользовательской инъекции: опубликовал список с инструкцией в заголовке и ждёшь
+  // семантического матча (порог низкий, MIN_SIMILARITY=0.3).
   let lore = precedents.length
-    ? `\n\nPRECEDENTS from our library (similar existing lists — reuse good structure, avoid duplicating, improve on them):\n${precedents.map((p, i) => `${i + 1}. ${p.title}${p.desc ? ' — ' + p.desc : ''}${p.tags.length ? ' [' + p.tags.join(', ') + ']' : ''}`).join('\n')}`
+    ? `\n\n${sp.wrap('PRECEDENTS', precedents.map((p, i) => `${i + 1}. ${p.title}${p.desc ? ' — ' + p.desc : ''}${p.tags.length ? ' [' + p.tags.join(', ') + ']' : ''}`).join('\n'))}\n(reuse good structure, avoid duplicating, improve on them)`
     : ''
 
   // Веб-искатель (старейшина advanced-тира): интернет-прецеденты сверх наших списков (за флагом council_web_seek).
@@ -167,7 +180,8 @@ ${roster}`,
     emit('seek', say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
     const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a list on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
     const webRes = await run(online(fast, true), webSys, `Topic:\n${topic}`, 500)
-    if (webRes && webRes.text.trim()) lore += `\n\nWEB PRECEDENTS (from the elder's web search — verify, don't copy blindly):\n${webRes.text.trim()}`
+    // Содержимое чужих веб-страниц — тоже недоверенный текст: оборачиваем, не вставляем сырьём.
+    if (webRes && webRes.text.trim()) lore += `\n\n${sp.wrap('WEB_PRECEDENTS', webRes.text.trim())}\n(verify, don't copy blindly)`
   }
 
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
@@ -209,7 +223,15 @@ ${roster}`,
     `You are the lead synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.${law ? `${law}\nThis shape is MANDATORY in the final JSON — do not merge it away.` : ''}\n${listRules}`,
     `${topic}${lore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
   )
-  if (elder) return parseList(elder.text, query)
-  // Синтез упал — вернём лучший черновик, чтобы список ОБЯЗАТЕЛЬНО получился.
-  return drafts.find(Boolean) ? parseList((drafts.find(Boolean) as { text: string }).text, query) : null
+  // firstJson: старейшина иногда предваряет JSON прозой («Here is the synthesized list:»), и голый
+  // parseList на этом падал → 7 вызовов совета в мусор, тихий фолбэк на одиночную, а лента уже
+  // сказала «свожу финальный список». Срезаем прозу так же, как у распорядителя.
+  if (elder) {
+    const list = parseList(firstJson(elder.text), query)
+    if (list) return list
+  }
+  // Синтез не распарсился — null. Прежний «фолбэк на лучший черновик» был мёртвым кодом: черновики —
+  // свободный текст (Return ONLY the draft text), parseList делает JSON.parse и всегда возвращал null.
+  // Возвращаем null честно → caller фолбэкнет на generateListDraft (там ретрай и своя форма).
+  return null
 }

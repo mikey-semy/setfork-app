@@ -14,6 +14,9 @@ export interface AiSettings {
   maxTokens: number
   /** Порог в USD: когда остаток на счёте OpenRouter ниже — переключаемся на fallbackModel. 0 = выкл. */
   cheapModeThreshold: number
+  /** Веб-поиск (:online) в одиночной генерации. OFF по умолчанию: OpenRouter берёт флэт-фи ~$0.005
+   *  за вызов — это было 60% всего расхода, включённое втихую на каждой генерации. */
+  webSearch: boolean
   /** «Совет гномов»: мульти-модельная генерация (распорядитель→эксперты+новатор→критик→синтез). OFF по умолчанию. */
   councilEnabled: boolean
   /** Гетерогенная панель моделей для совета (id OpenRouter). Пусто → встроенный дефолт. */
@@ -38,6 +41,7 @@ const KEYS = [
   'ai.temperature',
   'ai.max_tokens',
   'ai.cheap_mode_threshold',
+  'ai.web_search',
   'ai.council_enabled',
   'ai.council_models',
   'ai.council_max_gnomes',
@@ -93,6 +97,7 @@ export async function getAiSettings(): Promise<AiSettings> {
     temperature: num(m['ai.temperature'], 0.3),
     maxTokens: num(m['ai.max_tokens'], 1500),
     cheapModeThreshold: num(m['ai.cheap_mode_threshold'], 0),
+    webSearch: m['ai.web_search'] != null ? m['ai.web_search'] === 'true' : process.env.SETFORK_WEB_SEARCH === 'true',
     councilEnabled: m['ai.council_enabled'] != null ? m['ai.council_enabled'] === 'true' : process.env.SETFORK_COUNCIL_ENABLED === 'true',
     councilModels: m['ai.council_models'] != null ? csv(m['ai.council_models']) : csv(process.env.SETFORK_COUNCIL_MODELS),
     councilMaxGnomes: num(m['ai.council_max_gnomes'], Number(process.env.SETFORK_COUNCIL_MAX_GNOMES) || 3),

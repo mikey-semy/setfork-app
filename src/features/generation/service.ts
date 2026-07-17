@@ -74,70 +74,95 @@ export async function addCandidate(
   // Ленту больше НЕ чистим: реплики группируются по витку (attempt = idx), поэтому прошлые прогоны
   // не мешаются — а история придумывания остаётся навсегда, в этом весь смысл беседы.
   await setGenerationStatus(generationId, 'pending')
+
+  // settings читаем ПЕРВЫМ: от него зависит genOpts.web, обращаться к нему до объявления нельзя (TDZ).
+  const settings = await getAiSettings()
   const genOpts: GenerateOptions = {
-    web: true,
+    // Веб-поиск — по настройке, НЕ всегда: `:online` берёт флэт-фи ~$0.005/вызов (было 60% расхода,
+    // включённое втихую на каждой генерации). Совет управляет вебом своим councilWebSeek отдельно.
+    web: settings.webSearch,
     variant: idx,
     userId,
     feature: idx > 1 ? 'regenerate' : 'generate',
     refType: 'generation',
     refId: generationId,
   }
-  // «Совет» (за флагом + гейт аудитории). Дорогие проверки (settings-admin / лимит) — ТОЛЬКО когда фича включена.
-  const settings = await getAiSettings()
-  let useCouncil = false
-  if (settings.councilEnabled) {
-    const admin = await isAdminUser(userId)
-    useCouncil = settings.councilAudience === 'all' || admin
-    // Лимит (не для админов): по ДОСТАВЛЕННЫМ советам за месяц; исчерпал → одиночная генерация.
-    if (useCouncil && !admin && settings.councilMaxPerMonth > 0 && (await councilRunsThisMonth(userId)) >= settings.councilMaxPerMonth) {
-      useCouncil = false
-    }
-  }
 
-  let draft: GeneratedList | null = null
-  if (useCouncil) {
-    // #6: под-вызовы совета помечаем refType 'council' — админ-«Расход» отличает их от одиночных.
-    const res = await generateListCouncil(query, lang, { ...genOpts, refType: 'council' })
-    if (res && 'clarify' in res) {
-      // Диалог только на ПЕРВИЧНОЙ генерации: показываем форму (кандидата нет, ждём ответов).
-      // На «ещё вариант» (idx>1) clarify игнорируем — иначе пустой экран/коллизия idx=1; падаем на одиночную.
-      if (idx === 1) {
-        await setClarify(generationId, res.clarify)
-        await setGenerationStatus(generationId, 'clarify')
-        return true
+  // Терминальный статус ГАРАНТИРОВАН через finally: любой throw ниже (insert, ошибка модели, TypeError)
+  // раньше оставлял генерацию в 'pending' НАВСЕГДА, а чат поллит только пока pending → вечный спиннер.
+  let delivered = false
+  let clarified = false
+  try {
+    // «Совет» (за флагом + гейт аудитории). Дорогие проверки (админ/лимит) — ТОЛЬКО когда фича включена.
+    let useCouncil = false
+    if (settings.councilEnabled) {
+      const admin = await isAdminUser(userId)
+      useCouncil = settings.councilAudience === 'all' || admin
+      // Лимит (не для админов): по ДОСТАВЛЕННЫМ советам за месяц; исчерпал → одиночная генерация.
+      if (useCouncil && !admin && settings.councilMaxPerMonth > 0 && (await councilRunsThisMonth(userId)) >= settings.councilMaxPerMonth) {
+        useCouncil = false
       }
-    } else {
-      draft = res
     }
-    // #4: слот лимита дебетуем ТОЛЬКО при реально отданном списке (не clarify/фолбэк/ошибка).
-    if (draft) await recordCouncilRun(userId, generationId)
+
+    let draft: GeneratedList | null = null
+    if (useCouncil) {
+      // #6: под-вызовы совета помечаем refType 'council' — админ-«Расход» отличает их от одиночных.
+      const res = await generateListCouncil(query, lang, { ...genOpts, refType: 'council' })
+      if (res && 'clarify' in res) {
+        // Диалог только на ПЕРВИЧНОЙ генерации: показываем форму (кандидата нет, ждём ответов).
+        // На «ещё вариант» (idx>1) clarify игнорируем — иначе пустой экран/коллизия idx=1; падаем на одиночную.
+        if (idx === 1) {
+          await setClarify(generationId, res.clarify)
+          await setGenerationStatus(generationId, 'clarify')
+          clarified = true
+          return true
+        }
+      } else {
+        draft = res
+      }
+      // #4: слот лимита дебетуем ТОЛЬКО при реально отданном списке (не clarify/фолбэк/ошибка).
+      if (draft) await recordCouncilRun(userId, generationId)
+    }
+    draft = draft ?? (await generateListDraft(query, lang, genOpts))
+    if (!draft) return false // finally проставит 'failed' + реплику ошибки
+
+    const items: CandidateItem[] = draft.items.map((it) => ({
+      title: it.title,
+      desc: it.desc,
+      command: sanitizeCommand(it.command ?? ''),
+      level: it.level,
+      why: it.why,
+      subtasks: it.subtasks,
+      refs: it.refs,
+    }))
+    // «Что поменялось ключевое» — только со 2-го витка: у первого сравнивать не с чем.
+    const summary = idx > 1 ? await describeChange(generationId, idx, items, lang, genOpts) : ''
+    // onConflictDoUpdate по (generationId, idx): ретрай джобы или гонка двух «дополнить» на один idx
+    // не роняют insert по UNIQUE (это тоже вело в вечный pending) — переписываем свой виток.
+    const title = (draft.title || query).slice(0, 140)
+    await db
+      .insert(generationCandidates)
+      .values({
+        generationId,
+        idx,
+        title,
+        desc: draft.desc ?? '',
+        summary,
+        tags: draft.tags.length ? parseTags(draft.tags.join(' ')) : parseTags(query),
+        items,
+      })
+      .onConflictDoUpdate({
+        target: [generationCandidates.generationId, generationCandidates.idx],
+        set: { title, desc: draft.desc ?? '', summary, items },
+      })
+    delivered = true
+    await setGenerationStatus(generationId, 'done')
+    return true
+  } finally {
+    // Не успех и не уточнение → честный 'failed' + одна реплика ошибки. Гарантия против вечного спиннера.
+    if (!delivered && !clarified) {
+      await setGenerationStatus(generationId, 'failed')
+      await pushMessage(generationId, { attempt: idx, kind: 'error', text: '', who: 'council' })
+    }
   }
-  draft = draft ?? (await generateListDraft(query, lang, genOpts))
-  if (!draft) {
-    await setGenerationStatus(generationId, 'failed')
-    await pushMessage(generationId, { attempt: idx, kind: 'error', text: '', who: 'council' })
-    return false
-  }
-  const items: CandidateItem[] = draft.items.map((it) => ({
-    title: it.title,
-    desc: it.desc,
-    command: sanitizeCommand(it.command ?? ''),
-    level: it.level,
-    why: it.why,
-    subtasks: it.subtasks,
-    refs: it.refs,
-  }))
-  // «Что поменялось ключевое» — только со 2-го витка: у первого сравнивать не с чем.
-  const summary = idx > 1 ? await describeChange(generationId, idx, items, lang, genOpts) : ''
-  await db.insert(generationCandidates).values({
-    generationId,
-    idx,
-    title: (draft.title || query).slice(0, 140),
-    desc: draft.desc ?? '',
-    summary,
-    tags: draft.tags.length ? parseTags(draft.tags.join(' ')) : parseTags(query),
-    items,
-  })
-  await setGenerationStatus(generationId, 'done')
-  return true
 }
