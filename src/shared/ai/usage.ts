@@ -84,17 +84,20 @@ export async function getUsageByUser(sinceDays = 0): Promise<UsageByUser[]> {
 }
 
 /** Итог по всему сервису за окно. */
-export async function getUsageTotals(sinceDays = 0): Promise<{ calls: number; totalTokens: number; costUsd: number }> {
+export async function getUsageTotals(sinceDays = 0): Promise<{ calls: number; generations: number; totalTokens: number; costUsd: number }> {
   const filters = sinceDays > 0 ? [gte(aiUsage.createdAt, sql`now() - ${`${sinceDays} days`}::interval`)] : []
   const [r] = await db
     .select({
       calls: sql<number>`count(*)::int`,
+      // Генерация = один refId (совет = много вызовов на один refId). Считаем маркеры 'generation'/'council-run',
+      // чтобы средняя цена была ЗА ГЕНЕРАЦИЮ, а не за вызов — так осязаемее «на сколько хватит остатка».
+      generations: sql<number>`count(distinct ${aiUsage.refId}) filter (where ${aiUsage.refType} in ('generation','council-run'))::int`,
       totalTokens: sql<number>`coalesce(sum(${aiUsage.totalTokens}),0)::int`,
       costUsd: sql<number>`coalesce(sum(${aiUsage.costUsd}),0)::float8`,
     })
     .from(aiUsage)
     .where(filters.length ? and(...filters) : undefined)
-  return r ?? { calls: 0, totalTokens: 0, costUsd: 0 }
+  return r ?? { calls: 0, generations: 0, totalTokens: 0, costUsd: 0 }
 }
 
 /** Расход одного пользователя (для его настроек). */
