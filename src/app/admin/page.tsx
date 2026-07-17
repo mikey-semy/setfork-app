@@ -13,11 +13,13 @@ import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
 import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, Mail, MessageSquare, RefreshCw, ScrollText, Search, Shield, Tag, Users, Wrench } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
+import { getRosterAll } from '@/shared/ai/roster'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { AiKeyAndSwitch } from '@/features/admin/AiKeyAndSwitch'
 import { CouncilFields } from '@/features/admin/CouncilFields'
+import { CouncilRoster } from '@/features/admin/CouncilRoster'
 import { CreditsWidget } from '@/features/admin/CreditsWidget'
 import { MediaSettingsForm } from '@/features/admin/MediaSettingsForm'
 import { EmailSettingsForm } from '@/features/admin/EmailSettingsForm'
@@ -62,6 +64,19 @@ function ensure(opts: Option[], current: string): Option[] {
   return current && !opts.some((o) => o.value === current) ? [{ value: current, id: current }, ...opts] : opts
 }
 
+/** Встроенные персонажи для галереи — читаем каталог, а не держим список руками:
+ *  дорисовали картинку в public/gnomes — она появилась в выборе сама. */
+async function builtinAvatars(): Promise<string[]> {
+  const { readdir } = await import('node:fs/promises')
+  const { join } = await import('node:path')
+  try {
+    const files = await readdir(join(process.cwd(), 'public', 'gnomes'))
+    return files.filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -5)).sort()
+  } catch {
+    return []
+  }
+}
+
 export const metadata = { title: 'Admin' }
 
 export default async function AdminPage() {
@@ -80,6 +95,7 @@ export default async function AdminPage() {
     getMonetizationSettings(),
   ])
   const ru = lang === 'ru'
+  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const pushValues = { publicKey: vapid.publicKey, subject: vapid.subject, configured: Boolean(vapid.publicKey && vapid.privateKey) }
   const emailValues = {
     host: email.host,
@@ -108,6 +124,8 @@ export default async function AdminPage() {
   const models = hasKey ? await fetchModels() : { chat: [], embedding: [] }
 
   const chatOpts = ensure(buildOpts(models.chat, false, ru), settings.chatModel)
+  // Ростер и галерея встроенных персонажей — читаем на сервере: клиенту не нужен доступ к БД и fs.
+  const [roster, gallery] = await Promise.all([getRosterAll(), builtinAvatars()])
   const fallbackOpts = ensure(buildOpts(models.chat, false, ru), settings.fallbackModel)
   const embOpts = ensure(buildOpts(models.embedding, true, ru), settings.embeddingModel)
 
@@ -264,6 +282,13 @@ export default async function AdminPage() {
               </button>
             </div>
           </form>
+
+          {/* Ростер — ВНЕ формы настроек: у каждого эксперта своя форма, а вложенные формы
+              невалидны. Заодно правка одного эксперта не перетирает остальных. */}
+          <div className="mt-6 border-t border-border pt-5">
+            <div className="mb-3 text-[13px] font-medium text-ink">{say('Council experts', 'Эксперты совета')}</div>
+            <CouncilRoster experts={roster} modelOptions={chatOpts} gallery={gallery} ru={ru} />
+          </div>
         </section>
       ),
     },

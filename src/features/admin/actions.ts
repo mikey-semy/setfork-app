@@ -12,7 +12,7 @@ import { clearMonetizationCache, DEFAULT_AD_MARKING, DEFAULT_DISCLOSURE, MONETIZ
 import { parseAffiliateRules } from '@/core'
 import { clearVapidCache, VAPID_KEYS } from '@/shared/push/vapid'
 import { sendMail } from '@/shared/email/mailer'
-import { db, users } from '@/shared/db'
+import { councilExperts, db, users } from '@/shared/db'
 import { eq } from 'drizzle-orm'
 
 export async function setAiSettings(formData: FormData): Promise<void> {
@@ -232,4 +232,38 @@ export async function toggleMaintenance(on: boolean): Promise<boolean> {
   await recordAudit(on ? 'maintenance.on' : 'maintenance.off', { actorId: admin.userId })
   revalidatePath('/admin')
   return maintenanceFlag()
+}
+
+// ── Менеджер ростера совета (таблица council_experts, см. shared/ai/roster.ts) ────────
+/**
+ * Сохранить эксперта. id не редактируется и приходит скрытым полем: он же имя встроенной
+ * аватарки и значение who в истории бесед — переименование осиротило бы и картинку, и историю.
+ * Поэтому же нет удаления: выключение флагом enabled.
+ */
+export async function saveExpert(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const id = String(formData.get('id') ?? '').trim()
+  if (!id) return
+
+  const domains = String(formData.get('domains') ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+  const modelRaw = String(formData.get('model') ?? '').trim()
+
+  await db
+    .update(councilExperts)
+    .set({
+      nameRu: String(formData.get('nameRu') ?? '').trim().slice(0, 40),
+      nameEn: String(formData.get('nameEn') ?? '').trim().slice(0, 40),
+      persona: String(formData.get('persona') ?? '').trim().slice(0, 2000),
+      domains,
+      model: modelRaw === '__none__' ? '' : modelRaw,
+      avatar: String(formData.get('avatar') ?? '').trim() || id,
+      online: formData.get('online') === 'on',
+      enabled: formData.get('enabled') === 'on',
+      updatedAt: new Date(),
+    })
+    .where(eq(councilExperts.id, id))
+  revalidatePath('/admin')
 }
