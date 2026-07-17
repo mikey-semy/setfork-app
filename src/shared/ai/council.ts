@@ -6,7 +6,8 @@ import { globalBudgetOk } from '@/shared/quota'
 import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
-import { parseList, JSON_SHAPE, type GeneratedList, type GenerateOptions } from './generate'
+import { parseList, jsonShapeFor, type GeneratedList, type GenerateOptions } from './generate'
+import { classifyListKind, shapeFor, LIST_KINDS, type ListKind } from './list-kind'
 import { findPrecedents } from './retrieval'
 import { getRoster, type Expert } from './roster'
 import { lawBlock } from './list-laws'
@@ -100,14 +101,18 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const clarifyLine = settings.councilClarify
     ? '- depth "clarify": the request is too vague for a useful list — a bare fragment or pronoun ("organize it", "plan the thing", "help me"), OR the good answer hinges on unstated parameters (budget / skill level / goal / constraints). Return 2-3 short clarifying questions in "questions". PREFER clarify over single/council whenever the request is underspecified this way.\n'
     : ''
+  // «kind» распорядитель решает тем же дешёвым вызовом, что и глубину/состав — стоит ~0. Это LLM-слой
+  // классификации типа списка (ADR-0010) поверх грамматического дефолта classifyListKind (fallback ниже).
+  const kindField = `"kind":"procedure|inventory|checklist|criteria|options"`
   const jsonShape = settings.councilClarify
-    ? '{"depth":"single|council|clarify","summon":["id",...],"questions":["...only if clarify"],"reason":"short"}'
-    : '{"depth":"single|council","summon":["id",...],"reason":"short"}'
+    ? `{"depth":"single|council|clarify",${kindField},"summon":["id",...],"questions":["...only if clarify"],"reason":"short"}`
+    : `{"depth":"single|council",${kindField},"summon":["id",...],"reason":"short"}`
   const steward = await run(
     fast,
-    `You are the steward of a panel of domain experts building a reference list. Choose process depth and summon experts.
+    `You are the steward of a panel of domain experts building a reference list. Choose process depth, the LIST KIND, and summon experts.
 ${clarifyLine}- depth "single": the topic is clear AND simple/everyday (chores, basic personal routines) — no council needed.
 - depth "council": the topic is clear but technical/multi-faceted/professional — summon 1-${maxGnomes} RELEVANT, DIVERSE experts from the roster.
+- kind: what the ELEMENT of the list is. "procedure" = ordered steps to DO (how-to). "inventory" = THINGS to get/have (accessories, gear, ingredients, packing/shopping list). "checklist" = states to verify. "criteria" = rules for choosing/judging. "options" = variants to compare. Pick by what the user actually wants: "what accessories do I need" → inventory, NOT procedure.
 MATCH THE TOPIC TO THE ROSTER BY DOMAIN (the topic may be in ANY language): a recipe/dish/cooking → chef; a workout/health → coach; a trip/city → traveler; deploy/servers/CI → devops; code/API/library → coder; study/course → scholar. Use 'generalist' ONLY when nothing fits.
 Return ONLY JSON: ${jsonShape}
 ${sp.rule()}
@@ -119,11 +124,14 @@ ${roster}`,
   let depth: 'single' | 'council' | 'clarify' = 'council'
   let ids: string[] = []
   let questions: string[] = []
+  // Дефолт типа — грамматический; распорядитель уточняет своим LLM-решением, если оно валидно.
+  let kind: ListKind = classifyListKind(query)
   if (steward) {
     try {
-      const p = JSON.parse(firstJson(steward.text)) as { depth?: string; summon?: string[]; questions?: string[] }
+      const p = JSON.parse(firstJson(steward.text)) as { depth?: string; kind?: string; summon?: string[]; questions?: string[] }
       if (p.depth === 'single') depth = 'single'
       else if (p.depth === 'clarify' && settings.councilClarify) depth = 'clarify'
+      if (p.kind && (LIST_KINDS as string[]).includes(p.kind)) kind = p.kind as ListKind
       ids = Array.isArray(p.summon) ? p.summon : []
       questions = Array.isArray(p.questions) ? p.questions.filter((q) => typeof q === 'string' && q.trim()).map((q) => q.trim()).slice(0, 3) : []
     } catch { /* дефолт council */ }
@@ -138,7 +146,8 @@ ${roster}`,
   // law — обязательная форма типа списка (напр. рецепт). Раньше её тут НЕ было, и получался парадокс:
   // совет ВЫКЛ → рецепт правильный (generate.ts закон применяет), совет ВКЛ + «тема простая» → сломан.
   // Закон отсутствовал ровно в single-ветке совета, ради которой он и писался.
-  const listRules = `You produce a canonical, high-quality reference list. All content MUST be in ${langName}.${law}\n${JSON_SHAPE}\n${sp.rule()}`
+  // Форма по типу списка (kind): та же структура JSON, иной смысл элемента (ADR-0010).
+  const listRules = `You produce a canonical, high-quality reference list. All content MUST be in ${langName}.${law}\n${jsonShapeFor(kind)}\n${sp.rule()}`
 
   // Тривиально → один гном (обычная генерация, но через тот же учёт совета).
   if (depth === 'single') {
@@ -189,7 +198,8 @@ ${roster}`,
     // Своя модель эксперта (если задана в админке) сильнее пула — иначе раздаём пул по кругу.
     const model = online(e.model || pool[i % pool.length], web && Boolean(e.online))
     // Закон типа списка (если есть) сильнее общего «6-9 шагов»: у рецепта своя обязательная форма.
-    const sys = `You are ${e.persona}. Draft a practical list for the topic. 6-9 ordered steps: short imperative + one clarifying sentence + a real terminal command only when the step is technical. All content in ${langName}. Return ONLY the draft text.${law}\n${sp.rule()}`
+    // Черновик по ТИПУ списка, а не всегда «6-9 шагов»: иначе на inventory эксперт даёт процедуру.
+    const sys = `You are ${e.persona}. Draft a practical list for the topic. 6-9 items, each with one clarifying sentence. All content in ${langName}. Return ONLY the draft text.\n${shapeFor(kind)}${law}\n${sp.rule()}`
     emit('draft', say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
     return run(model, sys, `Draft the list.\n${topic}${lore}`)
   })
