@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { TagInput } from '@/shared/ui/TagInput'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { ModelSelect, NONE, type Option } from './ModelSelect'
 import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } from './actions'
@@ -132,6 +133,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [pending, start] = useTransition()
   const [enabled, setEnabled] = useState(e.enabled)
+  const [anyTopic, setAnyTopic] = useState(e.domains.includes('*'))
   const [online, setOnline] = useState(e.online)
   const [saved, setSaved] = useState(false)
 
@@ -182,8 +184,15 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           </div>
 
           <div>
-            <label className={lbl}>{say('Domains (comma-separated; * = any topic)', 'Домены (через запятую; * = любая тема)')}</label>
-            <input name="domains" defaultValue={e.domains.join(', ')} className={`${field} font-mono text-[12px]`} />
+            <label className={lbl}>{say('Domains — what this expert is summoned for', 'Домены — на что зовут этого эксперта')}</label>
+            {/* Домены — те же теги по смыслу, поэтому тот же TagInput: чипы, автокомплит из реестра.
+                «Любая тема» отдельным тумблером, а не доменом «*»: normalize у TagInput вырезает
+                звёздочку, да и тумблер честнее магического символа. */}
+            <label className="mb-1.5 flex items-center gap-2 text-[12px] text-ink-2">
+              <Switch name="anyTopic" checked={anyTopic} onCheckedChange={setAnyTopic} />
+              {say('Any topic (generalist)', 'Любая тема (универсал)')}
+            </label>
+            {anyTopic ? null : <TagInput name="domains" initial={e.domains.filter((d) => d !== '*')} lang={ru ? 'ru' : 'en'} max={12} />}
           </div>
 
           <div>

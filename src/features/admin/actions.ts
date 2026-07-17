@@ -246,10 +246,15 @@ export async function saveExpert(formData: FormData): Promise<void> {
   const id = String(formData.get('id') ?? '').trim()
   if (!id) return
 
-  const domains = String(formData.get('domains') ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
+  // Домены = те же теги по смыслу, поэтому и ввод тот же (TagInput): он пишет slug'и через ПРОБЕЛ.
+  // «Любая тема» — тумблер, а не домен «*»: normalize у TagInput звёздочку бы вырезал.
+  const domains =
+    formData.get('anyTopic') === 'on'
+      ? ['*']
+      : String(formData.get('domains') ?? '')
+          .split(/[\s,]+/)
+          .map((s) => s.trim().toLowerCase())
+          .filter((s) => s && s !== '*')
   const modelRaw = String(formData.get('model') ?? '').trim()
 
   await db
