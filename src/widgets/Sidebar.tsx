@@ -2,20 +2,22 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Compass, Home, ListChecks, PlayCircle, X } from 'lucide-react'
+import { ChevronLeft, Compass, Home, ListChecks, PlayCircle, X } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { t, type Lang } from '@/shared/i18n'
 import { ListsPanel, type ListsPanelItem } from './ListsPanel'
 import { useSidebar } from './sidebar-context'
 
-// ОДИН сайдбар вместо пары «рэйл + drawer»: на десктопе сворачивается своим
-// тумблером (иконки ↔ подписи + «Top lists»); свёрнутый НЕ показывает списки.
-// На мобилке — тот же сайдбар оверлеем (открывает бургер в топ-баре).
+// ОДИН сайдбар: показан ЦЕЛИКОМ (иконки + подписи + «Top lists») или скрыт ЦЕЛИКОМ —
+// без промежуточного мини-рельса (иконки+подписи в узкой колонке смысла не давали).
+// Тумблер — стрелка внизу панели И бургер ☰ в шапке (на десктопе он же скрывает/
+// показывает). На мобилке — тот же сайдбар оверлеем.
 type NavItem = { href: string; label: string; icon: typeof Home }
 
 export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolean; topLists: ListsPanelItem[] }) {
   const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useSidebar()
   const pathname = usePathname()
+  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
 
   const items: NavItem[] = [
@@ -29,7 +31,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
       : []),
   ]
 
-  const nav = (expanded: boolean, onNavigate?: () => void) => (
+  const nav = (onNavigate?: () => void) => (
     <nav className="flex flex-col gap-0.5" aria-label={t('menu', lang)}>
       {items.map((it) => {
         const active = isActive(it.href)
@@ -38,15 +40,13 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
             key={it.href}
             href={it.href}
             onClick={onNavigate}
-            title={expanded ? undefined : it.label}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex items-center rounded-md font-medium',
-              expanded ? 'gap-2.5 px-2.5 py-2 text-[13.5px]' : 'flex-col gap-1 px-1 py-2 text-center text-[9.5px] leading-tight',
+              'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] font-medium',
               active ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink',
             )}
           >
-            <it.icon size={expanded ? 16 : 18} className={cn('shrink-0', active ? 'text-accent' : 'text-muted')} />
+            <it.icon size={16} className={cn('shrink-0', active ? 'text-accent' : 'text-muted')} />
             {it.label}
           </Link>
         )
@@ -54,7 +54,6 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
     </nav>
   )
 
-  // «Top lists» — только когда развёрнут (свёрнутый прячет списки, как просили).
   const lists = (onNavigate?: () => void) =>
     authed && topLists.length > 0 ? (
       <>
@@ -77,30 +76,33 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
 
   return (
     <>
-      {/* Desktop: один сворачиваемый сайдбар. min-h во всю высоту экрана — иначе на
-          коротких страницах правая граница обрывалась на середине. */}
+      {/* Desktop: показан целиком (240px) или скрыт целиком (0px). При скрытии панель
+          уезжает и уступает место контенту; вернуть — бургером ☰ в шапке. */}
       <aside
+        aria-hidden={collapsed}
         className={cn(
-          'hidden min-h-[calc(100dvh-53px)] shrink-0 border-r border-border bg-surface transition-[width] lg:block print:hidden',
-          collapsed ? 'w-[60px]' : 'w-[240px]',
+          'hidden shrink-0 overflow-hidden bg-surface transition-[width] duration-200 lg:block print:hidden',
+          collapsed ? 'w-0 border-r-0' : 'min-h-[calc(100dvh-53px)] w-[240px] border-r border-border',
         )}
       >
-        <div className="sticky top-[53px] flex h-[calc(100dvh-53px)] flex-col px-2 py-2.5">
-          <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
-            {nav(!collapsed)}
-            {!collapsed && lists()}
+        {!collapsed && (
+          <div className="sticky top-[53px] flex h-[calc(100dvh-53px)] w-[240px] flex-col px-2 py-2.5">
+            <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
+              {nav()}
+              {lists()}
+            </div>
+            {/* Свернуть — стрелкой внизу панели (развернуть обратно — бургером в шапке). */}
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label={say('Hide menu', 'Скрыть меню')}
+              className="mt-2 flex h-8 shrink-0 items-center gap-2 rounded-md px-2.5 text-[12.5px] text-muted hover:bg-surface-2 hover:text-ink"
+            >
+              <ChevronLeft size={15} className="shrink-0" />
+              {say('Collapse', 'Свернуть')}
+            </button>
           </div>
-          {/* Свернуть/развернуть — стрелкой ВНИЗУ сайдбара (бургер-логотип живёт в шапке). */}
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-label={t('menu', lang)}
-            aria-expanded={!collapsed}
-            className="mt-2 grid h-7 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-          >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
-        </div>
+        )}
       </aside>
 
       {/* Mobile: тот же сайдбар оверлеем (бургер в топ-баре) */}
@@ -120,7 +122,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
               </button>
             </div>
             <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
-              {nav(true, () => setMobileOpen(false))}
+              {nav(() => setMobileOpen(false))}
               {lists(() => setMobileOpen(false))}
             </div>
           </aside>
