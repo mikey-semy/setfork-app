@@ -29,6 +29,8 @@ export interface LandingCopy {
 export interface LandingContent {
   en: LandingCopy
   ru: LandingCopy
+  /** URL картинки hero (общая, не по языку); пусто → дефолт в самом лендинге. */
+  heroImage?: string
 }
 
 export const LANDING_DEFAULTS: LandingContent = {
@@ -88,6 +90,7 @@ export async function getLandingContent(): Promise<LandingContent> {
     return {
       en: mergeCopy(LANDING_DEFAULTS.en, saved.en),
       ru: mergeCopy(LANDING_DEFAULTS.ru, saved.ru),
+      heroImage: typeof saved.heroImage === 'string' && saved.heroImage ? saved.heroImage : undefined,
     }
   } catch {
     return LANDING_DEFAULTS

@@ -1,6 +1,7 @@
 import 'server-only'
 import { NextResponse } from 'next/server'
 import { getLandingContent } from '@/shared/settings/landing'
+import { imageUrl } from '@/shared/media'
 import { getFeed } from '@/features/library/queries'
 
 // Публичный контракт для маркетинг-лендинга (проект setfork-about, ISR):
@@ -12,6 +13,9 @@ export const dynamic = 'force-dynamic' // всегда свежее; ленди�
 
 export async function GET() {
   const [content, top] = await Promise.all([getLandingContent(), getFeed({ sort: 'mostStarred' }).catch(() => [])])
+
+  // heroImage хранится как storage_key — резолвим в подписанный URL (лендинг сам не подпишет).
+  if (content.heroImage) content.heroImage = (await imageUrl(content.heroImage, 'rs:fit:1536:0')) ?? undefined
 
   // Лёгкая проекция карточек (title/desc — LocaleText, лендинг резолвит по языку).
   const featured = top.slice(0, 6).map((l) => ({
