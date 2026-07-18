@@ -3,7 +3,7 @@ import { Sparkles } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { hasOpenRouterKey } from '@/shared/settings/ai'
-import { t } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { GenerateForm } from '@/features/generation/GenerateForm'
 
 export const metadata = { title: 'Draft a list' }
@@ -43,6 +43,17 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
       {sp.e === 'ai_quota' && (
         <div className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2.5 text-[13px] text-warn">
           {ru ? 'Исчерпан месячный лимит на черновики. Попробуй в следующем месяце.' : 'Monthly draft limit reached. Try again next month.'}
+        </div>
+      )}
+      {sp.e === 'free_limit' && (
+        <div className="mb-4 rounded-md border border-accent/40 bg-surface px-3 py-2.5 text-[13px] text-ink-2">
+          {tr(
+            {
+              en: 'You have reached the free monthly generation limit. Pro removes the limit and unlocks the council (multi-model quality).',
+              ru: 'Достигнут месячный лимит бесплатных генераций. Pro снимает лимит и открывает «совет» — мультимодельное качество.',
+            },
+            lang,
+          )}
         </div>
       )}
 

@@ -241,8 +241,22 @@ export default async function AdminPage() {
               </div>
               <div>
                 <label className={lbl}>Max tokens</label>
-                <input type="number" name="maxTokens" step="1" min="64" max="4000" defaultValue={settings.maxTokens} className={field} />
+                <input type="number" name="maxTokens" step="1" min="64" max="8000" defaultValue={settings.maxTokens} className={field} />
               </div>
+            </div>
+
+            <div>
+              <label className={lbl}>{tr({ en: 'Free plan: generations / month', ru: 'Free-тариф: генераций в месяц' }, lang)}</label>
+              <input type="number" name="freeMonthlyGens" step="1" min="0" defaultValue={settings.freeMonthlyGens} className={field} />
+              <p className="mt-1.5 text-[12px] text-muted">
+                {tr(
+                  {
+                    en: 'Generation limit for free users. 0 = monetization off (no limit). Pro / admin are always unlimited; the council is Pro-only.',
+                    ru: 'Лимит генераций для бесплатных. 0 = монетизация выключена (без лимита). Pro/админ — без лимита; «совет» — только Pro.',
+                  },
+                  lang,
+                )}
+              </p>
             </div>
 
             <p className="text-[12px] text-muted">

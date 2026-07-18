@@ -24,7 +24,9 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   const fallbackModel = fallbackRaw === '__none__' ? '' : fallbackRaw
   const embeddingModel = String(formData.get('embeddingModel') ?? '').trim()
   const temperature = Math.min(2, Math.max(0, Number(formData.get('temperature')) || 0.3))
-  const maxTokens = Math.min(4000, Math.max(64, Math.round(Number(formData.get('maxTokens')) || 1500)))
+  // Потолок 8000, а не 4000: длинные списки (рецепты/инвентарь) при 1500 обрезались → 33-56% отказов
+  // (research/2026-07-18-council-bench). Прод на 5000; кламп 4000 молча вернул бы поломку при пересохранении.
+  const maxTokens = Math.min(8000, Math.max(64, Math.round(Number(formData.get('maxTokens')) || 4000)))
   const cheapModeThreshold = Math.max(0, Number(formData.get('cheapModeThreshold')) || 0)
   // Ключ пишем только если поле заполнено — пустое поле значит «не менять».
   const apiKey = String(formData.get('apiKey') ?? '').trim()
@@ -32,6 +34,7 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   // «Совет гномов» — мультимодельная генерация за флагами (см. shared/ai/council.ts).
   const councilMaxGnomes = Math.min(8, Math.max(1, Math.round(Number(formData.get('councilMaxGnomes')) || 3)))
   const councilMaxPerMonth = Math.max(0, Math.round(Number(formData.get('councilMaxPerMonth')) || 0))
+  const freeMonthlyGens = Math.max(0, Math.round(Number(formData.get('freeMonthlyGens')) || 0))
   const councilModels = String(formData.get('councilModels') ?? '').split(',').map((s) => s.trim()).filter(Boolean).join(',')
 
   const settings: Record<string, string> = {
@@ -48,6 +51,7 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.council_web_seek': formData.get('councilWebSeek') === 'on' ? 'true' : 'false',
     'ai.council_clarify': formData.get('councilClarify') === 'on' ? 'true' : 'false',
     'ai.council_max_per_month': String(councilMaxPerMonth),
+    'ai.free_monthly_gens': String(freeMonthlyGens),
   }
   if (apiKey) settings[API_KEY_SETTING] = apiKey
   // Включать генерацию можно только при наличии ключа.
