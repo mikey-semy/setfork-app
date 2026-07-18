@@ -95,7 +95,11 @@ export async function getAiSettings(): Promise<AiSettings> {
     fallbackModel: m['ai.fallback_model'] || '',
     embeddingModel: m['ai.embedding_model'] || defaultEmbeddingModel(),
     temperature: num(m['ai.temperature'], 0.3),
-    maxTokens: num(m['ai.max_tokens'], 1500),
+    // 4000, а не 1500: живой бенч (research/2026-07-18-council-bench) — при 1500 ДЛИННЫЕ списки
+    // (рецепты/инвентарь) обрезались на полуслове → невалидный JSON → parseList null → 33-56% отказов.
+    // При достаточном лимите те же промпты дают 0% отказов. Прод-настройка ai.max_tokens=5000; этот
+    // код-дефолт был лэндмайном (сброс настроек вернул бы 1500 и поломку). Кап — платим за факт вывода.
+    maxTokens: num(m['ai.max_tokens'], 4000),
     cheapModeThreshold: num(m['ai.cheap_mode_threshold'], 0),
     webSearch: m['ai.web_search'] != null ? m['ai.web_search'] === 'true' : process.env.SETFORK_WEB_SEARCH === 'true',
     councilEnabled: m['ai.council_enabled'] != null ? m['ai.council_enabled'] === 'true' : process.env.SETFORK_COUNCIL_ENABLED === 'true',
