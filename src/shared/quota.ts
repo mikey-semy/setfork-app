@@ -1,7 +1,8 @@
 import 'server-only'
 import { and, eq, gte, sql } from 'drizzle-orm'
-import { aiUsage, db, templates } from '@/shared/db'
+import { aiUsage, db, generations, templates } from '@/shared/db'
 import { isAdminHandle } from '@/shared/auth/admin'
+import { isPro } from '@/shared/entitlements'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 
 // Квоты — мягкая защита от абьюза, не биллинг. Лимиты щедрые и настраиваются
@@ -37,6 +38,21 @@ export async function listQuota(userId: string, handle?: string | null): Promise
   const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(templates).where(eq(templates.ownerId, userId))
   const used = r?.n ?? 0
   return { used, limit: MAX_LISTS_PER_USER, ok: used < MAX_LISTS_PER_USER, unlimited: false }
+}
+
+/**
+ * Квота Free-тарифа: число ГЕНЕРАЦИЙ за календарный месяц. Pro/админ — без лимита. limit ≤ 0 —
+ * монетизация НЕ активирована → без лимита для всех (чтобы не блокировать free-юзеров, пока Pro нельзя
+ * купить). Считаем строки generations (новые генерации-запросы). Вызывать на входе генерации.
+ */
+export async function freeGenQuota(userId: string, handle: string | null | undefined, limit: number): Promise<QuotaState> {
+  if (limit <= 0 || isPro(handle)) return { used: 0, limit: Infinity, ok: true, unlimited: true }
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(generations)
+    .where(and(eq(generations.userId, userId), gte(generations.createdAt, sql`date_trunc('month', now())`)))
+  const used = r?.n ?? 0
+  return { used, limit, ok: used < limit, unlimited: false }
 }
 
 /** Месячная квота AI-расхода (сумма cost_usd за текущий календарный месяц). */

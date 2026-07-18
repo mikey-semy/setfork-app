@@ -12,7 +12,8 @@ import { classifyListKind, LIST_KINDS } from '@/shared/ai/list-kind'
 import { claimClarify } from '@/shared/ai/council-clarify'
 import { getMessages, pushMessage, setGenerationStatus } from '@/shared/ai/generation-messages'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
-import { aiQuota, listQuota } from '@/shared/quota'
+import { aiQuota, freeGenQuota, listQuota } from '@/shared/quota'
+import { getAiSettings } from '@/shared/settings/ai'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { enqueueReindex } from '@/features/library/jobs'
 import { toProposedItems } from '@/features/library/editor'
@@ -82,6 +83,9 @@ export async function startGeneration(formData: FormData): Promise<void> {
   const { allowed } = await checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/search?q=${encodeURIComponent(query)}&e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate?e=ai_quota&q=${encodeURIComponent(query)}`)
+  // Тариф Free: месячный лимит генераций (0 = монетизация не активирована → без лимита). Pro/админ — без лимита.
+  const { freeMonthlyGens } = await getAiSettings()
+  if (!(await freeGenQuota(session.userId, session.handle, freeMonthlyGens)).ok) redirect(`/generate?e=free_limit&q=${encodeURIComponent(query)}`)
 
   // Тип списка (ADR-0010) — грамматический дефолт при создании; переключатель в чате его меняет.
   const listKind = classifyListKind(query)
