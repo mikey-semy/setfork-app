@@ -28,7 +28,10 @@ const DEFAULT_COUNCIL_MODELS = ['openai/gpt-4o-mini', 'meta-llama/llama-3.3-70b-
 const INNOVATOR_TEMP = 0.9
 // Потолок на ОДИН вызов: зависшая/медленная модель не должна вешать весь совет (6-7 вызовов).
 // Превышение → вызов падает → гном «выпадает», совет продолжает без него.
-const CALL_TIMEOUT_MS = 60_000
+// 120с, а не 60: живой бенч (research/2026-07-18-council-bench) показал 33% отказов — под
+// одновременностью вызовы (особенно синтез старейшины на большой модели с длинным промптом) не
+// укладывались в 60с. При успехе совет ~4 мин, отдельные вызовы 60-120с — 60с резал их зря.
+const CALL_TIMEOUT_MS = 120_000
 
 function firstJson(t: string): string {
   const s = t.indexOf('{'), e = t.lastIndexOf('}')
@@ -77,23 +80,35 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   }
 
   // Один под-вызов: генерация + учёт расхода. Ошибка → null (гном «выпал»), совет продолжает.
+  // ОДИН ретрай на транзиентной ошибке (таймаут/сеть/429/5xx): бенч показал, что 33% отказов —
+  // это упавшие под нагрузкой ОДИНОЧНЫЕ вызовы (чаще синтез старейшины), а не детерминированный сбой.
+  // Ретрай именно транзиента бьёт по хвосту, не удваивая цену на стабильных ответах.
   async function run(model: string, system: string, prompt: string, maxTokens = settings.maxTokens, temp = settings.temperature): Promise<{ text: string } | null> {
-    try {
-      const result = await generateText({
-        model: openrouter.chat(model, { usage: { include: true } }),
-        system,
-        prompt,
-        temperature: temp,
-        maxOutputTokens: maxTokens,
-        abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
-      })
-      const u = extractUsage(result)
-      await recordUsage({ userId: opts.userId, feature, model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType ?? 'council', refId: opts.refId })
-      return { text: result.text }
-    } catch (e) {
-      console.warn('[council] call failed', e instanceof Error ? e.message : e)
-      return null
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const result = await generateText({
+          model: openrouter.chat(model, { usage: { include: true } }),
+          system,
+          prompt,
+          temperature: temp,
+          maxOutputTokens: maxTokens,
+          abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+        })
+        const u = extractUsage(result)
+        await recordUsage({ userId: opts.userId, feature, model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType ?? 'council', refId: opts.refId })
+        return { text: result.text }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        const transient = /timeout|abort|econnreset|fetch failed|network|socket|429|50[234]/i.test(msg)
+        if (attempt === 0 && transient) {
+          console.warn('[council] call retry', msg)
+          continue
+        }
+        console.warn('[council] call failed', msg)
+        return null
+      }
     }
+    return null
   }
 
   // 1) Распорядитель: глубина (single|council|clarify) + созыв экспертов по домену (адаптивная глубина = лимит цены).
