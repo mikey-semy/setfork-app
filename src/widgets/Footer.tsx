@@ -7,9 +7,10 @@ import { getMonetizationSettings } from '@/shared/settings/monetization'
 const REPO_URL = 'https://docs.setfork.com'
 // Юридические страницы живут в доках; роуты /terms и /privacy редиректят туда же.
 const LEGAL_URL = `${REPO_URL}/docs/legal`
-// «О проекте» — отдельный маркетинг-лендинг (проект setfork-about). Домен задаётся
-// env-переменной; дефолт — апекс setfork.ru (куплен под РФ, ADR-0008).
-const ABOUT_URL = process.env.NEXT_PUBLIC_ABOUT_URL ?? 'https://setfork.ru'
+// «О проекте» — отдельный маркетинг-лендинг (проект setfork-about). Живёт по ПУТИ
+// /about основного домена (basePath, не поддомен — лучше для SEO). Домен задаётся
+// env-переменной; дефолт — setfork.ru/about (куплен под РФ, ADR-0008).
+const ABOUT_URL = process.env.NEXT_PUBLIC_ABOUT_URL ?? 'https://setfork.ru/about'
 
 /** Плоский подвал (как в GitHub): один ряд приглушённых ссылок, без границ и колонок. */
 export async function Footer({ lang }: { lang: Lang }) {
