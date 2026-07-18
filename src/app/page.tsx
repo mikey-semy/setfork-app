@@ -1,10 +1,9 @@
 import Link from 'next/link'
-import { and, desc, eq, sql } from 'drizzle-orm'
-import { db, templates } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr, type Lang } from '@/shared/i18n'
+import { t } from '@/shared/i18n'
 import { HeroSearch } from '@/features/library/HeroSearch'
+import { sampleListTitles } from '@/features/library/sample-titles'
 import { Dashboard } from '@/widgets/Dashboard'
 
 // Запасные подсказки — только если публичных списков ещё нет (пустая база/стенд).
@@ -23,33 +22,16 @@ const PLACEHOLDERS = [
   { en: 'What needs doing — step by step?', ru: 'Что нужно сделать — по шагам?' },
   { en: 'Ask for a list on any topic…', ru: 'Спроси список на любую тему…' },
 ]
-const CHIP_POOL = 100 // из скольких вариантов тянем
 const CHIPS_SHOWN = 4 // сколько показываем за раз
 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
-
-/** Заголовки НАСТОЯЩИХ публичных списков (до сотни, по популярности), перемешанные. */
-async function liveTitles(lang: Lang): Promise<string[]> {
-  const rows = await db
-    .select({ title: templates.title })
-    .from(templates)
-    .where(and(eq(templates.visibility, 'public'), eq(templates.status, 'published'), eq(templates.moderation, 'active')))
-    .orderBy(desc(sql`${templates.starsCount} + ${templates.forksCount}`))
-    .limit(CHIP_POOL)
-  const titles = [...new Set(rows.map((r) => tr(r.title, lang).trim()).filter((s) => s.length > 0 && s.length <= 46))]
-  for (let i = titles.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[titles[i], titles[j]] = [titles[j], titles[i]]
-  }
-  return titles
-}
 
 export default async function HomePage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
   if (session) return <Dashboard lang={lang} userId={session.userId} />
 
   const ru = lang === 'ru'
-  const titles = await liveTitles(lang)
+  const titles = await sampleListTitles(lang)
   const chips = titles.length >= CHIPS_SHOWN ? titles.slice(0, CHIPS_SHOWN) : FALLBACK_CHIPS.map((c) => (ru ? c.ru : c.en))
   // Пул фраз + «Например: «живой заголовок»» (берём тот, что не попал в чипы).
   const example = titles[CHIPS_SHOWN]

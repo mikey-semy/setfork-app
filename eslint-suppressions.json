@@ -124,11 +124,6 @@
       "count": 2
     }
   },
-  "src/app/generate/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 3
-    }
-  },
   "src/app/improve/page.tsx": {
     "no-restricted-syntax": {
       "count": 9
@@ -302,11 +297,6 @@
   "src/features/gardener/service.ts": {
     "boundaries/dependencies": {
       "count": 5
-    }
-  },
-  "src/features/generation/GenerateForm.tsx": {
-    "no-restricted-syntax": {
-      "count": 2
     }
   },
   "src/features/generation/GenerationReview.tsx": {
