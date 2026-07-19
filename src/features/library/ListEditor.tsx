@@ -30,6 +30,7 @@ import type { Lang } from '@/shared/i18n'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { DatePicker } from '@/shared/ui/DatePicker'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
+import { CodeEditor } from '@/shared/ui/CodeEditor'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorProduct, type EditorQuiz } from './editor'
 import { t } from '@/shared/i18n'
@@ -466,14 +467,11 @@ export function ListEditor({
               ariaLabel={ru ? `Описание пункта ${i + 1}` : `Item ${i + 1} description`}
               placeholder={ru ? 'Описание (Markdown, необязательно)' : 'Description (Markdown, optional)'}
             />
-            <BubbleTextEditor
-              value={it.command}
+            <CodeEditor
+              value={it.command || ''}
               onChange={(v) => patch(i, { command: v })}
-              singleLine
-              mono
-              lang={ru ? 'ru' : 'en'}
               ariaLabel={ru ? `Команда пункта ${i + 1}` : `Item ${i + 1} command`}
-              placeholder={ru ? 'Команда (необязательно)' : 'Command (optional)'}
+              placeholder={ru ? 'Команда или код (необязательно)' : 'Command or code (optional)'}
             />
 
             {/* Уровень + «зачем» */}
