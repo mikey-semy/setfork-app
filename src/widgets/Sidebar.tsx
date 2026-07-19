@@ -76,17 +76,23 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
 
   return (
     <>
-      {/* Desktop: показан целиком (240px) или скрыт целиком (0px). При скрытии панель
-          уезжает и уступает место контенту; вернуть — бургером ☰ в шапке. */}
+      {/* Desktop: панель фиксирована во всю высоту экрана под шапкой — не улетает при
+          скролле и всегда доходит до низа (в потоке она обрывалась и уезжала вместе со
+          страницей на коротких экранах). Ширину в потоке держит спейсер ниже. */}
+      {/* Спейсер: резервирует место под фиксированную панель, чтобы контент не уезжал под неё. */}
+      <div
+        aria-hidden
+        className={cn('hidden shrink-0 transition-[width] duration-200 lg:block print:hidden', collapsed ? 'w-0' : 'w-[240px]')}
+      />
       <aside
         aria-hidden={collapsed}
         className={cn(
-          'hidden shrink-0 overflow-hidden bg-surface transition-[width] duration-200 lg:block print:hidden',
-          collapsed ? 'w-0 border-r-0' : 'min-h-[calc(100dvh-53px)] w-[240px] border-r border-border',
+          'fixed bottom-0 left-0 top-[53px] z-20 hidden overflow-hidden bg-surface transition-[width] duration-200 lg:block print:hidden',
+          collapsed ? 'w-0 border-r-0' : 'w-[240px] border-r border-border',
         )}
       >
         {!collapsed && (
-          <div className="sticky top-[53px] flex h-[calc(100dvh-53px)] w-[240px] flex-col px-2 py-2.5">
+          <div className="flex h-full w-[240px] flex-col px-2 py-2.5">
             <div className="scroll-thin min-h-0 flex-1 overflow-y-auto">
               {nav()}
               {lists()}
