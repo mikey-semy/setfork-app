@@ -47,7 +47,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             v{item.version}
           </span>
           {foreignLang && (
-            <span className="rounded border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted" title={foreignLang}>
+            <span className="rounded border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted">
               {foreignLang}
             </span>
           )}

@@ -7,6 +7,7 @@ import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { SafeLink } from '@/shared/ui/SafeLink'
@@ -145,7 +146,6 @@ export function RunView({
                   onClick={() => {
                     if (confirm(t('runFailConfirm', lang))) start(() => failRun(runId))
                   }}
-                  title={t('runFailAction', lang)}
                   className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/10"
                 >
                   <CircleAlert size={13} /> {t('runFailAction', lang)}
@@ -153,17 +153,18 @@ export function RunView({
               </>
             )}
             {/* Delete — реально удаляет прогон (в отличие от «завершить/неудача»), уводит на /runs */}
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm(t('runDeleteConfirm', lang))) start(() => deleteRun(runId))
-              }}
-              title={t('runDelete', lang)}
-              aria-label={t('runDelete', lang)}
-              className="grid h-8 w-8 place-items-center rounded-md text-muted hover:text-danger"
-            >
-              <Trash2 size={15} />
-            </button>
+            <Tooltip label={t('runDelete', lang)}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(t('runDeleteConfirm', lang))) start(() => deleteRun(runId))
+                }}
+                aria-label={t('runDelete', lang)}
+                className="grid h-8 w-8 place-items-center rounded-md text-muted hover:text-danger"
+              >
+                <Trash2 size={15} />
+              </button>
+            </Tooltip>
           </div>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
