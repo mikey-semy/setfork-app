@@ -11,6 +11,8 @@ import { getUserTemplates } from '@/features/library/queries'
 import { getUserAppearance } from '@/features/settings/appearance'
 import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
 import { HydrationSignal } from '@/shared/ui/HydrationSignal'
+import { TooltipProvider } from '@/shared/ui/Tooltip'
+import { AppToaster } from '@/shared/ui/toast'
 import { TopNav } from '@/widgets/TopNav'
 import { Sidebar } from '@/widgets/Sidebar'
 import { SidebarProvider } from '@/widgets/sidebar-context'
@@ -119,20 +121,23 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <div className="flex min-h-screen flex-col bg-canvas">
-            <SidebarProvider>
-              <Suspense>
-                <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
-              </Suspense>
-              <div className="flex flex-1">
-                <Sidebar lang={lang} authed={!!navUser} topLists={topLists} />
-                <main className="flex min-w-0 flex-1 flex-col">{children}</main>
-              </div>
-            </SidebarProvider>
-            <Footer lang={lang} />
-            <ScrollToTop label={lang === 'ru' ? 'Наверх' : 'Back to top'} />
-            {user && browserNotify && <BrowserNotifier enabled />}
-          </div>
+          <TooltipProvider>
+            <div className="flex min-h-screen flex-col bg-canvas">
+              <SidebarProvider>
+                <Suspense>
+                  <TopNav lang={lang} user={navUser} isAdmin={isAdminHandle(user?.handle)} unread={unread} notifications={notifications} />
+                </Suspense>
+                <div className="flex flex-1">
+                  <Sidebar lang={lang} authed={!!navUser} topLists={topLists} />
+                  <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+                </div>
+              </SidebarProvider>
+              <Footer lang={lang} />
+              <ScrollToTop label={lang === 'ru' ? 'Наверх' : 'Back to top'} />
+              {user && browserNotify && <BrowserNotifier enabled />}
+            </div>
+          </TooltipProvider>
+          <AppToaster />
         </ThemeProvider>
         {process.env.NEXT_PUBLIC_UMAMI_URL && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <script
