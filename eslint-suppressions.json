@@ -480,11 +480,6 @@
       "count": 15
     }
   },
-  "src/features/reactions/Reactions.tsx": {
-    "no-restricted-syntax": {
-      "count": 3
-    }
-  },
   "src/features/releases/actions.ts": {
     "boundaries/dependencies": {
       "count": 2

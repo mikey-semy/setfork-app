@@ -1,15 +1,10 @@
 'use client'
 import { type KeyboardEvent, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import dynamic from 'next/dynamic'
-import { useTheme } from 'next-themes'
 import { AtSign, ImageIcon, Paperclip, SmilePlus } from 'lucide-react'
 import { markdownToolbarGroups } from './markdown-toolbar'
-import emojiData from '@emoji-mart/data'
 import { Markdown } from './Markdown'
 import { caretCoords } from './caret-coords'
-
-const EmojiPicker = dynamic(() => import('@emoji-mart/react'), { ssr: false })
+import { EmojiPickerPopover } from './EmojiPickerPopover'
 
 type Props = {
   name: string
@@ -43,10 +38,6 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
     onValueChange?.(v)
   }
   const [tab, setTab] = useState<'write' | 'preview'>('write')
-  const [emojiOpen, setEmojiOpen] = useState(false)
-  // Пикер эмодзи — портал в body + centered-fixed overlay (не привязан к кнопке,
-  // не уезжает со скроллом, всегда на экране; корневой контейнер overflow-hidden).
-  const toggleEmoji = () => setEmojiOpen((o) => !o)
   const [busy, setBusy] = useState(0)
   const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
   const [users, setUsers] = useState<MentionUser[]>([])
@@ -63,7 +54,6 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   const irefSeq = useRef(0)
   const valRef = useRef(defaultValue) // «живое» значение (без задержки setState) для расчётов
   const hist = useRef({ stack: [defaultValue], idx: 0, at: 0, typing: false }) // история undo/redo
-  const { resolvedTheme } = useTheme()
   const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
 
   const restore = (start: number, end: number) =>
@@ -401,39 +391,19 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
             <button type="button" title={L('упомянуть', 'mention')} aria-label={L('упомянуть', 'mention')} onClick={() => insertAt('@')} className={btn}>
               <AtSign size={15} />
             </button>
-            <span className="inline-flex">
-              <button type="button" title={L('эмодзи', 'emoji')} aria-label={L('эмодзи', 'emoji')} onClick={toggleEmoji} className={btn}>
-                <SmilePlus size={15} />
-              </button>
-              {emojiOpen &&
-                createPortal(
-                  // Centered-fixed overlay: не привязан к кнопке, не уезжает со скроллом,
-                  // всегда на экране (важно на мобиле). Клик по фону закрывает.
-                  <div
-                    className="fixed inset-0 z-100 flex items-center justify-center bg-black/30 p-4"
-                    onClick={() => setEmojiOpen(false)}
-                  >
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <EmojiPicker
-                        data={emojiData}
-                        locale={lang === 'ru' ? 'ru' : 'en'}
-                        theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
-                        previewPosition="none"
-                        skinTonePosition="none"
-                        perLine={8}
-                        emojiSize={20}
-                        emojiButtonSize={30}
-                        maxFrequentRows={2}
-                        onEmojiSelect={(ev: { native?: string }) => {
-                          if (ev.native) insertAt(ev.native)
-                          setEmojiOpen(false)
-                        }}
-                      />
-                    </div>
-                  </div>,
-                  document.body,
-                )}
-            </span>
+            {/* Якорный поповер (рядом с кнопкой), а не centered-модалка; портал в body
+                спасает от overflow редактора. Тултип — на самой кнопке. */}
+            <EmojiPickerPopover
+              lang={lang}
+              side="top"
+              tooltip={L('эмодзи', 'emoji')}
+              onPick={(native) => insertAt(native)}
+              button={
+                <button type="button" aria-label={L('эмодзи', 'emoji')} className={btn}>
+                  <SmilePlus size={15} />
+                </button>
+              }
+            />
           </div>
         )}
       </div>
