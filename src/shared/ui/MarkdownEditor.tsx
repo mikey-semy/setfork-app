@@ -4,6 +4,7 @@ import { AtSign, ImageIcon, Paperclip, SmilePlus } from 'lucide-react'
 import { markdownToolbarGroups } from './markdown-toolbar'
 import { Markdown } from './Markdown'
 import { caretCoords } from './caret-coords'
+import { Tooltip } from './Tooltip'
 import { EmojiPickerPopover } from './EmojiPickerPopover'
 
 type Props = {
@@ -375,22 +376,30 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
               <div key={gi} className="flex items-center gap-0.5">
                 {gi > 0 && <span className="mx-1 h-4 w-px bg-border" />}
                 {group.map((tool, i) => (
-                  <button key={i} type="button" title={tool.t} aria-label={tool.t} onClick={tool.run} className={btn}>
-                    <tool.icon size={15} />
-                  </button>
+                  <Tooltip key={i} label={tool.t}>
+                    <button type="button" aria-label={tool.t} onClick={tool.run} className={btn}>
+                      <tool.icon size={15} />
+                    </button>
+                  </Tooltip>
                 ))}
               </div>
             ))}
             <span className="mx-1 h-4 w-px bg-border" />
-            <button type="button" title={L('картинка', 'image')} aria-label={L('картинка', 'image')} onClick={() => imgInput.current?.click()} className={btn}>
-              <ImageIcon size={15} />
-            </button>
-            <button type="button" title={L('файл', 'attach file')} aria-label={L('файл', 'attach file')} onClick={() => fileInput.current?.click()} className={btn}>
-              <Paperclip size={15} />
-            </button>
-            <button type="button" title={L('упомянуть', 'mention')} aria-label={L('упомянуть', 'mention')} onClick={() => insertAt('@')} className={btn}>
-              <AtSign size={15} />
-            </button>
+            <Tooltip label={L('картинка', 'image')}>
+              <button type="button" aria-label={L('картинка', 'image')} onClick={() => imgInput.current?.click()} className={btn}>
+                <ImageIcon size={15} />
+              </button>
+            </Tooltip>
+            <Tooltip label={L('файл', 'attach file')}>
+              <button type="button" aria-label={L('файл', 'attach file')} onClick={() => fileInput.current?.click()} className={btn}>
+                <Paperclip size={15} />
+              </button>
+            </Tooltip>
+            <Tooltip label={L('упомянуть', 'mention')}>
+              <button type="button" aria-label={L('упомянуть', 'mention')} onClick={() => insertAt('@')} className={btn}>
+                <AtSign size={15} />
+              </button>
+            </Tooltip>
             {/* Якорный поповер (рядом с кнопкой), а не centered-модалка; портал в body
                 спасает от overflow редактора. Тултип — на самой кнопке. */}
             <EmojiPickerPopover
