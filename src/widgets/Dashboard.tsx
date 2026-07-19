@@ -49,8 +49,9 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
 
   return (
     <div className="grid w-full gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[300px_minmax(0,1fr)_300px] lg:px-8">
-      {/* Слева: твои списки (переиспользуемая панель) */}
-      <aside className="lg:sticky lg:top-[68px] lg:self-start">
+      {/* Слева: твои списки (переиспользуемая панель). top = высота шапки (57) + верхний
+          паддинг сетки (py-6 = 24) → панель НЕ подпрыгивает к шапке при скролле. */}
+      <aside className="lg:sticky lg:top-[81px] lg:self-start">
         <ListsPanel
           lang={lang}
           title={t('yourLists', lang)}
@@ -89,7 +90,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
       </div>
 
       {/* Справа: промо-слот + changelog */}
-      <aside className="hidden lg:sticky lg:top-[68px] lg:flex lg:flex-col lg:gap-4 lg:self-start">
+      <aside className="hidden lg:sticky lg:top-[81px] lg:flex lg:flex-col lg:gap-4 lg:self-start">
         <PromoCard lang={lang} />
         <ChangelogCard lang={lang} />
       </aside>
