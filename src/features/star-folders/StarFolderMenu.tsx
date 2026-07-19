@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Check, ChevronDown, Plus } from 'lucide-react'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { createStarFolder, toggleListInFolder } from './actions'
 import type { StarFolder } from './queries'
 
@@ -51,15 +52,16 @@ export function StarFolderMenu({
 
   return (
     <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label={ru ? 'В папку' : 'Add to folder'}
-        title={ru ? 'В папку' : 'Add to folder'}
-        className="inline-flex h-full items-center rounded-r-md border border-l-0 border-border px-1.5 py-1.5 text-muted hover:bg-surface-2 hover:text-ink"
-      >
-        <ChevronDown size={14} />
-      </button>
+      <Tooltip label={ru ? 'В папку' : 'Add to folder'}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={ru ? 'В папку' : 'Add to folder'}
+          className="inline-flex h-full items-center rounded-r-md border border-l-0 border-border px-1.5 py-1.5 text-muted hover:bg-surface-2 hover:text-ink"
+        >
+          <ChevronDown size={14} />
+        </button>
+      </Tooltip>
       <OverlayPanel open={open} onClose={() => setOpen(false)} width={280} className="p-2" title={ru ? 'В папку' : 'Add to folder'}>
               <div className="max-h-[240px] overflow-y-auto">
                 {items.map((f) => {

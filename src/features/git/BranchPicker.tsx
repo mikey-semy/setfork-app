@@ -6,6 +6,7 @@ import { Check, GitBranch, ChevronDown, Plus, Trash2, X } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { GitBranch as Branch } from '@/core'
 import type { Lang } from '@/shared/i18n'
 import { createBranchAction, deleteBranchAction, type BranchActionResult } from './actions'
@@ -77,11 +78,13 @@ export function BranchPicker({
 
   return (
     <div className="relative inline-block">
-      <Button onClick={() => setOpen((v) => !v)} title={ru ? 'Ветки' : 'Branches'} aria-expanded={open}>
-        <GitBranch size={13} className="text-muted" />
-        <span className="max-w-[140px] truncate">{current}</span>
-        <ChevronDown size={12} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
-      </Button>
+      <Tooltip label={ru ? 'Ветки' : 'Branches'}>
+        <Button onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+          <GitBranch size={13} className="text-muted" />
+          <span className="max-w-[140px] truncate">{current}</span>
+          <ChevronDown size={12} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
+        </Button>
+      </Tooltip>
       {open && (
         <>
           {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
@@ -116,16 +119,17 @@ export function BranchPicker({
                         )}
                       </Link>
                       {canManage && !b.isDefault && (
-                        <Button
-                          variant="danger"
-                          size="xs"
-                          disabled={pending}
-                          onClick={() => remove(b.name)}
-                          className="mr-1 hidden shrink-0 p-1 group-hover:inline-flex"
-                          title={ru ? 'Удалить ветку' : 'Delete branch'}
-                        >
-                          <Trash2 size={12} />
-                        </Button>
+                        <Tooltip label={ru ? 'Удалить ветку' : 'Delete branch'}>
+                          <Button
+                            variant="danger"
+                            size="xs"
+                            disabled={pending}
+                            onClick={() => remove(b.name)}
+                            className="mr-1 hidden shrink-0 p-1 group-hover:inline-flex"
+                          >
+                            <Trash2 size={12} />
+                          </Button>
+                        </Tooltip>
                       )}
                     </div>
                   )
