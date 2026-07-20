@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { legalUrl } from '@/shared/docs'
 import { RegisterForm } from '@/features/auth/AuthForms'
 
 export const metadata = { title: 'Create account' }
@@ -21,11 +22,11 @@ export default async function RegisterPage() {
 
         <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
           {t('agreeToTermsPrefix', lang)}{' '}
-          <a href="https://docs.setfork.com/docs/legal/terms" className="text-accent hover:underline">
+          <a href={legalUrl('terms', lang)} className="text-accent hover:underline">
             {t('termsOfService', lang)}
           </a>{' '}
           {t('agreeToTermsAnd', lang)}{' '}
-          <a href="https://docs.setfork.com/docs/legal/privacy" className="text-accent hover:underline">
+          <a href={legalUrl('privacy', lang)} className="text-accent hover:underline">
             {t('privacyPolicy', lang)}
           </a>.
         </p>

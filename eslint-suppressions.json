@@ -94,11 +94,6 @@
       "count": 30
     }
   },
-  "src/app/admin/usage/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 12
-    }
-  },
   "src/app/change-email/page.tsx": {
     "no-restricted-syntax": {
       "count": 9
@@ -297,11 +292,6 @@
   "src/features/gardener/service.ts": {
     "boundaries/dependencies": {
       "count": 5
-    }
-  },
-  "src/features/generation/GenerationReview.tsx": {
-    "no-restricted-syntax": {
-      "count": 25
     }
   },
   "src/features/generation/actions.ts": {

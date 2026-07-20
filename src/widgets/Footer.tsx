@@ -1,12 +1,7 @@
 import Link from 'next/link'
 import { t, type Lang } from '@/shared/i18n'
+import { docsUrl, legalUrl } from '@/shared/docs'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
-
-// Репозиторий приватный — публичная ссылка на него отдаёт 404. Ведём в доки;
-// когда репо откроется, вернуть REPO_URL на github.
-const REPO_URL = 'https://docs.setfork.com'
-// Юридические страницы живут в доках; роуты /terms и /privacy редиректят туда же.
-const LEGAL_URL = `${REPO_URL}/docs/legal`
 // «О проекте» — отдельный маркетинг-лендинг (проект setfork-about). Живёт по ПУТИ
 // /about основного домена (basePath, не поддомен — лучше для SEO). Домен задаётся
 // env-переменной; дефолт — setfork.ru/about (куплен под РФ, ADR-0008).
@@ -25,11 +20,12 @@ export async function Footer({ lang }: { lang: Lang }) {
         <span className="text-muted">© {year} SetFork</span>
         <Link href="/explore" className={link}>{t('explore', lang)}</Link>
         <a href={ABOUT_URL} className={link}>{t('aboutProject', lang)}</a>
-        <a href={REPO_URL} target="_blank" rel="noreferrer" className={link}>{t('sourceCode', lang)}</a>
+        {/* Репозиторий приватный — публичная ссылка отдаёт 404, поэтому ведём в доки. */}
+        <a href={docsUrl('/docs', lang)} target="_blank" rel="noreferrer" className={link}>{t('sourceCode', lang)}</a>
         {/* Contact ведёт на свою форму фидбека (ссылка на issues приватного репо отдавала 404). */}
         <Link href="/feedback" className={link}>{t('feedback', lang)}</Link>
-        <a href={`${LEGAL_URL}/terms`} className={link}>{t('terms', lang)}</a>
-        <a href={`${LEGAL_URL}/privacy`} className={link}>{t('privacy', lang)}</a>
+        <a href={legalUrl('terms', lang)} className={link}>{t('terms', lang)}</a>
+        <a href={legalUrl('privacy', lang)} className={link}>{t('privacy', lang)}</a>
         {donateUrl && (
           <a href={donateUrl} target="_blank" rel="noreferrer" className={link}>
             {t('footerSupport', lang)}
