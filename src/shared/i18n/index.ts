@@ -368,6 +368,32 @@ const DICT = {
   signInGithub: { en: 'Sign in with GitHub', ru: 'Войти через GitHub' },
   signInYandex: { en: 'Sign in with Yandex', ru: 'Войти через Яндекс' },
   signInVk: { en: 'Sign in with VK ID', ru: 'Войти через VK ID' },
+  signInTelegram: { en: 'Sign in with Telegram', ru: 'Войти через Telegram' },
+  // Шаг Telegram-входа (/login/telegram) + сообщения бота ({site} подставляется кодом).
+  tgLoginIntro: {
+    en: 'Open Telegram with the button below and confirm the sign-in with the bot — this page will continue automatically.',
+    ru: 'Открой Telegram по кнопке ниже и подтверди вход у бота — эта страница сама продолжит.',
+  },
+  tgLoginOpen: { en: 'Open Telegram', ru: 'Открыть Telegram' },
+  tgLoginAnother: { en: 'Another sign-in method', ru: 'Другой способ входа' },
+  tgLoginExpired: { en: 'The link expired — start the sign-in again.', ru: 'Ссылка устарела — начни вход заново.' },
+  tgLoginWaiting: { en: 'Waiting for confirmation in Telegram…', ru: 'Жду подтверждение в Telegram…' },
+  tgBotConfirm: {
+    en: 'Someone (hopefully you) is signing in to {site} in a browser via this link. If it was not you — just ignore this message.',
+    ru: 'Кто-то (надеемся, ты) входит на {site} в браузере по этой ссылке. Если это не ты — просто проигнорируй сообщение.',
+  },
+  tgBotConfirmBtn: { en: '✅ Yes, it’s me — sign in', ru: '✅ Да, это я — войти' },
+  tgBotStale: {
+    en: 'The sign-in link expired — start again at {site}/login.',
+    ru: 'Ссылка для входа устарела — начни заново на {site}/login.',
+  },
+  tgBotHello: {
+    en: 'This bot confirms sign-ins to {site}. Start signing in on the site and come back via its link.',
+    ru: 'Этот бот подтверждает вход на {site}. Начни вход на сайте — и вернись сюда по его ссылке.',
+  },
+  tgBotDone: { en: '✅ Sign-in confirmed — go back to your browser.', ru: '✅ Вход подтверждён — вернись в браузер.' },
+  tgBotCbOk: { en: 'Sign-in confirmed', ru: 'Вход подтверждён' },
+  tgBotCbStale: { en: 'Link expired — start the sign-in over', ru: 'Ссылка устарела — начни вход заново' },
   signInDemo: { en: 'Continue as demo', ru: 'Продолжить как demo' },
   tryLiveDemo: { en: 'Try the live demo →', ru: 'Открыть демо →' },
   signOut: { en: 'Sign out', ru: 'Выйти' },
