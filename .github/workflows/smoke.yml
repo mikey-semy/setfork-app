@@ -17,32 +17,31 @@ on:
 jobs:
   smoke:
     runs-on: [self-hosted, setfork]
-    services:
-      postgres:
-        # pgvector-образ: схема использует тип vector (embeddings), обычный postgres:16 его не имеет.
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: sf
-          POSTGRES_PASSWORD: sf
-          POSTGRES_DB: sf
-        # ДИНАМИЧЕСКИЙ хост-порт вместо '5432:5432': раннеры обоих репо живут на
-        # одной машине с общим docker-демоном, поэтому фиксированный порт ловил
-        # «Bind for 0.0.0.0:5432 failed: port is already allocated» — падал тот job,
-        # что стартовал вторым. Реальный порт берём из job.services (шаг ниже).
-        ports: ['5432/tcp']
-        options: >-
-          --health-cmd "pg_isready -U sf"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
     env:
       AUTH_SECRET: ci-placeholder-secret-at-least-32-characters-long
       POLYGON_URL: http://localhost:3000
       SIM_PROXY: 'off' # прокси нужен только для демо-стенда; локалхост — напрямую
       # SETFORK_CORE_URL НЕ задаём → фронт использует inproc-git (системный git)
     steps:
-      - name: DATABASE_URL (порт назначен рантаймом)
-        run: echo "DATABASE_URL=postgres://sf:sf@localhost:${{ job.services.postgres.ports['5432'] }}/sf" >> "$GITHUB_ENV"
+      # `services:` тут не годятся: раннер сам в контейнере (sibling-демон), их
+      # порты публикуются на ХОСТЕ, а localhost внутри раннера — это он сам.
+      # Поднимаем Postgres своей сетью и подключаем к ней раннер (как в core).
+      # pgvector-образ: схема использует тип vector (embeddings).
+      - name: Postgres (sibling-контейнер в сети раннера)
+        run: |
+          NET="ci-${GITHUB_RUN_ID}-smoke"
+          docker network create "$NET" >/dev/null 2>&1 || true
+          docker rm -f "pg-$NET" >/dev/null 2>&1 || true
+          docker run -d --name "pg-$NET" --network "$NET" \
+            -e POSTGRES_USER=sf -e POSTGRES_PASSWORD=sf -e POSTGRES_DB=sf \
+            pgvector/pgvector:pg16 >/dev/null
+          docker network connect "$NET" "$(hostname)" >/dev/null 2>&1 || true
+          for i in $(seq 1 60); do
+            docker exec "pg-$NET" pg_isready -U sf >/dev/null 2>&1 && break
+            sleep 1
+          done
+          echo "CI_NET=$NET" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=postgres://sf:sf@pg-$NET:5432/sf" >> "$GITHUB_ENV"
 
       - name: Checkout frontend
         uses: actions/checkout@v4
@@ -104,3 +103,10 @@ jobs:
           name: playwright-report
           path: _sim/playwright-report
           if-no-files-found: ignore
+
+      - name: cleanup (контейнер и сеть)
+        if: always()
+        run: |
+          docker rm -f "pg-${CI_NET}" >/dev/null 2>&1 || true
+          docker network disconnect "${CI_NET}" "$(hostname)" >/dev/null 2>&1 || true
+          docker network rm "${CI_NET}" >/dev/null 2>&1 || true
