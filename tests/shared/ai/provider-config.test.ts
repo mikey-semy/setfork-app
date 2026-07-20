@@ -25,7 +25,7 @@ describe('resolveAiProvider', () => {
     const cfg = resolveAiProvider({}, { AI_PROVIDER: 'yandex', YC_AI_API_KEY: 'k', YC_AI_FOLDER_ID: 'b1gtest' })
     expect(cfg).toMatchObject({
       provider: 'yandex',
-      baseUrl: 'https://llm.api.cloud.yandex.net/v1',
+      baseUrl: 'https://ai.api.cloud.yandex.net/v1',
       apiKey: 'k',
       headers: { 'x-folder-id': 'b1gtest', 'x-data-logging-enabled': 'false' },
     })

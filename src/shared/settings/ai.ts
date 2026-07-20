@@ -93,7 +93,8 @@ export function resolveAiProvider(
     if (!folder || !apiKey) return null
     return {
       provider,
-      baseUrl: (env.YC_AI_URL || 'https://llm.api.cloud.yandex.net/v1').trim().replace(/\/$/, ''),
+      // Новый хост AI Studio; старый llm.api.cloud.yandex.net тоже жив (оба проверены).
+      baseUrl: (env.YC_AI_URL || 'https://ai.api.cloud.yandex.net/v1').trim().replace(/\/$/, ''),
       apiKey,
       // x-data-logging-enabled:false — запрет использования запросов Яндексом.
       headers: { 'x-folder-id': folder, 'x-data-logging-enabled': 'false' },
