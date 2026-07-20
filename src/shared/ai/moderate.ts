@@ -2,8 +2,8 @@ import 'server-only'
 import { randomBytes } from 'node:crypto'
 import { generateObject, NoObjectGeneratedError } from 'ai'
 import { z } from 'zod'
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { getAiSettings, getApiKey } from '@/shared/settings/ai'
+import { getAiSettings } from '@/shared/settings/ai'
+import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { extractUsage, recordUsage } from './usage'
 
@@ -55,14 +55,9 @@ export async function moderateContent(
   text: string,
   meta: { userId?: string; refId?: string } = {},
 ): Promise<ModerationVerdict | null> {
-  const apiKey = await getApiKey()
-  if (!apiKey || !text.trim()) return null
+  const client = await getAiChatClient()
+  if (!client || !text.trim()) return null
   const settings = await getAiSettings()
-  const openrouter = createOpenRouter({
-    apiKey,
-    appName: 'SetFork',
-    appUrl: process.env.APP_URL || 'http://localhost:3000',
-  })
   const model = await pickChatModel(settings)
   // Spotlighting: пользовательский контент — между маркерами со случайным nonce. Инъекции
   // сложнее «закрыть» блок и выдать себя за инструкции; лимит выше прежних 4000, т.к. теперь
@@ -71,7 +66,7 @@ export async function moderateContent(
   const prompt = `Classify the list content between the markers.\nBEGIN LIST DATA ${nonce}\n${text.slice(0, 12000)}\nEND LIST DATA ${nonce}`
   try {
     const result = await generateObject({
-      model: openrouter.chat(model, { usage: { include: true }, structuredOutputs: { strict: true } }),
+      model: client.chat(model, { structured: true }),
       schema: VERDICT_SCHEMA,
       system: SYSTEM,
       prompt,

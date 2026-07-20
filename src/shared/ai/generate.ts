@@ -1,8 +1,8 @@
 import 'server-only'
 import { generateText } from 'ai'
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { getAiSettings, getApiKey } from '@/shared/settings/ai'
+import { getAiSettings } from '@/shared/settings/ai'
 import { globalBudgetOk } from '@/shared/quota'
+import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { sanitizeCommand } from './sanitize-command'
@@ -127,25 +127,23 @@ async function runListModel(
   feature: AiFeature,
   opts: GenerateOptions,
 ): Promise<GeneratedList | null> {
-  const apiKey = await getApiKey()
-  if (!apiKey) return null
+  const client = await getAiChatClient()
+  if (!client) return null
   const settings = await getAiSettings()
   if (!settings.enabled) return null
   if (!(await globalBudgetOk())) return null // глобальный дневной кап расхода исчерпан
 
-  const web = opts.web ?? false
-  const openrouter = createOpenRouter({
-    apiKey,
-    appName: 'SetFork',
-    appUrl: process.env.APP_URL || 'http://localhost:3000',
-  })
+  // :online-суффикс, models-фолбэк и middle-out — механики OpenRouter; на других
+  // провайдерах зовём голую модель (веб-поиска и авто-фолбэка там нет).
+  const isOpenRouter = client.cfg.provider === 'openrouter'
+  const web = (opts.web ?? false) && isOpenRouter
   const base = await pickChatModel(settings)
   const online = (m: string) => (web && m ? `${m}:online` : m)
   const models = [base, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i).map(online)
 
   try {
     const result = await generateText({
-      model: openrouter.chat(online(base), { usage: { include: true }, extraBody: { models, transforms: ['middle-out'] } }),
+      model: client.chat(online(base), isOpenRouter ? { extraBody: { models, transforms: ['middle-out'] } } : undefined),
       system,
       prompt,
       temperature: settings.temperature,
@@ -206,17 +204,12 @@ export async function generateChangeNote(
   lang: Lang,
   opts: GenerateOptions = {},
 ): Promise<string | null> {
-  const apiKey = await getApiKey()
-  if (!apiKey) return null
+  const client = await getAiChatClient()
+  if (!client) return null
   const settings = await getAiSettings()
   if (!settings.enabled) return null
   if (!(await globalBudgetOk())) return null // глобальный дневной кап расхода исчерпан
 
-  const openrouter = createOpenRouter({
-    apiKey,
-    appName: 'SetFork',
-    appUrl: process.env.APP_URL || 'http://localhost:3000',
-  })
   const model = await pickChatModel(settings)
   const langName = langEnName(lang)
   const compact = (xs: NoteItem[]) =>
@@ -225,7 +218,7 @@ export async function generateChangeNote(
 
   try {
     const result = await generateText({
-      model: openrouter.chat(model, { usage: { include: true } }),
+      model: client.chat(model),
       system: `You write a SHORT changelog note (like a git commit message) describing what changed between two versions of a list, and why it matters. One concise line, imperative mood, in ${langName}. No quotes, no markdown, max ~90 characters.
 ${sp.rule()}`,
       prompt: `${sp.wrap('BEFORE', compact(base) || '(empty)')}\n\n${sp.wrap('AFTER', compact(next) || '(empty)')}\n\nWrite the change note.`,

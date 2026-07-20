@@ -1,7 +1,7 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { getAiSettings, getApiKey, maskKey } from '@/shared/settings/ai'
+import { getAiSettings, getOpenRouterApiKey, maskKey } from '@/shared/settings/ai'
 import { getMediaSettings, maskSecret } from '@/shared/settings/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { getEmailSettings } from '@/shared/settings/email'
@@ -85,7 +85,7 @@ export default async function AdminPage() {
   const [lang, settings, apiKey, media, search, email, online, vapid, achDisplay, maintOn, monetization] = await Promise.all([
     getLang(),
     getAiSettings(),
-    getApiKey(),
+    getOpenRouterApiKey(), // поле ключа в админке — именно OpenRouter (RU-провайдеры задаются env)
     getMediaSettings(),
     getSearchSettings(),
     getEmailSettings(),

@@ -1,5 +1,5 @@
 import 'server-only'
-import { getApiKey } from '@/shared/settings/ai'
+import { getAiProviderConfig } from '@/shared/settings/ai'
 
 export interface ModelOption {
   id: string
@@ -44,14 +44,15 @@ async function fetchList(url: string, init?: RequestInit): Promise<RawModel[]> {
   }
 }
 
-/** Каталог моделей OpenRouter (chat + embedding) с ценами — для селектов в админке. */
+/** Каталог моделей АКТИВНОГО провайдера (OpenAI-совместимый /models) — для
+ *  селектов в админке. Список эмбеддингов — только у OpenRouter (фаза 2). */
 export async function fetchModels(): Promise<ModelsResult> {
-  const key = await getApiKey()
-  const base = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
-  const init = key ? { headers: { Authorization: `Bearer ${key}` } } : undefined
+  const cfg = await getAiProviderConfig()
+  if (!cfg) return { chat: [], embedding: [] }
+  const init = { headers: { Authorization: `Bearer ${cfg.apiKey}`, ...(cfg.headers ?? {}) } }
   const [chat, embedding] = await Promise.all([
-    fetchList(`${base}/models`, init),
-    fetchList(`${base}/embeddings/models`, init),
+    fetchList(`${cfg.baseUrl}/models`, init),
+    cfg.provider === 'openrouter' ? fetchList(`${cfg.baseUrl}/embeddings/models`, init) : Promise.resolve([]),
   ])
   return {
     chat: toOptions(chat),

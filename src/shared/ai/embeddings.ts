@@ -1,5 +1,5 @@
 import 'server-only'
-import { getApiKey } from '@/shared/settings/ai'
+import { getOpenRouterApiKey } from '@/shared/settings/ai'
 import { recordUsage } from './usage'
 
 /** Кто/зачем зовёт эмбеддинги — для учёта расхода в ai_usage (feature 'embed'). */
@@ -10,7 +10,10 @@ export interface EmbedMeta {
 }
 
 // Эмбеддинги через OpenRouter (openai/text-embedding-3-small → 1536 dims,
-// под колонку embeddings.embedding). Один OPENROUTER_API_KEY на чат и эмбеддинги.
+// под колонку embeddings.embedding). НАМЕРЕННО не на провайдер-слое (этап B
+// фаза 2): у RU-провайдеров другая размерность векторов → смена = alter колонки
+// vector(N) + полный реиндекс (админ-панель реиндекса есть). До этого момента
+// эмбеддинги остаются на ключе OpenRouter, даже когда чат уехал на RU-провайдера.
 // Любая ошибка → null, чтобы вызывающий мог пропустить индексацию.
 
 const API_URL = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'
@@ -19,7 +22,7 @@ const DEFAULT_EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'openai/text-embe
 export const EMBEDDING_DIM = 1536
 
 export async function isEmbeddingEnabled(): Promise<boolean> {
-  return Boolean(await getApiKey())
+  return Boolean(await getOpenRouterApiKey())
 }
 
 function headers(key: string): Record<string, string> {
@@ -32,7 +35,7 @@ function headers(key: string): Record<string, string> {
 }
 
 export async function embedTexts(texts: string[], model?: string, meta?: EmbedMeta): Promise<number[][] | null> {
-  const key = await getApiKey()
+  const key = await getOpenRouterApiKey()
   if (!key || texts.length === 0) return null
   const usedModel = model || DEFAULT_EMBEDDING_MODEL
   try {
