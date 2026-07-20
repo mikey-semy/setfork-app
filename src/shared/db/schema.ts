@@ -833,6 +833,10 @@ export const generations = pgTable(
     // Свободный текст, а не pg-enum: набор типов растёт в коде (list-kind.ts), не хочется миграции enum'а.
     // Пусто у старых генераций — там переключателя не было; UI покажет по кандидату/дефолту.
     listKind: text('list_kind'),
+    // Объём списка: 'short' | 'normal' | 'detailed' (shared/ai/detail-level.ts).
+    // Тоже колонкой и тоже свободным текстом: воркер перечитывает её на «ещё вариант»
+    // и на смене типа — иначе выбор терялся бы после первой генерации. NULL = обычный.
+    detail: text('detail'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

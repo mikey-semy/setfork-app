@@ -10,6 +10,7 @@ export interface GenerationView {
   status: GenerationStatus
   /** Тип списка (ADR-0010) — для переключателя в чате. null у старых генераций. */
   listKind: string | null
+  detail: string | null
   candidates: GenerationCandidate[]
 }
 
@@ -33,6 +34,7 @@ export async function getGeneration(id: string, viewerId: string): Promise<Gener
     chosenTemplateId: gen.chosenTemplateId,
     status: gen.status,
     listKind: gen.listKind,
+    detail: gen.detail,
     candidates,
   }
 }

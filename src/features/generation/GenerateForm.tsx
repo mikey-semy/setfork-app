@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useState, useTransition } from 'react'
 import { ArrowUp, Loader2 } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
+import { DEFAULT_DETAIL, DETAIL_LEVELS, detailLabel, type DetailLevel } from '@/shared/ai/detail-level'
 import { startGeneration } from './actions'
 
 /**
@@ -32,6 +33,7 @@ export function GenerateForm({
 }) {
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [q, setQ] = useState(defaultQuery)
+  const [detail, setDetail] = useState<DetailLevel>(DEFAULT_DETAIL)
   const [launching, setLaunching] = useState(false)
   const [, start] = useTransition()
   const boxRef = useRef<HTMLDivElement>(null)
@@ -68,6 +70,7 @@ export function GenerateForm({
     setLaunching(true)
     const fd = new FormData()
     fd.set('q', query)
+    fd.set('detail', detail)
     // Даём спуску проиграться до навигации (экшен создаёт генерацию и редиректит быстро).
     window.setTimeout(() => start(() => startGeneration(fd)), 520)
   }
@@ -145,6 +148,26 @@ export function GenerateForm({
             {launching ? <Loader2 size={17} className="animate-spin" /> : <ArrowUp size={18} />}
           </button>
         </form>
+
+        {/* Объём списка. Уровень уезжает в колонку generations.detail, поэтому переживает
+            «ещё вариант» — и его же можно переключить потом прямо в чате. */}
+        {!launching && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[12px]">
+            {DETAIL_LEVELS.map((lv) => (
+              <button
+                key={lv}
+                type="button"
+                onClick={() => setDetail(lv)}
+                className={cn(
+                  'rounded-full border px-2.5 py-[3px] transition-colors',
+                  detail === lv ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
+                )}
+              >
+                {detailLabel(lv, lang === 'ru')}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Прошлые черновики: за историей логичнее всего идти отсюда же. */}
         {!launching && (

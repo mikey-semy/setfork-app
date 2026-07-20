@@ -8,6 +8,7 @@ import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { sanitizeCommand } from './sanitize-command'
 import { lawBlock } from './list-laws'
 import { classifyListKind, shapeFor, type ListKind } from './list-kind'
+import { detailRule, DEFAULT_DETAIL, type DetailLevel } from './detail-level'
 import { spotlight } from './spotlight'
 import { langEnName, type Lang } from '@/shared/i18n'
 
@@ -47,6 +48,8 @@ export interface GenerateOptions {
   variant?: number
   /** Тип списка (ADR-0010): переопределяет автоклассификацию (переключатель в чате). */
   kind?: ListKind
+  /** Объём: короче / обычный / подробнее (переключатель на старте и в чате). */
+  detail?: DetailLevel
   /** Для учёта расхода: кто вызвал, какая фича, к чему относится. */
   userId?: string
   feature?: AiFeature
@@ -188,7 +191,7 @@ export async function generateListDraft(query: string, lang: Lang, opts: Generat
   const system = `You generate a canonical, high-quality, community-grade reference list as STRICT JSON.${lawBlock(query)}
 All content MUST be in ${langName}.
 ${web ? 'Use up-to-date web search results to make the list accurate and current.\n' : ''}${jsonShapeFor(kind)}
-- Be accurate and practical. Everything in ${langName}.${variantHint}
+- Be accurate and practical. Everything in ${langName}.${variantHint}${detailRule(opts.detail ?? DEFAULT_DETAIL)}
 ${sp.rule()}`
   const feature: AiFeature = opts.feature ?? (opts.variant && opts.variant > 1 ? 'regenerate' : 'generate')
   return runListModel(system, `Create the reference list for the topic below.\n${sp.wrap('TOPIC', query)}`, query, feature, { ...opts, web })
