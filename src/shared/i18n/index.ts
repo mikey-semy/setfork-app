@@ -366,6 +366,8 @@ const DICT = {
   screenshot: { en: 'Screenshot / expected output', ru: 'Скриншот / ожидаемый результат' },
   signIn: { en: 'Sign in', ru: 'Войти' },
   signInGithub: { en: 'Sign in with GitHub', ru: 'Войти через GitHub' },
+  signInYandex: { en: 'Sign in with Yandex', ru: 'Войти через Яндекс' },
+  signInVk: { en: 'Sign in with VK ID', ru: 'Войти через VK ID' },
   signInDemo: { en: 'Continue as demo', ru: 'Продолжить как demo' },
   tryLiveDemo: { en: 'Try the live demo →', ru: 'Открыть демо →' },
   signOut: { en: 'Sign out', ru: 'Выйти' },

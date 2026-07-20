@@ -6,6 +6,7 @@ import { db, users } from '@/shared/db'
 import { startSession } from '@/shared/auth/session'
 import { dummyVerify, hashPassword, verifyPassword } from '@/shared/auth/password'
 import { clientIpFromHeaders } from '@/shared/auth/app-origin'
+import { HANDLE_RE, RESERVED_HANDLES as RESERVED } from '@/shared/auth/handle'
 import { rateLimit } from '@/shared/rate-limit'
 import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
@@ -14,8 +15,6 @@ import { t } from '@/shared/i18n'
 export type AuthResult = { error?: string }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
-const HANDLE_RE = /^[a-z0-9-]{3,30}$/
-const RESERVED = new Set(['explore', 'new', 'settings', 'admin', 'login', 'register', 'notifications', 'my-lists', 'api', 'generate', 'ghost', 'verify-email', 'forgot-password', 'reset-password', 'changelog'])
 
 async function beginSession(user: { id: string; handle: string; name: string | null; avatarUrl: string | null }) {
   await startSession({

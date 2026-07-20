@@ -107,6 +107,8 @@ export type NotifyPrefs = {
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   githubId: bigint('github_id', { mode: 'number' }).unique(), // null для demo-пользователя и ghost
+  yandexId: text('yandex_id').unique(), // Яндекс OAuth: id из login.yandex.ru/info (строка по докам), null = не привязан
+  vkId: bigint('vk_id', { mode: 'number' }).unique(), // VK ID OAuth: user_id, null = не привязан
   email: text('email').unique(), // вход по паролю (null у github/demo/ghost)
   passwordHash: text('password_hash'), // scrypt-хеш (null у oauth)
   emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }), // null = не подтверждена
