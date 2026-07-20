@@ -7,6 +7,7 @@ import { db, generationCandidates, generationMessages, generations, users } from
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { DEFAULT_LANG, isLang, type Lang } from '@/shared/i18n'
+import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { sanitizeCommand } from '@/shared/ai/generate'
 import { classifyListKind, LIST_KINDS } from '@/shared/ai/list-kind'
 import { claimClarify } from '@/shared/ai/council-clarify'
@@ -76,9 +77,14 @@ async function threadQuery(generationId: string, baseQuery: string): Promise<str
 // ── Старт генерации: запрос → задача в очередь → экран ожидания ───────
 export async function startGeneration(formData: FormData): Promise<void> {
   const session = await requireSession()
-  const lang = await getLang()
+  const uiLang = await getLang()
   const query = String(formData.get('q') ?? '').trim().slice(0, 300)
   if (!query) redirect('/search')
+
+  // Язык СПИСКА ≠ язык интерфейса: запрос на английском при русском UI должен давать
+  // английский список. Приоритет: явный выбор пользователя → язык запроса → язык интерфейса.
+  const picked = String(formData.get('lang') ?? '')
+  const lang: Lang = isLang(picked) ? picked : detectTextLang(query, uiLang)
 
   const { allowed } = await checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/search?q=${encodeURIComponent(query)}&e=ratelimited`)
