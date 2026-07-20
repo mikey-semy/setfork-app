@@ -7,6 +7,7 @@ import { hasOpenRouterKey } from '@/shared/settings/ai'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { AdvancedFacets } from '@/features/library/AdvancedFacets'
+import { QualifierSearch } from '@/features/library/QualifierSearch'
 import { ScopeSwitcher, type Scope } from '@/features/library/ScopeSwitcher'
 import { startGeneration } from '@/features/generation/actions'
 import { countLists, getFeed, getPopularTags, type FeedSort } from '@/features/library/queries'
@@ -47,6 +48,7 @@ export default async function SearchPage({
     scope?: string
     psort?: string
     state?: string
+    focus?: string
   }>
 }) {
   const sp = await searchParams
@@ -113,6 +115,14 @@ export default async function SearchPage({
       <section className="min-w-0 flex-1 px-4 py-4 md:px-6">
        <div className="mx-auto flex w-full max-w-[1120px] gap-6">
         <div className="min-w-0 flex-1">
+        {/* Поле поиска живёт НА СТРАНИЦЕ, а не в шапке: в шапке на мобильном оно
+            сжималось до ~100px (рядом с лого, переключателем языка и «Войти») и было
+            бесполезным, да и дублировать функцию страницы, на которой уже находишься,
+            незачем. Здесь оно во всю ширину. */}
+        <div className="mb-4">
+          <QualifierSearch initial={sp.q ?? ''} scope={sp.scope} autoFocus={sp.focus === '1'} lang={lang} />
+        </div>
+
         {/* Мобильный доступ к scope и фильтрам (сайдбар скрыт < lg) */}
         <div className="mb-3 lg:hidden">
           <ScopeSwitcher active={scope} counts={counts} q={sp.q} sort={sp.sort} lang={lang} basePath={BASE} orientation="horizontal" />

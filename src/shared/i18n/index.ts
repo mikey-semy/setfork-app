@@ -199,6 +199,7 @@ const DICT = {
   advancedFilters: { en: 'Advanced', ru: 'Расширенные' },
   filterAuthor: { en: 'Owner', ru: 'Автор' },
   filterMinStars: { en: 'Min stars', ru: 'Мин. звёзд' },
+  searchTitle: { en: 'Search', ru: 'Поиск' },
   searchPrompt: { en: 'Search lists, people and issues', ru: 'Ищите списки, людей и задачи' },
   popularPeople: { en: 'Popular people', ru: 'Популярные люди' },
   searchFor: { en: 'Search for', ru: 'Искать' },

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { ChevronDown, Menu, Plus, Search, Sparkles } from 'lucide-react'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
@@ -52,7 +52,6 @@ export function TopNav({
   notifications?: NotificationItem[]
 }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { toggle: toggleSidebar } = useSidebar() // ☰ = лого-символ списка + тумблер сайдбара
   // На странице поиска поле в шапке = полноценный квалификатор-поиск во всю ширину.
   const isSearch = pathname.startsWith('/search')
@@ -113,7 +112,9 @@ export function TopNav({
     ? user
       ? t('dashboard', lang)
       : ''
-    : pathname.startsWith('/explore')
+    : pathname.startsWith('/search')
+      ? t('searchTitle', lang)
+      : pathname.startsWith('/explore')
       ? t('explore', lang)
       : pathname.startsWith('/my-lists')
         ? t('myLists', lang)
@@ -168,22 +169,12 @@ export function TopNav({
           )}
         </nav>
       )}
-      {/* Страница поиска: поле-квалификатор во всю ширину прямо в шапке (как GitHub Search). */}
-      {isSearch ? (
-        <div className="mx-2 flex min-w-0 flex-1 md:mx-4">
-          <QualifierSearch
-            key={searchParams.get('q') ?? ''}
-            initial={searchParams.get('q') ?? ''}
-            scope={searchParams.get('scope')}
-            autoFocus={searchParams.get('focus') === '1'}
-            lang={lang}
-          />
-        </div>
-      ) : (
-        title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>
-      )}
+      {/* На самой странице поиска поля в шапке НЕТ: оно живёт в контенте страницы во всю
+          ширину. В шапке на мобильном оно сжималось до ~100px (лого + язык + «Войти»
+          съедали ширину) и было бесполезным, да и дублировать функцию страницы незачем. */}
+      {title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>}
 
-      <div className={`flex items-center gap-2 ${isSearch ? '' : 'ml-auto'}`}>
+      <div className="ml-auto flex items-center gap-2">
         {/* Небольшой виджет-поиск с подсказками — на всех страницах, КРОМЕ страницы поиска */}
         {!isSearch && (
           <>
