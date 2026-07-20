@@ -114,7 +114,6 @@ export function ShareButton({
                 target="_blank"
                 rel="noreferrer"
                 aria-label={n.name}
-                title={n.name}
                 className="flex flex-col items-center gap-1 rounded-md px-1 py-2 text-muted hover:bg-surface-2 hover:text-ink"
               >
                 {ICON[n.name]}

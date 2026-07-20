@@ -3,6 +3,7 @@ import { GitFork, Lock, Star } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { TagChip } from '@/shared/ui/TagChip'
 import { cardAccent } from '@/shared/ui/AutoBanner'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
 import type { FeedItem } from './queries'
@@ -57,9 +58,11 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             </span>
           )}
           {item.visibility === 'private' && (
-            <span className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10.5px] text-ink-2" title="private">
-              <Lock size={10} />
-            </span>
+            <Tooltip label="private">
+              <span className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10.5px] text-ink-2">
+                <Lock size={10} />
+              </span>
+            </Tooltip>
           )}
           {item.tags.slice(0, 4).map((tag) => (
             <TagChip key={tag} slug={tag} />
@@ -86,14 +89,15 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
 
       {/* единственное действие — Star */}
       <form action={star} className="shrink-0">
-        <button
-          title="star"
-          className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors hover:border-border-strong ${
-            starred ? 'border-warn text-warn' : 'border-border text-ink-2'
-          }`}
-        >
-          <Star size={14} fill={starred ? 'currentColor' : 'none'} /> {fmt(item.starsCount)}
-        </button>
+        <Tooltip label={t('star', lang)}>
+          <button
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors hover:border-border-strong ${
+              starred ? 'border-warn text-warn' : 'border-border text-ink-2'
+            }`}
+          >
+            <Star size={14} fill={starred ? 'currentColor' : 'none'} /> {fmt(item.starsCount)}
+          </button>
+        </Tooltip>
       </form>
     </div>
   )

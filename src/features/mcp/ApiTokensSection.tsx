@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Check, Copy, KeyRound, Loader2, Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import type { TokenRow } from './queries'
 import { createApiToken, revokeApiToken } from './actions'
@@ -159,12 +160,11 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
                 </div>
               </div>
               <form action={revokeApiToken.bind(null, tk.id)}>
-                <button
-                  className="inline-flex items-center gap-1 rounded p-1.5 text-muted hover:text-danger"
-                  title={ru ? 'Отозвать' : 'Revoke'}
-                >
-                  <Trash2 size={15} />
-                </button>
+                <Tooltip label={ru ? 'Отозвать' : 'Revoke'}>
+                  <button className="inline-flex items-center gap-1 rounded p-1.5 text-muted hover:text-danger">
+                    <Trash2 size={15} />
+                  </button>
+                </Tooltip>
               </form>
             </div>
             )

@@ -1,6 +1,7 @@
 import { Users, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { addCollaborator, removeCollaborator } from './actions'
 import type { CollaboratorRow } from './queries'
 
@@ -41,13 +42,14 @@ export function CollaboratorsSection({
               <span className="text-[13.5px] font-medium text-ink">{c.handle}</span>
               <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">{c.role}</span>
               <form action={removeCollaborator.bind(null, templateId, c.userId)} className="ml-auto">
-                <button
-                  className="inline-flex items-center gap-1 rounded p-1 text-muted hover:text-danger"
-                  aria-label={t('removeLabel', lang)}
-                  title={t('removeLabel', lang)}
-                >
-                  <X size={15} />
-                </button>
+                <Tooltip label={t('removeLabel', lang)}>
+                  <button
+                    className="inline-flex items-center gap-1 rounded p-1 text-muted hover:text-danger"
+                    aria-label={t('removeLabel', lang)}
+                  >
+                    <X size={15} />
+                  </button>
+                </Tooltip>
               </form>
             </div>
           ))}

@@ -9,6 +9,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Badge } from '@/shared/ui/badge'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
 import { ListHeader } from '@/widgets/ListHeader'
@@ -36,9 +37,11 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-[16px] font-bold text-ink">Releases</h1>
           <div className="flex items-center gap-2">
-            <a href={`${base}/releases.atom`} title="Atom feed" className="rounded-md border border-border p-1.5 text-muted hover:text-ink">
-              <Rss size={14} />
-            </a>
+            <Tooltip label="Atom feed">
+              <a href={`${base}/releases.atom`} className="rounded-md border border-border p-1.5 text-muted hover:text-ink">
+                <Rss size={14} />
+              </a>
+            </Tooltip>
             {canManage && (
               <Link
                 href={`${base}/releases/new`}

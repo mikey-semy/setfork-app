@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { LOCALES, type Lang } from '@/shared/i18n'
+import { Tooltip } from './Tooltip'
 
 export function LangSwitch({ lang }: { lang: Lang }) {
   const router = useRouter()
@@ -65,17 +66,17 @@ export function ThemeModeSwitch({ labels = false, lang }: { labels?: boolean; la
     return (
       <span className="inline-flex gap-0.5 rounded-full border border-border bg-surface-2 p-0.5">
         {modes.map(({ value, label, icon: Icon }) => (
-          <button
-            key={value}
-            aria-label={label}
-            title={label}
-            onClick={() => setTheme(value)}
-            className={`grid h-[24px] w-[24px] place-items-center rounded-full transition-colors ${
-              current === value ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
-            }`}
-          >
-            <Icon size={13} />
-          </button>
+          <Tooltip key={value} label={label}>
+            <button
+              aria-label={label}
+              onClick={() => setTheme(value)}
+              className={`grid h-[24px] w-[24px] place-items-center rounded-full transition-colors ${
+                current === value ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
+              }`}
+            >
+              <Icon size={13} />
+            </button>
+          </Tooltip>
         ))}
       </span>
     )

@@ -5,6 +5,7 @@ import { Check, Loader2 } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { TagInput } from '@/shared/ui/TagInput'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { ModelSelect, NONE, type Option } from './ModelSelect'
 import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } from './actions'
 
@@ -74,14 +75,16 @@ function AvatarPicker({
 
   return (
     <div className="shrink-0">
-      <button type="button" onClick={() => setOpen((v) => !v)} className="relative block" title={say('Change', 'Сменить')}>
-        <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-(--accent)" />
-        {busy && (
-          <span className="absolute inset-0 grid place-items-center rounded-full bg-black/50">
-            <Loader2 size={16} className="animate-spin text-white" />
-          </span>
-        )}
-      </button>
+      <Tooltip label={say('Change', 'Сменить')}>
+        <button type="button" onClick={() => setOpen((v) => !v)} className="relative block">
+          <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-(--accent)" />
+          {busy && (
+            <span className="absolute inset-0 grid place-items-center rounded-full bg-black/50">
+              <Loader2 size={16} className="animate-spin text-white" />
+            </span>
+          )}
+        </button>
+      </Tooltip>
       {open && (
         <div className="mt-2 w-[232px] rounded-md border border-border bg-surface p-1.5">
           <div className="grid max-h-[136px] grid-cols-6 gap-1 overflow-y-auto">
@@ -158,9 +161,11 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
 
         <div className="min-w-0 flex-1 space-y-2.5">
           <div className="flex items-center gap-2">
-            <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted" title={say('id is fixed: avatar name and who in past chats', 'id не меняется: имя аватарки и who в прошлых беседах')}>
-              {e.id}
-            </code>
+            <Tooltip label={say('id is fixed: avatar name and who in past chats', 'id не меняется: имя аватарки и who в прошлых беседах')}>
+              <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
+                {e.id}
+              </code>
+            </Tooltip>
             <div className="ml-auto flex items-center gap-1.5">
               <span className="text-[11.5px] text-muted">{say('On', 'Вкл')}</span>
               <Switch name="enabled" checked={enabled} onCheckedChange={setEnabled} />

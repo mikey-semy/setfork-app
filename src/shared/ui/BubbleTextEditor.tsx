@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
 import { AtSign, MoreHorizontal, SmilePlus } from 'lucide-react'
@@ -9,6 +8,7 @@ import { markdownToolbarGroups } from './markdown-toolbar'
 import emojiData from '@emoji-mart/data'
 import { caretCoords } from './caret-coords'
 import { Tooltip } from './Tooltip'
+import { Popover, PopoverAnchor, PopoverContent } from './popover'
 
 const EmojiPicker = dynamic(() => import('@emoji-mart/react'), { ssr: false })
 const tbtn = 'grid h-7 w-7 place-items-center rounded text-muted hover:bg-surface-2 hover:text-ink'
@@ -216,17 +216,38 @@ export function BubbleTextEditor({
           ))}
           <span className="mx-0.5 h-4 w-px bg-border" />
           <div className="relative">
-            <Tooltip label={L('ещё', 'more')}>
-              <button
-                type="button"
-                aria-label={L('ещё', 'more')}
-                aria-expanded={moreOpen}
-                onClick={() => setMoreOpen((o) => !o)}
-                className={tbtn}
-              >
-                <MoreHorizontal size={14} />
-              </button>
-            </Tooltip>
+            {/* Пикер эмодзи — ЯКОРНЫЙ (не по центру экрана). Якорь — кнопка «ещё»:
+                она остаётся смонтированной, в отличие от самой кнопки эмодзи, которая
+                живёт в закрывающемся меню. Открытием управляет emojiOpen. */}
+            <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+              <Tooltip label={L('ещё', 'more')}>
+                <PopoverAnchor asChild>
+                  <button
+                    type="button"
+                    aria-label={L('ещё', 'more')}
+                    aria-expanded={moreOpen}
+                    onClick={() => setMoreOpen((o) => !o)}
+                    className={tbtn}
+                  >
+                    <MoreHorizontal size={14} />
+                  </button>
+                </PopoverAnchor>
+              </Tooltip>
+              <PopoverContent side="bottom" align="end" className="border-0 bg-transparent p-0 shadow-none">
+                <EmojiPicker
+                  data={emojiData}
+                  locale={lang === 'ru' ? 'ru' : 'en'}
+                  theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                  previewPosition="none"
+                  skinTonePosition="none"
+                  perLine={8}
+                  onEmojiSelect={(ev: { native?: string }) => {
+                    if (ev.native) insertAtRange(ev.native, savedSel.current[0], savedSel.current[1])
+                    setEmojiOpen(false)
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
             {moreOpen && (
               // Сетка с переносом: меню тоже не должно быть шире экрана.
               <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-[188px] flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
@@ -290,26 +311,6 @@ export function BubbleTextEditor({
         </div>
       )}
 
-      {emojiOpen &&
-        createPortal(
-          <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/30 p-4" onClick={() => setEmojiOpen(false)}>
-            <div onClick={(e) => e.stopPropagation()}>
-              <EmojiPicker
-                data={emojiData}
-                locale={lang === 'ru' ? 'ru' : 'en'}
-                theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
-                previewPosition="none"
-                skinTonePosition="none"
-                perLine={8}
-                onEmojiSelect={(ev: { native?: string }) => {
-                  if (ev.native) insertAtRange(ev.native, savedSel.current[0], savedSel.current[1])
-                  setEmojiOpen(false)
-                }}
-              />
-            </div>
-          </div>,
-          document.body,
-        )}
     </div>
   )
 }

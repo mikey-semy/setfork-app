@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Check, GitMerge, Loader2, Pencil, RefreshCw, Star, Trash2, X } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Badge } from '@/shared/ui/badge'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import type { TagRow } from './queries'
 import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from './actions'
@@ -126,13 +127,14 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
 
 function IconBtn({ children, title, onClick, active, danger }: { children: React.ReactNode; title: string; onClick: () => void; active?: boolean; danger?: boolean }) {
   return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      className={`grid size-7 place-items-center rounded-md border border-border hover:border-border-strong ${active ? 'text-accent' : danger ? 'text-ink-2 hover:text-danger' : 'text-ink-2 hover:text-ink'}`}
-    >
-      {children}
-    </button>
+    <Tooltip label={title}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`grid size-7 place-items-center rounded-md border border-border hover:border-border-strong ${active ? 'text-accent' : danger ? 'text-ink-2 hover:text-danger' : 'text-ink-2 hover:text-ink'}`}
+      >
+        {children}
+      </button>
+    </Tooltip>
   )
 }

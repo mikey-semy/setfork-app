@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { generateChangeNoteAction } from './actions'
 
 // Поле «Что изменили и почему» + кнопка генерации примечания из диффа версий
@@ -65,16 +66,17 @@ export function ChangeNoteField({
           }`}
         />
         {/* Иконка-генерация внутри инпута справа, как commit-message в VSCode */}
-        <button
-          type="button"
-          onClick={generate}
-          disabled={busy}
-          title={ru ? 'Сгенерировать из изменений' : 'Generate commit message from changes'}
-          aria-label={ru ? 'Сгенерировать из изменений' : 'Generate commit message from changes'}
-          className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2"
-        >
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-        </button>
+        <Tooltip label={ru ? 'Сгенерировать из изменений' : 'Generate commit message from changes'}>
+          <button
+            type="button"
+            onClick={generate}
+            disabled={busy}
+            aria-label={ru ? 'Сгенерировать из изменений' : 'Generate commit message from changes'}
+            className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2"
+          >
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+          </button>
+        </Tooltip>
       </div>
       {invalid && <p className="mt-1 text-[12px] text-danger">{ru ? 'Опишите, что изменили и почему.' : 'Describe what you changed and why.'}</p>}
       {err && <p className="mt-1 text-[12px] text-danger">{err}</p>}

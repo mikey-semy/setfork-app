@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import { removeListCover, setListAccent, setListCover } from './cover-actions'
 
@@ -65,32 +66,33 @@ export function CoverSection({
     <section className={card}>
       <div className="mb-4 font-semibold text-ink">{ru ? 'Обложка' : 'Cover'}</div>
 
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault()
-          setOver(true)
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setOver(false)
-          upload(e.dataTransfer.files?.[0])
-        }}
-        className={`relative block h-[150px] w-full overflow-hidden rounded-lg border-2 ${over ? 'border-accent' : 'border-dashed border-border'}`}
-        title={ru ? 'Перетащи или выбери картинку' : 'Drag or pick an image'}
-      >
-        {cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={cover} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <AutoBanner seed={templateId} accent={accent} label={slug} height="h-full" />
-        )}
-        <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-black/0 text-white opacity-0 transition-opacity hover:bg-black/35 hover:opacity-100">
-          {busy ? <Loader2 size={18} className="animate-spin" /> : <ImagePlus size={18} />}
-        </span>
-      </button>
+      <Tooltip label={ru ? 'Перетащи или выбери картинку' : 'Drag or pick an image'}>
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setOver(true)
+          }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setOver(false)
+            upload(e.dataTransfer.files?.[0])
+          }}
+          className={`relative block h-[150px] w-full overflow-hidden rounded-lg border-2 ${over ? 'border-accent' : 'border-dashed border-border'}`}
+        >
+          {cover ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cover} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <AutoBanner seed={templateId} accent={accent} label={slug} height="h-full" />
+          )}
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-black/0 text-white opacity-0 transition-opacity hover:bg-black/35 hover:opacity-100">
+            {busy ? <Loader2 size={18} className="animate-spin" /> : <ImagePlus size={18} />}
+          </span>
+        </button>
+      </Tooltip>
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => upload(e.target.files?.[0])} />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

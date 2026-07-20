@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import { GitFork, Star } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
@@ -31,6 +34,9 @@ export function ActivityGraph({
   /** База профиля для ссылок селектора (например `/mike`). */
   base?: string
 }) {
+  // ОДИН тултип на весь хитмап: ячеек ~370, и вешать на каждую отдельный Radix-инстанс
+  // расточительно. Стиль — как у shared/ui/Tooltip, позиция считается от ячейки.
+  const [tip, setTip] = useState<{ text: string; left: number; top: number } | null>(null)
   const map = new Map(contributions.map((c) => [c.date, c.count]))
   const total = contributions.reduce((s, c) => s + c.count, 0)
   const today = new Date()
@@ -138,7 +144,15 @@ export function ActivityGraph({
             дни), без JS; внутренний ltr возвращает нормальный порядок недель. Скролл —
             тонкий полупрозрачный (.scroll-thin), не пугает на узких экранах. */}
         <div className="scroll-thin min-w-0 flex-1 overflow-x-auto pb-1" style={{ direction: 'rtl' }}>
-          <div className="inline-flex flex-col gap-1" style={{ direction: 'ltr' }}>
+          <div className="relative inline-flex flex-col gap-1" style={{ direction: 'ltr' }}>
+            {tip && (
+              <div
+                className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-[11.5px] leading-snug text-ink shadow-card"
+                style={{ left: tip.left, top: tip.top }}
+              >
+                {tip.text}
+              </div>
+            )}
             {/* Строка месяцев ровно h-[13px] (= spacer колонки дней), текст прижат вниз к клеткам. */}
             <div className="flex h-[13px] items-end gap-[3px] text-[10px] leading-none text-muted">
               {months.map((m, i) => (
@@ -156,7 +170,15 @@ export function ActivityGraph({
                     ) : (
                       <div
                         key={di}
-                        title={`${cell.count} ${t('contributions', lang)} · ${cell.date}`}
+                        onMouseEnter={(e) => {
+                          const el = e.currentTarget
+                          setTip({
+                            text: `${cell.count} ${t('contributions', lang)} · ${cell.date}`,
+                            left: el.offsetLeft + el.offsetWidth / 2,
+                            top: el.offsetTop - 4,
+                          })
+                        }}
+                        onMouseLeave={() => setTip(null)}
                         className={`h-[11px] w-[11px] rounded-[2px] ${LEVEL[level(cell.count)]}`}
                       />
                     ),

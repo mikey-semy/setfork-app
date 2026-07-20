@@ -3,7 +3,8 @@ import { GitFork, Lock, Star } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { TagChip } from '@/shared/ui/TagChip'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
-import { tr, type Lang } from '@/shared/i18n'
+import { Tooltip } from '@/shared/ui/Tooltip'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { toggleStar } from '@/features/library/actions'
 import type { FeedItem } from './queries'
 
@@ -46,14 +47,15 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
             <GitFork size={12} /> {fmt(item.forksCount)}
           </span>
           <form action={star}>
-            <button
-              title="star"
-              className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors hover:border-border-strong ${
-                starred ? 'border-warn text-warn' : 'border-border text-ink-2'
-              }`}
-            >
-              <Star size={13} fill={starred ? 'currentColor' : 'none'} /> {fmt(item.starsCount)}
-            </button>
+            <Tooltip label={t('star', lang)}>
+              <button
+                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors hover:border-border-strong ${
+                  starred ? 'border-warn text-warn' : 'border-border text-ink-2'
+                }`}
+              >
+                <Star size={13} fill={starred ? 'currentColor' : 'none'} /> {fmt(item.starsCount)}
+              </button>
+            </Tooltip>
           </form>
         </div>
       </div>

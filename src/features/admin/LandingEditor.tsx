@@ -7,6 +7,7 @@ import { cn } from '@/shared/lib/cn'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import type { LandingContent, LandingCopy } from '@/shared/settings/landing'
 import { saveLanding, suggestSlogan, uploadLandingImage } from './landing-actions'
@@ -138,15 +139,16 @@ function LimitedField({
   }
 
   const aiBtn = onSuggest && (
-    <button
-      type="button"
-      onClick={suggest}
-      disabled={busy}
-      title="AI"
-      className="grid size-6 place-items-center rounded text-accent hover:bg-(--accent-soft) disabled:opacity-50"
-    >
-      {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-    </button>
+    <Tooltip label="AI">
+      <button
+        type="button"
+        onClick={suggest}
+        disabled={busy}
+        className="grid size-6 place-items-center rounded text-accent hover:bg-(--accent-soft) disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+      </button>
+    </Tooltip>
   )
 
   return (

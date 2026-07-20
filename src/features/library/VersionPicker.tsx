@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { ArrowLeftRight } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 // Выбор пары версий (shadcn Select) — масштабируется на десятки/сотни версий.
 export function VersionPicker({
@@ -46,15 +47,16 @@ export function VersionPicker({
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-[12px] text-muted">{fromLabel}</span>
       {picker(from, (v) => go(v, to))}
-      <button
-        type="button"
-        onClick={() => go(to, from)}
-        title={swapLabel}
-        aria-label={swapLabel}
-        className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted hover:border-border-strong hover:text-ink"
-      >
-        <ArrowLeftRight size={14} />
-      </button>
+      <Tooltip label={swapLabel}>
+        <button
+          type="button"
+          onClick={() => go(to, from)}
+          aria-label={swapLabel}
+          className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted hover:border-border-strong hover:text-ink"
+        >
+          <ArrowLeftRight size={14} />
+        </button>
+      </Tooltip>
       <span className="text-[12px] text-muted">{toLabel}</span>
       {picker(to, (v) => go(from, v))}
     </div>

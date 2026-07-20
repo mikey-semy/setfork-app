@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { ACHIEVEMENT_KEYS, type AchievementKey } from '@/features/profile/achievements'
 import { ACH_META } from '@/features/profile/achievement-meta'
 import type { AchDisplayMap } from '@/features/profile/achievement-config'
@@ -81,34 +82,35 @@ function AchRow({
   return (
     <div className={`flex items-center gap-3 rounded-md border border-border bg-surface-2 p-2.5 ${d.enabled ? '' : 'opacity-60'}`}>
       {/* Плитка-дропзона: картинка или иконка-фолбэк. */}
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault()
-          setOver(true)
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setOver(false)
-          onUpload(k, e.dataTransfer.files?.[0])
-        }}
-        title={ru ? 'Перетащи или выбери картинку' : 'Drag or pick an image'}
-        className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border ${
-          over ? 'border-accent bg-(--accent-soft)' : 'border-dashed border-border'
-        }`}
-      >
-        {d.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={d.imageUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <Icon size={20} className={meta.color} />
-        )}
-        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-opacity hover:bg-black/40 hover:opacity-100">
-          <ImagePlus size={16} />
-        </span>
-      </button>
+      <Tooltip label={ru ? 'Перетащи или выбери картинку' : 'Drag or pick an image'}>
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setOver(true)
+          }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setOver(false)
+            onUpload(k, e.dataTransfer.files?.[0])
+          }}
+          className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md border ${
+            over ? 'border-accent bg-(--accent-soft)' : 'border-dashed border-border'
+          }`}
+        >
+          {d.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={d.imageUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Icon size={20} className={meta.color} />
+          )}
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition-opacity hover:bg-black/40 hover:opacity-100">
+            <ImagePlus size={16} />
+          </span>
+        </button>
+      </Tooltip>
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => onUpload(k, e.target.files?.[0])} />
 
       <div className="min-w-0 flex-1">
@@ -117,14 +119,15 @@ function AchRow({
       </div>
 
       {d.imageUrl && (
-        <button
-          type="button"
-          onClick={() => onClear(k)}
-          title={ru ? 'Сбросить к иконке' : 'Reset to icon'}
-          className="shrink-0 rounded p-1 text-muted hover:bg-surface hover:text-danger"
-        >
-          <X size={15} />
-        </button>
+        <Tooltip label={ru ? 'Сбросить к иконке' : 'Reset to icon'}>
+          <button
+            type="button"
+            onClick={() => onClear(k)}
+            className="shrink-0 rounded p-1 text-muted hover:bg-surface hover:text-danger"
+          >
+            <X size={15} />
+          </button>
+        </Tooltip>
       )}
       {pending && <Loader2 size={14} className="shrink-0 animate-spin text-muted" />}
       <Switch checked={d.enabled} onCheckedChange={(v) => onToggle(k, v)} />

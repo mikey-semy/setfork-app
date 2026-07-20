@@ -2,6 +2,7 @@
 import { useTransition } from 'react'
 import { SmilePlus } from 'lucide-react'
 import { EmojiPickerPopover } from '@/shared/ui/EmojiPickerPopover'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { ReactionAgg } from './constants'
 import { toggleReaction } from './actions'
 
@@ -32,19 +33,19 @@ export function Reactions({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {shown.map((r) => (
-        <button
-          key={r.emoji}
-          type="button"
-          disabled={!canReact || pending}
-          onClick={() => react(r.emoji)}
-          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[12.5px] transition-colors disabled:opacity-60 ${
-            r.mine ? 'border-accent bg-accent/10 text-ink' : 'border-border bg-surface-2 text-ink-2 hover:border-border-strong'
-          }`}
-          title={r.mine ? say('remove reaction', 'снять реакцию') : say('reaction', 'реакция')}
-        >
-          <span>{r.emoji}</span>
-          <span className="tabular-nums">{r.count}</span>
-        </button>
+        <Tooltip key={r.emoji} label={r.mine ? say('remove reaction', 'снять реакцию') : say('reaction', 'реакция')}>
+          <button
+            type="button"
+            disabled={!canReact || pending}
+            onClick={() => react(r.emoji)}
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[12.5px] transition-colors disabled:opacity-60 ${
+              r.mine ? 'border-accent bg-accent/10 text-ink' : 'border-border bg-surface-2 text-ink-2 hover:border-border-strong'
+            }`}
+          >
+            <span>{r.emoji}</span>
+            <span className="tabular-nums">{r.count}</span>
+          </button>
+        </Tooltip>
       ))}
 
       {canReact && (
