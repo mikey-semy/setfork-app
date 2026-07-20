@@ -109,6 +109,7 @@ export const users = pgTable('users', {
   githubId: bigint('github_id', { mode: 'number' }).unique(), // null для demo-пользователя и ghost
   yandexId: text('yandex_id').unique(), // Яндекс OAuth: id из login.yandex.ru/info (строка по докам), null = не привязан
   vkId: bigint('vk_id', { mode: 'number' }).unique(), // VK ID OAuth: user_id, null = не привязан
+  telegramId: bigint('telegram_id', { mode: 'number' }).unique(), // Telegram (бот-логин): tg user id, null = не привязан
   email: text('email').unique(), // вход по паролю (null у github/demo/ghost)
   passwordHash: text('password_hash'), // scrypt-хеш (null у oauth)
   emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }), // null = не подтверждена
@@ -130,6 +131,21 @@ export const users = pgTable('users', {
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
   // Кураторский аккаунт библиотеки: правки садовника на его списках автопринимаются.
   curated: boolean('curated').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// ── Telegram bot-login (одноразовые токены deep-link входа) ──────────
+// Виджет oauth.telegram.org в РФ заблокирован, поэтому вход через бота:
+// браузер получает токен (кука + t.me-ссылка), пользователь подтверждает в
+// боте, webhook заполняет tg_*, браузер поллит и получает сессию.
+export const telegramLoginTokens = pgTable('telegram_login_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  token: text('token').notNull().unique(), // hex из randomBytes; живёт 10 минут
+  tgId: bigint('tg_id', { mode: 'number' }), // null до подтверждения в боте
+  tgName: text('tg_name'),
+  tgUsername: text('tg_username'),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 

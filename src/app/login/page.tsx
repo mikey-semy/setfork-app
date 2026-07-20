@@ -77,6 +77,15 @@ export default async function LoginPage({
           </Link>
         )}
 
+        {oauth.telegram && (
+          <Link
+            href="/api/auth/telegram"
+            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[14px] font-semibold text-primary-fg"
+          >
+            <TelegramMark /> {t("signInTelegram", lang)}
+          </Link>
+        )}
+
         {oauth.vk && (
           <Link
             href="/api/auth/vk"
@@ -156,6 +165,20 @@ function YandexMark() {
       />
       <path
         d="M13.32 7.666h-.924c-1.694 0-2.585.858-2.585 2.123 0 1.43.616 2.1 1.881 2.959l1.045.704-3.003 4.487H7.49l2.695-4.014c-1.55-1.111-2.42-2.19-2.42-4.015 0-2.288 1.595-3.85 4.62-3.85h3.003v11.868H13.32V7.666z"
+        fill="#fff"
+      />
+    </svg>
+  );
+}
+
+// Telegram: канонический «самолётик» (тот же контур, что public/telegram.svg
+// в devon-store-frontend / simple-icons) на фирменном синем #26A5E4.
+function TelegramMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+      <circle cx="12" cy="12" r="12" fill="#26A5E4" />
+      <path
+        d="M16.906 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"
         fill="#fff"
       />
     </svg>
