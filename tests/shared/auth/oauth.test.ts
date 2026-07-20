@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { oauthEnabled, parseDisabledProviders } from '@/shared/auth/oauth'
 
-const ENV_KEYS = ['GITHUB_CLIENT_ID', 'YANDEX_CLIENT_ID', 'VK_CLIENT_ID', 'AUTH_DISABLED_PROVIDERS'] as const
+const ENV_KEYS = [
+  'GITHUB_CLIENT_ID',
+  'YANDEX_CLIENT_ID',
+  'VK_CLIENT_ID',
+  'TELEGRAM_BOT_TOKEN',
+  'TELEGRAM_BOT_USERNAME',
+  'AUTH_DISABLED_PROVIDERS',
+] as const
 let saved: Record<string, string | undefined>
 
 beforeEach(() => {
@@ -32,19 +39,26 @@ describe('parseDisabledProviders', () => {
 
 describe('oauthEnabled', () => {
   it('без кредов все выключены', () => {
-    expect(oauthEnabled()).toEqual({ github: false, yandex: false, vk: false })
+    expect(oauthEnabled()).toEqual({ github: false, yandex: false, vk: false, telegram: false })
   })
 
   it('провайдер включается кредами', () => {
     process.env.YANDEX_CLIENT_ID = 'x'
     process.env.VK_CLIENT_ID = 'y'
-    expect(oauthEnabled()).toEqual({ github: false, yandex: true, vk: true })
+    expect(oauthEnabled()).toEqual({ github: false, yandex: true, vk: true, telegram: false })
+  })
+
+  it('telegram требует и токен бота, и username', () => {
+    process.env.TELEGRAM_BOT_TOKEN = 't'
+    expect(oauthEnabled().telegram).toBe(false)
+    process.env.TELEGRAM_BOT_USERNAME = 'setforkbot'
+    expect(oauthEnabled().telegram).toBe(true)
   })
 
   it('AUTH_DISABLED_PROVIDERS скрывает провайдера при живых кредах', () => {
     process.env.GITHUB_CLIENT_ID = 'gh'
     process.env.YANDEX_CLIENT_ID = 'ya'
     process.env.AUTH_DISABLED_PROVIDERS = 'github'
-    expect(oauthEnabled()).toEqual({ github: false, yandex: true, vk: false })
+    expect(oauthEnabled()).toEqual({ github: false, yandex: true, vk: false, telegram: false })
   })
 })

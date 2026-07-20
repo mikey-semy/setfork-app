@@ -40,16 +40,25 @@ export type OauthProfile = {
 }
 
 /**
- * Вход через Яндекс/VK: находим по внешнему id или создаём. handle генерим сами
- * (у провайдера может не быть логина) и дальше НЕ синхронизируем — он наш.
+ * Вход через Яндекс/VK/Telegram: находим по внешнему id или создаём. handle
+ * генерим сами (у провайдера может не быть логина) и дальше НЕ синхронизируем.
  */
-export async function upsertOauthUser(provider: 'yandex' | 'vk', p: OauthProfile): Promise<SessionUser> {
+export async function upsertOauthUser(provider: 'yandex' | 'vk' | 'telegram', p: OauthProfile): Promise<SessionUser> {
   const byExternalId =
-    provider === 'yandex' ? eq(users.yandexId, String(p.externalId)) : eq(users.vkId, Number(p.externalId))
+    provider === 'yandex'
+      ? eq(users.yandexId, String(p.externalId))
+      : provider === 'vk'
+        ? eq(users.vkId, Number(p.externalId))
+        : eq(users.telegramId, Number(p.externalId))
   const [existing] = await db.select().from(users).where(byExternalId).limit(1)
   if (existing) return toSession(existing)
 
-  const idValue = provider === 'yandex' ? { yandexId: String(p.externalId) } : { vkId: Number(p.externalId) }
+  const idValue =
+    provider === 'yandex'
+      ? { yandexId: String(p.externalId) }
+      : provider === 'vk'
+        ? { vkId: Number(p.externalId) }
+        : { telegramId: Number(p.externalId) }
   let email: string | null = p.email?.trim().toLowerCase() || null
   if (email) {
     const [byEmail] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
