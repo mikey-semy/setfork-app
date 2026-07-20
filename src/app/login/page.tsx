@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
+import { oauthEnabled } from '@/shared/auth/oauth'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { redirect } from 'next/navigation'
@@ -12,7 +13,10 @@ export const metadata = { title: 'Sign in' }
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ e?: string; reset?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (session) redirect('/')
-  const hasGithub = !!process.env.GITHUB_CLIENT_ID
+  // Провайдеры включаются кредами в env; AUTH_DISABLED_PROVIDERS скрывает не удаляя
+  // (RU-прод: github выключен, на .com может остаться). См. shared/auth/oauth.
+  const oauth = oauthEnabled()
+  const hasOauth = oauth.github || oauth.yandex || oauth.vk
   // На проде задаётся DEMO_URL=https://demo.setfork.com → «demo» ведёт в изолированную
   // песочницу (там свой богатый контент), а не логинит пустого юзера в прод-базе. На
   // самом demo-сайте эту переменную НЕ задаём — там обычный demo-вход. (Серверный
@@ -46,7 +50,25 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <PasskeyLoginButton lang={lang} />
         </div>
 
-        {hasGithub && (
+        {oauth.yandex && (
+          <Link
+            href="/api/auth/yandex"
+            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[14px] font-semibold text-primary-fg"
+          >
+            <YandexMark /> {t('signInYandex', lang)}
+          </Link>
+        )}
+
+        {oauth.vk && (
+          <Link
+            href="/api/auth/vk"
+            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[14px] font-semibold text-primary-fg"
+          >
+            <VkMark /> {t('signInVk', lang)}
+          </Link>
+        )}
+
+        {oauth.github && (
           <Link
             href="/api/auth/github"
             className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[14px] font-semibold text-primary-fg"
@@ -59,7 +81,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <a
             href={demoSite}
             className={`flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-[14px] font-semibold ${
-              hasGithub ? 'border border-border text-ink' : 'bg-primary text-primary-fg'
+              hasOauth ? 'border border-border text-ink' : 'bg-primary text-primary-fg'
             }`}
           >
             {t('tryLiveDemo', lang)}
@@ -68,8 +90,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <form action="/api/auth/demo" method="post">
             <Button
               type="submit"
-              variant={hasGithub ? 'outline' : 'primary'}
-              className={`w-full gap-2 px-4 py-3 text-[14px] ${hasGithub ? 'bg-transparent' : ''}`}
+              variant={hasOauth ? 'outline' : 'primary'}
+              className={`w-full gap-2 px-4 py-3 text-[14px] ${hasOauth ? 'bg-transparent' : ''}`}
             >
               {t('signInDemo', lang)}
             </Button>
@@ -78,10 +100,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
         {sp.e && (
           <div className="mt-4 text-[12px] text-danger">
-            {sp.e === 'no_github'
+            {sp.e === 'oauth_off' || sp.e === 'no_github'
               ? lang === 'ru'
-                ? 'GitHub OAuth не настроен — используйте demo-вход.'
-                : 'GitHub OAuth is not configured — use the demo sign-in.'
+                ? 'Этот способ входа не настроен — выберите другой.'
+                : 'This sign-in method is not configured — pick another one.'
               : sp.e === '2fa_throttled'
                 ? lang === 'ru'
                   ? 'Слишком много попыток кода 2FA — войди заново через несколько минут.'
@@ -95,6 +117,32 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </Link>
       </div>
     </div>
+  )
+}
+
+function YandexMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+      <circle cx="12" cy="12" r="12" fill="#FC3F1D" />
+      {/* Буква «Я» — фирменный знак Яндекс ID (упрощённый контур) */}
+      <path
+        d="M13.6 4.7h2.9v14.6h-2.6v-5.6h-1.2l-3.3 5.6H6.5l3.6-6.1c-1.8-.9-2.9-2.4-2.9-4.4 0-2.6 1.9-4.1 4.6-4.1zm.3 2.1c-1.5 0-2.4.9-2.4 2.2 0 1.4.9 2.3 2.4 2.3h1v-4.5z"
+        fill="#fff"
+      />
+    </svg>
+  )
+}
+
+function VkMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+      <rect width="24" height="24" rx="6" fill="#0077FF" />
+      {/* Логотип VK (упрощённый контур) */}
+      <path
+        d="M12.8 17.2c-4.7 0-7.4-3.2-7.5-8.6h2.4c.1 3.9 1.8 5.6 3.2 5.9V8.6h2.2v3.4c1.4-.2 2.8-1.7 3.3-3.4h2.2c-.4 2.1-1.9 3.7-3 4.3 1.1.5 2.8 1.9 3.5 4.3h-2.5c-.5-1.6-1.8-2.9-3.5-3.1v3.1z"
+        fill="#fff"
+      />
+    </svg>
   )
 }
 

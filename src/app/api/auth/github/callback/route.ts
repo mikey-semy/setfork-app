@@ -1,10 +1,8 @@
 // Callback GitHub OAuth: проверяем state, меняем code на токен, тянем юзера, ставим сессию.
 import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
-import { eq } from 'drizzle-orm'
-import { db, users } from '@/shared/db'
 import { upsertGithubUser } from '@/shared/auth/users'
-import { startSession } from '@/shared/auth/session'
+import { finishOauthLogin } from '@/features/auth/oauth-finish'
 
 export async function GET(req: NextRequest) {
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
@@ -49,14 +47,5 @@ export async function GET(req: NextRequest) {
   }
 
   const session = await upsertGithubUser(gh)
-  // Если у аккаунта включён 2FA — второй фактор обязателен и на OAuth-пути:
-  // сессию НЕ создаём, ставим pending-куку и ведём на шаг с кодом.
-  const [u] = await db.select({ totpEnabled: users.totpEnabled }).from(users).where(eq(users.id, session.userId)).limit(1)
-  if (u?.totpEnabled) {
-    const { startPendingLogin } = await import('@/features/auth/twofa')
-    await startPendingLogin(session.userId)
-    return NextResponse.redirect(`${appUrl}/login/2fa`)
-  }
-  await startSession(session)
-  return NextResponse.redirect(appUrl)
+  return NextResponse.redirect(await finishOauthLogin(session, appUrl))
 }

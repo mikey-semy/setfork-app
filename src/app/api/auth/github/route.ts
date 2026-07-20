@@ -1,13 +1,14 @@
 // Старт GitHub OAuth: редирект на authorize с anti-CSRF state.
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { oauthEnabled } from '@/shared/auth/oauth'
 
 export async function GET() {
   const clientId = process.env.GITHUB_CLIENT_ID
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
-  if (!clientId) {
-    // Нет OAuth-приложения → отправляем на /login, где доступен demo-вход.
-    return NextResponse.redirect(`${appUrl}/login?e=no_github`)
+  if (!clientId || !oauthEnabled().github) {
+    // Провайдер не настроен или выключен → на /login, где остальные способы входа.
+    return NextResponse.redirect(`${appUrl}/login?e=oauth_off`)
   }
 
   const state = crypto.randomUUID()

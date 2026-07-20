@@ -1,0 +1,50 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { oauthEnabled, parseDisabledProviders } from '@/shared/auth/oauth'
+
+const ENV_KEYS = ['GITHUB_CLIENT_ID', 'YANDEX_CLIENT_ID', 'VK_CLIENT_ID', 'AUTH_DISABLED_PROVIDERS'] as const
+let saved: Record<string, string | undefined>
+
+beforeEach(() => {
+  saved = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]))
+  for (const k of ENV_KEYS) delete process.env[k]
+})
+
+afterEach(() => {
+  for (const k of ENV_KEYS) {
+    if (saved[k] === undefined) delete process.env[k]
+    else process.env[k] = saved[k]
+  }
+})
+
+describe('parseDisabledProviders', () => {
+  it('пусто/undefined → пустой набор', () => {
+    expect(parseDisabledProviders(undefined).size).toBe(0)
+    expect(parseDisabledProviders('').size).toBe(0)
+  })
+
+  it('список с пробелами и регистром нормализуется', () => {
+    const s = parseDisabledProviders(' GitHub , vk ')
+    expect(s.has('github')).toBe(true)
+    expect(s.has('vk')).toBe(true)
+    expect(s.has('yandex')).toBe(false)
+  })
+})
+
+describe('oauthEnabled', () => {
+  it('без кредов все выключены', () => {
+    expect(oauthEnabled()).toEqual({ github: false, yandex: false, vk: false })
+  })
+
+  it('провайдер включается кредами', () => {
+    process.env.YANDEX_CLIENT_ID = 'x'
+    process.env.VK_CLIENT_ID = 'y'
+    expect(oauthEnabled()).toEqual({ github: false, yandex: true, vk: true })
+  })
+
+  it('AUTH_DISABLED_PROVIDERS скрывает провайдера при живых кредах', () => {
+    process.env.GITHUB_CLIENT_ID = 'gh'
+    process.env.YANDEX_CLIENT_ID = 'ya'
+    process.env.AUTH_DISABLED_PROVIDERS = 'github'
+    expect(oauthEnabled()).toEqual({ github: false, yandex: true, vk: false })
+  })
+})
