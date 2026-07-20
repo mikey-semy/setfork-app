@@ -316,6 +316,13 @@
       "when": 1783890000000,
       "breakpoints": true,
       "tag": "0044_generation_detail"
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1783900000000,
+      "breakpoints": true,
+      "tag": "0045_council_experts_generation_messages"
     }
   ]
 }
