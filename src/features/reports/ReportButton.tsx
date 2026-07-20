@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { Flag } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
+import { legalUrl } from '@/shared/docs'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -64,7 +65,7 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
               <p className="rounded-md bg-warn/10 px-3 py-2 text-[12px] leading-relaxed text-ink-2">
                 {t('rpCopyrightNote', lang)}{' '}
                 <a
-                  href="https://docs.setfork.com/docs/legal/copyright"
+                  href={legalUrl('copyright', lang)}
                   target="_blank"
                   rel="noreferrer"
                   className="font-semibold text-accent hover:underline"
