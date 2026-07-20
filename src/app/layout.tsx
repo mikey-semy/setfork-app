@@ -83,6 +83,13 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#0f172a',
+  width: 'device-width',
+  initialScale: 1,
+  // Виртуальная клавиатура РЕСАЙЗИТ контент, а не перекрывает его: поле ввода не
+  // прячется под клавиатурой (Chrome/Android). Зум НЕ запрещаем (никаких
+  // maximum-scale / userScalable: false) — это доступность; от зума при фокусе
+  // спасает 16px в полях (см. globals.css, @media pointer: coarse).
+  interactiveWidget: 'resizes-content',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
