@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useLayoutEffect, useRef, useState, useTransition } from 'react'
 import { ArrowUp, Loader2 } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
@@ -153,6 +154,15 @@ export function GenerateForm({
             {launching ? <Loader2 size={17} className="animate-spin" /> : <ArrowUp size={18} />}
           </button>
         </form>
+
+        {/* Прошлые черновики: за историей логичнее всего идти отсюда же. */}
+        {!launching && (
+          <div className="mt-3 text-center">
+            <Link href="/generate/history" className="text-[12px] text-muted hover:text-ink">
+              {say('Draft history', 'История генераций')}
+            </Link>
+          </div>
+        )}
 
         {/* Язык СПИСКА (не интерфейса). «Авто» = по языку запроса: напишешь по-английски —
             получишь английский список, даже когда интерфейс русский. */}

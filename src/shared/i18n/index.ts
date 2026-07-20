@@ -265,6 +265,7 @@ const DICT = {
   whyPh: { en: 'Why this step matters (optional)', ru: 'Зачем этот шаг (необязательно)' },
   runStart: { en: 'Start run', ru: 'Начать прогон' },
   myRuns: { en: 'Runs', ru: 'Прогоны' },
+  draftHistory: { en: 'Draft history', ru: 'История генераций' },
   runsInProgress: { en: 'In progress', ru: 'В процессе' },
   runsCompleted: { en: 'Completed', ru: 'Завершённые' },
   runsAbandoned: { en: 'Abandoned', ru: 'Брошенные' },
