@@ -48,7 +48,12 @@ export function TabNav({
 
   return (
     <div className="border-b border-border">
-      <nav ref={ref} className={`no-scrollbar relative mx-auto flex w-full gap-1 overflow-x-auto px-4 text-[14px] ${center ? 'justify-center' : ''} ${maxWidthClass}`}>
+      {/* justify-center-safe (= `safe center`), а НЕ обычный justify-center: когда табы
+          шире экрана (мобильный), обычное центрирование уводит первый таб за левый край
+          в НЕДОСКРОЛЛИВАЕМУЮ зону — слева край не видно и достать его нельзя. `safe`
+          центрирует, пока влезает, а при переполнении ведёт себя как start (прижимает
+          влево), и ряд нормально листается. */}
+      <nav ref={ref} className={`no-scrollbar relative mx-auto flex w-full gap-1 overflow-x-auto px-4 text-[14px] ${center ? 'justify-center-safe' : ''} ${maxWidthClass}`}>
         {children}
         {bar && (
           <span
