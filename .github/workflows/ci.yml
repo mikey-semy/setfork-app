@@ -27,28 +27,33 @@ jobs:
 
   # Интеграция data-layer против реального Postgres (pgvector). Схема — drizzle-kit push
   # (не migrate: журнал миграций хрупкий, для эфемерной БД push надёжнее).
+  # ВАЖНО про Postgres/Redis: `services:` здесь НЕ работают. Раннер сам живёт в
+  # контейнере (sibling-демон через docker.sock), поэтому порты сервисов
+  # публикуются на ХОСТЕ, а `localhost` внутри раннера — это он сам: подключение
+  # к localhost:<порт> не доходит никогда (job падал на connect всегда, а при
+  # фиксированном '5432:5432' ещё и ловил «port is already allocated»).
+  # Рабочий приём — тот же, что в setfork-core: поднимаем sibling-контейнеры в
+  # своей сети и ПОДКЛЮЧАЕМ К НЕЙ САМ РАННЕР, обращаясь по имени контейнера.
   integration:
     runs-on: [self-hosted, setfork]
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: ci
-          POSTGRES_PASSWORD: ci
-          POSTGRES_DB: ci
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U ci -d ci"
-          --health-interval 5s --health-timeout 5s --health-retries 12
-      redis:
-        image: redis:7-alpine
-        ports: ['6379:6379']
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s --health-timeout 3s --health-retries 10
-    env:
-      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
     steps:
+      - name: Postgres + Redis (sibling-контейнеры в сети раннера)
+        run: |
+          NET="ci-${GITHUB_RUN_ID}-integration"
+          docker network create "$NET" >/dev/null 2>&1 || true
+          docker rm -f "pg-$NET" "redis-$NET" >/dev/null 2>&1 || true
+          docker run -d --name "pg-$NET" --network "$NET" \
+            -e POSTGRES_USER=ci -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=ci \
+            pgvector/pgvector:pg16 >/dev/null
+          docker run -d --name "redis-$NET" --network "$NET" redis:7-alpine >/dev/null
+          docker network connect "$NET" "$(hostname)" >/dev/null 2>&1 || true
+          for i in $(seq 1 60); do
+            docker exec "pg-$NET" pg_isready -U ci -d ci >/dev/null 2>&1 && break
+            sleep 1
+          done
+          echo "CI_NET=$NET" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=postgresql://ci:ci@pg-$NET:5432/ci" >> "$GITHUB_ENV"
+          echo "CI_REDIS_URL=redis://redis-$NET:6379" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -62,26 +67,35 @@ jobs:
       # Redis-бэкенд rate-limit против настоящего Redis (Lua fixedWindow/tokenBucket).
       - run: npx vitest run tests/shared/rate-limit-store.redis.test.ts
         env:
-          REDIS_URL: redis://localhost:6379
+          REDIS_URL: ${{ env.CI_REDIS_URL }}
+      - name: cleanup (контейнеры и сеть)
+        if: always()
+        run: |
+          docker rm -f "pg-${CI_NET}" "redis-${CI_NET}" >/dev/null 2>&1 || true
+          docker network disconnect "${CI_NET}" "$(hostname)" >/dev/null 2>&1 || true
+          docker network rm "${CI_NET}" >/dev/null 2>&1 || true
 
   # Барьер покрытия: честная цифра = unit + integration (unit-репорт врёт 0% на data-layer).
   # Сливаем оба coverage-final.json и держим порог, чтобы покрытие не проседало.
   coverage:
     runs-on: [self-hosted, setfork]
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_USER: ci
-          POSTGRES_PASSWORD: ci
-          POSTGRES_DB: ci
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U ci -d ci"
-          --health-interval 5s --health-timeout 5s --health-retries 12
-    env:
-      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
     steps:
+      # Sibling-контейнер в сети раннера — см. пояснение у job integration выше.
+      - name: Postgres (sibling-контейнер в сети раннера)
+        run: |
+          NET="ci-${GITHUB_RUN_ID}-coverage"
+          docker network create "$NET" >/dev/null 2>&1 || true
+          docker rm -f "pg-$NET" >/dev/null 2>&1 || true
+          docker run -d --name "pg-$NET" --network "$NET" \
+            -e POSTGRES_USER=ci -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=ci \
+            pgvector/pgvector:pg16 >/dev/null
+          docker network connect "$NET" "$(hostname)" >/dev/null 2>&1 || true
+          for i in $(seq 1 60); do
+            docker exec "pg-$NET" pg_isready -U ci -d ci >/dev/null 2>&1 && break
+            sleep 1
+          done
+          echo "CI_NET=$NET" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=postgresql://ci:ci@pg-$NET:5432/ci" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -93,3 +107,9 @@ jobs:
       - run: npm run coverage:unit
       - run: npm run coverage:integration
       - run: npm run coverage:check # порог --min из package.json
+      - name: cleanup (контейнер и сеть)
+        if: always()
+        run: |
+          docker rm -f "pg-${CI_NET}" >/dev/null 2>&1 || true
+          docker network disconnect "${CI_NET}" "$(hostname)" >/dev/null 2>&1 || true
+          docker network rm "${CI_NET}" >/dev/null 2>&1 || true
