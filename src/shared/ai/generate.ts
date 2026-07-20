@@ -67,6 +67,7 @@ Rules:
 - desc: one sentence describing it.
 - tags: 3-6 short lowercase tags, no '#'.
 - refs: put ALL URLs here (never in command). Each ref: label = short human name, url = full https URL. Use [] when there is no good link.
+- command: ONLY a REAL, runnable shell/CLI command (git, docker, npm, psql…). If the step is not technical — cooking, everyday life, physical actions, reading, decisions — leave it "". NEVER turn prose into a fake command (e.g. "boil water", "buy milk", "call the vendor").
 - section: a group heading for the item; "" unless the list type below asks to split items into groups.
 ${shapeFor(kind)}`
 }

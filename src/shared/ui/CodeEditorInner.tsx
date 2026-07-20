@@ -56,7 +56,10 @@ export default function CodeEditorInner({
 }) {
   const { resolvedTheme } = useTheme()
   const id = detectLang(value)
-  const multiline = value.includes('\n')
+  // Номера строк — как только в поле есть код. Раньше условие было `includes('\n')`,
+  // но ОДНА длинная команда переносится (lineWrapping) и визуально занимает несколько
+  // строк — номеров не было, хотя пользователь видит «больше одной строки».
+  const hasCode = value.trim() !== ''
   const extensions = useMemo(() => [langExt(id), appTheme, EditorView.lineWrapping], [id])
 
   return (
@@ -74,7 +77,7 @@ export default function CodeEditorInner({
         extensions={extensions}
         placeholder={placeholder}
         basicSetup={{
-          lineNumbers: multiline, // номера строк — только когда больше одной строки
+          lineNumbers: hasCode,
           foldGutter: false,
           highlightActiveLine: false,
           highlightActiveLineGutter: false,
