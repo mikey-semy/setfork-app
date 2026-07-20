@@ -154,6 +154,7 @@ async function seek(topic: string, available: Set<string>, tier: 'basic' | 'adva
   const ourLists = await retrieveOurLists(topic) // прод-хук: RAG по спискам SetFork
   const seekerModel = resolveModel(ELDER_SEEKER, available)
   const model = tier === 'advanced' ? `${seekerModel}:online` : seekerModel // advanced-поколение = ещё и интернет
+  // eslint-disable-next-line no-restricted-syntax -- консольный вывод/промпт скрипта, не UI
   const sys = `Ты ${ELDER_SEEKER.name} — ${ELDER_SEEKER.persona}. Твоя задача — дать совету ПРЕЦЕДЕНТЫ и АНАЛОГИИ по теме${tier === 'advanced' ? ' (можешь искать в интернете)' : ''}: как решают похожее, типичные грабли, проверенные подходы. Кратко, 3-6 пунктов. По-русски.`
   const c = await call('seeker', model, sys, `ТЕМА: ${topic}\n\nНАШИ ПОХОЖИЕ СПИСКИ: ${ourLists}`, 500)
   return { call: c, lore: c.text }

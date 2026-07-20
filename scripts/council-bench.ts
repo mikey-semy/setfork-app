@@ -186,6 +186,7 @@ function fmtUsd(n: number) { return `$${n.toFixed(6)}` }
 
 async function modePrices() {
   const catalog = await fetchCatalog()
+  // eslint-disable-next-line no-restricted-syntax -- консольный вывод/промпт скрипта, не UI
   console.log(`Каталог OpenRouter: ${catalog.length} моделей. Ключ: ${API_KEY ? 'есть' : 'НЕТ'}\n`)
   const { single, council, aggregator, judge } = pickRoster(catalog)
   console.log('Ростер (авто-выбор из доступных PREFERRED):')
@@ -199,6 +200,7 @@ async function modePrices() {
     console.log(' ', m.id.padEnd(40), m.prompt.toFixed(3).padStart(10), m.completion.toFixed(3).padStart(12))
   }
   const fusion = catalog.find((m) => m.id === 'openrouter/fusion')
+  // eslint-disable-next-line no-restricted-syntax -- консольный вывод/промпт скрипта, не UI
   console.log(`\n  openrouter/fusion в каталоге: ${fusion ? `есть (prompt ${fusion.prompt.toFixed(3)}, completion ${fusion.completion.toFixed(3)})` : 'НЕ найден (проверить доступность на ключе)'}`)
 }
 
