@@ -58,6 +58,8 @@ service GitCore {
   // Теги релизов: CreateTag ставит git-тег name на коммит версии (тег vN уже
   // есть у каждой версии), чтобы clone привозил и человекочитаемый тег релиза.
   rpc CreateTag(CreateTagRequest) returns (BranchOpResponse); // tip_sha = коммит тега
+  // ListTags — интроспекция (сверка releases-БД ↔ git-теги при инцидентах,
+  // grpcurl через reflection); UI-потребителя нет и не планируется (HQ ADR-0012).
   rpc ListTags(RepoRef) returns (TagsResponse);
 }
 
