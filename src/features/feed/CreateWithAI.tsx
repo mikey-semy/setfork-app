@@ -9,15 +9,13 @@ export function CreateWithAI({ lang }: { lang: Lang }) {
   const ru = lang === 'ru'
   return (
     <form action="/generate" method="get" className="mb-4 rounded-lg border border-border bg-surface p-3">
+      {/* Одна строка и короткий плейсхолдер: длинная подсказка с «Например: «…»»
+          переносилась на вторую строку. Плейсхолдер и так читается как пример. */}
       <Textarea
         variant="bare"
         name="q"
-        rows={2}
-        placeholder={
-          ru
-            ? 'Опиши, что нужно сделать — соберём список. Например: «подготовить Postgres к проду»'
-            : 'Describe what you need — we’ll draft a list. E.g. “prepare Postgres for production”'
-        }
+        rows={1}
+        placeholder={ru ? 'подготовить Postgres к проду' : 'prepare Postgres for production'}
       />
       <div className="mt-1.5 flex items-center justify-between">
         <span className="inline-flex items-center gap-1.5 text-[12px] text-muted">
