@@ -1,0 +1,48 @@
+# Автодеплой на прод setfork (31.177.83.219, без Dokploy) после зелёного CI на master.
+#
+# Исходники уезжают tar-ом по ssh в /opt/setfork/src/setfork-frontend, образ
+# собирается НА СЕРВЕРЕ (npm registry с RF-сервера работает; .env сервиса лежит
+# на сервере и tar-ом не затирается). Ключ деплоя приходит ro-mount'ом из
+# setfork-ci-runner/docker-compose.yml (/ssh/setfork) — GitHub Secrets не нужны.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+
+concurrency:
+  group: deploy-prod-frontend
+  cancel-in-progress: false
+
+env:
+  DEPLOY: root@31.177.83.219
+  APP_DIR: /opt/setfork/src/setfork-frontend
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: [self-hosted, setfork]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Ключ деплоя (ro-mount раннера)
+        run: |
+          test -f /ssh/setfork || { echo "::error::нет /ssh/setfork — подними раннер из setfork-ci-runner/docker-compose.yml (там ro-mount ключа)"; exit 1; }
+          command -v ssh >/dev/null || (apt-get update -qq && apt-get install -y -qq openssh-client)
+          install -m 600 /ssh/setfork /tmp/deploy_key
+
+      - name: Доставка исходников → сборка на сервере → up
+        run: |
+          SSH="ssh -i /tmp/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
+          tar --exclude=.git -czf - . | $SSH "mkdir -p $APP_DIR && tar -xzf - -C $APP_DIR"
+          $SSH "cd $APP_DIR && docker compose -f docker-compose.dokploy.yml up -d --build --remove-orphans"
+
+      - name: Health-check
+        run: |
+          SSH="ssh -i /tmp/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
+          sleep 10
+          $SSH "docker ps --filter name=setfork-frontend --format '{{.Names}} {{.Status}}' | grep -q 'healthy\|Up' " || { echo "::error::контейнер фронта не поднялся"; $SSH "docker logs --tail 50 setfork-frontend"; exit 1; }
