@@ -3,6 +3,7 @@
 import { useTransition } from 'react'
 import { Loader2, Monitor, Smartphone } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { UserSession } from './queries'
 import { revokeOtherSessions, revokeSession } from './actions'
 
@@ -34,7 +35,9 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
                   {t('currentSession', lang)}
                 </span>
               ) : s.online ? (
-                <span className="h-2 w-2 rounded-full bg-ok" title={t('onlineLabel', lang)} />
+                <Tooltip label={t('onlineLabel', lang)}>
+                  <span className="h-2 w-2 rounded-full bg-ok" />
+                </Tooltip>
               ) : stale ? (
                 <span className="rounded-full bg-surface px-2 py-0.5 text-[10.5px] font-semibold text-muted">{t('staleLabel', lang)}</span>
               ) : null}

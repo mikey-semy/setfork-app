@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Award, GraduationCap, Trophy } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 /** Прогресс прохождения тестов списка для текущего зрителя (сервер-компонент).
  *  Показываем, когда есть quiz-блоки ИЛИ курс уже пройден (completed).
@@ -49,9 +50,11 @@ export function CourseProgress({
         )}
       </div>
       {leaderboardHref && (
-        <Link href={leaderboardHref} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:border-border-strong hover:text-ink" title={ru ? 'Лидерборд' : 'Leaderboard'}>
-          <Trophy size={14} />
-        </Link>
+        <Tooltip label={ru ? 'Лидерборд' : 'Leaderboard'}>
+          <Link href={leaderboardHref} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:border-border-strong hover:text-ink">
+            <Trophy size={14} />
+          </Link>
+        </Tooltip>
       )}
       {done && certificateHref && (
         <Link

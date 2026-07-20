@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
 import { Badge } from '@/shared/ui/badge'
+import { Tooltip } from './Tooltip'
 import type { Lang } from '@/shared/i18n'
 
 // Чипы + автокомплит для тегов списка. Пишет скрытый <input name> со slug'ами
@@ -130,9 +131,9 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
               >
                 <span className="flex items-center gap-1.5">
                   {s.curated && (
-                    <span className="text-accent" title={say('Curated', 'Курируемый')}>
-                      ✓
-                    </span>
+                    <Tooltip label={say('Curated', 'Курируемый')}>
+                      <span className="text-accent">✓</span>
+                    </Tooltip>
                   )}
                   {s.slug}
                 </span>

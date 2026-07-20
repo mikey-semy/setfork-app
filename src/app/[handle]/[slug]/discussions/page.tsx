@@ -5,6 +5,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { Avatar } from '@/shared/ui/Avatar'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/widgets/ListHeader'
 import { getDiscussions } from '@/features/discussions/queries'
@@ -66,9 +67,9 @@ export default async function DiscussionsPage({
           <div className="divide-y divide-border rounded-lg border border-border bg-surface">
             {list.map((d) => (
               <div key={d.id} className="flex items-start gap-3 px-4 py-3">
-                <span className="mt-0.5 text-[16px]" title={categoryLabel(d.category, lang)}>
-                  {categoryMeta(d.category).icon}
-                </span>
+                <Tooltip label={categoryLabel(d.category, lang)}>
+                  <span className="mt-0.5 text-[16px]">{categoryMeta(d.category).icon}</span>
+                </Tooltip>
                 <div className="min-w-0 flex-1">
                   <Link href={`${base}/${d.number}`} className="text-[14.5px] font-semibold text-ink hover:text-accent">
                     {d.title}

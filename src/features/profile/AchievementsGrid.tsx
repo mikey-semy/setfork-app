@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Trophy, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 // Одна ачивка для отображения: только заработанные и только с картинкой (картинка —
 // обязательный атрибут; без неё ачивка не показывается вовсе — гейт в AchievementsCard).
@@ -33,22 +34,22 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
     <>
       <div className="grid grid-cols-3 gap-2">
         {items.map((a) => (
-          <button
-            key={a.key}
-            type="button"
-            onClick={() => setOpen(a)}
-            title={a.tier > 1 ? `${a.label} ×${a.tier}` : a.label}
-            aria-label={a.label}
-            className="relative aspect-square overflow-hidden rounded-md border border-border bg-surface-2 outline-hidden transition-transform hover:scale-[1.04] focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={a.imageUrl} alt="" className="h-full w-full object-cover" />
-            {a.tier > 1 && (
-              <span className="absolute bottom-0.5 right-0.5 rounded bg-black/65 px-1 font-mono text-[10px] font-semibold leading-tight text-white">
-                ×{a.tier}
-              </span>
-            )}
-          </button>
+          <Tooltip key={a.key} label={a.tier > 1 ? `${a.label} ×${a.tier}` : a.label}>
+            <button
+              type="button"
+              onClick={() => setOpen(a)}
+              aria-label={a.label}
+              className="relative aspect-square overflow-hidden rounded-md border border-border bg-surface-2 outline-hidden transition-transform hover:scale-[1.04] focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={a.imageUrl} alt="" className="h-full w-full object-cover" />
+              {a.tier > 1 && (
+                <span className="absolute bottom-0.5 right-0.5 rounded bg-black/65 px-1 font-mono text-[10px] font-semibold leading-tight text-white">
+                  ×{a.tier}
+                </span>
+              )}
+            </button>
+          </Tooltip>
         ))}
       </div>
 

@@ -7,6 +7,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/widgets/ListHeader'
 import { getDiscussion, getDiscussionComments } from '@/features/discussions/queries'
@@ -37,7 +38,9 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
       <ListHeader owner={owner} slug={slug} active="discussions" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <span className="text-[16px]" title={categoryLabel(disc.category, lang)}>{categoryMeta(disc.category).icon}</span>
+          <Tooltip label={categoryLabel(disc.category, lang)}>
+            <span className="text-[16px]">{categoryMeta(disc.category).icon}</span>
+          </Tooltip>
           <h1 className="text-[22px] font-bold leading-tight text-ink">
             {disc.title} <span className="font-normal text-muted">#{disc.number}</span>
           </h1>

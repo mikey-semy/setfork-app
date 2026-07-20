@@ -6,6 +6,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/widgets/ListHeader'
 import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, getListLabels, type IssueFilter, type IssueSort } from '@/features/issues/queries'
@@ -169,9 +170,11 @@ export default async function IssuesPage({
                 {(assigneesByIssue[it.id] ?? []).length > 0 && (
                   <div className="mt-0.5 flex -space-x-1.5">
                     {(assigneesByIssue[it.id] ?? []).slice(0, 3).map((a) => (
-                      <span key={a.handle} title={a.handle} className="ring-2 ring-surface">
-                        <Avatar handle={a.handle} avatarUrl={a.avatarUrl} size={18} />
-                      </span>
+                      <Tooltip key={a.handle} label={a.handle}>
+                        <span className="ring-2 ring-surface">
+                          <Avatar handle={a.handle} avatarUrl={a.avatarUrl} size={18} />
+                        </span>
+                      </Tooltip>
                     ))}
                   </div>
                 )}

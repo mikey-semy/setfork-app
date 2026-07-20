@@ -4,6 +4,7 @@ import { History } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { ListHeader } from '@/widgets/ListHeader'
 import { getListBlame } from '@/features/library/blame'
@@ -53,15 +54,16 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
                   <span className="w-6 shrink-0 text-right font-mono text-[11px] text-muted">{s.n}</span>
                   <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink">{tr(s.title, lang)}</span>
                   {s.note && <span className="hidden min-w-0 max-w-[220px] truncate text-[12px] text-muted sm:block">{s.note}</span>}
-                  <Link
-                    href={`${base}/versions`}
-                    title={ru ? 'история версий' : 'version history'}
-                    className={`shrink-0 rounded border px-1.5 font-mono text-[11px] ${
-                      fresh ? 'border-(--accent)/50 bg-(--accent-soft) text-accent' : 'border-border bg-surface-2 text-ink-2'
-                    }`}
-                  >
-                    v{s.lastVersion}
-                  </Link>
+                  <Tooltip label={ru ? 'история версий' : 'version history'}>
+                    <Link
+                      href={`${base}/versions`}
+                      className={`shrink-0 rounded border px-1.5 font-mono text-[11px] ${
+                        fresh ? 'border-(--accent)/50 bg-(--accent-soft) text-accent' : 'border-border bg-surface-2 text-ink-2'
+                      }`}
+                    >
+                      v{s.lastVersion}
+                    </Link>
+                  </Tooltip>
                   <span className="w-[92px] shrink-0 text-right text-[11.5px] text-muted">{timeAgo(s.lastAt, lang)}</span>
                 </div>
               </div>

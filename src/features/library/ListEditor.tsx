@@ -28,10 +28,10 @@ import {
 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Checkbox } from '@/shared/ui/checkbox'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { DatePicker } from '@/shared/ui/DatePicker'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { CodeEditor } from '@/shared/ui/CodeEditor'
-import { Tooltip } from '@/shared/ui/Tooltip'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorProduct, type EditorQuiz } from './editor'
 import { t } from '@/shared/i18n'
 import { blankCount, type QuizKind } from '@/core'
@@ -59,16 +59,17 @@ function LinkTitleButton({ url, onLabel, ru }: { url: string; onLabel: (v: strin
     if ('label' in res) onLabel(res.label)
   }
   return (
-    <button
-      type="button"
-      onClick={gen}
-      disabled={busy || !ok}
-      title={ru ? 'Название из ссылки' : 'Get title from link'}
-      aria-label={ru ? 'Название из ссылки' : 'Get title from link'}
-      className="grid h-6 w-6 place-items-center rounded text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-2"
-    >
-      {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-    </button>
+    <Tooltip label={ru ? 'Название из ссылки' : 'Get title from link'}>
+      <button
+        type="button"
+        onClick={gen}
+        disabled={busy || !ok}
+        aria-label={ru ? 'Название из ссылки' : 'Get title from link'}
+        className="grid h-6 w-6 place-items-center rounded text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-2"
+      >
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+      </button>
+    </Tooltip>
   )
 }
 
@@ -1258,51 +1259,52 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
         const y = -Math.sin(rad) * rr
         const Icon = BLOCK_ICON[t]
         return (
-          <button
-            key={t}
-            type="button"
-            aria-label={blockLabel(t, ru)}
-            title={blockLabel(t, ru)}
-            onClick={() => pick(t)}
-            onMouseEnter={() => setHoverK(k)}
-            onMouseLeave={() => setHoverK((h) => (h === k ? null : h))}
-            onFocus={() => setHoverK(k)}
-            onBlur={() => setHoverK((h) => (h === k ? null : h))}
-            tabIndex={open ? 0 : -1}
-            className={`absolute grid h-10 w-10 place-items-center rounded-full border shadow-md transition-all duration-200 motion-reduce:transition-none ${
-              hovered ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border bg-surface text-ink'
-            }`}
-            style={{
-              transform: open ? `translate(${x}px, ${y}px) scale(${hovered ? 1.18 : 1})` : 'translate(0,0) scale(0.3)',
-              opacity: open ? 1 : 0,
-              pointerEvents: open ? 'auto' : 'none',
-              zIndex: open ? (hovered ? 22 : 20) : undefined,
-            }}
-          >
-            <Icon size={16} />
-          </button>
+          <Tooltip key={t} label={blockLabel(t, ru)}>
+            <button
+              type="button"
+              aria-label={blockLabel(t, ru)}
+              onClick={() => pick(t)}
+              onMouseEnter={() => setHoverK(k)}
+              onMouseLeave={() => setHoverK((h) => (h === k ? null : h))}
+              onFocus={() => setHoverK(k)}
+              onBlur={() => setHoverK((h) => (h === k ? null : h))}
+              tabIndex={open ? 0 : -1}
+              className={`absolute grid h-10 w-10 place-items-center rounded-full border shadow-md transition-all duration-200 motion-reduce:transition-none ${
+                hovered ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border bg-surface text-ink'
+              }`}
+              style={{
+                transform: open ? `translate(${x}px, ${y}px) scale(${hovered ? 1.18 : 1})` : 'translate(0,0) scale(0.3)',
+                opacity: open ? 1 : 0,
+                pointerEvents: open ? 'auto' : 'none',
+                zIndex: open ? (hovered ? 22 : 20) : undefined,
+              }}
+            >
+              <Icon size={16} />
+            </button>
+          </Tooltip>
         )
       })}
       {/* Повтор предыдущего типа — нижний-центральный, чуть под кнопкой. */}
       {(() => {
         const Icon = BLOCK_ICON[repeatType]
         return (
-          <button
-            type="button"
-            aria-label={`${ru ? 'Повторить' : 'Repeat'}: ${blockLabel(repeatType, ru)}`}
-            title={`${ru ? 'Как предыдущий' : 'Same as previous'}: ${blockLabel(repeatType, ru)}`}
-            onClick={() => pick(repeatType)}
-            tabIndex={open ? 0 : -1}
-            className="absolute grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-fg shadow-md transition-all duration-200 hover:opacity-90 motion-reduce:transition-none"
-            style={{
-              transform: open ? `translate(0, ${R + 6}px) scale(1)` : 'translate(0,0) scale(0.3)',
-              opacity: open ? 1 : 0,
-              pointerEvents: open ? 'auto' : 'none',
-              zIndex: open ? 20 : undefined,
-            }}
-          >
-            <Icon size={15} />
-          </button>
+          <Tooltip label={`${ru ? 'Как предыдущий' : 'Same as previous'}: ${blockLabel(repeatType, ru)}`}>
+            <button
+              type="button"
+              aria-label={`${ru ? 'Повторить' : 'Repeat'}: ${blockLabel(repeatType, ru)}`}
+              onClick={() => pick(repeatType)}
+              tabIndex={open ? 0 : -1}
+              className="absolute grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-fg shadow-md transition-all duration-200 hover:opacity-90 motion-reduce:transition-none"
+              style={{
+                transform: open ? `translate(0, ${R + 6}px) scale(1)` : 'translate(0,0) scale(0.3)',
+                opacity: open ? 1 : 0,
+                pointerEvents: open ? 'auto' : 'none',
+                zIndex: open ? 20 : undefined,
+              }}
+            >
+              <Icon size={15} />
+            </button>
+          </Tooltip>
         )
       })()}
       {/* Центральная «+» кнопка. */}
