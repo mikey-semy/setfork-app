@@ -12,6 +12,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { Markdown } from '@/shared/ui/Markdown'
@@ -279,22 +280,27 @@ export default async function ListPage({
                 </span>
                 {latestNote && <span className="min-w-0 flex-1 truncate text-ink-2">{latestNote}</span>}
                 <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
-                <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent" title={t('versionsTab', lang)}>
-                  <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
-                </Link>
-                <Link href={`${base}/blame`} className="inline-flex shrink-0 items-center gap-1 text-muted hover:text-accent" title="Blame">
-                  <History size={14} />
-                </Link>
+                <Tooltip label={t('versionsTab', lang)}>
+                  <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent">
+                    <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
+                  </Link>
+                </Tooltip>
+                <Tooltip label="Blame">
+                  <Link href={`${base}/blame`} className="inline-flex shrink-0 items-center gap-1 text-muted hover:text-accent">
+                    <History size={14} />
+                  </Link>
+                </Tooltip>
                 <span className="inline-flex shrink-0 items-center gap-2 border-l border-border pl-2">
                   {tpl.isTemplate && viewer && (
                     <form action={useTemplate.bind(null, tpl.id)} className="inline-flex">
-                      <button
-                        type="submit"
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
-                        title={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}
-                      >
-                        <LayoutTemplate size={13} /> <span className="hidden md:inline">{lang === 'ru' ? 'Использовать шаблон' : 'Use this template'}</span>
-                      </button>
+                      <Tooltip label={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}>
+                        <button
+                          type="submit"
+                          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
+                        >
+                          <LayoutTemplate size={13} /> <span className="hidden md:inline">{lang === 'ru' ? 'Использовать шаблон' : 'Use this template'}</span>
+                        </button>
+                      </Tooltip>
                     </form>
                   )}
                   {/* Run — отдельной кнопкой РЯДОМ с Use (как просили): главный
@@ -312,13 +318,14 @@ export default async function ListPage({
                   {canManageBranches && !snapshot && !tpl.title[lang] && (
                     <TranslateButton templateId={tpl.id} targetLang={lang} lang={lang} />
                   )}
-                  <Link
-                    href={isOwner ? `${base}/edit` : `${base}/suggest`}
-                    title={isOwner ? t('edit', lang) : t('suggestEdit', lang)}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
-                  >
-                    <Pencil size={13} /> <span className="hidden md:inline">{isOwner ? t('edit', lang) : t('suggestEdit', lang)}</span>
-                  </Link>
+                  <Tooltip label={isOwner ? t('edit', lang) : t('suggestEdit', lang)}>
+                    <Link
+                      href={isOwner ? `${base}/edit` : `${base}/suggest`}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
+                    >
+                      <Pencil size={13} /> <span className="hidden md:inline">{isOwner ? t('edit', lang) : t('suggestEdit', lang)}</span>
+                    </Link>
+                  </Tooltip>
                 </span>
               </div>
             )}
@@ -618,9 +625,11 @@ export default async function ListPage({
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {contributors.slice(0, 14).map((c) => (
-                      <Link key={c.handle} href={`/${c.handle}`} title={c.handle} className="hover:opacity-80">
-                        <Avatar handle={c.handle} avatarUrl={c.avatarUrl} size={28} />
-                      </Link>
+                      <Tooltip key={c.handle} label={c.handle}>
+                        <Link href={`/${c.handle}`} className="hover:opacity-80">
+                          <Avatar handle={c.handle} avatarUrl={c.avatarUrl} size={28} />
+                        </Link>
+                      </Tooltip>
                     ))}
                   </div>
                 </div>
