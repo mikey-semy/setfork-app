@@ -25,19 +25,25 @@ jobs:
           POSTGRES_USER: sf
           POSTGRES_PASSWORD: sf
           POSTGRES_DB: sf
-        ports: ['5432:5432']
+        # ДИНАМИЧЕСКИЙ хост-порт вместо '5432:5432': раннеры обоих репо живут на
+        # одной машине с общим docker-демоном, поэтому фиксированный порт ловил
+        # «Bind for 0.0.0.0:5432 failed: port is already allocated» — падал тот job,
+        # что стартовал вторым. Реальный порт берём из job.services (шаг ниже).
+        ports: ['5432/tcp']
         options: >-
           --health-cmd "pg_isready -U sf"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     env:
-      DATABASE_URL: postgres://sf:sf@localhost:5432/sf
       AUTH_SECRET: ci-placeholder-secret-at-least-32-characters-long
       POLYGON_URL: http://localhost:3000
       SIM_PROXY: 'off' # прокси нужен только для демо-стенда; локалхост — напрямую
       # SETFORK_CORE_URL НЕ задаём → фронт использует inproc-git (системный git)
     steps:
+      - name: DATABASE_URL (порт назначен рантаймом)
+        run: echo "DATABASE_URL=postgres://sf:sf@localhost:${{ job.services.postgres.ports['5432'] }}/sf" >> "$GITHUB_ENV"
+
       - name: Checkout frontend
         uses: actions/checkout@v4
 

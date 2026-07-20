@@ -31,5 +31,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # полная история для скана
+      # Рабочая копия заносится через `docker cp`, а НЕ bind-mount: раннер сам в
+      # контейнере с проброшенным docker.sock, поэтому демон на ХОСТЕ монтировал бы
+      # несуществующий путь (пустоту) — gitleaks не находил .gitleaks.toml и падал
+      # с «unable to load gitleaks config». Тот же приём — в setfork-core/audit.yml.
       - name: gitleaks (secret scan)
-        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest detect --source=/repo --config=/repo/.gitleaks.toml --redact --exit-code 1
+        run: |
+          docker rm -f "gl-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true
+          docker create --name "gl-${GITHUB_RUN_ID}" zricethezav/gitleaks:latest \
+            detect --source=/repo --config=/repo/.gitleaks.toml --redact --exit-code 1
+          docker cp . "gl-${GITHUB_RUN_ID}:/repo"
+          docker start -a "gl-${GITHUB_RUN_ID}"
+      - name: cleanup
+        if: always()
+        run: docker rm -f "gl-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true

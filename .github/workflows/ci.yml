@@ -36,19 +36,25 @@ jobs:
           POSTGRES_USER: ci
           POSTGRES_PASSWORD: ci
           POSTGRES_DB: ci
-        ports: ['5432:5432']
+        # ДИНАМИЧЕСКИЕ хост-порты (не '5432:5432'): раннеры core и frontend живут на
+        # одной машине с общим docker-демоном, фиксированный порт давал гонку
+        # «Bind for 0.0.0.0:5432 failed: port is already allocated» — падал тот job,
+        # что стартовал вторым. Реальные порты берём из job.services (шаг ниже).
+        ports: ['5432/tcp']
         options: >-
           --health-cmd "pg_isready -U ci -d ci"
           --health-interval 5s --health-timeout 5s --health-retries 12
       redis:
         image: redis:7-alpine
-        ports: ['6379:6379']
+        ports: ['6379/tcp']
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 3s --health-retries 10
-    env:
-      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
     steps:
+      - name: URL сервисов (порты назначены рантаймом)
+        run: |
+          echo "DATABASE_URL=postgresql://ci:ci@localhost:${{ job.services.postgres.ports['5432'] }}/ci" >> "$GITHUB_ENV"
+          echo "CI_REDIS_URL=redis://localhost:${{ job.services.redis.ports['6379'] }}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -62,7 +68,7 @@ jobs:
       # Redis-бэкенд rate-limit против настоящего Redis (Lua fixedWindow/tokenBucket).
       - run: npx vitest run tests/shared/rate-limit-store.redis.test.ts
         env:
-          REDIS_URL: redis://localhost:6379
+          REDIS_URL: ${{ env.CI_REDIS_URL }}
 
   # Барьер покрытия: честная цифра = unit + integration (unit-репорт врёт 0% на data-layer).
   # Сливаем оба coverage-final.json и держим порог, чтобы покрытие не проседало.
@@ -75,13 +81,14 @@ jobs:
           POSTGRES_USER: ci
           POSTGRES_PASSWORD: ci
           POSTGRES_DB: ci
-        ports: ['5432:5432']
+        # Динамический порт — см. пояснение в job integration выше.
+        ports: ['5432/tcp']
         options: >-
           --health-cmd "pg_isready -U ci -d ci"
           --health-interval 5s --health-timeout 5s --health-retries 12
-    env:
-      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
     steps:
+      - name: DATABASE_URL (порт назначен рантаймом)
+        run: echo "DATABASE_URL=postgresql://ci:ci@localhost:${{ job.services.postgres.ports['5432'] }}/ci" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
