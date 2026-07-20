@@ -33,12 +33,10 @@ export default async function HomePage() {
   const ru = lang === 'ru'
   const titles = await sampleListTitles(lang)
   const chips = titles.length >= CHIPS_SHOWN ? titles.slice(0, CHIPS_SHOWN) : FALLBACK_CHIPS.map((c) => (ru ? c.ru : c.en))
-  // Пул фраз + «Например: «живой заголовок»» (берём тот, что не попал в чипы).
+  // Пул фраз + живой заголовок КАК ЕСТЬ. Без приписки «Например:» — плейсхолдер и так
+  // читается как пример, а приписка только удлиняла строку.
   const example = titles[CHIPS_SHOWN]
-  const placeholder = pick([
-    ...PLACEHOLDERS.map((p) => (ru ? p.ru : p.en)),
-    ...(example ? [ru ? `Например: «${example}»` : `e.g. “${example}”`] : []),
-  ])
+  const placeholder = pick([...PLACEHOLDERS.map((p) => (ru ? p.ru : p.en)), ...(example ? [example] : [])])
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
