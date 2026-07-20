@@ -81,10 +81,10 @@ export async function startGeneration(formData: FormData): Promise<void> {
   const query = String(formData.get('q') ?? '').trim().slice(0, 300)
   if (!query) redirect('/search')
 
-  // Язык СПИСКА ≠ язык интерфейса: запрос на английском при русском UI должен давать
-  // английский список. Приоритет: явный выбор пользователя → язык запроса → язык интерфейса.
-  const picked = String(formData.get('lang') ?? '')
-  const lang: Lang = isLang(picked) ? picked : detectTextLang(query, uiLang)
+  // Язык СПИСКА ≠ язык интерфейса: он определяется САМИМ запросом. Написал по-русски —
+  // список русский, даже если рядом стоят английские термины; написал по-английски —
+  // английский. Переключателя нет намеренно: язык и так явно указан тем, как задан запрос.
+  const lang: Lang = detectTextLang(query, uiLang)
 
   const { allowed } = await checkRateLimit(`gen:${session.userId}`)
   if (!allowed) redirect(`/search?q=${encodeURIComponent(query)}&e=ratelimited`)

@@ -17,13 +17,6 @@ import { startGeneration } from './actions'
  * во flex, а перелёт в низ — плавным transform без магических величин.
  */
 
-// Выбор языка списка: '' = авто (определяем по языку запроса на сервере).
-const LANG_CHOICES: readonly (readonly ['' | Lang, string])[] = [
-  ['', 'Auto'],
-  ['ru', 'Русский'],
-  ['en', 'English'],
-] as const
-
 export function GenerateForm({
   lang,
   aiOn,
@@ -39,7 +32,6 @@ export function GenerateForm({
 }) {
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [q, setQ] = useState(defaultQuery)
-  const [langChoice, setLangChoice] = useState<'' | Lang>('')
   const [launching, setLaunching] = useState(false)
   const [, start] = useTransition()
   const boxRef = useRef<HTMLDivElement>(null)
@@ -76,7 +68,6 @@ export function GenerateForm({
     setLaunching(true)
     const fd = new FormData()
     fd.set('q', query)
-    if (langChoice) fd.set('lang', langChoice) // пусто = авто, сервер определит по запросу
     // Даём спуску проиграться до навигации (экшен создаёт генерацию и редиректит быстро).
     window.setTimeout(() => start(() => startGeneration(fd)), 520)
   }
@@ -164,26 +155,6 @@ export function GenerateForm({
           </div>
         )}
 
-        {/* Язык СПИСКА (не интерфейса). «Авто» = по языку запроса: напишешь по-английски —
-            получишь английский список, даже когда интерфейс русский. */}
-        {!launching && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[12px]">
-            <span className="text-muted">{say('List language', 'Язык списка')}:</span>
-            {LANG_CHOICES.map(([value, label]) => (
-              <button
-                key={value || 'auto'}
-                type="button"
-                onClick={() => setLangChoice(value)}
-                className={cn(
-                  'rounded-full border px-2.5 py-[3px] transition-colors',
-                  langChoice === value ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
-                )}
-              >
-                {value === '' ? say('Auto', 'Авто') : label}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Варианты как у поисковика — «живые» заголовки списков. Клик = отправка. Прячем на старте. */}
         {!launching && suggestions.length > 0 && (
