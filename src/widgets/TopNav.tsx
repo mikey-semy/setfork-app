@@ -257,6 +257,9 @@ export function TopNav({
                   <Link href="/runs">{t('myRuns', lang)}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
+                  <Link href="/generate/history">{t('draftHistory', lang)}</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link href={`/${user.handle}?tab=starred`}>{t('starredTab', lang)}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
