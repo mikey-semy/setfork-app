@@ -4,10 +4,10 @@ import { listStore as drizzleStore } from './list-store.adapter'
 import { listReadRemote, listWriteRemote } from './list-store.remote'
 
 // Фасад порта ListStore — точка катовера домена на Rust.
-// READS → Rust ListRead при SETFORK_DOMAIN_READS=1; WRITES (addVersion) → Rust
-// ListWrite при SETFORK_DOMAIN_WRITES=1 (отдельный, более осторожный флаг —
-// транзакции). create — пока всегда Drizzle. Требует работающего ядра
-// (SETFORK_CORE_URL/ADDR). Потребители импортируют ТОЛЬКО отсюда.
+// READS → Rust ListRead при SETFORK_DOMAIN_READS=1; WRITES (addVersion И create) →
+// Rust ListWrite при SETFORK_DOMAIN_WRITES=1 (отдельный, более осторожный флаг —
+// транзакции). Требует работающего ядра (SETFORK_CORE_URL/ADDR).
+// Потребители импортируют ТОЛЬКО отсюда.
 const coreOn = !!process.env.SETFORK_CORE_URL
 const remoteReads = coreOn && process.env.SETFORK_DOMAIN_READS === '1'
 const remoteWrites = coreOn && process.env.SETFORK_DOMAIN_WRITES === '1'
@@ -31,20 +31,29 @@ export function registerAfterVersion(fn: AfterVersionHook): void {
 // Барьер модерации: новая версия = изменение контента → пере-проверка публичного
 // списка. Раньше recheckList звался вручную на каждом addVersion-пути (saveNewVersion,
 // acceptSuggestion, MCP, gardener) — забытый вызов = «отмывка» (залил чистое, прошёл
-// модерацию, подменил на нарушающее). Теперь recheck висит на фасаде addVersion — единой
-// точке, которую обойти нельзя. Сам recheckList самозащищён по visibility и
-// дедуплицируется, поэтому хук безопасен для всех вызывающих.
+// модерацию, подменил на нарушающее). Теперь recheck висит на фасаде addVersion И create —
+// единых точках, которые обойти нельзя (create без хука пропускал ПЕРВУЮ версию нового
+// списка мимо модерации — аудит core 2026-07-20, F3). Сам recheckList самозащищён по
+// visibility и дедуплицируется, поэтому хук безопасен для всех вызывающих.
+async function moderate(templateId: string): Promise<void> {
+  if (!afterVersion) return
+  try {
+    await afterVersion(templateId)
+  } catch {
+    /* модерация не должна ронять сохранение — recheckList и так глушит свои ошибки */
+  }
+}
+
 export const listStore: ListStore = {
   ...base,
   async addVersion(templateId, input) {
     const ver = await base.addVersion(templateId, input)
-    if (afterVersion) {
-      try {
-        await afterVersion(templateId)
-      } catch {
-        /* модерация не должна ронять сохранение версии — recheckList и так глушит свои ошибки */
-      }
-    }
+    await moderate(templateId)
     return ver
+  },
+  async create(input) {
+    const list = await base.create(input)
+    await moderate(list.id)
+    return list
   },
 }

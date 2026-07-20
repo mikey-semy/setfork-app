@@ -297,9 +297,84 @@ function execStdin(args: string[], input: string): Promise<string> {
   })
 }
 
+// Пер-шаговые md-оверрайды: steps/NN-*.md с rev'а (зеркало Rust project.rs
+// read_step_files). Ключ — NN из имени файла (номер шага в list.json),
+// не позиция среди блоков.
+async function stepMdOverrides(bare: string, rev: string): Promise<Map<number, string>> {
+  const out = new Map<number, string>()
+  let names: string[]
+  try {
+    const { stdout } = await exec('git', ['--git-dir', bare, 'ls-tree', '--name-only', rev, 'steps/'])
+    names = String(stdout)
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.endsWith('.md'))
+  } catch {
+    return out // нет steps/ в дереве — оверрайдов нет
+  }
+  await Promise.all(
+    names.map(async (path) => {
+      const m = /^steps\/(\d+)/.exec(path)
+      if (!m) return
+      try {
+        const { stdout } = await exec('git', ['--git-dir', bare, 'show', `${rev}:${path}`], {
+          maxBuffer: 8 * 1024 * 1024,
+        })
+        out.set(Number(m[1]), String(stdout))
+      } catch {
+        /* нечитаемый блоб — просто без оверрайда */
+      }
+    }),
+  )
+  return out
+}
+
+// Значение front-matter вида `key: "json-строка"` или `key: raw` (порт Rust front_value).
+function frontValue(raw: string): string {
+  const t = raw.trim()
+  if (t.startsWith('"')) {
+    try {
+      return JSON.parse(t) as string
+    } catch {
+      return t
+    }
+  }
+  return t
+}
+
+// Обратный парс steps/NN-*.md → title/desc/command (порт Rust parse_step_md).
+// Безопасное подмножество: источник остальных полей — всегда list.json.
+function parseStepMd(content: string): { title?: string; desc?: string; command?: string } {
+  let title: string | undefined
+  let command: string | undefined
+  const lines = content.split('\n')
+  let bodyStart = 0
+  if (lines[0] === '---') {
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trimEnd() === '---') {
+        bodyStart = i + 1
+        break
+      }
+      if (lines[i].startsWith('title:')) title = frontValue(lines[i].slice('title:'.length))
+      else if (lines[i].startsWith('command:')) command = frontValue(lines[i].slice('command:'.length))
+    }
+  }
+  // desc — текст до первого маркера (**Why:**, subtask, ref), без пустых краёв.
+  const descLines: string[] = []
+  for (const line of lines.slice(bodyStart)) {
+    const t = line.trimStart()
+    if (t.startsWith('**Why:**') || t.startsWith('- [ ] ') || t.startsWith('- ')) break
+    descLines.push(line)
+  }
+  while (descLines.length && !descLines[0].trim()) descLines.shift()
+  while (descLines.length && !descLines[descLines.length - 1].trim()) descLines.pop()
+  return { title, desc: descLines.length ? descLines.join('\n') : undefined, command }
+}
+
 // Материализация произвольного rev (ветка/sha): list.json → BranchSnapshot.
-// Набор/порядок шагов — из list.json; per-step md-оверрайды применяет только
-// Rust-канон, inproc — dev/demo-фолбэк без них.
+// Набор/порядок шагов — из list.json; per-step md-оверрайды (title/desc/command)
+// применяются КАК В RUST-каноне (project.rs) — раньше inproc их игнорировал,
+// и снапшот с оверрайдами зависел от флага SETFORK_CORE_URL (аудит core 2026-07-20, F4).
 async function snapshotAt(bare: string, rev: string): Promise<BranchSnapshot | null> {
   let raw: string
   let tip: string
@@ -316,32 +391,38 @@ async function snapshotAt(bare: string, rev: string): Promise<BranchSnapshot | n
     desc?: string
     tags?: string[]
     ordered?: boolean
-    steps?: { type?: string; content?: Record<string, unknown>; title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
+    steps?: { n?: number; type?: string; content?: Record<string, unknown>; title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
   }
   try {
     parsed = JSON.parse(raw)
   } catch {
     return null
   }
+  const md = await stepMdOverrides(bare, rev)
   const isStep = (st: { type?: string }) => !st.type || st.type === 'step'
   // Шаг-блок без title — мусор; не-step блоки (text/image) валидны и без title.
+  // origN — номер шага из list.json (ключ steps/NN-*.md), считается ДО фильтрации.
   const steps: BranchSnapshot['steps'] = (parsed.steps ?? [])
-    .filter((st) => !isStep(st) || (st.title ?? '').trim())
-    .map((st, i) => ({
-      n: i + 1,
-      // type/content несём только у не-step блоков (у шага — undefined, byte-compat).
-      ...(isStep(st) ? {} : { type: st.type, content: st.content && typeof st.content === 'object' ? st.content : {} }),
-      title: st.title ?? '',
-      desc: st.desc ?? '',
-      command: st.command ?? '',
-      level: st.level || 'required',
-      why: st.why ?? '',
-      section: st.section ?? '',
-      subtasks: st.subtasks ?? [],
-      refs: (st.refs ?? [])
-        .filter((r) => (r.label ?? '').trim())
-        .map((r) => ({ label: r.label ?? '', ...(r.url ? { url: r.url } : {}) })),
-    }))
+    .map((st, rawIdx) => ({ st, origN: st.n ?? rawIdx + 1 }))
+    .filter(({ st }) => !isStep(st) || (st.title ?? '').trim())
+    .map(({ st, origN }, i) => {
+      const o = isStep(st) && md.has(origN) ? parseStepMd(md.get(origN)!) : undefined
+      return {
+        n: i + 1,
+        // type/content несём только у не-step блоков (у шага — undefined, byte-compat).
+        ...(isStep(st) ? {} : { type: st.type, content: st.content && typeof st.content === 'object' ? st.content : {} }),
+        title: o?.title?.trim() ? o.title : (st.title ?? ''),
+        desc: o?.desc !== undefined ? o.desc : (st.desc ?? ''),
+        command: o?.command !== undefined ? o.command : (st.command ?? ''),
+        level: st.level || 'required',
+        why: st.why ?? '',
+        section: st.section ?? '',
+        subtasks: st.subtasks ?? [],
+        refs: (st.refs ?? [])
+          .filter((r) => (r.label ?? '').trim())
+          .map((r) => ({ label: r.label ?? '', ...(r.url ? { url: r.url } : {}) })),
+      }
+    })
   return {
     tipSha: tip.trim(),
     title: parsed.title ?? '',
