@@ -8,9 +8,10 @@ import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
 import type { GenerationStatus } from './queries'
 import { LIST_KINDS, kindLabel, refineHint } from '@/shared/ai/list-kind'
+import { DETAIL_LEVELS, detailLabel, toDetail } from '@/shared/ai/detail-level'
 import { CouncilBubble } from './CouncilBubble'
 import { CandidateCard } from './CandidateCard'
-import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationKind } from './actions'
+import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
 
 /**
  * Экран генерации — беседа, от первой реплики до результата.
@@ -135,13 +136,16 @@ interface Props {
   messages: GenMessage[]
   /** Тип списка (ADR-0010) — подсвечиваем в переключателе; null у старых генераций. */
   listKind: string | null
+  /** Объём (short/normal/detailed); null у старых генераций → обычный. */
+  detail: string | null
   /** id → своя картинка эксперта (сменили в админке). Нет записи → встроенная по who. */
   avatars: Record<string, string>
   error?: string
   clarifyQuestions?: string[]
 }
 
-export function GenerationChat({ generationId, lang, candidates, status, messages, listKind, avatars, error, clarifyQuestions }: Props) {
+export function GenerationChat({ generationId, lang, candidates, status, messages, listKind, detail, avatars, error, clarifyQuestions }: Props) {
+  const detailNow = toDetail(detail)
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const router = useRouter()
@@ -254,6 +258,22 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             }`}
           >
             {kindLabel(k, ru)}
+          </button>
+        ))}
+        <span className="mx-1 h-4 w-px shrink-0 bg-border" />
+        {/* Объём — вторая ось рядом с типом: «слишком куце / слишком много» лечится одним
+            кликом, новый вариант приходит в ленту, старые остаются для сравнения. */}
+        {DETAIL_LEVELS.map((lv) => (
+          <button
+            key={lv}
+            type="button"
+            onClick={() => lv !== detailNow && start(() => setGenerationDetail(generationId, lv))}
+            disabled={working}
+            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] transition-colors disabled:opacity-40 ${
+              lv === detailNow ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
+            }`}
+          >
+            {detailLabel(lv, ru)}
           </button>
         ))}
       </div>

@@ -46,6 +46,7 @@ export default async function GenerationPage({
       status={gen.status}
       messages={messages}
       listKind={gen.listKind}
+      detail={gen.detail}
       avatars={avatars}
       error={sp.e}
       clarifyQuestions={clarifyQuestions}
