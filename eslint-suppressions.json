@@ -91,7 +91,7 @@
   },
   "src/app/admin/page.tsx": {
     "no-restricted-syntax": {
-      "count": 30
+      "count": 28
     }
   },
   "src/app/change-email/page.tsx": {
@@ -162,11 +162,6 @@
   "src/features/admin/AchievementsAdmin.tsx": {
     "no-restricted-syntax": {
       "count": 3
-    }
-  },
-  "src/features/admin/AiKeyAndSwitch.tsx": {
-    "no-restricted-syntax": {
-      "count": 6
     }
   },
   "src/features/admin/CreditsWidget.tsx": {

@@ -1,7 +1,7 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { getAiSettings, getOpenRouterApiKey, maskKey } from '@/shared/settings/ai'
+import { getAiProviderRaw, getAiSettings, maskKey } from '@/shared/settings/ai'
 import { getMediaSettings, maskSecret } from '@/shared/settings/media'
 import { getSearchSettings } from '@/shared/settings/search'
 import { getEmailSettings } from '@/shared/settings/email'
@@ -44,22 +44,28 @@ function priceMetric(m: ModelOption, embedding?: boolean): number {
   if (isVariable(m)) return Number.POSITIVE_INFINITY // «плавающие» — в конец списка
   return embedding ? m.promptPrice : m.completionPrice || m.promptPrice
 }
-function priceText(m: ModelOption, embedding: boolean, ru: boolean): string {
+type Currency = 'USD' | 'RUB'
+const CUR_SIGN: Record<Currency, string> = { USD: '$', RUB: '₽' }
+function priceText(m: ModelOption, embedding: boolean, ru: boolean, cur: Currency): string {
   if (isVariable(m)) return ru ? 'Плавающая' : 'Variable'
   if (!m.promptPrice && !m.completionPrice) return ru ? 'Бесплатно' : 'Free'
-  return embedding ? `$${m.promptPrice.toFixed(2)}` : `$${m.promptPrice.toFixed(2)} / $${m.completionPrice.toFixed(2)}`
+  const s = CUR_SIGN[cur]
+  return embedding ? `${s}${m.promptPrice.toFixed(2)}` : `${s}${m.promptPrice.toFixed(2)} / ${s}${m.completionPrice.toFixed(2)}`
 }
 // Зелёный — дёшево, жёлтый — средне, красный — дорого, серый — плавающая.
-function priceClass(metric: number): string {
+// Пороги в валюте каталога (₽-цены Selectel на два порядка «крупнее» долларовых).
+function priceClass(metric: number, cur: Currency): string {
   if (!Number.isFinite(metric)) return 'text-muted'
-  if (metric <= 1) return 'text-ok'
-  if (metric <= 10) return 'text-warn'
+  const [ok, warn] = cur === 'RUB' ? [100, 1000] : [1, 10]
+  if (metric <= ok) return 'text-ok'
+  if (metric <= warn) return 'text-warn'
   return 'text-danger'
 }
-function buildOpts(models: ModelOption[], embedding: boolean, ru: boolean): Option[] {
+function buildOpts(models: ModelOption[], embedding: boolean, ru: boolean, cur: Currency, pricesKnown: boolean): Option[] {
+  if (!pricesKnown) return [...models].map((m) => ({ value: m.id, id: m.id }))
   return [...models]
     .sort((a, b) => priceMetric(a, embedding) - priceMetric(b, embedding))
-    .map((m) => ({ value: m.id, id: m.id, price: priceText(m, embedding, ru), priceClass: priceClass(priceMetric(m, embedding)) }))
+    .map((m) => ({ value: m.id, id: m.id, price: priceText(m, embedding, ru, cur), priceClass: priceClass(priceMetric(m, embedding), cur) }))
 }
 function ensure(opts: Option[], current: string): Option[] {
   return current && !opts.some((o) => o.value === current) ? [{ value: current, id: current }, ...opts] : opts
@@ -82,10 +88,10 @@ export const metadata = { title: 'Admin' }
 
 export default async function AdminPage() {
   await requireAdmin()
-  const [lang, settings, apiKey, media, search, email, online, vapid, achDisplay, maintOn, monetization] = await Promise.all([
+  const [lang, settings, aiProv, media, search, email, online, vapid, achDisplay, maintOn, monetization] = await Promise.all([
     getLang(),
     getAiSettings(),
-    getOpenRouterApiKey(), // поле ключа в админке — именно OpenRouter (RU-провайдеры задаются env)
+    getAiProviderRaw(),
     getMediaSettings(),
     getSearchSettings(),
     getEmailSettings(),
@@ -107,8 +113,22 @@ export default async function AdminPage() {
     passMask: maskSecret(email.pass),
     notifyTo: email.notifyTo,
   }
-  const hasKey = Boolean(apiKey)
-  const maskedKey = maskKey(apiKey)
+  const providerKeys = {
+    openrouter: aiProv.openrouterKey,
+    selectel: aiProv.selectelKey,
+    yandex: aiProv.yandexKey,
+  }
+  const hasKeyByProvider = {
+    openrouter: Boolean(providerKeys.openrouter),
+    selectel: Boolean(providerKeys.selectel),
+    yandex: Boolean(providerKeys.yandex && aiProv.yandexFolder),
+  }
+  const maskedKeys = {
+    openrouter: maskKey(providerKeys.openrouter),
+    selectel: maskKey(providerKeys.selectel),
+    yandex: maskKey(providerKeys.yandex),
+  }
+  const hasKey = hasKeyByProvider[aiProv.provider] // активный провайдер сконфигурирован
   const mediaValues = {
     s3Endpoint: media.s3Endpoint,
     s3Region: media.s3Region,
@@ -122,15 +142,15 @@ export default async function AdminPage() {
     imgproxyKeyMask: maskSecret(media.imgproxyKey),
     imgproxySaltMask: maskSecret(media.imgproxySalt),
   }
-  const models = hasKey ? await fetchModels() : { chat: [], embedding: [] }
+  const models = await fetchModels() // сам вернёт пустой каталог, если провайдер не сконфигурирован
 
-  const chatOpts = ensure(buildOpts(models.chat, false, ru), settings.chatModel)
+  const chatOpts = ensure(buildOpts(models.chat, false, ru, models.currency, models.pricesKnown), settings.chatModel)
   // Ростер и галерея встроенных персонажей — читаем на сервере: клиенту не нужен доступ к БД и fs.
   const [rosterRows, gallery, uploaded] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars()])
   // Загруженная картинка идёт готовым URL (imgproxy/диск) — клиент не должен знать про S3-ключи.
   const roster = rosterRows.map((e) => ({ ...e, uploadedUrl: e.avatarUploaded ? uploaded[e.id] : undefined }))
-  const fallbackOpts = ensure(buildOpts(models.chat, false, ru), settings.fallbackModel)
-  const embOpts = ensure(buildOpts(models.embedding, true, ru), settings.embeddingModel)
+  const fallbackOpts = ensure(buildOpts(models.chat, false, ru, models.currency, models.pricesKnown), settings.fallbackModel)
+  const embOpts = ensure(buildOpts(models.embedding, true, ru, 'USD', true), settings.embeddingModel)
 
   const card = 'rounded-lg border border-border bg-surface p-5'
 
@@ -198,14 +218,22 @@ export default async function AdminPage() {
 
           {!hasKey && (
             <div className="mb-5 rounded-md border border-warn/40 bg-warn/10 px-3 py-2.5 text-[13px] text-warn">
-              {ru
-                ? 'Нет OPENROUTER_API_KEY в .env — генерация и списки моделей недоступны (id можно ввести вручную).'
-                : 'No OPENROUTER_API_KEY in .env — generation and model lists are unavailable (id can be typed manually).'}
+              {say(
+                'The active provider is not configured (no key) — generation and model lists are unavailable (id can be typed manually).',
+                'Активный провайдер не сконфигурирован (нет ключа) — генерация и списки моделей недоступны (id можно ввести вручную).',
+              )}
             </div>
           )}
 
           <form action={setAiSettings} className="flex flex-col gap-5">
-            <AiKeyAndSwitch enabled={settings.enabled} hasKey={hasKey} maskedKey={maskedKey} ru={ru} />
+            <AiKeyAndSwitch
+              enabled={settings.enabled}
+              provider={aiProv.provider}
+              hasKey={hasKeyByProvider}
+              maskedKeys={maskedKeys}
+              yandexFolder={aiProv.yandexFolder}
+              ru={ru}
+            />
 
             <div>
               <label className={lbl}>{ru ? 'Модель генерации' : 'Chat model'}</label>
@@ -231,6 +259,14 @@ export default async function AdminPage() {
                 <ModelSelect name="embeddingModel" defaultValue={settings.embeddingModel} options={embOpts} placeholder={ru ? 'Выбери модель' : 'Pick a model'} />
               ) : (
                 <input name="embeddingModel" defaultValue={settings.embeddingModel} className={`${field} font-mono`} />
+              )}
+              {models.provider !== 'openrouter' && (
+                <p className="mt-1.5 text-[12px] text-muted">
+                  {say(
+                    'Embeddings still go through OpenRouter (its key) until phase 2 with a reindex.',
+                    'Эмбеддинги пока всегда идут через OpenRouter (его ключ) — до фазы 2 с реиндексом.',
+                  )}
+                </p>
               )}
             </div>
 
@@ -260,24 +296,32 @@ export default async function AdminPage() {
             </div>
 
             <p className="text-[12px] text-muted">
-              {ru
-                ? 'Цены в списках — за 1М токенов (prompt/completion). Зелёные дешевле, жёлтые средние, красные дорогие.'
-                : 'Prices are per 1M tokens (prompt/completion). Green = cheap, yellow = mid, red = expensive.'}
+              {models.pricesKnown
+                ? say(
+                    `Prices are per 1M tokens (prompt/completion), in ${CUR_SIGN[models.currency]}. Green = cheap, yellow = mid, red = expensive.`,
+                    `Цены в списках — за 1М токенов (prompt/completion), в ${CUR_SIGN[models.currency]}. Зелёные дешевле, жёлтые средние, красные дорогие.`,
+                  )
+                : say(
+                    'This provider does not expose prices via API — check the Yandex Cloud console.',
+                    'Провайдер не отдаёт цены по API — смотри тарифы в консоли Yandex Cloud.',
+                  )}
             </p>
 
-            <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
-              <div className="text-[13px] font-medium text-ink">{ru ? 'Контроль расходов OpenRouter' : 'OpenRouter cost control'}</div>
-              <CreditsWidget ru={ru} />
-              <div>
-                <label className={lbl}>{ru ? 'Порог авто-fallback ($)' : 'Auto-fallback threshold ($)'}</label>
-                <input type="number" name="cheapModeThreshold" step="any" min="0" defaultValue={settings.cheapModeThreshold} className={field} />
-                <p className="mt-1.5 text-[12px] text-muted">
-                  {ru
-                    ? 'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.'
-                    : 'When the balance drops below this, generation switches to the fallback model. 0 = off.'}
-                </p>
+            {models.provider === 'openrouter' && (
+              <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
+                <div className="text-[13px] font-medium text-ink">{ru ? 'Контроль расходов OpenRouter' : 'OpenRouter cost control'}</div>
+                <CreditsWidget ru={ru} />
+                <div>
+                  <label className={lbl}>{ru ? 'Порог авто-fallback ($)' : 'Auto-fallback threshold ($)'}</label>
+                  <input type="number" name="cheapModeThreshold" step="any" min="0" defaultValue={settings.cheapModeThreshold} className={field} />
+                  <p className="mt-1.5 text-[12px] text-muted">
+                    {ru
+                      ? 'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.'
+                      : 'When the balance drops below this, generation switches to the fallback model. 0 = off.'}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <CouncilFields
               modelOptions={chatOpts}

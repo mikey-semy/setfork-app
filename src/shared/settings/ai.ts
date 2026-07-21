@@ -74,6 +74,9 @@ export interface AiProviderConfig {
 export const PROVIDER_SETTING = 'ai.provider'
 export const SELECTEL_KEY_SETTING = 'ai.selectel_api_key'
 export const YANDEX_KEY_SETTING = 'ai.yandex_api_key'
+export const YANDEX_FOLDER_SETTING = 'ai.yandex_folder_id'
+
+export const AI_PROVIDERS: readonly AiProviderId[] = ['openrouter', 'selectel', 'yandex'] as const
 
 /** Чистый резолв провайдера из настроек БД + env (юнит-тестируется без БД). */
 export function resolveAiProvider(
@@ -82,13 +85,12 @@ export function resolveAiProvider(
 ): AiProviderConfig | null {
   const provider = (m[PROVIDER_SETTING]?.trim() || env.AI_PROVIDER || 'openrouter') as AiProviderId
   if (provider === 'selectel') {
-    // Endpoint у Selectel индивидуальный (из панели ИИ-роутера), дефолта нет.
-    const baseUrl = (env.SELECTEL_AI_URL || '').trim().replace(/\/$/, '')
+    const baseUrl = (env.SELECTEL_AI_URL || 'https://api.selectel.ru/aig/v1').trim().replace(/\/$/, '')
     const apiKey = (m[SELECTEL_KEY_SETTING]?.trim() || env.SELECTEL_AI_KEY || '').trim()
     return baseUrl && apiKey ? { provider, baseUrl, apiKey } : null
   }
   if (provider === 'yandex') {
-    const folder = (env.YC_AI_FOLDER_ID || '').trim()
+    const folder = (m[YANDEX_FOLDER_SETTING]?.trim() || env.YC_AI_FOLDER_ID || '').trim()
     const apiKey = (m[YANDEX_KEY_SETTING]?.trim() || env.YC_AI_API_KEY || '').trim()
     if (!folder || !apiKey) return null
     return {
@@ -106,12 +108,35 @@ export function resolveAiProvider(
     : null
 }
 
+/** Сырые провайдер-настройки для админки (БД → env). Ключи маскирует вызывающий. */
+export async function getAiProviderRaw(): Promise<{
+  provider: AiProviderId
+  openrouterKey: string
+  selectelKey: string
+  yandexKey: string
+  yandexFolder: string
+}> {
+  const rows = await db
+    .select()
+    .from(appSettings)
+    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING, YANDEX_FOLDER_SETTING]))
+  const m = Object.fromEntries(rows.map((r) => [r.key, (r.value ?? '').trim()]))
+  const raw = m[PROVIDER_SETTING] || process.env.AI_PROVIDER || 'openrouter'
+  return {
+    provider: (AI_PROVIDERS as readonly string[]).includes(raw) ? (raw as AiProviderId) : 'openrouter',
+    openrouterKey: m[API_KEY_SETTING] || process.env.OPENROUTER_API_KEY?.trim() || '',
+    selectelKey: m[SELECTEL_KEY_SETTING] || process.env.SELECTEL_AI_KEY?.trim() || '',
+    yandexKey: m[YANDEX_KEY_SETTING] || process.env.YC_AI_API_KEY?.trim() || '',
+    yandexFolder: m[YANDEX_FOLDER_SETTING] || process.env.YC_AI_FOLDER_ID?.trim() || '',
+  }
+}
+
 /** Активный провайдер чата (null = ИИ не сконфигурирован). */
 export async function getAiProviderConfig(): Promise<AiProviderConfig | null> {
   const rows = await db
     .select()
     .from(appSettings)
-    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING]))
+    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING, YANDEX_FOLDER_SETTING]))
   return resolveAiProvider(Object.fromEntries(rows.map((r) => [r.key, r.value ?? ''])))
 }
 
