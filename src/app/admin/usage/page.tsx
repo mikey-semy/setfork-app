@@ -32,8 +32,10 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
     getUsageByUser(days),
     getUsageTotals(days),
     getOpenRouterCredits(),
-    modelHealth((days || 30) * 24 * 3_600_000), // «Всё» → окно 30д: старьё в надёжности не показательно
-    modelHealth(QUARANTINE_WINDOW_MS), // карантин всегда считается по суткам
+    // Щиток — вторичен: его сбой (см. инцидент со схемой 2026-07-21) не должен
+    // ронять страницу расходов целиком.
+    modelHealth((days || 30) * 24 * 3_600_000).catch(() => []), // «Всё» → окно 30д
+    modelHealth(QUARANTINE_WINDOW_MS).catch(() => []), // карантин всегда по суткам
   ])
   const quarantinedNow = new Set(dayHealth.filter(isQuarantined).map((h) => h.model))
 

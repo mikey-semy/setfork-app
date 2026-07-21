@@ -17,9 +17,14 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-# ── migrate: применить версионные миграции к БД (one-shot перед стартом app) ──
+# ── migrate: привести БД к schema.ts (one-shot перед стартом app) ──
+# ИМЕННО push, а не versioned migrate: снапшоты миграций отстали от схемы на
+# месяцы (прод исторически строился ручными push) — инцидент 2026-07-21, когда
+# код с новыми колонками уехал без схемы и /admin/usage лёг. push идемпотентен
+# и приводит БД к schema.ts; его интерактивный вопрос (напр. data-loss) валит
+# контейнер → app не стартует (depends_on) → деплой красный = сигнал руками.
 FROM builder AS migrate
-CMD ["npx", "drizzle-kit", "migrate"]
+CMD ["npx", "drizzle-kit", "push", "--force"]
 
 # ── runner: минимальный standalone-сервер (непривилегированный) ──
 FROM base AS runner
