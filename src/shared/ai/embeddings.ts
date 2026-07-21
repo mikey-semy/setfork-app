@@ -93,6 +93,7 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
       cost: 0,
       refType: meta?.refType,
       refId: meta?.refId,
+      provider: space.provider,
     })
     return out
   } catch (e) {

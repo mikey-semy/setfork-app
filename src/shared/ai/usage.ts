@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import { aiUsage, db, users } from '@/shared/db'
+import type { AiProviderId } from '@/shared/settings/ai'
 
 export type AiFeature = 'generate' | 'regenerate' | 'refine' | 'note' | 'moderate' | 'embed' | 'translate'
 
@@ -47,14 +48,17 @@ export async function recordUsage(row: {
   refId?: string
   outcome?: AiOutcome
   durationMs?: number
+  /** Провайдер вызова — для оценки стоимости, когда API её не отдаёт. */
+  provider?: AiProviderId
 }): Promise<void> {
   try {
-    // Яндекс cost в ответе не присылает (пишлось 0 → денежные квоты не работали):
-    // оцениваем по хардкод-прайсу (yandex-pricing); без цены в прайсе — честный 0.
+    // RU-провайдеры cost в ответе не присылают (писалось 0 → денежные квоты не
+    // работали): оцениваем единым прайс-слоем (pricing: яндекс/гигачат — хардкод,
+    // selectel — кеш их каталога). Без цены — честный 0, не выдумка.
     let cost = row.cost
-    if (!cost && (row.model.startsWith('gpt://') || row.model.startsWith('emb://'))) {
-      const { estimateYandexCostUsd } = await import('./yandex-pricing')
-      cost = estimateYandexCostUsd(row.model, row.input, row.output) ?? 0
+    if (!cost) {
+      const { estimateCostUsd } = await import('./pricing')
+      cost = (await estimateCostUsd(row.provider, row.model, row.input, row.output)) ?? 0
     }
     await db.insert(aiUsage).values({
       userId: row.userId ?? null,

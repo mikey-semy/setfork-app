@@ -55,6 +55,7 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   if (!client) return null
   // В замыкание run (function declaration) сужение client не протекает — фиксируем поля.
   const chat = client.chat
+  const providerId = client.cfg.provider
   const settings = await getAiSettings()
   if (!settings.enabled) return null
   if (!(await globalBudgetOk())) return null
@@ -127,13 +128,13 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
           abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
         })
         const u = extractUsage(result)
-        await recordUsage({ userId: opts.userId, feature, model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType ?? 'council', refId: opts.refId, outcome: 'ok', durationMs: Date.now() - startedAt })
+        await recordUsage({ userId: opts.userId, feature, model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType ?? 'council', refId: opts.refId, outcome: 'ok', durationMs: Date.now() - startedAt, provider: providerId })
         return { text: result.text }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         // Каждый ФИЗИЧЕСКИЙ вызов попадает в журнал (и ретраи) — иначе щиток
         // надёжности видел бы только успехи и карантин никогда бы не срабатывал.
-        await recordUsage({ userId: opts.userId, feature, model, input: 0, output: 0, total: 0, cost: 0, refType: opts.refType ?? 'council', refId: opts.refId, outcome: outcomeOf(e), durationMs: Date.now() - startedAt })
+        await recordUsage({ userId: opts.userId, feature, model, input: 0, output: 0, total: 0, cost: 0, refType: opts.refType ?? 'council', refId: opts.refId, outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: providerId })
         const transient = /timeout|abort|econnreset|fetch failed|network|socket|429|50[234]/i.test(msg)
         if (attempt === 0 && transient) {
           console.warn('[council] call retry', msg)

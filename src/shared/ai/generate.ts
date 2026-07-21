@@ -169,6 +169,7 @@ async function runListModel(
       refId: opts.refId,
       outcome: parsed ? 'ok' : 'invalid',
       durationMs: Date.now() - startedAt,
+      provider: client.cfg.provider,
     })
     return parsed
   } catch (e) {
@@ -184,6 +185,7 @@ async function runListModel(
       refId: opts.refId,
       outcome: outcomeOf(e),
       durationMs: Date.now() - startedAt,
+      provider: client.cfg.provider,
     })
     console.warn('[generate] failed', e instanceof Error ? e.message : e)
     return null
@@ -245,7 +247,7 @@ ${sp.rule()}`,
       maxOutputTokens: 60,
     })
     const u = extractUsage(result)
-    await recordUsage({ userId: opts.userId, feature: 'note', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType, refId: opts.refId, outcome: 'ok', durationMs: Date.now() - startedAt })
+    await recordUsage({ userId: opts.userId, feature: 'note', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType, refId: opts.refId, outcome: 'ok', durationMs: Date.now() - startedAt, provider: client.cfg.provider })
     const note = result.text.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, ' ').slice(0, 140)
     return note || null
   } catch (e) {

@@ -124,6 +124,13 @@ export async function fetchModels(): Promise<ModelsResult> {
         : m
     })
   }
+  if (cfg.provider === 'gigachat') {
+    const { gigachatPriceRub1M } = await import('./pricing')
+    chatOpts = chatOpts.map((m) => {
+      const price = gigachatPriceRub1M(m.id) // ₽/1М, вход=выход единая
+      return price != null ? { ...m, priceKnown: true, promptPrice: price, completionPrice: price } : m
+    })
+  }
   return {
     provider: cfg.provider,
     currency: cfg.provider === 'openrouter' ? 'USD' : 'RUB',
