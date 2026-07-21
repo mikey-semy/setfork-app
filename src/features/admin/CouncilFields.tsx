@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Switch } from '@/shared/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { ModelSelect, type Option } from './ModelSelect'
 
 // Поля «Совета гномов» внутри формы AI-настроек (submit через setAiSettings).
@@ -45,10 +46,15 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={lbl}>{say('Audience', 'Аудитория')}</label>
-          <select name="councilAudience" defaultValue={v.audience} className={field}>
-            <option value="admin">{say('Admins only', 'Только админам')}</option>
-            <option value="all">{say('Everyone', 'Всем')}</option>
-          </select>
+          <Select name="councilAudience" defaultValue={v.audience}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">{say('Admins only', 'Только админам')}</SelectItem>
+              <SelectItem value="all">{say('Everyone', 'Всем')}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <label className={lbl}>{say('Max experts', 'Макс экспертов')}</label>

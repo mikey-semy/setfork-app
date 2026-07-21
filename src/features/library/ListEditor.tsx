@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Checkbox } from '@/shared/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { DatePicker } from '@/shared/ui/DatePicker'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
@@ -788,19 +789,22 @@ function ProductBlockBody({
             value={p.url}
             onChange={(e) => patchRow(pi, { url: e.target.value })}
           />
-          <select
-            className={`${input} sm:max-w-[130px]`}
-            aria-label={t('productTierNone', lang)}
-            value={p.tier}
-            onChange={(e) => patchRow(pi, { tier: e.target.value as EditorProduct['tier'] })}
+          <Select
+            value={p.tier || '__none__'}
+            onValueChange={(v) => patchRow(pi, { tier: (v === '__none__' ? '' : v) as EditorProduct['tier'] })}
           >
-            <option value="">{t('productTierNone', lang)}</option>
-            {PRODUCT_TIERS.map((tr) => (
-              <option key={tr} value={tr}>
-                {tierLabel(tr)}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="sm:max-w-[130px]" aria-label={t('productTierNone', lang)}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">{t('productTierNone', lang)}</SelectItem>
+              {PRODUCT_TIERS.map((tr) => (
+                <SelectItem key={tr} value={tr}>
+                  {tierLabel(tr)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <input
             className={input}
             aria-label={t('productNotePh', lang)}
