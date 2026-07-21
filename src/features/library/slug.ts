@@ -13,10 +13,13 @@ export function parseTags(raw: unknown): string[] {
   ].slice(0, 8)
 }
 
+import { translitRu } from '@/shared/lib/translit'
+
 export function slugify(input: string): string {
   return (
-    input
-      .toLowerCase()
+    // Кириллица транслитерируется, а не вырезается: раньше русский заголовок
+    // давал слаг «-» (реальный случай: MCP-создание «Домашнее маршмеллоу»).
+    translitRu(input)
       .trim()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')

@@ -11,7 +11,7 @@ import { translateList } from './actions'
 // Кнопка «Перевести» (ADR-0009): AI-перевод полей списка на язык зрителя, ДОБАВЛЯЕТ
 // языковой ключ (оригинал остаётся) → новая версия. Икон-онли (как x.com), подпись —
 // в тултипе; ошибку показываем тостом, а не инлайн-красным. Тон нейтральный.
-export function TranslateButton({ templateId, targetLang, lang }: { templateId: string; targetLang: Lang; lang: Lang }) {
+export function TranslateButton({ templateId, targetLang, lang, iconOnly }: { templateId: string; targetLang: Lang; lang: Lang; iconOnly?: boolean }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
@@ -39,7 +39,9 @@ export function TranslateButton({ templateId, targetLang, lang }: { templateId: 
         onClick={run}
         disabled={pending}
         aria-label={label}
-        className="grid size-[30px] shrink-0 place-items-center rounded-md border border-border text-ink hover:border-border-strong disabled:opacity-60"
+        className={iconOnly
+          ? "grid h-7 w-7 shrink-0 place-items-center rounded text-muted hover:text-ink disabled:opacity-60"
+          : "grid size-[30px] shrink-0 place-items-center rounded-md border border-border text-ink hover:border-border-strong disabled:opacity-60"}
       >
         {pending ? <Loader2 size={15} className="animate-spin" /> : <Languages size={15} />}
       </button>

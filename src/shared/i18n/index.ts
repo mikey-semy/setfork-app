@@ -369,6 +369,7 @@ const DICT = {
   signInYandex: { en: 'Sign in with Yandex', ru: 'Войти через Яндекс' },
   signInVk: { en: 'Sign in with VK ID', ru: 'Войти через VK ID' },
   signInTelegram: { en: 'Sign in with Telegram', ru: 'Войти через Telegram' },
+  stepChecksLabel: { en: 'Check', ru: 'Проверь' },
   // Шаг Telegram-входа (/login/telegram) + сообщения бота ({site} подставляется кодом).
   tgLoginIntro: {
     en: 'Open Telegram with the button below and confirm the sign-in with the bot — this page will continue automatically.',

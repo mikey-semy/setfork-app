@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, useTemplate } from '@/features/library/actions'
@@ -313,19 +313,24 @@ export default async function ListPage({
                     </form>
                   )}
                   <CloneDropdown base={base} lang={lang} />
-                  {/* «Перевести» — владельцу/коллаборатору, когда у списка нет
-                      заголовка на языке зрителя (перевод добавит язык, ADR-0009). */}
-                  {canManageBranches && !snapshot && !tpl.title[lang] && (
-                    <TranslateButton templateId={tpl.id} targetLang={lang} lang={lang} />
-                  )}
-                  <Tooltip label={isOwner ? t('edit', lang) : t('suggestEdit', lang)}>
-                    <Link
-                      href={isOwner ? `${base}/edit` : `${base}/suggest`}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
-                    >
-                      <Pencil size={13} /> <span className="hidden md:inline">{isOwner ? t('edit', lang) : t('suggestEdit', lang)}</span>
-                    </Link>
-                  </Tooltip>
+                  {/* Служебные действия — иконки без рамки в углу (как у GitHub),
+                      а не полноразмерные кнопки в основном ряду (фидбек владельца). */}
+                  <span className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2">
+                    {/* «Перевести» — владельцу/коллаборатору, когда у списка нет
+                        заголовка на языке зрителя (перевод добавит язык, ADR-0009). */}
+                    {canManageBranches && !snapshot && !tpl.title[lang] && (
+                      <TranslateButton templateId={tpl.id} targetLang={lang} lang={lang} iconOnly />
+                    )}
+                    <Tooltip label={isOwner ? t('edit', lang) : t('suggestEdit', lang)}>
+                      <Link
+                        href={isOwner ? `${base}/edit` : `${base}/suggest`}
+                        aria-label={isOwner ? t('edit', lang) : t('suggestEdit', lang)}
+                        className="grid h-7 w-7 place-items-center rounded text-muted hover:text-ink"
+                      >
+                        <Pencil size={14} />
+                      </Link>
+                    </Tooltip>
+                  </span>
                 </span>
               </div>
             )}
@@ -541,14 +546,22 @@ export default async function ListPage({
                           </div>
                         )}
                         {subs.length > 0 && (
-                          <ul className="mt-3 flex flex-col gap-1.5">
-                            {subs.map((label, i) => (
-                              <li key={i} className="flex gap-2 text-[13px] text-ink-2">
-                                <span className="text-muted">–</span>
-                                {label}
-                              </li>
-                            ))}
-                          </ul>
+                          <div className="mt-3">
+                            {/* subtasks — критерии проверки шага (см. промпт генерации:
+                                «verification checks»), а не под-шаги: подписываем и рисуем
+                                чек-квадратами, иначе выглядят оторванным списком. */}
+                            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                              {t('stepChecksLabel', lang)}
+                            </div>
+                            <ul className="flex flex-col gap-1.5">
+                              {subs.map((label, i) => (
+                                <li key={i} className="flex gap-2 text-[13px] text-ink-2">
+                                  <SquareCheckBig size={14} className="mt-0.5 shrink-0 text-muted" />
+                                  {label}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         )}
                         {refs.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
