@@ -36,6 +36,7 @@ import { CodeEditor } from '@/shared/ui/CodeEditor'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorProduct, type EditorQuiz } from './editor'
 import { t } from '@/shared/i18n'
 import { blankCount, type QuizKind } from '@/core'
+import { classifyListKind, refineHint } from '@/shared/ai/list-kind'
 import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
 import { fetchLinkTitleAction, refineList, uploadStepFile, uploadStepImage, uploadStepVideo } from './actions'
 
@@ -322,9 +323,12 @@ export function ListEditor({
             <Sparkles size={14} /> {ru ? 'Улучшить' : 'Improve'}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {/* Плейсхолдер — готовая фраза ПО ТИПУ списка (тот же refineHint, что в чате
+                генерации): тип выводится классификатором из заголовка бесплатно, без
+                LLM-вызова. Хардкод «про TLS» на рецепте выглядел нелепо (фидбек владельца). */}
             <input
               className={`${input} min-w-[240px] flex-1`}
-              placeholder={ru ? 'напр. добавь шаг про TLS и команды' : 'e.g. add a TLS step with commands'}
+              placeholder={refineHint(classifyListKind(aiRefine.title), ru)}
               value={instruction}
               disabled={refining}
               onChange={(e) => setInstruction(e.target.value)}

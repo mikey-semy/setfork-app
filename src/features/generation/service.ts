@@ -177,6 +177,7 @@ export async function addCandidate(
     // Пустой объект у одиночной генерации (у неё пока нет провенанса) — не null, чтобы
     // читателю не различать «нет колонки/нет данных».
     const provenance = (draft.provenance ?? {}) as Record<string, unknown>
+    const hint = draft.hint ?? ''
     await db
       .insert(generationCandidates)
       .values({
@@ -188,10 +189,11 @@ export async function addCandidate(
         tags: draft.tags.length ? parseTags(draft.tags.join(' ')) : parseTags(query),
         items,
         provenance,
+        hint,
       })
       .onConflictDoUpdate({
         target: [generationCandidates.generationId, generationCandidates.idx],
-        set: { title, desc: draft.desc ?? '', summary, items, provenance },
+        set: { title, desc: draft.desc ?? '', summary, items, provenance, hint },
       })
     delivered = true
     await setGenerationStatus(generationId, 'done')

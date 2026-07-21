@@ -87,10 +87,34 @@ export async function moderateContent(
   } catch (e) {
     const invalid = NoObjectGeneratedError.isInstance(e)
     await recordUsage({ userId: meta.userId, feature: 'moderate', model, input: 0, output: 0, total: 0, cost: 0, refType: 'template', refId: meta.refId, outcome: invalid ? 'invalid' : outcomeOf(e), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
-    // Модель не вернула валидный по схеме вердикт (не тот формат / контент-фильтр / инъекция):
-    // это НЕ транзиентно (при temperature=0 повторится, деньги спишутся снова) — не ретраим,
-    // отдаём неуверенный вердикт → на гейте уйдёт к человеку (hold), живой список не тронем.
-    if (invalid) return { flagged: false, category: '', reason: 'classifier returned no valid verdict', confidence: 0 }
+    if (invalid) {
+      // Частый режим отказа RU-моделей: валидный JSON, но С ПРОЗОЙ вокруг («Вот вердикт: {...}») —
+      // structured-парсер это бракует. Спасаем вердикт из сырого текста ошибки (он в ней есть),
+      // прежде чем отправлять список человеку: иначе «автоматическая» модерация каждый раз
+      // застревала в hold с confidence 0 (фидбек владельца — списки висят «На проверке»).
+      const raw = (e as { text?: string }).text ?? ''
+      const s = raw.indexOf('{')
+      const en = raw.lastIndexOf('}')
+      if (s >= 0 && en > s) {
+        try {
+          const parsed = VERDICT_SCHEMA.safeParse(JSON.parse(raw.slice(s, en + 1)))
+          if (parsed.success) {
+            const obj = parsed.data
+            return {
+              flagged: !!obj.flagged,
+              category: String(obj.category ?? '').slice(0, 60),
+              reason: String(obj.reason ?? '').slice(0, 300),
+              confidence: Number.isFinite(obj.confidence) ? Math.min(1, Math.max(0, obj.confidence)) : 0,
+            }
+          }
+        } catch {
+          // не спаслось — ниже честный «no valid verdict»
+        }
+      }
+      // Спасти не удалось: НЕ транзиентно (при temperature=0 повторится, деньги спишутся снова) —
+      // не ретраим, отдаём неуверенный вердикт → на гейте уйдёт к человеку (hold).
+      return { flagged: false, category: '', reason: 'classifier returned no valid verdict', confidence: 0 }
+    }
     // Иная ошибка (сеть/провайдер недоступен) — транзиентная, вызывающий вправе ретраить.
     return null
   }

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { BadgeCheck, Check, EyeOff, Eye, Loader2, Sparkles } from 'lucide-react'
 import { t, tr, type Lang } from '@/shared/i18n'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { ModFilter, ModItem } from './queries'
 import { aiModerate, setModeration, setVerified } from './actions'
 
@@ -51,12 +52,13 @@ export function ModerationTable({
 
   return (
     <div>
-      <div className="mb-4 flex gap-4 border-b border-border text-[13.5px] font-semibold">
+      {/* На мобильном табы скроллятся, не ломая строк (фидбек владельца). */}
+      <div className="no-scrollbar mb-4 flex gap-4 overflow-x-auto border-b border-border text-[13.5px] font-semibold">
         {tabs.map((tb) => (
           <Link
             key={tb.key}
             href={tb.key === 'all' ? '/admin/moderation' : `/admin/moderation?filter=${tb.key}`}
-            className={`pb-2.5 ${filter === tb.key ? 'border-b-2 border-ink text-ink' : 'text-ink-2 hover:text-ink'}`}
+            className={`shrink-0 whitespace-nowrap pb-2.5 ${filter === tb.key ? 'border-b-2 border-ink text-ink' : 'text-ink-2 hover:text-ink'}`}
           >
             {tb.label}
             {tb.n != null && tb.n > 0 && <span className="ml-1.5 rounded-full bg-surface-2 px-1.5 text-[11px] text-ink-2">{tb.n}</span>}
@@ -90,41 +92,55 @@ export function ModerationTable({
                 {it.moderationReason && <div className="text-[11.5px] text-warn">{it.moderationReason}</div>}
               </div>
 
-              <div className="flex shrink-0 items-center gap-1.5">
+              {/* Действия — компактные иконки с тултипами (фидбек владельца: кнопки-простыни
+                  не влезали на мобильный). aria-label дублирует тултип для доступности. */}
+              <div className="flex shrink-0 items-center gap-1">
                 {it.moderation !== 'active' && (
-                  <button
-                    onClick={() => start(() => void setModeration(it.id, 'active'))}
-                    disabled={pending}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-ok/50 px-2.5 py-1.5 text-[12px] font-medium text-ok disabled:opacity-60"
-                  >
-                    <Check size={13} /> {t('approveAction', lang)}
-                  </button>
+                  <Tooltip label={t('approveAction', lang)}>
+                    <button
+                      onClick={() => start(() => void setModeration(it.id, 'active'))}
+                      disabled={pending}
+                      aria-label={t('approveAction', lang)}
+                      className="grid h-8 w-8 place-items-center rounded-md border border-ok/50 text-ok disabled:opacity-60"
+                    >
+                      <Check size={14} />
+                    </button>
+                  </Tooltip>
                 )}
-                <button
-                  onClick={() => start(() => void setVerified(it.id, !it.verified))}
-                  disabled={pending}
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] font-medium disabled:opacity-60 ${
-                    it.verified ? 'border-ok text-ok' : 'border-border text-ink-2 hover:text-ink'
-                  }`}
-                >
-                  <BadgeCheck size={13} /> {it.verified ? t('unverifyAction', lang) : t('verifyAction', lang)}
-                </button>
-                <button
-                  onClick={() => runAi(it.id)}
-                  disabled={pending}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12px] font-medium text-ink-2 hover:text-ink disabled:opacity-60"
-                >
-                  {busy === it.id ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {t('aiCheck', lang)}
-                </button>
-                <button
-                  onClick={() => start(() => void setModeration(it.id, hidden ? 'active' : 'hidden'))}
-                  disabled={pending}
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] font-medium disabled:opacity-60 ${
-                    hidden ? 'border-border text-ink-2 hover:text-ink' : 'border-danger/40 text-danger'
-                  }`}
-                >
-                  {hidden ? <Eye size={13} /> : <EyeOff size={13} />} {hidden ? t('unhideAction', lang) : t('hideAction', lang)}
-                </button>
+                <Tooltip label={it.verified ? t('unverifyAction', lang) : t('verifyAction', lang)}>
+                  <button
+                    onClick={() => start(() => void setVerified(it.id, !it.verified))}
+                    disabled={pending}
+                    aria-label={it.verified ? t('unverifyAction', lang) : t('verifyAction', lang)}
+                    className={`grid h-8 w-8 place-items-center rounded-md border disabled:opacity-60 ${
+                      it.verified ? 'border-ok text-ok' : 'border-border text-ink-2 hover:text-ink'
+                    }`}
+                  >
+                    <BadgeCheck size={14} />
+                  </button>
+                </Tooltip>
+                <Tooltip label={t('aiCheck', lang)}>
+                  <button
+                    onClick={() => runAi(it.id)}
+                    disabled={pending}
+                    aria-label={t('aiCheck', lang)}
+                    className="grid h-8 w-8 place-items-center rounded-md border border-border text-ink-2 hover:text-ink disabled:opacity-60"
+                  >
+                    {busy === it.id ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                  </button>
+                </Tooltip>
+                <Tooltip label={hidden ? t('unhideAction', lang) : t('hideAction', lang)}>
+                  <button
+                    onClick={() => start(() => void setModeration(it.id, hidden ? 'active' : 'hidden'))}
+                    disabled={pending}
+                    aria-label={hidden ? t('unhideAction', lang) : t('hideAction', lang)}
+                    className={`grid h-8 w-8 place-items-center rounded-md border disabled:opacity-60 ${
+                      hidden ? 'border-border text-ink-2 hover:text-ink' : 'border-danger/40 text-danger'
+                    }`}
+                  >
+                    {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                </Tooltip>
               </div>
             </div>
           )

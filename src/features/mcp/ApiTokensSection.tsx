@@ -101,7 +101,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
               create()
             }
           }}
-          placeholder={ru ? 'Название токена (напр. «Claude Desktop»)' : 'Token name (e.g. "Claude Desktop")'}
+          placeholder="Claude Desktop"
           className="min-w-[220px] flex-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
         />
         <button
