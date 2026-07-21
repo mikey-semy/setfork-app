@@ -6,6 +6,7 @@ import { tr } from '@/shared/i18n'
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { canViewList } from '@/core'
 import { listQuota } from '@/shared/quota'
+import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
@@ -251,6 +252,8 @@ export interface McpCreateInput {
   tags?: string[]
   ordered?: boolean
   items: McpItemInput[]
+  /** Язык контента ('ru'|'en'); не задан — детект по заголовку/описанию. */
+  lang?: string
 }
 
 /** Создать список от имени пользователя. Всегда как ЧЕРНОВИК — публикует потом владелец на сайте. */
@@ -265,12 +268,15 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
   if (!(await listQuota(userId, u?.handle)).ok) return { error: 'list quota reached — delete a list first' }
   const slug = await uniqueSlug(title, userId)
   const tags = (input.tags ?? []).map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
+  // Локаль заголовка/описания: явный lang из запроса или детект по тексту —
+  // раньше всё хардкодилось в {en:} и русский список получал бейдж EN.
+  const lang = input.lang === 'ru' || input.lang === 'en' ? input.lang : detectTextLang(`${title} ${input.desc ?? ''}`)
 
   await listStore.create({
     ownerId: userId,
     slug,
-    title: { en: title },
-    desc: input.desc?.trim() ? { en: input.desc.trim() } : {},
+    title: { [lang]: title },
+    desc: input.desc?.trim() ? { [lang]: input.desc.trim() } : {},
     tags,
     ordered: input.ordered ?? true,
     visibility: 'public',

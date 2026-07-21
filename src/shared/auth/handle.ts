@@ -2,7 +2,9 @@
 import { randomBytes } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
+import { translitRu } from '@/shared/lib/translit'
 
+export { translitRu }
 export const HANDLE_RE = /^[a-z0-9-]{3,30}$/
 export const RESERVED_HANDLES = new Set([
   'explore', 'new', 'settings', 'admin', 'login', 'register', 'notifications', 'my-lists', 'api',
@@ -11,20 +13,6 @@ export const RESERVED_HANDLES = new Set([
   // «demo» отдала бы чужой аккаунт публичному demo-входу.
   'demo',
 ])
-
-const RU_LAT: Record<string, string> = {
-  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y',
-  к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f',
-  х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
-}
-
-export function translitRu(s: string): string {
-  return s
-    .toLowerCase()
-    .split('')
-    .map((ch) => RU_LAT[ch] ?? ch)
-    .join('')
-}
 
 /** Сырую строку (login/имя/local-part email) → кандидат handle; '' если ничего не осталось. */
 export function sanitizeHandleBase(raw: string): string {
