@@ -1,5 +1,5 @@
 import 'server-only'
-import { defaultChatModel, getAiProviderConfig, getOpenRouterApiKey, type AiSettings } from '@/shared/settings/ai'
+import { getAiProviderConfig, getOpenRouterApiKey, type AiSettings } from '@/shared/settings/ai'
 
 export interface OpenRouterCredits {
   total: number
@@ -71,13 +71,11 @@ export async function pickChatModel(settings: AiSettings): Promise<string> {
   if (provider === 'yandex' && settings.cheapModeThreshold > 0 && settings.fallbackModel.startsWith('gpt://')) {
     if ((await dailySpendRub()) > settings.cheapModeThreshold) return settings.fallbackModel
   }
-  // ai.chat_model в БД мог остаться от другого провайдера (напр. openai/gpt-4o-mini
-  // после переключения на yandex): у Яндекса модели строго gpt://… — иначе дефолт.
-  // folder берём из конфига (может быть задан в админке, а не в env).
+  // Неймспейсы дают провайдер-корректную модель уже на чтении; этот гвард —
+  // последний рубеж (руками вписали чужой id в яндекс-неймспейс).
   if (provider === 'yandex' && !settings.chatModel.startsWith('gpt://')) {
     const folder = cfg?.headers?.['x-folder-id'] ?? ''
-    const envDefault = defaultChatModel()
-    return envDefault.startsWith('gpt://') && !envDefault.includes('gpt:///') ? envDefault : `gpt://${folder}/yandexgpt-5.1/latest`
+    return `gpt://${folder}/yandexgpt-5.1/latest`
   }
   return settings.chatModel
 }

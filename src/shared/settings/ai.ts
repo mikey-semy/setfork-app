@@ -140,12 +140,68 @@ export async function getAiProviderConfig(): Promise<AiProviderConfig | null> {
   return resolveAiProvider(Object.fromEntries(rows.map((r) => [r.key, r.value ?? ''])))
 }
 
-export function defaultChatModel(): string {
-  const provider = process.env.AI_PROVIDER || 'openrouter'
-  if (provider === 'selectel') return process.env.SELECTEL_CHAT_MODEL || 'openai/gpt-4o-mini'
-  if (provider === 'yandex')
-    return process.env.YC_CHAT_MODEL || `gpt://${process.env.YC_AI_FOLDER_ID || ''}/yandexgpt/latest`
-  return process.env.OPENROUTER_CHAT_MODEL || 'openai/gpt-4o-mini'
+// ── Пер-провайдерные настройки моделей ───────────────────────────────
+// Модели/пороги у каждого провайдера СВОИ (ai.<provider>.chat_model и т.д.):
+// переключение провайдера ничего не затирает и не теряет. Легаси-ключи
+// (ai.chat_model, …) читаются ТОЛЬКО как фолбэк openrouter-неймспейса — они
+// писались в эпоху, когда провайдер был один.
+export interface ModelSettings {
+  chatModel: string
+  fallbackModel: string
+  councilModels: string[]
+  /** OpenRouter: минимальный остаток баланса, $. Яндекс: дневной расход, ₽. */
+  cheapModeThreshold: number
+}
+
+export const NS_MODEL_KEYS = ['chat_model', 'fallback_model', 'council_models', 'cheap_mode_threshold'] as const
+export const nsKey = (provider: string, k: string) => `ai.${provider}.${k}`
+
+/** Опциональный allowlist моделей стенда (env AI_MODEL_ALLOWLIST, CSV префиксов
+ *  id). Пусто = всё разрешено. Пример строгого RU: `gpt://,emb://`. */
+export function parseModelAllowlist(env: Record<string, string | undefined> = process.env): string[] {
+  return (env.AI_MODEL_ALLOWLIST || '').split(',').map((s) => s.trim()).filter(Boolean)
+}
+
+export function modelAllowed(id: string, allowlist: string[]): boolean {
+  return allowlist.length === 0 || allowlist.some((p) => id.startsWith(p))
+}
+
+export function defaultChatModelFor(
+  provider: AiProviderId,
+  folder: string,
+  env: Record<string, string | undefined> = process.env,
+): string {
+  if (provider === 'selectel') return env.SELECTEL_CHAT_MODEL || 'openai/gpt-4o-mini'
+  if (provider === 'yandex') return env.YC_CHAT_MODEL || `gpt://${folder}/yandexgpt-5.1/latest`
+  return env.OPENROUTER_CHAT_MODEL || 'openai/gpt-4o-mini'
+}
+
+/** Чистый резолв модельных настроек активного провайдера (юнит-тестируется). */
+export function resolveModelSettings(
+  m: Record<string, string | undefined>,
+  provider: AiProviderId,
+  env: Record<string, string | undefined> = process.env,
+): ModelSettings {
+  const ns = (k: string) => m[nsKey(provider, k)]?.trim() || ''
+  // Легаси-фолбэк только у openrouter: старые глобальные ключи писались для него.
+  const legacy = (k: string) => (provider === 'openrouter' ? m[`ai.${k}`]?.trim() || '' : '')
+  const folder = m[YANDEX_FOLDER_SETTING]?.trim() || env.YC_AI_FOLDER_ID || ''
+  const allowlist = parseModelAllowlist(env)
+  const csv = (v: string): string[] => v.split(',').map((s) => s.trim()).filter(Boolean)
+
+  const chatRaw = ns('chat_model') || legacy('chat_model')
+  const chatDefault = defaultChatModelFor(provider, folder, env)
+  const fallbackRaw = ns('fallback_model') || legacy('fallback_model')
+  const councilRaw = ns('council_models') || legacy('council_models') || (provider === 'openrouter' ? env.SETFORK_COUNCIL_MODELS || '' : '')
+  const thresholdRaw = ns('cheap_mode_threshold') || legacy('cheap_mode_threshold')
+
+  return {
+    // Модель вне allowlist стенда (или пустая) → дефолт провайдера, не битый вызов.
+    chatModel: chatRaw && modelAllowed(chatRaw, allowlist) ? chatRaw : chatDefault,
+    fallbackModel: fallbackRaw && modelAllowed(fallbackRaw, allowlist) ? fallbackRaw : '',
+    councilModels: csv(councilRaw).filter((id) => modelAllowed(id, allowlist)),
+    cheapModeThreshold: Math.max(0, Number(thresholdRaw) || 0),
+  }
 }
 
 export function defaultEmbeddingModel(): string {
@@ -180,17 +236,26 @@ export function maskKey(k: string): string {
 }
 
 export async function getAiSettings(): Promise<AiSettings> {
-  const rows = await db.select().from(appSettings).where(inArray(appSettings.key, [...KEYS]))
+  const allKeys = [
+    ...KEYS,
+    PROVIDER_SETTING,
+    YANDEX_FOLDER_SETTING,
+    ...AI_PROVIDERS.flatMap((p) => NS_MODEL_KEYS.map((k) => nsKey(p, k))),
+  ]
+  const rows = await db.select().from(appSettings).where(inArray(appSettings.key, allKeys))
   const m = Object.fromEntries(rows.map((r) => [r.key, r.value]))
   const num = (v: string | undefined, fallback: number) => {
     const n = Number(v)
     return Number.isFinite(n) ? n : fallback
   }
-  const csv = (v: string | undefined): string[] => (v || '').split(',').map((s) => s.trim()).filter(Boolean)
+  const providerRaw = m[PROVIDER_SETTING]?.trim() || process.env.AI_PROVIDER || 'openrouter'
+  const provider = (AI_PROVIDERS as readonly string[]).includes(providerRaw) ? (providerRaw as AiProviderId) : 'openrouter'
+  // Модели/пороги — из неймспейса АКТИВНОГО провайдера (легаси-ключи = фолбэк openrouter).
+  const models = resolveModelSettings(m, provider)
   return {
     enabled: m['ai.enabled'] != null ? m['ai.enabled'] === 'true' : hasAiEnvConfig(),
-    chatModel: m['ai.chat_model'] || defaultChatModel(),
-    fallbackModel: m['ai.fallback_model'] || '',
+    chatModel: models.chatModel,
+    fallbackModel: models.fallbackModel,
     embeddingModel: m['ai.embedding_model'] || defaultEmbeddingModel(),
     temperature: num(m['ai.temperature'], 0.3),
     // 4000, а не 1500: живой бенч (research/2026-07-18-council-bench) — при 1500 ДЛИННЫЕ списки
@@ -198,10 +263,10 @@ export async function getAiSettings(): Promise<AiSettings> {
     // При достаточном лимите те же промпты дают 0% отказов. Прод-настройка ai.max_tokens=5000; этот
     // код-дефолт был лэндмайном (сброс настроек вернул бы 1500 и поломку). Кап — платим за факт вывода.
     maxTokens: num(m['ai.max_tokens'], 4000),
-    cheapModeThreshold: num(m['ai.cheap_mode_threshold'], 0),
+    cheapModeThreshold: models.cheapModeThreshold,
     webSearch: m['ai.web_search'] != null ? m['ai.web_search'] === 'true' : process.env.SETFORK_WEB_SEARCH === 'true',
     councilEnabled: m['ai.council_enabled'] != null ? m['ai.council_enabled'] === 'true' : process.env.SETFORK_COUNCIL_ENABLED === 'true',
-    councilModels: m['ai.council_models'] != null ? csv(m['ai.council_models']) : csv(process.env.SETFORK_COUNCIL_MODELS),
+    councilModels: models.councilModels,
     councilMaxGnomes: num(m['ai.council_max_gnomes'], Number(process.env.SETFORK_COUNCIL_MAX_GNOMES) || 3),
     councilAudience: (m['ai.council_audience'] ?? process.env.SETFORK_COUNCIL_AUDIENCE) === 'all' ? 'all' : 'admin',
     councilWebSeek: m['ai.council_web_seek'] != null ? m['ai.council_web_seek'] === 'true' : process.env.SETFORK_COUNCIL_WEB_SEEK === 'true',
