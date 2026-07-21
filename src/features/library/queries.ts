@@ -190,9 +190,8 @@ async function semanticFeed(
   viewerId?: string,
   extra: SQL[] = [],
 ): Promise<FeedItem[] | null> {
-  const [{ getAiSettings }, { embedOne }] = await Promise.all([import('@/shared/settings/ai'), import('@/shared/ai/embeddings')])
-  const { embeddingModel } = await getAiSettings()
-  const vec = await embedOne(q, embeddingModel, { userId: viewerId ?? null, refType: 'search' })
+  const { embedOne } = await import('@/shared/ai/embeddings')
+  const vec = await embedOne(q, 'query', { userId: viewerId ?? null, refType: 'search' })
   if (!vec) return null
 
   const distance = cosineDistance(embeddings.embedding, vec)

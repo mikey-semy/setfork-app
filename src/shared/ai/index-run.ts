@@ -1,8 +1,8 @@
 import 'server-only'
-import { inArray } from 'drizzle-orm'
+import { inArray, sql } from 'drizzle-orm'
 import { db, embeddings } from '@/shared/db'
 import { getSettings, saveSettings } from '@/shared/settings/kv'
-import { getAiSettings } from '@/shared/settings/ai'
+import { ensureFreshSpace, setIndexSpace } from './embed-space'
 import { embedTexts } from './embeddings'
 
 // «Умная» переиндексация: батчами, разнесёнными по времени, с кулдауном.
@@ -168,7 +168,18 @@ export async function startIndexRun(spreadMs: number): Promise<{ ok: true } | { 
 async function runLoop(spreadMs: number, startDone: number): Promise<void> {
   g.__shLoopActive = true
   try {
-    const { embeddingModel } = await getAiSettings()
+    // Смена пространства (провайдер/модель/мерность эмбеддингов): фиксируем цель
+    // как пространство ИНДЕКСА с самого старта — все вставки (в т.ч. инкрементальные
+    // параллельно с реиндексом) и поисковые запросы сразу идут новым пространством.
+    // Старые векторы стираем целиком: смесь пространств в HNSW = мусорная близость,
+    // честнее временно деградировать поиск до текстового, чем отдавать шум.
+    const { target, inSync } = await ensureFreshSpace()
+    if (!inSync && startDone === 0) {
+      await setIndexSpace(target)
+      await db.execute(sql`truncate table ${embeddings}`)
+    } else if (startDone === 0) {
+      await setIndexSpace(target) // фиксируем факт (и дату) даже без смены пространства
+    }
     const items = await indexSource().collectItems()
     const total = items.length
     const segments = computeSegments(items)
@@ -200,7 +211,7 @@ async function runLoop(spreadMs: number, startDone: number): Promise<void> {
       try {
         const vecs = await embedTexts(
           slice.map((it) => it.content),
-          embeddingModel,
+          'doc',
         )
         if (vecs) anyVec = true
         const toDelete = [...new Set(slice.map((it) => it.refId))].filter((r) => !deleted.has(r))

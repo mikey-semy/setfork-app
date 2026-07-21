@@ -65,9 +65,8 @@ export async function reindexList(templateId: string): Promise<void> {
   const item = items.find((i) => i.refId === templateId)
   await db.delete(embeddings).where(eq(embeddings.refId, templateId))
   if (!item) return
-  const [{ getAiSettings }, { embedOne }] = await Promise.all([import('@/shared/settings/ai'), import('@/shared/ai/embeddings')])
-  const { embeddingModel } = await getAiSettings()
-  const vec = await embedOne(item.content, embeddingModel)
+  const { embedOne } = await import('@/shared/ai/embeddings')
+  const vec = await embedOne(item.content, 'doc') // модель/мерность диктует пространство индекса (embed-space)
   await db.insert(embeddings).values({
     kind: item.kind,
     refId: item.refId,

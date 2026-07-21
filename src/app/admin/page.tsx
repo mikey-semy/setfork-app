@@ -263,8 +263,8 @@ export default async function AdminPage() {
               {models.provider !== 'openrouter' && (
                 <p className="mt-1.5 text-[12px] text-muted">
                   {say(
-                    'Embeddings still go through OpenRouter (its key) until phase 2 with a reindex.',
-                    'Эмбеддинги пока всегда идут через OpenRouter (его ключ) — до фазы 2 с реиндексом.',
+                    'Embedding model applies to the OpenRouter space; the space itself (incl. Yandex v2) is switched in the reindex panel.',
+                    'Модель эмбеддингов относится к OpenRouter-пространству; само пространство (в т.ч. Yandex v2) переключается в панели реиндекса.',
                   )}
                 </p>
               )}

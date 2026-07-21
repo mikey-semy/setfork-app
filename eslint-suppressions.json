@@ -186,7 +186,7 @@
   },
   "src/features/admin/ReindexPanel.tsx": {
     "no-restricted-syntax": {
-      "count": 11
+      "count": 1
     }
   },
   "src/features/admin/SearchSettingsForm.tsx": {
