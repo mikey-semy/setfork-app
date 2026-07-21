@@ -5,7 +5,7 @@ import { aiUsage, db, generationCandidates, generations, users, type CandidateIt
 import { generateChangeNote, generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
 import { backfillRecipeSections } from '@/shared/ai/list-kind'
 import { toDetail } from '@/shared/ai/detail-level'
-import { generateListCouncil } from '@/shared/ai/council'
+import { generateListCouncil, type CouncilProvenance } from '@/shared/ai/council'
 import { setClarify } from '@/shared/ai/council-clarify'
 import { pushMessage, setGenerationStatus } from '@/shared/ai/generation-messages'
 import { recordUsage } from '@/shared/ai/usage'
@@ -115,7 +115,7 @@ export async function addCandidate(
       }
     }
 
-    let draft: GeneratedList | null = null
+    let draft: (GeneratedList & { provenance?: CouncilProvenance }) | null = null
     if (useCouncil) {
       // #6: под-вызовы совета помечаем refType 'council' — админ-«Расход» отличает их от одиночных.
       const res = await generateListCouncil(query, lang, { ...genOpts, refType: 'council' })
@@ -155,6 +155,10 @@ export async function addCandidate(
     // onConflictDoUpdate по (generationId, idx): ретрай джобы или гонка двух «дополнить» на один idx
     // не роняют insert по UNIQUE (это тоже вело в вечный pending) — переписываем свой виток.
     const title = (draft.title || query).slice(0, 140)
+    // Провенанс (объяснимость, HQ §6) пишется В МОМЕНТ витка — потом не восстановить.
+    // Пустой объект у одиночной генерации (у неё пока нет провенанса) — не null, чтобы
+    // читателю не различать «нет колонки/нет данных».
+    const provenance = (draft.provenance ?? {}) as Record<string, unknown>
     await db
       .insert(generationCandidates)
       .values({
@@ -165,10 +169,11 @@ export async function addCandidate(
         summary,
         tags: draft.tags.length ? parseTags(draft.tags.join(' ')) : parseTags(query),
         items,
+        provenance,
       })
       .onConflictDoUpdate({
         target: [generationCandidates.generationId, generationCandidates.idx],
-        set: { title, desc: draft.desc ?? '', summary, items },
+        set: { title, desc: draft.desc ?? '', summary, items, provenance },
       })
     delivered = true
     await setGenerationStatus(generationId, 'done')

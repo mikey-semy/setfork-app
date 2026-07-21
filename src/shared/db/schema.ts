@@ -904,6 +904,11 @@ export const generationCandidates = pgTable(
     summary: text('summary').notNull().default(''),
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     items: jsonb('items').notNull().default([]).$type<CandidateItem[]>(),
+    // Провенанс витка (объяснимость, HQ §6): кто из гномов участвовал и на какой
+    // модели, какие прецеденты пошли в промпты, что сказал критик. Пишется В МОМЕНТ
+    // совета — задним числом эту историю не восстановить. Пустой объект у одиночных
+    // генераций и старых кандидатов.
+    provenance: jsonb('provenance').notNull().default({}).$type<Record<string, unknown>>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
