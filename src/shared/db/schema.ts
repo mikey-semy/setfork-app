@@ -22,6 +22,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
   vector,
 } from 'drizzle-orm/pg-core'
@@ -43,7 +44,7 @@ export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done', 'blocked
 export const stepLevel = pgEnum('step_level', ['required', 'recommended', 'optional'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
 // Тип AI-вызова для учёта расхода (токены/деньги).
-export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'mcp-gnome'])
+export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'mcp-gnome', 'dig'])
 export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
@@ -870,6 +871,36 @@ export const generations = pgTable(
  * attempt — номер витка (совпадает с generationCandidates.idx): дубли реплик лечатся группировкой по
  * витку, а не стиранием ленты, как раньше.
  */
+/**
+ * «Копать глубже» (HQ §8): слои раскопки под шагом списка. Шахта ОСТАЁТСЯ —
+ * выкопанное одним видно всем следующим читателям бесплатно. Привязка к
+ * (template, version, stepN): новая версия меняет шаги — честно копать заново,
+ * старые штольни остаются в истории своей версии.
+ * level: 1 — причины и источники, 2 — механизм и исключения, 3 — тонкости.
+ */
+export const digLayers = pgTable(
+  'dig_layers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    stepN: integer('step_n').notNull(),
+    level: integer('level').notNull(),
+    lang: text('lang').notNull().default('en'),
+    content: text('content').notNull(),
+    // Летописец (HQ §8): модель/провайдер/на чём основан слой — пишется в момент раскопки.
+    provenance: jsonb('provenance').notNull().default({}).$type<Record<string, unknown>>(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('dig_layers_step_level_idx').on(t.templateId, t.version, t.stepN, t.level, t.lang),
+    index('dig_layers_tpl_idx').on(t.templateId, t.version),
+  ],
+)
+
 export const generationMessages = pgTable(
   'generation_messages',
   {

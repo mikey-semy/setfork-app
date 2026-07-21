@@ -16,6 +16,8 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { Markdown } from '@/shared/ui/Markdown'
+import { DigPanel } from '@/features/dig/DigPanel'
+import { digLayersFor } from '@/features/dig/queries'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews } from '@/features/library/queries'
@@ -125,6 +127,9 @@ export default async function ListPage({
   // Прохождение курса — ПОСТОЯННЫЙ факт: плашка с сертификатом видна и после
   // правок тестов автором (иначе вернувшемуся «проходи заново ради бумажки»).
   const completion = viewer ? await getCourseCompletion(tpl.id, viewer.userId) : null
+  // Шахты «Копать глубже» (HQ §8): выкопанные слои текущей версии — по шагам.
+  // У snapshot-веток раскопки нет (шаги без стабильных номеров версии).
+  const digMap = !snapshot ? await digLayersFor(tpl.id, tpl.currentVersion, lang) : new Map<number, never[]>()
   // Уроки курса = секции блоков (в порядке). Собираем оглавление + прогресс тестов по уроку.
   // lessonOfBlock[si] = индекс урока блока si (−1 = до первого урока).
   const lessons: OutlineLesson[] = []
@@ -583,6 +588,13 @@ export default async function ListPage({
                                 </span>
                               )
                             })}
+                          </div>
+                        )}
+                        {/* «Копать глубже» (HQ §8): шахта под шагом — слои причин/механизмов.
+                            Копают залогиненные; выкопанное видно всем. Печать без шахт. */}
+                        {!snapshot && typeof s.n === 'number' && (
+                          <div className="print:hidden">
+                            <DigPanel templateId={tpl.id} stepN={s.n} initial={digMap.get(s.n) ?? []} canDig={!!viewer} lang={lang} />
                           </div>
                         )}
                       </div>
