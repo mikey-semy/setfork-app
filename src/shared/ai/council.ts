@@ -26,6 +26,10 @@ import { langEnName, type Lang } from '@/shared/i18n'
  */
 
 const DEFAULT_COUNCIL_MODELS = ['openai/gpt-4o-mini', 'meta-llama/llama-3.3-70b-instruct', 'mistralai/mistral-nemo']
+// Дефолтный пул для Яндекса: без него OpenRouter-дефолты фильтровались в пусто и
+// совет МОЛЧА становился одномодельным. 4 семейства RU-hosted, цены известны
+// (yandex-pricing); flash первым — он ведёт промежуточные шаги (цена/скорость).
+const DEFAULT_YANDEX_POOL = ['aliceai-llm-flash', 'qwen3.6-35b-a3b', 'gpt-oss-120b', 'deepseek-v4-flash']
 const INNOVATOR_TEMP = 0.9
 // Потолок на ОДИН вызов: зависшая/медленная модель не должна вешать весь совет (6-7 вызовов).
 // Превышение → вызов падает → гном «выпадает», совет продолжает без него.
@@ -58,7 +62,12 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // gpt://…): несовместимые отсеиваем, пустой пул → база. У Selectel id в стиле
   // OpenRouter — проходят как есть.
   const forProvider = (m: string) => (client.cfg.provider === 'yandex' ? m.startsWith('gpt://') : true)
-  const rawPool = settings.councilModels.length ? settings.councilModels : DEFAULT_COUNCIL_MODELS
+  const yandexFolder = client.cfg.headers?.['x-folder-id'] ?? ''
+  const defaultPool =
+    client.cfg.provider === 'yandex' && yandexFolder
+      ? DEFAULT_YANDEX_POOL.map((n) => `gpt://${yandexFolder}/${n}/latest`)
+      : DEFAULT_COUNCIL_MODELS
+  const rawPool = settings.councilModels.length ? settings.councilModels : defaultPool
   // АВТОРОТАЦИЯ: модели с проседающим success-rate за сутки (журнал ai_usage)
   // временно выпадают из ротации; окно скользящее — возврат автоматический.
   const quarantined = await quarantinedModels()
