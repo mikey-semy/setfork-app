@@ -9,7 +9,7 @@ import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, jsonShapeFor, type GeneratedList, type GenerateOptions } from './generate'
 import { classifyListKind, shapeFor, LIST_KINDS, type ListKind } from './list-kind'
-import { findPrecedents, type Precedent } from './retrieval'
+import { findPrecedents, type Precedent, type StepPrecedent } from './retrieval'
 import { getRoster, type Expert } from './roster'
 import { voiceLine, type VoiceKind } from './voice'
 import { pickPrecedents } from './precedent-filter'
@@ -60,6 +60,8 @@ export interface CouncilProvenance {
   kind: string
   /** Найденные прецеденты (до 10) — что вообще легло на стол. */
   precedents: { title: string; tags: string[] }[]
+  /** Шаги-прецеденты (kind='step', #index-chunks) — срезом первых 120 символов. */
+  precedentSteps?: string[]
   /** По каждому гному: модель и СВОЙ срез прецедентов (после доменной линзы). */
   experts?: { id: string; model: string; precedents: string[] }[]
   models: { steward?: string; innovator?: string; critic?: string; elder?: string; single?: string }
@@ -259,7 +261,8 @@ ${roster}`,
   // 2.5) Старейшина-искатель: прецеденты из НАШИХ списков (pgvector). Пусто на пустом корпусе — ок.
   // Берём 10 (не 3): дальше каждый эксперт получает СВОЙ срез по своим доменам
   // (pickPrecedents) — повару кулинарные, девопсу деплойные; в один промпт идёт максимум 3.
-  const precedents = await findPrecedents(query, lang, { userId: opts.userId, limit: 10 })
+  // С #index-chunks приезжают ещё и ОТДЕЛЬНЫЕ ШАГИ похожих списков (kind='step') — тем же вектором.
+  const { lists: precedents, steps: stepPrecedents } = await findPrecedents(query, lang, { userId: opts.userId, limit: 10, stepLimit: 6 })
   // Форма «X: N» — чтобы не склонять числительное (было «3 похожих списков») и не тащить плюрализацию в ленту.
   if (precedents.length)
     emit('seek', vl('seek-lists', 'seek', { n: String(precedents.length) }) ?? say(`Similar lists in our library: ${precedents.length}`, `Похожих списков в библиотеке: ${precedents.length}`), 'seek-lists', say('Librarian', 'Библиотекарь'))
@@ -269,6 +272,11 @@ ${roster}`,
   const loreBlock = (list: Precedent[]) =>
     list.length
       ? `\n\n${sp.wrap('PRECEDENTS', list.map((p, i) => `${i + 1}. ${p.title}${p.desc ? ' — ' + p.desc : ''}${p.tags.length ? ' [' + p.tags.join(', ') + ']' : ''}`).join('\n'))}\n(reuse good structure, avoid duplicating, improve on them)`
+      : ''
+  // Шаги-прецеденты — тоже чужой публичный текст → тот же spotlight.
+  const stepsBlock = (list: StepPrecedent[]) =>
+    list.length
+      ? `\n\n${sp.wrap('PRECEDENT_STEPS', list.map((s, i) => `${i + 1}. ${s.content.slice(0, 240)}`).join('\n'))}\n(proven steps from similar lists — adapt, don't copy blindly)`
       : ''
 
   // Веб-искатель (старейшина advanced-тира): интернет-прецеденты сверх наших списков (за флагом council_web_seek).
@@ -295,9 +303,11 @@ ${roster}`,
     const sys = `You are ${e.persona}.${guild}\nDraft a practical list for the topic. 6-9 items, each with one clarifying sentence. All content in ${langName}. Return ONLY the draft text.\n${shapeFor(kind)}${law}\n${sp.rule()}`
     emit('draft', vl(e.id, 'draft') ?? say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
     // Каждому — прецеденты ЕГО доменов: повар видит рецепты, а не деплой (этап 1 базы знаний).
+    // Та же доменная линза режет и шаги-прецеденты (pickPrecedents дженерик по tags).
     const mine = pickPrecedents(precedents, e.domains)
+    const mySteps = pickPrecedents(stepPrecedents, e.domains)
     expertProv.push({ id: e.id, model: expertModel, precedents: mine.map((p) => p.title) })
-    return run(model, sys, `Draft the list.\n${topic}${loreBlock(mine)}${webLore}`)
+    return run(model, sys, `Draft the list.\n${topic}${loreBlock(mine)}${stepsBlock(mySteps)}${webLore}`)
   })
   emit('innovate', vl('innovator', 'innovate') ?? say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'), 'innovator', say('Innovator', 'Новатор'))
   const innovatorJob = run(
@@ -332,7 +342,7 @@ ${roster}`,
     base,
     `You are the lead synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.${law ? `${law}\nThis shape is MANDATORY in the final JSON — do not merge it away.` : ''}\n${listRules}`,
     // Старейшине — топ по близости без доменного среза: он сводит все взгляды.
-    `${topic}${loreBlock(precedents.slice(0, 3))}${webLore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
+    `${topic}${loreBlock(precedents.slice(0, 3))}${stepsBlock(stepPrecedents.slice(0, 3))}${webLore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
   )
   // firstJson: старейшина иногда предваряет JSON прозой («Here is the synthesized list:»), и голый
   // parseList на этом падал → 7 вызовов совета в мусор, тихий фолбэк на одиночную, а лента уже
@@ -348,6 +358,7 @@ ${roster}`,
           provider: providerId,
           kind,
           precedents: precedents.map((p) => ({ title: p.title, tags: p.tags })),
+          precedentSteps: stepPrecedents.map((s) => s.content.slice(0, 120)),
           experts: expertProv,
           models: { steward: fast, innovator: pool[0], critic: fast, elder: base },
           webSeek: settings.councilWebSeek,
