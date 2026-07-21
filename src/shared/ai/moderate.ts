@@ -75,7 +75,7 @@ export async function moderateContent(
       maxOutputTokens: 200,
     })
     const u = extractUsage(result)
-    await recordUsage({ userId: meta.userId, feature: 'moderate', model, ...u, refType: 'template', refId: meta.refId, outcome: 'ok', durationMs: Date.now() - startedAt })
+    await recordUsage({ userId: meta.userId, feature: 'moderate', model, ...u, refType: 'template', refId: meta.refId, outcome: 'ok', durationMs: Date.now() - startedAt, provider: client.cfg.provider })
     const obj = result.object
     return {
       flagged: !!obj.flagged,
@@ -86,7 +86,7 @@ export async function moderateContent(
     }
   } catch (e) {
     const invalid = NoObjectGeneratedError.isInstance(e)
-    await recordUsage({ userId: meta.userId, feature: 'moderate', model, input: 0, output: 0, total: 0, cost: 0, refType: 'template', refId: meta.refId, outcome: invalid ? 'invalid' : outcomeOf(e), durationMs: Date.now() - startedAt })
+    await recordUsage({ userId: meta.userId, feature: 'moderate', model, input: 0, output: 0, total: 0, cost: 0, refType: 'template', refId: meta.refId, outcome: invalid ? 'invalid' : outcomeOf(e), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
     // Модель не вернула валидный по схеме вердикт (не тот формат / контент-фильтр / инъекция):
     // это НЕ транзиентно (при temperature=0 повторится, деньги спишутся снова) — не ретраим,
     // отдаём неуверенный вердикт → на гейте уйдёт к человеку (hold), живой список не тронем.
