@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getSession } from "@/shared/auth/session";
-import { oauthEnabled } from "@/shared/auth/oauth";
+import { oauthEnabled, demoLoginEnabled } from "@/shared/auth/oauth";
 import { getLang } from "@/shared/i18n/server";
 import { t } from "@/shared/i18n";
 import { redirect } from "next/navigation";
@@ -25,6 +25,9 @@ export default async function LoginPage({
   // (RU-прод: github выключен, на .com может остаться). См. shared/auth/oauth.
   const oauth = oauthEnabled();
   const hasOauth = oauth.github || oauth.yandex || oauth.vk;
+  // Публичный demo-вход: на проде выключен (AUTH_DISABLED_PROVIDERS=...,demo) —
+  // каталог и поиск и так открыты анонимно, общий demo-аккаунт не нужен.
+  const hasDemoLogin = demoLoginEnabled();
   // На проде задаётся DEMO_URL=https://demo.setfork.com → «demo» ведёт в изолированную
   // песочницу (там свой богатый контент), а не логинит пустого юзера в прод-базе. На
   // самом demo-сайте эту переменную НЕ задаём — там обычный demo-вход. (Серверный
@@ -116,15 +119,17 @@ export default async function LoginPage({
             {t("tryLiveDemo", lang)}
           </a>
         ) : (
-          <form action="/api/auth/demo" method="post">
-            <Button
-              type="submit"
-              variant={hasOauth ? "outline" : "primary"}
-              className={`w-full gap-2 px-4 py-3 text-[14px] ${hasOauth ? "bg-transparent" : ""}`}
-            >
-              {t("signInDemo", lang)}
-            </Button>
-          </form>
+          hasDemoLogin && (
+            <form action="/api/auth/demo" method="post">
+              <Button
+                type="submit"
+                variant={hasOauth ? "outline" : "primary"}
+                className={`w-full gap-2 px-4 py-3 text-[14px] ${hasOauth ? "bg-transparent" : ""}`}
+              >
+                {t("signInDemo", lang)}
+              </Button>
+            </form>
+          )
         )}
 
         {sp.e && (
