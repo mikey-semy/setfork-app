@@ -3,7 +3,7 @@ import { ChevronDown, SearchX, Sparkles, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { hasOpenRouterKey } from '@/shared/settings/ai'
+import { hasAiEnvConfig } from '@/shared/settings/ai'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { AdvancedFacets } from '@/features/library/AdvancedFacets'
@@ -52,7 +52,7 @@ export default async function SearchPage({
   }>
 }) {
   const sp = await searchParams
-  const aiOn = hasOpenRouterKey()
+  const aiOn = hasAiEnvConfig()
   const scope: Scope = sp.scope === 'people' ? 'people' : sp.scope === 'issues' ? 'issues' : 'lists'
   const sort = (SORTS.find((s) => s.key === sp.sort)?.key ?? 'trending') as FeedSort
   const peopleSort = (PEOPLE_SORTS.find((s) => s.key === sp.psort)?.key ?? 'followers') as PeopleSort

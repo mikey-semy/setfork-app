@@ -152,8 +152,8 @@ export function defaultEmbeddingModel(): string {
   return process.env.EMBEDDING_MODEL || 'openai/text-embedding-3-small'
 }
 
-/** Синхронная проверка только env-конфига (для мест, где нет доступа к БД). */
-export function hasOpenRouterKey(): boolean {
+/** Синхронная проверка только env-конфига АКТИВНОГО провайдера (без БД). */
+export function hasAiEnvConfig(): boolean {
   return Boolean(resolveAiProvider({}, process.env))
 }
 
@@ -188,7 +188,7 @@ export async function getAiSettings(): Promise<AiSettings> {
   }
   const csv = (v: string | undefined): string[] => (v || '').split(',').map((s) => s.trim()).filter(Boolean)
   return {
-    enabled: m['ai.enabled'] != null ? m['ai.enabled'] === 'true' : hasOpenRouterKey(),
+    enabled: m['ai.enabled'] != null ? m['ai.enabled'] === 'true' : hasAiEnvConfig(),
     chatModel: m['ai.chat_model'] || defaultChatModel(),
     fallbackModel: m['ai.fallback_model'] || '',
     embeddingModel: m['ai.embedding_model'] || defaultEmbeddingModel(),
