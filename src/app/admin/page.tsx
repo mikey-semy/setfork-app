@@ -309,17 +309,31 @@ export default async function AdminPage() {
                   )}
             </p>
 
-            {models.provider === 'openrouter' && (
+            {models.provider !== 'selectel' && (
               <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
-                <div className="text-[13px] font-medium text-ink">{ru ? 'Контроль расходов OpenRouter' : 'OpenRouter cost control'}</div>
-                <CreditsWidget ru={ru} />
+                <div className="text-[13px] font-medium text-ink">
+                  {models.provider === 'openrouter'
+                    ? say('OpenRouter cost control', 'Контроль расходов OpenRouter')
+                    : say('Yandex cost control', 'Контроль расходов Яндекса')}
+                </div>
+                {models.provider === 'openrouter' && <CreditsWidget ru={ru} />}
                 <div>
-                  <label className={lbl}>{ru ? 'Порог авто-fallback ($)' : 'Auto-fallback threshold ($)'}</label>
+                  <label className={lbl}>
+                    {models.provider === 'openrouter'
+                      ? say('Auto-fallback threshold ($ balance)', 'Порог авто-fallback (остаток, $)')
+                      : say('Auto-fallback threshold (₽ per day)', 'Порог авто-fallback (расход, ₽/день)')}
+                  </label>
                   <input type="number" name="cheapModeThreshold" step="any" min="0" defaultValue={settings.cheapModeThreshold} className={field} />
                   <p className="mt-1.5 text-[12px] text-muted">
-                    {ru
-                      ? 'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.'
-                      : 'When the balance drops below this, generation switches to the fallback model. 0 = off.'}
+                    {models.provider === 'openrouter'
+                      ? say(
+                          'When the balance drops below this, generation switches to the fallback model. 0 = off.',
+                          'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.',
+                        )
+                      : say(
+                          'Balance is not exposed by the API, so the threshold is DAILY spend (our journal, hardcoded prices): above it generation switches to the fallback model. 0 = off.',
+                          'Баланс в API Яндекс не отдаёт, поэтому порог — ДНЕВНОЙ расход (наш журнал, хардкод-прайс): выше него генерация переключается на запасную модель. 0 — выключено.',
+                        )}
                   </p>
                 </div>
               </div>
