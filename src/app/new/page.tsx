@@ -35,7 +35,7 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
         <Input
           name="title"
           required
-          placeholder={ru ? 'напр. Деплой на VPS' : 'e.g. Deploy to a VPS'}
+          placeholder={ru ? 'Деплой на VPS' : 'Deploy to a VPS'}
           className="mb-5 px-3 py-2.5 text-[14px]"
         />
 

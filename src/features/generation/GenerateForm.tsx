@@ -6,6 +6,7 @@ import { ArrowUp, Loader2 } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
 import { DEFAULT_DETAIL, DETAIL_LEVELS, detailLabel, type DetailLevel } from '@/shared/ai/detail-level'
+import { kindLabel, LIST_KINDS, type ListKind } from '@/shared/ai/list-kind'
 import { startGeneration } from './actions'
 
 /**
@@ -34,6 +35,9 @@ export function GenerateForm({
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [q, setQ] = useState(defaultQuery)
   const [detail, setDetail] = useState<DetailLevel>(DEFAULT_DETAIL)
+  // Тип списка ДО первой генерации: авто-угадывание промахивалось, и нужный тип
+  // стоил второй генерации (фидбек владельца). '' = Авто (классификатор по запросу).
+  const [kind, setKind] = useState<ListKind | ''>('')
   const [launching, setLaunching] = useState(false)
   const [, start] = useTransition()
   const boxRef = useRef<HTMLDivElement>(null)
@@ -71,6 +75,7 @@ export function GenerateForm({
     const fd = new FormData()
     fd.set('q', query)
     fd.set('detail', detail)
+    if (kind) fd.set('kind', kind)
     // Даём спуску проиграться до навигации (экшен создаёт генерацию и редиректит быстро).
     window.setTimeout(() => start(() => startGeneration(fd)), 520)
   }
@@ -149,10 +154,40 @@ export function GenerateForm({
           </button>
         </form>
 
+        {/* Тип списка — ДО генерации: «Авто» угадывает по запросу, явный выбор экономит
+            целую генерацию при промахе. На узком экране пилюли переносятся, не прячутся. */}
+        {!launching && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[12px]">
+            <button
+              type="button"
+              onClick={() => setKind('')}
+              className={cn(
+                'rounded-full border px-2.5 py-[3px] transition-colors',
+                kind === '' ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
+              )}
+            >
+              {say('Auto', 'Авто')}
+            </button>
+            {LIST_KINDS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKind(k)}
+                className={cn(
+                  'rounded-full border px-2.5 py-[3px] transition-colors',
+                  kind === k ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
+                )}
+              >
+                {kindLabel(k, lang === 'ru')}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Объём списка. Уровень уезжает в колонку generations.detail, поэтому переживает
             «ещё вариант» — и его же можно переключить потом прямо в чате. */}
         {!launching && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[12px]">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[12px]">
             {DETAIL_LEVELS.map((lv) => (
               <button
                 key={lv}

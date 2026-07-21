@@ -230,7 +230,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                   {/* «Что поменялось ключевое» — берём у самого кандидата: реплики может не быть
                       (старые генерации), а вариант обязан быть виден всегда. */}
                   {cand.summary && <div className="mb-1 pl-1 text-[11.5px] text-muted">{cand.summary}</div>}
-                  <CandidateCard cand={cand} selected={cand.id === selId} onSelect={() => setSelId(cand.id)} />
+                  <CandidateCard cand={cand} selected={cand.id === selId} onSelect={() => setSelId(cand.id)} lang={lang} />
                 </div>
               )}
             </li>
@@ -278,7 +278,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
       {/* Дополнить прямо здесь: реплика уходит в нить, следующий вариант учитывает ВСЮ беседу.
           Действия с вариантами — меню слева от поля: раньше висели липким баром наверху,
           и к ним приходилось скроллить от поля ввода (фидбек владельца). */}
-      <div className="sticky bottom-0 -mx-4 mt-4 border-t border-border bg-canvas/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+      <div data-sticky-input className="sticky bottom-0 -mx-4 mt-4 border-t border-border bg-canvas/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex items-end gap-2">
           <ActionsMenu
             candidates={candidates}
@@ -289,6 +289,10 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             onAccept={() => selId && start(() => acceptCandidate(generationId, selId))}
             onRegen={() => start(() => regenerateCandidate(generationId))}
           />
+          {/* Плейсхолдер = ГОТОВОЕ сообщение (фидбек владельца: никаких «Дополни — «…»»-инструкций,
+              как ghost-suggestion у Copilot/Claude): подсказка ПО ТЕМЕ от модели (hint кандидата,
+              0 лишних вызовов), фолбэк — фраза по типу списка. Tab или → подхватывает её в поле.
+              Короткая — чтобы НИКОГДА не пряталась/не переносилась. */}
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -297,9 +301,13 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 e.preventDefault()
                 submitNote()
               }
+              if ((e.key === 'Tab' || e.key === 'ArrowRight') && !note) {
+                e.preventDefault()
+                setNote(last?.hint || refineHint(listKind, ru))
+              }
             }}
             rows={1}
-            placeholder={say(`Add a detail — “${refineHint(listKind, false)}”…`, `Дополни — «${refineHint(listKind, true)}»…`)}
+            placeholder={last?.hint || refineHint(listKind, ru)}
             className="max-h-32 min-h-[42px] w-full resize-y rounded-2xl border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
           />
           <button

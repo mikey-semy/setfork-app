@@ -108,7 +108,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
                 setOpen(false)
               }
             }}
-            placeholder={tags.length === 0 ? say('e.g. docker', 'напр. docker') : ''}
+            placeholder={tags.length === 0 ? 'docker' : ''}
             className="min-w-[90px] flex-1 bg-transparent px-1 py-0.5 text-[13.5px] text-ink outline-hidden placeholder:text-muted"
           />
         )}

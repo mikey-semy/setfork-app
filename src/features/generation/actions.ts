@@ -94,8 +94,11 @@ export async function startGeneration(formData: FormData): Promise<void> {
   const { freeMonthlyGens } = await getAiSettings()
   if (!(await freeGenQuota(session.userId, session.handle, freeMonthlyGens)).ok) redirect(`/generate?e=free_limit&q=${encodeURIComponent(query)}`)
 
-  // Тип списка (ADR-0010) — грамматический дефолт при создании; переключатель в чате его меняет.
-  const listKind = classifyListKind(query)
+  // Тип списка (ADR-0010): явный выбор на старт-форме сильнее всего — без него первая
+  // генерация шла грамматическим дефолтом, промахивалась, и правильный тип стоил ВТОРОЙ
+  // генерации (фидбек владельца). «Авто» (пусто) → грамматический классификатор, как раньше.
+  const pickedKind = String(formData.get('kind') ?? '')
+  const listKind = (LIST_KINDS as string[]).includes(pickedKind) ? pickedKind : classifyListKind(query)
   // Объём — из формы (переключатель на старте); дальше живёт в колонке и переживает «ещё вариант».
   const detail = toDetail(String(formData.get('detail') ?? ''))
   const [gen] = await db.insert(generations).values({ userId: session.userId, query, lang, status: 'pending', listKind, detail }).returning()

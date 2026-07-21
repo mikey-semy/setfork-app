@@ -909,6 +909,9 @@ export const generationCandidates = pgTable(
     // совета — задним числом эту историю не восстановить. Пустой объект у одиночных
     // генераций и старых кандидатов.
     provenance: jsonb('provenance').notNull().default({}).$type<Record<string, unknown>>(),
+    // Подсказка «что улучшить следующим» по ТЕМЕ (GeneratedList.hint) — плейсхолдер-призрак
+    // поля ввода в чате. Пусто у старых кандидатов → статичный refineHint по типу.
+    hint: text('hint').notNull().default(''),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

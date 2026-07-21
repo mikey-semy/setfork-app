@@ -1,35 +1,53 @@
 'use client'
 
-import { Link2 } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, Link2 } from 'lucide-react'
 import type { GenerationCandidate } from '@/shared/db'
+import type { Lang } from '@/shared/i18n'
 import { safeHref } from '@/shared/lib/safe-url'
 
 /**
- * Вариант списка карточкой. Раньше рисовался на весь экран и подменялся табами «Вариант 1/2/3»;
- * теперь это реплика в беседе — вариантов может быть видно сразу несколько, и старые никуда не деваются.
+ * Вариант списка карточкой. СВЁРНУТ по умолчанию (фидбек владельца: показывать
+ * основную идею кратко, полный список — по клику; лента вариантов стала компактной,
+ * и понятно, что сравнивать). Клик по карточке = выбрать и раскрыть/свернуть.
  *
- * selected — выбор для действия «Использовать этот» (кнопка живёт в панели над чатом).
+ * selected — выбор для действия «Использовать этот» (меню у поля ввода).
  */
 export function CandidateCard({
   cand,
   selected,
   onSelect,
+  lang,
 }: {
   cand: GenerationCandidate
   selected: boolean
   onSelect: () => void
+  lang: Lang
 }) {
+  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
+  const [open, setOpen] = useState(false)
   return (
     <button
       type="button"
-      onClick={onSelect}
+      onClick={() => {
+        onSelect()
+        setOpen((v) => !v)
+      }}
       aria-pressed={selected}
+      aria-expanded={open}
       className={`w-full rounded-2xl rounded-bl-md border bg-(--surface) p-4 text-left transition-colors ${
         selected ? 'border-(--accent)' : 'border-border hover:border-border-strong'
       }`}
     >
-      <div className="text-[14.5px] font-semibold text-ink">{cand.title}</div>
-      {cand.desc && <p className="mt-1 text-[12.5px] text-ink-2">{cand.desc}</p>}
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-[14.5px] font-semibold text-ink">{cand.title}</div>
+          {cand.desc && <p className="mt-1 text-[12.5px] text-ink-2">{cand.desc}</p>}
+        </div>
+        <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[11.5px] text-muted">
+          {cand.items.length} <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        </span>
+      </div>
       {cand.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {cand.tags.map((tg) => (
@@ -39,9 +57,12 @@ export function CandidateCard({
           ))}
         </div>
       )}
+      {!open && (
+        <div className="mt-2 text-[11.5px] text-muted">{say('Tap to see the full list', 'Нажми — покажу список целиком')}</div>
+      )}
       {/* Секции (напр. рецепт: «Ингредиенты» / «Приготовление») — двойной список, а не всё в кучу.
           Группируем по item.section; нет секций → плоский список, как раньше. Нумерация внутри секции. */}
-      <div className="mt-3.5 space-y-4">
+      <div className={open ? 'mt-3.5 space-y-4' : 'hidden'}>
         {groupBySection(cand.items).map((g, gi) => (
           <div key={gi}>
             {g.section && <div className="mb-1.5 text-[11.5px] font-semibold tracking-wide text-muted uppercase">{g.section}</div>}

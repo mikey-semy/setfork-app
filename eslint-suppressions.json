@@ -176,7 +176,7 @@
   },
   "src/features/admin/MediaSettingsForm.tsx": {
     "no-restricted-syntax": {
-      "count": 10
+      "count": 9
     }
   },
   "src/features/admin/PushSettingsForm.tsx": {
@@ -361,7 +361,7 @@
   },
   "src/features/library/ListEditor.tsx": {
     "no-restricted-syntax": {
-      "count": 101
+      "count": 100
     }
   },
   "src/features/library/TemplateSection.tsx": {
@@ -394,7 +394,7 @@
   },
   "src/features/mcp/ApiTokensSection.tsx": {
     "no-restricted-syntax": {
-      "count": 21
+      "count": 20
     }
   },
   "src/features/milestones/actions.ts": {

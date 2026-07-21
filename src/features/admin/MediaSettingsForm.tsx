@@ -57,7 +57,7 @@ export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }
         </div>
         <div>
           <label className={lbl}>{ru ? 'Префикс пути' : 'Path prefix'}</label>
-          <input name="s3Prefix" defaultValue={v.s3Prefix} placeholder={ru ? 'напр. prod' : 'e.g. prod'} className={`${field} font-mono`} />
+          <input name="s3Prefix" defaultValue={v.s3Prefix} placeholder="prod" className={`${field} font-mono`} />
         </div>
         <div>
           <label className={lbl}>Access key</label>
