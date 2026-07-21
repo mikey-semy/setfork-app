@@ -25,6 +25,15 @@ export function extractUsage(result: {
   return { input, output, total, cost }
 }
 
+/** Исход вызова ИИ: успех / таймаут / мусорный ответ (не-JSON) / ошибка сети-провайдера. */
+export type AiOutcome = 'ok' | 'timeout' | 'invalid' | 'error'
+
+/** Классификация пойманной ошибки вызова для журнала (таймаут отличаем от прочего). */
+export function outcomeOf(e: unknown): AiOutcome {
+  const msg = e instanceof Error ? `${e.name} ${e.message}` : String(e)
+  return /abort|timeout|timed out/i.test(msg) ? 'timeout' : 'error'
+}
+
 /** Записать один вызов ИИ в журнал расхода. Никогда не роняет основной поток. */
 export async function recordUsage(row: {
   userId?: string | null
@@ -36,6 +45,8 @@ export async function recordUsage(row: {
   cost: number
   refType?: string
   refId?: string
+  outcome?: AiOutcome
+  durationMs?: number
 }): Promise<void> {
   try {
     await db.insert(aiUsage).values({
@@ -48,6 +59,8 @@ export async function recordUsage(row: {
       costUsd: row.cost.toFixed(6),
       refType: row.refType ?? null,
       refId: row.refId ?? null,
+      outcome: row.outcome ?? 'ok',
+      durationMs: Math.max(0, Math.round(row.durationMs ?? 0)),
     })
   } catch (e) {
     console.warn('[ai-usage] record failed', e instanceof Error ? e.message : e)

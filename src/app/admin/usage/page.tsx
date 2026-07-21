@@ -6,6 +6,7 @@ import { tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { getUsageByUser, getUsageTotals } from '@/shared/ai/usage'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
+import { isQuarantined, modelHealth, QUARANTINE_WINDOW_MS } from '@/shared/ai/health'
 
 const WINDOWS = [
   { days: 1, en: '24h', ru: '24ч' },
@@ -27,7 +28,14 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
   await requireAdmin()
   const [lang, sp] = await Promise.all([getLang(), searchParams])
   const days = WINDOWS.some((w) => String(w.days) === sp.w) ? Number(sp.w) : 30
-  const [rows, totals, credits] = await Promise.all([getUsageByUser(days), getUsageTotals(days), getOpenRouterCredits()])
+  const [rows, totals, credits, health, dayHealth] = await Promise.all([
+    getUsageByUser(days),
+    getUsageTotals(days),
+    getOpenRouterCredits(),
+    modelHealth((days || 30) * 24 * 3_600_000), // «Всё» → окно 30д: старьё в надёжности не показательно
+    modelHealth(QUARANTINE_WINDOW_MS), // карантин всегда считается по суткам
+  ])
+  const quarantinedNow = new Set(dayHealth.filter(isQuarantined).map((h) => h.model))
 
   // Осязаемость денег: во что обходится ОДНА генерация и на сколько ещё хватит остатка OpenRouter.
   // Средняя берётся за выбранное окно (совет = много вызовов, но один refId, поэтому делим на
@@ -129,6 +137,52 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
             )}
           </div>
           {avgPerGen != null && <p className="mt-3 text-[12px] text-muted">{footnote}</p>}
+        </div>
+      )}
+
+      {/* Щиток надёжности: success-rate и p95 по моделям; карантин = авторотация совета */}
+      {health.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+          <div className="border-b border-border px-4 py-2.5">
+            <span className="text-[13px] font-semibold text-ink">{tr({ en: 'Model reliability', ru: 'Надёжность моделей' }, lang)}</span>
+            <span className="ml-2 text-[12px] text-muted">
+              {tr(
+                {
+                  en: 'quarantined models are auto-rotated out of the council pool (24h sliding window)',
+                  ru: 'модели в карантине автоматически выпадают из пула совета (скользящие сутки)',
+                },
+                lang,
+              )}
+            </span>
+          </div>
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
+            <span>{tr({ en: 'Model', ru: 'Модель' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'Success', ru: 'Успех' }, lang)}</span>
+            <span className="text-right">p95</span>
+            <span className="text-right">{tr({ en: 'Status', ru: 'Статус' }, lang)}</span>
+          </div>
+          {[...health]
+            .sort((a, b) => a.okRate - b.okRate || b.calls - a.calls)
+            .map((h) => (
+              <div key={h.model} className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0">
+                <span className="truncate font-mono text-[12.5px] text-ink">{h.model}</span>
+                <span className="text-right font-mono text-[13px] text-ink-2">{num(h.calls)}</span>
+                <span className={`text-right font-mono text-[13px] font-semibold ${h.okRate >= 0.95 ? 'text-ok' : h.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}>
+                  {(h.okRate * 100).toFixed(1)}%
+                </span>
+                <span className="text-right font-mono text-[13px] text-ink-2">{h.p95Ms ? `${(h.p95Ms / 1000).toFixed(1)}s` : '—'}</span>
+                <span className="text-right">
+                  {quarantinedNow.has(h.model) ? (
+                    <span className="rounded-full border border-danger/40 bg-danger/10 px-2 py-0.5 text-[11px] font-semibold text-danger">
+                      {tr({ en: 'quarantine', ru: 'карантин' }, lang)}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-muted">{tr({ en: 'in rotation', ru: 'в ротации' }, lang)}</span>
+                  )}
+                </span>
+              </div>
+            ))}
         </div>
       )}
 

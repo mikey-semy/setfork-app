@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { getAiSettings } from '@/shared/settings/ai'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
-import { extractUsage, recordUsage } from './usage'
+import { extractUsage, outcomeOf, recordUsage } from './usage'
 
 export interface ModerationVerdict {
   flagged: boolean
@@ -64,6 +64,7 @@ export async function moderateContent(
   // в текст входит контент rich-блоков (чанкование длинного — отдельным шагом).
   const nonce = randomBytes(9).toString('hex')
   const prompt = `Classify the list content between the markers.\nBEGIN LIST DATA ${nonce}\n${text.slice(0, 12000)}\nEND LIST DATA ${nonce}`
+  const startedAt = Date.now()
   try {
     const result = await generateObject({
       model: client.chat(model, { structured: true }),
@@ -74,7 +75,7 @@ export async function moderateContent(
       maxOutputTokens: 200,
     })
     const u = extractUsage(result)
-    await recordUsage({ userId: meta.userId, feature: 'moderate', model, ...u, refType: 'template', refId: meta.refId })
+    await recordUsage({ userId: meta.userId, feature: 'moderate', model, ...u, refType: 'template', refId: meta.refId, outcome: 'ok', durationMs: Date.now() - startedAt })
     const obj = result.object
     return {
       flagged: !!obj.flagged,
@@ -84,11 +85,12 @@ export async function moderateContent(
       confidence: Number.isFinite(obj.confidence) ? Math.min(1, Math.max(0, obj.confidence)) : 0,
     }
   } catch (e) {
+    const invalid = NoObjectGeneratedError.isInstance(e)
+    await recordUsage({ userId: meta.userId, feature: 'moderate', model, input: 0, output: 0, total: 0, cost: 0, refType: 'template', refId: meta.refId, outcome: invalid ? 'invalid' : outcomeOf(e), durationMs: Date.now() - startedAt })
     // Модель не вернула валидный по схеме вердикт (не тот формат / контент-фильтр / инъекция):
     // это НЕ транзиентно (при temperature=0 повторится, деньги спишутся снова) — не ретраим,
     // отдаём неуверенный вердикт → на гейте уйдёт к человеку (hold), живой список не тронем.
-    if (NoObjectGeneratedError.isInstance(e))
-      return { flagged: false, category: '', reason: 'classifier returned no valid verdict', confidence: 0 }
+    if (invalid) return { flagged: false, category: '', reason: 'classifier returned no valid verdict', confidence: 0 }
     // Иная ошибка (сеть/провайдер недоступен) — транзиентная, вызывающий вправе ретраить.
     return null
   }

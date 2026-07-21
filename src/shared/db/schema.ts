@@ -960,9 +960,18 @@ export const aiUsage = pgTable(
     costUsd: numeric('cost_usd', { precision: 12, scale: 6 }).notNull().default('0'),
     refType: text('ref_type'), // 'generation' | 'template' | …
     refId: uuid('ref_id'),
+    // Исход вызова — сырьё для щитка надёжности и авторотации пула совета:
+    // ok | timeout | invalid (модель ответила мусором/не-JSON) | error (сеть/провайдер).
+    outcome: text('outcome').notNull().default('ok'),
+    durationMs: integer('duration_ms').notNull().default(0), // латентность вызова (p95 в щитке)
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('ai_usage_user_idx').on(t.userId, t.createdAt), index('ai_usage_created_idx').on(t.createdAt)],
+  (t) => [
+    index('ai_usage_user_idx').on(t.userId, t.createdAt),
+    index('ai_usage_created_idx').on(t.createdAt),
+    // Щиток/карантин агрегируют по модели за окно времени.
+    index('ai_usage_model_idx').on(t.model, t.createdAt),
+  ],
 )
 
 // ── Traffic: просмотры списков ───────────────────────────────────────
