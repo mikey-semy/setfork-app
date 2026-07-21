@@ -1,6 +1,6 @@
 import 'server-only'
 import { generateText } from 'ai'
-import { getAiSettings } from '@/shared/settings/ai'
+import { getAiSettings, modelAllowed, parseModelAllowlist } from '@/shared/settings/ai'
 import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
@@ -71,7 +71,8 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // АВТОРОТАЦИЯ: модели с проседающим success-rate за сутки (журнал ai_usage)
   // временно выпадают из ротации; окно скользящее — возврат автоматический.
   const quarantined = await quarantinedModels()
-  const usable = (m: string) => forProvider(m) && !quarantined.has(baseModelId(m))
+  const allowlist = parseModelAllowlist()
+  const usable = (m: string) => forProvider(m) && modelAllowed(m, allowlist) && !quarantined.has(baseModelId(m))
   const pool = filterByQuarantine(rawPool.filter(forProvider), quarantined)
   // Быстрая модель для ПРОМЕЖУТОЧНЫХ шагов (распорядитель-классификатор, критик, веб-поиск):
   // reasoning-модель там не нужна, а совет из 6-7 вызовов на ней тормозит минутами. Финал — на base.

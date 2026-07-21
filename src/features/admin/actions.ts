@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
 import { maintenanceFlag, setMaintenance } from '@/shared/settings/maintenance'
-import { AI_PROVIDERS, API_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_FOLDER_SETTING, YANDEX_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } from '@/shared/settings/ai'
+import { AI_PROVIDERS, API_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_FOLDER_SETTING, YANDEX_KEY_SETTING, defaultEmbeddingModel, getAiProviderRaw, hasApiKey, nsKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
 import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/email'
@@ -45,22 +45,26 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   const freeMonthlyGens = Math.max(0, Math.round(Number(formData.get('freeMonthlyGens')) || 0))
   const councilModels = String(formData.get('councilModels') ?? '').split(',').map((s) => s.trim()).filter(Boolean).join(',')
 
+  // Модели/порог пишутся в НЕЙМСПЕЙС провайдера из формы (селекты рендерились под
+  // него): переключение провайдера не затирает настройки соседей. Легаси-ключи
+  // (ai.chat_model, …) больше не пишем — они остаются read-фолбэком openrouter.
+  const nsProv = provider || (await getAiProviderRaw()).provider
   const settings: Record<string, string> = {
-    'ai.chat_model': chatModel || defaultChatModel(),
-    'ai.fallback_model': fallbackModel,
+    [nsKey(nsProv, 'chat_model')]: chatModel, // пусто = дефолт провайдера при чтении
+    [nsKey(nsProv, 'fallback_model')]: fallbackModel,
+    [nsKey(nsProv, 'council_models')]: councilModels,
     'ai.embedding_model': embeddingModel || defaultEmbeddingModel(),
     'ai.temperature': String(temperature),
     'ai.max_tokens': String(maxTokens),
     'ai.council_enabled': formData.get('councilEnabled') === 'on' ? 'true' : 'false',
     'ai.council_audience': formData.get('councilAudience') === 'all' ? 'all' : 'admin',
     'ai.council_max_gnomes': String(councilMaxGnomes),
-    'ai.council_models': councilModels,
     'ai.council_web_seek': formData.get('councilWebSeek') === 'on' ? 'true' : 'false',
     'ai.council_clarify': formData.get('councilClarify') === 'on' ? 'true' : 'false',
     'ai.council_max_per_month': String(councilMaxPerMonth),
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
-  if (cheapModeThreshold != null) settings['ai.cheap_mode_threshold'] = String(cheapModeThreshold)
+  if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)
   if (provider) settings[PROVIDER_SETTING] = provider
   if (apiKey) settings[API_KEY_SETTING] = apiKey
   if (selectelKey) settings[SELECTEL_KEY_SETTING] = selectelKey

@@ -1,5 +1,5 @@
 import 'server-only'
-import { getAiProviderConfig, type AiProviderId } from '@/shared/settings/ai'
+import { getAiProviderConfig, modelAllowed, parseModelAllowlist, type AiProviderId } from '@/shared/settings/ai'
 
 export interface ModelOption {
   id: string
@@ -106,8 +106,12 @@ export async function fetchModels(): Promise<ModelsResult> {
   // У Яндекса в общем /models лежат и эмбеддинги (emb://), и картинки (art://),
   // и realtime-речь — в chat-селекте им не место; rc/deprecated-версии тоже
   // прячем (мусорят выбор, для них есть явный ввод id руками).
+  const allowlist = parseModelAllowlist()
   let chatOpts = toOptions(chat).filter(
-    (m) => !/^emb:\/\/|^art:\/\/|\/speech-/.test(m.id) && !/\/(rc|deprecated)$/.test(m.id),
+    (m) =>
+      !/^emb:\/\/|^art:\/\/|\/speech-/.test(m.id) &&
+      !/\/(rc|deprecated)$/.test(m.id) &&
+      modelAllowed(m.id, allowlist), // allowlist стенда (env AI_MODEL_ALLOWLIST)
   )
   if (cfg.provider === 'yandex') {
     const { yandexPriceRub } = await import('./yandex-pricing')
