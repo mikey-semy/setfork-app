@@ -93,7 +93,8 @@ const EMPTY: ModelsResult = { provider: 'openrouter', currency: 'USD', pricesKno
 
 /** Каталог моделей АКТИВНОГО провайдера (OpenAI-совместимый /models) — для
  *  селектов в админке. Список эмбеддингов — только у OpenRouter (фаза 2).
- *  Цены: OpenRouter — USD/токен, Selectel — RUB/токен; Яндекс цен не отдаёт. */
+ *  Цены: OpenRouter — USD/токен из API, Selectel — RUB/токен из API; Яндекс в
+ *  API цен не отдаёт — подставляем хардкод-прайс (yandex-pricing, ₽/1M). */
 export async function fetchModels(): Promise<ModelsResult> {
   const cfg = await getAiProviderConfig()
   if (!cfg) return EMPTY
@@ -102,16 +103,27 @@ export async function fetchModels(): Promise<ModelsResult> {
     fetchList(`${cfg.baseUrl}/models`, init),
     cfg.provider === 'openrouter' ? fetchList(`${cfg.baseUrl}/embeddings/models`, init) : Promise.resolve([]),
   ])
+  // У Яндекса в общем /models лежат и эмбеддинги (emb://), и картинки (art://),
+  // и realtime-речь — в chat-селекте им не место; rc/deprecated-версии тоже
+  // прячем (мусорят выбор, для них есть явный ввод id руками).
+  let chatOpts = toOptions(chat).filter(
+    (m) => !/^emb:\/\/|^art:\/\/|\/speech-/.test(m.id) && !/\/(rc|deprecated)$/.test(m.id),
+  )
+  if (cfg.provider === 'yandex') {
+    const { yandexPriceRub } = await import('./yandex-pricing')
+    chatOpts = chatOpts.map((m) => {
+      const price = yandexPriceRub(m.id)
+      // Прайс за 1000 токенов → приводим к ₽/1M, как у остальных провайдеров.
+      return price
+        ? { ...m, priceKnown: true, promptPrice: price[0] * 1000, completionPrice: price[1] * 1000 }
+        : m
+    })
+  }
   return {
     provider: cfg.provider,
-    currency: cfg.provider === 'selectel' ? 'RUB' : 'USD',
-    pricesKnown: cfg.provider !== 'yandex',
-    // У Яндекса в общем /models лежат и эмбеддинги (emb://), и картинки (art://),
-    // и realtime-речь — в chat-селекте им не место; rc/deprecated-версии тоже
-    // прячем (мусорят выбор, для них есть явный ввод id руками).
-    chat: toOptions(chat).filter(
-      (m) => !/^emb:\/\/|^art:\/\/|\/speech-/.test(m.id) && !/\/(rc|deprecated)$/.test(m.id),
-    ),
+    currency: cfg.provider === 'openrouter' ? 'USD' : 'RUB',
+    pricesKnown: true, // per-model приоритетнее: без прайса опция покажет «—»
+    chat: chatOpts,
     embedding: toOptions(embedding).filter((m) => EMBEDDING_1536.has(m.id)),
   }
 }

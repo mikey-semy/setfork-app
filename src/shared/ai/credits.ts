@@ -39,14 +39,37 @@ export async function getOpenRouterCredits(opts?: { fresh?: boolean }): Promise<
   }
 }
 
-/** Активная модель: если задан порог >0 и баланс ниже — fallback, иначе основная.
- *  Cheap-mode завязан на баланс OpenRouter — на других провайдерах не применяется. */
+// Дневной ₽-расход для яндекс-cheap-mode кэшируем на 60с (дёргается на каждом вызове).
+let daySpendCache: { rub: number; at: number } | null = null
+
+async function dailySpendRub(): Promise<number> {
+  if (daySpendCache && Date.now() - daySpendCache.at < 60_000) return daySpendCache.rub
+  const [{ db, aiUsage }, { sql, gte }, { rubPerUsd }] = await Promise.all([
+    import('@/shared/db'),
+    import('drizzle-orm'),
+    import('./yandex-pricing'),
+  ])
+  const [r] = await db
+    .select({ usd: sql<number>`coalesce(sum(${aiUsage.costUsd}),0)::float8` })
+    .from(aiUsage)
+    .where(gte(aiUsage.createdAt, sql`date_trunc('day', now())`))
+  const rub = (r?.usd ?? 0) * rubPerUsd()
+  daySpendCache = { rub, at: Date.now() }
+  return rub
+}
+
+/** Активная модель: задан порог >0 и он превышен — fallback, иначе основная.
+ *  OpenRouter: порог = минимальный остаток баланса ($). Яндекс: баланса в API нет —
+ *  порог трактуется как ДНЕВНОЙ расход в ₽ (по нашему журналу с хардкод-прайсом). */
 export async function pickChatModel(settings: AiSettings): Promise<string> {
   const cfg = await getAiProviderConfig()
   const provider = cfg?.provider ?? 'openrouter'
   if (provider === 'openrouter' && settings.cheapModeThreshold > 0 && settings.fallbackModel) {
     const credits = await getOpenRouterCredits()
     if (credits && credits.remaining < settings.cheapModeThreshold) return settings.fallbackModel
+  }
+  if (provider === 'yandex' && settings.cheapModeThreshold > 0 && settings.fallbackModel.startsWith('gpt://')) {
+    if ((await dailySpendRub()) > settings.cheapModeThreshold) return settings.fallbackModel
   }
   // ai.chat_model в БД мог остаться от другого провайдера (напр. openai/gpt-4o-mini
   // после переключения на yandex): у Яндекса модели строго gpt://… — иначе дефолт.

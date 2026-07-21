@@ -49,6 +49,13 @@ export async function recordUsage(row: {
   durationMs?: number
 }): Promise<void> {
   try {
+    // Яндекс cost в ответе не присылает (пишлось 0 → денежные квоты не работали):
+    // оцениваем по хардкод-прайсу (yandex-pricing); без цены в прайсе — честный 0.
+    let cost = row.cost
+    if (!cost && (row.model.startsWith('gpt://') || row.model.startsWith('emb://'))) {
+      const { estimateYandexCostUsd } = await import('./yandex-pricing')
+      cost = estimateYandexCostUsd(row.model, row.input, row.output) ?? 0
+    }
     await db.insert(aiUsage).values({
       userId: row.userId ?? null,
       feature: row.feature,
@@ -56,7 +63,7 @@ export async function recordUsage(row: {
       inputTokens: Math.round(row.input),
       outputTokens: Math.round(row.output),
       totalTokens: Math.round(row.total),
-      costUsd: row.cost.toFixed(6),
+      costUsd: cost.toFixed(6),
       refType: row.refType ?? null,
       refId: row.refId ?? null,
       outcome: row.outcome ?? 'ok',
