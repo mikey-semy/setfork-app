@@ -48,8 +48,28 @@ function firstJson(t: string): string {
 }
 const online = (m: string, web: boolean) => (web && m ? `${m}:online` : m)
 
-/** Результат совета: готовый список, ИЛИ уточняющие вопросы (диалог), ИЛИ null (ошибка/выкл → фолбэк). */
-export type CouncilResult = GeneratedList | { clarify: string[] } | null
+/**
+ * Провенанс витка — объяснимость («почему ты это предложил тогда?», HQ §6):
+ * кто участвовал и на чём, какие прецеденты пошли в чьи промпты, что сказал критик.
+ * Собирается ИЗ ДАННЫХ, уже находящихся в руках совета — ни одного лишнего вызова.
+ */
+export interface CouncilProvenance {
+  engine: 'council'
+  depth: 'single' | 'council'
+  provider: string
+  kind: string
+  /** Найденные прецеденты (до 10) — что вообще легло на стол. */
+  precedents: { title: string; tags: string[] }[]
+  /** По каждому гному: модель и СВОЙ срез прецедентов (после доменной линзы). */
+  experts?: { id: string; model: string; precedents: string[] }[]
+  models: { steward?: string; innovator?: string; critic?: string; elder?: string; single?: string }
+  webSeek?: boolean
+  /** Разбор критика (срез 2000) — раньше терялся вовсе. */
+  critique?: string
+}
+
+/** Результат совета: готовый список (+провенанс), ИЛИ уточняющие вопросы (диалог), ИЛИ null (ошибка/выкл → фолбэк). */
+export type CouncilResult = (GeneratedList & { provenance?: CouncilProvenance }) | { clarify: string[] } | null
 
 /** Мультимодельный «совет гномов». null при ошибке/выкл — caller фолбэкает на generateListDraft. */
 export async function generateListCouncil(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<CouncilResult> {
@@ -212,7 +232,10 @@ ${roster}`,
   if (depth === 'single') {
     emit('plan', vl('planner', 'plan-single') ?? say('Simple topic — writing it up right away', 'Тема простая — пишу сразу'), 'planner', say('Planner', 'Планировщик'))
     const one = await run(online(base, web), listRules, `Create the reference list for the topic below.\n${topic}`)
-    return one ? parseList(firstJson(one.text), query) : null
+    const single = one ? parseList(firstJson(one.text), query) : null
+    return single
+      ? { ...single, provenance: { engine: 'council', depth: 'single', provider: providerId, kind, precedents: [], models: { single: base } } }
+      : null
   }
   emit('plan', vl('planner', 'plan-council') ?? say('The topic is many-sided — convening the council', 'Тема многогранная — собираем совет'), 'planner', say('Planner', 'Планировщик'))
 
@@ -259,6 +282,7 @@ ${roster}`,
   }
 
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
+  const expertProv: NonNullable<CouncilProvenance['experts']> = []
   const draftJobs = experts.map((e, i) => {
     // Своя модель эксперта (если задана в админке) сильнее пула — иначе раздаём пул по
     // кругу. Карантин бьёт и по личной модели гнома — падающая заменяется пулом.
@@ -269,7 +293,9 @@ ${roster}`,
     const sys = `You are ${e.persona}. Draft a practical list for the topic. 6-9 items, each with one clarifying sentence. All content in ${langName}. Return ONLY the draft text.\n${shapeFor(kind)}${law}\n${sp.rule()}`
     emit('draft', vl(e.id, 'draft') ?? say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
     // Каждому — прецеденты ЕГО доменов: повар видит рецепты, а не деплой (этап 1 базы знаний).
-    return run(model, sys, `Draft the list.\n${topic}${loreBlock(pickPrecedents(precedents, e.domains))}${webLore}`)
+    const mine = pickPrecedents(precedents, e.domains)
+    expertProv.push({ id: e.id, model: expertModel, precedents: mine.map((p) => p.title) })
+    return run(model, sys, `Draft the list.\n${topic}${loreBlock(mine)}${webLore}`)
   })
   emit('innovate', vl('innovator', 'innovate') ?? say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'), 'innovator', say('Innovator', 'Новатор'))
   const innovatorJob = run(
@@ -307,7 +333,21 @@ ${roster}`,
   // сказала «свожу финальный список». Срезаем прозу так же, как у распорядителя.
   if (elder) {
     const list = parseList(firstJson(elder.text), query)
-    if (list) return list
+    if (list)
+      return {
+        ...list,
+        provenance: {
+          engine: 'council',
+          depth: 'council',
+          provider: providerId,
+          kind,
+          precedents: precedents.map((p) => ({ title: p.title, tags: p.tags })),
+          experts: expertProv,
+          models: { steward: fast, innovator: pool[0], critic: fast, elder: base },
+          webSeek: settings.councilWebSeek,
+          critique: critique?.text ? critique.text.slice(0, 2000) : undefined,
+        },
+      }
   }
   // Синтез не распарсился — null. Прежний «фолбэк на лучший черновик» был мёртвым кодом: черновики —
   // свободный текст (Return ONLY the draft text), parseList делает JSON.parse и всегда возвращал null.
