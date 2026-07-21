@@ -48,16 +48,18 @@ export function backfillRecipeSections(items: { title: string; section?: string 
   }
 }
 
-/** Пример для поля «дополнить» — ПО ТИПУ списка: «побольше про безопасность» не лезет к рецепту.
+/** Пример для поля «дополнить» — ПО ТИПУ списка и НЕЙТРАЛЬНО К ТЕМЕ: «побольше про
+ *  безопасность» смотрелось нелепо на списке фантастики (фидбек владельца) — примеры
+ *  теперь про СТРУКТУРУ списка, а не предметную область.
  *  kind — свободная строка из БД (list_kind), невалидное молча падает на procedure. */
 export function refineHint(kind: string | null, ru: boolean): string {
   const H: Record<ListKind, [en: string, ru: string]> = {
-    procedure: ['add more about security', 'побольше про безопасность'],
-    inventory: ['add budget options', 'добавь бюджетные варианты'],
-    checklist: ['add pre-launch checks', 'добавь проверки перед запуском'],
-    criteria: ['weigh price vs quality', 'учти цену против качества'],
-    options: ['add a cheaper option', 'добавь вариант подешевле'],
-    recipe: ['make it less sweet, add per-portion', 'сделай менее сладким, добавь на порцию'],
+    procedure: ['add a missing step', 'добавь недостающий шаг'],
+    inventory: ['add a couple more items', 'добавь ещё пару пунктов'],
+    checklist: ['add a missing check', 'добавь недостающую проверку'],
+    criteria: ['add an important criterion', 'добавь важный критерий'],
+    options: ['add one more option', 'добавь ещё вариант'],
+    recipe: ['make it for 2 servings', 'пересчитай на 2 порции'],
   }
   const [en, rus] = H[(kind as ListKind) in H ? (kind as ListKind) : 'procedure']
   return ru ? rus : en
