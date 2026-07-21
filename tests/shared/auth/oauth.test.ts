@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { oauthEnabled, parseDisabledProviders } from '@/shared/auth/oauth'
+import { demoLoginEnabled, oauthEnabled, parseDisabledProviders } from '@/shared/auth/oauth'
 
 const ENV_KEYS = [
   'GITHUB_CLIENT_ID',
@@ -60,5 +60,26 @@ describe('oauthEnabled', () => {
     process.env.YANDEX_CLIENT_ID = 'ya'
     process.env.AUTH_DISABLED_PROVIDERS = 'github'
     expect(oauthEnabled()).toEqual({ github: false, yandex: true, vk: false, telegram: false })
+  })
+})
+
+describe('demoLoginEnabled', () => {
+  it('по умолчанию demo-вход разрешён (dev без OAuth-приложений)', () => {
+    expect(demoLoginEnabled()).toBe(true)
+  })
+
+  it('выключается через AUTH_DISABLED_PROVIDERS вместе с остальными', () => {
+    process.env.AUTH_DISABLED_PROVIDERS = 'github,telegram,demo'
+    expect(demoLoginEnabled()).toBe(false)
+  })
+
+  it('регистр и пробелы не мешают (как у провайдеров)', () => {
+    process.env.AUTH_DISABLED_PROVIDERS = ' Demo '
+    expect(demoLoginEnabled()).toBe(false)
+  })
+
+  it('отключение других провайдеров demo не трогает', () => {
+    process.env.AUTH_DISABLED_PROVIDERS = 'github'
+    expect(demoLoginEnabled()).toBe(true)
   })
 })
