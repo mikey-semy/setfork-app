@@ -1,5 +1,5 @@
 import 'server-only'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { councilExperts, db } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
 
@@ -20,6 +20,11 @@ export interface Expert {
   nameEn: string
   nameRu: string
   persona: string
+  /** Гильдия (HQ §7) — «носитель цеха»: имя для людей, кодекс для промптов. */
+  guildEn: string
+  guildRu: string
+  /** Кодекс гильдии — компактный свод стандартов качества (маркированные строки). */
+  code: string
   domains: string[]
   /** Принудительная модель; пусто → из пула совета по кругу. */
   model: string
@@ -41,6 +46,12 @@ export const SEED: Expert[] = [
     id: 'devops',
     nameEn: 'Devops',
     nameRu: 'Девопсер',
+    guildEn: 'Reliability Guild',
+    guildRu: 'Гильдия надёжности',
+    code: `- Every risky step names its rollback
+- Success is proven by a health-check, not by hope
+- Repetitive manual work becomes a scripted step
+- Reliability is a number (SLO), not a feeling`,
     domains: ['deploy', 'devops', 'ci', 'servers', 'infra', 'docker', 'kubernetes'],
     // Google SRE Book (SLO/error budget, blameless postmortem, toil) + DORA Four Keys.
     persona:
@@ -54,6 +65,12 @@ export const SEED: Expert[] = [
     id: 'coder',
     nameEn: 'Coder',
     nameRu: 'Кодер',
+    guildEn: "Coders' Guild",
+    guildRu: 'Гильдия кодеров',
+    code: `- Steps are small, single-purpose and reviewable
+- Commands are runnable exactly as written
+- Edge cases and failure modes are named, not implied
+- Correctness beats cleverness`,
     domains: ['programming', 'software', 'coding', 'api', 'library', 'framework'],
     // SOLID (R. C. Martin) + Test Pyramid (Fowler) + Google Engineering Practices + SWEBOK v4.
     persona:
@@ -67,6 +84,12 @@ export const SEED: Expert[] = [
     id: 'chef',
     nameEn: 'Chef',
     nameRu: 'Повар',
+    guildEn: "Chefs' Guild",
+    guildRu: 'Гильдия поваров',
+    code: `- Exact amounts, timings and temperatures — never "to taste" where a number exists
+- Mise en place before heat
+- Food-safety critical points are called out (danger zone 5–57 °C)
+- Kitchen order: what waits, what runs in parallel, what must not`,
     domains: ['cooking', 'food', 'recipe', 'kitchen', 'baking'],
     // Mise en place (CIA) + HACCP 7 principles (Codex CXC 1-1969) + FDA Food Code danger zone.
     persona:
@@ -80,6 +103,12 @@ export const SEED: Expert[] = [
     id: 'traveler',
     nameEn: 'Wanderer',
     nameRu: 'Странник',
+    guildEn: "Wanderers' Guild",
+    guildRu: 'Гильдия странников',
+    code: `- Sequence by lead time: weeks out → week out → departure day
+- Documents are verified against the official source for the traveller's date and passport
+- Every likely failure has a fallback
+- Budget and time cost sit next to each step`,
     domains: ['travel', 'trip', 'city', 'tourism', 'itinerary'],
     // ISO 31030 (travel risk) + IATA Timatic (docs volatility) + CDC Yellow Book / WHO (health prep).
     persona:
@@ -93,6 +122,12 @@ export const SEED: Expert[] = [
     id: 'coach',
     nameEn: 'Coach',
     nameRu: 'Тренер',
+    guildEn: "Coaches' Guild",
+    guildRu: 'Гильдия тренеров',
+    code: `- Screening before load; red-flag symptoms → doctor first
+- Every prescription is explicit: frequency, intensity, time, type, volume, progression
+- Progress raises ONE parameter at a time
+- Injury-causing form errors are named`,
     domains: ['fitness', 'health', 'workout', 'sport', 'nutrition'],
     // ACSM GETP (FITT-VP, preparticipation screening, progressive overload) + WHO 2020 activity guidelines.
     persona:
@@ -106,6 +141,12 @@ export const SEED: Expert[] = [
     id: 'scholar',
     nameEn: 'Scholar',
     nameRu: 'Книжник',
+    guildEn: "Scholars' Guild",
+    guildRu: 'Гильдия книжников',
+    code: `- Sources are weighed against THIS question, not the brand
+- The search path is reproducible: what was searched, included, rejected and why
+- Disagreements are cited, not smoothed over
+- Comprehension checks are built in`,
     domains: ['study', 'learning', 'research', 'course', 'exam'],
     // ACRL Framework for Information Literacy + PRISMA 2020 (reproducible search).
     persona:
@@ -119,6 +160,12 @@ export const SEED: Expert[] = [
     id: 'hoarder',
     nameEn: 'Hoarder',
     nameRu: 'Барахольщик',
+    guildEn: "Scavengers' Guild",
+    guildRu: 'Гильдия барахольщиков',
+    code: `- Every find passes CRAAP: currency, relevance, authority, accuracy, purpose
+- Never just a name: what it is FOR, what it costs, and its catch
+- Primary and official sources are preferred
+- Staleness is admitted, never hidden`,
     domains: ['*'],
     // Belbin Resource Investigator (+ его allowable weakness) + CRAAP test.
     persona:
@@ -132,6 +179,12 @@ export const SEED: Expert[] = [
     id: 'generalist',
     nameEn: 'Generalist',
     nameRu: 'Универсал',
+    guildEn: "Generalists' Guild",
+    guildRu: 'Гильдия универсалов',
+    code: `- Classify the task before picking the method
+- "Look back" is a real step that verifies the result
+- Checklist shape: short blocks, clear pause points
+- Each step marked read-do or do-confirm`,
     domains: ['*'],
     // Cynefin (Snowden & Boone, HBR) + Pólya «How to Solve It» + Checklist Manifesto / WHO checklist.
     persona:
@@ -148,6 +201,9 @@ const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   nameEn: r.nameEn,
   nameRu: r.nameRu,
   persona: r.persona,
+  guildEn: r.guildEn,
+  guildRu: r.guildRu,
+  code: r.code,
   domains: r.domains,
   model: r.model,
   avatar: r.avatar || r.id,
@@ -164,6 +220,21 @@ export async function seedRoster(): Promise<void> {
 }
 
 /**
+ * Догнать гильдии у СУЩЕСТВУЮЩИХ строк (HQ §7): таблица на проде уже наполнена,
+ * onConflictDoNothing новые поля не проставит. Трогаем только строки с ПУСТЫМ
+ * кодексом — правку админа не перетираем никогда (пустой = не задавался).
+ */
+async function backfillGuilds(rows: (typeof councilExperts.$inferSelect)[]): Promise<boolean> {
+  const missing = SEED.filter((s) => rows.some((r) => r.id === s.id && !r.code))
+  for (const s of missing)
+    await db
+      .update(councilExperts)
+      .set({ guildEn: s.guildEn, guildRu: s.guildRu, code: s.code, updatedAt: new Date() })
+      .where(and(eq(councilExperts.id, s.id), eq(councilExperts.code, '')))
+  return missing.length > 0
+}
+
+/**
  * Действующий ростер (только включённые, в заданном порядке). Пустая таблица → сеем и читаем снова.
  * Любая ошибка БД → SEED: совет обязан работать, даже если менеджер сломан.
  */
@@ -176,6 +247,7 @@ export async function getRoster(): Promise<Expert[]> {
       await seedRoster()
       rows = await read()
     }
+    if (await backfillGuilds(rows)) rows = await read()
     return rows.length ? rows.map(row2expert) : SEED
   } catch (e) {
     console.warn('[roster] fallback to SEED', e instanceof Error ? e.message : e)
@@ -209,6 +281,7 @@ export async function rosterAvatars(): Promise<Record<string, string>> {
 /** Весь ростер для админки — включая выключенных. */
 export async function getRosterAll(): Promise<(Expert & { enabled: boolean; sort: number })[]> {
   await seedRoster()
-  const rows = await db.select().from(councilExperts).orderBy(asc(councilExperts.sort))
+  let rows = await db.select().from(councilExperts).orderBy(asc(councilExperts.sort))
+  if (await backfillGuilds(rows)) rows = await db.select().from(councilExperts).orderBy(asc(councilExperts.sort))
   return rows.map((r) => ({ ...row2expert(r), enabled: r.enabled, sort: r.sort }))
 }

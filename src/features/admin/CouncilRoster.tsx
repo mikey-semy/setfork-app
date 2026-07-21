@@ -31,6 +31,9 @@ export interface ExpertRow {
   nameRu: string
   nameEn: string
   persona: string
+  guildRu: string
+  guildEn: string
+  code: string
   domains: string[]
   model: string
   avatar: string
@@ -187,6 +190,22 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
               <label className={lbl}>{say('Name (EN)', 'Имя (EN)')}</label>
               <input name="nameEn" defaultValue={e.nameEn} className={field} />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className={lbl}>{say('Guild (RU)', 'Гильдия (RU)')}</label>
+              <input name="guildRu" defaultValue={e.guildRu} className={field} />
+            </div>
+            <div>
+              <label className={lbl}>{say('Guild (EN)', 'Гильдия (EN)')}</label>
+              <input name="guildEn" defaultValue={e.guildEn} className={field} />
+            </div>
+          </div>
+
+          <div>
+            <label className={lbl}>{say('Guild code — quality standards (goes into the gnome’s and the critic’s prompts)', 'Кодекс гильдии — стандарты качества (уходит в промпт гнома и критика)')}</label>
+            <textarea name="code" defaultValue={e.code} rows={4} className={`${field} resize-y font-mono text-[12.5px] leading-[1.45]`} />
           </div>
 
           <div>
