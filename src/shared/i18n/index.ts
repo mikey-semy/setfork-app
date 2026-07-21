@@ -298,6 +298,14 @@ const DICT = {
   runUnblock: { en: 'Unblock', ru: 'Разблокировать' },
   runDelete: { en: 'Delete run', ru: 'Удалить прогон' },
   runDeleteConfirm: { en: 'Delete this run? Your progress will be lost — this cannot be undone.', ru: 'Удалить прогон? Прогресс пропадёт — это необратимо.' },
+  // ── «Помощь на шаге» (AI-подсказка застрявшему) ──
+  runAssist: { en: 'Help me', ru: 'Помоги' },
+  runAssistAgain: { en: 'Ask again', ru: 'Спросить ещё раз' },
+  runAssistThinking: { en: 'Looking into it…', ru: 'Разбираюсь…' },
+  runAssistLabel: { en: 'Hint', ru: 'Подсказка' },
+  runAssistFailed: { en: 'Could not get a hint — try again later.', ru: 'Не получилось собрать подсказку — попробуйте позже.' },
+  runAssistLimited: { en: 'Too many requests — wait a minute.', ru: 'Слишком часто — подождите минуту.' },
+  runAssistQuota: { en: 'Monthly AI limit reached.', ru: 'Месячный лимит ИИ исчерпан.' },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for agents to connect via MCP: search and read your lists — and, with write access, create and update them.',

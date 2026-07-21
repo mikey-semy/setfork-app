@@ -63,6 +63,9 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.council_web_seek': formData.get('councilWebSeek') === 'on' ? 'true' : 'false',
     'ai.council_clarify': formData.get('councilClarify') === 'on' ? 'true' : 'false',
     'ai.council_max_per_month': String(councilMaxPerMonth),
+    // «Помощь на шаге» (AI-подсказка застрявшему в прогоне) — свой флаг+аудитория.
+    'ai.assist_enabled': formData.get('assistEnabled') === 'on' ? 'true' : 'false',
+    'ai.assist_audience': formData.get('assistAudience') === 'all' ? 'all' : 'admin',
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
   if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)
