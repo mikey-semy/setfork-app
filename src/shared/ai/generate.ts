@@ -4,7 +4,7 @@ import { getAiSettings } from '@/shared/settings/ai'
 import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
-import { extractUsage, recordUsage, type AiFeature } from './usage'
+import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { sanitizeCommand } from './sanitize-command'
 import { lawBlock } from './list-laws'
 import { classifyListKind, shapeFor, type ListKind } from './list-kind'
@@ -141,6 +141,7 @@ async function runListModel(
   const online = (m: string) => (web && m ? `${m}:online` : m)
   const models = [base, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i).map(online)
 
+  const startedAt = Date.now()
   try {
     const result = await generateText({
       model: client.chat(online(base), isOpenRouter ? { extraBody: { models, transforms: ['middle-out'] } } : undefined),
@@ -149,7 +150,9 @@ async function runListModel(
       temperature: settings.temperature,
       maxOutputTokens: settings.maxTokens,
     })
-    // Учёт расхода — до парсинга (токены потрачены в любом случае).
+    // parseList чистый и не бросает — можно узнать исход ДО записи расхода:
+    // невалидный JSON = outcome 'invalid' (токены потрачены в любом случае).
+    const parsed = parseList(result.text, fallbackTitle)
     const u = extractUsage(result)
     await recordUsage({
       userId: opts.userId,
@@ -164,9 +167,24 @@ async function runListModel(
       cost: u.cost,
       refType: opts.refType,
       refId: opts.refId,
+      outcome: parsed ? 'ok' : 'invalid',
+      durationMs: Date.now() - startedAt,
     })
-    return parseList(result.text, fallbackTitle)
+    return parsed
   } catch (e) {
+    await recordUsage({
+      userId: opts.userId,
+      feature,
+      model: online(base),
+      input: 0,
+      output: 0,
+      total: 0,
+      cost: 0,
+      refType: opts.refType,
+      refId: opts.refId,
+      outcome: outcomeOf(e),
+      durationMs: Date.now() - startedAt,
+    })
     console.warn('[generate] failed', e instanceof Error ? e.message : e)
     return null
   }
@@ -216,6 +234,7 @@ export async function generateChangeNote(
     xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n').slice(0, MAX_PROMPT_CHARS)
   const sp = spotlight()
 
+  const startedAt = Date.now()
   try {
     const result = await generateText({
       model: client.chat(model),
@@ -226,7 +245,7 @@ ${sp.rule()}`,
       maxOutputTokens: 60,
     })
     const u = extractUsage(result)
-    await recordUsage({ userId: opts.userId, feature: 'note', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType, refId: opts.refId })
+    await recordUsage({ userId: opts.userId, feature: 'note', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType, refId: opts.refId, outcome: 'ok', durationMs: Date.now() - startedAt })
     const note = result.text.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, ' ').slice(0, 140)
     return note || null
   } catch (e) {

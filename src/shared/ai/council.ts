@@ -4,7 +4,8 @@ import { getAiSettings } from '@/shared/settings/ai'
 import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
-import { extractUsage, recordUsage, type AiFeature } from './usage'
+import { baseModelId, filterByQuarantine, quarantinedModels } from './health'
+import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, jsonShapeFor, type GeneratedList, type GenerateOptions } from './generate'
 import { classifyListKind, shapeFor, LIST_KINDS, type ListKind } from './list-kind'
@@ -58,7 +59,11 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // OpenRouter — проходят как есть.
   const forProvider = (m: string) => (client.cfg.provider === 'yandex' ? m.startsWith('gpt://') : true)
   const rawPool = settings.councilModels.length ? settings.councilModels : DEFAULT_COUNCIL_MODELS
-  const pool = rawPool.filter(forProvider)
+  // АВТОРОТАЦИЯ: модели с проседающим success-rate за сутки (журнал ai_usage)
+  // временно выпадают из ротации; окно скользящее — возврат автоматический.
+  const quarantined = await quarantinedModels()
+  const usable = (m: string) => forProvider(m) && !quarantined.has(baseModelId(m))
+  const pool = filterByQuarantine(rawPool.filter(forProvider), quarantined)
   // Быстрая модель для ПРОМЕЖУТОЧНЫХ шагов (распорядитель-классификатор, критик, веб-поиск):
   // reasoning-модель там не нужна, а совет из 6-7 вызовов на ней тормозит минутами. Финал — на base.
   const fast = pool[0] || base
@@ -92,6 +97,7 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // Ретрай именно транзиента бьёт по хвосту, не удваивая цену на стабильных ответах.
   async function run(model: string, system: string, prompt: string, maxTokens = settings.maxTokens, temp = settings.temperature): Promise<{ text: string } | null> {
     for (let attempt = 0; attempt < 2; attempt++) {
+      const startedAt = Date.now()
       try {
         const result = await generateText({
           model: chat(model),
@@ -102,10 +108,13 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
           abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
         })
         const u = extractUsage(result)
-        await recordUsage({ userId: opts.userId, feature, model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType ?? 'council', refId: opts.refId })
+        await recordUsage({ userId: opts.userId, feature, model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType ?? 'council', refId: opts.refId, outcome: 'ok', durationMs: Date.now() - startedAt })
         return { text: result.text }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
+        // Каждый ФИЗИЧЕСКИЙ вызов попадает в журнал (и ретраи) — иначе щиток
+        // надёжности видел бы только успехи и карантин никогда бы не срабатывал.
+        await recordUsage({ userId: opts.userId, feature, model, input: 0, output: 0, total: 0, cost: 0, refType: opts.refType ?? 'council', refId: opts.refId, outcome: outcomeOf(e), durationMs: Date.now() - startedAt })
         const transient = /timeout|abort|econnreset|fetch failed|network|socket|429|50[234]/i.test(msg)
         if (attempt === 0 && transient) {
           console.warn('[council] call retry', msg)
@@ -219,8 +228,9 @@ ${roster}`,
 
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
   const draftJobs = experts.map((e, i) => {
-    // Своя модель эксперта (если задана в админке) сильнее пула — иначе раздаём пул по кругу.
-    const expertModel = e.model && forProvider(e.model) ? e.model : pool[i % pool.length] || base
+    // Своя модель эксперта (если задана в админке) сильнее пула — иначе раздаём пул по
+    // кругу. Карантин бьёт и по личной модели гнома — падающая заменяется пулом.
+    const expertModel = e.model && usable(e.model) ? e.model : pool[i % pool.length] || base
     const model = online(expertModel, web && Boolean(e.online))
     // Закон типа списка (если есть) сильнее общего «6-9 шагов»: у рецепта своя обязательная форма.
     // Черновик по ТИПУ списка, а не всегда «6-9 шагов»: иначе на inventory эксперт даёт процедуру.
