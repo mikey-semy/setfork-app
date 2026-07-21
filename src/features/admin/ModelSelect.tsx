@@ -6,9 +6,10 @@ import { Check, ChevronDown, Search, X } from 'lucide-react'
 /** Значение-пустышка для «нет модели». */
 export const NONE = '__none__'
 
-/** id — идентификатор модели (моно), price — готовая строка цены, priceClass —
+/** id — идентификатор модели (моно), label — человеческое имя (URI не показываем),
+ *  family — семейство (бейдж), price — готовая строка цены, priceClass —
  *  цветовой класс (зелёный дёшево / жёлтый средне / красный дорого). */
-export type Option = { value: string; id: string; price?: string; priceClass?: string }
+export type Option = { value: string; id: string; label?: string; family?: string; price?: string; priceClass?: string }
 
 const parseCsv = (s: string | undefined): string[] => (s || '').split(',').map((x) => x.trim()).filter(Boolean)
 
@@ -39,17 +40,18 @@ export function ModelSelect({
   const [highlight, setHighlight] = useState(0)
 
   const value = values[0] ?? ''
-  const idOf = (v: string) => options.find((o) => o.value === v)?.id ?? v
+  const optOf = (v: string) => options.find((o) => o.value === v)
+  const labelOf = (v: string) => optOf(v)?.label ?? optOf(v)?.id ?? v
 
   const rootRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return q ? options.filter((o) => o.id.toLowerCase().includes(q)) : options
+    return q ? options.filter((o) => o.id.toLowerCase().includes(q) || o.label?.toLowerCase().includes(q) || o.family?.toLowerCase().includes(q)) : options
   }, [query, options])
 
-  const triggerLabel = multiple ? (values.length ? `Выбрано моделей: ${values.length}` : '') : idOf(value)
+  const triggerLabel = multiple ? (values.length ? `Выбрано моделей: ${values.length}` : '') : labelOf(value)
 
   // Закрытие по клику вне и фокус в поиск при открытии.
   useEffect(() => {
@@ -109,7 +111,7 @@ export function ModelSelect({
           onClick={() => setOpen((v) => !v)}
           className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] outline-hidden focus:border-border-strong"
         >
-          <span className={triggerLabel ? 'truncate font-mono text-[13px] text-ink' : 'text-muted'}>
+          <span className={triggerLabel ? 'truncate text-[13px] text-ink' : 'text-muted'}>
             {triggerLabel || placeholder}
           </span>
           <ChevronDown size={16} className="shrink-0 text-muted" />
@@ -159,7 +161,12 @@ export function ModelSelect({
                   onMouseEnter={() => setHighlight(i)}
                   onClick={() => pick(o.value)}
                 >
-                  <span className="truncate font-mono text-[12px]">{o.id}</span>
+                  <span className="truncate text-[12.5px]">{o.label ?? o.id}</span>
+                  {o.family && (
+                    <span className="ml-1.5 shrink-0 rounded-full border border-border bg-surface-2 px-1.5 py-px text-[10px] text-muted">
+                      {o.family}
+                    </span>
+                  )}
                   {o.price && <span className={`ml-auto shrink-0 pl-4 tabular-nums text-[11.5px] ${o.priceClass ?? ''}`}>{o.price}</span>}
                 </Row>
               ))}
@@ -175,10 +182,10 @@ export function ModelSelect({
           {values.map((v, i) => (
             <span key={v} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 py-1 pl-1.5 pr-1 text-[11.5px] text-ink-2">
               <span className="grid size-4 shrink-0 place-items-center rounded bg-surface text-[10px] tabular-nums text-muted">{i + 1}</span>
-              <span className="font-mono">{idOf(v)}</span>
+              <span>{labelOf(v)}</span>
               <button
                 type="button"
-                aria-label={`Убрать ${idOf(v)}`}
+                aria-label={`Убрать ${labelOf(v)}`}
                 onClick={() => pick(v)}
                 className="grid size-4 shrink-0 place-items-center rounded text-muted hover:text-ink"
               >

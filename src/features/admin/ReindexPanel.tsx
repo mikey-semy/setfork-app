@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Eraser, Loader2, Sparkles } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, startReindex } from './actions'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
@@ -121,21 +122,25 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
           )}
           <div className="mt-2.5 flex items-center gap-2">
             <label className="text-[12px] text-ink-2">{say('Target:', 'Цель:')}</label>
-            <select
+            <Select
               value={space.target.provider}
               disabled={switching || running}
-              onChange={async (e) => {
+              onValueChange={async (v) => {
                 setSwitching(true)
-                const res = await setEmbedTarget(e.target.value)
+                const res = await setEmbedTarget(v)
                 if ('error' in res) setMsg(res.error)
                 setSpace(await getEmbedSpaceInfo())
                 setSwitching(false)
               }}
-              className="rounded-md border border-border bg-surface px-2 py-1 text-[12.5px] text-ink outline-hidden"
             >
-              <option value="openrouter">OpenRouter · 1536</option>
-              <option value="yandex">Yandex v2 · 768 🇷🇺</option>
-            </select>
+              <SelectTrigger className="h-auto w-auto min-w-[190px] px-2 py-1 text-[12.5px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openrouter">OpenRouter · 1536</SelectItem>
+                <SelectItem value="yandex">Yandex v2 · 768 🇷🇺</SelectItem>
+              </SelectContent>
+            </Select>
             {switching && <Loader2 size={13} className="animate-spin text-muted" />}
           </div>
         </div>

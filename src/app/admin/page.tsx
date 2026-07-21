@@ -41,12 +41,14 @@ function isVariable(m: ModelOption): boolean {
 }
 // Цена, по которой красим и сортируем: для эмбеддингов — prompt, для чата — completion (или prompt).
 function priceMetric(m: ModelOption, embedding?: boolean): number {
+  if (!m.priceKnown) return Number.POSITIVE_INFINITY // цена неизвестна — в конец, серым
   if (isVariable(m)) return Number.POSITIVE_INFINITY // «плавающие» — в конец списка
   return embedding ? m.promptPrice : m.completionPrice || m.promptPrice
 }
 type Currency = 'USD' | 'RUB'
 const CUR_SIGN: Record<Currency, string> = { USD: '$', RUB: '₽' }
 function priceText(m: ModelOption, embedding: boolean, ru: boolean, cur: Currency): string {
+  if (!m.priceKnown) return '—' // провайдер не прислал цену: неизвестно ≠ бесплатно
   if (isVariable(m)) return ru ? 'Плавающая' : 'Variable'
   if (!m.promptPrice && !m.completionPrice) return ru ? 'Бесплатно' : 'Free'
   const s = CUR_SIGN[cur]
@@ -62,10 +64,10 @@ function priceClass(metric: number, cur: Currency): string {
   return 'text-danger'
 }
 function buildOpts(models: ModelOption[], embedding: boolean, ru: boolean, cur: Currency, pricesKnown: boolean): Option[] {
-  if (!pricesKnown) return [...models].map((m) => ({ value: m.id, id: m.id }))
+  if (!pricesKnown) return [...models].map((m) => ({ value: m.id, id: m.id, label: m.label, family: m.family }))
   return [...models]
     .sort((a, b) => priceMetric(a, embedding) - priceMetric(b, embedding))
-    .map((m) => ({ value: m.id, id: m.id, price: priceText(m, embedding, ru, cur), priceClass: priceClass(priceMetric(m, embedding), cur) }))
+    .map((m) => ({ value: m.id, id: m.id, label: m.label, family: m.family, price: priceText(m, embedding, ru, cur), priceClass: priceClass(priceMetric(m, embedding), cur) }))
 }
 function ensure(opts: Option[], current: string): Option[] {
   return current && !opts.some((o) => o.value === current) ? [{ value: current, id: current }, ...opts] : opts
