@@ -12,6 +12,7 @@ import { ListEditor } from '@/features/library/ListEditor'
 import { TagInput } from '@/shared/ui/TagInput'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
+import { FloatingBack } from '@/shared/ui/FloatingBack'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -41,6 +42,8 @@ export default async function EditPage({
       >
         <ArrowLeft size={15} /> {tpl.owner.handle}/{tpl.slug}
       </Link>
+      {/* На длинном списке верхняя ссылка уезжает — плавающий дубль слева-внизу (фидбек владельца). */}
+      <FloatingBack href={`/${owner}/${slug}`} label={tr(tpl.title, lang) || `${tpl.owner.handle}/${tpl.slug}`} />
 
       <form action={action}>
         <h1 className="mb-5 text-[18px] font-bold text-ink">
