@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
 export type AiProviderChoice = 'openrouter' | 'selectel' | 'yandex'
 
@@ -78,19 +79,23 @@ export function AiKeyAndSwitch({
 
       <div>
         <label className={lbl}>{say('Provider', 'Провайдер')}</label>
-        <select
+        <Select
           name="provider"
           value={prov}
-          onChange={(e) => {
-            setProv(e.target.value as AiProviderChoice)
+          onValueChange={(v) => {
+            setProv(v as AiProviderChoice)
             setKeyInput('')
           }}
-          className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-ink outline-hidden focus:border-border-strong"
         >
-          <option value="openrouter">OpenRouter</option>
-          <option value="selectel">{say('Selectel AI router (RU)', 'Selectel ИИ-роутер (РФ)')}</option>
-          <option value="yandex">YandexGPT / AI Studio (РФ)</option>
-        </select>
+          <SelectTrigger className="text-[13px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="openrouter">OpenRouter</SelectItem>
+            <SelectItem value="selectel">{say('Selectel AI router (RU)', 'Selectel ИИ-роутер (РФ)')}</SelectItem>
+            <SelectItem value="yandex">YandexGPT / AI Studio (РФ)</SelectItem>
+          </SelectContent>
+        </Select>
         <p className="mt-1.5 text-[12px] text-muted">{PROVIDER_NOTE[prov]}</p>
       </div>
 

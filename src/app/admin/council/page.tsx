@@ -13,6 +13,7 @@ export const metadata = { title: 'Council' }
 type Currency = 'USD' | 'RUB'
 function priceText(m: ModelOption, ru: boolean, cur: Currency): string {
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+  if (!m.priceKnown) return '—' // провайдер не прислал цену: неизвестно ≠ бесплатно
   if (m.promptPrice < 0 || m.completionPrice < 0) return say('Variable', 'Плавающая')
   if (!m.promptPrice && !m.completionPrice) return say('Free', 'Бесплатно')
   const s = cur === 'RUB' ? '₽' : '$'
@@ -57,8 +58,8 @@ export default async function CouncilPage() {
     .sort((a, b) => (a.completionPrice || a.promptPrice) - (b.completionPrice || b.promptPrice))
     .map((m) =>
       models?.pricesKnown
-        ? { value: m.id, id: m.id, price: priceText(m, ru, models.currency), priceClass: priceClass(m, models.currency) }
-        : { value: m.id, id: m.id },
+        ? { value: m.id, id: m.id, label: m.label, family: m.family, price: priceText(m, ru, models.currency), priceClass: priceClass(m, models.currency) }
+        : { value: m.id, id: m.id, label: m.label, family: m.family },
     )
 
   const [rows, gallery, uploaded] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars()])
