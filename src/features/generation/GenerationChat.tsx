@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowUp, Check, ChevronDown, ChevronRight, Loader2, RotateCw } from 'lucide-react'
+import { ArrowUp, ChevronRight, Loader2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
@@ -11,6 +11,7 @@ import { LIST_KINDS, kindLabel, refineHint } from '@/shared/ai/list-kind'
 import { DETAIL_LEVELS, detailLabel, toDetail } from '@/shared/ai/detail-level'
 import { CouncilBubble } from './CouncilBubble'
 import { CandidateCard } from './CandidateCard'
+import { ActionsMenu } from './ActionsMenu'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
 
 /**
@@ -57,72 +58,6 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars }: { messages: GenM
             </li>
           ))}
         </ol>
-      )}
-    </div>
-  )
-}
-
-/**
- * Прыжок по вариантам: на мобилке лента длинная, и доскроллить до нужного варианта — мучение.
- * Заголовки в меню, потому что «Вариант 2» ни о чём не говорит, а «Настройка CI…» — говорит.
- */
-function VariantJump({
-  candidates,
-  lang,
-  selId,
-  onPick,
-}: {
-  candidates: GenerationCandidate[]
-  lang: Lang
-  selId?: string
-  onPick: (id: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
-
-  const jump = (c: GenerationCandidate) => {
-    onPick(c.id)
-    setOpen(false)
-    // Выбор — не только подсветка: ещё и доводим карточку до глаз.
-    document.getElementById(`cand-${c.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-
-  return (
-    <div ref={ref} className="relative ml-auto">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] text-muted hover:text-ink"
-      >
-        {say(`Variants: ${candidates.length}`, `Вариантов: ${candidates.length}`)}
-        <ChevronDown size={13} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+4px)] z-20 w-[260px] overflow-hidden rounded-md border border-border bg-surface shadow-card">
-          {candidates.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => jump(c)}
-              className={`flex w-full items-start gap-2 px-2.5 py-2 text-left hover:bg-surface-2 ${c.id === selId ? 'bg-surface-2' : ''}`}
-            >
-              <span className="mt-px shrink-0 text-[11px] tabular-nums text-muted">{c.idx}</span>
-              <span className="min-w-0">
-                <span className="block truncate text-[12.5px] text-ink">{c.title}</span>
-                {c.summary && <span className="mt-0.5 block truncate text-[11px] text-muted">{c.summary}</span>}
-              </span>
-            </button>
-          ))}
-        </div>
       )}
     </div>
   )
@@ -224,29 +159,12 @@ export function GenerationChat({ generationId, lang, candidates, status, message
   return (
     // Контейнер минимум во весь экран под шапкой (она sticky, 53px) — иначе на коротком чате
     // sticky-поле ввода прижималось бы к концу текста, а не к низу окна, как в мессенджерах.
-    <div className="mx-auto flex min-h-[calc(100dvh-53px)] w-full max-w-[720px] flex-col px-4 py-4 sm:px-6">
-      {/* Действия — НАД беседой, липко. Заголовка и подзаголовка нет: чат говорит сам за себя. */}
-      <div className="sticky top-0 z-10 -mx-4 mb-4 flex items-center gap-2 border-b border-border bg-canvas/85 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6">
-        <button
-          onClick={() => selId && start(() => acceptCandidate(generationId, selId))}
-          disabled={!selId || working}
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg disabled:opacity-40"
-        >
-          <Check size={14} /> {say('Use this one', 'Использовать этот')}
-        </button>
-        <button
-          onClick={() => start(() => regenerateCandidate(generationId))}
-          disabled={working || candidates.length >= 6}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-[13px] text-ink-2 hover:text-ink disabled:opacity-40"
-        >
-          <RotateCw size={14} /> {say('Another', 'Ещё вариант')}
-        </button>
-        {candidates.length > 1 && <VariantJump candidates={candidates} lang={lang} selId={selId} onPick={setSelId} />}
-      </div>
-
+    // 1040px, не 720: на десктопе половина экрана пустовала (фидбек владельца).
+    <div className="mx-auto flex min-h-[calc(100dvh-53px)] w-full max-w-[1040px] flex-col px-4 py-4 sm:px-6">
       {/* Переключатель типа списка (ADR-0010): не тот тип? — жми, будет новый вариант в нужной форме.
-          Дешевле и без трения, чем уточняющий вопрос; каждый клик — сигнал, что автоугадывание промахнулось. */}
-      <div className="no-scrollbar -mx-4 mb-4 flex items-center gap-1.5 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
+          Дешевле и без трения, чем уточняющий вопрос; каждый клик — сигнал, что автоугадывание промахнулось.
+          На узком — горизонтальный скролл, на sm+ — перенос строк: пилюли не должны уходить за экран. */}
+      <div className="no-scrollbar -mx-4 mb-4 flex items-center gap-1.5 overflow-x-auto px-4 sm:-mx-6 sm:flex-wrap sm:overflow-x-visible sm:px-6">
         {LIST_KINDS.map((k) => (
           <button
             key={k}
@@ -294,7 +212,8 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             <li key={n} className="flex flex-col gap-3">
               {said.map((m) => (
                 <div key={m.id} className="flex animate-fadein justify-end">
-                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[13.5px] leading-[1.5] text-primary-fg">
+                  {/* Кап 640px: на широком контейнере пузырь на 85% превращался в строку во весь экран. */}
+                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[13.5px] leading-[1.5] text-primary-fg sm:max-w-[640px]">
                     {m.kind === 'again' ? say('Another variant', 'Ещё вариант') : m.text}
                   </div>
                 </div>
@@ -356,9 +275,20 @@ export function GenerationChat({ generationId, lang, candidates, status, message
         )}
       </ol>
 
-      {/* Дополнить прямо здесь: реплика уходит в нить, следующий вариант учитывает ВСЮ беседу. */}
+      {/* Дополнить прямо здесь: реплика уходит в нить, следующий вариант учитывает ВСЮ беседу.
+          Действия с вариантами — меню слева от поля: раньше висели липким баром наверху,
+          и к ним приходилось скроллить от поля ввода (фидбек владельца). */}
       <div className="sticky bottom-0 -mx-4 mt-4 border-t border-border bg-canvas/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex items-end gap-2">
+          <ActionsMenu
+            candidates={candidates}
+            selId={selId}
+            working={working}
+            lang={lang}
+            onPick={setSelId}
+            onAccept={() => selId && start(() => acceptCandidate(generationId, selId))}
+            onRegen={() => start(() => regenerateCandidate(generationId))}
+          />
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}

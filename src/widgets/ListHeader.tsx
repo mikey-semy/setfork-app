@@ -18,6 +18,7 @@ import { getOpenIssueCount } from '@/features/issues/queries'
 import { getDiscussionCount } from '@/features/discussions/queries'
 import { getWatchCount, isWatching } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
+import { humanModerationReason } from '@/features/moderation/reason'
 import { TabItem, TabNav } from '@/shared/ui/TabNav'
 
 type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'discussions' | 'insights' | 'settings'
@@ -148,7 +149,8 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
               : meta.moderation === 'pending'
                 ? t('pendingNotice', lang)
                 : t('flaggedNotice', lang)}
-            {meta.moderationReason && ` — ${meta.moderationReason}`}
+            {/* В БД причина машинная (английская, для очереди админа) — владельцу её переводим. */}
+            {meta.moderationReason && ` — ${humanModerationReason(meta.moderationReason, lang)}`}
             {meta.moderation === 'flagged' && isOwner && (
               <span className="ml-2">
                 {meta.appealedAt ? (

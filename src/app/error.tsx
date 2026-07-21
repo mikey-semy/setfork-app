@@ -10,8 +10,15 @@ import { captureError } from '@/shared/observability'
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const [lang, setLang] = useState<Lang>(DEFAULT_LANG)
   useEffect(() => {
+    // <html lang> — ровно то, что решил сервер (cookie → Accept-Language), и
+    // корневой layout при ошибке ниже него ЖИВ. Cookie одной было мало: без
+    // ручного переключения языка её нет, и русские видели английскую ошибку.
+    const fromHtml = document.documentElement.lang
+    if (isLang(fromHtml)) return setLang(fromHtml)
     const m = document.cookie.match(/(?:^|; )lang=([^;]+)/)
-    if (m && isLang(m[1])) setLang(m[1])
+    if (m && isLang(m[1])) return setLang(m[1])
+    const fromNav = navigator.language?.slice(0, 2).toLowerCase()
+    if (isLang(fromNav)) setLang(fromNav)
   }, [])
   useEffect(() => {
     captureError(error, { where: 'app/error', digest: error.digest })

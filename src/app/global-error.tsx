@@ -28,7 +28,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
       >
         <div style={{ maxWidth: 420, padding: '48px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: 44, lineHeight: 1 }}>⚠️</div>
-          <h1 style={{ margin: '16px 0 8px', fontSize: 20, fontWeight: 700 }}>Something went wrong</h1>
+          <h1 style={{ margin: '16px 0 8px', fontSize: 20, fontWeight: 700 }}>Something went wrong / Что-то пошло не так</h1>
           <p style={{ margin: 0, fontSize: 14, color: '#6b6b66' }}>
             An unexpected error occurred. / Произошла непредвиденная ошибка.
           </p>

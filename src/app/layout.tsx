@@ -11,6 +11,8 @@ import { getUserTemplates } from '@/features/library/queries'
 import { getUserAppearance } from '@/features/settings/appearance'
 import { BrowserNotifier } from '@/features/notifications/BrowserNotifier'
 import { HydrationSignal } from '@/shared/ui/HydrationSignal'
+import { UpdateBanner } from '@/shared/ui/UpdateBanner'
+import { getBuildId } from '@/shared/version'
 import { TooltipProvider } from '@/shared/ui/Tooltip'
 import { AppToaster } from '@/shared/ui/toast'
 import { TopNav } from '@/widgets/TopNav'
@@ -141,6 +143,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </SidebarProvider>
               <Footer lang={lang} />
               <ScrollToTop label={lang === 'ru' ? 'Наверх' : 'Back to top'} />
+              {/* Детект устаревшей вкладки после деплоя — иначе Server Actions падают UnrecognizedActionError. */}
+              <UpdateBanner build={getBuildId()} lang={lang} />
               {user && browserNotify && <BrowserNotifier enabled />}
             </div>
           </TooltipProvider>
