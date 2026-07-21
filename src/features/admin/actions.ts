@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
 import { maintenanceFlag, setMaintenance } from '@/shared/settings/maintenance'
-import { API_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } from '@/shared/settings/ai'
+import { AI_PROVIDERS, API_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_FOLDER_SETTING, YANDEX_KEY_SETTING, defaultChatModel, defaultEmbeddingModel, hasApiKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
 import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/email'
@@ -27,9 +27,17 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   // Потолок 8000, а не 4000: длинные списки (рецепты/инвентарь) при 1500 обрезались → 33-56% отказов
   // (research/2026-07-18-council-bench). Прод на 5000; кламп 4000 молча вернул бы поломку при пересохранении.
   const maxTokens = Math.min(8000, Math.max(64, Math.round(Number(formData.get('maxTokens')) || 4000)))
-  const cheapModeThreshold = Math.max(0, Number(formData.get('cheapModeThreshold')) || 0)
-  // Ключ пишем только если поле заполнено — пустое поле значит «не менять».
+  // Поле порога рендерится только при OpenRouter — отсутствие в форме значит «не менять»,
+  // иначе смена провайдера туда-обратно молча обнуляла бы порог.
+  const thresholdRaw = formData.get('cheapModeThreshold')
+  const cheapModeThreshold = thresholdRaw == null ? null : Math.max(0, Number(thresholdRaw) || 0)
+  // Провайдер чата + его ключи. Ключ пишем только если поле заполнено — пусто = «не менять».
+  const providerRaw = String(formData.get('provider') ?? '').trim()
+  const provider = (AI_PROVIDERS as readonly string[]).includes(providerRaw) ? providerRaw : ''
   const apiKey = String(formData.get('apiKey') ?? '').trim()
+  const selectelKey = String(formData.get('selectelKey') ?? '').trim()
+  const yandexKey = String(formData.get('yandexKey') ?? '').trim()
+  const yandexFolder = String(formData.get('yandexFolder') ?? '').trim()
 
   // «Совет гномов» — мультимодельная генерация за флагами (см. shared/ai/council.ts).
   const councilMaxGnomes = Math.min(8, Math.max(1, Math.round(Number(formData.get('councilMaxGnomes')) || 3)))
@@ -43,7 +51,6 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.embedding_model': embeddingModel || defaultEmbeddingModel(),
     'ai.temperature': String(temperature),
     'ai.max_tokens': String(maxTokens),
-    'ai.cheap_mode_threshold': String(cheapModeThreshold),
     'ai.council_enabled': formData.get('councilEnabled') === 'on' ? 'true' : 'false',
     'ai.council_audience': formData.get('councilAudience') === 'all' ? 'all' : 'admin',
     'ai.council_max_gnomes': String(councilMaxGnomes),
@@ -53,12 +60,18 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.council_max_per_month': String(councilMaxPerMonth),
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
+  if (cheapModeThreshold != null) settings['ai.cheap_mode_threshold'] = String(cheapModeThreshold)
+  if (provider) settings[PROVIDER_SETTING] = provider
   if (apiKey) settings[API_KEY_SETTING] = apiKey
-  // Включать генерацию можно только при наличии ключа.
-  const keyExists = apiKey.length > 0 || (await hasApiKey())
-  settings['ai.enabled'] = enabled && keyExists ? 'true' : 'false'
+  if (selectelKey) settings[SELECTEL_KEY_SETTING] = selectelKey
+  if (yandexKey) settings[YANDEX_KEY_SETTING] = yandexKey
+  if (yandexFolder) settings[YANDEX_FOLDER_SETTING] = yandexFolder
 
+  // Сначала сохраняем провайдера/ключи, затем проверяем конфиг УЖЕ нового провайдера —
+  // «включено» допустимо только когда активный провайдер реально сконфигурирован.
   await saveSettings(settings)
+  const keyExists = await hasApiKey()
+  await saveSettings({ 'ai.enabled': enabled && keyExists ? 'true' : 'false' })
   revalidatePath('/admin')
 }
 

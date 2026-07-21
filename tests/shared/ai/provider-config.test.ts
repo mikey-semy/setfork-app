@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { resolveAiProvider, API_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING } from '@/shared/settings/ai'
+import {
+  resolveAiProvider,
+  API_KEY_SETTING,
+  PROVIDER_SETTING,
+  SELECTEL_KEY_SETTING,
+  YANDEX_FOLDER_SETTING,
+  YANDEX_KEY_SETTING,
+} from '@/shared/settings/ai'
 
 describe('resolveAiProvider', () => {
   it('дефолт: openrouter из env-ключа; без ключа — null', () => {
@@ -13,11 +20,22 @@ describe('resolveAiProvider', () => {
     expect(cfg?.apiKey).toBe('sk-db')
   })
 
-  it('selectel: нужен и endpoint, и ключ; хвостовой слэш срезается', () => {
-    expect(resolveAiProvider({}, { AI_PROVIDER: 'selectel', SELECTEL_AI_KEY: 'k' })).toBeNull()
+  it('selectel: без ключа null; endpoint дефолтный, override срезает хвостовой слэш', () => {
     expect(resolveAiProvider({}, { AI_PROVIDER: 'selectel', SELECTEL_AI_URL: 'https://x/v1' })).toBeNull()
+    expect(resolveAiProvider({}, { AI_PROVIDER: 'selectel', SELECTEL_AI_KEY: 'k' })).toMatchObject({
+      provider: 'selectel',
+      baseUrl: 'https://api.selectel.ru/aig/v1',
+    })
     const cfg = resolveAiProvider({}, { AI_PROVIDER: 'selectel', SELECTEL_AI_URL: 'https://x/v1/', SELECTEL_AI_KEY: 'k' })
     expect(cfg).toMatchObject({ provider: 'selectel', baseUrl: 'https://x/v1', apiKey: 'k' })
+  })
+
+  it('yandex: folder_id можно задать в БД (админка), не только env', () => {
+    const cfg = resolveAiProvider(
+      { [PROVIDER_SETTING]: 'yandex', [YANDEX_KEY_SETTING]: 'yk', [YANDEX_FOLDER_SETTING]: 'b1gdb' },
+      {},
+    )
+    expect(cfg?.headers?.['x-folder-id']).toBe('b1gdb')
   })
 
   it('yandex: ключ + folder_id, заголовки с x-folder-id и запретом логирования', () => {

@@ -10,17 +10,20 @@ export const metadata = { title: 'Council' }
 
 // Те же цены, что и в общей админке. Дублировать формулу не хочется, но и тащить её в shared ради
 // двух страниц рано — вынесем, когда появится третий потребитель.
-function priceText(m: ModelOption, ru: boolean): string {
+type Currency = 'USD' | 'RUB'
+function priceText(m: ModelOption, ru: boolean, cur: Currency): string {
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   if (m.promptPrice < 0 || m.completionPrice < 0) return say('Variable', 'Плавающая')
   if (!m.promptPrice && !m.completionPrice) return say('Free', 'Бесплатно')
-  return `$${m.promptPrice.toFixed(2)} / $${m.completionPrice.toFixed(2)}`
+  const s = cur === 'RUB' ? '₽' : '$'
+  return `${s}${m.promptPrice.toFixed(2)} / ${s}${m.completionPrice.toFixed(2)}`
 }
-function priceClass(m: ModelOption): string {
+function priceClass(m: ModelOption, cur: Currency): string {
   const v = m.completionPrice || m.promptPrice
+  const [ok, warn] = cur === 'RUB' ? [100, 1000] : [1, 10]
   if (v < 0) return 'text-muted'
-  if (v <= 1) return 'text-ok'
-  if (v <= 10) return 'text-warn'
+  if (v <= ok) return 'text-ok'
+  if (v <= warn) return 'text-warn'
   return 'text-danger'
 }
 
@@ -49,10 +52,14 @@ export default async function CouncilPage() {
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
-  const models = apiKey ? await fetchModels() : { chat: [], embedding: [] }
-  const modelOptions: Option[] = [...models.chat]
+  const models = apiKey ? await fetchModels() : null
+  const modelOptions: Option[] = [...(models?.chat ?? [])]
     .sort((a, b) => (a.completionPrice || a.promptPrice) - (b.completionPrice || b.promptPrice))
-    .map((m) => ({ value: m.id, id: m.id, price: priceText(m, ru), priceClass: priceClass(m) }))
+    .map((m) =>
+      models?.pricesKnown
+        ? { value: m.id, id: m.id, price: priceText(m, ru, models.currency), priceClass: priceClass(m, models.currency) }
+        : { value: m.id, id: m.id },
+    )
 
   const [rows, gallery, uploaded] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars()])
   // Загруженная картинка уходит готовым URL (imgproxy/диск) — клиенту незачем знать про S3-ключи.

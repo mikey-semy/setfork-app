@@ -42,14 +42,19 @@ export async function getOpenRouterCredits(opts?: { fresh?: boolean }): Promise<
 /** Активная модель: если задан порог >0 и баланс ниже — fallback, иначе основная.
  *  Cheap-mode завязан на баланс OpenRouter — на других провайдерах не применяется. */
 export async function pickChatModel(settings: AiSettings): Promise<string> {
-  const provider = (await getAiProviderConfig())?.provider ?? 'openrouter'
+  const cfg = await getAiProviderConfig()
+  const provider = cfg?.provider ?? 'openrouter'
   if (provider === 'openrouter' && settings.cheapModeThreshold > 0 && settings.fallbackModel) {
     const credits = await getOpenRouterCredits()
     if (credits && credits.remaining < settings.cheapModeThreshold) return settings.fallbackModel
   }
   // ai.chat_model в БД мог остаться от другого провайдера (напр. openai/gpt-4o-mini
-  // после переключения на yandex): у Яндекса модели строго gpt://… — иначе дефолт
-  // провайдера, а не гарантированно битый вызов.
-  if (provider === 'yandex' && !settings.chatModel.startsWith('gpt://')) return defaultChatModel()
+  // после переключения на yandex): у Яндекса модели строго gpt://… — иначе дефолт.
+  // folder берём из конфига (может быть задан в админке, а не в env).
+  if (provider === 'yandex' && !settings.chatModel.startsWith('gpt://')) {
+    const folder = cfg?.headers?.['x-folder-id'] ?? ''
+    const envDefault = defaultChatModel()
+    return envDefault.startsWith('gpt://') && !envDefault.includes('gpt:///') ? envDefault : `gpt://${folder}/yandexgpt-5.1/latest`
+  }
   return settings.chatModel
 }
