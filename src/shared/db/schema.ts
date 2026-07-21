@@ -43,7 +43,7 @@ export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done', 'blocked
 export const stepLevel = pgEnum('step_level', ['required', 'recommended', 'optional'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
 // Тип AI-вызова для учёта расхода (токены/деньги).
-export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate'])
+export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'assist'])
 export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
@@ -335,6 +335,9 @@ export const runStepState = pgTable(
     // отмеченные подшаги: массив индексов выполненных подшагов
     subtasksDone: jsonb('subtasks_done').notNull().default([]).$type<number[]>(),
     doneAt: timestamp('done_at', { withTimezone: true }),
+    // «Помощь на шаге»: последний AI-ответ (markdown) — переживает перезагрузку страницы.
+    assist: text('assist').notNull().default(''),
+    assistAt: timestamp('assist_at', { withTimezone: true }),
   },
   (t) => ({ runStep: unique('run_step_state_run_step').on(t.runId, t.stepId) }),
 )
