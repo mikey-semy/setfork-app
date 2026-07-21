@@ -110,6 +110,7 @@ export async function fetchModels(): Promise<ModelsResult> {
   let chatOpts = toOptions(chat).filter(
     (m) =>
       !/^emb:\/\/|^art:\/\/|\/speech-/.test(m.id) &&
+      !/^(Embeddings|GigaEmbeddings)/.test(m.id) && // эмбеддинг-модели GigaChat — не чат
       !/\/(rc|deprecated)$/.test(m.id) &&
       modelAllowed(m.id, allowlist), // allowlist стенда (env AI_MODEL_ALLOWLIST)
   )

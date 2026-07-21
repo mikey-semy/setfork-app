@@ -119,16 +119,19 @@ export default async function AdminPage() {
     openrouter: aiProv.openrouterKey,
     selectel: aiProv.selectelKey,
     yandex: aiProv.yandexKey,
+    gigachat: aiProv.gigachatKey,
   }
   const hasKeyByProvider = {
     openrouter: Boolean(providerKeys.openrouter),
     selectel: Boolean(providerKeys.selectel),
     yandex: Boolean(providerKeys.yandex && aiProv.yandexFolder),
+    gigachat: Boolean(providerKeys.gigachat),
   }
   const maskedKeys = {
     openrouter: maskKey(providerKeys.openrouter),
     selectel: maskKey(providerKeys.selectel),
     yandex: maskKey(providerKeys.yandex),
+    gigachat: maskKey(providerKeys.gigachat),
   }
   const hasKey = hasKeyByProvider[aiProv.provider] // активный провайдер сконфигурирован
   const mediaValues = {
@@ -309,7 +312,7 @@ export default async function AdminPage() {
                   )}
             </p>
 
-            {models.provider !== 'selectel' && (
+            {(models.provider === 'openrouter' || models.provider === 'yandex') && (
               <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
                 <div className="text-[13px] font-medium text-ink">
                   {models.provider === 'openrouter'

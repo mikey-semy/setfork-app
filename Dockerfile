@@ -33,6 +33,9 @@ RUN apt-get update \
 COPY --chown=node:node --from=builder /app/.next/standalone ./
 COPY --chown=node:node --from=builder /app/.next/static ./.next/static
 COPY --chown=node:node --from=builder /app/public ./public
+# Серты НУЦ Минцифры (публичные) — доверие TLS Сбера (GigaChat). Безвредно без него.
+COPY --chown=node:node --from=builder /app/certs ./certs
+ENV NODE_EXTRA_CA_CERTS=/app/certs/russian-trusted-ca-bundle.pem
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=4s --start-period=20s --retries=3 \
