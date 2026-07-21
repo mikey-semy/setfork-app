@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 import { mcpCheckStep, mcpCreateList, mcpGetList, mcpGetRun, mcpGetScript, mcpSearch, mcpStartRun, mcpUpdateList } from '@/features/mcp/tools'
+import { mcpAskGnome, mcpListGnomes } from '@/features/mcp/gnome'
 
 const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
@@ -101,6 +102,37 @@ const handler = createMcpHandler(
       async (userId, { runId }) => {
         const res = await mcpGetRun(userId, runId)
         return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    // ── Гномы (мастерская): ростер + вопрос одному эксперту ───────────
+    readTool(
+      'list_gnomes',
+      {
+        title: 'List the workshop gnomes',
+        description:
+          'The SetFork workshop is staffed by gnome experts (chef, devops, coder, coach, traveler, scholar and more). Returns the roster: id, name (en/ru), domains and what each gnome is good at. Call this first to pick whom to ask via ask_gnome.',
+        inputSchema: {},
+      },
+      async () => json(await mcpListGnomes()),
+    )
+
+    readTool(
+      'ask_gnome',
+      {
+        title: 'Ask a gnome',
+        description:
+          'Ask ONE workshop gnome a question in their specialty — advice, a draft outline, or a critique. Optionally attach one of your lists (handle+slug) as context; the gnome will consider its content. Uses your AI quota; costs one model call. Pick the gnome by domain fit (list_gnomes), not at random — a chef will not help with a deploy.',
+        inputSchema: {
+          gnome: z.string().describe('Gnome id from list_gnomes, e.g. "chef"'),
+          question: z.string().describe('Your question or task for this gnome, any language'),
+          handle: z.string().optional().describe('Optional: owner handle of a list to attach as context'),
+          slug: z.string().optional().describe('Optional: slug of that list (required together with handle)'),
+        },
+      },
+      async (userId, { gnome, question, handle, slug }) => {
+        const res = await mcpAskGnome(userId, { gnome, question, handle, slug })
+        return 'error' in res ? err(res.error) : json(res)
       },
     )
 
