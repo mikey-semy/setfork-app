@@ -1,8 +1,8 @@
 import 'server-only'
 import { generateText } from 'ai'
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { getAiSettings, getApiKey } from '@/shared/settings/ai'
+import { getAiSettings } from '@/shared/settings/ai'
 import { globalBudgetOk } from '@/shared/quota'
+import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { extractUsage, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
@@ -44,23 +44,30 @@ export type CouncilResult = GeneratedList | { clarify: string[] } | null
 
 /** Мультимодельный «совет гномов». null при ошибке/выкл — caller фолбэкает на generateListDraft. */
 export async function generateListCouncil(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<CouncilResult> {
-  const apiKey = await getApiKey()
-  if (!apiKey) return null
+  const client = await getAiChatClient()
+  if (!client) return null
+  // В замыкание run (function declaration) сужение client не протекает — фиксируем поля.
+  const chat = client.chat
   const settings = await getAiSettings()
   if (!settings.enabled) return null
   if (!(await globalBudgetOk())) return null
-
-  const openrouter = createOpenRouter({ apiKey, appName: 'SetFork', appUrl: process.env.APP_URL || 'http://localhost:3000' })
   const langName = langEnName(lang)
   const base = await pickChatModel(settings) // конфигурируемая модель — для ФИНАЛЬНОГО списка (качество)
-  const pool = settings.councilModels.length ? settings.councilModels : DEFAULT_COUNCIL_MODELS
+  // Пул/ростер могли остаться с моделями другого провайдера (у Яндекса id строго
+  // gpt://…): несовместимые отсеиваем, пустой пул → база. У Selectel id в стиле
+  // OpenRouter — проходят как есть.
+  const forProvider = (m: string) => (client.cfg.provider === 'yandex' ? m.startsWith('gpt://') : true)
+  const rawPool = settings.councilModels.length ? settings.councilModels : DEFAULT_COUNCIL_MODELS
+  const pool = rawPool.filter(forProvider)
   // Быстрая модель для ПРОМЕЖУТОЧНЫХ шагов (распорядитель-классификатор, критик, веб-поиск):
   // reasoning-модель там не нужна, а совет из 6-7 вызовов на ней тормозит минутами. Финал — на base.
   const fast = pool[0] || base
   // Ростер — из БД (админка); пустая таблица → сид исходным составом, ошибка → SEED.
   const EXPERTS = await getRoster()
   const maxGnomes = Math.max(1, Math.min(settings.councilMaxGnomes || 3, EXPERTS.length))
-  const web = opts.web ?? true
+  // :online-суффикс — механика OpenRouter; на других провайдерах веб-шагов нет.
+  const isOpenRouter = client.cfg.provider === 'openrouter'
+  const web = (opts.web ?? true) && isOpenRouter
   const sp: Spotlight = spotlight()
   const topic = sp.wrap('TOPIC', query)
   // Закон типа списка (напр. рецепт) — по ЗАПРОСУ, а не по составу совета: на простой теме
@@ -87,7 +94,7 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const result = await generateText({
-          model: openrouter.chat(model, { usage: { include: true } }),
+          model: chat(model),
           system,
           prompt,
           temperature: temp,
@@ -205,7 +212,7 @@ ${roster}`,
   if (settings.councilWebSeek) {
     emit('seek', say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
     const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a list on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
-    const webRes = await run(online(fast, true), webSys, `Topic:\n${topic}`, 500)
+    const webRes = await run(online(fast, isOpenRouter), webSys, `Topic:\n${topic}`, 500)
     // Содержимое чужих веб-страниц — тоже недоверенный текст: оборачиваем, не вставляем сырьём.
     if (webRes && webRes.text.trim()) lore += `\n\n${sp.wrap('WEB_PRECEDENTS', webRes.text.trim())}\n(verify, don't copy blindly)`
   }
@@ -213,7 +220,8 @@ ${roster}`,
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
   const draftJobs = experts.map((e, i) => {
     // Своя модель эксперта (если задана в админке) сильнее пула — иначе раздаём пул по кругу.
-    const model = online(e.model || pool[i % pool.length], web && Boolean(e.online))
+    const expertModel = e.model && forProvider(e.model) ? e.model : pool[i % pool.length] || base
+    const model = online(expertModel, web && Boolean(e.online))
     // Закон типа списка (если есть) сильнее общего «6-9 шагов»: у рецепта своя обязательная форма.
     // Черновик по ТИПУ списка, а не всегда «6-9 шагов»: иначе на inventory эксперт даёт процедуру.
     const sys = `You are ${e.persona}. Draft a practical list for the topic. 6-9 items, each with one clarifying sentence. All content in ${langName}. Return ONLY the draft text.\n${shapeFor(kind)}${law}\n${sp.rule()}`

@@ -55,7 +55,71 @@ const KEYS = [
   'ai.free_monthly_gens',
 ] as const
 
+// ── Провайдер ИИ (этап B: пользовательский текст — на RU-провайдера) ─────────
+// Все три говорят по OpenAI-совместимому протоколу, поэтому клиент один
+// (см. shared/ai/provider). Выбор: app_settings 'ai.provider' → env AI_PROVIDER
+// → openrouter. Эмбеддинги пока ВСЕГДА OpenRouter (фаза 2: смена размерности
+// вектора + реиндекс), поэтому его ключ читается и отдельно.
+export type AiProviderId = 'openrouter' | 'selectel' | 'yandex'
+
+export interface AiProviderConfig {
+  provider: AiProviderId
+  /** Корень OpenAI-совместимого API, без хвостового слэша (…/v1). */
+  baseUrl: string
+  apiKey: string
+  /** Доп. заголовки (Яндекс: x-folder-id + запрет логирования). */
+  headers?: Record<string, string>
+}
+
+export const PROVIDER_SETTING = 'ai.provider'
+export const SELECTEL_KEY_SETTING = 'ai.selectel_api_key'
+export const YANDEX_KEY_SETTING = 'ai.yandex_api_key'
+
+/** Чистый резолв провайдера из настроек БД + env (юнит-тестируется без БД). */
+export function resolveAiProvider(
+  m: Record<string, string | undefined>,
+  env: Record<string, string | undefined> = process.env,
+): AiProviderConfig | null {
+  const provider = (m[PROVIDER_SETTING]?.trim() || env.AI_PROVIDER || 'openrouter') as AiProviderId
+  if (provider === 'selectel') {
+    // Endpoint у Selectel индивидуальный (из панели ИИ-роутера), дефолта нет.
+    const baseUrl = (env.SELECTEL_AI_URL || '').trim().replace(/\/$/, '')
+    const apiKey = (m[SELECTEL_KEY_SETTING]?.trim() || env.SELECTEL_AI_KEY || '').trim()
+    return baseUrl && apiKey ? { provider, baseUrl, apiKey } : null
+  }
+  if (provider === 'yandex') {
+    const folder = (env.YC_AI_FOLDER_ID || '').trim()
+    const apiKey = (m[YANDEX_KEY_SETTING]?.trim() || env.YC_AI_API_KEY || '').trim()
+    if (!folder || !apiKey) return null
+    return {
+      provider,
+      // Новый хост AI Studio; старый llm.api.cloud.yandex.net тоже жив (оба проверены).
+      baseUrl: (env.YC_AI_URL || 'https://ai.api.cloud.yandex.net/v1').trim().replace(/\/$/, ''),
+      apiKey,
+      // x-data-logging-enabled:false — запрет использования запросов Яндексом.
+      headers: { 'x-folder-id': folder, 'x-data-logging-enabled': 'false' },
+    }
+  }
+  const apiKey = (m[API_KEY_SETTING]?.trim() || env.OPENROUTER_API_KEY || '').trim()
+  return apiKey
+    ? { provider: 'openrouter', baseUrl: (env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, ''), apiKey }
+    : null
+}
+
+/** Активный провайдер чата (null = ИИ не сконфигурирован). */
+export async function getAiProviderConfig(): Promise<AiProviderConfig | null> {
+  const rows = await db
+    .select()
+    .from(appSettings)
+    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING]))
+  return resolveAiProvider(Object.fromEntries(rows.map((r) => [r.key, r.value ?? ''])))
+}
+
 export function defaultChatModel(): string {
+  const provider = process.env.AI_PROVIDER || 'openrouter'
+  if (provider === 'selectel') return process.env.SELECTEL_CHAT_MODEL || 'openai/gpt-4o-mini'
+  if (provider === 'yandex')
+    return process.env.YC_CHAT_MODEL || `gpt://${process.env.YC_AI_FOLDER_ID || ''}/yandexgpt/latest`
   return process.env.OPENROUTER_CHAT_MODEL || 'openai/gpt-4o-mini'
 }
 
@@ -63,13 +127,18 @@ export function defaultEmbeddingModel(): string {
   return process.env.EMBEDDING_MODEL || 'openai/text-embedding-3-small'
 }
 
-/** Синхронная проверка только env-ключа (для мест, где нет доступа к БД). */
+/** Синхронная проверка только env-конфига (для мест, где нет доступа к БД). */
 export function hasOpenRouterKey(): boolean {
-  return Boolean(process.env.OPENROUTER_API_KEY)
+  return Boolean(resolveAiProvider({}, process.env))
 }
 
-/** Действующий ключ: сначала введённый в админке (БД), иначе из .env. */
+/** Ключ активного провайдера чата (для «ИИ доступен?» и совместимости). */
 export async function getApiKey(): Promise<string> {
+  return (await getAiProviderConfig())?.apiKey ?? ''
+}
+
+/** Ключ именно OpenRouter (эмбеддинги/кредиты живут там до фазы 2). */
+export async function getOpenRouterApiKey(): Promise<string> {
   const rows = await db.select().from(appSettings).where(eq(appSettings.key, API_KEY_SETTING))
   return (rows[0]?.value?.trim() || process.env.OPENROUTER_API_KEY || '').trim()
 }

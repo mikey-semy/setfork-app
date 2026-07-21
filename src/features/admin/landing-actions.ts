@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { generateText } from 'ai'
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { requireAdmin } from '@/shared/auth/admin'
-import { getAiSettings, getApiKey } from '@/shared/settings/ai'
+import { getAiSettings } from '@/shared/settings/ai'
+import { getAiChatClient } from '@/shared/ai/provider'
 import { pickChatModel } from '@/shared/ai/credits'
 import { imageUrl, uploadImageFile } from '@/shared/media'
 import { saveLandingContent, type LandingContent } from '@/shared/settings/landing'
@@ -40,15 +40,14 @@ export async function uploadLandingImage(formData: FormData): Promise<{ ok: true
 /** AI-подсказка слогана (кнопка прямо в поле). Одна строка на языке поля. */
 export async function suggestSlogan(lang: 'en' | 'ru', kind: string, current: string): Promise<{ text: string } | { error: string }> {
   await requireAdmin()
-  const apiKey = await getApiKey()
-  if (!apiKey) return { error: 'AI не настроен (нет ключа).' }
+  const client = await getAiChatClient()
+  if (!client) return { error: 'AI не настроен (нет ключа).' }
   const settings = await getAiSettings()
-  const openrouter = createOpenRouter({ apiKey, appName: 'SetFork', appUrl: process.env.APP_URL || 'http://localhost:3000' })
   const model = await pickChatModel(settings)
   const langName = lang === 'ru' ? 'Russian' : 'English'
   try {
     const res = await generateText({
-      model: openrouter.chat(model),
+      model: client.chat(model),
       system: `You write punchy marketing copy for SetFork — a "GitHub for lists": living, community-improved, runnable lists (checklists, recipes, procedures). Return ONE line, plain text, no surrounding quotes, in ${langName}. Target field: "${kind}". Keep it short, concrete and confident.`,
       prompt: current.trim() ? `Rewrite this "${kind}" to be sharper:\n${current.trim()}` : `Write a "${kind}".`,
       temperature: 0.85,

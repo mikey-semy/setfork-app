@@ -1,5 +1,5 @@
 import 'server-only'
-import { getApiKey, type AiSettings } from '@/shared/settings/ai'
+import { defaultChatModel, getAiProviderConfig, getOpenRouterApiKey, type AiSettings } from '@/shared/settings/ai'
 
 export interface OpenRouterCredits {
   total: number
@@ -16,7 +16,7 @@ export function clearCreditsCache(): void {
 }
 
 export async function getOpenRouterCredits(opts?: { fresh?: boolean }): Promise<OpenRouterCredits | null> {
-  const key = await getApiKey()
+  const key = await getOpenRouterApiKey() // /credits есть только у OpenRouter
   if (!key) return null
   if (!opts?.fresh && cache && Date.now() - cache.fetchedAt < TTL_MS) return cache
   const url = `${process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1'}/credits`
@@ -39,11 +39,17 @@ export async function getOpenRouterCredits(opts?: { fresh?: boolean }): Promise<
   }
 }
 
-/** Активная модель: если задан порог >0 и баланс ниже — fallback, иначе основная. */
+/** Активная модель: если задан порог >0 и баланс ниже — fallback, иначе основная.
+ *  Cheap-mode завязан на баланс OpenRouter — на других провайдерах не применяется. */
 export async function pickChatModel(settings: AiSettings): Promise<string> {
-  if (settings.cheapModeThreshold > 0 && settings.fallbackModel) {
+  const provider = (await getAiProviderConfig())?.provider ?? 'openrouter'
+  if (provider === 'openrouter' && settings.cheapModeThreshold > 0 && settings.fallbackModel) {
     const credits = await getOpenRouterCredits()
     if (credits && credits.remaining < settings.cheapModeThreshold) return settings.fallbackModel
   }
+  // ai.chat_model в БД мог остаться от другого провайдера (напр. openai/gpt-4o-mini
+  // после переключения на yandex): у Яндекса модели строго gpt://… — иначе дефолт
+  // провайдера, а не гарантированно битый вызов.
+  if (provider === 'yandex' && !settings.chatModel.startsWith('gpt://')) return defaultChatModel()
   return settings.chatModel
 }
