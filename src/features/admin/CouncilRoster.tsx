@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { BarChart3, Check, Loader2 } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { TagInput } from '@/shared/ui/TagInput'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
@@ -165,6 +166,11 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
               <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
                 {e.id}
               </code>
+            </Tooltip>
+            <Tooltip label={say('Personal page: KPI and knowledge base', 'Личная страница: KPI и база знаний')}>
+              <Link href={`/admin/council/${e.id}`} aria-label={say('Personal page', 'Личная страница')} className="grid h-6 w-6 place-items-center rounded text-muted hover:text-ink">
+                <BarChart3 size={13} />
+              </Link>
             </Tooltip>
             <div className="ml-auto flex items-center gap-1.5">
               <span className="text-[11.5px] text-muted">{say('On', 'Вкл')}</span>
