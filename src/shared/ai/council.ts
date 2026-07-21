@@ -290,7 +290,9 @@ ${roster}`,
     const model = online(expertModel, web && Boolean(e.online))
     // Закон типа списка (если есть) сильнее общего «6-9 шагов»: у рецепта своя обязательная форма.
     // Черновик по ТИПУ списка, а не всегда «6-9 шагов»: иначе на inventory эксперт даёт процедуру.
-    const sys = `You are ${e.persona}. Draft a practical list for the topic. 6-9 items, each with one clarifying sentence. All content in ${langName}. Return ONLY the draft text.\n${shapeFor(kind)}${law}\n${sp.rule()}`
+    // Кодекс гильдии (HQ §7): стандарты качества цеха, который гном представляет.
+    const guild = e.code ? `\nYou represent ${e.guildEn || 'your guild'}. GUILD CODE — quality standards your draft must uphold:\n${e.code}` : ''
+    const sys = `You are ${e.persona}.${guild}\nDraft a practical list for the topic. 6-9 items, each with one clarifying sentence. All content in ${langName}. Return ONLY the draft text.\n${shapeFor(kind)}${law}\n${sp.rule()}`
     emit('draft', vl(e.id, 'draft') ?? say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
     // Каждому — прецеденты ЕГО доменов: повар видит рецепты, а не деплой (этап 1 базы знаний).
     const mine = pickPrecedents(precedents, e.domains)
@@ -312,11 +314,15 @@ ${roster}`,
   // (напр. `awk '{print $1}'`, `${HOME}/bin`) — только для JSON-ответа распорядителя/синтеза.
   const anon = pooled.map((d, i) => `--- DRAFT ${String.fromCharCode(65 + i)} ---\n${d.text.trim()}`).join('\n\n')
 
-  // 4) Адвокат дьявола (Janis: обязательная оппозиция).
+  // 4) Адвокат дьявола (Janis: обязательная оппозиция). Кодексы гильдий — как мерило:
+  // объединением и БЕЗ авторства (черновики анонимны сознательно — иначе критик судит
+  // по имени гильдии, а не по содержанию).
+  const codes = [...new Set(experts.filter((e) => e.code).map((e) => e.code))].join('\n')
+  const codeBlock = codes ? `\nApply these guild quality standards where relevant:\n${codes}` : ''
   emit('critique', vl('critic', 'critique') ?? say('Reviewing the drafts critically…', 'Критически разбираю черновики…'), 'critic', say('Critic', 'Критик'))
   const critique = await run(
     fast,
-    `You are a devil's advocate reviewer. Given several anonymous draft lists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.\n${sp.rule()}`,
+    `You are a devil's advocate reviewer. Given several anonymous draft lists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.${codeBlock}\n${sp.rule()}`,
     `${topic}\n\nDRAFTS:\n${anon}`,
   )
 

@@ -59,6 +59,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
               <span className="rounded border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted">{say('disabled', 'выключен')}</span>
             )}
           </h1>
+          {(ru ? e.guildRu : e.guildEn) && <div className="mt-0.5 text-[13px] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {e.domains.map((d) => (
               <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[11.5px] text-ink-2">
@@ -104,6 +105,12 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
         <div className={card}>
           <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{say('Persona (working frame)', 'Персона (рабочий каркас)')}</div>
           <p className="whitespace-pre-wrap text-[13px] leading-[1.55] text-ink-2">{e.persona}</p>
+          {e.code && (
+            <>
+              <div className="mb-2 mt-4 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
+              <p className="whitespace-pre-wrap font-mono text-[12px] leading-[1.55] text-ink-2">{e.code}</p>
+            </>
+          )}
           <Link href="/admin/council" className="mt-3 inline-block text-[12.5px] font-semibold text-accent hover:underline">
             {say('Edit in the council hall →', 'Править в зале совета →')}
           </Link>

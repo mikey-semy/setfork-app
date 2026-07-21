@@ -936,6 +936,12 @@ export const councilExperts = pgTable(
     nameEn: text('name_en').notNull(),
     nameRu: text('name_ru').notNull(),
     persona: text('persona').notNull(),
+    // Гильдия (HQ §7): гном — носитель гильдии, совет один — голоса разные.
+    guildEn: text('guild_en').notNull().default(''),
+    guildRu: text('guild_ru').notNull().default(''),
+    // Кодекс гильдии — свод стандартов качества: подмешивается в промпт гнома,
+    // критик получает объединение кодексов как мерило (черновики анонимны — без авторства).
+    code: text('code').notNull().default(''),
     domains: text('domains').array().notNull().default(sql`'{}'::text[]`),
     model: text('model').notNull().default(''),
     avatar: text('avatar').notNull().default(''),
