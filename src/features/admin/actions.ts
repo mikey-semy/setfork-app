@@ -229,6 +229,49 @@ export async function purgeEmbeddings(): Promise<{ ok: true; removed: number } |
   }
 }
 
+/** Пространство эмбеддингов для панели: чем построен индекс, цель, покрытие. */
+export async function getEmbedSpaceInfo(): Promise<{
+  index: { provider: string; docModel: string; dim: number; at?: number }
+  target: { provider: string; docModel: string; dim: number }
+  inSync: boolean
+  rows: number
+  vectorized: number
+} | null> {
+  if (!(await getAdmin())) return null
+  const [{ ensureFreshSpace }, { db, embeddings }, { sql }] = await Promise.all([
+    import('@/shared/ai/embed-space'),
+    import('@/shared/db'),
+    import('drizzle-orm'),
+  ])
+  const { index, target, inSync } = await ensureFreshSpace()
+  const [stats] = await db
+    .select({
+      rows: sql<number>`count(*)::int`,
+      vectorized: sql<number>`(count(*) filter (where ${embeddings.embedding} is not null))::int`,
+    })
+    .from(embeddings)
+  return {
+    index: { provider: index.provider, docModel: index.docModel, dim: index.dim, at: index.at },
+    target: { provider: target.provider, docModel: target.docModel, dim: target.dim },
+    inSync,
+    rows: stats?.rows ?? 0,
+    vectorized: stats?.vectorized ?? 0,
+  }
+}
+
+/** Цель эмбеддингов (провайдер); вступает в силу полным реиндексом. */
+export async function setEmbedTarget(provider: string): Promise<{ ok: true } | { error: string }> {
+  if (!(await getAdmin())) return { error: 'Доступ запрещён.' }
+  if (provider !== 'openrouter' && provider !== 'yandex') return { error: 'Неизвестный провайдер.' }
+  const [{ EMBED_TARGET_SETTING, clearEmbedSpaceCache }, { saveSettings }] = await Promise.all([
+    import('@/shared/ai/embed-space'),
+    import('@/shared/settings/kv'),
+  ])
+  await saveSettings({ [EMBED_TARGET_SETTING]: provider })
+  clearEmbedSpaceCache()
+  return { ok: true }
+}
+
 // ── Баланс OpenRouter (свежий, для виджета) ──────────────────────────
 export async function fetchOpenRouterCredits(): Promise<
   { ok: true; total: number; used: number; remaining: number } | { error: string }

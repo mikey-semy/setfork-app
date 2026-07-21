@@ -2,17 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Eraser, Loader2, Sparkles } from 'lucide-react'
-import { getReindexStatus, purgeEmbeddings, startReindex } from './actions'
+import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, startReindex } from './actions'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
+type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
 
 const ROWS = 7
 
 /** Переиндексация эмбеддингов: прогресс сеткой-прямоугольником (как контрибуции
  *  на GitHub) — клетки наполняются долей прогресса; серый — ждёт, красный — ошибка. */
 export function ReindexPanel({ ru }: { ru: boolean }) {
+  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [spread, setSpread] = useState(0)
   const [status, setStatus] = useState<Status>(null)
+  const [space, setSpace] = useState<SpaceInfo>(null)
+  const [switching, setSwitching] = useState(false)
   const [starting, setStarting] = useState(false)
   const [purging, setPurging] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -33,8 +37,11 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
   useEffect(() => {
     let alive = true
     const tick = async () => {
-      const s = await getReindexStatus()
-      if (alive) setStatus(s)
+      const [s, sp] = await Promise.all([getReindexStatus(), getEmbedSpaceInfo()])
+      if (alive) {
+        setStatus(s)
+        setSpace(sp)
+      }
     }
     void tick()
     const poll = setInterval(tick, 1500)
@@ -73,22 +80,69 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
     setMsg(null)
     const res = await purgeEmbeddings()
     setPurging(false)
-    setMsg('error' in res ? res.error : ru ? `Удалено осиротевших: ${res.removed}` : `Removed orphaned: ${res.removed}`)
+    setMsg('error' in res ? res.error : say(`Removed orphaned: ${res.removed}`, `Удалено осиротевших: ${res.removed}`))
   }
 
   const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[13px] font-semibold disabled:opacity-60'
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-1 font-semibold text-ink">{ru ? 'Индексация поиска (эмбеддинги)' : 'Search index (embeddings)'}</div>
+      <div className="mb-1 font-semibold text-ink">{say('Search index (embeddings)', 'Индексация поиска (эмбеддинги)')}</div>
       <p className="mb-3 text-[13px] text-ink-2">
-        {ru
-          ? 'Пересчёт векторного индекса списков. Идёт батчами, не чаще раза в 30 минут.'
-          : 'Rebuild the vector index of lists. Runs in batches, at most once per 30 min.'}
+        {say('Rebuild the vector index of lists. Runs in batches, at most once per 30 min.', 'Пересчёт векторного индекса списков. Идёт батчами, не чаще раза в 30 минут.')}
       </p>
 
+      {space && (
+        <div className={`mb-4 rounded-md border p-3 ${space.inSync ? 'border-border bg-surface-2' : 'border-warn/50 bg-warn/10'}`}>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Мерность — крупным бейджем: в чём реально построен индекс */}
+            <span className="inline-flex items-baseline gap-1 rounded-md bg-primary px-2.5 py-1.5 font-mono text-primary-fg">
+              <span className="text-[18px] font-bold leading-none">{space.index.dim}</span>
+              <span className="text-[10px] uppercase opacity-80">{say('dim', 'мерн.')}</span>
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-2 text-[13px] font-medium text-ink">
+                {say('Index space:', 'Пространство индекса:')}
+                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11.5px] font-semibold">
+                  {space.index.provider === 'yandex' ? 'Yandex v2 🇷🇺' : 'OpenRouter'}
+                </span>
+                <span className="truncate font-mono text-[11.5px] text-ink-2">{space.index.docModel}</span>
+              </div>
+              <div className="mt-0.5 text-[12px] text-muted">
+                {space.vectorized}/{space.rows} {say('rows vectorized', 'строк с векторами')}
+                {space.index.at ? ` · ${say('reindexed', 'реиндекс')} ${new Date(space.index.at).toLocaleString()}` : ''}
+              </div>
+            </div>
+          </div>
+          {!space.inSync && (
+            <div className="mt-2 text-[12.5px] font-medium text-warn">
+              {say(`Target changed: ${space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter'} (${space.target.dim}-dim) — run a reindex to rebuild. Old vectors will be wiped.`, `Цель изменена: ${space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter'} (${space.target.dim}-мерное) — запусти реиндекс, чтобы перестроить индекс. Старые векторы будут стёрты.`)}
+            </div>
+          )}
+          <div className="mt-2.5 flex items-center gap-2">
+            <label className="text-[12px] text-ink-2">{say('Target:', 'Цель:')}</label>
+            <select
+              value={space.target.provider}
+              disabled={switching || running}
+              onChange={async (e) => {
+                setSwitching(true)
+                const res = await setEmbedTarget(e.target.value)
+                if ('error' in res) setMsg(res.error)
+                setSpace(await getEmbedSpaceInfo())
+                setSwitching(false)
+              }}
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[12.5px] text-ink outline-hidden"
+            >
+              <option value="openrouter">OpenRouter · 1536</option>
+              <option value="yandex">Yandex v2 · 768 🇷🇺</option>
+            </select>
+            {switching && <Loader2 size={13} className="animate-spin text-muted" />}
+          </div>
+        </div>
+      )}
+
       <div className="mb-3">
-        <label className="mb-1 block text-[12px] text-ink-2">{ru ? 'Разнести на, мин' : 'Spread over, min'}</label>
+        <label className="mb-1 block text-[12px] text-ink-2">{say('Spread over, min', 'Разнести на, мин')}</label>
         <input
           type="number"
           min={0}
@@ -106,22 +160,14 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
         <div className="flex items-center justify-between text-[12px] text-muted">
           <span>
             {stalled
-              ? ru
-                ? 'Прервано — запустите заново'
-                : 'Interrupted — run again'
+              ? say('Interrupted — run again', 'Прервано — запустите заново')
               : running
-                ? ru
-                  ? 'Индексируем…'
-                  : 'Indexing…'
+                ? say('Indexing…', 'Индексируем…')
                 : status?.status === 'done'
-                  ? ru
-                    ? `Готово${status.vectorized ? '' : ' (без векторов — нет ключа)'}`
-                    : `Done${status.vectorized ? '' : ' (no vectors — no key)'}`
+                  ? say(`Done${status.vectorized ? '' : ' (no vectors — no key)'}`, `Готово${status.vectorized ? '' : ' (без векторов — нет ключа)'}`)
                   : status?.status === 'error'
-                    ? `${ru ? 'Ошибка' : 'Error'}: ${status.error ?? ''}`
-                    : ru
-                      ? 'Индекс ещё не построен'
-                      : 'Not indexed yet'}
+                    ? `${say('Error', 'Ошибка')}: ${status.error ?? ''}`
+                    : say('Not indexed yet', 'Индекс ещё не построен')}
           </span>
           <span className="font-mono">
             {status?.doneItems ?? 0}/{status?.total ?? 0} · {pct}%
@@ -150,21 +196,15 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
       <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">
         <button onClick={purge} disabled={purging || running} className={`${btn} border border-border text-ink hover:border-border-strong`}>
           {purging ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} />}
-          {ru ? 'Почистить' : 'Purge'}
+          {say('Purge', 'Почистить')}
         </button>
         <button onClick={start} disabled={running || onCooldown || starting} className={`${btn} bg-primary text-primary-fg`}>
           {running || starting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
           {running
-            ? ru
-              ? 'Индексируем…'
-              : 'Indexing…'
+            ? say('Indexing…', 'Индексируем…')
             : onCooldown
-              ? ru
-                ? `Через ${Math.ceil(cooldownLeft / 60000)} мин`
-                : `In ${Math.ceil(cooldownLeft / 60000)} min`
-              : ru
-                ? 'Запустить'
-                : 'Run'}
+              ? say(`In ${Math.ceil(cooldownLeft / 60000)} min`, `Через ${Math.ceil(cooldownLeft / 60000)} мин`)
+              : say('Run', 'Запустить')}
         </button>
       </div>
     </div>

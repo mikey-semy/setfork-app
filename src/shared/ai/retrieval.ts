@@ -1,7 +1,6 @@
 import 'server-only'
 import { and, cosineDistance, desc, eq, isNotNull, sql } from 'drizzle-orm'
 import { db, embeddings, templates } from '@/shared/db'
-import { getAiSettings } from '@/shared/settings/ai'
 import { embedOne } from './embeddings'
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 
@@ -25,8 +24,7 @@ export interface Precedent {
  * В СИНХРОНЕ с visibleFilter() там (при смене правил видимости/модерации — править оба места).
  */
 export async function findPrecedents(query: string, lang: Lang, opts: { userId?: string | null; limit?: number } = {}): Promise<Precedent[]> {
-  const { embeddingModel } = await getAiSettings()
-  const vec = await embedOne(query, embeddingModel, { userId: opts.userId ?? null, refType: 'council-seek' })
+  const vec = await embedOne(query, 'query', { userId: opts.userId ?? null, refType: 'council-seek' })
   if (!vec) return []
   const distance = cosineDistance(embeddings.embedding, vec)
   const rows = await db
