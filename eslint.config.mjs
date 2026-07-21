@@ -43,6 +43,13 @@ export default [
           message:
             'Двуязычную строку из тернарника вынеси в словарь i18n (t()/tr() из @/shared/i18n): третий язык не должен требовать правки 100+ файлов. Технический литерал (не UI) — оставь // eslint-disable-next-line no-restricted-syntax.',
         },
+        // «У нас shadcn строго» (владелец, 2026-07-21, повторно): браузерные
+        // формоэлементы запрещены — только shared/ui (Radix). Radix сам рендерит
+        // скрытый нативный select для форм — правило ловит лишь НАШ JSX.
+        {
+          selector: "JSXOpeningElement[name.name='select']",
+          message: 'Браузерный <select> запрещён — используй Select из @/shared/ui/select (shadcn/Radix, name для форм поддерживается).',
+        },
       ],
     },
   },
