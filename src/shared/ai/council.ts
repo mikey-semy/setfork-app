@@ -9,8 +9,10 @@ import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, jsonShapeFor, type GeneratedList, type GenerateOptions } from './generate'
 import { classifyListKind, shapeFor, LIST_KINDS, type ListKind } from './list-kind'
-import { findPrecedents } from './retrieval'
+import { findPrecedents, type Precedent } from './retrieval'
 import { getRoster, type Expert } from './roster'
+import { voiceLine, type VoiceKind } from './voice'
+import { pickPrecedents } from './precedent-filter'
 import { lawBlock } from './list-laws'
 import { pushMessage, type GenMessageKind } from './generation-messages'
 import { langEnName, type Lang } from '@/shared/i18n'
@@ -110,6 +112,10 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const emit = (kind: GenMessageKind, text: string, who?: string, name?: string) => {
     if (opts.refId) void pushMessage(opts.refId, { attempt, kind, text, who, name }).catch(() => {})
   }
+  // Голоса гномов (voice.ts): seed стабилен на виток — реплики попытки детерминированы,
+  // между попытками разные. null (кастомный эксперт без голоса) → нейтральный текст сайта вызова.
+  const vseed = `${opts.refId ?? query}:${attempt}`
+  const vl = (who: string, kind: VoiceKind, vars?: Record<string, string>) => voiceLine(who, kind, lang, vseed, vars)
 
   // Один под-вызов: генерация + учёт расхода. Ошибка → null (гном «выпал»), совет продолжает.
   // ОДИН ретрай на транзиентной ошибке (таймаут/сеть/429/5xx): бенч показал, что 33% отказов —
@@ -192,7 +198,7 @@ ${roster}`,
 
   // Диалог: не хватает ключевого → возвращаем уточняющие вопросы (совет не гоним, ждём ответов пользователя).
   if (depth === 'clarify' && questions.length) {
-    emit('plan', say('The request is vague — I need a couple of details', 'Запрос размытый — нужна пара деталей'), 'reporter', say('Reporter', 'Репортёр'))
+    emit('plan', vl('reporter', 'clarify') ?? say('The request is vague — I need a couple of details', 'Запрос размытый — нужна пара деталей'), 'reporter', say('Reporter', 'Репортёр'))
     return { clarify: questions }
   }
 
@@ -204,11 +210,11 @@ ${roster}`,
 
   // Тривиально → один гном (обычная генерация, но через тот же учёт совета).
   if (depth === 'single') {
-    emit('plan', say('Simple topic — writing it up right away', 'Тема простая — пишу сразу'), 'planner', say('Planner', 'Планировщик'))
+    emit('plan', vl('planner', 'plan-single') ?? say('Simple topic — writing it up right away', 'Тема простая — пишу сразу'), 'planner', say('Planner', 'Планировщик'))
     const one = await run(online(base, web), listRules, `Create the reference list for the topic below.\n${topic}`)
     return one ? parseList(firstJson(one.text), query) : null
   }
-  emit('plan', say('The topic is many-sided — convening the council', 'Тема многогранная — собираем совет'), 'planner', say('Planner', 'Планировщик'))
+  emit('plan', vl('planner', 'plan-council') ?? say('The topic is many-sided — convening the council', 'Тема многогранная — собираем совет'), 'planner', say('Planner', 'Планировщик'))
 
   // 2) Созыв: эксперты по домену; пол разнообразия — минимум 2 независимых мнения (мудрость толпы).
   const experts = ids.map((id) => EXPERTS.find((e) => e.id === id)).filter((e): e is Expert => Boolean(e)).slice(0, maxGnomes)
@@ -224,26 +230,32 @@ ${roster}`,
     if (experts.length >= 2) break
     if (!experts.some((e) => e.id === g.id)) experts.push(g)
   }
-  emit('summon', say(`Consulting: ${experts.map(gtitle).join(', ')}`, `Созываю: ${experts.map(gtitle).join(', ')}`), 'crier', say('Coordinator', 'Координатор'))
+  const names = experts.map(gtitle).join(', ')
+  emit('summon', vl('crier', 'summon', { names }) ?? say(`Consulting: ${names}`, `Созываю: ${names}`), 'crier', say('Coordinator', 'Координатор'))
 
   // 2.5) Старейшина-искатель: прецеденты из НАШИХ списков (pgvector). Пусто на пустом корпусе — ок.
-  const precedents = await findPrecedents(query, lang, { userId: opts.userId })
+  // Берём 10 (не 3): дальше каждый эксперт получает СВОЙ срез по своим доменам
+  // (pickPrecedents) — повару кулинарные, девопсу деплойные; в один промпт идёт максимум 3.
+  const precedents = await findPrecedents(query, lang, { userId: opts.userId, limit: 10 })
   // Форма «X: N» — чтобы не склонять числительное (было «3 похожих списков») и не тащить плюрализацию в ленту.
-  if (precedents.length) emit('seek', say(`Similar lists in our library: ${precedents.length}`, `Похожих списков в библиотеке: ${precedents.length}`), 'seek-lists', say('Librarian', 'Библиотекарь'))
+  if (precedents.length)
+    emit('seek', vl('seek-lists', 'seek', { n: String(precedents.length) }) ?? say(`Similar lists in our library: ${precedents.length}`, `Похожих списков в библиотеке: ${precedents.length}`), 'seek-lists', say('Librarian', 'Библиотекарь'))
   // Прецеденты — title/desc/tags ЧУЖИХ публичных списков: недоверенный текст, оборачиваем spotlight'ом.
   // Иначе — вектор межпользовательской инъекции: опубликовал список с инструкцией в заголовке и ждёшь
   // семантического матча (порог низкий, MIN_SIMILARITY=0.3).
-  let lore = precedents.length
-    ? `\n\n${sp.wrap('PRECEDENTS', precedents.map((p, i) => `${i + 1}. ${p.title}${p.desc ? ' — ' + p.desc : ''}${p.tags.length ? ' [' + p.tags.join(', ') + ']' : ''}`).join('\n'))}\n(reuse good structure, avoid duplicating, improve on them)`
-    : ''
+  const loreBlock = (list: Precedent[]) =>
+    list.length
+      ? `\n\n${sp.wrap('PRECEDENTS', list.map((p, i) => `${i + 1}. ${p.title}${p.desc ? ' — ' + p.desc : ''}${p.tags.length ? ' [' + p.tags.join(', ') + ']' : ''}`).join('\n'))}\n(reuse good structure, avoid duplicating, improve on them)`
+      : ''
 
   // Веб-искатель (старейшина advanced-тира): интернет-прецеденты сверх наших списков (за флагом council_web_seek).
+  let webLore = ''
   if (settings.councilWebSeek) {
-    emit('seek', say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
+    emit('seek', vl('seek-web', 'seek') ?? say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
     const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a list on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
     const webRes = await run(online(fast, isOpenRouter), webSys, `Topic:\n${topic}`, 500)
     // Содержимое чужих веб-страниц — тоже недоверенный текст: оборачиваем, не вставляем сырьём.
-    if (webRes && webRes.text.trim()) lore += `\n\n${sp.wrap('WEB_PRECEDENTS', webRes.text.trim())}\n(verify, don't copy blindly)`
+    if (webRes && webRes.text.trim()) webLore = `\n\n${sp.wrap('WEB_PRECEDENTS', webRes.text.trim())}\n(verify, don't copy blindly)`
   }
 
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
@@ -255,10 +267,11 @@ ${roster}`,
     // Закон типа списка (если есть) сильнее общего «6-9 шагов»: у рецепта своя обязательная форма.
     // Черновик по ТИПУ списка, а не всегда «6-9 шагов»: иначе на inventory эксперт даёт процедуру.
     const sys = `You are ${e.persona}. Draft a practical list for the topic. 6-9 items, each with one clarifying sentence. All content in ${langName}. Return ONLY the draft text.\n${shapeFor(kind)}${law}\n${sp.rule()}`
-    emit('draft', say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
-    return run(model, sys, `Draft the list.\n${topic}${lore}`)
+    emit('draft', vl(e.id, 'draft') ?? say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
+    // Каждому — прецеденты ЕГО доменов: повар видит рецепты, а не деплой (этап 1 базы знаний).
+    return run(model, sys, `Draft the list.\n${topic}${loreBlock(pickPrecedents(precedents, e.domains))}${webLore}`)
   })
-  emit('innovate', say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'), 'innovator', say('Innovator', 'Новатор'))
+  emit('innovate', vl('innovator', 'innovate') ?? say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'), 'innovator', say('Innovator', 'Новатор'))
   const innovatorJob = run(
     pool[0],
     `You are an innovator (divergent thinking, Medici-effect cross-domain). Give a FRESH, non-obvious angle on the list: what everyone misses, which move from an adjacent field lifts quality. 4-7 bold points. All content in ${langName}. Return ONLY text.\n${sp.rule()}`,
@@ -274,7 +287,7 @@ ${roster}`,
   const anon = pooled.map((d, i) => `--- DRAFT ${String.fromCharCode(65 + i)} ---\n${d.text.trim()}`).join('\n\n')
 
   // 4) Адвокат дьявола (Janis: обязательная оппозиция).
-  emit('critique', say('Reviewing the drafts critically…', 'Критически разбираю черновики…'), 'critic', say('Critic', 'Критик'))
+  emit('critique', vl('critic', 'critique') ?? say('Reviewing the drafts critically…', 'Критически разбираю черновики…'), 'critic', say('Critic', 'Критик'))
   const critique = await run(
     fast,
     `You are a devil's advocate reviewer. Given several anonymous draft lists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.\n${sp.rule()}`,
@@ -282,11 +295,12 @@ ${roster}`,
   )
 
   // 5) Старейшина-синтез → строгий JSON. Конвергенция, но СОХРАНИ лучшую новизну (не усредняй).
-  emit('synth', say('Synthesizing the final list…', 'Свожу финальный список…'), 'elder', say('Elder', 'Старейшина'))
+  emit('synth', vl('elder', 'synth') ?? say('Synthesizing the final list…', 'Свожу финальный список…'), 'elder', say('Elder', 'Старейшина'))
   const elder = await run(
     base,
     `You are the lead synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.${law ? `${law}\nThis shape is MANDATORY in the final JSON — do not merge it away.` : ''}\n${listRules}`,
-    `${topic}${lore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
+    // Старейшине — топ по близости без доменного среза: он сводит все взгляды.
+    `${topic}${loreBlock(precedents.slice(0, 3))}${webLore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
   )
   // firstJson: старейшина иногда предваряет JSON прозой («Here is the synthesized list:»), и голый
   // parseList на этом падал → 7 вызовов совета в мусор, тихий фолбэк на одиночную, а лента уже

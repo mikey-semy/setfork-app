@@ -264,33 +264,38 @@ export default async function ListPage({
               </div>
             )}
 
-            {/* Панель над списком (как у GitHub над файлами): слева — последняя версия
-                (КТО · vN · note · КОГДА · всего), справа — Use (=Code) и Edit/Suggest. */}
+            {/* Панель над списком (как у GitHub над файлами): ДВЕ группы, а не одна строка.
+                Инфо (ветка · КТО · vN · note · КОГДА · счётчики) — слева; действия (Начать
+                прогон, Получить, иконки) — справа, и на узком экране переносятся ЦЕЛИКОМ
+                на строку ниже (фидбек владельца: в одну строку не вмещалось). */}
             {currentVersion && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
-                {(branches.length > 1 || (canManageBranches && branches.length > 0)) && (
-                  <BranchPicker base={base} owner={owner} slug={slug} branches={branches} current={refBranch ?? 'main'} lang={lang} canManage={canManageBranches} />
-                )}
-                <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
-                <Link href={`/${tpl.owner.handle}`} className="shrink-0 font-semibold text-ink hover:text-accent">
-                  {tpl.owner.handle}
-                </Link>
-                <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">
-                  v{currentVersion.version}
-                </span>
-                {latestNote && <span className="min-w-0 flex-1 truncate text-ink-2">{latestNote}</span>}
-                <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
-                <Tooltip label={t('versionsTab', lang)}>
-                  <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent">
-                    <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
+              <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
+                {/* min-w: инфо-группа не сжимается в ноль — иначе действия никогда не переносились бы. */}
+                <div className="flex min-w-[240px] flex-1 items-center gap-2">
+                  {(branches.length > 1 || (canManageBranches && branches.length > 0)) && (
+                    <BranchPicker base={base} owner={owner} slug={slug} branches={branches} current={refBranch ?? 'main'} lang={lang} canManage={canManageBranches} />
+                  )}
+                  <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
+                  <Link href={`/${tpl.owner.handle}`} className="shrink-0 font-semibold text-ink hover:text-accent">
+                    {tpl.owner.handle}
                   </Link>
-                </Tooltip>
-                <Tooltip label="Blame">
-                  <Link href={`${base}/blame`} className="inline-flex shrink-0 items-center gap-1 text-muted hover:text-accent">
-                    <History size={14} />
-                  </Link>
-                </Tooltip>
-                <span className="inline-flex shrink-0 items-center gap-2 border-l border-border pl-2">
+                  <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">
+                    v{currentVersion.version}
+                  </span>
+                  {latestNote && <span className="min-w-0 flex-1 truncate text-ink-2">{latestNote}</span>}
+                  <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
+                  <Tooltip label={t('versionsTab', lang)}>
+                    <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent">
+                      <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
+                    </Link>
+                  </Tooltip>
+                  <Tooltip label="Blame">
+                    <Link href={`${base}/blame`} className="inline-flex shrink-0 items-center gap-1 text-muted hover:text-accent">
+                      <History size={14} />
+                    </Link>
+                  </Tooltip>
+                </div>
+                <div className="ml-auto flex shrink-0 items-center gap-2">
                   {tpl.isTemplate && viewer && (
                     <form action={useTemplate.bind(null, tpl.id)} className="inline-flex">
                       <Tooltip label={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}>
@@ -331,7 +336,7 @@ export default async function ListPage({
                       </Link>
                     </Tooltip>
                   </span>
-                </span>
+                </div>
               </div>
             )}
 
