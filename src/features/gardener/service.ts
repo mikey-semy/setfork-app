@@ -167,7 +167,18 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       })),
     }
 
-    const refined = await generateListRefine(current, INSTRUCTION, 'en', {
+    // Сорняки (HQ §9): обход ссылок списка КОДОМ до refine. Уверенно мёртвые
+    // (404/410) отдаём садовнику-LLM на замену — подбор живого источника как раз
+    // его работа. 'unknown' (geo-блок/бот-защита с RU-сервера) не трогаем.
+    const { checkUrls } = await import('@/shared/lib/link-health')
+    const refUrls = current.items.flatMap((it) => it.refs.map((r) => r.url)).filter(Boolean)
+    const verdicts = refUrls.length ? await checkUrls(refUrls) : new Map<string, string>()
+    const deadUrls = [...verdicts.entries()].filter(([, v]) => v === 'dead').map(([u]) => u)
+    const instruction = deadUrls.length
+      ? `${INSTRUCTION} DEAD LINKS (verified 404/410 by the site, not a guess) — replace each with a working authoritative source or drop the ref: ${deadUrls.join(' ')}`
+      : INSTRUCTION
+
+    const refined = await generateListRefine(current, instruction, 'en', {
       userId: gardener.id,
       feature: 'refine',
       refType: 'template',
@@ -190,7 +201,9 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       .values({
         templateId: tpl.id,
         authorId: gardener.id,
-        note: '\u{1F9D9} Gardener: clarified steps, added checks and rationale. Review and merge if useful.',
+        note: deadUrls.length
+          ? `\u{1F9D9} Gardener: clarified steps and replaced ${deadUrls.length} dead link(s). Review and merge if useful.`
+          : '\u{1F9D9} Gardener: clarified steps, added checks and rationale. Review and merge if useful.',
         baseVersion: tpl.currentVersion,
         items,
       })

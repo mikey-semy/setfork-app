@@ -150,6 +150,24 @@ export async function addCandidate(
     // Рецепт: если модель не проставила секции (gpt-4o-mini часто не проставляет) — выводим их
     // структурно, чтобы карточка разделила «Ингредиенты»/«Приготовление», а не рисовала всё в кучу.
     if (genOpts.kind === 'recipe') backfillRecipeSections(items, lang === 'ru')
+    // Здоровье ссылок (HQ §9): уверенно мёртвые refs (404/410) выкидываем ДО сохранения,
+    // критик отчитывается в ленту. Сбой проверки не роняет генерацию.
+    try {
+      const { filterDeadRefs } = await import('@/shared/lib/link-health')
+      const dead = await filterDeadRefs(items)
+      if (dead > 0) {
+        const sayL = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
+        await pushMessage(generationId, {
+          attempt: idx,
+          kind: 'critique',
+          text: sayL(`Checked the links — removed dead ones: ${dead}`, `Проверил ссылки — выкинул мёртвых: ${dead}`),
+          who: 'critic',
+          name: sayL('Critic', 'Критик'),
+        })
+      }
+    } catch {
+      // сеть/таймауты проверки — не повод терять вариант
+    }
     // «Что поменялось ключевое» — только со 2-го витка: у первого сравнивать не с чем.
     const summary = idx > 1 ? await describeChange(generationId, idx, items, lang, genOpts) : ''
     // onConflictDoUpdate по (generationId, idx): ретрай джобы или гонка двух «дополнить» на один idx
