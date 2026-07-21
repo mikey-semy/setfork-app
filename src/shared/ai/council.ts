@@ -30,6 +30,8 @@ const DEFAULT_COUNCIL_MODELS = ['openai/gpt-4o-mini', 'meta-llama/llama-3.3-70b-
 // совет МОЛЧА становился одномодельным. 4 семейства RU-hosted, цены известны
 // (yandex-pricing); flash первым — он ведёт промежуточные шаги (цена/скорость).
 const DEFAULT_YANDEX_POOL = ['aliceai-llm-flash', 'qwen3.6-35b-a3b', 'gpt-oss-120b', 'deepseek-v4-flash']
+// У GigaChat одна семья — гетерогенность слабее (размеры вместо семейств).
+const DEFAULT_GIGACHAT_POOL = ['GigaChat-2', 'GigaChat-2-Pro', 'GigaChat-2-Max']
 const INNOVATOR_TEMP = 0.9
 // Потолок на ОДИН вызов: зависшая/медленная модель не должна вешать весь совет (6-7 вызовов).
 // Превышение → вызов падает → гном «выпадает», совет продолжает без него.
@@ -61,12 +63,19 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // Пул/ростер могли остаться с моделями другого провайдера (у Яндекса id строго
   // gpt://…): несовместимые отсеиваем, пустой пул → база. У Selectel id в стиле
   // OpenRouter — проходят как есть.
-  const forProvider = (m: string) => (client.cfg.provider === 'yandex' ? m.startsWith('gpt://') : true)
+  const forProvider = (m: string) =>
+    client.cfg.provider === 'yandex'
+      ? m.startsWith('gpt://')
+      : client.cfg.provider === 'gigachat'
+        ? !m.includes('/') // id GigaChat без слешей; чужие — vendor/model или gpt://
+        : true
   const yandexFolder = client.cfg.headers?.['x-folder-id'] ?? ''
   const defaultPool =
     client.cfg.provider === 'yandex' && yandexFolder
       ? DEFAULT_YANDEX_POOL.map((n) => `gpt://${yandexFolder}/${n}/latest`)
-      : DEFAULT_COUNCIL_MODELS
+      : client.cfg.provider === 'gigachat'
+        ? DEFAULT_GIGACHAT_POOL
+        : DEFAULT_COUNCIL_MODELS
   const rawPool = settings.councilModels.length ? settings.councilModels : defaultPool
   // АВТОРОТАЦИЯ: модели с проседающим success-rate за сутки (журнал ai_usage)
   // временно выпадают из ротации; окно скользящее — возврат автоматический.

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
 import { maintenanceFlag, setMaintenance } from '@/shared/settings/maintenance'
-import { AI_PROVIDERS, API_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_FOLDER_SETTING, YANDEX_KEY_SETTING, defaultEmbeddingModel, getAiProviderRaw, hasApiKey, nsKey } from '@/shared/settings/ai'
+import { AI_PROVIDERS, API_KEY_SETTING, GIGACHAT_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_FOLDER_SETTING, YANDEX_KEY_SETTING, defaultEmbeddingModel, getAiProviderRaw, hasApiKey, nsKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
 import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/email'
@@ -38,6 +38,7 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   const selectelKey = String(formData.get('selectelKey') ?? '').trim()
   const yandexKey = String(formData.get('yandexKey') ?? '').trim()
   const yandexFolder = String(formData.get('yandexFolder') ?? '').trim()
+  const gigachatKey = String(formData.get('gigachatKey') ?? '').trim()
 
   // «Совет гномов» — мультимодельная генерация за флагами (см. shared/ai/council.ts).
   const councilMaxGnomes = Math.min(8, Math.max(1, Math.round(Number(formData.get('councilMaxGnomes')) || 3)))
@@ -70,6 +71,11 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   if (selectelKey) settings[SELECTEL_KEY_SETTING] = selectelKey
   if (yandexKey) settings[YANDEX_KEY_SETTING] = yandexKey
   if (yandexFolder) settings[YANDEX_FOLDER_SETTING] = yandexFolder
+  if (gigachatKey) {
+    settings[GIGACHAT_KEY_SETTING] = gigachatKey
+    const { clearGigaChatTokenCache } = await import('@/shared/ai/gigachat-token')
+    clearGigaChatTokenCache() // старый Bearer мог быть от прежнего ключа
+  }
 
   // Сначала сохраняем провайдера/ключи, затем проверяем конфиг УЖЕ нового провайдера —
   // «включено» допустимо только когда активный провайдер реально сконфигурирован.

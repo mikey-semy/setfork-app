@@ -77,5 +77,6 @@ export async function pickChatModel(settings: AiSettings): Promise<string> {
     const folder = cfg?.headers?.['x-folder-id'] ?? ''
     return `gpt://${folder}/yandexgpt-5.1/latest`
   }
+  if (provider === 'gigachat' && settings.chatModel.includes('/')) return 'GigaChat-2'
   return settings.chatModel
 }

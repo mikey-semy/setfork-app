@@ -60,7 +60,7 @@ const KEYS = [
 // (см. shared/ai/provider). Выбор: app_settings 'ai.provider' → env AI_PROVIDER
 // → openrouter. Эмбеддинги пока ВСЕГДА OpenRouter (фаза 2: смена размерности
 // вектора + реиндекс), поэтому его ключ читается и отдельно.
-export type AiProviderId = 'openrouter' | 'selectel' | 'yandex'
+export type AiProviderId = 'openrouter' | 'selectel' | 'yandex' | 'gigachat'
 
 export interface AiProviderConfig {
   provider: AiProviderId
@@ -75,8 +75,9 @@ export const PROVIDER_SETTING = 'ai.provider'
 export const SELECTEL_KEY_SETTING = 'ai.selectel_api_key'
 export const YANDEX_KEY_SETTING = 'ai.yandex_api_key'
 export const YANDEX_FOLDER_SETTING = 'ai.yandex_folder_id'
+export const GIGACHAT_KEY_SETTING = 'ai.gigachat_auth_key'
 
-export const AI_PROVIDERS: readonly AiProviderId[] = ['openrouter', 'selectel', 'yandex'] as const
+export const AI_PROVIDERS: readonly AiProviderId[] = ['openrouter', 'selectel', 'yandex', 'gigachat'] as const
 
 /** Чистый резолв провайдера из настроек БД + env (юнит-тестируется без БД). */
 export function resolveAiProvider(
@@ -88,6 +89,17 @@ export function resolveAiProvider(
     const baseUrl = (env.SELECTEL_AI_URL || 'https://api.selectel.ru/aig/v1').trim().replace(/\/$/, '')
     const apiKey = (m[SELECTEL_KEY_SETTING]?.trim() || env.SELECTEL_AI_KEY || '').trim()
     return baseUrl && apiKey ? { provider, baseUrl, apiKey } : null
+  }
+  if (provider === 'gigachat') {
+    // apiKey тут — Basic-ключ авторизации (ClientID:Secret, base64); короткоживущий
+    // Bearer добывает getAiChatClient через gigachat-token. TLS: НУЦ-серт, см. certs/.
+    const authKey = (m[GIGACHAT_KEY_SETTING]?.trim() || env.GIGACHAT_AUTH_KEY || '').trim()
+    if (!authKey) return null
+    return {
+      provider,
+      baseUrl: (env.GIGACHAT_API_URL || 'https://gigachat.devices.sberbank.ru/api/v1').trim().replace(/\/$/, ''),
+      apiKey: authKey,
+    }
   }
   if (provider === 'yandex') {
     const folder = (m[YANDEX_FOLDER_SETTING]?.trim() || env.YC_AI_FOLDER_ID || '').trim()
@@ -115,11 +127,12 @@ export async function getAiProviderRaw(): Promise<{
   selectelKey: string
   yandexKey: string
   yandexFolder: string
+  gigachatKey: string
 }> {
   const rows = await db
     .select()
     .from(appSettings)
-    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING, YANDEX_FOLDER_SETTING]))
+    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING, YANDEX_FOLDER_SETTING, GIGACHAT_KEY_SETTING]))
   const m = Object.fromEntries(rows.map((r) => [r.key, (r.value ?? '').trim()]))
   const raw = m[PROVIDER_SETTING] || process.env.AI_PROVIDER || 'openrouter'
   return {
@@ -128,6 +141,7 @@ export async function getAiProviderRaw(): Promise<{
     selectelKey: m[SELECTEL_KEY_SETTING] || process.env.SELECTEL_AI_KEY?.trim() || '',
     yandexKey: m[YANDEX_KEY_SETTING] || process.env.YC_AI_API_KEY?.trim() || '',
     yandexFolder: m[YANDEX_FOLDER_SETTING] || process.env.YC_AI_FOLDER_ID?.trim() || '',
+    gigachatKey: m[GIGACHAT_KEY_SETTING] || process.env.GIGACHAT_AUTH_KEY?.trim() || '',
   }
 }
 
@@ -136,7 +150,7 @@ export async function getAiProviderConfig(): Promise<AiProviderConfig | null> {
   const rows = await db
     .select()
     .from(appSettings)
-    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING, YANDEX_FOLDER_SETTING]))
+    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING, YANDEX_FOLDER_SETTING, GIGACHAT_KEY_SETTING]))
   return resolveAiProvider(Object.fromEntries(rows.map((r) => [r.key, r.value ?? ''])))
 }
 
@@ -172,6 +186,7 @@ export function defaultChatModelFor(
   env: Record<string, string | undefined> = process.env,
 ): string {
   if (provider === 'selectel') return env.SELECTEL_CHAT_MODEL || 'openai/gpt-4o-mini'
+  if (provider === 'gigachat') return env.GIGACHAT_CHAT_MODEL || 'GigaChat-2'
   if (provider === 'yandex') return env.YC_CHAT_MODEL || `gpt://${folder}/yandexgpt-5.1/latest`
   return env.OPENROUTER_CHAT_MODEL || 'openai/gpt-4o-mini'
 }

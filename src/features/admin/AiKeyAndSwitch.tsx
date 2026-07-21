@@ -5,7 +5,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
-export type AiProviderChoice = 'openrouter' | 'selectel' | 'yandex'
+export type AiProviderChoice = 'openrouter' | 'selectel' | 'yandex' | 'gigachat'
 
 /** Провайдер ИИ + его ключи (маскированные) + переключатель генерации.
  *  Поля показываются под выбранный провайдер; полный ключ на клиент не приходит —
@@ -45,6 +45,7 @@ export function AiKeyAndSwitch({
     openrouter: { label: say('OpenRouter API key', 'API-ключ OpenRouter'), placeholder: 'sk-or-v1-…', name: 'apiKey' },
     selectel: { label: say('Selectel AI router API key', 'API-ключ Selectel (ИИ-роутер)'), placeholder: 'sk-sl-v1-…', name: 'selectelKey' },
     yandex: { label: say('Yandex AI Studio API key', 'API-ключ Yandex AI Studio'), placeholder: 'AQVN…', name: 'yandexKey' },
+    gigachat: { label: say('GigaChat authorization key (Basic)', 'Ключ авторизации GigaChat (Basic)'), placeholder: 'base64(ClientID:Secret)', name: 'gigachatKey' },
   }
   const field = KEY_FIELD[prov]
 
@@ -60,6 +61,10 @@ export function AiKeyAndSwitch({
     yandex: say(
       'Fully in RU (Yandex Cloud); prices — in the Yandex Cloud console. Model ids look like gpt://<folder>/…',
       'Полностью в РФ (Yandex Cloud); цены — в консоли Yandex Cloud. Модели вида gpt://<каталог>/…',
+    ),
+    gigachat: say(
+      'Fully in RU (Sber). Needs the Russian Trusted CA cert (NODE_EXTRA_CA_CERTS, see certs/). Chat only: embeddings are a paid tier.',
+      'Полностью в РФ (Сбер). Нужен серт НУЦ Минцифры (NODE_EXTRA_CA_CERTS, см. certs/). Только чат: эмбеддинги — платный тариф.',
     ),
   }
 
@@ -94,6 +99,7 @@ export function AiKeyAndSwitch({
             <SelectItem value="openrouter">OpenRouter</SelectItem>
             <SelectItem value="selectel">{say('Selectel AI router (RU)', 'Selectel ИИ-роутер (РФ)')}</SelectItem>
             <SelectItem value="yandex">YandexGPT / AI Studio (РФ)</SelectItem>
+            <SelectItem value="gigachat">{say('GigaChat / Sber (RU)', 'GigaChat / Сбер (РФ)')}</SelectItem>
           </SelectContent>
         </Select>
         <p className="mt-1.5 text-[12px] text-muted">{PROVIDER_NOTE[prov]}</p>
