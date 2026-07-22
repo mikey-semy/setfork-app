@@ -189,14 +189,25 @@ export async function refineInChat(generationId: string, text: string): Promise<
   const nextIdx = (await maxIdx(generationId)) + 1
   if (nextIdx > 6) redirect(`/generate/${generationId}?e=variantcap`)
 
+  // Язык генерации залипал на языке ПЕРВОГО запроса: англ. первый запрос → русский
+  // юзер не мог попросить «Давай по-русски», гном отвечал «continue in English».
+  // Реплика на ДРУГОМ языке = явный сигнал сменить язык списка (следующий виток
+  // совет генерирует заново — язык переключается чисто). detectTextLang асимметричен:
+  // любая кириллица → ru, значит русская реплика надёжно переводит на русский.
+  const noteLang = detectTextLang(note, gen.lang as Lang)
+  const effLang: Lang = isLang(noteLang) ? noteLang : (gen.lang as Lang)
+  if (effLang !== gen.lang) {
+    await db.update(generations).set({ lang: effLang }).where(eq(generations.id, generationId))
+  }
+
   // Реплику пишем ДО постановки джобы: воркер соберёт нить уже вместе с ней.
   await pushMessage(generationId, { attempt: nextIdx, kind: 'user', text: note })
   // Диалог (HQ §2, этап 3): адресованный гном коротко отвечает на реплику — fire-and-forget,
   // ответ прилетает поллингом параллельно с ходом витка; сбой не мешает генерации.
   void import('@/shared/ai/dialogue')
-    .then((m) => m.replyToUser(generationId, nextIdx, note, gen.listKind, gen.lang as Lang, session.userId))
+    .then((m) => m.replyToUser(generationId, nextIdx, note, gen.listKind, effLang, session.userId))
     .catch(() => {})
-  await enqueueGenerate(generationId, session.userId, await threadQuery(generationId, gen.query), gen.lang, nextIdx)
+  await enqueueGenerate(generationId, session.userId, await threadQuery(generationId, gen.query), effLang, nextIdx)
   redirect(`/generate/${generationId}?v=${nextIdx}`)
 }
 
