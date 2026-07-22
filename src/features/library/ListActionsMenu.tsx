@@ -3,7 +3,7 @@
 import { useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { GitCommitHorizontal, History, Languages, MoreHorizontal, Pencil } from 'lucide-react'
+import { GitCommitHorizontal, Languages, MoreHorizontal, Pencil } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { LANG_META, t, type Lang } from '@/shared/i18n'
 import { toast } from '@/shared/ui/toast'
@@ -78,11 +78,6 @@ export function ListActionsMenu({
           <Link href={`${base}/versions`}>
             <GitCommitHorizontal size={15} className="text-muted" /> {t('versionsTab', lang)}
             <span className="ml-auto font-mono text-[12px] text-muted">{versionsCount}</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href={`${base}/blame`}>
-            <History size={15} className="text-muted" /> {say('Blame', 'Авторство')}
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
