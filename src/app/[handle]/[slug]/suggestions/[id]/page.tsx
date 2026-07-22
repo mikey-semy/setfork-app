@@ -15,7 +15,6 @@ import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
-import { ListHeader } from '@/widgets/ListHeader'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
 import { diffSteps } from '@/features/library/suggestion-diff'
 import { getReactionsFor } from '@/features/reactions/queries'
@@ -102,7 +101,6 @@ export default async function SuggestionThreadPage({
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="suggestions" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold ${statusCls}`}>

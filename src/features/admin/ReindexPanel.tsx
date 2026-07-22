@@ -107,7 +107,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
                 <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11.5px] font-semibold">
                   {space.index.provider === 'yandex' ? 'Yandex v2 🇷🇺' : 'OpenRouter'}
                 </span>
-                <span className="truncate font-mono text-[11.5px] text-ink-2">{space.index.docModel}</span>
+                <span className="truncate font-mono text-[11.5px] text-ink-2" title={space.index.docModel}>{space.index.docLabel}</span>
               </div>
               <div className="mt-0.5 text-[12px] text-muted">
                 {space.vectorized}/{space.rows} {say('rows vectorized', 'строк с векторами')}
@@ -169,7 +169,14 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
               : running
                 ? say('Indexing…', 'Индексируем…')
                 : status?.status === 'done'
-                  ? say(`Done${status.vectorized ? '' : ' (no vectors — no key)'}`, `Готово${status.vectorized ? '' : ' (без векторов — нет ключа)'}`)
+                  ? status.vectorized
+                    ? say('Done', 'Готово')
+                    : // Векторов нет: контент проиндексирован, но у эмбеддинг-провайдера НЕТ ключа.
+                      // Называем какой именно — иначе непонятно, что настраивать (ключ эмбеддингов
+                      // ≠ ключ чат-провайдера).
+                      space?.index.provider === 'yandex'
+                      ? say('Done, but 0 vectors — set the Yandex API key + folder', 'Готово, но 0 векторов — задайте ключ Yandex API и folder')
+                      : say('Done, but 0 vectors — set the OpenRouter key (ai.api_key)', 'Готово, но 0 векторов — задайте ключ OpenRouter (ai.api_key)')
                   : status?.status === 'error'
                     ? `${say('Error', 'Ошибка')}: ${status.error ?? ''}`
                     : say('Not indexed yet', 'Индекс ещё не построен')}

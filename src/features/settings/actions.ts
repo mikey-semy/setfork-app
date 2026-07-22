@@ -52,6 +52,7 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
   const location = String(formData.get('location') ?? '').trim().slice(0, 80) || null
   const website = normalizeUrl(String(formData.get('website') ?? '')).slice(0, 200) || null
   const socials = parseSocials(String(formData.get('socials') ?? '[]'))
+  const profilePrivate = formData.get('profilePrivate') === 'on'
 
   let avatarRef: string | undefined // storage_key (S3) или /uploads-путь
   const file = formData.get('avatar')
@@ -69,7 +70,7 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
 
   await db
     .update(users)
-    .set({ name, bio, location, website, socials, ...(avatarRef ? { avatarUrl: avatarRef } : clearAvatar ? { avatarUrl: null } : {}) })
+    .set({ name, bio, location, website, socials, profilePrivate, ...(avatarRef ? { avatarUrl: avatarRef } : clearAvatar ? { avatarUrl: null } : {}) })
     .where(eq(users.id, session.userId))
 
   // В сессии храним УЖЕ отрезолвленный URL (навбар — клиент, подписать сам не может).

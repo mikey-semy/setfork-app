@@ -64,6 +64,9 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.council_web_seek': formData.get('councilWebSeek') === 'on' ? 'true' : 'false',
     'ai.council_clarify': formData.get('councilClarify') === 'on' ? 'true' : 'false',
     'ai.council_max_per_month': String(councilMaxPerMonth),
+    // «Помощь на шаге» (AI-подсказка застрявшему в прогоне) — свой флаг+аудитория.
+    'ai.assist_enabled': formData.get('assistEnabled') === 'on' ? 'true' : 'false',
+    'ai.assist_audience': formData.get('assistAudience') === 'all' ? 'all' : 'admin',
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
   if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)
@@ -242,17 +245,20 @@ export async function purgeEmbeddings(): Promise<{ ok: true; removed: number } |
 
 /** Пространство эмбеддингов для панели: чем построен индекс, цель, покрытие. */
 export async function getEmbedSpaceInfo(): Promise<{
-  index: { provider: string; docModel: string; dim: number; at?: number }
-  target: { provider: string; docModel: string; dim: number }
+  // docLabel — красивое имя модели (prettyModelName): сырой URI emb://<folder>/…
+  // нечитаем; помощник server-only, а панель клиентская — прибираем здесь.
+  index: { provider: string; docModel: string; docLabel: string; dim: number; at?: number }
+  target: { provider: string; docModel: string; docLabel: string; dim: number }
   inSync: boolean
   rows: number
   vectorized: number
 } | null> {
   if (!(await getAdmin())) return null
-  const [{ ensureFreshSpace }, { db, embeddings }, { sql }] = await Promise.all([
+  const [{ ensureFreshSpace }, { db, embeddings }, { sql }, { prettyModelName }] = await Promise.all([
     import('@/shared/ai/embed-space'),
     import('@/shared/db'),
     import('drizzle-orm'),
+    import('@/shared/ai/models'),
   ])
   const { index, target, inSync } = await ensureFreshSpace()
   const [stats] = await db
@@ -262,8 +268,8 @@ export async function getEmbedSpaceInfo(): Promise<{
     })
     .from(embeddings)
   return {
-    index: { provider: index.provider, docModel: index.docModel, dim: index.dim, at: index.at },
-    target: { provider: target.provider, docModel: target.docModel, dim: target.dim },
+    index: { provider: index.provider, docModel: index.docModel, docLabel: prettyModelName(index.docModel), dim: index.dim, at: index.at },
+    target: { provider: target.provider, docModel: target.docModel, docLabel: prettyModelName(target.docModel), dim: target.dim },
     inSync,
     rows: stats?.rows ?? 0,
     vectorized: stats?.vectorized ?? 0,

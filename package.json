@@ -110,5 +110,8 @@
     "tsx": "^4.22.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "sharp": "^0.35.0"
   }
 }

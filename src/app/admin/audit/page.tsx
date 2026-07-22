@@ -18,6 +18,8 @@ const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string;
   'list.appeal': { icon: ShieldCheck, ru: 'Апелляция владельца', en: 'Moderation appeal', cls: 'text-accent' },
   'list.report': { icon: Flag, ru: 'Жалоба на список', en: 'List reported', cls: 'text-warn' },
   'list.verify': { icon: ShieldCheck, ru: 'Верификация списка', en: 'List verified', cls: 'text-ok' },
+  'list.transfer-init': { icon: GitCommitVertical, ru: 'Предложена передача списка', en: 'List transfer offered', cls: 'text-warn' },
+  'list.transfer-accept': { icon: GitCommitVertical, ru: 'Список передан', en: 'List transferred', cls: 'text-warn' },
   'git.push': { icon: GitCommitVertical, ru: 'Push в список', en: 'Push to list', cls: 'text-ink-2' },
   'session.revoke': { icon: LogOut, ru: 'Отозвана сессия', en: 'Session revoked', cls: 'text-ink-2' },
   'session.revoke_others': { icon: LogOut, ru: 'Выход с др. устройств', en: 'Signed out others', cls: 'text-ink-2' },

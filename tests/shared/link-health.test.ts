@@ -1,13 +1,19 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { checkUrl, classifyStatus, filterDeadRefs } from '@/shared/lib/link-health'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-afterEach(() => vi.unstubAllGlobals())
+// Мокаем SSRF-чокпоинт (safe-fetch), а не голый fetch: link-health ходит только
+// через него (иначе редирект-хоп мог увести на 169.254.169.254), и юнит-тест
+// не должен зависеть от реального DNS-резолва фейковых доменов.
+const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<{ res: { status: number; body?: undefined } | null; reason?: string }>>()
+vi.mock('@/shared/lib/safe-fetch', () => ({
+  fetchPublicUrlDetailed: (url: string, init?: RequestInit) => fetchMock(url, init),
+}))
 
-const stubFetch = (impl: (url: string, init?: RequestInit) => Promise<{ status: number }>) => {
-  const fn = vi.fn(impl)
-  vi.stubGlobal('fetch', fn as unknown as typeof fetch)
-  return fn
-}
+const { checkUrl, classifyStatus, filterDeadRefs } = await import('@/shared/lib/link-health')
+
+beforeEach(() => fetchMock.mockReset())
+
+const byStatus = (impl: (url: string, init?: RequestInit) => number) =>
+  fetchMock.mockImplementation(async (url, init) => ({ res: { status: impl(url, init) } }))
 
 describe('classifyStatus', () => {
   it('мёртвая — только уверенная смерть (404/410)', () => {
@@ -25,25 +31,25 @@ describe('classifyStatus', () => {
 
 describe('checkUrl', () => {
   it('HEAD 405 → перепроверка GET-ом', async () => {
-    stubFetch(async (_url, init) => ({ status: init?.method === 'HEAD' ? 405 : 200 }))
+    byStatus((_url, init) => (init?.method === 'HEAD' ? 405 : 200))
     expect(await checkUrl('https://example.com/x')).toBe('ok')
   })
-  it('сетевая ошибка → unknown', async () => {
-    stubFetch(async () => {
-      throw new Error('ECONNREFUSED')
-    })
-    expect(await checkUrl('https://example.com/x')).toBe('unknown')
+  it('SSRF-отказ / несуществующий домен / сеть → unknown', async () => {
+    fetchMock.mockResolvedValue({ res: null, reason: 'dns' })
+    expect(await checkUrl('https://dead-domain.example/x')).toBe('unknown')
+    fetchMock.mockResolvedValue({ res: null, reason: 'net' })
+    expect(await checkUrl('https://blocked.example/x')).toBe('unknown')
   })
   it('не-HTTP не проверяем', async () => {
-    const spy = stubFetch(async () => ({ status: 200 }))
+    byStatus(() => 200)
     expect(await checkUrl('mailto:a@b.c')).toBe('unknown')
-    expect(spy).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
 
 describe('filterDeadRefs', () => {
   it('выкидывает только dead, unknown остаётся; возвращает число удалённых', async () => {
-    stubFetch(async (url) => ({ status: String(url).includes('dead') ? 404 : String(url).includes('slow') ? 503 : 200 }))
+    byStatus((url) => (String(url).includes('dead') ? 404 : String(url).includes('slow') ? 503 : 200))
     const items = [
       { refs: [{ url: 'https://ok.example/a' }, { url: 'https://dead.example/b' }] },
       { refs: [{ url: 'https://slow.example/c' }] },

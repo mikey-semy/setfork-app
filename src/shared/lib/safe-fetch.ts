@@ -41,50 +41,73 @@ export function isPrivateIp(ip: string): boolean {
   )
 }
 
-/** Хост публичен: префильтр по имени + DNS-резолв, все адреса — не приватные. */
-async function isPublicHost(hostname: string): Promise<boolean> {
+/** Причина отказа/сбоя fetchPublicUrlDetailed — link-checker'у важно различать
+ *  «домена нет» (dns → кандидат в битые) и «сеть не пустила» (net → недостижимо
+ *  с нашего egress, у RU-сервера это сплошь ТСПУ — НЕ значит «мертво»). */
+export type SafeFetchReason = 'bad_url' | 'private' | 'dns' | 'net' | 'too_many_redirects'
+
+/** Хост публичен? 'ok' | 'private' (приватные адреса/имена) | 'dns' (не резолвится). */
+async function checkPublicHost(hostname: string): Promise<'ok' | 'private' | 'dns'> {
   const host = hostname.replace(/^\[|\]$/g, '') // IPv6 в URL приходит в скобках
-  if (PRIVATE_HOST_RE.test(hostname) || PRIVATE_HOST_RE.test(host)) return false
+  if (PRIVATE_HOST_RE.test(hostname) || PRIVATE_HOST_RE.test(host)) return 'private'
   try {
     const addrs = await lookup(host, { all: true })
-    return addrs.length > 0 && addrs.every((a) => !isPrivateIp(a.address))
+    if (!addrs.length) return 'dns'
+    return addrs.every((a) => !isPrivateIp(a.address)) ? 'ok' : 'private'
   } catch {
-    return false // NXDOMAIN и прочее — не ходим
+    return 'dns' // резолв не удался (NXDOMAIN/сбой резолвера) — не ходим
   }
 }
 
+export interface SafeFetchDetailed {
+  res: Response | null
+  reason?: SafeFetchReason
+  /** URL, на котором закончили (после редиректов) — для «страница переехала». */
+  finalUrl?: string
+}
+
 /**
- * fetch по недоверенному URL: только http/https, хост каждого хопа проверяется
- * (см. выше), редиректы идём вручную (до maxRedirects). null = отказано/ошибка сети.
+ * fetch по недоверенному URL с причиной отказа: только http/https, хост каждого
+ * хопа проверяется, редиректы идём вручную (до maxRedirects).
  */
-export async function fetchPublicUrl(input: URL | string, init: RequestInit = {}, maxRedirects = 3): Promise<Response | null> {
+export async function fetchPublicUrlDetailed(input: URL | string, init: RequestInit = {}, maxRedirects = 3): Promise<SafeFetchDetailed> {
   let u: URL
   try {
     u = typeof input === 'string' ? new URL(input) : input
   } catch {
-    return null
+    return { res: null, reason: 'bad_url' }
   }
   for (let hop = 0; hop <= maxRedirects; hop++) {
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
-    if (!(await isPublicHost(u.hostname))) return null
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return { res: null, reason: 'bad_url' }
+    const host = await checkPublicHost(u.hostname)
+    if (host !== 'ok') return { res: null, reason: host }
     let res: Response
     try {
       res = await fetch(u, { ...init, redirect: 'manual' })
     } catch {
-      return null
+      // timeout/reset/tls/прочая сеть — уже после успешного резолва
+      return { res: null, reason: 'net', finalUrl: u.toString() }
     }
     if (res.status >= 300 && res.status < 400) {
       const loc = res.headers.get('location')
       res.body?.cancel().catch(() => {}) // освобождаем сокет недочитанного редиректа
-      if (!loc) return null
+      if (!loc) return { res: null, reason: 'net', finalUrl: u.toString() }
       try {
         u = new URL(loc, u) // относительный Location — против текущего хопа
       } catch {
-        return null
+        return { res: null, reason: 'bad_url' }
       }
       continue
     }
-    return res
+    return { res, finalUrl: u.toString() }
   }
-  return null // слишком длинная цепочка редиректов
+  return { res: null, reason: 'too_many_redirects' }
+}
+
+/**
+ * fetch по недоверенному URL: null = отказано/ошибка сети (без причины —
+ * прежний контракт; за причиной — fetchPublicUrlDetailed).
+ */
+export async function fetchPublicUrl(input: URL | string, init: RequestInit = {}, maxRedirects = 3): Promise<Response | null> {
+  return (await fetchPublicUrlDetailed(input, init, maxRedirects)).res
 }

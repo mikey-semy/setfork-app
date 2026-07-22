@@ -13,6 +13,8 @@ export type AuditAction =
   | 'list.appeal'
   | 'list.report'
   | 'list.verify'
+  | 'list.transfer-init'
+  | 'list.transfer-accept'
   | 'git.push'
   | 'session.revoke'
   | 'session.revoke_others'

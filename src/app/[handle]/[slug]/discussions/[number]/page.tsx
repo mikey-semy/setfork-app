@@ -9,7 +9,6 @@ import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import { getDiscussion, getDiscussionComments } from '@/features/discussions/queries'
 import { addDiscussionComment } from '@/features/discussions/actions'
 import { categoryLabel, categoryMeta } from '@/features/discussions/constants'
@@ -35,7 +34,6 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
   const card = 'rounded-lg border border-border bg-surface'
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="discussions" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <Tooltip label={categoryLabel(disc.category, lang)}>

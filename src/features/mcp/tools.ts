@@ -12,8 +12,17 @@ import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
+import { isCollaborator } from '@/features/collab/queries'
 import { recordRunCompletionIfDone } from '@/features/library/completion'
 import { getCourseCompletion } from '@/features/quizzes/queries'
+
+// Единая проверка «зритель вправе видеть» для MCP: тот же canViewList, что и на
+// сайте, но коллаборатора (для приватного/черновика) досчитываем лениво.
+async function mcpCanView(tpl: { id: string; ownerId: string; visibility: 'public' | 'private'; status: 'draft' | 'published'; moderation: string }, userId: string): Promise<boolean> {
+  const isOwner = tpl.ownerId === userId
+  const isCollab = !isOwner && (tpl.visibility === 'private' || tpl.status === 'draft') ? await isCollaborator(tpl.id, userId) : false
+  return canViewList(tpl, { isOwner, isCollaborator: isCollab })
+}
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')
 
@@ -209,7 +218,7 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
   if (!detail) return null
   const { tpl, currentVersion, steps } = detail
   // Тот же единый предикат приватности, что и на сайте (у MCP админа нет).
-  if (!canViewList(tpl, { isOwner: tpl.ownerId === userId })) return null
+  if (!(await mcpCanView(tpl, userId))) return null
 
   return {
     ref: `${handle}/${slug}`,
@@ -231,7 +240,7 @@ export async function mcpGetScript(userId: string, handle: string, slug: string,
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return null
   const { tpl } = detail
-  if (!canViewList(tpl, { isOwner: tpl.ownerId === userId })) return null
+  if (!(await mcpCanView(tpl, userId))) return null
 
   const dialect = normalizeDialect(dialectRaw)
   const url = `${SITE_URL}/${handle}/${slug}/raw`
@@ -386,8 +395,7 @@ export async function mcpStartRun(userId: string, handle: string, slug: string) 
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return { error: 'list not found' }
   const { tpl, currentVersion } = detail
-  const isOwner = tpl.ownerId === userId
-  if (!canViewList(tpl, { isOwner })) return { error: 'forbidden' }
+  if (!(await mcpCanView(tpl, userId))) return { error: 'forbidden' }
   const cur = currentVersion
   if (!cur) return { error: 'list has no version' }
 

@@ -364,6 +364,11 @@
       "count": 100
     }
   },
+  "src/features/library/ListSettingsDanger.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
   "src/features/library/TemplateSection.tsx": {
     "no-restricted-syntax": {
       "count": 2
@@ -385,6 +390,11 @@
   "src/features/library/export.ts": {
     "no-restricted-syntax": {
       "count": 2
+    }
+  },
+  "src/features/library/guard.ts": {
+    "boundaries/dependencies": {
+      "count": 1
     }
   },
   "src/features/library/queries.ts": {
@@ -472,7 +482,7 @@
   },
   "src/features/runs/actions.ts": {
     "boundaries/dependencies": {
-      "count": 2
+      "count": 3
     }
   },
   "src/features/search/adapter.ts": {
@@ -517,6 +527,11 @@
   "src/features/star-folders/StarFolderMenu.tsx": {
     "no-restricted-syntax": {
       "count": 6
+    }
+  },
+  "src/features/transfer/actions.ts": {
+    "boundaries/dependencies": {
+      "count": 2
     }
   },
   "src/features/watch/actions.ts": {

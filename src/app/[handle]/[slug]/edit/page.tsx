@@ -7,8 +7,10 @@ import { t, tr } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- write-доступ (canWriteList) строже просмотра; редиректит не-редакторов
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { canWriteList } from '@/features/collab/queries'
+import { canEditList } from '@/core'
 import { saveNewVersion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
+import { ListTypeToggle } from '@/features/library/ListTypeToggle'
 import { TagInput } from '@/shared/ui/TagInput'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
@@ -30,6 +32,9 @@ export default async function EditPage({
   if (!detail) notFound()
   const { tpl, steps } = detail
   if (!(await canWriteList(tpl.id, tpl.ownerId, session.userId))) redirect(`/${owner}/${slug}`)
+  // Архив/заморозка: редактор недоступен (список только-чтение). Разблокировать —
+  // разархивировать/разморозить в настройках. Баннер причины покажет сама страница.
+  if (!canEditList(tpl)) redirect(`/${owner}/${slug}`)
 
   const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
   const action = saveNewVersion.bind(null, tpl.id)
@@ -58,21 +63,8 @@ export default async function EditPage({
         </div>
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('listKind', lang)}</label>
-        <div className="mb-6 grid grid-cols-2 gap-2">
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
-            <input type="radio" name="ordered" value="ordered" defaultChecked={tpl.ordered} className="mt-0.5" />
-            <span>
-              <span className="block text-[13.5px] font-medium text-ink">{t('orderedLabel', lang)}</span>
-              <span className="block text-[12px] text-ink-2">{t('orderedHint', lang)}</span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
-            <input type="radio" name="ordered" value="unordered" defaultChecked={!tpl.ordered} className="mt-0.5" />
-            <span>
-              <span className="block text-[13.5px] font-medium text-ink">{t('unorderedLabel', lang)}</span>
-              <span className="block text-[12px] text-ink-2">{t('unorderedHint', lang)}</span>
-            </span>
-          </label>
+        <div className="mb-6">
+          <ListTypeToggle ordered={tpl.ordered} lang={lang} />
         </div>
 
         <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">

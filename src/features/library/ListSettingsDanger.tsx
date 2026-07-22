@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Globe, Loader2, Lock, Pin, PinOff, Trash2 } from 'lucide-react'
+import { useActionState, useState, useTransition } from 'react'
+import { Archive, ArchiveRestore, Globe, Loader2, Lock, Snowflake, Sun, Trash2, UserRoundPlus } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { t, type Lang } from '@/shared/i18n'
-import { deleteListAction, setListPinned, setListVisibility } from './actions'
+import { cancelTransfer, initiateTransfer, type TransferResult } from '@/features/transfer/actions'
+import { deleteListAction, setListArchived, setListFrozen, setListVisibility } from './actions'
 
 // Опасная зона списка (аналог GitHub Danger Zone): опасные действия собраны
 // в одном месте, каждое — через модалку. Удаление подтверждается вводом
@@ -16,7 +18,9 @@ export function ListSettingsDanger({
   slug,
   visibility,
   moderation,
-  pinned,
+  archived,
+  frozen,
+  pendingTransfer,
   lang,
 }: {
   templateId: string
@@ -24,12 +28,14 @@ export function ListSettingsDanger({
   slug: string
   visibility: 'public' | 'private'
   moderation: string
-  pinned: boolean
+  archived: boolean
+  frozen: boolean
+  pendingTransfer: { id: string; toHandle: string } | null
   lang: Lang
 }) {
   const [pending, start] = useTransition()
-  const [pinPending, startPin] = useTransition()
-  const [dialog, setDialog] = useState<null | 'visibility' | 'delete'>(null)
+  const [dialog, setDialog] = useState<null | 'visibility' | 'delete' | 'archive' | 'freeze' | 'transfer'>(null)
+  const [trState, trAction, trPending] = useActionState<TransferResult | null, FormData>(initiateTransfer.bind(null, templateId), null)
   const fullName = `${handle}/${slug}` // видимый идентификатор для подтверждения
   const isPublic = visibility === 'public'
   // Снятый модерацией список владелец удалить не может (сервер блокирует — стирание
@@ -40,26 +46,7 @@ export function ListSettingsDanger({
 
   return (
     <>
-      {/* Pin — не опасное действие, отдельной картой над зоной. */}
-      <section className="mb-6 rounded-lg border border-border bg-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-start gap-2.5">
-            <Pin size={17} className="mt-0.5 text-ink-2" />
-            <div>
-              <div className="text-[14px] font-medium text-ink">{t('pinToProfile', lang)}</div>
-              <p className="text-[12.5px] text-ink-2">{pinned ? t('pinnedOn', lang) : t('pinHint', lang)}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => startPin(() => setListPinned(templateId, !pinned))}
-            disabled={pinPending}
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong disabled:opacity-60"
-          >
-            {pinPending ? <Loader2 size={14} className="animate-spin" /> : pinned ? <PinOff size={14} /> : <Pin size={14} />}
-            {pinned ? t('unpin', lang) : t('pin', lang)}
-          </button>
-        </div>
-      </section>
+      {/* Pin убран из настроек — теперь кнопкой над списком (шапка, #389). */}
 
       {/* Опасная зона: обведённая красным рамка со строками-действиями. */}
       <section className="overflow-hidden rounded-lg border border-danger/40">
@@ -79,6 +66,58 @@ export function ListSettingsDanger({
             </Button>
           </div>
 
+          {/* Заморозка правок (защита) */}
+          <div className={row}>
+            <div className="min-w-0">
+              <div className="text-[14px] font-medium text-ink">{t(frozen ? 'unfreezeList' : 'freezeList', lang)}</div>
+              <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+                <Snowflake size={12} /> {t(frozen ? 'frozenOn' : 'freezeHint', lang)}
+              </p>
+            </div>
+            <Button variant="danger" size="md" onClick={() => setDialog('freeze')} className="gap-2 border border-danger/40">
+              {frozen ? <Sun size={14} /> : <Snowflake size={14} />} {t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+            </Button>
+          </div>
+
+          {/* Архив (read-only) */}
+          <div className={row}>
+            <div className="min-w-0">
+              <div className="text-[14px] font-medium text-ink">{t(archived ? 'unarchiveList' : 'archiveList', lang)}</div>
+              <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+                <Archive size={12} /> {t(archived ? 'archivedOn' : 'archiveHint', lang)}
+              </p>
+            </div>
+            <Button variant="danger" size="md" onClick={() => setDialog('archive')} className="gap-2 border border-danger/40">
+              {archived ? <ArchiveRestore size={14} /> : <Archive size={14} />} {t(archived ? 'unarchiveList' : 'archiveList', lang)}
+            </Button>
+          </div>
+
+          {/* Передача владения */}
+          <div className={row}>
+            <div className="min-w-0">
+              <div className="text-[14px] font-medium text-ink">{t('transferOwnership', lang)}</div>
+              <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+                <UserRoundPlus size={12} />
+                {pendingTransfer ? `${t('transferPendingTo', lang)} @${pendingTransfer.toHandle}` : t('transferHint', lang)}
+              </p>
+            </div>
+            {pendingTransfer ? (
+              <Button
+                variant="danger"
+                size="md"
+                onClick={() => start(() => cancelTransfer(pendingTransfer.id))}
+                disabled={pending}
+                className="border border-danger/40"
+              >
+                {t('transferCancel', lang)}
+              </Button>
+            ) : (
+              <Button variant="danger" size="md" onClick={() => setDialog('transfer')} className="gap-2 border border-danger/40">
+                <UserRoundPlus size={14} /> {t('transferOwnership', lang)}
+              </Button>
+            )}
+          </div>
+
           {/* Удаление */}
           <div className={row}>
             <div className="min-w-0">
@@ -96,6 +135,39 @@ export function ListSettingsDanger({
         </div>
       </section>
 
+      {/* Модалка передачи — ввод ника получателя (реальная смена — при принятии им). */}
+      <OverlayPanel
+        open={dialog === 'transfer'}
+        onClose={() => setDialog(null)}
+        width={460}
+        title={
+          <span className="inline-flex items-center gap-1.5 text-danger">
+            <UserRoundPlus size={14} /> {t('transferOwnership', lang)}
+          </span>
+        }
+      >
+        <form action={trAction} className="flex flex-col gap-4 p-4">
+          <p className="text-[13px] leading-relaxed text-ink-2">{t('transferWarn', lang)}</p>
+          <label className="flex flex-col gap-1.5 text-[12.5px] font-semibold text-ink-2">
+            {t('transferRecipientField', lang)}
+            <div className="mt-0.5 flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 focus-within:border-danger">
+              <span className="text-muted">@</span>
+              <input name="toHandle" autoComplete="off" spellCheck={false} className="w-full bg-transparent py-2 font-mono text-[13px] text-ink outline-hidden" />
+            </div>
+          </label>
+          {trState?.error && <div className="text-[13px] text-danger">{trState.error}</div>}
+          {trState?.ok && <div className="text-[13px] text-ok">✓</div>}
+          <div className="flex items-center justify-end gap-2">
+            <button type="button" onClick={() => setDialog(null)} className="rounded-md px-3 py-2 text-[13px] text-ink-2 hover:text-ink">
+              {t('cancel', lang)}
+            </button>
+            <Button type="submit" variant="dangerSolid" size="md" disabled={trPending}>
+              {t('transferOwnership', lang)}
+            </Button>
+          </div>
+        </form>
+      </OverlayPanel>
+
       {/* Модалка смены видимости — с последствиями, без ввода имени. */}
       <ConfirmDialog
         open={dialog === 'visibility'}
@@ -108,6 +180,40 @@ export function ListSettingsDanger({
         onConfirm={() =>
           start(async () => {
             await setListVisibility(templateId, isPublic ? 'private' : 'public')
+            setDialog(null)
+          })
+        }
+      />
+
+      {/* Модалка заморозки — обратимо, без ввода имени. */}
+      <ConfirmDialog
+        open={dialog === 'freeze'}
+        onClose={() => setDialog(null)}
+        title={t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+        intro={t(frozen ? 'unfreezeEffects' : 'freezeEffects', lang)}
+        confirmLabel={t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+        cancelLabel={t('cancel', lang)}
+        busy={pending}
+        onConfirm={() =>
+          start(async () => {
+            await setListFrozen(templateId, !frozen)
+            setDialog(null)
+          })
+        }
+      />
+
+      {/* Модалка архива — обратимо, без ввода имени. */}
+      <ConfirmDialog
+        open={dialog === 'archive'}
+        onClose={() => setDialog(null)}
+        title={t(archived ? 'unarchiveList' : 'archiveList', lang)}
+        intro={t(archived ? 'unarchiveEffects' : 'archiveEffects', lang)}
+        confirmLabel={t(archived ? 'unarchiveList' : 'archiveList', lang)}
+        cancelLabel={t('cancel', lang)}
+        busy={pending}
+        onConfirm={() =>
+          start(async () => {
+            await setListArchived(templateId, !archived)
             setDialog(null)
           })
         }

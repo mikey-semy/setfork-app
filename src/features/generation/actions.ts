@@ -3,7 +3,7 @@
 import { eq, sql } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { db, generationCandidates, generationMessages, generations, users } from '@/shared/db'
+import { db, generationCandidates, generationMessages, generations, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { DEFAULT_LANG, isLang, type Lang } from '@/shared/i18n'
@@ -191,6 +191,11 @@ export async function refineInChat(generationId: string, text: string): Promise<
 
   // Реплику пишем ДО постановки джобы: воркер соберёт нить уже вместе с ней.
   await pushMessage(generationId, { attempt: nextIdx, kind: 'user', text: note })
+  // Диалог (HQ §2, этап 3): адресованный гном коротко отвечает на реплику — fire-and-forget,
+  // ответ прилетает поллингом параллельно с ходом витка; сбой не мешает генерации.
+  void import('@/shared/ai/dialogue')
+    .then((m) => m.replyToUser(generationId, nextIdx, note, gen.listKind, gen.lang as Lang, session.userId))
+    .catch(() => {})
   await enqueueGenerate(generationId, session.userId, await threadQuery(generationId, gen.query), gen.lang, nextIdx)
   redirect(`/generate/${generationId}?v=${nextIdx}`)
 }
@@ -285,7 +290,8 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       imagePreview: '',
       level: it.level ?? 'required',
       why: it.why ?? '',
-      section: '',
+      // section раньше хардкодился '' — принятые AI-рецепты становились плоскими.
+      section: it.section ?? '',
       subtasks: it.subtasks,
       refs: (it.refs ?? []).map((r) => ({ label: r.label, url: r.url })),
     })),
@@ -317,6 +323,9 @@ export async function acceptCandidate(generationId: string, candidateId: string)
     })),
   })
   await db.update(generations).set({ chosenTemplateId: list.id }).where(eq(generations.id, gen.id))
+  // Тип списка переезжает на template — иначе он умирал вместе с generation,
+  // и садовник/refine не знали, что перед ними рецепт (ломали структуру).
+  if (gen.listKind) await db.update(templates).set({ listKind: gen.listKind }).where(eq(templates.id, list.id))
   await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)

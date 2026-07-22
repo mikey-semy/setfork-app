@@ -8,7 +8,6 @@ import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, getListLabels, type IssueFilter, type IssueSort } from '@/features/issues/queries'
 import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
 import { LabelsManager } from '@/features/issues/LabelsManager'
@@ -66,7 +65,6 @@ export default async function IssuesPage({
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="issues" />
       <div className="mx-auto w-full max-w-[900px] px-4 py-6">
         {/* Поиск + New */}
         <div className="mb-3 flex items-center gap-2">
