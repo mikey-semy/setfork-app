@@ -40,7 +40,7 @@ export async function digChatAsk(input: {
   history: DigChatMsg[]
   question: string
   lang: Lang
-}): Promise<{ who: string; name: string; text: string } | { error: string }> {
+}): Promise<{ who: string; name: string; text: string; followups: string[] } | { error: string }> {
   const session = await requireSession()
   const question = (input.question ?? '').trim().slice(0, 500)
   if (!question) return { error: 'empty' }
@@ -102,6 +102,7 @@ export async function digChatAsk(input: {
 
   const system = `You are ${expert.persona}${guild}${memory}
 You are chatting with a user in the SetFork workshop ABOUT ONE STEP of a list (context below). Dig as deep as they want: reasons, mechanisms, exceptions, alternatives, adjacent techniques — follow THEIR direction. Be concrete; admit "точных данных нет"/"no reliable data" instead of inventing. Keep answers tight (2-5 short paragraphs or a compact list). Answer in ${langEnName(input.lang)}.
+You are the guide in this mountain of knowledge — end EVERY reply with one final line "NEXT: q1 | q2 | q3" — three SHORT follow-up questions (max ~6 words each, in the answer language) that dig deeper from what you just said. Nothing after that line.
 ${sp.rule()}`
   const prompt = `${sp.wrap('STEP', stepCtx)}${hist ? `\n\nCHAT SO FAR:\n${sp.wrap('HISTORY', hist)}` : ''}\n\n${sp.wrap('QUESTION', question)}`
 
@@ -112,14 +113,20 @@ ${sp.rule()}`
       system,
       prompt,
       temperature: settings.temperature,
-      maxOutputTokens: 500,
+      maxOutputTokens: 560, // +60 к ответу под строку NEXT с фоллоу-апами
       abortSignal: AbortSignal.timeout(45_000),
     })
     const u = extractUsage(result)
     await recordUsage({ userId: session.userId, feature: 'dig', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: 'template', refId: tpl.id, outcome: 'ok', durationMs: Date.now() - startedAt, provider: client.cfg.provider })
-    const text = result.text.trim()
+    const raw = result.text.trim()
+    if (!raw) return { error: 'aifail' }
+    // Хвост «NEXT: q1 | q2 | q3» → кнопки-фоллоу-апы (гном ведёт вглубь);
+    // модель могла и не выдать строку — тогда просто без кнопок.
+    const nm = /(?:^|\n)\s*NEXT:\s*(.+)\s*$/i.exec(raw)
+    const followups = nm ? nm[1].split('|').map((s) => s.trim()).filter(Boolean).slice(0, 3) : []
+    const text = nm ? raw.slice(0, nm.index).trim() : raw
     if (!text) return { error: 'aifail' }
-    return { who: expert.id, name: input.lang === 'ru' ? expert.nameRu : expert.nameEn, text }
+    return { who: expert.id, name: input.lang === 'ru' ? expert.nameRu : expert.nameEn, text, followups }
   } catch (e) {
     await recordUsage({ userId: session.userId, feature: 'dig', model, input: 0, output: 0, total: 0, cost: 0, refType: 'template', refId: tpl.id, outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
     return { error: 'aifail' }
