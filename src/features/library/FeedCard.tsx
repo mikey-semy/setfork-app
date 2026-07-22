@@ -2,10 +2,8 @@ import Link from 'next/link'
 import { GitFork, Lock, Star } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { TagChip } from '@/shared/ui/TagChip'
-import { cardAccent } from '@/shared/ui/AutoBanner'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, tr, type Lang } from '@/shared/i18n'
-import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { toggleStar } from '@/features/library/actions'
 import type { FeedItem } from './queries'
 
@@ -19,25 +17,8 @@ function fmt(n: number): string {
  *  единственное действие на карточке — ⭐ Star (сигнал качества + коллекция). */
 export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang: Lang; starred?: boolean }) {
   const star = toggleStar.bind(null, item.id)
-  const a = cardAccent(item.accent, item.id)
-  // Язык контента ≠ языку интерфейса → бейдж кода языка (ADR-0009: единый пул,
-  // иностранные списки в ленте — норма, а не ошибка). Есть перевод — бейдж не нужен.
-  // Но ключу LocaleText верить нельзя: русский текст часто лежит под 'en' (неверный
-  // тег генерации) — тогда бейдж «en» на явно русском списке = бред. Детектим по
-  // самому тексту (кириллица → ru): помечаем, только если текст ДЕЙСТВИТЕЛЬНО чужой.
-  const shownTitle = item.title[lang] || Object.values(item.title).find(Boolean) || ''
-  const foreignLang =
-    !item.title[lang] && detectTextLang(shownTitle, lang) !== lang
-      ? Object.keys(item.title).find((k) => item.title[k])
-      : null
   return (
-    <div className="relative flex items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface py-3 pr-3.5 pl-4 transition-colors hover:border-border-strong">
-      {/* accent-полоса слева — идентичность списка (без синтетического баннера в ленте) */}
-      <span
-        aria-hidden
-        className="absolute inset-y-0 left-0 w-1"
-        style={{ background: `linear-gradient(180deg, ${a}, color-mix(in srgb, ${a} 55%, transparent))` }}
-      />
+    <div className="relative flex items-start gap-3 rounded-lg border border-border bg-surface px-3.5 py-3 transition-colors hover:border-border-strong">
       <Link href={`/${item.ownerHandle}`} className="shrink-0">
         <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={32} />
       </Link>
@@ -55,11 +36,6 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
           <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">
             v{item.version}
           </span>
-          {foreignLang && (
-            <span className="rounded border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted">
-              {foreignLang}
-            </span>
-          )}
           {item.status === 'draft' && (
             <span className="rounded border border-warn px-1.5 py-0.5 text-[10.5px] font-medium text-warn">
               {t('draftBadge', lang)}
