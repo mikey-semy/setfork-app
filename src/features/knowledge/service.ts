@@ -1,8 +1,8 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, jobs, steps, templates, templateVersions } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
-import { extractTriples, extractedTemplateIds, saveTriples } from '@/shared/ai/triples'
+import { extractTriples, saveTriples } from '@/shared/ai/triples'
 import { globalBudgetOk } from '@/shared/quota'
 import { isAiAvailable } from '@/shared/settings/ai'
 import { log } from '@/shared/observability'
@@ -37,15 +37,22 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
     return { mined: 0, skipped: 0 }
   }
 
-  // Свежие публичные списки, из которых ещё не извлекались тройки.
-  const recent = await db
+  // Публичные списки, где рудник ещё не был (или список правился после добычи).
+  // Маркер triples_mined_at ставится независимо от урожая — «пустой» список не
+  // перерабатывается ежедневно (фикс по ревью волны).
+  const batch = await db
     .select({ id: templates.id, title: templates.title, desc: templates.desc, currentVersion: templates.currentVersion })
     .from(templates)
-    .where(and(eq(templates.status, 'published'), eq(templates.visibility, 'public'), eq(templates.moderation, 'active')))
+    .where(
+      and(
+        eq(templates.status, 'published'),
+        eq(templates.visibility, 'public'),
+        eq(templates.moderation, 'active'),
+        sql`(${templates.triplesMinedAt} is null or ${templates.triplesMinedAt} < ${templates.updatedAt})`,
+      ),
+    )
     .orderBy(desc(templates.updatedAt))
-    .limit(30)
-  const done = await extractedTemplateIds(recent.map((t) => t.id))
-  const batch = recent.filter((t) => !done.has(t.id)).slice(0, BATCH)
+    .limit(BATCH)
 
   let mined = 0
   let skipped = 0
@@ -64,6 +71,7 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
       .join('\n')
     if (text.length < 60) {
       skipped++
+      await db.update(templates).set({ triplesMinedAt: new Date() }).where(eq(templates.id, tpl.id))
       continue
     }
     // Язык троек — язык заголовка (двуязычные пишут обе локали через « / » — модель берёт как есть).
@@ -75,6 +83,8 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
     } else {
       skipped++
     }
+    // Маркер — ВСЕГДА, даже при нулевом урожае: рудник не возвращается впустую.
+    await db.update(templates).set({ triplesMinedAt: new Date() }).where(eq(templates.id, tpl.id))
   }
   log.info('triples sweep done', { batch: batch.length, mined, skipped })
   return { mined, skipped }

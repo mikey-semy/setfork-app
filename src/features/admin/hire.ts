@@ -20,7 +20,7 @@ export interface HireSignal {
 }
 
 /** Матч тега и домена — та же логика, что доменная линза прецедентов (pickPrecedents). */
-const covers = (tag: string, domain: string) => tag === domain || tag.includes(domain) || domain.includes(tag)
+const covers = (tag: string, domain: string) => tag === domain || (domain.length >= 3 && tag.includes(domain)) || (tag.length >= 3 && domain.includes(tag))
 
 /**
  * Сигнал найма: теги кандидатов за 30 дней из генераций, где черновик писал

@@ -231,25 +231,34 @@ export async function seedRoster(): Promise<void> {
 }
 
 /**
- * Догнать гильдии у СУЩЕСТВУЮЩИХ строк (HQ §7): таблица на проде уже наполнена,
- * onConflictDoNothing новые поля не проставит. Трогаем только строки с ПУСТЫМ
- * кодексом — правку админа не перетираем никогда (пустой = не задавался).
+ * Догнать гильдии/линзы у СУЩЕСТВУЮЩИХ строк (HQ §7): таблица на проде уже
+ * наполнена, onConflictDoNothing новые поля не проставит. ОДНОРАЗОВОСТЬ (фикс
+ * по ревью волны): если хоть у одного SEED-гнома поле уже непустое — бэкфилл
+ * этого поля был (или админ заполнил сам) и больше НЕ выполняется. Иначе
+ * очищенный админом кодекс молча воскресал бы на каждом чтении ростера.
+ * Вызывается только из getRosterAll (админка) — не из горячего пути совета.
  */
 async function backfillGuilds(rows: (typeof councilExperts.$inferSelect)[]): Promise<boolean> {
-  const missing = SEED.filter((s) => rows.some((r) => r.id === s.id && !r.code))
-  for (const s of missing)
-    await db
-      .update(councilExperts)
-      .set({ guildEn: s.guildEn, guildRu: s.guildRu, code: s.code, updatedAt: new Date() })
-      .where(and(eq(councilExperts.id, s.id), eq(councilExperts.code, '')))
-  // Линза (появилась позже гильдий) — та же логика: пустая = не задавалась, догоняем из SEED.
-  const missingLens = SEED.filter((s) => rows.some((r) => r.id === s.id && !r.lens))
-  for (const s of missingLens)
-    await db
-      .update(councilExperts)
-      .set({ lens: s.lens, updatedAt: new Date() })
-      .where(and(eq(councilExperts.id, s.id), eq(councilExperts.lens, '')))
-  return missing.length > 0 || missingLens.length > 0
+  const seedRows = rows.filter((r) => SEED.some((s) => s.id === r.id))
+  let changed = false
+  if (seedRows.length && seedRows.every((r) => !r.code)) {
+    for (const s of SEED.filter((s) => seedRows.some((r) => r.id === s.id)))
+      await db
+        .update(councilExperts)
+        .set({ guildEn: s.guildEn, guildRu: s.guildRu, code: s.code, updatedAt: new Date() })
+        .where(and(eq(councilExperts.id, s.id), eq(councilExperts.code, '')))
+    changed = true
+  }
+  // Линза (появилась позже гильдий) — отдельный одноразовый проход по тому же правилу.
+  if (seedRows.length && seedRows.every((r) => !r.lens)) {
+    for (const s of SEED.filter((s) => seedRows.some((r) => r.id === s.id)))
+      await db
+        .update(councilExperts)
+        .set({ lens: s.lens, updatedAt: new Date() })
+        .where(and(eq(councilExperts.id, s.id), eq(councilExperts.lens, '')))
+    changed = true
+  }
+  return changed
 }
 
 /**
@@ -265,7 +274,8 @@ export async function getRoster(): Promise<Expert[]> {
       await seedRoster()
       rows = await read()
     }
-    if (await backfillGuilds(rows)) rows = await read()
+    // Бэкфилл гильдий здесь НЕ зовём (фикс по ревью): getRoster — горячий путь
+    // каждого совета, писать в БД на чтении нельзя; бэкфилл живёт в getRosterAll.
     return rows.length ? rows.map(row2expert) : SEED
   } catch (e) {
     console.warn('[roster] fallback to SEED', e instanceof Error ? e.message : e)

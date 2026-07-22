@@ -102,7 +102,7 @@ export async function mcpAskGnome(
 }
 
 /** Матч тега списка и домена гнома — та же формула, что доменная линза. */
-const tagFits = (tag: string, domain: string) => tag === domain || tag.includes(domain) || domain.includes(tag)
+const tagFits = (tag: string, domain: string) => tag === domain || (domain.length >= 3 && tag.includes(domain)) || (tag.length >= 3 && domain.includes(tag))
 
 /**
  * gnome_review (MCP этап 3, HQ §1): гном-мастер смотрит СУЩЕСТВУЮЩИЙ список и
