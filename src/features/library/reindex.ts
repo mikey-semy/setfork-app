@@ -13,6 +13,11 @@ export interface Item {
   refId: string
   content: string
   metadata: Record<string, unknown>
+  /** Публично видимый список (published+public+active). Приватные/черновики/снятые
+   *  ИНДЕКСИРУЕМ (вектор нужен владельцу для семантического поиска СВОИХ списков —
+   *  visibleFilter(viewerId)), но их плейнтекст content/metadata в корпус НЕ пишем
+   *  (defense-in-depth: неосторожный будущий ридер embeddings не выдаст приватку). */
+  isPublic: boolean
 }
 
 /** templateId — точечный режим (фикс по ревью: реиндекс одного списка грузил ВЕСЬ корпус). */
@@ -42,10 +47,14 @@ export async function collectItems(templateId?: string): Promise<Item[]> {
       .filter(Boolean)
       .join('\n')
     const base = { slug: tpl.slug, ownerHandle: tpl.owner.handle, title }
-    const listItem: Item = { kind: 'list', refId: tpl.id, content, metadata: base }
+    // Синхронно с visibleFilter()/findPrecedents: публично видим = published+public+active.
+    const isPublic = tpl.visibility === 'public' && tpl.status === 'published' && tpl.moderation === 'active'
+    const listItem: Item = { kind: 'list', refId: tpl.id, content, metadata: base, isPublic }
     const stepItems: Item[] = steps.flatMap((s) => {
       const chunk = stepChunkContent(title, s)
-      return chunk ? [{ kind: 'step' as const, refId: tpl.id, content: chunk, metadata: { ...base, n: s.n, stepTitle: flat(s.title) } }] : []
+      return chunk
+        ? [{ kind: 'step' as const, refId: tpl.id, content: chunk, metadata: { ...base, n: s.n, stepTitle: flat(s.title) }, isPublic }]
+        : []
     })
     return [listItem, ...stepItems]
   })
@@ -98,9 +107,10 @@ export async function reindexList(templateId: string): Promise<void> {
     mine.map((it, i) => ({
       kind: it.kind,
       refId: it.refId,
-      content: it.content,
+      // Вектор уже посчитан из ПОЛНОГО текста; приватный плейнтекст в корпус не пишем.
+      content: it.isPublic ? it.content : '',
       embedding: vecs?.[i] ?? null,
-      metadata: it.metadata,
+      metadata: it.isPublic ? it.metadata : { private: true },
     })),
   )
 }
