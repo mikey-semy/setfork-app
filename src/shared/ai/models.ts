@@ -14,34 +14,10 @@ export interface ModelOption {
   completionPrice: number // за 1M completion-токенов
 }
 
-/** Человеческое имя модели: gpt://<каталог>/yandexgpt-5.1/latest → «yandexgpt-5.1»,
- *  openai/gpt-4o-mini → «gpt-4o-mini»; версия ≠ latest — в скобках. Чистая, тестируется. */
-export function prettyModelName(id: string): string {
-  const uri = /^(?:gpt|emb|art):\/\/[^/]+\/([^/]+)(?:\/([^/@]+))?(?:@(.+))?$/.exec(id)
-  if (uri) {
-    const [, name, ver, tuned] = uri
-    const verPart = ver && ver !== 'latest' ? ` (${ver})` : ''
-    return `${name}${tuned ? `@${tuned}` : ''}${verPart}`
-  }
-  const slash = id.indexOf('/')
-  return slash > 0 ? id.slice(slash + 1) : id
-}
-
-/** Семейство: owned_by провайдера, иначе вендор из префикса id (openai/…, gpt://…/yandexgpt…). */
-export function modelFamily(id: string, ownedBy?: string): string {
-  if (ownedBy && ownedBy !== 'gateway') return ownedBy
-  const slash = id.indexOf('/')
-  if (!id.includes('://') && slash > 0) {
-    const vendor = id.slice(0, slash)
-    return vendor.charAt(0).toUpperCase() + vendor.slice(1)
-  }
-  const n = prettyModelName(id)
-  if (/^(yandexgpt|aliceai)/.test(n)) return 'Yandex'
-  if (/^deepseek/.test(n)) return 'DeepSeek'
-  if (/^qwen/.test(n)) return 'Qwen'
-  if (/^gpt-oss/.test(n)) return 'OpenAI'
-  return ''
-}
+// Чистые имена вынесены в model-names.ts (клиенту нужен prettyModelName в родословной,
+// а этот модуль server-only). Реэкспорт — обратная совместимость импортов.
+export { prettyModelName, modelFamily } from './model-names'
+import { prettyModelName, modelFamily } from './model-names'
 
 export interface ModelsResult {
   provider: AiProviderId

@@ -217,6 +217,10 @@ export const templates = pgTable(
     runsCount: integer('runs_count').notNull().default(0),
     forksCount: integer('forks_count').notNull().default(0),
     starsCount: integer('stars_count').notNull().default(0),
+    // Когда рудник знаний (features/knowledge) последний раз добывал тройки из списка.
+    // Ставится НЕЗАВИСИМО от урожая (фикс по ревью: «пустые» списки перерабатывались
+    // ежедневно впустую). NULL = ещё не добывали.
+    triplesMinedAt: timestamp('triples_mined_at', { withTimezone: true }),
     // Сумма уникальных дневных просмотров (см. template_views); владелец не считается.
     viewsCount: integer('views_count').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

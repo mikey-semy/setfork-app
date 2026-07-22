@@ -74,13 +74,17 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
       return null
     }
     const data = (await res.json()) as {
-      data?: { embedding: number[] }[]
+      data?: { embedding: number[]; index?: number }[]
       usage?: { prompt_tokens?: number; total_tokens?: number }
     }
     if (!Array.isArray(data.data)) return null
     // Эмбеддинги готовы — фиксируем их ДО учёта расхода, чтобы результат не зависел
     // от записи в ai_usage (recordUsage к тому же гасит свои ошибки и не бросает).
-    const out = data.data.map((d) => padToColumn(d.embedding))
+    // Сортировка по index (фикс по ревью): спека OpenAI-совместимого ответа не гарантирует
+    // порядок, а с чанками шагов путаница вектора списка и шага была бы тихой порчей индекса.
+    const out = [...data.data]
+      .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+      .map((d) => padToColumn(d.embedding))
     // Учёт расхода: стоимость эмбеддингов провайдер в теле не возвращает — токены, cost 0.
     const tokens = data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0
     await recordUsage({

@@ -14,8 +14,10 @@ export interface Item {
   metadata: Record<string, unknown>
 }
 
-export async function collectItems(): Promise<Item[]> {
+/** templateId — точечный режим (фикс по ревью: реиндекс одного списка грузил ВЕСЬ корпус). */
+export async function collectItems(templateId?: string): Promise<Item[]> {
   const tpls = await db.query.templates.findMany({
+    ...(templateId ? { where: (t, { eq: eqOp }) => eqOp(t.id, templateId) } : {}),
     with: {
       owner: true,
       versions: { with: { steps: { orderBy: (s, { asc }) => asc(s.n) } }, orderBy: (v, { desc }) => desc(v.version) },
@@ -62,8 +64,7 @@ export async function purgeStaleEmbeddings(activeRefIds?: Set<string>): Promise<
 /** Точечная переиндексация одного списка (или удаление из индекса, если его нет).
  *  Список + его шаги эмбеддятся ОДНИМ батч-вызовом (embedTexts) — не по HTTP на шаг. */
 export async function reindexList(templateId: string): Promise<void> {
-  const items = await collectItems()
-  const mine = items.filter((i) => i.refId === templateId)
+  const mine = await collectItems(templateId)
   await db.delete(embeddings).where(eq(embeddings.refId, templateId))
   if (!mine.length) return
   const { embedTexts } = await import('@/shared/ai/embeddings')
