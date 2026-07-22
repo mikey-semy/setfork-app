@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { History } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -17,7 +17,6 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 
 export default async function BlamePage({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle: owner, slug }, lang] = await Promise.all([params, getLang()])
-  const ru = lang === 'ru'
   // requireViewableMeta = загрузка + проверка видимости атомарно (не хрупкий сайд-эффект
   // ListHeader): приватный/черновой/снятый список не отдаёт blame по owner/slug.
   const meta = await requireViewableMeta(owner, slug)
@@ -31,13 +30,9 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
     <>
       <div className="mx-auto w-full max-w-[900px] px-4 py-6">
         <h1 className="mb-1 flex items-center gap-2 text-[17px] font-bold text-ink">
-          <History size={18} className="text-muted" /> Blame
+          <History size={18} className="text-muted" /> {t('blameTitle', lang)}
         </h1>
-        <p className="mb-4 text-[13px] text-ink-2">
-          {ru
-            ? 'В какой версии каждый шаг менялся в последний раз (по позиции) — видно устаревшие и свежие.'
-            : 'Which version last changed each step (by position) — spot stale vs. fresh steps.'}
-        </p>
+        <p className="mb-4 text-[13px] text-ink-2">{t('blameHint', lang)}</p>
 
         <div className="divide-y divide-border rounded-lg border border-border bg-surface">
           {blame.steps.map((s) => {
@@ -52,7 +47,7 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
                   <span className="w-6 shrink-0 text-right font-mono text-[11px] text-muted">{s.n}</span>
                   <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink">{tr(s.title, lang)}</span>
                   {s.note && <span className="hidden min-w-0 max-w-[220px] truncate text-[12px] text-muted sm:block">{s.note}</span>}
-                  <Tooltip label={ru ? 'история версий' : 'version history'}>
+                  <Tooltip label={t('versionHistory', lang)}>
                     <Link
                       href={`${base}/versions`}
                       className={`shrink-0 rounded border px-1.5 font-mono text-[11px] ${

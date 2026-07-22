@@ -15,7 +15,7 @@ export function ChangelogCard({ lang, limit = 4 }: { lang: Lang; limit?: number 
         {CHANGELOG.slice(0, limit).map((e) => (
           <div key={e.date + e.en} className="relative">
             <span className="absolute left-[-12.5px] top-[5px] h-[7px] w-[7px] rounded-full border border-border bg-surface-2" />
-            <div className="font-mono text-[10.5px] text-muted">{fmt.format(new Date(e.date))}</div>
+            <div className="text-[10.5px] text-muted">{fmt.format(new Date(e.date))}</div>
             <div className="text-[12.5px] leading-snug text-ink-2">{ru ? e.ru : e.en}</div>
           </div>
         ))}

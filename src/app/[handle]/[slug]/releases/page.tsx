@@ -98,7 +98,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
                 )}
 
                 <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border/60 pt-2.5 text-[12.5px]">
-                  <span className="font-mono text-[10.5px] uppercase tracking-widest text-muted">Assets</span>
+                  <span className="text-[10.5px] font-semibold uppercase tracking-widest text-muted">Assets</span>
                   <a href={`${base}/export?format=md`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
                     <FileText size={13} /> markdown
                   </a>
