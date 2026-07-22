@@ -2,12 +2,16 @@
 
 import type { ReactNode } from 'react'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 /**
- * Реплика участника совета: аватарка + подпись роли + пузырь. Один примитив на оба места, где
- * совет «говорит»: беседа генерации (GenerationChat) и уточняющие вопросы в ней же.
+ * Реплика участника совета — облачко как в мессенджере (фидбек владельца по
+ * скринам Telegram): компактная аватарка у нижнего края, ИМЯ ВНУТРИ пузыря
+ * первой строкой цветом, хвостик к аватарке. Один примитив на оба места, где
+ * совет «говорит»: беседа генерации и уточняющие вопросы.
  *
- * Все реплики слева: пользователь в беседе не участник, он наблюдатель — его ход только в форме уточнений.
+ * Все реплики слева: пользователь в беседе не участник совета — его реплики
+ * рендерит GenerationChat справа, без аватарки (он один и видит себя в шапке).
  */
 
 // Аватарки: `public/gnomes/<id>.webp`. Ключи = id ролей движка (council.ts: EXPERTS.id + служебные).
@@ -30,23 +34,30 @@ function TypingDots() {
   )
 }
 
-export function CouncilBubble({ who, name, badge, typing, src, children }: { who?: string; name?: string; badge?: string; typing?: boolean; src?: string; children: ReactNode }) {
+export function CouncilBubble({ who, name, badge, badgeTitle, typing, src, children }: { who?: string; name?: string; badge?: string; badgeTitle?: string; typing?: boolean; src?: string; children: ReactNode }) {
   return (
-    <div className="flex items-end gap-2.5">
-      {/* Декоративная (роль названа рядом текстом). 64px: персонажи ростовые и с реквизитом, а внутри белого
-          кружка занимают лишь 80% диаметра — мельче роль не узнаётся, а в ней весь смысл аватарки.
-          Обычный <img>: статичная webp из public/, оптимизатор next/image ни к чему (как в shared/ui/Avatar). */}
-      <GnomeAvatar src={src || builtinSrc(who)} size={64} className="size-16 shrink-0" />
+    <div className="flex items-end gap-2">
+      {/* Декоративная (роль названа в пузыре). 44px — мессенджер-масштаб: ростовые персонажи
+          в 64px съедали строку чата (фидбек владельца «как статусы, не сообщения»). */}
+      <GnomeAvatar src={src || builtinSrc(who)} size={44} className="size-11 shrink-0" />
       <div className="min-w-0">
-        {name ? (
-          <div className="mb-1 pl-3.5 text-[11px] font-medium tracking-wide text-muted">
-            {name}
-            {/* Репутация (HQ §6): доля советов, принятых людьми, — почему этому голосу можно верить. */}
-            {badge && <span className="ml-1.5 rounded-full bg-(--accent-soft) px-1.5 py-px text-[10px] font-semibold text-accent">{badge}</span>}
-          </div>
-        ) : null}
-        {/* Без тени и рамки: контраст даёт surface поверх canvas. Скруглённый угол у аватарки — «хвостик» реплики. */}
-        <div className="w-fit rounded-2xl rounded-bl-md bg-(--surface) px-3.5 py-2 text-[13.5px] leading-[1.5] text-ink-2">
+        {/* Пузырь с хвостиком к аватарке; имя ВНУТРИ первой строкой цветом — как в Telegram. */}
+        <div className="w-fit max-w-full rounded-2xl rounded-bl-md bg-(--surface-2) px-3.5 py-2 text-[13.5px] leading-[1.5] text-ink-2">
+          {name ? (
+            <div className="mb-0.5 flex items-center gap-1.5 text-[12px] font-semibold text-accent">
+              {name}
+              {/* Репутация (HQ §6): доля советов, принятых людьми, — почему этому голосу можно верить. */}
+              {badge ? (
+                badgeTitle ? (
+                  <Tooltip label={badgeTitle}>
+                    <span className="rounded-full bg-(--accent-soft) px-1.5 py-px text-[10px] font-semibold text-accent">{badge}</span>
+                  </Tooltip>
+                ) : (
+                  <span className="rounded-full bg-(--accent-soft) px-1.5 py-px text-[10px] font-semibold text-accent">{badge}</span>
+                )
+              ) : null}
+            </div>
+          ) : null}
           {children}
           {typing ? <TypingDots /> : null}
         </div>
