@@ -1,3 +1,10 @@
+import { readFileSync } from 'node:fs'
+
+// Версия приложения — единый источник — package.json. Инлайним на сборке в
+// NEXT_PUBLIC_APP_VERSION, чтобы её видели и сервер (футер), и клиент (баннер
+// обновления) без чтения файла в рантайме (standalone-образ package.json не тащит целиком).
+const pkgVersion = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
+
 // Разрешённые origin'ы для Server Actions (Next сам сверяет Origin↔Host для CSRF).
 // Same-origin проходит всегда; тут добавляем прод-домен на случай прокси, где Host отличается.
 const serverActionOrigins = ['localhost:3000']
@@ -12,6 +19,8 @@ if (process.env.NEXT_PUBLIC_SITE_URL) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Прокидываем версию в бандл (клиент+сервер) — читается через shared/app-version.
+  env: { NEXT_PUBLIC_APP_VERSION: pkgVersion },
   // Компактный self-contained сервер (.next/standalone) для Docker-образа.
   output: 'standalone',
   images: {

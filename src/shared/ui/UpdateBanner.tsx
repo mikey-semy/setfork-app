@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, TriangleAlert } from 'lucide-react'
+import { APP_VERSION } from '@/shared/app-version'
 import type { Lang } from '@/shared/i18n'
 
 /**
@@ -16,10 +17,12 @@ const CHECK_MS = 5 * 60_000
 
 export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
-  const [stale, setStale] = useState(false)
+  // nextBuild — build-id серверной сборки, отличный от нашего: показываем короткий
+  // хвост как «что именно изменилось» (semver 0.1.0 между деплоями не двигается).
+  const [nextBuild, setNextBuild] = useState<string | null>(null)
 
   useEffect(() => {
-    if (build === 'dev' || stale) return // dev пересобирается на лету; уже показали — хватит дёргать сеть
+    if (build === 'dev' || nextBuild) return // dev пересобирается на лету; уже показали — хватит дёргать сеть
     let stop = false
     const check = async () => {
       if (stop || document.hidden) return
@@ -27,7 +30,7 @@ export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
         const r = await fetch('/api/version', { cache: 'no-store' })
         if (!r.ok) return
         const d: { build?: string } = await r.json()
-        if (d.build && d.build !== build) setStale(true)
+        if (d.build && d.build !== build) setNextBuild(d.build)
       } catch {
         // Сеть моргнула — проверим в следующий раз.
       }
@@ -44,18 +47,36 @@ export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
       window.removeEventListener('focus', onVisible)
       clearInterval(timer)
     }
-  }, [build, stale])
+  }, [build, nextBuild])
 
-  if (!stale) return null
+  if (!nextBuild) return null
   return (
-    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 animate-fadein items-center gap-3 rounded-full border border-border bg-surface py-2 pl-4 pr-2 text-[13px] text-ink shadow-card">
-      {say('SetFork was updated — reload to keep everything working.', 'Вышло обновление SetFork — перезагрузи, чтобы всё работало.')}
+    // Прямоугольная карточка-предупреждение (не «таблетка»): жёлтый акцент слева,
+    // иконка внимания, заголовок с версией, кнопка-иконка перезагрузки (без текста).
+    <div
+      role="alert"
+      className="fixed bottom-4 left-1/2 z-50 flex w-[min(92vw,400px)] -translate-x-1/2 animate-fadein items-start gap-3 border border-border border-l-2 border-l-warn bg-surface px-4 py-3 shadow-card"
+    >
+      <TriangleAlert size={18} className="mt-0.5 shrink-0 text-warn" />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] font-semibold text-ink">
+          {say('Update available', 'Доступно обновление')}
+          <span className="font-mono text-[11px] font-medium text-ink-2">
+            v{APP_VERSION} · {nextBuild.slice(0, 7)}
+          </span>
+        </div>
+        <p className="mt-0.5 text-[12px] leading-snug text-ink-2">
+          {say('Reload the page so everything keeps working.', 'Перезагрузите страницу, чтобы всё работало правильно.')}
+        </p>
+      </div>
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-fg"
+        aria-label={say('Reload', 'Перезагрузить')}
+        title={say('Reload', 'Перезагрузить')}
+        className="shrink-0 self-center rounded-md bg-primary p-2 text-primary-fg transition-opacity hover:opacity-90"
       >
-        <RefreshCw size={13} /> {say('Reload', 'Перезагрузить')}
+        <RefreshCw size={16} />
       </button>
     </div>
   )
