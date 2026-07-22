@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Award, Ban, Check, CircleAlert, CircleCheckBig, Flag, GraduationCap, Info, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
+import { ArrowLeft, Award, Ban, Check, CircleAlert, CircleCheckBig, Flag, GraduationCap, Info, LifeBuoy, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
@@ -12,7 +12,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ProductBlock, type ProductLinkVM } from '@/shared/ui/ProductBlock'
-import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
+import { assistStep, blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 
 export interface RunStepVM {
   id: string
@@ -34,6 +34,8 @@ export interface RunStepVM {
   blocked: boolean
   reason: string
   subtasksDone: number[]
+  /** Последняя AI-подсказка «помощи на шаге» (markdown; '' — не спрашивали). */
+  assist: string
 }
 
 export function RunView({
@@ -46,6 +48,7 @@ export function RunView({
   lang,
   certificateHref,
   courseCompleted,
+  assistEnabled,
 }: {
   runId: string
   status: 'active' | 'done' | 'abandoned' | 'failed'
@@ -58,12 +61,16 @@ export function RunView({
   // Курс уже пройден РАНЬШЕ (courseCompletions) — сертификат доступен и в новом
   // прогоне с нуля, повторное прохождение ради «бумажки» не требуется.
   courseCompleted?: boolean
+  /** «Помощь на шаге» доступна этому юзеру (флаг+аудитория посчитаны сервером). */
+  assistEnabled?: boolean
 }) {
   const ru = lang === 'ru'
   const [steps, setSteps] = useState(initial)
   const [, start] = useTransition()
   const [blockingId, setBlockingId] = useState<string | null>(null)
   const [reasonDraft, setReasonDraft] = useState('')
+  const [assistBusyId, setAssistBusyId] = useState<string | null>(null)
+  const [assistError, setAssistError] = useState<{ id: string; key: 'runAssistLimited' | 'runAssistQuota' | 'runAssistFailed' } | null>(null)
   // Прогресс — только по шаг-блокам (text/image — контекст, не чекаются).
   const isStep = (s: RunStepVM) => !s.type || s.type === 'step'
   const total = steps.filter(isStep).length
@@ -97,6 +104,26 @@ export function RunView({
     const s = steps[i]
     patch(i, { blocked: false, reason: '' })
     start(() => unblockStep(runId, s.id))
+  }
+  function askAssist(i: number) {
+    const s = steps[i]
+    if (assistBusyId) return
+    setAssistBusyId(s.id)
+    setAssistError(null)
+    start(async () => {
+      try {
+        const res = await assistStep(runId, s.id)
+        if ('text' in res) patch(i, { assist: res.text })
+        else {
+          const key = res.error === 'ratelimited' ? 'runAssistLimited' : res.error === 'ai_quota' ? 'runAssistQuota' : 'runAssistFailed'
+          setAssistError({ id: s.id, key })
+        }
+      } catch {
+        setAssistError({ id: s.id, key: 'runAssistFailed' })
+      } finally {
+        setAssistBusyId(null)
+      }
+    })
   }
 
   return (
@@ -290,18 +317,30 @@ export function RunView({
                   </div>
                 )}
 
-                {/* Неудачный путь: «не получилось» → причина → сообщить */}
+                {/* Неудачный путь: «не получилось» → причина → сообщить; рядом — «Помоги» (AI). */}
                 {!closed && !s.blocked && !s.done && blockingId !== s.id && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBlockingId(s.id)
-                      setReasonDraft('')
-                    }}
-                    className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-danger"
-                  >
-                    <Ban size={13} /> {t('runCantComplete', lang)}
-                  </button>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBlockingId(s.id)
+                        setReasonDraft('')
+                      }}
+                      className="inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-danger"
+                    >
+                      <Ban size={13} /> {t('runCantComplete', lang)}
+                    </button>
+                    {assistEnabled && (
+                      <button
+                        type="button"
+                        onClick={() => askAssist(i)}
+                        disabled={assistBusyId === s.id}
+                        className="inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-accent disabled:opacity-60"
+                      >
+                        <LifeBuoy size={13} /> {assistBusyId === s.id ? t('runAssistThinking', lang) : t(s.assist ? 'runAssistAgain' : 'runAssist', lang)}
+                      </button>
+                    )}
+                  </div>
                 )}
                 {blockingId === s.id && (
                   <div className="mt-3 rounded-md border border-danger/40 bg-danger/5 p-2.5">
@@ -343,6 +382,17 @@ export function RunView({
                     </div>
                     {s.reason && <div className="mt-0.5 text-ink-2">{s.reason}</div>}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {/* Застрявшему помощь нужнее всего — «Помоги» первой кнопкой. */}
+                      {assistEnabled && !closed && (
+                        <button
+                          type="button"
+                          onClick={() => askAssist(i)}
+                          disabled={assistBusyId === s.id}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-ink hover:border-border-strong disabled:opacity-60"
+                        >
+                          <LifeBuoy size={12} /> {assistBusyId === s.id ? t('runAssistThinking', lang) : t(s.assist ? 'runAssistAgain' : 'runAssist', lang)}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => start(() => reportBlockedStep(runId, s.id))}
@@ -356,6 +406,19 @@ export function RunView({
                         </button>
                       )}
                     </div>
+                  </div>
+                )}
+                {/* Панель подсказки «помощи на шаге» — под текущим состоянием шага. */}
+                {(s.assist || assistError?.id === s.id) && (
+                  <div className="mt-3 rounded-md border border-border bg-surface-2 p-2.5 text-[12.5px]">
+                    <div className="flex items-center gap-1.5 font-semibold text-ink">
+                      <LifeBuoy size={13} className="text-accent" /> {t('runAssistLabel', lang)}
+                    </div>
+                    {assistError?.id === s.id ? (
+                      <div className="mt-0.5 text-danger">{t(assistError.key, lang)}</div>
+                    ) : (
+                      <Markdown className="mt-1 text-ink-2">{s.assist}</Markdown>
+                    )}
                   </div>
                 )}
               </div>

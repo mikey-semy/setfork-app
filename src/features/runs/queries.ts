@@ -1,7 +1,21 @@
 import 'server-only'
-import { and, eq, inArray, sql } from 'drizzle-orm'
-import { db, runs, steps } from '@/shared/db'
+import { and, eq, inArray, ne, sql } from 'drizzle-orm'
+import { db, runStepState, runs, steps } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
+
+/** Опыт других прогонов шага для «помощи на шаге»: сколько прошло / застряло.
+ *  Только счётчики (наш data moat) — чужие тексты причин НЕ выдаём (приватность note).
+ *  excludeRunId — текущий прогон не считаем сам себе «опытом других». */
+export async function stepStuckStats(stepId: string, excludeRunId: string): Promise<{ passed: number; stuck: number }> {
+  const [row] = await db
+    .select({
+      passed: sql<number>`count(*) filter (where ${runStepState.status} = 'done')::int`,
+      stuck: sql<number>`count(*) filter (where ${runStepState.status} = 'blocked')::int`,
+    })
+    .from(runStepState)
+    .where(and(eq(runStepState.stepId, stepId), ne(runStepState.runId, excludeRunId)))
+  return { passed: row?.passed ?? 0, stuck: row?.stuck ?? 0 }
+}
 
 export interface UserRunRow {
   id: string
