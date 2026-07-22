@@ -5,7 +5,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { baseModelId, filterByQuarantine, quarantinedModels } from './health'
-import { gnomeMood, gnomeReputation, repScore } from './gnome-reputation'
+import { gnomeMood, gnomeReputation, gnomeThanksCounts, repScore } from './gnome-reputation'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, jsonShapeFor, type GeneratedList, type GenerateOptions } from './generate'
@@ -210,12 +210,12 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
       // (few-shot по research: не показываем статику дословно — она «робот»).
       // + НАСТРОЕНИЕ (RPG-развитие): демеанор из послужного списка гнома — часто
       // отклоняют → ворчливый, часто принимают → окрылённый. Реальный сигнал в стиль.
-      const moodRep = await gnomeReputation()
+      const [moodRep, thanksN] = await Promise.all([gnomeReputation(), gnomeThanksCounts()])
       const whoIds = ['planner', 'reporter', 'innovator', 'critic', 'elder', ...EXPERTS.map((e) => e.id)]
       const cards = whoIds
         .map((id) => {
           const c = gnomeCard(id)
-          const mood = gnomeMood(moodRep, id).style
+          const mood = gnomeMood(moodRep, id, thanksN[id] ?? 0).style
           return `${id}: ${c.trait}; тик — ${c.quirk}; эмодзи ${c.emoji}${mood ? `; настроение сейчас — ${mood}` : ''}`
         })
         .join('\n')

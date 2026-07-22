@@ -66,23 +66,50 @@ export interface GnomeMood {
   style: string
 }
 
-export function gnomeMood(rep: Record<string, GnomeRep>, id: string): GnomeMood {
+export function gnomeMood(rep: Record<string, GnomeRep>, id: string, thanks = 0): GnomeMood {
   const r = rep[id]
-  if (!r || r.gens < REP_MIN_GENS) return { label: 'settled', labelRu: 'ровный', style: '' }
+  // «Спасибо» — сильный тёплый сигнал (идея владельца: поблагодарят → добрый и
+  // счастливый). Даже без достаточной статистики принятий пара благодарностей
+  // делает гнома приветливым; много — согревает даже ворчуна.
+  const warmed = thanks >= 2
+  if (!r || r.gens < REP_MIN_GENS) {
+    return warmed
+      ? { label: 'content', labelRu: 'тронут', style: `warm and a little touched — someone thanked it${thanks >= 5 ? ' more than once' : ''}` }
+      : { label: 'settled', labelRu: 'ровный', style: '' }
+  }
   const rate = r.accepted / r.gens
-  // Интенсивность растёт с объёмом опыта: у бывалого гнома чувства ярче.
   const seasoned = r.gens >= REP_MIN_GENS * 3
-  if (rate >= 0.6)
+  const thanksNote = warmed ? '; and it has been thanked — that warms it up' : ''
+  if (rate >= 0.6 || (warmed && rate >= 0.4))
     return {
       label: 'elated',
       labelRu: 'окрылённый',
-      style: `upbeat, warm and generous with tips — its lists keep getting accepted${seasoned ? ', quietly proud of its craft' : ''}`,
+      style: `upbeat, warm and generous with tips — its lists keep getting accepted${seasoned ? ', quietly proud of its craft' : ''}${thanksNote}`,
     }
-  if (rate >= 0.4) return { label: 'content', labelRu: 'в духе', style: 'confident and in good spirits, work is landing well' }
-  if (rate >= 0.2) return { label: 'wary', labelRu: 'задетый', style: 'a touch self-doubting and terse, double-checks itself — lately often turned down' }
+  if (rate >= 0.4) return { label: 'content', labelRu: 'в духе', style: `confident and in good spirits, work is landing well${thanksNote}` }
+  if (rate >= 0.2) return { label: 'wary', labelRu: 'задетый', style: `a touch self-doubting and terse, double-checks itself — lately often turned down${thanksNote}` }
   return {
     label: 'grumpy',
     labelRu: 'ворчливый',
-    style: `grumbling and touchy, half-expects a rejection${seasoned ? ' after so many' : ''} — defensive but still professional and useful`,
+    style: `grumbling and touchy, half-expects a rejection${seasoned ? ' after so many' : ''} — defensive but still professional and useful${thanksNote}`,
+  }
+}
+
+/** Сколько «спасибо» у каждого гнома (одушевление): питает настроение. Кеш 5 мин. */
+let thanksCache: { at: number; data: Record<string, number> } | null = null
+export async function gnomeThanksCounts(): Promise<Record<string, number>> {
+  if (thanksCache && Date.now() - thanksCache.at < 5 * 60_000) return thanksCache.data
+  try {
+    const { gnomeThanks } = await import('@/shared/db')
+    const rows = await db
+      .select({ who: gnomeThanks.gnomeId, n: sql<number>`count(*)::int` })
+      .from(gnomeThanks)
+      .groupBy(gnomeThanks.gnomeId)
+    const data: Record<string, number> = {}
+    for (const r of rows) data[r.who] = r.n
+    thanksCache = { at: Date.now(), data }
+    return data
+  } catch {
+    return thanksCache?.data ?? {}
   }
 }

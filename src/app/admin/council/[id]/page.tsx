@@ -7,7 +7,7 @@ import { getLang } from '@/shared/i18n/server'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { prettyModelName } from '@/shared/ai/models'
 import { gnomeKpi } from '@/features/admin/gnome-stats'
-import { gnomeMood } from '@/shared/ai/gnome-reputation'
+import { gnomeMood, gnomeThanksCounts } from '@/shared/ai/gnome-reputation'
 import { timeAgo } from '@/shared/ui/timeAgo'
 
 /**
@@ -32,7 +32,8 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   const avatarUrl = e.avatarUploaded ? avatars[e.id] : `/gnomes/${e.avatar || e.id}.webp`
   const acceptShare = kpi.gens ? Math.round((kpi.accepted / kpi.gens) * 100) : null
   // Настроение (RPG-развитие): демеанор из послужного списка — в стиль общения.
-  const mood = gnomeMood({ [e.id]: { gens: kpi.gens, accepted: kpi.accepted } }, e.id)
+  const thanksN = (await gnomeThanksCounts())[e.id] ?? 0
+  const mood = gnomeMood({ [e.id]: { gens: kpi.gens, accepted: kpi.accepted } }, e.id, thanksN)
   const moodEmoji: Record<string, string> = { elated: '😄', content: '🙂', settled: '😐', wary: '😟', grumpy: '😾' }
 
   const card = 'rounded-lg border border-border bg-surface p-4'

@@ -50,3 +50,19 @@ describe('gnomeMood (RPG-развитие: настроение из послу�
     expect(gnomeMood({}, 'unknown').labelRu).toBe('ровный')
   })
 })
+
+describe('gnomeMood + «спасибо» (одушевление: поблагодарят → добрее)', () => {
+  const R = (gens: number, accepted: number): Record<string, GnomeRep> => ({ g: { gens, accepted } })
+  it('пара «спасибо» без статистики → тронут (тёплый), не ровный', () => {
+    const m = gnomeMood({}, 'g', 3)
+    expect(m.labelRu).toBe('тронут')
+    expect(m.style).toContain('thanked')
+  })
+  it('«спасибо» согревает даже ворчуна (в стиле появляется тёплая нота)', () => {
+    const m = gnomeMood(R(20, 2), 'g', 4) // низкая принятость, но благодарили
+    expect(m.style).toContain('thanked')
+  })
+  it('одно «спасибо» (< порога) не меняет ровного', () => {
+    expect(gnomeMood({}, 'g', 1).labelRu).toBe('ровный')
+  })
+})

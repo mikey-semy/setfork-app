@@ -1038,6 +1038,26 @@ export const digLayers = pgTable(
 )
 
 /**
+ * Благодарности гному (одушевление, идея владельца «скажут спасибо — запомнит и
+ * будет добрым»): явный положительный сигнал сверх принятия списка. Питает
+ * настроение (теплеет) и — позже — эпизодическую память (личные уроки). Одна
+ * строка = один «спасибо» от пользователя; source различает место (dig/…).
+ */
+export const gnomeThanks = pgTable(
+  'gnome_thanks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    gnomeId: text('gnome_id').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    source: text('source').notNull().default('dig'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('gnome_thanks_gnome_idx').on(t.gnomeId, t.createdAt)],
+)
+
+/**
  * Мини-чат раскопки (редизайн «Копать глубже»): ПЕРСОНАЛЬНАЯ беседа читателя с
  * гномом по конкретному пункту. В отличие от dig_layers (общие штольни, один
  * слой на уровень) — своя нить у каждого пользователя, живёт как сессия: открыл
