@@ -324,7 +324,7 @@ export default async function ListPage({
                       <Tooltip label={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}>
                         <button
                           type="submit"
-                          className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border px-3 text-[13px] font-semibold text-ink hover:border-border-strong"
+                          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-[13px] font-semibold text-ink hover:border-border-strong"
                         >
                           <LayoutTemplate size={14} /> <span className="hidden md:inline">{lang === 'ru' ? 'Использовать шаблон' : 'Use this template'}</span>
                         </button>
@@ -332,10 +332,10 @@ export default async function ListPage({
                     </form>
                   )}
                   {/* Run — первичное действие, отдельной кнопкой рядом с Получить.
-                      Высота фиксирована (38px) — ряд ровный с Получить и «...». */}
+                      Высота фиксирована (36px, h-9) — ряд ровный с Получить и «...». */}
                   {viewer && (
                     <form action={startRun.bind(null, tpl.id)} className="inline-flex">
-                      <button className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[13px] font-semibold text-primary-fg hover:opacity-90">
+                      <button className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[13px] font-semibold text-primary-fg hover:opacity-90">
                         <PlayCircle size={15} /> <span className="hidden md:inline">{t('runStart', lang)}</span>
                       </button>
                     </form>

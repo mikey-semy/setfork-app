@@ -51,7 +51,7 @@ export function ListActionsMenu({
         <button
           type="button"
           aria-label={say('More actions', 'Ещё действия')}
-          className="inline-flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-md border border-border text-ink transition-colors hover:border-border-strong"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-ink transition-colors hover:border-border-strong"
         >
           <MoreHorizontal size={16} />
         </button>

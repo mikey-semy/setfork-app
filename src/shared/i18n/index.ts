@@ -683,6 +683,7 @@ const DICT = {
   },
   aboutProject: { en: 'About', ru: 'О проекте' },
   appVersion: { en: 'App version', ru: 'Версия приложения' },
+  moreActions: { en: 'More actions', ru: 'Ещё действия' },
   terms: { en: 'Terms', ru: 'Условия' },
   privacy: { en: 'Privacy', ru: 'Конфиденциальность' },
   contact: { en: 'Contact', ru: 'Контакты' },

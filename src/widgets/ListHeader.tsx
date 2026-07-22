@@ -12,6 +12,7 @@ import { StarButton } from '@/features/library/StarButton'
 import { StarFolderMenu } from '@/features/star-folders/StarFolderMenu'
 import { getFoldersForTemplate, getUserFolders } from '@/features/star-folders/queries'
 import { ShareButton } from '@/features/library/ShareButton'
+import { ListHeaderMenu } from '@/features/library/ListHeaderMenu'
 import { WatchButton } from '@/features/watch/WatchButton'
 import { getOpenSuggestionCount, isStarred } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -102,10 +103,12 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Start run переехал в Use-дропдаун (version-bar) — тоже «исполнение». */}
-            {/* Pin — только своим ПУБЛИЧНЫМ (приватные к публичному профилю не прикрепить). */}
+            {/* Pin — свой публичный. Кнопкой на широком экране (как GitHub);
+                на мобиле уезжает в «...» (см. ниже). */}
             {isOwner && meta.visibility === 'public' && (
-              <PinButton templateId={meta.id} pinned={meta.pinned} pinLabel={t('pin', lang)} unpinLabel={t('unpin', lang)} />
+              <span className="hidden sm:inline-flex">
+                <PinButton templateId={meta.id} pinned={meta.pinned} pinLabel={t('pin', lang)} unpinLabel={t('unpin', lang)} />
+              </span>
             )}
             {session && watchState && (
               <WatchButton
@@ -134,27 +137,28 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             )}
             {session ? (
               // Split-кнопка как у GitHub: [★ Star N | ▾-папки] одной группой.
-              <span className="inline-flex items-stretch">
+              // h-9 на группе + items-stretch → оба дочерних ровно 36px.
+              <span className="inline-flex h-9 items-stretch">
                 <StarButton templateId={meta.id} starred={starred} count={meta.starsCount} label={t('star', lang)} grouped />
                 <StarFolderMenu templateId={meta.id} folders={folders} inFolders={inFolders} lang={lang} />
               </span>
             ) : (
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+                className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3.5 text-[13px] font-semibold text-ink hover:border-border-strong"
               >
                 <Star size={14} /> <span className="hidden sm:inline">{t('star', lang)}</span> <span className="font-mono text-[12px] text-muted">{meta.starsCount}</span>
               </Link>
             )}
             {/* Fork как split на GitHub: кнопка (диалог для чужого / неактивна для своего /
                 логин для гостя) + счётчик-ссылка в дерево форков (HQ §11, #395). */}
-            <span className="inline-flex items-stretch overflow-hidden rounded-md border border-border">
+            <span className="inline-flex h-9 items-stretch overflow-hidden rounded-md border border-border">
               {isOwner ? (
                 // Свой список форкнуть нельзя (как на GitHub свой репозиторий) — кнопка неактивна.
                 <button
                   disabled
                   title={t('cantForkOwn', lang)}
-                  className="inline-flex cursor-not-allowed items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-muted opacity-60"
+                  className="inline-flex h-full cursor-not-allowed items-center gap-2 px-3.5 text-[13px] font-semibold text-muted opacity-60"
                 >
                   <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
                 </button>
@@ -181,7 +185,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               ) : (
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-surface-2"
+                  className="inline-flex h-full items-center gap-2 px-3.5 text-[13px] font-semibold text-ink hover:bg-surface-2"
                 >
                   <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
                 </Link>
@@ -190,11 +194,12 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               <Link
                 href={`${base}/forks`}
                 aria-label={t('fork', lang)}
-                className="inline-flex items-center border-l border-border px-2.5 py-2 font-mono text-[12px] text-muted hover:bg-surface-2 hover:text-ink"
+                className="inline-flex h-full items-center border-l border-border px-2.5 font-mono text-[12px] text-muted hover:bg-surface-2 hover:text-ink"
               >
                 {meta.forksCount}
               </Link>
             </span>
+            {/* Share — кнопкой на широком экране; на мобиле уезжает в «...». */}
             <ShareButton
               path={base}
               ru={lang === 'ru'}
@@ -204,8 +209,30 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               copyLinkLabel={t('copyLink', lang)}
               shareViaLabel={t('shareVia', lang)}
               qrHint={t('qrHint', lang)}
-              className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+              className="hidden h-9 items-center gap-2 rounded-md border border-border px-3.5 text-[13px] font-semibold text-ink hover:border-border-strong sm:inline-flex"
             />
+            {/* «...» — вторичное (Pin + Поделиться) ТОЛЬКО на мобиле, где ряд не
+                вмещает всё. На широком экране всё видно кнопками — как в GitHub. */}
+            <span className="inline-flex sm:hidden">
+              <ListHeaderMenu
+                moreLabel={t('moreActions', lang)}
+                canPin={isOwner && meta.visibility === 'public'}
+                templateId={meta.id}
+                pinned={meta.pinned}
+                pinLabel={t('pin', lang)}
+                unpinLabel={t('unpin', lang)}
+                path={base}
+                shareTitle={tr(meta.title, lang)}
+                ru={lang === 'ru'}
+                share={{
+                  label: t('share', lang),
+                  copiedLabel: t('copied', lang),
+                  copyLinkLabel: t('copyLink', lang),
+                  shareViaLabel: t('shareVia', lang),
+                  qrHint: t('qrHint', lang),
+                }}
+              />
+            </span>
             {/* Use (клон) и Edit/Suggest переехали в область списка (version-bar) — как
                 зелёная Code и карандаш у GitHub живут в контенте, не в шапке. */}
           </div>

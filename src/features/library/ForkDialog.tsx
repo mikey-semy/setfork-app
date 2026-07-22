@@ -76,8 +76,8 @@ export function ForkDialog({
         }}
         className={
           grouped
-            ? 'inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-surface-2'
-            : 'inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong'
+            ? 'inline-flex h-full items-center gap-2 px-3.5 text-[13px] font-semibold text-ink hover:bg-surface-2'
+            : 'inline-flex h-9 items-center gap-2 rounded-md border border-border px-3.5 text-[13px] font-semibold text-ink hover:border-border-strong'
         }
       >
         <GitFork size={14} /> <span className="hidden sm:inline">{labels.fork}</span>

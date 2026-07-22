@@ -42,7 +42,93 @@ function networks(u: string, text: string, ru: boolean) {
   return order.map((name) => ({ name, href: all[name] }))
 }
 
-/** «Поделиться»: соц-сети + копирование ссылки + QR-код + системный share (мобильные). */
+export interface ShareLabels {
+  label?: string
+  copiedLabel?: string
+  copyLinkLabel?: string
+  shareViaLabel?: string
+  qrHint?: string
+}
+
+/**
+ * Содержимое «Поделиться» БЕЗ триггера/обёртки-дропдауна — чтобы переиспользовать
+ * и в самостоятельной кнопке ShareButton, и внутри общего «...»-меню шапки
+ * (ListHeaderMenu), не дублируя копирование/соцсети/QR. QR генерим на маунте:
+ * компонент монтируется только когда меню открыто (Radix-портал), так же как
+ * раньше по onOpenChange.
+ */
+export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabel, copyLinkLabel, shareViaLabel, qrHint }: { path: string; title?: string; ru?: boolean } & ShareLabels) {
+  const [copied, setCopied] = useState(false)
+  const [qr, setQr] = useState('')
+  const [canNative, setCanNative] = useState(false)
+  const url = typeof location !== 'undefined' ? location.origin + path : path
+
+  useEffect(() => {
+    setCanNative(typeof navigator !== 'undefined' && typeof navigator.share === 'function')
+    QRCode.toDataURL(url, { width: 176, margin: 1 }).then(setQr).catch(() => {})
+  }, [url])
+
+  const copy = () => {
+    navigator.clipboard?.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1400)
+  }
+  const nativeShare = () => {
+    navigator.share?.({ title: title || undefined, url }).catch(() => {})
+  }
+  const nets = networks(url, title, ru)
+
+  return (
+    <>
+      {canNative && (
+        <button
+          onClick={nativeShare}
+          className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+        >
+          <Share2 size={15} /> {label}
+        </button>
+      )}
+      <button
+        onClick={copy}
+        className="flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+      >
+        {copied ? <Check size={15} className="text-ok" /> : <Copy size={15} />}
+        {copied ? (copiedLabel ?? copyLinkLabel) : copyLinkLabel}
+      </button>
+
+      <div className="mt-2 border-t border-border pt-2">
+        {shareViaLabel && (
+          <div className="mb-1.5 px-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">{shareViaLabel}</div>
+        )}
+        <div className="grid grid-cols-3 gap-1">
+          {nets.map((n) => (
+            <a
+              key={n.name}
+              href={n.href}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={n.name}
+              className="flex flex-col items-center gap-1 rounded-md px-1 py-2 text-muted hover:bg-surface-2 hover:text-ink"
+            >
+              {ICON[n.name]}
+              <span className="text-[10.5px] leading-none">{n.name}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {qr && (
+        <div className="mt-2 flex flex-col items-center border-t border-border pt-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={qr} alt="QR" width={160} height={160} className="rounded bg-white p-1" />
+          <span className="mt-1.5 text-[11px] text-muted">{qrHint}</span>
+        </div>
+      )}
+    </>
+  )
+}
+
+/** «Поделиться»: самостоятельная кнопка-дропдаун (соц-сети + копия + QR + системный share). */
 export function ShareButton({
   path,
   title = '',
@@ -59,89 +145,16 @@ export function ShareButton({
   /** Порядок соцсетей под аудиторию локали (ru: VK/TG/OK первыми). */
   ru?: boolean
   className?: string
-  label?: string
-  copiedLabel?: string
-  copyLinkLabel?: string
-  shareViaLabel?: string
-  qrHint?: string
-}) {
-  const [copied, setCopied] = useState(false)
-  const [qr, setQr] = useState('')
-  const [canNative, setCanNative] = useState(false)
-
-  // navigator.share есть только на клиенте (и не всегда) — проверяем после маунта.
-  useEffect(() => {
-    setCanNative(typeof navigator !== 'undefined' && typeof navigator.share === 'function')
-  }, [])
-
-  const url = () => (typeof location !== 'undefined' ? location.origin + path : path)
-
-  const onOpenChange = (open: boolean) => {
-    if (open && !qr) QRCode.toDataURL(url(), { width: 176, margin: 1 }).then(setQr).catch(() => {})
-  }
-  const copy = () => {
-    navigator.clipboard?.writeText(url())
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1400)
-  }
-  const nativeShare = () => {
-    navigator.share?.({ title: title || undefined, url: url() }).catch(() => {})
-  }
-
-  const nets = networks(url(), title, ru)
-
+} & ShareLabels) {
   return (
-    <DropdownMenu onOpenChange={onOpenChange}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" className={className} aria-label={label || 'Share'}>
           <Share2 size={15} /> {label && <span className="hidden sm:inline">{label}</span>}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[240px] p-3">
-        {canNative && (
-          <button
-            onClick={nativeShare}
-            className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
-          >
-            <Share2 size={15} /> {label}
-          </button>
-        )}
-        <button
-          onClick={copy}
-          className="flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
-        >
-          {copied ? <Check size={15} className="text-ok" /> : <Copy size={15} />}
-          {copied ? (copiedLabel ?? copyLinkLabel) : copyLinkLabel}
-        </button>
-
-        <div className="mt-2 border-t border-border pt-2">
-          {shareViaLabel && (
-            <div className="mb-1.5 px-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">{shareViaLabel}</div>
-          )}
-          <div className="grid grid-cols-3 gap-1">
-            {nets.map((n) => (
-              <a
-                key={n.name}
-                href={n.href}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={n.name}
-                className="flex flex-col items-center gap-1 rounded-md px-1 py-2 text-muted hover:bg-surface-2 hover:text-ink"
-              >
-                {ICON[n.name]}
-                <span className="text-[10.5px] leading-none">{n.name}</span>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {qr && (
-          <div className="mt-2 flex flex-col items-center border-t border-border pt-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={qr} alt="QR" width={160} height={160} className="rounded bg-white p-1" />
-            <span className="mt-1.5 text-[11px] text-muted">{qrHint}</span>
-          </div>
-        )}
+        <ShareMenuItems path={path} title={title} ru={ru} label={label} copiedLabel={copiedLabel} copyLinkLabel={copyLinkLabel} shareViaLabel={shareViaLabel} qrHint={qrHint} />
       </DropdownMenuContent>
     </DropdownMenu>
   )
