@@ -31,8 +31,17 @@ describe('dominantLang', () => {
   it('русский список → ru (чинит рефайн RU-списков по-английски)', () => {
     expect(dominantLang([{ ru: 'Маршмеллоу' }, { ru: 'Сахар — 400 г' }, { ru: 'Взбить' }])).toBe('ru')
   })
-  it('двуязычный (перевод есть везде) → en при ничьей', () => {
-    expect(dominantLang([{ en: 'A', ru: 'А' }, { en: 'B', ru: 'Б' }])).toBe('en')
+  it('ГЛАВНЫЙ БАГ: русский текст под ключом en (ключ = язык интерфейса, не текста) → ru', () => {
+    expect(dominantLang([{ en: 'Список книг по фантастике' }, { en: 'Дюна — прочитать первой' }])).toBe('ru')
+  })
+  it('русский технический список с латинскими командами → ru (порог ⅓)', () => {
+    expect(dominantLang([{ en: 'Настроить бэкапы Postgres' }, { en: 'pg_dump --format=custom, потом aws s3 cp' }])).toBe('ru')
+  })
+  it('английский список → en (кириллицы нет)', () => {
+    expect(dominantLang([{ en: 'Deploy checklist' }, { en: 'Pin image by digest' }])).toBe('en')
+  })
+  it('полный дубляж (перевод есть везде) → ru: кириллица ≥ трети букв', () => {
+    expect(dominantLang([{ en: 'Beat egg whites', ru: 'Взбить белки' }])).toBe('ru')
   })
   it('пустые/undefined значения не считаются', () => {
     expect(dominantLang([{ en: '', ru: 'Только рус' }, undefined, null])).toBe('ru')

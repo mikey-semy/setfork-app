@@ -1,5 +1,5 @@
 import { LIST_KINDS, classifyListKind, type ListKind } from './list-kind'
-import { LOCALES, type Lang, type LocaleText } from '@/shared/i18n'
+import { type Lang, type LocaleText } from '@/shared/i18n'
 
 // Политики качества садовника ПО ТИПУ СПИСКА (ось B «живые списки»).
 // Инсайт владельца: рецепту не нужен ассистент, но нужна точность («посолить
@@ -12,6 +12,7 @@ export const GARDENER_BASE_INSTRUCTION =
   'You are the site gardener improving a community list. ' +
   'Clarify vague steps, add missing verification sub-tasks, add a short "why" where the reason is non-obvious, ' +
   'and fix factual or ordering issues. Keep the author’s voice and structure. ' +
+  'The language of the list is part of the author’s voice: NEVER translate the list into another language — translation is not an improvement. ' +
   'Add at most 2 new steps and do not remove existing ones unless clearly wrong.'
 
 /** Код-дефолты политик. Главное правило всех политик: НЕ ВЫДУМЫВАТЬ ФАКТЫ —
@@ -48,27 +49,27 @@ export function policyFor(kind: ListKind, overrides: Partial<Record<ListKind, st
 export const policySettingKey = (kind: ListKind) => `gardener.policy.${kind}`
 export const POLICY_SETTING_KEYS = LIST_KINDS.map(policySettingKey)
 
-/** Доминантный язык мультиязычного контента: язык с наибольшим числом
- *  непустых значений по полям (ничья → 'en'). Чинит баг: садовник рефайнил
- *  RU-списки с lang='en' и предлагал английский перевод русского списка. */
+/** Язык ФАКТИЧЕСКОГО текста — по алфавиту, а не по ключам LocaleText.
+ *  Ключ врёт: createTemplate кладёт текст под язык ИНТЕРФЕЙСА автора, поэтому
+ *  русский список при en-интерфейсе хранится под 'en'. Прежний dominantLang
+ *  считал ключи и садовник «улучшал» такие списки переводом на английский.
+ *  Кириллица ≥ трети букв → ru: технические списки полны латинских команд и
+ *  терминов, треть — достаточный сигнал. Расширение LOCALES потребует
+ *  настоящей детекции, пока алфавитов два. */
+export function textLang(texts: (string | null | undefined)[]): Lang {
+  let cyr = 0
+  let lat = 0
+  for (const v of texts) {
+    if (!v) continue
+    cyr += (v.match(/[а-яё]/gi) ?? []).length
+    lat += (v.match(/[a-z]/gi) ?? []).length
+  }
+  return cyr > 0 && cyr >= (cyr + lat) / 3 ? 'ru' : 'en'
+}
+
+/** То же для мультиязычного контента: смотрим значения ВСЕХ ключей. */
 export function dominantLang(texts: (LocaleText | null | undefined)[]): Lang {
-  const counts = new Map<string, number>()
-  for (const t of texts) {
-    if (!t) continue
-    for (const [k, v] of Object.entries(t)) {
-      if (typeof v === 'string' && v.trim()) counts.set(k, (counts.get(k) ?? 0) + 1)
-    }
-  }
-  let best: Lang = 'en'
-  let bestN = counts.get('en') ?? 0
-  for (const l of LOCALES) {
-    const n = counts.get(l) ?? 0
-    if (n > bestN) {
-      best = l
-      bestN = n
-    }
-  }
-  return best
+  return textLang(texts.flatMap((t) => (t ? Object.values(t) : [])))
 }
 
 /** Тип списка по структуре (дешёвая эвристика для ленивого бэкфилла

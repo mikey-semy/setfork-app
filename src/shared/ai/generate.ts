@@ -303,6 +303,7 @@ export async function generateListRefine(
   const sp = spotlight()
   const system = `You REFINE an existing list per the user's instruction, returning the FULL updated list as STRICT JSON.
 All content MUST be in ${langName}.
+Translation is never an improvement: if the CURRENT LIST is written in a different language than ${langName}, keep the language of the CURRENT LIST — unless the INSTRUCTION explicitly asks to translate.
 Preserve good existing content and ordering; change only what the instruction requires. Do not drop unrelated steps.
 Preserve each item's "section" value; keep items grouped in their sections.
 ${web ? 'You may use web search to ground new content.\n' : ''}${jsonShapeFor(opts.kind ?? 'procedure')}
