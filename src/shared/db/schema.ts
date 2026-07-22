@@ -214,6 +214,9 @@ export const templates = pgTable(
     isTemplate: boolean('is_template').notNull().default(false), // «Use this template» (копия без fork-связи)
     coverImage: text('cover_image'), // storage_key обложки-баннера (витрина/og); null → авто-баннер
     accent: text('accent'), // hex акцента карточки/авто-баннера ('' / null = дефолт)
+    // Тип списка (ADR-0010): переносится из generations при принятии кандидата,
+    // лениво доклассифицируется садовником. null = ещё не определён (≈procedure).
+    listKind: text('list_kind'),
     repositoryId: uuid('repository_id'), // каталог-репозиторий (FK задаётся в relations); null = solo
     forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
     runsCount: integer('runs_count').notNull().default(0),

@@ -298,6 +298,19 @@ const DICT = {
   runUnblock: { en: 'Unblock', ru: 'Разблокировать' },
   runDelete: { en: 'Delete run', ru: 'Удалить прогон' },
   runDeleteConfirm: { en: 'Delete this run? Your progress will be lost — this cannot be undone.', ru: 'Удалить прогон? Прогресс пропадёт — это необратимо.' },
+  // ── Садовник: note правки на языке списка ──
+  gardenerNoteRecipe: {
+    en: '\u{1F9D9} Gardener: clarified amounts (marked ~) and timings. Verify quantities before merging.',
+    ru: '\u{1F9D9} Садовник: уточнил количества (помечены ~) и тайминги. Проверьте граммовки перед принятием.',
+  },
+  gardenerNoteDefault: {
+    en: '\u{1F9D9} Gardener: clarified steps, added checks and rationale. Review and merge if useful.',
+    ru: '\u{1F9D9} Садовник: уточнил шаги, добавил проверки и обоснования. Примите, если полезно.',
+  },
+  gardenerNoteDeadLinks: {
+    en: 'Replaced {n} dead link(s) — verify the new sources.',
+    ru: 'Заменил мёртвых ссылок: {n} — проверьте новые источники.',
+  },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for agents to connect via MCP: search and read your lists — and, with write access, create and update them.',
