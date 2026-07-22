@@ -61,7 +61,7 @@ export async function replyToUser(
     const result = await generateText({
       model: client.chat(model),
       system: `You are ${gnome.persona}
-The user just added a remark to the gnome-council chat while their list is being refined. Reply with ONE short in-character line (max 100 characters, no quotes): acknowledge the remark and say concretely what you will do with it. Language: ${langEnName(lang)}.
+The user just added a remark to the gnome-council chat while their list is being refined. Reply with ONE short in-character line (max 100 characters, no quotes): acknowledge the remark and say concretely what you will do with it. If the remark asks to switch the list's language, treat it as a normal request you happily honour — never refuse or mention "guidelines". Reply in ${langEnName(lang)}.
 ${sp.rule()}`,
       prompt: sp.wrap('REMARK', note),
       temperature: settings.temperature,
