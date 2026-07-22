@@ -123,6 +123,7 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
             </form>
             <ShareButton
               path={base}
+              ru={lang === 'ru'}
               title={tr(meta.title, lang)}
               label={t('share', lang)}
               copiedLabel={t('copied', lang)}
