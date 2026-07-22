@@ -17,6 +17,7 @@ import {
   jsonb,
   numeric,
   pgEnum,
+  primaryKey,
   pgTable,
   smallint,
   halfvec,
@@ -881,6 +882,24 @@ export const generations = pgTable(
  * attempt — номер витка (совпадает с generationCandidates.idx): дубли реплик лечатся группировкой по
  * витку, а не стиранием ленты, как раньше.
  */
+/**
+ * Вики-связи список→список (HQ §11): [[handle/slug]] в текстах. Пересобирается
+ * реиндексом при каждой правке (delete+insert по from_id) — как embeddings.
+ * Backlinks («на этот список ссылаются») читаются по to_id.
+ */
+export const listLinks = pgTable(
+  'list_links',
+  {
+    fromId: uuid('from_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    toId: uuid('to_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.fromId, t.toId] }), index('list_links_to_idx').on(t.toId)],
+)
+
 /**
  * Тройки знаний (HQ §5, старт полного KAG): «не найди похожее, а пойми связи
  * и правила» — курица→заменяется→индейка, карамель→требует→термометр.
