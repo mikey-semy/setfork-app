@@ -49,3 +49,40 @@ export function repScore(rep: Record<string, GnomeRep>, id: string): number {
   if (!r || r.gens < REP_MIN_GENS) return 0.5
   return r.accepted / r.gens
 }
+
+/**
+ * НАСТРОЕНИЕ гнома (RPG-развитие персоны, идея владельца): демеанор вытекает из
+ * реального послужного списка и выражается в СТИЛЕ общения. Часто отклоняют →
+ * ворчливый и обидчивый; часто принимают → окрылённый и щедрый. На тонких данных
+ * (< порога) настроения нет — не судим по паре витков.
+ *
+ * Research-обоснование (PsyPlay/Big-Five 2025): дискретные уровни трейта, явно
+ * инъецируемые в промпт. Возвращаем label (для UI) + style (директива шлифовке).
+ */
+export interface GnomeMood {
+  label: string
+  labelRu: string
+  /** Короткая директива стиля для генерации реплик (пусто = базовый характер). */
+  style: string
+}
+
+export function gnomeMood(rep: Record<string, GnomeRep>, id: string): GnomeMood {
+  const r = rep[id]
+  if (!r || r.gens < REP_MIN_GENS) return { label: 'settled', labelRu: 'ровный', style: '' }
+  const rate = r.accepted / r.gens
+  // Интенсивность растёт с объёмом опыта: у бывалого гнома чувства ярче.
+  const seasoned = r.gens >= REP_MIN_GENS * 3
+  if (rate >= 0.6)
+    return {
+      label: 'elated',
+      labelRu: 'окрылённый',
+      style: `upbeat, warm and generous with tips — its lists keep getting accepted${seasoned ? ', quietly proud of its craft' : ''}`,
+    }
+  if (rate >= 0.4) return { label: 'content', labelRu: 'в духе', style: 'confident and in good spirits, work is landing well' }
+  if (rate >= 0.2) return { label: 'wary', labelRu: 'задетый', style: 'a touch self-doubting and terse, double-checks itself — lately often turned down' }
+  return {
+    label: 'grumpy',
+    labelRu: 'ворчливый',
+    style: `grumbling and touchy, half-expects a rejection${seasoned ? ' after so many' : ''} — defensive but still professional and useful`,
+  }
+}

@@ -5,7 +5,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { baseModelId, filterByQuarantine, quarantinedModels } from './health'
-import { gnomeReputation, repScore } from './gnome-reputation'
+import { gnomeMood, gnomeReputation, repScore } from './gnome-reputation'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, jsonShapeFor, type GeneratedList, type GenerateOptions } from './generate'
@@ -13,6 +13,7 @@ import { classifyListKind, shapeFor, LIST_KINDS, type ListKind } from './list-ki
 import { findPrecedents, type Precedent, type StepPrecedent } from './retrieval'
 import { getRoster, type Expert } from './roster'
 import { voiceLine, type VoiceKind } from './voice'
+import { gnomeCard } from './gnome-character'
 import { pickPrecedents } from './precedent-filter'
 import { craftRules } from './triples'
 import { lawBlock } from './list-laws'
@@ -143,10 +144,15 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const vseed = `${opts.refId ?? query}:${attempt}`
   // LLM-шлифовка реплик (HQ §2, этап 2): ОДИН flash-вызов на весь совет, стартует
   // параллельно со стюардом и НЕ блокирует: не успел к событию — статичный голос,
-  // успел — реплика живая и ПО ТЕМЕ. События с переменными ({names}) не шлифуем.
+  // успел — реплика живая и ПО ТЕМЕ. События с переменными ({names}/{n}) ТОЖЕ
+  // шлифуются: модель оставляет токен в тексте, здесь подставляем — иначе созыв
+  // и поиск вечно на статике и заметно повторялись (фидбек владельца про «робота»).
   let polished: Record<string, string> | null = null
-  const vl = (who: string, kind: VoiceKind, vars?: Record<string, string>) =>
-    (!vars ? polished?.[`${who}:${kind}`] : undefined) ?? voiceLine(who, kind, lang, vseed, vars)
+  const vl = (who: string, kind: VoiceKind, vars?: Record<string, string>) => {
+    let line = polished?.[`${who}:${kind}`]
+    if (line && vars) for (const [k, v] of Object.entries(vars)) line = line.replaceAll(`{${k}}`, v)
+    return line ?? voiceLine(who, kind, lang, vseed, vars)
+  }
 
   // Один под-вызов: генерация + учёт расхода. Ошибка → null (гном «выпал»), совет продолжает.
   // ОДИН ретрай на транзиентной ошибке (таймаут/сеть/429/5xx): бенч показал, что 33% отказов —
@@ -192,17 +198,37 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
         'planner:plan-single',
         'planner:plan-council',
         'reporter:clarify',
+        'crier:summon', // с токеном {names} — подставим созванных
+        'seek-lists:seek', // с токеном {n} — число прецедентов
         ...EXPERTS.map((e) => `${e.id}:draft`),
         'innovator:innovate',
         'critic:critique',
         'elder:synth',
       ]
-      const cast = EXPERTS.map((e) => `${e.id} — ${e.guildEn || e.nameEn}`).join('; ')
+      // Character cards (одушевление, HQ §3): каждый гном — РАЗНЫЙ. Карточка =
+      // «семя» стиля (трейт+тик+эмодзи), из которого модель генерит СВЕЖУЮ реплику
+      // (few-shot по research: не показываем статику дословно — она «робот»).
+      // + НАСТРОЕНИЕ (RPG-развитие): демеанор из послужного списка гнома — часто
+      // отклоняют → ворчливый, часто принимают → окрылённый. Реальный сигнал в стиль.
+      const moodRep = await gnomeReputation()
+      const whoIds = ['planner', 'reporter', 'innovator', 'critic', 'elder', ...EXPERTS.map((e) => e.id)]
+      const cards = whoIds
+        .map((id) => {
+          const c = gnomeCard(id)
+          const mood = gnomeMood(moodRep, id).style
+          return `${id}: ${c.trait}; тик — ${c.quirk}; эмодзи ${c.emoji}${mood ? `; настроение сейчас — ${mood}` : ''}`
+        })
+        .join('\n')
       const res = await run(
         fast,
-        `You write ONE short in-character line for each event of a gnome-workshop council working on the topic. Cast: ${cast}. Service roles: planner (chooses the process), reporter (asks clarifying questions), innovator (bold ideas), critic (devil's advocate), elder (synthesizes the final list). A line is what the gnome SAYS as its event starts. Gnomes have CHARACTER (Pratchett vibes): childlike wonder plus old-sage wisdom — let emotion show (excitement, grumbling, pride), never a dry status report. A fitting emoji is welcome in SOME lines (at most one per line, not every line). Tie each line to the topic naturally, max 90 characters, no quotes. Language: ${langName}. Return ONLY a JSON object mapping every key to its line.\n${sp.rule()}`,
-        `${topic}\nKEYS:\n${events.join('\n')}`,
-        600,
+        `You voice a gnome-workshop council working on the topic. Each gnome has a DISTINCT character (cards below). Write ONE opening line for each event key "who:kind" — what THAT gnome says as its step starts.
+RULES: make every line UNMISTAKABLY that gnome — show emotion, humor and their quirk, never a dry status report; a good workshop banters. VARY the wording freely every time (never a stock phrase); tie it to the topic naturally. An emoji fits SOME lines (≤1 per line, not every line). Max 90 characters, no quotes. Language: ${langName}.
+For "crier:summon" put the literal token {names} where the summoned gnomes are named. For "seek-lists:seek" put the literal token {n} where the count of found precedents goes.
+CHARACTERS:
+${cards}
+Return ONLY a JSON object mapping every event key to its line.\n${sp.rule()}`,
+        `TOPIC: ${topic}\nKEYS:\n${events.join('\n')}`,
+        800,
       )
       if (res) {
         const obj = JSON.parse(firstJson(res.text)) as Record<string, unknown>
