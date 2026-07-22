@@ -13,7 +13,11 @@ import { CouncilBubble } from './CouncilBubble'
 import { CandidateCard } from './CandidateCard'
 import { ActionsMenu } from './ActionsMenu'
 import { ProvenancePanel } from './ProvenancePanel'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
+
+/** Первая буква — заглавная: hint приходит от модели строчными, а это готовое сообщение. */
+const capFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 /**
  * Экран генерации — беседа, от первой реплики до результата.
@@ -147,10 +151,18 @@ export function GenerationChat({ generationId, lang, candidates, status, message
     }
   }, [status, generationId, messages.length, router])
 
+  const noteRef = useRef<HTMLTextAreaElement>(null)
+  // Авторост поля до 128px (rows=1 без ручки resize: форму не ломает, ось кнопок стабильна).
+  const autosize = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`
+  }
+
   const submitNote = () => {
     const t = note.trim()
     if (!t || working) return
     setNote('')
+    if (noteRef.current) noteRef.current.style.height = 'auto'
     start(() => refineInChat(generationId, t))
   }
 
@@ -343,33 +355,38 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             {(last?.hint || '').trim() && (
               <button
                 type="button"
-                onClick={() => setNote(last.hint ?? '')}
+                onClick={() => setNote(capFirst(last.hint ?? ''))}
                 className="inline-flex max-w-[280px] items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[12.5px] text-muted hover:border-border-strong hover:text-ink-2"
               >
-                <span className="truncate">{last.hint}</span>
+                <span className="truncate">{capFirst(last.hint ?? '')}</span>
               </button>
             )}
           </div>
         )}
-        <div className="relative">
-          <div className="absolute bottom-[7px] left-1.5 z-10">
-            <ActionsMenu
-              candidates={candidates}
-              selId={selId}
-              working={working}
-              lang={lang}
-              onPick={setSelId}
-              onAccept={() => selId && start(() => acceptCandidate(generationId, selId))}
-              onRegen={() => start(() => regenerateCandidate(generationId))}
-            />
-          </div>
+        {/* Рамка = сам «инпут», кнопки В ПОТОКЕ (не absolute): одна строка — всё по
+            центральной оси, много строк — кнопки у низа (items-end). Фидбек владельца:
+            absolute-кнопки «падали» ниже оси при фактической высоте textarea. */}
+        <div className="flex items-end gap-1 rounded-2xl border border-border bg-surface px-1.5 py-1.5 focus-within:border-border-strong">
+          <ActionsMenu
+            candidates={candidates}
+            selId={selId}
+            working={working}
+            lang={lang}
+            onPick={setSelId}
+            onAccept={() => selId && start(() => acceptCandidate(generationId, selId))}
+            onRegen={() => start(() => regenerateCandidate(generationId))}
+          />
           {/* Плейсхолдер = ГОТОВОЕ сообщение (фидбек владельца: никаких «Дополни — «…»»-инструкций,
               как ghost-suggestion у Copilot/Claude): подсказка ПО ТЕМЕ от модели (hint кандидата,
-              0 лишних вызовов), фолбэк — фраза по типу списка. Tab или → подхватывает её в поле.
-              Короткая — чтобы НИКОГДА не пряталась/не переносилась. */}
+              0 лишних вызовов), с большой буквы; фолбэк — фраза по типу списка. Tab или →
+              подхватывает её в поле. Авторост до 128px, дальше внутренний скролл. */}
           <textarea
+            ref={noteRef}
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => {
+              setNote(e.target.value)
+              autosize(e.currentTarget)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
@@ -377,21 +394,23 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               }
               if ((e.key === 'Tab' || e.key === 'ArrowRight') && !note) {
                 e.preventDefault()
-                setNote(last?.hint || refineHint(listKind, ru))
+                setNote(capFirst(last?.hint || refineHint(listKind, ru)))
               }
             }}
             rows={1}
-            placeholder={last?.hint || refineHint(listKind, ru)}
-            className="max-h-32 min-h-[52px] w-full resize-y rounded-2xl border border-border bg-surface py-3.5 pl-[52px] pr-[52px] text-[13.5px] text-ink outline-hidden focus:border-border-strong"
+            placeholder={capFirst(last?.hint || refineHint(listKind, ru))}
+            className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-[7.5px] text-[13.5px] leading-[1.55] text-ink outline-hidden"
           />
-          <button
-            onClick={submitNote}
-            disabled={!note.trim() || working}
-            aria-label={say('Send', 'Отправить')}
-            className="absolute bottom-[7px] right-1.5 grid size-[38px] shrink-0 place-items-center rounded-full bg-primary text-primary-fg disabled:opacity-40"
-          >
-            {working ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={17} />}
-          </button>
+          <Tooltip label={say('Send', 'Отправить')}>
+            <button
+              onClick={submitNote}
+              disabled={!note.trim() || working}
+              aria-label={say('Send', 'Отправить')}
+              className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-primary-fg disabled:opacity-40"
+            >
+              {working ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={17} />}
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>

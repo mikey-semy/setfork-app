@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, Plus, RotateCw } from 'lucide-react'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 
@@ -62,18 +63,19 @@ export function ActionsMenu({
     <div ref={ref} className="relative shrink-0">
       {/* «+» ВНУТРИ поля (как у ChatGPT/Claude, фидбек владельца). Кликабелен ВСЕГДА:
           disabled-кнопка «нажимаю и ничего» ставила в тупик — теперь до первого варианта
-          меню честно объясняет, что появится здесь. */}
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={say('Variant actions', 'Действия с вариантами')}
-        title={say('Variant actions', 'Действия с вариантами')}
-        onClick={() => setOpen((v) => !v)}
-        className="grid size-[38px] place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-ink"
-      >
-        <Plus size={18} className={`transition-transform ${open ? 'rotate-45' : ''}`} />
-      </button>
+          меню честно объясняет, что появится здесь. Тултип — shadcn, не браузерный title. */}
+      <Tooltip label={say('Variant actions', 'Действия с вариантами')}>
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={say('Variant actions', 'Действия с вариантами')}
+          onClick={() => setOpen((v) => !v)}
+          className="grid size-9 place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-ink"
+        >
+          <Plus size={18} className={`transition-transform ${open ? 'rotate-45' : ''}`} />
+        </button>
+      </Tooltip>
 
       {open && candidates.length === 0 && (
         <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[260px] rounded-md border border-border bg-surface px-3 py-2.5 text-[12.5px] leading-relaxed text-muted shadow-card">

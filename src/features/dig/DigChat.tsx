@@ -8,6 +8,7 @@ import { Textarea } from '@/shared/ui/textarea'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Markdown } from '@/shared/ui/Markdown'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { digChatAsk, type DigChatMsg } from './chat-actions'
 
 /**
@@ -196,18 +197,20 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
             placeholder={say('Why exactly this way?', 'Почему именно так?')}
             className="max-h-24 min-h-[38px] w-full resize-none pr-10"
           />
-          {/* Кнопка ВНУТРИ поля (фидбек владельца): Enter — отправить, Shift+Enter — перенос, Esc — закрыть. */}
-          <Button
-            variant="ghost"
-            size="xs"
-            aria-label={say('Send (Enter)', 'Отправить (Enter)')}
-            title={say('Enter — send · Shift+Enter — new line · Esc — close', 'Enter — отправить · Shift+Enter — перенос · Esc — закрыть')}
-            onClick={() => send()}
-            disabled={!text.trim() || pending}
-            className="absolute bottom-1.5 right-1.5 text-accent disabled:text-muted"
-          >
-            <SendHorizontal size={15} />
-          </Button>
+          {/* Кнопка ВНУТРИ поля (фидбек владельца): Enter — отправить, Shift+Enter — перенос, Esc — закрыть.
+              Тултип — shadcn, не браузерный title (правило проекта). */}
+          <Tooltip label={say('Enter — send · Shift+Enter — new line · Esc — close', 'Enter — отправить · Shift+Enter — перенос · Esc — закрыть')}>
+            <Button
+              variant="ghost"
+              size="xs"
+              aria-label={say('Send (Enter)', 'Отправить (Enter)')}
+              onClick={() => send()}
+              disabled={!text.trim() || pending}
+              className="absolute bottom-1.5 right-1.5 text-accent disabled:text-muted"
+            >
+              <SendHorizontal size={15} />
+            </Button>
+          </Tooltip>
         </div>
       </div>
     </div>
@@ -217,14 +220,15 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
 /** Кирка в углу пункта: открывает чат с контекстом этого шага. */
 export function DigChatOpen({ detail, label }: { detail: DigChatOpenDetail; label: string }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={() => window.dispatchEvent(new CustomEvent(DIG_CHAT_EVENT, { detail }))}
-      className="grid size-7 shrink-0 place-items-center rounded text-muted transition-colors hover:text-accent"
-    >
-      <Pickaxe size={14} />
-    </button>
+    <Tooltip label={label}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={() => window.dispatchEvent(new CustomEvent(DIG_CHAT_EVENT, { detail }))}
+        className="grid size-7 shrink-0 place-items-center rounded text-muted transition-colors hover:text-accent"
+      >
+        <Pickaxe size={14} />
+      </button>
+    </Tooltip>
   )
 }
