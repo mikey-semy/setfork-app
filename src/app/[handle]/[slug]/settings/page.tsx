@@ -94,7 +94,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       title: t('dangerZone', lang),
       icon: <TriangleAlert size={15} />,
       danger: true,
-      keywords: ['danger', 'delete', 'remove', 'visibility', 'private', 'pin', 'опасная', 'удалить', 'видимость', 'приватный', 'закрепить'],
+      keywords: ['danger', 'delete', 'remove', 'visibility', 'private', 'опасная', 'удалить', 'видимость', 'приватный'],
       content: (
         <ListSettingsDanger
           templateId={meta.id}
@@ -102,7 +102,6 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           slug={meta.slug}
           visibility={meta.visibility}
           moderation={meta.moderation}
-          pinned={meta.pinned}
           lang={lang}
         />
       ),

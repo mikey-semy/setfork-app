@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Globe, Loader2, Lock, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Globe, Loader2, Lock, Trash2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { t, type Lang } from '@/shared/i18n'
-import { deleteListAction, setListPinned, setListVisibility } from './actions'
+import { deleteListAction, setListVisibility } from './actions'
 
 // Опасная зона списка (аналог GitHub Danger Zone): опасные действия собраны
 // в одном месте, каждое — через модалку. Удаление подтверждается вводом
@@ -16,7 +16,6 @@ export function ListSettingsDanger({
   slug,
   visibility,
   moderation,
-  pinned,
   lang,
 }: {
   templateId: string
@@ -24,11 +23,9 @@ export function ListSettingsDanger({
   slug: string
   visibility: 'public' | 'private'
   moderation: string
-  pinned: boolean
   lang: Lang
 }) {
   const [pending, start] = useTransition()
-  const [pinPending, startPin] = useTransition()
   const [dialog, setDialog] = useState<null | 'visibility' | 'delete'>(null)
   const fullName = `${handle}/${slug}` // видимый идентификатор для подтверждения
   const isPublic = visibility === 'public'
@@ -40,27 +37,7 @@ export function ListSettingsDanger({
 
   return (
     <>
-      {/* Pin — не опасное действие, отдельной картой над зоной. */}
-      <section className="mb-6 rounded-lg border border-border bg-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-start gap-2.5">
-            <Pin size={17} className="mt-0.5 text-ink-2" />
-            <div>
-              <div className="text-[14px] font-medium text-ink">{t('pinToProfile', lang)}</div>
-              <p className="text-[12.5px] text-ink-2">{pinned ? t('pinnedOn', lang) : t('pinHint', lang)}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => startPin(() => setListPinned(templateId, !pinned))}
-            disabled={pinPending}
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong disabled:opacity-60"
-          >
-            {pinPending ? <Loader2 size={14} className="animate-spin" /> : pinned ? <PinOff size={14} /> : <Pin size={14} />}
-            {pinned ? t('unpin', lang) : t('pin', lang)}
-          </button>
-        </div>
-      </section>
-
+      {/* Pin убран из настроек — теперь кнопкой над списком (шапка). */}
       {/* Опасная зона: обведённая красным рамка со строками-действиями. */}
       <section className="overflow-hidden rounded-lg border border-danger/40">
         <div className="border-b border-danger/40 bg-danger/5 px-5 py-2.5 font-semibold text-danger">{t('dangerZone', lang)}</div>
