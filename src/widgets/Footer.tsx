@@ -16,12 +16,10 @@ export async function Footer({ lang }: { lang: Lang }) {
   const { donateUrl } = await getMonetizationSettings()
 
   return (
-    <footer className="mt-auto print:hidden">
+    <footer className="relative mt-auto print:hidden">
       <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-center gap-x-4 gap-y-2 px-6 py-8 text-[12px]">
         <span className="text-muted">© {year} SetFork</span>
         <Link href="/explore" className={link}>{t('explore', lang)}</Link>
-        {/* Версия приложения (semver из package.json) — как у взрослого приложения. */}
-        <span className="font-mono text-muted" title={t('appVersion', lang)}>v{APP_VERSION}</span>
         <a href={ABOUT_URL} className={link}>{t('aboutProject', lang)}</a>
         {/* Репозиторий приватный — публичная ссылка отдаёт 404, поэтому ведём в доки. */}
         <a href={docsUrl('/docs', lang)} target="_blank" rel="noreferrer" className={link}>{t('sourceCode', lang)}</a>
@@ -35,6 +33,13 @@ export async function Footer({ lang }: { lang: Lang }) {
           </a>
         )}
       </div>
+      {/* Версия — незаметно в углу (мелкий прозрачный моно), а не в ряду ссылок. */}
+      <span
+        title={t('appVersion', lang)}
+        className="pointer-events-none absolute bottom-1.5 right-2.5 font-mono text-[10px] text-muted opacity-50 select-none"
+      >
+        v{APP_VERSION}
+      </span>
     </footer>
   )
 }

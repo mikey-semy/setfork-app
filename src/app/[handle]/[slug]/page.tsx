@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, Hammer, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, useTemplate } from '@/features/library/actions'
@@ -11,6 +11,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
+import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
@@ -33,7 +34,7 @@ import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutl
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
-import { db, generations, listLinks, templates as templatesTable, users as usersTable } from '@/shared/db'
+import { db, listLinks, templates as templatesTable, users as usersTable } from '@/shared/db'
 import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
@@ -136,13 +137,6 @@ export default async function ListPage({
   const digGnomes = viewer && !snapshot
     ? (await getRoster()).map((e) => ({ id: e.id, name: lang === 'ru' ? e.nameRu : e.nameEn, guild: lang === 'ru' ? e.guildRu : e.guildEn }))
     : []
-  // Клеймо мастерской (HQ §7 «гильдии наружу»): список рождён советом гномов.
-  // Публичный бейдж; ссылка на беседу — только автору генерации (чат приватен).
-  const [forged] = await db
-    .select({ id: generations.id, userId: generations.userId })
-    .from(generations)
-    .where(eq(generations.chosenTemplateId, tpl.id))
-    .limit(1)
   // Backlinks (HQ §11, Obsidian-вектор): публичные списки, ссылающиеся на этот
   // через [[handle/slug]] (list_links пересобирает реиндекс).
   const backlinks = await db
@@ -213,6 +207,10 @@ export default async function ListPage({
     currentVersion?.note && !['initial', 'edit', 'seeded', 'ai draft'].includes(currentVersion.note)
       ? currentVersion.note
       : ''
+  // «Перевести» и языковой бейдж имеют смысл, ТОЛЬКО если контент реально не на
+  // языке зрителя. Русский текст под ключом 'en' (неверный тег генерации) не должен
+  // предлагать «перевести на русский» — детектим по самому тексту (кириллица → ru).
+  const titleIsForeign = !tpl.title[lang] && detectTextLang(tr(tpl.title, lang), lang) !== lang
 
   return (
     <>
@@ -316,24 +314,11 @@ export default async function ListPage({
                   <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">
                     v{currentVersion.version}
                   </span>
-                  {/* Клеймо совета — ТОЛЬКО иконка с тултипом (текст жрал место). */}
-                  {forged && (
-                    <Tooltip label={say('Forged by the gnome council — see Guilds', 'Выкован советом гномов — см. Гильдии')}>
-                      {forged.userId === viewer?.userId ? (
-                        <Link href={`/generate/${forged.id}`} aria-label={say('Council-forged', 'Выкован советом')} className="grid size-5 shrink-0 place-items-center rounded text-muted hover:text-accent">
-                          <Hammer size={13} />
-                        </Link>
-                      ) : (
-                        <span aria-label={say('Council-forged', 'Выкован советом')} className="grid size-5 shrink-0 place-items-center text-muted">
-                          <Hammer size={13} />
-                        </span>
-                      )}
-                    </Tooltip>
-                  )}
                   {latestNote && <span className="hidden min-w-0 flex-1 truncate text-ink-2 sm:inline">{latestNote}</span>}
                   <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
+                  {/* История коммитов (версии) — видна и на мобиле (просили вернуть). */}
                   <Tooltip label={t('versionsTab', lang)}>
-                    <Link href={`${base}/versions`} className="hidden shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent sm:inline-flex">
+                    <Link href={`${base}/versions`} aria-label={t('versionsTab', lang)} className="inline-flex shrink-0 items-center gap-1 border-l border-border py-1 pl-2 text-muted hover:text-accent">
                       <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
                     </Link>
                   </Tooltip>
@@ -371,7 +356,7 @@ export default async function ListPage({
                   <span className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2">
                     {/* «Перевести» — владельцу/коллаборатору, когда у списка нет
                         заголовка на языке зрителя (перевод добавит язык, ADR-0009). */}
-                    {canManageBranches && !snapshot && !tpl.title[lang] && (
+                    {canManageBranches && !snapshot && titleIsForeign && (
                       <TranslateButton templateId={tpl.id} targetLang={lang} lang={lang} iconOnly />
                     )}
                     <Tooltip label={isOwner ? t('edit', lang) : t('suggestEdit', lang)}>
