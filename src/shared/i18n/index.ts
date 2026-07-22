@@ -458,6 +458,8 @@ const DICT = {
     ru: 'Аккаунт удаляется, личные данные стираются. Ваши списки остаются под пометкой «удалённый пользователь».',
   },
   deleteConfirmLabel: { en: 'Type your handle to confirm:', ru: 'Введите свой ник для подтверждения:' },
+  // Общая модалка type-to-confirm (список/аккаунт)
+  dangerConfirmHint: { en: 'To confirm, type:', ru: 'Для подтверждения введите:' },
   deletedUser: { en: 'Deleted user', ru: 'Удалённый пользователь' },
   cancel: { en: 'Cancel', ru: 'Отмена' },
   // ── Состояния: 404 / ошибка / пусто ──
@@ -728,6 +730,20 @@ const DICT = {
   makePublic: { en: 'Make public', ru: 'Сделать публичным' },
   deleteList: { en: 'Delete this list', ru: 'Удалить список' },
   deleteListHint: { en: 'Permanently deletes the list, its versions and stars. Cannot be undone.', ru: 'Безвозвратно удаляет список, версии и звёзды.' },
+  deleteListCascade: {
+    en: 'This permanently deletes the list — every version, its steps, runs, suggestions, issues and stars. This cannot be undone.',
+    ru: 'Безвозвратно удаляет список — все версии, шаги, прогоны, предложения, обсуждения и звёзды. Отменить нельзя.',
+  },
+  changeVisibility: { en: 'Change visibility', ru: 'Изменить видимость' },
+  visibilityCurrent: { en: 'This list is currently', ru: 'Сейчас список' },
+  makePrivateEffects: {
+    en: 'The list disappears from explore, search and everyone else — only you will see it. Stars and watchers from other users lose access.',
+    ru: 'Список пропадёт из обзора, поиска и у всех остальных — останется виден только вам. Звёзды и наблюдатели других потеряют доступ.',
+  },
+  makePublicEffects: {
+    en: 'The list becomes visible to everyone in explore and search, and is re-checked by moderation before it appears.',
+    ru: 'Список станет виден всем в обзоре и поиске и пройдёт повторную проверку модерации перед показом.',
+  },
   deleteLockedModeration: {
     en: 'A list removed by moderation cannot be deleted. Submit an appeal for review — deleting would erase the record of the removed content.',
     ru: 'Список, снятый модерацией, удалить нельзя. Подайте апелляцию на пересмотр — удаление стёрло бы запись о снятом контенте.',
