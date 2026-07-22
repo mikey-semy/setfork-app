@@ -15,6 +15,7 @@ import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
+import { DismissibleHint } from '@/shared/ui/DismissibleHint'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { Markdown } from '@/shared/ui/Markdown'
@@ -273,9 +274,12 @@ export default async function ListPage({
               </div>
             )}
             {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
-              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3 text-[13px] text-accent print:hidden">
+              <DismissibleHint
+                storageKey={`hint:ai-draft:${tpl.id}`}
+                className="mb-4 rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3 text-[13px] text-accent print:hidden"
+              >
                 <Sparkles size={15} className="shrink-0" /> {t('aiVerifyHint', lang)}
-              </div>
+              </DismissibleHint>
             )}
             {/* РФ-маркировка «Реклама» — до ссылок; компактная пометка (сам erid
                 едет в ссылке через /api/go). ч. 16 ст. 18.1 требует назвать
