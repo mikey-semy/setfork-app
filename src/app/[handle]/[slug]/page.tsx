@@ -16,8 +16,8 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { Markdown } from '@/shared/ui/Markdown'
-import { DigPanel } from '@/features/dig/DigPanel'
-import { digLayersFor } from '@/features/dig/queries'
+import { DigChatHost, DigChatOpen } from '@/features/dig/DigChat'
+import { getRoster } from '@/shared/ai/roster'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews } from '@/features/library/queries'
@@ -133,7 +133,10 @@ export default async function ListPage({
   const completion = viewer ? await getCourseCompletion(tpl.id, viewer.userId) : null
   // Шахты «Копать глубже» (HQ §8): выкопанные слои текущей версии — по шагам.
   // У snapshot-веток раскопки нет (шаги без стабильных номеров версии).
-  const digMap = !snapshot ? await digLayersFor(tpl.id, tpl.currentVersion, lang) : new Map<number, never[]>()
+  // Мини-чат раскопки (редизайн HQ §8): ростер для выбора собеседника в чате.
+  const digGnomes = viewer && !snapshot
+    ? (await getRoster()).map((e) => ({ id: e.id, name: lang === 'ru' ? e.nameRu : e.nameEn, guild: lang === 'ru' ? e.guildRu : e.guildEn }))
+    : []
   // Клеймо мастерской (HQ §7 «гильдии наружу»): список рождён советом гномов.
   // Публичный бейдж; ссылка на беседу — только автору генерации (чат приватен).
   const [forged] = await db
@@ -216,6 +219,7 @@ export default async function ListPage({
     <>
       {/* Просмотр: владелец себя не накручивает, сервер дополнительно дедупит. */}
       {!isOwner && mon.viewTracking && <ViewBeacon templateId={tpl.id} />}
+      {viewer && !snapshot && <DigChatHost gnomes={digGnomes} lang={lang} />}
       <div className="print:hidden">
         <ListHeader owner={owner} slug={slug} active="overview" />
       </div>
@@ -569,6 +573,12 @@ export default async function ListPage({
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
+                          {/* Кирка (HQ §8, редизайн): чат-раскопка по ЭТОМУ пункту — в правом углу. */}
+                          {viewer && !snapshot && typeof s.n === 'number' && (
+                            <span className="ml-auto print:hidden">
+                              <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={say('Dig into this step', 'Копнуть этот пункт')} />
+                            </span>
+                          )}
                         </div>
                         {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}
                         {tr(s.why, lang) && (
@@ -628,13 +638,6 @@ export default async function ListPage({
                                 </span>
                               )
                             })}
-                          </div>
-                        )}
-                        {/* «Копать глубже» (HQ §8): шахта под шагом — слои причин/механизмов.
-                            Копают залогиненные; выкопанное видно всем. Печать без шахт. */}
-                        {!snapshot && typeof s.n === 'number' && (
-                          <div className="print:hidden">
-                            <DigPanel templateId={tpl.id} stepN={s.n} initial={digMap.get(s.n) ?? []} canDig={!!viewer} lang={lang} />
                           </div>
                         )}
                       </div>
