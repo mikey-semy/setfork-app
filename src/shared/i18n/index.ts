@@ -460,6 +460,13 @@ const DICT = {
   deleteConfirmLabel: { en: 'Type your handle to confirm:', ru: 'Введите свой ник для подтверждения:' },
   // Общая модалка type-to-confirm (список/аккаунт)
   dangerConfirmHint: { en: 'To confirm, type:', ru: 'Для подтверждения введите:' },
+  // Смена ника
+  changeHandle: { en: 'Change handle', ru: 'Сменить ник' },
+  changeHandleField: { en: 'New handle', ru: 'Новый ник' },
+  changeHandleWarn: {
+    en: 'Your handle is part of your URLs (/handle, /handle/list…). After the change, old links stop working — there are no redirects yet. GitHub-linked accounts can’t change it (it re-syncs from GitHub on sign-in).',
+    ru: 'Ник — часть ваших ссылок (/ник, /ник/список…). После смены старые ссылки перестанут работать — редиректов пока нет. Аккаунтам с привязкой к GitHub сменить нельзя (ник синхронизируется с GitHub при входе).',
+  },
   deletedUser: { en: 'Deleted user', ru: 'Удалённый пользователь' },
   cancel: { en: 'Cancel', ru: 'Отмена' },
   // ── Состояния: 404 / ошибка / пусто ──

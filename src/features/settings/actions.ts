@@ -7,6 +7,7 @@ import { db, stars, suggestions, templates, users } from '@/shared/db'
 import type { Social } from '@/shared/db/schema'
 import { clearSessionCookie, refreshSessionCookie, requireSession } from '@/shared/auth/session'
 import { recordAudit } from '@/shared/audit'
+import { handleTaken, isHandleShapeValid, normalizeHandle } from '@/shared/auth/handle'
 import { removeAvatar, saveAvatar } from './avatar'
 
 export type ActionResult = { ok?: true; error?: string }
@@ -83,6 +84,43 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
   // layout — чтобы обновился аватар в шапке (TopNav), а не только на страницах.
   revalidatePath('/', 'layout')
   return { ok: true }
+}
+
+/** Смена ника (handle). Ник — часть публичных URL (/handle/…), поэтому смена ломает
+ *  старые ссылки (предупреждаем в UI; таблицы редиректов пока нет). GitHub-аккаунтам
+ *  запрещено: upsertGithubUser синхронизирует handle с gh.login на каждом входе и
+ *  откатил бы смену. Сессия обновляется без ре-логина (refreshSessionCookie). */
+export async function changeHandle(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const session = await requireSession()
+  const next = normalizeHandle(String(formData.get('handle') ?? ''))
+
+  if (!next) return { error: 'Введите новый ник.' }
+  if (next === session.handle) return { error: 'Это ваш текущий ник.' }
+  if (!isHandleShapeValid(next)) return { error: 'Ник: 3–30 символов, только a–z, 0–9 и дефис; некоторые слова зарезервированы.' }
+
+  const [me] = await db.select({ githubId: users.githubId }).from(users).where(eq(users.id, session.userId)).limit(1)
+  if (me?.githubId != null) {
+    return { error: 'Аккаунтам, привязанным к GitHub, смена ника недоступна — он синхронизируется с GitHub при входе.' }
+  }
+  if (await handleTaken(next)) return { error: 'Этот ник уже занят.' }
+
+  try {
+    await db.update(users).set({ handle: next }).where(eq(users.id, session.userId))
+  } catch {
+    // гонка: ник заняли между проверкой и апдейтом (unique-нарушение)
+    return { error: 'Этот ник уже занят.' }
+  }
+
+  await recordAudit('account.handle-change', {
+    actorId: session.userId,
+    targetType: 'user',
+    targetId: session.userId,
+    meta: { from: session.handle, to: next },
+  })
+  // Сессия хранит handle (используется в revalidatePath/quota-ключах) — обновляем без ре-логина.
+  await refreshSessionCookie({ userId: session.userId, handle: next, name: session.name, avatarUrl: session.avatarUrl })
+  revalidatePath('/', 'layout')
+  redirect(`/${next}`)
 }
 
 /** Спец-аккаунт «удалённый пользователь» — под него переходят списки удалённых людей. */
