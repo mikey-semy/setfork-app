@@ -41,6 +41,7 @@ export async function generateDigLayer(
   level: number,
   lang: Lang,
   meta: { userId: string; templateId: string },
+  sources: string[] = [],
 ): Promise<{ content: string; model: string; provider: string } | null> {
   const client = await getAiChatClient()
   if (!client) return null
@@ -59,10 +60,12 @@ SHORING RULES (the mine must not collapse):
 ${sp.rule()}`
 
   const prevBlock = prevLayers.length ? `\n\nPREVIOUS LAYERS (dig below them, do not repeat):\n${sp.wrap('LAYERS', prevLayers.map((p, i) => `— layer ${i + 1} —\n${p}`).join('\n'))}` : ''
+  // Гранулярный индекс кормит слои источниками (HQ §8): чужой публичный текст → spotlight.
+  const srcBlock = sources.length ? `\n\nFrom the SetFork knowledge base (real precedents — cite what you use, don't copy blindly):\n${sp.wrap('SOURCES', sources.join('\n'))}` : ''
   const prompt = `${sp.wrap(
     'STEP',
     `List: ${step.listTitle}\nStep: ${step.stepTitle}${step.stepDesc ? `\n${step.stepDesc}` : ''}${step.stepWhy ? `\nWhy (author): ${step.stepWhy}` : ''}${step.command ? `\nCommand: ${step.command}` : ''}`,
-  )}${prevBlock}\n\nDig layer ${level}.`
+  )}${prevBlock}${srcBlock}\n\nDig layer ${level}.`
 
   const startedAt = Date.now()
   try {

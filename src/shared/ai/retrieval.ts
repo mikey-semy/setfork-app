@@ -49,13 +49,17 @@ export async function findPrecedents(
     sql`${distance} <= ${1 - MIN_SIMILARITY}`, // #8: только реально похожие (similarity >= порога)
   )
   const stepLimit = opts.stepLimit ?? 5
+  // Вес практики (HQ §5 шаг 3): звёзды и форки МЯГКО поднимают прецедент — проверенное
+  // сообществом предпочитается при близкой семантике, но никогда не перебивает смысл
+  // (логарифм + малый коэффициент: 10 звёзд ≈ +19% к скору, 100 ≈ +37%).
+  const score = sql<number>`(1 - (${distance})) * (1 + 0.08 * ln(1 + ${templates.starsCount} + ${templates.forksCount}))`
   const [listRows, stepRows] = await Promise.all([
     db
       .select({ title: templates.title, desc: templates.desc, tags: templates.tags })
       .from(embeddings)
       .innerJoin(templates, eq(embeddings.refId, templates.id))
       .where(and(eq(embeddings.kind, 'list'), visible))
-      .orderBy(desc(sql<number>`1 - (${distance})`))
+      .orderBy(desc(score))
       .limit(opts.limit ?? 3),
     stepLimit > 0
       ? db
@@ -63,7 +67,7 @@ export async function findPrecedents(
           .from(embeddings)
           .innerJoin(templates, eq(embeddings.refId, templates.id))
           .where(and(eq(embeddings.kind, 'step'), visible))
-          .orderBy(desc(sql<number>`1 - (${distance})`))
+          .orderBy(desc(score))
           .limit(stepLimit * 3) // с запасом: ниже режем «не больше 2 с одного списка»
       : Promise.resolve([]),
   ])

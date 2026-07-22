@@ -25,6 +25,8 @@ export interface Expert {
   guildRu: string
   /** Кодекс гильдии — компактный свод стандартов качества (маркированные строки). */
   code: string
+  /** Линза запроса (HQ §5): аспекты, которыми гном смотрит на любой запрос к базе. */
+  lens: string
   domains: string[]
   /** Принудительная модель; пусто → из пула совета по кругу. */
   model: string
@@ -52,6 +54,7 @@ export const SEED: Expert[] = [
 - Success is proven by a health-check, not by hope
 - Repetitive manual work becomes a scripted step
 - Reliability is a number (SLO), not a feeling`,
+    lens: 'deploy rollback health-check automation reliability',
     domains: ['deploy', 'devops', 'ci', 'servers', 'infra', 'docker', 'kubernetes'],
     // Google SRE Book (SLO/error budget, blameless postmortem, toil) + DORA Four Keys.
     persona:
@@ -71,6 +74,7 @@ export const SEED: Expert[] = [
 - Commands are runnable exactly as written
 - Edge cases and failure modes are named, not implied
 - Correctness beats cleverness`,
+    lens: 'code commands edge cases tests review',
     domains: ['programming', 'software', 'coding', 'api', 'library', 'framework'],
     // SOLID (R. C. Martin) + Test Pyramid (Fowler) + Google Engineering Practices + SWEBOK v4.
     persona:
@@ -90,6 +94,7 @@ export const SEED: Expert[] = [
 - Mise en place before heat
 - Food-safety critical points are called out (danger zone 5–57 °C)
 - Kitchen order: what waits, what runs in parallel, what must not`,
+    lens: 'ingredients technique temperature timing food safety',
     domains: ['cooking', 'food', 'recipe', 'kitchen', 'baking'],
     // Mise en place (CIA) + HACCP 7 principles (Codex CXC 1-1969) + FDA Food Code danger zone.
     persona:
@@ -109,6 +114,7 @@ export const SEED: Expert[] = [
 - Documents are verified against the official source for the traveller's date and passport
 - Every likely failure has a fallback
 - Budget and time cost sit next to each step`,
+    lens: 'documents visas route timing budget fallback',
     domains: ['travel', 'trip', 'city', 'tourism', 'itinerary'],
     // ISO 31030 (travel risk) + IATA Timatic (docs volatility) + CDC Yellow Book / WHO (health prep).
     persona:
@@ -128,6 +134,7 @@ export const SEED: Expert[] = [
 - Every prescription is explicit: frequency, intensity, time, type, volume, progression
 - Progress raises ONE parameter at a time
 - Injury-causing form errors are named`,
+    lens: 'training load progression form safety',
     domains: ['fitness', 'health', 'workout', 'sport', 'nutrition'],
     // ACSM GETP (FITT-VP, preparticipation screening, progressive overload) + WHO 2020 activity guidelines.
     persona:
@@ -147,6 +154,7 @@ export const SEED: Expert[] = [
 - The search path is reproducible: what was searched, included, rejected and why
 - Disagreements are cited, not smoothed over
 - Comprehension checks are built in`,
+    lens: 'sources study methods verification practice',
     domains: ['study', 'learning', 'research', 'course', 'exam'],
     // ACRL Framework for Information Literacy + PRISMA 2020 (reproducible search).
     persona:
@@ -166,6 +174,7 @@ export const SEED: Expert[] = [
 - Never just a name: what it is FOR, what it costs, and its catch
 - Primary and official sources are preferred
 - Staleness is admitted, never hidden`,
+    lens: 'tools resources links prices alternatives',
     domains: ['*'],
     // Belbin Resource Investigator (+ его allowable weakness) + CRAAP test.
     persona:
@@ -185,6 +194,7 @@ export const SEED: Expert[] = [
 - "Look back" is a real step that verifies the result
 - Checklist shape: short blocks, clear pause points
 - Each step marked read-do or do-confirm`,
+    lens: 'method structure checklist verification',
     domains: ['*'],
     // Cynefin (Snowden & Boone, HBR) + Pólya «How to Solve It» + Checklist Manifesto / WHO checklist.
     persona:
@@ -204,6 +214,7 @@ const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   guildEn: r.guildEn,
   guildRu: r.guildRu,
   code: r.code,
+  lens: r.lens,
   domains: r.domains,
   model: r.model,
   avatar: r.avatar || r.id,
@@ -231,7 +242,14 @@ async function backfillGuilds(rows: (typeof councilExperts.$inferSelect)[]): Pro
       .update(councilExperts)
       .set({ guildEn: s.guildEn, guildRu: s.guildRu, code: s.code, updatedAt: new Date() })
       .where(and(eq(councilExperts.id, s.id), eq(councilExperts.code, '')))
-  return missing.length > 0
+  // Линза (появилась позже гильдий) — та же логика: пустая = не задавалась, догоняем из SEED.
+  const missingLens = SEED.filter((s) => rows.some((r) => r.id === s.id && !r.lens))
+  for (const s of missingLens)
+    await db
+      .update(councilExperts)
+      .set({ lens: s.lens, updatedAt: new Date() })
+      .where(and(eq(councilExperts.id, s.id), eq(councilExperts.lens, '')))
+  return missing.length > 0 || missingLens.length > 0
 }
 
 /**

@@ -5,6 +5,7 @@ import { db, digLayers, steps, templates, templateVersions } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
 import { generateDigLayer, DIG_MAX_LEVEL } from '@/shared/ai/dig'
+import { findPrecedents } from '@/shared/ai/retrieval'
 import { aiQuota, globalBudgetOk } from '@/shared/quota'
 import { getAiSettings, isAiAvailable } from '@/shared/settings/ai'
 import { rateLimit } from '@/shared/rate-limit'
@@ -59,10 +60,19 @@ export async function digDeeper(
     : []
   if (!row || row.type !== 'step') return { error: 'not found' }
 
+  // Источники из общей базы — по шагу и теме (гранулярный индекс кормит слои, HQ §8).
+  const listTitle = tr(tpl.title as LocaleText, lang)
+  const stepTitle = tr(row.title as LocaleText, lang)
+  const found = await findPrecedents(`${listTitle}: ${stepTitle}`, lang, { userId: session.userId, limit: 2, stepLimit: 3 })
+  const sources = [
+    ...found.lists.map((p) => `${p.title}${p.desc ? ' — ' + p.desc : ''}`),
+    ...found.steps.map((s) => s.content.slice(0, 240)),
+  ]
+
   const generated = await generateDigLayer(
     {
-      listTitle: tr(tpl.title as LocaleText, lang),
-      stepTitle: tr(row.title as LocaleText, lang),
+      listTitle,
+      stepTitle,
       stepDesc: tr(row.desc as LocaleText, lang),
       stepWhy: tr(row.why as LocaleText, lang),
       command: row.command ?? '',
@@ -71,6 +81,7 @@ export async function digDeeper(
     nextLevel,
     lang,
     { userId: session.userId, templateId },
+    sources,
   )
   if (!generated) return { error: 'aifail' }
 
@@ -84,7 +95,7 @@ export async function digDeeper(
       level: nextLevel,
       lang,
       content: generated.content,
-      provenance: { model: generated.model, provider: generated.provider, basedOnLevels: existing.map((l) => l.level) },
+      provenance: { model: generated.model, provider: generated.provider, basedOnLevels: existing.map((l) => l.level), sources: sources.slice(0, 5) },
       createdBy: session.userId,
     })
     .onConflictDoNothing()

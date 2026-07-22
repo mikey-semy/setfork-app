@@ -34,6 +34,7 @@ export interface ExpertRow {
   guildRu: string
   guildEn: string
   code: string
+  lens: string
   domains: string[]
   model: string
   avatar: string
@@ -206,6 +207,11 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           <div>
             <label className={lbl}>{say('Guild code — quality standards (goes into the gnome’s and the critic’s prompts)', 'Кодекс гильдии — стандарты качества (уходит в промпт гнома и критика)')}</label>
             <textarea name="code" defaultValue={e.code} rows={4} className={`${field} resize-y font-mono text-[12.5px] leading-[1.45]`} />
+          </div>
+
+          <div>
+            <label className={lbl}>{say('Query lens — aspects he searches the knowledge base by (ask_gnome, dig)', 'Линза запроса — аспекты, которыми он ищет по базе знаний (ask_gnome, раскопка)')}</label>
+            <input name="lens" defaultValue={e.lens} className={`${field} font-mono text-[12.5px]`} />
           </div>
 
           <div>
