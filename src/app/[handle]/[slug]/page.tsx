@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
+import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, useTemplate } from '@/features/library/actions'
@@ -39,7 +39,7 @@ import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
-import { TranslateButton } from '@/features/library/TranslateButton'
+import { ListActionsMenu } from '@/features/library/ListActionsMenu'
 import { ReportButton } from '@/features/reports/ReportButton'
 import { publishList } from '@/features/library/actions'
 
@@ -316,17 +316,7 @@ export default async function ListPage({
                   </span>
                   {latestNote && <span className="hidden min-w-0 flex-1 truncate text-ink-2 sm:inline">{latestNote}</span>}
                   <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
-                  {/* История коммитов (версии) — видна и на мобиле (просили вернуть). */}
-                  <Tooltip label={t('versionsTab', lang)}>
-                    <Link href={`${base}/versions`} aria-label={t('versionsTab', lang)} className="inline-flex shrink-0 items-center gap-1 border-l border-border py-1 pl-2 text-muted hover:text-accent">
-                      <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
-                    </Link>
-                  </Tooltip>
-                  <Tooltip label="Blame">
-                    <Link href={`${base}/blame`} className="hidden shrink-0 items-center gap-1 text-muted hover:text-accent sm:inline-flex">
-                      <History size={14} />
-                    </Link>
-                  </Tooltip>
+                  {/* История коммитов и blame переехали в «...»-меню действий справа. */}
                 </div>
                 <div className="ml-auto flex shrink-0 items-center gap-2 max-sm:w-full max-sm:justify-end">
                   {tpl.isTemplate && viewer && (
@@ -334,41 +324,34 @@ export default async function ListPage({
                       <Tooltip label={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}>
                         <button
                           type="submit"
-                          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] font-semibold text-ink hover:border-border-strong"
+                          className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border px-3 text-[13px] font-semibold text-ink hover:border-border-strong"
                         >
-                          <LayoutTemplate size={13} /> <span className="hidden md:inline">{lang === 'ru' ? 'Использовать шаблон' : 'Use this template'}</span>
+                          <LayoutTemplate size={14} /> <span className="hidden md:inline">{lang === 'ru' ? 'Использовать шаблон' : 'Use this template'}</span>
                         </button>
                       </Tooltip>
                     </form>
                   )}
-                  {/* Run — отдельной кнопкой РЯДОМ с Use (как просили): главный
-                      сценарий исполнения, не прячем внутрь дропдауна. */}
+                  {/* Run — первичное действие, отдельной кнопкой рядом с Получить.
+                      Высота фиксирована (38px) — ряд ровный с Получить и «...». */}
                   {viewer && (
                     <form action={startRun.bind(null, tpl.id)} className="inline-flex">
-                      <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg hover:opacity-90 max-sm:px-2.5 max-sm:py-1.5">
+                      <button className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[13px] font-semibold text-primary-fg hover:opacity-90">
                         <PlayCircle size={15} /> <span className="hidden md:inline">{t('runStart', lang)}</span>
                       </button>
                     </form>
                   )}
                   <CloneDropdown base={base} lang={lang} />
-                  {/* Служебные действия — иконки без рамки в углу (как у GitHub),
-                      а не полноразмерные кнопки в основном ряду (фидбек владельца). */}
-                  <span className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2">
-                    {/* «Перевести» — владельцу/коллаборатору, когда у списка нет
-                        заголовка на языке зрителя (перевод добавит язык, ADR-0009). */}
-                    {canManageBranches && !snapshot && titleIsForeign && (
-                      <TranslateButton templateId={tpl.id} targetLang={lang} lang={lang} iconOnly />
-                    )}
-                    <Tooltip label={isOwner ? t('edit', lang) : t('suggestEdit', lang)}>
-                      <Link
-                        href={isOwner ? `${base}/edit` : `${base}/suggest`}
-                        aria-label={isOwner ? t('edit', lang) : t('suggestEdit', lang)}
-                        className="grid h-7 w-7 place-items-center rounded text-muted hover:text-ink"
-                      >
-                        <Pencil size={14} />
-                      </Link>
-                    </Tooltip>
-                  </span>
+                  {/* Вторичное (правка/перевод/история/blame) — одним «...»-меню,
+                      а не россыпью разновысоких иконок (эталон: секции настроек). */}
+                  <ListActionsMenu
+                    base={base}
+                    isOwner={isOwner}
+                    templateId={tpl.id}
+                    lang={lang}
+                    versionsCount={tpl.versions.length}
+                    canTranslate={canManageBranches && !snapshot && titleIsForeign}
+                    targetLang={lang}
+                  />
                 </div>
               </div>
             )}
