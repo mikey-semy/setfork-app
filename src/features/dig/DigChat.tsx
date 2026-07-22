@@ -182,8 +182,12 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       </div>
 
       <div className="border-t border-border px-2.5 py-2">
-        <div className="relative">
+        {/* Рамка = «инпут», кнопка В ПОТОКЕ и КРУГЛАЯ bg-primary (как в чате генерации):
+            одна строка — по оси (items-end), много — у низа. Фидбек владельца:
+            absolute-кнопка «падала» ниже оси и была не круглой. */}
+        <div className="flex items-end gap-1 rounded-2xl border border-border bg-surface px-1.5 py-1.5 focus-within:border-border-strong">
           <Textarea
+            variant="bare"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -195,20 +199,18 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
             }}
             rows={1}
             placeholder={say('Why exactly this way?', 'Почему именно так?')}
-            className="max-h-24 min-h-[38px] w-full resize-none pr-10"
+            className="max-h-24 min-h-8 flex-1 px-2 py-1.5"
           />
-          {/* Кнопка ВНУТРИ поля (фидбек владельца): Enter — отправить, Shift+Enter — перенос, Esc — закрыть.
-              Тултип — shadcn, не браузерный title (правило проекта). */}
+          {/* Тултип — shadcn, не браузерный title (правило проекта). Enter — отправить, Shift+Enter — перенос, Esc — закрыть. */}
           <Tooltip label={say('Enter — send · Shift+Enter — new line · Esc — close', 'Enter — отправить · Shift+Enter — перенос · Esc — закрыть')}>
             <Button
-              variant="ghost"
-              size="xs"
+              size="sm"
               aria-label={say('Send (Enter)', 'Отправить (Enter)')}
               onClick={() => send()}
               disabled={!text.trim() || pending}
-              className="absolute bottom-1.5 right-1.5 text-accent disabled:text-muted"
+              className="grid size-8 shrink-0 place-items-center rounded-full p-0"
             >
-              <SendHorizontal size={15} />
+              {pending ? <Loader2 size={15} className="animate-spin" /> : <SendHorizontal size={15} />}
             </Button>
           </Tooltip>
         </div>
