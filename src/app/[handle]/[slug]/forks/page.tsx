@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, GitFork, Star } from 'lucide-react'
+import { ArrowLeft, CornerDownRight, GitFork, Star } from 'lucide-react'
 import { sql } from 'drizzle-orm'
 import { db } from '@/shared/db'
 import { getLang } from '@/shared/i18n/server'
@@ -60,8 +60,9 @@ export default async function ForksPage({ params }: { params: Promise<{ handle: 
 
   return (
     <div className="mx-auto w-full max-w-[860px] px-4 py-6 sm:px-6">
+      {/* Назад к списку — показываем title (как в шапке), а не технический slug. */}
       <Link href={`/${owner}/${slug}`} className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
-        <ArrowLeft size={15} /> {owner}/{slug}
+        <ArrowLeft size={15} /> {owner} / {tr(meta.title, lang)}
       </Link>
       <h1 className="flex items-center gap-2 text-[18px] font-bold text-ink">
         <GitFork size={17} /> {say('Fork tree', 'Дерево форков')}
@@ -76,8 +77,9 @@ export default async function ForksPage({ params }: { params: Promise<{ handle: 
         <ul className="mt-5 flex flex-col gap-1.5">
           {rows.map((r) => (
             <li key={r.id} style={{ paddingLeft: `${(r.level - 1) * 20}px` }} className="flex items-baseline gap-2 text-[13.5px]">
+              {/* Иерархия форка (не дубль иконки заголовка «Дерево форков»). */}
               <span className={`self-center ${fresh(r.updated_at) ? 'text-accent' : 'text-muted'}`} aria-hidden>
-                <GitFork size={12} />
+                <CornerDownRight size={13} />
               </span>
               <Link href={`/${r.handle}/${r.slug}`} className="min-w-0 truncate font-medium text-ink hover:text-accent">
                 {tr(r.title, lang) || `${r.handle}/${r.slug}`}
