@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useState, useTransition } from 'react'
-import { Archive, ArchiveRestore, Globe, Loader2, Lock, Snowflake, Sun, Trash2, UserRoundPlus } from 'lucide-react'
+import { Archive, Globe, Lock, Snowflake, UserRoundPlus } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
@@ -42,7 +42,7 @@ export function ListSettingsDanger({
   // fingerprint'а открывало бы отмывку повторной заливкой). Показываем причину.
   const lockedByModeration = moderation === 'flagged' || moderation === 'hidden'
 
-  const row = 'flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0'
+  const row = 'flex flex-wrap items-center justify-between gap-3 py-4'
 
   return (
     <>
@@ -74,8 +74,8 @@ export function ListSettingsDanger({
                 <Snowflake size={12} /> {t(frozen ? 'frozenOn' : 'freezeHint', lang)}
               </p>
             </div>
-            <Button variant="danger" size="md" onClick={() => setDialog('freeze')} className="gap-2 border border-danger/40">
-              {frozen ? <Sun size={14} /> : <Snowflake size={14} />} {t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+            <Button variant="danger" size="md" onClick={() => setDialog('freeze')} className="border border-danger/40">
+              {t(frozen ? 'unfreezeList' : 'freezeList', lang)}
             </Button>
           </div>
 
@@ -87,8 +87,8 @@ export function ListSettingsDanger({
                 <Archive size={12} /> {t(archived ? 'archivedOn' : 'archiveHint', lang)}
               </p>
             </div>
-            <Button variant="danger" size="md" onClick={() => setDialog('archive')} className="gap-2 border border-danger/40">
-              {archived ? <ArchiveRestore size={14} /> : <Archive size={14} />} {t(archived ? 'unarchiveList' : 'archiveList', lang)}
+            <Button variant="danger" size="md" onClick={() => setDialog('archive')} className="border border-danger/40">
+              {t(archived ? 'unarchiveList' : 'archiveList', lang)}
             </Button>
           </div>
 
@@ -112,8 +112,8 @@ export function ListSettingsDanger({
                 {t('transferCancel', lang)}
               </Button>
             ) : (
-              <Button variant="danger" size="md" onClick={() => setDialog('transfer')} className="gap-2 border border-danger/40">
-                <UserRoundPlus size={14} /> {t('transferOwnership', lang)}
+              <Button variant="danger" size="md" onClick={() => setDialog('transfer')} className="border border-danger/40">
+                {t('transferOwnership', lang)}
               </Button>
             )}
           </div>
@@ -127,8 +127,8 @@ export function ListSettingsDanger({
               </p>
             </div>
             {!lockedByModeration && (
-              <Button variant="danger" size="md" onClick={() => setDialog('delete')} className="gap-2 border border-danger/40">
-                <Trash2 size={14} /> {t('deleteList', lang)}
+              <Button variant="danger" size="md" onClick={() => setDialog('delete')} className="border border-danger/40">
+                {t('deleteList', lang)}
               </Button>
             )}
           </div>
