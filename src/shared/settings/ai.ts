@@ -291,7 +291,9 @@ export async function getAiSettings(): Promise<AiSettings> {
     councilMaxGnomes: num(m['ai.council_max_gnomes'], Number(process.env.SETFORK_COUNCIL_MAX_GNOMES) || 3),
     councilAudience: (m['ai.council_audience'] ?? process.env.SETFORK_COUNCIL_AUDIENCE) === 'all' ? 'all' : 'admin',
     councilWebSeek: m['ai.council_web_seek'] != null ? m['ai.council_web_seek'] === 'true' : process.env.SETFORK_COUNCIL_WEB_SEEK === 'true',
-    councilClarify: m['ai.council_clarify'] != null ? m['ai.council_clarify'] === 'true' : process.env.SETFORK_COUNCIL_CLARIFY === 'true',
+    // ВКЛ по умолчанию (фидбек владельца: «Деплой на VPS» обязан начинаться с
+    // вопросов, а clarify на проде молчал — настройка нигде не была включена).
+    councilClarify: m['ai.council_clarify'] != null ? m['ai.council_clarify'] === 'true' : process.env.SETFORK_COUNCIL_CLARIFY !== 'false',
     councilMaxPerMonth: num(m['ai.council_max_per_month'], Number(process.env.SETFORK_COUNCIL_MAX_PER_MONTH) || 0),
     assistEnabled: m['ai.assist_enabled'] === 'true',
     assistAudience: m['ai.assist_audience'] === 'all' ? 'all' : 'admin',

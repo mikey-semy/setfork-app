@@ -243,7 +243,8 @@ export async function answerClarify(generationId: string, answers: string[]): Pr
 
   // Память нити: пары «вопрос→ответ» подмешиваем в ЗАПРОС ДЖОБЫ (generations.query не портим —
   // заголовок остаётся чистым). Совет с контекстом уже не спросит уточнений и сгенерирует список.
-  const qa = questions.map((q, i) => `Q: ${q}\nA: ${(answers[i] ?? '').trim() || '(no answer)'}`).join('\n')
+  // Хвост вариантов после «|» (чипы быстрых ответов в UI) в промпт не тянем — там только вопрос.
+  const qa = questions.map((q, i) => `Q: ${q.split('|')[0].trim()}\nA: ${(answers[i] ?? '').trim() || '(no answer)'}`).join('\n')
   const augmented = `${gen.query}\n\n[User clarifications]\n${qa}`.slice(0, 2000)
   await enqueueGenerate(generationId, session.userId, augmented, gen.lang, 1)
   redirect(`/generate/${generationId}`)
