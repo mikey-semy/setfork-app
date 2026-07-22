@@ -6,6 +6,7 @@ import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 import { mcpCheckStep, mcpCreateList, mcpGetList, mcpGetRun, mcpGetScript, mcpSearch, mcpStartRun, mcpUpdateList } from '@/features/mcp/tools'
 import { mcpAskGnome, mcpListGnomes } from '@/features/mcp/gnome'
+import { mcpCouncilDraft, mcpGetCouncilDraft } from '@/features/mcp/council'
 
 const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
@@ -132,6 +133,35 @@ const handler = createMcpHandler(
       },
       async (userId, { gnome, question, handle, slug }) => {
         const res = await mcpAskGnome(userId, { gnome, question, handle, slug })
+        return 'error' in res ? err(res.error) : json(res)
+      },
+    )
+
+    readTool(
+      'get_council_draft',
+      {
+        title: 'Get a council draft',
+        description:
+          'Fetch the state of a council draft started with council_draft: status (pending/done/failed/clarify), the council conversation (which gnome said what), and the candidate lists. Poll every ~20s while status is "pending".',
+        inputSchema: { draftId: z.string().describe('The draftId from council_draft') },
+      },
+      async (userId, { draftId }) => {
+        const res = await mcpGetCouncilDraft(userId, draftId)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    // ── WRITE: полный совет гномов (тратит AI-квоту как генерация на сайте) ──
+    writeTool(
+      'council_draft',
+      {
+        title: 'Convene the gnome council',
+        description:
+          'Start a FULL gnome council on a topic: the steward classifies it, guild experts draft in parallel, a critic reviews, the elder synthesizes the final list. Takes 1-4 minutes and spends your AI quota (same as drafting on the site). Returns a draftId — poll get_council_draft for the result; the conversation is also visible on the site. For a quick single-expert answer use ask_gnome instead.',
+        inputSchema: { query: z.string().describe('What list to build, any language — same as typing into the site') },
+      },
+      async (userId, { query }) => {
+        const res = await mcpCouncilDraft(userId, query)
         return 'error' in res ? err(res.error) : json(res)
       },
     )
