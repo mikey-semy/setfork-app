@@ -50,4 +50,21 @@ describe('canViewList', () => {
     expect(canViewList(l, admin)).toBe(false) // private/draft beat the admin moderation exception
     expect(canViewList(l, owner)).toBe(true)
   })
+
+  const collab = { isOwner: false, isCollaborator: true }
+  it('collaborator sees a PRIVATE list (maintained together — not kicked out)', () => {
+    const l = list({ visibility: 'private' })
+    expect(canViewList(l, other)).toBe(false)
+    expect(canViewList(l, collab)).toBe(true)
+    expect(canViewList(l, owner)).toBe(true)
+  })
+  it('collaborator sees a DRAFT list (helps build it)', () => {
+    expect(canViewList(list({ status: 'draft' }), collab)).toBe(true)
+    expect(canViewList(list({ status: 'draft' }), other)).toBe(false)
+  })
+  it('collaborator does NOT bypass moderation takedown (safety gate)', () => {
+    for (const mod of ['flagged', 'hidden']) {
+      expect(canViewList(list({ moderation: mod }), collab)).toBe(false)
+    }
+  })
 })

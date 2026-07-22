@@ -36,6 +36,11 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
   const { handle } = await params
   const user = await getUserByHandle(handle)
   if (!user) return { title: handle }
+  // Приватный профиль не раскрываем в мете (og:title/desc) чужим — только сам ник.
+  if (user.profilePrivate) {
+    const viewer = await getSession()
+    if (viewer?.userId !== user.id) return { title: handle }
+  }
   return {
     title: user.name ? `${user.name} (${handle})` : handle,
     description: user.bio ?? undefined,
@@ -52,6 +57,9 @@ export default async function ProfilePage({
   const [{ handle }, sp, lang, viewer] = await Promise.all([params, searchParams, getLang(), getSession()])
   const user = await getUserByHandle(handle)
   if (!user) notFound()
+  // Приватный профиль виден только владельцу — для всех прочих 404 (как приватный
+  // список). Публичные списки юзера при этом остаются доступны по своим URL.
+  if (user.profilePrivate && viewer?.userId !== user.id) notFound()
 
   const tab: Tab =
     sp.tab === 'lists' ? 'lists'
@@ -79,7 +87,7 @@ export default async function ProfilePage({
     getFollowCounts(user.id),
     viewer && !isOwner ? isFollowing(viewer.userId, user.id) : Promise.resolve(false),
     avatarSrc(user.avatarUrl, 180),
-    getContributions(user.id, graphYear),
+    getContributions(user.id, graphYear, viewer?.userId),
     getReceivedStats(user.id),
     !isListsTab ? Promise.resolve([]) : tab === 'starred' ? getStarredTemplates(user.id, viewer?.userId) : getUserTemplates(user.id, viewer?.userId),
     getPinnedTemplates(user.id, viewer?.userId),

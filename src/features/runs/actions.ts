@@ -8,6 +8,7 @@ import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
 import { tr, type LocaleText } from '@/shared/i18n'
 import { collabStore } from '@/features/collab-store/store'
+import { isCollaborator } from '@/features/collab/queries'
 import { recordRunCompletionIfDone } from '@/features/library/completion'
 
 async function ownedRun(runId: string, userId: string) {
@@ -32,8 +33,13 @@ export async function startRun(templateId: string): Promise<void> {
   })
   if (!tpl) return
   const isOwner = tpl.ownerId === session.userId
-  if (tpl.visibility === 'private' && !isOwner) return
-  if (tpl.status === 'draft' && !isOwner) return
+  // Коллаборатор — «свой» для приватного/черновика (ведут вместе), как canViewList.
+  // Считаем лениво: только если это могло бы заблокировать не-владельца.
+  const maintainer =
+    isOwner ||
+    ((tpl.visibility === 'private' || tpl.status === 'draft') && (await isCollaborator(tpl.id, session.userId)))
+  if (tpl.visibility === 'private' && !maintainer) return
+  if (tpl.status === 'draft' && !maintainer) return
   if (tpl.moderation !== 'active' && !isOwner) return
 
   const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
