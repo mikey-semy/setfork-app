@@ -112,7 +112,7 @@ export const listStore: ListStore = {
         currentVersion: 1,
       })
       .returning()
-    const [ver] = await db.insert(templateVersions).values({ templateId: row.id, version: 1, note: input.note }).returning()
+    const [ver] = await db.insert(templateVersions).values({ templateId: row.id, version: 1, note: input.note, authorId: input.ownerId }).returning()
     if (input.steps.length) {
       await db.insert(stepsTable).values(
         input.steps.map((s, i) => ({
@@ -142,7 +142,7 @@ export const listStore: ListStore = {
     const newVersion = tpl.currentVersion + 1
     const [ver] = await db
       .insert(templateVersions)
-      .values({ templateId: listId, version: newVersion, note: input.note })
+      .values({ templateId: listId, version: newVersion, note: input.note, authorId: input.authorId ?? null })
       .returning()
     if (input.steps.length) {
       await db.insert(stepsTable).values(

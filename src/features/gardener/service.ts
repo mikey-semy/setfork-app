@@ -248,7 +248,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       // Кураторская библиотека — контент сайта: правка садовника применяется сразу
       // (та же механика, что acceptSuggestion), с атрибуцией в истории и модерацией.
       // recheck публичного списка — в фасаде listStore.addVersion (барьер), здесь не дублируем.
-      await listStore.addVersion(tpl.id, { note: '\u{1F9D9} gardener: refreshed steps', steps: toStepInput(items) })
+      await listStore.addVersion(tpl.id, { note: '\u{1F9D9} gardener: refreshed steps', steps: toStepInput(items), authorId: gardener.id })
       await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, created.id))
       await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: gardener.id, type: 'new_version', templateId: tpl.id })
       await enqueueReindex(tpl.id)

@@ -35,6 +35,7 @@ export interface IdGen {
 export interface NewVersionInput {
   note: string
   steps: NewStepInput[]
+  authorId?: Id | null // кто создал версию (для «Коммитов»); опционально — gardener/фон могут не знать
 }
 
 export interface CreateListInput {
