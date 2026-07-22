@@ -1,6 +1,7 @@
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { TagInput } from '@/shared/ui/TagInput'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { ListTypeToggle } from './ListTypeToggle'
 import { updateListMeta, setListVisibility } from './actions'
 
 const card = 'rounded-lg border border-border bg-surface p-5'
@@ -47,25 +48,10 @@ export function GeneralSection({
           <TagInput initial={tags} lang={lang} />
         </div>
 
-        <fieldset>
-          <legend className={label}>{t('listKind', lang)}</legend>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
-              <input type="radio" name="ordered" value="ordered" defaultChecked={ordered} className="mt-0.5" />
-              <span>
-                <span className="block text-[13.5px] font-medium text-ink">{t('orderedLabel', lang)}</span>
-                <span className="block text-[12px] text-ink-2">{t('orderedHint', lang)}</span>
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-[:checked]:border-accent">
-              <input type="radio" name="ordered" value="unordered" defaultChecked={!ordered} className="mt-0.5" />
-              <span>
-                <span className="block text-[13.5px] font-medium text-ink">{t('unorderedLabel', lang)}</span>
-                <span className="block text-[12px] text-ink-2">{t('unorderedHint', lang)}</span>
-              </span>
-            </label>
-          </div>
-        </fieldset>
+        <div>
+          <span className={label}>{t('listKind', lang)}</span>
+          <ListTypeToggle ordered={ordered} lang={lang} />
+        </div>
 
         <div>
           <SubmitButton className="rounded-md bg-primary px-4 py-2 text-[14px] font-semibold text-primary-fg">
