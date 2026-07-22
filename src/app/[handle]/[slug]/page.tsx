@@ -36,7 +36,6 @@ import { requireViewableDetail, requireViewableMeta } from '@/features/library/g
 import { db, generations } from '@/shared/db'
 import { eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
-import { ListHeader } from '@/widgets/ListHeader'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { TranslateButton } from '@/features/library/TranslateButton'
 import { ReportButton } from '@/features/reports/ReportButton'
@@ -200,7 +199,6 @@ export default async function ListPage({
       {/* Просмотр: владелец себя не накручивает, сервер дополнительно дедупит. */}
       {!isOwner && mon.viewTracking && <ViewBeacon templateId={tpl.id} />}
       <div className="print:hidden">
-        <ListHeader owner={owner} slug={slug} active="overview" />
       </div>
 
       <div className="mx-auto w-full max-w-[1180px] px-4 py-6">

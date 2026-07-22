@@ -6,7 +6,6 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
-import { ListHeader } from '@/widgets/ListHeader'
 import { VersionPicker } from '@/features/library/VersionPicker'
 import { getVersions, getVersionSteps } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -92,7 +91,6 @@ export default async function ComparePage({
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="versions" />
       <div className="mx-auto w-full max-w-[860px] px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[16px] font-bold text-ink">{t('compareTitle', lang)}</h1>
