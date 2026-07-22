@@ -1,5 +1,6 @@
 import { LIST_KINDS, classifyListKind, type ListKind } from './list-kind'
 import { type Lang, type LocaleText } from '@/shared/i18n'
+import { textLang } from '@/shared/i18n/detect-text-lang'
 
 // Политики качества садовника ПО ТИПУ СПИСКА (ось B «живые списки»).
 // Инсайт владельца: рецепту не нужен ассистент, но нужна точность («посолить
@@ -49,25 +50,9 @@ export function policyFor(kind: ListKind, overrides: Partial<Record<ListKind, st
 export const policySettingKey = (kind: ListKind) => `gardener.policy.${kind}`
 export const POLICY_SETTING_KEYS = LIST_KINDS.map(policySettingKey)
 
-/** Язык ФАКТИЧЕСКОГО текста — по алфавиту, а не по ключам LocaleText.
- *  Ключ врёт: createTemplate кладёт текст под язык ИНТЕРФЕЙСА автора, поэтому
- *  русский список при en-интерфейсе хранится под 'en'. Прежний dominantLang
- *  считал ключи и садовник «улучшал» такие списки переводом на английский.
- *  Кириллица ≥ трети букв → ru: технические списки полны латинских команд и
- *  терминов, треть — достаточный сигнал. Расширение LOCALES потребует
- *  настоящей детекции, пока алфавитов два. */
-export function textLang(texts: (string | null | undefined)[]): Lang {
-  let cyr = 0
-  let lat = 0
-  for (const v of texts) {
-    if (!v) continue
-    cyr += (v.match(/[а-яё]/gi) ?? []).length
-    lat += (v.match(/[a-z]/gi) ?? []).length
-  }
-  return cyr > 0 && cyr >= (cyr + lat) / 3 ? 'ru' : 'en'
-}
-
-/** То же для мультиязычного контента: смотрим значения ВСЕХ ключей. */
+/** Язык ФАКТИЧЕСКОГО текста мультиязычного контента — по алфавиту значений
+ *  ВСЕХ ключей (ключам верить нельзя, см. textLang). Прежний dominantLang
+ *  считал ключи и садовник «улучшал» русские списки переводом на английский. */
 export function dominantLang(texts: (LocaleText | null | undefined)[]): Lang {
   return textLang(texts.flatMap((t) => (t ? Object.values(t) : [])))
 }
