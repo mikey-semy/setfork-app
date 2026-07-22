@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { ChevronDown, Loader2, Pickaxe, SendHorizontal, X } from 'lucide-react'
+import { ChevronDown, Heart, Loader2, Pickaxe, SendHorizontal, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { Textarea } from '@/shared/ui/textarea'
@@ -10,7 +10,7 @@ import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
-import { digChatAsk, getDigChatHistory, type DigChatMsg } from './chat-actions'
+import { digChatAsk, getDigChatHistory, thankGnome, type DigChatMsg } from './chat-actions'
 
 /**
  * Мини-чат раскопки (редизайн «Копать глубже» по фидбеку владельца): кирка в
@@ -43,6 +43,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   const [gnome, setGnome] = useState('auto')
   const [messages, setMessages] = useState<DigChatMsg[]>([])
   const [followups, setFollowups] = useState<string[]>([])
+  const [thanked, setThanked] = useState<Set<number>>(new Set()) // индексы реплик, за которые сказали спасибо
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
   const [pending, start] = useTransition()
@@ -109,6 +110,12 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         setFollowups(res.followups)
       }
     })
+  }
+
+  const thank = (i: number, who: string) => {
+    if (thanked.has(i)) return
+    setThanked((s) => new Set(s).add(i)) // оптимистично: благодарность — не критичный путь
+    void thankGnome(who).catch(() => {})
   }
 
   const current = gnomes.find((g) => g.id === gnome)
@@ -183,8 +190,9 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
               <GnomeAvatar src={`/gnomes/${m.who ?? 'generalist'}.webp`} size={32} className="size-8 shrink-0" />
               <div className="min-w-0 rounded-2xl rounded-bl-md bg-(--surface-2) px-3 py-1.5">
                 <Markdown codeCards className="text-[13px] leading-[1.5] text-ink-2">{m.text}</Markdown>
-                {/* Копировать всю реплику (фидбек владельца): проявляется при наведении. */}
-                <div className="mt-1 flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
+                {/* «Спасибо» гному (одушевление) + копировать — проявляются при наведении. */}
+                <div className="mt-1 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <ThankButton who={m.who ?? 'generalist'} thanked={thanked.has(i)} onThank={() => thank(i, m.who ?? 'generalist')} lang={lang} />
                   <CopyButton text={m.text} />
                 </div>
               </div>
@@ -235,6 +243,25 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         </div>
       </div>
     </div>
+  )
+}
+
+/** «Спасибо» гному за реплику (одушевление): сердечко, после клика — заполненное. */
+function ThankButton({ who, thanked, onThank, lang }: { who: string; thanked: boolean; onThank: () => void; lang: Lang }) {
+  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
+  void who
+  return (
+    <Tooltip label={thanked ? say('Thanked', 'Спасибо сказано') : say('Thank the gnome', 'Сказать спасибо')}>
+      <button
+        type="button"
+        aria-label={say('Thank the gnome', 'Сказать спасибо')}
+        onClick={onThank}
+        disabled={thanked}
+        className={thanked ? 'text-accent' : 'text-muted transition-colors hover:text-accent'}
+      >
+        <Heart size={13} className={thanked ? 'fill-current' : ''} />
+      </button>
+    </Tooltip>
   )
 }
 

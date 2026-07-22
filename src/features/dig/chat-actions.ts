@@ -2,7 +2,7 @@
 
 import { and, asc, eq } from 'drizzle-orm'
 import { generateText } from 'ai'
-import { db, digChatMessages, steps, templates, templateVersions } from '@/shared/db'
+import { db, digChatMessages, gnomeThanks, steps, templates, templateVersions } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
 import { getRoster } from '@/shared/ai/roster'
@@ -169,5 +169,24 @@ export async function getDigChatHistory(templateId: string, stepN: number): Prom
     return rows.map((r) => ({ role: r.role === 'gnome' ? 'gnome' : 'user', who: r.who ?? undefined, text: r.text }))
   } catch {
     return []
+  }
+}
+
+/**
+ * Сказать гному «спасибо» (одушевление): явная благодарность за полезный ответ.
+ * Питает настроение (теплеет) и позже — эпизодическую память. Мягкий дедуп: не
+ * чаще раза в минуту на гнома от юзера (от случайных двойных кликов), не критично.
+ */
+export async function thankGnome(who: string): Promise<{ ok: true } | { error: string }> {
+  const session = await requireSession()
+  const id = (who ?? '').trim().slice(0, 40)
+  if (!id) return { error: 'empty' }
+  try {
+    const rl = await rateLimit(`thank:${session.userId}:${id}`, 1, 60_000)
+    if (!rl.ok) return { ok: true } // уже поблагодарил недавно — тихо принимаем
+    await db.insert(gnomeThanks).values({ gnomeId: id, userId: session.userId, source: 'dig' })
+    return { ok: true }
+  } catch {
+    return { ok: true } // благодарность — не критичный путь (нет таблицы/сбой не мешает чату)
   }
 }
