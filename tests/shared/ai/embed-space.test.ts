@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   COLUMN_DIM,
   EMBED_TARGET_SETTING,
-  padToColumn,
+  fitToColumn,
   parseIndexSpace,
   resolveTargetSpace,
   sameSpace,
@@ -43,13 +43,20 @@ describe('parseIndexSpace', () => {
   })
 })
 
-describe('padToColumn', () => {
-  it('768 → 1536 нулями, 1536 не трогаем', () => {
-    const v = padToColumn(new Array<number>(768).fill(0.5))
+describe('fitToColumn', () => {
+  it('короче колонки → паддинг нулями; ровно — не трогаем', () => {
+    const v = fitToColumn(new Array<number>(256).fill(0.5))
     expect(v).toHaveLength(COLUMN_DIM)
-    expect(v[767]).toBe(0.5)
-    expect(v[768]).toBe(0)
-    expect(padToColumn(new Array<number>(COLUMN_DIM).fill(1))).toHaveLength(COLUMN_DIM)
+    expect(v[255]).toBe(0.5)
+    expect(v[256]).toBe(0)
+    expect(fitToColumn(new Array<number>(COLUMN_DIM).fill(1))).toHaveLength(COLUMN_DIM)
+  })
+
+  it('длиннее колонки (не-MRL без dimensions) → усечение + L2-нормализация', () => {
+    const v = fitToColumn(new Array<number>(COLUMN_DIM + 64).fill(2))
+    expect(v).toHaveLength(COLUMN_DIM)
+    const norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0))
+    expect(norm).toBeCloseTo(1, 9)
   })
 
   it('паддинг не меняет косинусную близость', () => {

@@ -100,10 +100,13 @@ export async function moderateContent(
           const parsed = VERDICT_SCHEMA.safeParse(JSON.parse(raw.slice(s, en + 1)))
           if (parsed.success) {
             const obj = parsed.data
+            // Компромисс (см. ревью волны): structured-парсер этот ответ забраковал, мы
+            // осознанно доверяем спасённому JSON ради автоматики (иначе RU-модели вечно
+            // держат списки «На проверке»). След в reason — для аудита в очереди админа.
             return {
               flagged: !!obj.flagged,
               category: String(obj.category ?? '').slice(0, 60),
-              reason: String(obj.reason ?? '').slice(0, 300),
+              reason: `${String(obj.reason ?? '').slice(0, 280)} [salvaged]`,
               confidence: Number.isFinite(obj.confidence) ? Math.min(1, Math.max(0, obj.confidence)) : 0,
             }
           }

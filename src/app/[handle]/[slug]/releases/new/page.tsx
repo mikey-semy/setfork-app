@@ -9,7 +9,6 @@ import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { getVersions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
-import { ListHeader } from '@/widgets/ListHeader'
 import { createRelease } from '@/features/releases/actions'
 import { VersionSelect } from '@/features/releases/VersionSelect'
 
@@ -43,7 +42,6 @@ export default async function NewReleasePage({
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="versions" />
       <div className="mx-auto w-full max-w-[680px] px-4 py-6">
         <h1 className="mb-1 flex items-center gap-2 text-[16px] font-bold text-ink">
           <Tag size={16} className="text-accent" /> {ru ? 'Новый релиз' : 'New release'}

@@ -12,6 +12,7 @@ import { DETAIL_LEVELS, detailLabel, toDetail } from '@/shared/ai/detail-level'
 import { CouncilBubble } from './CouncilBubble'
 import { CandidateCard } from './CandidateCard'
 import { ActionsMenu } from './ActionsMenu'
+import { ProvenancePanel } from './ProvenancePanel'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
 
 /**
@@ -234,6 +235,9 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                       (старые генерации), а вариант обязан быть виден всегда. */}
                   {cand.summary && <div className="mb-1 pl-1 text-[11.5px] text-muted">{cand.summary}</div>}
                   <CandidateCard cand={cand} selected={cand.id === selId} onSelect={() => setSelId(cand.id)} lang={lang} />
+                  {/* Родословная (HQ §6): под карточкой, а не внутри — карточка сама <button>,
+                      вложенные интерактивы в неё класть нельзя. */}
+                  <ProvenancePanel provenance={cand.provenance ?? {}} lang={lang} />
                 </div>
               )}
             </li>

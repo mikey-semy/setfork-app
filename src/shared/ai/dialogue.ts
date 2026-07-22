@@ -47,6 +47,9 @@ export async function replyToUser(
   const client = await getAiChatClient().catch(() => null)
   const settings = await getAiSettings().catch(() => null)
   if (!client || !settings?.enabled) return
+  // Дневной кап — и здесь (фикс по ревью): это был единственный LLM-вызов в обход предохранителя.
+  const { globalBudgetOk } = await import('@/shared/quota')
+  if (!(await globalBudgetOk().catch(() => false))) return
   const roster = await getRoster().catch(() => [])
   const gnome = pickAddressee(note, roster, listKind)
   if (!gnome) return

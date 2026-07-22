@@ -6,6 +6,7 @@ import { eq, inArray, sql } from 'drizzle-orm'
 import { db, stars, suggestions, templates, users } from '@/shared/db'
 import type { Social } from '@/shared/db/schema'
 import { clearSessionCookie, refreshSessionCookie, requireSession } from '@/shared/auth/session'
+import { recordAudit } from '@/shared/audit'
 import { removeAvatar, saveAvatar } from './avatar'
 
 export type ActionResult = { ok?: true; error?: string }
@@ -50,6 +51,7 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
   const location = String(formData.get('location') ?? '').trim().slice(0, 80) || null
   const website = normalizeUrl(String(formData.get('website') ?? '')).slice(0, 200) || null
   const socials = parseSocials(String(formData.get('socials') ?? '[]'))
+  const profilePrivate = formData.get('profilePrivate') === 'on'
 
   let avatarRef: string | undefined // storage_key (S3) или /uploads-путь
   const file = formData.get('avatar')
@@ -67,7 +69,7 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
 
   await db
     .update(users)
-    .set({ name, bio, location, website, socials, ...(avatarRef ? { avatarUrl: avatarRef } : clearAvatar ? { avatarUrl: null } : {}) })
+    .set({ name, bio, location, website, socials, profilePrivate, ...(avatarRef ? { avatarUrl: avatarRef } : clearAvatar ? { avatarUrl: null } : {}) })
     .where(eq(users.id, session.userId))
 
   // В сессии храним УЖЕ отрезолвленный URL (навбар — клиент, подписать сам не может).
@@ -130,7 +132,18 @@ export async function deleteAccount(_prev: ActionResult | null, formData: FormDa
       .where(inArray(templates.id, starred.map((r) => r.tid)))
   }
 
-  // 4) Удаляем аккаунт — каскадом уходят его звёзды и прогоны.
+  // 4) Аудит ДО удаления: actorId ссылается на users (onDelete set null),
+  // после db.delete запись потеряла бы автора. Списки переданы ghost, поэтому
+  // фиксируем сколько именно передано/расзвёзжено.
+  await recordAudit('account.delete', {
+    actorId: session.userId,
+    targetType: 'user',
+    targetId: session.userId,
+    meta: { handle: session.handle, listsTransferred: mine.length, starsRemoved: starred.length },
+  })
+
+  // 5) Удаляем аккаунт — каскадом уходят его звёзды, прогоны И сессии на всех
+  // устройствах (FK sessions.userId → onDelete cascade): отзыв везде, не только тут.
   await removeAvatar(session.userId)
   await db.delete(users).where(eq(users.id, session.userId))
 

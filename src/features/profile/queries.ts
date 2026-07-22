@@ -74,18 +74,22 @@ export async function getOwnListsLight(userId: string): Promise<{ id: string; sl
 /** Активность по дням за ~год: версии списков (правки) + предложения правок. */
 // Вклад по дням: без year — скользящее окно ~год (дефолтный граф);
 // с year — весь календарный год (для выбора года, как GitHub).
-export async function getContributions(userId: string, year?: number): Promise<{ date: string; count: number }[]> {
+export async function getContributions(userId: string, year?: number, viewerId?: string): Promise<{ date: string; count: number }[]> {
   const range =
     year != null
       ? sql`day >= ${`${year}-01-01`}::date and day < ${`${year + 1}-01-01`}::date`
       : sql`day >= now() - interval '371 days'`
+  // Версии приватных/черновиков/снятых списков светились в графе-квадратиках ВСЕМ —
+  // чужой видел «в этот день была активность» по недоступному ему списку. Гейтим по
+  // видимости с учётом зрителя (владелец видит всё), как getMonthActivity.
+  const vis = sql`and (t.visibility = 'public' and t.status = 'published' and t.moderation = 'active' or t.owner_id = ${viewerId ?? null})`
   const res = await db.execute(sql`
     select (day::date)::text as date, count(*)::int as count
     from (
       select tv.created_at as day
         from ${templateVersions} tv
         join ${templates} t on t.id = tv.template_id
-        where t.owner_id = ${userId}
+        where t.owner_id = ${userId} ${vis}
       union all
       select s.created_at from ${suggestions} s where s.author_id = ${userId}
     ) x

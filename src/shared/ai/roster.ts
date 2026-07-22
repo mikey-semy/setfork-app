@@ -27,6 +27,8 @@ export interface Expert {
   code: string
   /** Линза запроса (HQ §5): аспекты, которыми гном смотрит на любой запрос к базе. */
   lens: string
+  /** Память (HQ §3 этап 2): выжимка ремесла из лучших списков доменов — пишет рудник. */
+  memory: string
   domains: string[]
   /** Принудительная модель; пусто → из пула совета по кругу. */
   model: string
@@ -55,6 +57,7 @@ export const SEED: Expert[] = [
 - Repetitive manual work becomes a scripted step
 - Reliability is a number (SLO), not a feeling`,
     lens: 'deploy rollback health-check automation reliability',
+    memory: '',
     domains: ['deploy', 'devops', 'ci', 'servers', 'infra', 'docker', 'kubernetes'],
     // Google SRE Book (SLO/error budget, blameless postmortem, toil) + DORA Four Keys.
     persona:
@@ -75,6 +78,7 @@ export const SEED: Expert[] = [
 - Edge cases and failure modes are named, not implied
 - Correctness beats cleverness`,
     lens: 'code commands edge cases tests review',
+    memory: '',
     domains: ['programming', 'software', 'coding', 'api', 'library', 'framework'],
     // SOLID (R. C. Martin) + Test Pyramid (Fowler) + Google Engineering Practices + SWEBOK v4.
     persona:
@@ -95,6 +99,7 @@ export const SEED: Expert[] = [
 - Food-safety critical points are called out (danger zone 5–57 °C)
 - Kitchen order: what waits, what runs in parallel, what must not`,
     lens: 'ingredients technique temperature timing food safety',
+    memory: '',
     domains: ['cooking', 'food', 'recipe', 'kitchen', 'baking'],
     // Mise en place (CIA) + HACCP 7 principles (Codex CXC 1-1969) + FDA Food Code danger zone.
     persona:
@@ -115,6 +120,7 @@ export const SEED: Expert[] = [
 - Every likely failure has a fallback
 - Budget and time cost sit next to each step`,
     lens: 'documents visas route timing budget fallback',
+    memory: '',
     domains: ['travel', 'trip', 'city', 'tourism', 'itinerary'],
     // ISO 31030 (travel risk) + IATA Timatic (docs volatility) + CDC Yellow Book / WHO (health prep).
     persona:
@@ -135,6 +141,7 @@ export const SEED: Expert[] = [
 - Progress raises ONE parameter at a time
 - Injury-causing form errors are named`,
     lens: 'training load progression form safety',
+    memory: '',
     domains: ['fitness', 'health', 'workout', 'sport', 'nutrition'],
     // ACSM GETP (FITT-VP, preparticipation screening, progressive overload) + WHO 2020 activity guidelines.
     persona:
@@ -155,6 +162,7 @@ export const SEED: Expert[] = [
 - Disagreements are cited, not smoothed over
 - Comprehension checks are built in`,
     lens: 'sources study methods verification practice',
+    memory: '',
     domains: ['study', 'learning', 'research', 'course', 'exam'],
     // ACRL Framework for Information Literacy + PRISMA 2020 (reproducible search).
     persona:
@@ -175,6 +183,7 @@ export const SEED: Expert[] = [
 - Primary and official sources are preferred
 - Staleness is admitted, never hidden`,
     lens: 'tools resources links prices alternatives',
+    memory: '',
     domains: ['*'],
     // Belbin Resource Investigator (+ его allowable weakness) + CRAAP test.
     persona:
@@ -195,6 +204,7 @@ export const SEED: Expert[] = [
 - Checklist shape: short blocks, clear pause points
 - Each step marked read-do or do-confirm`,
     lens: 'method structure checklist verification',
+    memory: '',
     domains: ['*'],
     // Cynefin (Snowden & Boone, HBR) + Pólya «How to Solve It» + Checklist Manifesto / WHO checklist.
     persona:
@@ -215,6 +225,7 @@ const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   guildRu: r.guildRu,
   code: r.code,
   lens: r.lens,
+  memory: r.memory,
   domains: r.domains,
   model: r.model,
   avatar: r.avatar || r.id,
@@ -231,25 +242,34 @@ export async function seedRoster(): Promise<void> {
 }
 
 /**
- * Догнать гильдии у СУЩЕСТВУЮЩИХ строк (HQ §7): таблица на проде уже наполнена,
- * onConflictDoNothing новые поля не проставит. Трогаем только строки с ПУСТЫМ
- * кодексом — правку админа не перетираем никогда (пустой = не задавался).
+ * Догнать гильдии/линзы у СУЩЕСТВУЮЩИХ строк (HQ §7): таблица на проде уже
+ * наполнена, onConflictDoNothing новые поля не проставит. ОДНОРАЗОВОСТЬ (фикс
+ * по ревью волны): если хоть у одного SEED-гнома поле уже непустое — бэкфилл
+ * этого поля был (или админ заполнил сам) и больше НЕ выполняется. Иначе
+ * очищенный админом кодекс молча воскресал бы на каждом чтении ростера.
+ * Вызывается только из getRosterAll (админка) — не из горячего пути совета.
  */
 async function backfillGuilds(rows: (typeof councilExperts.$inferSelect)[]): Promise<boolean> {
-  const missing = SEED.filter((s) => rows.some((r) => r.id === s.id && !r.code))
-  for (const s of missing)
-    await db
-      .update(councilExperts)
-      .set({ guildEn: s.guildEn, guildRu: s.guildRu, code: s.code, updatedAt: new Date() })
-      .where(and(eq(councilExperts.id, s.id), eq(councilExperts.code, '')))
-  // Линза (появилась позже гильдий) — та же логика: пустая = не задавалась, догоняем из SEED.
-  const missingLens = SEED.filter((s) => rows.some((r) => r.id === s.id && !r.lens))
-  for (const s of missingLens)
-    await db
-      .update(councilExperts)
-      .set({ lens: s.lens, updatedAt: new Date() })
-      .where(and(eq(councilExperts.id, s.id), eq(councilExperts.lens, '')))
-  return missing.length > 0 || missingLens.length > 0
+  const seedRows = rows.filter((r) => SEED.some((s) => s.id === r.id))
+  let changed = false
+  if (seedRows.length && seedRows.every((r) => !r.code)) {
+    for (const s of SEED.filter((s) => seedRows.some((r) => r.id === s.id)))
+      await db
+        .update(councilExperts)
+        .set({ guildEn: s.guildEn, guildRu: s.guildRu, code: s.code, updatedAt: new Date() })
+        .where(and(eq(councilExperts.id, s.id), eq(councilExperts.code, '')))
+    changed = true
+  }
+  // Линза (появилась позже гильдий) — отдельный одноразовый проход по тому же правилу.
+  if (seedRows.length && seedRows.every((r) => !r.lens)) {
+    for (const s of SEED.filter((s) => seedRows.some((r) => r.id === s.id)))
+      await db
+        .update(councilExperts)
+        .set({ lens: s.lens, updatedAt: new Date() })
+        .where(and(eq(councilExperts.id, s.id), eq(councilExperts.lens, '')))
+    changed = true
+  }
+  return changed
 }
 
 /**
@@ -265,7 +285,8 @@ export async function getRoster(): Promise<Expert[]> {
       await seedRoster()
       rows = await read()
     }
-    if (await backfillGuilds(rows)) rows = await read()
+    // Бэкфилл гильдий здесь НЕ зовём (фикс по ревью): getRoster — горячий путь
+    // каждого совета, писать в БД на чтении нельзя; бэкфилл живёт в getRosterAll.
     return rows.length ? rows.map(row2expert) : SEED
   } catch (e) {
     console.warn('[roster] fallback to SEED', e instanceof Error ? e.message : e)

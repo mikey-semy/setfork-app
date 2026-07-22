@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 import { mcpCheckStep, mcpCreateList, mcpGetList, mcpGetRun, mcpGetScript, mcpSearch, mcpStartRun, mcpUpdateList } from '@/features/mcp/tools'
-import { mcpAskGnome, mcpListGnomes } from '@/features/mcp/gnome'
+import { mcpAskGnome, mcpGnomeReview, mcpListGnomes } from '@/features/mcp/gnome'
 import { mcpCouncilDraft, mcpGetCouncilDraft } from '@/features/mcp/council'
 
 const json = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
@@ -134,6 +134,24 @@ const handler = createMcpHandler(
       async (userId, { gnome, question, handle, slug }) => {
         const res = await mcpAskGnome(userId, { gnome, question, handle, slug })
         return 'error' in res ? err(res.error) : json(res)
+      },
+    )
+
+    readTool(
+      'gnome_review',
+      {
+        title: 'Gnome review of a list',
+        description:
+          'A guild master reviews an existing list against his guild code and returns concrete fixes: verdict, issues (where/problem/fix) and missing additions. Pick the gnome explicitly or let the workshop match one by the list tags. Costs one model call from your AI quota.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle of the list'),
+          slug: z.string().describe('List slug'),
+          gnome: z.string().optional().describe('Optional gnome id from list_gnomes; omit to auto-match by tags'),
+        },
+      },
+      async (userId, { handle, slug, gnome }) => {
+        const res = await mcpGnomeReview(userId, { handle, slug, gnome })
+        return 'error' in res ? err(res.error as string) : json(res)
       },
     )
 
