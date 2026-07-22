@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { tr, type LocaleText } from '@/shared/i18n'
-import { getRun } from '@/features/runs/queries'
+import { getAssistThreads, getRun, versionStuckStats } from '@/features/runs/queries'
 import { RunView, type RunStepVM } from '@/features/runs/RunView'
 import { productItems } from '@/features/library/blocks'
 import { getCourseCompletion } from '@/features/quizzes/queries'
@@ -17,10 +17,20 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   if (!session) redirect('/login')
   const data = await getRun(id, session.userId)
   if (!data) notFound()
-  // Прохождение курса — постоянный факт: в новом прогоне сертификат уже доступен.
-  const completion = await getCourseCompletion(data.run.templateId, session.userId)
   // «Помощь на шаге»: флаг + аудитория считаются здесь (сервером), клиент только рисует кнопку.
   const assistEnabled = ai.enabled && ai.assistEnabled && (ai.assistAudience === 'all' || isAdminHandle(session.handle))
+  // Прохождение курса — постоянный факт: в новом прогоне сертификат уже доступен.
+  const [completion, threads, stuckMap] = await Promise.all([
+    getCourseCompletion(data.run.templateId, session.userId),
+    assistEnabled ? getAssistThreads(id) : Promise.resolve(new Map<string, { role: 'user' | 'assistant'; content: string }[]>()),
+    assistEnabled ? versionStuckStats(data.run.versionId, id) : Promise.resolve(new Map<string, { passed: number; stuck: number }>()),
+  ])
+  // Бейдж «здесь часто застревают» — только на статистически осмысленном базисе (≥4 чужих прогона).
+  const stuckPct = (stepId: string) => {
+    const st = stuckMap.get(stepId)
+    const total = st ? st.passed + st.stuck : 0
+    return st && total >= 4 ? st.stuck / total : 0
+  }
 
   const steps: RunStepVM[] = data.steps.map((s) => ({
     id: s.id,
@@ -49,7 +59,8 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
     blocked: s.state?.status === 'blocked',
     reason: s.state?.note ?? '',
     subtasksDone: s.state?.subtasksDone ?? [],
-    assist: s.state?.assist ?? '',
+    assist: threads.get(s.id) ?? [],
+    stuckPct: stuckPct(s.id),
   }))
 
   return (

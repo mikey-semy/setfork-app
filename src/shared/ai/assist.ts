@@ -8,14 +8,23 @@ import { pickChatModel } from './credits'
 import { extractUsage, outcomeOf, recordUsage } from './usage'
 import { spotlight } from './spotlight'
 
-// «Помощь на шаге»: короткая AI-подсказка человеку, застрявшему на шаге прогона.
-// Отличие от generate*: работает с ОДНИМ шагом, возвращает текст (markdown),
-// а не список; должна быть быстрой (застрявший ждёт), поэтому короткий вывод
-// и жёсткий таймаут. Наш data moat в промпте — агрегат опыта других прогонов
-// (только ЦИФРЫ; чужие тексты причин не показываем — приватность note).
+// «Спутник исполнения»: AI-помощь человеку, застрявшему на шаге прогона.
+// Диалог, а не одноразовая справка: первый вызов собирает контекст шага,
+// дальше — нить уточнений (хвост нити идёт в messages). Должна быть быстрой
+// (застрявший ждёт): короткий вывод и жёсткий таймаут. Наш data moat в
+// промпте — агрегат опыта других прогонов (только ЦИФРЫ; чужие тексты причин
+// не показываем — приватность note). Spotlight — на UGC-контенте шага;
+// уточнения самого юзера — легитимное управление, их не оборачиваем.
 
 const ASSIST_TIMEOUT_MS = 45_000
 const MAX_FIELD_CHARS = 1_500
+/** Хвост нити в промпте (пар сообщений с запасом) — потолок input-цены диалога. */
+const MAX_THREAD_MSGS = 10
+
+export interface AssistTurn {
+  role: 'user' | 'assistant'
+  content: string
+}
 
 export interface AssistStepContext {
   listTitle: string
@@ -74,11 +83,13 @@ ${sp.rule()}`
   return { system, prompt: parts.join('\n\n') }
 }
 
-/** Подсказка по шагу. null — фича недоступна/бюджет/ошибка (caller показывает мягкую ошибку). */
+/** Подсказка по шагу (диалог: thread — прошлые реплики, последняя — вопрос юзера
+ *  или пусто для первого вызова). null — недоступно/бюджет/ошибка. */
 export async function assistOnStep(
   ctx: AssistStepContext,
   lang: Lang,
   opts: { userId: string; refId?: string },
+  thread: AssistTurn[] = [],
 ): Promise<string | null> {
   const client = await getAiChatClient()
   if (!client) return null
@@ -88,12 +99,15 @@ export async function assistOnStep(
 
   const model = await pickChatModel(settings)
   const { system, prompt } = buildAssistPrompt(ctx, lang)
+  // Контекст шага — первым user-сообщением; дальше хвост нити диалога.
+  const tail = thread.slice(-MAX_THREAD_MSGS).map((m) => ({ role: m.role, content: m.content.slice(0, 4_000) }))
+  const messages: { role: 'user' | 'assistant'; content: string }[] = [{ role: 'user', content: prompt }, ...tail]
   const startedAt = Date.now()
   try {
     const result = await generateText({
       model: client.chat(model),
       system,
-      prompt,
+      messages,
       temperature: 0.4,
       maxOutputTokens: 600, // короткая помощь, не эссе — и потолок цены вызова
       abortSignal: AbortSignal.timeout(ASSIST_TIMEOUT_MS),

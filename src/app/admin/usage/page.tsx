@@ -7,6 +7,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { getUsageByUser, getUsageTotals } from '@/shared/ai/usage'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { isQuarantined, modelHealth, QUARANTINE_WINDOW_MS } from '@/shared/ai/health'
+import { assistEffect } from '@/features/runs/queries'
 
 const WINDOWS = [
   { days: 1, en: '24h', ru: '24ч' },
@@ -28,7 +29,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
   await requireAdmin()
   const [lang, sp] = await Promise.all([getLang(), searchParams])
   const days = WINDOWS.some((w) => String(w.days) === sp.w) ? Number(sp.w) : 30
-  const [rows, totals, credits, health, dayHealth] = await Promise.all([
+  const [rows, totals, credits, health, dayHealth, assist] = await Promise.all([
     getUsageByUser(days),
     getUsageTotals(days),
     getOpenRouterCredits(),
@@ -36,6 +37,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
     // ронять страницу расходов целиком.
     modelHealth((days || 30) * 24 * 3_600_000).catch(() => []), // «Всё» → окно 30д
     modelHealth(QUARANTINE_WINDOW_MS).catch(() => []), // карантин всегда по суткам
+    assistEffect().catch(() => null), // «спутник» — вторичен, страницу не роняет
   ])
   const quarantinedNow = new Set(dayHealth.filter(isQuarantined).map((h) => h.model))
 
@@ -106,6 +108,28 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           <div className="mt-1 text-[20px] font-bold text-(--accent)">{money(totals.costUsd)}</div>
         </div>
       </div>
+
+      {/* «Спутник исполнения»: сработала ли помощь — unblock rate (шаг стал done ПОСЛЕ подсказки).
+          Это будущий аргумент ценности Pro: не «сколько сгенерили», а «скольким помогло». */}
+      {assist && assist.hinted > 0 && (
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <div className="text-[11px] uppercase tracking-wide text-muted">{tr({ en: 'Step assist', ru: 'Помощь на шаге' }, lang)}</div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+            <span className="text-[20px] font-bold text-ink">
+              {Math.round((assist.unblocked / assist.hinted) * 100)}%
+            </span>
+            <span className="text-[13px] text-ink-2">
+              {tr(
+                {
+                  en: `unblock rate — ${num(assist.unblocked)} of ${num(assist.hinted)} hinted steps got done afterwards`,
+                  ru: `unblock rate — ${num(assist.unblocked)} из ${num(assist.hinted)} шагов с подсказкой затем пройдены`,
+                },
+                lang,
+              )}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Осязаемость: остаток OpenRouter → на сколько генераций хватит (по средней за период) */}
       {(credits || avgPerGen != null) && (

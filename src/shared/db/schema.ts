@@ -335,11 +335,31 @@ export const runStepState = pgTable(
     // отмеченные подшаги: массив индексов выполненных подшагов
     subtasksDone: jsonb('subtasks_done').notNull().default([]).$type<number[]>(),
     doneAt: timestamp('done_at', { withTimezone: true }),
-    // «Помощь на шаге»: последний AI-ответ (markdown) — переживает перезагрузку страницы.
-    assist: text('assist').notNull().default(''),
+    // «Помощь на шаге»: время последней подсказки — метрика unblock rate
+    // (шаг стал done ПОСЛЕ подсказки = помощь сработала). Сам диалог — в runStepAssist.
     assistAt: timestamp('assist_at', { withTimezone: true }),
   },
   (t) => ({ runStep: unique('run_step_state_run_step').on(t.runId, t.stepId) }),
+)
+
+// ── «Спутник исполнения»: нить диалога помощи на шаге прогона ────────
+// Диалог, а не одноразовая справка: вопрос → подсказка → уточнение → …
+// Нить видна только владельцу прогона; в промпт идёт хвост нити.
+export const runStepAssist = pgTable(
+  'run_step_assist',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'cascade' }),
+    stepId: uuid('step_id')
+      .notNull()
+      .references(() => steps.id, { onDelete: 'cascade' }),
+    role: text('role', { enum: ['user', 'assistant'] }).notNull(),
+    content: text('content').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('run_step_assist_run_step_idx').on(t.runId, t.stepId)],
 )
 
 // ── Stars (закладка/лайк шаблона) ────────────────────────────────────

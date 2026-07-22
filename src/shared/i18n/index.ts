@@ -306,6 +306,11 @@ const DICT = {
   runAssistFailed: { en: 'Could not get a hint — try again later.', ru: 'Не получилось собрать подсказку — попробуйте позже.' },
   runAssistLimited: { en: 'Too many requests — wait a minute.', ru: 'Слишком часто — подождите минуту.' },
   runAssistQuota: { en: 'Monthly AI limit reached.', ru: 'Месячный лимит ИИ исчерпан.' },
+  runAssistAskPh: { en: 'Follow up… (what exactly is not working?)', ru: 'Уточнить… (что именно не выходит?)' },
+  runAssistSend: { en: 'Send', ru: 'Отправить' },
+  runAssistRetry: { en: 'Didn’t help — try another way', ru: 'Не помогло — предложи иначе' },
+  runAssistRetryMsg: { en: 'That didn’t help. Suggest a different approach.', ru: 'Это не помогло. Предложи другой подход.' },
+  runStuckBadge: { en: 'people often get stuck here', ru: 'здесь часто застревают' },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for agents to connect via MCP: search and read your lists — and, with write access, create and update them.',

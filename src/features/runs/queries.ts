@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, eq, inArray, ne, sql } from 'drizzle-orm'
-import { db, runStepState, runs, steps } from '@/shared/db'
+import { and, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
+import { db, runStepAssist, runStepState, runs, steps } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 
 /** Опыт других прогонов шага для «помощи на шаге»: сколько прошло / застряло.
@@ -15,6 +15,51 @@ export async function stepStuckStats(stepId: string, excludeRunId: string): Prom
     .from(runStepState)
     .where(and(eq(runStepState.stepId, stepId), ne(runStepState.runId, excludeRunId)))
   return { passed: row?.passed ?? 0, stuck: row?.stuck ?? 0 }
+}
+
+/** То же пакетно по всем шагам версии — для проактивной подсветки
+ *  «здесь часто застревают» на странице прогона (один запрос, не N). */
+export async function versionStuckStats(versionId: string, excludeRunId: string): Promise<Map<string, { passed: number; stuck: number }>> {
+  const rows = await db
+    .select({
+      stepId: runStepState.stepId,
+      passed: sql<number>`count(*) filter (where ${runStepState.status} = 'done')::int`,
+      stuck: sql<number>`count(*) filter (where ${runStepState.status} = 'blocked')::int`,
+    })
+    .from(runStepState)
+    .innerJoin(steps, eq(steps.id, runStepState.stepId))
+    .where(and(eq(steps.versionId, versionId), ne(runStepState.runId, excludeRunId)))
+    .groupBy(runStepState.stepId)
+  return new Map(rows.map((r) => [r.stepId, { passed: r.passed, stuck: r.stuck }]))
+}
+
+/** Нити диалога помощи прогона, сгруппированные по шагам (для страницы прогона). */
+export async function getAssistThreads(runId: string): Promise<Map<string, { role: 'user' | 'assistant'; content: string }[]>> {
+  const rows = await db
+    .select({ stepId: runStepAssist.stepId, role: runStepAssist.role, content: runStepAssist.content })
+    .from(runStepAssist)
+    .where(eq(runStepAssist.runId, runId))
+    .orderBy(runStepAssist.createdAt)
+  const map = new Map<string, { role: 'user' | 'assistant'; content: string }[]>()
+  for (const r of rows) {
+    const arr = map.get(r.stepId) ?? []
+    arr.push({ role: r.role, content: r.content })
+    map.set(r.stepId, arr)
+  }
+  return map
+}
+
+/** Эффект «помощи на шаге» для админ-метрик: сколько шагов получали подсказку
+ *  и сколько из них ПОСЛЕ неё дошли до done (unblock rate — аргумент ценности). */
+export async function assistEffect(): Promise<{ hinted: number; unblocked: number }> {
+  const [row] = await db
+    .select({
+      hinted: sql<number>`count(*)::int`,
+      unblocked: sql<number>`count(*) filter (where ${runStepState.status} = 'done' and ${runStepState.doneAt} > ${runStepState.assistAt})::int`,
+    })
+    .from(runStepState)
+    .where(isNotNull(runStepState.assistAt))
+  return { hinted: row?.hinted ?? 0, unblocked: row?.unblocked ?? 0 }
 }
 
 export interface UserRunRow {
@@ -74,7 +119,7 @@ export async function getRun(runId: string, userId: string) {
 
   const stateByStep = new Map(run.stepStates.map((s) => [s.stepId, s]))
   return {
-    run: { id: run.id, status: run.status, doneCount: run.doneCount, version: run.version, templateId: run.templateId },
+    run: { id: run.id, status: run.status, doneCount: run.doneCount, version: run.version, templateId: run.templateId, versionId: run.versionId },
     template: {
       handle: run.template.owner.handle,
       slug: run.template.slug,

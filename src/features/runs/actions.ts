@@ -3,11 +3,11 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { db, runStepState, runs, steps, templates, users } from '@/shared/db'
+import { db, runStepAssist, runStepState, runs, steps, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { canViewList } from '@/core'
-import { tr, type LocaleText } from '@/shared/i18n'
+import { t, tr, type LocaleText } from '@/shared/i18n'
 import { getLang } from '@/shared/i18n/server'
 import { getAiSettings } from '@/shared/settings/ai'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
@@ -230,10 +230,14 @@ export async function reportBlockedStep(runId: string, stepId: string): Promise<
   redirect(`/${tpl.owner.handle}/${tpl.slug}/issues/${ins.number}`)
 }
 
-// ── «Помощь на шаге»: AI-подсказка застрявшему ────────────────────────
-export type AssistStepResult = { text: string } | { error: 'off' | 'ratelimited' | 'ai_quota' | 'failed' }
+// ── «Спутник исполнения»: диалог помощи на шаге ───────────────────────
+export type AssistStepResult = { text: string; userTurn?: string } | { error: 'off' | 'ratelimited' | 'ai_quota' | 'failed' }
 
-export async function assistStep(runId: string, stepId: string): Promise<AssistStepResult> {
+/** Потолок нити на шаг: диалог, а не бесконечный чат (цена + UX). */
+const MAX_ASSIST_THREAD = 40
+
+/** Помощь/уточнение на шаге. Без question при существующей нити = «предложи иначе». */
+export async function assistStep(runId: string, stepId: string, question?: string): Promise<AssistStepResult> {
   const session = await requireSession()
   const run = await ownedRun(runId, session.userId)
   if (!run) return { error: 'failed' }
@@ -250,8 +254,8 @@ export async function assistStep(runId: string, stepId: string): Promise<AssistS
   if (!allowed) return { error: 'ratelimited' }
   if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
 
-  // Контекст: шаг + соседние шаг-блоки версии + заголовок списка + причина юзера.
-  const [lang, tpl, versionSteps, [state], stats] = await Promise.all([
+  // Контекст: шаг + соседние шаг-блоки версии + заголовок списка + причина юзера + нить.
+  const [lang, tpl, versionSteps, [state], stats, threadRows] = await Promise.all([
     getLang(),
     db.query.templates.findFirst({ where: (t) => eq(t.id, run.templateId) }),
     db
@@ -265,12 +269,23 @@ export async function assistStep(runId: string, stepId: string): Promise<AssistS
       .where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, stepId)))
       .limit(1),
     stepStuckStats(stepId, runId),
+    db
+      .select({ role: runStepAssist.role, content: runStepAssist.content })
+      .from(runStepAssist)
+      .where(and(eq(runStepAssist.runId, runId), eq(runStepAssist.stepId, stepId)))
+      .orderBy(runStepAssist.createdAt),
   ])
   const [step] = await db.select().from(steps).where(eq(steps.id, stepId)).limit(1)
   if (!step || step.versionId !== run.versionId) return { error: 'failed' }
+  if (threadRows.length >= MAX_ASSIST_THREAD) return { error: 'failed' }
   const idx = versionSteps.findIndex((s) => s.id === stepId)
   const prev = idx > 0 ? versionSteps[idx - 1] : null
   const next = idx >= 0 && idx < versionSteps.length - 1 ? versionSteps[idx + 1] : null
+
+  // Реплика юзера этого хода: вопрос, либо «предложи иначе» при повторе без вопроса.
+  const q = (question ?? '').trim().slice(0, 1_000)
+  const userTurn = q || (threadRows.length > 0 ? t('runAssistRetryMsg', lang) : '')
+  const thread = [...threadRows, ...(userTurn ? [{ role: 'user' as const, content: userTurn }] : [])]
 
   const text = await assistOnStep(
     {
@@ -288,13 +303,19 @@ export async function assistStep(runId: string, stepId: string): Promise<AssistS
     },
     lang,
     { userId: session.userId, refId: runId },
+    thread,
   )
   if (!text) return { error: 'failed' }
 
-  // Сохраняем последний ответ в состоянии шага — переживает перезагрузку.
+  // Нить в БД (реплика юзера + ответ) + метка времени для метрики unblock rate.
+  const turns = [
+    ...(userTurn ? [{ runId, stepId, role: 'user' as const, content: userTurn }] : []),
+    { runId, stepId, role: 'assistant' as const, content: text.slice(0, 8_000) },
+  ]
+  await db.insert(runStepAssist).values(turns)
   await db
     .update(runStepState)
-    .set({ assist: text.slice(0, 8_000), assistAt: new Date() })
+    .set({ assistAt: new Date() })
     .where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, stepId)))
-  return { text }
+  return { text, userTurn: userTurn || undefined }
 }

@@ -28,7 +28,9 @@ describe('mcp runs — видимость на старте + приватнос
     expect(await mcpStartRun(otherId, 'mrowner', slug)).toMatchObject({ error: expect.stringContaining('forbidden') })
   })
 
-  it('владелец запускает прогон, отмечает шаг, прогресс растёт', async () => {
+  // 15s: под coverage-инструментацией на занятой машине (self-hosted CI) тест
+  // ходит ~5с и флейкал на дефолтном лимите 5000 (наблюдалось: 5016мс).
+  it('владелец запускает прогон, отмечает шаг, прогресс растёт', { timeout: 15_000 }, async () => {
     const run = await mcpStartRun(ownerId, 'mrowner', slug)
     const runId = (run as { runId: string }).runId
     expect(runId).toBeTruthy()
