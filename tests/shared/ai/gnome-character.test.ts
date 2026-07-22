@@ -25,3 +25,18 @@ describe('gnome-character (одушевление)', () => {
     expect(c.emoji).toBeTruthy()
   })
 })
+
+describe('rivalries (конкуренция как banter, безопасно)', () => {
+  it('пары соперничеств заданы и ссылаются на реальных гномов', async () => {
+    const { RIVALRIES, GNOME_CARDS } = await import('@/shared/ai/gnome-character')
+    expect(RIVALRIES.length).toBeGreaterThan(0)
+    for (const [a, b] of RIVALRIES) {
+      expect(GNOME_CARDS[a], a).toBeDefined()
+      expect(GNOME_CARDS[b], b).toBeDefined()
+    }
+  })
+  it('rivalryHints даёт непустой текст для промпта', async () => {
+    const { rivalryHints } = await import('@/shared/ai/gnome-character')
+    expect(rivalryHints()).toContain('↔')
+  })
+})
