@@ -390,6 +390,11 @@ const DICT = {
   fork: { en: 'Fork', ru: 'Форк' },
   forkTemplate: { en: 'Fork template', ru: 'Форкнуть шаблон' },
   forkDialogTitle: { en: 'Create a new fork', ru: 'Создать форк' },
+  forkIntro: {
+    en: 'A fork is a copy of the list under your account — experiment freely without touching the original.',
+    ru: 'Форк — копия списка под твоим аккаунтом: экспериментируй свободно, не задевая оригинал.',
+  },
+  forkExisting: { en: 'View existing forks', ru: 'Существующие форки' },
   forkOwnerLabel: { en: 'Owner', ru: 'Владелец' },
   forkNameLabel: { en: 'List name', ru: 'Имя списка' },
   forkNameHint: {
