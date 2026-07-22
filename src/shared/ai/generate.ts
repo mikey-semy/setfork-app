@@ -26,8 +26,7 @@ export interface GeneratedItem {
   title: string
   desc: string
   command: string
-  /** Заголовок группы-секции (напр. рецепт: «Ингредиенты»/«Приготовление»). '' — без секции.
-   *  Опционально: parseList всегда его ставит, но внешние конструкторы (напр. садовник) — нет. */
+  /** Заголовок группы-секции (напр. рецепт: «Ингредиенты»/«Приготовление»). '' — без секции. */
   section?: string
   level: 'required' | 'recommended' | 'optional'
   why: string
@@ -103,6 +102,9 @@ export function parseList(text: string, fallbackTitle: string): GeneratedList | 
           title: String(it?.title ?? '').trim(),
           desc: String(it?.desc ?? '').trim(),
           command: sanitizeCommand(String(it?.command ?? '')),
+          // section раньше ЗДЕСЬ терялся (докстрока GeneratedItem лгала) — из-за
+          // этого рецепты приходили плоскими, а садовник исключал секционные списки.
+          section: String(it?.section ?? '').trim().slice(0, 80),
           level: (LEVELS.includes(String(it?.level)) ? String(it?.level) : 'required') as GeneratedItem['level'],
           why: String(it?.why ?? '').trim(),
           subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s) => String(s).trim()).filter(Boolean).slice(0, 6) : [],
@@ -287,7 +289,9 @@ Translate the list above into ${langName} and return the full JSON list in the s
   return runListModel(system, prompt, current.title, 'translate', { ...opts, web: false })
 }
 
-/** Правка существующего списка по инструкции пользователя (AI-refine). */
+/** Правка существующего списка по инструкции пользователя (AI-refine).
+ *  opts.kind задаёт форму JSON по типу списка (рецепт хранит секции и т.д.) —
+ *  раньше форма всегда была procedure, и refine рецепта ломал его структуру. */
 export async function generateListRefine(
   current: { title: string; desc: string; tags: string[]; items: GeneratedItem[] },
   instruction: string,
@@ -300,7 +304,8 @@ export async function generateListRefine(
   const system = `You REFINE an existing list per the user's instruction, returning the FULL updated list as STRICT JSON.
 All content MUST be in ${langName}.
 Preserve good existing content and ordering; change only what the instruction requires. Do not drop unrelated steps.
-${web ? 'You may use web search to ground new content.\n' : ''}${JSON_SHAPE}
+Preserve each item's "section" value; keep items grouped in their sections.
+${web ? 'You may use web search to ground new content.\n' : ''}${jsonShapeFor(opts.kind ?? 'procedure')}
 - Everything in ${langName}.
 ${sp.rule()}`
   const prompt = `${sp.wrap('CURRENT LIST (JSON)', JSON.stringify(current).slice(0, MAX_PROMPT_CHARS))}

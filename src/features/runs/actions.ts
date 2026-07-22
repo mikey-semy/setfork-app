@@ -3,12 +3,19 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { db, runStepState, runs, steps, templates } from '@/shared/db'
+import { db, runStepState, runs, steps, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { canViewList } from '@/core'
 import { tr, type LocaleText } from '@/shared/i18n'
+import { getLang } from '@/shared/i18n/server'
+import { getAiSettings } from '@/shared/settings/ai'
+import { checkRateLimit } from '@/shared/ai/rate-limit'
+import { aiQuota } from '@/shared/quota'
+import { assistOnStep } from '@/shared/ai/assist'
 import { collabStore } from '@/features/collab-store/store'
 import { recordRunCompletionIfDone } from '@/features/library/completion'
+import { stepStuckStats } from './queries'
 
 async function ownedRun(runId: string, userId: string) {
   const run = await db.query.runs.findFirst({ where: (r) => eq(r.id, runId) })
@@ -221,4 +228,73 @@ export async function reportBlockedStep(runId: string, stepId: string): Promise<
 
   const ins = await collabStore.openIssue(tpl.id, session.userId, title, body.slice(0, 20000), ['bug'])
   redirect(`/${tpl.owner.handle}/${tpl.slug}/issues/${ins.number}`)
+}
+
+// ── «Помощь на шаге»: AI-подсказка застрявшему ────────────────────────
+export type AssistStepResult = { text: string } | { error: 'off' | 'ratelimited' | 'ai_quota' | 'failed' }
+
+export async function assistStep(runId: string, stepId: string): Promise<AssistStepResult> {
+  const session = await requireSession()
+  const run = await ownedRun(runId, session.userId)
+  if (!run) return { error: 'failed' }
+
+  // Гейт фичи + аудитории (паттерн совета: дорогая admin-проверка — только при включённой фиче).
+  const settings = await getAiSettings()
+  if (!settings.enabled || !settings.assistEnabled) return { error: 'off' }
+  if (settings.assistAudience !== 'all') {
+    const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, session.userId)).limit(1)
+    if (!isAdminHandle(u?.handle ?? null)) return { error: 'off' }
+  }
+
+  const { allowed } = await checkRateLimit(`assist:${session.userId}`)
+  if (!allowed) return { error: 'ratelimited' }
+  if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
+
+  // Контекст: шаг + соседние шаг-блоки версии + заголовок списка + причина юзера.
+  const [lang, tpl, versionSteps, [state], stats] = await Promise.all([
+    getLang(),
+    db.query.templates.findFirst({ where: (t) => eq(t.id, run.templateId) }),
+    db
+      .select({ id: steps.id, n: steps.n, type: steps.type, title: steps.title })
+      .from(steps)
+      .where(and(eq(steps.versionId, run.versionId), eq(steps.type, 'step')))
+      .orderBy(steps.n),
+    db
+      .select({ note: runStepState.note, subtasksDone: runStepState.subtasksDone })
+      .from(runStepState)
+      .where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, stepId)))
+      .limit(1),
+    stepStuckStats(stepId, runId),
+  ])
+  const [step] = await db.select().from(steps).where(eq(steps.id, stepId)).limit(1)
+  if (!step || step.versionId !== run.versionId) return { error: 'failed' }
+  const idx = versionSteps.findIndex((s) => s.id === stepId)
+  const prev = idx > 0 ? versionSteps[idx - 1] : null
+  const next = idx >= 0 && idx < versionSteps.length - 1 ? versionSteps[idx + 1] : null
+
+  const text = await assistOnStep(
+    {
+      listTitle: tpl ? tr(tpl.title as LocaleText, lang) : '',
+      stepTitle: tr(step.title as LocaleText, lang),
+      stepDesc: tr(step.desc as LocaleText, lang),
+      stepWhy: tr(step.why as LocaleText, lang),
+      stepCommand: step.command,
+      subtasks: (step.subtasks as LocaleText[]).map((s) => tr(s, lang)).filter(Boolean),
+      subtasksDone: state?.subtasksDone ?? [],
+      reason: state?.note ?? '',
+      prevTitle: prev ? tr(prev.title as LocaleText, lang) : '',
+      nextTitle: next ? tr(next.title as LocaleText, lang) : '',
+      stats,
+    },
+    lang,
+    { userId: session.userId, refId: runId },
+  )
+  if (!text) return { error: 'failed' }
+
+  // Сохраняем последний ответ в состоянии шага — переживает перезагрузку.
+  await db
+    .update(runStepState)
+    .set({ assist: text.slice(0, 8_000), assistAt: new Date() })
+    .where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, stepId)))
+  return { text }
 }
