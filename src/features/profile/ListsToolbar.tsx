@@ -89,7 +89,7 @@ export function ListsToolbar({
       {isOwner && (
         <Link
           href="/new"
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-ok px-3 text-[13px] font-semibold text-white hover:opacity-90"
+          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-semibold text-white hover:opacity-90"
         >
           <Plus size={15} /> {ru ? 'Создать' : 'New'}
         </Link>

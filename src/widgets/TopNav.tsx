@@ -131,7 +131,7 @@ export function TopNav({
                   : pathname.startsWith('/admin/council')
                     ? t('councilHall', lang)
                     : pathname.startsWith('/admin')
-                      ? 'Admin'
+                      ? t('admin', lang)
                       : ''
 
   return (
@@ -260,7 +260,7 @@ export function TopNav({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/admin">Admin</Link>
+                      <Link href="/admin">{t('admin', lang)}</Link>
                     </DropdownMenuItem>
                   </>
                 )}

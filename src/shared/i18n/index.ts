@@ -684,6 +684,7 @@ const DICT = {
   aboutProject: { en: 'About', ru: 'О проекте' },
   appVersion: { en: 'App version', ru: 'Версия приложения' },
   moreActions: { en: 'More actions', ru: 'Ещё действия' },
+  admin: { en: 'Admin', ru: 'Админка' },
   blameTitle: { en: 'Blame', ru: 'Авторство' },
   blameHint: {
     en: 'Which version last changed each step (by position) — spot stale vs. fresh steps.',
