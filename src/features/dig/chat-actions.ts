@@ -1,8 +1,8 @@
 'use server'
 
-import { and, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { generateText } from 'ai'
-import { db, steps, templates, templateVersions } from '@/shared/db'
+import { db, digChatMessages, steps, templates, templateVersions } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
 import { getRoster } from '@/shared/ai/roster'
@@ -100,7 +100,13 @@ export async function digChatAsk(input: {
     .map((m) => `${m.role === 'user' ? 'USER' : 'GNOME'}: ${String(m.text).slice(0, 400)}`)
     .join('\n')
 
-  const system = `You are ${expert.persona}${guild}${memory}
+  // Аккуратность специалиста (фидбек владельца: повар уверенно отвечал про Homebrew).
+  // Вне своего ремесла гном честно предупреждает и отвечает общими знаниями, а не
+  // притворяется экспертом. generalist (домены '*') — по любой теме, оговорка не нужна.
+  const lane = expert.domains.includes('*')
+    ? ''
+    : `\nYour craft is: ${expert.domains.join(', ')}. If the question falls OUTSIDE your craft, open with a brief honest note that it's not your specialty (in character), then answer with general knowledge or point to which kind of specialist fits — never fake deep expertise you don't have.`
+  const system = `You are ${expert.persona}${guild}${memory}${lane}
 You are chatting with a user in the SetFork workshop ABOUT ONE STEP of a list (context below). Dig as deep as they want: reasons, mechanisms, exceptions, alternatives, adjacent techniques — follow THEIR direction. Be concrete; admit "точных данных нет"/"no reliable data" instead of inventing. Keep answers tight (2-5 short paragraphs or a compact list). Answer in ${langEnName(input.lang)}.
 You are the guide in this mountain of knowledge — end EVERY reply with one final line "NEXT: q1 | q2 | q3" — three SHORT follow-up questions (max ~6 words each, in the answer language) that dig deeper from what you just said. Nothing after that line.
 ${sp.rule()}`
@@ -126,9 +132,37 @@ ${sp.rule()}`
     const followups = nm ? nm[1].split('|').map((s) => s.trim()).filter(Boolean).slice(0, 3) : []
     const text = nm ? raw.slice(0, nm.index).trim() : raw
     if (!text) return { error: 'aifail' }
+    // Сессия (фидбек владельца: «беседа исчезла»): пишем вопрос+ответ в БД, чтобы
+    // при повторном открытии кирки на пункте разговор восстановился. fire-and-forget:
+    // не блокируем ответ, персист — не критичный путь.
+    void db
+      .insert(digChatMessages)
+      .values([
+        { templateId: tpl.id, stepN: input.stepN, userId: session.userId, role: 'user', text: question },
+        { templateId: tpl.id, stepN: input.stepN, userId: session.userId, role: 'gnome', who: expert.id, text },
+      ])
+      .catch(() => {})
     return { who: expert.id, name: input.lang === 'ru' ? expert.nameRu : expert.nameEn, text, followups }
   } catch (e) {
     await recordUsage({ userId: session.userId, feature: 'dig', model, input: 0, output: 0, total: 0, cost: 0, refType: 'template', refId: tpl.id, outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
     return { error: 'aifail' }
   }
+}
+
+/**
+ * История беседы по пункту для текущего пользователя (сессия): при повторном
+ * открытии кирки разговор восстанавливается. Проверяем доступ к списку. Хвост
+ * 40 реплик — беседа личная и обычно короткая.
+ */
+export async function getDigChatHistory(templateId: string, stepN: number): Promise<DigChatMsg[]> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: eq(templates.id, templateId) })
+  if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return []
+  const rows = await db
+    .select({ role: digChatMessages.role, who: digChatMessages.who, text: digChatMessages.text })
+    .from(digChatMessages)
+    .where(and(eq(digChatMessages.templateId, templateId), eq(digChatMessages.stepN, stepN), eq(digChatMessages.userId, session.userId)))
+    .orderBy(asc(digChatMessages.createdAt))
+    .limit(40)
+  return rows.map((r) => ({ role: r.role === 'gnome' ? 'gnome' : 'user', who: r.who ?? undefined, text: r.text }))
 }

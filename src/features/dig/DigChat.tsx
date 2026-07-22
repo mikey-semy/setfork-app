@@ -9,7 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { digChatAsk, type DigChatMsg } from './chat-actions'
+import { CopyButton } from '@/shared/ui/CopyButton'
+import { digChatAsk, getDigChatHistory, type DigChatMsg } from './chat-actions'
 
 /**
  * Мини-чат раскопки (редизайн «Копать глубже» по фидбеку владельца): кирка в
@@ -52,11 +53,18 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
     const onOpen = (e: Event) => {
       const detail = (e as CustomEvent<DigChatOpenDetail>).detail
       setCtx((cur) => {
-        // Другой шаг → новая сессия; тот же — просто поднять окно.
+        // Другой шаг → грузим ЕГО сессию из БД (беседа сохраняется, фидбек владельца).
+        // Тот же шаг — просто поднять окно, ничего не трогаем.
         if (!cur || cur.templateId !== detail.templateId || cur.stepN !== detail.stepN) {
           setMessages([])
           setFollowups([])
           setErr('')
+          void getDigChatHistory(detail.templateId, detail.stepN)
+            .then((h) => {
+              // Не перетираем, если пользователь уже начал печатать/спрашивать в новой сессии.
+              setMessages((m) => (m.length === 0 ? h : m))
+            })
+            .catch(() => {})
         }
         return detail
       })
@@ -164,10 +172,14 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
               <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3 py-1.5 text-[13px] leading-[1.5] text-primary-fg">{m.text}</div>
             </div>
           ) : (
-            <div key={i} ref={i === messages.length - 1 ? lastReplyRef : undefined} className="flex items-start gap-2">
+            <div key={i} ref={i === messages.length - 1 ? lastReplyRef : undefined} className="group flex items-start gap-2">
               <GnomeAvatar src={`/gnomes/${m.who ?? 'generalist'}.webp`} size={32} className="size-8 shrink-0" />
               <div className="min-w-0 rounded-2xl rounded-bl-md bg-(--surface-2) px-3 py-1.5">
                 <Markdown codeCards className="text-[13px] leading-[1.5] text-ink-2">{m.text}</Markdown>
+                {/* Копировать всю реплику (фидбек владельца): проявляется при наведении. */}
+                <div className="mt-1 flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
+                  <CopyButton text={m.text} />
+                </div>
               </div>
             </div>
           ),
