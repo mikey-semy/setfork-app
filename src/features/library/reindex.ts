@@ -1,5 +1,6 @@
-import { eq, inArray } from 'drizzle-orm'
-import { db, embeddings } from '@/shared/db'
+import { and, eq, inArray } from 'drizzle-orm'
+import { db, embeddings, listLinks, templates, users } from '@/shared/db'
+import { extractWikiRefs } from '@/shared/lib/wiki-links'
 import { flat, stepChunkContent } from './index-content'
 
 // Сбор контента для индексации: каждый СПИСОК → один чанк 'list' (заголовок +
@@ -12,6 +13,11 @@ export interface Item {
   refId: string
   content: string
   metadata: Record<string, unknown>
+  /** Публично видимый список (published+public+active). Приватные/черновики/снятые
+   *  ИНДЕКСИРУЕМ (вектор нужен владельцу для семантического поиска СВОИХ списков —
+   *  visibleFilter(viewerId)), но их плейнтекст content/metadata в корпус НЕ пишем
+   *  (defense-in-depth: неосторожный будущий ридер embeddings не выдаст приватку). */
+  isPublic: boolean
 }
 
 /** templateId — точечный режим (фикс по ревью: реиндекс одного списка грузил ВЕСЬ корпус). */
@@ -41,10 +47,14 @@ export async function collectItems(templateId?: string): Promise<Item[]> {
       .filter(Boolean)
       .join('\n')
     const base = { slug: tpl.slug, ownerHandle: tpl.owner.handle, title }
-    const listItem: Item = { kind: 'list', refId: tpl.id, content, metadata: base }
+    // Синхронно с visibleFilter()/findPrecedents: публично видим = published+public+active.
+    const isPublic = tpl.visibility === 'public' && tpl.status === 'published' && tpl.moderation === 'active'
+    const listItem: Item = { kind: 'list', refId: tpl.id, content, metadata: base, isPublic }
     const stepItems: Item[] = steps.flatMap((s) => {
       const chunk = stepChunkContent(title, s)
-      return chunk ? [{ kind: 'step' as const, refId: tpl.id, content: chunk, metadata: { ...base, n: s.n, stepTitle: flat(s.title) } }] : []
+      return chunk
+        ? [{ kind: 'step' as const, refId: tpl.id, content: chunk, metadata: { ...base, n: s.n, stepTitle: flat(s.title) }, isPublic }]
+        : []
     })
     return [listItem, ...stepItems]
   })
@@ -61,11 +71,35 @@ export async function purgeStaleEmbeddings(activeRefIds?: Set<string>): Promise<
   return { removed: staleIds.length }
 }
 
+/** Пересобрать вики-связи списка (HQ §11): [[handle/slug]] из уже собранного
+ *  текста → list_links. Сбой связей не роняет реиндекс (ссылки — не индекс). */
+async function rebuildWikiLinks(templateId: string, contents: string[]): Promise<void> {
+  try {
+    await db.delete(listLinks).where(eq(listLinks.fromId, templateId))
+    const refs = extractWikiRefs(contents.join('\n'))
+    if (!refs.length) return
+    const rows: { fromId: string; toId: string }[] = []
+    for (const r of refs) {
+      const [t] = await db
+        .select({ id: templates.id })
+        .from(templates)
+        .innerJoin(users, eq(users.id, templates.ownerId))
+        .where(and(eq(users.handle, r.handle), eq(templates.slug, r.slug)))
+        .limit(1)
+      if (t && t.id !== templateId) rows.push({ fromId: templateId, toId: t.id })
+    }
+    if (rows.length) await db.insert(listLinks).values(rows).onConflictDoNothing()
+  } catch (e) {
+    console.warn('[wiki-links] rebuild failed', e instanceof Error ? e.message : e)
+  }
+}
+
 /** Точечная переиндексация одного списка (или удаление из индекса, если его нет).
  *  Список + его шаги эмбеддятся ОДНИМ батч-вызовом (embedTexts) — не по HTTP на шаг. */
 export async function reindexList(templateId: string): Promise<void> {
   const mine = await collectItems(templateId)
   await db.delete(embeddings).where(eq(embeddings.refId, templateId))
+  await rebuildWikiLinks(templateId, mine.map((i) => i.content))
   if (!mine.length) return
   const { embedTexts } = await import('@/shared/ai/embeddings')
   const vecs = await embedTexts(mine.map((i) => i.content), 'doc') // модель/мерность диктует пространство индекса (embed-space)
@@ -73,9 +107,10 @@ export async function reindexList(templateId: string): Promise<void> {
     mine.map((it, i) => ({
       kind: it.kind,
       refId: it.refId,
-      content: it.content,
+      // Вектор уже посчитан из ПОЛНОГО текста; приватный плейнтекст в корпус не пишем.
+      content: it.isPublic ? it.content : '',
       embedding: vecs?.[i] ?? null,
-      metadata: it.metadata,
+      metadata: it.isPublic ? it.metadata : { private: true },
     })),
   )
 }

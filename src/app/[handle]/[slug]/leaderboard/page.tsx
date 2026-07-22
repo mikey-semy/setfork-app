@@ -5,7 +5,6 @@ import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import { getCourseLeaderboard } from '@/features/quizzes/queries'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -24,7 +23,6 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ ha
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="overview" />
       <div className="mx-auto w-full max-w-[720px] px-4 py-6">
         <h1 className="mb-1 flex items-center gap-2 text-[16px] font-bold text-ink">
           <Trophy size={18} className="text-accent" /> {ru ? 'Лидерборд курса' : 'Course leaderboard'}
