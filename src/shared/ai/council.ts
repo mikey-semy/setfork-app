@@ -354,13 +354,27 @@ ${roster}`,
     : ''
 
   // Веб-искатель (старейшина advanced-тира): интернет-прецеденты сверх наших списков (за флагом council_web_seek).
+  // ВЕБ-ГОРА: OpenRouter ищет сам (:online); у Яндекса — РЕАЛЬНЫЙ Yandex Search API,
+  // снипеты кормим модели как грунтинг. Раньше на Яндексе модель ВЫДУМЫВАЛА
+  // «прецеденты» (латентный баг): без реального поиска веб-шаг теперь пропускаем.
   let webLore = ''
   if (settings.councilWebSeek) {
-    emit('seek', vl('seek-web', 'seek') ?? say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
-    const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a list on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
-    const webRes = await run(online(fast, isOpenRouter), webSys, `Topic:\n${topic}`, 500)
-    // Содержимое чужих веб-страниц — тоже недоверенный текст: оборачиваем, не вставляем сырьём.
-    if (webRes && webRes.text.trim()) webLore = `\n\n${sp.wrap('WEB_PRECEDENTS', webRes.text.trim())}\n(verify, don't copy blindly)`
+    if (isOpenRouter) {
+      emit('seek', vl('seek-web', 'seek') ?? say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
+      const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a list on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
+      const webRes = await run(online(fast, true), webSys, `Topic:\n${topic}`, 500)
+      // Содержимое чужих веб-страниц — тоже недоверенный текст: оборачиваем, не вставляем сырьём.
+      if (webRes && webRes.text.trim()) webLore = `\n\n${sp.wrap('WEB_PRECEDENTS', webRes.text.trim())}\n(verify, don't copy blindly)`
+    } else {
+      const { webSearch } = await import('./web-search')
+      const hits = await webSearch(query, lang, 5)
+      if (hits && hits.length) {
+        emit('seek', vl('seek-web', 'seek') ?? say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
+        const bullets = hits.map((h) => `- ${h.title}: ${h.snippet} (${h.url})`).join('\n')
+        webLore = `\n\n${sp.wrap('WEB_PRECEDENTS', bullets)}\n(real search results — verify, don't copy blindly)`
+      }
+      // нет ключа поиска или пусто → веб-шаг молча пропущен (не выдумываем)
+    }
   }
 
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).

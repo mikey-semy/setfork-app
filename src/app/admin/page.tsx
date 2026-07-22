@@ -238,6 +238,7 @@ export default async function AdminPage() {
               hasKey={hasKeyByProvider}
               maskedKeys={maskedKeys}
               yandexFolder={aiProv.yandexFolder}
+              searchKeyMasked={maskKey(aiProv.yandexSearchKey)}
               ru={ru}
             />
 

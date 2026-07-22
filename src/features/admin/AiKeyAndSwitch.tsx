@@ -16,6 +16,7 @@ export function AiKeyAndSwitch({
   hasKey,
   maskedKeys,
   yandexFolder,
+  searchKeyMasked,
   ru,
 }: {
   enabled: boolean
@@ -26,6 +27,8 @@ export function AiKeyAndSwitch({
   maskedKeys: Record<AiProviderChoice, string>
   /** Текущий folder_id Яндекса (БД или env) — он не секрет. */
   yandexFolder: string
+  /** Маска ключа Yandex Search API (веб-гора); пусто = не задан. */
+  searchKeyMasked: string
   ru: boolean
 }) {
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
@@ -150,6 +153,23 @@ export function AiKeyAndSwitch({
             {say(
               'From the console URL: aistudio.yandex.ru/platform/folders/<folder_id>.',
               'Из URL консоли: aistudio.yandex.ru/platform/folders/<folder_id>.',
+            )}
+          </p>
+          {/* Веб-гора: ОТДЕЛЬНЫЙ ключ Yandex Search API (не чат-ключ). Пусто →
+              веб-разведчик совета молча пропускается, а не выдумывает прецеденты. */}
+          <label className={`${lbl} mt-4`}>{say('Yandex Search API key (web scout, optional)', 'Ключ Yandex Search API (веб-разведчик, опционально)')}</label>
+          <input
+            name="yandexSearchKey"
+            defaultValue=""
+            placeholder={searchKeyMasked || 'AQVN…'}
+            autoComplete="off"
+            spellCheck={false}
+            className={inputCls}
+          />
+          <p className="mt-1.5 text-[12px] text-muted">
+            {say(
+              'Separate paid service — activate Search API in Yandex Cloud. Empty = council relies on our corpus only (no made-up web precedents). Leave blank to keep current.',
+              'Отдельный платный сервис — активируй Search API в Yandex Cloud. Пусто = совет опирается только на наш корпус (без выдуманных веб-прецедентов). Оставь пустым, чтобы не менять.',
             )}
           </p>
         </div>
