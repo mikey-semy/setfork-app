@@ -77,6 +77,8 @@ async function pickCandidates(gardenerId: string, limit: number) {
         eq(templates.status, 'published'),
         eq(templates.visibility, 'public'),
         eq(templates.moderation, 'active'),
+        // Архивные/замороженные списки садовник не трогает (read-only от правок).
+        sql`${templates.archivedAt} is null and ${templates.frozenAt} is null`,
         sql`${templates.ownerId} <> ${gardenerId}`,
         // Не берём список, где садовник уже оставил ОТКРЫТУЮ правку ЛИБО что-либо
         // предлагал за последние GARDENER_EVERY_DAYS дней. Второе условие важно для

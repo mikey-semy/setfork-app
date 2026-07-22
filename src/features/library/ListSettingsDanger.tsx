@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Globe, Loader2, Lock, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Globe, Loader2, Lock, Pin, PinOff, Snowflake, Sun, Trash2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { t, type Lang } from '@/shared/i18n'
-import { deleteListAction, setListPinned, setListVisibility } from './actions'
+import { deleteListAction, setListArchived, setListFrozen, setListPinned, setListVisibility } from './actions'
 
 // Опасная зона списка (аналог GitHub Danger Zone): опасные действия собраны
 // в одном месте, каждое — через модалку. Удаление подтверждается вводом
@@ -16,6 +16,8 @@ export function ListSettingsDanger({
   slug,
   visibility,
   moderation,
+  archived,
+  frozen,
   pinned,
   lang,
 }: {
@@ -24,12 +26,14 @@ export function ListSettingsDanger({
   slug: string
   visibility: 'public' | 'private'
   moderation: string
+  archived: boolean
+  frozen: boolean
   pinned: boolean
   lang: Lang
 }) {
   const [pending, start] = useTransition()
   const [pinPending, startPin] = useTransition()
-  const [dialog, setDialog] = useState<null | 'visibility' | 'delete'>(null)
+  const [dialog, setDialog] = useState<null | 'visibility' | 'delete' | 'archive' | 'freeze'>(null)
   const fullName = `${handle}/${slug}` // видимый идентификатор для подтверждения
   const isPublic = visibility === 'public'
   // Снятый модерацией список владелец удалить не может (сервер блокирует — стирание
@@ -79,6 +83,32 @@ export function ListSettingsDanger({
             </Button>
           </div>
 
+          {/* Заморозка правок (защита) */}
+          <div className={row}>
+            <div className="min-w-0">
+              <div className="text-[14px] font-medium text-ink">{t(frozen ? 'unfreezeList' : 'freezeList', lang)}</div>
+              <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+                <Snowflake size={12} /> {t(frozen ? 'frozenOn' : 'freezeHint', lang)}
+              </p>
+            </div>
+            <Button variant="danger" size="md" onClick={() => setDialog('freeze')} className="gap-2 border border-danger/40">
+              {frozen ? <Sun size={14} /> : <Snowflake size={14} />} {t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+            </Button>
+          </div>
+
+          {/* Архив (read-only) */}
+          <div className={row}>
+            <div className="min-w-0">
+              <div className="text-[14px] font-medium text-ink">{t(archived ? 'unarchiveList' : 'archiveList', lang)}</div>
+              <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+                <Archive size={12} /> {t(archived ? 'archivedOn' : 'archiveHint', lang)}
+              </p>
+            </div>
+            <Button variant="danger" size="md" onClick={() => setDialog('archive')} className="gap-2 border border-danger/40">
+              {archived ? <ArchiveRestore size={14} /> : <Archive size={14} />} {t(archived ? 'unarchiveList' : 'archiveList', lang)}
+            </Button>
+          </div>
+
           {/* Удаление */}
           <div className={row}>
             <div className="min-w-0">
@@ -108,6 +138,40 @@ export function ListSettingsDanger({
         onConfirm={() =>
           start(async () => {
             await setListVisibility(templateId, isPublic ? 'private' : 'public')
+            setDialog(null)
+          })
+        }
+      />
+
+      {/* Модалка заморозки — обратимо, без ввода имени. */}
+      <ConfirmDialog
+        open={dialog === 'freeze'}
+        onClose={() => setDialog(null)}
+        title={t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+        intro={t(frozen ? 'unfreezeEffects' : 'freezeEffects', lang)}
+        confirmLabel={t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+        cancelLabel={t('cancel', lang)}
+        busy={pending}
+        onConfirm={() =>
+          start(async () => {
+            await setListFrozen(templateId, !frozen)
+            setDialog(null)
+          })
+        }
+      />
+
+      {/* Модалка архива — обратимо, без ввода имени. */}
+      <ConfirmDialog
+        open={dialog === 'archive'}
+        onClose={() => setDialog(null)}
+        title={t(archived ? 'unarchiveList' : 'archiveList', lang)}
+        intro={t(archived ? 'unarchiveEffects' : 'archiveEffects', lang)}
+        confirmLabel={t(archived ? 'unarchiveList' : 'archiveList', lang)}
+        cancelLabel={t('cancel', lang)}
+        busy={pending}
+        onConfirm={() =>
+          start(async () => {
+            await setListArchived(templateId, !archived)
             setDialog(null)
           })
         }

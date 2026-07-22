@@ -27,7 +27,7 @@ import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
-import { canViewList } from '@/core'
+import { canEditList, canViewList } from '@/core'
 
 /** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
 function toStepInput(items: ProposedItem[]) {
@@ -107,6 +107,25 @@ export async function deleteListAction(templateId: string): Promise<void> {
   await recordAudit('list.delete', { actorId: session.userId, targetType: 'list', targetId: templateId, meta: { slug: tpl.slug } })
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}`)
+}
+
+// ── Обратимые состояния: архив (read-only) и заморозка правок ─────────
+// Владелец переключает из Danger Zone. Ставят/снимают timestamp; сами эти
+// экшены доступны и в архиве (иначе разархивировать было бы нечем).
+export async function setListArchived(templateId: string, on: boolean): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  await db.update(templates).set({ archivedAt: on ? new Date() : null }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}`, 'layout')
+}
+
+export async function setListFrozen(templateId: string, on: boolean): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  await db.update(templates).set({ frozenAt: on ? new Date() : null }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}`, 'layout')
 }
 
 // ── Загрузка скриншота шага (в редакторе) ────────────────────────────
@@ -262,6 +281,8 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   // Нельзя предлагать правки к приватному/скрытому списку, которого не видишь
   // (иначе — запись в чужую очередь + пинг владельцу + оракул существования).
   if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return
+  // Архив/заморозка: предложения запрещены в обоих состояниях (список только-чтение).
+  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
   // Анти-спам: правки — запись в чужую очередь + пинг владельца/упомянутых. Кап на автора.
   if (!(await rateLimit(`suggest:${session.userId}`, 10, 10 * 60_000)).ok) {
     redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions?e=ratelimited`)

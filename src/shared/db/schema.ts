@@ -219,6 +219,13 @@ export const templates = pgTable(
     starsCount: integer('stars_count').notNull().default(0),
     // Сумма уникальных дневных просмотров (см. template_views); владелец не считается.
     viewsCount: integer('views_count').notNull().default(0),
+    // Обратимые ограниченные состояния владельца (Danger Zone; НЕ путать с moderation —
+    // то админский takedown). archivedAt — полностью read-only (как archived-репо GitHub:
+    // ни правок, ни предложений, ни новых прогонов; просмотр/форк/звезда работают).
+    // frozenAt — заморозка правок: нельзя править/предлагать, но прогоны и просмотр идут.
+    // null = состояние выключено. archived строже frozen.
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    frozenAt: timestamp('frozen_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

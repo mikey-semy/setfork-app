@@ -1,5 +1,8 @@
 import 'server-only'
+import { eq } from 'drizzle-orm'
 import type { ListStore } from '@/core'
+import { canEditList } from '@/core'
+import { db, templates } from '@/shared/db'
 import { listStore as drizzleStore } from './list-store.adapter'
 import { listReadRemote, listWriteRemote } from './list-store.remote'
 
@@ -44,9 +47,26 @@ async function moderate(templateId: string): Promise<void> {
   }
 }
 
+// Жёсткий backstop состояния на ЕДИНОЙ write-точке версий (та же философия, что
+// барьер moderate ниже: точку обойти нельзя). Любая новая версия существующего
+// списка — это правка; в архиве/заморозке запрещена. Экшены гейтят раньше и
+// по-человечески (редирект), сюда доходит только обход/гонка → бросаем. create
+// (новый список) не трогаем — у нового id состояния нет.
+async function assertVersionAllowed(templateId: string): Promise<void> {
+  const [st] = await db
+    .select({ archivedAt: templates.archivedAt, frozenAt: templates.frozenAt })
+    .from(templates)
+    .where(eq(templates.id, templateId))
+    .limit(1)
+  if (st && !canEditList(st)) {
+    throw new Error(`list ${st.archivedAt ? 'archived' : 'frozen'}: new versions are not allowed`)
+  }
+}
+
 export const listStore: ListStore = {
   ...base,
   async addVersion(templateId, input) {
+    await assertVersionAllowed(templateId)
     const ver = await base.addVersion(templateId, input)
     await moderate(templateId)
     return ver

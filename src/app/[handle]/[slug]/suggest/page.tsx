@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
+import { canEditList } from '@/core'
 import { ArrowLeft } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
@@ -30,6 +31,8 @@ export default async function SuggestPage({
   const detail = await requireViewableDetail(owner, slug)
   if (!detail) notFound()
   const { tpl, steps } = detail
+  // Предложения запрещены в архиве и заморозке (список только-чтение).
+  if (!canEditList(tpl)) redirect(`/${owner}/${slug}`)
 
   const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
   const action = submitSuggestion.bind(null, tpl.id)

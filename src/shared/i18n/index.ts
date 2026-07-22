@@ -744,6 +744,31 @@ const DICT = {
     en: 'The list becomes visible to everyone in explore and search, and is re-checked by moderation before it appears.',
     ru: 'Список станет виден всем в обзоре и поиске и пройдёт повторную проверку модерации перед показом.',
   },
+  // ── Заморозка правок (защита) ──
+  freezeList: { en: 'Freeze edits', ru: 'Заморозить правки' },
+  unfreezeList: { en: 'Unfreeze edits', ru: 'Разморозить правки' },
+  freezeHint: { en: 'Editable now — anyone allowed can edit and suggest.', ru: 'Сейчас редактируется — правки и предложения открыты.' },
+  frozenOn: { en: 'Frozen — edits and suggestions are off; runs still work.', ru: 'Заморожен — правки и предложения отключены; прогоны работают.' },
+  freezeEffects: {
+    en: 'No new versions, edits or suggestions — from you, collaborators or the gardener. Runs, viewing, stars and forks keep working. Reversible any time.',
+    ru: 'Никаких новых версий, правок и предложений — ни от вас, ни от коллабораторов, ни от садовника. Прогоны, просмотр, звёзды и форки работают. Обратимо в любой момент.',
+  },
+  unfreezeEffects: { en: 'Editing and suggestions are enabled again.', ru: 'Правки и предложения снова разрешены.' },
+  // ── Архив (полностью read-only) ──
+  archiveList: { en: 'Archive this list', ru: 'Архивировать список' },
+  unarchiveList: { en: 'Unarchive this list', ru: 'Разархивировать список' },
+  archiveHint: { en: 'Mark this list read-only.', ru: 'Пометить список только-чтение.' },
+  archivedOn: { en: 'Archived — read-only: no edits, suggestions or new runs.', ru: 'В архиве — только чтение: ни правок, ни предложений, ни новых прогонов.' },
+  archiveEffects: {
+    en: 'The list becomes fully read-only: no edits, suggestions or new runs (in-progress runs can still be finished). It stays visible and forkable. Reversible any time.',
+    ru: 'Список становится полностью только-чтение: ни правок, ни предложений, ни новых прогонов (начатые прогоны можно доводить). Остаётся видимым и форкается. Обратимо в любой момент.',
+  },
+  unarchiveEffects: { en: 'The list returns to normal: editing and new runs are enabled again.', ru: 'Список возвращается к обычному режиму: правки и новые прогоны снова доступны.' },
+  // Баннеры состояния на странице списка
+  bannerArchived: { en: 'This list is archived (read-only).', ru: 'Этот список в архиве (только чтение).' },
+  bannerFrozen: { en: 'This list is frozen — edits and suggestions are off.', ru: 'Этот список заморожен — правки и предложения отключены.' },
+  badgeArchived: { en: 'Archived', ru: 'Архив' },
+  badgeFrozen: { en: 'Frozen', ru: 'Заморожен' },
   deleteLockedModeration: {
     en: 'A list removed by moderation cannot be deleted. Submit an appeal for review — deleting would erase the record of the removed content.',
     ru: 'Список, снятый модерацией, удалить нельзя. Подайте апелляцию на пересмотр — удаление стёрло бы запись о снятом контенте.',
