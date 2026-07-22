@@ -13,6 +13,7 @@ import { findPrecedents, type Precedent, type StepPrecedent } from './retrieval'
 import { getRoster, type Expert } from './roster'
 import { voiceLine, type VoiceKind } from './voice'
 import { pickPrecedents } from './precedent-filter'
+import { craftRules } from './triples'
 import { lawBlock } from './list-laws'
 import { pushMessage, type GenMessageKind } from './generation-messages'
 import { langEnName, type Lang } from '@/shared/i18n'
@@ -62,6 +63,8 @@ export interface CouncilProvenance {
   precedents: { title: string; tags: string[] }[]
   /** Шаги-прецеденты (kind='step', #index-chunks) — срезом первых 120 символов. */
   precedentSteps?: string[]
+  /** Ремесленные правила из базы троек (KAG) — какие связи легли в промпты. */
+  craftRules?: string[]
   /** По каждому гному: модель и СВОЙ срез прецедентов (после доменной линзы). */
   experts?: { id: string; model: string; precedents: string[] }[]
   models: { steward?: string; innovator?: string; critic?: string; elder?: string; single?: string }
@@ -278,6 +281,12 @@ ${roster}`,
     list.length
       ? `\n\n${sp.wrap('PRECEDENT_STEPS', list.map((s, i) => `${i + 1}. ${s.content.slice(0, 240)}`).join('\n'))}\n(proven steps from similar lists — adapt, don't copy blindly)`
       : ''
+  // Ремесленные правила (KAG, HQ §5): переносимые связи из базы троек — по запросу
+  // и объединению доменов призванных. Извлечены из чужих списков → spotlight.
+  const rules = await craftRules(query, experts.flatMap((e) => e.domains))
+  const rulesBlock = rules.length
+    ? `\n\nCRAFT RULES from the knowledge base (transferable facts, honor them unless the topic clearly overrides):\n${sp.wrap('RULES', rules.join('\n'))}`
+    : ''
 
   // Веб-искатель (старейшина advanced-тира): интернет-прецеденты сверх наших списков (за флагом council_web_seek).
   let webLore = ''
@@ -307,7 +316,7 @@ ${roster}`,
     const mine = pickPrecedents(precedents, e.domains)
     const mySteps = pickPrecedents(stepPrecedents, e.domains)
     expertProv.push({ id: e.id, model: expertModel, precedents: mine.map((p) => p.title) })
-    return run(model, sys, `Draft the list.\n${topic}${loreBlock(mine)}${stepsBlock(mySteps)}${webLore}`)
+    return run(model, sys, `Draft the list.\n${topic}${loreBlock(mine)}${stepsBlock(mySteps)}${rulesBlock}${webLore}`)
   })
   emit('innovate', vl('innovator', 'innovate') ?? say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'), 'innovator', say('Innovator', 'Новатор'))
   const innovatorJob = run(
@@ -342,7 +351,7 @@ ${roster}`,
     base,
     `You are the lead synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.${law ? `${law}\nThis shape is MANDATORY in the final JSON — do not merge it away.` : ''}\n${listRules}`,
     // Старейшине — топ по близости без доменного среза: он сводит все взгляды.
-    `${topic}${loreBlock(precedents.slice(0, 3))}${stepsBlock(stepPrecedents.slice(0, 3))}${webLore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
+    `${topic}${loreBlock(precedents.slice(0, 3))}${stepsBlock(stepPrecedents.slice(0, 3))}${rulesBlock}${webLore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
   )
   // firstJson: старейшина иногда предваряет JSON прозой («Here is the synthesized list:»), и голый
   // parseList на этом падал → 7 вызовов совета в мусор, тихий фолбэк на одиночную, а лента уже
@@ -359,6 +368,7 @@ ${roster}`,
           kind,
           precedents: precedents.map((p) => ({ title: p.title, tags: p.tags })),
           precedentSteps: stepPrecedents.map((s) => s.content.slice(0, 120)),
+          craftRules: rules.length ? rules : undefined,
           experts: expertProv,
           models: { steward: fast, innovator: pool[0], critic: fast, elder: base },
           webSeek: settings.councilWebSeek,

@@ -419,7 +419,7 @@ export const appSettings = pgTable('app_settings', {
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples'
 
 export const jobs = pgTable(
   'jobs',
@@ -871,6 +871,32 @@ export const generations = pgTable(
  * attempt — номер витка (совпадает с generationCandidates.idx): дубли реплик лечатся группировкой по
  * витку, а не стиранием ленты, как раньше.
  */
+/**
+ * Тройки знаний (HQ §5, старт полного KAG): «не найди похожее, а пойми связи
+ * и правила» — курица→заменяется→индейка, карамель→требует→термометр.
+ * Извлекаются фоном из опубликованных списков дешёвой моделью; повторное
+ * извлечение той же связи из ДРУГОГО списка инкрементит confidence
+ * (подтверждение практикой). Словарь relation ограничен (см. shared/ai/triples).
+ */
+export const knowledgeTriples = pgTable(
+  'knowledge_triples',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subject: text('subject').notNull(),
+    relation: text('relation').notNull(),
+    object: text('object').notNull(),
+    domain: text('domain').notNull().default(''),
+    lang: text('lang').notNull().default('en'),
+    sourceTemplateId: uuid('source_template_id').references(() => templates.id, { onDelete: 'set null' }),
+    confidence: integer('confidence').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('knowledge_triples_fact_idx').on(t.subject, t.relation, t.object, t.lang),
+    index('knowledge_triples_domain_idx').on(t.domain),
+  ],
+)
+
 /**
  * «Копать глубже» (HQ §8): слои раскопки под шагом списка. Шахта ОСТАЁТСЯ —
  * выкопанное одним видно всем следующим читателям бесплатно. Привязка к
