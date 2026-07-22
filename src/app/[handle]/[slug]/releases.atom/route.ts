@@ -14,7 +14,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // видимость → release notes flagged/hidden/pending и публичных черновиков утекали.
   if (!meta || !isPubliclyVisible(meta)) return new Response('Not found', { status: 404 })
 
-  const origin = new URL(req.url).origin
+  // Публичный канонический адрес, а не bind-origin запроса (за прокси req.url = 0.0.0.0:3000).
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin).replace(/\/$/, '')
   const base = `${origin}/${handle}/${slug}`
   const rels = await getReleases(meta.id)
   const updated = (rels[0]?.createdAt ?? new Date(0)).toISOString()

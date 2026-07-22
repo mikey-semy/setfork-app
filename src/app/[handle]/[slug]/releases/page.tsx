@@ -33,7 +33,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
     <>
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-[16px] font-bold text-ink">Releases</h1>
+          <h1 className="text-[16px] font-bold text-ink">{t('releasesLabel', lang)}</h1>
           <div className="flex items-center gap-2">
             <Tooltip label="Atom feed">
               <a href={`${base}/releases.atom`} className="rounded-md border border-border p-1.5 text-muted hover:text-ink">
@@ -63,7 +63,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
             )}
             <div className="mt-2 text-[12.5px]">
               <Link href={`${base}/versions`} className="text-ink-2 hover:text-accent">
-                {ru ? 'Все версии — во вкладке Versions' : 'All versions live under the Versions tab'}
+                {ru ? 'Все версии — во вкладке «Версии»' : 'All versions live under the Versions tab'}
               </Link>
             </div>
           </div>
