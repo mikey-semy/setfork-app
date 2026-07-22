@@ -419,7 +419,7 @@ export const appSettings = pgTable('app_settings', {
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck'
 
 export const jobs = pgTable(
   'jobs',
@@ -1096,6 +1096,54 @@ export const linkClicks = pgTable(
     index('link_clicks_tpl_idx').on(t.templateId, t.createdAt),
     index('link_clicks_host_idx').on(t.templateId, t.host),
   ],
+)
+
+// ── Link-checker («живые списки», Ж1): здоровье внешних URL ──────────
+// Вердикт — свойство САМОГО URL (мёртв для всех), поэтому храним per-URL
+// глобально (дедуп проб повторяющихся ссылок), а привязку к спискам — через
+// таблицу вхождений. broken присваивается ТОЛЬКО эскалацией fail_count через
+// несколько свипов; сетевые отказы (ТСПУ/SNI) в broken не эскалируют никогда.
+export const linkVerdict = pgEnum('link_verdict', ['ok', 'redirected', 'broken', 'unreachable', 'uncheckable'])
+
+export const linkChecks = pgTable(
+  'link_checks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    urlNorm: text('url_norm').notNull().unique(), // normalizeUrl(): без #fragment, lower scheme/host, cap 2048
+    host: text('host').notNull(),
+    httpStatus: integer('http_status'), // null = не дошли до HTTP (dns/сеть/SSRF-отказ)
+    finalUrl: text('final_url'), // после редиректов — сырьё для предложения замены
+    verdict: linkVerdict('verdict'), // null = ещё не проверялся
+    reason: text('reason'), // 'http_404'|'dns'|'timeout'|'net'|'soft404'|'bot_block'|…
+    failCount: integer('fail_count').notNull().default(0), // подряд broken-кандидатных свипов; успех → 0
+    lastOkAt: timestamp('last_ok_at', { withTimezone: true }),
+    checkedAt: timestamp('checked_at', { withTimezone: true }),
+    nextCheckAt: timestamp('next_check_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('link_checks_due_idx').on(t.nextCheckAt),
+    index('link_checks_host_idx').on(t.host),
+    index('link_checks_verdict_idx').on(t.verdict),
+  ],
+)
+
+// Вхождение URL в контент списка. Пересобирается delete+insert per template
+// при харвесте (полная материализация — как suggestions.items).
+export const linkOccurrences = pgTable(
+  'link_occurrences',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    stepId: uuid('step_id').references(() => steps.id, { onDelete: 'cascade' }), // null = desc списка
+    urlNorm: text('url_norm').notNull(),
+    source: text('source', { enum: ['ref', 'product', 'video', 'file', 'inline'] }).notNull(),
+    refIndex: integer('ref_index').notNull().default(0),
+    seenAt: timestamp('seen_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('link_occ_tpl_idx').on(t.templateId), index('link_occ_url_idx').on(t.urlNorm)],
 )
 
 // ── Feedback (обратная связь с сайта) ────────────────────────────────
