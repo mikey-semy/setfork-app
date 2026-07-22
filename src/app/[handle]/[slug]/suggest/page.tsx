@@ -43,7 +43,7 @@ export default async function SuggestPage({
         href={`/${owner}/${slug}`}
         className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink"
       >
-        <ArrowLeft size={15} /> {tpl.owner.handle}/{tpl.slug}
+        <ArrowLeft size={15} /> {tpl.owner.handle} / {tr(tpl.title, lang) || tpl.slug}
       </Link>
       {/* На длинном списке верхняя ссылка уезжает — плавающий дубль слева-внизу (фидбек владельца). */}
       <FloatingBack href={`/${owner}/${slug}`} label={tr(tpl.title, lang) || `${tpl.owner.handle}/${tpl.slug}`} />
