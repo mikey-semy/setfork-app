@@ -40,7 +40,8 @@ ${sp.rule()}`
 export function buildGnomePrompt(e: Expert, question: string, listContext?: string, precedents?: string[]): { system: string; prompt: string } {
   const sp = spotlight()
   const guild = e.code ? `\nYou represent ${e.guildEn || 'your guild'}. GUILD CODE — quality standards your answer must uphold:\n${e.code}` : ''
-  const system = `You are ${e.persona}${guild}
+  const memory = e.memory ? `\nYOUR CRAFT MEMORY (distilled from the guild's best lists):\n${sp.wrap('MEMORY', e.memory)}` : ''
+  const system = `You are ${e.persona}${guild}${memory}
 A user is asking you ONE question through the SetFork workshop. Answer as this expert, practically and specifically: give the advice, the draft or the critique they ask for — not generic filler. Prefer a short structured answer (a few tight paragraphs or a compact list). Answer in the SAME LANGUAGE as the question.
 ${sp.rule()}`
   const lore = precedents?.length

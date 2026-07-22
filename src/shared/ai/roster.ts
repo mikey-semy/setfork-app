@@ -27,6 +27,8 @@ export interface Expert {
   code: string
   /** Линза запроса (HQ §5): аспекты, которыми гном смотрит на любой запрос к базе. */
   lens: string
+  /** Память (HQ §3 этап 2): выжимка ремесла из лучших списков доменов — пишет рудник. */
+  memory: string
   domains: string[]
   /** Принудительная модель; пусто → из пула совета по кругу. */
   model: string
@@ -55,6 +57,7 @@ export const SEED: Expert[] = [
 - Repetitive manual work becomes a scripted step
 - Reliability is a number (SLO), not a feeling`,
     lens: 'deploy rollback health-check automation reliability',
+    memory: '',
     domains: ['deploy', 'devops', 'ci', 'servers', 'infra', 'docker', 'kubernetes'],
     // Google SRE Book (SLO/error budget, blameless postmortem, toil) + DORA Four Keys.
     persona:
@@ -75,6 +78,7 @@ export const SEED: Expert[] = [
 - Edge cases and failure modes are named, not implied
 - Correctness beats cleverness`,
     lens: 'code commands edge cases tests review',
+    memory: '',
     domains: ['programming', 'software', 'coding', 'api', 'library', 'framework'],
     // SOLID (R. C. Martin) + Test Pyramid (Fowler) + Google Engineering Practices + SWEBOK v4.
     persona:
@@ -95,6 +99,7 @@ export const SEED: Expert[] = [
 - Food-safety critical points are called out (danger zone 5–57 °C)
 - Kitchen order: what waits, what runs in parallel, what must not`,
     lens: 'ingredients technique temperature timing food safety',
+    memory: '',
     domains: ['cooking', 'food', 'recipe', 'kitchen', 'baking'],
     // Mise en place (CIA) + HACCP 7 principles (Codex CXC 1-1969) + FDA Food Code danger zone.
     persona:
@@ -115,6 +120,7 @@ export const SEED: Expert[] = [
 - Every likely failure has a fallback
 - Budget and time cost sit next to each step`,
     lens: 'documents visas route timing budget fallback',
+    memory: '',
     domains: ['travel', 'trip', 'city', 'tourism', 'itinerary'],
     // ISO 31030 (travel risk) + IATA Timatic (docs volatility) + CDC Yellow Book / WHO (health prep).
     persona:
@@ -135,6 +141,7 @@ export const SEED: Expert[] = [
 - Progress raises ONE parameter at a time
 - Injury-causing form errors are named`,
     lens: 'training load progression form safety',
+    memory: '',
     domains: ['fitness', 'health', 'workout', 'sport', 'nutrition'],
     // ACSM GETP (FITT-VP, preparticipation screening, progressive overload) + WHO 2020 activity guidelines.
     persona:
@@ -155,6 +162,7 @@ export const SEED: Expert[] = [
 - Disagreements are cited, not smoothed over
 - Comprehension checks are built in`,
     lens: 'sources study methods verification practice',
+    memory: '',
     domains: ['study', 'learning', 'research', 'course', 'exam'],
     // ACRL Framework for Information Literacy + PRISMA 2020 (reproducible search).
     persona:
@@ -175,6 +183,7 @@ export const SEED: Expert[] = [
 - Primary and official sources are preferred
 - Staleness is admitted, never hidden`,
     lens: 'tools resources links prices alternatives',
+    memory: '',
     domains: ['*'],
     // Belbin Resource Investigator (+ его allowable weakness) + CRAAP test.
     persona:
@@ -195,6 +204,7 @@ export const SEED: Expert[] = [
 - Checklist shape: short blocks, clear pause points
 - Each step marked read-do or do-confirm`,
     lens: 'method structure checklist verification',
+    memory: '',
     domains: ['*'],
     // Cynefin (Snowden & Boone, HBR) + Pólya «How to Solve It» + Checklist Manifesto / WHO checklist.
     persona:
@@ -215,6 +225,7 @@ const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   guildRu: r.guildRu,
   code: r.code,
   lens: r.lens,
+  memory: r.memory,
   domains: r.domains,
   model: r.model,
   avatar: r.avatar || r.id,
