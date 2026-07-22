@@ -627,9 +627,9 @@ const DICT = {
   translateFailed: { en: 'Translation failed — try again.', ru: 'Не удалось перевести — попробуйте ещё раз.' },
   // ── Product-блок («Shop this list») ──
   productBlockTitle: { en: 'Shop this list', ru: 'Купить по списку' },
-  productTierBudget: { en: 'Budget', ru: 'Дешевле' },
-  productTierMid: { en: 'Mid-range', ru: 'Средне' },
-  productTierPremium: { en: 'Premium', ru: 'Дороже' },
+  productTierBudget: { en: 'Budget', ru: 'Бюджет' },
+  productTierMid: { en: 'Mid-range', ru: 'Средний' },
+  productTierPremium: { en: 'Premium', ru: 'Премиум' },
   productTierNone: { en: 'No tier', ru: 'Без яруса' },
   productNamePh: { en: 'Product name', ru: 'Название товара' },
   productNotePh: { en: 'Why it’s in the kit (optional)', ru: 'Зачем это в наборе (необязательно)' },
