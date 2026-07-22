@@ -70,12 +70,15 @@ export function WatchButton({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className={`inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-[13px] font-semibold transition-colors ${
+            aria-label={watching ? labels.unwatch : labels.watch}
+            title={watching ? labels.unwatch : labels.watch}
+            className={`inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-[13px] font-semibold transition-colors max-sm:gap-1.5 max-sm:px-2.5 max-sm:py-1.5 ${
               watching ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink hover:border-border-strong'
             }`}
           >
             {watching ? <EyeOff size={14} /> : <Eye size={14} />}
-            <span>{watching ? labels.unwatch : labels.watch}</span>
+            {/* Мобила: только глаз+счётчик (текст не влезал рядом с Pin — скилл mobile-ui). */}
+            <span className="hidden sm:inline">{watching ? labels.unwatch : labels.watch}</span>
             <span className="font-mono text-[12px] text-muted">{count_}</span>
             <ChevronDown size={13} className="text-muted" />
           </button>
