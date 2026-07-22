@@ -32,3 +32,22 @@ describe('parseFollowups (NEXT: не должен вылезать тексто�
     expect(r.followups).toHaveLength(3)
   })
 })
+
+describe('parseSummon (реальный созыв гнома)', () => {
+  it('вычленяет SUMMON: id и текст передачи', async () => {
+    const { parseSummon } = await import('@/features/dig/followups')
+    const r = parseSummon('Это по части девопса, зову коллегу.\nSUMMON: devops')
+    expect(r.summonId).toBe('devops')
+    expect(r.text).toBe('Это по части девопса, зову коллегу.')
+  })
+  it('id нормализуется в нижний регистр', async () => {
+    const { parseSummon } = await import('@/features/dig/followups')
+    expect(parseSummon('X\nSUMMON: DevOps').summonId).toBe('devops')
+  })
+  it('нет SUMMON → текст целиком, без id', async () => {
+    const { parseSummon } = await import('@/features/dig/followups')
+    const r = parseSummon('Обычный ответ.')
+    expect(r.summonId).toBeUndefined()
+    expect(r.text).toBe('Обычный ответ.')
+  })
+})

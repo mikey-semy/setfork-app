@@ -5,7 +5,7 @@ import { generateText } from 'ai'
 import { db, digChatMessages, gnomeThanks, steps, templates, templateVersions } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
-import { getRoster } from '@/shared/ai/roster'
+import { getRoster, type Expert } from '@/shared/ai/roster'
 import { getAiChatClient } from '@/shared/ai/provider'
 import { getAiSettings, isAiAvailable } from '@/shared/settings/ai'
 import { pickChatModel } from '@/shared/ai/credits'
@@ -14,7 +14,7 @@ import { extractUsage, outcomeOf, recordUsage } from '@/shared/ai/usage'
 import { aiQuota, globalBudgetOk } from '@/shared/quota'
 import { rateLimit } from '@/shared/rate-limit'
 import { tr, langEnName, type Lang, type LocaleText } from '@/shared/i18n'
-import { parseFollowups } from './followups'
+import { parseFollowups, parseSummon } from './followups'
 
 /**
  * Мини-чат раскопки (HQ §8, редизайн по фидбеку владельца): вместо статичных
@@ -34,6 +34,13 @@ const HISTORY_TAIL = 8
 
 const fits = (tag: string, domain: string) => tag === domain || (domain.length >= 3 && tag.includes(domain)) || (tag.length >= 3 && domain.includes(tag))
 
+export interface DigReply {
+  who: string
+  name: string
+  text: string
+  followups: string[]
+}
+
 export async function digChatAsk(input: {
   templateId: string
   stepN: number
@@ -41,7 +48,7 @@ export async function digChatAsk(input: {
   history: DigChatMsg[]
   question: string
   lang: Lang
-}): Promise<{ who: string; name: string; text: string; followups: string[] } | { error: string }> {
+}): Promise<{ replies: DigReply[] } | { error: string }> {
   const session = await requireSession()
   const question = (input.question ?? '').trim().slice(0, 500)
   if (!question) return { error: 'empty' }
@@ -81,11 +88,8 @@ export async function digChatAsk(input: {
   if (!client) return { error: 'ai_off' }
   const forProvider = (m: string) =>
     client.cfg.provider === 'yandex' ? m.startsWith('gpt://') : client.cfg.provider === 'gigachat' ? !m.includes('/') : true
-  const model = expert.model && forProvider(expert.model) ? expert.model : await pickChatModel(settings)
 
   const sp = spotlight()
-  const guild = expert.code ? `\nGUILD CODE — quality standard you uphold:\n${expert.code}` : ''
-  const memory = expert.memory ? `\nYOUR CRAFT MEMORY:\n${sp.wrap('MEMORY', expert.memory)}` : ''
   const stepCtx = [
     `List: ${tr(tpl.title as LocaleText, input.lang)}`,
     tpl.tags.length ? `Tags: ${tpl.tags.join(', ')}` : '',
@@ -101,49 +105,81 @@ export async function digChatAsk(input: {
     .map((m) => `${m.role === 'user' ? 'USER' : 'GNOME'}: ${String(m.text).slice(0, 400)}`)
     .join('\n')
 
-  // Аккуратность специалиста (фидбек владельца: повар уверенно отвечал про Homebrew).
-  // Вне своего ремесла гном честно предупреждает и отвечает общими знаниями, а не
-  // притворяется экспертом. generalist (домены '*') — по любой теме, оговорка не нужна.
-  const lane = expert.domains.includes('*')
-    ? ''
-    : `\nYour craft is: ${expert.domains.join(', ')}. If the question falls OUTSIDE your craft, open with a brief honest note that it's not your specialty (in character), then answer with general knowledge or point to which kind of specialist fits — never fake deep expertise you don't have.`
-  const system = `You are ${expert.persona}${guild}${memory}${lane}
+  // Ответить КАК КОНКРЕТНЫЙ гном. allowSummon — можно ли позвать коллегу (только у
+  // первого гнома, чтобы не было цепочек созывов). Возвращает текст+фоллоу-апы и,
+  // если гном решил передать вопрос, id вызванного специалиста (реальное действие).
+  const refId = tpl.id // не-null локаль: сужение `if (!tpl)` не протекает в async-замыкание
+  async function answer(e: Expert, allowSummon: boolean): Promise<{ text: string; followups: string[]; summonId?: string } | null> {
+    const model = e.model && forProvider(e.model) ? e.model : await pickChatModel(settings)
+    const guild = e.code ? `\nGUILD CODE — quality standard you uphold:\n${e.code}` : ''
+    const memory = e.memory ? `\nYOUR CRAFT MEMORY:\n${sp.wrap('MEMORY', e.memory)}` : ''
+    // Аккуратность специалиста: вне ремесла — честная оговорка (generalist '*' — по всему).
+    const lane = e.domains.includes('*')
+      ? ''
+      : `\nYour craft is: ${e.domains.join(', ')}. If the question falls OUTSIDE your craft, be honest it's not your specialty.`
+    // РЕАЛЬНЫЙ СОЗЫВ (идея владельца, MCP-подобное действие гнома): если вопрос
+    // явно чужого ремесла и есть подходящий коллега — гном МОЖЕТ позвать его.
+    // Это не понарошку: вызванный гном реально войдёт в чат и ответит сам.
+    const others = roster.filter((x) => x.id !== e.id && !x.domains.includes('*'))
+    const summonBlock =
+      allowSummon && !e.domains.includes('*') && others.length
+        ? `\nYOU CAN CALL A COLLEAGUE: if this question truly belongs to another craft, hand it off — reply with ONE short in-character line that you're calling them, then on the FINAL line put exactly "SUMMON: <id>" (id from the ROSTER). Use ONLY for a real domain mismatch; if you can answer well yourself, just answer and do NOT summon. When you summon, do NOT add the NEXT line — the colleague will.\nROSTER (id: craft):\n${others.map((x) => `${x.id}: ${x.domains.join(', ')}`).join('\n')}`
+        : ''
+    const system = `You are ${e.persona}${guild}${memory}${lane}${summonBlock}
 You are chatting with a user in the SetFork workshop ABOUT ONE STEP of a list (context below). Dig as deep as they want: reasons, mechanisms, exceptions, alternatives, adjacent techniques — follow THEIR direction. Be concrete; admit "точных данных нет"/"no reliable data" instead of inventing. Keep answers tight (2-5 short paragraphs or a compact list). Answer in ${langEnName(input.lang)}.
-Keep the MAIN answer to ~4 sentences so there is room for what follows. You are the guide in this mountain of knowledge — you MUST end EVERY reply with, on its own final line, exactly: "NEXT: q1 | q2 | q3" — three SHORT follow-up questions (max ~6 words each, in the answer language, separated by " | ") that dig deeper from what you just said. This NEXT line is mandatory; nothing after it.
+Keep the MAIN answer to ~4 sentences so there is room for what follows. You are the guide in this mountain of knowledge — unless you are summoning a colleague, you MUST end EVERY reply with, on its own final line, exactly: "NEXT: q1 | q2 | q3" — three SHORT follow-up questions (max ~6 words each, in the answer language, separated by " | ") that dig deeper. This NEXT line is mandatory (except when summoning); nothing after it.
 ${sp.rule()}`
-  const prompt = `${sp.wrap('STEP', stepCtx)}${hist ? `\n\nCHAT SO FAR:\n${sp.wrap('HISTORY', hist)}` : ''}\n\n${sp.wrap('QUESTION', question)}`
-
-  const startedAt = Date.now()
-  try {
-    const result = await generateText({
-      model: client.chat(model),
-      system,
-      prompt,
-      temperature: settings.temperature,
-      maxOutputTokens: 700, // запас под ответ + строку NEXT (560 иногда обрезал NEXT на длинных ответах)
-      abortSignal: AbortSignal.timeout(45_000),
-    })
-    const u = extractUsage(result)
-    await recordUsage({ userId: session.userId, feature: 'dig', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: 'template', refId: tpl.id, outcome: 'ok', durationMs: Date.now() - startedAt, provider: client.cfg.provider })
-    const raw = result.text.trim()
-    if (!raw) return { error: 'aifail' }
-    const { text, followups } = parseFollowups(raw)
-    if (!text) return { error: 'aifail' }
-    // Сессия (фидбек владельца: «беседа исчезла»): пишем вопрос+ответ в БД, чтобы
-    // при повторном открытии кирки на пункте разговор восстановился. fire-and-forget:
-    // не блокируем ответ, персист — не критичный путь.
-    void db
-      .insert(digChatMessages)
-      .values([
-        { templateId: tpl.id, stepN: input.stepN, userId: session.userId, role: 'user', text: question },
-        { templateId: tpl.id, stepN: input.stepN, userId: session.userId, role: 'gnome', who: expert.id, text },
-      ])
-      .catch(() => {})
-    return { who: expert.id, name: input.lang === 'ru' ? expert.nameRu : expert.nameEn, text, followups }
-  } catch (e) {
-    await recordUsage({ userId: session.userId, feature: 'dig', model, input: 0, output: 0, total: 0, cost: 0, refType: 'template', refId: tpl.id, outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
-    return { error: 'aifail' }
+    const prompt = `${sp.wrap('STEP', stepCtx)}${hist ? `\n\nCHAT SO FAR:\n${sp.wrap('HISTORY', hist)}` : ''}\n\n${sp.wrap('QUESTION', question)}`
+    const startedAt = Date.now()
+    try {
+      const result = await generateText({
+        model: client!.chat(model),
+        system,
+        prompt,
+        temperature: settings.temperature,
+        maxOutputTokens: 700,
+        abortSignal: AbortSignal.timeout(45_000),
+      })
+      const u = extractUsage(result)
+      await recordUsage({ userId: session.userId, feature: 'dig', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: 'template', refId, outcome: 'ok', durationMs: Date.now() - startedAt, provider: client!.cfg.provider })
+      const rawFull = result.text.trim()
+      if (!rawFull) return null
+      // Реальный созыв: вычленяем «SUMMON: id» (валидный, не сам себя) → отдаём id.
+      const parsed = allowSummon ? parseSummon(rawFull) : { text: rawFull, summonId: undefined }
+      const summonId = parsed.summonId && others.some((x) => x.id === parsed.summonId) ? parsed.summonId : undefined
+      const { text, followups } = parseFollowups(parsed.text)
+      if (!text) return null
+      return { text, followups, summonId }
+    } catch (err) {
+      await recordUsage({ userId: session.userId, feature: 'dig', model, input: 0, output: 0, total: 0, cost: 0, refType: 'template', refId, outcome: outcomeOf(err), durationMs: Date.now() - startedAt, provider: client!.cfg.provider })
+      return null
+    }
   }
+
+  const gname = (e: Expert) => (input.lang === 'ru' ? e.nameRu : e.nameEn)
+  const primary = await answer(expert, true)
+  if (!primary) return { error: 'aifail' }
+  const replies: DigReply[] = [{ who: expert.id, name: gname(expert), text: primary.text, followups: primary.followups }]
+
+  // Настоящий созыв: вызванный гном РЕАЛЬНО входит в чат и отвечает сам (свой
+  // персонаж/модель). Глубина 1 — он уже не зовёт дальше (allowSummon=false).
+  if (primary.summonId) {
+    const target = roster.find((x) => x.id === primary.summonId)
+    if (target) {
+      const second = await answer(target, false)
+      if (second) replies.push({ who: target.id, name: gname(target), text: second.text, followups: second.followups })
+    }
+  }
+
+  // Сессия: пишем вопрос + ВСЕ реплики гномов (созванный тоже сохраняется).
+  void db
+    .insert(digChatMessages)
+    .values([
+      { templateId: tpl.id, stepN: input.stepN, userId: session.userId, role: 'user' as const, text: question },
+      ...replies.map((r) => ({ templateId: tpl.id, stepN: input.stepN, userId: session.userId, role: 'gnome' as const, who: r.who, text: r.text })),
+    ])
+    .catch(() => {})
+  return { replies }
 }
 
 /**

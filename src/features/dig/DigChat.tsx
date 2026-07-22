@@ -106,8 +106,10 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       const res = await digChatAsk({ templateId: ctx.templateId, stepN: ctx.stepN, gnome, history, question: q, lang })
       if ('error' in res) setErr(errText[res.error] ?? res.error)
       else {
-        setMessages((m) => [...m, { role: 'gnome', who: res.who, text: res.text }])
-        setFollowups(res.followups)
+        // Реплик может быть НЕСКОЛЬКО: гном мог реально созвать коллегу — тот входит
+        // в чат отдельным участником. Фоллоу-апы берём у ПОСЛЕДНЕГО ответившего.
+        setMessages((m) => [...m, ...res.replies.map((r) => ({ role: 'gnome' as const, who: r.who, text: r.text }))])
+        setFollowups(res.replies[res.replies.length - 1]?.followups ?? [])
       }
     })
   }
