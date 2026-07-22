@@ -25,10 +25,20 @@ export function sanitizeHandleBase(raw: string): string {
   return s.length >= 3 ? s : ''
 }
 
-async function handleTaken(h: string): Promise<boolean> {
+export async function handleTaken(h: string): Promise<boolean> {
   if (RESERVED_HANDLES.has(h)) return true
   const [row] = await db.select({ id: users.id }).from(users).where(eq(users.handle, h)).limit(1)
   return !!row
+}
+
+/** Нормализовать ввод ника (обрезка, нижний регистр, снятие ведущего @). */
+export function normalizeHandle(raw: string): string {
+  return raw.trim().toLowerCase().replace(/^@+/, '')
+}
+
+/** Валиден ли ник по форме (НЕ занятость): длина/алфавит + не зарезервирован. */
+export function isHandleShapeValid(h: string): boolean {
+  return HANDLE_RE.test(h) && !RESERVED_HANDLES.has(h)
 }
 
 /**

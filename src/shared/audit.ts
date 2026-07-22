@@ -31,6 +31,7 @@ export type AuditAction =
   | 'passkey.remove'
   | 'passkey.login'
   | 'account.delete'
+  | 'account.handle-change'
 
 export async function recordAudit(
   action: AuditAction,
