@@ -79,7 +79,7 @@ export function BranchPicker({
   return (
     <div className="relative inline-block">
       <Tooltip label={ru ? 'Ветки' : 'Branches'}>
-        <Button onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <Button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="h-9">
           <GitBranch size={13} className="text-muted" />
           <span className="max-w-[140px] truncate">{current}</span>
           <ChevronDown size={12} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />

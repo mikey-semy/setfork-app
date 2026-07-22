@@ -82,7 +82,7 @@ export function ListActionsMenu({
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={`${base}/blame`}>
-            <History size={15} className="text-muted" /> Blame
+            <History size={15} className="text-muted" /> {say('Blame', 'Авторство')}
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
