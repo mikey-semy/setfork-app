@@ -9,6 +9,7 @@ export interface ReleaseRow {
   tag: string
   title: string
   notes: string
+  prerelease: boolean
   createdAt: Date
   authorHandle: string
   authorAvatarUrl: string | null
@@ -23,6 +24,7 @@ export async function getReleases(templateId: string): Promise<ReleaseRow[]> {
       tag: releases.tag,
       title: releases.title,
       notes: releases.notes,
+      prerelease: releases.prerelease,
       createdAt: releases.createdAt,
       authorHandle: users.handle,
       authorAvatarUrl: users.avatarUrl,

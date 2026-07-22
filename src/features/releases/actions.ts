@@ -27,6 +27,7 @@ export async function createRelease(templateId: string, formData: FormData): Pro
   const tag = String(formData.get('tag') ?? '').trim() || `v${version}`
   const title = String(formData.get('title') ?? '').trim().slice(0, 200)
   const notes = String(formData.get('notes') ?? '').trim().slice(0, 50000)
+  const prerelease = formData.get('prerelease') === 'on'
 
   if (!TAG_RE.test(tag)) redirect(`${base}/new?e=badtag`)
   // Версия должна существовать.
@@ -44,7 +45,7 @@ export async function createRelease(templateId: string, formData: FormData): Pro
     .limit(1)
   if (dup) redirect(`${base}/new?e=tagtaken`)
 
-  await db.insert(releases).values({ templateId: tpl.id, version, tag, title, notes, authorId: session.userId })
+  await db.insert(releases).values({ templateId: tpl.id, version, tag, title, notes, prerelease, authorId: session.userId })
   // Git-тег релиза на коммит версии (best-effort): чтобы clone привозил и
   // человекочитаемый тег, а не только авто-vN. Ошибку git не роняем на релиз.
   const { gitCore } = await import('@/features/git/core')

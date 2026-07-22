@@ -292,6 +292,7 @@ export const releases = pgTable(
     tag: text('tag').notNull(), // человекочитаемый тег (дефолт vN)
     title: text('title').notNull().default(''),
     notes: text('notes').notNull().default(''), // markdown
+    prerelease: boolean('prerelease').notNull().default(false), // пред-релиз (не «Последняя», как GitHub)
     authorId: uuid('author_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),

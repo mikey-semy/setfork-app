@@ -26,6 +26,8 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
   const rels = await getReleases(meta.id)
+  // «Последняя» = первый НЕ пред-релиз (rels новые сверху), как GitHub.
+  const latestId = rels.find((r) => !r.prerelease)?.id
   const canManage = !!session && (session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId)))
   const base = `/${owner}/${slug}`
 
@@ -69,13 +71,18 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {rels.map((r, i) => (
+            {rels.map((r) => (
               <div key={r.id} className="rounded-lg border border-border bg-surface p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className="px-2.5 font-mono text-[12px] text-ink">
                     <Tag size={12} className="text-muted" /> {r.tag}
                   </Badge>
-                  {i === 0 && <Badge variant="ok">{t('latest', lang)}</Badge>}
+                  {r.id === latestId && <Badge variant="ok">{t('latest', lang)}</Badge>}
+                  {r.prerelease && (
+                    <span className="rounded-full border border-warn/40 bg-warn/10 px-2 py-0.5 text-[11px] font-semibold text-warn">
+                      {t('preRelease', lang)}
+                    </span>
+                  )}
                   <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-2">
                     <Avatar handle={r.authorHandle} avatarUrl={r.authorAvatarUrl} size={16} />
                     <Link href={`/${r.authorHandle}`} className="hover:text-accent">{r.authorHandle}</Link>

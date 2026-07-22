@@ -205,6 +205,8 @@ const DICT = {
   releasesLabel: { en: 'Releases', ru: 'Релизы' },
   noReleases: { en: 'No releases yet.', ru: 'Пока нет релизов.' },
   latest: { en: 'Latest', ru: 'Последняя' },
+  preRelease: { en: 'Pre-release', ru: 'Пред-релиз' },
+  preReleaseHint: { en: 'won’t be marked “Latest”', ru: 'не будет помечен «Последним»' },
   contributors: { en: 'Contributors', ru: 'Контрибьюторы' },
   collaboratorsHeading: { en: 'Collaborators', ru: 'Соавторы' },
   collaboratorsHint: { en: 'Collaborators can edit the list and push over git.', ru: 'Соавторы могут править список и пушить по git.' },

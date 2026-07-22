@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
@@ -80,6 +81,11 @@ export default async function NewReleasePage({
           <label className="flex flex-col gap-1.5">
             <span className="text-[12.5px] font-semibold text-ink">Notes</span>
             <MarkdownEditor name="notes" rows={8} placeholder={ru ? 'Заметки релиза (markdown)…' : 'Release notes (markdown)…'} maxLength={50000} lang={lang} refScope={{ owner, slug }} />
+          </label>
+          <label className="flex cursor-pointer items-center gap-2.5 text-[13px]">
+            <input type="checkbox" name="prerelease" className="size-4 accent-(--accent)" />
+            <span className="font-medium text-ink">{t('preRelease', lang)}</span>
+            <span className="text-muted">— {t('preReleaseHint', lang)}</span>
           </label>
           <div className="flex items-center gap-3">
             <SubmitButton className="rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
