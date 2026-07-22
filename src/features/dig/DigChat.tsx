@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { ChevronDown, Heart, Loader2, Pickaxe, SendHorizontal, X } from 'lucide-react'
+import { ChevronDown, Heart, Loader2, Pickaxe, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
-import { Textarea } from '@/shared/ui/textarea'
+import { ChatComposer } from '@/shared/ui/ChatComposer'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Markdown } from '@/shared/ui/Markdown'
@@ -16,8 +16,8 @@ import { digChatAsk, getDigChatHistory, thankGnome, type DigChatMsg } from './ch
  * Мини-чат раскопки (редизайн «Копать глубже» по фидбеку владельца): кирка в
  * углу пункта → живой чат в правом нижнем углу. Контекст — список+пункт;
  * дальше любая глубина и направление, собеседник — профильный гном (auto)
- * или выбранный из ростера. UI строго на shadcn-примитивах (Button/Textarea/
- * DropdownMenu) — правило проекта.
+ * или выбранный из ростера. Поле ввода — общий ChatComposer (дом гномов, UI):
+ * тот же композер, что в чате генерации; остальное на shadcn-примитивах.
  *
  * Открытие — CustomEvent 'setfork:dig-chat' от кирки на шаге: один хост на
  * страницу, повторный клик по другому шагу перезапускает сессию с его контекстом.
@@ -211,38 +211,19 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       </div>
 
       <div className="border-t border-border px-2.5 py-2">
-        {/* Рамка = «инпут», кнопка В ПОТОКЕ и КРУГЛАЯ bg-primary (как в чате генерации):
-            одна строка — по оси (items-end), много — у низа. Фидбек владельца:
-            absolute-кнопка «падала» ниже оси и была не круглой. */}
-        <div className="flex items-end gap-1 rounded-2xl border border-border bg-surface px-1.5 py-1.5 focus-within:border-border-strong">
-          <Textarea
-            variant="bare"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                send()
-              }
-              if (e.key === 'Escape') setCtx(null)
-            }}
-            rows={1}
-            placeholder={say('Why exactly this way?', 'Почему именно так?')}
-            className="max-h-24 min-h-8 flex-1 px-2 py-1.5"
-          />
-          {/* Тултип — shadcn, не браузерный title (правило проекта). Enter — отправить, Shift+Enter — перенос, Esc — закрыть. */}
-          <Tooltip label={say('Enter — send · Shift+Enter — new line · Esc — close', 'Enter — отправить · Shift+Enter — перенос · Esc — закрыть')}>
-            <Button
-              size="sm"
-              aria-label={say('Send (Enter)', 'Отправить (Enter)')}
-              onClick={() => send()}
-              disabled={!text.trim() || pending}
-              className="grid size-8 shrink-0 place-items-center rounded-full p-0"
-            >
-              {pending ? <Loader2 size={15} className="animate-spin" /> : <SendHorizontal size={15} />}
-            </Button>
-          </Tooltip>
-        </div>
+        {/* Композер — общий дом гномов (UI): то же поле+круглая кнопка+хоткеи, что в
+            чате генерации. Esc закрывает окно раскопки (специфика этой поверхности). */}
+        <ChatComposer
+          value={text}
+          onChange={setText}
+          onSend={() => send()}
+          placeholder={say('Why exactly this way?', 'Почему именно так?')}
+          sendDisabled={!text.trim() || pending}
+          pending={pending}
+          sendAriaLabel={say('Send (Enter)', 'Отправить (Enter)')}
+          sendTooltip={say('Enter — send · Shift+Enter — new line · Esc — close', 'Enter — отправить · Shift+Enter — перенос · Esc — закрыть')}
+          onEscape={() => setCtx(null)}
+        />
       </div>
     </div>
   )
