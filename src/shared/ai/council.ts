@@ -140,7 +140,12 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // Голоса гномов (voice.ts): seed стабилен на виток — реплики попытки детерминированы,
   // между попытками разные. null (кастомный эксперт без голоса) → нейтральный текст сайта вызова.
   const vseed = `${opts.refId ?? query}:${attempt}`
-  const vl = (who: string, kind: VoiceKind, vars?: Record<string, string>) => voiceLine(who, kind, lang, vseed, vars)
+  // LLM-шлифовка реплик (HQ §2, этап 2): ОДИН flash-вызов на весь совет, стартует
+  // параллельно со стюардом и НЕ блокирует: не успел к событию — статичный голос,
+  // успел — реплика живая и ПО ТЕМЕ. События с переменными ({names}) не шлифуем.
+  let polished: Record<string, string> | null = null
+  const vl = (who: string, kind: VoiceKind, vars?: Record<string, string>) =>
+    (!vars ? polished?.[`${who}:${kind}`] : undefined) ?? voiceLine(who, kind, lang, vseed, vars)
 
   // Один под-вызов: генерация + учёт расхода. Ошибка → null (гном «выпал»), совет продолжает.
   // ОДИН ретрай на транзиентной ошибке (таймаут/сеть/429/5xx): бенч показал, что 33% отказов —
@@ -177,6 +182,37 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
     }
     return null
   }
+
+  // Шлифовка стартует ЗДЕСЬ (до стюарда): к поздним стадиям (драфт/критика/синтез)
+  // реплики почти всегда успевают; ранние возьмут статичный голос — тоже норм.
+  void (async () => {
+    try {
+      const events = [
+        'planner:plan-single',
+        'planner:plan-council',
+        'reporter:clarify',
+        ...EXPERTS.map((e) => `${e.id}:draft`),
+        'innovator:innovate',
+        'critic:critique',
+        'elder:synth',
+      ]
+      const cast = EXPERTS.map((e) => `${e.id} — ${e.guildEn || e.nameEn}`).join('; ')
+      const res = await run(
+        fast,
+        `You write ONE short in-character line for each event of a gnome-workshop council working on the topic. Cast: ${cast}. Service roles: planner (chooses the process), reporter (asks clarifying questions), innovator (bold ideas), critic (devil's advocate), elder (synthesizes the final list). A line is what the gnome SAYS as its event starts: lively, in character, tied to the topic naturally, max 60 characters, no quotes, no emoji. Language: ${langName}. Return ONLY a JSON object mapping every key to its line.\n${sp.rule()}`,
+        `${topic}\nKEYS:\n${events.join('\n')}`,
+        600,
+      )
+      if (res) {
+        const obj = JSON.parse(firstJson(res.text)) as Record<string, unknown>
+        const out: Record<string, string> = {}
+        for (const [k, v] of Object.entries(obj)) if (typeof v === 'string' && v.trim()) out[k] = v.trim().slice(0, 90)
+        if (Object.keys(out).length) polished = out
+      }
+    } catch {
+      // статичные голоса — нормальный фолбэк
+    }
+  })()
 
   // 1) Распорядитель: глубина (single|council|clarify) + созыв экспертов по домену (адаптивная глубина = лимит цены).
   const roster = EXPERTS.map((e) => `${e.id}: ${e.persona} [${e.domains.join(',')}]`).join('\n')
