@@ -214,21 +214,51 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
     }
   })()
 
-  // 1) Распорядитель: глубина (single|council|clarify) + созыв экспертов по домену (адаптивная глубина = лимит цены).
+  // 0) ГЕЙТ БЕСЕДЫ — отдельный фокусный вызов (HQ §clarify): решение «нужны ли
+  // вопросы» вынесено из стюарда, потому что fast-модель Яндекса, делая 4 задачи
+  // разом (глубина+тип+состав+вопросы), почти всегда роняла именно вопросы —
+  // «Деплой на VPS» уходил в совет без беседы. Отдельная задача с примерами в обе
+  // стороны исполняется надёжно. Только на ПЕРВОМ витке и пока пользователь ещё
+  // не отвечал (иначе зациклимся): [User clarifications] дописывает answerClarify.
+  const alreadyClarified = /\[User clarifications\]/i.test(query)
+  if (settings.councilClarify && attempt === 1 && !alreadyClarified) {
+    const gate = await run(
+      fast,
+      `You decide whether a list-generating council must ASK the user 2-3 questions FIRST, or can proceed right away.
+ASK when the request is underspecified — a bare fragment/pronoun ("organize it", "help me"), or a broad activity/goal whose good list depends on unstated parameters: stack/OS, skill level, budget, goal, scope, audience, constraints.
+  Examples that MUST ask: "Deploy to a VPS" (which stack? OS? zero-downtime?), "Deploy an app on a VPS", "Learn guitar" (genre? level?), "Plan a trip" (where? days? budget?), "Start a business", "Get fit", "Организовать переезд".
+PROCEED (no questions) when the request already names a concrete, self-contained subject: a specific dish ("домашний зефир"), a specific book/topic list ("книги про гномов"), a specific well-scoped how-to ("настроить бэкапы Postgres на VPS в S3").
+When asking: write 2-3 SHORT questions in the request's language. Where natural, append 2-4 quick answer OPTIONS after a "|": "Which stack? | Node.js | Python | PHP | Docker". Starting with questions is GOOD service, not friction.
+Return ONLY JSON: {"ask": true|false, "questions": ["...only if ask"]}
+${sp.rule()}`,
+      `REQUEST:\n${topic}`,
+      220,
+    )
+    let gateQuestions: string[] = []
+    let ask = false
+    if (gate) {
+      try {
+        const g = JSON.parse(firstJson(gate.text)) as { ask?: boolean; questions?: string[] }
+        ask = g.ask === true
+        gateQuestions = Array.isArray(g.questions) ? g.questions.filter((q) => typeof q === 'string' && q.trim()).map((q) => q.trim()).slice(0, 3) : []
+      } catch { /* не распарсили — идём как обычно */ }
+    }
+    if (ask && gateQuestions.length) {
+      emit('plan', vl('reporter', 'clarify') ?? say('The request is broad — a couple of details first', 'Запрос широкий — сначала пара деталей'), 'reporter', say('Reporter', 'Репортёр'))
+      return { clarify: gateQuestions }
+    }
+  }
+
+  // 1) Распорядитель: глубина (single|council) + созыв экспертов по домену (адаптивная глубина = лимит цены).
   const roster = EXPERTS.map((e) => `${e.id}: ${e.persona} [${e.domains.join(',')}]`).join('\n')
-  const clarifyLine = settings.councilClarify
-    ? '- depth "clarify": the request needs the user\'s input BEFORE a useful list can be made — a bare fragment/pronoun ("organize it", "help me"), OR a short broad topic where the right list depends on unstated parameters ("deploy to a VPS" — which stack/OS/runtime? "learn guitar" — genre/level?), budget / skill level / goal / constraints. Return 2-3 short clarifying questions in "questions"; where natural, append 2-4 quick answer OPTIONS to a question after a "|" separator: "Which stack? | Node.js | Python | PHP | Docker". PREFER clarify over single/council whenever the request is underspecified this way — starting with questions is GOOD service, not friction.\n'
-    : ''
   // «kind» распорядитель решает тем же дешёвым вызовом, что и глубину/состав — стоит ~0. Это LLM-слой
   // классификации типа списка (ADR-0010) поверх грамматического дефолта classifyListKind (fallback ниже).
   const kindField = `"kind":"procedure|inventory|checklist|criteria|options"`
-  const jsonShape = settings.councilClarify
-    ? `{"depth":"single|council|clarify",${kindField},"summon":["id",...],"questions":["...only if clarify"],"reason":"short"}`
-    : `{"depth":"single|council",${kindField},"summon":["id",...],"reason":"short"}`
+  const jsonShape = `{"depth":"single|council",${kindField},"summon":["id",...],"reason":"short"}`
   const steward = await run(
     fast,
     `You are the steward of a panel of domain experts building a reference list. Choose process depth, the LIST KIND, and summon experts.
-${clarifyLine}- depth "single": the topic is clear AND simple/everyday (chores, basic personal routines) — no council needed.
+- depth "single": the topic is clear AND simple/everyday (chores, basic personal routines) — no council needed.
 - depth "council": the topic is clear but technical/multi-faceted/professional — summon 1-${maxGnomes} RELEVANT, DIVERSE experts from the roster.
 - kind: what the ELEMENT of the list is. "procedure" = ordered steps to DO (how-to). "inventory" = THINGS to get/have (accessories, gear, ingredients, packing/shopping list). "checklist" = states to verify. "criteria" = rules for choosing/judging. "options" = variants to compare. Pick by what the user actually wants: "what accessories do I need" → inventory, NOT procedure.
 MATCH THE TOPIC TO THE ROSTER BY DOMAIN (the topic may be in ANY language): a recipe/dish/cooking → chef; a workout/health → coach; a trip/city → traveler; deploy/servers/CI → devops; code/API/library → coder; study/course → scholar. Use 'generalist' ONLY when nothing fits.
@@ -239,28 +269,19 @@ ${roster}`,
     `REQUEST:\n${topic}`,
     220,
   )
-  let depth: 'single' | 'council' | 'clarify' = 'council'
+  let depth: 'single' | 'council' = 'council'
   let ids: string[] = []
-  let questions: string[] = []
   // opts.kind (выбор пользователя-переключателя) — ЖЁСТКИЙ: распорядитель его не трогает.
   // Иначе — грамматический дефолт, а распорядитель уточняет своим LLM-решением, если оно валидно.
   const kindForced = Boolean(opts.kind)
   let kind: ListKind = opts.kind ?? classifyListKind(query)
   if (steward) {
     try {
-      const p = JSON.parse(firstJson(steward.text)) as { depth?: string; kind?: string; summon?: string[]; questions?: string[] }
+      const p = JSON.parse(firstJson(steward.text)) as { depth?: string; kind?: string; summon?: string[] }
       if (p.depth === 'single') depth = 'single'
-      else if (p.depth === 'clarify' && settings.councilClarify) depth = 'clarify'
       if (!kindForced && p.kind && (LIST_KINDS as string[]).includes(p.kind)) kind = p.kind as ListKind
       ids = Array.isArray(p.summon) ? p.summon : []
-      questions = Array.isArray(p.questions) ? p.questions.filter((q) => typeof q === 'string' && q.trim()).map((q) => q.trim()).slice(0, 3) : []
     } catch { /* дефолт council */ }
-  }
-
-  // Диалог: не хватает ключевого → возвращаем уточняющие вопросы (совет не гоним, ждём ответов пользователя).
-  if (depth === 'clarify' && questions.length) {
-    emit('plan', vl('reporter', 'clarify') ?? say('The request is vague — I need a couple of details', 'Запрос размытый — нужна пара деталей'), 'reporter', say('Reporter', 'Репортёр'))
-    return { clarify: questions }
   }
 
   // law — обязательная форма типа списка (напр. рецепт). Раньше её тут НЕ было, и получался парадокс:
