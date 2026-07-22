@@ -31,8 +31,9 @@ const POLL_FAST_MS = 2000
 const POLL_SLOW_MS = 10_000
 const DEGRADE_AFTER_MS = 2 * 60_000
 
-/** Реплики совета — второстепенное: их сворачиваем. Реплики пользователя и карточка — нет. */
-const COUNCIL_KINDS = new Set<GenMessage['kind']>(['plan', 'summon', 'seek', 'draft', 'innovate', 'critique', 'synth'])
+/** Реплики совета — второстепенное: их сворачиваем. Реплики пользователя и карточка — нет.
+ *  'reply' — ответ гнома на реплику человека (диалог): живёт в той же нити витка. */
+const COUNCIL_KINDS = new Set<GenMessage['kind']>(['plan', 'summon', 'seek', 'draft', 'innovate', 'critique', 'synth', 'reply'])
 
 /** Ход совета: пока виток идёт — раскрыт (это и есть лоадер), отработал — свёрнут в одну строку. */
 function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { messages: GenMessage[]; lang: Lang; defaultOpen: boolean; avatars: Record<string, string>; repBadges: Record<string, string> }) {

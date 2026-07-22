@@ -191,6 +191,11 @@ export async function refineInChat(generationId: string, text: string): Promise<
 
   // Реплику пишем ДО постановки джобы: воркер соберёт нить уже вместе с ней.
   await pushMessage(generationId, { attempt: nextIdx, kind: 'user', text: note })
+  // Диалог (HQ §2, этап 3): адресованный гном коротко отвечает на реплику — fire-and-forget,
+  // ответ прилетает поллингом параллельно с ходом витка; сбой не мешает генерации.
+  void import('@/shared/ai/dialogue')
+    .then((m) => m.replyToUser(generationId, nextIdx, note, gen.listKind, gen.lang as Lang, session.userId))
+    .catch(() => {})
   await enqueueGenerate(generationId, session.userId, await threadQuery(generationId, gen.query), gen.lang, nextIdx)
   redirect(`/generate/${generationId}?v=${nextIdx}`)
 }
