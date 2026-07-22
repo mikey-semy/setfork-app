@@ -1010,6 +1010,11 @@ export const councilExperts = pgTable(
     // аспектов к запросу перед embed (повар — ингредиенты/техника, девопсер — откаты).
     // Применяется там, где работает ОДИН гном (ask_gnome, dig); в совете — доменный фильтр.
     lens: text('lens').notNull().default(''),
+    // Память гнома (HQ §3, этап 2): фоновая выжимка ремесла из ЛУЧШИХ списков его
+    // доменов — «гном учится на публикациях». Обновляет рудник знаний; видна на
+    // личной странице; подмешивается в его промпты (spotlight — материал чужой).
+    memory: text('memory').notNull().default(''),
+    memoryUpdatedAt: timestamp('memory_updated_at', { withTimezone: true }),
     domains: text('domains').array().notNull().default(sql`'{}'::text[]`),
     model: text('model').notNull().default(''),
     avatar: text('avatar').notNull().default(''),
