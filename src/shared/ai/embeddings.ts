@@ -73,7 +73,11 @@ function cacheSet(key: string, vec: number[]): void {
   queryCache.set(key, vec)
 }
 
-/** Один HTTP-вызов /embeddings: вектора (отсортированы по index) + токены. */
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+/** Один HTTP-вызов /embeddings: вектора (отсортированы по index) + токены.
+ *  429 ретраится с бэкоффом (Retry-After провайдера или 1с/2с/4с) — реиндекс
+ *  по одному тексту упирался в RPS-лимит Яндекса (прод 2026-07-22). */
 async function requestEmbeddings(
   ep: { url: string; headers: Record<string, string> },
   model: string,
@@ -81,14 +85,20 @@ async function requestEmbeddings(
   withDims: boolean,
   dims: number,
 ): Promise<{ vectors: number[][]; tokens: number } | null> {
-  const res = await fetch(ep.url, {
-    method: 'POST',
-    headers: ep.headers,
-    body: JSON.stringify({ model, input, ...(withDims ? { dimensions: dims } : {}) }),
-    signal: AbortSignal.timeout(20_000),
-  })
-  if (!res.ok) {
-    console.warn(`[embeddings] HTTP ${res.status} (model=${model})`)
+  let res: Response | null = null
+  for (let attempt = 0; attempt < 4; attempt++) {
+    res = await fetch(ep.url, {
+      method: 'POST',
+      headers: ep.headers,
+      body: JSON.stringify({ model, input, ...(withDims ? { dimensions: dims } : {}) }),
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (res.status !== 429 || attempt === 3) break
+    const retryAfter = Number(res.headers.get('retry-after')) * 1000
+    await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 10_000) : 1000 * 2 ** attempt)
+  }
+  if (!res || !res.ok) {
+    console.warn(`[embeddings] HTTP ${res?.status} (model=${model})`)
     return null
   }
   const data = (await res.json()) as {
@@ -128,7 +138,8 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
       // ловил 400 и молча писал NULL-вектора). Шлём последовательно по одному —
       // и отдаём null ЦЕЛИКОМ, если упал хоть один: частичный батч = дыры в индексе.
       out = []
-      for (const t of texts) {
+      for (const [i, t] of texts.entries()) {
+        if (i > 0) await sleep(150) // щадим RPS-лимит Яндекса между запросами
         const one = await requestEmbeddings(ep, model, [t], withDims, dims)
         if (!one) return null
         out.push(one.vectors[0])
