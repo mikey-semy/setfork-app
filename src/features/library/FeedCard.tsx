@@ -5,6 +5,7 @@ import { TagChip } from '@/shared/ui/TagChip'
 import { cardAccent } from '@/shared/ui/AutoBanner'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, tr, type Lang } from '@/shared/i18n'
+import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { toggleStar } from '@/features/library/actions'
 import type { FeedItem } from './queries'
 
@@ -21,7 +22,14 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
   const a = cardAccent(item.accent, item.id)
   // Язык контента ≠ языку интерфейса → бейдж кода языка (ADR-0009: единый пул,
   // иностранные списки в ленте — норма, а не ошибка). Есть перевод — бейдж не нужен.
-  const foreignLang = item.title[lang] ? null : Object.keys(item.title).find((k) => item.title[k])
+  // Но ключу LocaleText верить нельзя: русский текст часто лежит под 'en' (неверный
+  // тег генерации) — тогда бейдж «en» на явно русском списке = бред. Детектим по
+  // самому тексту (кириллица → ru): помечаем, только если текст ДЕЙСТВИТЕЛЬНО чужой.
+  const shownTitle = item.title[lang] || Object.values(item.title).find(Boolean) || ''
+  const foreignLang =
+    !item.title[lang] && detectTextLang(shownTitle, lang) !== lang
+      ? Object.keys(item.title).find((k) => item.title[k])
+      : null
   return (
     <div className="relative flex items-start gap-3 overflow-hidden rounded-lg border border-border bg-surface py-3 pr-3.5 pl-4 transition-colors hover:border-border-strong">
       {/* accent-полоса слева — идентичность списка (без синтетического баннера в ленте) */}
