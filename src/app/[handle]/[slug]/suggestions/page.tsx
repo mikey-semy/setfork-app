@@ -6,7 +6,6 @@ import { t, tr, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { getSuggestions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import type { ProposedItem } from '@/shared/db'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -36,7 +35,6 @@ export default async function SuggestionsPage({
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="suggestions" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
       {list.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">

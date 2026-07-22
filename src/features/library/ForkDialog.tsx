@@ -28,12 +28,15 @@ export function ForkDialog({
   defaultSlug,
   viewerHandle,
   count,
+  grouped = false,
   labels,
 }: {
   templateId: string
   defaultSlug: string
   viewerHandle: string
-  count: number
+  count?: number
+  /** В сплит-группе (кнопка Fork + счётчик-ссылка в дерево форков): без рамки и без счётчика. */
+  grouped?: boolean
   labels: ForkLabels
 }) {
   const [open, setOpen] = useState(false)
@@ -71,10 +74,14 @@ export function ForkDialog({
           setError(null)
           setOpen(true)
         }}
-        className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+        className={
+          grouped
+            ? 'inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-surface-2'
+            : 'inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong'
+        }
       >
-        <GitFork size={14} /> <span className="hidden sm:inline">{labels.fork}</span>{' '}
-        <span className="font-mono text-[12px] text-muted">{count}</span>
+        <GitFork size={14} /> <span className="hidden sm:inline">{labels.fork}</span>
+        {!grouped && count != null && <span className="font-mono text-[12px] text-muted">{count}</span>}
       </button>
 
       <OverlayPanel open={open} onClose={() => setOpen(false)} title={labels.title} width={420}>

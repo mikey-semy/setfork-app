@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { BarChart3, CircleDot, GitFork, GitPullRequest, Globe, ListChecks, Lock, MessagesSquare, Settings, Star, Tag } from 'lucide-react'
+import { GitFork, Globe, Lock, Star } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -20,12 +20,12 @@ import { getDiscussionCount } from '@/features/discussions/queries'
 import { getWatchCount, isWatching } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { humanModerationReason } from '@/features/moderation/reason'
-import { TabItem, TabNav } from '@/shared/ui/TabNav'
+import { ListTabs } from './ListTabs'
 
-type Tab = 'overview' | 'versions' | 'issues' | 'suggestions' | 'discussions' | 'insights' | 'settings'
-
-/** Общая шапка страницы списка (= «репозиторий»): back, owner/name, действия, вкладки. */
-export async function ListHeader({ owner, slug, active }: { owner: string; slug: string; active: Tab }) {
+/** Общая шапка страницы списка (= «репозиторий»): owner/name, действия, вкладки.
+ *  Живёт в персистентном [handle]/[slug]/layout.tsx — не перемонтируется между
+ *  вкладками (меню не моргает); активная вкладка определяется в ListTabs клиентски. */
+export async function ListHeader({ owner, slug }: { owner: string; slug: string }) {
   // Шапка = defense-in-depth: страницы уже гейтят через requireViewable*, но и здесь
   // не рендерим чужой приватный/черновик/снятый модерацией — через тот же чокпоинт (canViewList).
   const [lang, session, meta] = await Promise.all([getLang(), getSession(), requireViewableMeta(owner, slug)])
@@ -49,21 +49,22 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
 
   return (
     <div>
-      {/* Табы — full-width СРАЗУ под шапкой (как GitHub); единый TabNav из shared/ui. */}
-      <TabNav scope="list">
-        {/* Первый таб — сам список (как «Code» у GitHub-репо), не «Overview». */}
-        <TabItem href={base} on={active === 'overview'} icon={<ListChecks size={15} />} label={t('listTab', lang)} />
-        {meta.issuesEnabled && (
-          <TabItem href={`${base}/issues`} on={active === 'issues'} icon={<CircleDot size={15} />} label={t('issuesTab', lang)} count={issueCount} />
-        )}
-        <TabItem href={`${base}/suggestions`} on={active === 'suggestions'} icon={<GitPullRequest size={15} />} label={t('suggestions', lang)} count={suggCount} />
-        {meta.discussionsEnabled && (
-          <TabItem href={`${base}/discussions`} on={active === 'discussions'} icon={<MessagesSquare size={15} />} label={lang === 'ru' ? 'Обсуждения' : 'Discussions'} count={discCount} />
-        )}
-        <TabItem href={`${base}/versions`} on={active === 'versions'} icon={<Tag size={15} />} label={t('versionsTab', lang)} />
-        <TabItem href={`${base}/insights`} on={active === 'insights'} icon={<BarChart3 size={15} />} label={t('insightsTab', lang)} />
-        {isOwner && <TabItem href={`${base}/settings`} on={active === 'settings'} icon={<Settings size={15} />} label={t('settings', lang)} />}
-      </TabNav>
+      {/* Табы — full-width СРАЗУ под шапкой (как GitHub). Активная вкладка — клиентски
+          (ListTabs/usePathname), чтобы полоска переезжала мгновенно и меню не моргало. */}
+      <ListTabs
+        base={base}
+        labels={{
+          list: t('listTab', lang),
+          issues: t('issuesTab', lang),
+          suggestions: t('suggestions', lang),
+          discussions: lang === 'ru' ? 'Обсуждения' : 'Discussions',
+          versions: t('versionsTab', lang),
+          insights: t('insightsTab', lang),
+          settings: t('settings', lang),
+        }}
+        counts={{ issues: issueCount, suggestions: suggCount, discussions: discCount }}
+        flags={{ issues: meta.issuesEnabled, discussions: meta.discussionsEnabled, owner: isOwner }}
+      />
 
       <div className="mx-auto w-full max-w-[1180px] px-4 pt-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -119,45 +120,55 @@ export async function ListHeader({ owner, slug, active }: { owner: string; slug:
                 <Star size={14} /> <span className="hidden sm:inline">{t('star', lang)}</span> <span className="font-mono text-[12px] text-muted">{meta.starsCount}</span>
               </Link>
             )}
-            {isOwner ? (
-              // Свой список форкнуть нельзя (как на GitHub свой репозиторий) — кнопка неактивна.
-              <button
-                disabled
-                title={t('cantForkOwn', lang)}
-                className="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-muted opacity-60"
-              >
-                <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>{' '}
-                <span className="font-mono text-[12px]">{meta.forksCount}</span>
-              </button>
-            ) : session ? (
-              <ForkDialog
-                templateId={meta.id}
-                defaultSlug={meta.slug}
-                viewerHandle={session.handle}
-                count={meta.forksCount}
-                labels={{
-                  fork: t('fork', lang),
-                  title: t('forkDialogTitle', lang),
-                  ownerLabel: t('forkOwnerLabel', lang),
-                  nameLabel: t('forkNameLabel', lang),
-                  nameHint: t('forkNameHint', lang),
-                  available: t('forkAvailable', lang),
-                  taken: t('forkTaken', lang),
-                  descLabel: t('forkDescLabel', lang),
-                  descPlaceholder: t('forkDescPlaceholder', lang),
-                  create: t('createFork', lang),
-                  cancel: t('cancel', lang),
-                }}
-              />
-            ) : (
+            {/* Fork как split на GitHub: кнопка (диалог для чужого / неактивна для своего /
+                логин для гостя) + счётчик-ссылка в дерево форков (HQ §11, #395). */}
+            <span className="inline-flex items-stretch overflow-hidden rounded-md border border-border">
+              {isOwner ? (
+                // Свой список форкнуть нельзя (как на GitHub свой репозиторий) — кнопка неактивна.
+                <button
+                  disabled
+                  title={t('cantForkOwn', lang)}
+                  className="inline-flex cursor-not-allowed items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-muted opacity-60"
+                >
+                  <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
+                </button>
+              ) : session ? (
+                <ForkDialog
+                  templateId={meta.id}
+                  defaultSlug={meta.slug}
+                  viewerHandle={session.handle}
+                  grouped
+                  labels={{
+                    fork: t('fork', lang),
+                    title: t('forkDialogTitle', lang),
+                    ownerLabel: t('forkOwnerLabel', lang),
+                    nameLabel: t('forkNameLabel', lang),
+                    nameHint: t('forkNameHint', lang),
+                    available: t('forkAvailable', lang),
+                    taken: t('forkTaken', lang),
+                    descLabel: t('forkDescLabel', lang),
+                    descPlaceholder: t('forkDescPlaceholder', lang),
+                    create: t('createFork', lang),
+                    cancel: t('cancel', lang),
+                  }}
+                />
+              ) : (
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-surface-2"
+                >
+                  <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
+                </Link>
+              )}
+              {/* Счётчик — ссылка в дерево форков (HQ §11): кто что вырастил из списка. */}
               <Link
-                href="/login"
-                className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+                href={`${base}/forks`}
+                aria-label={t('fork', lang)}
+                className="inline-flex items-center border-l border-border px-2.5 py-2 font-mono text-[12px] text-muted hover:bg-surface-2 hover:text-ink"
               >
-                <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>{' '}
-                <span className="font-mono text-[12px] text-muted">{meta.forksCount}</span>
+                {meta.forksCount}
               </Link>
-            )}
+            </span>
             <ShareButton
               path={base}
               ru={lang === 'ru'}
