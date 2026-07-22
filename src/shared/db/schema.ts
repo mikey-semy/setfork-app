@@ -19,6 +19,7 @@ import {
   pgEnum,
   pgTable,
   smallint,
+  halfvec,
   text,
   timestamp,
   unique,
@@ -402,12 +403,17 @@ export const embeddings = pgTable(
     kind: text('kind').notNull(), // 'list'
     refId: uuid('ref_id'), // template.id
     content: text('content').notNull(),
-    embedding: vector('embedding', { dimensions: 1536 }),
+    // halfvec(768): вдвое меньше памяти и быстрее HNSW (анализ поиска P4); 768 —
+    // родная мерность Яндекс v2 и MRL-срез text-embedding-3-small. Смена типа
+    // на проде = drop+add колонки (push --force), данные индекса пропадают —
+    // ЗАПЛАНИРОВАННО: следом идёт полный реиндекс, до него поиск живёт на
+    // лексической ветке гибрида (#377).
+    embedding: halfvec('embedding', { dimensions: 768 }),
     metadata: jsonb('metadata'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    index('embeddings_hnsw_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
+    index('embeddings_hnsw_idx').using('hnsw', t.embedding.op('halfvec_cosine_ops')),
     index('embeddings_kind_idx').on(t.kind),
   ],
 )
