@@ -11,6 +11,7 @@ import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { dockerFile } from '@codemirror/legacy-modes/mode/dockerfile'
 import { useTheme } from 'next-themes'
 import { detectLang, LANG_LABEL, type CodeLang } from './detect-lang'
+import { CopyButton } from './CopyButton'
 
 // Расширение подсветки по определённому языку. Ленивые пакеты уже импортированы —
 // этот файл сам грузится динамически (см. CodeEditor.tsx), в основной бандл не идёт.
@@ -64,10 +65,13 @@ export default function CodeEditorInner({
 
   return (
     <div className="relative" role="group" aria-label={ariaLabel}>
-      {/* Определитель языка — в правом верхнем углу (как просили). */}
+      {/* Правый верхний угол: язык + копировать (фидбек владельца). */}
       {value.trim() !== '' && (
-        <span className="pointer-events-none absolute right-2 top-1.5 z-10 rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted">
-          {LANG_LABEL[id]}
+        <span className="absolute right-2 top-1.5 z-10 inline-flex items-center gap-1.5">
+          <span className="pointer-events-none rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted">
+            {LANG_LABEL[id]}
+          </span>
+          <CopyButton text={value} />
         </span>
       )}
       <CodeMirror
