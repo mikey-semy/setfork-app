@@ -82,6 +82,10 @@ export const SELECTEL_KEY_SETTING = 'ai.selectel_api_key'
 export const YANDEX_KEY_SETTING = 'ai.yandex_api_key'
 export const YANDEX_FOLDER_SETTING = 'ai.yandex_folder_id'
 export const GIGACHAT_KEY_SETTING = 'ai.gigachat_auth_key'
+// Веб-гора (Yandex Search API v2): ОТДЕЛЬНЫЙ ключ Search API (не чат-ключ Яндекса) —
+// сервис активируется и тарифицируется отдельно в Yandex Cloud. Пусто → веб-шаг
+// пропускается (совет опирается на наш корпус), а НЕ выдумывает прецеденты.
+export const YANDEX_SEARCH_KEY_SETTING = 'ai.yandex_search_api_key'
 
 export const AI_PROVIDERS: readonly AiProviderId[] = ['openrouter', 'selectel', 'yandex', 'gigachat'] as const
 
@@ -134,11 +138,12 @@ export async function getAiProviderRaw(): Promise<{
   yandexKey: string
   yandexFolder: string
   gigachatKey: string
+  yandexSearchKey: string
 }> {
   const rows = await db
     .select()
     .from(appSettings)
-    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING, YANDEX_FOLDER_SETTING, GIGACHAT_KEY_SETTING]))
+    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING, YANDEX_FOLDER_SETTING, GIGACHAT_KEY_SETTING, YANDEX_SEARCH_KEY_SETTING]))
   const m = Object.fromEntries(rows.map((r) => [r.key, (r.value ?? '').trim()]))
   const raw = m[PROVIDER_SETTING] || process.env.AI_PROVIDER || 'openrouter'
   return {
@@ -148,6 +153,7 @@ export async function getAiProviderRaw(): Promise<{
     yandexKey: m[YANDEX_KEY_SETTING] || process.env.YC_AI_API_KEY?.trim() || '',
     yandexFolder: m[YANDEX_FOLDER_SETTING] || process.env.YC_AI_FOLDER_ID?.trim() || '',
     gigachatKey: m[GIGACHAT_KEY_SETTING] || process.env.GIGACHAT_AUTH_KEY?.trim() || '',
+    yandexSearchKey: m[YANDEX_SEARCH_KEY_SETTING] || process.env.YC_SEARCH_API_KEY?.trim() || '',
   }
 }
 

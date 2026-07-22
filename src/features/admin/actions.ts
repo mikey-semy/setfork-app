@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
 import { maintenanceFlag, setMaintenance } from '@/shared/settings/maintenance'
-import { AI_PROVIDERS, API_KEY_SETTING, GIGACHAT_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_FOLDER_SETTING, YANDEX_KEY_SETTING, defaultEmbeddingModel, getAiProviderRaw, hasApiKey, nsKey } from '@/shared/settings/ai'
+import { AI_PROVIDERS, API_KEY_SETTING, GIGACHAT_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_FOLDER_SETTING, YANDEX_KEY_SETTING, YANDEX_SEARCH_KEY_SETTING, defaultEmbeddingModel, getAiProviderRaw, hasApiKey, nsKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
 import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/email'
@@ -39,6 +39,7 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   const selectelKey = String(formData.get('selectelKey') ?? '').trim()
   const yandexKey = String(formData.get('yandexKey') ?? '').trim()
   const yandexFolder = String(formData.get('yandexFolder') ?? '').trim()
+  const yandexSearchKey = String(formData.get('yandexSearchKey') ?? '').trim()
   const gigachatKey = String(formData.get('gigachatKey') ?? '').trim()
 
   // «Совет гномов» — мультимодельная генерация за флагами (см. shared/ai/council.ts).
@@ -75,6 +76,7 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   if (selectelKey) settings[SELECTEL_KEY_SETTING] = selectelKey
   if (yandexKey) settings[YANDEX_KEY_SETTING] = yandexKey
   if (yandexFolder) settings[YANDEX_FOLDER_SETTING] = yandexFolder
+  if (yandexSearchKey) settings[YANDEX_SEARCH_KEY_SETTING] = yandexSearchKey
   if (gigachatKey) {
     settings[GIGACHAT_KEY_SETTING] = gigachatKey
     const { clearGigaChatTokenCache } = await import('@/shared/ai/gigachat-token')
