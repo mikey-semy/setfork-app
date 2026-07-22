@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
 import { maintenanceFlag, setMaintenance } from '@/shared/settings/maintenance'
@@ -399,4 +400,17 @@ export async function setExpertAvatar(id: string, builtin: string): Promise<void
     .set({ avatar: builtin, avatarUploaded: false, updatedAt: new Date() })
     .where(eq(councilExperts.id, id))
   revalidatePath('/admin')
+}
+
+/** Найм гнома (HQ §4в): LLM-черновик профиля по признанному профстандарту → INSERT
+ *  ВЫКЛЮЧЕННЫМ → редирект на личную страницу. Ошибка → назад в зал с маркером. */
+export async function hireGnome(formData: FormData): Promise<void> {
+  const admin = await requireAdmin()
+  const tag = String(formData.get('tag') ?? '').trim().toLowerCase().slice(0, 40)
+  if (!tag) redirect('/admin/council')
+  const { draftHire, insertHired } = await import('./hire')
+  const draft = await draftHire(tag, admin.userId)
+  const id = draft ? await insertHired(draft) : null
+  revalidatePath('/admin/council')
+  redirect(id ? `/admin/council/${id}` : '/admin/council?hire=failed')
 }
