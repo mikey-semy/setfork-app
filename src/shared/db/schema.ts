@@ -270,6 +270,9 @@ export const templateVersions = pgTable(
       .references(() => templates.id, { onDelete: 'cascade' }),
     version: integer('version').notNull(),
     note: text('note').notNull().default(''), // что изменилось (для «истории»)
+    // Кто создал версию (для «Коммитов»: автор + аватар). Nullable: старые версии,
+    // gardener и Rust-write-путь (SETFORK_DOMAIN_WRITES) автора не проставляют.
+    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ tplVersion: uniqueIndex('template_versions_tpl_version').on(t.templateId, t.version), created: index('template_versions_created_idx').on(t.createdAt) }),

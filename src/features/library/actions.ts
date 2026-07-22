@@ -263,7 +263,7 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
   // Создание версии+шагов идёт через доменный порт ListStore (write-seam под Rust).
-  await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed) })
+  await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed), authorId: session.userId })
   // tags/ordered/gated — атрибуты списка, не версии; обновляем отдельно.
   await db.update(templates).set({ tags, ordered, gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   await registerTags(tags)
@@ -452,7 +452,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
 
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
-  await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items) })
+  await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items), authorId: session.userId })
   // Пере-проверку делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await db
     .update(suggestions)
@@ -648,7 +648,7 @@ export async function translateList(templateId: string, targetLang: string): Pro
   })
 
   const note = `translate → ${langEnName(targetLang)}`
-  await listStore.addVersion(tpl.id, { note, steps: toStepInput(proposed) })
+  await listStore.addVersion(tpl.id, { note, steps: toStepInput(proposed), authorId: session.userId })
   // Также перевести title/desc самого списка (в templates, не в шагах).
   await db
     .update(templates)
