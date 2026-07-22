@@ -199,7 +199,7 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
       const cast = EXPERTS.map((e) => `${e.id} — ${e.guildEn || e.nameEn}`).join('; ')
       const res = await run(
         fast,
-        `You write ONE short in-character line for each event of a gnome-workshop council working on the topic. Cast: ${cast}. Service roles: planner (chooses the process), reporter (asks clarifying questions), innovator (bold ideas), critic (devil's advocate), elder (synthesizes the final list). A line is what the gnome SAYS as its event starts: lively, in character, tied to the topic naturally, max 60 characters, no quotes, no emoji. Language: ${langName}. Return ONLY a JSON object mapping every key to its line.\n${sp.rule()}`,
+        `You write ONE short in-character line for each event of a gnome-workshop council working on the topic. Cast: ${cast}. Service roles: planner (chooses the process), reporter (asks clarifying questions), innovator (bold ideas), critic (devil's advocate), elder (synthesizes the final list). A line is what the gnome SAYS as its event starts. Gnomes have CHARACTER (Pratchett vibes): childlike wonder plus old-sage wisdom — let emotion show (excitement, grumbling, pride), never a dry status report. A fitting emoji is welcome in SOME lines (at most one per line, not every line). Tie each line to the topic naturally, max 90 characters, no quotes. Language: ${langName}. Return ONLY a JSON object mapping every key to its line.\n${sp.rule()}`,
         `${topic}\nKEYS:\n${events.join('\n')}`,
         600,
       )
@@ -217,7 +217,7 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // 1) Распорядитель: глубина (single|council|clarify) + созыв экспертов по домену (адаптивная глубина = лимит цены).
   const roster = EXPERTS.map((e) => `${e.id}: ${e.persona} [${e.domains.join(',')}]`).join('\n')
   const clarifyLine = settings.councilClarify
-    ? '- depth "clarify": the request is too vague for a useful list — a bare fragment or pronoun ("organize it", "plan the thing", "help me"), OR the good answer hinges on unstated parameters (budget / skill level / goal / constraints). Return 2-3 short clarifying questions in "questions". PREFER clarify over single/council whenever the request is underspecified this way.\n'
+    ? '- depth "clarify": the request needs the user\'s input BEFORE a useful list can be made — a bare fragment/pronoun ("organize it", "help me"), OR a short broad topic where the right list depends on unstated parameters ("deploy to a VPS" — which stack/OS/runtime? "learn guitar" — genre/level?), budget / skill level / goal / constraints. Return 2-3 short clarifying questions in "questions"; where natural, append 2-4 quick answer OPTIONS to a question after a "|" separator: "Which stack? | Node.js | Python | PHP | Docker". PREFER clarify over single/council whenever the request is underspecified this way — starting with questions is GOOD service, not friction.\n'
     : ''
   // «kind» распорядитель решает тем же дешёвым вызовом, что и глубину/состав — стоит ~0. Это LLM-слой
   // классификации типа списка (ADR-0010) поверх грамматического дефолта classifyListKind (fallback ниже).
