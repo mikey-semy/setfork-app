@@ -13,7 +13,7 @@ import { classifyListKind, shapeFor, LIST_KINDS, type ListKind } from './list-ki
 import { findPrecedents, type Precedent, type StepPrecedent } from './retrieval'
 import { getRoster, type Expert } from './roster'
 import { voiceLine, type VoiceKind } from './voice'
-import { gnomeCard } from './gnome-character'
+import { gnomeCard, rivalryHints } from './gnome-character'
 import { pickPrecedents } from './precedent-filter'
 import { craftRules } from './triples'
 import { lawBlock } from './list-laws'
@@ -222,10 +222,12 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
       const res = await run(
         fast,
         `You voice a gnome-workshop council working on the topic. Each gnome has a DISTINCT character (cards below). Write ONE opening line for each event key "who:kind" — what THAT gnome says as its step starts.
-RULES: make every line UNMISTAKABLY that gnome — show emotion, humor and their quirk, never a dry status report; a good workshop banters. VARY the wording freely every time (never a stock phrase); tie it to the topic naturally. An emoji fits SOME lines (≤1 per line, not every line). Max 90 characters, no quotes. Language: ${langName}.
+RULES: make every line UNMISTAKABLY that gnome — show emotion, humor and their quirk, never a dry status report; a good workshop banters. In 1-2 lines let a gnome throw a GOOD-NATURED jab at a rival per the rivalries below (playful, never mean) — it makes the council memorable. VARY the wording freely every time (never a stock phrase); tie it to the topic naturally. An emoji fits SOME lines (≤1 per line, not every line). Max 90 characters, no quotes. Language: ${langName}.
 For "crier:summon" put the literal token {names} where the summoned gnomes are named. For "seek-lists:seek" put the literal token {n} where the count of found precedents goes.
 CHARACTERS:
 ${cards}
+RIVALRIES (playful, for banter):
+${rivalryHints()}
 Return ONLY a JSON object mapping every event key to its line.\n${sp.rule()}`,
         `TOPIC: ${topic}\nKEYS:\n${events.join('\n')}`,
         800,
