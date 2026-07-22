@@ -5,6 +5,7 @@ import { ChevronDown, Link2 } from 'lucide-react'
 import type { GenerationCandidate } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import { safeHref } from '@/shared/lib/safe-url'
+import { detectLang, LANG_LABEL } from '@/shared/ui/detect-lang'
 
 /**
  * Вариант списка карточкой. СВЁРНУТ по умолчанию (фидбек владельца: показывать
@@ -74,7 +75,12 @@ export function CandidateCard({
                   </div>
                   {it.desc && <div className="mt-0.5 text-[12.5px] text-ink-2">{it.desc}</div>}
                   {it.command && (
-                    <code className="mt-1 block rounded bg-surface-2 px-2 py-1 font-mono text-[12px] text-ink">{it.command}</code>
+                    // Бейдж языка в углу (detect-lang, как в редакторе); перенос вместо
+                    // горизонтального скролла. CopyButton нельзя: карточка сама <button>.
+                    <code className="relative mt-1 block whitespace-pre-wrap rounded bg-surface-2 px-2 py-1 pr-14 font-mono text-[12px] text-ink [overflow-wrap:anywhere]">
+                      {it.command}
+                      <span className="absolute right-1.5 top-1 font-mono text-[9.5px] uppercase tracking-wide text-muted">{LANG_LABEL[detectLang(it.command)]}</span>
+                    </code>
                   )}
                   {it.subtasks.length > 0 && (
                     <ul className="mt-1 space-y-0.5">
@@ -114,10 +120,12 @@ export function CandidateCard({
 
 type CardItem = GenerationCandidate['items'][number]
 
-/** Пункты в группы по section, сохраняя порядок; нумерация СВОЯ в каждой группе (ингредиенты 1..N,
- *  шаги 1..M). Секций нет → одна безымянная группа со сквозной нумерацией = прежний плоский вид. */
+/** Пункты в группы по section, сохраняя порядок; нумерация СКВОЗНАЯ через все
+ *  секции (фидбек владельца: «с 1 после каждого заголовка» сбивала с толку;
+ *  страница списка нумерует так же — displayNum). */
 function groupBySection(items: CardItem[]): { section: string; items: { it: CardItem; n: number }[] }[] {
   const groups: { section: string; items: { it: CardItem; n: number }[] }[] = []
+  let seq = 0
   for (const it of items) {
     const section = it.section ?? ''
     let g = groups[groups.length - 1]
@@ -125,7 +133,7 @@ function groupBySection(items: CardItem[]): { section: string; items: { it: Card
       g = { section, items: [] }
       groups.push(g)
     }
-    g.items.push({ it, n: g.items.length + 1 })
+    g.items.push({ it, n: ++seq })
   }
   return groups
 }
