@@ -1,5 +1,5 @@
 import 'server-only'
-import { desc, inArray, or, sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { generateText } from 'ai'
 import { db, knowledgeTriples } from '@/shared/db'
 import { getAiSettings } from '@/shared/settings/ai'
@@ -86,30 +86,65 @@ export async function saveTriples(triples: Triple[], lang: string, sourceTemplat
 }
 
 /**
- * «Ремесленные правила» для промпта: тройки, чьи subject/object встречаются в
- * тексте запроса ИЛИ чей домен входит в домены гнома. Таблица мала — ILIKE ок;
- * упрёмся в масштаб → триграммный индекс.
+ * «Ремесленные правила» для промпта: тройки по запросу/домену + СВЯЗАННЫЕ с ними
+ * через отношения (KAG-2, графовый обход — см. graphRules). Сбой не роняет
+ * генерацию: правила — приправа, не блюдо.
  */
 export async function craftRules(query: string, domains: string[], limit = 6): Promise<string[]> {
   try {
     const q = query.toLowerCase()
     const clean = domains.filter((d) => d !== '*')
-    const rows = await db
-      .select()
-      .from(knowledgeTriples)
-      .where(
-        or(
-          sql`${sql.param(q)} ilike '%' || ${knowledgeTriples.subject} || '%'`,
-          sql`${sql.param(q)} ilike '%' || ${knowledgeTriples.object} || '%'`,
-          clean.length ? inArray(knowledgeTriples.domain, clean) : sql`false`,
-        ),
-      )
-      .orderBy(desc(knowledgeTriples.confidence))
-      .limit(limit)
+    const rows = await graphRules(q, clean, limit)
     return rows.map((r) => `${r.subject} ${r.relation} ${r.object}${r.confidence > 1 ? ` (confirmed ×${r.confidence})` : ''}`)
   } catch {
-    return [] // правила — приправа, не блюдо: сбой не роняет генерацию
+    return []
   }
+}
+
+interface TripleRow {
+  subject: string
+  relation: string
+  object: string
+  confidence: number
+}
+
+/**
+ * KAG-2 (§5, графовые обходы): не только тройки, чей subject/object совпал с
+ * запросом (KAG-1/seed), но и СВЯЗАННЫЕ через отношения — до 2 шагов по графу.
+ * Так по «солярис» всплывает вся цепочка порядка чтения (марсианские хроники →
+ * … → нейромант), а по ингредиенту — предупреждения и замены соседей.
+ * Рекурсивный CTE: seed → шаг по subject=object / object=subject той же lang.
+ * UNION (не ALL) гасит циклы, depth≤2 и LIMIT держат обход ограниченным;
+ * прямые совпадения (min depth) раньше связанных, дальше по подтверждённости.
+ */
+async function graphRules(q: string, cleanDomains: string[], limit: number): Promise<TripleRow[]> {
+  const domainFilter = cleanDomains.length ? sql`domain = any(${sql.param(cleanDomains)})` : sql`false`
+  const res = await db.execute(sql`
+    with recursive seed as (
+      select subject, relation, object, domain, lang, confidence
+      from knowledge_triples
+      where ${sql.param(q)} ilike '%' || subject || '%'
+         or ${sql.param(q)} ilike '%' || object || '%'
+         or ${domainFilter}
+      order by confidence desc
+      limit 20
+    ),
+    walk as (
+      select subject, relation, object, lang, confidence, 0 as depth from seed
+      union
+      select kt.subject, kt.relation, kt.object, kt.lang, kt.confidence, w.depth + 1
+      from knowledge_triples kt
+      join walk w on kt.lang = w.lang and (kt.subject = w.object or kt.object = w.subject)
+      where w.depth < 2
+    )
+    select subject, relation, object, max(confidence)::int as confidence
+    from walk
+    group by subject, relation, object
+    order by min(depth) asc, max(confidence) desc
+    limit ${sql.param(limit)}
+  `)
+  const rows = (res as unknown as { rows?: TripleRow[] }).rows ?? (res as unknown as TripleRow[])
+  return Array.isArray(rows) ? rows : []
 }
 
 /** Сколько троек в базе — для щитка/страницы гнома. */
