@@ -16,6 +16,9 @@ export interface IndexItem {
   refId: string
   content: string
   metadata: Record<string, unknown>
+  /** Публично видимый список. Приватные индексируем (вектор), но их плейнтекст
+   *  content/metadata в корпус не пишем — см. Item в features/library/reindex. */
+  isPublic: boolean
 }
 
 export interface IndexSource {
@@ -223,9 +226,10 @@ async function runLoop(spreadMs: number, startDone: number): Promise<void> {
           slice.map((it, j) => ({
             kind: it.kind,
             refId: it.refId,
-            content: it.content,
+            // Вектор считается из полного текста (embedTexts выше); приватный плейнтекст не пишем.
+            content: it.isPublic ? it.content : '',
             embedding: vecs ? vecs[j] : null,
-            metadata: it.metadata,
+            metadata: it.isPublic ? it.metadata : { private: true },
           })),
         )
         done = Math.min(done + slice.length, total)

@@ -116,12 +116,21 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                 <Star size={14} /> <span className="hidden sm:inline">{t('star', lang)}</span> <span className="font-mono text-[12px] text-muted">{meta.starsCount}</span>
               </Link>
             )}
-            <form action={forkBound}>
-              <button className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
-                <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>{' '}
-                <span className="font-mono text-[12px] text-muted">{meta.forksCount}</span>
-              </button>
-            </form>
+            <span className="inline-flex overflow-hidden rounded-md border border-border">
+              <form action={forkBound}>
+                <button className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-surface-2">
+                  <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
+                </button>
+              </form>
+              {/* Счётчик — ссылка в дерево форков (HQ §11): кто что вырастил из списка. */}
+              <Link
+                href={`${base}/forks`}
+                aria-label={t('fork', lang)}
+                className="inline-flex items-center border-l border-border px-2.5 py-2 font-mono text-[12px] text-muted hover:bg-surface-2 hover:text-ink"
+              >
+                {meta.forksCount}
+              </Link>
+            </span>
             <ShareButton
               path={base}
               ru={lang === 'ru'}

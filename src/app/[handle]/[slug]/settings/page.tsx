@@ -35,7 +35,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       id: 'general',
       title: t('generalTitle', lang),
       icon: <Info size={15} />,
-      keywords: ['general', 'title', 'name', 'description', 'tags', 'visibility', 'ordered', 'основное', 'название', 'описание', 'теги', 'видимость', 'порядок'],
+      keywords: ['general', 'title', 'name', 'description', 'tags', 'ordered', 'основное', 'название', 'описание', 'теги', 'порядок'],
       content: (
         <GeneralSection
           templateId={meta.id}
@@ -43,7 +43,6 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           desc={meta.desc}
           tags={meta.tags}
           ordered={meta.ordered}
-          visibility={meta.visibility}
           lang={lang}
         />
       ),
@@ -95,8 +94,18 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       title: t('dangerZone', lang),
       icon: <TriangleAlert size={15} />,
       danger: true,
-      keywords: ['danger', 'delete', 'remove', 'pin', 'опасная', 'удалить', 'закрепить'],
-      content: <ListSettingsDanger templateId={meta.id} slug={meta.slug} moderation={meta.moderation} pinned={meta.pinned} lang={lang} />,
+      keywords: ['danger', 'delete', 'remove', 'visibility', 'private', 'pin', 'опасная', 'удалить', 'видимость', 'приватный', 'закрепить'],
+      content: (
+        <ListSettingsDanger
+          templateId={meta.id}
+          handle={owner}
+          slug={meta.slug}
+          visibility={meta.visibility}
+          moderation={meta.moderation}
+          pinned={meta.pinned}
+          lang={lang}
+        />
+      ),
     },
   ]
 
