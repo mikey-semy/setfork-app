@@ -6,7 +6,8 @@ import { getAiSettings } from '@/shared/settings/ai'
 import { getAiChatClient } from '@/shared/ai/provider'
 import { pickChatModel } from '@/shared/ai/credits'
 import { getRoster } from '@/shared/ai/roster'
-import { buildGnomePrompt, buildReviewPrompt, gnomeCard } from '@/shared/ai/gnome'
+import { buildReviewPrompt, gnomeCard } from '@/shared/ai/gnome'
+import { gnomeSpeak } from '@/shared/ai/gnomes'
 import { findPrecedents } from '@/shared/ai/retrieval'
 import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { extractUsage, outcomeOf, recordUsage } from '@/shared/ai/usage'
@@ -66,11 +67,6 @@ export async function mcpAskGnome(
     listContext = JSON.stringify(list).slice(0, MAX_LIST_CONTEXT)
   }
 
-  // Личная модель гнома (админка) — если совместима с текущим провайдером; иначе общий выбор.
-  const forProvider = (m: string) =>
-    client.cfg.provider === 'yandex' ? m.startsWith('gpt://') : client.cfg.provider === 'gigachat' ? !m.includes('/') : true
-  const model = expert.model && forProvider(expert.model) ? expert.model : await pickChatModel(settings)
-
   // Линза гнома (HQ §5 шаг 2): «общий мозг, разные линзы» — вопрос дополняется его
   // аспектами перед embed, из базы приезжают списки и куски-шаги. Пусто на пустом
   // корпусе или при выключенных эмбеддингах — гном отвечает как раньше.
@@ -81,24 +77,19 @@ export async function mcpAskGnome(
     ...found.steps.map((s) => s.content.slice(0, 240)),
   ]
 
-  const { system, prompt } = buildGnomePrompt(expert, question, listContext, precedents)
-  const startedAt = Date.now()
-  try {
-    const result = await generateText({
-      model: client.chat(model),
-      system,
-      prompt,
-      temperature: settings.temperature,
-      maxOutputTokens: MAX_ANSWER_TOKENS,
-      abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
-    })
-    const usage = extractUsage(result)
-    await recordUsage({ userId, feature: 'mcp-gnome', model, input: usage.input, output: usage.output, total: usage.total, cost: usage.cost, refType: 'mcp', outcome: 'ok', durationMs: Date.now() - startedAt, provider: client.cfg.provider })
-    return { gnome: expert.id, name: { en: expert.nameEn, ru: expert.nameRu }, answer: result.text.trim() }
-  } catch (e) {
-    await recordUsage({ userId, feature: 'mcp-gnome', model, input: 0, output: 0, total: 0, cost: 0, refType: 'mcp', outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
-    return { error: 'The gnome could not answer (model call failed) — try again' }
-  }
+  // Единый ДОМ ГНОМОВ: тот же движок, что в раскопках/генерации — характер,
+  // настроение, аккуратность одинаковы. MCP — без фоллоу-апов/созыва (это API-ответ).
+  const reply = await gnomeSpeak(expert, question, {
+    lang,
+    context: listContext,
+    precedents,
+    feature: 'mcp-gnome',
+    refType: 'mcp',
+    userId,
+    maxTokens: MAX_ANSWER_TOKENS,
+  })
+  if (!reply) return { error: 'The gnome could not answer (model call failed) — try again' }
+  return { gnome: expert.id, name: { en: expert.nameEn, ru: expert.nameRu }, answer: reply.text }
 }
 
 /** Матч тега списка и домена гнома — та же формула, что доменная линза. */

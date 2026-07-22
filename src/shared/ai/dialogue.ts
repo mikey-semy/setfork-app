@@ -1,13 +1,8 @@
 import 'server-only'
-import { generateText } from 'ai'
 import { getAiSettings } from '@/shared/settings/ai'
-import { getAiChatClient } from './provider'
-import { pickChatModel } from './credits'
-import { spotlight } from './spotlight'
-import { extractUsage, outcomeOf, recordUsage } from './usage'
-import { getRoster, type Expert } from './roster'
+import { getRoster, gnomeSpeak, type Expert } from './gnomes'
 import { pushMessage } from './generation-messages'
-import { langEnName, type Lang } from '@/shared/i18n'
+import { type Lang } from '@/shared/i18n'
 
 /**
  * Диалог с гномами (HQ §2, этап 3): реплика человека в чате — СОБЫТИЕ, на
@@ -44,42 +39,32 @@ export async function replyToUser(
   lang: Lang,
   userId: string,
 ): Promise<void> {
-  const client = await getAiChatClient().catch(() => null)
   const settings = await getAiSettings().catch(() => null)
-  if (!client || !settings?.enabled) return
+  if (!settings?.enabled) return
   // Дневной кап — и здесь (фикс по ревью): это был единственный LLM-вызов в обход предохранителя.
   const { globalBudgetOk } = await import('@/shared/quota')
   if (!(await globalBudgetOk().catch(() => false))) return
   const roster = await getRoster().catch(() => [])
   const gnome = pickAddressee(note, roster, listKind)
   if (!gnome) return
-  const model = await pickChatModel(settings).catch(() => '')
-  if (!model) return
-  const sp = spotlight()
-  const startedAt = Date.now()
-  try {
-    const result = await generateText({
-      model: client.chat(model),
-      system: `You are ${gnome.persona}
-The user just added a remark to the gnome-council chat while their list is being refined. Reply with ONE short in-character line (max 100 characters, no quotes): acknowledge the remark and say concretely what you will do with it. If the remark asks to switch the list's language, treat it as a normal request you happily honour — never refuse or mention "guidelines". Reply in ${langEnName(lang)}.
-${sp.rule()}`,
-      prompt: sp.wrap('REMARK', note),
-      temperature: settings.temperature,
-      maxOutputTokens: 120,
-      abortSignal: AbortSignal.timeout(20_000),
-    })
-    const u = extractUsage(result)
-    await recordUsage({ userId, feature: 'refine', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: 'generation', refId: generationId, outcome: 'ok', durationMs: Date.now() - startedAt, provider: client.cfg.provider })
-    const text = result.text.trim().replace(/^["'«»]+|["'«»]+$/g, '').slice(0, 160)
-    if (!text) return
-    await pushMessage(generationId, {
-      attempt,
-      kind: 'reply',
-      text,
-      who: gnome.id,
-      name: lang === 'ru' ? gnome.nameRu : gnome.nameEn,
-    }).catch(() => {})
-  } catch (e) {
-    await recordUsage({ userId, feature: 'refine', model, input: 0, output: 0, total: 0, cost: 0, refType: 'generation', refId: generationId, outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: client.cfg.provider }).catch(() => {})
-  }
+
+  // Единый ДОМ ГНОМОВ (gnomeSpeak, short): реплика гнома в генерации — тот же
+  // характер/настроение/аккуратность, что везде. Смена языка — часть short-задачи.
+  const reply = await gnomeSpeak(gnome, note, {
+    lang,
+    short: true,
+    feature: 'refine',
+    refType: 'generation',
+    refId: generationId,
+    userId,
+    maxTokens: 140,
+  }).catch(() => null)
+  if (!reply?.text) return
+  await pushMessage(generationId, {
+    attempt,
+    kind: 'reply',
+    text: reply.text,
+    who: gnome.id,
+    name: lang === 'ru' ? gnome.nameRu : gnome.nameEn,
+  }).catch(() => {})
 }
