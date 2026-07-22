@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, eq } from 'drizzle-orm'
 import { councilExperts, db } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
+import type { Lang } from '@/shared/i18n'
 
 /**
  * Ростер совета: кто такие эксперты и как они себя ведут. Живёт в БД (council_experts), чтобы
@@ -314,6 +315,25 @@ export async function rosterAvatars(): Promise<Record<string, string>> {
     return out
   } catch {
     return {} // без карты UI просто нарисует встроенные — беседа важнее аватарок
+  }
+}
+
+/**
+ * id → отображаемое имя гнома на языке зрителя. Нужна там, где есть только id
+ * (родословная кандидата хранит id экспертов) — чтобы показать «Универсал», а не
+ * «generalist». Ошибка/пусто → UI капитализирует id как фолбэк.
+ */
+export async function rosterNames(lang: Lang): Promise<Record<string, string>> {
+  try {
+    const rows = await db.select().from(councilExperts)
+    const out: Record<string, string> = {}
+    for (const r of rows) {
+      const e = row2expert(r)
+      out[r.id] = lang === 'ru' ? e.nameRu : e.nameEn
+    }
+    return out
+  } catch {
+    return {}
   }
 }
 

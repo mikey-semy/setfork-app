@@ -6,9 +6,11 @@ import type { Lang } from '@/shared/i18n'
 import { prettyModelName } from '@/shared/ai/model-names'
 
 /**
- * Родословная кандидата (HQ §6, объяснимость): «почему ты это предложил тогда?» —
- * кто ковал и на чём, какие прецеденты и правила легли в промпты, что сказал
- * критик. Данные из provenance (#358) — копятся при каждом витке.
+ * «Как собран список» (HQ §6, объяснимость): прозрачность мастерской — какие
+ * гномы участвовали, на какие похожие списки опирались, какие правила ремесла
+ * держали и что сказал критик. Данные из provenance (#358) копятся на каждом
+ * витке. Раньше называлось «Родословная» и показывало id гнома + модель — было
+ * непонятно (фидбек владельца «что такое Ковали?»): теперь имена и вводная строка.
  */
 
 interface Prov {
@@ -22,12 +24,13 @@ interface Prov {
   models?: Record<string, string>
 }
 
-export function ProvenancePanel({ provenance, lang }: { provenance: Record<string, unknown>; lang: Lang }) {
+export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: Record<string, unknown>; gnomeNames?: Record<string, string>; lang: Lang }) {
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   const [open, setOpen] = useState(false)
   const p = provenance as Prov
   const hasAny = Boolean(p.experts?.length || p.precedents?.length || p.craftRules?.length || p.critique || p.depth)
   if (!hasAny) return null
+  const nameOf = (id: string) => gnomeNames?.[id] || id.charAt(0).toUpperCase() + id.slice(1)
 
   const row = (label: string, items: string[]) =>
     items.length > 0 && (
@@ -44,21 +47,32 @@ export function ProvenancePanel({ provenance, lang }: { provenance: Record<strin
         className="inline-flex items-center gap-1 rounded-md py-0.5 text-[11.5px] text-muted hover:text-ink-2"
       >
         <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
-        <ScrollText size={11} /> {say('Lineage', 'Родословная')}
+        <ScrollText size={11} /> {say('How the list was built', 'Как собран список')}
       </button>
       {open && (
         <div className="mt-1.5 space-y-1.5 border-l-2 border-border pl-3 text-[11.5px] leading-relaxed">
+          <p className="text-muted">
+            {say('Transparency of the workshop: who took part and what they leaned on.', 'Прозрачность мастерской: кто участвовал и на что опирался.')}
+          </p>
           {p.experts && p.experts.length > 0 && (
             <div>
-              <span className="font-semibold text-ink-2">{say('Forged by', 'Ковали')}:</span>{' '}
-              <span className="text-muted">{p.experts.map((e) => `${e.id} (${prettyModelName(e.model)})`).join(' · ')}</span>
+              {/* Имя гнома — крупно, модель (его «инструмент») — мелко и в скобках. */}
+              <span className="font-semibold text-ink-2">{say('Gnomes', 'Гномы')}:</span>{' '}
+              <span className="text-muted">
+                {p.experts.map((e, i) => (
+                  <span key={e.id}>
+                    {i > 0 && ' · '}
+                    {nameOf(e.id)} <span className="text-[10px] opacity-70">({prettyModelName(e.model)})</span>
+                  </span>
+                ))}
+              </span>
             </div>
           )}
-          {row(say('Precedents', 'Прецеденты'), (p.precedents ?? []).map((x) => x.title))}
-          {row(say('Craft rules', 'Правила ремесла'), p.craftRules ?? [])}
+          {row(say('Leaned on similar lists', 'Опирались на похожие списки'), (p.precedents ?? []).map((x) => x.title))}
+          {row(say('Craft rules held', 'Держали правила ремесла'), p.craftRules ?? [])}
           {p.critique && (
             <div>
-              <span className="font-semibold text-ink-2">{say('Critic said', 'Критик сказал')}:</span>{' '}
+              <span className="font-semibold text-ink-2">{say('Critic said', 'Критик заметил')}:</span>{' '}
               <span className="whitespace-pre-wrap text-muted">{p.critique.slice(0, 500)}</span>
             </div>
           )}

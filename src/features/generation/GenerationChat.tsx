@@ -20,6 +20,41 @@ import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setG
 const capFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 /**
+ * Индикатор работы совета — это НЕ реплика (фидбек владельца): без аватара и
+ * пузыря, лёгкая строка с анимацией из трёх точек (без текстового «…»). Фразы
+ * в характере мастерской и МЕНЯЮТСЯ, пока идёт генерация — «совет живой».
+ */
+const THINKING_LINES: [string, string][] = [
+  ['The gnomes confer', 'Гномы совещаются'],
+  ['Digging the archives', 'Копаемся в архивах'],
+  ['Weighing the options', 'Взвешиваем варианты'],
+  ['Forging the list', 'Куём список'],
+  ['Arguing over details', 'Спорим до искр'],
+  ['Sorting it onto shelves', 'Раскладываем по полочкам'],
+  ['Hunting for pitfalls', 'Ищем подводные камни'],
+]
+
+function ThinkingIndicator({ ru, slow, slowText }: { ru: boolean; slow: boolean; slowText: string }) {
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    if (slow) return
+    const t = setInterval(() => setI((v) => (v + 1) % THINKING_LINES.length), 2600)
+    return () => clearInterval(t)
+  }, [slow])
+  const text = slow ? slowText : THINKING_LINES[i][ru ? 1 : 0]
+  return (
+    <div className="flex items-center gap-2 pl-1 text-[12.5px] text-muted">
+      <span className="inline-flex items-center gap-[3px]">
+        {[0, 200, 400].map((d) => (
+          <span key={d} className="size-[4px] animate-pulse rounded-full bg-current opacity-60" style={{ animationDelay: `${d}ms` }} />
+        ))}
+      </span>
+      <span className="transition-opacity">{text}</span>
+    </div>
+  )
+}
+
+/**
  * Экран генерации — беседа, от первой реплики до результата.
  *
  * Почему так: раньше это был «лоадер, потом результат с табами вариантов», и четыре
@@ -87,13 +122,15 @@ interface Props {
   detail: string | null
   /** id → своя картинка эксперта (сменили в админке). Нет записи → встроенная по who. */
   avatars: Record<string, string>
+  /** id → отображаемое имя гнома на языке зрителя (для родословной, где хранится только id). */
+  gnomeNames: Record<string, string>
   /** who → бейдж репутации «✓ N%» (HQ §6) — считается на сервере, ниже порога записи нет. */
   repBadges: Record<string, string>
   error?: string
   clarifyQuestions?: string[]
 }
 
-export function GenerationChat({ generationId, lang, candidates, status, messages, listKind, detail, avatars, repBadges, error, clarifyQuestions }: Props) {
+export function GenerationChat({ generationId, lang, candidates, status, messages, listKind, detail, avatars, gnomeNames, repBadges, error, clarifyQuestions }: Props) {
   const detailNow = toDetail(detail)
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
@@ -255,7 +292,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                   <CandidateCard cand={cand} selected={cand.id === selId} onSelect={() => setSelId(cand.id)} lang={lang} />
                   {/* Родословная (HQ §6): под карточкой, а не внутри — карточка сама <button>,
                       вложенные интерактивы в неё класть нельзя. */}
-                  <ProvenancePanel provenance={cand.provenance ?? {}} lang={lang} />
+                  <ProvenancePanel provenance={cand.provenance ?? {}} gnomeNames={gnomeNames} lang={lang} />
                 </div>
               )}
             </li>
@@ -264,11 +301,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
 
         {working && (
           <li className="animate-fadein">
-            <CouncilBubble who="council" typing>
-              {slow
-                ? say('Still working — it runs in the background, we’ll ping you.', 'Ещё думаем — идёт в фоне, пришлём уведомление.')
-                : say('Working…', 'Думаем…')}
-            </CouncilBubble>
+            <ThinkingIndicator ru={ru} slow={slow} slowText={say('Still working — runs in the background, we’ll ping you', 'Ещё думаем — идёт в фоне, пришлём уведомление')} />
           </li>
         )}
 
