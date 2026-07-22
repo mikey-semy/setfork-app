@@ -73,6 +73,37 @@ function cacheSet(key: string, vec: number[]): void {
   queryCache.set(key, vec)
 }
 
+/** Один HTTP-вызов /embeddings: вектора (отсортированы по index) + токены. */
+async function requestEmbeddings(
+  ep: { url: string; headers: Record<string, string> },
+  model: string,
+  input: string[],
+  withDims: boolean,
+  dims: number,
+): Promise<{ vectors: number[][]; tokens: number } | null> {
+  const res = await fetch(ep.url, {
+    method: 'POST',
+    headers: ep.headers,
+    body: JSON.stringify({ model, input, ...(withDims ? { dimensions: dims } : {}) }),
+    signal: AbortSignal.timeout(20_000),
+  })
+  if (!res.ok) {
+    console.warn(`[embeddings] HTTP ${res.status} (model=${model})`)
+    return null
+  }
+  const data = (await res.json()) as {
+    data?: { embedding: number[]; index?: number }[]
+    usage?: { prompt_tokens?: number; total_tokens?: number }
+  }
+  if (!Array.isArray(data.data)) return null
+  // Сортировка по index (фикс по ревью): спека OpenAI-совместимого ответа не гарантирует
+  // порядок, а с чанками шагов путаница вектора списка и шага была бы тихой порчей индекса.
+  const vectors = [...data.data]
+    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    .map((d) => fitToColumn(d.embedding))
+  return { vectors, tokens: data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0 }
+}
+
 export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: EmbedMeta): Promise<number[][] | null> {
   if (texts.length === 0) return null
   const space = await getIndexSpace()
@@ -84,33 +115,34 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
     const hit = cacheGet(cacheKey)
     if (hit) return [hit]
   }
+  // dimensions: Яндексу ОБЯЗАТЕЛЕН (дефолт v2 — 256), text-embedding-3-* умеет MRL;
+  // прочим не шлём — не все OpenRouter-модели принимают параметр (усечёт fitToColumn).
+  const withDims = space.provider === 'yandex' || /text-embedding-3/.test(model)
+  const dims = Math.min(space.dim, EMBEDDING_DIM)
   try {
-    const res = await fetch(ep.url, {
-      method: 'POST',
-      headers: ep.headers,
-      // dimensions: Яндексу ОБЯЗАТЕЛЕН (дефолт v2 — 256), text-embedding-3-* умеет MRL;
-      // прочим не шлём — не все OpenRouter-модели принимают параметр (усечёт fitToColumn).
-      body: JSON.stringify({ model, input: texts, ...(space.provider === 'yandex' || /text-embedding-3/.test(model) ? { dimensions: Math.min(space.dim, EMBEDDING_DIM) } : {}) }),
-      signal: AbortSignal.timeout(20_000),
-    })
-    if (!res.ok) {
-      console.warn(`[embeddings] HTTP ${res.status} (model=${model})`)
-      return null
+    let out: number[][]
+    let tokens = 0
+    if (space.provider === 'yandex' && texts.length > 1) {
+      // Яндекс OpenAI-compat принимает РОВНО один текст на запрос («Array input
+      // must contain exactly one string», прод 2026-07-22: реиндекс батчами по 32
+      // ловил 400 и молча писал NULL-вектора). Шлём последовательно по одному —
+      // и отдаём null ЦЕЛИКОМ, если упал хоть один: частичный батч = дыры в индексе.
+      out = []
+      for (const t of texts) {
+        const one = await requestEmbeddings(ep, model, [t], withDims, dims)
+        if (!one) return null
+        out.push(one.vectors[0])
+        tokens += one.tokens
+      }
+    } else {
+      const r = await requestEmbeddings(ep, model, texts, withDims, dims)
+      if (!r) return null
+      out = r.vectors
+      tokens = r.tokens
     }
-    const data = (await res.json()) as {
-      data?: { embedding: number[]; index?: number }[]
-      usage?: { prompt_tokens?: number; total_tokens?: number }
-    }
-    if (!Array.isArray(data.data)) return null
     // Эмбеддинги готовы — фиксируем их ДО учёта расхода, чтобы результат не зависел
     // от записи в ai_usage (recordUsage к тому же гасит свои ошибки и не бросает).
-    // Сортировка по index (фикс по ревью): спека OpenAI-совместимого ответа не гарантирует
-    // порядок, а с чанками шагов путаница вектора списка и шага была бы тихой порчей индекса.
-    const out = [...data.data]
-      .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-      .map((d) => fitToColumn(d.embedding))
     // Учёт расхода: стоимость эмбеддингов провайдер в теле не возвращает — токены, cost 0.
-    const tokens = data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0
     await recordUsage({
       userId: meta?.userId ?? null,
       feature: 'embed',
