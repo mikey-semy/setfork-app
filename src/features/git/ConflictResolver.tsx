@@ -95,7 +95,7 @@ export function ConflictResolver({
       <div className="flex flex-col gap-3 px-3.5 py-3">
         {metaConflicts.map((m) => (
           <div key={m.field}>
-            <div className="mb-1 font-mono text-[10.5px] uppercase tracking-widest text-muted">
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-widest text-muted">
               {ru ? 'поле' : 'field'}: {m.field}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -111,7 +111,7 @@ export function ConflictResolver({
 
         {conflicts.map((c) => (
           <div key={c.key}>
-            <div className="mb-1 font-mono text-[10.5px] uppercase tracking-widest text-muted">
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-widest text-muted">
               {c.kind === 'modified'
                 ? ru ? 'изменён в обеих' : 'modified in both'
                 : c.kind === 'delete-ours'

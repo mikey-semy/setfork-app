@@ -14,6 +14,7 @@ import { t, tr, type LocaleText } from '@/shared/i18n'
 import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { Markdown } from '@/shared/ui/Markdown'
@@ -624,9 +625,9 @@ export default async function ListPage({
             <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
             {backlinks.length > 0 && (
               <div className="rounded-lg border border-border bg-surface p-4">
-                <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
+                <SectionLabel className="mb-2">
                   {say('Linked from', 'Ссылаются на этот список')}
-                </div>
+                </SectionLabel>
                 <ul className="flex flex-col gap-1.5">
                   {backlinks.map((b) => (
                     <li key={`${b.handle}/${b.slug}`}>
@@ -639,9 +640,9 @@ export default async function ListPage({
               </div>
             )}
             <div className="rounded-lg border border-border bg-surface p-4">
-              <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
+              <SectionLabel className="mb-2">
                 {t('about', lang)}
-              </div>
+              </SectionLabel>
               {tr(tpl.desc, lang) && <p className="text-[13.5px] leading-relaxed text-ink-2">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -679,9 +680,9 @@ export default async function ListPage({
 
               {contributors.length > 0 && (
                 <div className="mt-4 border-t border-border pt-3">
-                  <div className="mb-2 flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
+                  <SectionLabel className="mb-2 flex items-center gap-1.5">
                     <Users size={12} /> {t('contributors', lang)} <span className="text-ink-2">{contributors.length}</span>
-                  </div>
+                  </SectionLabel>
                   <div className="flex flex-wrap gap-1.5">
                     {contributors.slice(0, 14).map((c) => (
                       <Tooltip key={c.handle} label={c.handle}>

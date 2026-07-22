@@ -1,5 +1,6 @@
 import { Check, ListTree } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 
 export interface OutlineLesson {
   title: string
@@ -15,9 +16,9 @@ export function CourseOutline({ lessons, showProgress, lang }: { lessons: Outlin
   const ru = lang === 'ru'
   return (
     <nav className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-2 flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
+      <SectionLabel className="mb-2 flex items-center gap-1.5">
         <ListTree size={12} /> {ru ? 'Содержание' : 'Contents'}
-      </div>
+      </SectionLabel>
       <ol className="flex flex-col">
         {lessons.map((l, i) => {
           const done = showProgress && l.quizTotal > 0 && l.quizPassed >= l.quizTotal

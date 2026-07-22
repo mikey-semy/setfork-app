@@ -150,7 +150,7 @@ export default async function SuggestionThreadPage({
           </div>
         )}
 
-        <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → правка` : `v${sug.baseVersion} → suggestion`}
         </div>
         <SuggestionDiff rows={diff.rows} summary={diff.summary} lang={lang} />

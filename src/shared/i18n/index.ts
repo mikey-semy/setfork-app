@@ -684,6 +684,12 @@ const DICT = {
   aboutProject: { en: 'About', ru: 'О проекте' },
   appVersion: { en: 'App version', ru: 'Версия приложения' },
   moreActions: { en: 'More actions', ru: 'Ещё действия' },
+  blameTitle: { en: 'Blame', ru: 'Авторство' },
+  blameHint: {
+    en: 'Which version last changed each step (by position) — spot stale vs. fresh steps.',
+    ru: 'В какой версии каждый шаг менялся в последний раз (по позиции) — видно устаревшие и свежие.',
+  },
+  versionHistory: { en: 'version history', ru: 'история версий' },
   terms: { en: 'Terms', ru: 'Условия' },
   privacy: { en: 'Privacy', ru: 'Конфиденциальность' },
   contact: { en: 'Contact', ru: 'Контакты' },

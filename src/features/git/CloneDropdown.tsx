@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Check, ChevronDown, Code2, Copy, FileCode, FileDown, GitBranch, ListChecks, Printer, Sparkles, Terminal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { SectionLabel } from '@/shared/ui/SectionLabel'
 import { t, type Lang } from '@/shared/i18n'
 
 type TabKey = 'clone' | 'run' | 'embed'
@@ -29,9 +30,9 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
   }
 
   const heading = (icon: React.ReactNode, label: string) => (
-    <div className="mb-1.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+    <SectionLabel className="mb-1.5 flex items-center gap-1.5">
       {icon} {label}
-    </div>
+    </SectionLabel>
   )
   const copyField = (key: string, value: string, mono = true) => (
     <div className="flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5">

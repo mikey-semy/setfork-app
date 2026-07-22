@@ -79,7 +79,7 @@ export function ListsPanel({
 
   const header =
     headerStyle === 'mono' ? (
-      <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted">{title}</span>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">{title}</span>
     ) : (
       <span className="text-[12px] font-semibold text-muted">{title}</span>
     )
