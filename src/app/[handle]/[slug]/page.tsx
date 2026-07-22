@@ -33,9 +33,10 @@ import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutl
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
-import { db, generations } from '@/shared/db'
-import { eq } from 'drizzle-orm'
+import { db, generations, listLinks, templates as templatesTable, users as usersTable } from '@/shared/db'
+import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
+import { renderWikiLinks } from '@/shared/lib/wiki-links'
 import { ListHeader } from '@/widgets/ListHeader'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { TranslateButton } from '@/features/library/TranslateButton'
@@ -140,6 +141,22 @@ export default async function ListPage({
     .from(generations)
     .where(eq(generations.chosenTemplateId, tpl.id))
     .limit(1)
+  // Backlinks (HQ §11, Obsidian-вектор): публичные списки, ссылающиеся на этот
+  // через [[handle/slug]] (list_links пересобирает реиндекс).
+  const backlinks = await db
+    .select({ slug: templatesTable.slug, title: templatesTable.title, handle: usersTable.handle })
+    .from(listLinks)
+    .innerJoin(templatesTable, eq(listLinks.fromId, templatesTable.id))
+    .innerJoin(usersTable, eq(usersTable.id, templatesTable.ownerId))
+    .where(
+      andOp(
+        eq(listLinks.toId, tpl.id),
+        eq(templatesTable.status, 'published'),
+        eq(templatesTable.visibility, 'public'),
+        eq(templatesTable.moderation, 'active'),
+      ),
+    )
+    .limit(10)
   // Уроки курса = секции блоков (в порядке). Собираем оглавление + прогресс тестов по уроку.
   // lessonOfBlock[si] = индекс урока блока si (−1 = до первого урока).
   const lessons: OutlineLesson[] = []
@@ -446,7 +463,7 @@ export default async function ListPage({
                     const md = typeof s.content?.md === 'string' ? s.content.md : ''
                     el = md ? (
                       <div className="break-inside-avoid px-1 py-1">
-                        <Markdown className="text-[14px] leading-relaxed text-ink-2">{md}</Markdown>
+                        <Markdown className="text-[14px] leading-relaxed text-ink-2">{renderWikiLinks(md)}</Markdown>
                       </div>
                     ) : null
                   } else if (s.type === 'image') {
@@ -553,7 +570,7 @@ export default async function ListPage({
                           <span className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
                         </div>
-                        {tr(s.desc, lang) && <Markdown className="mt-1">{tr(s.desc, lang)}</Markdown>}
+                        {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}
                         {tr(s.why, lang) && (
                           <div className="mt-1.5 flex gap-1.5 text-[12.5px] text-ink-2">
                             <Info size={13} className="mt-0.5 shrink-0 text-muted" />
@@ -632,6 +649,22 @@ export default async function ListPage({
           {/* About-сайдбар */}
           <aside className="flex shrink-0 flex-col gap-4 print:hidden lg:w-[300px]">
             <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
+            {backlinks.length > 0 && (
+              <div className="rounded-lg border border-border bg-surface p-4">
+                <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
+                  {say('Linked from', 'Ссылаются на этот список')}
+                </div>
+                <ul className="flex flex-col gap-1.5">
+                  {backlinks.map((b) => (
+                    <li key={`${b.handle}/${b.slug}`}>
+                      <Link href={`/${b.handle}/${b.slug}`} className="block truncate text-[13px] text-accent hover:underline">
+                        {tr(b.title as LocaleText, lang) || `${b.handle}/${b.slug}`}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="rounded-lg border border-border bg-surface p-4">
               <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
                 {t('about', lang)}
