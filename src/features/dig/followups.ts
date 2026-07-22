@@ -15,3 +15,13 @@ export function parseFollowups(raw: string): { text: string; followups: string[]
     .slice(0, 3)
   return { text: raw.slice(0, nm.index).trim(), followups }
 }
+
+/**
+ * Отделяет реальный созыв «SUMMON: <id>» (MCP-подобное действие гнома: передать
+ * вопрос коллеге) от текста передачи. id валидируется вызывающим по ростеру.
+ */
+export function parseSummon(raw: string): { text: string; summonId?: string } {
+  const sm = /(?:^|\n)\s*SUMMON:\s*([a-z0-9_-]+)\s*$/i.exec(raw)
+  if (!sm) return { text: raw }
+  return { text: raw.slice(0, sm.index).trim(), summonId: sm[1].trim().toLowerCase() }
+}
