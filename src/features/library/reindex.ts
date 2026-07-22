@@ -1,5 +1,6 @@
-import { eq, inArray } from 'drizzle-orm'
-import { db, embeddings } from '@/shared/db'
+import { and, eq, inArray } from 'drizzle-orm'
+import { db, embeddings, listLinks, templates, users } from '@/shared/db'
+import { extractWikiRefs } from '@/shared/lib/wiki-links'
 import { flat, stepChunkContent } from './index-content'
 
 // Сбор контента для индексации: каждый СПИСОК → один чанк 'list' (заголовок +
@@ -14,8 +15,10 @@ export interface Item {
   metadata: Record<string, unknown>
 }
 
-export async function collectItems(): Promise<Item[]> {
+/** templateId — точечный режим (фикс по ревью: реиндекс одного списка грузил ВЕСЬ корпус). */
+export async function collectItems(templateId?: string): Promise<Item[]> {
   const tpls = await db.query.templates.findMany({
+    ...(templateId ? { where: (t, { eq: eqOp }) => eqOp(t.id, templateId) } : {}),
     with: {
       owner: true,
       versions: { with: { steps: { orderBy: (s, { asc }) => asc(s.n) } }, orderBy: (v, { desc }) => desc(v.version) },
@@ -59,12 +62,35 @@ export async function purgeStaleEmbeddings(activeRefIds?: Set<string>): Promise<
   return { removed: staleIds.length }
 }
 
+/** Пересобрать вики-связи списка (HQ §11): [[handle/slug]] из уже собранного
+ *  текста → list_links. Сбой связей не роняет реиндекс (ссылки — не индекс). */
+async function rebuildWikiLinks(templateId: string, contents: string[]): Promise<void> {
+  try {
+    await db.delete(listLinks).where(eq(listLinks.fromId, templateId))
+    const refs = extractWikiRefs(contents.join('\n'))
+    if (!refs.length) return
+    const rows: { fromId: string; toId: string }[] = []
+    for (const r of refs) {
+      const [t] = await db
+        .select({ id: templates.id })
+        .from(templates)
+        .innerJoin(users, eq(users.id, templates.ownerId))
+        .where(and(eq(users.handle, r.handle), eq(templates.slug, r.slug)))
+        .limit(1)
+      if (t && t.id !== templateId) rows.push({ fromId: templateId, toId: t.id })
+    }
+    if (rows.length) await db.insert(listLinks).values(rows).onConflictDoNothing()
+  } catch (e) {
+    console.warn('[wiki-links] rebuild failed', e instanceof Error ? e.message : e)
+  }
+}
+
 /** Точечная переиндексация одного списка (или удаление из индекса, если его нет).
  *  Список + его шаги эмбеддятся ОДНИМ батч-вызовом (embedTexts) — не по HTTP на шаг. */
 export async function reindexList(templateId: string): Promise<void> {
-  const items = await collectItems()
-  const mine = items.filter((i) => i.refId === templateId)
+  const mine = await collectItems(templateId)
   await db.delete(embeddings).where(eq(embeddings.refId, templateId))
+  await rebuildWikiLinks(templateId, mine.map((i) => i.content))
   if (!mine.length) return
   const { embedTexts } = await import('@/shared/ai/embeddings')
   const vecs = await embedTexts(mine.map((i) => i.content), 'doc') // модель/мерность диктует пространство индекса (embed-space)

@@ -17,8 +17,10 @@ import {
   jsonb,
   numeric,
   pgEnum,
+  primaryKey,
   pgTable,
   smallint,
+  halfvec,
   text,
   timestamp,
   unique,
@@ -212,11 +214,18 @@ export const templates = pgTable(
     isTemplate: boolean('is_template').notNull().default(false), // «Use this template» (копия без fork-связи)
     coverImage: text('cover_image'), // storage_key обложки-баннера (витрина/og); null → авто-баннер
     accent: text('accent'), // hex акцента карточки/авто-баннера ('' / null = дефолт)
+    // Тип списка (ADR-0010): переносится из generations при принятии кандидата,
+    // лениво доклассифицируется садовником. null = ещё не определён (≈procedure).
+    listKind: text('list_kind'),
     repositoryId: uuid('repository_id'), // каталог-репозиторий (FK задаётся в relations); null = solo
     forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
     runsCount: integer('runs_count').notNull().default(0),
     forksCount: integer('forks_count').notNull().default(0),
     starsCount: integer('stars_count').notNull().default(0),
+    // Когда рудник знаний (features/knowledge) последний раз добывал тройки из списка.
+    // Ставится НЕЗАВИСИМО от урожая (фикс по ревью: «пустые» списки перерабатывались
+    // ежедневно впустую). NULL = ещё не добывали.
+    triplesMinedAt: timestamp('triples_mined_at', { withTimezone: true }),
     // Сумма уникальных дневных просмотров (см. template_views); владелец не считается.
     viewsCount: integer('views_count').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -401,12 +410,17 @@ export const embeddings = pgTable(
     kind: text('kind').notNull(), // 'list'
     refId: uuid('ref_id'), // template.id
     content: text('content').notNull(),
-    embedding: vector('embedding', { dimensions: 1536 }),
+    // halfvec(768): вдвое меньше памяти и быстрее HNSW (анализ поиска P4); 768 —
+    // родная мерность Яндекс v2 и MRL-срез text-embedding-3-small. Смена типа
+    // на проде = drop+add колонки (push --force), данные индекса пропадают —
+    // ЗАПЛАНИРОВАННО: следом идёт полный реиндекс, до него поиск живёт на
+    // лексической ветке гибрида (#377).
+    embedding: halfvec('embedding', { dimensions: 768 }),
     metadata: jsonb('metadata'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    index('embeddings_hnsw_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
+    index('embeddings_hnsw_idx').using('hnsw', t.embedding.op('halfvec_cosine_ops')),
     index('embeddings_kind_idx').on(t.kind),
   ],
 )
@@ -422,7 +436,7 @@ export const appSettings = pgTable('app_settings', {
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples'
 
 export const jobs = pgTable(
   'jobs',
@@ -875,6 +889,71 @@ export const generations = pgTable(
  * витку, а не стиранием ленты, как раньше.
  */
 /**
+ * Сохранённые запросы к СВОИМ спискам (HQ §11, Dataview-аналог Obsidian):
+ * «все книги en, которые начал» = теги + статус прогона. Живут на /my-lists
+ * чипами; фильтр применяется на сервере.
+ */
+export const savedQueries = pgTable(
+  'saved_queries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+    // 'any' | 'started' (есть активный прогон) | 'done' (есть завершённый)
+    runState: text('run_state').notNull().default('any'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('saved_queries_user_idx').on(t.userId)],
+)
+
+/**
+ * Вики-связи список→список (HQ §11): [[handle/slug]] в текстах. Пересобирается
+ * реиндексом при каждой правке (delete+insert по from_id) — как embeddings.
+ * Backlinks («на этот список ссылаются») читаются по to_id.
+ */
+export const listLinks = pgTable(
+  'list_links',
+  {
+    fromId: uuid('from_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    toId: uuid('to_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.fromId, t.toId] }), index('list_links_to_idx').on(t.toId)],
+)
+
+/**
+ * Тройки знаний (HQ §5, старт полного KAG): «не найди похожее, а пойми связи
+ * и правила» — курица→заменяется→индейка, карамель→требует→термометр.
+ * Извлекаются фоном из опубликованных списков дешёвой моделью; повторное
+ * извлечение той же связи из ДРУГОГО списка инкрементит confidence
+ * (подтверждение практикой). Словарь relation ограничен (см. shared/ai/triples).
+ */
+export const knowledgeTriples = pgTable(
+  'knowledge_triples',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subject: text('subject').notNull(),
+    relation: text('relation').notNull(),
+    object: text('object').notNull(),
+    domain: text('domain').notNull().default(''),
+    lang: text('lang').notNull().default('en'),
+    sourceTemplateId: uuid('source_template_id').references(() => templates.id, { onDelete: 'set null' }),
+    confidence: integer('confidence').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('knowledge_triples_fact_idx').on(t.subject, t.relation, t.object, t.lang),
+    index('knowledge_triples_domain_idx').on(t.domain),
+  ],
+)
+
+/**
  * «Копать глубже» (HQ §8): слои раскопки под шагом списка. Шахта ОСТАЁТСЯ —
  * выкопанное одним видно всем следующим читателям бесплатно. Привязка к
  * (template, version, stepN): новая версия меняет шаги — честно копать заново,
@@ -983,6 +1062,11 @@ export const councilExperts = pgTable(
     // аспектов к запросу перед embed (повар — ингредиенты/техника, девопсер — откаты).
     // Применяется там, где работает ОДИН гном (ask_gnome, dig); в совете — доменный фильтр.
     lens: text('lens').notNull().default(''),
+    // Память гнома (HQ §3, этап 2): фоновая выжимка ремесла из ЛУЧШИХ списков его
+    // доменов — «гном учится на публикациях». Обновляет рудник знаний; видна на
+    // личной странице; подмешивается в его промпты (spotlight — материал чужой).
+    memory: text('memory').notNull().default(''),
+    memoryUpdatedAt: timestamp('memory_updated_at', { withTimezone: true }),
     domains: text('domains').array().notNull().default(sql`'{}'::text[]`),
     model: text('model').notNull().default(''),
     avatar: text('avatar').notNull().default(''),

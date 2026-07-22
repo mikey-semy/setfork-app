@@ -306,6 +306,19 @@ const DICT = {
   runAssistFailed: { en: 'Could not get a hint — try again later.', ru: 'Не получилось собрать подсказку — попробуйте позже.' },
   runAssistLimited: { en: 'Too many requests — wait a minute.', ru: 'Слишком часто — подождите минуту.' },
   runAssistQuota: { en: 'Monthly AI limit reached.', ru: 'Месячный лимит ИИ исчерпан.' },
+  // ── Садовник: note правки на языке списка ──
+  gardenerNoteRecipe: {
+    en: '\u{1F9D9} Gardener: clarified amounts (marked ~) and timings. Verify quantities before merging.',
+    ru: '\u{1F9D9} Садовник: уточнил количества (помечены ~) и тайминги. Проверьте граммовки перед принятием.',
+  },
+  gardenerNoteDefault: {
+    en: '\u{1F9D9} Gardener: clarified steps, added checks and rationale. Review and merge if useful.',
+    ru: '\u{1F9D9} Садовник: уточнил шаги, добавил проверки и обоснования. Примите, если полезно.',
+  },
+  gardenerNoteDeadLinks: {
+    en: 'Replaced {n} dead link(s) — verify the new sources.',
+    ru: 'Заменил мёртвых ссылок: {n} — проверьте новые источники.',
+  },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for agents to connect via MCP: search and read your lists — and, with write access, create and update them.',
@@ -466,6 +479,8 @@ const DICT = {
     ru: 'Аккаунт удаляется, личные данные стираются. Ваши списки остаются под пометкой «удалённый пользователь».',
   },
   deleteConfirmLabel: { en: 'Type your handle to confirm:', ru: 'Введите свой ник для подтверждения:' },
+  // Общая модалка type-to-confirm (список/аккаунт)
+  dangerConfirmHint: { en: 'To confirm, type:', ru: 'Для подтверждения введите:' },
   deletedUser: { en: 'Deleted user', ru: 'Удалённый пользователь' },
   cancel: { en: 'Cancel', ru: 'Отмена' },
   // ── Состояния: 404 / ошибка / пусто ──
@@ -736,6 +751,20 @@ const DICT = {
   makePublic: { en: 'Make public', ru: 'Сделать публичным' },
   deleteList: { en: 'Delete this list', ru: 'Удалить список' },
   deleteListHint: { en: 'Permanently deletes the list, its versions and stars. Cannot be undone.', ru: 'Безвозвратно удаляет список, версии и звёзды.' },
+  deleteListCascade: {
+    en: 'This permanently deletes the list — every version, its steps, runs, suggestions, issues and stars. This cannot be undone.',
+    ru: 'Безвозвратно удаляет список — все версии, шаги, прогоны, предложения, обсуждения и звёзды. Отменить нельзя.',
+  },
+  changeVisibility: { en: 'Change visibility', ru: 'Изменить видимость' },
+  visibilityCurrent: { en: 'This list is currently', ru: 'Сейчас список' },
+  makePrivateEffects: {
+    en: 'The list disappears from explore, search and everyone else — only you will see it. Stars and watchers from other users lose access.',
+    ru: 'Список пропадёт из обзора, поиска и у всех остальных — останется виден только вам. Звёзды и наблюдатели других потеряют доступ.',
+  },
+  makePublicEffects: {
+    en: 'The list becomes visible to everyone in explore and search, and is re-checked by moderation before it appears.',
+    ru: 'Список станет виден всем в обзоре и поиске и пройдёт повторную проверку модерации перед показом.',
+  },
   deleteLockedModeration: {
     en: 'A list removed by moderation cannot be deleted. Submit an appeal for review — deleting would erase the record of the removed content.',
     ru: 'Список, снятый модерацией, удалить нельзя. Подайте апелляцию на пересмотр — удаление стёрло бы запись о снятом контенте.',

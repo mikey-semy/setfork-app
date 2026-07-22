@@ -12,6 +12,7 @@ import { DETAIL_LEVELS, detailLabel, toDetail } from '@/shared/ai/detail-level'
 import { CouncilBubble } from './CouncilBubble'
 import { CandidateCard } from './CandidateCard'
 import { ActionsMenu } from './ActionsMenu'
+import { ProvenancePanel } from './ProvenancePanel'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
 
 /**
@@ -31,8 +32,9 @@ const POLL_FAST_MS = 2000
 const POLL_SLOW_MS = 10_000
 const DEGRADE_AFTER_MS = 2 * 60_000
 
-/** Реплики совета — второстепенное: их сворачиваем. Реплики пользователя и карточка — нет. */
-const COUNCIL_KINDS = new Set<GenMessage['kind']>(['plan', 'summon', 'seek', 'draft', 'innovate', 'critique', 'synth'])
+/** Реплики совета — второстепенное: их сворачиваем. Реплики пользователя и карточка — нет.
+ *  'reply' — ответ гнома на реплику человека (диалог): живёт в той же нити витка. */
+const COUNCIL_KINDS = new Set<GenMessage['kind']>(['plan', 'summon', 'seek', 'draft', 'innovate', 'critique', 'synth', 'reply'])
 
 /** Ход совета: пока виток идёт — раскрыт (это и есть лоадер), отработал — свёрнут в одну строку. */
 function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { messages: GenMessage[]; lang: Lang; defaultOpen: boolean; avatars: Record<string, string>; repBadges: Record<string, string> }) {
@@ -233,6 +235,9 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                       (старые генерации), а вариант обязан быть виден всегда. */}
                   {cand.summary && <div className="mb-1 pl-1 text-[11.5px] text-muted">{cand.summary}</div>}
                   <CandidateCard cand={cand} selected={cand.id === selId} onSelect={() => setSelId(cand.id)} lang={lang} />
+                  {/* Родословная (HQ §6): под карточкой, а не внутри — карточка сама <button>,
+                      вложенные интерактивы в неё класть нельзя. */}
+                  <ProvenancePanel provenance={cand.provenance ?? {}} lang={lang} />
                 </div>
               )}
             </li>

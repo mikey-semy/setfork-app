@@ -13,6 +13,7 @@ import { findPrecedents, type Precedent, type StepPrecedent } from './retrieval'
 import { getRoster, type Expert } from './roster'
 import { voiceLine, type VoiceKind } from './voice'
 import { pickPrecedents } from './precedent-filter'
+import { craftRules } from './triples'
 import { lawBlock } from './list-laws'
 import { pushMessage, type GenMessageKind } from './generation-messages'
 import { langEnName, type Lang } from '@/shared/i18n'
@@ -62,6 +63,8 @@ export interface CouncilProvenance {
   precedents: { title: string; tags: string[] }[]
   /** Шаги-прецеденты (kind='step', #index-chunks) — срезом первых 120 символов. */
   precedentSteps?: string[]
+  /** Ремесленные правила из базы троек (KAG) — какие связи легли в промпты. */
+  craftRules?: string[]
   /** По каждому гному: модель и СВОЙ срез прецедентов (после доменной линзы). */
   experts?: { id: string; model: string; precedents: string[] }[]
   models: { steward?: string; innovator?: string; critic?: string; elder?: string; single?: string }
@@ -137,7 +140,12 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // Голоса гномов (voice.ts): seed стабилен на виток — реплики попытки детерминированы,
   // между попытками разные. null (кастомный эксперт без голоса) → нейтральный текст сайта вызова.
   const vseed = `${opts.refId ?? query}:${attempt}`
-  const vl = (who: string, kind: VoiceKind, vars?: Record<string, string>) => voiceLine(who, kind, lang, vseed, vars)
+  // LLM-шлифовка реплик (HQ §2, этап 2): ОДИН flash-вызов на весь совет, стартует
+  // параллельно со стюардом и НЕ блокирует: не успел к событию — статичный голос,
+  // успел — реплика живая и ПО ТЕМЕ. События с переменными ({names}) не шлифуем.
+  let polished: Record<string, string> | null = null
+  const vl = (who: string, kind: VoiceKind, vars?: Record<string, string>) =>
+    (!vars ? polished?.[`${who}:${kind}`] : undefined) ?? voiceLine(who, kind, lang, vseed, vars)
 
   // Один под-вызов: генерация + учёт расхода. Ошибка → null (гном «выпал»), совет продолжает.
   // ОДИН ретрай на транзиентной ошибке (таймаут/сеть/429/5xx): бенч показал, что 33% отказов —
@@ -174,6 +182,37 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
     }
     return null
   }
+
+  // Шлифовка стартует ЗДЕСЬ (до стюарда): к поздним стадиям (драфт/критика/синтез)
+  // реплики почти всегда успевают; ранние возьмут статичный голос — тоже норм.
+  void (async () => {
+    try {
+      const events = [
+        'planner:plan-single',
+        'planner:plan-council',
+        'reporter:clarify',
+        ...EXPERTS.map((e) => `${e.id}:draft`),
+        'innovator:innovate',
+        'critic:critique',
+        'elder:synth',
+      ]
+      const cast = EXPERTS.map((e) => `${e.id} — ${e.guildEn || e.nameEn}`).join('; ')
+      const res = await run(
+        fast,
+        `You write ONE short in-character line for each event of a gnome-workshop council working on the topic. Cast: ${cast}. Service roles: planner (chooses the process), reporter (asks clarifying questions), innovator (bold ideas), critic (devil's advocate), elder (synthesizes the final list). A line is what the gnome SAYS as its event starts: lively, in character, tied to the topic naturally, max 60 characters, no quotes, no emoji. Language: ${langName}. Return ONLY a JSON object mapping every key to its line.\n${sp.rule()}`,
+        `${topic}\nKEYS:\n${events.join('\n')}`,
+        600,
+      )
+      if (res) {
+        const obj = JSON.parse(firstJson(res.text)) as Record<string, unknown>
+        const out: Record<string, string> = {}
+        for (const [k, v] of Object.entries(obj)) if (typeof v === 'string' && v.trim()) out[k] = v.trim().slice(0, 90)
+        if (Object.keys(out).length) polished = out
+      }
+    } catch {
+      // статичные голоса — нормальный фолбэк
+    }
+  })()
 
   // 1) Распорядитель: глубина (single|council|clarify) + созыв экспертов по домену (адаптивная глубина = лимит цены).
   const roster = EXPERTS.map((e) => `${e.id}: ${e.persona} [${e.domains.join(',')}]`).join('\n')
@@ -278,6 +317,12 @@ ${roster}`,
     list.length
       ? `\n\n${sp.wrap('PRECEDENT_STEPS', list.map((s, i) => `${i + 1}. ${s.content.slice(0, 240)}`).join('\n'))}\n(proven steps from similar lists — adapt, don't copy blindly)`
       : ''
+  // Ремесленные правила (KAG, HQ §5): переносимые связи из базы троек — по запросу
+  // и объединению доменов призванных. Извлечены из чужих списков → spotlight.
+  const rules = await craftRules(query, experts.flatMap((e) => e.domains))
+  const rulesBlock = rules.length
+    ? `\n\nCRAFT RULES from the knowledge base (transferable facts, honor them unless the topic clearly overrides):\n${sp.wrap('RULES', rules.join('\n'))}`
+    : ''
 
   // Веб-искатель (старейшина advanced-тира): интернет-прецеденты сверх наших списков (за флагом council_web_seek).
   let webLore = ''
@@ -300,14 +345,17 @@ ${roster}`,
     // Черновик по ТИПУ списка, а не всегда «6-9 шагов»: иначе на inventory эксперт даёт процедуру.
     // Кодекс гильдии (HQ §7): стандарты качества цеха, который гном представляет.
     const guild = e.code ? `\nYou represent ${e.guildEn || 'your guild'}. GUILD CODE — quality standards your draft must uphold:\n${e.code}` : ''
-    const sys = `You are ${e.persona}.${guild}\nDraft a practical list for the topic. 6-9 items, each with one clarifying sentence. All content in ${langName}. Return ONLY the draft text.\n${shapeFor(kind)}${law}\n${sp.rule()}`
+    // Память (HQ §3 этап 2): выжимка ремесла из лучших списков его доменов. Материал
+    // добыт из чужих публикаций → spotlight, как прецеденты.
+    const memory = e.memory ? `\nYOUR CRAFT MEMORY (distilled from the guild's best lists):\n${sp.wrap('MEMORY', e.memory)}` : ''
+    const sys = `You are ${e.persona}.${guild}${memory}\nDraft a practical list for the topic. 6-9 items, each with one clarifying sentence. All content in ${langName}. Return ONLY the draft text.\n${shapeFor(kind)}${law}\n${sp.rule()}`
     emit('draft', vl(e.id, 'draft') ?? say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
     // Каждому — прецеденты ЕГО доменов: повар видит рецепты, а не деплой (этап 1 базы знаний).
     // Та же доменная линза режет и шаги-прецеденты (pickPrecedents дженерик по tags).
     const mine = pickPrecedents(precedents, e.domains)
     const mySteps = pickPrecedents(stepPrecedents, e.domains)
     expertProv.push({ id: e.id, model: expertModel, precedents: mine.map((p) => p.title) })
-    return run(model, sys, `Draft the list.\n${topic}${loreBlock(mine)}${stepsBlock(mySteps)}${webLore}`)
+    return run(model, sys, `Draft the list.\n${topic}${loreBlock(mine)}${stepsBlock(mySteps)}${rulesBlock}${webLore}`)
   })
   emit('innovate', vl('innovator', 'innovate') ?? say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'), 'innovator', say('Innovator', 'Новатор'))
   const innovatorJob = run(
@@ -342,7 +390,7 @@ ${roster}`,
     base,
     `You are the lead synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.${law ? `${law}\nThis shape is MANDATORY in the final JSON — do not merge it away.` : ''}\n${listRules}`,
     // Старейшине — топ по близости без доменного среза: он сводит все взгляды.
-    `${topic}${loreBlock(precedents.slice(0, 3))}${stepsBlock(stepPrecedents.slice(0, 3))}${webLore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
+    `${topic}${loreBlock(precedents.slice(0, 3))}${stepsBlock(stepPrecedents.slice(0, 3))}${rulesBlock}${webLore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
   )
   // firstJson: старейшина иногда предваряет JSON прозой («Here is the synthesized list:»), и голый
   // parseList на этом падал → 7 вызовов совета в мусор, тихий фолбэк на одиночную, а лента уже
@@ -359,6 +407,7 @@ ${roster}`,
           kind,
           precedents: precedents.map((p) => ({ title: p.title, tags: p.tags })),
           precedentSteps: stepPrecedents.map((s) => s.content.slice(0, 120)),
+          craftRules: rules.length ? rules : undefined,
           experts: expertProv,
           models: { steward: fast, innovator: pool[0], critic: fast, elder: base },
           webSeek: settings.councilWebSeek,
