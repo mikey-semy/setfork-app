@@ -682,6 +682,7 @@ const DICT = {
     ru: 'Через запятую. Пусто — на email админов из ADMIN_HANDLES.',
   },
   aboutProject: { en: 'About', ru: 'О проекте' },
+  appVersion: { en: 'App version', ru: 'Версия приложения' },
   terms: { en: 'Terms', ru: 'Условия' },
   privacy: { en: 'Privacy', ru: 'Конфиденциальность' },
   contact: { en: 'Contact', ru: 'Контакты' },
