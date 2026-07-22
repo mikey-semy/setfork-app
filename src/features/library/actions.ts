@@ -15,6 +15,7 @@ import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { rateLimit } from '@/shared/rate-limit'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { aiQuota, listQuota } from '@/shared/quota'
+import { textLang } from '@/shared/ai/gardener-policies'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { enqueueReindex } from './jobs'
 import { ensureWatch } from '@/features/watch/actions'
@@ -525,7 +526,12 @@ export async function refineList(input: {
         refs: (it.refs || []).filter((r) => r.label?.trim() && r.url?.trim()).map((r) => ({ label: r.label, url: r.url })),
       })),
   }
-  const refined = await generateListRefine(current, instruction, lang, { userId: session.userId, feature: 'refine' })
+  // Язык рефайна = язык СОДЕРЖИМОГО списка, не интерфейса: русский список при
+  // en-интерфейсе иначе «улучшался» переводом. Пустой черновик → язык интерфейса.
+  const contentLang = current.title || current.items.length
+    ? textLang([current.title, current.desc, ...current.items.flatMap((it) => [it.title, it.desc])])
+    : lang
+  const refined = await generateListRefine(current, instruction, contentLang, { userId: session.userId, feature: 'refine' })
   if (!refined) return { error: 'aifail' }
 
   // Refine переписывает текстовое содержимое шагов; скриншоты не переносятся, ссылки — да.
