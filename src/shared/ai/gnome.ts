@@ -20,13 +20,17 @@ export function gnomeCard(e: Expert): { id: string; name: { en: string; ru: stri
   }
 }
 
-/** system+prompt для одного вопроса гному. listContext — срез списка (уже обрезанный вызывающим). */
-export function buildGnomePrompt(e: Expert, question: string, listContext?: string): { system: string; prompt: string } {
+/** system+prompt для одного вопроса гному. listContext — срез списка (уже обрезанный вызывающим);
+ *  precedents — куски из общей базы, найденные ЧЕРЕЗ ЛИНЗУ гнома (недоверенный чужой текст → spotlight). */
+export function buildGnomePrompt(e: Expert, question: string, listContext?: string, precedents?: string[]): { system: string; prompt: string } {
   const sp = spotlight()
   const guild = e.code ? `\nYou represent ${e.guildEn || 'your guild'}. GUILD CODE — quality standards your answer must uphold:\n${e.code}` : ''
   const system = `You are ${e.persona}${guild}
 A user is asking you ONE question through the SetFork workshop. Answer as this expert, practically and specifically: give the advice, the draft or the critique they ask for — not generic filler. Prefer a short structured answer (a few tight paragraphs or a compact list). Answer in the SAME LANGUAGE as the question.
 ${sp.rule()}`
-  const prompt = `${sp.wrap('QUESTION', question)}${listContext ? `\n\nThe user attached their list as context:\n${sp.wrap('LIST', listContext)}` : ''}`
+  const lore = precedents?.length
+    ? `\n\nFrom the SetFork knowledge base (found through your guild's lens — use what helps, don't copy blindly):\n${sp.wrap('PRECEDENTS', precedents.join('\n'))}`
+    : ''
+  const prompt = `${sp.wrap('QUESTION', question)}${listContext ? `\n\nThe user attached their list as context:\n${sp.wrap('LIST', listContext)}` : ''}${lore}`
   return { system, prompt }
 }

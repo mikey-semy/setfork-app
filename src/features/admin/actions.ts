@@ -336,6 +336,7 @@ export async function saveExpert(formData: FormData): Promise<void> {
       guildRu: String(formData.get('guildRu') ?? '').trim().slice(0, 60),
       guildEn: String(formData.get('guildEn') ?? '').trim().slice(0, 60),
       code: String(formData.get('code') ?? '').trim().slice(0, 1200),
+      lens: String(formData.get('lens') ?? '').trim().slice(0, 200),
       domains,
       model: modelRaw === '__none__' ? '' : modelRaw,
       online: formData.get('online') === 'on',

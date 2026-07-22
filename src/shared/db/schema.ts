@@ -976,6 +976,10 @@ export const councilExperts = pgTable(
     // Кодекс гильдии — свод стандартов качества: подмешивается в промпт гнома,
     // критик получает объединение кодексов как мерило (черновики анонимны — без авторства).
     code: text('code').notNull().default(''),
+    // Линза запроса (HQ §5, шаг 2): КАК гном спрашивает общую базу — короткая добавка
+    // аспектов к запросу перед embed (повар — ингредиенты/техника, девопсер — откаты).
+    // Применяется там, где работает ОДИН гном (ask_gnome, dig); в совете — доменный фильтр.
+    lens: text('lens').notNull().default(''),
     domains: text('domains').array().notNull().default(sql`'{}'::text[]`),
     model: text('model').notNull().default(''),
     avatar: text('avatar').notNull().default(''),

@@ -7,6 +7,8 @@ import { getAiChatClient } from '@/shared/ai/provider'
 import { pickChatModel } from '@/shared/ai/credits'
 import { getRoster } from '@/shared/ai/roster'
 import { buildGnomePrompt, gnomeCard } from '@/shared/ai/gnome'
+import { findPrecedents } from '@/shared/ai/retrieval'
+import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { extractUsage, outcomeOf, recordUsage } from '@/shared/ai/usage'
 import { aiQuota, globalBudgetOk } from '@/shared/quota'
 import { rateLimit } from '@/shared/rate-limit'
@@ -69,7 +71,17 @@ export async function mcpAskGnome(
     client.cfg.provider === 'yandex' ? m.startsWith('gpt://') : client.cfg.provider === 'gigachat' ? !m.includes('/') : true
   const model = expert.model && forProvider(expert.model) ? expert.model : await pickChatModel(settings)
 
-  const { system, prompt } = buildGnomePrompt(expert, question, listContext)
+  // Линза гнома (HQ §5 шаг 2): «общий мозг, разные линзы» — вопрос дополняется его
+  // аспектами перед embed, из базы приезжают списки и куски-шаги. Пусто на пустом
+  // корпусе или при выключенных эмбеддингах — гном отвечает как раньше.
+  const lang = detectTextLang(question, 'en')
+  const found = await findPrecedents(expert.lens ? `${question}\n${expert.lens}` : question, lang, { userId, limit: 3, stepLimit: 4 })
+  const precedents = [
+    ...found.lists.map((p) => `${p.title}${p.desc ? ' — ' + p.desc : ''}`),
+    ...found.steps.map((s) => s.content.slice(0, 240)),
+  ]
+
+  const { system, prompt } = buildGnomePrompt(expert, question, listContext, precedents)
   const startedAt = Date.now()
   try {
     const result = await generateText({
