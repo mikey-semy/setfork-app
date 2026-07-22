@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Trash2 } from 'lucide-react'
+import { Check, Copy, Loader2, Trash2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { t, type Lang } from '@/shared/i18n'
 import { deleteListAction } from './actions'
@@ -19,6 +19,7 @@ export function ListSettingsDanger({
 }) {
   const [pending, start] = useTransition()
   const [confirm, setConfirm] = useState('')
+  const [copied, setCopied] = useState(false)
   const matches = confirm.trim() === slug
   // Снятый модерацией список владелец удалить не может (сервер блокирует — стирание
   // fingerprint'а открывало бы отмывку повторной заливкой). Показываем причину.
@@ -35,7 +36,24 @@ export function ListSettingsDanger({
           <p className="text-[12.5px] text-ink-2">{t('deleteLockedModeration', lang)}</p>
         ) : (
           <>
-            <p className="mb-3 text-[12.5px] text-ink-2">{t('deleteListHint', lang)}</p>
+            <p className="mb-2 text-[12.5px] text-ink-2">{t('deleteListHint', lang)}</p>
+            {/* Идентификатор для подтверждения — не по памяти: показываем и даём скопировать. */}
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] text-ink-2">
+              <span>{t('deleteConfirmCopy', lang)}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(slug)
+                  setCopied(true)
+                  setTimeout(() => setCopied(false), 1500)
+                }}
+                aria-label={t('copied', lang)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1 font-mono text-[12.5px] text-ink hover:border-border-strong"
+              >
+                <code>{slug}</code>
+                {copied ? <Check size={13} className="text-accent" /> : <Copy size={13} className="text-muted" />}
+              </button>
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <input
                 value={confirm}
