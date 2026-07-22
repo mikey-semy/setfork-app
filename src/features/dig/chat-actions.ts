@@ -14,6 +14,7 @@ import { extractUsage, outcomeOf, recordUsage } from '@/shared/ai/usage'
 import { aiQuota, globalBudgetOk } from '@/shared/quota'
 import { rateLimit } from '@/shared/rate-limit'
 import { tr, langEnName, type Lang, type LocaleText } from '@/shared/i18n'
+import { parseFollowups } from './followups'
 
 /**
  * Мини-чат раскопки (HQ §8, редизайн по фидбеку владельца): вместо статичных
@@ -126,11 +127,7 @@ ${sp.rule()}`
     await recordUsage({ userId: session.userId, feature: 'dig', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: 'template', refId: tpl.id, outcome: 'ok', durationMs: Date.now() - startedAt, provider: client.cfg.provider })
     const raw = result.text.trim()
     if (!raw) return { error: 'aifail' }
-    // Хвост «NEXT: q1 | q2 | q3» → кнопки-фоллоу-апы (гном ведёт вглубь);
-    // модель могла и не выдать строку — тогда просто без кнопок.
-    const nm = /(?:^|\n)\s*NEXT:\s*(.+)\s*$/i.exec(raw)
-    const followups = nm ? nm[1].split('|').map((s) => s.trim()).filter(Boolean).slice(0, 3) : []
-    const text = nm ? raw.slice(0, nm.index).trim() : raw
+    const { text, followups } = parseFollowups(raw)
     if (!text) return { error: 'aifail' }
     // Сессия (фидбек владельца: «беседа исчезла»): пишем вопрос+ответ в БД, чтобы
     // при повторном открытии кирки на пункте разговор восстановился. fire-and-forget:
@@ -158,11 +155,19 @@ export async function getDigChatHistory(templateId: string, stepN: number): Prom
   const session = await requireSession()
   const tpl = await db.query.templates.findFirst({ where: eq(templates.id, templateId) })
   if (!tpl || !canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return []
-  const rows = await db
-    .select({ role: digChatMessages.role, who: digChatMessages.who, text: digChatMessages.text })
-    .from(digChatMessages)
-    .where(and(eq(digChatMessages.templateId, templateId), eq(digChatMessages.stepN, stepN), eq(digChatMessages.userId, session.userId)))
-    .orderBy(asc(digChatMessages.createdAt))
-    .limit(40)
-  return rows.map((r) => ({ role: r.role === 'gnome' ? 'gnome' : 'user', who: r.who ?? undefined, text: r.text }))
+  // История — НЕ критичный путь: любой сбой запроса (нет таблицы на не-мигрированной
+  // дев-БД, транзиент) должен дать пустую сессию, а НЕ ронять страницу в 500
+  // (инцидент дев-среды: relation dig_chat_messages does not exist). Запись обёрнута
+  // так же — чтение теперь симметрично.
+  try {
+    const rows = await db
+      .select({ role: digChatMessages.role, who: digChatMessages.who, text: digChatMessages.text })
+      .from(digChatMessages)
+      .where(and(eq(digChatMessages.templateId, templateId), eq(digChatMessages.stepN, stepN), eq(digChatMessages.userId, session.userId)))
+      .orderBy(asc(digChatMessages.createdAt))
+      .limit(40)
+    return rows.map((r) => ({ role: r.role === 'gnome' ? 'gnome' : 'user', who: r.who ?? undefined, text: r.text }))
+  } catch {
+    return []
+  }
 }

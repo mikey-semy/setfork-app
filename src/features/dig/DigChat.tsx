@@ -48,26 +48,24 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   const [pending, start] = useTransition()
   const scrollRef = useRef<HTMLDivElement>(null)
   const lastReplyRef = useRef<HTMLDivElement>(null)
+  const ctxRef = useRef<DigChatOpenDetail | null>(null) // актуальный ctx без stale-замыкания в слушателе
 
   useEffect(() => {
     const onOpen = (e: Event) => {
       const detail = (e as CustomEvent<DigChatOpenDetail>).detail
-      setCtx((cur) => {
-        // Другой шаг → грузим ЕГО сессию из БД (беседа сохраняется, фидбек владельца).
-        // Тот же шаг — просто поднять окно, ничего не трогаем.
-        if (!cur || cur.templateId !== detail.templateId || cur.stepN !== detail.stepN) {
-          setMessages([])
-          setFollowups([])
-          setErr('')
-          void getDigChatHistory(detail.templateId, detail.stepN)
-            .then((h) => {
-              // Не перетираем, если пользователь уже начал печатать/спрашивать в новой сессии.
-              setMessages((m) => (m.length === 0 ? h : m))
-            })
-            .catch(() => {})
-        }
-        return detail
-      })
+      const cur = ctxRef.current
+      const isNew = !cur || cur.templateId !== detail.templateId || cur.stepN !== detail.stepN
+      ctxRef.current = detail
+      setCtx(detail) // апдейтер БЕЗ побочных эффектов (React-варнинг «setState во время рендера»)
+      if (isNew) {
+        // Другой шаг → грузим ЕГО сессию из БД (беседа сохраняется). Тот же — просто поднять окно.
+        setMessages([])
+        setFollowups([])
+        setErr('')
+        void getDigChatHistory(detail.templateId, detail.stepN)
+          .then((h) => setMessages((m) => (m.length === 0 ? h : m))) // не перетираем начатую сессию
+          .catch(() => {})
+      }
     }
     window.addEventListener(DIG_CHAT_EVENT, onOpen)
     return () => window.removeEventListener(DIG_CHAT_EVENT, onOpen)
@@ -231,17 +229,19 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   )
 }
 
-/** Кирка в углу пункта: открывает чат с контекстом этого шага. */
-export function DigChatOpen({ detail, label }: { detail: DigChatOpenDetail; label: string }) {
+/** Кирка в углу пункта: открывает чат с контекстом этого шага. hasSession —
+ *  точка-индикатор «здесь уже копали» (у пункта есть сохранённая беседа). */
+export function DigChatOpen({ detail, label, hasSession }: { detail: DigChatOpenDetail; label: string; hasSession?: boolean }) {
   return (
     <Tooltip label={label}>
       <button
         type="button"
         aria-label={label}
         onClick={() => window.dispatchEvent(new CustomEvent(DIG_CHAT_EVENT, { detail }))}
-        className="grid size-7 shrink-0 place-items-center rounded text-muted transition-colors hover:text-accent"
+        className="relative grid size-7 shrink-0 place-items-center rounded text-muted transition-colors hover:text-accent"
       >
         <Pickaxe size={14} />
+        {hasSession && <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-accent" aria-hidden />}
       </button>
     </Tooltip>
   )
