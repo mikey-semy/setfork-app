@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
+import { ExternalLink, FileText, Hammer, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, useTemplate } from '@/features/library/actions'
@@ -33,6 +33,8 @@ import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutl
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
+import { db, generations } from '@/shared/db'
+import { eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ListHeader } from '@/widgets/ListHeader'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
@@ -104,6 +106,7 @@ export default async function ListPage({
     (s.command ?? '').toLowerCase().includes(find)
   const steps = find ? allSteps.filter(matches) : allSteps
   const viewer = await getSession()
+  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументами (i18n-lint)
   const isOwner = viewer?.userId === tpl.ownerId
   // Ветками управляют те, кто может пушить: владелец или коллаборатор.
   const canManageBranches = isOwner || (!!viewer && (await isCollaborator(tpl.id, viewer.userId)))
@@ -130,6 +133,13 @@ export default async function ListPage({
   // Шахты «Копать глубже» (HQ §8): выкопанные слои текущей версии — по шагам.
   // У snapshot-веток раскопки нет (шаги без стабильных номеров версии).
   const digMap = !snapshot ? await digLayersFor(tpl.id, tpl.currentVersion, lang) : new Map<number, never[]>()
+  // Клеймо мастерской (HQ §7 «гильдии наружу»): список рождён советом гномов.
+  // Публичный бейдж; ссылка на беседу — только автору генерации (чат приватен).
+  const [forged] = await db
+    .select({ id: generations.id, userId: generations.userId })
+    .from(generations)
+    .where(eq(generations.chosenTemplateId, tpl.id))
+    .limit(1)
   // Уроки курса = секции блоков (в порядке). Собираем оглавление + прогресс тестов по уроку.
   // lessonOfBlock[si] = индекс урока блока si (−1 = до первого урока).
   const lessons: OutlineLesson[] = []
@@ -287,6 +297,19 @@ export default async function ListPage({
                   <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">
                     v{currentVersion.version}
                   </span>
+                  {forged && (
+                    <Tooltip label={say('Forged by the gnome council — see Guilds', 'Выкован советом гномов — см. Гильдии')}>
+                      {forged.userId === viewer?.userId ? (
+                        <Link href={`/generate/${forged.id}`} className="inline-flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-ink-2 hover:border-border-strong hover:text-ink">
+                          <Hammer size={11} /> {say('Council-forged', 'Выкован советом')}
+                        </Link>
+                      ) : (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-ink-2">
+                          <Hammer size={11} /> {say('Council-forged', 'Выкован советом')}
+                        </span>
+                      )}
+                    </Tooltip>
+                  )}
                   {latestNote && <span className="min-w-0 flex-1 truncate text-ink-2">{latestNote}</span>}
                   <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
                   <Tooltip label={t('versionsTab', lang)}>
