@@ -39,10 +39,11 @@ export default async function GenerationPage({
   // догадка по таблице jobs. Уточнения пока отдельным стором.
   const [messages, clarifyQuestions, avatars, rep] = await Promise.all([getMessages(gen.id), getClarify(gen.id), rosterAvatars(), gnomeReputation()])
   // Репутация НАРУЖУ (HQ §6): бейдж «✓ N%» = доля генераций с участием гнома, где список
-  // приняли. Меньше REP_MIN_GENS выходов — цифру не показываем (не вводить в заблуждение).
+  // приняли. Меньше REP_MIN_GENS выходов ИЛИ ноль принятых — не показываем: «✓ 0%» читался
+  // как «этому гному нельзя верить» и ставил в тупик (фидбек владельца со скрина).
   const repBadges: Record<string, string> = {}
   for (const [who, r] of Object.entries(rep))
-    if (r.gens >= REP_MIN_GENS) repBadges[who] = `✓ ${Math.round((r.accepted / r.gens) * 100)}%`
+    if (r.gens >= REP_MIN_GENS && r.accepted > 0) repBadges[who] = `✓ ${Math.round((r.accepted / r.gens) * 100)}%`
 
   return (
     <GenerationChat

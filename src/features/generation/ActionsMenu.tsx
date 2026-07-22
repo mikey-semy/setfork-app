@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, ChevronUp, RotateCw } from 'lucide-react'
+import { Check, Plus, RotateCw } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 
@@ -60,19 +60,28 @@ export function ActionsMenu({
 
   return (
     <div ref={ref} className="relative shrink-0">
+      {/* «+» ВНУТРИ поля (как у ChatGPT/Claude, фидбек владельца). Кликабелен ВСЕГДА:
+          disabled-кнопка «нажимаю и ничего» ставила в тупик — теперь до первого варианта
+          меню честно объясняет, что появится здесь. */}
       <button
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={say('Variant actions', 'Действия с вариантами')}
-        disabled={candidates.length === 0}
+        title={say('Variant actions', 'Действия с вариантами')}
         onClick={() => setOpen((v) => !v)}
-        className="grid size-[42px] place-items-center rounded-full border border-border text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-40"
+        className="grid size-[38px] place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-ink"
       >
-        <ChevronUp size={17} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        <Plus size={18} className={`transition-transform ${open ? 'rotate-45' : ''}`} />
       </button>
 
-      {open && (
+      {open && candidates.length === 0 && (
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[260px] rounded-md border border-border bg-surface px-3 py-2.5 text-[12.5px] leading-relaxed text-muted shadow-card">
+          {say('Variant actions will appear here once the council forges the first list.', 'Здесь появятся действия с вариантами, когда совет выкует первый список.')}
+        </div>
+      )}
+
+      {open && candidates.length > 0 && (
         <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[300px] overflow-hidden rounded-md border border-border bg-surface shadow-card">
           <button
             type="button"

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowUp, ChevronRight, Loader2 } from 'lucide-react'
+import { ArrowUp, Check, ChevronRight, Loader2, RotateCw } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
@@ -54,7 +54,13 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { mes
         <ol className="mt-2 flex flex-col gap-3">
           {messages.map((m) => (
             <li key={m.id} className="animate-fadein">
-              <CouncilBubble who={m.who ?? undefined} name={m.name ?? undefined} badge={m.who ? repBadges[m.who] : undefined} src={m.who ? avatars[m.who] : undefined}>
+              <CouncilBubble
+                who={m.who ?? undefined}
+                name={m.name ?? undefined}
+                badge={m.who ? repBadges[m.who] : undefined}
+                badgeTitle={say('Share of council lists people accepted', 'Доля советов, принятых людьми')}
+                src={m.who ? avatars[m.who] : undefined}
+              >
                 {m.text}
               </CouncilBubble>
             </li>
@@ -283,19 +289,52 @@ export function GenerationChat({ generationId, lang, candidates, status, message
       </ol>
 
       {/* Дополнить прямо здесь: реплика уходит в нить, следующий вариант учитывает ВСЮ беседу.
-          Действия с вариантами — меню слева от поля: раньше висели липким баром наверху,
-          и к ним приходилось скроллить от поля ввода (фидбек владельца). */}
+          Композер как у ChatGPT/Claude (фидбек владельца со скринов): кнопки ВНУТРИ поля —
+          «+» (действия с вариантами) слева, отправка справа; над полем — чипы дальнейших
+          действий, появляются сами вместе с готовым вариантом. */}
       <div data-sticky-input className="sticky bottom-0 -mx-4 mt-4 border-t border-border bg-canvas/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="flex items-end gap-2">
-          <ActionsMenu
-            candidates={candidates}
-            selId={selId}
-            working={working}
-            lang={lang}
-            onPick={setSelId}
-            onAccept={() => selId && start(() => acceptCandidate(generationId, selId))}
-            onRegen={() => start(() => regenerateCandidate(generationId))}
-          />
+        {!working && last && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              disabled={!selId}
+              onClick={() => selId && start(() => acceptCandidate(generationId, selId))}
+              className="inline-flex items-center gap-1.5 rounded-full border border-(--accent)/60 bg-(--accent-soft) px-3 py-1.5 text-[12.5px] font-medium text-accent hover:opacity-90 disabled:opacity-40"
+            >
+              <Check size={13} /> {say('Use this one', 'Использовать этот')}
+            </button>
+            {candidates.length < 6 && (
+              <button
+                type="button"
+                onClick={() => start(() => regenerateCandidate(generationId))}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[12.5px] text-ink-2 hover:border-border-strong hover:text-ink"
+              >
+                <RotateCw size={13} /> {say('Another variant', 'Ещё вариант')}
+              </button>
+            )}
+            {(last?.hint || '').trim() && (
+              <button
+                type="button"
+                onClick={() => setNote(last.hint ?? '')}
+                className="inline-flex max-w-[280px] items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[12.5px] text-muted hover:border-border-strong hover:text-ink-2"
+              >
+                <span className="truncate">{last.hint}</span>
+              </button>
+            )}
+          </div>
+        )}
+        <div className="relative">
+          <div className="absolute bottom-[7px] left-1.5 z-10">
+            <ActionsMenu
+              candidates={candidates}
+              selId={selId}
+              working={working}
+              lang={lang}
+              onPick={setSelId}
+              onAccept={() => selId && start(() => acceptCandidate(generationId, selId))}
+              onRegen={() => start(() => regenerateCandidate(generationId))}
+            />
+          </div>
           {/* Плейсхолдер = ГОТОВОЕ сообщение (фидбек владельца: никаких «Дополни — «…»»-инструкций,
               как ghost-suggestion у Copilot/Claude): подсказка ПО ТЕМЕ от модели (hint кандидата,
               0 лишних вызовов), фолбэк — фраза по типу списка. Tab или → подхватывает её в поле.
@@ -315,13 +354,13 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             }}
             rows={1}
             placeholder={last?.hint || refineHint(listKind, ru)}
-            className="max-h-32 min-h-[42px] w-full resize-y rounded-2xl border border-border bg-surface px-3.5 py-2.5 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
+            className="max-h-32 min-h-[52px] w-full resize-y rounded-2xl border border-border bg-surface py-3.5 pl-[52px] pr-[52px] text-[13.5px] text-ink outline-hidden focus:border-border-strong"
           />
           <button
             onClick={submitNote}
             disabled={!note.trim() || working}
             aria-label={say('Send', 'Отправить')}
-            className="grid size-[42px] shrink-0 place-items-center rounded-full bg-primary text-primary-fg disabled:opacity-40"
+            className="absolute bottom-[7px] right-1.5 grid size-[38px] shrink-0 place-items-center rounded-full bg-primary text-primary-fg disabled:opacity-40"
           >
             {working ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={17} />}
           </button>
