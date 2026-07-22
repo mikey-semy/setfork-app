@@ -6,7 +6,6 @@ import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
-import { ForkDialog } from '@/features/library/ForkDialog'
 import { PinButton } from '@/features/library/PinButton'
 import { StarButton } from '@/features/library/StarButton'
 import { StarFolderMenu } from '@/features/star-folders/StarFolderMenu'
@@ -167,25 +166,13 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                   <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
                 </button>
               ) : session ? (
-                <ForkDialog
-                  templateId={meta.id}
-                  defaultSlug={meta.slug}
-                  viewerHandle={session.handle}
-                  grouped
-                  labels={{
-                    fork: t('fork', lang),
-                    title: t('forkDialogTitle', lang),
-                    ownerLabel: t('forkOwnerLabel', lang),
-                    nameLabel: t('forkNameLabel', lang),
-                    nameHint: t('forkNameHint', lang),
-                    available: t('forkAvailable', lang),
-                    taken: t('forkTaken', lang),
-                    descLabel: t('forkDescLabel', lang),
-                    descPlaceholder: t('forkDescPlaceholder', lang),
-                    create: t('createFork', lang),
-                    cancel: t('cancel', lang),
-                  }}
-                />
+                // Форк — отдельной страницей /fork (как GitHub), не модалкой.
+                <Link
+                  href={`${base}/fork`}
+                  className="inline-flex h-full items-center gap-2 px-3.5 text-[13px] font-semibold text-ink hover:bg-surface-2"
+                >
+                  <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
+                </Link>
               ) : (
                 <Link
                   href="/login"
