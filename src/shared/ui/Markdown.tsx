@@ -1,13 +1,28 @@
+import { isValidElement, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/shared/lib/cn'
 import { SmartImage } from './SmartImage'
+import { CodeCard } from './CodeCard'
 import { remarkIssueRefs } from './remark-issue-refs'
+
+/** Текст код-блока и его язык из children элемента pre (react-markdown кладёт туда <code className="language-x">). */
+function codeOf(children: ReactNode): { code: string; name?: string } | null {
+  const child = Array.isArray(children) ? children[0] : children
+  if (!isValidElement(child)) return null
+  const props = child.props as { className?: string; children?: ReactNode }
+  const raw = props.children
+  const code = typeof raw === 'string' ? raw : Array.isArray(raw) && raw.every((x) => typeof x === 'string') ? raw.join('') : ''
+  if (!code) return null
+  return { code, name: /language-([\w-]+)/.exec(props.className ?? '')?.[1] }
+}
 
 // Безопасный рендер markdown (react-markdown не пропускает сырой HTML) + GFM
 // (таск-листы, таблицы, strikethrough, автоссылки) + картинки. refBase — префикс
 // для кросс-ссылок `#N` на issue (напр. /owner/slug/issues); задаётся в issue/suggestion.
-export function Markdown({ children, className, refBase }: { children: string; className?: string; refBase?: string }) {
+// codeCards: код-блоки рендерятся карточкой CodeCard (имя+копировать+номера строк,
+// перенос вместо горизонтального скролла) — включено в чатах гномов.
+export function Markdown({ children, className, refBase, codeCards }: { children: string; className?: string; refBase?: string; codeCards?: boolean }) {
   if (!children?.trim()) return null
   return (
     <div className={cn('text-[13px] leading-snug text-ink-2 [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
@@ -15,8 +30,12 @@ export function Markdown({ children, className, refBase }: { children: string; c
         remarkPlugins={refBase ? [remarkGfm, remarkIssueRefs(refBase)] : [remarkGfm]}
         components={{
           a: (p) => <a {...p} target="_blank" rel="noreferrer" className="text-accent hover:underline" />,
-          code: (p) => <code {...p} className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[0.9em] text-ink" />,
-          pre: (p) => <pre {...p} className="overflow-x-auto rounded-md border border-border bg-surface-2 p-2.5 font-mono text-[12px] text-ink" />,
+          code: (p) => <code {...p} className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[0.9em] text-ink [overflow-wrap:anywhere]" />,
+          pre: (p) => {
+            const c = codeCards ? codeOf(p.children) : null
+            if (c) return <CodeCard code={c.code} name={c.name} />
+            return <pre {...p} className="overflow-x-auto rounded-md border border-border bg-surface-2 p-2.5 font-mono text-[12px] text-ink" />
+          },
           ul: (p) => <ul {...p} className="list-disc pl-5" />,
           ol: (p) => <ol {...p} className="list-decimal pl-5" />,
           strong: (p) => <strong {...p} className="font-semibold text-ink" />,

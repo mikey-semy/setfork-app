@@ -40,10 +40,12 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   const [ctx, setCtx] = useState<DigChatOpenDetail | null>(null)
   const [gnome, setGnome] = useState('auto')
   const [messages, setMessages] = useState<DigChatMsg[]>([])
+  const [followups, setFollowups] = useState<string[]>([])
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
   const [pending, start] = useTransition()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const lastReplyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -52,6 +54,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         // Другой шаг → новая сессия; тот же — просто поднять окно.
         if (!cur || cur.templateId !== detail.templateId || cur.stepN !== detail.stepN) {
           setMessages([])
+          setFollowups([])
           setErr('')
         }
         return detail
@@ -62,7 +65,14 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   }, [])
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+    // Пришёл ответ гнома → скроллим к его НАЧАЛУ (читают сверху, не с конца);
+    // свой вопрос/индикатор — вниз, как обычно. scrollTo по offsetTop, а не
+    // scrollIntoView: последний не должен дёргать скролл самой страницы.
+    const box = scrollRef.current
+    if (!box) return
+    const last = messages[messages.length - 1]
+    if (last?.role === 'gnome' && lastReplyRef.current) box.scrollTo({ top: lastReplyRef.current.offsetTop - 8, behavior: 'smooth' })
+    else box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' })
   }, [messages, pending])
 
   if (!ctx) return null
@@ -76,21 +86,43 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
     'not found': say('Step not found.', 'Шаг не найден.'),
   }
 
-  const send = () => {
-    const q = text.trim()
+  const send = (preset?: string) => {
+    const q = (preset ?? text).trim()
     if (!q || pending) return
     setText('')
     setErr('')
+    setFollowups([])
     const history = messages
     setMessages((m) => [...m, { role: 'user', text: q }])
     start(async () => {
       const res = await digChatAsk({ templateId: ctx.templateId, stepN: ctx.stepN, gnome, history, question: q, lang })
       if ('error' in res) setErr(errText[res.error] ?? res.error)
-      else setMessages((m) => [...m, { role: 'gnome', who: res.who, text: res.text }])
+      else {
+        setMessages((m) => [...m, { role: 'gnome', who: res.who, text: res.text }])
+        setFollowups(res.followups)
+      }
     })
   }
 
   const current = gnomes.find((g) => g.id === gnome)
+  // Готовые вопросы на старте: копать можно вообще без клавиатуры — дальше
+  // ведут фоллоу-апы самого гнома (кнопки после каждого ответа).
+  const starterQuestions = [
+    say('Why exactly this way?', 'Почему именно так?'),
+    say('What are the pitfalls?', 'Какие подводные камни?'),
+    say('Is there an alternative?', 'Какая есть альтернатива?'),
+    say('Explain it simpler', 'Объясни проще'),
+  ]
+  const chips = messages.length === 0 ? starterQuestions : followups
+  const chipRow = chips.length > 0 && !pending && (
+    <div className="flex flex-wrap gap-1.5">
+      {chips.map((q) => (
+        <Button key={q} variant="outline" size="xs" className="rounded-full font-normal" onClick={() => send(q)}>
+          {q}
+        </Button>
+      ))}
+    </div>
+  )
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex max-h-[70dvh] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card">
@@ -131,10 +163,10 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
               <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3 py-1.5 text-[13px] leading-[1.5] text-primary-fg">{m.text}</div>
             </div>
           ) : (
-            <div key={i} className="flex items-end gap-2">
+            <div key={i} ref={i === messages.length - 1 ? lastReplyRef : undefined} className="flex items-start gap-2">
               <GnomeAvatar src={`/gnomes/${m.who ?? 'generalist'}.webp`} size={32} className="size-8 shrink-0" />
               <div className="min-w-0 rounded-2xl rounded-bl-md bg-(--surface-2) px-3 py-1.5">
-                <Markdown className="text-[13px] leading-[1.5] text-ink-2">{m.text}</Markdown>
+                <Markdown codeCards className="text-[13px] leading-[1.5] text-ink-2">{m.text}</Markdown>
               </div>
             </div>
           ),
@@ -145,25 +177,38 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
           </div>
         )}
         {err && <p className="text-[12px] text-warn">{err}</p>}
+        {chipRow}
       </div>
 
-      <div className="flex items-end gap-1.5 border-t border-border px-2.5 py-2">
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              send()
-            }
-          }}
-          rows={1}
-          placeholder={say('Why exactly this way?', 'Почему именно так?')}
-          className="max-h-24 min-h-[36px] flex-1 resize-none"
-        />
-        <Button size="sm" aria-label={say('Send', 'Отправить')} onClick={send} disabled={!text.trim() || pending}>
-          <SendHorizontal size={15} />
-        </Button>
+      <div className="border-t border-border px-2.5 py-2">
+        <div className="relative">
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                send()
+              }
+              if (e.key === 'Escape') setCtx(null)
+            }}
+            rows={1}
+            placeholder={say('Why exactly this way?', 'Почему именно так?')}
+            className="max-h-24 min-h-[38px] w-full resize-none pr-10"
+          />
+          {/* Кнопка ВНУТРИ поля (фидбек владельца): Enter — отправить, Shift+Enter — перенос, Esc — закрыть. */}
+          <Button
+            variant="ghost"
+            size="xs"
+            aria-label={say('Send (Enter)', 'Отправить (Enter)')}
+            title={say('Enter — send · Shift+Enter — new line · Esc — close', 'Enter — отправить · Shift+Enter — перенос · Esc — закрыть')}
+            onClick={() => send()}
+            disabled={!text.trim() || pending}
+            className="absolute bottom-1.5 right-1.5 text-accent disabled:text-muted"
+          >
+            <SendHorizontal size={15} />
+          </Button>
+        </div>
       </div>
     </div>
   )
