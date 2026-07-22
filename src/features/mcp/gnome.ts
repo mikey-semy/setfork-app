@@ -6,7 +6,7 @@ import { getAiSettings } from '@/shared/settings/ai'
 import { getAiChatClient } from '@/shared/ai/provider'
 import { pickChatModel } from '@/shared/ai/credits'
 import { getRoster } from '@/shared/ai/roster'
-import { buildGnomePrompt, gnomeCard } from '@/shared/ai/gnome'
+import { buildGnomePrompt, buildReviewPrompt, gnomeCard } from '@/shared/ai/gnome'
 import { findPrecedents } from '@/shared/ai/retrieval'
 import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { extractUsage, outcomeOf, recordUsage } from '@/shared/ai/usage'
@@ -98,5 +98,80 @@ export async function mcpAskGnome(
   } catch (e) {
     await recordUsage({ userId, feature: 'mcp-gnome', model, input: 0, output: 0, total: 0, cost: 0, refType: 'mcp', outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
     return { error: 'The gnome could not answer (model call failed) — try again' }
+  }
+}
+
+/** Матч тега списка и домена гнома — та же формула, что доменная линза. */
+const tagFits = (tag: string, domain: string) => tag === domain || tag.includes(domain) || domain.includes(tag)
+
+/**
+ * gnome_review (MCP этап 3, HQ §1): гном-мастер смотрит СУЩЕСТВУЮЩИЙ список и
+ * даёт правки по кодексу своей гильдии. Гном — явный (параметр) или профильный
+ * по тегам списка; та же бюджетная лестница и rate-limit, что ask_gnome.
+ */
+export async function mcpGnomeReview(
+  userId: string,
+  args: { handle: string; slug: string; gnome?: string },
+): Promise<Record<string, unknown> | { error: string }> {
+  const list = await mcpGetList(userId, args.handle, args.slug)
+  if (!list) return { error: 'List not found or not accessible' }
+
+  const roster = await getRoster()
+  let expert = args.gnome ? roster.find((e) => e.id === args.gnome) : undefined
+  if (args.gnome && !expert) return { error: `Unknown gnome "${args.gnome}". Call list_gnomes for the roster.` }
+  if (!expert) {
+    const tags = ((list as { tags?: string[] }).tags ?? []).map((t) => t.toLowerCase())
+    expert =
+      roster.find((e) => !e.domains.includes('*') && e.domains.some((d) => tags.some((t) => tagFits(t, d.toLowerCase())))) ??
+      roster.find((e) => e.id === 'generalist') ??
+      roster[0]
+  }
+  if (!expert) return { error: 'Roster is empty' }
+
+  const client = await getAiChatClient()
+  const settings = await getAiSettings()
+  if (!client || !settings.enabled) return { error: 'AI is disabled on this instance' }
+  if (!(await globalBudgetOk())) return { error: 'AI budget exhausted for today — try later' }
+  const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
+  if (!(await aiQuota(userId, u?.handle)).ok) return { error: 'Your monthly AI quota is used up' }
+  const rl = await rateLimit(`mcp:gnome:${userId}`, GNOME_RATE_PER_MIN, 60_000)
+  if (!rl.ok) return { error: 'Too many gnome calls — wait a minute' }
+
+  const forProvider = (m: string) =>
+    client.cfg.provider === 'yandex' ? m.startsWith('gpt://') : client.cfg.provider === 'gigachat' ? !m.includes('/') : true
+  const model = expert.model && forProvider(expert.model) ? expert.model : await pickChatModel(settings)
+
+  const { system, prompt } = buildReviewPrompt(expert, JSON.stringify(list).slice(0, 6000))
+  const startedAt = Date.now()
+  try {
+    const result = await generateText({
+      model: client.chat(model),
+      system,
+      prompt,
+      temperature: settings.temperature,
+      maxOutputTokens: 900,
+      abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+    })
+    const usage = extractUsage(result)
+    await recordUsage({ userId, feature: 'mcp-gnome', model, input: usage.input, output: usage.output, total: usage.total, cost: usage.cost, refType: 'mcp-review', outcome: 'ok', durationMs: Date.now() - startedAt, provider: client.cfg.provider })
+    const raw = result.text
+    const s = raw.indexOf('{')
+    const e2 = raw.lastIndexOf('}')
+    let review: unknown = null
+    try {
+      review = s >= 0 && e2 > s ? JSON.parse(raw.slice(s, e2 + 1)) : null
+    } catch {
+      review = null
+    }
+    return {
+      gnome: expert.id,
+      name: { en: expert.nameEn, ru: expert.nameRu },
+      guild: expert.guildEn || undefined,
+      // JSON не собрался → честно отдаём сырой текст ревью, клиент разберётся.
+      review: review ?? raw.trim(),
+    }
+  } catch (e) {
+    await recordUsage({ userId, feature: 'mcp-gnome', model, input: 0, output: 0, total: 0, cost: 0, refType: 'mcp-review', outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
+    return { error: 'The gnome could not finish the review — try again' }
   }
 }
