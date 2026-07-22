@@ -31,7 +31,7 @@ export function PinButton({
       disabled={pending}
       aria-label={opt ? unpinLabel : pinLabel}
       title={opt ? unpinLabel : pinLabel}
-      className={`inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-[13px] font-semibold transition-colors disabled:opacity-60 max-sm:px-2.5 max-sm:py-1.5 ${
+      className={`inline-flex h-9 items-center gap-2 rounded-md border px-3.5 text-[13px] font-semibold transition-colors disabled:opacity-60 ${
         opt ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink hover:border-border-strong'
       }`}
     >

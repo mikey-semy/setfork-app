@@ -58,8 +58,8 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        {/* Фиксированная высота 38px — ряд действий панели списка ровный (Run/«…»). */}
-        <button type="button" className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border px-3.5 text-[13px] font-semibold text-ink hover:border-border-strong">
+        {/* Фиксированная высота 36px (h-9) — ряд действий панели списка ровный. */}
+        <button type="button" className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3.5 text-[13px] font-semibold text-ink hover:border-border-strong">
           <ListChecks size={15} /> {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>
       </DropdownMenuTrigger>

@@ -72,7 +72,7 @@ export function WatchButton({
           <button
             aria-label={watching ? labels.unwatch : labels.watch}
             title={watching ? labels.unwatch : labels.watch}
-            className={`inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-[13px] font-semibold transition-colors max-sm:gap-1.5 max-sm:px-2.5 max-sm:py-1.5 ${
+            className={`inline-flex h-9 items-center gap-2 rounded-md border px-3.5 text-[13px] font-semibold transition-colors max-sm:gap-1.5 max-sm:px-3 ${
               watching ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink hover:border-border-strong'
             }`}
           >
