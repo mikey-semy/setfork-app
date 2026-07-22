@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, or, sql } from 'drizzle-orm'
 import type { CurationStore } from '@/core'
 import { db, stars, templates, watches } from '@/shared/db'
 
@@ -33,42 +33,81 @@ export const curationStore: CurationStore = {
 
   async isWatching(listId, userId) {
     const [r] = await db
-      .select({ id: watches.id })
+      .select({ level: watches.level })
       .from(watches)
       .where(and(eq(watches.userId, userId), eq(watches.templateId, listId)))
       .limit(1)
-    return !!r
+    return r?.level === 'all' || r?.level === 'custom'
+  },
+
+  async watchState(listId, userId) {
+    const [r] = await db
+      .select({ level: watches.level, events: watches.events })
+      .from(watches)
+      .where(and(eq(watches.userId, userId), eq(watches.templateId, listId)))
+      .limit(1)
+    if (!r) return { level: 'participating', events: null }
+    return { level: r.level, events: r.events ?? null }
+  },
+
+  async setWatch(listId, userId, level, events) {
+    // 'participating' = глобальный дефолт = отсутствие строки.
+    if (level === 'participating') {
+      await db.delete(watches).where(and(eq(watches.userId, userId), eq(watches.templateId, listId)))
+      return
+    }
+    const evs = level === 'custom' ? (events ?? {}) : null
+    await db
+      .insert(watches)
+      .values({ userId, templateId: listId, level, events: evs })
+      .onConflictDoUpdate({ target: [watches.userId, watches.templateId], set: { level, events: evs } })
   },
 
   async toggleWatch(listId, userId) {
     const [ex] = await db
-      .select({ id: watches.id })
+      .select({ level: watches.level })
       .from(watches)
       .where(and(eq(watches.userId, userId), eq(watches.templateId, listId)))
       .limit(1)
-    if (ex) {
+    // Уже смотрит (all/custom) → снять до participating. Иначе (нет строки / ignore) → All Activity.
+    if (ex && (ex.level === 'all' || ex.level === 'custom')) {
       await db.delete(watches).where(and(eq(watches.userId, userId), eq(watches.templateId, listId)))
       return false
     }
-    await db.insert(watches).values({ userId, templateId: listId }).onConflictDoNothing()
+    await db
+      .insert(watches)
+      .values({ userId, templateId: listId, level: 'all', events: null })
+      .onConflictDoUpdate({ target: [watches.userId, watches.templateId], set: { level: 'all', events: null } })
     return true
   },
 
   async ensureWatch(listId, userId) {
     try {
-      await db.insert(watches).values({ userId, templateId: listId }).onConflictDoNothing()
+      // Авто-watch при участии: только если ещё нет выбора (не перебиваем ignore/custom).
+      await db.insert(watches).values({ userId, templateId: listId, level: 'all' }).onConflictDoNothing()
     } catch {
       /* watch — не критичный путь */
     }
   },
 
   async watchCount(listId) {
-    const [r] = await db.select({ c: sql<number>`count(*)::int` }).from(watches).where(eq(watches.templateId, listId))
+    const [r] = await db
+      .select({ c: sql<number>`count(*)::int` })
+      .from(watches)
+      .where(and(eq(watches.templateId, listId), sql`${watches.level} in ('all','custom')`))
     return r?.c ?? 0
   },
 
-  async watcherIds(listId) {
-    const rows = await db.select({ id: watches.userId }).from(watches).where(eq(watches.templateId, listId))
+  async watcherIds(listId, event) {
+    const rows = await db
+      .select({ id: watches.userId })
+      .from(watches)
+      .where(
+        and(
+          eq(watches.templateId, listId),
+          or(eq(watches.level, 'all'), and(eq(watches.level, 'custom'), sql`${watches.events} ->> ${event} = 'true'`)),
+        ),
+      )
     return rows.map((r) => r.id)
   },
 }

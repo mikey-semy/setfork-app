@@ -31,6 +31,10 @@ export interface AiSettings {
   councilClarify: boolean
   /** Лимит советов на пользователя за ~месяц (не для админов); исчерпал → откат на одиночную. 0 = безлимит. */
   councilMaxPerMonth: number
+  /** «Помощь на шаге»: AI-подсказка застрявшему в прогоне. OFF по умолчанию. */
+  assistEnabled: boolean
+  /** Аудитория помощи (гейт цены/раскатки): 'admin' — только админам, 'all' — всем. */
+  assistAudience: 'admin' | 'all'
   /** Тариф Free: лимит генераций на пользователя за календарный месяц. 0 = безлимит (монетизация НЕ
    *  активирована). Ставится, когда Pro можно купить — иначе free-юзеров блокировать некуда. Pro/админ — без лимита. */
   freeMonthlyGens: number
@@ -52,6 +56,8 @@ const KEYS = [
   'ai.council_web_seek',
   'ai.council_clarify',
   'ai.council_max_per_month',
+  'ai.assist_enabled',
+  'ai.assist_audience',
   'ai.free_monthly_gens',
 ] as const
 
@@ -287,6 +293,8 @@ export async function getAiSettings(): Promise<AiSettings> {
     councilWebSeek: m['ai.council_web_seek'] != null ? m['ai.council_web_seek'] === 'true' : process.env.SETFORK_COUNCIL_WEB_SEEK === 'true',
     councilClarify: m['ai.council_clarify'] != null ? m['ai.council_clarify'] === 'true' : process.env.SETFORK_COUNCIL_CLARIFY === 'true',
     councilMaxPerMonth: num(m['ai.council_max_per_month'], Number(process.env.SETFORK_COUNCIL_MAX_PER_MONTH) || 0),
+    assistEnabled: m['ai.assist_enabled'] === 'true',
+    assistAudience: m['ai.assist_audience'] === 'all' ? 'all' : 'admin',
     freeMonthlyGens: num(m['ai.free_monthly_gens'], Number(process.env.SETFORK_FREE_MONTHLY_GENS) || 0),
   }
 }

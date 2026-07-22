@@ -148,7 +148,7 @@ export async function uploadStepFile(formData: FormData): Promise<{ url: string;
 }
 
 async function notifyWatchersNewVersion(templateId: string, actorId: string): Promise<void> {
-  const watchers = await getWatcherIds(templateId)
+  const watchers = await getWatcherIds(templateId, 'versions')
   await notifyMany(watchers, { actorId, type: 'new_version', templateId })
 }
 
@@ -466,7 +466,7 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   await collabStore.addSuggestionComment(sug.id, session.userId, body)
   await ensureWatch(sug.templateId)
 
-  const [commenters, watchers] = await Promise.all([suggestionCommenterIds(sug.id), getWatcherIds(sug.templateId)])
+  const [commenters, watchers] = await Promise.all([suggestionCommenterIds(sug.id), getWatcherIds(sug.templateId, 'suggestions')])
   const recipients = [sug.authorId, sug.template.ownerId, ...commenters, ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'suggestion_comment', templateId: sug.templateId, suggestionId: sug.id })
   await notifyMentions({ text: body, actorId: session.userId, templateId: sug.templateId })
@@ -834,20 +834,38 @@ export async function useTemplate(templateId: string): Promise<void> {
   redirect(`/${session.handle}/${slug}`)
 }
 
-export async function forkTemplate(templateId: string): Promise<void> {
+export type ForkResult = { error?: string }
+
+/** Статус имени будущего форка для диалога (как «EcoPlay is available ✓» на GitHub):
+ *  нормализованный slug + свободно ли оно в пространстве текущего пользователя. */
+export async function forkNameStatus(name: string): Promise<{ slug: string; available: boolean }> {
+  const session = await requireSession()
+  const slug = slugify(name)
+  const [taken] = await db
+    .select({ id: templates.id })
+    .from(templates)
+    .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, slug)))
+    .limit(1)
+  return { slug, available: !taken }
+}
+
+/** Форк списка = «Create a new fork» на GitHub: диалог задаёт имя (по умолчанию slug
+ *  источника — у тебя он уникален) и опциональное описание; авто-суффикса `-fork`
+ *  больше нет. Свой список форкнуть нельзя (у своих вместо Fork — Pin). */
+export async function forkTemplate(templateId: string, opts?: { name?: string; description?: string }): Promise<ForkResult | void> {
   const session = await requireSession()
   const src = await db.query.templates.findFirst({
     where: (t) => eq(t.id, templateId),
     with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
   })
-  if (!src) return
-  // Видимость: форк раскрывает ВСЁ содержимое списка (шаги/команды) — приватные
-  // и скрытые модерацией доступны только владельцу (как в useTemplate). Иначе
-  // любой залогиненный мог бы склонировать чужой приватный список по его id.
-  if (!canViewList(src, { isOwner: src.ownerId === session.userId })) return
+  if (!src) return { error: 'Список не найден.' }
+  // Нельзя форкнуть собственный список (как на GitHub свой репозиторий не форкается).
+  if (src.ownerId === session.userId) return { error: 'Нельзя форкнуть собственный список.' }
+  // Видимость: форк раскрывает ВСЁ содержимое (шаги/команды) — чужой приватный/скрытый
+  // модерацией форкнуть нельзя (иначе любой залогиненный склонировал бы приватку по id).
+  if (!canViewList(src, { isOwner: false })) return { error: 'Список недоступен.' }
 
-  // Дедуп: этот пользователь уже форкал этот список → ведём на существующий форк,
-  // не плодим дубли (двойной клик по кнопке Fork создавал два форка + двойной счётчик).
+  // Дедуп: один аккаунт = один форк списка (как личный аккаунт GitHub) → ведём на существующий.
   const [existingFork] = await db
     .select({ slug: templates.slug })
     .from(templates)
@@ -857,11 +875,19 @@ export async function forkTemplate(templateId: string): Promise<void> {
 
   if (!(await listQuota(session.userId, session.handle)).ok) redirect(`/${session.handle}?e=list_quota`)
 
-  const owned = await db
-    .select({ slug: templates.slug })
+  // Имя из диалога → slug (по умолчанию slug источника). Авто-суффикса нет: занятое имя = ошибка
+  // (диалог проверяет доступность вживую через forkNameStatus, сервер валидирует ещё раз).
+  const slug = slugify(opts?.name?.trim() || src.slug)
+  const [taken] = await db
+    .select({ id: templates.id })
     .from(templates)
-    .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, src.slug)))
-  const slug = owned.length ? `${src.slug}-fork` : src.slug
+    .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, slug)))
+    .limit(1)
+  if (taken) return { error: 'У вас уже есть список с таким именем — выберите другое.' }
+
+  // Описание из диалога (опц.) переопределяет на языке зрителя; пустое — наследуем от источника.
+  const descOverride = opts?.description?.trim()
+  const desc = descOverride ? { ...((src.desc as LocaleText | null) ?? {}), [await getLang()]: descOverride } : src.desc
 
   const srcCurrent = src.versions.find((v) => v.version === src.currentVersion) ?? src.versions[0]
   const srcSteps = srcCurrent
@@ -871,7 +897,7 @@ export async function forkTemplate(templateId: string): Promise<void> {
     ownerId: session.userId,
     slug,
     title: src.title,
-    desc: src.desc,
+    desc,
     tags: src.tags,
     ordered: src.ordered,
     visibility: src.visibility,
@@ -904,5 +930,5 @@ export async function forkTemplate(templateId: string): Promise<void> {
   await enqueueReindex(forked.id)
 
   revalidatePath('/explore')
-  redirect(`/${await ownerHandle(session.userId)}/${slug}`)
+  redirect(`/${session.handle}/${slug}`)
 }

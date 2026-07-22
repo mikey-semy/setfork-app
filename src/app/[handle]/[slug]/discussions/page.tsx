@@ -7,7 +7,6 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import { getDiscussions } from '@/features/discussions/queries'
 import { DISCUSSION_CATEGORIES, categoryLabel, categoryMeta } from '@/features/discussions/constants'
 
@@ -35,7 +34,6 @@ export default async function DiscussionsPage({
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="discussions" />
       <div className="mx-auto w-full max-w-[900px] px-4 py-6">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1">

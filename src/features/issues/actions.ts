@@ -40,7 +40,7 @@ export async function createIssue(formData: FormData): Promise<void> {
   const ins = await collabStore.openIssue(tpl.id, session.userId, title, body, labels)
 
   await ensureWatch(tpl.id) // автор issue следит за списком
-  const watchers = await getWatcherIds(tpl.id)
+  const watchers = await getWatcherIds(tpl.id, 'issues')
   await notifyMany([tpl.ownerId, ...watchers], { actorId: session.userId, type: 'issue_new', templateId: tpl.id })
   await notifyMentions({ text: `${title}\n${body}`, actorId: session.userId, templateId: tpl.id, issueId: ins.id })
   revalidatePath(`/${owner}/${slug}/issues`)
@@ -79,7 +79,7 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   await ensureWatch(tpl.id) // комментатор начинает следить
 
   // Участники: автор issue + владелец + прежние комментаторы + наблюдатели.
-  const [commenters, watchers] = await Promise.all([issueCommenterIds(iss.id), getWatcherIds(tpl.id)])
+  const [commenters, watchers] = await Promise.all([issueCommenterIds(iss.id), getWatcherIds(tpl.id, 'issues')])
   const recipients = [iss.authorId, tpl.ownerId, ...commenters, ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'issue_comment', templateId: tpl.id, issueId: iss.id })
   await notifyMentions({ text: body, actorId: session.userId, templateId: tpl.id, issueId: iss.id })

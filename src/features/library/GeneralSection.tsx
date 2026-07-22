@@ -2,13 +2,14 @@ import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { TagInput } from '@/shared/ui/TagInput'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { ListTypeToggle } from './ListTypeToggle'
-import { updateListMeta, setListVisibility } from './actions'
+import { updateListMeta } from './actions'
 
 const card = 'rounded-lg border border-border bg-surface p-5'
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none focus:border-border-strong'
 const label = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
-/** Настройки списка → Основное: название / описание / теги / порядок + видимость.
+/** Настройки списка → Основное: название / описание / теги / порядок.
+ *  Видимость переехала в Опасную зону (как «Change visibility» на GitHub).
  *  slug НЕ редактируется (техническая авто-вещь). */
 export function GeneralSection({
   templateId,
@@ -16,7 +17,6 @@ export function GeneralSection({
   desc,
   tags,
   ordered,
-  visibility,
   lang,
 }: {
   templateId: string
@@ -24,11 +24,9 @@ export function GeneralSection({
   desc: LocaleText
   tags: string[]
   ordered: boolean
-  visibility: 'public' | 'private'
   lang: Lang
 }) {
   const save = updateListMeta.bind(null, templateId)
-  const toggleVisibility = setListVisibility.bind(null, templateId, visibility === 'public' ? 'private' : 'public')
 
   return (
     <section className={card}>
@@ -59,23 +57,6 @@ export function GeneralSection({
           </SubmitButton>
         </div>
       </form>
-
-      {/* Видимость — на видном месте (не в danger). */}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <div>
-          <div className="text-[13.5px] font-medium text-ink">
-            {t('visibility', lang)}: {t(visibility === 'public' ? 'publicLabel' : 'privateLabel', lang)}
-          </div>
-          <div className="mt-0.5 text-[12.5px] text-ink-2">
-            {t(visibility === 'public' ? 'publicHint' : 'privateHint', lang)}
-          </div>
-        </div>
-        <form action={toggleVisibility}>
-          <SubmitButton className="rounded-md border border-border px-3 py-1.5 text-[13px] font-medium text-ink hover:border-border-strong">
-            {t(visibility === 'public' ? 'makePrivate' : 'makePublic', lang)}
-          </SubmitButton>
-        </form>
-      </div>
     </section>
   )
 }

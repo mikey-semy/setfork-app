@@ -46,7 +46,7 @@ export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done', 'blocked
 export const stepLevel = pgEnum('step_level', ['required', 'recommended', 'optional'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
 // Тип AI-вызова для учёта расхода (токены/деньги).
-export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'mcp-gnome', 'dig'])
+export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'mcp-gnome', 'dig', 'assist'])
 export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
@@ -214,6 +214,9 @@ export const templates = pgTable(
     isTemplate: boolean('is_template').notNull().default(false), // «Use this template» (копия без fork-связи)
     coverImage: text('cover_image'), // storage_key обложки-баннера (витрина/og); null → авто-баннер
     accent: text('accent'), // hex акцента карточки/авто-баннера ('' / null = дефолт)
+    // Тип списка (ADR-0010): переносится из generations при принятии кандидата,
+    // лениво доклассифицируется садовником. null = ещё не определён (≈procedure).
+    listKind: text('list_kind'),
     repositoryId: uuid('repository_id'), // каталог-репозиторий (FK задаётся в relations); null = solo
     forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
     runsCount: integer('runs_count').notNull().default(0),
@@ -342,6 +345,9 @@ export const runStepState = pgTable(
     // отмеченные подшаги: массив индексов выполненных подшагов
     subtasksDone: jsonb('subtasks_done').notNull().default([]).$type<number[]>(),
     doneAt: timestamp('done_at', { withTimezone: true }),
+    // «Помощь на шаге»: последний AI-ответ (markdown) — переживает перезагрузку страницы.
+    assist: text('assist').notNull().default(''),
+    assistAt: timestamp('assist_at', { withTimezone: true }),
   },
   (t) => ({ runStep: unique('run_step_state_run_step').on(t.runId, t.stepId) }),
 )
@@ -677,6 +683,10 @@ export type Discussion = typeof discussions.$inferSelect
 export type DiscussionComment = typeof discussionComments.$inferSelect
 
 // ── Watches (подписка на список — как Watch на GitHub) ───────────────
+// Уровень подписки (дропдаун Watch на GitHub). «Participating & @mentions»
+// (глобальный дефолт: только упоминания/участие) = ОТСУТСТВИЕ строки. Строка = явный
+// выбор: 'all' (All Activity), 'ignore' (Never), 'custom' (по колонке events).
+export const watchLevel = pgEnum('watch_level', ['all', 'ignore', 'custom'])
 export const watches = pgTable(
   'watches',
   {
@@ -687,6 +697,11 @@ export const watches = pgTable(
     templateId: uuid('template_id')
       .notNull()
       .references(() => templates.id, { onDelete: 'cascade' }),
+    // Существующие подписчики (клик Watch) → 'all' (их прежнее поведение = все обновления).
+    level: watchLevel('level').notNull().default('all'),
+    // Только для level='custom': какие события слать (null иначе). Доставку наблюдателям
+    // имеют versions/issues/suggestions (discussions/security им пока не шлём).
+    events: jsonb('events').$type<{ versions?: boolean; issues?: boolean; suggestions?: boolean }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ userTpl: unique('watches_user_tpl').on(t.userId, t.templateId), tpl: index('watches_tpl_idx').on(t.templateId) }),

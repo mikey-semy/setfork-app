@@ -37,7 +37,6 @@ import { db, generations, listLinks, templates as templatesTable, users as users
 import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
-import { ListHeader } from '@/widgets/ListHeader'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { TranslateButton } from '@/features/library/TranslateButton'
 import { ReportButton } from '@/features/reports/ReportButton'
@@ -221,7 +220,6 @@ export default async function ListPage({
       {!isOwner && mon.viewTracking && <ViewBeacon templateId={tpl.id} />}
       {viewer && !snapshot && <DigChatHost gnomes={digGnomes} lang={lang} />}
       <div className="print:hidden">
-        <ListHeader owner={owner} slug={slug} active="overview" />
       </div>
 
       <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
