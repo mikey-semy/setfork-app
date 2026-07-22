@@ -883,6 +883,27 @@ export const generations = pgTable(
  * витку, а не стиранием ленты, как раньше.
  */
 /**
+ * Сохранённые запросы к СВОИМ спискам (HQ §11, Dataview-аналог Obsidian):
+ * «все книги en, которые начал» = теги + статус прогона. Живут на /my-lists
+ * чипами; фильтр применяется на сервере.
+ */
+export const savedQueries = pgTable(
+  'saved_queries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+    // 'any' | 'started' (есть активный прогон) | 'done' (есть завершённый)
+    runState: text('run_state').notNull().default('any'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('saved_queries_user_idx').on(t.userId)],
+)
+
+/**
  * Вики-связи список→список (HQ §11): [[handle/slug]] в текстах. Пересобирается
  * реиндексом при каждой правке (delete+insert по from_id) — как embeddings.
  * Backlinks («на этот список ссылаются») читаются по to_id.
