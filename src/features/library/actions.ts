@@ -148,7 +148,7 @@ export async function uploadStepFile(formData: FormData): Promise<{ url: string;
 }
 
 async function notifyWatchersNewVersion(templateId: string, actorId: string): Promise<void> {
-  const watchers = await getWatcherIds(templateId)
+  const watchers = await getWatcherIds(templateId, 'versions')
   await notifyMany(watchers, { actorId, type: 'new_version', templateId })
 }
 
@@ -466,7 +466,7 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
   await collabStore.addSuggestionComment(sug.id, session.userId, body)
   await ensureWatch(sug.templateId)
 
-  const [commenters, watchers] = await Promise.all([suggestionCommenterIds(sug.id), getWatcherIds(sug.templateId)])
+  const [commenters, watchers] = await Promise.all([suggestionCommenterIds(sug.id), getWatcherIds(sug.templateId, 'suggestions')])
   const recipients = [sug.authorId, sug.template.ownerId, ...commenters, ...watchers]
   await notifyMany(recipients, { actorId: session.userId, type: 'suggestion_comment', templateId: sug.templateId, suggestionId: sug.id })
   await notifyMentions({ text: body, actorId: session.userId, templateId: sug.templateId })
