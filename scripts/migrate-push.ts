@@ -37,12 +37,15 @@ async function main() {
 
   for (const [table, column, type, constraint] of PREFLIGHT) {
     await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${type}`)
-    // ADD CONSTRAINT не умеет IF NOT EXISTS — ловим duplicate_object (42710).
+    // ADD CONSTRAINT не умеет IF NOT EXISTS. Повтор даёт 42710 (duplicate_object)
+    // ЛИБО 42P07 (duplicate_table — за unique стоит одноимённый индекс; именно так
+    // упал .com-прод, где констрейнт уже существовал) — оба значат «уже есть, ок».
     try {
       await pool.query(`ALTER TABLE ${table} ADD CONSTRAINT ${constraint} UNIQUE (${column})`)
       console.log(`[preflight] ${constraint} создан`)
     } catch (e) {
-      if ((e as { code?: string }).code !== '42710') throw e
+      const code = (e as { code?: string }).code
+      if (code !== '42710' && code !== '42P07') throw e
     }
   }
 
