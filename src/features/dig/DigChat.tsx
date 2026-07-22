@@ -120,7 +120,16 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
     say('Is there an alternative?', 'Какая есть альтернатива?'),
     say('Explain it simpler', 'Объясни проще'),
   ]
-  const chips = messages.length === 0 ? starterQuestions : followups
+  // Гном ВСЕГДА ведёт вглубь (договорённость с владельцем): если модель не выдала
+  // свои NEXT-вопросы (длинный ответ съел бюджет / модель забыла) — не оставляем
+  // гостя без направлений, показываем универсальные «копающие» кнопки.
+  const deeperFallback = [
+    say('Dig deeper', 'Копни глубже'),
+    say('What could go wrong?', 'А что может пойти не так?'),
+    say('Give an example', 'Приведи пример'),
+    say('Any alternatives?', 'Какие есть альтернативы?'),
+  ]
+  const chips = messages.length === 0 ? starterQuestions : followups.length ? followups : deeperFallback
   const chipRow = chips.length > 0 && !pending && (
     <div className="flex flex-wrap gap-1.5">
       {chips.map((q) => (
