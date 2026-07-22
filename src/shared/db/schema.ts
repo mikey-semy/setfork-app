@@ -1034,6 +1034,32 @@ export const digLayers = pgTable(
   ],
 )
 
+/**
+ * Мини-чат раскопки (редизайн «Копать глубже»): ПЕРСОНАЛЬНАЯ беседа читателя с
+ * гномом по конкретному пункту. В отличие от dig_layers (общие штольни, один
+ * слой на уровень) — своя нить у каждого пользователя, живёт как сессия: открыл
+ * кирку на пункте снова → видишь прошлый разговор. Привязка (template, stepN,
+ * user); версию не пишем — беседа личная и продолжается через правки списка.
+ */
+export const digChatMessages = pgTable(
+  'dig_chat_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    stepN: integer('step_n').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: text('role').notNull(), // 'user' | 'gnome'
+    who: text('who'), // id гнома у реплик gnome; null у пользователя
+    text: text('text').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('dig_chat_thread_idx').on(t.templateId, t.stepN, t.userId, t.createdAt)],
+)
+
 export const generationMessages = pgTable(
   'generation_messages',
   {

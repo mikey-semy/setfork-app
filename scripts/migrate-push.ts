@@ -44,6 +44,7 @@ const MARKERS: Array<{ table: string; column?: string; udt?: string }> = [
   { table: 'list_links' },
   { table: 'saved_queries' },
   { table: 'knowledge_triples' },
+  { table: 'dig_chat_messages' }, // мини-чат раскопки как сессия
 ]
 
 async function main() {
