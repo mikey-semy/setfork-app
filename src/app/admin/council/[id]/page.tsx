@@ -7,6 +7,7 @@ import { getLang } from '@/shared/i18n/server'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { prettyModelName } from '@/shared/ai/models'
 import { gnomeKpi } from '@/features/admin/gnome-stats'
+import { gnomeMood } from '@/shared/ai/gnome-reputation'
 import { timeAgo } from '@/shared/ui/timeAgo'
 
 /**
@@ -30,6 +31,9 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   const name = ru ? e.nameRu : e.nameEn
   const avatarUrl = e.avatarUploaded ? avatars[e.id] : `/gnomes/${e.avatar || e.id}.webp`
   const acceptShare = kpi.gens ? Math.round((kpi.accepted / kpi.gens) * 100) : null
+  // Настроение (RPG-развитие): демеанор из послужного списка — в стиль общения.
+  const mood = gnomeMood({ [e.id]: { gens: kpi.gens, accepted: kpi.accepted } }, e.id)
+  const moodEmoji: Record<string, string> = { elated: '😄', content: '🙂', settled: '😐', wary: '😟', grumpy: '😾' }
 
   const card = 'rounded-lg border border-border bg-surface p-4'
   const kpiCell = (icon: ReactNode, label: string, value: string, sub?: string) => (
@@ -61,6 +65,10 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           </h1>
           {(ru ? e.guildRu : e.guildEn) && <div className="mt-0.5 text-[13px] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
+            <span className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[11.5px] text-ink-2" title={mood.style || say('not enough data yet', 'пока мало данных')}>
+              {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
+            </span>
             {e.domains.map((d) => (
               <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[11.5px] text-ink-2">
                 {d}
