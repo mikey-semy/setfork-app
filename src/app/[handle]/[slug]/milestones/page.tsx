@@ -5,7 +5,6 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import { isCollaborator } from '@/features/collab/queries'
 import { getMilestones } from '@/features/milestones/queries'
 import { MilestoneForm } from '@/features/milestones/MilestoneForm'
@@ -26,7 +25,6 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="issues" />
       <div className="mx-auto w-full max-w-[900px] px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="flex items-center gap-2 text-[17px] font-bold text-ink">

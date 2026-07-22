@@ -9,7 +9,6 @@ import { getCollaborators } from '@/features/collab/queries'
 import { CollaboratorsSection } from '@/features/collab/CollaboratorsSection'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { CatalogSection } from '@/features/catalogs/CatalogSection'
-import { ListHeader } from '@/widgets/ListHeader'
 import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
 import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
@@ -112,7 +111,6 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="settings" />
       <SettingsShell sections={sections} lang={lang} />
     </>
   )
