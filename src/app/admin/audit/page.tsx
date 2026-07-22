@@ -30,6 +30,7 @@ const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string;
   'passkey.add': { icon: Fingerprint, ru: 'Добавлен passkey', en: 'Passkey added', cls: 'text-ok' },
   'passkey.remove': { icon: Fingerprint, ru: 'Удалён passkey', en: 'Passkey removed', cls: 'text-warn' },
   'passkey.login': { icon: Fingerprint, ru: 'Вход по passkey', en: 'Passkey sign-in', cls: 'text-ink-2' },
+  'account.delete': { icon: Trash2, ru: 'Удалён аккаунт', en: 'Account deleted', cls: 'text-danger' },
 }
 
 function fmt(d: Date, ru: boolean): string {

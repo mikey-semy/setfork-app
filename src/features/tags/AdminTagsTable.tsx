@@ -37,7 +37,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
           type="button"
           onClick={() => run(() => refreshTagUsage())}
           disabled={pending}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[13px] font-medium text-ink hover:border-border-strong disabled:opacity-50"
+          className="ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-surface px-3 py-1.5 text-[13px] font-medium text-ink hover:border-border-strong disabled:opacity-50"
         >
           {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {say('Refresh usage', 'Пересчитать usage')}
         </button>

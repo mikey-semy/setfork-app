@@ -7,6 +7,7 @@ import { TagInput } from '@/shared/ui/TagInput'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
+import { ListTypeToggle } from '@/features/library/ListTypeToggle'
 import { listQuota } from '@/shared/quota'
 
 export const metadata = { title: 'New list' }
@@ -54,21 +55,8 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
         </div>
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('listKind', lang)}</label>
-        <div className="mb-6 grid grid-cols-2 gap-2">
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
-            <input type="radio" name="ordered" value="ordered" defaultChecked className="mt-0.5" />
-            <span>
-              <span className="block text-[13.5px] font-medium text-ink">{t('orderedLabel', lang)}</span>
-              <span className="block text-[12px] text-ink-2">{t('orderedHint', lang)}</span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
-            <input type="radio" name="ordered" value="unordered" className="mt-0.5" />
-            <span>
-              <span className="block text-[13.5px] font-medium text-ink">{t('unorderedLabel', lang)}</span>
-              <span className="block text-[12px] text-ink-2">{t('unorderedHint', lang)}</span>
-            </span>
-          </label>
+        <div className="mb-6">
+          <ListTypeToggle ordered lang={lang} />
         </div>
 
         <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('visibility', lang)}</label>

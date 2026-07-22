@@ -157,6 +157,23 @@ const DICT = {
   noCommentsYet: { en: 'No comments yet.', ru: 'Пока нет комментариев.' },
   watch: { en: 'Watch', ru: 'Следить' },
   unwatch: { en: 'Unwatch', ru: 'Не следить' },
+  watchTitle: { en: 'Notifications', ru: 'Уведомления' },
+  watchParticipating: { en: 'Participating and @mentions', ru: 'Участие и @упоминания' },
+  watchParticipatingDesc: {
+    en: 'Only notified when participating or @mentioned.',
+    ru: 'Уведомления только при участии или @упоминании.',
+  },
+  watchAll: { en: 'All Activity', ru: 'Вся активность' },
+  watchAllDesc: { en: 'Notified of all activity on this list.', ru: 'Уведомления обо всей активности списка.' },
+  watchIgnore: { en: 'Ignore', ru: 'Игнорировать' },
+  watchIgnoreDesc: { en: 'Never be notified.', ru: 'Никогда не уведомлять.' },
+  watchCustom: { en: 'Custom', ru: 'Выборочно' },
+  watchCustomDesc: {
+    en: 'Choose which events to be notified of, plus participating and @mentions.',
+    ru: 'Выбрать события для уведомлений, плюс участие и @упоминания.',
+  },
+  watchCustomTitle: { en: 'Subscribe to events', ru: 'Подписка на события' },
+  apply: { en: 'Apply', ru: 'Применить' },
   cloneMenuLabel: { en: 'Get', ru: 'Получить' },
   cloneGitHeading: { en: 'Clone / Git', ru: 'Clone / Git' },
   cloneHeading: { en: 'Clone', ru: 'Клонировать' },
@@ -298,6 +315,27 @@ const DICT = {
   runUnblock: { en: 'Unblock', ru: 'Разблокировать' },
   runDelete: { en: 'Delete run', ru: 'Удалить прогон' },
   runDeleteConfirm: { en: 'Delete this run? Your progress will be lost — this cannot be undone.', ru: 'Удалить прогон? Прогресс пропадёт — это необратимо.' },
+  // ── «Помощь на шаге» (AI-подсказка застрявшему) ──
+  runAssist: { en: 'Help me', ru: 'Помоги' },
+  runAssistAgain: { en: 'Ask again', ru: 'Спросить ещё раз' },
+  runAssistThinking: { en: 'Looking into it…', ru: 'Разбираюсь…' },
+  runAssistLabel: { en: 'Hint', ru: 'Подсказка' },
+  runAssistFailed: { en: 'Could not get a hint — try again later.', ru: 'Не получилось собрать подсказку — попробуйте позже.' },
+  runAssistLimited: { en: 'Too many requests — wait a minute.', ru: 'Слишком часто — подождите минуту.' },
+  runAssistQuota: { en: 'Monthly AI limit reached.', ru: 'Месячный лимит ИИ исчерпан.' },
+  // ── Садовник: note правки на языке списка ──
+  gardenerNoteRecipe: {
+    en: '\u{1F9D9} Gardener: clarified amounts (marked ~) and timings. Verify quantities before merging.',
+    ru: '\u{1F9D9} Садовник: уточнил количества (помечены ~) и тайминги. Проверьте граммовки перед принятием.',
+  },
+  gardenerNoteDefault: {
+    en: '\u{1F9D9} Gardener: clarified steps, added checks and rationale. Review and merge if useful.',
+    ru: '\u{1F9D9} Садовник: уточнил шаги, добавил проверки и обоснования. Примите, если полезно.',
+  },
+  gardenerNoteDeadLinks: {
+    en: 'Replaced {n} dead link(s) — verify the new sources.',
+    ru: 'Заменил мёртвых ссылок: {n} — проверьте новые источники.',
+  },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for agents to connect via MCP: search and read your lists — and, with write access, create and update them.',
@@ -347,6 +385,19 @@ const DICT = {
   run: { en: 'Run', ru: 'Прогон' },
   fork: { en: 'Fork', ru: 'Форк' },
   forkTemplate: { en: 'Fork template', ru: 'Форкнуть шаблон' },
+  forkDialogTitle: { en: 'Create a new fork', ru: 'Создать форк' },
+  forkOwnerLabel: { en: 'Owner', ru: 'Владелец' },
+  forkNameLabel: { en: 'List name', ru: 'Имя списка' },
+  forkNameHint: {
+    en: 'By default a fork is named like the source. You can keep the same name — under your account it is unique.',
+    ru: 'По умолчанию форк называется как источник. Можно оставить то же имя — под твоим аккаунтом оно уникально.',
+  },
+  forkAvailable: { en: 'available', ru: 'свободно' },
+  forkTaken: { en: 'you already have a list with this name', ru: 'у тебя уже есть список с таким именем' },
+  forkDescLabel: { en: 'Description (optional)', ru: 'Описание (необязательно)' },
+  forkDescPlaceholder: { en: 'A short description of your fork', ru: 'Короткое описание твоего форка' },
+  createFork: { en: 'Create fork', ru: 'Создать форк' },
+  cantForkOwn: { en: "You can't fork your own list", ru: 'Нельзя форкнуть собственный список' },
   bookmark: { en: 'Save', ru: 'В закладки' },
   saved: { en: 'Saved', ru: 'В закладках' },
   share: { en: 'Share', ru: 'Поделиться' },
@@ -463,6 +514,8 @@ const DICT = {
     ru: 'Аккаунт удаляется, личные данные стираются. Ваши списки остаются под пометкой «удалённый пользователь».',
   },
   deleteConfirmLabel: { en: 'Type your handle to confirm:', ru: 'Введите свой ник для подтверждения:' },
+  // Общая модалка type-to-confirm (список/аккаунт)
+  dangerConfirmHint: { en: 'To confirm, type:', ru: 'Для подтверждения введите:' },
   deletedUser: { en: 'Deleted user', ru: 'Удалённый пользователь' },
   cancel: { en: 'Cancel', ru: 'Отмена' },
   // ── Состояния: 404 / ошибка / пусто ──
@@ -733,6 +786,20 @@ const DICT = {
   makePublic: { en: 'Make public', ru: 'Сделать публичным' },
   deleteList: { en: 'Delete this list', ru: 'Удалить список' },
   deleteListHint: { en: 'Permanently deletes the list, its versions and stars. Cannot be undone.', ru: 'Безвозвратно удаляет список, версии и звёзды.' },
+  deleteListCascade: {
+    en: 'This permanently deletes the list — every version, its steps, runs, suggestions, issues and stars. This cannot be undone.',
+    ru: 'Безвозвратно удаляет список — все версии, шаги, прогоны, предложения, обсуждения и звёзды. Отменить нельзя.',
+  },
+  changeVisibility: { en: 'Change visibility', ru: 'Изменить видимость' },
+  visibilityCurrent: { en: 'This list is currently', ru: 'Сейчас список' },
+  makePrivateEffects: {
+    en: 'The list disappears from explore, search and everyone else — only you will see it. Stars and watchers from other users lose access.',
+    ru: 'Список пропадёт из обзора, поиска и у всех остальных — останется виден только вам. Звёзды и наблюдатели других потеряют доступ.',
+  },
+  makePublicEffects: {
+    en: 'The list becomes visible to everyone in explore and search, and is re-checked by moderation before it appears.',
+    ru: 'Список станет виден всем в обзоре и поиске и пройдёт повторную проверку модерации перед показом.',
+  },
   deleteLockedModeration: {
     en: 'A list removed by moderation cannot be deleted. Submit an appeal for review — deleting would erase the record of the removed content.',
     ru: 'Список, снятый модерацией, удалить нельзя. Подайте апелляцию на пересмотр — удаление стёрло бы запись о снятом контенте.',

@@ -12,7 +12,6 @@ import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
-import { ListHeader } from '@/widgets/ListHeader'
 import { getReleases } from '@/features/releases/queries'
 import { deleteRelease } from '@/features/releases/actions'
 
@@ -32,7 +31,6 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="versions" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-[16px] font-bold text-ink">Releases</h1>
