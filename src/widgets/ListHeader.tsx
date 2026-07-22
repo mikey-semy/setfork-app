@@ -22,6 +22,7 @@ import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { humanModerationReason } from '@/features/moderation/reason'
 import { ListTabs } from './ListTabs'
+import { ShowOnListRoot } from './ShowOnListRoot'
 
 /** Общая шапка страницы списка (= «репозиторий»): owner/name, действия, вкладки.
  *  Живёт в персистентном [handle]/[slug]/layout.tsx — не перемонтируется между
@@ -102,6 +103,9 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             ) : null}
           </div>
 
+          {/* Действия репозитория — только на корне «Список» (как GitHub: на
+              под-вкладках видны только табы, без Watch/Fork/Star). */}
+          <ShowOnListRoot base={base}>
           <div className="flex flex-wrap items-center gap-2">
             {/* Pin — свой публичный. Кнопкой на широком экране (как GitHub);
                 на мобиле уезжает в «...» (см. ниже). */}
@@ -236,6 +240,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             {/* Use (клон) и Edit/Suggest переехали в область списка (version-bar) — как
                 зелёная Code и карандаш у GitHub живут в контенте, не в шапке. */}
           </div>
+          </ShowOnListRoot>
         </div>
 
         {meta.moderation !== 'active' && (isOwner || isAdmin) && (
