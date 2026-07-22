@@ -5,6 +5,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { baseModelId, filterByQuarantine, quarantinedModels } from './health'
+import { gnomeReputation, repScore } from './gnome-reputation'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
 import { parseList, jsonShapeFor, type GeneratedList, type GenerateOptions } from './generate'
@@ -301,15 +302,22 @@ ${roster}`,
   }
   emit('plan', vl('planner', 'plan-council') ?? say('The topic is many-sided — convening the council', 'Тема многогранная — собираем совет'), 'planner', say('Planner', 'Планировщик'))
 
+  // KPI-петля (HQ §6, слой «репутация»): при ПРОЧИХ РАВНЫХ предпочитаем гномов с
+  // лучшим послужным списком (доля принятых людьми). Влияет только на ВЫБОР среди
+  // кандидатов — не на то, кого вообще можно позвать: домен решает стюард. Так
+  // «признание практикой» замыкается в поведение, а не только в бейдж.
+  const rep = await gnomeReputation()
   // 2) Созыв: эксперты по домену; пол разнообразия — минимум 2 независимых мнения (мудрость толпы).
-  const experts = ids.map((id) => EXPERTS.find((e) => e.id === id)).filter((e): e is Expert => Boolean(e)).slice(0, maxGnomes)
+  // Стюард мог назвать больше maxGnomes — оставляем не первых попавшихся, а самых уважаемых.
+  const summoned = ids.map((id) => EXPERTS.find((e) => e.id === id)).filter((e): e is Expert => Boolean(e))
+  const experts = [...summoned].sort((a, b) => repScore(rep, b.id) - repScore(rep, a.id)).slice(0, maxGnomes)
   // Добор до 2 — из ТОГО, ЧТО ВКЛЮЧЕНО (EXPERTS уже отфильтрован по enabled). Раньше здесь стоял
   // EXPERTS.find(...)! по хардкоду 'generalist'/'hoarder' — админ выключил универсала в зале совета,
   // и вся джоба падала (TypeError вне try → вечный pending). Универсал/барахольщик приоритетны как
-  // дефолт-на-любую-тему, дальше — любой оставшийся.
+  // дефолт-на-любую-тему; среди прочих равных — по репутации.
   const padOrder = [...EXPERTS].sort((a, b) => {
     const rank = (e: Expert) => (e.id === 'generalist' ? 0 : e.id === 'hoarder' ? 1 : 2)
-    return rank(a) - rank(b)
+    return rank(a) - rank(b) || repScore(rep, b.id) - repScore(rep, a.id)
   })
   for (const g of padOrder) {
     if (experts.length >= 2) break
