@@ -19,6 +19,7 @@ import { CopyButton } from '@/shared/ui/CopyButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { Markdown } from '@/shared/ui/Markdown'
 import { DigChatHost, DigChatOpen } from '@/features/dig/DigChat'
+import { digStepsWithSession } from '@/features/dig/queries'
 import { getRoster } from '@/shared/ai/roster'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
@@ -110,6 +111,8 @@ export default async function ListPage({
   const viewer = await getSession()
   const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументами (i18n-lint)
   const isOwner = viewer?.userId === tpl.ownerId
+  // Точка на кирке: у каких пунктов есть сохранённая dig-сессия зрителя (resilient — [] без таблицы).
+  const digSteps = viewer && !snapshot ? await digStepsWithSession(tpl.id, viewer.userId) : new Set<number>()
   // Ветками управляют те, кто может пушить: владелец или коллаборатор.
   const canManageBranches = isOwner || (!!viewer && (await isCollaborator(tpl.id, viewer.userId)))
   // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.
@@ -541,7 +544,7 @@ export default async function ListPage({
                         при переносе заголовка она уплывала в середину — фидбек владельца). */}
                     {viewer && !snapshot && typeof s.n === 'number' && (
                       <span className="absolute right-2 top-2 print:hidden">
-                        <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={say('Dig into this step', 'Копнуть этот пункт')} />
+                        <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={say('Dig into this step', 'Копнуть этот пункт')} hasSession={digSteps.has(s.n)} />
                       </span>
                     )}
                     <div className="flex gap-3">

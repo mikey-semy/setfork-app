@@ -1,8 +1,25 @@
 import 'server-only'
 import { and, asc, eq } from 'drizzle-orm'
-import { db, digLayers } from '@/shared/db'
+import { db, digChatMessages, digLayers } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import type { DigLayerRow } from './actions'
+
+/**
+ * Номера шагов, у которых есть СОХРАНЁННАЯ dig-сессия этого пользователя — чтобы
+ * кирка на пункте показывала точку «здесь уже копали» (фидбек владельца). Resilient:
+ * нет таблицы (не-мигрированная дев-БД) или сбой → пустое множество, страница не падает.
+ */
+export async function digStepsWithSession(templateId: string, userId: string): Promise<Set<number>> {
+  try {
+    const rows = await db
+      .selectDistinct({ stepN: digChatMessages.stepN })
+      .from(digChatMessages)
+      .where(and(eq(digChatMessages.templateId, templateId), eq(digChatMessages.userId, userId)))
+    return new Set(rows.map((r) => r.stepN))
+  } catch {
+    return new Set()
+  }
+}
 
 /** Все выкопанные слои списка (текущая версия, язык зрителя) одной выборкой — по шагам. */
 export async function digLayersFor(templateId: string, version: number, lang: Lang): Promise<Map<number, DigLayerRow[]>> {
