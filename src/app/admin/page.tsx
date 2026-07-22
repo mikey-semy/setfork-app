@@ -494,7 +494,11 @@ export default async function AdminPage() {
         </div>
         {/* Мобилка: ряд разделов не переносим и не сжимаем — он ЕДЕТ горизонтально (свайп),
             край-в-край за счёт -mx-6/px-6. На sm+ — обычный ряд. Паттерн как в TabNav. */}
-        <div className="no-scrollbar -mx-6 flex w-full shrink-0 items-center gap-2 overflow-x-auto px-6 sm:mx-0 sm:w-auto sm:px-0">
+        {/* Строй разделов — edge-to-edge скролл на мобильном: ширина = контент+2×px-6,
+            а -mx-6 гасит её обратно (нетто-след = 100% родителя). Так правый край
+            строя совпадает с отступом контента ниже (раньше w-full+-mx-6 обрезал
+            последнюю кнопку). На sm+ — обычный ряд. */}
+        <div className="no-scrollbar -mx-6 flex w-[calc(100%+3rem)] shrink-0 items-center gap-2 overflow-x-auto px-6 sm:mx-0 sm:w-auto sm:px-0">
           <Link
             href="/admin/dashboard"
             className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"

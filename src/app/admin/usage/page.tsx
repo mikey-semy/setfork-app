@@ -7,6 +7,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { getUsageByUser, getUsageTotals } from '@/shared/ai/usage'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { isQuarantined, modelHealth, QUARANTINE_WINDOW_MS } from '@/shared/ai/health'
+import { prettyModelName } from '@/shared/ai/models'
 
 const WINDOWS = [
   { days: 1, en: '24h', ru: '24ч' },
@@ -144,7 +145,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
       {/* Щиток надёжности: success-rate и p95 по моделям; карантин = авторотация совета */}
       {health.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <div className="border-b border-border px-4 py-2.5">
             <span className="text-[13px] font-semibold text-ink">{tr({ en: 'Model reliability', ru: 'Надёжность моделей' }, lang)}</span>
             <span className="ml-2 text-[12px] text-muted">
@@ -157,7 +158,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               )}
             </span>
           </div>
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
+          <div className="grid min-w-[560px] grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
             <span>{tr({ en: 'Model', ru: 'Модель' }, lang)}</span>
             <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
             <span className="text-right">{tr({ en: 'Success', ru: 'Успех' }, lang)}</span>
@@ -167,8 +168,8 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           {[...health]
             .sort((a, b) => a.okRate - b.okRate || b.calls - a.calls)
             .map((h) => (
-              <div key={h.model} className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0">
-                <span className="truncate font-mono text-[12.5px] text-ink">{h.model}</span>
+              <div key={h.model} className="grid min-w-[560px] grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0">
+                <span className="truncate font-mono text-[12.5px] text-ink" title={h.model}>{prettyModelName(h.model)}</span>
                 <span className="text-right font-mono text-[13px] text-ink-2">{num(h.calls)}</span>
                 <span className={`text-right font-mono text-[13px] font-semibold ${h.okRate >= 0.95 ? 'text-ok' : h.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}>
                   {(h.okRate * 100).toFixed(1)}%
@@ -189,8 +190,8 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
       )}
 
       {/* По пользователям */}
-      <div className="overflow-hidden rounded-lg border border-border bg-surface">
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="grid min-w-[440px] grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
           <span>{tr({ en: 'User', ru: 'Пользователь' }, lang)}</span>
           <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
           <span className="text-right">{tr({ en: 'Tokens', ru: 'Токены' }, lang)}</span>
@@ -202,7 +203,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           rows.map((r) => (
             <div
               key={r.userId ?? 'system'}
-              className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0"
+              className="grid min-w-[440px] grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0"
             >
               <span className="flex min-w-0 items-center gap-2">
                 {r.handle ? (

@@ -242,17 +242,20 @@ export async function purgeEmbeddings(): Promise<{ ok: true; removed: number } |
 
 /** Пространство эмбеддингов для панели: чем построен индекс, цель, покрытие. */
 export async function getEmbedSpaceInfo(): Promise<{
-  index: { provider: string; docModel: string; dim: number; at?: number }
-  target: { provider: string; docModel: string; dim: number }
+  // docLabel — красивое имя модели (prettyModelName): сырой URI emb://<folder>/…
+  // нечитаем; помощник server-only, а панель клиентская — прибираем здесь.
+  index: { provider: string; docModel: string; docLabel: string; dim: number; at?: number }
+  target: { provider: string; docModel: string; docLabel: string; dim: number }
   inSync: boolean
   rows: number
   vectorized: number
 } | null> {
   if (!(await getAdmin())) return null
-  const [{ ensureFreshSpace }, { db, embeddings }, { sql }] = await Promise.all([
+  const [{ ensureFreshSpace }, { db, embeddings }, { sql }, { prettyModelName }] = await Promise.all([
     import('@/shared/ai/embed-space'),
     import('@/shared/db'),
     import('drizzle-orm'),
+    import('@/shared/ai/models'),
   ])
   const { index, target, inSync } = await ensureFreshSpace()
   const [stats] = await db
@@ -262,8 +265,8 @@ export async function getEmbedSpaceInfo(): Promise<{
     })
     .from(embeddings)
   return {
-    index: { provider: index.provider, docModel: index.docModel, dim: index.dim, at: index.at },
-    target: { provider: target.provider, docModel: target.docModel, dim: target.dim },
+    index: { provider: index.provider, docModel: index.docModel, docLabel: prettyModelName(index.docModel), dim: index.dim, at: index.at },
+    target: { provider: target.provider, docModel: target.docModel, docLabel: prettyModelName(target.docModel), dim: target.dim },
     inSync,
     rows: stats?.rows ?? 0,
     vectorized: stats?.vectorized ?? 0,
