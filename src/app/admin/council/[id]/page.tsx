@@ -111,6 +111,12 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
               <p className="whitespace-pre-wrap font-mono text-[12px] leading-[1.55] text-ink-2">{e.code}</p>
             </>
           )}
+          {e.memory && (
+            <>
+              <div className="mb-2 mt-4 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{say('Craft memory (auto-distilled)', 'Память ремесла (автовыжимка)')}</div>
+              <p className="whitespace-pre-wrap text-[12.5px] leading-[1.55] text-ink-2">{e.memory}</p>
+            </>
+          )}
           <Link href="/admin/council" className="mt-3 inline-block text-[12.5px] font-semibold text-accent hover:underline">
             {say('Edit in the council hall →', 'Править в зале совета →')}
           </Link>

@@ -18,17 +18,10 @@ const remoteWrites = coreOn && process.env.SETFORK_DOMAIN_WRITES === '1'
 function reads(): Partial<CurationStore> {
   const client = createClient(CurationRead, coreTransport())
   return {
+    // isWatching/watchCount/watcherIds НЕ проксируем в Rust: их семантика теперь завязана
+    // на watch_level/events, а прото CurationRead этого пока не знает → идут через drizzle.
     async isStarred(listId, userId) {
       return (await client.isStarred({ listId, userId })).value
-    },
-    async isWatching(listId, userId) {
-      return (await client.isWatching({ listId, userId })).value
-    },
-    async watchCount(listId) {
-      return (await client.watchCount({ id: listId })).value
-    },
-    async watcherIds(listId) {
-      return (await client.watcherIds({ id: listId })).ids
     },
   }
 }

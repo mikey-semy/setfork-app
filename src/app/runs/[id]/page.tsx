@@ -7,16 +7,20 @@ import { RunView, type RunStepVM } from '@/features/runs/RunView'
 import { productItems } from '@/features/library/blocks'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
+import { getAiSettings } from '@/shared/settings/ai'
+import { isAdminHandle } from '@/shared/auth/admin-handle'
 
 export const metadata = { title: 'Run' }
 
 export default async function RunPage({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }, session, lang, mon] = await Promise.all([params, getSession(), getLang(), getMonetizationSettings()])
+  const [{ id }, session, lang, mon, ai] = await Promise.all([params, getSession(), getLang(), getMonetizationSettings(), getAiSettings()])
   if (!session) redirect('/login')
   const data = await getRun(id, session.userId)
   if (!data) notFound()
   // Прохождение курса — постоянный факт: в новом прогоне сертификат уже доступен.
   const completion = await getCourseCompletion(data.run.templateId, session.userId)
+  // «Помощь на шаге»: флаг + аудитория считаются здесь (сервером), клиент только рисует кнопку.
+  const assistEnabled = ai.enabled && ai.assistEnabled && (ai.assistAudience === 'all' || isAdminHandle(session.handle))
 
   const steps: RunStepVM[] = data.steps.map((s) => ({
     id: s.id,
@@ -45,6 +49,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
     blocked: s.state?.status === 'blocked',
     reason: s.state?.note ?? '',
     subtasksDone: s.state?.subtasksDone ?? [],
+    assist: s.state?.assist ?? '',
   }))
 
   return (
@@ -58,6 +63,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       lang={lang}
       certificateHref={`/${data.template.handle}/${data.template.slug}/certificate`}
       courseCompleted={!!completion}
+      assistEnabled={assistEnabled}
     />
   )
 }

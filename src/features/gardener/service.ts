@@ -1,37 +1,36 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
-import { db, jobs, steps, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
+import { appSettings, db, jobs, steps, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
 import { listStore } from '@/features/library/list-store'
 import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
 import { enqueueReindex } from '@/features/library/jobs'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { generateListRefine, type GeneratedItem } from '@/shared/ai/generate'
+import { LIST_KINDS, type ListKind } from '@/shared/ai/list-kind'
+import { POLICY_SETTING_KEYS, dominantLang, inferListKind, policyFor, policySettingKey } from '@/shared/ai/gardener-policies'
 import { globalBudgetOk } from '@/shared/quota'
 import { isAiAvailable } from '@/shared/settings/ai'
 import { notify } from '@/features/notifications/notify'
 import { log } from '@/shared/observability'
-import type { LocaleText } from '@/shared/i18n'
+import { t, type Lang, type LocaleText } from '@/shared/i18n'
 
-// ── ИИ-садовник (Э2) ─────────────────────────────────────────────────
+// ── ИИ-садовник (Э2 → ось B «живые списки») ──────────────────────────
 // Прозрачный ИИ-участник: раз в GARDENER_EVERY_DAYS выбирает несколько публичных
 // списков и предлагает улучшения ОБЫЧНОЙ правкой (PR-модель) от сервисного
 // аккаунта `gardener` — владелец ревьюит и принимает/отклоняет. Ничего не
 // публикуется автоматически. Расход пишется в ai_usage (feature 'refine').
+// Правка идёт НА ЯЗЫКЕ СПИСКА и ПО ПОЛИТИКЕ ЕГО ТИПА (рецепт: точные
+// количества; процедура: актуальность команд — см. gardener-policies).
 
 const GARDENER_HANDLE = 'gardener'
 const GARDENER_EVERY_DAYS = 2
 const BATCH = Number(process.env.GARDENER_BATCH ?? 3)
 
-const INSTRUCTION =
-  'You are the site gardener improving a community list. ' +
-  'Clarify vague steps, add missing verification sub-tasks, add a short "why" where the reason is non-obvious, ' +
-  'and fix factual or ordering issues. Keep the author’s voice and structure. ' +
-  'Add at most 2 new steps and do not remove existing ones unless clearly wrong.'
-
-const locEn = (v: LocaleText | null | undefined): string => {
+/** Значение LocaleText на языке списка (фолбэк en → первый непустой). */
+const loc = (v: LocaleText | null | undefined, lang: Lang): string => {
   if (!v) return ''
-  return v.en ?? Object.values(v).find(Boolean) ?? ''
+  return v[lang] ?? v.en ?? Object.values(v).find(Boolean) ?? ''
 }
 
 /** Сервисный аккаунт садовника (создаётся при первом прогоне; входа у него нет). */
@@ -69,7 +68,7 @@ export async function ensureGardenerScheduled(): Promise<void> {
  *  (refine пока не сохраняет section) — сначала популярные и давно не обновлявшиеся. */
 async function pickCandidates(gardenerId: string, limit: number) {
   return db
-    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, ownerCurated: users.curated })
+    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, listKind: templates.listKind, ownerCurated: users.curated })
     .from(templates)
     .innerJoin(users, eq(users.id, templates.ownerId))
     .where(
@@ -86,12 +85,26 @@ async function pickCandidates(gardenerId: string, limit: number) {
         // и без учёта свежести список попадал бы в выборку снова → повторный refine.
         sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = ${gardenerId}
              and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS}::int * interval '1 day')))`,
-        sql`not exists (select 1 from ${steps} st join ${templateVersions} v on v.id = st.version_id
-             where v.template_id = ${templates.id} and coalesce(st.section->>'en','') <> '')`,
       ),
     )
     .orderBy(desc(templates.starsCount), asc(templates.updatedAt))
     .limit(limit)
+}
+
+/** Override-политики из админки (app_settings gardener.policy.<kind>); пусто = код-дефолты. */
+async function policyOverrides(): Promise<Partial<Record<ListKind, string>>> {
+  const rows = await db.select().from(appSettings).where(inArray(appSettings.key, POLICY_SETTING_KEYS))
+  const out: Partial<Record<ListKind, string>> = {}
+  for (const kind of LIST_KINDS) {
+    const v = rows.find((r) => r.key === policySettingKey(kind))?.value?.trim()
+    if (v) out[kind] = v
+  }
+  return out
+}
+
+/** Note правки — на языке списка, с честным описанием того, что делал садовник. */
+function noteFor(kind: ListKind, lang: Lang): string {
+  return t(kind === 'recipe' ? 'gardenerNoteRecipe' : 'gardenerNoteDefault', lang)
 }
 
 
@@ -113,19 +126,21 @@ function toStepInput(items: ProposedItem[]) {
   }))
 }
 
-function toProposed(items: GeneratedItem[]): ProposedItem[] {
+function toProposed(items: GeneratedItem[], lang: Lang): ProposedItem[] {
   return items.map((it) => ({
-    title: { en: it.title.trim() },
-    desc: it.desc.trim() ? { en: it.desc.trim() } : {},
+    title: { [lang]: it.title.trim() },
+    desc: it.desc.trim() ? { [lang]: it.desc.trim() } : {},
     command: (it.command ?? '').trim(),
     hasImage: false,
     level: it.level ?? 'required',
-    why: it.why?.trim() ? { en: it.why.trim() } : {},
-    section: {},
-    subtasks: (it.subtasks ?? []).filter((s) => s.trim()).map((s) => ({ en: s.trim() })),
+    why: it.why?.trim() ? { [lang]: it.why.trim() } : {},
+    // section раньше терялся здесь (второй разрыв цепочки после parseList) —
+    // из-за этого секционные списки были исключены из свипа целиком.
+    section: it.section?.trim() ? { [lang]: it.section.trim() } : {},
+    subtasks: (it.subtasks ?? []).filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
     refs: (it.refs ?? [])
       .filter((r) => r.label?.trim())
-      .map((r) => ({ label: { en: r.label.trim() }, ...(r.url?.trim() ? { url: r.url.trim() } : {}) })),
+      .map((r) => ({ label: { [lang]: r.label.trim() }, ...(r.url?.trim() ? { url: r.url.trim() } : {}) })),
   }))
 }
 
@@ -141,7 +156,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     return { proposed: 0, skipped: 0 }
   }
   const gardener = await ensureGardenerUser()
-  const candidates = await pickCandidates(gardener.id, BATCH)
+  const [candidates, overrides] = await Promise.all([pickCandidates(gardener.id, BATCH), policyOverrides()])
 
   let proposed = 0
   let skipped = 0
@@ -154,18 +169,33 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       ? await db.select().from(steps).where(eq(steps.versionId, ver.id)).orderBy(asc(steps.n))
       : []
 
+    // Язык списка — по его контенту (раньше RU-список рефайнился на английском
+    // и садовник предлагал перевод вместо улучшения).
+    const lang = dominantLang([tpl.title, tpl.desc, ...rows.map((s) => s.title)])
+    // Тип списка: колонка → структурная эвристика → грамматика заголовка;
+    // определённое лениво дозаписываем (самозаполняющийся бэкфилл).
+    const kind: ListKind = (LIST_KINDS as readonly string[]).includes(tpl.listKind ?? '')
+      ? (tpl.listKind as ListKind)
+      : inferListKind({
+          title: loc(tpl.title, lang),
+          sections: rows.map((s) => loc(s.section, lang)).filter(Boolean),
+          commandCount: rows.filter((s) => s.command.trim()).length,
+        })
+    if (!tpl.listKind) await db.update(templates).set({ listKind: kind }).where(eq(templates.id, tpl.id))
+
     const current = {
-      title: locEn(tpl.title),
-      desc: locEn(tpl.desc),
+      title: loc(tpl.title, lang),
+      desc: loc(tpl.desc, lang),
       tags: tpl.tags,
       items: rows.map((s) => ({
-        title: locEn(s.title),
-        desc: locEn(s.desc),
+        title: loc(s.title, lang),
+        desc: loc(s.desc, lang),
         command: s.command,
+        section: loc(s.section, lang),
         level: s.level,
-        why: locEn(s.why),
-        subtasks: (s.subtasks ?? []).map(locEn).filter(Boolean),
-        refs: (s.refs ?? []).map((r) => ({ label: locEn(r.label), url: r.url ?? '' })),
+        why: loc(s.why, lang),
+        subtasks: (s.subtasks ?? []).map((x) => loc(x, lang)).filter(Boolean),
+        refs: (s.refs ?? []).map((r) => ({ label: loc(r.label, lang), url: r.url ?? '' })),
       })),
     }
 
@@ -176,48 +206,51 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     const refUrls = current.items.flatMap((it) => it.refs.map((r) => r.url)).filter(Boolean)
     const verdicts = refUrls.length ? await checkUrls(refUrls) : new Map<string, string>()
     const deadUrls = [...verdicts.entries()].filter(([, v]) => v === 'dead').map(([u]) => u)
+    // Инструкция = политика ТИПА списка (+ замена мёртвых ссылок, если нашлись).
+    const policy = policyFor(kind, overrides)
     const instruction = deadUrls.length
-      ? `${INSTRUCTION} DEAD LINKS (verified 404/410 by the site, not a guess) — replace each with a working authoritative source or drop the ref: ${deadUrls.join(' ')}`
-      : INSTRUCTION
+      ? `${policy}\nDEAD LINKS (verified 404/410 by the site, not a guess) — replace each with a working authoritative source or drop the ref: ${deadUrls.join(' ')}`
+      : policy
 
-    const refined = await generateListRefine(current, instruction, 'en', {
+    const refined = await generateListRefine(current, instruction, lang, {
       userId: gardener.id,
       feature: 'refine',
       refType: 'template',
       refId: tpl.id,
+      kind,
     })
     if (!refined || !refined.items.length) {
       skipped++
       continue
     }
     // Без изменений — правку не открываем (сравнение по нормализованному контенту).
-    const norm = (xs: GeneratedItem[]) => JSON.stringify(toProposed(xs))
+    const norm = (xs: GeneratedItem[]) => JSON.stringify(toProposed(xs, lang))
     if (norm(refined.items) === norm(current.items as GeneratedItem[])) {
       skipped++
       continue
     }
 
-    const items = toProposed(refined.items)
+    const items = toProposed(refined.items, lang)
     const [created] = await db
       .insert(suggestions)
       .values({
         templateId: tpl.id,
         authorId: gardener.id,
-        note: deadUrls.length
-          ? `\u{1F9D9} Gardener: clarified steps and replaced ${deadUrls.length} dead link(s). Review and merge if useful.`
-          : '\u{1F9D9} Gardener: clarified steps, added checks and rationale. Review and merge if useful.',
+        note: noteFor(kind, lang) + (deadUrls.length ? ' ' + t('gardenerNoteDeadLinks', lang).replace('{n}', String(deadUrls.length)) : ''),
         baseVersion: tpl.currentVersion,
         items,
       })
       .returning({ id: suggestions.id })
 
-    if (tpl.ownerCurated) {
+    // Рецепты НЕ авто-мёрджим даже на кураторских — правка количеств требует
+    // человеческого глаза, пока качество recipe-политики не оценено вручную.
+    if (tpl.ownerCurated && kind !== 'recipe') {
       // Кураторская библиотека — контент сайта: правка садовника применяется сразу
       // (та же механика, что acceptSuggestion), с атрибуцией в истории и модерацией.
       // recheck публичного списка — в фасаде listStore.addVersion (барьер), здесь не дублируем.
       await listStore.addVersion(tpl.id, { note: '\u{1F9D9} gardener: refreshed steps', steps: toStepInput(items) })
       await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, created.id))
-      await notifyMany(await getWatcherIds(tpl.id), { actorId: gardener.id, type: 'new_version', templateId: tpl.id })
+      await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: gardener.id, type: 'new_version', templateId: tpl.id })
       await enqueueReindex(tpl.id)
       log.info('gardener: auto-merged on curated list', { slug: tpl.slug })
     } else {

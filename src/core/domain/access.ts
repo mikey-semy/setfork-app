@@ -10,19 +10,25 @@ export interface ListAccess {
 
 export interface ListViewer {
   isOwner: boolean
+  /** Соредактор списка (collaborators). Приватный/черновик — «свой» и для него:
+   *  список ведут вместе, прятать от участника бессмысленно (как в GitHub —
+   *  приватный репозиторий виден коллабораторам). НЕ снимает модерацию. */
+  isCollaborator?: boolean
   isAdmin?: boolean // у MCP админа нет → передавать false/не передавать
 }
 
 /**
  * true — список можно показать зрителю.
- * - private → только владелец;
- * - draft (черновик) → только владелец;
- * - moderation ≠ 'active' (flagged/hidden/…) → владелец ИЛИ админ.
+ * - private → владелец ИЛИ коллаборатор (участники ведут список вместе);
+ * - draft (черновик) → владелец ИЛИ коллаборатор (помогают собирать);
+ * - moderation ≠ 'active' (flagged/hidden/…) → владелец ИЛИ админ (коллаборатор
+ *   модерационный takedown НЕ обходит — это защитный гейт).
  * Публичный + published + active виден всем.
  */
 export function canViewList(list: ListAccess, viewer: ListViewer): boolean {
-  if (list.visibility === 'private' && !viewer.isOwner) return false
-  if (list.status === 'draft' && !viewer.isOwner) return false
+  const maintainer = viewer.isOwner || !!viewer.isCollaborator
+  if (list.visibility === 'private' && !maintainer) return false
+  if (list.status === 'draft' && !maintainer) return false
   if (list.moderation !== 'active' && !viewer.isOwner && !viewer.isAdmin) return false
   return true
 }

@@ -11,7 +11,8 @@
 /** Матч тега и домена: равенство или вхождение В ОБЕ стороны — теги свободные
  *  («приготовление», 'home-cooking'), домены короткие ('cooking', 'food'). */
 function tagMatches(tag: string, domain: string): boolean {
-  return tag === domain || tag.includes(domain) || domain.includes(tag)
+  // Включение — только от 3+ символов (фикс по ревью: 'go' матчил 'lego'/'django').
+  return tag === domain || (domain.length >= 3 && tag.includes(domain)) || (tag.length >= 3 && domain.includes(tag))
 }
 
 /**

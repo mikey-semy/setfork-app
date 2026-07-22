@@ -17,8 +17,10 @@ import {
   jsonb,
   numeric,
   pgEnum,
+  primaryKey,
   pgTable,
   smallint,
+  halfvec,
   text,
   timestamp,
   unique,
@@ -44,7 +46,7 @@ export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done', 'blocked
 export const stepLevel = pgEnum('step_level', ['required', 'recommended', 'optional'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
 // Тип AI-вызова для учёта расхода (токены/деньги).
-export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'mcp-gnome', 'dig'])
+export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'mcp-gnome', 'dig', 'assist'])
 export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
@@ -133,6 +135,10 @@ export const users = pgTable('users', {
   // Язык ДОСТАВКИ (email/push-уведомления) — интерфейс пока English-only.
   lang: text('lang').notNull().default('en').$type<Lang>(),
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
+  // Приватный профиль: страница /handle скрыта от всех кроме владельца, юзер убран
+  // из поиска людей. Публичные СПИСКИ остаются публичными (со своим ником) — это не
+  // анонимизация, а скрытие профиль-страницы/агрегатов. NB: списки прячет своя visibility.
+  profilePrivate: boolean('profile_private').notNull().default(false),
   // Кураторский аккаунт библиотеки: правки садовника на его списках автопринимаются.
   curated: boolean('curated').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -215,11 +221,18 @@ export const templates = pgTable(
     isTemplate: boolean('is_template').notNull().default(false), // «Use this template» (копия без fork-связи)
     coverImage: text('cover_image'), // storage_key обложки-баннера (витрина/og); null → авто-баннер
     accent: text('accent'), // hex акцента карточки/авто-баннера ('' / null = дефолт)
+    // Тип списка (ADR-0010): переносится из generations при принятии кандидата,
+    // лениво доклассифицируется садовником. null = ещё не определён (≈procedure).
+    listKind: text('list_kind'),
     repositoryId: uuid('repository_id'), // каталог-репозиторий (FK задаётся в relations); null = solo
     forkedFromId: uuid('forked_from_id'), // самоссылка задаётся в relations
     runsCount: integer('runs_count').notNull().default(0),
     forksCount: integer('forks_count').notNull().default(0),
     starsCount: integer('stars_count').notNull().default(0),
+    // Когда рудник знаний (features/knowledge) последний раз добывал тройки из списка.
+    // Ставится НЕЗАВИСИМО от урожая (фикс по ревью: «пустые» списки перерабатывались
+    // ежедневно впустую). NULL = ещё не добывали.
+    triplesMinedAt: timestamp('triples_mined_at', { withTimezone: true }),
     // Сумма уникальных дневных просмотров (см. template_views); владелец не считается.
     viewsCount: integer('views_count').notNull().default(0),
     // Обратимые ограниченные состояния владельца (Danger Zone; НЕ путать с moderation —
@@ -346,6 +359,9 @@ export const runStepState = pgTable(
     // отмеченные подшаги: массив индексов выполненных подшагов
     subtasksDone: jsonb('subtasks_done').notNull().default([]).$type<number[]>(),
     doneAt: timestamp('done_at', { withTimezone: true }),
+    // «Помощь на шаге»: последний AI-ответ (markdown) — переживает перезагрузку страницы.
+    assist: text('assist').notNull().default(''),
+    assistAt: timestamp('assist_at', { withTimezone: true }),
   },
   (t) => ({ runStep: unique('run_step_state_run_step').on(t.runId, t.stepId) }),
 )
@@ -408,12 +424,17 @@ export const embeddings = pgTable(
     kind: text('kind').notNull(), // 'list'
     refId: uuid('ref_id'), // template.id
     content: text('content').notNull(),
-    embedding: vector('embedding', { dimensions: 1536 }),
+    // halfvec(768): вдвое меньше памяти и быстрее HNSW (анализ поиска P4); 768 —
+    // родная мерность Яндекс v2 и MRL-срез text-embedding-3-small. Смена типа
+    // на проде = drop+add колонки (push --force), данные индекса пропадают —
+    // ЗАПЛАНИРОВАННО: следом идёт полный реиндекс, до него поиск живёт на
+    // лексической ветке гибрида (#377).
+    embedding: halfvec('embedding', { dimensions: 768 }),
     metadata: jsonb('metadata'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    index('embeddings_hnsw_idx').using('hnsw', t.embedding.op('vector_cosine_ops')),
+    index('embeddings_hnsw_idx').using('hnsw', t.embedding.op('halfvec_cosine_ops')),
     index('embeddings_kind_idx').on(t.kind),
   ],
 )
@@ -429,7 +450,7 @@ export const appSettings = pgTable('app_settings', {
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck'
 
 export const jobs = pgTable(
   'jobs',
@@ -676,6 +697,10 @@ export type Discussion = typeof discussions.$inferSelect
 export type DiscussionComment = typeof discussionComments.$inferSelect
 
 // ── Watches (подписка на список — как Watch на GitHub) ───────────────
+// Уровень подписки (дропдаун Watch на GitHub). «Participating & @mentions»
+// (глобальный дефолт: только упоминания/участие) = ОТСУТСТВИЕ строки. Строка = явный
+// выбор: 'all' (All Activity), 'ignore' (Never), 'custom' (по колонке events).
+export const watchLevel = pgEnum('watch_level', ['all', 'ignore', 'custom'])
 export const watches = pgTable(
   'watches',
   {
@@ -686,6 +711,11 @@ export const watches = pgTable(
     templateId: uuid('template_id')
       .notNull()
       .references(() => templates.id, { onDelete: 'cascade' }),
+    // Существующие подписчики (клик Watch) → 'all' (их прежнее поведение = все обновления).
+    level: watchLevel('level').notNull().default('all'),
+    // Только для level='custom': какие события слать (null иначе). Доставку наблюдателям
+    // имеют versions/issues/suggestions (discussions/security им пока не шлём).
+    events: jsonb('events').$type<{ versions?: boolean; issues?: boolean; suggestions?: boolean }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ userTpl: unique('watches_user_tpl').on(t.userId, t.templateId), tpl: index('watches_tpl_idx').on(t.templateId) }),
@@ -911,6 +941,45 @@ export const generations = pgTable(
  * витку, а не стиранием ленты, как раньше.
  */
 /**
+ * Сохранённые запросы к СВОИМ спискам (HQ §11, Dataview-аналог Obsidian):
+ * «все книги en, которые начал» = теги + статус прогона. Живут на /my-lists
+ * чипами; фильтр применяется на сервере.
+ */
+export const savedQueries = pgTable(
+  'saved_queries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+    // 'any' | 'started' (есть активный прогон) | 'done' (есть завершённый)
+    runState: text('run_state').notNull().default('any'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('saved_queries_user_idx').on(t.userId)],
+)
+
+/**
+ * Вики-связи список→список (HQ §11): [[handle/slug]] в текстах. Пересобирается
+ * реиндексом при каждой правке (delete+insert по from_id) — как embeddings.
+ * Backlinks («на этот список ссылаются») читаются по to_id.
+ */
+export const listLinks = pgTable(
+  'list_links',
+  {
+    fromId: uuid('from_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    toId: uuid('to_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.fromId, t.toId] }), index('list_links_to_idx').on(t.toId)],
+)
+
+/**
  * Тройки знаний (HQ §5, старт полного KAG): «не найди похожее, а пойми связи
  * и правила» — курица→заменяется→индейка, карамель→требует→термометр.
  * Извлекаются фоном из опубликованных списков дешёвой моделью; повторное
@@ -1045,6 +1114,11 @@ export const councilExperts = pgTable(
     // аспектов к запросу перед embed (повар — ингредиенты/техника, девопсер — откаты).
     // Применяется там, где работает ОДИН гном (ask_gnome, dig); в совете — доменный фильтр.
     lens: text('lens').notNull().default(''),
+    // Память гнома (HQ §3, этап 2): фоновая выжимка ремесла из ЛУЧШИХ списков его
+    // доменов — «гном учится на публикациях». Обновляет рудник знаний; видна на
+    // личной странице; подмешивается в его промпты (spotlight — материал чужой).
+    memory: text('memory').notNull().default(''),
+    memoryUpdatedAt: timestamp('memory_updated_at', { withTimezone: true }),
     domains: text('domains').array().notNull().default(sql`'{}'::text[]`),
     model: text('model').notNull().default(''),
     avatar: text('avatar').notNull().default(''),
@@ -1135,6 +1209,54 @@ export const linkClicks = pgTable(
     index('link_clicks_tpl_idx').on(t.templateId, t.createdAt),
     index('link_clicks_host_idx').on(t.templateId, t.host),
   ],
+)
+
+// ── Link-checker («живые списки», Ж1): здоровье внешних URL ──────────
+// Вердикт — свойство САМОГО URL (мёртв для всех), поэтому храним per-URL
+// глобально (дедуп проб повторяющихся ссылок), а привязку к спискам — через
+// таблицу вхождений. broken присваивается ТОЛЬКО эскалацией fail_count через
+// несколько свипов; сетевые отказы (ТСПУ/SNI) в broken не эскалируют никогда.
+export const linkVerdict = pgEnum('link_verdict', ['ok', 'redirected', 'broken', 'unreachable', 'uncheckable'])
+
+export const linkChecks = pgTable(
+  'link_checks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    urlNorm: text('url_norm').notNull().unique(), // normalizeUrl(): без #fragment, lower scheme/host, cap 2048
+    host: text('host').notNull(),
+    httpStatus: integer('http_status'), // null = не дошли до HTTP (dns/сеть/SSRF-отказ)
+    finalUrl: text('final_url'), // после редиректов — сырьё для предложения замены
+    verdict: linkVerdict('verdict'), // null = ещё не проверялся
+    reason: text('reason'), // 'http_404'|'dns'|'timeout'|'net'|'soft404'|'bot_block'|…
+    failCount: integer('fail_count').notNull().default(0), // подряд broken-кандидатных свипов; успех → 0
+    lastOkAt: timestamp('last_ok_at', { withTimezone: true }),
+    checkedAt: timestamp('checked_at', { withTimezone: true }),
+    nextCheckAt: timestamp('next_check_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('link_checks_due_idx').on(t.nextCheckAt),
+    index('link_checks_host_idx').on(t.host),
+    index('link_checks_verdict_idx').on(t.verdict),
+  ],
+)
+
+// Вхождение URL в контент списка. Пересобирается delete+insert per template
+// при харвесте (полная материализация — как suggestions.items).
+export const linkOccurrences = pgTable(
+  'link_occurrences',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    stepId: uuid('step_id').references(() => steps.id, { onDelete: 'cascade' }), // null = desc списка
+    urlNorm: text('url_norm').notNull(),
+    source: text('source', { enum: ['ref', 'product', 'video', 'file', 'inline'] }).notNull(),
+    refIndex: integer('ref_index').notNull().default(0),
+    seenAt: timestamp('seen_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('link_occ_tpl_idx').on(t.templateId), index('link_occ_url_idx').on(t.urlNorm)],
 )
 
 // ── Feedback (обратная связь с сайта) ────────────────────────────────

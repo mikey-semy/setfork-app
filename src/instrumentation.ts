@@ -29,7 +29,7 @@ export async function register() {
 
   // Фоновый воркер очереди задач. Idempotent, безопасен между инстансами.
   // Реестр обработчиков: по одному модулю jobs.ts на фичу-владельца.
-  const [{ startWorker }, notifications, generation, library, digest, moderation, gardener, knowledge] = await Promise.all([
+  const [{ startWorker }, notifications, generation, library, digest, moderation, gardener, knowledge, linkcheck] = await Promise.all([
     import('@/shared/jobs/worker'),
     import('@/features/notifications/jobs'),
     import('@/features/generation/jobs'),
@@ -38,6 +38,7 @@ export async function register() {
     import('@/features/moderation/jobs'),
     import('@/features/gardener/jobs'),
     import('@/features/knowledge/jobs'),
+    import('@/features/linkcheck/jobs'),
   ])
   startWorker({
     email: notifications.runEmailJob,
@@ -48,6 +49,7 @@ export async function register() {
     moderate: moderation.runModerateJobHandler,
     gardener: gardener.runGardenerJob,
     triples: knowledge.runTriplesJob,
+    linkcheck: linkcheck.runLinkcheckJob,
   })
 
   // Самоподдерживающиеся джобы: на старте гарантируем первую постановку в очередь;
@@ -61,6 +63,9 @@ export async function register() {
   void import('@/features/knowledge/service')
     .then((m) => m.ensureTriplesScheduled())
     .catch((e) => captureError(e, { where: 'triples.ensure' }))
+  void import('@/features/linkcheck/service')
+    .then((m) => m.ensureLinkcheckScheduled())
+    .catch((e) => captureError(e, { where: 'linkcheck.ensure' }))
   void import('@/features/moderation/moderate-list')
     .then((m) => m.ensureModerationFingerprints())
     .catch((e) => captureError(e, { where: 'moderation.fingerprints' }))

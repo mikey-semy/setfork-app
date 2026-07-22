@@ -1,4 +1,5 @@
 import 'server-only'
+import { fetchPublicUrlDetailed } from './safe-fetch'
 
 /**
  * Здоровье ссылок (HQ §9): проверка — работа КОДА, не LLM (модель по URL не
@@ -27,15 +28,23 @@ export function classifyStatus(status: number): LinkVerdict {
 
 export async function checkUrl(url: string): Promise<LinkVerdict> {
   if (!/^https?:\/\//i.test(url)) return 'unknown' // не-HTTP (mailto и пр.) не проверяем
+  // ВАЖНО: только через SSRF-гейт (safe-fetch). URL приходит из пользовательского
+  // контента — голый fetch с redirect:'follow' ходил бы на 169.254.169.254/
+  // внутренние хосты по редиректу (ровно та дыра, которую закрывает чокпоинт).
   const probe = async (method: 'HEAD' | 'GET') => {
-    const r = await fetch(url, { method, redirect: 'follow', signal: AbortSignal.timeout(TIMEOUT_MS), headers: { 'user-agent': 'SetForkLinkCheck/1.0 (+https://setfork.ru)' } })
-    return r.status
+    const r = await fetchPublicUrlDetailed(url, {
+      method,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { 'user-agent': 'SetForkLinkCheck/1.0 (+https://setfork.ru)' },
+    })
+    r.res?.body?.cancel().catch(() => {}) // тело не нужно — освобождаем сокет
+    return r.res ? r.res.status : null // null = SSRF-отказ/сеть → 'unknown'
   }
   try {
     let status = await probe('HEAD')
     // Многие серверы не умеют HEAD — перепроверяем GET'ом, прежде чем судить.
     if (status === 405 || status === 501 || status === 404) status = await probe('GET')
-    return classifyStatus(status)
+    return status == null ? 'unknown' : classifyStatus(status)
   } catch {
     return 'unknown'
   }

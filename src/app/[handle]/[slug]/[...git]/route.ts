@@ -110,7 +110,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     if (!res) return new Response('Repository unavailable', { status: 500 })
     // Уведомление наблюдателей + аудит — delivery-эффекты, вне git-ядра.
     if (res.newVersion != null) {
-      const watchers = await getWatcherIds(meta.id)
+      const watchers = await getWatcherIds(meta.id, 'versions')
       await notifyMany(watchers, { type: 'new_version', templateId: meta.id }).catch(() => {})
       await recordAudit('git.push', { actorId: az, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } })
       // push меняет title/desc/tags минуя формы → пере-проверяем публичный список в фоне.

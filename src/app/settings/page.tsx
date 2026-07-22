@@ -78,6 +78,7 @@ export default async function SettingsPage() {
             location={user.location ?? ''}
             website={user.website ?? ''}
             socials={user.socials}
+            profilePrivate={user.profilePrivate}
           />
         </section>
       ),

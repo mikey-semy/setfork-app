@@ -10,7 +10,6 @@ import { getPendingTransfer } from '@/features/transfer/queries'
 import { CollaboratorsSection } from '@/features/collab/CollaboratorsSection'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { CatalogSection } from '@/features/catalogs/CatalogSection'
-import { ListHeader } from '@/widgets/ListHeader'
 import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
 import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
@@ -101,7 +100,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       title: t('dangerZone', lang),
       icon: <TriangleAlert size={15} />,
       danger: true,
-      keywords: ['danger', 'delete', 'remove', 'visibility', 'private', 'archive', 'freeze', 'lock', 'transfer', 'pin', 'опасная', 'удалить', 'видимость', 'приватный', 'архив', 'заморозить', 'передать', 'закрепить'],
+      keywords: ['danger', 'delete', 'remove', 'visibility', 'private', 'archive', 'freeze', 'lock', 'transfer', 'опасная', 'удалить', 'видимость', 'приватный', 'архив', 'заморозить', 'передать'],
       content: (
         <ListSettingsDanger
           templateId={meta.id}
@@ -111,7 +110,6 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           moderation={meta.moderation}
           archived={meta.archivedAt != null}
           frozen={meta.frozenAt != null}
-          pinned={meta.pinned}
           pendingTransfer={pendingTransfer}
           lang={lang}
         />
@@ -119,10 +117,5 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
     },
   ]
 
-  return (
-    <>
-      <ListHeader owner={owner} slug={slug} active="settings" />
-      <SettingsShell sections={sections} lang={lang} />
-    </>
-  )
+  return <SettingsShell sections={sections} lang={lang} />
 }

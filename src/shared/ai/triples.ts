@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, inArray, or, sql } from 'drizzle-orm'
+import { desc, inArray, or, sql } from 'drizzle-orm'
 import { generateText } from 'ai'
 import { db, knowledgeTriples } from '@/shared/db'
 import { getAiSettings } from '@/shared/settings/ai'
@@ -110,16 +110,6 @@ export async function craftRules(query: string, domains: string[], limit = 6): P
   } catch {
     return [] // правила — приправа, не блюдо: сбой не роняет генерацию
   }
-}
-
-/** Списки, из которых тройки уже извлекались (для батчей джобы). */
-export async function extractedTemplateIds(candidates: string[]): Promise<Set<string>> {
-  if (!candidates.length) return new Set()
-  const rows = await db
-    .selectDistinct({ id: knowledgeTriples.sourceTemplateId })
-    .from(knowledgeTriples)
-    .where(and(inArray(knowledgeTriples.sourceTemplateId, candidates), sql`${knowledgeTriples.sourceTemplateId} is not null`))
-  return new Set(rows.map((r) => r.id!).filter(Boolean))
 }
 
 /** Сколько троек в базе — для щитка/страницы гнома. */

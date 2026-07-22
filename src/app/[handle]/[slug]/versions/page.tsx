@@ -5,7 +5,6 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
 import { listStore } from '@/features/library/list-store'
-import { ListHeader } from '@/widgets/ListHeader'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -24,7 +23,6 @@ export default async function VersionsPage({
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="versions" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
         {meta.currentVersion > 1 && (
           <Link

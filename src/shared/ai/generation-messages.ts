@@ -29,6 +29,9 @@ export type GenMessageKind =
   | 'innovate'
   | 'critique'
   | 'synth'
+  // Ответ гнома НА РЕПЛИКУ человека (диалог, HQ §2 этап 3): короткое «принял,
+  // вот что сделаю» от адресованного/профильного гнома перед новым витком.
+  | 'reply'
   | 'error'
 
 export interface GenMessage {

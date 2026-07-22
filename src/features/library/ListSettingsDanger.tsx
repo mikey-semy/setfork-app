@@ -1,13 +1,13 @@
 'use client'
 
 import { useActionState, useState, useTransition } from 'react'
-import { Archive, ArchiveRestore, Globe, Loader2, Lock, Pin, PinOff, Snowflake, Sun, Trash2, UserRoundPlus } from 'lucide-react'
+import { Archive, ArchiveRestore, Globe, Loader2, Lock, Snowflake, Sun, Trash2, UserRoundPlus } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { t, type Lang } from '@/shared/i18n'
 import { cancelTransfer, initiateTransfer, type TransferResult } from '@/features/transfer/actions'
-import { deleteListAction, setListArchived, setListFrozen, setListPinned, setListVisibility } from './actions'
+import { deleteListAction, setListArchived, setListFrozen, setListVisibility } from './actions'
 
 // Опасная зона списка (аналог GitHub Danger Zone): опасные действия собраны
 // в одном месте, каждое — через модалку. Удаление подтверждается вводом
@@ -20,7 +20,6 @@ export function ListSettingsDanger({
   moderation,
   archived,
   frozen,
-  pinned,
   pendingTransfer,
   lang,
 }: {
@@ -31,12 +30,10 @@ export function ListSettingsDanger({
   moderation: string
   archived: boolean
   frozen: boolean
-  pinned: boolean
   pendingTransfer: { id: string; toHandle: string } | null
   lang: Lang
 }) {
   const [pending, start] = useTransition()
-  const [pinPending, startPin] = useTransition()
   const [dialog, setDialog] = useState<null | 'visibility' | 'delete' | 'archive' | 'freeze' | 'transfer'>(null)
   const [trState, trAction, trPending] = useActionState<TransferResult | null, FormData>(initiateTransfer.bind(null, templateId), null)
   const fullName = `${handle}/${slug}` // видимый идентификатор для подтверждения
@@ -49,26 +46,7 @@ export function ListSettingsDanger({
 
   return (
     <>
-      {/* Pin — не опасное действие, отдельной картой над зоной. */}
-      <section className="mb-6 rounded-lg border border-border bg-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-start gap-2.5">
-            <Pin size={17} className="mt-0.5 text-ink-2" />
-            <div>
-              <div className="text-[14px] font-medium text-ink">{t('pinToProfile', lang)}</div>
-              <p className="text-[12.5px] text-ink-2">{pinned ? t('pinnedOn', lang) : t('pinHint', lang)}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => startPin(() => setListPinned(templateId, !pinned))}
-            disabled={pinPending}
-            className="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong disabled:opacity-60"
-          >
-            {pinPending ? <Loader2 size={14} className="animate-spin" /> : pinned ? <PinOff size={14} /> : <Pin size={14} />}
-            {pinned ? t('unpin', lang) : t('pin', lang)}
-          </button>
-        </div>
-      </section>
+      {/* Pin убран из настроек — теперь кнопкой над списком (шапка, #389). */}
 
       {/* Опасная зона: обведённая красным рамка со строками-действиями. */}
       <section className="overflow-hidden rounded-lg border border-danger/40">
