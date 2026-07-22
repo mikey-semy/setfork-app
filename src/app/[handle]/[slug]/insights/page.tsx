@@ -7,7 +7,6 @@ import { Badge } from '@/shared/ui/badge'
 import { TrendChart } from '@/shared/ui/TrendChart'
 import { getContributors } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import { headers } from 'next/headers'
 import { getInsightTotals, getWeeklySeries, WEEKS } from '@/features/insights/queries'
 import { BadgesCard } from '@/features/badges/BadgesCard'
@@ -57,7 +56,6 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="insights" />
       <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
         {/* Итоги */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">

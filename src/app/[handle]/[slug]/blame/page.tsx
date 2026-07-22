@@ -6,7 +6,6 @@ import { tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import { getListBlame } from '@/features/library/blame'
 
 // «Blame» по шагам: видно, что давно не трогали, а что свежее. Автор версий
@@ -30,7 +29,6 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="overview" />
       <div className="mx-auto w-full max-w-[900px] px-4 py-6">
         <h1 className="mb-1 flex items-center gap-2 text-[17px] font-bold text-ink">
           <History size={18} className="text-muted" /> Blame

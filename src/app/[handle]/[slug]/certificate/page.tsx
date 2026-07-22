@@ -5,7 +5,6 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { CertificatePrintButton } from '@/features/quizzes/CertificatePrintButton'
 
@@ -28,7 +27,6 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="overview" />
       <div className="mx-auto w-full max-w-[760px] px-4 py-8">
         {!session ? (
           <p className="text-[14px] text-ink-2">

@@ -19,6 +19,7 @@ import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { AiKeyAndSwitch } from '@/features/admin/AiKeyAndSwitch'
+import { AssistFields } from '@/features/admin/AssistFields'
 import { CouncilFields } from '@/features/admin/CouncilFields'
 import { CouncilRoster } from '@/features/admin/CouncilRoster'
 import { CreditsWidget } from '@/features/admin/CreditsWidget'
@@ -355,6 +356,8 @@ export default async function AdminPage() {
               }}
               ru={ru}
             />
+
+            <AssistFields v={{ enabled: settings.assistEnabled, audience: settings.assistAudience }} ru={ru} />
 
             <div className="flex justify-end border-t border-border pt-4">
               <button className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
