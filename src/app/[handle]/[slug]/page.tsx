@@ -298,54 +298,52 @@ export default async function ListPage({
               </div>
             )}
 
-            {/* Панель над списком (как у GitHub над файлами): ДВЕ группы, а не одна строка.
-                Инфо (ветка · КТО · vN · note · КОГДА · счётчики) — слева; действия (Начать
-                прогон, Получить, иконки) — справа, и на узком экране переносятся ЦЕЛИКОМ
-                на строку ниже (фидбек владельца: в одну строку не вмещалось). */}
+            {/* Панель над списком (как у GitHub над файлами). Мобильная логика
+                (фидбек владельца): ДВЕ плотные строки — (1) инфо: ветка · аватар ·
+                ник · vN · ⚒ · время; (2) действия ВПРАВО: Run · Получить · ✎.
+                Всё лишнее для узкого экрана (note, счётчики, blame) — только sm+.
+                На sm+ прежний вид: инфо слева, действия справа. */}
             {currentVersion && (
-              <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
-                {/* На мобильном инфо-группа ПЕРЕНОСИТ элементы и сжимается (min-w-0) —
-                    иначе не-сжимаемые shrink-0 (ник · vN · время · счётчики) суммарно шире
-                    вьюпорта и весь документ уезжает влево (горизонтальный скролл). На sm+
-                    возвращаем min-w-[240px]+nowrap, чтобы действия справа переносились ЦЕЛИКОМ. */}
-                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 sm:min-w-[240px] sm:flex-nowrap sm:gap-2">
+              <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] print:hidden sm:px-3.5">
+                <div className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[240px]">
                   {(branches.length > 1 || (canManageBranches && branches.length > 0)) && (
                     <BranchPicker base={base} owner={owner} slug={slug} branches={branches} current={refBranch ?? 'main'} lang={lang} canManage={canManageBranches} />
                   )}
                   <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
-                  <Link href={`/${tpl.owner.handle}`} className="shrink-0 font-semibold text-ink hover:text-accent">
+                  <Link href={`/${tpl.owner.handle}`} className="min-w-0 truncate font-semibold text-ink hover:text-accent">
                     {tpl.owner.handle}
                   </Link>
                   <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">
                     v{currentVersion.version}
                   </span>
+                  {/* Клеймо совета — ТОЛЬКО иконка с тултипом (текст жрал место). */}
                   {forged && (
                     <Tooltip label={say('Forged by the gnome council — see Guilds', 'Выкован советом гномов — см. Гильдии')}>
                       {forged.userId === viewer?.userId ? (
-                        <Link href={`/generate/${forged.id}`} className="inline-flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-ink-2 hover:border-border-strong hover:text-ink">
-                          <Hammer size={11} /> {say('Council-forged', 'Выкован советом')}
+                        <Link href={`/generate/${forged.id}`} aria-label={say('Council-forged', 'Выкован советом')} className="grid size-5 shrink-0 place-items-center rounded text-muted hover:text-accent">
+                          <Hammer size={13} />
                         </Link>
                       ) : (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-ink-2">
-                          <Hammer size={11} /> {say('Council-forged', 'Выкован советом')}
+                        <span aria-label={say('Council-forged', 'Выкован советом')} className="grid size-5 shrink-0 place-items-center text-muted">
+                          <Hammer size={13} />
                         </span>
                       )}
                     </Tooltip>
                   )}
-                  {latestNote && <span className="min-w-0 flex-1 truncate text-ink-2">{latestNote}</span>}
+                  {latestNote && <span className="hidden min-w-0 flex-1 truncate text-ink-2 sm:inline">{latestNote}</span>}
                   <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
                   <Tooltip label={t('versionsTab', lang)}>
-                    <Link href={`${base}/versions`} className="inline-flex shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent">
+                    <Link href={`${base}/versions`} className="hidden shrink-0 items-center gap-1 border-l border-border pl-2 text-muted hover:text-accent sm:inline-flex">
                       <GitCommitHorizontal size={14} /> <span className="font-mono">{tpl.versions.length}</span>
                     </Link>
                   </Tooltip>
                   <Tooltip label="Blame">
-                    <Link href={`${base}/blame`} className="inline-flex shrink-0 items-center gap-1 text-muted hover:text-accent">
+                    <Link href={`${base}/blame`} className="hidden shrink-0 items-center gap-1 text-muted hover:text-accent sm:inline-flex">
                       <History size={14} />
                     </Link>
                   </Tooltip>
                 </div>
-                <div className="ml-auto flex shrink-0 items-center gap-2">
+                <div className="ml-auto flex shrink-0 items-center gap-2 max-sm:w-full max-sm:justify-end">
                   {tpl.isTemplate && viewer && (
                     <form action={useTemplate.bind(null, tpl.id)} className="inline-flex">
                       <Tooltip label={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}>
@@ -362,7 +360,7 @@ export default async function ListPage({
                       сценарий исполнения, не прячем внутрь дропдауна. */}
                   {viewer && (
                     <form action={startRun.bind(null, tpl.id)} className="inline-flex">
-                      <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg hover:opacity-90">
+                      <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg hover:opacity-90 max-sm:px-2.5 max-sm:py-1.5">
                         <PlayCircle size={15} /> <span className="hidden md:inline">{t('runStart', lang)}</span>
                       </button>
                     </form>
@@ -567,19 +565,20 @@ export default async function ListPage({
                 return (
                   <Fragment key={s.id}>
                     {header}
-                  <div className="break-inside-avoid rounded-lg border border-border bg-surface p-4">
+                  <div className="relative break-inside-avoid rounded-lg border border-border bg-surface p-4">
+                    {/* Кирка — СТРОГО в правом верхнем углу карточки (absolute, не в потоке:
+                        при переносе заголовка она уплывала в середину — фидбек владельца). */}
+                    {viewer && !snapshot && typeof s.n === 'number' && (
+                      <span className="absolute right-2 top-2 print:hidden">
+                        <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={say('Dig into this step', 'Копнуть этот пункт')} />
+                      </span>
+                    )}
                     <div className="flex gap-3">
                       <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? displayNum[si] : '•'}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2 pr-7">
                           <span className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
-                          {/* Кирка (HQ §8, редизайн): чат-раскопка по ЭТОМУ пункту — в правом углу. */}
-                          {viewer && !snapshot && typeof s.n === 'number' && (
-                            <span className="ml-auto print:hidden">
-                              <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={say('Dig into this step', 'Копнуть этот пункт')} />
-                            </span>
-                          )}
                         </div>
                         {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}
                         {tr(s.why, lang) && (
