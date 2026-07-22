@@ -19,6 +19,9 @@ const VERB: Record<NotificationType, TKey> = {
   follow: 'notifFollow',
   mention: 'notifMention',
   assigned: 'notifAssigned',
+  transfer_incoming: 'notifTransferIncoming',
+  transfer_accepted: 'notifTransferAccepted',
+  transfer_declined: 'notifTransferDeclined',
 }
 
 const appUrl = () => (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '')
@@ -74,11 +77,15 @@ export async function resolveNotificationDisplay(p: NotificationRef): Promise<No
   const url =
     p.type === 'follow'
       ? `${appUrl()}/${actorHandle}`
-      : iss
-        ? `${base}/issues/${iss.number}`
-        : p.suggestionId && tpl
-          ? `${base}/suggestions/${p.suggestionId}`
-          : base
+      : // Приглашение принять владение — на страницу настроек (список может быть
+        // приватным, получатель его ещё не видит; принять/отклонить — там).
+        p.type === 'transfer_incoming'
+        ? `${appUrl()}/settings`
+        : iss
+          ? `${base}/issues/${iss.number}`
+          : p.suggestionId && tpl
+            ? `${base}/suggestions/${p.suggestionId}`
+            : base
   const text = listTitle ? `${actorHandle} ${verb} ${listTitle}` : `${actorHandle} ${verb}`
 
   return { actorHandle, verb, listTitle, url, text }

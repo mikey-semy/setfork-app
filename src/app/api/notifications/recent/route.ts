@@ -18,6 +18,9 @@ const VERB: Record<NotificationType, TKey> = {
   follow: 'notifFollow',
   mention: 'notifMention',
   assigned: 'notifAssigned',
+  transfer_incoming: 'notifTransferIncoming',
+  transfer_accepted: 'notifTransferAccepted',
+  transfer_declined: 'notifTransferDeclined',
 }
 
 /** Последние непрочитанные уведомления для браузерных оповещений (клиент поллит). */
