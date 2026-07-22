@@ -432,6 +432,35 @@ export async function getSuggestion(templateId: string, id: string) {
   return { ...row, author: { ...row.author, avatarUrl: await avatarSrc(row.author.avatarUrl, 64) } }
 }
 
+/** «Коммиты» списка: версии с автором (аватар/ник) для GitHub-подобной страницы.
+ *  leftJoin — у старых версий и фоновых (gardener/API) автора нет (authorId null). */
+export async function getCommits(templateId: string) {
+  const rows = await db
+    .select({
+      id: templateVersions.id,
+      version: templateVersions.version,
+      note: templateVersions.note,
+      createdAt: templateVersions.createdAt,
+      authorId: templateVersions.authorId,
+      authorHandle: users.handle,
+      authorName: users.name,
+      authorAvatarUrl: users.avatarUrl,
+    })
+    .from(templateVersions)
+    .leftJoin(users, eq(templateVersions.authorId, users.id))
+    .where(eq(templateVersions.templateId, templateId))
+    .orderBy(desc(templateVersions.version))
+  return Promise.all(
+    rows.map(async (r) => ({
+      id: r.id,
+      version: r.version,
+      note: r.note,
+      createdAt: r.createdAt,
+      author: r.authorId && r.authorHandle ? { handle: r.authorHandle, name: r.authorName, avatarUrl: await avatarSrc(r.authorAvatarUrl, 48) } : null,
+    })),
+  )
+}
+
 /** Комментарии-обсуждение к предложению. */
 export async function getSuggestionComments(suggestionId: string) {
   const rows = await db
