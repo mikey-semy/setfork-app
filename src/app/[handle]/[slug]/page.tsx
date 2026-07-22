@@ -275,8 +275,11 @@ export default async function ListPage({
                 на строку ниже (фидбек владельца: в одну строку не вмещалось). */}
             {currentVersion && (
               <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] print:hidden">
-                {/* min-w: инфо-группа не сжимается в ноль — иначе действия никогда не переносились бы. */}
-                <div className="flex min-w-[240px] flex-1 items-center gap-2">
+                {/* На мобильном инфо-группа ПЕРЕНОСИТ элементы и сжимается (min-w-0) —
+                    иначе не-сжимаемые shrink-0 (ник · vN · время · счётчики) суммарно шире
+                    вьюпорта и весь документ уезжает влево (горизонтальный скролл). На sm+
+                    возвращаем min-w-[240px]+nowrap, чтобы действия справа переносились ЦЕЛИКОМ. */}
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 sm:min-w-[240px] sm:flex-nowrap sm:gap-2">
                   {(branches.length > 1 || (canManageBranches && branches.length > 0)) && (
                     <BranchPicker base={base} owner={owner} slug={slug} branches={branches} current={refBranch ?? 'main'} lang={lang} canManage={canManageBranches} />
                   )}
