@@ -21,6 +21,9 @@ const VERB: Record<NotificationItem['type'], TKey> = {
   follow: 'notifFollow',
   mention: 'notifMention',
   assigned: 'notifAssigned',
+  transfer_incoming: 'notifTransferIncoming',
+  transfer_accepted: 'notifTransferAccepted',
+  transfer_declined: 'notifTransferDeclined',
 }
 
 export const metadata = { title: 'Notifications' }

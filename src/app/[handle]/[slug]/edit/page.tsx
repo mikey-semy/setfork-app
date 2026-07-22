@@ -7,6 +7,7 @@ import { t, tr } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- write-доступ (canWriteList) строже просмотра; редиректит не-редакторов
 import { getStepPreviews, getTemplateDetail } from '@/features/library/queries'
 import { canWriteList } from '@/features/collab/queries'
+import { canEditList } from '@/core'
 import { saveNewVersion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { ListTypeToggle } from '@/features/library/ListTypeToggle'
@@ -31,6 +32,9 @@ export default async function EditPage({
   if (!detail) notFound()
   const { tpl, steps } = detail
   if (!(await canWriteList(tpl.id, tpl.ownerId, session.userId))) redirect(`/${owner}/${slug}`)
+  // Архив/заморозка: редактор недоступен (список только-чтение). Разблокировать —
+  // разархивировать/разморозить в настройках. Баннер причины покажет сама страница.
+  if (!canEditList(tpl)) redirect(`/${owner}/${slug}`)
 
   const initial = toEditorItems(steps, lang, await getStepPreviews(steps))
   const action = saveNewVersion.bind(null, tpl.id)

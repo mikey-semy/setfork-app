@@ -39,3 +39,38 @@ export function canViewList(list: ListAccess, viewer: ListViewer): boolean {
 export function isPubliclyVisible(list: ListAccess): boolean {
   return canViewList(list, { isOwner: false, isAdmin: false })
 }
+
+// ── Обратимые ограниченные состояния (архив / заморозка) ─────────────
+// Ортогональны видимости и модерации: архивный/замороженный список остаётся
+// ВИДИМЫМ (canViewList его не трогает), но ограничен в записи. Чистые предикаты
+// на минимальной форме — один источник правды для guard'ов во всех actions.
+export interface ListState {
+  archivedAt?: Date | string | null
+  frozenAt?: Date | string | null
+}
+
+export function isArchived(list: ListState): boolean {
+  return list.archivedAt != null
+}
+export function isFrozen(list: ListState): boolean {
+  return list.frozenAt != null
+}
+
+/** Можно ли МЕНЯТЬ контент/структуру/настройки (правки, версии, предложения,
+ *  push, обложка, коллабораторы, каталог…). Запрещено и в архиве, и в заморозке. */
+export function canEditList(list: ListState): boolean {
+  return !isArchived(list) && !isFrozen(list)
+}
+
+/** Можно ли начать НОВЫЙ прогон. Запрещено только в архиве (заморозка прогоны
+ *  оставляет — список замораживают от правок, а не от использования). */
+export function canRunList(list: ListState): boolean {
+  return !isArchived(list)
+}
+
+/** Почему нельзя писать ('archived' | 'frozen' | null) — для сообщений/редиректов. */
+export function editBlockReason(list: ListState): 'archived' | 'frozen' | null {
+  if (isArchived(list)) return 'archived'
+  if (isFrozen(list)) return 'frozen'
+  return null
+}

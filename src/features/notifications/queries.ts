@@ -18,6 +18,9 @@ export type NotificationType =
   | 'follow'
   | 'mention'
   | 'assigned'
+  | 'transfer_incoming'
+  | 'transfer_accepted'
+  | 'transfer_declined'
 
 export interface NotificationItem {
   id: string

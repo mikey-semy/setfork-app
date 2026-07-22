@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { eq } from 'drizzle-orm'
-import { BarChart3, Bell, Fingerprint, KeyRound, Mail, Monitor, Palette, ShieldCheck, TriangleAlert, User } from 'lucide-react'
+import { BarChart3, Bell, Fingerprint, KeyRound, Mail, Monitor, Palette, ShieldCheck, TriangleAlert, User, UserRoundPlus } from 'lucide-react'
 import { db, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
@@ -17,6 +17,8 @@ import { listPasskeys } from '@/features/auth/passkeys'
 import { EmailSection } from '@/features/settings/EmailSection'
 import { AppearanceSettings } from '@/features/settings/AppearanceSettings'
 import { DangerZone } from '@/features/settings/DangerZone'
+import { IncomingTransfers } from '@/features/transfer/IncomingTransfers'
+import { getIncomingTransfers } from '@/features/transfer/queries'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
 import { NotifyPrefsForm } from '@/features/notifications/NotifyPrefsForm'
 import { getUserSessions } from '@/features/sessions/queries'
@@ -33,7 +35,7 @@ export default async function SettingsPage() {
     const { redirect } = await import('next/navigation')
     redirect('/login')
   }
-  const [avatar, userSessions, usage, lists, aiMonth, userPasskeys, tokens, h] = await Promise.all([
+  const [avatar, userSessions, usage, lists, aiMonth, userPasskeys, tokens, incomingTransfers, h] = await Promise.all([
     avatarSrc(user.avatarUrl, 144),
     getUserSessions(session.userId, session.sid),
     getUserUsage(session.userId),
@@ -41,6 +43,7 @@ export default async function SettingsPage() {
     aiQuota(session.userId, session.handle),
     listPasskeys(),
     getApiTokens(session.userId),
+    getIncomingTransfers(session.userId),
     headers(),
   ])
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
@@ -48,6 +51,16 @@ export default async function SettingsPage() {
   const mcpUrl = `${proto}://${host}/api/mcp`
 
   const sections: SettingsSection[] = [
+    // Секция появляется только при наличии входящих передач списков.
+    ...(incomingTransfers.length > 0
+      ? [{
+          id: 'incoming-transfers',
+          title: t('incomingTransfersTitle', lang),
+          icon: <UserRoundPlus size={15} />,
+          keywords: ['transfer', 'ownership', 'incoming', 'передача', 'владение', 'входящие'],
+          content: <IncomingTransfers items={incomingTransfers} lang={lang} />,
+        } satisfies SettingsSection]
+      : []),
     {
       id: 'profile',
       title: t('publicProfile', lang),

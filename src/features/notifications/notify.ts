@@ -23,6 +23,9 @@ type NotifType =
   | 'follow'
   | 'mention'
   | 'assigned'
+  | 'transfer_incoming'
+  | 'transfer_accepted'
+  | 'transfer_declined'
 
 // Тип события → ключ предпочтения получателя (follow не отключается — ключа нет).
 const TYPE_PREF: Partial<Record<NotifType, keyof NotifyPrefs>> = {

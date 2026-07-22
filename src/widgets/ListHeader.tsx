@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { GitFork, Globe, Lock, Star } from 'lucide-react'
+import { Archive, GitFork, Globe, Lock, Snowflake, Star } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -89,6 +89,16 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                 </>
               )}
             </span>
+            {/* Ограниченные состояния — рядом с видимостью (архив строже заморозки). */}
+            {meta.archivedAt != null ? (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-warn/40 bg-warn/10 px-2 py-0.5 text-[11px] text-warn">
+                <Archive size={11} /> {t('badgeArchived', lang)}
+              </span>
+            ) : meta.frozenAt != null ? (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
+                <Snowflake size={11} /> {t('badgeFrozen', lang)}
+              </span>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -238,6 +248,17 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             )}
           </div>
         )}
+
+        {/* Баннер ограниченного состояния — виден всем (не только владельцу). */}
+        {meta.archivedAt != null ? (
+          <div className="mt-3 flex items-center gap-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-[12.5px] text-warn">
+            <Archive size={14} className="shrink-0" /> {t('bannerArchived', lang)}
+          </div>
+        ) : meta.frozenAt != null ? (
+          <div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[12.5px] text-ink-2">
+            <Snowflake size={14} className="shrink-0" /> {t('bannerFrozen', lang)}
+          </div>
+        ) : null}
       </div>
     </div>
   )

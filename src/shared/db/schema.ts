@@ -60,6 +60,9 @@ export const notificationType = pgEnum('notification_type', [
   'follow',
   'mention',
   'assigned',
+  'transfer_incoming', // тебе предлагают принять владение списком
+  'transfer_accepted', // получатель принял твою передачу
+  'transfer_declined', // получатель отклонил твою передачу
 ])
 
 export const issueStatus = pgEnum('issue_status', ['open', 'closed'])
@@ -232,6 +235,13 @@ export const templates = pgTable(
     triplesMinedAt: timestamp('triples_mined_at', { withTimezone: true }),
     // Сумма уникальных дневных просмотров (см. template_views); владелец не считается.
     viewsCount: integer('views_count').notNull().default(0),
+    // Обратимые ограниченные состояния владельца (Danger Zone; НЕ путать с moderation —
+    // то админский takedown). archivedAt — полностью read-only (как archived-репо GitHub:
+    // ни правок, ни предложений, ни новых прогонов; просмотр/форк/звезда работают).
+    // frozenAt — заморозка правок: нельзя править/предлагать, но прогоны и просмотр идут.
+    // null = состояние выключено. archived строже frozen.
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    frozenAt: timestamp('frozen_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -729,6 +739,35 @@ export const collaborators = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ tplUser: unique('collab_tpl_user').on(t.templateId, t.userId) }),
+)
+
+// ── Передача владения списком (invite → accept, как перенос репозитория GitHub) ─
+// Владелец создаёт pending-инвайт получателю; смена ownerId происходит ТОЛЬКО
+// когда получатель принял. Один pending-инвайт на список (partial-unique ниже).
+export const transferStatus = pgEnum('transfer_status', ['pending', 'accepted', 'declined', 'cancelled'])
+
+export const transferInvites = pgTable(
+  'transfer_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    fromUserId: uuid('from_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    toUserId: uuid('to_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: transferStatus('status').notNull().default('pending'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('transfer_to_idx').on(t.toUserId, t.status),
+    // Не больше ОДНОГО ожидающего инвайта на список (частичный unique).
+    uniqueIndex('transfer_one_pending').on(t.templateId).where(sql`status = 'pending'`),
+  ],
 )
 
 // ── Repositories (каталоги — группа из 1..N списков; git-единица в Rust-эре) ─

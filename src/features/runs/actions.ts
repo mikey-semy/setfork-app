@@ -62,6 +62,13 @@ export async function startRun(templateId: string): Promise<void> {
     .limit(1)
   let runId = existing[0]?.id
 
+  // Архив = read-only: НОВЫЙ прогон начать нельзя (но уже начатый — продолжаем,
+  // ветка existing выше). Заморозка прогоны не трогает. Владелец не исключение —
+  // архивный список не запускается ни у кого.
+  if (!runId && tpl.archivedAt != null) {
+    redirect(`/${(await db.query.users.findFirst({ where: (u) => eq(u.id, tpl.ownerId) }))?.handle}/${tpl.slug}?e=archived`)
+  }
+
   if (!runId) {
     const [r] = await db
       .insert(runs)

@@ -6,6 +6,7 @@ import { t } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- owner-only: доступ строже canViewList (session.userId === ownerId)
 import { getListCover, getListMeta } from '@/features/library/queries'
 import { getCollaborators } from '@/features/collab/queries'
+import { getPendingTransfer } from '@/features/transfer/queries'
 import { CollaboratorsSection } from '@/features/collab/CollaboratorsSection'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { CatalogSection } from '@/features/catalogs/CatalogSection'
@@ -26,7 +27,12 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
   const meta = await getListMeta(owner, slug)
   if (!meta) notFound()
   if (!session || session.userId !== meta.ownerId) notFound() // только владелец
-  const [collaborators, catalogs, cover] = await Promise.all([getCollaborators(meta.id), getOwnerCatalogs(meta.ownerId), getListCover(meta.id)])
+  const [collaborators, catalogs, cover, pendingTransfer] = await Promise.all([
+    getCollaborators(meta.id),
+    getOwnerCatalogs(meta.ownerId),
+    getListCover(meta.id),
+    getPendingTransfer(meta.id),
+  ])
 
   // Настройки списка на общем SettingsShell (как настройки пользователя/админки):
   // липкое меню секций + scrollspy + поиск. Метка меню = имя секции.
@@ -94,7 +100,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       title: t('dangerZone', lang),
       icon: <TriangleAlert size={15} />,
       danger: true,
-      keywords: ['danger', 'delete', 'remove', 'visibility', 'private', 'опасная', 'удалить', 'видимость', 'приватный'],
+      keywords: ['danger', 'delete', 'remove', 'visibility', 'private', 'archive', 'freeze', 'lock', 'transfer', 'опасная', 'удалить', 'видимость', 'приватный', 'архив', 'заморозить', 'передать'],
       content: (
         <ListSettingsDanger
           templateId={meta.id}
@@ -102,15 +108,14 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           slug={meta.slug}
           visibility={meta.visibility}
           moderation={meta.moderation}
+          archived={meta.archivedAt != null}
+          frozen={meta.frozenAt != null}
+          pendingTransfer={pendingTransfer}
           lang={lang}
         />
       ),
     },
   ]
 
-  return (
-    <>
-      <SettingsShell sections={sections} lang={lang} />
-    </>
-  )
+  return <SettingsShell sections={sections} lang={lang} />
 }
