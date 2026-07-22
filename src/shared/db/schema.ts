@@ -23,7 +23,6 @@ import {
   halfvec,
   text,
   timestamp,
-  unique,
   uniqueIndex,
   uuid,
   vector,
@@ -246,7 +245,7 @@ export const templates = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    ownerSlug: unique('templates_owner_slug').on(t.ownerId, t.slug),
+    ownerSlug: uniqueIndex('templates_owner_slug').on(t.ownerId, t.slug),
     forkedFrom: index('templates_forked_from_idx').on(t.forkedFromId),
     // Публичная лента: сорт по updatedAt / starsCount под фильтром видимости —
     // частичные индексы точно под visibleFilter (published+public+active).
@@ -273,7 +272,7 @@ export const templateVersions = pgTable(
     note: text('note').notNull().default(''), // что изменилось (для «истории»)
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ tplVersion: unique('template_versions_tpl_version').on(t.templateId, t.version), created: index('template_versions_created_idx').on(t.createdAt) }),
+  (t) => ({ tplVersion: uniqueIndex('template_versions_tpl_version').on(t.templateId, t.version), created: index('template_versions_created_idx').on(t.createdAt) }),
 )
 
 // ── Releases (публикация версии как релиза, как GitHub Releases) ─────
@@ -295,7 +294,7 @@ export const releases = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique('releases_tpl_tag').on(t.templateId, t.tag), index('releases_tpl_idx').on(t.templateId, t.createdAt)],
+  (t) => [uniqueIndex('releases_tpl_tag').on(t.templateId, t.tag), index('releases_tpl_idx').on(t.templateId, t.createdAt)],
 )
 
 // ── Steps (= блоки списка) ───────────────────────────────────────────
@@ -363,7 +362,7 @@ export const runStepState = pgTable(
     assist: text('assist').notNull().default(''),
     assistAt: timestamp('assist_at', { withTimezone: true }),
   },
-  (t) => ({ runStep: unique('run_step_state_run_step').on(t.runId, t.stepId) }),
+  (t) => ({ runStep: uniqueIndex('run_step_state_run_step').on(t.runId, t.stepId) }),
 )
 
 // ── Stars (закладка/лайк шаблона) ────────────────────────────────────
@@ -380,7 +379,7 @@ export const stars = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    userTpl: unique('stars_user_tpl').on(t.userId, t.templateId),
+    userTpl: uniqueIndex('stars_user_tpl').on(t.userId, t.templateId),
     tpl: index('stars_tpl_idx').on(t.templateId),
     userCreated: index('stars_user_created_idx').on(t.userId, t.createdAt.desc()), // вкладка «starred» профиля
   }),
@@ -397,7 +396,7 @@ export const starFolders = pgTable(
     name: text('name').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique('star_folders_user_name').on(t.userId, t.name), index('star_folders_user_idx').on(t.userId)],
+  (t) => [uniqueIndex('star_folders_user_name').on(t.userId, t.name), index('star_folders_user_idx').on(t.userId)],
 )
 
 // Членство: какой starred-список в какой папке (список может быть в нескольких).
@@ -413,7 +412,7 @@ export const starFolderItems = pgTable(
       .references(() => templates.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique('star_folder_items_pair').on(t.folderId, t.templateId), index('star_folder_items_folder_idx').on(t.folderId)],
+  (t) => [uniqueIndex('star_folder_items_pair').on(t.folderId, t.templateId), index('star_folder_items_folder_idx').on(t.folderId)],
 )
 
 // ── Embeddings (RAG, pgvector 1536) ──────────────────────────────────
@@ -558,7 +557,7 @@ export const reactions = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique('reactions_uniq').on(t.userId, t.targetType, t.targetId, t.emoji),
+    uniqueIndex('reactions_uniq').on(t.userId, t.targetType, t.targetId, t.emoji),
     index('reactions_target_idx').on(t.targetType, t.targetId),
   ],
 )
@@ -585,7 +584,7 @@ export const issues = pgTable(
     closedAt: timestamp('closed_at', { withTimezone: true }),
   },
   (t) => [
-    unique('issues_tpl_number').on(t.templateId, t.number),
+    uniqueIndex('issues_tpl_number').on(t.templateId, t.number),
     index('issues_tpl_status_idx').on(t.templateId, t.status),
   ],
 )
@@ -603,7 +602,7 @@ export const listLabels = pgTable(
     color: text('color').notNull(), // hex #rrggbb
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique('list_labels_tpl_name').on(t.templateId, t.name), index('list_labels_tpl_idx').on(t.templateId)],
+  (t) => [uniqueIndex('list_labels_tpl_name').on(t.templateId, t.name), index('list_labels_tpl_idx').on(t.templateId)],
 )
 
 // Вехи (milestones) — группировка issue по цели/срокам, как в GitHub.
@@ -635,7 +634,7 @@ export const issueAssignees = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
   },
-  (t) => [unique('issue_assignees_uq').on(t.issueId, t.userId), index('issue_assignees_issue_idx').on(t.issueId)],
+  (t) => [uniqueIndex('issue_assignees_uq').on(t.issueId, t.userId), index('issue_assignees_issue_idx').on(t.issueId)],
 )
 
 export const issueComments = pgTable(
@@ -674,7 +673,7 @@ export const discussions = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique('discussions_tpl_number').on(t.templateId, t.number), index('discussions_tpl_idx').on(t.templateId, t.createdAt)],
+  (t) => [uniqueIndex('discussions_tpl_number').on(t.templateId, t.number), index('discussions_tpl_idx').on(t.templateId, t.createdAt)],
 )
 
 export const discussionComments = pgTable(
@@ -718,7 +717,7 @@ export const watches = pgTable(
     events: jsonb('events').$type<{ versions?: boolean; issues?: boolean; suggestions?: boolean }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ userTpl: unique('watches_user_tpl').on(t.userId, t.templateId), tpl: index('watches_tpl_idx').on(t.templateId) }),
+  (t) => ({ userTpl: uniqueIndex('watches_user_tpl').on(t.userId, t.templateId), tpl: index('watches_tpl_idx').on(t.templateId) }),
 )
 
 // ── Collaborators (совместная запись — push/правки не только владельцем) ─
@@ -738,7 +737,7 @@ export const collaborators = pgTable(
     role: collaboratorRole('role').notNull().default('write'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ tplUser: unique('collab_tpl_user').on(t.templateId, t.userId) }),
+  (t) => ({ tplUser: uniqueIndex('collab_tpl_user').on(t.templateId, t.userId) }),
 )
 
 // ── Передача владения списком (invite → accept, как перенос репозитория GitHub) ─
@@ -784,7 +783,7 @@ export const repositories = pgTable(
     desc: jsonb('desc').notNull().default({}).$type<LocaleText>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ ownerName: unique('repo_owner_name').on(t.ownerId, t.name) }),
+  (t) => ({ ownerName: uniqueIndex('repo_owner_name').on(t.ownerId, t.name) }),
 )
 
 // ── Collections (админ-курируемые кросс-авторские подборки) ───────────
@@ -818,7 +817,7 @@ export const collectionItems = pgTable(
     position: integer('position').notNull().default(0),
   },
   (t) => [
-    unique('collection_items_uq').on(t.collectionId, t.kind, t.refId),
+    uniqueIndex('collection_items_uq').on(t.collectionId, t.kind, t.refId),
     index('collection_items_coll_idx').on(t.collectionId, t.position),
   ],
 )
@@ -844,7 +843,7 @@ export const pollVotes = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique('poll_votes_uq').on(t.userId, t.templateId, t.bid, t.optionId),
+    uniqueIndex('poll_votes_uq').on(t.userId, t.templateId, t.bid, t.optionId),
     index('poll_votes_bid_idx').on(t.templateId, t.bid),
   ],
 )
@@ -871,7 +870,7 @@ export const quizAttempts = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique('quiz_attempts_uq').on(t.userId, t.templateId, t.bid),
+    uniqueIndex('quiz_attempts_uq').on(t.userId, t.templateId, t.bid),
     index('quiz_attempts_bid_idx').on(t.templateId, t.bid),
   ],
 )
@@ -893,7 +892,7 @@ export const courseCompletions = pgTable(
     completedAt: timestamp('completed_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique('course_completions_uq').on(t.userId, t.templateId),
+    uniqueIndex('course_completions_uq').on(t.userId, t.templateId),
     index('course_completions_tpl_idx').on(t.templateId),
   ],
 )
@@ -1080,7 +1079,7 @@ export const generationCandidates = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique('generation_candidates_gen_idx').on(t.generationId, t.idx),
+    uniqueIndex('generation_candidates_gen_idx').on(t.generationId, t.idx),
     index('generation_candidates_gen_idx2').on(t.generationId),
   ],
 )
@@ -1180,7 +1179,7 @@ export const templateViews = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique('template_views_uq').on(t.templateId, t.visitor, t.day),
+    uniqueIndex('template_views_uq').on(t.templateId, t.visitor, t.day),
     index('template_views_tpl_idx').on(t.templateId, t.createdAt),
   ],
 )
@@ -1316,7 +1315,7 @@ export const follows = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique('follows_pair').on(t.followerId, t.followingId), index('follows_following_idx').on(t.followingId)],
+  (t) => [uniqueIndex('follows_pair').on(t.followerId, t.followingId), index('follows_following_idx').on(t.followingId)],
 )
 
 // ── 2FA recovery-коды: показываются один раз, храним только sha256 ────
