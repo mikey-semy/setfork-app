@@ -6,7 +6,8 @@ import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
-import { forkTemplate } from '@/features/library/actions'
+import { ForkDialog } from '@/features/library/ForkDialog'
+import { PinButton } from '@/features/library/PinButton'
 import { StarButton } from '@/features/library/StarButton'
 import { StarFolderMenu } from '@/features/star-folders/StarFolderMenu'
 import { getFoldersForTemplate, getUserFolders } from '@/features/star-folders/queries'
@@ -45,7 +46,6 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
     getDiscussionCount(meta.id),
   ])
   const base = `/${owner}/${slug}`
-  const forkBound = forkTemplate.bind(null, meta.id)
 
   return (
     <div>
@@ -93,6 +93,10 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Start run переехал в Use-дропдаун (version-bar) — тоже «исполнение». */}
+            {/* Pin — только своим ПУБЛИЧНЫМ (приватные к публичному профилю не прикрепить). */}
+            {isOwner && meta.visibility === 'public' && (
+              <PinButton templateId={meta.id} pinned={meta.pinned} pinLabel={t('pin', lang)} unpinLabel={t('unpin', lang)} />
+            )}
             {session && (
               <WatchButton
                 templateId={meta.id}
@@ -116,12 +120,46 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                 <Star size={14} /> <span className="hidden sm:inline">{t('star', lang)}</span> <span className="font-mono text-[12px] text-muted">{meta.starsCount}</span>
               </Link>
             )}
-            <span className="inline-flex overflow-hidden rounded-md border border-border">
-              <form action={forkBound}>
-                <button className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-surface-2">
+            {/* Fork как split на GitHub: кнопка (диалог для чужого / неактивна для своего /
+                логин для гостя) + счётчик-ссылка в дерево форков (HQ §11, #395). */}
+            <span className="inline-flex items-stretch overflow-hidden rounded-md border border-border">
+              {isOwner ? (
+                // Свой список форкнуть нельзя (как на GitHub свой репозиторий) — кнопка неактивна.
+                <button
+                  disabled
+                  title={t('cantForkOwn', lang)}
+                  className="inline-flex cursor-not-allowed items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-muted opacity-60"
+                >
                   <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
                 </button>
-              </form>
+              ) : session ? (
+                <ForkDialog
+                  templateId={meta.id}
+                  defaultSlug={meta.slug}
+                  viewerHandle={session.handle}
+                  grouped
+                  labels={{
+                    fork: t('fork', lang),
+                    title: t('forkDialogTitle', lang),
+                    ownerLabel: t('forkOwnerLabel', lang),
+                    nameLabel: t('forkNameLabel', lang),
+                    nameHint: t('forkNameHint', lang),
+                    available: t('forkAvailable', lang),
+                    taken: t('forkTaken', lang),
+                    descLabel: t('forkDescLabel', lang),
+                    descPlaceholder: t('forkDescPlaceholder', lang),
+                    create: t('createFork', lang),
+                    cancel: t('cancel', lang),
+                  }}
+                />
+              ) : (
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-surface-2"
+                >
+                  <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
+                </Link>
+              )}
               {/* Счётчик — ссылка в дерево форков (HQ §11): кто что вырастил из списка. */}
               <Link
                 href={`${base}/forks`}
