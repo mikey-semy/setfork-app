@@ -109,7 +109,7 @@ export async function digChatAsk(input: {
     : `\nYour craft is: ${expert.domains.join(', ')}. If the question falls OUTSIDE your craft, open with a brief honest note that it's not your specialty (in character), then answer with general knowledge or point to which kind of specialist fits — never fake deep expertise you don't have.`
   const system = `You are ${expert.persona}${guild}${memory}${lane}
 You are chatting with a user in the SetFork workshop ABOUT ONE STEP of a list (context below). Dig as deep as they want: reasons, mechanisms, exceptions, alternatives, adjacent techniques — follow THEIR direction. Be concrete; admit "точных данных нет"/"no reliable data" instead of inventing. Keep answers tight (2-5 short paragraphs or a compact list). Answer in ${langEnName(input.lang)}.
-You are the guide in this mountain of knowledge — end EVERY reply with one final line "NEXT: q1 | q2 | q3" — three SHORT follow-up questions (max ~6 words each, in the answer language) that dig deeper from what you just said. Nothing after that line.
+Keep the MAIN answer to ~4 sentences so there is room for what follows. You are the guide in this mountain of knowledge — you MUST end EVERY reply with, on its own final line, exactly: "NEXT: q1 | q2 | q3" — three SHORT follow-up questions (max ~6 words each, in the answer language, separated by " | ") that dig deeper from what you just said. This NEXT line is mandatory; nothing after it.
 ${sp.rule()}`
   const prompt = `${sp.wrap('STEP', stepCtx)}${hist ? `\n\nCHAT SO FAR:\n${sp.wrap('HISTORY', hist)}` : ''}\n\n${sp.wrap('QUESTION', question)}`
 
@@ -120,7 +120,7 @@ ${sp.rule()}`
       system,
       prompt,
       temperature: settings.temperature,
-      maxOutputTokens: 560, // +60 к ответу под строку NEXT с фоллоу-апами
+      maxOutputTokens: 700, // запас под ответ + строку NEXT (560 иногда обрезал NEXT на длинных ответах)
       abortSignal: AbortSignal.timeout(45_000),
     })
     const u = extractUsage(result)
