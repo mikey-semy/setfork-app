@@ -451,9 +451,16 @@ ${roster}`,
   emit('critique', vl('critic', 'critique') ?? say('Reviewing the drafts critically…', 'Критически разбираю черновики…'), 'critic', say('Critic', 'Критик'))
   const critique = await run(
     fast,
-    `You are a devil's advocate reviewer. Given several anonymous draft lists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.${codeBlock}\n${sp.rule()}`,
+    `You are a devil's advocate reviewer. Given several anonymous draft lists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.
+FIRST line of your reply must be "VERDICT: …" — one short punchy in-character sentence (max 90 chars) capturing the KEY finding of THIS review; then a blank line and the full critique.${codeBlock}\n${sp.rule()}`,
     `${topic}\n\nDRAFTS:\n${anon}`,
   )
+  // Event-aware реакция (research: реплики grounded в ситуации): вместо слепой
+  // «разбираю…» показываем РЕАЛЬНЫЙ вывод критика этого витка — ценой ноль
+  // (вызов уже сделан). VERDICT-строку отделяем, дальше в синтез идёт полный текст.
+  const vm = critique?.text ? /(?:^|\n)\s*VERDICT:\s*(.+)/i.exec(critique.text) : null
+  if (vm) emit('critique', vm[1].trim().slice(0, 120), 'critic', say('Critic', 'Критик'))
+  const critiqueBody = vm ? critique!.text.replace(vm[0], '').trim() : (critique?.text ?? '')
 
   // 5) Старейшина-синтез → строгий JSON. Конвергенция, но СОХРАНИ лучшую новизну (не усредняй).
   emit('synth', vl('elder', 'synth') ?? say('Synthesizing the final list…', 'Свожу финальный список…'), 'elder', say('Elder', 'Старейшина'))
@@ -461,7 +468,7 @@ ${roster}`,
     base,
     `You are the lead synthesizer. Merge the strongest, most accurate and complete steps, honor the critique, drop weak/duplicate ones. IMPORTANT (innovation principle): PRESERVE the 1-2 most valuable non-obvious ideas — do not flatten the list to bland average. All content in ${langName}.${law ? `${law}\nThis shape is MANDATORY in the final JSON — do not merge it away.` : ''}\n${listRules}`,
     // Старейшине — топ по близости без доменного среза: он сводит все взгляды.
-    `${topic}${loreBlock(precedents.slice(0, 3))}${stepsBlock(stepPrecedents.slice(0, 3))}${rulesBlock}${webLore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critique?.text ?? '(none)'}\n\nReturn the synthesized list as strict JSON.`,
+    `${topic}${loreBlock(precedents.slice(0, 3))}${stepsBlock(stepPrecedents.slice(0, 3))}${rulesBlock}${webLore}\n\nDRAFTS:\n${anon}\n\nCRITIQUE:\n${critiqueBody || '(none)'}\n\nReturn the synthesized list as strict JSON.`,
   )
   // firstJson: старейшина иногда предваряет JSON прозой («Here is the synthesized list:»), и голый
   // parseList на этом падал → 7 вызовов совета в мусор, тихий фолбэк на одиночную, а лента уже
@@ -482,7 +489,7 @@ ${roster}`,
           experts: expertProv,
           models: { steward: fast, innovator: pool[0], critic: fast, elder: base },
           webSeek: settings.councilWebSeek,
-          critique: critique?.text ? critique.text.slice(0, 2000) : undefined,
+          critique: critiqueBody ? critiqueBody.slice(0, 2000) : undefined,
         },
       }
   }
