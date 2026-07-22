@@ -683,6 +683,10 @@ export type Discussion = typeof discussions.$inferSelect
 export type DiscussionComment = typeof discussionComments.$inferSelect
 
 // ── Watches (подписка на список — как Watch на GitHub) ───────────────
+// Уровень подписки (дропдаун Watch на GitHub). «Participating & @mentions»
+// (глобальный дефолт: только упоминания/участие) = ОТСУТСТВИЕ строки. Строка = явный
+// выбор: 'all' (All Activity), 'ignore' (Never), 'custom' (по колонке events).
+export const watchLevel = pgEnum('watch_level', ['all', 'ignore', 'custom'])
 export const watches = pgTable(
   'watches',
   {
@@ -693,6 +697,11 @@ export const watches = pgTable(
     templateId: uuid('template_id')
       .notNull()
       .references(() => templates.id, { onDelete: 'cascade' }),
+    // Существующие подписчики (клик Watch) → 'all' (их прежнее поведение = все обновления).
+    level: watchLevel('level').notNull().default('all'),
+    // Только для level='custom': какие события слать (null иначе). Доставку наблюдателям
+    // имеют versions/issues/suggestions (discussions/security им пока не шлём).
+    events: jsonb('events').$type<{ versions?: boolean; issues?: boolean; suggestions?: boolean }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ userTpl: unique('watches_user_tpl').on(t.userId, t.templateId), tpl: index('watches_tpl_idx').on(t.templateId) }),

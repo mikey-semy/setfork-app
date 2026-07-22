@@ -17,7 +17,7 @@ import { getOpenSuggestionCount, isStarred } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getOpenIssueCount } from '@/features/issues/queries'
 import { getDiscussionCount } from '@/features/discussions/queries'
-import { getWatchCount, isWatching } from '@/features/watch/queries'
+import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
 import { humanModerationReason } from '@/features/moderation/reason'
 import { ListTabs } from './ListTabs'
@@ -34,7 +34,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
   const canWrite = isOwner || (session ? await isCollaborator(meta.id, session.userId) : false)
   const isAdmin = isAdminHandle(session?.handle)
   const starred = session ? await isStarred(meta.id, session.userId) : false
-  const watching = session ? await isWatching(session.userId, meta.id) : false
+  const watchState = session ? await getWatchState(session.userId, meta.id) : null
   // Папки для звёзд (организация starred по папкам, как GitHub Lists).
   const [folders, inFolders] = session
     ? await Promise.all([getUserFolders(session.userId), getFoldersForTemplate(session.userId, meta.id)])
@@ -97,13 +97,29 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             {isOwner && meta.visibility === 'public' && (
               <PinButton templateId={meta.id} pinned={meta.pinned} pinLabel={t('pin', lang)} unpinLabel={t('unpin', lang)} />
             )}
-            {session && (
+            {session && watchState && (
               <WatchButton
                 templateId={meta.id}
-                watching={watching}
+                state={watchState}
                 count={watchCount}
-                watchLabel={t('watch', lang)}
-                unwatchLabel={t('unwatch', lang)}
+                labels={{
+                  watch: t('watch', lang),
+                  unwatch: t('unwatch', lang),
+                  title: t('watchTitle', lang),
+                  participating: t('watchParticipating', lang),
+                  participatingDesc: t('watchParticipatingDesc', lang),
+                  all: t('watchAll', lang),
+                  allDesc: t('watchAllDesc', lang),
+                  ignore: t('watchIgnore', lang),
+                  ignoreDesc: t('watchIgnoreDesc', lang),
+                  custom: t('watchCustom', lang),
+                  customDesc: t('watchCustomDesc', lang),
+                  customTitle: t('watchCustomTitle', lang),
+                  evVersions: t('versionsTab', lang),
+                  evIssues: t('issuesTab', lang),
+                  evSuggestions: t('suggestions', lang),
+                  apply: t('apply', lang),
+                }}
               />
             )}
             {session ? (

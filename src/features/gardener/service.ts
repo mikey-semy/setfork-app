@@ -248,7 +248,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       // recheck публичного списка — в фасаде listStore.addVersion (барьер), здесь не дублируем.
       await listStore.addVersion(tpl.id, { note: '\u{1F9D9} gardener: refreshed steps', steps: toStepInput(items) })
       await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, created.id))
-      await notifyMany(await getWatcherIds(tpl.id), { actorId: gardener.id, type: 'new_version', templateId: tpl.id })
+      await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: gardener.id, type: 'new_version', templateId: tpl.id })
       await enqueueReindex(tpl.id)
       log.info('gardener: auto-merged on curated list', { slug: tpl.slug })
     } else {

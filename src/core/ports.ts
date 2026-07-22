@@ -74,14 +74,30 @@ export interface SearchIndex {
 }
 
 // ── Курирование / соц. граф ──────────────────────────────────────────
+/** Уровень подписки на список (дропдаун Watch на GitHub). 'participating' —
+ *  глобальный дефолт (только упоминания/участие) = отсутствие строки в watches. */
+export type WatchLevel = 'participating' | 'all' | 'ignore' | 'custom'
+/** События с доставкой наблюдателям (для level='custom'). */
+export type WatchEvent = 'versions' | 'issues' | 'suggestions'
+export type WatchEvents = Partial<Record<WatchEvent, boolean>>
+export interface WatchState {
+  level: WatchLevel
+  events: WatchEvents | null
+}
+
 export interface CurationStore {
   isStarred(listId: Id, userId: Id): Promise<boolean>
   toggleStar(listId: Id, userId: Id): Promise<boolean> // → новое состояние (true = теперь со звездой)
-  isWatching(listId: Id, userId: Id): Promise<boolean>
-  toggleWatch(listId: Id, userId: Id): Promise<boolean>
+  isWatching(listId: Id, userId: Id): Promise<boolean> // true, если level 'all'|'custom'
+  /** Текущее состояние подписки зрителя (для дропдауна Watch). */
+  watchState(listId: Id, userId: Id): Promise<WatchState>
+  /** Явно задать уровень; 'participating' удаляет строку (= дефолт). events — для 'custom'. */
+  setWatch(listId: Id, userId: Id, level: WatchLevel, events?: WatchEvents): Promise<void>
+  toggleWatch(listId: Id, userId: Id): Promise<boolean> // быстрый тумблер participating↔all
   ensureWatch(listId: Id, userId: Id): Promise<void>
-  watchCount(listId: Id): Promise<number>
-  watcherIds(listId: Id): Promise<Id[]>
+  watchCount(listId: Id): Promise<number> // подписчики: level 'all'|'custom' (без 'ignore')
+  /** Кому слать событие: level='all' ИЛИ (level='custom' И events[event]). */
+  watcherIds(listId: Id, event: WatchEvent): Promise<Id[]>
 }
 
 // ── Issues / предложения / комментарии ───────────────────────────────
