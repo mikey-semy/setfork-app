@@ -331,13 +331,15 @@ export default async function ListPage({
                       </Tooltip>
                     </form>
                   )}
-                  {/* Run — первичное действие, отдельной кнопкой рядом с Получить.
-                      Высота фиксирована (36px, h-9) — ряд ровный с Получить и «...». */}
+                  {/* Run — первичное действие, кнопка-иконка 36×36 (без текста —
+                      подпись в тултипе/aria). Ряд ровный с Получить и «...». */}
                   {viewer && (
                     <form action={startRun.bind(null, tpl.id)} className="inline-flex">
-                      <button className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[13px] font-semibold text-primary-fg hover:opacity-90">
-                        <PlayCircle size={15} /> <span className="hidden md:inline">{t('runStart', lang)}</span>
-                      </button>
+                      <Tooltip label={t('runStart', lang)}>
+                        <button aria-label={t('runStart', lang)} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-fg hover:opacity-90">
+                          <PlayCircle size={16} />
+                        </button>
+                      </Tooltip>
                     </form>
                   )}
                   <CloneDropdown base={base} lang={lang} />

@@ -72,7 +72,7 @@ export function WatchButton({
           <button
             aria-label={watching ? labels.unwatch : labels.watch}
             title={watching ? labels.unwatch : labels.watch}
-            className={`inline-flex h-9 items-center gap-2 rounded-md border px-3.5 text-[13px] font-semibold transition-colors max-sm:gap-1.5 max-sm:px-3 ${
+            className={`inline-flex h-9 items-center gap-2 rounded-md border pl-3.5 text-[13px] font-semibold transition-colors max-sm:gap-1.5 max-sm:pl-3 ${
               watching ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink hover:border-border-strong'
             }`}
           >
@@ -80,7 +80,10 @@ export function WatchButton({
             {/* Мобила: только глаз+счётчик (текст не влезал рядом с Pin — скилл mobile-ui). */}
             <span className="hidden sm:inline">{watching ? labels.unwatch : labels.watch}</span>
             <span className="font-mono text-[12px] text-muted">{count_}</span>
-            <ChevronDown size={13} className="text-muted" />
+            {/* Каретка за разделителем — единый вид со сплитами Star/Fork. */}
+            <span className="flex h-full items-center self-stretch border-l border-border pl-1.5 pr-2 max-sm:pr-1.5">
+              <ChevronDown size={13} className="text-muted" />
+            </span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[330px] p-0">
