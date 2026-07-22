@@ -8,10 +8,11 @@ import { defaultEmbeddingModel } from '@/shared/settings/ai'
 // пространством, иначе близость — мусор. Цель (embed.provider) меняется в
 // админке и вступает в силу ТОЛЬКО через полный реиндекс.
 //
-// Колонка остаётся vector(1536) (HNSW-индекс требует фиксированной мерности,
-// а ALTER на живых данных уронил бы миграцию): векторы уже родной мерности
-// дополняются нулями — косинусная близость при нулевом паддинге сохраняется
-// точно (скалярное произведение и нормы не меняются).
+// Колонка — halfvec(768) (P4 анализа поиска): 768 — родная мерность Яндекс v2
+// и MRL-срез text-embedding-3-small (dimensions=768). Вектор короче колонки —
+// паддинг нулями (косинус сохраняется точно); длиннее (не-MRL модель без
+// dimensions) — усечение + L2-нормализация: для MRL-моделей это штатный режим,
+// для прочих — осознанная деградация с warn (лучше, чем падение индексации).
 
 export type EmbedProvider = 'openrouter' | 'yandex'
 
@@ -27,7 +28,7 @@ export interface EmbedSpace {
 
 export const EMBED_TARGET_SETTING = 'embed.provider'
 export const EMBED_SPACE_SETTING = 'embed.index_space'
-export const COLUMN_DIM = 1536
+export const COLUMN_DIM = 768
 export const YANDEX_EMBED_DIM = 768 // максимум v2-моделей (128/256/512/768)
 
 /** Чистый резолв ЦЕЛЕВОГО пространства (юнит-тестируется). */
@@ -47,6 +48,7 @@ export function resolveTargetSpace(
     }
   }
   const model = m['ai.embedding_model']?.trim() || defaultEmbeddingModel()
+  // 768 и для OpenRouter: text-embedding-3-* — матрёшечные (MRL), dimensions=768 штатен.
   return { provider: 'openrouter', docModel: model, queryModel: model, dim: COLUMN_DIM }
 }
 
@@ -100,9 +102,19 @@ export function clearEmbedSpaceCache(): void {
   cache = null
 }
 
-/** Дополнить вектор нулями до мерности колонки (косинус сохраняется точно). */
-export function padToColumn(vec: number[]): number[] {
-  return vec.length >= COLUMN_DIM ? vec : [...vec, ...new Array<number>(COLUMN_DIM - vec.length).fill(0)]
+/** Привести вектор к мерности колонки: короче — паддинг нулями (косинус точен);
+ *  длиннее — усечение + L2-нормализация (штатно для MRL; для прочих — деградация). */
+let warnedTruncate = false
+export function fitToColumn(vec: number[]): number[] {
+  if (vec.length === COLUMN_DIM) return vec
+  if (vec.length < COLUMN_DIM) return [...vec, ...new Array<number>(COLUMN_DIM - vec.length).fill(0)]
+  if (!warnedTruncate) {
+    warnedTruncate = true
+    console.warn(`[embed-space] truncating ${vec.length}-dim vector to ${COLUMN_DIM} (use a dimensions-capable model)`)
+  }
+  const cut = vec.slice(0, COLUMN_DIM)
+  const norm = Math.sqrt(cut.reduce((s, x) => s + x * x, 0)) || 1
+  return cut.map((x) => x / norm)
 }
 
 /** Совпадает ли индекс с целью (нет — в админке горит «нужен реиндекс»). */

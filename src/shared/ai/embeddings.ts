@@ -1,15 +1,15 @@
 import 'server-only'
 import { getAiProviderRaw, getOpenRouterApiKey } from '@/shared/settings/ai'
-import { getIndexSpace, padToColumn, type EmbedSpace } from './embed-space'
+import { COLUMN_DIM, fitToColumn, getIndexSpace, type EmbedSpace } from './embed-space'
 import { recordUsage } from './usage'
 
 // Эмбеддинги идут по ПРОСТРАНСТВУ ИНДЕКСА (embed-space): и документы при
 // индексации, и поисковые запросы — одним провайдером/моделью/мерностью, иначе
 // близость — мусор. Пространство меняется только полным реиндексом (админка).
-// - openrouter: openai/text-embedding-3-small, 1536, одна модель на doc и query
+// - openrouter: openai/text-embedding-3-small (MRL, dimensions=768), одна модель
 // - yandex: text-embeddings-v2-doc / -v2-query (768, dimensions в запросе),
 //   ключ Яндекса из настроек ИИ — работает независимо от чат-провайдера
-// Векторы паддятся нулями до колонки vector(1536) — косинус сохраняется точно.
+// Векторы приводятся к колонке halfvec(768) (fitToColumn) — см. embed-space.
 // Любая ошибка → null, чтобы вызывающий мог пропустить индексацию.
 
 /** Назначение вектора: 'doc' — индексация контента, 'query' — поисковый запрос. */
@@ -22,7 +22,7 @@ export interface EmbedMeta {
   refId?: string
 }
 
-export const EMBEDDING_DIM = 1536 // мерность КОЛОНКИ (родная мерность — в embed-space)
+export const EMBEDDING_DIM = COLUMN_DIM // мерность колонки halfvec — единый источник в embed-space
 
 export async function isEmbeddingEnabled(): Promise<boolean> {
   const space = await getIndexSpace()
@@ -54,19 +54,43 @@ async function endpointFor(space: EmbedSpace): Promise<{ url: string; headers: R
   }
 }
 
+// Кэш query-векторов (P2 анализа поиска, HQ research/2026-07-22): формулировки
+// запросов повторяются (совет+гном+раскопка над одной темой), а вектор
+// детерминирован → LRU в памяти. Только purpose='query': doc-тексты уникальны.
+// Кэш-хит не пишет ai_usage — вызова провайдера не было.
+const QUERY_CACHE_MAX = 500
+const queryCache = new Map<string, number[]>()
+function cacheGet(key: string): number[] | undefined {
+  const hit = queryCache.get(key)
+  if (hit) {
+    queryCache.delete(key) // LRU: перекладываем в хвост
+    queryCache.set(key, hit)
+  }
+  return hit
+}
+function cacheSet(key: string, vec: number[]): void {
+  if (queryCache.size >= QUERY_CACHE_MAX) queryCache.delete(queryCache.keys().next().value as string)
+  queryCache.set(key, vec)
+}
+
 export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: EmbedMeta): Promise<number[][] | null> {
   if (texts.length === 0) return null
   const space = await getIndexSpace()
   const ep = await endpointFor(space)
   if (!ep) return null
   const model = purpose === 'query' ? space.queryModel : space.docModel
+  const cacheKey = purpose === 'query' && texts.length === 1 ? `${model}\u0000${texts[0]}` : null
+  if (cacheKey) {
+    const hit = cacheGet(cacheKey)
+    if (hit) return [hit]
+  }
   try {
     const res = await fetch(ep.url, {
       method: 'POST',
       headers: ep.headers,
-      // dimensions шлём только когда мерность НЕ колоночная: OpenRouter ретранслирует
-      // параметр не всем провайдерам, а Яндексу он обязателен (дефолт v2 — 256).
-      body: JSON.stringify({ model, input: texts, ...(space.dim !== EMBEDDING_DIM ? { dimensions: space.dim } : {}) }),
+      // dimensions: Яндексу ОБЯЗАТЕЛЕН (дефолт v2 — 256), text-embedding-3-* умеет MRL;
+      // прочим не шлём — не все OpenRouter-модели принимают параметр (усечёт fitToColumn).
+      body: JSON.stringify({ model, input: texts, ...(space.provider === 'yandex' || /text-embedding-3/.test(model) ? { dimensions: Math.min(space.dim, EMBEDDING_DIM) } : {}) }),
       signal: AbortSignal.timeout(20_000),
     })
     if (!res.ok) {
@@ -84,7 +108,7 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
     // порядок, а с чанками шагов путаница вектора списка и шага была бы тихой порчей индекса.
     const out = [...data.data]
       .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-      .map((d) => padToColumn(d.embedding))
+      .map((d) => fitToColumn(d.embedding))
     // Учёт расхода: стоимость эмбеддингов провайдер в теле не возвращает — токены, cost 0.
     const tokens = data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0
     await recordUsage({
@@ -99,6 +123,7 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
       refId: meta?.refId,
       provider: space.provider,
     })
+    if (cacheKey && out[0]) cacheSet(cacheKey, out[0])
     return out
   } catch (e) {
     console.warn('[embeddings] failed', e instanceof Error ? e.message : e)

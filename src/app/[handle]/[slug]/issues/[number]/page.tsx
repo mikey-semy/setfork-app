@@ -7,7 +7,6 @@ import { t } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { requireViewableMeta } from '@/features/library/guard'
-import { ListHeader } from '@/widgets/ListHeader'
 import { getIssue, getIssueAssignees, getIssueComments, getListLabels } from '@/features/issues/queries'
 import { LabelEditor } from '@/features/issues/LabelEditor'
 import { AssigneePicker } from '@/features/issues/AssigneePicker'
@@ -62,7 +61,6 @@ export default async function IssueThreadPage({
 
   return (
     <>
-      <ListHeader owner={owner} slug={slug} active="issues" />
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
         <div className="mb-1 flex flex-wrap items-start gap-x-2 gap-y-1">
           <h1 className="text-[22px] font-bold leading-tight text-ink">

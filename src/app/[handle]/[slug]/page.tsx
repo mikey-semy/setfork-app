@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
+import { ExternalLink, FileText, Hammer, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, Pencil, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, useTemplate } from '@/features/library/actions'
@@ -16,8 +16,8 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
 import { Markdown } from '@/shared/ui/Markdown'
-import { DigPanel } from '@/features/dig/DigPanel'
-import { digLayersFor } from '@/features/dig/queries'
+import { DigChatHost, DigChatOpen } from '@/features/dig/DigChat'
+import { getRoster } from '@/shared/ai/roster'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews } from '@/features/library/queries'
@@ -33,8 +33,10 @@ import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutl
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
+import { db, generations, listLinks, templates as templatesTable, users as usersTable } from '@/shared/db'
+import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
-import { ListHeader } from '@/widgets/ListHeader'
+import { renderWikiLinks } from '@/shared/lib/wiki-links'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { TranslateButton } from '@/features/library/TranslateButton'
 import { ReportButton } from '@/features/reports/ReportButton'
@@ -104,6 +106,7 @@ export default async function ListPage({
     (s.command ?? '').toLowerCase().includes(find)
   const steps = find ? allSteps.filter(matches) : allSteps
   const viewer = await getSession()
+  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументами (i18n-lint)
   const isOwner = viewer?.userId === tpl.ownerId
   // Ветками управляют те, кто может пушить: владелец или коллаборатор.
   const canManageBranches = isOwner || (!!viewer && (await isCollaborator(tpl.id, viewer.userId)))
@@ -129,7 +132,33 @@ export default async function ListPage({
   const completion = viewer ? await getCourseCompletion(tpl.id, viewer.userId) : null
   // Шахты «Копать глубже» (HQ §8): выкопанные слои текущей версии — по шагам.
   // У snapshot-веток раскопки нет (шаги без стабильных номеров версии).
-  const digMap = !snapshot ? await digLayersFor(tpl.id, tpl.currentVersion, lang) : new Map<number, never[]>()
+  // Мини-чат раскопки (редизайн HQ §8): ростер для выбора собеседника в чате.
+  const digGnomes = viewer && !snapshot
+    ? (await getRoster()).map((e) => ({ id: e.id, name: lang === 'ru' ? e.nameRu : e.nameEn, guild: lang === 'ru' ? e.guildRu : e.guildEn }))
+    : []
+  // Клеймо мастерской (HQ §7 «гильдии наружу»): список рождён советом гномов.
+  // Публичный бейдж; ссылка на беседу — только автору генерации (чат приватен).
+  const [forged] = await db
+    .select({ id: generations.id, userId: generations.userId })
+    .from(generations)
+    .where(eq(generations.chosenTemplateId, tpl.id))
+    .limit(1)
+  // Backlinks (HQ §11, Obsidian-вектор): публичные списки, ссылающиеся на этот
+  // через [[handle/slug]] (list_links пересобирает реиндекс).
+  const backlinks = await db
+    .select({ slug: templatesTable.slug, title: templatesTable.title, handle: usersTable.handle })
+    .from(listLinks)
+    .innerJoin(templatesTable, eq(listLinks.fromId, templatesTable.id))
+    .innerJoin(usersTable, eq(usersTable.id, templatesTable.ownerId))
+    .where(
+      andOp(
+        eq(listLinks.toId, tpl.id),
+        eq(templatesTable.status, 'published'),
+        eq(templatesTable.visibility, 'public'),
+        eq(templatesTable.moderation, 'active'),
+      ),
+    )
+    .limit(10)
   // Уроки курса = секции блоков (в порядке). Собираем оглавление + прогресс тестов по уроку.
   // lessonOfBlock[si] = индекс урока блока si (−1 = до первого урока).
   const lessons: OutlineLesson[] = []
@@ -189,8 +218,8 @@ export default async function ListPage({
     <>
       {/* Просмотр: владелец себя не накручивает, сервер дополнительно дедупит. */}
       {!isOwner && mon.viewTracking && <ViewBeacon templateId={tpl.id} />}
+      {viewer && !snapshot && <DigChatHost gnomes={digGnomes} lang={lang} />}
       <div className="print:hidden">
-        <ListHeader owner={owner} slug={slug} active="overview" />
       </div>
 
       <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
@@ -290,6 +319,19 @@ export default async function ListPage({
                   <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">
                     v{currentVersion.version}
                   </span>
+                  {forged && (
+                    <Tooltip label={say('Forged by the gnome council — see Guilds', 'Выкован советом гномов — см. Гильдии')}>
+                      {forged.userId === viewer?.userId ? (
+                        <Link href={`/generate/${forged.id}`} className="inline-flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-ink-2 hover:border-border-strong hover:text-ink">
+                          <Hammer size={11} /> {say('Council-forged', 'Выкован советом')}
+                        </Link>
+                      ) : (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded border border-border px-1.5 py-px text-[11px] text-ink-2">
+                          <Hammer size={11} /> {say('Council-forged', 'Выкован советом')}
+                        </span>
+                      )}
+                    </Tooltip>
+                  )}
                   {latestNote && <span className="min-w-0 flex-1 truncate text-ink-2">{latestNote}</span>}
                   <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
                   <Tooltip label={t('versionsTab', lang)}>
@@ -426,7 +468,7 @@ export default async function ListPage({
                     const md = typeof s.content?.md === 'string' ? s.content.md : ''
                     el = md ? (
                       <div className="break-inside-avoid px-1 py-1">
-                        <Markdown className="text-[14px] leading-relaxed text-ink-2">{md}</Markdown>
+                        <Markdown className="text-[14px] leading-relaxed text-ink-2">{renderWikiLinks(md)}</Markdown>
                       </div>
                     ) : null
                   } else if (s.type === 'image') {
@@ -532,8 +574,14 @@ export default async function ListPage({
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
+                          {/* Кирка (HQ §8, редизайн): чат-раскопка по ЭТОМУ пункту — в правом углу. */}
+                          {viewer && !snapshot && typeof s.n === 'number' && (
+                            <span className="ml-auto print:hidden">
+                              <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={say('Dig into this step', 'Копнуть этот пункт')} />
+                            </span>
+                          )}
                         </div>
-                        {tr(s.desc, lang) && <Markdown className="mt-1">{tr(s.desc, lang)}</Markdown>}
+                        {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}
                         {tr(s.why, lang) && (
                           <div className="mt-1.5 flex gap-1.5 text-[12.5px] text-ink-2">
                             <Info size={13} className="mt-0.5 shrink-0 text-muted" />
@@ -593,13 +641,6 @@ export default async function ListPage({
                             })}
                           </div>
                         )}
-                        {/* «Копать глубже» (HQ §8): шахта под шагом — слои причин/механизмов.
-                            Копают залогиненные; выкопанное видно всем. Печать без шахт. */}
-                        {!snapshot && typeof s.n === 'number' && (
-                          <div className="print:hidden">
-                            <DigPanel templateId={tpl.id} stepN={s.n} initial={digMap.get(s.n) ?? []} canDig={!!viewer} lang={lang} />
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -612,6 +653,22 @@ export default async function ListPage({
           {/* About-сайдбар */}
           <aside className="flex shrink-0 flex-col gap-4 print:hidden lg:w-[300px]">
             <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
+            {backlinks.length > 0 && (
+              <div className="rounded-lg border border-border bg-surface p-4">
+                <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
+                  {say('Linked from', 'Ссылаются на этот список')}
+                </div>
+                <ul className="flex flex-col gap-1.5">
+                  {backlinks.map((b) => (
+                    <li key={`${b.handle}/${b.slug}`}>
+                      <Link href={`/${b.handle}/${b.slug}`} className="block truncate text-[13px] text-accent hover:underline">
+                        {tr(b.title as LocaleText, lang) || `${b.handle}/${b.slug}`}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="rounded-lg border border-border bg-surface p-4">
               <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
                 {t('about', lang)}
