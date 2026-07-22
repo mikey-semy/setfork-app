@@ -8,6 +8,7 @@ import { getMessages } from '@/shared/ai/generation-messages'
 import { rosterAvatars } from '@/shared/ai/roster'
 import { getClarify } from '@/shared/ai/council-clarify'
 import { GenerationChat } from '@/features/generation/GenerationChat'
+import { gnomeReputation, REP_MIN_GENS } from '@/features/generation/reputation'
 
 export const metadata = { title: 'Draft' }
 
@@ -36,7 +37,12 @@ export default async function GenerationPage({
 
   // Беседа — из БД: переживает уход со страницы, перезапуск и неделю. Статус — колонка, а не
   // догадка по таблице jobs. Уточнения пока отдельным стором.
-  const [messages, clarifyQuestions, avatars] = await Promise.all([getMessages(gen.id), getClarify(gen.id), rosterAvatars()])
+  const [messages, clarifyQuestions, avatars, rep] = await Promise.all([getMessages(gen.id), getClarify(gen.id), rosterAvatars(), gnomeReputation()])
+  // Репутация НАРУЖУ (HQ §6): бейдж «✓ N%» = доля генераций с участием гнома, где список
+  // приняли. Меньше REP_MIN_GENS выходов — цифру не показываем (не вводить в заблуждение).
+  const repBadges: Record<string, string> = {}
+  for (const [who, r] of Object.entries(rep))
+    if (r.gens >= REP_MIN_GENS) repBadges[who] = `✓ ${Math.round((r.accepted / r.gens) * 100)}%`
 
   return (
     <GenerationChat
@@ -48,6 +54,7 @@ export default async function GenerationPage({
       listKind={gen.listKind}
       detail={gen.detail}
       avatars={avatars}
+      repBadges={repBadges}
       error={sp.e}
       clarifyQuestions={clarifyQuestions}
     />

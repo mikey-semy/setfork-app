@@ -35,7 +35,7 @@ const DEGRADE_AFTER_MS = 2 * 60_000
 const COUNCIL_KINDS = new Set<GenMessage['kind']>(['plan', 'summon', 'seek', 'draft', 'innovate', 'critique', 'synth'])
 
 /** Ход совета: пока виток идёт — раскрыт (это и есть лоадер), отработал — свёрнут в одну строку. */
-function CouncilTrail({ messages, lang, defaultOpen, avatars }: { messages: GenMessage[]; lang: Lang; defaultOpen: boolean; avatars: Record<string, string> }) {
+function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { messages: GenMessage[]; lang: Lang; defaultOpen: boolean; avatars: Record<string, string>; repBadges: Record<string, string> }) {
   const [open, setOpen] = useState(defaultOpen)
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   return (
@@ -52,7 +52,7 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars }: { messages: GenM
         <ol className="mt-2 flex flex-col gap-3">
           {messages.map((m) => (
             <li key={m.id} className="animate-fadein">
-              <CouncilBubble who={m.who ?? undefined} name={m.name ?? undefined}>
+              <CouncilBubble who={m.who ?? undefined} name={m.name ?? undefined} badge={m.who ? repBadges[m.who] : undefined} src={m.who ? avatars[m.who] : undefined}>
                 {m.text}
               </CouncilBubble>
             </li>
@@ -75,11 +75,13 @@ interface Props {
   detail: string | null
   /** id → своя картинка эксперта (сменили в админке). Нет записи → встроенная по who. */
   avatars: Record<string, string>
+  /** who → бейдж репутации «✓ N%» (HQ §6) — считается на сервере, ниже порога записи нет. */
+  repBadges: Record<string, string>
   error?: string
   clarifyQuestions?: string[]
 }
 
-export function GenerationChat({ generationId, lang, candidates, status, messages, listKind, detail, avatars, error, clarifyQuestions }: Props) {
+export function GenerationChat({ generationId, lang, candidates, status, messages, listKind, detail, avatars, repBadges, error, clarifyQuestions }: Props) {
   const detailNow = toDetail(detail)
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
@@ -219,7 +221,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 </div>
               ))}
               {/* Ход совета — второстепенное: свёрнут, когда виток уже отработал. Пока идёт — раскрыт. */}
-              {trail.length > 0 && <CouncilTrail messages={trail} lang={lang} defaultOpen={!cand && !failed} avatars={avatars} />}
+              {trail.length > 0 && <CouncilTrail messages={trail} lang={lang} defaultOpen={!cand && !failed} avatars={avatars} repBadges={repBadges} />}
               {failed && (
                 <CouncilBubble who="council" name={say('Council', 'Совет')}>
                   <span className="text-warn">{say('Could not finish this one — try again.', 'Не получилось — попробуй ещё раз.')}</span>

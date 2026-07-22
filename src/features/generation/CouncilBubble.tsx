@@ -30,7 +30,7 @@ function TypingDots() {
   )
 }
 
-export function CouncilBubble({ who, name, typing, src, children }: { who?: string; name?: string; typing?: boolean; src?: string; children: ReactNode }) {
+export function CouncilBubble({ who, name, badge, typing, src, children }: { who?: string; name?: string; badge?: string; typing?: boolean; src?: string; children: ReactNode }) {
   return (
     <div className="flex items-end gap-2.5">
       {/* Декоративная (роль названа рядом текстом). 64px: персонажи ростовые и с реквизитом, а внутри белого
@@ -38,7 +38,13 @@ export function CouncilBubble({ who, name, typing, src, children }: { who?: stri
           Обычный <img>: статичная webp из public/, оптимизатор next/image ни к чему (как в shared/ui/Avatar). */}
       <GnomeAvatar src={src || builtinSrc(who)} size={64} className="size-16 shrink-0" />
       <div className="min-w-0">
-        {name ? <div className="mb-1 pl-3.5 text-[11px] font-medium tracking-wide text-muted">{name}</div> : null}
+        {name ? (
+          <div className="mb-1 pl-3.5 text-[11px] font-medium tracking-wide text-muted">
+            {name}
+            {/* Репутация (HQ §6): доля советов, принятых людьми, — почему этому голосу можно верить. */}
+            {badge && <span className="ml-1.5 rounded-full bg-(--accent-soft) px-1.5 py-px text-[10px] font-semibold text-accent">{badge}</span>}
+          </div>
+        ) : null}
         {/* Без тени и рамки: контраст даёт surface поверх canvas. Скруглённый угол у аватарки — «хвостик» реплики. */}
         <div className="w-fit rounded-2xl rounded-bl-md bg-(--surface) px-3.5 py-2 text-[13.5px] leading-[1.5] text-ink-2">
           {children}
