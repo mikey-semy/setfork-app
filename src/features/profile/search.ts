@@ -23,7 +23,8 @@ const listsCountExpr = sql<number>`(
 const followersCountExpr = sql<number>`(select count(*)::int from ${follows} where ${follows.followingId} = ${users.id})`
 
 function peopleWhere(q?: string): SQL {
-  const base = eq(users.deleted, false)
+  // Приватные профили не всплывают в поиске людей (скрыты от всех кроме владельца).
+  const base = and(eq(users.deleted, false), eq(users.profilePrivate, false))!
   if (!q) return base
   const like = `%${q}%`
   return and(base, or(ilike(users.handle, like), ilike(users.name, like)))!
@@ -77,7 +78,7 @@ export async function getFollowers(userId: string): Promise<PersonRow[]> {
     .select(personCols)
     .from(follows)
     .innerJoin(users, eq(users.id, follows.followerId))
-    .where(and(eq(follows.followingId, userId), eq(users.deleted, false)))
+    .where(and(eq(follows.followingId, userId), eq(users.deleted, false), eq(users.profilePrivate, false)))
     .orderBy(desc(follows.createdAt))
     .limit(200)
   return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 96) })))
@@ -89,7 +90,7 @@ export async function getFollowing(userId: string): Promise<PersonRow[]> {
     .select(personCols)
     .from(follows)
     .innerJoin(users, eq(users.id, follows.followingId))
-    .where(and(eq(follows.followerId, userId), eq(users.deleted, false)))
+    .where(and(eq(follows.followerId, userId), eq(users.deleted, false), eq(users.profilePrivate, false)))
     .orderBy(desc(follows.createdAt))
     .limit(200)
   return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 96) })))

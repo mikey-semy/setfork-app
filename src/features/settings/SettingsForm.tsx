@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Switch } from '@/shared/ui/switch'
 import { AvatarDropzone } from './AvatarDropzone'
 import { SOCIAL_TYPES, SocialIcon } from './socials'
 import { updateProfile, type ActionResult } from './actions'
@@ -29,6 +30,7 @@ export function SettingsForm({
   location,
   website,
   socials,
+  profilePrivate,
 }: {
   lang: Lang
   handle: string
@@ -38,9 +40,11 @@ export function SettingsForm({
   location: string
   website: string
   socials: Social[]
+  profilePrivate: boolean
 }) {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(updateProfile, null)
   const [rows, setRows] = useState<SocialRow[]>(() => socials.map((s, i) => ({ ...s, _k: i })))
+  const [priv, setPriv] = useState(profilePrivate)
   const seq = useRef(socials.length)
 
   const addRow = () => {
@@ -129,6 +133,15 @@ export function SettingsForm({
             <Plus size={14} /> {t('addSocial', lang)}
           </button>
         </div>
+      </div>
+
+      {/* Приватность профиля */}
+      <div className="flex items-start justify-between gap-4 border-t border-border pt-4">
+        <div className="min-w-0">
+          <div className="text-[13.5px] font-medium text-ink">{t('profilePrivateLabel', lang)}</div>
+          <p className="mt-0.5 max-w-[520px] text-[12px] text-ink-2">{t('profilePrivateHint', lang)}</p>
+        </div>
+        <Switch name="profilePrivate" checked={priv} onCheckedChange={setPriv} />
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-border pt-4">

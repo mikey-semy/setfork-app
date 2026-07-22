@@ -502,6 +502,11 @@ const DICT = {
   undo: { en: 'Undo', ru: 'Отменить' },
   saveChanges: { en: 'Save changes', ru: 'Сохранить' },
   profileSaved: { en: 'Profile saved.', ru: 'Профиль сохранён.' },
+  profilePrivateLabel: { en: 'Private profile', ru: 'Приватный профиль' },
+  profilePrivateHint: {
+    en: 'Your profile page and activity graph are hidden from everyone but you, and you won’t appear in people search. Your PUBLIC lists stay public and still show your handle.',
+    ru: 'Страница профиля и граф активности видны только вам, и вы не появляетесь в поиске людей. Ваши ПУБЛИЧНЫЕ списки остаются публичными и по-прежнему показывают ваш ник.',
+  },
   dangerZone: { en: 'Danger zone', ru: 'Опасная зона' },
   deleteAccount: { en: 'Delete account', ru: 'Удалить аккаунт' },
   deleteAccountHint: {

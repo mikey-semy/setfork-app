@@ -132,6 +132,10 @@ export const users = pgTable('users', {
   // Язык ДОСТАВКИ (email/push-уведомления) — интерфейс пока English-only.
   lang: text('lang').notNull().default('en').$type<Lang>(),
   deleted: boolean('deleted').notNull().default(false), // true у ghost / удалённых аккаунтов
+  // Приватный профиль: страница /handle скрыта от всех кроме владельца, юзер убран
+  // из поиска людей. Публичные СПИСКИ остаются публичными (со своим ником) — это не
+  // анонимизация, а скрытие профиль-страницы/агрегатов. NB: списки прячет своя visibility.
+  profilePrivate: boolean('profile_private').notNull().default(false),
   // Кураторский аккаунт библиотеки: правки садовника на его списках автопринимаются.
   curated: boolean('curated').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
