@@ -319,7 +319,9 @@ export default async function ListPage({
             {currentVersion && (
               <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] print:hidden sm:px-3.5">
                 <div className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[240px]">
-                  {(branches.length > 1 || (canManageBranches && branches.length > 0)) && (
+                  {/* Пикер веток показываем ВСЕГДА, когда ветка есть (как GitHub «main ▾» —
+                      даже одна ветка и на чужом списке; canManage лишь гейтит создание). */}
+                  {branches.length > 0 && (
                     <BranchPicker base={base} owner={owner} slug={slug} branches={branches} current={refBranch ?? 'main'} lang={lang} canManage={canManageBranches} />
                   )}
                   <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
