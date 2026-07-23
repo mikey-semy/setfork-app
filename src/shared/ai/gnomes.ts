@@ -7,7 +7,7 @@ import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight } from './spotlight'
 import { getRoster, type Expert } from './roster'
 import { gnomeCard } from './gnome-character'
-import { gnomeMood, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, gnomeUserAccepts } from './gnome-reputation'
+import { gnomeMood, gnomeReflection, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, gnomeUserAccepts } from './gnome-reputation'
 import { parseFollowups, parseSummon } from './reply-parse'
 import { langEnName, type Lang } from '@/shared/i18n'
 
@@ -22,7 +22,7 @@ import { langEnName, type Lang } from '@/shared/i18n'
  */
 export { getRoster, type Expert } from './roster'
 export { gnomeCard, rivalryHints } from './gnome-character'
-export { gnomeMood, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, gnomeUserAccepts, repScore, REP_MIN_GENS } from './gnome-reputation'
+export { gnomeMood, gnomeReflection, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, gnomeUserAccepts, repScore, REP_MIN_GENS } from './gnome-reputation'
 
 const CALL_TIMEOUT_MS = 45_000
 
@@ -80,6 +80,8 @@ export async function gnomeSpeak(
   const card = gnomeCard(e.id)
   const [rep, thanks] = await Promise.all([gnomeReputation(), gnomeThanksCounts()])
   const mood = gnomeMood(rep, e.id, thanks[e.id] ?? 0).style
+  // Рефлексия — стаж/самоощущение (объём карьеры), ортогонально настроению (недавняя доля).
+  const reflection = gnomeReflection(rep, e.id)
 
   // Эпизодическая память о СОБЕСЕДНИКЕ (идея владельца «запомнит и будет добрым»):
   // гном узнаёт вернувшегося человека по ДВУМ сигналам — принятые черновики (сильнее:
@@ -102,7 +104,7 @@ export async function gnomeSpeak(
   }
 
   const persona = `You are ${e.persona}
-Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now: ${mood}.` : ''}${bond}${guild}${memory}`
+Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now: ${mood}.` : ''}${reflection ? ` Where your craft stands: ${reflection}.` : ''}${bond}${guild}${memory}`
 
   // Аккуратность специалиста: вне ремесла — честная оговорка (generalist '*' — по всему).
   const lane = e.domains.includes('*')
