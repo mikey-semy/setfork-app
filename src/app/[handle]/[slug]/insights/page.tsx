@@ -56,7 +56,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[1180px] overflow-x-clip px-4 py-6">
         {/* Итоги */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           {stats.map(({ icon: Icon, label, v }) => (
@@ -73,10 +73,10 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
           {/* Графики за 12 недель */}
           <div className="grid min-w-0 gap-4 sm:grid-cols-2">
             {charts.map((c) => (
-              <div key={c.key} className={card}>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[13px] font-semibold text-ink">{c.title}</span>
-                  <span className="font-mono text-[11.5px] text-muted">
+              <div key={c.key} className={`${card} min-w-0`}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-[13px] font-semibold text-ink">{c.title}</span>
+                  <span className="shrink-0 whitespace-nowrap font-mono text-[11.5px] text-muted">
                     {c.points.reduce((s, v) => s + v, 0)} / {WEEKS}{ru ? ' нед' : 'w'}
                   </span>
                 </div>
