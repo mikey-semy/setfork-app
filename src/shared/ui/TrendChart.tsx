@@ -35,8 +35,19 @@ export function TrendChart({
   const total = points.reduce((s, v) => s + v, 0)
 
   return (
-    <div className={className}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="block w-full" role="img" aria-label={`trend, total ${total}`}>
+    <div className={`min-w-0 ${className ?? ''}`}>
+      {/* max-w-full + width/height + preserveAspectRatio: без этого мобильный Safari
+          рендерит инлайновый SVG по внутренней ширине viewBox (600px) и страница
+          «уезжает» вбок. Клип по ширине контейнера + масштаб по соотношению сторон. */}
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width={W}
+        height={H}
+        preserveAspectRatio="xMidYMid meet"
+        className="block h-auto w-full max-w-full"
+        role="img"
+        aria-label={`trend, total ${total}`}
+      >
         {/* фоновая сетка: 3 горизонтали */}
         {[0.25, 0.5, 0.75].map((f) => (
           <line key={f} x1={PAD} x2={W - PAD} y1={PAD + f * (H - PAD * 2)} y2={PAD + f * (H - PAD * 2)} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 5" />
