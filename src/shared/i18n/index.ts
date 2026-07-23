@@ -502,6 +502,7 @@ const DICT = {
   foldersLabel: { en: 'Folders', ru: 'Папки' },
   starsLabel: { en: 'stars', ru: 'звёзд' },
   forksLabel: { en: 'forks', ru: 'форков' },
+  viewsLabel: { en: 'views', ru: 'просмотров' },
   byCount: { en: 'By count', ru: 'По числу' },
   searchStarsPh: { en: 'Search stars…', ru: 'Поиск по избранному…' },
   sortRecent: { en: 'Recent', ru: 'Недавние' },

@@ -156,12 +156,18 @@ export function TopNav({
           Слеша между лого и handle нет — только между handle и slug. */}
       {crumb && !isSearch && (
         <nav className="ml-2 flex min-w-0 items-center gap-1 text-[14px]" aria-label="breadcrumb">
-          <Link href={`/${crumb.handle}`} className={`truncate text-ink hover:text-accent ${crumb.slug ? 'font-medium' : 'font-semibold'}`}>
+          {/* На мобиле для СПИСКА показываем только его имя (как GitHub) — owner-хэндл
+              прятали, иначе он схлопывался в «m…», а title всё равно не влезал. На sm+
+              owner виден (до 160px, потом троеточие), title забирает остаток. */}
+          <Link
+            href={`/${crumb.handle}`}
+            className={`text-ink hover:text-accent ${crumb.slug ? 'hidden max-w-[160px] shrink-0 truncate font-medium sm:block' : 'truncate font-semibold'}`}
+          >
             {crumb.handle}
           </Link>
           {crumb.slug && (
             <>
-              <span className="text-muted">/</span>
+              <span className="hidden text-muted sm:inline">/</span>
               <Link href={`/${crumb.handle}/${crumb.slug}`} className="truncate font-semibold text-ink hover:text-accent">
                 {crumbTitle ? tr(crumbTitle, lang) : crumb.slug}
               </Link>

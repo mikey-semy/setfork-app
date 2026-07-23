@@ -1,7 +1,11 @@
 import 'server-only'
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
+// library — контент-фича (версии/шаги/дифф), от которой заметки релиза зависят по сути;
+// тот же кросс-фич-паттерн, что у gardener/generation (в baseline-suppressions).
+// eslint-disable-next-line boundaries/dependencies -- версии/шаги списка из library
 import { getVersions, getVersionSteps } from '@/features/library/queries'
 import { getReleases } from '@/features/releases/queries'
+// eslint-disable-next-line boundaries/dependencies -- дифф шагов версий из library
 import { diffSteps, type CmpStep, type DiffStatus } from '@/features/library/diff'
 
 // Пункты версии (LocaleText-поля) → CmpStep (строки на языке зрителя). Та же
