@@ -517,6 +517,7 @@ const DICT = {
   addSocial: { en: 'Add link', ru: 'Добавить ссылку' },
   avatar: { en: 'Avatar', ru: 'Аватар' },
   changeAvatar: { en: 'Change avatar', ru: 'Сменить аватар' },
+  avatarSquareLabel: { en: 'Square avatar (round by default)', ru: 'Квадратный аватар (по умолчанию круглый)' },
   avatarHint: { en: 'PNG, JPG, WEBP or GIF, up to 2 MB.', ru: 'PNG, JPG, WEBP или GIF, до 2 МБ.' },
   dropAvatar: { en: 'Drag & drop an image, or click to choose', ru: 'Перетащите изображение или нажмите, чтобы выбрать' },
   dropRelease: { en: 'Drop the image to upload', ru: 'Отпустите, чтобы загрузить' },

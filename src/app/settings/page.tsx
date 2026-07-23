@@ -79,6 +79,7 @@ export default async function SettingsPage() {
             website={user.website ?? ''}
             socials={user.socials}
             profilePrivate={user.profilePrivate}
+            avatarShape={user.avatarShape}
           />
         </section>
       ),

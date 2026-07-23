@@ -126,6 +126,8 @@ export const users = pgTable('users', {
   handle: text('handle').notNull().unique(),
   name: text('name'),
   avatarUrl: text('avatar_url'),
+  // Форма аватара в профиле: пользователь выбирает круг или квадрат (по умолчанию круг).
+  avatarShape: text('avatar_shape').notNull().default('circle').$type<'circle' | 'square'>(),
   bio: text('bio'),
   location: text('location'),
   website: text('website'),
