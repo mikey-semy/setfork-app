@@ -56,7 +56,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[1180px] overflow-x-clip px-4 py-6">
+      <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
         {/* Итоги */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           {stats.map(({ icon: Icon, label, v }) => (
@@ -69,9 +69,12 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
           ))}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        {/* grid-cols-1 на базе ОБЯЗАТЕЛЕН: без явной колонки на мобиле сетка берёт
+            неявный трек `auto`, который тянется к max-content графика (600px) и уезжает
+            за экран. `grid-cols-1` = minmax(0,1fr) — колонка сжимается до ширины экрана. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           {/* Графики за 12 недель */}
-          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 min-w-0 gap-4 sm:grid-cols-2">
             {charts.map((c) => (
               <div key={c.key} className={`${card} min-w-0`}>
                 <div className="mb-2 flex items-center justify-between gap-2">
