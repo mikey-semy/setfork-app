@@ -95,6 +95,26 @@ export function gnomeMood(rep: Record<string, GnomeRep>, id: string, thanks = 0)
   }
 }
 
+/**
+ * Эпизодическая память о СОБЕСЕДНИКЕ (идея владельца: «поблагодарят — запомнит»):
+ * сколько раз ИМЕННО этот пользователь благодарил ИМЕННО этого гнома. Гном узнаёт
+ * вернувшегося благодарного человека. Не кешируем (варьируется по паре гном×юзер);
+ * запрос дешёвый — точечный по индексу gnome_thanks_gnome_idx, зовём лишь когда у
+ * гнома вообще есть благодарности (см. gnomeSpeak). Сбой → 0 (память не критична).
+ */
+export async function gnomeUserThanks(gnomeId: string, userId: string): Promise<number> {
+  try {
+    const { gnomeThanks } = await import('@/shared/db')
+    const [row] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(gnomeThanks)
+      .where(and(eq(gnomeThanks.gnomeId, gnomeId), eq(gnomeThanks.userId, userId)))
+    return row?.n ?? 0
+  } catch {
+    return 0
+  }
+}
+
 /** Сколько «спасибо» у каждого гнома (одушевление): питает настроение. Кеш 5 мин. */
 let thanksCache: { at: number; data: Record<string, number> } | null = null
 export async function gnomeThanksCounts(): Promise<Record<string, number>> {
