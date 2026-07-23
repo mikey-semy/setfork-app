@@ -37,13 +37,20 @@ export const MEDIA_SECRET_KEYS = [MEDIA_KEYS.s3SecretKey, MEDIA_KEYS.imgproxyKey
 
 const strip = (s: string) => s.replace(/\/+$/, '')
 
+// TTL-кэш: настройки медиа читаются на КАЖДЫЙ рендер аватара. Без TTL процесс,
+// один раз закэшировавший «плохое» состояние (пустой конфиг при холодном старте
+// до готовности БД, правки настроек в админке), держал бы поломку до рестарта
+// сервера — классическая «сломалось и не чинится». 60с → само-лечение.
 let cache: MediaSettings | null = null
+let cachedAt = 0
+const CACHE_TTL_MS = 60_000
 export function clearMediaCache(): void {
   cache = null
+  cachedAt = 0
 }
 
 export async function getMediaSettings(): Promise<MediaSettings> {
-  if (cache) return cache
+  if (cache && Date.now() - cachedAt < CACHE_TTL_MS) return cache
   const rows = await db.select().from(appSettings).where(inArray(appSettings.key, Object.values(MEDIA_KEYS)))
   const m = Object.fromEntries(rows.map((r) => [r.key, r.value]))
   const val = (key: string, env: string) => (m[key]?.trim() || process.env[env] || '').trim()
@@ -61,6 +68,7 @@ export async function getMediaSettings(): Promise<MediaSettings> {
     useImgproxy: (m[MEDIA_KEYS.useImgproxy] ?? (process.env.MEDIA_USE_IMGPROXY === 'true' ? 'true' : 'false')) === 'true',
     cdnUrl: strip(val(MEDIA_KEYS.cdnUrl, 'CDN_URL')),
   }
+  cachedAt = Date.now()
   return cache
 }
 
