@@ -96,6 +96,25 @@ export function gnomeMood(rep: Record<string, GnomeRep>, id: string, thanks = 0)
 }
 
 /**
+ * РЕФЛЕКСИЯ гнома (одушевление, слой памяти 3; идея владельца — гном от первого лица
+ * о своём пути). Ортогональна настроению: mood — недавняя ДОЛЯ принятий (эмоция),
+ * рефлексия — накопленный ОБЪЁМ карьеры (сколько списков людей выросло из его
+ * черновиков) → стаж/самоощущение, от новичка до бывалого мастера. Можно быть
+ * мастером (большой объём) и при этом в кислом настроении (недавняя полоса).
+ * Растёт со временем; у новичка стажа нет → пусто (только заслуженное).
+ *
+ * Research: Generative Agents — рефлексия как синтез накопленного опыта в устойчивое
+ * самоощущение поверх сиюминутных наблюдений.
+ */
+export function gnomeReflection(rep: Record<string, GnomeRep>, id: string): string {
+  const accepted = rep[id]?.accepted ?? 0
+  if (accepted >= 30) return 'a seasoned master — many lists out there carry your hand; let quiet, earned confidence show, nothing to prove'
+  if (accepted >= 10) return 'you have a real track record now — a good number of lists were built on your drafts; speak with settled competence'
+  if (accepted >= 3) return 'you are finding your footing — a few of your lists have stuck with people; a quiet note of growing confidence'
+  return '' // новичок — стажа ещё нет, не выдумываем прошлое
+}
+
+/**
  * Эпизодическая память о СОБЕСЕДНИКЕ (идея владельца: «поблагодарят — запомнит»):
  * сколько раз ИМЕННО этот пользователь благодарил ИМЕННО этого гнома. Гном узнаёт
  * вернувшегося благодарного человека. Не кешируем (варьируется по паре гном×юзер);
@@ -109,6 +128,33 @@ export async function gnomeUserThanks(gnomeId: string, userId: string): Promise<
       .select({ n: sql<number>`count(*)::int` })
       .from(gnomeThanks)
       .where(and(eq(gnomeThanks.gnomeId, gnomeId), eq(gnomeThanks.userId, userId)))
+    return row?.n ?? 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Эпизодическая память о СОБЕСЕДНИКЕ, слой 2 (сигнал СИЛЬНЕЕ «спасибо»): сколько раз
+ * ЭТОТ пользователь ПРИНЯЛ список из генерации, где ЭТОТ гном давал черновик — «ты уже
+ * помогал этому человеку собрать список», он воспользовался твоей работой, а не просто
+ * поблагодарил. Не кешируем (пара гном×юзер); запрос точечный (generations_user_idx),
+ * зовём лишь у гномов с ненулевой репутацией принятий (см. gnomeSpeak). Сбой → 0.
+ */
+export async function gnomeUserAccepts(gnomeId: string, userId: string): Promise<number> {
+  try {
+    const [row] = await db
+      .select({ n: sql<number>`count(distinct ${generations.id})::int` })
+      .from(generationMessages)
+      .innerJoin(generations, eq(generations.id, generationMessages.generationId))
+      .where(
+        and(
+          eq(generationMessages.who, gnomeId),
+          eq(generationMessages.kind, 'draft'),
+          eq(generations.userId, userId),
+          isNotNull(generations.chosenTemplateId),
+        ),
+      )
     return row?.n ?? 0
   } catch {
     return 0

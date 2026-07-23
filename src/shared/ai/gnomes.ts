@@ -7,7 +7,7 @@ import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight } from './spotlight'
 import { getRoster, type Expert } from './roster'
 import { gnomeCard } from './gnome-character'
-import { gnomeMood, gnomeReputation, gnomeThanksCounts, gnomeUserThanks } from './gnome-reputation'
+import { gnomeMood, gnomeReflection, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, gnomeUserAccepts } from './gnome-reputation'
 import { parseFollowups, parseSummon } from './reply-parse'
 import { langEnName, type Lang } from '@/shared/i18n'
 
@@ -22,7 +22,7 @@ import { langEnName, type Lang } from '@/shared/i18n'
  */
 export { getRoster, type Expert } from './roster'
 export { gnomeCard, rivalryHints } from './gnome-character'
-export { gnomeMood, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, repScore, REP_MIN_GENS } from './gnome-reputation'
+export { gnomeMood, gnomeReflection, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, gnomeUserAccepts, repScore, REP_MIN_GENS } from './gnome-reputation'
 
 const CALL_TIMEOUT_MS = 45_000
 
@@ -80,20 +80,31 @@ export async function gnomeSpeak(
   const card = gnomeCard(e.id)
   const [rep, thanks] = await Promise.all([gnomeReputation(), gnomeThanksCounts()])
   const mood = gnomeMood(rep, e.id, thanks[e.id] ?? 0).style
+  // Рефлексия — стаж/самоощущение (объём карьеры), ортогонально настроению (недавняя доля).
+  const reflection = gnomeReflection(rep, e.id)
 
   // Эпизодическая память о СОБЕСЕДНИКЕ (идея владельца «запомнит и будет добрым»):
-  // гном узнаёт вернувшегося человека, который благодарил его раньше. Гейт на общем
-  // счётчике благодарностей — точечный запрос лишь у гномов, кого вообще благодарили.
-  // Тонко и в характере: тёплый кивок, не подобострастие; 0 → строки нет (только факт).
+  // гном узнаёт вернувшегося человека по ДВУМ сигналам — принятые черновики (сильнее:
+  // «ты помогал ему собрать список») и «спасибо». Оба запроса точечные и под гейтом
+  // (спрашиваем лишь у гнома, у кого вообще есть принятия/благодарности) → без лишней
+  // нагрузки. Тонко и в характере: тёплый кивок, не подобострастие; 0/0 → строки нет.
   let bond = ''
-  if (opts.userId && (thanks[e.id] ?? 0) > 0) {
-    const ut = await gnomeUserThanks(e.id, opts.userId).catch(() => 0)
-    if (ut > 0)
-      bond = `\nYOU REMEMBER THIS PERSON: they have thanked you before${ut >= 3 ? ' several times — a familiar, valued face' : ''}. A brief, genuine note of recognition fits if it feels natural — warm, never servile or overfamiliar.`
+  if (opts.userId) {
+    const uid = opts.userId
+    const [accepts, thanked] = await Promise.all([
+      (rep[e.id]?.accepted ?? 0) > 0 ? gnomeUserAccepts(e.id, uid).catch(() => 0) : Promise.resolve(0),
+      (thanks[e.id] ?? 0) > 0 ? gnomeUserThanks(e.id, uid).catch(() => 0) : Promise.resolve(0),
+    ])
+    if (accepts > 0 && thanked > 0)
+      bond = `\nYOU REMEMBER THIS PERSON WELL: you've helped them build lists before — they went with your draft — and they've thanked you. A warm, familiar nod fits, never servile or overfamiliar.`
+    else if (accepts > 0)
+      bond = `\nYOU REMEMBER THIS PERSON: they have built lists from your drafts before${accepts >= 3 ? ' more than once — a familiar face' : ''}. A brief, genuine note of recognition fits if natural — never servile or overfamiliar.`
+    else if (thanked > 0)
+      bond = `\nYOU REMEMBER THIS PERSON: they have thanked you before${thanked >= 3 ? ' several times — a familiar, valued face' : ''}. A brief, genuine note of recognition fits if it feels natural — warm, never servile or overfamiliar.`
   }
 
   const persona = `You are ${e.persona}
-Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now: ${mood}.` : ''}${bond}${guild}${memory}`
+Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now: ${mood}.` : ''}${reflection ? ` Where your craft stands: ${reflection}.` : ''}${bond}${guild}${memory}`
 
   // Аккуратность специалиста: вне ремесла — честная оговорка (generalist '*' — по всему).
   const lane = e.domains.includes('*')
