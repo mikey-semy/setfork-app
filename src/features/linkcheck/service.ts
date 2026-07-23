@@ -76,8 +76,10 @@ export async function runLinkcheckSweep(payload: LinkcheckPayload = {}, probe: P
       const row = queue.shift()
       if (!row) return
       // Politeness: не чаще perHostPerMin на хост; не пустило — отложим URL
-      // на retryAfter, он уйдёт в следующий батч цепочки.
-      const gate = await store.tokenBucket(`lc:${row.host}`, 2, s.perHostPerMin / 60)
+      // на retryAfter, он уйдёт в следующий батч цепочки. Ёмкость (burst) = сама
+      // поминутная норма хоста, НЕ хардкод: список с N ссылками на один хост должен
+      // пробиться за один свип, а не растягиваться по 2 на 48ч (баг захардкоженного «2»).
+      const gate = await store.tokenBucket(`lc:${row.host}`, Math.max(2, s.perHostPerMin), s.perHostPerMin / 60)
       if (!gate.allowed) {
         await db
           .update(linkChecks)
