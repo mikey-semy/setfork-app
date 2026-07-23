@@ -46,7 +46,7 @@
   },
   "src/app/[handle]/[slug]/releases/new/page.tsx": {
     "no-restricted-syntax": {
-      "count": 10
+      "count": 9
     }
   },
   "src/app/[handle]/[slug]/releases/page.tsx": {
@@ -252,11 +252,6 @@
   "src/features/discussions/actions.ts": {
     "boundaries/dependencies": {
       "count": 1
-    }
-  },
-  "src/features/feed/CreateWithAI.tsx": {
-    "no-restricted-syntax": {
-      "count": 3
     }
   },
   "src/features/feed/Feed.tsx": {

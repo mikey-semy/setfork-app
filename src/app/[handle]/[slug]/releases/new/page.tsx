@@ -5,13 +5,13 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
-import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { getVersions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
 import { createRelease } from '@/features/releases/actions'
 import { VersionSelect } from '@/features/releases/VersionSelect'
+import { ReleaseNotesGen } from '@/features/releases/ReleaseNotesGen'
 
 const ERR: Record<string, { ru: string; en: string }> = {
   badtag: { ru: 'Тег: буквы/цифры и .-_ (до 40 символов).', en: 'Tag: letters/digits and .-_ (max 40 chars).' },
@@ -78,10 +78,18 @@ export default async function NewReleasePage({
             <span className="text-[12.5px] font-semibold text-ink">{ru ? 'Заголовок' : 'Title'}</span>
             <Input name="title" maxLength={200} placeholder={ru ? 'Что вошло в релиз' : 'What’s in this release'} />
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[12.5px] font-semibold text-ink">Notes</span>
-            <MarkdownEditor name="notes" rows={8} placeholder={ru ? 'Заметки релиза (markdown)…' : 'Release notes (markdown)…'} maxLength={50000} lang={lang} refScope={{ owner, slug }} />
-          </label>
+          <ReleaseNotesGen
+            templateId={meta.id}
+            owner={owner}
+            slug={slug}
+            lang={lang}
+            labels={{
+              notes: 'Notes',
+              generate: t('generateFromChanges', lang),
+              empty: t('changelogEmpty', lang),
+              placeholder: t('releaseNotesPh', lang),
+            }}
+          />
           <label className="flex cursor-pointer items-center gap-2.5 text-[13px]">
             <input type="checkbox" name="prerelease" className="size-4 accent-(--accent)" />
             <span className="font-medium text-ink">{t('preRelease', lang)}</span>
