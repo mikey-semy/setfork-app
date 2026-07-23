@@ -115,6 +115,33 @@ export async function gnomeUserThanks(gnomeId: string, userId: string): Promise<
   }
 }
 
+/**
+ * Эпизодическая память о СОБЕСЕДНИКЕ, слой 2 (сигнал СИЛЬНЕЕ «спасибо»): сколько раз
+ * ЭТОТ пользователь ПРИНЯЛ список из генерации, где ЭТОТ гном давал черновик — «ты уже
+ * помогал этому человеку собрать список», он воспользовался твоей работой, а не просто
+ * поблагодарил. Не кешируем (пара гном×юзер); запрос точечный (generations_user_idx),
+ * зовём лишь у гномов с ненулевой репутацией принятий (см. gnomeSpeak). Сбой → 0.
+ */
+export async function gnomeUserAccepts(gnomeId: string, userId: string): Promise<number> {
+  try {
+    const [row] = await db
+      .select({ n: sql<number>`count(distinct ${generations.id})::int` })
+      .from(generationMessages)
+      .innerJoin(generations, eq(generations.id, generationMessages.generationId))
+      .where(
+        and(
+          eq(generationMessages.who, gnomeId),
+          eq(generationMessages.kind, 'draft'),
+          eq(generations.userId, userId),
+          isNotNull(generations.chosenTemplateId),
+        ),
+      )
+    return row?.n ?? 0
+  } catch {
+    return 0
+  }
+}
+
 /** Сколько «спасибо» у каждого гнома (одушевление): питает настроение. Кеш 5 мин. */
 let thanksCache: { at: number; data: Record<string, number> } | null = null
 export async function gnomeThanksCounts(): Promise<Record<string, number>> {
