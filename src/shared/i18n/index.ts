@@ -425,6 +425,7 @@ const DICT = {
   copied: { en: 'Copied', ru: 'Скопировано' },
   history: { en: 'history', ru: 'история' },
   updated: { en: 'updated', ru: 'обновлён' },
+  verifiedBadge: { en: 'verified', ru: 'проверен' },
   detailed: { en: 'Detailed', ru: 'Подробно' },
   compact: { en: 'Compact', ru: 'Кратко' },
   markDone: { en: 'Mark done', ru: 'Отметить' },

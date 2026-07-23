@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { GitFork, Lock, Star } from 'lucide-react'
-import { Avatar } from '@/shared/ui/Avatar'
+import { BadgeCheck, GitFork, ListChecks, Lock, Play, Star } from 'lucide-react'
 import { TagChip } from '@/shared/ui/TagChip'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, tr, type Lang } from '@/shared/i18n'
@@ -12,34 +11,64 @@ function fmt(n: number): string {
   return String(n)
 }
 
-/** Карточка-строка (как список репозиториев GitHub): слева accent-полоса (цвет
- *  списка — идентичность без фейкового баннера), имя = title, клик открывает;
- *  единственное действие на карточке — ⭐ Star (сигнал качества + коллекция). */
+/** Карточка списка в витрине Explore — по анатомии карточки репозитория GitHub
+ *  Explore (сверху вниз): обложка (если есть) → owner/title + ⭐ Star (как у нас) →
+ *  бейджи → описание → строка-инфо со счётчиками (аналог вкладок GitHub) → футер
+ *  с датой обновления. Без фейкового баннера и без значка языка. */
 export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang: Lang; starred?: boolean }) {
   const star = toggleStar.bind(null, item.id)
+  const base = `/${item.ownerHandle}/${item.slug}`
+  const desc = tr(item.desc, lang)
+  const updated = new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(item.updatedAt))
+
   return (
-    <div className="relative flex items-start gap-3 rounded-lg border border-border bg-surface px-3.5 py-3 transition-colors hover:border-border-strong">
-      <Link href={`/${item.ownerHandle}`} className="shrink-0">
-        <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={32} />
-      </Link>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[14.5px]">
-            <Link href={`/${item.ownerHandle}`} className="font-semibold text-ink-2 hover:text-accent">
-              {item.ownerHandle}
+    <div className="overflow-hidden rounded-lg border border-border bg-surface transition-colors hover:border-border-strong">
+      {/* 1. Обложка — только если реально загружена (иначе идентичность даёт заголовок). */}
+      {item.coverImage && (
+        // eslint-disable-next-line @next/next/no-img-element -- внешний ассет по готовому URL
+        <img src={item.coverImage} alt="" className="h-24 w-full border-b border-border object-cover sm:h-28" />
+      )}
+
+      <div className="p-4">
+        {/* 2. Заголовок owner/title + 3. Кнопка Star (как у нас), в правом верхнем углу. */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2">
+            <Link href={base} className="mt-0.5 shrink-0 text-muted hover:text-accent" aria-label={tr(item.title, lang)}>
+              <ListChecks size={16} />
             </Link>
-            <span className="text-muted"> / </span>
-            <Link href={`/${item.ownerHandle}/${item.slug}`} className="font-bold text-ink hover:text-accent hover:underline">
-              {tr(item.title, lang)}
-            </Link>
-          </span>
-          <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">
-            v{item.version}
-          </span>
+            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[15px] leading-tight">
+              <Link href={`/${item.ownerHandle}`} className="font-medium text-ink-2 hover:text-accent">
+                {item.ownerHandle}
+              </Link>
+              <span className="text-muted">/</span>
+              <Link href={base} className="min-w-0 break-words font-bold text-accent hover:underline">
+                {tr(item.title, lang)}
+              </Link>
+              {item.verified && (
+                <Tooltip label={t('verifiedBadge', lang)}>
+                  <BadgeCheck size={14} className="shrink-0 text-accent" />
+                </Tooltip>
+              )}
+            </div>
+          </div>
+          <form action={star} className="shrink-0">
+            <Tooltip label={t('star', lang)}>
+              <button
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[12px] font-medium transition-colors hover:border-border-strong ${
+                  starred ? 'border-warn text-warn' : 'border-border text-ink-2'
+                }`}
+              >
+                <Star size={14} fill={starred ? 'currentColor' : 'none'} /> {fmt(item.starsCount)}
+              </button>
+            </Tooltip>
+          </form>
+        </div>
+
+        {/* Бейджи версии/черновика/приватности. */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">v{item.version}</span>
           {item.status === 'draft' && (
-            <span className="rounded border border-warn px-1.5 py-0.5 text-[10.5px] font-medium text-warn">
-              {t('draftBadge', lang)}
-            </span>
+            <span className="rounded border border-warn px-1.5 py-0.5 text-[10.5px] font-medium text-warn">{t('draftBadge', lang)}</span>
           )}
           {item.visibility === 'private' && (
             <Tooltip label="private">
@@ -48,41 +77,38 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
               </span>
             </Tooltip>
           )}
-          {item.tags.slice(0, 4).map((tag) => (
-            <TagChip key={tag} slug={tag} />
-          ))}
         </div>
-        <div className="mt-1 truncate text-[12.5px] text-ink-2">{tr(item.desc, lang)}</div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-3.5 text-[11.5px] text-muted">
+
+        {/* Описание. */}
+        {desc && <p className="mt-2 line-clamp-2 text-[13px] leading-snug text-ink-2">{desc}</p>}
+
+        {/* Теги. */}
+        {item.tags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {item.tags.slice(0, 5).map((tag) => (
+              <TagChip key={tag} slug={tag} />
+            ))}
+          </div>
+        )}
+
+        {/* 4. Строка-инфо со счётчиками (аналог вкладок GitHub «со всей информацией»). */}
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted">
+          <span className="inline-flex items-center gap-1">
+            <Star size={12} /> {fmt(item.starsCount)}
+          </span>
           <span className="inline-flex items-center gap-1">
             <GitFork size={12} /> {fmt(item.forksCount)}
           </span>
-          <span>
-            {new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric' }).format(
-              new Date(item.updatedAt),
-            )}
+          <span className="inline-flex items-center gap-1">
+            <Play size={11} /> {fmt(item.runsCount)}
           </span>
         </div>
+
+        {/* 5. Футер — дата последнего обновления. */}
+        <div className="mt-3 border-t border-border pt-2 text-[11.5px] text-muted">
+          {t('updated', lang)} {updated}
+        </div>
       </div>
-
-      {/* Обложка — компактный thumb, ТОЛЬКО если реально загружена (иначе идентичность даёт полоса слева). */}
-      {item.coverImage && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.coverImage} alt="" className="hidden h-14 w-24 shrink-0 self-center rounded-md border border-border object-cover sm:block" />
-      )}
-
-      {/* единственное действие — Star */}
-      <form action={star} className="shrink-0">
-        <Tooltip label={t('star', lang)}>
-          <button
-            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors hover:border-border-strong ${
-              starred ? 'border-warn text-warn' : 'border-border text-ink-2'
-            }`}
-          >
-            <Star size={14} fill={starred ? 'currentColor' : 'none'} /> {fmt(item.starsCount)}
-          </button>
-        </Tooltip>
-      </form>
     </div>
   )
 }
