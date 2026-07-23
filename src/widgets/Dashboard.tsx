@@ -6,7 +6,6 @@ import { getFollowingIds } from '@/features/follows/queries'
 import { getWatchedIds } from '@/features/watch/queries'
 import { getFeedEvents, getRecommended, getStarredIds, type FeedEvent } from '@/features/feed/queries'
 import { Feed } from '@/features/feed/Feed'
-import { CreateWithAI } from '@/features/feed/CreateWithAI'
 import type { Lang } from '@/shared/i18n'
 import { ListsPanel } from './ListsPanel'
 import { t, tr } from '@/shared/i18n'
@@ -62,9 +61,8 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
         />
       </aside>
 
-      {/* Центр: AI-area + лента */}
+      {/* Центр: лента (AI-строка убрана — дублировала кнопку «Создать» из шапки/списков). */}
       <div className="min-w-0">
-        <CreateWithAI lang={lang} />
         {improve.length > 0 && (
           <div className="mb-4 rounded-lg border border-border bg-surface p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
