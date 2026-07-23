@@ -18,7 +18,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const origin = (process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin).replace(/\/$/, '')
   const base = `${origin}/${handle}/${slug}`
   const rels = await getReleases(meta.id)
-  const updated = (rels[0]?.createdAt ?? new Date(0)).toISOString()
+  // Нет релизов → берём время списка (обновление/создание), НЕ эпоху 0: пустой фид
+  // с <updated>1970-01-01</updated> невалиден по смыслу и путал ридеры (баг владельца).
+  const updated = (rels[0]?.createdAt ?? meta.updatedAt ?? meta.createdAt ?? new Date()).toISOString()
 
   const entries = rels
     .map(

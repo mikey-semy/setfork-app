@@ -328,9 +328,7 @@ export default async function ListPage({
                   <Link href={`/${tpl.owner.handle}`} className="min-w-0 truncate font-semibold text-ink hover:text-accent">
                     {tpl.owner.handle}
                   </Link>
-                  <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">
-                    v{currentVersion.version}
-                  </span>
+                  {/* Версию тут НЕ показываем — она только в сайдбаре Releases (убран дубль v1×3). */}
                   {latestNote && <span className="hidden min-w-0 flex-1 truncate text-ink-2 sm:inline">{latestNote}</span>}
                   <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
                   {/* История коммитов и blame переехали в «...»-меню действий справа. */}
@@ -348,17 +346,6 @@ export default async function ListPage({
                       </Tooltip>
                     </form>
                   )}
-                  {/* Run — первичное действие, кнопка-иконка 36×36 (без текста —
-                      подпись в тултипе/aria). Ряд ровный с Получить и «...». */}
-                  {viewer && (
-                    <form action={startRun.bind(null, tpl.id)} className="inline-flex">
-                      <Tooltip label={t('runStart', lang)}>
-                        <button aria-label={t('runStart', lang)} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-fg hover:opacity-90">
-                          <PlayCircle size={16} />
-                        </button>
-                      </Tooltip>
-                    </form>
-                  )}
                   <CloneDropdown base={base} lang={lang} />
                   {/* Вторичное (правка/перевод/история/blame) — одним «...»-меню,
                       а не россыпью разновысоких иконок (эталон: секции настроек). */}
@@ -371,6 +358,17 @@ export default async function ListPage({
                     canTranslate={canManageBranches && !snapshot && titleIsForeign}
                     targetLang={lang}
                   />
+                  {/* Run — первичное действие (прогон): к ПРАВОМУ КРАЮ ряда (thumb-зона, по
+                      mobile-ui: primary справа-внизу). Кнопка-иконка 36×36, подпись в тултипе/aria. */}
+                  {viewer && (
+                    <form action={startRun.bind(null, tpl.id)} className="inline-flex">
+                      <Tooltip label={t('runStart', lang)}>
+                        <button aria-label={t('runStart', lang)} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-fg hover:opacity-90">
+                          <PlayCircle size={16} />
+                        </button>
+                      </Tooltip>
+                    </form>
+                  )}
                 </div>
               </div>
             )}
