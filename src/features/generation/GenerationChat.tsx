@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowUp, Check, ChevronRight, Loader2, RotateCw } from 'lucide-react'
+import { Check, ChevronRight, RotateCw } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import type { GenMessage } from '@/shared/ai/generation-messages'
@@ -13,7 +13,7 @@ import { CouncilBubble } from './CouncilBubble'
 import { CandidateCard } from './CandidateCard'
 import { ActionsMenu } from './ActionsMenu'
 import { ProvenancePanel } from './ProvenancePanel'
-import { Tooltip } from '@/shared/ui/Tooltip'
+import { ChatComposer } from '@/shared/ui/ChatComposer'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
 
 /** Первая буква — заглавная: hint приходит от модели строчными, а это готовое сообщение. */
@@ -188,18 +188,10 @@ export function GenerationChat({ generationId, lang, candidates, status, message
     }
   }, [status, generationId, messages.length, router])
 
-  const noteRef = useRef<HTMLTextAreaElement>(null)
-  // Авторост поля до 128px (rows=1 без ручки resize: форму не ломает, ось кнопок стабильна).
-  const autosize = (el: HTMLTextAreaElement) => {
-    el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 128)}px`
-  }
-
   const submitNote = () => {
     const t = note.trim()
     if (!t || working) return
     setNote('')
-    if (noteRef.current) noteRef.current.style.height = 'auto'
     start(() => refineInChat(generationId, t))
   }
 
@@ -396,55 +388,29 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             )}
           </div>
         )}
-        {/* Рамка = сам «инпут», кнопки В ПОТОКЕ (не absolute): одна строка — всё по
-            центральной оси, много строк — кнопки у низа (items-end). Фидбек владельца:
-            absolute-кнопки «падали» ниже оси при фактической высоте textarea. */}
-        <div className="flex items-end gap-1 rounded-2xl border border-border bg-surface px-1.5 py-1.5 focus-within:border-border-strong">
-          <ActionsMenu
-            candidates={candidates}
-            selId={selId}
-            working={working}
-            lang={lang}
-            onPick={setSelId}
-            onAccept={() => selId && start(() => acceptCandidate(generationId, selId))}
-            onRegen={() => start(() => regenerateCandidate(generationId))}
-          />
-          {/* Плейсхолдер = ГОТОВОЕ сообщение (фидбек владельца: никаких «Дополни — «…»»-инструкций,
-              как ghost-suggestion у Copilot/Claude): подсказка ПО ТЕМЕ от модели (hint кандидата,
-              0 лишних вызовов), с большой буквы; фолбэк — фраза по типу списка. Tab или →
-              подхватывает её в поле. Авторост до 128px, дальше внутренний скролл. */}
-          <textarea
-            ref={noteRef}
-            value={note}
-            onChange={(e) => {
-              setNote(e.target.value)
-              autosize(e.currentTarget)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                submitNote()
-              }
-              if ((e.key === 'Tab' || e.key === 'ArrowRight') && !note) {
-                e.preventDefault()
-                setNote(capFirst(last?.hint || refineHint(listKind, ru)))
-              }
-            }}
-            rows={1}
-            placeholder={capFirst(last?.hint || refineHint(listKind, ru))}
-            className="max-h-32 min-h-9 flex-1 resize-none bg-transparent px-2 py-[7.5px] text-[13.5px] leading-[1.55] text-ink outline-hidden"
-          />
-          <Tooltip label={say('Send', 'Отправить')}>
-            <button
-              onClick={submitNote}
-              disabled={!note.trim() || working}
-              aria-label={say('Send', 'Отправить')}
-              className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-primary-fg disabled:opacity-40"
-            >
-              {working ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={17} />}
-            </button>
-          </Tooltip>
-        </div>
+        {/* Композер — общий компонент (дом гномов, UI): плейсхолдер = ГОТОВОЕ сообщение
+            (hint по теме, 0 вызовов), Tab/→ подхватывает его; «+» слева — действия с вариантами. */}
+        <ChatComposer
+          value={note}
+          onChange={setNote}
+          onSend={submitNote}
+          placeholder={capFirst(last?.hint || refineHint(listKind, ru))}
+          sendDisabled={!note.trim() || working}
+          pending={working}
+          sendAriaLabel={say('Send', 'Отправить')}
+          onTab={() => setNote(capFirst(last?.hint || refineHint(listKind, ru)))}
+          leftSlot={
+            <ActionsMenu
+              candidates={candidates}
+              selId={selId}
+              working={working}
+              lang={lang}
+              onPick={setSelId}
+              onAccept={() => selId && start(() => acceptCandidate(generationId, selId))}
+              onRegen={() => start(() => regenerateCandidate(generationId))}
+            />
+          }
+        />
       </div>
     </div>
   )
