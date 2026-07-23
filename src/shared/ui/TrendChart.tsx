@@ -36,13 +36,12 @@ export function TrendChart({
 
   return (
     <div className={`min-w-0 ${className ?? ''}`}>
-      {/* max-w-full + width/height + preserveAspectRatio: без этого мобильный Safari
-          рендерит инлайновый SVG по внутренней ширине viewBox (600px) и страница
-          «уезжает» вбок. Клип по ширине контейнера + масштаб по соотношению сторон. */}
+      {/* Без width/height-атрибутов: они задают SVG max-content = 600px, и в сжимаемой
+          колонке всё равно норм, но в неявном grid-треке `auto` это тянет вёрстку за
+          экран. viewBox + w-full + max-w-full + h-auto → масштаб по ширине контейнера,
+          высота по соотношению сторон (реальный фикс ширины — grid-cols-1 у сеток). */}
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        width={W}
-        height={H}
         preserveAspectRatio="xMidYMid meet"
         className="block h-auto w-full max-w-full"
         role="img"
