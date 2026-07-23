@@ -1,4 +1,12 @@
-# Автодеплой на прод setfork (31.177.83.219, без Dokploy) после зелёного CI на master.
+# Автодеплой на прод setfork (31.177.83.219, без Dokploy) на КАЖДЫЙ пуш в master.
+#
+# Триггер — push (не workflow_run CI): раньше Deploy ждал завершения воркфлоу CI,
+# но `cancel-in-progress` + частые мержи параллельных сессий отменяли master-CI
+# за 2-4 мин (не доживал до конца) → Deploy вечно skipped, автодеплой не работал.
+# Теперь деплой не зависит от гонки CI. Гейт качества: (1) PR-CI зелёный ПЕРЕД
+# мержем (linkcheck-флейк починен, CI снова доверяемый); (2) сборка `--build` идёт
+# НА СЕРВЕРЕ — битый код не соберётся, а `compose up` НЕ заменит рабочий контейнер
+# (прод остаётся на последней рабочей сборке, джоба краснеет — видно).
 #
 # Исходники уезжают tar-ом по ssh в /opt/setfork/src/setfork-frontend, образ
 # собирается НА СЕРВЕРЕ (npm registry с RF-сервера работает; .env сервиса лежит
@@ -7,11 +15,12 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [master]
 
+# Один деплой за раз (никогда не параллелим прод), но БЕЗ cancel-in-progress:
+# оборвать deploy на середине `compose up` = риск полуподнятого контейнера.
+# Мержи копятся в очередь и катятся по одному, прод сходится к последнему коммиту.
 concurrency:
   group: deploy-prod-frontend
   cancel-in-progress: false
@@ -22,12 +31,9 @@ env:
 
 jobs:
   deploy:
-    if: github.event.workflow_run.conclusion == 'success'
     runs-on: [self-hosted, setfork]
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Ключ деплоя (ro-mount раннера)
         run: |
