@@ -103,11 +103,12 @@ describe('runLinkcheckSweep с инжектированной пробой', () 
     await db.insert(appSettings).values([
       { key: 'linkcheck.enabled', value: 'true' },
       { key: 'linkcheck.broken_fails', value: '2' },
-      // Politeness (per_host_per_min=6 деф.) душил бы тест: dead-хост пробится в трёх
-      // свипах подряд за миллисекунды, а bucket (ёмкость 2, refill 0.1/с) не успевает —
-      // третий свип (сайт ожил) отложил бы ссылку без пробы, вердикт застрял бы на broken.
-      // В проде свипы через ~2 дня, bucket полон. Тут снимаем троттлинг высоким лимитом.
-      { key: 'linkcheck.per_host_per_min', value: '600000' },
+      // Politeness: три свипа dead-хоста идут за миллисекунды. Ёмкость bucket теперь =
+      // perHostPerMin (не хардкод 2), так что 60 даёт запас на 3 пробы без троттлинга —
+      // вердикт не застрянет на broken из-за отложенной пробы. NB: значение обязано
+      // быть в валидном диапазоне настройки (1..60) — прежние «600000» молча клэмпились
+      // в дефолт 6, из-за чего ёмкость была мала и третий свип троттлился (флейк CI).
+      { key: 'linkcheck.per_host_per_min', value: '60' },
     ])
     clearLinkcheckCache()
     const dead = 'https://ref.example.com/guide'
