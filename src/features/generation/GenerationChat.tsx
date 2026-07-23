@@ -388,13 +388,14 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             )}
           </div>
         )}
-        {/* Композер — общий компонент (дом гномов, UI): плейсхолдер = ГОТОВОЕ сообщение
-            (hint по теме, 0 вызовов), Tab/→ подхватывает его; «+» слева — действия с вариантами. */}
+        {/* Композер — общий компонент (дом гномов, UI): плейсхолдер КОРОТКИЙ (не дублирует
+            подсказку-чип над полем и не переносится на мобиле); полную подсказку по теме
+            подхватывает Tab/→ (onTab); «+» слева — действия с вариантами. */}
         <ChatComposer
           value={note}
           onChange={setNote}
           onSend={submitNote}
-          placeholder={capFirst(last?.hint || refineHint(listKind, ru))}
+          placeholder={say('Your reply…', 'Ваш ответ…')}
           sendDisabled={!note.trim() || working}
           pending={working}
           sendAriaLabel={say('Send', 'Отправить')}

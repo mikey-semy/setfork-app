@@ -79,7 +79,7 @@ function AvatarPicker({
   }
 
   return (
-    <div className="shrink-0">
+    <div className="relative shrink-0">
       <Tooltip label={say('Change', 'Сменить')}>
         <button type="button" onClick={() => setOpen((v) => !v)} className="relative block">
           <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-(--accent)" />
@@ -91,7 +91,7 @@ function AvatarPicker({
         </button>
       </Tooltip>
       {open && (
-        <div className="mt-2 w-[232px] rounded-md border border-border bg-surface p-1.5">
+        <div className="absolute left-0 top-full z-20 mt-2 w-[232px] rounded-md border border-border bg-surface p-1.5 shadow-card">
           <div className="grid max-h-[136px] grid-cols-6 gap-1 overflow-y-auto">
             {gallery.map((g) => (
               <button
@@ -161,27 +161,28 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           встроенную» экран строил путь из S3-ключа, показывая битую картинку. */}
       <input type="hidden" name="id" value={e.id} />
 
-      <div className="flex gap-3">
+      {/* Аватар — в ОДНОЙ строке с id/страницей/тумблером, не отдельной колонкой слева
+          (иначе под аватаром пустота, а поля уезжали вправо — фидбек владельца). Поля ниже
+          во всю ширину карточки. */}
+      <div className="mb-3 flex items-center gap-2">
         <AvatarPicker id={e.id} value={e.avatarUploaded ? e.id : e.avatar || e.id} uploadedUrl={e.uploadedUrl} gallery={gallery} ru={ru} />
+        <Tooltip label={say('id is fixed: avatar name and who in past chats', 'id не меняется: имя аватарки и who в прошлых беседах')}>
+          <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
+            {e.id}
+          </code>
+        </Tooltip>
+        <Tooltip label={say('Personal page: KPI and knowledge base', 'Личная страница: KPI и база знаний')}>
+          <Link href={`/admin/council/${e.id}`} aria-label={say('Personal page', 'Личная страница')} className="grid h-6 w-6 place-items-center rounded text-muted hover:text-ink">
+            <BarChart3 size={13} />
+          </Link>
+        </Tooltip>
+        <div className="ml-auto flex items-center gap-1.5">
+          <span className="text-[11.5px] text-muted">{say('On', 'Вкл')}</span>
+          <Switch name="enabled" checked={enabled} onCheckedChange={setEnabled} />
+        </div>
+      </div>
 
-        <div className="min-w-0 flex-1 space-y-2.5">
-          <div className="flex items-center gap-2">
-            <Tooltip label={say('id is fixed: avatar name and who in past chats', 'id не меняется: имя аватарки и who в прошлых беседах')}>
-              <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
-                {e.id}
-              </code>
-            </Tooltip>
-            <Tooltip label={say('Personal page: KPI and knowledge base', 'Личная страница: KPI и база знаний')}>
-              <Link href={`/admin/council/${e.id}`} aria-label={say('Personal page', 'Личная страница')} className="grid h-6 w-6 place-items-center rounded text-muted hover:text-ink">
-                <BarChart3 size={13} />
-              </Link>
-            </Tooltip>
-            <div className="ml-auto flex items-center gap-1.5">
-              <span className="text-[11.5px] text-muted">{say('On', 'Вкл')}</span>
-              <Switch name="enabled" checked={enabled} onCheckedChange={setEnabled} />
-            </div>
-          </div>
-
+      <div className="space-y-2.5">
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={lbl}>{say('Name (RU)', 'Имя (RU)')}</label>
@@ -251,7 +252,6 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
             </button>
           </div>
         </div>
-      </div>
     </form>
   )
 }

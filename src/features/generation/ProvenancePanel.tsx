@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ChevronRight, ScrollText } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { Markdown } from '@/shared/ui/Markdown'
 import { prettyModelName } from '@/shared/ai/model-names'
 
 /**
@@ -72,8 +73,9 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
           {row(say('Craft rules held', 'Держали правила ремесла'), p.craftRules ?? [])}
           {p.critique && (
             <div>
-              <span className="font-semibold text-ink-2">{say('Critic said', 'Критик заметил')}:</span>{' '}
-              <span className="whitespace-pre-wrap text-muted">{p.critique.slice(0, 500)}</span>
+              <span className="font-semibold text-ink-2">{say('Critic said', 'Критик заметил')}:</span>
+              {/* Критик пишет markdown (**жирный**, списки) — рендерим, а не показываем звёздочки. */}
+              <Markdown className="mt-1 space-y-1 text-muted [&_strong]:text-ink-2">{p.critique.slice(0, 800)}</Markdown>
             </div>
           )}
           {p.depth === 'single' && <div className="text-muted">{say('Simple topic — a single gnome wrote it.', 'Тема простая — писал один гном.')}</div>}
