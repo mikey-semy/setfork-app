@@ -122,6 +122,7 @@ export const listWriteRemote = {
     const res = await writeClient.addVersion({
       listId,
       note: input.note,
+      authorId: input.authorId ?? '', // '' = null (parity с Postgres-адаптером/proto author_id)
       steps: input.steps.map((s) => ({
         title: toPbLoc(s.title),
         desc: toPbLoc(s.desc),

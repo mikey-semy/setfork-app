@@ -60,6 +60,7 @@ message Version {
   string note = 4;
   string commit_sha = 5; // '' = null
   int64 created_at_ms = 6;
+  string author_id = 7; // '' = null (кто создал версию — для «Коммитов»)
 }
 
 message StepRef {
@@ -182,6 +183,7 @@ message AddVersionRequest {
   string list_id = 1;
   string note = 2;
   repeated NewStep steps = 3;
+  string author_id = 4; // '' = null (автор версии)
 }
 
 service ListWrite {
