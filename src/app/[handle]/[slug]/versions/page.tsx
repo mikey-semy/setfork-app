@@ -4,11 +4,10 @@ import { notFound } from 'next/navigation'
 import { GitBranch, GitCommitHorizontal, GitCompare } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { Avatar } from '@/shared/ui/Avatar'
-import { timeAgo } from '@/shared/ui/timeAgo'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getCommits } from '@/features/library/queries'
 import { CommitFilters } from '@/features/library/CommitFilters'
+import { CommitRow } from '@/features/library/CommitRow'
 import { commitCutoff } from '@/features/library/commit-filter'
 import { gitCore } from '@/features/git/core'
 
@@ -121,46 +120,31 @@ export default async function CommitsPage({
             <div className="mb-2 mt-4 flex items-center gap-2 text-[12.5px] font-medium text-ink-2 first:mt-0">
               <GitCommitHorizontal size={15} className="text-muted" /> {t('versionsTab', lang)} · {g.day}
             </div>
-            {/* Ветвь-линия слева с узлами-точками, как в GitHub. */}
+            {/* Ветвь-линия слева с узлами-точками; каждая строка — аккордеон (тап → дифф). */}
             <div className="ml-2 flex flex-col gap-2 border-l border-border pl-4">
               {g.items.map((c) => {
                 const msg = c.note && !['seeded', 'initial', 'edit', 'ai draft'].includes(c.note) ? c.note : t('noCommitMessage', lang)
                 return (
-                  <div key={c.id} className="relative rounded-lg border border-border bg-surface px-4 py-3">
-                    {/* Узел-точка на ветви (акцент — текущая версия). */}
-                    <span
-                      aria-hidden
-                      className={`absolute -left-5 top-[19px] size-2 rounded-full ${c.version === meta.currentVersion ? 'bg-accent' : 'bg-muted'}`}
-                    />
-                    {/* Строка 1 — сообщение + версия-тег. */}
-                    <div className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink">{msg}</span>
-                      <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">v{c.version}</span>
-                      {c.version === meta.currentVersion && (
-                        <span className="shrink-0 rounded-full bg-ok/15 px-1.5 py-0.5 text-[10px] font-semibold text-ok">{t('currentVersion', lang)}</span>
-                      )}
-                    </div>
-                    {/* Строка 2 — кто и когда (аватар + ник + время). */}
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted">
-                      {c.author ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Avatar handle={c.author.handle} avatarUrl={c.author.avatarUrl} size={18} />
-                          <Link href={`/${c.author.handle}`} className="font-medium text-ink-2 hover:text-accent">
-                            {c.author.name || c.author.handle}
-                          </Link>
-                        </span>
-                      ) : (
-                        <span>{t('authorNotRecorded', lang)}</span>
-                      )}
-                      <span>·</span>
-                      <span>{timeAgo(new Date(c.createdAt), lang)}</span>
-                      {c.version > 1 && (
-                        <Link href={`${base}/compare?from=${c.version - 1}&to=${c.version}`} className="ml-auto inline-flex items-center gap-1 hover:text-accent">
-                          <GitCompare size={12} /> {t('compareVersions', lang)} v{c.version - 1}
-                        </Link>
-                      )}
-                    </div>
-                  </div>
+                  <CommitRow
+                    key={c.id}
+                    owner={owner}
+                    slug={slug}
+                    base={base}
+                    version={c.version}
+                    msg={msg}
+                    createdAtMs={new Date(c.createdAt).getTime()}
+                    isCurrent={c.version === meta.currentVersion}
+                    author={c.author}
+                    lang={lang}
+                    labels={{
+                      current: t('currentVersion', lang),
+                      authorNotRecorded: t('authorNotRecorded', lang),
+                      loading: t('loadingChanges', lang),
+                      noChanges: t('diffNothing', lang),
+                      fullCompare: t('compareTitle', lang),
+                      expandHint: t('expandCommit', lang),
+                    }}
+                  />
                 )
               })}
             </div>

@@ -382,6 +382,8 @@ const DICT = {
   branchesLabel: { en: 'branches', ru: 'веток' },
   noCommitMessage: { en: '(no message)', ru: '(без описания)' },
   authorNotRecorded: { en: 'author not recorded', ru: 'автор не записан' },
+  loadingChanges: { en: 'Loading changes…', ru: 'Загружаю изменения…' },
+  expandCommit: { en: 'Show changes', ru: 'Показать изменения' },
   allAuthors: { en: 'All authors', ru: 'Все авторы' },
   allTime: { en: 'All time', ru: 'За всё время' },
   lastDay: { en: 'Last 24 hours', ru: 'За сутки' },
