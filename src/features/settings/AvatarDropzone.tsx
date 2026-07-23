@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ImageUp, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { AvatarCropper } from '@/shared/ui/AvatarCropper'
 import { t, type Lang } from '@/shared/i18n'
 
 const ACCEPT = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
@@ -16,14 +17,18 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [removed, setRemoved] = useState(false) // помечен на удаление существующий аватар
+  const [cropSrc, setCropSrc] = useState<string | null>(null) // objectURL выбранного файла для кропа
 
-  // Отзываем последний objectURL при размонтировании (переход со страницы без
-  // сохранения/очистки иначе держит blob до GC). previewRef всегда = текущий preview.
+  // Отзываем последние objectURL при размонтировании (переход со страницы без
+  // сохранения/очистки иначе держит blob до GC). *Ref всегда = текущее значение.
   const previewRef = useRef<string | null>(null)
   previewRef.current = preview
+  const cropRef = useRef<string | null>(null)
+  cropRef.current = cropSrc
   useEffect(
     () => () => {
       if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+      if (cropRef.current) URL.revokeObjectURL(cropRef.current)
     },
     [],
   )
@@ -41,10 +46,18 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
     return true
   }
 
+  // Выбор файла → сначала кроп/зум (модалка), а не сразу в форму.
   const applyFile = (file: File) => {
     if (!accept(file)) return
+    setCropSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
+  }
+
+  // Готовый (кадрированный) файл кладём в input[name=avatar] и показываем превью.
+  const commitFile = (file: File) => {
     setRemoved(false) // выбор нового файла отменяет пометку на удаление
-    // Кладём файл в input, чтобы он ушёл в FormData вместе с формой.
     const dt = new DataTransfer()
     dt.items.add(file)
     if (inputRef.current) inputRef.current.files = dt.files
@@ -52,6 +65,20 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
       if (prev) URL.revokeObjectURL(prev)
       return URL.createObjectURL(file)
     })
+  }
+
+  const closeCrop = () =>
+    setCropSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+  const onCropDone = (file: File) => {
+    commitFile(file)
+    closeCrop()
+  }
+  const onCropCancel = () => {
+    closeCrop()
+    if (inputRef.current) inputRef.current.value = '' // отмена кропа = отмена выбора
   }
 
   const onDrop = (e: React.DragEvent) => {
@@ -145,6 +172,20 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
           if (f) applyFile(f)
         }}
         className="hidden"
+      />
+
+      <AvatarCropper
+        open={cropSrc !== null}
+        src={cropSrc}
+        onCancel={onCropCancel}
+        onDone={onCropDone}
+        labels={{
+          title: t('cropAvatar', lang),
+          zoom: t('zoom', lang),
+          apply: t('apply', lang),
+          cancel: t('cancel', lang),
+          failed: t('cropFailed', lang),
+        }}
       />
     </div>
   )
