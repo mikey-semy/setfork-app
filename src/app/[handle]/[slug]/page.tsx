@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, FileText, GitCommitHorizontal, GitFork, GitPullRequest, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
+import { ExternalLink, Eye, FileText, GitBranch, GitCommitHorizontal, GitFork, GitPullRequest, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, useTemplate } from '@/features/library/actions'
@@ -251,9 +251,16 @@ export default async function ListPage({
                   ))}
                 </div>
               )}
+              {/* Сводка (как строка stats у GitHub: stars · forks · watching · Branches).
+                  Приватность — только на мобиле: на sm+ она в титул-строке ListHeader. */}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-2">
+                {tpl.visibility === 'private' && (
+                  <span className="inline-flex items-center gap-1.5 text-ink-2 sm:hidden"><Lock size={14} className="text-muted" /> {t('privateLabel', lang)}</span>
+                )}
                 <span className="inline-flex items-center gap-1.5"><Star size={14} className="text-muted" /> <b className="text-ink">{tpl.starsCount}</b> {t('starsLabel', lang)}</span>
                 <span className="inline-flex items-center gap-1.5"><GitFork size={14} className="text-muted" /> <b className="text-ink">{tpl.forksCount}</b> {t('forksLabel', lang)}</span>
+                <Link href={`${base}/insights`} className="inline-flex items-center gap-1.5 hover:text-accent"><Eye size={14} className="text-muted" /> <b className="text-ink">{tpl.viewsCount}</b> {t('viewsLabel', lang)}</Link>
+                <Link href={`${base}/versions`} className="inline-flex items-center gap-1.5 hover:text-accent"><GitBranch size={14} className="text-muted" /> <b className="text-ink">{Math.max(1, branches.length)}</b> {t('branchesLabel', lang)}</Link>
                 <Link href={`${base}/versions`} className="inline-flex items-center gap-1.5 hover:text-accent"><Tag size={14} className="text-muted" /> v{currentVersion?.version ?? tpl.currentVersion}</Link>
               </div>
             </div>
