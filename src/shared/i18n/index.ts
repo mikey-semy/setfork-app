@@ -345,6 +345,17 @@ const DICT = {
     en: 'Replaced {n} dead link(s) — verify the new sources.',
     ru: 'Заменил мёртвых ссылок: {n} — проверьте новые источники.',
   },
+  // ── Садовник: issue про битые ссылки (Ж1b, доставка link-checker'а) ──
+  gardenerIssueBrokenTitle: {
+    en: 'Broken links found ({n})',
+    ru: 'Найдены битые ссылки ({n})',
+  },
+  gardenerIssueBrokenIntro: {
+    en: '\u{1F9D9} While checking this list, these links look dead (404/410, confirmed across several checks). Please fix or remove them:',
+    ru: '\u{1F9D9} При проверке списка эти ссылки оказались мёртвыми (404/410, подтверждено несколькими проверками). Замените или удалите:',
+  },
+  gardenerIssueBrokenArchive: { en: 'archived copy', ru: 'копия в архиве' },
+  gardenerIssueBrokenMore: { en: '…and {n} more', ru: '…и ещё {n}' },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for agents to connect via MCP: search and read your lists — and, with write access, create and update them.',

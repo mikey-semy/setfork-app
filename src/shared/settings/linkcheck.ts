@@ -13,6 +13,7 @@ export const LINKCHECK_KEYS = {
   perHostPerMin: 'linkcheck.per_host_per_min', // politeness: проб на один хост в минуту
   concurrency: 'linkcheck.concurrency', // одновременных проб внутри батча
   brokenFails: 'linkcheck.broken_fails', // сколько свипов-подтверждений до verdict broken
+  deliverIssues: 'linkcheck.deliver_issues', // Ж1b: садовник открывает issue про битые ссылки
 } as const
 
 export interface LinkcheckSettings {
@@ -23,6 +24,7 @@ export interface LinkcheckSettings {
   perHostPerMin: number
   concurrency: number
   brokenFails: number
+  deliverIssues: boolean
 }
 
 const DEFAULTS: LinkcheckSettings = {
@@ -33,6 +35,7 @@ const DEFAULTS: LinkcheckSettings = {
   perHostPerMin: 6,
   concurrency: 4,
   brokenFails: 3, // 3 разных свипа ≈ 6 суток до окончательного «битая»
+  deliverIssues: false, // копим данные молча; issue-доставку включаем отдельно, когда решим
 }
 
 const TTL_MS = 5_000
@@ -63,6 +66,7 @@ export async function getLinkcheckSettings(): Promise<LinkcheckSettings> {
     perHostPerMin: num(LINKCHECK_KEYS.perHostPerMin, DEFAULTS.perHostPerMin, 1, 60),
     concurrency: num(LINKCHECK_KEYS.concurrency, DEFAULTS.concurrency, 1, 16),
     brokenFails: num(LINKCHECK_KEYS.brokenFails, DEFAULTS.brokenFails, 1, 10),
+    deliverIssues: m[LINKCHECK_KEYS.deliverIssues] === 'true',
   }
   cache = { value, ts: Date.now() }
   return value

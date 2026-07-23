@@ -10,6 +10,7 @@ export const ISSUE_LABELS = [
   { key: 'docs', en: 'docs', ru: 'документация', cls: 'border-ok/40 bg-ok/10 text-ok' },
   { key: 'help', en: 'help wanted', ru: 'нужна помощь', cls: 'border-ok/40 bg-ok/10 text-ok' },
   { key: 'wontfix', en: 'wontfix', ru: 'не будет', cls: 'border-border bg-surface-2 text-muted' },
+  { key: 'broken-link', en: 'broken link', ru: 'битая ссылка', cls: 'border-danger/40 bg-danger/10 text-danger' },
 ] as const
 
 export type IssueLabelKey = (typeof ISSUE_LABELS)[number]['key']
