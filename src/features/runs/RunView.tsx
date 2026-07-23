@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Award, Ban, Check, CircleAlert, CircleCheckBig, Flag, GraduationCap, Info, LifeBuoy, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
+import { ArrowLeft, Award, Ban, Check, CircleAlert, CircleCheckBig, Flag, GraduationCap, Info, RotateCcw, Square, SquareCheckBig, Trash2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
@@ -12,7 +12,10 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { ProductBlock, type ProductLinkVM } from '@/shared/ui/ProductBlock'
-import { assistStep, blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
+// dig-чат («кирка» на шаге) — UI-фича, переиспользуем в прогоне (как и в детали списка).
+// eslint-disable-next-line boundaries/dependencies -- кирка/dig-чат из features/dig
+import { DIG_SAVED_EVENT, DigChatHost, DigChatOpen, type GnomeOption } from '@/features/dig/DigChat'
+import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 
 export interface RunStepVM {
   id: string
@@ -34,12 +37,13 @@ export interface RunStepVM {
   blocked: boolean
   reason: string
   subtasksDone: number[]
-  /** Последняя AI-подсказка «помощи на шаге» (markdown; '' — не спрашивали). */
+  /** Последняя AI-подсказка «помощи на шаге» (не используется в UI — заменено «киркой»). */
   assist: string
 }
 
 export function RunView({
   runId,
+  templateId,
   status,
   ordered,
   title,
@@ -48,9 +52,12 @@ export function RunView({
   lang,
   certificateHref,
   courseCompleted,
-  assistEnabled,
+  digEnabled,
+  digGnomes,
+  digSteps,
 }: {
   runId: string
+  templateId: string
   status: 'active' | 'done' | 'abandoned' | 'failed'
   ordered: boolean
   title: string
@@ -61,16 +68,28 @@ export function RunView({
   // Курс уже пройден РАНЬШЕ (courseCompletions) — сертификат доступен и в новом
   // прогоне с нуля, повторное прохождение ради «бумажки» не требуется.
   courseCompleted?: boolean
-  /** «Помощь на шаге» доступна этому юзеру (флаг+аудитория посчитаны сервером). */
-  assistEnabled?: boolean
+  /** «Кирка» (dig-чат «в шахту») доступна: ИИ включён и есть ростер собеседников. */
+  digEnabled?: boolean
+  digGnomes?: GnomeOption[]
+  /** Номера шагов, где у зрителя уже есть сохранённая dig-беседа (точка на кирке). */
+  digSteps?: number[]
 }) {
-  const ru = lang === 'ru'
   const [steps, setSteps] = useState(initial)
   const [, start] = useTransition()
   const [blockingId, setBlockingId] = useState<string | null>(null)
   const [reasonDraft, setReasonDraft] = useState('')
-  const [assistBusyId, setAssistBusyId] = useState<string | null>(null)
-  const [assistError, setAssistError] = useState<{ id: string; key: 'runAssistLimited' | 'runAssistQuota' | 'runAssistFailed' } | null>(null)
+  // Точку на кирке зажигаем СРАЗУ при сохранении сессии (событие dig-saved), а не
+  // только после перезагрузки (серверный digSteps — начальный снимок).
+  const [dugLocal, setDugLocal] = useState<Set<number>>(() => new Set(digSteps ?? []))
+  useEffect(() => {
+    const onSaved = (e: Event) => {
+      const d = (e as CustomEvent<{ templateId: string; stepN: number }>).detail
+      if (d?.templateId !== templateId) return
+      setDugLocal((s) => (s.has(d.stepN) ? s : new Set(s).add(d.stepN)))
+    }
+    window.addEventListener(DIG_SAVED_EVENT, onSaved)
+    return () => window.removeEventListener(DIG_SAVED_EVENT, onSaved)
+  }, [templateId])
   // Прогресс — только по шаг-блокам (text/image — контекст, не чекаются).
   const isStep = (s: RunStepVM) => !s.type || s.type === 'step'
   const total = steps.filter(isStep).length
@@ -105,34 +124,14 @@ export function RunView({
     patch(i, { blocked: false, reason: '' })
     start(() => unblockStep(runId, s.id))
   }
-  function askAssist(i: number) {
-    const s = steps[i]
-    if (assistBusyId) return
-    setAssistBusyId(s.id)
-    setAssistError(null)
-    start(async () => {
-      try {
-        const res = await assistStep(runId, s.id)
-        if ('text' in res) patch(i, { assist: res.text })
-        else {
-          const key = res.error === 'ratelimited' ? 'runAssistLimited' : res.error === 'ai_quota' ? 'runAssistQuota' : 'runAssistFailed'
-          setAssistError({ id: s.id, key })
-        }
-      } catch {
-        setAssistError({ id: s.id, key: 'runAssistFailed' })
-      } finally {
-        setAssistBusyId(null)
-      }
-    })
-  }
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-6 py-8">
+    <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6">
       <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink">
         <ArrowLeft size={14} /> {backHref.replace(/^\//, '')}
       </Link>
 
-      {/* Прогресс */}
+      {/* Прогресс. Кнопки одной высоты (h-9): «Завершить» текстом, остальное — иконки. */}
       <div className="sticky top-[64px] z-10 mb-5 rounded-lg border border-border bg-surface/95 p-4 backdrop-blur-sm">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -150,33 +149,37 @@ export function RunView({
               )}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             {closed ? (
               <button
                 type="button"
                 onClick={() => start(() => reopenRun(runId))}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[12.5px] text-ink hover:border-border-strong"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12.5px] text-ink hover:border-border-strong"
               >
-                <RotateCcw size={13} /> {t('runReopen', lang)}
+                <RotateCcw size={14} /> {t('runReopen', lang)}
               </button>
             ) : (
               <>
                 <button
                   type="button"
                   onClick={() => start(() => finishRun(runId))}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-[12.5px] font-semibold text-primary-fg"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[13px] font-semibold text-primary-fg"
                 >
-                  <CircleCheckBig size={13} /> {t('runFinish', lang)}
+                  <CircleCheckBig size={15} /> {t('runFinish', lang)}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm(t('runFailConfirm', lang))) start(() => failRun(runId))
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 px-3 py-1.5 text-[12.5px] font-medium text-danger hover:bg-danger/10"
-                >
-                  <CircleAlert size={13} /> {t('runFailAction', lang)}
-                </button>
+                {/* «Остановить как неудачу» — иконкой (был длинный текст, фидбек владельца). */}
+                <Tooltip label={t('runFailAction', lang)}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(t('runFailConfirm', lang))) start(() => failRun(runId))
+                    }}
+                    aria-label={t('runFailAction', lang)}
+                    className="grid size-9 place-items-center rounded-md border border-danger/40 text-danger hover:bg-danger/10"
+                  >
+                    <CircleAlert size={16} />
+                  </button>
+                </Tooltip>
               </>
             )}
             {/* Delete — реально удаляет прогон (в отличие от «завершить/неудача»), уводит на /runs */}
@@ -187,9 +190,9 @@ export function RunView({
                   if (confirm(t('runDeleteConfirm', lang))) start(() => deleteRun(runId))
                 }}
                 aria-label={t('runDelete', lang)}
-                className="grid h-8 w-8 place-items-center rounded-md text-muted hover:text-danger"
+                className="grid size-9 place-items-center rounded-md text-muted hover:text-danger"
               >
-                <Trash2 size={15} />
+                <Trash2 size={16} />
               </button>
             </Tooltip>
           </div>
@@ -198,6 +201,9 @@ export function RunView({
           <div className="h-full rounded-full bg-ok transition-all" style={{ width: `${pct}%` }} />
         </div>
       </div>
+
+      {/* Хост dig-чата («в шахту») — одна модалка на страницу, открывают кирки на шагах. */}
+      {digEnabled && digGnomes && <DigChatHost gnomes={digGnomes} lang={lang} />}
 
       {/* Все шаги сделаны СЕЙЧАС или курс пройден РАНЬШЕ → ссылка на сертификат. */}
       {certificateHref && ((total > 0 && done === total && blockedCount === 0) || courseCompleted) && (
@@ -233,31 +239,59 @@ export function RunView({
           }
           // Порядковый номер шага (только по шаг-блокам).
           const stepNo = steps.slice(0, i).filter(isStep).length + 1
+          const showFail = !closed && !s.done && !s.blocked && blockingId !== s.id
           return (
-          <div
-            key={s.id}
-            className={`rounded-lg border p-4 transition-colors ${
-              s.blocked ? 'border-danger/40 bg-danger/5' : s.done ? 'border-ok/40 bg-ok/5' : 'border-border bg-surface'
-            }`}
-          >
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => toggle(i)}
-                aria-label={s.done ? 'uncheck' : 'check'}
-                className={`mt-0.5 shrink-0 ${s.done ? 'text-ok' : 'text-muted hover:text-ink'}`}
-              >
-                {s.done ? <SquareCheckBig size={20} /> : <Square size={20} />}
-              </button>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-2">
+            <div
+              key={s.id}
+              className={`relative rounded-lg border p-4 transition-colors ${
+                s.blocked ? 'border-danger/40 bg-danger/5' : s.done ? 'border-ok/40 bg-ok/5' : 'border-border bg-surface'
+              }`}
+            >
+              {/* Служебные иконки — правый верхний угол (mobile-ui: absolute, без текста, тултипы):
+                  «Шаг не получается» (красная) + «кирка» (dig-чат «в шахту»). */}
+              {(showFail || digEnabled) && (
+                <div className="absolute right-2 top-2 flex items-center gap-1">
+                  {showFail && (
+                    <Tooltip label={t('runCantComplete', lang)}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBlockingId(s.id)
+                          setReasonDraft('')
+                        }}
+                        aria-label={t('runCantComplete', lang)}
+                        className="grid size-8 place-items-center rounded text-muted transition-colors hover:text-danger"
+                      >
+                        <Ban size={16} />
+                      </button>
+                    </Tooltip>
+                  )}
+                  {digEnabled && <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.title }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />}
+                </div>
+              )}
+
+              {/* Шапка: чекбокс (верх-лево) + номер + заголовок + уровень. pr — под угловые иконки. */}
+              <div className="flex items-start gap-2.5 pr-14">
+                <button
+                  type="button"
+                  onClick={() => toggle(i)}
+                  aria-label={s.done ? 'uncheck' : 'check'}
+                  className={`grid size-8 shrink-0 place-items-center ${s.done ? 'text-ok' : 'text-muted hover:text-ink'}`}
+                >
+                  {s.done ? <SquareCheckBig size={20} /> : <Square size={20} />}
+                </button>
+                <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-2 pt-1">
                   {ordered && <span className="font-mono text-[12px] text-muted">{stepNo}</span>}
                   <span className={`text-[14.5px] font-semibold ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
                   <StepLevelBadge level={s.level} lang={lang} />
                 </div>
-                {s.desc && <Markdown className="mt-1">{s.desc}</Markdown>}
+              </div>
+
+              {/* Тело — во всю ширину карточки (без отступа под чекбокс, «данные к краю»). */}
+              <div className="mt-2 flex flex-col gap-3">
+                {s.desc && <Markdown>{s.desc}</Markdown>}
                 {s.why && (
-                  <div className="mt-1.5 flex gap-1.5 text-[12.5px] text-ink-2">
+                  <div className="flex gap-1.5 text-[12.5px] text-ink-2">
                     <Info size={13} className="mt-0.5 shrink-0 text-muted" />
                     <span>
                       <span className="font-medium">{t('whyLabel', lang)}:</span> {s.why}
@@ -266,28 +300,21 @@ export function RunView({
                 )}
 
                 {s.command && (
-                  <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12px] text-ink">
+                  <div className="flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12px] text-ink">
                     <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
-                    {/* Горизонтальный скролл + выделение части строки (см. list detail). */}
                     <span className="no-scrollbar min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{s.command}</span>
                     <CopyButton text={s.command} />
                   </div>
                 )}
 
                 {s.subtasks.length > 0 && (
-                  <ul className="mt-3 flex flex-col gap-1.5">
+                  <ul className="flex flex-col gap-1.5">
                     {s.subtasks.map((sub, idx) => {
                       const checked = s.subtasksDone.includes(idx)
                       return (
                         <li key={idx}>
-                          <button
-                            type="button"
-                            onClick={() => toggleSub(i, idx)}
-                            className="flex items-start gap-2 text-left text-[13px] text-ink-2"
-                          >
-                            <span className={`mt-0.5 shrink-0 ${checked ? 'text-ok' : 'text-muted'}`}>
-                              {checked ? <Check size={14} /> : <Square size={14} />}
-                            </span>
+                          <button type="button" onClick={() => toggleSub(i, idx)} className="flex items-start gap-2 text-left text-[13px] text-ink-2">
+                            <span className={`mt-0.5 shrink-0 ${checked ? 'text-ok' : 'text-muted'}`}>{checked ? <Check size={14} /> : <Square size={14} />}</span>
                             <span className={checked ? 'line-through opacity-70' : ''}>{sub}</span>
                           </button>
                         </li>
@@ -297,15 +324,10 @@ export function RunView({
                 )}
 
                 {s.refs.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {s.refs.map((r) =>
                       r.url ? (
-                        <SafeLink
-                          key={`${r.label}:${r.url}`}
-                          href={r.href ?? r.url}
-                          rel="nofollow noreferrer"
-                          className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent"
-                        >
+                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent">
                           {r.label}
                         </SafeLink>
                       ) : (
@@ -317,33 +339,9 @@ export function RunView({
                   </div>
                 )}
 
-                {/* Неудачный путь: «не получилось» → причина → сообщить; рядом — «Помоги» (AI). */}
-                {!closed && !s.blocked && !s.done && blockingId !== s.id && (
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBlockingId(s.id)
-                        setReasonDraft('')
-                      }}
-                      className="inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-danger"
-                    >
-                      <Ban size={13} /> {t('runCantComplete', lang)}
-                    </button>
-                    {assistEnabled && (
-                      <button
-                        type="button"
-                        onClick={() => askAssist(i)}
-                        disabled={assistBusyId === s.id}
-                        className="inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-accent disabled:opacity-60"
-                      >
-                        <LifeBuoy size={13} /> {assistBusyId === s.id ? t('runAssistThinking', lang) : t(s.assist ? 'runAssistAgain' : 'runAssist', lang)}
-                      </button>
-                    )}
-                  </div>
-                )}
+                {/* Ввод причины «не получилось» (открывает угловая иконка Ban). */}
                 {blockingId === s.id && (
-                  <div className="mt-3 rounded-md border border-danger/40 bg-danger/5 p-2.5">
+                  <div className="rounded-md border border-danger/40 bg-danger/5 p-2.5">
                     <textarea
                       autoFocus
                       value={reasonDraft}
@@ -354,11 +352,7 @@ export function RunView({
                       className="w-full resize-none rounded border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
                     />
                     <div className="mt-2 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => confirmBlock(i)}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-[12.5px] font-semibold text-white"
-                      >
+                      <button type="button" onClick={() => confirmBlock(i)} className="inline-flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-[12.5px] font-semibold text-white">
                         <Ban size={13} /> {t('runBlockAction', lang)}
                       </button>
                       <button
@@ -374,25 +368,16 @@ export function RunView({
                     </div>
                   </div>
                 )}
+
+                {/* Состояние «застрял»: причина + сообщить/снять (помощь теперь через «кирку» в углу). */}
                 {s.blocked && blockingId !== s.id && (
-                  <div className="mt-3 rounded-md border border-danger/40 bg-danger/5 p-2.5 text-[12.5px]">
+                  <div className="rounded-md border border-danger/40 bg-danger/5 p-2.5 text-[12.5px]">
                     <div className="flex items-center gap-1.5 font-semibold text-danger">
                       <Ban size={13} /> {t('runBlockedLabel', lang)}
                       {s.reason ? ':' : ''}
                     </div>
                     {s.reason && <div className="mt-0.5 text-ink-2">{s.reason}</div>}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {/* Застрявшему помощь нужнее всего — «Помоги» первой кнопкой. */}
-                      {assistEnabled && !closed && (
-                        <button
-                          type="button"
-                          onClick={() => askAssist(i)}
-                          disabled={assistBusyId === s.id}
-                          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-ink hover:border-border-strong disabled:opacity-60"
-                        >
-                          <LifeBuoy size={12} /> {assistBusyId === s.id ? t('runAssistThinking', lang) : t(s.assist ? 'runAssistAgain' : 'runAssist', lang)}
-                        </button>
-                      )}
                       <button
                         type="button"
                         onClick={() => start(() => reportBlockedStep(runId, s.id))}
@@ -408,22 +393,8 @@ export function RunView({
                     </div>
                   </div>
                 )}
-                {/* Панель подсказки «помощи на шаге» — под текущим состоянием шага. */}
-                {(s.assist || assistError?.id === s.id) && (
-                  <div className="mt-3 rounded-md border border-border bg-surface-2 p-2.5 text-[12.5px]">
-                    <div className="flex items-center gap-1.5 font-semibold text-ink">
-                      <LifeBuoy size={13} className="text-accent" /> {t('runAssistLabel', lang)}
-                    </div>
-                    {assistError?.id === s.id ? (
-                      <div className="mt-0.5 text-danger">{t(assistError.key, lang)}</div>
-                    ) : (
-                      <Markdown className="mt-1 text-ink-2">{s.assist}</Markdown>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
-          </div>
           )
         })}
       </div>

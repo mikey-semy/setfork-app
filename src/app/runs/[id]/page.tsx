@@ -8,7 +8,8 @@ import { productItems } from '@/features/library/blocks'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getAiSettings } from '@/shared/settings/ai'
-import { isAdminHandle } from '@/shared/auth/admin-handle'
+import { getRoster } from '@/shared/ai/roster'
+import { digStepsWithSession } from '@/features/dig/queries'
 
 export const metadata = { title: 'Run' }
 
@@ -19,8 +20,13 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
   if (!data) notFound()
   // Прохождение курса — постоянный факт: в новом прогоне сертификат уже доступен.
   const completion = await getCourseCompletion(data.run.templateId, session.userId)
-  // «Помощь на шаге»: флаг + аудитория считаются здесь (сервером), клиент только рисует кнопку.
-  const assistEnabled = ai.enabled && ai.assistEnabled && (ai.assistAudience === 'all' || isAdminHandle(session.handle))
+  // «Кирка» (dig-чат «в шахту») на шагах вместо разовой «Помоги»: нужен ИИ + ростер
+  // собеседников; точки на кирках — где у зрителя уже есть сохранённая беседа.
+  const digEnabled = ai.enabled
+  const [digGnomesRaw, digStepsSet] = digEnabled
+    ? await Promise.all([getRoster(), digStepsWithSession(data.run.templateId, session.userId)])
+    : [[], new Set<number>()]
+  const digGnomes = digGnomesRaw.map((e) => ({ id: e.id, name: lang === 'ru' ? e.nameRu : e.nameEn, guild: lang === 'ru' ? e.guildRu : e.guildEn }))
 
   const steps: RunStepVM[] = data.steps.map((s) => ({
     id: s.id,
@@ -63,7 +69,10 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       lang={lang}
       certificateHref={`/${data.template.handle}/${data.template.slug}/certificate`}
       courseCompleted={!!completion}
-      assistEnabled={assistEnabled}
+      templateId={data.run.templateId}
+      digEnabled={digEnabled}
+      digGnomes={digGnomes}
+      digSteps={[...digStepsSet]}
     />
   )
 }

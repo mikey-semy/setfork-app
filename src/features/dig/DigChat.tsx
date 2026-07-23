@@ -30,6 +30,9 @@ export interface DigChatOpenDetail {
 }
 
 export const DIG_CHAT_EVENT = 'setfork:dig-chat'
+// Сессия шага СОХРАНЕНА (первый ответ гнома записан) — чтобы точку на кирке можно было
+// зажечь сразу, без перезагрузки. detail: { templateId, stepN }.
+export const DIG_SAVED_EVENT = 'setfork:dig-saved'
 
 export interface GnomeOption {
   id: string
@@ -110,6 +113,8 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         // в чат отдельным участником. Фоллоу-апы берём у ПОСЛЕДНЕГО ответившего.
         setMessages((m) => [...m, ...res.replies.map((r) => ({ role: 'gnome' as const, who: r.who, text: r.text }))])
         setFollowups(res.replies[res.replies.length - 1]?.followups ?? [])
+        // Сессия шага сохранена → зажечь точку на кирке сразу (слушают RunView/деталь).
+        window.dispatchEvent(new CustomEvent(DIG_SAVED_EVENT, { detail: { templateId: ctx.templateId, stepN: ctx.stepN } }))
       }
     })
   }
