@@ -6,6 +6,8 @@ import { redirect } from 'next/navigation'
 import { db, releases, templates, templateVersions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isCollaborator } from '@/features/collab/queries'
+import { buildReleaseChangelog } from './changelog'
+import type { Lang } from '@/shared/i18n'
 
 const TAG_RE = /^[A-Za-z0-9._-]{1,40}$/
 
@@ -52,6 +54,17 @@ export async function createRelease(templateId: string, formData: FormData): Pro
   await gitCore.createTag({ owner, slug: tpl.slug }, tag, version).catch(() => {})
   revalidatePath(base)
   redirect(base)
+}
+
+/** Автоген заметок релиза из диффа версий (для кнопки «Сгенерировать» в форме).
+ *  Только владелец/коллаборатор; пусто — сравнивать не с чем или без изменений. */
+export async function generateReleaseNotes(templateId: string, toVersion: number, lang: Lang): Promise<string> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl) return ''
+  const canManage = tpl.ownerId === session.userId || (await isCollaborator(templateId, session.userId))
+  if (!canManage) return ''
+  return buildReleaseChangelog(templateId, toVersion, lang)
 }
 
 /** Владелец/коллаборатор: удалить релиз (сам список/версии не трогаем). */
