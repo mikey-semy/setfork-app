@@ -23,8 +23,8 @@ export default async function GuildsPage() {
       <h1 className="text-[22px] font-bold text-ink">{say('The Workshop Guilds', 'Гильдии мастерской')}</h1>
       <p className="mt-1.5 max-w-[640px] text-[14px] leading-relaxed text-ink-2">
         {say(
-          'Every SetFork list is forged by a council of gnome masters. Each master carries his guild — its code of quality and its reputation, earned list by list.',
-          'Каждый список SetFork куёт совет гномов-мастеров. За каждым — его гильдия: кодекс качества и репутация, заработанная список за списком.',
+          'Every SetFork list is forged by a council of masters. Each master carries his guild — its code of quality and its reputation, earned list by list.',
+          'Каждый список SetFork куёт совет мастеров. За каждым — его гильдия: кодекс качества и репутация, заработанная список за списком.',
         )}
       </p>
 

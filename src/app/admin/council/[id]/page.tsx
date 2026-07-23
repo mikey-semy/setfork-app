@@ -15,7 +15,7 @@ import { timeAgo } from '@/shared/ui/timeAgo'
  * база знаний и текущие настройки в одном месте. Правки — в зале совета
  * (/admin/council): здесь смотрим на развитие, там крутим ручки.
  */
-export const metadata = { title: 'Gnome' }
+export const metadata = { title: 'Expert' }
 
 export default async function GnomePage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin()

@@ -90,7 +90,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
     budget: say('AI budget is exhausted for today.', 'Дневной бюджет ИИ исчерпан.'),
     quota: say('Your monthly AI quota is used up.', 'Твоя месячная ИИ-квота исчерпана.'),
     ratelimited: say('Too fast — wait a minute.', 'Слишком часто — подожди минуту.'),
-    aifail: say('The gnome got stuck — try again.', 'Гном замешкался — попробуй ещё раз.'),
+    aifail: say('The master got stuck — try again.', 'Мастер замешкался — попробуй ещё раз.'),
     'not found': say('Step not found.', 'Шаг не найден.'),
   }
 
@@ -157,7 +157,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
           <div className="truncate text-[12.5px] font-semibold text-ink">{ctx.stepTitle}</div>
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-ink-2">
-              {gnome === 'auto' ? say('Gnome: auto by topic', 'Гном: авто по теме') : `${current?.name ?? gnome}${current?.guild ? ` · ${current.guild}` : ''}`}
+              {gnome === 'auto' ? say('Auto by topic', 'Авто по теме') : `${current?.name ?? gnome}${current?.guild ? ` · ${current.guild}` : ''}`}
               <ChevronDown size={11} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -179,7 +179,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       <div ref={scrollRef} className="min-h-[120px] flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {messages.length === 0 && (
           <p className="text-[12.5px] leading-relaxed text-muted">
-            {say('Ask anything about this step — reasons, pitfalls, alternatives. The gnome digs where you point.', 'Спрашивай что угодно про этот пункт — причины, подводные камни, альтернативы. Гном копает туда, куда покажешь.')}
+            {say('Ask anything about this step — reasons, pitfalls, alternatives. The master digs where you point.', 'Спрашивай что угодно про этот пункт — причины, подводные камни, альтернативы. Мастер копает туда, куда покажешь.')}
           </p>
         )}
         {messages.map((m, i) =>
@@ -234,10 +234,10 @@ function ThankButton({ who, thanked, onThank, lang }: { who: string; thanked: bo
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   void who
   return (
-    <Tooltip label={thanked ? say('Thanked', 'Спасибо сказано') : say('Thank the gnome', 'Сказать спасибо')}>
+    <Tooltip label={thanked ? say('Thanked', 'Спасибо сказано') : say('Say thanks', 'Сказать спасибо')}>
       <button
         type="button"
-        aria-label={say('Thank the gnome', 'Сказать спасибо')}
+        aria-label={say('Say thanks', 'Сказать спасибо')}
         onClick={onThank}
         disabled={thanked}
         className={thanked ? 'text-accent' : 'text-muted transition-colors hover:text-accent'}

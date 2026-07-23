@@ -98,14 +98,14 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
                   type="submit"
                   className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[12.5px] text-ink hover:border-border-strong"
                 >
-                  {say(`Hire a gnome for “${s.tag}”`, `Нанять гнома под «${s.tag}»`)}
+                  {say(`Hire a master for “${s.tag}”`, `Нанять мастера под «${s.tag}»`)}
                   <span className="font-mono text-[11px] text-muted">×{s.n}</span>
                 </button>
               </form>
             ))}
           </div>
           <p className="mt-2 text-[11.5px] text-ink-2">
-            {say('The new gnome is created DISABLED — review the profile, tweak it and switch him on.', 'Новый гном рождается ВЫКЛЮЧЕННЫМ — прочитай профиль, поправь и включи сам.')}
+            {say('The new master is created DISABLED — review the profile, tweak it and switch him on.', 'Новый мастер рождается ВЫКЛЮЧЕННЫМ — прочитай профиль, поправь и включи сам.')}
           </p>
         </div>
       )}
