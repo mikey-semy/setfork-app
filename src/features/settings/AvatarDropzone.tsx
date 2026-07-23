@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ImageUp, X } from 'lucide-react'
+import { Crop, ImageUp, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { AvatarCropper } from '@/shared/ui/AvatarCropper'
 import { t, type Lang } from '@/shared/i18n'
@@ -11,7 +11,8 @@ const MAX_BYTES = 2 * 1024 * 1024
 
 /** Аватар с drag-and-drop: перетащить или кликнуть. Выбранный файл кладётся в
  *  скрытый input[name=avatar], чтобы уйти в форму updateProfile обычным сабмитом. */
-export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; avatarUrl: string | null; lang: Lang }) {
+export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { handle: string; avatarUrl: string | null; lang: Lang; square?: boolean }) {
+  const shapeCls = square ? 'rounded-2xl' : 'rounded-full'
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -115,9 +116,9 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
       >
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className="h-[72px] w-[72px] shrink-0 rounded-full object-cover" />
+          <img src={preview} alt="" className={`h-[72px] w-[72px] shrink-0 object-cover ${shapeCls}`} />
         ) : (
-          <Avatar handle={handle} avatarUrl={removed ? null : avatarUrl} size={72} />
+          <Avatar handle={handle} avatarUrl={removed ? null : avatarUrl} size={72} rounded={shapeCls} />
         )}
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[13.5px] font-medium text-ink">
@@ -138,18 +139,30 @@ export function AvatarDropzone({ handle, avatarUrl, lang }: { handle: string; av
               <X size={12} /> {t('removePhoto', lang)}
             </button>
           )}
-          {/* Убрать УЖЕ загруженный аватар (когда нет нового файла). */}
+          {/* Действия над УЖЕ загруженным аватаром (когда нет нового файла): кадрировать / убрать. */}
           {!preview && avatarUrl && !removed && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                setRemoved(true)
-              }}
-              className="mt-1.5 inline-flex items-center gap-1 text-[12px] text-ink-2 hover:text-danger"
-            >
-              <X size={12} /> {t('removePhoto', lang)}
-            </button>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCropSrc(avatarUrl)
+                }}
+                className="inline-flex items-center gap-1 text-[12px] text-ink-2 hover:text-ink"
+              >
+                <Crop size={12} /> {t('edit', lang)}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setRemoved(true)
+                }}
+                className="inline-flex items-center gap-1 text-[12px] text-ink-2 hover:text-danger"
+              >
+                <X size={12} /> {t('removePhoto', lang)}
+              </button>
+            </div>
           )}
           {removed && (
             <p className="mt-1.5 text-[12px] text-muted">

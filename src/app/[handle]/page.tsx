@@ -201,7 +201,7 @@ export default async function ProfilePage({
       <div className="px-6 py-8 lg:px-8">
       <div className="mx-auto flex max-w-[980px] flex-col gap-8 md:flex-row">
         <aside className="shrink-0 md:w-[280px]">
-          <Avatar handle={user.handle} avatarUrl={bigAvatar} size={180} rounded="rounded-full" />
+          <Avatar handle={user.handle} avatarUrl={bigAvatar} size={180} rounded={user.avatarShape === 'square' ? 'rounded-2xl' : 'rounded-full'} />
           <div className="mt-4">
             {user.name && <div className="text-[22px] font-bold leading-tight text-ink">{user.name}</div>}
             <div className="text-[18px] text-ink-2">{user.handle}</div>

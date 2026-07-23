@@ -66,6 +66,9 @@ services:
       IMGPROXY_SALT: ${IMGPROXY_SALT}
       IMGPROXY_ENABLE_WEBP_DETECTION: 'true'
       IMGPROXY_MAX_SRC_RESOLUTION: '50'
+      # CORS: без Access-Control-Allow-Origin браузер «портит» canvas при ре-кропе
+      # уже сохранённого аватара (toBlob падает). '*' достаточно для анонимных запросов.
+      IMGPROXY_ALLOW_ORIGIN: ${IMGPROXY_ALLOW_ORIGIN:-*}
     ports:
       - '${IMGPROXY_PORT:-8081}:8080'
 

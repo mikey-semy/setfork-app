@@ -66,6 +66,8 @@ services:
       IMGPROXY_SALT: ${IMGPROXY_SALT}
       IMGPROXY_AUTO_WEBP: 'true'
       IMGPROXY_MAX_SRC_RESOLUTION: '50'
+      # CORS для ре-кропа аватара через canvas (см. основной compose).
+      IMGPROXY_ALLOW_ORIGIN: ${IMGPROXY_ALLOW_ORIGIN:-*}
     ports:
       - '${DEMO_IMGPROXY_PORT:-8082}:8080'
     networks: [dokploy-network]

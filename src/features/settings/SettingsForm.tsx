@@ -31,6 +31,7 @@ export function SettingsForm({
   website,
   socials,
   profilePrivate,
+  avatarShape,
 }: {
   lang: Lang
   handle: string
@@ -41,10 +42,12 @@ export function SettingsForm({
   website: string
   socials: Social[]
   profilePrivate: boolean
+  avatarShape: 'circle' | 'square'
 }) {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(updateProfile, null)
   const [rows, setRows] = useState<SocialRow[]>(() => socials.map((s, i) => ({ ...s, _k: i })))
   const [priv, setPriv] = useState(profilePrivate)
+  const [square, setSquare] = useState(avatarShape === 'square')
   const seq = useRef(socials.length)
 
   const addRow = () => {
@@ -56,7 +59,13 @@ export function SettingsForm({
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <AvatarDropzone handle={handle} avatarUrl={avatarUrl} lang={lang} />
+      <AvatarDropzone handle={handle} avatarUrl={avatarUrl} lang={lang} square={square} />
+
+      {/* Форма аватара в профиле — круг (по умолчанию) или квадрат. */}
+      <label className="flex items-center justify-between gap-3">
+        <span className="text-[13px] text-ink-2">{t('avatarSquareLabel', lang)}</span>
+        <Switch name="avatarSquare" checked={square} onCheckedChange={setSquare} />
+      </label>
 
       <div>
         <label className={lbl}>{t('displayName', lang)}</label>
