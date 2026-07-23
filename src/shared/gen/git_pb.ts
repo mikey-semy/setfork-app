@@ -779,6 +779,9 @@ export const GitCore: GenService<{
     output: typeof BranchOpResponseSchema;
   },
   /**
+   * ListTags — интроспекция (сверка releases-БД ↔ git-теги при инцидентах,
+   * grpcurl через reflection); UI-потребителя нет и не планируется (HQ ADR-0012).
+   *
    * @generated from rpc setfork.git.v1.GitCore.ListTags
    */
   listTags: {
