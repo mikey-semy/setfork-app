@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HANDLE_RE, RESERVED_HANDLES, sanitizeHandleBase, translitRu } from '@/shared/auth/handle'
+import { HANDLE_RE, RESERVED_HANDLES, isHandleShapeValid, sanitizeHandleBase, translitRu } from '@/shared/auth/handle'
 
 describe('translitRu', () => {
   it('транслитерирует кириллицу', () => {
@@ -45,5 +45,21 @@ describe('sanitizeHandleBase', () => {
 
   it('зарезервированные не входят в сам санитайзер (решает uniqueHandle)', () => {
     expect(RESERVED_HANDLES.has('admin')).toBe(true)
+  })
+})
+
+describe('isHandleShapeValid — admin-ники нельзя занять (F9 privesc)', () => {
+  it('ник из ADMIN_HANDLES отвергается сменой ника/регистрацией', () => {
+    const prev = process.env.ADMIN_HANDLES
+    process.env.ADMIN_HANDLES = 'mike, alice'
+    try {
+      expect(isHandleShapeValid('mike')).toBe(false)
+      expect(isHandleShapeValid('alice')).toBe(false)
+      // обычный ник (не в списке) остаётся валидным
+      expect(isHandleShapeValid('bob')).toBe(true)
+    } finally {
+      if (prev === undefined) delete process.env.ADMIN_HANDLES
+      else process.env.ADMIN_HANDLES = prev
+    }
   })
 })
