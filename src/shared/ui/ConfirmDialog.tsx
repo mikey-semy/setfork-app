@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import { OverlayPanel } from './OverlayPanel'
 import { Button } from './button'
+import { CopyButton } from './CopyButton'
 import { confirmMatches } from '@/shared/lib/confirm-phrase'
 
 // Общая модалка подтверждения опасного действия (type-to-confirm, как GitHub
@@ -56,10 +57,16 @@ export function ConfirmDialog({
     <div className="flex flex-col gap-4 p-4">
       {intro && <div className="text-[13px] leading-relaxed text-ink-2">{intro}</div>}
       {confirmPhrase && (
-        <label className="flex flex-col gap-1.5 text-[12.5px] font-semibold text-ink-2">
-          <span>
-            {confirmHint} <span className="font-mono text-ink">{confirmPhrase}</span>
-          </span>
+        <div className="flex flex-col gap-1.5 text-[12.5px] font-semibold text-ink-2">
+          <span>{confirmHint}</span>
+          {/* Фразу-подтверждение на мобиле выделить нельзя — даём отдельную строку
+              с кнопкой «копировать» (горизонтальный скролл внутри бокса, не страницы). */}
+          <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 py-1.5">
+            <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] text-ink [scrollbar-width:none]">
+              {confirmPhrase}
+            </code>
+            <CopyButton text={confirmPhrase} />
+          </div>
           <input
             name="confirm"
             value={typed}
@@ -69,7 +76,7 @@ export function ConfirmDialog({
             aria-label={typeof confirmHint === 'string' ? confirmHint : 'confirm'}
             className="mt-0.5 w-full rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-hidden focus:border-danger"
           />
-        </label>
+        </div>
       )}
       {error && <div className="text-[13px] text-danger">{error}</div>}
       <div className="flex items-center justify-end gap-2">

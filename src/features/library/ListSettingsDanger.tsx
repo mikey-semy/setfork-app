@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useState, useTransition } from 'react'
-import { Archive, Globe, Lock, Snowflake, UserRoundPlus } from 'lucide-react'
+import { Archive, Globe, Lock, Snowflake, Trash2, UserRoundPlus } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
@@ -56,13 +56,12 @@ export function ListSettingsDanger({
           <div className={row}>
             <div className="min-w-0">
               <div className="text-[14px] font-medium text-ink">{t('changeVisibility', lang)}</div>
-              <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
-                {isPublic ? <Globe size={12} /> : <Lock size={12} />}
+              <p className="mt-0.5 text-[12.5px] text-ink-2">
                 {t('visibilityCurrent', lang)} {t(isPublic ? 'publicLabel' : 'privateLabel', lang).toLowerCase()}.
               </p>
             </div>
             <Button variant="danger" size="md" onClick={() => setDialog('visibility')} className="border border-danger/40">
-              {t(isPublic ? 'makePrivate' : 'makePublic', lang)}
+              {isPublic ? <Lock size={14} /> : <Globe size={14} />} {t(isPublic ? 'makePrivate' : 'makePublic', lang)}
             </Button>
           </div>
 
@@ -70,12 +69,12 @@ export function ListSettingsDanger({
           <div className={row}>
             <div className="min-w-0">
               <div className="text-[14px] font-medium text-ink">{t(frozen ? 'unfreezeList' : 'freezeList', lang)}</div>
-              <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
-                <Snowflake size={12} /> {t(frozen ? 'frozenOn' : 'freezeHint', lang)}
+              <p className="mt-0.5 text-[12.5px] text-ink-2">
+                {t(frozen ? 'frozenOn' : 'freezeHint', lang)}
               </p>
             </div>
             <Button variant="danger" size="md" onClick={() => setDialog('freeze')} className="border border-danger/40">
-              {t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+              <Snowflake size={14} /> {t(frozen ? 'unfreezeList' : 'freezeList', lang)}
             </Button>
           </div>
 
@@ -83,12 +82,12 @@ export function ListSettingsDanger({
           <div className={row}>
             <div className="min-w-0">
               <div className="text-[14px] font-medium text-ink">{t(archived ? 'unarchiveList' : 'archiveList', lang)}</div>
-              <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
-                <Archive size={12} /> {t(archived ? 'archivedOn' : 'archiveHint', lang)}
+              <p className="mt-0.5 text-[12.5px] text-ink-2">
+                {t(archived ? 'archivedOn' : 'archiveHint', lang)}
               </p>
             </div>
             <Button variant="danger" size="md" onClick={() => setDialog('archive')} className="border border-danger/40">
-              {t(archived ? 'unarchiveList' : 'archiveList', lang)}
+              <Archive size={14} /> {t(archived ? 'unarchiveList' : 'archiveList', lang)}
             </Button>
           </div>
 
@@ -96,8 +95,7 @@ export function ListSettingsDanger({
           <div className={row}>
             <div className="min-w-0">
               <div className="text-[14px] font-medium text-ink">{t('transferOwnership', lang)}</div>
-              <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
-                <UserRoundPlus size={12} />
+              <p className="mt-0.5 text-[12.5px] text-ink-2">
                 {pendingTransfer ? `${t('transferPendingTo', lang)} @${pendingTransfer.toHandle}` : t('transferHint', lang)}
               </p>
             </div>
@@ -113,7 +111,7 @@ export function ListSettingsDanger({
               </Button>
             ) : (
               <Button variant="danger" size="md" onClick={() => setDialog('transfer')} className="border border-danger/40">
-                {t('transferOwnership', lang)}
+                <UserRoundPlus size={14} /> {t('transferOwnership', lang)}
               </Button>
             )}
           </div>
@@ -128,7 +126,7 @@ export function ListSettingsDanger({
             </div>
             {!lockedByModeration && (
               <Button variant="danger" size="md" onClick={() => setDialog('delete')} className="border border-danger/40">
-                {t('deleteList', lang)}
+                <Trash2 size={14} /> {t('deleteList', lang)}
               </Button>
             )}
           </div>
