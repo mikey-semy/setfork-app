@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { t, type Lang } from '@/shared/i18n'
-import { docsUrl, legalUrl } from '@/shared/docs'
+import { legalUrl } from '@/shared/docs'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { APP_VERSION } from '@/shared/app-version'
 // «О проекте» — отдельный маркетинг-лендинг (проект setfork-about). Живёт по ПУТИ
@@ -21,8 +21,8 @@ export async function Footer({ lang }: { lang: Lang }) {
         <span className="text-muted">© {year} SetFork</span>
         <Link href="/explore" className={link}>{t('explore', lang)}</Link>
         <a href={ABOUT_URL} className={link}>{t('aboutProject', lang)}</a>
-        {/* Репозиторий приватный — публичная ссылка отдаёт 404, поэтому ведём в доки. */}
-        <a href={docsUrl('/docs', lang)} target="_blank" rel="noreferrer" className={link}>{t('sourceCode', lang)}</a>
+        {/* «Исходный код» убран из футера (владелец): репо приватный, ссылка вела в доки,
+            а не в исходники — вводила в заблуждение. Доки доступны из других мест. */}
         {/* Contact ведёт на свою форму фидбека (ссылка на issues приватного репо отдавала 404). */}
         <Link href="/feedback" className={link}>{t('feedback', lang)}</Link>
         <a href={legalUrl('terms', lang)} className={link}>{t('terms', lang)}</a>
