@@ -115,6 +115,27 @@ export function gnomeReflection(rep: Record<string, GnomeRep>, id: string): stri
 }
 
 /**
+ * ВИДИМЫЙ РАНГ гнома (профразвитие, идея владельца — прогрессия на глазах у юзера):
+ * цеховой титул по ОБЪЁМУ карьеры (сколько списков людей выросло из его черновиков),
+ * те же пороги, что у рефлексии — они консистентны (внутреннее самоощущение ↔
+ * внешний титул). Ученик → Подмастерье → Мастер → Старший мастер. Ортогонален
+ * настроению (сиюминутной доле). Растёт со временем; ученик — стартовый ранг, не «пусто».
+ * tier — для стиля бейджа (выше = заметнее).
+ */
+export interface GnomeRank {
+  tier: 0 | 1 | 2 | 3
+  labelEn: string
+  labelRu: string
+}
+export function gnomeRank(rep: Record<string, GnomeRep>, id: string): GnomeRank {
+  const accepted = rep[id]?.accepted ?? 0
+  if (accepted >= 30) return { tier: 3, labelEn: 'Senior Master', labelRu: 'Старший мастер' }
+  if (accepted >= 10) return { tier: 2, labelEn: 'Master', labelRu: 'Мастер' }
+  if (accepted >= 3) return { tier: 1, labelEn: 'Journeyman', labelRu: 'Подмастерье' }
+  return { tier: 0, labelEn: 'Apprentice', labelRu: 'Ученик' }
+}
+
+/**
  * Эпизодическая память о СОБЕСЕДНИКЕ (идея владельца: «поблагодарят — запомнит»):
  * сколько раз ИМЕННО этот пользователь благодарил ИМЕННО этого гнома. Гном узнаёт
  * вернувшегося благодарного человека. Не кешируем (варьируется по паре гном×юзер);

@@ -1,8 +1,18 @@
 import type { Metadata } from 'next'
+import { Award } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { getRoster, rosterAvatars } from '@/shared/ai/roster'
-import { gnomeReputation, REP_MIN_GENS } from '@/features/generation/reputation'
+import { gnomeRank, gnomeReputation, REP_MIN_GENS } from '@/features/generation/reputation'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
+
+// Стиль бейджа ранга по tier: выше — заметнее. Ученик (0) — приглушённо (стартовый
+// ранг, не «пусто»); Старший мастер (3) — самый выразительный. Только токены темы.
+const RANK_CLS = [
+  'text-muted', // 0 Ученик
+  'border border-border text-ink-2', // 1 Подмастерье
+  'bg-(--accent-soft) text-accent', // 2 Мастер
+  'border border-(--accent) bg-(--accent-soft) text-accent', // 3 Старший мастер
+]
 
 /**
  * Публичная витрина гильдий (HQ §7 «гильдии наружу»): кто куёт списки SetFork,
@@ -32,6 +42,8 @@ export default async function GuildsPage() {
         {roster.map((e) => {
           const r = rep[e.id]
           const share = r && r.gens >= REP_MIN_GENS ? Math.round((r.accepted / r.gens) * 100) : null
+          // Видимый ранг (профразвитие): цеховой титул по объёму принятых списков.
+          const rank = gnomeRank(rep, e.id)
           return (
             <div key={e.id} className="rounded-lg border border-border bg-surface p-4">
               <div className="flex items-center gap-3">
@@ -39,9 +51,15 @@ export default async function GuildsPage() {
                 <div className="min-w-0">
                   <div className="text-[15px] font-semibold text-ink">{ru ? e.nameRu : e.nameEn}</div>
                   {(ru ? e.guildRu : e.guildEn) && <div className="text-[12.5px] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
+                  {/* Ранг — цеховой титул (RPG-прогрессия на глазах). Иконка-медаль с
+                      подмастерья; ученик — приглушённый текст без иконки. */}
+                  <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${RANK_CLS[rank.tier]}`} title={say('Craft rank — earned by lists people built from this master', 'Цеховой ранг — заработан списками, что люди собрали из черновиков мастера')}>
+                    {rank.tier >= 1 && <Award size={11} />}
+                    {ru ? rank.labelRu : rank.labelEn}
+                  </span>
                 </div>
                 {share !== null && (
-                  <span className="ml-auto shrink-0 rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11.5px] font-semibold text-accent" title={say('Share of councils whose list was accepted', 'Доля советов, чей список приняли')}>
+                  <span className="ml-auto shrink-0 self-start rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11.5px] font-semibold text-accent" title={say('Share of councils whose list was accepted', 'Доля советов, чей список приняли')}>
                     ✓ {share}%
                   </span>
                 )}
