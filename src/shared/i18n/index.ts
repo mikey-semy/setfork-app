@@ -309,6 +309,7 @@ const DICT = {
   runFailConfirm: { en: 'Stop this run as failed? Use it when the list could not be completed.', ru: 'Остановить прогон как неудачу? Когда список не удалось пройти.' },
   runBlockedLabel: { en: 'blocked', ru: 'заблокировано' },
   runCantComplete: { en: "Can't complete this step", ru: 'Шаг не получается' },
+  digStep: { en: 'Dig into this step', ru: 'Копнуть этот пункт' },
   // ── Память прохождения курса (courseCompletions — постоянный факт) ──
   courseTestsChanged: {
     en: 'Tests changed since your completion — your certificate stays valid.',
