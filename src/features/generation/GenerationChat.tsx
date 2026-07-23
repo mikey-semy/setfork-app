@@ -25,7 +25,7 @@ const capFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
  * в характере мастерской и МЕНЯЮТСЯ, пока идёт генерация — «совет живой».
  */
 const THINKING_LINES: [string, string][] = [
-  ['The gnomes confer', 'Гномы совещаются'],
+  ['The council confers', 'Совет совещается'],
   ['Digging the archives', 'Копаемся в архивах'],
   ['Weighing the options', 'Взвешиваем варианты'],
   ['Forging the list', 'Куём список'],

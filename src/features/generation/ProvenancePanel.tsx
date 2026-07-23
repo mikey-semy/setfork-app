@@ -58,7 +58,7 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
           {p.experts && p.experts.length > 0 && (
             <div>
               {/* Имя гнома — крупно, модель (его «инструмент») — мелко и в скобках. */}
-              <span className="font-semibold text-ink-2">{say('Gnomes', 'Гномы')}:</span>{' '}
+              <span className="font-semibold text-ink-2">{say('Assembled by', 'Собрали')}:</span>{' '}
               <span className="text-muted">
                 {p.experts.map((e, i) => (
                   <span key={e.id}>
@@ -78,7 +78,7 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
               <Markdown className="mt-1 space-y-1 text-muted [&_strong]:text-ink-2">{p.critique.slice(0, 800)}</Markdown>
             </div>
           )}
-          {p.depth === 'single' && <div className="text-muted">{say('Simple topic — a single gnome wrote it.', 'Тема простая — писал один гном.')}</div>}
+          {p.depth === 'single' && <div className="text-muted">{say('Simple topic — a single master wrote it.', 'Тема простая — писал один мастер.')}</div>}
         </div>
       )}
     </div>
