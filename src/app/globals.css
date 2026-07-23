@@ -80,8 +80,10 @@
    Light — палитра экранов Search/Explore и карточки 2A.
    Dark  — палитра карточки 2B / dark RunStep. */
 :root {
-  --font-sans: 'Hanken Grotesk', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  /* Эмоджи-фонты в конце стека: без них система-шрифт мог не рисовать часть эмоджи
+     (гномы шлют их в репликах) → «тофу»-квадрат. Ставим перед generic sans-serif. */
+  --font-sans: 'Hanken Grotesk', system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', monospace;
 
   --canvas: #f4f4f1; /* фон страницы (светлый, под контент во всю ширину) */
   --surface: #ffffff;
@@ -157,9 +159,9 @@
 
 /* ── Шрифт интерфейса (data-font на html; переменные шрифтов задаёт next/font
       в layout). Специфичность html[data-font] бьёт класс next/font. ── */
-html[data-font='inter'] { --font-sans: var(--font-inter), system-ui, sans-serif; }
-html[data-font='manrope'] { --font-sans: var(--font-manrope), system-ui, sans-serif; }
-html[data-font='system'] { --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+html[data-font='inter'] { --font-sans: var(--font-inter), system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
+html[data-font='manrope'] { --font-sans: var(--font-manrope), system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
+html[data-font='system'] { --font-sans: system-ui, -apple-system, 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
 
 * {
   box-sizing: border-box;
