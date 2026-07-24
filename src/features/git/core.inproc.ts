@@ -9,9 +9,13 @@ import { gitStore } from './adapter'
 
 const exec = promisify(execFile)
 
-// Только простые имена веток (защита от ref-инъекций) — зеркало проверки в Rust-ядре.
+// Только простые имена веток (защита от ref- и argument-инъекций) — зеркало проверки
+// в Rust-ядре. Ведущий '-' запрещён ОТДЕЛЬНО: BRANCH_RE его пропускает (дефис — в классе),
+// но как позиционный arg git трактует '-D' и т.п. как ФЛАГ — напр. `git branch -D main`
+// удалил бы защищённый main. См. security-скан 2026-07-23, F3 (CWE-88). Все пользовательские
+// имена веток/тегов проходят через badBranch, так что это закрывает весь класс инъекции.
 const BRANCH_RE = /^[A-Za-z0-9._-]+$/
-const badBranch = (b: string) => !b || !BRANCH_RE.test(b) || b.includes('..')
+const badBranch = (b: string) => !b || !BRANCH_RE.test(b) || b.includes('..') || b.startsWith('-')
 
 // In-process реализация GitCore поверх низкоуровневого GitStore (shell → git).
 // Пост-MVP этот же порт закрывает remote-реализация (Connect → Rust git-core).
