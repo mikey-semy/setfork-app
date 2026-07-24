@@ -20,3 +20,6 @@ build/
 # SetFork git-as-source-of-truth persistent repos
 .setfork-git/
 coverage/
+
+# Local eval/benchmark output (generated, timestamped — ablation-eval, #478)
+/scripts/ablation-eval-result.json
