@@ -74,11 +74,16 @@ export async function digChatAsk(input: {
   // Единый ДОМ ГНОМОВ (gnomeConverse): весь чат-функционал гнома — характер,
   // настроение, аккуратность, реальный созыв коллеги, фоллоу-апы — живёт там и
   // одинаков во всех поверхностях. Раскопка лишь передаёт контекст пункта.
+  // Текст-блок хранит markdown в content.md (не в desc) — без этого кирка на
+  // «Тексте» отдала бы гному пустой контекст.
+  const blockMd =
+    row.type === 'text' && typeof (row.content as { md?: string } | null)?.md === 'string' ? (row.content as { md: string }).md : ''
   const stepCtx = [
     `List: ${tr(tpl.title as LocaleText, input.lang)}`,
     tpl.tags.length ? `Tags: ${tpl.tags.join(', ')}` : '',
     `Step ${input.stepN}: ${tr(row.title as LocaleText, input.lang)}`,
     tr(row.desc as LocaleText, input.lang),
+    blockMd,
     row.command ? `Command: ${row.command}` : '',
     tr(row.why as LocaleText, input.lang) ? `Why: ${tr(row.why as LocaleText, input.lang)}` : '',
   ]

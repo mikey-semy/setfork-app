@@ -224,9 +224,16 @@ export function RunView({
           // Презентационные блоки — контекст: без чекбокса и контролов.
           if (!isStep(s)) {
             if (s.type === 'text') {
+              // Текст-блок — как шаг: контейнер + «кирка» для углублённого изучения
+              // (dig-чат), но презентационный: без чекбокса и «не получается».
               return s.text ? (
-                <div key={s.id} className="px-1">
-                  <Markdown className="text-[14px] leading-relaxed text-ink-2">{s.text}</Markdown>
+                <div key={s.id} className="relative rounded-lg border border-border bg-surface p-4">
+                  {digEnabled && (
+                    <div className="absolute right-2 top-2">
+                      <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.title }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />
+                    </div>
+                  )}
+                  <Markdown className={`text-[14px] leading-relaxed text-ink-2${digEnabled ? ' pr-10' : ''}`}>{s.text}</Markdown>
                 </div>
               ) : null
             }

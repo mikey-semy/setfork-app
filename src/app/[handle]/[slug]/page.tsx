@@ -208,10 +208,16 @@ export default async function ListPage({
   // ч. 16 ст. 18.1: пометка обязана называть рекламодателя (наименование+ИНН).
   const adAdvertisers = showAdMarking ? markedAdvertisers(affiliateUrls, mon.affiliateRules) : []
   // Показываем note версии, только если он осмысленный (не служебный boilerplate).
-  const latestNote =
+  const rawNote =
     currentVersion?.note && !['initial', 'edit', 'seeded', 'ai draft'].includes(currentVersion.note)
       ? currentVersion.note
       : ''
+  // Служебные note от MCP/API хранятся по-английски — локализуем на показе.
+  const SYSTEM_NOTE_KEY: Record<string, 'noteCreatedViaApi' | 'noteUpdatedViaApi'> = {
+    'created via API': 'noteCreatedViaApi',
+    'updated via API': 'noteUpdatedViaApi',
+  }
+  const latestNote = rawNote ? (SYSTEM_NOTE_KEY[rawNote] ? t(SYSTEM_NOTE_KEY[rawNote], lang) : rawNote) : ''
   // «Перевести» и языковой бейдж имеют смысл, ТОЛЬКО если контент реально не на
   // языке зрителя. Русский текст под ключом 'en' (неверный тег генерации) не должен
   // предлагать «перевести на русский» — детектим по самому тексту (кириллица → ru).
