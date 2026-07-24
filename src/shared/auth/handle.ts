@@ -2,6 +2,7 @@
 import { randomBytes } from 'crypto'
 import { eq } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
+import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { translitRu } from '@/shared/lib/translit'
 
 export { translitRu }
@@ -26,7 +27,9 @@ export function sanitizeHandleBase(raw: string): string {
 }
 
 export async function handleTaken(h: string): Promise<boolean> {
-  if (RESERVED_HANDLES.has(h)) return true
+  // admin-ники (ADMIN_HANDLES) НЕЛЬЗЯ занять сменой ника/регистрацией — иначе privesc
+  // до админа через самоназначаемый handle (security-скан 2026-07-23, F9).
+  if (RESERVED_HANDLES.has(h) || isAdminHandle(h)) return true
   const [row] = await db.select({ id: users.id }).from(users).where(eq(users.handle, h)).limit(1)
   return !!row
 }
@@ -38,7 +41,7 @@ export function normalizeHandle(raw: string): string {
 
 /** Валиден ли ник по форме (НЕ занятость): длина/алфавит + не зарезервирован. */
 export function isHandleShapeValid(h: string): boolean {
-  return HANDLE_RE.test(h) && !RESERVED_HANDLES.has(h)
+  return HANDLE_RE.test(h) && !RESERVED_HANDLES.has(h) && !isAdminHandle(h)
 }
 
 /**
