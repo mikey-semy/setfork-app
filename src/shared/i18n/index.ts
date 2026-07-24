@@ -465,8 +465,8 @@ const DICT = {
   stepChecksLabel: { en: 'Check', ru: 'Проверь' },
   // Шаг Telegram-входа (/login/telegram) + сообщения бота ({site} подставляется кодом).
   tgLoginIntro: {
-    en: 'Open Telegram with the button below and confirm the sign-in with the bot — this page will continue automatically.',
-    ru: 'Открой Telegram по кнопке ниже и подтверди вход у бота — эта страница сама продолжит.',
+    en: 'Open Telegram with the button below, confirm the sign-in with the bot, then enter the code it sends you here.',
+    ru: 'Открой Telegram по кнопке ниже, подтверди вход у бота и введи присланный им код здесь.',
   },
   tgLoginOpen: { en: 'Open Telegram', ru: 'Открыть Telegram' },
   tgLoginAnother: { en: 'Another sign-in method', ru: 'Другой способ входа' },
@@ -486,8 +486,18 @@ const DICT = {
     ru: 'Этот бот подтверждает вход на {site}. Начни вход на сайте — и вернись сюда по его ссылке.',
   },
   tgBotDone: { en: '✅ Sign-in confirmed — go back to your browser.', ru: '✅ Вход подтверждён — вернись в браузер.' },
-  tgBotCbOk: { en: 'Sign-in confirmed', ru: 'Вход подтверждён' },
+  tgBotCode: {
+    en: '✅ Your sign-in code: {code}\n\nType it on the sign-in page in your browser to finish. This code only works in the browser that started this sign-in — never share it with anyone.',
+    ru: '✅ Твой код входа: {code}\n\nВведи его на странице входа в браузере, чтобы завершить. Код работает только в том браузере, где начат вход, — никому его не сообщай.',
+  },
+  tgBotCbOk: { en: 'Code sent — enter it in your browser', ru: 'Код отправлен — введи его в браузере' },
   tgBotCbStale: { en: 'Link expired — start the sign-in over', ru: 'Ссылка устарела — начни вход заново' },
+  tgLoginCodePrompt: {
+    en: 'Enter the 6-digit code the bot sent you in Telegram:',
+    ru: 'Введи 6-значный код, который бот прислал в Telegram:',
+  },
+  tgLoginCodeSubmit: { en: 'Sign in', ru: 'Войти' },
+  tgLoginBadCode: { en: 'Wrong code — check Telegram and try again.', ru: 'Неверный код — проверь Telegram и попробуй ещё раз.' },
   signInDemo: { en: 'Continue as demo', ru: 'Продолжить как demo' },
   tryLiveDemo: { en: 'Try the live demo →', ru: 'Открыть демо →' },
   signOut: { en: 'Sign out', ru: 'Выйти' },
