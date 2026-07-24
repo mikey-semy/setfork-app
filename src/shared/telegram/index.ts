@@ -3,6 +3,7 @@
 // https://tg-egress.setfork.com (+ extra_hosts в docker-compose.override.yml)
 // и TELEGRAM_API_INSECURE=1 (TLS терминится на мосту самоподписанным сертом).
 // node:https вместо fetch — undici не даёт выключить проверку серта точечно.
+import { createHmac } from 'node:crypto'
 import { request } from 'node:https'
 
 export function telegramConfigured(): boolean {
@@ -73,4 +74,17 @@ export function parseStartToken(text: string | undefined): string | null {
 export function parseConfirmToken(data: string | undefined): string | null {
   const m = /^tglogin:([a-f0-9]{32,64})$/.exec(data ?? '')
   return m ? m[1] : null
+}
+
+/**
+ * 6-значный код подтверждения входа: HMAC(AUTH_SECRET, `token:tgId`) → 6 цифр.
+ * Детерминированный (webhook и poll считают одинаково, хранить в БД не нужно) и
+ * непредсказуемый без AUTH_SECRET. Привязывает подтверждение к ИНИЦИИРОВАВШЕМУ
+ * браузеру: бот шлёт код подтвердившему в Telegram, а завершить вход можно только
+ * введя код в браузере с токеном — relay чужой ссылки не даёт сессию (F2, CWE-352).
+ */
+export function telegramLoginCode(token: string, tgId: number): string {
+  const secret = process.env.AUTH_SECRET ?? ''
+  const mac = createHmac('sha256', secret).update(`${token}:${tgId}`).digest()
+  return String(mac.readUInt32BE(0) % 1_000_000).padStart(6, '0')
 }

@@ -7,7 +7,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { db, telegramLoginTokens } from '@/shared/db'
 import { t, type Lang, type TKey } from '@/shared/i18n'
-import { parseConfirmToken, parseStartToken, tgApi, telegramConfigured, type TgUpdate } from '@/shared/telegram'
+import { parseConfirmToken, parseStartToken, telegramLoginCode, tgApi, telegramConfigured, type TgUpdate } from '@/shared/telegram'
 
 const site = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/^https?:\/\//, '')
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const cb = update.callback_query
     const lang = langOf(cb.from?.language_code)
     const token = parseConfirmToken(cb.data)
-    let done = false
+    let code = ''
     if (token && cb.from?.id) {
       const [row] = await db.select().from(telegramLoginTokens).where(eq(telegramLoginTokens.token, token)).limit(1)
       if (row && !row.confirmedAt && row.expiresAt > new Date()) {
@@ -60,18 +60,20 @@ export async function POST(req: NextRequest) {
             confirmedAt: new Date(),
           })
           .where(eq(telegramLoginTokens.id, row.id))
-        done = true
+        // Код доставляем ПОДТВЕРДИВШЕМУ в Telegram; завершить вход можно только введя
+        // его в браузере-инициаторе (с токеном) — relay чужой ссылки не даёт сессию (F2).
+        code = telegramLoginCode(token, cb.from.id)
       }
     }
     await tgApi('answerCallbackQuery', {
       callback_query_id: cb.id,
-      text: t(done ? 'tgBotCbOk' : 'tgBotCbStale', lang),
+      text: t(code ? 'tgBotCbOk' : 'tgBotCbStale', lang),
     })
-    if (done && cb.message?.chat && cb.message.message_id) {
+    if (code && cb.message?.chat && cb.message.message_id) {
       await tgApi('editMessageText', {
         chat_id: cb.message.chat.id,
         message_id: cb.message.message_id,
-        text: t('tgBotDone', lang),
+        text: t('tgBotCode', lang).replace('{code}', code),
       })
     }
   }
