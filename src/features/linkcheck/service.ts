@@ -8,6 +8,7 @@ import { log } from '@/shared/observability'
 import { classifyProbe, nextVerdict } from './classify'
 import { probeUrl, type ProbeFn } from './probe'
 import { harvestAll } from './harvest'
+import { deliverBrokenLinks } from './deliver'
 
 // Свип link-checker'а («живые списки», Ж1): чанками < reap-порога (30 мин),
 // с самоцепочкой до суточного капа. Politeness: per-host token-bucket +
@@ -48,8 +49,13 @@ export async function runLinkcheckSweep(payload: LinkcheckPayload = {}, probe: P
     return { probed: 0, chained: false }
   }
   const startedAt = Date.now()
-  // Харвест — только в голове цепочки (первая джоба свипа).
-  if (!payload.chained) await harvestAll()
+  // Харвест + доставка битых ссылок — только в голове цепочки (раз в проход).
+  if (!payload.chained) {
+    await harvestAll()
+    // Ж1b: доставка идёт после харвеста (свежие occurrences) и не зависит от ИИ.
+    // Сама решает, включена ли (linkcheck.deliver_issues); ошибку не роняем в свип.
+    await deliverBrokenLinks().catch((e) => log.error('linkcheck deliver failed', { err: String(e) }))
+  }
 
   const already = await probesToday()
   const budget = Math.max(0, Math.min(s.batchProbes, s.dailyCap - already))
