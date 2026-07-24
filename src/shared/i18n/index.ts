@@ -356,6 +356,9 @@ const DICT = {
   },
   gardenerIssueBrokenArchive: { en: 'archived copy', ru: 'копия в архиве' },
   gardenerIssueBrokenMore: { en: '…and {n} more', ru: '…и ещё {n}' },
+  // Служебные note версий, созданных через MCP/API — локализуем на показе.
+  noteCreatedViaApi: { en: 'created via API', ru: 'создан через API' },
+  noteUpdatedViaApi: { en: 'updated via API', ru: 'обновлён через API' },
   mcpTitle: { en: 'API & MCP access', ru: 'API и MCP-доступ' },
   mcpIntro: {
     en: 'Personal tokens for agents to connect via MCP: search and read your lists — and, with write access, create and update them.',
