@@ -93,16 +93,29 @@ function extractUsage(result: {
 async function call(model: string, system: string, prompt: string, maxTokens = MAX_TOKENS): Promise<CallStat> {
   if (spentUsd > HARD_CAP_USD) throw new Error(`HARD_CAP $${HARD_CAP_USD} exceeded (spent $${spentUsd.toFixed(4)})`)
   const t0 = Date.now()
-  const result = await generateText({
-    model: openrouter.chat(model, { usage: { include: true } }),
-    system,
-    prompt,
-    temperature: TEMPERATURE,
-    maxOutputTokens: maxTokens,
-  })
-  const u = extractUsage(result)
-  spentUsd += u.cost
-  return { model, input: u.input, output: u.output, cost: u.cost, ms: Date.now() - t0, text: result.text }
+  // OpenRouter иногда роутит модель на провайдера, отвергающего endpoint (ошибка не
+  // isRetryable → SDK не ретраит). Дёшево ретраим сами: чаще всего пере-роутит.
+  let lastErr: unknown
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const result = await generateText({
+        // provider.ignore: часть провайдеров OpenRouter (напр. Novita) отвергает
+        // chat/completions для некоторых моделей (судья qwen флейкал) → исключаем их.
+        model: openrouter.chat(model, { usage: { include: true }, extraBody: { provider: { ignore: ['Novita'] } } }),
+        system,
+        prompt,
+        temperature: TEMPERATURE,
+        maxOutputTokens: maxTokens,
+      })
+      const u = extractUsage(result)
+      spentUsd += u.cost
+      return { model, input: u.input, output: u.output, cost: u.cost, ms: Date.now() - t0, text: result.text }
+    } catch (e) {
+      lastErr = e
+      await new Promise((r) => setTimeout(r, 800))
+    }
+  }
+  throw lastErr
 }
 
 async function fetchCatalog(): Promise<ModelPrice[]> {
@@ -245,44 +258,51 @@ async function modeLive() {
   const B = { total: 0, alive: 0 }
   const C = { list: 0, prose: 0, tie: 0, listUnits: [] as number[] }
   const rows: Record<string, unknown>[] = []
+  let skipped = 0
 
   for (const prompt of PROMPTS) {
     console.log(`### ${prompt}`)
-    // Генерации: одиночка (JSON), совет (JSON), проза.
-    const solo = await call(single.id, SYS_GEN, `Create the reference checklist for the topic.\nTOPIC: ${prompt}`)
-    const coun = await runCouncil(council, aggregator, prompt)
-    const prose = await call(single.id, SYS_PROSE, `TASK: ${prompt}`)
+    try {
+      // Генерации: одиночка (JSON), совет (JSON), проза.
+      const solo = await call(single.id, SYS_GEN, `Create the reference checklist for the topic.\nTOPIC: ${prompt}`)
+      const coun = await runCouncil(council, aggregator, prompt)
+      const prose = await call(single.id, SYS_PROSE, `TASK: ${prompt}`)
 
-    // A: совет vs одиночка (та же задача, оба JSON).
-    const aWin = await pairwiseSwapped(judge, prompt, coun.final, solo.text)
-    A[aWin]++
-    const mul = coun.cost / (solo.cost || 1e-9)
-    A.costMul.push(mul)
+      // A: совет vs одиночка (та же задача, оба JSON).
+      const aWin = await pairwiseSwapped(judge, prompt, coun.final, solo.text)
+      A[aWin]++
+      const mul = coun.cost / (solo.cost || 1e-9)
+      A.costMul.push(mul)
 
-    // B: валидность URL у НЕ-grounded одиночки (объективно).
-    const uv = await urlValidity(solo.text)
-    B.total += uv.total; B.alive += uv.alive
+      // B: валидность URL у НЕ-grounded одиночки (объективно).
+      const uv = await urlValidity(solo.text)
+      B.total += uv.total; B.alive += uv.alive
 
-    // C: список (одиночка JSON) vs проза.
-    const cWin = await judgeActionability(judge, prompt, solo.text, prose.text)
-    C[cWin]++
-    const units = checkableUnits(solo.text)
-    C.listUnits.push(units)
+      // C: список (одиночка JSON) vs проза.
+      const cWin = await judgeActionability(judge, prompt, solo.text, prose.text)
+      C[cWin]++
+      const units = checkableUnits(solo.text)
+      C.listUnits.push(units)
 
-    console.log(`  A совет-vs-одиночка: ${aWin.toUpperCase()}  (cost ×${mul.toFixed(1)}: ${fmtUsd(coun.cost)} vs ${fmtUsd(solo.cost)}, ${coun.calls} вызовов)`)
-    console.log(`  B URL-валидность (одиночка): ${uv.alive}/${uv.total} живых${uv.total ? ` (${Math.round((uv.alive / uv.total) * 100)}%)` : ''}`)
-    console.log(`  C список-vs-проза: ${cWin.toUpperCase()}  (у списка ${units} проверяемых единиц, у прозы ~0)\n`)
-    rows.push({ prompt, A: aWin, costMul: mul, B: uv, C: cWin, listUnits: units })
+      console.log(`  A совет-vs-одиночка: ${aWin.toUpperCase()}  (cost ×${mul.toFixed(1)}: ${fmtUsd(coun.cost)} vs ${fmtUsd(solo.cost)}, ${coun.calls} вызовов)`)
+      console.log(`  B URL-валидность (одиночка): ${uv.alive}/${uv.total} живых${uv.total ? ` (${Math.round((uv.alive / uv.total) * 100)}%)` : ''}`)
+      console.log(`  C список-vs-проза: ${cWin.toUpperCase()}  (у списка ${units} проверяемых единиц, у прозы ~0)\n`)
+      rows.push({ prompt, A: aWin, costMul: mul, B: uv, C: cWin, listUnits: units })
+    } catch (e) {
+      skipped++
+      console.warn(`  ! промпт пропущен (${e instanceof Error ? e.message.slice(0, 80) : e})\n`)
+    }
   }
+  const N = PROMPTS.length - skipped
 
   const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0)
   const alivePct = B.total ? Math.round((B.alive / B.total) * 100) : 0
-  console.log('=== ИТОГ ===')
-  console.log(`A. МУЛЬТИАГЕНТ: совет лучше в ${A.council}/${PROMPTS.length}, хуже в ${A.single}, ничья ${A.tie}. Цена совета ×${avg(A.costMul).toFixed(1)} к одиночке.`)
+  console.log(`=== ИТОГ (N=${N} промптов${skipped ? `, пропущено ${skipped}` : ''}) ===`)
+  console.log(`A. МУЛЬТИАГЕНТ: совет лучше в ${A.council}/${N}, хуже в ${A.single}, ничья ${A.tie}. Цена совета ×${avg(A.costMul).toFixed(1)} к одиночке.`)
   console.log(`   → вывод: ${A.council > A.single + A.tie ? 'совет оправдан' : A.council > A.single ? 'слабый перевес совета — стоит ли ×цена?' : 'совет НЕ бьёт одиночку — реальный риск мнимого улучшения'}`)
   console.log(`B. GROUNDING: у НЕ-grounded генерации живо ${B.alive}/${B.total} URL (${alivePct}%) → ${100 - alivePct}% ссылок выдуманы/мертвы.`)
   console.log(`   → вывод: чем ниже %, тем сильнее объективная нужда в grounding (сверить: тот же тест на выводе продукта с grounding должен дать выше).`)
-  console.log(`C. СТРУКТУРА: список лучше для прохождения в ${C.list}/${PROMPTS.length}, проза в ${C.prose}, ничья ${C.tie}. Проверяемых единиц у списка в среднем ${avg(C.listUnits).toFixed(1)}, у прозы ~0.`)
+  console.log(`C. СТРУКТУРА: список лучше для прохождения в ${C.list}/${N}, проза в ${C.prose}, ничья ${C.tie}. Проверяемых единиц у списка в среднем ${avg(C.listUnits).toFixed(1)}, у прозы ~0.`)
   console.log(`   → вывод: прокси в пользу структуры; РЕАЛЬНАЯ успешность = полевой A/B (completion прогонов) — обязателен для твёрдого вывода.`)
   console.log(`\nПотрачено: ${fmtUsd(spentUsd)}`)
 
