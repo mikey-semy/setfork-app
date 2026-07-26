@@ -12,7 +12,7 @@ import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
 import { Megaphone } from 'lucide-react'
-import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, LayoutDashboard, Mail, MessageSquare, RefreshCw, ScrollText, Search, Shield, Tag, Users, Wrench } from 'lucide-react'
+import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, LayoutDashboard, Mail, MessageSquare, RefreshCw, ScrollText, Search, Shield, Tag, TrendingUp, Users, Wrench } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { setAiSettings } from '@/features/admin/actions'
@@ -508,6 +508,12 @@ export default async function AdminPage() {
             className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
           >
             <LayoutDashboard size={14} /> {tr({ en: 'Dashboard', ru: 'Дашборд' }, lang)}
+          </Link>
+          <Link
+            href="/admin/development"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
+          >
+            <TrendingUp size={14} /> {tr({ en: 'Development', ru: 'Развитие' }, lang)}
           </Link>
           <Link
             href="/admin/collections"
