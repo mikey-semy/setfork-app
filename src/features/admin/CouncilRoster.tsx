@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { BarChart3, Check, Loader2 } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { TagInput } from '@/shared/ui/TagInput'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -30,6 +31,15 @@ export interface ExpertRow {
   avatarUploaded: boolean
   nameRu: string
   nameEn: string
+  /** Профессия отдельно от имени — уезжает в профиль как должность. */
+  professionRu: string
+  professionEn: string
+  /** Тир мастерства по профессии (джун/мидл/сеньор, commis→шеф). Пусто = плоская. */
+  tier: string
+  /** Карьера: active → dormant → archived (архив обратим). */
+  lifecycle: 'active' | 'dormant' | 'archived'
+  /** «Чего не хватает» — сигнал в фиче-бэклог владельца. */
+  dreams: string
   persona: string
   guildRu: string
   guildEn: string
@@ -194,6 +204,40 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
             </div>
           </div>
 
+          {/* Профессия ОТДЕЛЬНО от имени: имя своё (мифологическое), профессия буквальная
+              и показывается в профиле аккаунта как должность. */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className={lbl}>{say('Profession (RU)', 'Профессия (RU)')}</label>
+              <input name="professionRu" defaultValue={e.professionRu} className={field} placeholder={say('Chef', 'Повар')} />
+            </div>
+            <div>
+              <label className={lbl}>{say('Profession (EN)', 'Профессия (EN)')}</label>
+              <input name="professionEn" defaultValue={e.professionEn} className={field} placeholder="Chef" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className={lbl}>{say('Tier', 'Тир мастерства')}</label>
+              <input name="tier" defaultValue={e.tier} className={field} placeholder={say('senior', 'сеньор')} />
+            </div>
+            <div>
+              <label className={lbl}>{say('Career', 'Карьера')}</label>
+              {/* Спящих и архивных совет не созывает; архив обратим — персона и опыт целы. */}
+              <Select name="lifecycle" defaultValue={e.lifecycle}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">{say('active', 'в строю')}</SelectItem>
+                  <SelectItem value="dormant">{say('dormant', 'спит')}</SelectItem>
+                  <SelectItem value="archived">{say('archived', 'в архиве')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={lbl}>{say('Guild (RU)', 'Гильдия (RU)')}</label>
@@ -218,6 +262,18 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           <div>
             <label className={lbl}>{say('Instruction (persona)', 'Инструкция (персона)')}</label>
             <textarea name="persona" defaultValue={e.persona} rows={7} className={`${field} resize-y leading-[1.45]`} />
+          </div>
+
+          {/* «Мечты» — что мешает работать; это сигнал в фиче-бэклог, а не служебная заметка. */}
+          <div>
+            <label className={lbl}>{say('What’s missing (goes to the feature backlog)', 'Чего не хватает (уходит в фиче-бэклог)')}</label>
+            <textarea
+              name="dreams"
+              defaultValue={e.dreams}
+              rows={2}
+              className={`${field} resize-y leading-[1.45]`}
+              placeholder={say('A step-timer for recipes', 'Таймер шага для рецептов')}
+            />
           </div>
 
           <div>
