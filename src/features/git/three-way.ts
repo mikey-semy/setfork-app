@@ -19,6 +19,8 @@ export interface TwStep {
   // Не-step блоки несут type/content; у шага — undefined (byte-compat).
   type?: string
   content?: Record<string, unknown>
+  /** Стабильная идентичность блока сквозь версии — сильнейший ключ для merge. */
+  blockId?: string
   title: string
   desc: string
   command: string
@@ -65,10 +67,12 @@ const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
 const stepEq = (a: TwStep | null, b: TwStep | null): boolean => JSON.stringify(a) === JSON.stringify(b)
 
-/** Ключ идентичности блока: шаг — по title; text/image — по стабильному
- *  content.bid (правка блока = modify, а не add+remove). Без bid (старые данные)
- *  — фолбэк по типу+контенту. */
+/** Ключ идентичности блока. Сильнейший — стабильный blockId: с ним
+ *  ПЕРЕИМЕНОВАНИЕ шага читается как modify, а не add+remove, и merge перестаёт
+ *  выдумывать конфликты там, где просто поправили заголовок. Дальше — легаси
+ *  content.bid не-step блоков, затем фолбэк по title/контенту (старые данные). */
 function blockKey(s: TwStep): string {
+  if (s.blockId) return `id#${s.blockId}`
   if (!s.type || s.type === 'step') return norm(s.title)
   const c = s.content ?? {}
   if (typeof c.bid === 'string' && c.bid) return `${s.type}#${c.bid}`
