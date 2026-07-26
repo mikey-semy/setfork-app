@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm'
 import { councilExperts, db, users } from '@/shared/db'
 import type { Expert } from './roster'
 import { HOME_REALM, mythicName } from './gnome-names'
+import { domainAffinity } from './precedent-filter'
 import type { Lang } from '@/shared/i18n'
 
 /**
@@ -92,6 +93,37 @@ export async function ensureGnomeUsers(roster: Expert[]): Promise<Record<string,
     if (id) out[e.id] = id
   }
   return out
+}
+
+/**
+ * КТО УХАЖИВАЕТ ЗА СПИСКОМ. «Садовник» — не персонаж, а ФУНКЦИЯ (следить за ростом
+ * качества информации), и носит её профильный специалист: рецепт правит повар, а не
+ * безликий общий аккаунт. Это решение владельца и §«роли — шляпы, не касты» в HQ.
+ *
+ * Практический смысл: правка от Фьялара на кулинарном списке осмысленна и её есть кому
+ * приписать; правка «от садовника» ничья — потому и висела неотсмотренной.
+ *
+ * Универсал/барахольщик ('*') намеренно не выигрывают: domainAffinity даёт им 0, иначе
+ * широкий домен всегда перебивал бы мастера. Никто не подошёл → null, и вызывающий
+ * берёт общий служебный аккаунт.
+ */
+export async function tenderForTags(tags: string[], roster: Expert[]): Promise<{ expert: Expert; userId: string } | null> {
+  if (!tags.length) return null
+  const ranked = roster
+    .map((e) => ({ e, score: domainAffinity(tags, e.domains) }))
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+  for (const { e } of ranked) {
+    const userId = await ensureGnomeUser(e)
+    if (userId) return { expert: e, userId }
+  }
+  return null
+}
+
+/** id всех служебных аккаунтов — для дедупа и исключений (их списки они ведут сами). */
+export async function agentUserIds(): Promise<string[]> {
+  const rows = await db.select({ id: users.id }).from(users).where(eq(users.accountType, 'agent'))
+  return rows.map((r) => r.id)
 }
 
 /**

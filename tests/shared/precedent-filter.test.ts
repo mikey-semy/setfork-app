@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pickPrecedents } from '@/shared/ai/precedent-filter'
+import { domainAffinity, matchScore, pickPrecedents } from '@/shared/ai/precedent-filter'
 
 const P = (title: string, tags: string[]) => ({ title, tags })
 
@@ -33,5 +33,38 @@ describe('pickPrecedents', () => {
   it('limit режет и матчи, и фолбэк', () => {
     expect(pickPrecedents(ALL, ['*'], 1)).toHaveLength(1)
     expect(pickPrecedents(ALL, ['cooking', 'recipe'], 1)).toHaveLength(1)
+  })
+})
+
+describe('matchScore — границы слова вместо подстроки', () => {
+  // Регрессия, найденная прогоном раздачи ухода на реальных данных: кулинарный список
+  // с тегом 'not-programming' уходил Кодеру, потому что подстрока совпадала.
+  it('тег-отрицание НЕ считается темой', () => {
+    expect(matchScore('not-programming', 'programming')).toBe(0)
+    expect(matchScore('non-cooking', 'cooking')).toBe(0)
+    expect(matchScore('не-программирование', 'программирование')).toBe(0)
+  })
+
+  it('точное совпадение — и тега, и слова внутри тега', () => {
+    expect(matchScore('cooking', 'cooking')).toBe(2)
+    expect(matchScore('home-cooking', 'cooking')).toBe(2)
+  })
+
+  it('производные формы — от 3 символов', () => {
+    expect(matchScore('deployments', 'deploy')).toBe(1)
+    expect(matchScore('dev', 'devops')).toBe(1)
+  })
+
+  it('двухбуквенные не ловят чужие слова (исходный фикс ревью)', () => {
+    expect(matchScore('go', 'golang')).toBe(0)
+    expect(matchScore('lego', 'go')).toBe(0)
+  })
+
+  it('domainAffinity: точное весит больше производного, «*» не выигрывает', () => {
+    expect(domainAffinity(['cooking'], ['cooking'])).toBe(2)
+    expect(domainAffinity(['dev'], ['devops'])).toBe(1)
+    expect(domainAffinity(['cooking', 'dessert'], ['*'])).toBe(0)
+    // Отрицание не добавляет веса профильному специалисту.
+    expect(domainAffinity(['cooking', 'not-programming'], ['programming'])).toBe(0)
   })
 })

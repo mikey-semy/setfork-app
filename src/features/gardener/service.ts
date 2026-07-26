@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, notInArray, sql } from 'drizzle-orm'
 import { appSettings, db, jobs, steps, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
 import { listStore } from '@/features/library/list-store'
 import { notifyMany } from '@/features/notifications/notify'
@@ -14,6 +14,8 @@ import { isAiAvailable } from '@/shared/settings/ai'
 import { notify } from '@/features/notifications/notify'
 import { log } from '@/shared/observability'
 import { HOME_REALM } from '@/shared/ai/gnome-names'
+import { agentUserIds, tenderForTags } from '@/shared/ai/gnome-account'
+import { getRoster } from '@/shared/ai/roster'
 import { t, type Lang, type LocaleText } from '@/shared/i18n'
 
 // ── ИИ-садовник (Э2 → ось B «живые списки») ──────────────────────────
@@ -72,7 +74,12 @@ export async function ensureGardenerScheduled(): Promise<void> {
 
 /** Кандидаты: публичные активные, без открытой правки садовника, без секций
  *  (refine пока не сохраняет section) — сначала популярные и давно не обновлявшиеся. */
-async function pickCandidates(gardenerId: string, limit: number) {
+async function pickCandidates(agentIds: string[], limit: number) {
+  // Дедуп и исключение владельца — по ВСЕМ служебным аккаунтам, а не по одному
+  // садовнику: с раздачей ухода профильным специалистам автором правки может быть
+  // любой из них, и проверка «уже предлагал» обязана это учитывать (иначе список
+  // с открытой правкой Фьялара попадал бы в выборку снова → повторный refine).
+  const agents = agentIds.length ? agentIds : ['00000000-0000-0000-0000-000000000000']
   return db
     .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, listKind: templates.listKind, ownerCurated: users.curated })
     .from(templates)
@@ -84,12 +91,13 @@ async function pickCandidates(gardenerId: string, limit: number) {
         eq(templates.moderation, 'active'),
         // Архивные/замороженные списки садовник не трогает (read-only от правок).
         sql`${templates.archivedAt} is null and ${templates.frozenAt} is null`,
-        sql`${templates.ownerId} <> ${gardenerId}`,
-        // Не берём список, где садовник уже оставил ОТКРЫТУЮ правку ЛИБО что-либо
-        // предлагал за последние GARDENER_EVERY_DAYS дней. Второе условие важно для
-        // кураторских списков: их правка авто-мёрджится (status='accepted', не 'open'),
+        // Списки самих служебных участников они ведут сами — правку себе не предлагают.
+        notInArray(templates.ownerId, agents),
+        // Не берём список, где служебный участник уже оставил ОТКРЫТУЮ правку ЛИБО
+        // что-либо предлагал за последние GARDENER_EVERY_DAYS дней. Второе условие важно
+        // для кураторских списков: их правка авто-мёрджится (status='accepted', не 'open'),
         // и без учёта свежести список попадал бы в выборку снова → повторный refine.
-        sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = ${gardenerId}
+        sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = any(${agents})
              and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS}::int * interval '1 day')))`,
       ),
     )
@@ -162,7 +170,8 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     return { proposed: 0, skipped: 0 }
   }
   const gardener = await ensureGardenerUser()
-  const [candidates, overrides] = await Promise.all([pickCandidates(gardener.id, BATCH), policyOverrides()])
+  const [agents, roster] = await Promise.all([agentUserIds(), getRoster()])
+  const [candidates, overrides] = await Promise.all([pickCandidates(agents, BATCH), policyOverrides()])
 
   let proposed = 0
   let skipped = 0
@@ -218,8 +227,15 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       ? `${policy}\nDEAD LINKS (verified 404/410 by the site, not a guess) — replace each with a working authoritative source or drop the ref: ${deadUrls.join(' ')}`
       : policy
 
+    // Шляпу садовника надевает ПРОФИЛЬНЫЙ специалист (решение владельца): кулинарный
+    // список правит повар — он в рецептах и разбирается. «Садовник» остаётся именем
+    // функции (следить за ростом качества), а не отдельным персонажем. Никто по домену
+    // не подошёл → общий служебный аккаунт, как раньше.
+    const tender = await tenderForTags(tpl.tags, roster)
+    const tenderId = tender?.userId ?? gardener.id
+
     const refined = await generateListRefine(current, instruction, lang, {
-      userId: gardener.id,
+      userId: tenderId,
       feature: 'refine',
       refType: 'template',
       refId: tpl.id,
@@ -241,7 +257,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       .insert(suggestions)
       .values({
         templateId: tpl.id,
-        authorId: gardener.id,
+        authorId: tenderId,
         note: noteFor(kind, lang) + (deadUrls.length ? ' ' + t('gardenerNoteDeadLinks', lang).replace('{n}', String(deadUrls.length)) : ''),
         baseVersion: tpl.currentVersion,
         items,
@@ -254,14 +270,14 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       // Кураторская библиотека — контент сайта: правка садовника применяется сразу
       // (та же механика, что acceptSuggestion), с атрибуцией в истории и модерацией.
       // recheck публичного списка — в фасаде listStore.addVersion (барьер), здесь не дублируем.
-      await listStore.addVersion(tpl.id, { note: '\u{1F9D9} gardener: refreshed steps', steps: toStepInput(items), authorId: gardener.id })
+      await listStore.addVersion(tpl.id, { note: '\u{1F9D9} gardener: refreshed steps', steps: toStepInput(items), authorId: tenderId })
       await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, created.id))
-      await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: gardener.id, type: 'new_version', templateId: tpl.id })
+      await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: tenderId, type: 'new_version', templateId: tpl.id })
       await enqueueReindex(tpl.id)
       log.info('gardener: auto-merged on curated list', { slug: tpl.slug })
     } else {
-      await notify({ recipientId: tpl.ownerId, actorId: gardener.id, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
-      log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id })
+      await notify({ recipientId: tpl.ownerId, actorId: tenderId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+      log.info('gardener: suggestion opened', { slug: tpl.slug, suggestionId: created.id, tender: tender?.expert.id ?? 'generic' })
     }
     proposed++
   }

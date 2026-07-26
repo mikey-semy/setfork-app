@@ -3,6 +3,7 @@ import { and, eq, gte, inArray, sql } from 'drizzle-orm'
 import { generateText } from 'ai'
 import { councilExperts, db, generationCandidates, generationMessages, generations } from '@/shared/db'
 import { getRosterAll } from '@/shared/ai/roster'
+import { tagMatches } from '@/shared/ai/precedent-filter'
 import { getAiChatClient } from '@/shared/ai/provider'
 import { getAiSettings } from '@/shared/settings/ai'
 import { pickChatModel } from '@/shared/ai/credits'
@@ -20,7 +21,8 @@ export interface HireSignal {
 }
 
 /** Матч тега и домена — та же логика, что доменная линза прецедентов (pickPrecedents). */
-const covers = (tag: string, domain: string) => tag === domain || (domain.length >= 3 && tag.includes(domain)) || (tag.length >= 3 && domain.includes(tag))
+// Единая доменная линза — та же, что фильтрует прецеденты и раздаёт садовничество.
+const covers = tagMatches
 
 /**
  * Сигнал найма: теги кандидатов за 30 дней из генераций, где черновик писал
