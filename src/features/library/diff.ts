@@ -11,6 +11,8 @@ export interface CmpStep {
   // удалённый блок «Текст» показывался голым «1.» без единой строки содержимого.
   type?: string
   content?: Record<string, unknown>
+  /** Стабильная идентичность блока сквозь версии (steps.block_id). */
+  blockId?: string | null
   title: string
   desc: string
   command: string
@@ -61,6 +63,7 @@ function blockBody(s: CmpStep): string[] {
 export type StepRow = {
   type?: string
   content?: Record<string, unknown>
+  blockId?: string | null
   title: LocaleText
   desc: LocaleText
   command: string
@@ -80,6 +83,7 @@ export function rowsToCmp(rows: StepRow[], lang: Lang): CmpStep[] {
   return rows.map((s) => ({
     type: s.type,
     content: s.content,
+    blockId: s.blockId ?? null,
     title: tr(s.title, lang),
     desc: tr(s.desc, lang),
     command: s.command,
@@ -265,52 +269,89 @@ export interface DiffEntry extends CmpStep {
   before?: CmpStep
 }
 
-// Ключ сопоставления блоков между версиями. ВРЕМЕННЫЙ: матчинг по подписи, из-за
-// чего переименование читается как «удалён + добавлен», а два одинаковых заголовка
-// коллизируют. Лечится стабильным block_id (фаза 2) — тогда это станет сравнением
-// множеств идентификаторов. Тип в ключе, чтобы шаг и блок не матчились друг с другом.
+// Фолбэк-ключ сопоставления, когда стабильного blockId нет (данные старше него
+// или запись мимо редактора): по типу + подписи. У него известные пороки —
+// переименование читается как «удалён + добавлен», одинаковые подписи
+// коллизируют. Тип в ключе, чтобы шаг и блок не матчились друг с другом.
 const skey = (s: CmpStep) => `${isStepBlock(s) ? 'step' : s.type}:${blockLabel(s).trim().toLowerCase()}`
 const sameArr = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i])
 const refsKey = (rs?: { label: string; url: string }[]) => (rs ?? []).map((r) => `${r.label.trim()}|${r.url.trim()}`).join('\n')
 const contentKey = (s: CmpStep) => JSON.stringify(s.content ?? {})
 
+/**
+ * Структурный дифф двух версий по БЛОКАМ.
+ *
+ * Сопоставление идёт по стабильному blockId (идентичность живёт сквозь версии),
+ * и только при его отсутствии — по типу+подписи. Разница принципиальная:
+ * с идентичностью переименование пункта — это «изменён», а не «удалён+добавлен»,
+ * и два пункта с одинаковым заголовком больше не склеиваются в один.
+ */
 export function diffSteps(from: CmpStep[], to: CmpStep[]): {
   entries: DiffEntry[]
   summary: { added: number; removed: number; changed: number; moved: number }
 } {
-  const fromMap = new Map<string, { s: CmpStep; i: number }>()
-  from.forEach((s, i) => fromMap.set(skey(s), { s, i }))
-  const toKeys = new Set(to.map(skey))
+  const byId = new Map<string, number>()
+  const byKey = new Map<string, number[]>()
+  from.forEach((s, i) => {
+    if (s.blockId) byId.set(s.blockId, i)
+    const k = skey(s)
+    byKey.set(k, [...(byKey.get(k) ?? []), i])
+  })
+
+  // Индексы from, уже отданные какому-то блоку из to: одна строка старой версии
+  // не может быть источником для двух новых (иначе дубли подписей врут в счётчиках).
+  const taken = new Set<number>()
+  /** Индекс блока в from + как он найден: по идентичности или по подписи. */
+  const pick = (s: CmpStep): { i: number; byIdentity: boolean } | null => {
+    if (s.blockId) {
+      const i = byId.get(s.blockId)
+      if (i != null && !taken.has(i)) return { i, byIdentity: true }
+      // Блок с известной идентичностью, которой не было раньше, — точно новый:
+      // по подписи не ищем, иначе «добавили пункт с тем же заголовком» слипнется.
+      if (i == null) return null
+    }
+    const queue = byKey.get(skey(s)) ?? []
+    for (const i of queue) if (!taken.has(i)) return { i, byIdentity: false }
+    return null
+  }
+
   const entries: DiffEntry[] = []
   let added = 0
   let changed = 0
   let removed = 0
   let moved = 0
   to.forEach((s, i) => {
-    const f = fromMap.get(skey(s))
-    if (!f) {
+    const hit = pick(s)
+    if (!hit) {
       entries.push({ ...s, status: 'added', changes: [] })
       added++
       return
     }
+    const { i: fi, byIdentity } = hit
+    taken.add(fi)
+    const before = from[fi]
     const changes: string[] = []
-    if (f.s.desc !== s.desc) changes.push('desc')
-    if (f.s.command !== s.command) changes.push('command')
-    if (f.s.level !== s.level) changes.push('level')
-    if (f.s.why !== s.why) changes.push('why')
-    if (!sameArr(f.s.subtasks, s.subtasks)) changes.push('subtasks')
-    if (refsKey(f.s.refs) !== refsKey(s.refs)) changes.push('refs')
-    if (contentKey(f.s) !== contentKey(s)) changes.push('content')
+    // Заголовок сравниваем ТОЛЬКО при матче по идентичности — так виден
+    // «переименовали пункт». В фолбэк-режиме подпись сама является ключом
+    // (и ключ регистронезависим), там сравнивать нечего.
+    if (byIdentity && before.title !== s.title) changes.push('title')
+    if (before.desc !== s.desc) changes.push('desc')
+    if (before.command !== s.command) changes.push('command')
+    if (before.level !== s.level) changes.push('level')
+    if (before.why !== s.why) changes.push('why')
+    if (!sameArr(before.subtasks, s.subtasks)) changes.push('subtasks')
+    if (refsKey(before.refs) !== refsKey(s.refs)) changes.push('refs')
+    if (contentKey(before) !== contentKey(s)) changes.push('content')
     if (changes.length) {
-      entries.push({ ...s, status: 'changed', changes, before: f.s })
+      entries.push({ ...s, status: 'changed', changes, before })
       changed++
-    } else if (f.i !== i) {
+    } else if (fi !== i) {
       entries.push({ ...s, status: 'moved', changes: [] })
       moved++
     } else entries.push({ ...s, status: 'unchanged', changes: [] })
   })
-  from.forEach((s) => {
-    if (!toKeys.has(skey(s))) {
+  from.forEach((s, i) => {
+    if (!taken.has(i)) {
       entries.push({ ...s, status: 'removed', changes: [] })
       removed++
     }

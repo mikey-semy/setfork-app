@@ -80,6 +80,8 @@ export type ProposedItem = {
   // content — payload не-step блоков (text:{md}, image:{ref,caption}); шагу не нужен.
   type?: string
   content?: Record<string, unknown>
+  /** Стабильный id блока сквозь версии (steps.block_id); пусто — старые данные. */
+  blockId?: string
   title: LocaleText
   desc: LocaleText
   command: string
@@ -312,6 +314,16 @@ export const steps = pgTable('steps', {
   versionId: uuid('version_id')
     .notNull()
     .references(() => templateVersions.id, { onDelete: 'cascade' }),
+  // СТАБИЛЬНАЯ идентичность блока СКВОЗЬ версии. steps.id — новый в каждом
+  // снимке (версия = полная копия блоков), а block_id переносится из версии в
+  // версию. Без него дифф сопоставляет пункты по ЗАГОЛОВКУ: переименование
+  // читается как «удалён + добавлен», одинаковые заголовки коллизируют, а
+  // комментарий к пункту привязывать не к чему. Модель Notion: идентичность
+  // отдельно от порядка (порядок — это n).
+  // Nullable: у версий, созданных до введения поля (дифф падает на фолбэк).
+  // ⚠️ В git пока НЕ сериализуется (сохраняем golden-паритет с Rust), поэтому
+  // проекция пуша идентичность теряет. Зеркалирование в core — отдельный этап.
+  blockId: uuid('block_id'),
   n: integer('n').notNull(), // порядковый номер блока в версии (1..)
   type: text('type').notNull().default('step'), // 'step' | 'text' | 'image'
   content: jsonb('content').notNull().default({}).$type<Record<string, unknown>>(), // payload не-step блоков
@@ -327,7 +339,7 @@ export const steps = pgTable('steps', {
   // Подшаги и ссылки — простой контент шага, храним как locale-JSON.
   subtasks: jsonb('subtasks').notNull().default([]).$type<LocaleText[]>(),
   refs: jsonb('refs').notNull().default([]).$type<{ label: LocaleText; url?: string }[]>(),
-})
+}, (t) => [index('steps_block_idx').on(t.blockId)])
 
 // ── Runs (прогон = исполняемый экземпляр шаблона на версии) ──────────
 export const runs = pgTable('runs', {

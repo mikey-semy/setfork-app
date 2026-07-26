@@ -200,3 +200,43 @@ describe('презентационные блоки в диффе', () => {
     expect(summary.changed).toBe(0)
   })
 })
+
+// Стабильный blockId: идентичность живёт сквозь версии (модель Notion).
+describe('дифф по стабильному blockId', () => {
+  const id = (bid: string, title: string, over: Partial<CmpStep> = {}) => step(title, { blockId: bid, ...over })
+
+  it('переименование — это «изменён», а не «удалён + добавлен»', () => {
+    const { summary, entries } = diffSteps([id('b1', 'Замочить желатин')], [id('b1', 'Замочить желатин в воде')])
+    expect(summary).toMatchObject({ added: 0, removed: 0, changed: 1 })
+    expect(entries[0].changes).toContain('title')
+    expect(entries[0].before?.title).toBe('Замочить желатин')
+  })
+
+  it('без идентичности то же переименование по-прежнему удалён+добавлен (фолбэк)', () => {
+    const { summary } = diffSteps([step('Замочить желатин')], [step('Замочить желатин в воде')])
+    expect(summary).toMatchObject({ added: 1, removed: 1, changed: 0 })
+  })
+
+  it('два пункта с ОДИНАКОВЫМ заголовком не склеиваются в один', () => {
+    const { summary } = diffSteps([id('b1', 'Помешать'), id('b2', 'Помешать')], [id('b1', 'Помешать'), id('b2', 'Помешать')])
+    expect(summary).toEqual({ added: 0, removed: 0, changed: 0, moved: 0 })
+  })
+
+  it('удаление одного из двух одинаковых заголовков считается один раз', () => {
+    const { summary } = diffSteps([id('b1', 'Помешать'), id('b2', 'Помешать')], [id('b1', 'Помешать')])
+    expect(summary).toMatchObject({ added: 0, removed: 1, changed: 0 })
+  })
+
+  it('перестановка по идентичности — moved, содержимое не трогали', () => {
+    const from = [id('b1', 'Первый'), id('b2', 'Второй')]
+    const to = [id('b2', 'Второй'), id('b1', 'Первый')]
+    const { summary } = diffSteps(from, to)
+    expect(summary).toMatchObject({ added: 0, removed: 0, changed: 0 })
+    expect(summary.moved).toBeGreaterThan(0)
+  })
+
+  it('новый blockId = новый пункт, даже если заголовок совпал со старым', () => {
+    const { summary } = diffSteps([id('b1', 'Помешать')], [id('b2', 'Помешать')])
+    expect(summary).toMatchObject({ added: 1, removed: 1, changed: 0 })
+  })
+})

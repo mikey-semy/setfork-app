@@ -37,6 +37,7 @@ function toStepInput(items: ProposedItem[]) {
     n: i + 1,
     type: it.type ?? 'step',
     content: it.content ?? {},
+    blockId: it.blockId ?? null,
     title: it.title,
     desc: it.desc,
     command: it.command,
