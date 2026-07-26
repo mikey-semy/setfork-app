@@ -116,7 +116,13 @@ export const listReadRemote = {
 
 const toPbLoc = (l: LocaleText) => ({ v: Object.fromEntries(Object.entries(l).filter(([, v]) => typeof v === 'string')) as Record<string, string> })
 
-/** WRITE-методы порта ListStore поверх Rust ListWrite (фаза write, отдельный флаг). */
+/** WRITE-методы порта ListStore поверх Rust ListWrite (фаза write, отдельный флаг).
+ *
+ *  ⚠️ ДОЛГ КАТОВЕРА: NewStepInput.blockId сюда НЕ уезжает — в proto NewStep поля
+ *  нет. Пока SETFORK_DOMAIN_WRITES выключен, это безвредно: версии пишет
+ *  Postgres-адаптер, идентичность блоков живёт. При включении Rust-записи она
+ *  потеряется, и дифф молча откатится на сопоставление по заголовку.
+ *  Чинить парой: block_id в domain_read.proto + Rust db.rs/serialize.rs. */
 export const listWriteRemote = {
   async addVersion(listId: string, input: NewVersionInput): Promise<Version> {
     const res = await writeClient.addVersion({

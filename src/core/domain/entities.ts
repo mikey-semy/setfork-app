@@ -104,6 +104,10 @@ export interface Step {
 export type NewStepInput = Omit<Step, 'id' | 'versionId' | 'type' | 'content'> & {
   type?: string
   content?: Record<string, unknown>
+  /** Стабильный id блока СКВОЗЬ версии (steps.block_id). Пусто — идентичность
+   *  неизвестна (старые данные или запись мимо редактора): дифф падает на
+   *  сопоставление по заголовку. */
+  blockId?: string | null
 }
 
 // ── Коллаборация ─────────────────────────────────────────────────────

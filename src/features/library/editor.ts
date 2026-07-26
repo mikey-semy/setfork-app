@@ -39,7 +39,11 @@ export type EditorQuiz = {
 export type EditorItem = {
   // Блочная модель: 'step' (runnable/чекаемый) | 'text' (markdown) | 'image' | 'poll'.
   type: BlockType
-  bid: string // стабильный id не-step блока (для merge); '' у шага. Живёт в content.bid.
+  // Стабильный id блока СКВОЗЬ версии — у любого типа, включая шаг. Для не-step
+  // дублируется в content.bid (так его видит git-merge и голоса опросов), для
+  // шага живёт только в колонке steps.block_id: класть его в content шага нельзя,
+  // это сломало бы байт-в-байт golden-паритет list.json с Rust.
+  bid: string
   text: string // markdown text-блока ('' для не-text)
   caption: string // подпись image/video-блока
   videoUrl: string // ссылка video-блока ('' для не-video)
@@ -67,10 +71,11 @@ export function emptyItem(): EditorItem {
   return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', fileUrl: '', fileName: '', poll: emptyPoll(), quiz: emptyQuiz(), products: [], title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
 }
 
-/** Пустой блок заданного типа (для инсертера). Не-step получает стабильный bid;
- *  poll/quiz заводятся с двумя пустыми вариантами. */
+/** Пустой блок заданного типа (для инсертера). Стабильный bid получает ЛЮБОЙ
+ *  блок, включая шаг: по нему дифф понимает «это тот же пункт, его переименовали»,
+ *  а не «удалили и добавили». poll/quiz заводятся с двумя пустыми вариантами. */
 export function emptyBlock(type: BlockType): EditorItem {
-  const base = { ...emptyItem(), type, bid: type === 'step' ? '' : newBlockId() }
+  const base = { ...emptyItem(), type, bid: newBlockId() }
   if (type === 'poll') base.poll = { question: '', options: [{ id: newOptionId(), text: '' }, { id: newOptionId(), text: '' }], multi: false, deadline: '' }
   if (type === 'quiz') base.quiz = { ...emptyQuiz(), options: [{ id: newOptionId(), text: '', correct: false }, { id: newOptionId(), text: '', correct: false }], accept: [''] }
   if (type === 'product') base.products = [{ name: '', url: '', tier: '', note: '' }]
@@ -84,8 +89,10 @@ export const isStepItem = (it: EditorItem): boolean => it.type === 'step'
  *  Шаг без заголовка — мусор (отбрасываем); text/image валидны и без title. */
 export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[] {
   const base = { title: {} as LocaleText, desc: {} as LocaleText, command: '', hasImage: false, level: 'required' as StepLevel, why: {} as LocaleText, section: {} as LocaleText, subtasks: [] as LocaleText[], refs: [] as { label: LocaleText; url?: string }[] }
-  return items
-    .filter((it) => !isStepItem(it) || it.title.trim())
+  const kept = items.filter((it) => !isStepItem(it) || it.title.trim())
+  // Стабильный blockId проставляем ОДНИМ местом поверх всех веток: у не-step он
+  // заодно лежит в content.bid (git-merge, голоса), у шага — только здесь.
+  return kept
     .map((it): ProposedItem => {
       // Секция/урок — у любого блока (группирует блоки ниже в урок курса).
       const sec: LocaleText = it.section.trim() ? { [lang]: it.section.trim() } : {}
@@ -211,10 +218,12 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
           .map((r) => ({ label: { [lang]: r.label.trim() }, url: r.url.trim() || undefined })),
       }
     })
+    .map((p, i) => ({ ...p, blockId: kept[i].bid || newBlockId() }))
 }
 
 type LocaleItem = {
   type?: string
+  blockId?: string | null
   content?: Record<string, unknown>
   title: LocaleText
   desc: LocaleText
@@ -234,7 +243,9 @@ type LocaleItem = {
 export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<string, string> = {}): EditorItem[] {
   return items.map((it): EditorItem => {
     const type = asType(it.type)
-    const bid = typeof it.content?.bid === 'string' ? it.content.bid : ''
+    // Идентичность: колонка block_id — источник правды; content.bid — легаси-дом
+    // не-step блоков (и то, что переживает git-round-trip). Пусто у старых строк.
+    const bid = it.blockId || (typeof it.content?.bid === 'string' ? it.content.bid : '')
     const section = it.section ? tr(it.section, lang) : '' // секция/урок — у любого блока
     if (type === 'text') {
       return { ...emptyItem(), type: 'text', bid, section, text: typeof it.content?.md === 'string' ? it.content.md : '' }
@@ -331,7 +342,7 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
     }
     return {
       type: 'step',
-      bid: '',
+      bid, // шаг тоже несёт идентичность сквозь версии (пусто у строк до block_id)
       text: '',
       caption: '',
       videoUrl: '',
