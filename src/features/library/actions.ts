@@ -19,7 +19,7 @@ import { textLang } from '@/shared/i18n/detect-text-lang'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { enqueueReindex } from './jobs'
 // eslint-disable-next-line boundaries/dependencies -- пере-привязка якорей комментариев (кросс-фич, как watch/collab)
-import { syncBlockThreadAnchors } from '@/features/comments/actions'
+import { syncBlockThreadAnchors } from '@/features/comments/sync'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'

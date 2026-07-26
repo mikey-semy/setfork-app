@@ -50,14 +50,20 @@ export async function getBlockThreads(templateId: string): Promise<BlockThread[]
     .innerJoin(users, eq(users.id, blockComments.authorId))
     .orderBy(asc(blockComments.createdAt))
 
+  // Аватары резолвятся параллельно: подпись URL — сетевая операция, а реплик в
+  // треде бывает много; последовательный await по списку упирался бы в их сумму.
+  const withAvatars = await Promise.all(
+    rows.map(async (r) => ({ r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })),
+  )
+
   const byThread = new Map<string, ThreadComment[]>()
-  for (const r of rows) {
+  for (const { r, avatarUrl } of withAvatars) {
     const list = byThread.get(r.threadId)
     const item: ThreadComment = {
       id: r.id,
       body: r.body,
       createdAt: r.createdAt,
-      author: { handle: r.handle, name: r.name, avatarUrl: await avatarSrc(r.avatarUrl, 48) },
+      author: { handle: r.handle, name: r.name, avatarUrl },
     }
     if (list) list.push(item)
     else byThread.set(r.threadId, [item])
