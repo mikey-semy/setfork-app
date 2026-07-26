@@ -1,39 +1,12 @@
 import 'server-only'
-import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 // library — контент-фича (версии/шаги/дифф), от которой заметки релиза зависят по сути;
 // тот же кросс-фич-паттерн, что у gardener/generation (в baseline-suppressions).
 // eslint-disable-next-line boundaries/dependencies -- версии/шаги списка из library
 import { getVersions, getVersionSteps } from '@/features/library/queries'
 import { getReleases } from '@/features/releases/queries'
 // eslint-disable-next-line boundaries/dependencies -- дифф шагов версий из library
-import { diffSteps, type CmpStep, type DiffStatus } from '@/features/library/diff'
-
-// Пункты версии (LocaleText-поля) → CmpStep (строки на языке зрителя). Та же
-// конверсия, что на странице сравнения — чтобы дифф считался одинаково.
-function stepsToCmp(
-  steps: {
-    title: LocaleText
-    desc: LocaleText
-    command: string
-    level: CmpStep['level']
-    why: LocaleText
-    section?: LocaleText
-    subtasks: LocaleText[]
-    refs?: { label: LocaleText; url?: string }[]
-  }[],
-  lang: Lang,
-): CmpStep[] {
-  return steps.map((s) => ({
-    title: tr(s.title, lang),
-    desc: tr(s.desc, lang),
-    command: s.command,
-    level: s.level,
-    why: tr(s.why, lang),
-    section: s.section ? tr(s.section, lang) : '',
-    subtasks: (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean),
-    refs: (s.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' })).filter((r) => r.label || r.url),
-  }))
-}
+import { blockLabel, diffSteps, rowsToCmp, type DiffStatus } from '@/features/library/diff'
 
 // Секции чейнджлога по статусу диффа (порядок фиксирован). Ярлыки — те же ключи,
 // что на сравнении версий (diffAdded/…), чтобы не плодить перевод.
@@ -59,14 +32,14 @@ export async function buildReleaseChangelog(templateId: string, toVersion: numbe
 
   const [fromV, toV] = await Promise.all([getVersionSteps(templateId, fromN), getVersionSteps(templateId, toVersion)])
   if (!fromV || !toV) return ''
-  const { entries } = diffSteps(stepsToCmp(fromV.steps, lang), stepsToCmp(toV.steps, lang))
+  const { entries } = diffSteps(rowsToCmp(fromV.steps, lang), rowsToCmp(toV.steps, lang))
 
   const out: string[] = []
   for (const { status, key } of SECTIONS) {
     const items = entries.filter((e) => e.status === status)
     if (!items.length) continue
     out.push(`### ${t(key, lang)}`)
-    for (const e of items) out.push(`- ${e.title}`)
+    for (const e of items) out.push(`- ${blockLabel(e)}`)
     out.push('')
   }
   return out.join('\n').trim()

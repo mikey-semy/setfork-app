@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, GitCompare, Loader2 } from 'lucide-react'
+import { ChevronRight, Eye, GitCompare, Loader2 } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
@@ -26,6 +26,7 @@ interface Labels {
   loading: string
   noChanges: string
   fullCompare: string
+  viewVersion: string
   expandHint: string
 }
 
@@ -132,14 +133,23 @@ export function CommitRow({
                   </li>
                 ))}
               </ul>
-              {version > 1 && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                {version > 1 && (
+                  <Link
+                    href={`${base}/compare?from=${version - 1}&to=${version}`}
+                    className="inline-flex items-center gap-1 py-1 text-[12px] text-accent hover:underline"
+                  >
+                    <GitCompare size={12} /> {labels.fullCompare}
+                  </Link>
+                )}
+                {/* Просмотр самой версии целиком — не только «что изменилось». */}
                 <Link
-                  href={`${base}/compare?from=${version - 1}&to=${version}`}
-                  className="mt-2.5 inline-flex items-center gap-1 text-[12px] text-accent hover:underline"
+                  href={isCurrent ? base : `${base}?v=${version}`}
+                  className="inline-flex items-center gap-1 py-1 text-[12px] text-accent hover:underline"
                 >
-                  <GitCompare size={12} /> {labels.fullCompare}
+                  <Eye size={12} /> {labels.viewVersion}
                 </Link>
-              )}
+              </div>
             </>
           )}
         </div>

@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { diffSteps, serializeSteps, lineDiff, type CmpStep } from '@/features/library/diff'
+import { blockLabel, diffSteps, serializeSteps, lineDiff, type CmpStep } from '@/features/library/diff'
+
+/** Презентационный блок: title пустой, всё содержимое — в content. */
+const textBlock = (md: string): CmpStep => ({
+  type: 'text',
+  content: { md },
+  title: '',
+  desc: '',
+  command: '',
+  level: 'required',
+  why: '',
+  subtasks: [],
+})
 
 const step = (title: string, over: Partial<CmpStep> = {}): CmpStep => ({
   title,
@@ -149,5 +161,42 @@ describe('lineDiff', () => {
     expect(del!.segs!.some((s) => s.changed && /app/.test(s.text))).toBe(true)
     expect(add!.segs!.some((s) => s.changed && /service/.test(s.text))).toBe(true)
     expect(del!.segs!.some((s) => !s.changed)).toBe(true) // "deploy the " общее
+  })
+})
+
+// Регрессия: блок «Текст» в диффе показывался голым «1.» — его содержимое не
+// сериализовалось вовсе, и удалённый сверху текст было НЕ ПОСМОТРЕТЬ.
+describe('презентационные блоки в диффе', () => {
+  it('текст блока попадает в строки — удалённый блок видно целиком', () => {
+    const lines = serializeSteps([textBlock('Первая строка\nВторая строка')], true)
+    const all = lines.map((l) => l.text).join('\n')
+    expect(all).toContain('Первая строка')
+    expect(all).toContain('Вторая строка')
+    expect(lines.some((l) => /^\d+\.\s*$/.test(l.text))).toBe(false) // не «1.» без текста
+  })
+
+  it('удаление блока даёт строки удаления с его текстом', () => {
+    const r = lineDiff(serializeSteps([textBlock('много текста тут')], true), [])
+    expect(r.rows.every((x) => x.type === 'del')).toBe(true)
+    expect(r.rows.map((x) => x.text).join('\n')).toContain('много текста тут')
+  })
+
+  it('нумерация шагов не сбивается о презентационные блоки', () => {
+    const lines = serializeSteps([textBlock('интро'), step('первый шаг'), step('второй шаг')], true)
+    const heads = lines.filter((l) => l.head).map((l) => l.text)
+    expect(heads.some((h) => h.startsWith('1. первый шаг'))).toBe(true)
+    expect(heads.some((h) => h.startsWith('2. второй шаг'))).toBe(true)
+  })
+
+  it('blockLabel даёт подпись блоку и заголовок шагу', () => {
+    expect(blockLabel(textBlock('Заголовок текста\nостальное'))).toBe('Заголовок текста')
+    expect(blockLabel(step('обычный шаг'))).toBe('обычный шаг')
+  })
+
+  it('шаг и блок с одинаковой подписью не матчатся друг с другом', () => {
+    const { summary } = diffSteps([step('одно и то же')], [textBlock('одно и то же')])
+    expect(summary.added).toBe(1)
+    expect(summary.removed).toBe(1)
+    expect(summary.changed).toBe(0)
   })
 })

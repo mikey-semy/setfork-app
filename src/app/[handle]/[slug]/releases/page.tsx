@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Download, FileText, GitCompare, Plus, Rss, Tag, Trash2 } from 'lucide-react'
+import { Download, Eye, FileText, GitCompare, Plus, Rss, Tag, Trash2 } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -13,6 +13,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
 import { getReleases } from '@/features/releases/queries'
+import { HistoryNav } from '@/widgets/HistoryNav'
 import { deleteRelease } from '@/features/releases/actions'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -34,6 +35,12 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
   return (
     <>
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+        <HistoryNav
+          base={base}
+          active="releases"
+          canCompare={meta.currentVersion > 1}
+          labels={{ commits: t('versionsTab', lang), releases: t('releasesLabel', lang), compare: t('compareTitle', lang) }}
+        />
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-[16px] font-bold text-ink">{t('releasesLabel', lang)}</h1>
           <div className="flex items-center gap-2">
@@ -115,6 +122,10 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
                   <a href={`${base}/repo.bundle`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
                     <Download size={13} /> {t('downloadBundle', lang)}
                   </a>
+                  {/* Содержимое опубликованной версии: ?v=N (текущую страница отдаёт как есть). */}
+                  <Link href={`${base}?v=${r.version}`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
+                    <Eye size={13} /> {t('viewVersion', lang)}
+                  </Link>
                   {r.version > 1 && (
                     <Link href={`${base}/compare?from=${r.version - 1}&to=${r.version}`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
                       <GitCompare size={13} /> {t('compareTitle', lang)}

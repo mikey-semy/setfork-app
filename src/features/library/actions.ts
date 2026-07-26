@@ -25,6 +25,7 @@ import { curationStore } from '@/features/curation/store'
 import { collabStore, suggestionCommenterIds } from '@/features/collab-store/store'
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
+import { getVersionSteps } from './queries'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
@@ -272,6 +273,38 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await enqueueReindex(tpl.id)
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
+}
+
+// ── Возврат к прошлой версии ──────────────────────────────────────────
+/**
+ * «Вернуть эту версию» — семантика revert из GitHub: содержимое версии N
+ * копируется в НОВУЮ версию N+1, история не переписывается и не теряется
+ * (откат самого отката тоже возможен). Идёт через ListStore.addVersion —
+ * тот же путь, что у обычного сохранения, включая запись в git.
+ */
+export async function revertToVersion(templateId: string, version: number): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl) return
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+  // Возвращать можно только к существующей ПРОШЛОЙ версии (текущая — не откат).
+  if (!Number.isInteger(version) || version < 1 || version >= tpl.currentVersion) return
+
+  const snap = await getVersionSteps(tpl.id, version)
+  if (!snap) return
+
+  await listStore.addVersion(tpl.id, {
+    note: `revert to v${version}`,
+    steps: toStepInput(snap.steps as unknown as ProposedItem[]),
+    authorId: session.userId,
+  })
+  await notifyWatchersNewVersion(tpl.id, session.userId)
+  await enqueueReindex(tpl.id)
+
+  const handle = await ownerHandle(tpl.ownerId)
+  revalidatePath(`/${handle}/${tpl.slug}`)
+  revalidatePath(`/${handle}/${tpl.slug}/versions`)
+  redirect(`/${handle}/${tpl.slug}`)
 }
 
 // ── Предложить правку (PR) ────────────────────────────────────────────

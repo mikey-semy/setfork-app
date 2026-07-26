@@ -1,12 +1,13 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { GitBranch, GitCommitHorizontal, GitCompare } from 'lucide-react'
+import { GitBranch, GitCommitHorizontal } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getCommits } from '@/features/library/queries'
 import { CommitFilters } from '@/features/library/CommitFilters'
+import { HistoryNav } from '@/widgets/HistoryNav'
 import { CommitRow } from '@/features/library/CommitRow'
 import { commitCutoff } from '@/features/library/commit-filter'
 import { gitCore } from '@/features/git/core'
@@ -65,6 +66,12 @@ export default async function CommitsPage({
 
   return (
     <div className="mx-auto w-full max-w-[900px] px-4 py-6">
+      <HistoryNav
+        base={base}
+        active="commits"
+        canCompare={meta.currentVersion > 1}
+        labels={{ commits: t('versionsTab', lang), releases: t('releasesLabel', lang), compare: t('compareTitle', lang) }}
+      />
       {/* Шапка: ветка + счётчики слева, фильтры автор/дата справа (как GitHub Commits). */}
       <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
@@ -77,11 +84,6 @@ export default async function CommitsPage({
           <span className="inline-flex items-center gap-1 text-ink-2">
             <GitBranch size={13} className="text-muted" /> <b className="text-ink">{branchCount}</b> {t('branchesLabel', lang)}
           </span>
-          {meta.currentVersion > 1 && (
-            <Link href={`${base}/compare`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
-              <GitCompare size={14} /> {t('compareTitle', lang)}
-            </Link>
-          )}
         </div>
         <div className="ml-auto">
           <CommitFilters
@@ -142,6 +144,7 @@ export default async function CommitsPage({
                       loading: t('loadingChanges', lang),
                       noChanges: t('diffNothing', lang),
                       fullCompare: t('compareTitle', lang),
+                      viewVersion: t('viewVersion', lang),
                       expandHint: t('expandCommit', lang),
                     }}
                   />
