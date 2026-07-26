@@ -1,10 +1,16 @@
 import type { StepLevel } from '@/shared/db'
+import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 
 // Дифф двух версий списка построчно, но нумерация — по ПУНКТАМ (не «строки кода»):
 // номер пункта показывается у его заголовка, продолжения (описание/команда/подпункты)
 // идут без номера. Плюс пословная подсветка изменённых строк.
 
 export interface CmpStep {
+  // Блочная модель: 'step' (дефолт, undefined тоже = шаг) | 'text' | 'image' | 'poll' | 'video'.
+  // content — payload презентационных блоков. Без него их текст в диффе НЕ ВИДЕН:
+  // удалённый блок «Текст» показывался голым «1.» без единой строки содержимого.
+  type?: string
+  content?: Record<string, unknown>
   title: string
   desc: string
   command: string
@@ -15,22 +21,103 @@ export interface CmpStep {
   refs?: { label: string; url: string }[]
 }
 
+export const isStepBlock = (s: CmpStep): boolean => !s.type || s.type === 'step'
+
+/** Маркер презентационного блока в «кодовом» виде (у шага вместо него номер). */
+const BLOCK_MARK: Record<string, string> = { text: '¶', image: '🖼', poll: '📊', video: '🎬' }
+
+const firstLine = (v: unknown): string => String(v ?? '').split('\n')[0].trim()
+
+/**
+ * Человекочитаемая подпись блока: у шага — заголовок, у презентационного — суть
+ * его content. Нужна везде, где UI показывает «что это за пункт»: у таких блоков
+ * title пустой, и без подписи карточка диффа выходила безымянной.
+ */
+export function blockLabel(s: CmpStep): string {
+  if (isStepBlock(s)) return s.title
+  const c = s.content ?? {}
+  if (s.type === 'text') return firstLine(c.md)
+  if (s.type === 'image') return firstLine(c.caption) || firstLine(c.ref)
+  if (s.type === 'poll') return firstLine(c.question)
+  if (s.type === 'video') return firstLine(c.caption) || firstLine(c.url)
+  return s.title
+}
+
+/** Строки содержимого презентационного блока — тело для построчного диффа. */
+function blockBody(s: CmpStep): string[] {
+  const c = s.content ?? {}
+  const str = (v: unknown) => String(v ?? '')
+  if (s.type === 'text') return str(c.md).split('\n').slice(1)
+  if (s.type === 'image') return [str(c.ref)].filter(Boolean)
+  if (s.type === 'poll') {
+    const opts = Array.isArray(c.options) ? (c.options as { text?: unknown }[]) : []
+    return opts.map((o) => `- ${str(o?.text)}`)
+  }
+  if (s.type === 'video') return [str(c.url)].filter(Boolean)
+  return []
+}
+
+/** Строка блока как она лежит в БД (locale-JSON поля). */
+export type StepRow = {
+  type?: string
+  content?: Record<string, unknown>
+  title: LocaleText
+  desc: LocaleText
+  command: string
+  level: StepLevel
+  why: LocaleText
+  section?: LocaleText | null
+  subtasks: LocaleText[]
+  refs?: { label: LocaleText; url?: string }[] | null
+}
+
+/**
+ * Блоки версии → CmpStep на языке зрителя. Единый конвертер для всех мест
+ * сравнения (страница сравнения, коммиты, генерация release notes): раньше в
+ * каждом лежала своя копия, и все три одинаково теряли type/content.
+ */
+export function rowsToCmp(rows: StepRow[], lang: Lang): CmpStep[] {
+  return rows.map((s) => ({
+    type: s.type,
+    content: s.content,
+    title: tr(s.title, lang),
+    desc: tr(s.desc, lang),
+    command: s.command,
+    level: s.level,
+    why: tr(s.why, lang),
+    section: s.section ? tr(s.section, lang) : '',
+    subtasks: (s.subtasks ?? []).map((x) => tr(x, lang)).filter(Boolean),
+    refs: (s.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' })).filter((r) => r.label || r.url),
+  }))
+}
+
 export interface SLine {
   text: string
   step: number // номер пункта, которому принадлежит строка
   head: boolean // строка-заголовок пункта (только у неё показываем номер)
 }
 
-/** Шаги версии → строки с привязкой к номеру пункта. */
+/** Блоки версии → строки с привязкой к номеру пункта. */
 export function serializeSteps(steps: CmpStep[], ordered: boolean): SLine[] {
   const lines: SLine[] = []
   let prevSection = ''
+  // Нумерация — ТОЛЬКО по шаг-блокам, как в README и в самом списке. Раньше номер
+  // брался из индекса массива, и презентационный блок «съедал» номер: пункты в
+  // диффе были пронумерованы иначе, чем на странице списка.
+  let stepNum = 0
   steps.forEach((s, idx) => {
     const step = idx + 1
+    if (!isStepBlock(s)) {
+      const mark = BLOCK_MARK[s.type ?? ''] ?? '¶'
+      lines.push({ text: `${mark} ${blockLabel(s)}`.trimEnd(), step, head: true })
+      blockBody(s).forEach((l) => lines.push({ text: `    ${l}`, step, head: false }))
+      return
+    }
+    stepNum++
     const section = s.section?.trim() ?? ''
     if (section && section !== prevSection) lines.push({ text: `## ${section}`, step, head: false })
     prevSection = section
-    lines.push({ text: `${ordered ? `${step}.` : '•'} ${s.title}${s.level !== 'required' ? `  [${s.level}]` : ''}`, step, head: true })
+    lines.push({ text: `${ordered ? `${stepNum}.` : '•'} ${s.title}${s.level !== 'required' ? `  [${s.level}]` : ''}`, step, head: true })
     if (s.desc) s.desc.split('\n').forEach((l) => lines.push({ text: `    ${l}`, step, head: false }))
     if (s.command) s.command.split('\n').forEach((l) => lines.push({ text: `    $ ${l}`, step, head: false }))
     if (s.why) lines.push({ text: `    why: ${s.why}`, step, head: false })
@@ -178,9 +265,14 @@ export interface DiffEntry extends CmpStep {
   before?: CmpStep
 }
 
-const skey = (s: CmpStep) => s.title.trim().toLowerCase()
+// Ключ сопоставления блоков между версиями. ВРЕМЕННЫЙ: матчинг по подписи, из-за
+// чего переименование читается как «удалён + добавлен», а два одинаковых заголовка
+// коллизируют. Лечится стабильным block_id (фаза 2) — тогда это станет сравнением
+// множеств идентификаторов. Тип в ключе, чтобы шаг и блок не матчились друг с другом.
+const skey = (s: CmpStep) => `${isStepBlock(s) ? 'step' : s.type}:${blockLabel(s).trim().toLowerCase()}`
 const sameArr = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i])
 const refsKey = (rs?: { label: string; url: string }[]) => (rs ?? []).map((r) => `${r.label.trim()}|${r.url.trim()}`).join('\n')
+const contentKey = (s: CmpStep) => JSON.stringify(s.content ?? {})
 
 export function diffSteps(from: CmpStep[], to: CmpStep[]): {
   entries: DiffEntry[]
@@ -208,6 +300,7 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
     if (f.s.why !== s.why) changes.push('why')
     if (!sameArr(f.s.subtasks, s.subtasks)) changes.push('subtasks')
     if (refsKey(f.s.refs) !== refsKey(s.refs)) changes.push('refs')
+    if (contentKey(f.s) !== contentKey(s)) changes.push('content')
     if (changes.length) {
       entries.push({ ...s, status: 'changed', changes, before: f.s })
       changed++
