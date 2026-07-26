@@ -1579,6 +1579,72 @@ export type TemplateVersion = typeof templateVersions.$inferSelect
 export type Step = typeof steps.$inferSelect
 export type Run = typeof runs.$inferSelect
 export type RunStepState = typeof runStepState.$inferSelect
+// ── Комментарии к пункту (и к выделенной части его текста) ───────────
+// Тред — единица обсуждения, разрешения И устаревания (как PullRequestReviewThread
+// у GitHub: isResolved/isOutdated живут на треде, а не на отдельной реплике).
+//
+// Якорь file-relative, а не diff-relative: блок опознаётся стабильным block_id,
+// место внутри блока — W3C-селекторами. Индекс строки внутри диффа (position
+// у GitHub) сознательно НЕ реализуем: он хрупок, и GitHub сам пометил его
+// deprecated в своей OpenAPI-спеке.
+//
+// Три позиции — контракт GitLab (lib/gitlab/diff/position_tracer, MIT):
+//   anchor_original — иммутабельна, «где это было сказано»;
+//   anchor_current  — сдвигается вперёд, пока якорь находится;
+//   anchor_changed_at — версия, на которой якорь потеряли (пусто = не терялся).
+// Плюс вмороженный снимок текста (роль diff_hunk у GitHub / note_diff_files у
+// GitLab): тред всегда может показать свой контекст, ничего не переспрашивая.
+export const blockCommentThreads = pgTable(
+  'block_comment_threads',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    /** Стабильная идентичность блока (steps.block_id) — переживает версии. */
+    blockId: uuid('block_id').notNull(),
+    /** Поле блока: 'title' | 'desc' | 'why' | 'command' | 'content.md' и т.п. */
+    field: text('field').notNull().default('desc'),
+    /** Версия, на которой тред заведён. */
+    createdVersion: integer('created_version').notNull(),
+    anchorOriginal: jsonb('anchor_original').notNull().$type<Record<string, unknown>>(),
+    anchorCurrent: jsonb('anchor_current').$type<Record<string, unknown> | null>(),
+    /** 'anchored' | 'reanchored' | 'orphaned' — три состояния, а не два. */
+    anchorState: text('anchor_state').notNull().default('anchored'),
+    /** Уверенность последней пере-привязки, 0..100 (пусто — не перепривязывался). */
+    anchorConfidence: integer('anchor_confidence'),
+    /** Версия, на которой якорь потеряли (аналог change_position у GitLab). */
+    anchorChangedAt: integer('anchor_changed_at'),
+    /** Вмороженный текст поля на момент создания — контекст треда навсегда. */
+    contextSnapshot: text('context_snapshot').notNull().default(''),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedById: uuid('resolved_by_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('bct_tpl_idx').on(t.templateId), index('bct_block_idx').on(t.blockId)],
+)
+
+export const blockComments = pgTable(
+  'block_comments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => blockCommentThreads.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('bc_thread_idx').on(t.threadId)],
+)
+
+export type BlockCommentThread = typeof blockCommentThreads.$inferSelect
+export type BlockComment = typeof blockComments.$inferSelect
+
 export type Suggestion = typeof suggestions.$inferSelect
 export type Generation = typeof generations.$inferSelect
 export type GenerationCandidate = typeof generationCandidates.$inferSelect
