@@ -1194,6 +1194,21 @@ export const councilExperts = pgTable(
     avatarUploaded: boolean('avatar_uploaded').notNull().default(false),
     online: boolean('online').notNull().default(false), // давать ли веб-поиск (:online)
     enabled: boolean('enabled').notNull().default(true),
+    // ЖИЗНЕННЫЙ ЦИКЛ (решение владельца): active → dormant (простаивает, всё сохранено)
+    // → archived (год без запросов). Архив — НЕ удаление: персона, опыт и репутация
+    // остаются, специалист мгновенно возвращается «как выпускник». Причина архивации не
+    // в вычислениях (простой на событийной модели ~бесплатен), а в том, чтобы действующий
+    // состав оставался обозримым для маршрутизации.
+    // Ортогонально enabled: enabled — рубильник админа, lifecycle — состояние карьеры.
+    lifecycle: text('lifecycle').notNull().default('active').$type<'active' | 'dormant' | 'archived'>(),
+    // ТИР МАСТЕРСТВА — лестница по профессии: у программиста джун/мидл/сеньор, у повара
+    // commis→шеф, у части профессий её нет вовсе (плоско). Поэтому свободный текст, а не
+    // enum. Пусто = плоская профессия. Ортогонален выводимому званию (gnomeRank считает
+    // его по числу принятых работ) — тут именно квалификация, а не выслуга.
+    tier: text('tier').notNull().default(''),
+    // «МЕЧТЫ» — канал «чего мне не хватает» от специалиста в фиче-бэклог владельца.
+    // Не служебная заметка: это сигнал развития продукта со стороны исполнителя.
+    dreams: text('dreams').notNull().default(''),
     sort: integer('sort').notNull().default(0),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

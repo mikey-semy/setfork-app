@@ -25,6 +25,12 @@ export interface Expert {
   professionRu: string
   /** Аккаунт уровня пользователя (ADR-0004: account_type='agent'). null = не заведён. */
   userId: string | null
+  /** Карьера: active → dormant → archived. Архив обратим (персона и опыт сохранены). */
+  lifecycle: 'active' | 'dormant' | 'archived'
+  /** Тир мастерства по профессии (джун/мидл/сеньор, commis→шеф). Пусто = плоская. */
+  tier: string
+  /** «Чего не хватает» — сигнал в фиче-бэклог владельца. */
+  dreams: string
   persona: string
   /** Гильдия (HQ §7) — «носитель цеха»: имя для людей, кодекс для промптов. */
   guildEn: string
@@ -52,7 +58,7 @@ export interface Expert {
  * специалисты. Источник каждой указан — чтобы правку можно было проверить, а не спорить о вкусе.
  */
 /** Исходный состав задаётся без профессии/аккаунта — они выводятся ниже. */
-type SeedExpert = Omit<Expert, 'professionEn' | 'professionRu' | 'userId'>
+type SeedExpert = Omit<Expert, 'professionEn' | 'professionRu' | 'userId' | 'lifecycle' | 'tier' | 'dreams'>
 
 const SEED_BASE: SeedExpert[] = [
   {
@@ -236,6 +242,9 @@ export const SEED: Expert[] = SEED_BASE.map((e) => ({
   professionEn: e.nameEn,
   professionRu: e.nameRu,
   userId: null,
+  lifecycle: 'active' as const,
+  tier: '', // исходный состав — плоские профессии, лестницу заводим по надобности
+  dreams: '',
 }))
 
 const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
@@ -245,6 +254,9 @@ const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   professionEn: r.professionEn,
   professionRu: r.professionRu,
   userId: r.userId,
+  lifecycle: r.lifecycle,
+  tier: r.tier,
+  dreams: r.dreams,
   persona: r.persona,
   guildEn: r.guildEn,
   guildRu: r.guildRu,
@@ -303,8 +315,14 @@ async function backfillGuilds(rows: (typeof councilExperts.$inferSelect)[]): Pro
  */
 export async function getRoster(): Promise<Expert[]> {
   try {
+    // Действующий состав = рубильник админа включён И карьера активна: спящих и
+    // архивных не созываем (архив обратим — вернётся в 'active', и он снова в строю).
     const read = () =>
-      db.select().from(councilExperts).where(eq(councilExperts.enabled, true)).orderBy(asc(councilExperts.sort))
+      db
+        .select()
+        .from(councilExperts)
+        .where(and(eq(councilExperts.enabled, true), eq(councilExperts.lifecycle, 'active')))
+        .orderBy(asc(councilExperts.sort))
     let rows = await read()
     if (rows.length === 0) {
       await seedRoster()
