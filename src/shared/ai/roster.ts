@@ -20,6 +20,11 @@ export interface Expert {
   id: string
   nameEn: string
   nameRu: string
+  /** Профессия отдельно от имени — уезжает в профиль как должность. Пусто → имя. */
+  professionEn: string
+  professionRu: string
+  /** Аккаунт уровня пользователя (ADR-0004: account_type='agent'). null = не заведён. */
+  userId: string | null
   persona: string
   /** Гильдия (HQ §7) — «носитель цеха»: имя для людей, кодекс для промптов. */
   guildEn: string
@@ -46,7 +51,10 @@ export interface Expert {
  * есть общее представление о профессии, ценность даёт конкретный каркас, по которому работают живые
  * специалисты. Источник каждой указан — чтобы правку можно было проверить, а не спорить о вкусе.
  */
-export const SEED: Expert[] = [
+/** Исходный состав задаётся без профессии/аккаунта — они выводятся ниже. */
+type SeedExpert = Omit<Expert, 'professionEn' | 'professionRu' | 'userId'>
+
+const SEED_BASE: SeedExpert[] = [
   {
     id: 'devops',
     nameEn: 'Devops',
@@ -217,10 +225,26 @@ export const SEED: Expert[] = [
   },
 ]
 
+/**
+ * Исходный состав как Expert. Профессия выводится из имени НЕ для галочки: у этого
+ * состава имя И БЫЛО профессией ('Chef'/'Повар'), так что это точная миграция смысла.
+ * Дальше владелец даёт специалистам собственные имена в админке, а профессия остаётся
+ * здесь и показывается в профиле как должность.
+ */
+export const SEED: Expert[] = SEED_BASE.map((e) => ({
+  ...e,
+  professionEn: e.nameEn,
+  professionRu: e.nameRu,
+  userId: null,
+}))
+
 const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   id: r.id,
   nameEn: r.nameEn,
   nameRu: r.nameRu,
+  professionEn: r.professionEn,
+  professionRu: r.professionRu,
+  userId: r.userId,
   persona: r.persona,
   guildEn: r.guildEn,
   guildRu: r.guildRu,

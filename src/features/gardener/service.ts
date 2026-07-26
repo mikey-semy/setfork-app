@@ -42,6 +42,10 @@ export async function ensureGardenerUser(): Promise<{ id: string }> {
     .values({
       handle: GARDENER_HANDLE,
       name: 'SetFork Gardener',
+      // account_type='agent' (ADR-0004): служебность стала ДАННЫМИ, а не догадкой по
+      // handle и эмодзи в bio — UI и API обязаны показывать, что это не человек.
+      accountType: 'agent',
+      profession: 'Gardener',
       bio: '\u{1F9D9} Gardener. I propose improvements to public lists; humans review and merge.',
     })
     .returning({ id: users.id })

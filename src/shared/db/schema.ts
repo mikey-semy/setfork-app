@@ -142,6 +142,14 @@ export const users = pgTable('users', {
   profilePrivate: boolean('profile_private').notNull().default(false),
   // Кураторский аккаунт библиотеки: правки садовника на его списках автопринимаются.
   curated: boolean('curated').notNull().default(false),
+  // ЧЕСТНАЯ ПОМЕТКА (ADR-0004): 'agent' — не человек, а служебный участник (садовник,
+  // специалисты совета). Раньше служебность угадывалась по handle='gardener' и эмодзи в
+  // bio, то есть данными нигде не была. Специалист участвует наравне с людьми (свои
+  // списки, обсуждения, правки), поэтому его нечеловечность обязана быть видна.
+  accountType: text('account_type').notNull().default('human').$type<'human' | 'agent'>(),
+  // Профессия — «должность» в профиле (у специалиста буквальная: повар, девопс; у
+  // человека необязательна). Имя остаётся именем, профессия живёт здесь, а не в имени.
+  profession: text('profession'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -1154,6 +1162,15 @@ export const councilExperts = pgTable(
     id: text('id').primaryKey(),
     nameEn: text('name_en').notNull(),
     nameRu: text('name_ru').notNull(),
+    // ПРОФЕССИЯ отдельно от ИМЕНИ (решение владельца): имя — своё, профессия —
+    // буквальная («повар», «девопс») и уезжает в ПРОФИЛЬ аккаунта как должность.
+    // Пусто → профессией считаем имя (так было исторически: name_en='Chef').
+    professionEn: text('profession_en').notNull().default(''),
+    professionRu: text('profession_ru').notNull().default(''),
+    // Аккаунт специалиста уровня пользователя (ADR-0004: помечен account_type='agent').
+    // Через него он ведёт СВОИ списки по темам, комментирует и предлагает правки —
+    // наравне с людьми, а не из админки. null = аккаунт ещё не заведён.
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
     persona: text('persona').notNull(),
     // Гильдия (HQ §7): гном — носитель гильдии, совет один — голоса разные.
     guildEn: text('guild_en').notNull().default(''),
