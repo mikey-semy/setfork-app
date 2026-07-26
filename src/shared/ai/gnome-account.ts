@@ -2,7 +2,7 @@ import 'server-only'
 import { and, arrayOverlaps, desc, eq, sql } from 'drizzle-orm'
 import { councilExperts, db, templates, users } from '@/shared/db'
 import type { Expert } from './roster'
-import { HOME_REALM, mythicName } from './gnome-names'
+import { HOME_REALM, isMythicName, mythicName } from './gnome-names'
 import { domainAffinity } from './precedent-filter'
 import type { Lang } from '@/shared/i18n'
 
@@ -180,12 +180,16 @@ export async function agentUserIds(): Promise<string[]> {
 export async function assignMythicNames(): Promise<{ renamed: number; names: Record<string, string> }> {
   const rows = await db.select().from(councilExperts)
   const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
-  const pending = rows.filter((r) => same(r.nameEn, r.professionEn || r.nameEn))
+  // Профессия: своя колонка, иначе имя — но ТОЛЬКО если имя ещё не мифологическое.
+  // Иначе испорченная профессия («Brokkr» вместо «Devops») ломала бы аффинити ремесла:
+  // ровно это и случилось после сброса дев-БД.
+  const profOf = (r: (typeof rows)[number]) => r.professionEn || (isMythicName(r.nameEn) ? '' : r.nameEn)
+  const pending = rows.filter((r) => same(r.nameEn, profOf(r) || r.nameEn))
   // Занятые имена: у кого имя уже своё — его не выдаём повторно.
   const taken = new Set(rows.filter((r) => !pending.includes(r)).map((r) => r.nameEn))
   const names: Record<string, string> = {}
   for (const r of pending) {
-    const n = mythicName(r.id, r.professionEn || r.nameEn, taken)
+    const n = mythicName(r.id, profOf(r), taken)
     taken.add(n.name)
     await db
       .update(councilExperts)

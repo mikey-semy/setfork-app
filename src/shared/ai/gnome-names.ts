@@ -160,6 +160,19 @@ export function mythicName(seed: string, profession = '', taken: ReadonlySet<str
   return { name: fallback, nameRu: fallback, source: 'synthesized', meaning: 'exhausted combinations' }
 }
 
+/**
+ * Это уже мифологическое имя, а не профессия?
+ *
+ * Защита от порчи данных, которая случилась на дев-БД: если профессию где-то заполнить
+ * из имени ПОСЛЕ переименования, в профессию попадает «Brokkr», и следующая раздача имён
+ * считает аффинити по мусору (кузнец переставал быть девопсером). Приём «профессия из
+ * имени» верен только до первого переименования — здесь мы это распознаём.
+ */
+export function isMythicName(s: string): boolean {
+  const v = s.trim()
+  return CANON.some((c) => c.name === v) || Object.values(CANON_RU).includes(v)
+}
+
 /** Имена для всего состава сразу — без повторов канона. */
 export function mythicNames(list: { id: string; profession: string }[]): Record<string, MythicName> {
   const taken = new Set<string>()

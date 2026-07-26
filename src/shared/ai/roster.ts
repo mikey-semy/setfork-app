@@ -1,7 +1,8 @@
 import 'server-only'
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { councilExperts, db } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
+import { ORG_SEED } from './roster-org'
 import type { Lang } from '@/shared/i18n'
 
 /**
@@ -16,6 +17,11 @@ import type { Lang } from '@/shared/i18n'
  * связи с историей; в UI меняют name, а не id.
  */
 
+export type OrgRole = 'partner' | 'chief' | 'manager' | 'expert' | 'backoffice'
+
+/** Кого зовёт совет: черновики списков пишут эксперты и начальники гильдий. */
+export const COUNCIL_ROLES: readonly OrgRole[] = ['expert', 'chief']
+
 export interface Expert {
   id: string
   nameEn: string
@@ -27,6 +33,8 @@ export interface Expert {
   userId: string | null
   /** Карьера: active → dormant → archived. Архив обратим (персона и опыт сохранены). */
   lifecycle: 'active' | 'dormant' | 'archived'
+  /** Место в компании: партнёр / начальник гильдии / менеджер / эксперт / бэк-офис. */
+  orgRole: OrgRole
   /** Тир мастерства по профессии (джун/мидл/сеньор, commis→шеф). Пусто = плоская. */
   tier: string
   /** «Чего не хватает» — сигнал в фиче-бэклог владельца. */
@@ -58,7 +66,7 @@ export interface Expert {
  * специалисты. Источник каждой указан — чтобы правку можно было проверить, а не спорить о вкусе.
  */
 /** Исходный состав задаётся без профессии/аккаунта — они выводятся ниже. */
-type SeedExpert = Omit<Expert, 'professionEn' | 'professionRu' | 'userId' | 'lifecycle' | 'tier' | 'dreams'>
+type SeedExpert = Omit<Expert, 'professionEn' | 'professionRu' | 'userId' | 'lifecycle' | 'tier' | 'dreams' | 'orgRole'>
 
 const SEED_BASE: SeedExpert[] = [
   {
@@ -237,15 +245,28 @@ const SEED_BASE: SeedExpert[] = [
  * Дальше владелец даёт специалистам собственные имена в админке, а профессия остаётся
  * здесь и показывается в профиле как должность.
  */
-export const SEED: Expert[] = SEED_BASE.map((e) => ({
+/**
+ * «Кодер» и «Девопсер» — ЗОНТИКИ над специализациями (бэкендер/тестировщик,
+ * безопасник/инженер БД), поэтому они начальники гильдий: созывают своих внутри
+ * специальности. Остальная восьмёрка — профильные эксперты.
+ */
+const CHIEFS = new Set(['coder', 'devops'])
+
+const withDefaults = (e: SeedExpert, orgRole: OrgRole): Expert => ({
   ...e,
+  orgRole,
   professionEn: e.nameEn,
   professionRu: e.nameRu,
   userId: null,
-  lifecycle: 'active' as const,
-  tier: '', // исходный состав — плоские профессии, лестницу заводим по надобности
+  lifecycle: 'active',
+  tier: '', // лестницу мастерства заводим по надобности; у части профессий её нет
   dreams: '',
-}))
+})
+
+export const SEED: Expert[] = [
+  ...SEED_BASE.map((e) => withDefaults(e, CHIEFS.has(e.id) ? 'chief' : 'expert')),
+  ...ORG_SEED.map(({ orgRole, ...e }) => withDefaults(e, orgRole)),
+]
 
 const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   id: r.id,
@@ -255,6 +276,7 @@ const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   professionRu: r.professionRu,
   userId: r.userId,
   lifecycle: r.lifecycle,
+  orgRole: r.orgRole,
   tier: r.tier,
   dreams: r.dreams,
   persona: r.persona,
@@ -315,13 +337,20 @@ async function backfillGuilds(rows: (typeof councilExperts.$inferSelect)[]): Pro
  */
 export async function getRoster(): Promise<Expert[]> {
   try {
-    // Действующий состав = рубильник админа включён И карьера активна: спящих и
-    // архивных не созываем (архив обратим — вернётся в 'active', и он снова в строю).
+    // Пул созыва = рубильник админа включён, карьера активна И роль пишущая. Спящих и
+    // архивных не созываем (архив обратим). Бэк-офис (бухгалтер, летописец, HR) и
+    // партнёры в пул НЕ входят: их работа — не черновики списков.
     const read = () =>
       db
         .select()
         .from(councilExperts)
-        .where(and(eq(councilExperts.enabled, true), eq(councilExperts.lifecycle, 'active')))
+        .where(
+          and(
+            eq(councilExperts.enabled, true),
+            eq(councilExperts.lifecycle, 'active'),
+            inArray(councilExperts.orgRole, [...COUNCIL_ROLES]),
+          ),
+        )
         .orderBy(asc(councilExperts.sort))
     let rows = await read()
     if (rows.length === 0) {
