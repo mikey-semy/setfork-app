@@ -2,6 +2,7 @@ import 'server-only'
 import { eq, sql } from 'drizzle-orm'
 import { councilExperts, db, users } from '@/shared/db'
 import type { Expert } from './roster'
+import { HOME_REALM, mythicName } from './gnome-names'
 import type { Lang } from '@/shared/i18n'
 
 /**
@@ -65,6 +66,8 @@ export async function ensureGnomeUser(e: Expert): Promise<string | null> {
         handle,
         name: gnomeName(e, 'en'),
         profession: professionOf(e, 'en'),
+        // Нидавеллир — кузни, место работы мастеров (Свартальвхейм — весь мир).
+        location: HOME_REALM,
         accountType: 'agent',
         // Встроенная картинка персонажа лежит в public/gnomes/<avatar>.webp — тот же
         // путь, что рисует беседа; так профиль и лента показывают одно лицо.
@@ -89,6 +92,33 @@ export async function ensureGnomeUsers(roster: Expert[]): Promise<Record<string,
     if (id) out[e.id] = id
   }
   return out
+}
+
+/**
+ * Дать специалистам мифологические имена — ОДНОРАЗОВО и только тем, у кого имя всё ещё
+ * равно профессии (исторически name_en='Chef' и был профессией). Собственное имя,
+ * однажды заданное владельцем в админке, не перетираем: иначе правка молча откатывалась
+ * бы при каждом прогоне — тем же граблям, что уже ловил бэкфилл гильдий.
+ *
+ * id НЕ трогаем: он же ключ аватарки и значение who в истории беседы.
+ */
+export async function assignMythicNames(): Promise<{ renamed: number; names: Record<string, string> }> {
+  const rows = await db.select().from(councilExperts)
+  const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+  const pending = rows.filter((r) => same(r.nameEn, r.professionEn || r.nameEn))
+  // Занятые имена: у кого имя уже своё — его не выдаём повторно.
+  const taken = new Set(rows.filter((r) => !pending.includes(r)).map((r) => r.nameEn))
+  const names: Record<string, string> = {}
+  for (const r of pending) {
+    const n = mythicName(r.id, r.professionEn || r.nameEn, taken)
+    taken.add(n.name)
+    await db
+      .update(councilExperts)
+      .set({ nameEn: n.name, nameRu: n.nameRu, updatedAt: new Date() })
+      .where(eq(councilExperts.id, r.id))
+    names[r.id] = `${n.name} / ${n.nameRu} (${n.source}: ${n.meaning})`
+  }
+  return { renamed: pending.length, names }
 }
 
 /** Сколько специалистов уже имеют аккаунт (для админки/дашборда). */

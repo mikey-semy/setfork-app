@@ -13,6 +13,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { isAiAvailable } from '@/shared/settings/ai'
 import { notify } from '@/features/notifications/notify'
 import { log } from '@/shared/observability'
+import { HOME_REALM } from '@/shared/ai/gnome-names'
 import { t, type Lang, type LocaleText } from '@/shared/i18n'
 
 // ── ИИ-садовник (Э2 → ось B «живые списки») ──────────────────────────
@@ -46,6 +47,7 @@ export async function ensureGardenerUser(): Promise<{ id: string }> {
       // handle и эмодзи в bio — UI и API обязаны показывать, что это не человек.
       accountType: 'agent',
       profession: 'Gardener',
+      location: HOME_REALM,
       bio: '\u{1F9D9} Gardener. I propose improvements to public lists; humans review and merge.',
     })
     .returning({ id: users.id })

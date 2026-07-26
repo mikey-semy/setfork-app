@@ -205,6 +205,15 @@ export default async function ProfilePage({
           <div className="mt-4">
             {user.name && <div className="text-[22px] font-bold leading-tight text-ink">{user.name}</div>}
             <div className="text-[18px] text-ink-2">{user.handle}</div>
+            {/* Профессия — должность под ником (у служебных участников буквальная). */}
+            {user.profession && <div className="mt-0.5 text-[14px] text-ink-2">{user.profession}</div>}
+            {/* ADR-0004: нечеловечность обязана быть видна — иначе профиль вводит в
+                заблуждение. Пометка ДАННЫЕ (account_type), а не догадка по нику. */}
+            {user.accountType === 'agent' && (
+              <div className="mt-2 inline-flex items-center rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-2">
+                {tr({ en: 'Service account', ru: 'Служебный аккаунт' }, lang)}
+              </div>
+            )}
           </div>
           {user.bio && <p className="mt-3 text-[14px] leading-snug text-ink">{user.bio}</p>}
 
