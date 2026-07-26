@@ -16,6 +16,8 @@ import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
+import { ReviewPanel } from '@/features/library/ReviewPanel'
+import { getSuggestionReviews } from '@/features/library/review-actions'
 import { diffSteps } from '@/features/library/suggestion-diff'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
@@ -68,6 +70,11 @@ export default async function SuggestionThreadPage({
     : (sug.items as ProposedItem[])
   const diffBase = sug.branchRef ? (await getVersionSteps(meta.id, meta.currentVersion))?.steps ?? [] : base?.steps ?? []
   const diff = diffSteps(diffBase, items, lang)
+
+  // Ревью правки: список вердиктов + свой текущий (форма показывает выбор, а не
+  // плодит копии — вердикт один на рецензента и перезаписывается).
+  const reviews = await getSuggestionReviews(sug.id)
+  const myVerdict = session ? (reviews.find((r) => r.reviewer.handle === session.handle)?.verdict ?? null) : null
 
   // A4: для открытого branch-PR заранее считаем трёхсторонний merge — при
   // конфликте вместо кнопки Merge показываем резолвер (выбор по шагам).
@@ -157,6 +164,33 @@ export default async function SuggestionThreadPage({
         <div className="mt-2">
           <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
         </div>
+
+        {/* Ревью: вердикты рецензентов + своя форма. «Нужны правки» от владельца
+            или коллаборатора блокирует принятие — панель говорит об этом прямо. */}
+        {sug.status === 'open' && (
+          <div className="mt-3">
+            <ReviewPanel
+              suggestionId={sug.id}
+              reviews={reviews}
+              myVerdict={myVerdict}
+              canReview={!!session}
+              isAuthor={session?.userId === sug.authorId}
+              lang={lang}
+              labels={{
+                title: t('reviewTitle', lang),
+                approve: t('reviewApprove', lang),
+                requestChanges: t('reviewRequestChanges', lang),
+                commentOnly: t('reviewCommentOnly', lang),
+                placeholder: t('reviewPlaceholder', lang),
+                send: t('commentSend', lang),
+                withdraw: t('reviewWithdraw', lang),
+                blocked: t('reviewBlocked', lang),
+                yourReview: t('reviewYours', lang),
+                ownAuthor: t('reviewOwnAuthor', lang),
+              }}
+            />
+          </div>
+        )}
 
         {isOwner && !sug.branchRef && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
           <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">

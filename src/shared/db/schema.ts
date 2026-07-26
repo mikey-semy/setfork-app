@@ -541,6 +541,35 @@ export const suggestions = pgTable('suggestions', {
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 }, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status)])
 
+// ── Ревью правки (вердикт рецензента, как review в PR) ───────────────
+// Вердикты по модели GitHub/Gitea, но без их ловушек: у Gitea «request changes»
+// закодирован как ReviewTypeReject, а сторона диффа — ЗНАКОМ номера строки (на
+// этом у них же висит собственный FIXME). Здесь всё явными значениями.
+//   comment — оставил замечания, не блокирует;
+//   approve — одобрил;
+//   changes — просит доработать (блокирует принятие).
+// Один активный вердикт на рецензента: повторное ревью ПЕРЕЗАПИСЫВАЕТ прежний,
+// иначе «одобрил → передумал» оставляло бы оба состояния сразу.
+export const suggestionReviews = pgTable(
+  'suggestion_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    reviewerId: uuid('reviewer_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    verdict: text('verdict').notNull(), // 'comment' | 'approve' | 'changes'
+    body: text('body').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_review_one_per_reviewer').on(t.suggestionId, t.reviewerId)],
+)
+
+export type SuggestionReview = typeof suggestionReviews.$inferSelect
+
 // Комментарии-обсуждение к правке (review-комментарии, как в PR).
 export const suggestionComments = pgTable(
   'suggestion_comments',

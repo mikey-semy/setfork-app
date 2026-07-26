@@ -28,6 +28,7 @@ import { collabStore, suggestionCommenterIds } from '@/features/collab-store/sto
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { getVersionSteps } from './queries'
+import { hasBlockingReview } from './review-actions'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
@@ -388,6 +389,9 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   if (!sug || sug.status !== 'open' || !sug.branchRef) return
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+  // Тот же гейт, что у принятия items-правки: иначе «Влить в main» обходило бы
+  // запрошенные правки, и вердикт зависел бы от того, каким путём пришёл PR.
+  if (await hasBlockingReview(sug.id)) return
 
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
@@ -497,6 +501,9 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     with: { template: true },
   })
   if (!sug || sug.status !== 'open' || sug.template.ownerId !== session.userId) return
+  // Запрошенные правки блокируют принятие — иначе вердикт «просит доработать»
+  // был бы декоративным. Разблокировать может сам рецензент, сменив свой голос.
+  if (await hasBlockingReview(sug.id)) return
 
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
