@@ -38,6 +38,8 @@ import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutl
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
+import { BlockComments } from '@/features/comments/BlockComments'
+import { getBlockThreads } from '@/features/comments/queries'
 import { db, listLinks, templates as templatesTable, users as usersTable } from '@/shared/db'
 import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
@@ -95,6 +97,9 @@ export default async function ListPage({
     ? snapshot.steps.map((s) => ({
         id: `br-${s.n}`,
         n: s.n,
+        // Идентичности у git-снимка нет: block_id в git не сериализуется (golden-
+        // паритет с Rust), поэтому на ветке комментарии к пунктам недоступны.
+        blockId: null as string | null,
         type: s.type ?? 'step', // не-step блоки снапшота (inproc); Rust пока только шаги
         content: (s.content ?? {}) as Record<string, unknown>,
         title: { en: s.title } as (typeof dbSteps)[number]['title'],
@@ -113,6 +118,32 @@ export default async function ListPage({
   // Любой альтернативный снимок (ветка или прошлая версия) — только чтение:
   // раскопки/трекинг ссылок/перевод привязаны к ТЕКУЩЕЙ версии.
   const readOnlyView = !!snapshot || !!histVer
+
+  // Обсуждения пунктов: раскладываем по стабильному block_id (не по steps.id —
+  // тот новый в каждой версии). На альтернативном снимке не показываем: треды
+  // живут на текущей версии.
+  const threads = readOnlyView ? [] : await getBlockThreads(tpl.id)
+  const threadsByBlock = new Map<string, typeof threads>()
+  for (const th of threads) {
+    const list = threadsByBlock.get(th.blockId)
+    if (list) list.push(th)
+    else threadsByBlock.set(th.blockId, [th])
+  }
+  const commentLabels = {
+    add: t('commentAdd', lang),
+    placeholder: t('commentPlaceholder', lang),
+    send: t('commentSend', lang),
+    cancel: t('commentCancel', lang),
+    reply: t('commentReply', lang),
+    resolve: t('commentResolve', lang),
+    unresolve: t('commentUnresolve', lang),
+    resolved: t('commentResolvedCount', lang),
+    onSelection: t('commentOnSelection', lang),
+    onBlock: t('commentOnBlock', lang),
+    stateReanchored: t('commentReanchored', lang),
+    stateOrphaned: t('commentOrphaned', lang),
+    orphanHint: t('commentOrphaned', lang),
+  }
 
   // Поиск ВНУТРИ списка (?find= из поиска в шапке): фильтр шагов по подстроке —
   // аналог поиска по файлам в GitHub-репо, для больших списков.
@@ -676,6 +707,20 @@ export default async function ListPage({
                               )
                             })}
                           </div>
+                        )}
+                        {/* Обсуждение пункта: треды + композер. Выделение текста
+                            выше → комментарий «к части», иначе ко всему пункту. */}
+                        {s.blockId && !readOnlyView && (
+                          <BlockComments
+                            owner={owner}
+                            slug={slug}
+                            blockId={s.blockId}
+                            field="desc"
+                            threads={threadsByBlock.get(s.blockId) ?? []}
+                            canComment={!!viewer}
+                            lang={lang}
+                            labels={commentLabels}
+                          />
                         )}
                       </div>
                     </div>
