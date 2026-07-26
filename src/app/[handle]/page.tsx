@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Award, BookOpen, FolderGit2, GraduationCap, Link2, ListChecks, MapPin, Pin, Star, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
+import { agentProfile } from '@/shared/ai/gnome-account'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
@@ -100,6 +101,9 @@ export default async function ProfilePage({
   const ownLight = tab === 'overview' && isOwner ? await getOwnListsLight(user.id) : []
   // Пройденные курсы (публично видимые) — на Overview.
   const completions = tab === 'overview' ? await getUserCompletions(user.id) : []
+  // Служебный участник (ADR-0004): его зона ответственности по доменам. Для людей — null,
+  // лишнего запроса не делаем.
+  const agent = tab === 'overview' && user.accountType === 'agent' ? await agentProfile(user.id) : null
 
   // Лента активности (Contribution activity) — на Overview; ?month=YYYY-MM листает историю.
   const nowMonth = new Date()
@@ -308,6 +312,40 @@ export default async function ProfilePage({
           {/* Overview: закреплённые (Popular) + граф активности. */}
           {tab === 'overview' && (
             <>
+              {/* ЗОНА ОТВЕТСТВЕННОСТИ служебного участника: за какие темы он отвечает.
+                  Именно «ведёт», а не владеет — авторство чужих списков не переписываем.
+                  Заодно объясняет посетителю, почему правки к этим спискам идут от него. */}
+              {agent && agent.tended.length > 0 && (
+                <div className="mb-6 min-w-0">
+                  <div className="mb-2 text-[12.5px] font-semibold text-ink-2">
+                    {tr({ en: 'Tends these lists', ru: 'Ведёт эти списки' }, lang)}
+                  </div>
+                  <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
+                    {agent.tended.map((it) => (
+                      <li key={`${it.handle}/${it.slug}`} className="min-w-0">
+                        <Link
+                          href={`/${it.handle}/${it.slug}`}
+                          className="flex min-w-0 items-center gap-2 px-3 py-3 hover:bg-surface-2"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink">
+                            {tr(it.title as Parameters<typeof tr>[0], lang) || it.slug}
+                          </span>
+                          <span className="hidden shrink-0 text-[11.5px] text-muted sm:inline">{it.handle}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-[11.5px] text-muted">
+                    {tr(
+                      {
+                        en: 'Responsibility zone by domain — the lists are their authors’, not this account’s.',
+                        ru: 'Зона ответственности по доменам — списки принадлежат своим авторам, не этому аккаунту.',
+                      },
+                      lang,
+                    )}
+                  </p>
+                </div>
+              )}
               {(pinned.length > 0 || (isOwner && ownLight.length > 0)) && (
                 <div className="mb-6">
                   <div className="mb-2 flex items-center justify-between gap-2 text-[12.5px] font-semibold text-ink-2">

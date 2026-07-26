@@ -1,6 +1,6 @@
 import 'server-only'
-import { eq, sql } from 'drizzle-orm'
-import { councilExperts, db, users } from '@/shared/db'
+import { and, arrayOverlaps, desc, eq, sql } from 'drizzle-orm'
+import { councilExperts, db, templates, users } from '@/shared/db'
 import type { Expert } from './roster'
 import { HOME_REALM, mythicName } from './gnome-names'
 import { domainAffinity } from './precedent-filter'
@@ -118,6 +118,49 @@ export async function tenderForTags(tags: string[], roster: Expert[]): Promise<{
     if (userId) return { expert: e, userId }
   }
   return null
+}
+
+/**
+ * Профиль служебного участника: его строка в ростере + списки, которые он ВЕДЁТ.
+ *
+ * «Ведёт» — не владеет: авторство чужих списков мы не переписываем. Это витрина зоны
+ * ответственности («вот за эти темы отвечаю я»), и она же объясняет посетителю, почему
+ * правки к таким спискам приходят именно от него.
+ *
+ * Отбор в два шага: SQL сужает по пересечению тегов с доменами (быстро, по индексу),
+ * а ранжирует уже доменная линза — она умеет производные формы и отсекает отрицания,
+ * чего SQL-пересечение не умеет.
+ */
+export async function agentProfile(userId: string, limit = 12) {
+  const [expert] = await db.select().from(councilExperts).where(eq(councilExperts.userId, userId))
+  if (!expert) return null
+  const domains = expert.domains.filter((d) => d && d !== '*')
+  if (!domains.length) return { expert, tended: [] as { slug: string; handle: string; title: unknown; tags: string[] }[] }
+
+  const rows = await db
+    .select({ slug: templates.slug, handle: users.handle, title: templates.title, tags: templates.tags })
+    .from(templates)
+    .innerJoin(users, eq(users.id, templates.ownerId))
+    .where(
+      and(
+        eq(templates.status, 'published'),
+        eq(templates.visibility, 'public'),
+        eq(templates.moderation, 'active'),
+        // Пересечение тегов с доменами — грубый, но индексируемый предфильтр.
+        // Именно arrayOverlaps, а не sql`… && ${domains}`: массив в шаблоне разворачивается
+        // в record, и Postgres падает на «operator does not exist: text[] && record».
+        arrayOverlaps(templates.tags, domains),
+      ),
+    )
+    .orderBy(desc(templates.starsCount))
+    .limit(limit * 3)
+
+  const tended = rows
+    .map((r) => ({ ...r, score: domainAffinity(r.tags, expert.domains) }))
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+  return { expert, tended }
 }
 
 /** id всех служебных аккаунтов — для дедупа и исключений (их списки они ведут сами). */
