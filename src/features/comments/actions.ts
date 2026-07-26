@@ -10,22 +10,28 @@ import { isCollaborator } from '@/features/collab/queries'
 // eslint-disable-next-line boundaries/dependencies -- гейт видимости списка и его блоки из library
 import { requireViewableMeta, requireViewableDetail } from '@/features/library/guard'
 import { makeAnchor } from './anchor'
+import { locateQuote } from './quote'
 import { fieldText, isCommentField, type AnchorableBlock } from './fields'
 
 const MAX_BODY = 10_000
 
+
 /**
  * Завести тред к блоку. Якорь снимается СЕРВЕРОМ по присланному смещению —
  * клиенту доверять диапазон нельзя, а текст поля мы и так знаем.
- * Пустой диапазон (start === end) = комментарий к блоку целиком.
+ *
+ * Клиент присылает ВЫДЕЛЕННЫЙ ТЕКСТ, а не координаты: описание рендерится
+ * Markdown'ом, и смещения в DOM не совпадают со смещениями в исходной строке,
+ * по которой потом идёт пере-привязка. Цитата не нашлась (выделение зацепило
+ * разметку) или пуста — тред становится комментарием к блоку целиком, а не
+ * привязывается наугад.
  */
 export async function createBlockThread(
   owner: string,
   slug: string,
   blockId: string,
   field: string,
-  start: number,
-  end: number,
+  quote: string,
   body: string,
 ): Promise<void> {
   const session = await requireSession()
@@ -39,7 +45,8 @@ export async function createBlockThread(
   if (!block) return // комментировать можно только существующий блок текущей версии
 
   const source = fieldText(block, field, lang)
-  const anchor = makeAnchor(source, start, end)
+  const at = locateQuote(source, quote.trim())
+  const anchor = makeAnchor(source, at.start, at.end)
 
   const [thread] = await db
     .insert(blockCommentThreads)
