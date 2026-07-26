@@ -320,6 +320,9 @@ export async function toggleMaintenance(on: boolean): Promise<boolean> {
  * аватарки и значение who в истории бесед — переименование осиротило бы и картинку, и историю.
  * Поэтому же нет удаления: выключение флагом enabled.
  */
+type Lifecycle = 'active' | 'dormant' | 'archived'
+const LIFECYCLES: readonly Lifecycle[] = ['active', 'dormant', 'archived']
+
 export async function saveExpert(formData: FormData): Promise<void> {
   await requireAdmin()
   const id = String(formData.get('id') ?? '').trim()
@@ -341,6 +344,18 @@ export async function saveExpert(formData: FormData): Promise<void> {
     .set({
       nameRu: String(formData.get('nameRu') ?? '').trim().slice(0, 40),
       nameEn: String(formData.get('nameEn') ?? '').trim().slice(0, 40),
+      // Профессия отдельно от имени: имя своё (мифологическое), профессия буквальная и
+      // показывается в профиле как должность.
+      professionRu: String(formData.get('professionRu') ?? '').trim().slice(0, 60),
+      professionEn: String(formData.get('professionEn') ?? '').trim().slice(0, 60),
+      // Тир мастерства по профессии (джун/мидл/сеньор, commis→шеф); пусто = плоская.
+      tier: String(formData.get('tier') ?? '').trim().slice(0, 40),
+      // Карьера: спящих и архивных не созываем (см. getRoster). Неизвестное значение НЕ
+      // пропускаем — иначе опечатка тихо вывела бы специалиста из действующего состава.
+      lifecycle: LIFECYCLES.includes(formData.get('lifecycle') as Lifecycle)
+        ? (formData.get('lifecycle') as Lifecycle)
+        : 'active',
+      dreams: String(formData.get('dreams') ?? '').trim().slice(0, 600),
       persona: String(formData.get('persona') ?? '').trim().slice(0, 2000),
       guildRu: String(formData.get('guildRu') ?? '').trim().slice(0, 60),
       guildEn: String(formData.get('guildEn') ?? '').trim().slice(0, 60),
@@ -412,6 +427,21 @@ export async function setExpertAvatar(id: string, builtin: string): Promise<void
 
 /** Найм гнома (HQ §4в): LLM-черновик профиля по признанному профстандарту → INSERT
  *  ВЫКЛЮЧЕННЫМ → редирект на личную страницу. Ошибка → назад в зал с маркером. */
+/**
+ * Завести аккаунты уровня пользователя всему действующему составу (ADR-0004:
+ * account_type='agent'). Действие ЯВНОЕ, кнопкой: аккаунт — публичная сущность
+ * (профиль, авторство), заводить его побочным эффектом чтения ростера нельзя.
+ * Идемпотентно — у кого аккаунт уже есть, тот переиспользуется.
+ */
+export async function createGnomeAccounts(): Promise<void> {
+  await requireAdmin()
+  const { ensureGnomeUsers } = await import('@/shared/ai/gnome-account')
+  const { getRoster } = await import('@/shared/ai/roster')
+  await ensureGnomeUsers(await getRoster())
+  revalidatePath('/admin/council')
+  redirect('/admin/council')
+}
+
 export async function hireGnome(formData: FormData): Promise<void> {
   const admin = await requireAdmin()
   const tag = String(formData.get('tag') ?? '').trim().toLowerCase().slice(0, 40)

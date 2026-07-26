@@ -1,10 +1,11 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, Eye, FileText, GitBranch, GitCommitHorizontal, GitFork, GitPullRequest, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
+import { ExternalLink, Eye, FileText, GitBranch, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
-import { openBranchPr, useTemplate } from '@/features/library/actions'
+import { openBranchPr, revertToVersion, useTemplate } from '@/features/library/actions'
+import { Button } from '@/shared/ui/button'
 import { gitCore } from '@/features/git/core'
 import { BranchPicker } from '@/features/git/BranchPicker'
 import { isCollaborator } from '@/features/collab/queries'
@@ -24,7 +25,7 @@ import { digStepsWithSession } from '@/features/dig/queries'
 import { getRoster } from '@/shared/ai/roster'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import { getContributors, getStepPreviews } from '@/features/library/queries'
+import { getContributors, getStepPreviews, getVersionSteps } from '@/features/library/queries'
 import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
@@ -37,6 +38,8 @@ import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutl
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
+import { BlockComments } from '@/features/comments/BlockComments'
+import { getBlockThreads } from '@/features/comments/queries'
 import { db, listLinks, templates as templatesTable, users as usersTable } from '@/shared/db'
 import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
@@ -69,7 +72,7 @@ export default async function ListPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
-  searchParams: Promise<{ find?: string; ref?: string }>
+  searchParams: Promise<{ find?: string; ref?: string; v?: string }>
 }) {
   const [{ handle: owner, slug }, sp, lang] = await Promise.all([params, searchParams, getLang()])
   const detail = await requireViewableDetail(owner, slug)
@@ -81,11 +84,22 @@ export default async function ListPage({
   const refBranch = sp.ref && sp.ref !== 'main' && branches.some((b) => b.name === sp.ref) ? sp.ref : null
   const snapshot = refBranch ? await gitCore.branchSnapshot({ owner, slug }, refBranch) : null
   const branchInfo = refBranch ? branches.find((b) => b.name === refBranch) : null
+
+  // Просмотр ПРОШЛОЙ версии по ?v=N (снимок из template_versions, только чтение).
+  // Каждая версия хранит полный набор блоков — рендерим их тем же кодом, что и
+  // текущую, поэтому старую версию видно целиком, а не только как дифф.
+  const askedV = Number(sp.v)
+  const curNum = currentVersion?.version ?? tpl.currentVersion
+  const histNum = Number.isInteger(askedV) && askedV > 0 && askedV !== curNum ? askedV : null
+  const histVer = histNum && !refBranch ? await getVersionSteps(tpl.id, histNum) : null
   // На ветке рендерим её шаги (маппинг plain→LocaleText-шейп; картинок у снапшота нет).
   const allSteps = snapshot
     ? snapshot.steps.map((s) => ({
         id: `br-${s.n}`,
         n: s.n,
+        // Идентичности у git-снимка нет: block_id в git не сериализуется (golden-
+        // паритет с Rust), поэтому на ветке комментарии к пунктам недоступны.
+        blockId: null as string | null,
         type: s.type ?? 'step', // не-step блоки снапшота (inproc); Rust пока только шаги
         content: (s.content ?? {}) as Record<string, unknown>,
         title: { en: s.title } as (typeof dbSteps)[number]['title'],
@@ -99,7 +113,37 @@ export default async function ListPage({
         imageKey: null,
         hasImage: false,
       }))
-    : dbSteps
+    : (histVer?.steps ?? dbSteps)
+
+  // Любой альтернативный снимок (ветка или прошлая версия) — только чтение:
+  // раскопки/трекинг ссылок/перевод привязаны к ТЕКУЩЕЙ версии.
+  const readOnlyView = !!snapshot || !!histVer
+
+  // Обсуждения пунктов: раскладываем по стабильному block_id (не по steps.id —
+  // тот новый в каждой версии). На альтернативном снимке не показываем: треды
+  // живут на текущей версии.
+  const threads = readOnlyView ? [] : await getBlockThreads(tpl.id)
+  const threadsByBlock = new Map<string, typeof threads>()
+  for (const th of threads) {
+    const list = threadsByBlock.get(th.blockId)
+    if (list) list.push(th)
+    else threadsByBlock.set(th.blockId, [th])
+  }
+  const commentLabels = {
+    add: t('commentAdd', lang),
+    placeholder: t('commentPlaceholder', lang),
+    send: t('commentSend', lang),
+    cancel: t('commentCancel', lang),
+    reply: t('commentReply', lang),
+    resolve: t('commentResolve', lang),
+    unresolve: t('commentUnresolve', lang),
+    resolved: t('commentResolvedCount', lang),
+    onSelection: t('commentOnSelection', lang),
+    onBlock: t('commentOnBlock', lang),
+    stateReanchored: t('commentReanchored', lang),
+    stateOrphaned: t('commentOrphaned', lang),
+    orphanHint: t('commentOrphaned', lang),
+  }
 
   // Поиск ВНУТРИ списка (?find= из поиска в шапке): фильтр шагов по подстроке —
   // аналог поиска по файлам в GitHub-репо, для больших списков.
@@ -113,7 +157,7 @@ export default async function ListPage({
   const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументами (i18n-lint)
   const isOwner = viewer?.userId === tpl.ownerId
   // Точка на кирке: у каких пунктов есть сохранённая dig-сессия зрителя (resilient — [] без таблицы).
-  const digSteps = viewer && !snapshot ? await digStepsWithSession(tpl.id, viewer.userId) : new Set<number>()
+  const digSteps = viewer && !readOnlyView ? await digStepsWithSession(tpl.id, viewer.userId) : new Set<number>()
   // Ветками управляют те, кто может пушить: владелец или коллаборатор.
   const canManageBranches = isOwner || (!!viewer && (await isCollaborator(tpl.id, viewer.userId)))
   // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.
@@ -139,7 +183,7 @@ export default async function ListPage({
   // Шахты «Копать глубже» (HQ §8): выкопанные слои текущей версии — по шагам.
   // У snapshot-веток раскопки нет (шаги без стабильных номеров версии).
   // Мини-чат раскопки (редизайн HQ §8): ростер для выбора собеседника в чате.
-  const digGnomes = viewer && !snapshot
+  const digGnomes = viewer && !readOnlyView
     ? (await getRoster()).map((e) => ({ id: e.id, name: lang === 'ru' ? e.nameRu : e.nameEn, guild: lang === 'ru' ? e.guildRu : e.guildEn }))
     : []
   // Backlinks (HQ §11, Obsidian-вектор): публичные списки, ссылающиеся на этот
@@ -227,7 +271,7 @@ export default async function ListPage({
     <>
       {/* Просмотр: владелец себя не накручивает, сервер дополнительно дедупит. */}
       {!isOwner && mon.viewTracking && <ViewBeacon templateId={tpl.id} />}
-      {viewer && !snapshot && <DigChatHost gnomes={digGnomes} lang={lang} />}
+      {viewer && !readOnlyView && <DigChatHost gnomes={digGnomes} lang={lang} />}
       <div className="print:hidden">
       </div>
 
@@ -361,12 +405,14 @@ export default async function ListPage({
                     templateId={tpl.id}
                     lang={lang}
                     versionsCount={tpl.versions.length}
-                    canTranslate={canManageBranches && !snapshot && titleIsForeign}
+                    canTranslate={canManageBranches && !readOnlyView && titleIsForeign}
                     targetLang={lang}
                   />
                   {/* Run — первичное действие (прогон): к ПРАВОМУ КРАЮ ряда (thumb-зона, по
                       mobile-ui: primary справа-внизу). Кнопка-иконка 36×36, подпись в тултипе/aria. */}
-                  {viewer && (
+                  {/* На альтернативном снимке (ветка/прошлая версия) прогон не предлагаем:
+                      он всё равно стартовал бы на ТЕКУЩЕЙ версии — обманчиво. */}
+                  {viewer && !readOnlyView && (
                     <form action={startRun.bind(null, tpl.id)} className="inline-flex">
                       <Tooltip label={t('runStart', lang)}>
                         <button aria-label={t('runStart', lang)} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-fg hover:opacity-90">
@@ -400,6 +446,37 @@ export default async function ListPage({
                   )}
                   <Link href={base} className="font-semibold text-accent hover:underline">
                     {lang === 'ru' ? '← на main' : '← back to main'}
+                  </Link>
+                </span>
+              </div>
+            )}
+
+            {/* Просмотр прошлой версии (?v=N): снимок только для чтения + возврат. */}
+            {histVer && histNum && (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-[12.5px] text-ink print:hidden">
+                <Tag size={13} className="shrink-0 text-accent" />
+                <span className="min-w-0 flex-1 truncate">
+                  {say('Version', 'Версия')} <b>v{histNum}</b>
+                  <span className="hidden sm:inline">
+                    {' '}
+                    · {timeAgo(histVer.createdAt, lang)} ·{' '}
+                    {say(`read-only, current is v${curNum}`, `только чтение, текущая — v${curNum}`)}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2 max-sm:w-full max-sm:justify-end">
+                  {canManageBranches && (
+                    <form action={revertToVersion.bind(null, tpl.id, histNum)}>
+                      <Button type="submit" variant="primary" className="h-[38px]">
+                        <History size={13} />
+                        <span className="max-sm:hidden">{say('Restore this version', 'Вернуть эту версию')}</span>
+                        <span className="sm:hidden">{say('Restore', 'Вернуть')}</span>
+                      </Button>
+                    </form>
+                  )}
+                  <Link href={base}>
+                    <Button variant="outline" className="h-[38px]">
+                      {say(`To v${curNum}`, `К v${curNum}`)}
+                    </Button>
                   </Link>
                 </span>
               </div>
@@ -488,7 +565,7 @@ export default async function ListPage({
                     // трекинг включён; у snapshot-веток нет DB-id → прямой url.
                     const items = productItems(s.content).map((p) => ({
                       ...p,
-                      href: !snapshot && mon.linkTracking ? `/api/go/${s.id}/p${p.idx}` : p.url,
+                      href: !readOnlyView && mon.linkTracking ? `/api/go/${s.id}/p${p.idx}` : p.url,
                     }))
                     const title = typeof s.content?.title === 'string' ? s.content.title : ''
                     el = items.length ? <ProductBlock title={title} items={items} lang={lang} /> : null
@@ -551,7 +628,7 @@ export default async function ListPage({
                 const refs = (s.refs as { label: LocaleText; url?: string }[]).map((x, ri) => ({
                   label: tr(x.label, lang),
                   url: x.url,
-                  href: x.url && !snapshot && mon.linkTracking ? `/api/go/${s.id}/${ri}` : x.url,
+                  href: x.url && !readOnlyView && mon.linkTracking ? `/api/go/${s.id}/${ri}` : x.url,
                 }))
                 return (
                   <Fragment key={s.id}>
@@ -559,7 +636,7 @@ export default async function ListPage({
                   <div className="relative break-inside-avoid rounded-lg border border-border bg-surface p-4">
                     {/* Кирка — СТРОГО в правом верхнем углу карточки (absolute, не в потоке:
                         при переносе заголовка она уплывала в середину — фидбек владельца). */}
-                    {viewer && !snapshot && typeof s.n === 'number' && (
+                    {viewer && !readOnlyView && typeof s.n === 'number' && (
                       <span className="absolute right-2 top-2 print:hidden">
                         <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={say('Dig into this step', 'Копнуть этот пункт')} hasSession={digSteps.has(s.n)} />
                       </span>
@@ -630,6 +707,20 @@ export default async function ListPage({
                               )
                             })}
                           </div>
+                        )}
+                        {/* Обсуждение пункта: треды + композер. Выделение текста
+                            выше → комментарий «к части», иначе ко всему пункту. */}
+                        {s.blockId && !readOnlyView && (
+                          <BlockComments
+                            owner={owner}
+                            slug={slug}
+                            blockId={s.blockId}
+                            field="desc"
+                            threads={threadsByBlock.get(s.blockId) ?? []}
+                            canComment={!!viewer}
+                            lang={lang}
+                            labels={commentLabels}
+                          />
                         )}
                       </div>
                     </div>

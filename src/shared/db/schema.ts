@@ -80,6 +80,8 @@ export type ProposedItem = {
   // content — payload не-step блоков (text:{md}, image:{ref,caption}); шагу не нужен.
   type?: string
   content?: Record<string, unknown>
+  /** Стабильный id блока сквозь версии (steps.block_id); пусто — старые данные. */
+  blockId?: string
   title: LocaleText
   desc: LocaleText
   command: string
@@ -142,6 +144,14 @@ export const users = pgTable('users', {
   profilePrivate: boolean('profile_private').notNull().default(false),
   // Кураторский аккаунт библиотеки: правки садовника на его списках автопринимаются.
   curated: boolean('curated').notNull().default(false),
+  // ЧЕСТНАЯ ПОМЕТКА (ADR-0004): 'agent' — не человек, а служебный участник (садовник,
+  // специалисты совета). Раньше служебность угадывалась по handle='gardener' и эмодзи в
+  // bio, то есть данными нигде не была. Специалист участвует наравне с людьми (свои
+  // списки, обсуждения, правки), поэтому его нечеловечность обязана быть видна.
+  accountType: text('account_type').notNull().default('human').$type<'human' | 'agent'>(),
+  // Профессия — «должность» в профиле (у специалиста буквальная: повар, девопс; у
+  // человека необязательна). Имя остаётся именем, профессия живёт здесь, а не в имени.
+  profession: text('profession'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -312,6 +322,16 @@ export const steps = pgTable('steps', {
   versionId: uuid('version_id')
     .notNull()
     .references(() => templateVersions.id, { onDelete: 'cascade' }),
+  // СТАБИЛЬНАЯ идентичность блока СКВОЗЬ версии. steps.id — новый в каждом
+  // снимке (версия = полная копия блоков), а block_id переносится из версии в
+  // версию. Без него дифф сопоставляет пункты по ЗАГОЛОВКУ: переименование
+  // читается как «удалён + добавлен», одинаковые заголовки коллизируют, а
+  // комментарий к пункту привязывать не к чему. Модель Notion: идентичность
+  // отдельно от порядка (порядок — это n).
+  // Nullable: у версий, созданных до введения поля (дифф падает на фолбэк).
+  // ⚠️ В git пока НЕ сериализуется (сохраняем golden-паритет с Rust), поэтому
+  // проекция пуша идентичность теряет. Зеркалирование в core — отдельный этап.
+  blockId: uuid('block_id'),
   n: integer('n').notNull(), // порядковый номер блока в версии (1..)
   type: text('type').notNull().default('step'), // 'step' | 'text' | 'image'
   content: jsonb('content').notNull().default({}).$type<Record<string, unknown>>(), // payload не-step блоков
@@ -327,7 +347,7 @@ export const steps = pgTable('steps', {
   // Подшаги и ссылки — простой контент шага, храним как locale-JSON.
   subtasks: jsonb('subtasks').notNull().default([]).$type<LocaleText[]>(),
   refs: jsonb('refs').notNull().default([]).$type<{ label: LocaleText; url?: string }[]>(),
-})
+}, (t) => [index('steps_block_idx').on(t.blockId)])
 
 // ── Runs (прогон = исполняемый экземпляр шаблона на версии) ──────────
 export const runs = pgTable('runs', {
@@ -1154,6 +1174,15 @@ export const councilExperts = pgTable(
     id: text('id').primaryKey(),
     nameEn: text('name_en').notNull(),
     nameRu: text('name_ru').notNull(),
+    // ПРОФЕССИЯ отдельно от ИМЕНИ (решение владельца): имя — своё, профессия —
+    // буквальная («повар», «девопс») и уезжает в ПРОФИЛЬ аккаунта как должность.
+    // Пусто → профессией считаем имя (так было исторически: name_en='Chef').
+    professionEn: text('profession_en').notNull().default(''),
+    professionRu: text('profession_ru').notNull().default(''),
+    // Аккаунт специалиста уровня пользователя (ADR-0004: помечен account_type='agent').
+    // Через него он ведёт СВОИ списки по темам, комментирует и предлагает правки —
+    // наравне с людьми, а не из админки. null = аккаунт ещё не заведён.
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
     persona: text('persona').notNull(),
     // Гильдия (HQ §7): гном — носитель гильдии, совет один — голоса разные.
     guildEn: text('guild_en').notNull().default(''),
@@ -1177,6 +1206,30 @@ export const councilExperts = pgTable(
     avatarUploaded: boolean('avatar_uploaded').notNull().default(false),
     online: boolean('online').notNull().default(false), // давать ли веб-поиск (:online)
     enabled: boolean('enabled').notNull().default(true),
+    // ЖИЗНЕННЫЙ ЦИКЛ (решение владельца): active → dormant (простаивает, всё сохранено)
+    // → archived (год без запросов). Архив — НЕ удаление: персона, опыт и репутация
+    // остаются, специалист мгновенно возвращается «как выпускник». Причина архивации не
+    // в вычислениях (простой на событийной модели ~бесплатен), а в том, чтобы действующий
+    // состав оставался обозримым для маршрутизации.
+    // Ортогонально enabled: enabled — рубильник админа, lifecycle — состояние карьеры.
+    lifecycle: text('lifecycle').notNull().default('active').$type<'active' | 'dormant' | 'archived'>(),
+    // МЕСТО В КОМПАНИИ. Гендиректор — владелец (человек), в ростере его нет.
+    //   partner    — партнёр-старейшина: методология, качество, повестка. Не домен-эксперт.
+    //   chief      — начальник гильдии: зонтик над специализациями, созывает своих.
+    //   manager    — менеджер задачи: ведёт одну работу от начала до конца.
+    //   expert     — профильный специалист (и он же садовник по своей теме).
+    //   backoffice — бухгалтер, HR, аналитик моделей, библиотекарь, летописец.
+    // Зачем колонка: совет обязан звать ЭКСПЕРТОВ, а не бухгалтера. Без разделения
+    // бэк-офис попадал бы в пул созыва и писал черновики списков (см. getRoster).
+    orgRole: text('org_role').notNull().default('expert').$type<'partner' | 'chief' | 'manager' | 'expert' | 'backoffice'>(),
+    // ТИР МАСТЕРСТВА — лестница по профессии: у программиста джун/мидл/сеньор, у повара
+    // commis→шеф, у части профессий её нет вовсе (плоско). Поэтому свободный текст, а не
+    // enum. Пусто = плоская профессия. Ортогонален выводимому званию (gnomeRank считает
+    // его по числу принятых работ) — тут именно квалификация, а не выслуга.
+    tier: text('tier').notNull().default(''),
+    // «МЕЧТЫ» — канал «чего мне не хватает» от специалиста в фиче-бэклог владельца.
+    // Не служебная заметка: это сигнал развития продукта со стороны исполнителя.
+    dreams: text('dreams').notNull().default(''),
     sort: integer('sort').notNull().default(0),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1567,6 +1620,72 @@ export type TemplateVersion = typeof templateVersions.$inferSelect
 export type Step = typeof steps.$inferSelect
 export type Run = typeof runs.$inferSelect
 export type RunStepState = typeof runStepState.$inferSelect
+// ── Комментарии к пункту (и к выделенной части его текста) ───────────
+// Тред — единица обсуждения, разрешения И устаревания (как PullRequestReviewThread
+// у GitHub: isResolved/isOutdated живут на треде, а не на отдельной реплике).
+//
+// Якорь file-relative, а не diff-relative: блок опознаётся стабильным block_id,
+// место внутри блока — W3C-селекторами. Индекс строки внутри диффа (position
+// у GitHub) сознательно НЕ реализуем: он хрупок, и GitHub сам пометил его
+// deprecated в своей OpenAPI-спеке.
+//
+// Три позиции — контракт GitLab (lib/gitlab/diff/position_tracer, MIT):
+//   anchor_original — иммутабельна, «где это было сказано»;
+//   anchor_current  — сдвигается вперёд, пока якорь находится;
+//   anchor_changed_at — версия, на которой якорь потеряли (пусто = не терялся).
+// Плюс вмороженный снимок текста (роль diff_hunk у GitHub / note_diff_files у
+// GitLab): тред всегда может показать свой контекст, ничего не переспрашивая.
+export const blockCommentThreads = pgTable(
+  'block_comment_threads',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    /** Стабильная идентичность блока (steps.block_id) — переживает версии. */
+    blockId: uuid('block_id').notNull(),
+    /** Поле блока: 'title' | 'desc' | 'why' | 'command' | 'content.md' и т.п. */
+    field: text('field').notNull().default('desc'),
+    /** Версия, на которой тред заведён. */
+    createdVersion: integer('created_version').notNull(),
+    anchorOriginal: jsonb('anchor_original').notNull().$type<Record<string, unknown>>(),
+    anchorCurrent: jsonb('anchor_current').$type<Record<string, unknown> | null>(),
+    /** 'anchored' | 'reanchored' | 'orphaned' — три состояния, а не два. */
+    anchorState: text('anchor_state').notNull().default('anchored'),
+    /** Уверенность последней пере-привязки, 0..100 (пусто — не перепривязывался). */
+    anchorConfidence: integer('anchor_confidence'),
+    /** Версия, на которой якорь потеряли (аналог change_position у GitLab). */
+    anchorChangedAt: integer('anchor_changed_at'),
+    /** Вмороженный текст поля на момент создания — контекст треда навсегда. */
+    contextSnapshot: text('context_snapshot').notNull().default(''),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedById: uuid('resolved_by_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('bct_tpl_idx').on(t.templateId), index('bct_block_idx').on(t.blockId)],
+)
+
+export const blockComments = pgTable(
+  'block_comments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => blockCommentThreads.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('bc_thread_idx').on(t.threadId)],
+)
+
+export type BlockCommentThread = typeof blockCommentThreads.$inferSelect
+export type BlockComment = typeof blockComments.$inferSelect
+
 export type Suggestion = typeof suggestions.$inferSelect
 export type Generation = typeof generations.$inferSelect
 export type GenerationCandidate = typeof generationCandidates.$inferSelect

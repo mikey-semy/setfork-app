@@ -5,7 +5,8 @@ import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { CouncilRoster } from '@/features/admin/CouncilRoster'
 import { hireSignals } from '@/features/admin/hire'
-import { hireGnome } from '@/features/admin/actions'
+import { createGnomeAccounts, hireGnome } from '@/features/admin/actions'
+import { UserPlus } from 'lucide-react'
 import type { Option } from '@/features/admin/ModelSelect'
 
 export const metadata = { title: 'Council' }
@@ -67,6 +68,8 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
   const [rows, gallery, uploaded, signals] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars(), hireSignals()])
   // Загруженная картинка уходит готовым URL (imgproxy/диск) — клиенту незачем знать про S3-ключи.
   const roster = rows.map((e) => ({ ...e, uploadedUrl: e.avatarUploaded ? uploaded[e.id] : undefined }))
+  // Сколько действующих специалистов ещё без аккаунта — только они и мешают.
+  const noAccounts = rows.filter((e) => e.enabled && e.lifecycle === 'active' && !e.userId).length
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6">
@@ -107,6 +110,32 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
           <p className="mt-2 text-[11.5px] text-ink-2">
             {say('The new master is created DISABLED — review the profile, tweak it and switch him on.', 'Новый мастер рождается ВЫКЛЮЧЕННЫМ — прочитай профиль, поправь и включи сам.')}
           </p>
+        </div>
+      )}
+      {/* Аккаунты уровня пользователя: специалист ведёт свои списки, комментирует и
+          предлагает правки наравне с людьми (ADR-0004 — помечен как служебный). Кнопка
+          ЯВНАЯ: аккаунт публичен (профиль, авторство), побочным эффектом его не заводят. */}
+      {noAccounts > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3.5">
+          <div className="min-w-0">
+            <div className="text-[12.5px] font-semibold text-ink">
+              {say('Accounts are missing', 'Не у всех есть аккаунт')}
+            </div>
+            <p className="mt-0.5 text-[11.5px] text-ink-2">
+              {say(
+                `${noAccounts} of ${roster.length} have no user-level account — without it their edits are nobody’s and cannot be attributed.`,
+                `${noAccounts} из ${roster.length} без аккаунта уровня пользователя — без него их правки ничьи и их некому приписать.`,
+              )}
+            </p>
+          </div>
+          <form action={createGnomeAccounts}>
+            <button
+              type="submit"
+              className="inline-flex h-[38px] items-center gap-2 rounded-md bg-primary px-4 text-[13px] font-semibold text-primary-fg"
+            >
+              <UserPlus size={14} /> {say('Create accounts', 'Завести аккаунты')}
+            </button>
+          </form>
         </div>
       )}
       <CouncilRoster experts={roster} modelOptions={modelOptions} gallery={gallery} ru={ru} />
