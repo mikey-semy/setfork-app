@@ -18,6 +18,8 @@ import { aiQuota, listQuota } from '@/shared/quota'
 import { textLang } from '@/shared/i18n/detect-text-lang'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { enqueueReindex } from './jobs'
+// eslint-disable-next-line boundaries/dependencies -- пере-привязка якорей комментариев (кросс-фич, как watch/collab)
+import { syncBlockThreadAnchors } from '@/features/comments/sync'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
@@ -25,6 +27,7 @@ import { curationStore } from '@/features/curation/store'
 import { collabStore, suggestionCommenterIds } from '@/features/collab-store/store'
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
+import { getVersionSteps } from './queries'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
@@ -36,6 +39,7 @@ function toStepInput(items: ProposedItem[]) {
     n: i + 1,
     type: it.type ?? 'step',
     content: it.content ?? {},
+    blockId: it.blockId ?? null,
     title: it.title,
     desc: it.desc,
     command: it.command,
@@ -269,9 +273,47 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await registerTags(tags)
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await notifyWatchersNewVersion(tpl.id, session.userId)
+  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
+  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
+  await syncBlockThreadAnchors(tpl.id)
   await enqueueReindex(tpl.id)
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
+}
+
+// ── Возврат к прошлой версии ──────────────────────────────────────────
+/**
+ * «Вернуть эту версию» — семантика revert из GitHub: содержимое версии N
+ * копируется в НОВУЮ версию N+1, история не переписывается и не теряется
+ * (откат самого отката тоже возможен). Идёт через ListStore.addVersion —
+ * тот же путь, что у обычного сохранения, включая запись в git.
+ */
+export async function revertToVersion(templateId: string, version: number): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl) return
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+  // Возвращать можно только к существующей ПРОШЛОЙ версии (текущая — не откат).
+  if (!Number.isInteger(version) || version < 1 || version >= tpl.currentVersion) return
+
+  const snap = await getVersionSteps(tpl.id, version)
+  if (!snap) return
+
+  await listStore.addVersion(tpl.id, {
+    note: `revert to v${version}`,
+    steps: toStepInput(snap.steps as unknown as ProposedItem[]),
+    authorId: session.userId,
+  })
+  await notifyWatchersNewVersion(tpl.id, session.userId)
+  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
+  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
+  await syncBlockThreadAnchors(tpl.id)
+  await enqueueReindex(tpl.id)
+
+  const handle = await ownerHandle(tpl.ownerId)
+  revalidatePath(`/${handle}/${tpl.slug}`)
+  revalidatePath(`/${handle}/${tpl.slug}/versions`)
+  redirect(`/${handle}/${tpl.slug}`)
 }
 
 // ── Предложить правку (PR) ────────────────────────────────────────────
@@ -363,6 +405,9 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   // git-merge создаёт версию МИМО listStore.addVersion → фасадный барьер её не ловит, recheck явно.
   if (tpl.visibility === 'public') await recheckList(tpl.id)
   await notifyWatchersNewVersion(tpl.id, session.userId)
+  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
+  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
+  await syncBlockThreadAnchors(tpl.id)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
   redirect(`/${owner}/${tpl.slug}`)
@@ -436,6 +481,9 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   // git-merge создаёт версию МИМО listStore.addVersion → фасадный барьер её не ловит, recheck явно.
   if (tpl.visibility === 'public') await recheckList(tpl.id)
   await notifyWatchersNewVersion(tpl.id, session.userId)
+  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
+  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
+  await syncBlockThreadAnchors(tpl.id)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
   redirect(`/${owner}/${tpl.slug}`)
@@ -460,6 +508,9 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     .where(eq(suggestions.id, sug.id))
   await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   await notifyWatchersNewVersion(tpl.id, session.userId)
+  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
+  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
+  await syncBlockThreadAnchors(tpl.id)
   await enqueueReindex(tpl.id)
 
   revalidatePath('/', 'layout')

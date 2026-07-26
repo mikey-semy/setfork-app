@@ -3,41 +3,15 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { Code2, List } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { VersionPicker } from '@/features/library/VersionPicker'
 import { getVersions, getVersionSteps } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
+import { HistoryNav } from '@/widgets/HistoryNav'
 import { safeHref } from '@/shared/lib/safe-url'
-import { diffSteps, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from '@/features/library/diff'
-
-function toCmp(
-  steps: {
-    title: LocaleText
-    desc: LocaleText
-    command: string
-    level: CmpStep['level']
-    why: LocaleText
-    section?: LocaleText
-    subtasks: LocaleText[]
-    refs?: { label: LocaleText; url?: string }[]
-  }[],
-  lang: Lang,
-): CmpStep[] {
-  return steps.map((s) => ({
-    title: tr(s.title, lang),
-    desc: tr(s.desc, lang),
-    command: s.command,
-    level: s.level,
-    why: tr(s.why, lang),
-    section: s.section ? tr(s.section, lang) : '',
-    subtasks: (s.subtasks as LocaleText[]).map((x) => tr(x, lang)).filter(Boolean),
-    refs: (s.refs ?? [])
-      .map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' }))
-      .filter((r) => r.label || r.url),
-  }))
-}
+import { blockLabel, diffSteps, isStepBlock, lineDiff, rowsToCmp, serializeSteps, type CmpStep, type DiffEntry } from '@/features/library/diff'
 
 const STATUS: Record<DiffEntry['status'], { color: string | null; key: 'diffAdded' | 'diffRemoved' | 'diffChanged' | 'diffMoved' | null }> = {
   added: { color: 'var(--ok)', key: 'diffAdded' },
@@ -74,8 +48,8 @@ export default async function ComparePage({
 
   const [fromV, toV] = await Promise.all([getVersionSteps(meta.id, fromN), getVersionSteps(meta.id, toN)])
   if (!fromV || !toV) notFound()
-  const fromSteps = toCmp(fromV.steps, lang)
-  const toSteps = toCmp(toV.steps, lang)
+  const fromSteps = rowsToCmp(fromV.steps, lang)
+  const toSteps = rowsToCmp(toV.steps, lang)
 
   const base = `/${owner}/${slug}/compare`
   const toggle = (key: 'code' | 'list', icon: ReactNode, labelKey: 'viewCode' | 'viewList') => (
@@ -92,6 +66,12 @@ export default async function ComparePage({
   return (
     <>
       <div className="mx-auto w-full max-w-[860px] px-4 py-6">
+        <HistoryNav
+          base={`/${owner}/${slug}`}
+          active="compare"
+          canCompare
+          labels={{ commits: t('versionsTab', lang), releases: t('releasesLabel', lang), compare: t('compareTitle', lang) }}
+        />
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[16px] font-bold text-ink">{t('compareTitle', lang)}</h1>
           <div className="flex items-center gap-1 rounded-md border border-border bg-surface-2 p-0.5">
@@ -182,16 +162,20 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
         {summary.moved > 0 && <span className="text-ink-2">⇅{summary.moved}</span>}
       </div>
       <div className="flex flex-col gap-2.5">
-        {entries.map((e) => {
+        {entries.map((e, i) => {
           const st = STATUS[e.status]
           const cardStyle = st.color
             ? { borderColor: mix(st.color, 55, 'var(--border)'), backgroundColor: mix(st.color, 6) }
             : undefined
+          // У презентационного блока title пуст, а содержимое лежит в content —
+          // берём подпись и тело оттуда, иначе карточка выходит безымянной и пустой.
+          const block = !isStepBlock(e)
+          const body = block ? (e.type === 'text' ? String(e.content?.md ?? '') : '') : e.desc
           return (
-            <div key={`${e.status}:${e.title}`} style={cardStyle} className={`rounded-lg border p-4 ${st.color ? '' : 'border-border opacity-60'}`}>
+            <div key={`${e.status}:${e.type ?? 'step'}:${i}`} style={cardStyle} className={`rounded-lg border p-4 ${st.color ? '' : 'border-border opacity-60'}`}>
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`text-[14.5px] font-semibold text-ink ${e.status === 'removed' ? 'line-through opacity-70' : ''}`}>{e.title}</span>
-                <StepLevelBadge level={e.level} lang={lang} />
+                <span className={`text-[14.5px] font-semibold text-ink ${e.status === 'removed' ? 'line-through opacity-70' : ''}`}>{blockLabel(e)}</span>
+                {!block && <StepLevelBadge level={e.level} lang={lang} />}
                 {st.key && st.color && (
                   <span
                     className="rounded border px-1.5 py-0.5 text-[10.5px] font-medium"
@@ -201,8 +185,8 @@ function ListDiff({ fromSteps, toSteps, lang }: { fromSteps: CmpStep[]; toSteps:
                   </span>
                 )}
               </div>
-              {e.status !== 'removed' && e.desc && <Markdown className="mt-1">{e.desc}</Markdown>}
-              {e.status === 'removed' && e.desc && <div className="mt-1 text-[13px] text-ink-2 line-through opacity-70">{e.desc}</div>}
+              {e.status !== 'removed' && body && <Markdown className="mt-1">{body}</Markdown>}
+              {e.status === 'removed' && body && <div className="mt-1 whitespace-pre-wrap text-[13px] text-ink-2 line-through opacity-70">{body}</div>}
               {e.status === 'changed' && e.before && (
                 <div className="mt-2 space-y-1 border-l-2 border-warn/40 pl-2.5 text-[12px] text-ink-2">
                   {e.changes.includes('level') && (

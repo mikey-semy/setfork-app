@@ -10,6 +10,10 @@ export type SerStep = {
   // Не-step блоки (text/image) несут type + content, .md-файл им не пишется.
   type?: string // 'step' (или undefined) | 'text' | 'image'
   content?: Record<string, unknown>
+  // Стабильная идентичность блока сквозь версии. Пишем ТОЛЬКО когда есть:
+  // строки без block_id (данные старше поля) дают байт-в-байт прежний list.json,
+  // поэтому golden-паритет с Rust не ломается.
+  blockId?: string
   title: string
   desc: string
   command: string
@@ -150,8 +154,10 @@ export function parseList(json: string): SerVersion | null {
       const s = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
       const type = typeof s.type === 'string' && s.type !== 'step' ? s.type : undefined
       const content = type && s.content && typeof s.content === 'object' ? (s.content as Record<string, unknown>) : undefined
+      const blockId = typeof s.blockId === 'string' && s.blockId ? s.blockId : undefined
       return {
         n: typeof s.n === 'number' ? s.n : i + 1,
+        ...(blockId ? { blockId } : {}),
         ...(type ? { type } : {}),
         ...(content ? { content } : {}),
         title: asStr(s.title),

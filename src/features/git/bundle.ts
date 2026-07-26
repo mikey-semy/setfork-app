@@ -34,6 +34,9 @@ async function loadVersions(templateId: string, ordered: boolean, title: LocaleT
       const isStep = !s.type || s.type === 'step'
       return {
         n: s.n,
+        // Идентичность блока — сразу после n; только когда есть (иначе байты list.json
+        // меняются у старых списков и рушится golden с Rust).
+        ...(s.blockId ? { blockId: s.blockId } : {}),
         // type/content — только у не-step блоков, сразу после n (порядок ключей = Rust bundle.rs).
         ...(isStep ? {} : { type: s.type, content: (s.content ?? {}) as Record<string, unknown> }),
         title: pick(s.title),

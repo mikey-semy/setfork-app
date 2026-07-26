@@ -118,6 +118,7 @@ export const listStore: ListStore = {
         input.steps.map((s, i) => ({
           versionId: ver.id,
           n: i + 1,
+          blockId: s.blockId ?? null,
           type: s.type ?? 'step',
           content: s.content ?? {},
           title: s.title,
@@ -149,6 +150,8 @@ export const listStore: ListStore = {
         input.steps.map((s, i) => ({
           versionId: ver.id,
           n: i + 1,
+          // Идентичность переносится из прошлой версии — новый снимок, тот же блок.
+          blockId: s.blockId ?? null,
           type: s.type ?? 'step',
           content: s.content ?? {},
           title: s.title,

@@ -33,10 +33,13 @@ export function isLang(v: unknown): v is Lang {
   return typeof v === 'string' && (LOCALES as readonly string[]).includes(v)
 }
 
-/** Резолв locale-текста с фолбэком: запрошенный → en → первый доступный. */
+/** Резолв locale-текста с фолбэком: запрошенный → en → первый доступный.
+ *  Фолбэк по ПУСТОТЕ, а не по nullish: `{ ru: '', en: 'Soak gelatin' }` должен
+ *  дать английский. С `??` пустая строка не nullish и глушила фолбэк — пункт
+ *  рендерился как голое «1.» без текста (видно было в диффе версий). */
 export function tr(text: LocaleText | null | undefined, lang: Lang): string {
   if (!text) return ''
-  return text[lang] ?? text.en ?? Object.values(text).find(Boolean) ?? ''
+  return text[lang] || text.en || Object.values(text).find(Boolean) || ''
 }
 
 type Dict = Record<string, LocaleText>
@@ -411,6 +414,21 @@ const DICT = {
   resetFilters: { en: 'Reset filters', ru: 'Сбросить фильтры' },
   about: { en: 'About', ru: 'О списке' },
   currentVersion: { en: 'current', ru: 'текущая' },
+  viewVersion: { en: 'View this version', ru: 'Посмотреть версию' },
+  // Комментарии к пункту (и к выделенной части его текста)
+  commentAdd: { en: 'Comment on this item', ru: 'Прокомментировать пункт' },
+  commentPlaceholder: { en: 'What is unclear or worth fixing?', ru: 'Что непонятно или стоит поправить?' },
+  commentSend: { en: 'Send', ru: 'Отправить' },
+  commentCancel: { en: 'Cancel', ru: 'Отмена' },
+  commentReply: { en: 'Reply', ru: 'Ответить' },
+  commentResolve: { en: 'Resolve', ru: 'Решено' },
+  commentUnresolve: { en: 'Reopen', ru: 'Вернуть' },
+  commentResolvedCount: { en: 'Resolved', ru: 'Решено' },
+  commentOnSelection: { en: 'On selection', ru: 'К выделенному' },
+  commentOnBlock: { en: 'Comment on the whole item', ru: 'Комментарий ко всему пункту' },
+  commentReanchored: { en: 'Text changed — re-anchored', ru: 'Текст изменился — привязка восстановлена' },
+  commentOrphaned: { en: 'The quoted text is gone — showing it as saved', ru: 'Процитированный текст исчез — показан как был' },
+  restoreVersion: { en: 'Restore this version', ru: 'Вернуть эту версию' },
   accept: { en: 'Accept', ru: 'Принять' },
   reject: { en: 'Reject', ru: 'Отклонить' },
   noSuggestions: { en: 'No suggestions yet.', ru: 'Пока нет предложений.' },
