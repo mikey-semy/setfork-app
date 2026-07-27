@@ -29,14 +29,14 @@ const items = () =>
 
 describe('пометка сквозь хранилище', () => {
   it('create → чтение версии: пометка и вопрос на месте, у второго шага пусто', async () => {
-    const list = await listStore.create({ ownerId, slug: 'bread', title: { ru: 'Хлеб' }, desc: {}, tags: ['еда'], ordered: true, visibility: 'public', status: 'draft', note: 'seed', steps: items() })
+    const list = await listStore.create({ ownerId, slug: 'bread', title: { ru: 'Хлеб' }, desc: {}, tags: ['еда'], ordered: true, visibility: 'public', status: 'draft', origin: 'ai_draft', note: 'seed', steps: items() })
     const v = await listStore.getVersion(list.id, 1)
     expect(v?.steps[0]).toMatchObject({ needsHuman: true, needsHumanAsk: { ru: 'Сколько стоит у вас?' } })
     expect(v?.steps[1]).toMatchObject({ needsHuman: false, needsHumanAsk: {} })
   })
 
   it('addVersion: человек ответил — пометка снята и вопрос погашен', async () => {
-    const list = await listStore.create({ ownerId, slug: 'bread-2', title: { ru: 'Хлеб 2' }, desc: {}, tags: ['еда'], ordered: true, visibility: 'public', status: 'draft', note: 'seed', steps: items() })
+    const list = await listStore.create({ ownerId, slug: 'bread-2', title: { ru: 'Хлеб 2' }, desc: {}, tags: ['еда'], ordered: true, visibility: 'public', status: 'draft', origin: 'ai_draft', note: 'seed', steps: items() })
     const answered = items().map((s, i) => (i === 0 ? { ...s, needsHuman: false, needsHumanAsk: {}, desc: { ru: 'Мука 80 ₽/кг в Кирове' } } : s))
     await listStore.addVersion(list.id, { note: 'ответ из опыта', steps: answered, authorId: ownerId })
     const v2 = await listStore.getVersion(list.id, 2)
