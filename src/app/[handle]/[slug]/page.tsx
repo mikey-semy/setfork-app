@@ -28,6 +28,8 @@ import { getRoster } from '@/shared/ai/roster'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews, getVersionSteps } from '@/features/library/queries'
+import { getListLineage, isLineageExact } from '@/features/library/lineage'
+import { ListLineage } from '@/features/library/ListLineage'
 import { getPollResults } from '@/features/polls/queries'
 import { PollBlock, type PollContent } from '@/features/polls/PollBlock'
 import { VideoEmbed } from '@/features/library/VideoEmbed'
@@ -194,6 +196,13 @@ export default async function ListPage({
   let stepSeq = 0
   const displayNum = steps.map((s) => (isStepBlock(s) ? ++stepSeq : 0))
   const contributors = await getContributors(tpl.id, tpl.ownerId)
+  // Родословная: как список появился (запрос, участники витка, прецеденты, разбор критика,
+  // где не было опоры) и какие варианты не выбрали. Ничего не рисуется у списков, сделанных
+  // руками — там объяснять нечего.
+  const [lineage, lineageExact] = readOnlyView ? [null, false] : await Promise.all([getListLineage(tpl.id), isLineageExact(tpl.id)])
+  // Имена специалистов для родословной: id вроде 'coder' человеку ничего не говорят.
+  // Ростер тянем только если родословная есть — на рукотворных списках лишнего запроса нет.
+  const lineageNames = lineage ? Object.fromEntries((await getRoster()).map((e) => [e.id, lang === 'ru' ? e.nameRu : e.nameEn])) : undefined
   const base = `/${owner}/${slug}`
   // Монетизация/трафик (админка): тумблеры трекинга + FTC-плашка, если среди
   // ссылок списка (всех, не только отфильтрованных ?find=) есть партнёрские.
@@ -749,6 +758,8 @@ export default async function ListPage({
                 </span>
                 {!isOwner && <ReportButton templateId={tpl.id} lang={lang} />}
               </div>
+
+              {lineage && <ListLineage lineage={lineage} exact={lineageExact} gnomeNames={lineageNames} lang={lang} />}
 
               {contributors.length > 0 && (
                 <div className="mt-4 border-t border-border pt-3">
