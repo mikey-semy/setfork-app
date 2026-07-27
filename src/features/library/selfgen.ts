@@ -14,6 +14,7 @@ import { enqueueJob } from '@/shared/jobs/queue'
 import { listStore } from './list-store'
 import { uniqueSlug } from './slug'
 import { log } from '@/shared/observability'
+import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { spotlight } from '@/shared/ai/spotlight'
 import { detectTextLang } from '@/shared/lib/translit'
@@ -123,6 +124,18 @@ export async function selfGenerateOne(expertId: string, topicOverride?: string):
   const lang = detectTextLang(topic)
   const draft = await generateListDraft(topic, lang, { userId, refType: 'selfgen' })
   if (!draft || !draft.items.length) return { error: 'generation-failed', topic }
+
+  // ПОЧТИ-ДУБЛЬ: тема была новой по заголовкам, но список мог получиться клоном уже
+  // существующего другими словами. Проверка кодом (шинглы+Жаккар), без вызовов модели —
+  // дешевле, чем потом чистить свалку похожих списков.
+  const dup = await findExistingNearDuplicate(
+    { title: draft.title || topic, items: draft.items.map((it) => it.title), tags: draft.tags },
+    { ownerId: userId },
+  )
+  if (dup.match) {
+    log.info('selfgen: near-duplicate, not creating', { topic, of: dup.match.title, score: dup.match.score })
+    return { error: 'near-duplicate', topic }
+  }
 
   const slug = await uniqueSlug(draft.title || topic, userId)
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
