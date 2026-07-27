@@ -37,10 +37,34 @@ const loc = (v: LocaleText | null | undefined, lang: Lang): string => {
   return v[lang] ?? v.en ?? Object.values(v).find(Boolean) ?? ''
 }
 
-/** Сервисный аккаунт садовника (создаётся при первом прогоне; входа у него нет). */
+/**
+ * Сервисный аккаунт садовника (создаётся при первом прогоне; входа у него нет).
+ *
+ * Существующую строку ДОЧИНИВАЕМ: на проде садовник был создан раньше, чем появилась
+ * пометка account_type, и после деплоя остался бы «человеком» — то есть ровно то, что
+ * ADR-0004 запрещает. Разовым скриптом такое чинить нельзя: он забывается, а инвариант
+ * должен держать код. Апдейт узкий (только пустые/дефолтные поля) и идемпотентный —
+ * заданные вручную значения не перетираем.
+ */
 export async function ensureGardenerUser(): Promise<{ id: string }> {
-  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.handle, GARDENER_HANDLE))
-  if (existing) return existing
+  const [existing] = await db
+    .select({ id: users.id, accountType: users.accountType, profession: users.profession, location: users.location })
+    .from(users)
+    .where(eq(users.handle, GARDENER_HANDLE))
+  if (existing) {
+    if (existing.accountType !== 'agent' || !existing.profession || !existing.location) {
+      await db
+        .update(users)
+        .set({
+          accountType: 'agent',
+          profession: existing.profession || 'Gardener',
+          location: existing.location || HOME_REALM,
+        })
+        .where(eq(users.id, existing.id))
+      log.info('gardener user marked as service account', { id: existing.id })
+    }
+    return { id: existing.id }
+  }
   const [created] = await db
     .insert(users)
     .values({
