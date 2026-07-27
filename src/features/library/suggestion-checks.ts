@@ -55,8 +55,13 @@ export async function suggestionChecks(input: {
   /** Черновик: слить нельзя, пока автор не отметил готовность. */
   draft: boolean
   blockingReview: boolean
-  /** Нерешённые обсуждения на пунктах — блокируют, как и вердикт «нужны правки». */
+  /** Нерешённые обсуждения на пунктах — блокируют, если так настроен список. */
   unresolvedThreads: number
+  /** Настройка списка: блокировать ли слияние нерешёнными обсуждениями. */
+  blockOnUnresolved: boolean
+  /** Одобрений собрано / требуется по настройке (0 = не требуются). */
+  approvals: number
+  requiredApprovals: number
   moderation: string
   lang: 'ru' | 'en'
 }): Promise<CheckItem[]> {
@@ -109,17 +114,31 @@ export async function suggestionChecks(input: {
       : { key: 'review', status: 'ok', title: say('Блокирующих ревью нет', 'No blocking reviews') },
   )
 
-  // 6. Нерешённые обсуждения на пунктах.
+  // 6. Нерешённые обсуждения на пунктах. Блокируют, только если так настроен
+  //    список: иначе выключенная настройка всё равно красила бы проверку красным.
   out.push(
     input.unresolvedThreads > 0
       ? {
           key: 'threads',
-          status: 'fail',
+          status: input.blockOnUnresolved ? 'fail' : 'warn',
           title: say(`Нерешённых обсуждений: ${input.unresolvedThreads}`, `Unresolved conversations: ${input.unresolvedThreads}`),
-          detail: say('закройте их или отметьте решёнными', 'close them or mark them resolved'),
+          detail: input.blockOnUnresolved
+            ? say('закройте их или отметьте решёнными', 'close them or mark them resolved')
+            : say('слияние не блокируют — так настроен список', 'they do not block merging — per list settings'),
         }
       : { key: 'threads', status: 'ok', title: say('Все обсуждения решены', 'All conversations resolved') },
   )
+
+  // 6б. Требуемые одобрения — тот же гейт, что у экшена слияния.
+  if (input.requiredApprovals > 0) {
+    const enough = input.approvals >= input.requiredApprovals
+    out.push({
+      key: 'approvals',
+      status: enough ? 'ok' : 'fail',
+      title: say(`Одобрений: ${input.approvals} из ${input.requiredApprovals}`, `Approvals: ${input.approvals} of ${input.requiredApprovals}`),
+      detail: enough ? undefined : say('нужны одобрения рецензентов', 'reviewer approvals are required'),
+    })
+  }
 
   // 7. Модерация списка: во flagged/hidden принимать правку бессмысленно.
   if (input.moderation === 'flagged' || input.moderation === 'hidden') {

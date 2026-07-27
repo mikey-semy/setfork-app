@@ -14,7 +14,7 @@ import { findPrecedents, type Precedent, type StepPrecedent } from './retrieval'
 import { getRoster, type Expert } from './roster'
 import { voiceLine, type VoiceKind } from './voice'
 import { gnomeCard, rivalryHints } from './gnome-character'
-import { pickPrecedents } from './precedent-filter'
+import { pickPrecedents, pickPrecedentsDetailed } from './precedent-filter'
 import { craftRules } from './triples'
 import { lawBlock } from './list-laws'
 import { pushMessage, type GenMessageKind } from './generation-messages'
@@ -74,6 +74,15 @@ export interface CouncilProvenance {
   /** Разбор критика (срез 2000) — раньше терялся вовсе. */
   critique?: string
   /**
+   * ГДЕ НЕ БЫЛО ОПОРЫ — структурно, без единого лишнего вызова модели.
+   *
+   * Фолбэк доменной линзы («по твоему ремеслу в библиотеке ничего нет — вот общие
+   * прецеденты») делает промпт непустым, но маскирует пробел: эксперт пишет так же
+   * уверенно, как если бы опора была. Здесь перечислено, у кого опоры не было и чего не
+   * хватало витку в целом — читается как «вот тут мы додумывали».
+   */
+  noBasis?: string[]
+  /**
    * Карта «буква анонимного черновика → автор». Критик и синтезатор имён НЕ видят
    * (анонимность обязательна: иначе оценка плывёт к репутации, а не к качеству текста),
    * но для скоркарта и для людей соответствие нужно — раньше оно вычислялось для
@@ -82,8 +91,38 @@ export interface CouncilProvenance {
   draftAuthors?: { letter: string; who: string }[]
 }
 
+/** Черновик эксперта как есть — сырьё для замера многогранности (см. generation_drafts). */
+export interface CouncilDraft {
+  letter: string
+  who: string
+  text: string
+}
+
+
+/** Буква черновика в анонимном блоке: A, B, C… — единственное, чем он подписан. */
+export const draftLetter = (i: number) => String.fromCharCode(65 + i)
+
+/**
+ * Анонимный блок черновиков для критика и старейшины.
+ *
+ * ИНВАРИАНТ: в этот текст не попадает НИЧЕГО об авторстве — ни id гнома, ни имя, ни гильдия.
+ * Это не стилистика, а защита от provenance paradox (arXiv 2603.18043): как только оценщик
+ * видит, кто написал, оценка плывёт к репутации автора, и маршрутизация начинает выбирать
+ * худших. Функция вынесена наружу именно затем, чтобы инвариант проверялся тестом, а не
+ * держался на внимательности при следующей правке промпта.
+ *
+ * Черновики передаются СЫРЬЁМ (не через firstJson): они свободный текст, и обрезка по первой
+ * JSON-скобке порезала бы шаги вида `awk '{print $1}'` или `${HOME}/bin`.
+ */
+export function anonymizeDrafts(drafts: { text: string }[]): string {
+  return drafts.map((d, i) => `--- DRAFT ${draftLetter(i)} ---\n${d.text.trim()}`).join('\n\n')
+}
+
 /** Результат совета: готовый список (+провенанс), ИЛИ уточняющие вопросы (диалог), ИЛИ null (ошибка/выкл → фолбэк). */
-export type CouncilResult = (GeneratedList & { provenance?: CouncilProvenance }) | { clarify: string[] } | null
+export type CouncilResult =
+  | (GeneratedList & { provenance?: CouncilProvenance; drafts?: CouncilDraft[] })
+  | { clarify: string[] }
+  | null
 
 /** Мультимодельный «совет гномов». null при ошибке/выкл — caller фолбэкает на generateListDraft. */
 export async function generateListCouncil(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<CouncilResult> {
@@ -417,6 +456,10 @@ ${roster}`,
 
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
   const expertProv: NonNullable<CouncilProvenance['experts']> = []
+  // Пробелы опоры собираем ПО ХОДУ витка: потом эти данные не восстановить.
+  const noBasis: string[] = []
+  if (!precedents.length) noBasis.push('в библиотеке не нашлось ни одного прецедента по теме')
+  if (!rules.length) noBasis.push('база ремесленных правил по теме пуста')
   const draftJobs = experts.map((e, i) => {
     // Своя модель эксперта (если задана в админке) сильнее пула — иначе раздаём пул по
     // кругу. Карантин бьёт и по личной модели гнома — падающая заменяется пулом.
@@ -433,9 +476,13 @@ ${roster}`,
     emit('draft', vl(e.id, 'draft') ?? say('drafting the list…', 'набрасывает список…'), e.id, gtitle(e))
     // Каждому — прецеденты ЕГО доменов: повар видит рецепты, а не деплой (этап 1 базы знаний).
     // Та же доменная линза режет и шаги-прецеденты (pickPrecedents дженерик по tags).
-    const mine = pickPrecedents(precedents, e.domains)
+    const mineInfo = pickPrecedentsDetailed(precedents, e.domains)
+    const mine = mineInfo.items
     const mySteps = pickPrecedents(stepPrecedents, e.domains)
     expertProv.push({ id: e.id, model: expertModel, precedents: mine.map((p) => p.title) })
+    // Опоры по ЕГО ремеслу не нашлось — фолбэк выдал общие прецеденты. Записываем, иначе
+    // в провенансе это выглядит как обычная работа по прецедентам.
+    if (!mineInfo.matched) noBasis.push(`${e.id}: нет прецедентов по доменам ${e.domains.join('/')}`)
     return run(model, sys, `Draft the list.\n${topic}${loreBlock(mine)}${stepsBlock(mySteps)}${rulesBlock}${webLore}`)
   })
   emit('innovate', vl('innovator', 'innovate') ?? say('Exploring a bold, non-obvious angle…', 'Ищу смелый неочевидный ход…'), 'innovator', say('Innovator', 'Новатор'))
@@ -457,14 +504,11 @@ ${roster}`,
   ]
   const alive = slots.filter((s): s is { text: string; who: string } => Boolean(s.text))
   if (alive.length === 0) return null // всё упало → пусть caller фолбэкнет
-  const letterOf = (i: number) => String.fromCharCode(65 + i)
-  // Черновики — свободный текст (не JSON): передаём СЫРЬЁМ. firstJson здесь порезал бы шаги со скобками
-  // (напр. `awk '{print $1}'`, `${HOME}/bin`) — только для JSON-ответа распорядителя/синтеза.
-  const anon = alive.map((s, i) => `--- DRAFT ${letterOf(i)} ---\n${s.text.trim()}`).join('\n\n')
+  const anon = anonymizeDrafts(alive)
   // Родословная авторства: буква ↔ гном. Анонимность для критика и синтезатора при этом
   // СОХРАНЯЕТСЯ — им уходит только `anon`, без имён (иначе оценка поплыла бы к репутации,
   // а не к качеству текста). Карту храним в провенансе, для людей и для скоркарта.
-  const draftAuthors = alive.map((s, i) => ({ letter: letterOf(i), who: s.who }))
+  const draftAuthors = alive.map((s, i) => ({ letter: draftLetter(i), who: s.who }))
 
   // 4) Адвокат дьявола (Janis: обязательная оппозиция). Кодексы гильдий — как мерило:
   // объединением и БЕЗ авторства (черновики анонимны сознательно — иначе критик судит
@@ -501,6 +545,9 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
     if (list)
       return {
         ...list,
+        // Черновики отдаём НАРУЖУ, а не в провенанс: провенанс уезжает клиенту, а полные
+        // черновики нужны только серверу — для замера многогранности (generation_drafts).
+        drafts: alive.map((s, i) => ({ letter: draftLetter(i), who: s.who, text: s.text })),
         provenance: {
           engine: 'council',
           depth: 'council',
@@ -510,6 +557,7 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
           precedentSteps: stepPrecedents.map((s) => s.content.slice(0, 120)),
           craftRules: rules.length ? rules : undefined,
           experts: expertProv,
+          noBasis: noBasis.length ? noBasis : undefined,
           draftAuthors,
           models: { steward: fast, innovator: pool[0], critic: fast, elder: base },
           webSeek: settings.councilWebSeek,

@@ -20,6 +20,7 @@ import { snapshotSteps } from '@/features/git/snapshot-steps'
 import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
 import { diffSteps, rowsToCmp } from '@/features/library/diff'
 import { DiffViewToggle } from '@/features/library/DiffViewToggle'
+import { SuggestionResult } from '@/features/library/SuggestionResult'
 import { SuggestionTabs, type SuggestionTab } from '@/features/library/SuggestionTabs'
 import { SuggestionTitle } from '@/features/library/SuggestionTitle'
 import { ChecksList } from '@/features/library/ChecksList'
@@ -27,6 +28,7 @@ import { CommitsList } from '@/features/library/CommitsList'
 import { DraftToggle } from '@/features/library/DraftToggle'
 import { PendingReviewBar } from '@/features/library/PendingReviewBar'
 import { suggestionChecks } from '@/features/library/suggestion-checks'
+import { withPrDefaults } from '@/features/library/pr-settings'
 import { blocksFrom } from '@/features/library/suggestion-blocks'
 import { closingRefs } from '@/features/library/closing-refs'
 import { MergedPanel } from '@/features/library/MergedPanel'
@@ -127,7 +129,10 @@ export default async function SuggestionThreadPage({
     ? threads.reduce((n, th) => n + th.comments.filter((c) => c.pending).length, 0)
     : 0
   // Нерешённые считаем из УЖЕ загруженных тредов: второй запрос дал бы то же число.
-  const unresolvedThreads = threads.filter((th) => !th.resolvedAt).length
+  // Условие — ровно то же, что у гейта (countUnresolvedThreads): тред из одних
+  // черновиков не блокирует, иначе свой неотправленный черновик прятал бы кнопку
+  // слияния от того, кто его пишет, а экшен при этом слить разрешал.
+  const unresolvedThreads = threads.filter((th) => !th.resolvedAt && th.comments.some((c) => !c.pending)).length
   const [reviews, watchState, watchCount, assignees, reviewRequests, customLabels, msOptions, curMilestone] = await Promise.all([
     getSuggestionReviews(sug.id),
     session ? getWatchState(session.userId, meta.id) : Promise.resolve(null),
@@ -185,7 +190,15 @@ export default async function SuggestionThreadPage({
         : t('statusOpen', lang)
   // Вкладка из ?tab= — адрес ссылабелен (можно послать ссылку сразу на изменения).
   const tab: SuggestionTab =
-    sp.tab === 'files' ? 'files' : sp.tab === 'checks' ? 'checks' : sp.tab === 'commits' && sug.branchRef ? 'commits' : 'conversation'
+    sp.tab === 'files'
+      ? 'files'
+      : sp.tab === 'result'
+        ? 'result'
+        : sp.tab === 'checks'
+          ? 'checks'
+          : sp.tab === 'commits' && sug.branchRef
+            ? 'commits'
+            : 'conversation'
   // Вид диффа — ТОТ ЖЕ ?view=, что на сравнении версий: одно изменение выглядит
   // одинаково, откуда бы на него ни смотрели.
   const view = sp.view === 'list' ? 'list' : 'code'
@@ -216,6 +229,10 @@ export default async function SuggestionThreadPage({
 
   // Проверки правки: сигналы, уже посчитанные выше, передаём аргументами —
   // считать их второй раз значило бы разойтись с тем, что показано на странице.
+  // Настройки предложений — ОДИН источник и для проверок, и для причин блокировки,
+  // и для экшенов (те читают их сами из списка).
+  const prs = withPrDefaults(meta.prSettings)
+  const approvals = reviews.filter((r) => r.verdict === 'approve').length
   const checks = await suggestionChecks({
     items: items as unknown[],
     changedCount,
@@ -226,6 +243,9 @@ export default async function SuggestionThreadPage({
     draft: sug.draft,
     blockingReview: reviews.some((r) => r.blocking),
     unresolvedThreads,
+    blockOnUnresolved: prs.blockOnUnresolved,
+    approvals,
+    requiredApprovals: prs.requiredApprovals,
     moderation: meta.moderation,
     lang: lang === 'ru' ? 'ru' : 'en',
   })
@@ -250,9 +270,15 @@ export default async function SuggestionThreadPage({
   // Почему нельзя слить. Раньше блокирующее ревью просто заставляло экшен молча
   // вернуться: пользователь жал кнопку и не получал ничего. Теперь причина названа,
   // а кнопки нет — состояние видно до клика.
+  // Причины считаем ПО ТЕМ ЖЕ настройкам, что и экшены. Иначе настройка «не
+  // блокировать при нерешённых обсуждениях» выключалась бы только наполовину
+  // (экшен пропускает, а кнопки нет), а «требовать N одобрений» — наоборот: кнопка
+  // есть, экшен молча отказывает. Оба перекоса уже были на этой странице.
   const blockReasons: string[] = []
   if (reviews.some((r) => r.blocking)) blockReasons.push(t('prBlockedReview', lang))
-  if (unresolvedThreads > 0) blockReasons.push(`${t('prBlockedThreads', lang)}: ${unresolvedThreads}`)
+  if (prs.blockOnUnresolved && unresolvedThreads > 0) blockReasons.push(`${t('prBlockedThreads', lang)}: ${unresolvedThreads}`)
+  if (prs.requiredApprovals > approvals)
+    blockReasons.push(`${t('prBlockedApprovals', lang)}: ${approvals}/${prs.requiredApprovals}`)
 
   const reviewPanel =
     sug.status === 'open' ? (
@@ -330,7 +356,13 @@ export default async function SuggestionThreadPage({
           commitsCount={commits ? commits.length : null}
           filesCount={changedCount}
           checksFailed={checksFailed}
-          labels={{ conversation: t('conversationTab', lang), commits: t('versionsTab', lang), checks: t('checksTab', lang), files: t('proposedChanges', lang) }}
+          labels={{
+            conversation: t('conversationTab', lang),
+            commits: t('versionsTab', lang),
+            checks: t('checksTab', lang),
+            files: t('proposedChanges', lang),
+            result: t('resultTab', lang),
+          }}
         />
 
         {/* Две колонки: содержимое вкладки + боковая панель (общий примитив). */}
@@ -427,6 +459,18 @@ export default async function SuggestionThreadPage({
         {reviewPanel}
         </>)}
 
+        {/* ИТОГ: каким станет список, если предложение принять. Решение принимают по
+            результату, а не по плюсам и минусам — именно поэтому предложения от
+            компании копились непринятыми: посмотреть результат было негде. */}
+        {tab === 'result' && (
+          <>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
+              {t('resultTab', lang)} · {lang === 'ru' ? `станет v${meta.currentVersion + 1}` : `becomes v${meta.currentVersion + 1}`}
+            </div>
+            <SuggestionResult items={items} lang={lang} ordered={meta.ordered} />
+          </>
+        )}
+
         {/* Обсуждение — вкладка по умолчанию. Заметка правки и ревью видны здесь,
             чтобы разговор шёл при полном контексте, как в Conversation у GitHub. */}
         {tab === 'conversation' && (<>
@@ -446,6 +490,7 @@ export default async function SuggestionThreadPage({
             </div>
           </div>
         )}
+
         <SuggestionTimeline
           events={timeline}
           lang={lang}

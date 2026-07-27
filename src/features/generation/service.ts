@@ -1,15 +1,16 @@
 import 'server-only'
 import { and, eq, gte, sql } from 'drizzle-orm'
 import type { Lang } from '@/shared/i18n'
-import { aiUsage, db, generationCandidates, generations, users, type CandidateItem } from '@/shared/db'
+import { aiUsage, db, generationCandidates, generationDrafts, generations, users, type CandidateItem } from '@/shared/db'
 import { generateChangeNote, generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
 import { backfillRecipeSections } from '@/shared/ai/list-kind'
 import { toDetail } from '@/shared/ai/detail-level'
-import { generateListCouncil, type CouncilProvenance } from '@/shared/ai/council'
+import { generateListCouncil, type CouncilDraft, type CouncilProvenance } from '@/shared/ai/council'
 import { setClarify } from '@/shared/ai/council-clarify'
 import { pushMessage, setGenerationStatus } from '@/shared/ai/generation-messages'
 import { recordUsage } from '@/shared/ai/usage'
 import { getAiSettings } from '@/shared/settings/ai'
+import { log } from '@/shared/observability'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { parseTags } from '@/features/library/slug'
 
@@ -115,7 +116,7 @@ export async function addCandidate(
       }
     }
 
-    let draft: (GeneratedList & { provenance?: CouncilProvenance }) | null = null
+    let draft: (GeneratedList & { provenance?: CouncilProvenance; drafts?: CouncilDraft[] }) | null = null
     if (useCouncil) {
       // #6: под-вызовы совета помечаем refType 'council' — админ-«Расход» отличает их от одиночных.
       const res = await generateListCouncil(query, lang, { ...genOpts, refType: 'council' })
@@ -198,6 +199,19 @@ export async function addCandidate(
         target: [generationCandidates.generationId, generationCandidates.idx],
         set: { title, desc: draft.desc ?? '', summary, items, provenance, hint },
       })
+    // ЧЕРНОВИКИ СОВЕТА — на диск. Без них многогранность («сколько своих граней принёс
+    // каждый и сколько потерял синтез») замерить нечем: раньше они выбрасывались вместе с
+    // памятью вызова. Пишем ПОСЛЕ кандидата: FK на generation, порядок вставки безразличен,
+    // но так неудачная запись замера не мешает доставке результата человеку.
+    if (draft.drafts?.length) {
+      try {
+        await db.insert(generationDrafts).values(
+          draft.drafts.map((d) => ({ generationId, idx, letter: d.letter, who: d.who, text: d.text.slice(0, 20_000) })),
+        )
+      } catch (e) {
+        log.warn?.('generation drafts not saved', { generationId, err: e instanceof Error ? e.message : String(e) })
+      }
+    }
     delivered = true
     await setGenerationStatus(generationId, 'done')
     return true

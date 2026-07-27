@@ -200,6 +200,7 @@ const DICT = {
   prLinkedIssuesHint: { en: 'They close when this suggestion is merged.', ru: 'Закроются при слиянии предложения.' },
   prBlockedThreads: { en: 'unresolved conversations on items', ru: 'нерешённые обсуждения на пунктах' },
   prBlockedReview: { en: 'a reviewer requested changes', ru: 'рецензент запросил правки' },
+  prBlockedApprovals: { en: 'not enough approvals', ru: 'не хватает одобрений' },
   prTitlePlaceholder: { en: 'What does this change?', ru: 'Что меняет это предложение?' },
   cmMore: { en: 'More', ru: 'Ещё' },
   cmCopyLink: { en: 'Copy link', ru: 'Скопировать ссылку' },
@@ -357,6 +358,7 @@ const DICT = {
   whyLabel: { en: 'Why', ru: 'Зачем' },
   // Пометка «здесь нужен человек»: слово «гном» в пользовательском тексте не звучит.
   needsHumanLabel: { en: 'A person is needed here', ru: 'Здесь нужен человек' },
+  resultTab: { en: 'Result', ru: 'Итог' },
   needsHumanAskLabel: { en: 'What to ask a person', ru: 'Что спросить у человека' },
   needsHumanAskPlaceholder: { en: 'What does this cost where you live?', ru: 'Сколько это стоит в вашем городе?' },
   needsHumanAnswer: { en: 'answer from experience', ru: 'ответить из опыта' },

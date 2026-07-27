@@ -523,14 +523,22 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   })
   if (!sug || sug.status !== 'open' || !sug.branchRef) return
   if (sug.draft) return // резолвер конфликтов тоже завершается слиянием — см. mergeBranchPr
-  const prs = withPrDefaults(sug.template.prSettings)
-  if (await hasBlockingReview(sug.id)) return
-  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+  // Гейты — ВСЕ те же, что у обычного слияния. Резолвер конфликтов тоже пишет в
+  // main, поэтому пропустить здесь хоть один значило бы дать обход: собери конфликт
+  // — и требуемые одобрения больше не нужны.
+  const prs = withPrDefaults(tpl.prSettings)
+  if (await hasBlockingReview(sug.id)) return
+  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
+  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals) return
 
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
+  // Линейная история: разрешение конфликтов создаёт merge-коммит по определению, а
+  // значит при этой настройке путь закрыт — сначала «Обновить из main», потом ff.
+  // Текст ошибки `not-linear` ровно это и советует.
+  if (prs.linearOnly) redirect(`${path}?e=not-linear`)
 
   const isChoice = (v: unknown): v is 'ours' | 'theirs' => v === 'ours' || v === 'theirs'
   let stepChoices: Record<string, 'ours' | 'theirs'> = {}
@@ -593,36 +601,57 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
 }
 
 // ── Автор списка: принять предложение → новая версия ─────────────────
-export async function acceptSuggestion(suggestionId: string): Promise<void> {
-  const session = await requireSession()
-  const sug = await db.query.suggestions.findFirst({
-    where: (s) => eq(s.id, suggestionId),
-    with: { template: true },
-  })
-  if (!sug || sug.status !== 'open' || sug.template.ownerId !== session.userId) return
-  if (sug.draft) return // черновик не принимаем — см. mergeBranchPr
-  // Гейты — по настройкам списка (раздел «Предложения»), кроме блокирующего ревью:
-  // оно не настройка, а смысл вердикта «просит доработать».
+/**
+ * ЯДРО принятия правки — без сессии и без редиректа.
+ *
+ * Вынесено из экшена, потому что принимать правки нужно не только со страницы: у владельца
+ * копятся правки от компании, и разбирать их удобно из ассистента (MCP). Копировать эти пять
+ * шагов во второй раз нельзя — копии уже расходились (в садовнике терялся `section`).
+ *
+ * Возвращает результат вместо редиректа: вызывающий сам решает, куда вести человека.
+ */
+export async function applySuggestion(
+  suggestionId: string,
+  actorUserId: string,
+): Promise<{ ok: true; templateId: string; slug: string; version: number } | { ok: false; reason: string }> {
+  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+  if (!sug) return { ok: false, reason: 'not found' }
+  if (sug.status !== 'open') return { ok: false, reason: `already ${sug.status}` }
+  if (sug.template.ownerId !== actorUserId) return { ok: false, reason: 'not your list' }
+  if (sug.draft) return { ok: false, reason: 'draft' } // черновик не принимаем — см. mergeBranchPr
+  // Запрошенные правки блокируют принятие — иначе вердикт «просит доработать»
+  // был бы декоративным. Разблокировать может сам рецензент, сменив свой голос.
+  if (await hasBlockingReview(sug.id)) return { ok: false, reason: 'a reviewer requested changes' }
+  // Остальные гейты — по настройкам списка (раздел «Предложения»). Проверяем ЗДЕСЬ,
+  // а не в экшене: через MCP правку принимают тем же ядром, и гейты не должны
+  // зависеть от того, пришёл человек со страницы или агент.
   const prs = withPrDefaults(sug.template.prSettings)
-  if (await hasBlockingReview(sug.id)) return
-  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
-  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals) return
+  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return { ok: false, reason: 'unresolved discussions' }
+  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals)
+    return { ok: false, reason: `needs ${prs.requiredApprovals} approval(s)` }
 
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
-  await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items), authorId: session.userId })
+  const ver = await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items), authorId: actorUserId })
   // Пере-проверку делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await db
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
-  await closeLinkedIssues(tpl.id, sug.note, session.userId, prs.autoCloseIssues)
-  await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
-  await notifyWatchersNewVersion(tpl.id, session.userId)
+  // «closes #12» в заметке закрывает задачи — но только теперь, когда изменения приняты.
+  await closeLinkedIssues(tpl.id, sug.note, actorUserId, prs.autoCloseIssues)
+  await notify({ recipientId: sug.authorId, actorId: actorUserId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
+  await notifyWatchersNewVersion(tpl.id, actorUserId)
   await enqueueReindex(tpl.id)
+  return { ok: true, templateId: tpl.id, slug: tpl.slug, version: ver.version }
+}
 
+export async function acceptSuggestion(suggestionId: string): Promise<void> {
+  const session = await requireSession()
+  const res = await applySuggestion(suggestionId, session.userId)
+  if (!res.ok) return
   revalidatePath('/', 'layout')
-  redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
+  redirect(`/${session.handle}/${res.slug}`)
 }
 
 // ── Обсуждение предложения (review-комментарии) ──────────────────────

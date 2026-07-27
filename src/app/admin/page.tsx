@@ -359,6 +359,7 @@ export default async function AdminPage() {
                 selfGenPerSweep: settings.selfGenPerSweep,
                 readinessMode: settings.readinessMode,
                 readinessMinSteps: settings.readinessMinSteps,
+                readinessMinGrade: settings.readinessMinGrade,
               }}
               ru={ru}
             />

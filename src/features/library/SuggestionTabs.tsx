@@ -1,10 +1,14 @@
 import Link from 'next/link'
-import { MessagesSquare, FileDiff, CircleCheck, GitCommitHorizontal } from 'lucide-react'
+import { MessagesSquare, FileDiff, CircleCheck, GitCommitHorizontal, Eye } from 'lucide-react'
 
-export type SuggestionTab = 'conversation' | 'commits' | 'checks' | 'files'
+export type SuggestionTab = 'conversation' | 'commits' | 'checks' | 'files' | 'result'
 
 /**
- * Вкладки правки (PR): Обсуждение | Коммиты | Проверки | Изменения.
+ * Вкладки предложения: Обсуждение | Коммиты | Проверки | Изменения | Итог.
+ *
+ * «Итог» — как список будет выглядеть, ЕСЛИ предложение принять. Дифф отвечает на другой вопрос
+ * («что изменилось»), а решение принимают по результату; без этого вида предложения от компании
+ * копились непринятыми — посмотреть результат было негде.
  *
  * Переключение через ?tab= — адрес остаётся ссылабельным (можно кинуть коллеге
  * ссылку прямо на изменения), в отличие от клиентского состояния. Отдельного
@@ -30,7 +34,7 @@ export function SuggestionTabs({
   filesCount: number
   /** Сколько проверок блокирует — счётчик показываем только когда есть что чинить. */
   checksFailed: number
-  labels: { conversation: string; commits: string; checks: string; files: string }
+  labels: { conversation: string; commits: string; checks: string; files: string; result: string }
 }) {
   const item = (tab: SuggestionTab, icon: React.ReactNode, label: string, count: number) => {
     const on = tab === active
@@ -55,6 +59,7 @@ export function SuggestionTabs({
       {commitsCount !== null && item('commits', <GitCommitHorizontal size={14} />, labels.commits, commitsCount)}
       {item('checks', <CircleCheck size={14} />, labels.checks, checksFailed)}
       {item('files', <FileDiff size={14} />, labels.files, filesCount)}
+      {item('result', <Eye size={14} />, labels.result, 0)}
     </div>
   )
 }

@@ -79,6 +79,10 @@ export async function setAiSettings(formData: FormData): Promise<void> {
       ? String(formData.get('readinessMode'))
       : 'off',
     'ai.readiness_min_steps': String(Math.max(1, Math.min(50, Number(formData.get('readinessMinSteps')) || 5))),
+    // Неизвестное значение → 'solid': опечатка не должна ослаблять планку.
+    'ai.readiness_min_grade': (['start', 'solid', 'full'] as const).includes(formData.get('readinessMinGrade') as 'start' | 'solid' | 'full')
+      ? String(formData.get('readinessMinGrade'))
+      : 'solid',
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
   if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)

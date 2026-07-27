@@ -68,8 +68,26 @@ export function domainAffinity(tags: string[], domains: string[]): number {
  * (прецеденты уже прошли порог смысловой близости к ЗАПРОСУ).
  */
 export function pickPrecedents<T extends { tags: string[] }>(all: T[], domains: string[], limit = 3): T[] {
-  if (domains.includes('*')) return all.slice(0, limit)
+  return pickPrecedentsDetailed(all, domains, limit).items
+}
+
+/**
+ * То же, но с ответом на вопрос «а было ли на что опереться ПО ЕГО ДОМЕНУ».
+ *
+ * Фолбэк «ничего не совпало → отдаём общие» полезен (пустой промпт хуже неточного), но он
+ * МАСКИРУЕТ отсутствие опоры: эксперт пишет как будто по прецедентам, а прецедентов его
+ * ремесла в библиотеке не было. Для честности провенанса это надо различать — иначе «список
+ * основан на прецедентах» звучит одинаково и когда основан, и когда нет.
+ *
+ * matched=false означает: либо совпадений по доменам нет, либо прецедентов нет вообще.
+ */
+export function pickPrecedentsDetailed<T extends { tags: string[] }>(
+  all: T[],
+  domains: string[],
+  limit = 3,
+): { items: T[]; matched: boolean } {
+  if (domains.includes('*')) return { items: all.slice(0, limit), matched: all.length > 0 }
   const doms = domains.map((d) => d.toLowerCase().trim()).filter(Boolean)
   const matched = all.filter((p) => p.tags.some((t) => doms.some((d) => tagMatches(t.toLowerCase().trim(), d))))
-  return (matched.length ? matched : all).slice(0, limit)
+  return { items: (matched.length ? matched : all).slice(0, limit), matched: matched.length > 0 }
 }
