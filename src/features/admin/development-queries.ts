@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, eq, gte, isNotNull, sql } from 'drizzle-orm'
-import { aiUsage, councilExperts, db, knowledgeTriples, runs, stars, suggestions, templates, users } from '@/shared/db'
+import { aiUsage, councilExperts, db, generationMessages, generations, knowledgeTriples, runs, stars, suggestions, templates, users } from '@/shared/db'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { getUsageTotals } from '@/shared/ai/usage'
 import { AI_DAILY_USD } from '@/shared/quota'
@@ -73,6 +73,11 @@ export interface DevelopmentMetrics {
   corpus: { triples: number; triplesNewInPeriod: number; listsMined: number }
   /** Штат. newProfessions недоступно (UNAVAILABLE.newProfessions). */
   roster: { enabled: number; total: number }
+  /**
+   * Приёмка по движку — главный открытый вопрос: оправдывает ли совет свою цену.
+   * Разовый разбор дал совет 12→0 против одиночки 13→4; теперь это следят постоянно.
+   */
+  engines: { council: { gens: number; accepted: number }; single: { gens: number; accepted: number } }
   gnomes: GnomeParticipation[]
   /** Темы роста = сырой сигнал найма (LLM-теги кандидатов, не таксономия). */
   topics: HireSignal[]
@@ -100,6 +105,45 @@ async function gardenerContribution(): Promise<Pick<DevelopmentMetrics['quality'
     .from(suggestions)
     .where(eq(suggestions.authorId, gardener.id))
   return { gardenerOpen: row?.open ?? 0, gardenerAccepted: row?.accepted ?? 0, listsImproved: row?.lists ?? 0 }
+}
+
+/**
+ * ПРИЁМКА ПО ДВИЖКУ: совет против одиночной генерации.
+ *
+ * Зачем метрика: разовый разбор показал совет 12 → 0 принятых против одиночки 13 → 4.
+ * Дорогой мультиагентный путь имел НУЛЕВУЮ приёмку — и это главный открытый вопрос
+ * продукта. Разовое наблюдение забывается, поэтому делаем его постоянной цифрой:
+ * вопрос решается замером, а не рассуждением о том, должен ли совет быть лучше.
+ *
+ * Совет отличаем по наличию черновиков С АВТОРОМ (kind='draft', who) — это факт в
+ * данных, а не догадка по провенансу, которого у части записей может не быть.
+ */
+async function acceptanceByEngine(): Promise<DevelopmentMetrics['engines']> {
+  const drafted = db
+    .select({
+      gid: generationMessages.generationId,
+      n: sql<number>`count(distinct ${generationMessages.who})::int`.as('n'),
+    })
+    .from(generationMessages)
+    .where(and(eq(generationMessages.kind, 'draft'), isNotNull(generationMessages.who)))
+    .groupBy(generationMessages.generationId)
+    .as('drafted')
+
+  const rows = await db
+    .select({
+      engine: sql<string>`case when coalesce(${drafted.n}, 0) > 0 then 'council' else 'single' end`,
+      gens: sql<number>`count(*)::int`,
+      accepted: sql<number>`count(*) filter (where ${generations.chosenTemplateId} is not null)::int`,
+    })
+    .from(generations)
+    .leftJoin(drafted, eq(drafted.gid, generations.id))
+    .groupBy(sql`1`)
+
+  const pick = (name: string) => {
+    const r = rows.find((x) => x.engine === name)
+    return { gens: r?.gens ?? 0, accepted: r?.accepted ?? 0 }
+  }
+  return { council: pick('council'), single: pick('single') }
 }
 
 /** Ростер + участие в совете. Читаем таблицу напрямую (getRoster* умеет писать seed). */
@@ -135,7 +179,7 @@ async function gnomeParticipation(): Promise<{ roster: DevelopmentMetrics['roste
 /** Всё для страницы одним проходом. Каждый блок — независимый SELECT, идём параллельно. */
 export async function getDevelopmentMetrics(periodDays = 30): Promise<DevelopmentMetrics> {
   const since = new Date(Date.now() - periodDays * 86_400_000)
-  const [lib, starRows, runRows, gardener, corpus, spendToday, spendPeriod, credits, totals30, staff, topics] = await Promise.all([
+  const [lib, starRows, runRows, gardener, corpus, spendToday, spendPeriod, credits, totals30, staff, topics, engines] = await Promise.all([
     db
       .select({
         published: sql<number>`count(*) filter (where ${templates.status} = 'published' and ${templates.visibility} = 'public' and ${templates.moderation} = 'active')::int`,
@@ -159,6 +203,7 @@ export async function getDevelopmentMetrics(periodDays = 30): Promise<Developmen
     getUsageTotals(30),
     gnomeParticipation(),
     hireSignals(),
+    acceptanceByEngine(),
   ])
   const [minedRow] = await db
     .select({ n: sql<number>`count(*)::int` })
@@ -187,6 +232,7 @@ export async function getDevelopmentMetrics(periodDays = 30): Promise<Developmen
     },
     corpus: { triples: corpus[0]?.triples ?? 0, triplesNewInPeriod: corpus[0]?.fresh ?? 0, listsMined: minedRow?.n ?? 0 },
     roster: staff.roster,
+    engines,
     gnomes: staff.gnomes,
     topics,
   }

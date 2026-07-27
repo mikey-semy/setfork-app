@@ -128,6 +128,40 @@ export default async function AdminDevelopmentPage() {
         )}
       </section>
 
+      {/* ГЛАВНЫЙ ОТКРЫТЫЙ ВОПРОС: оправдывает ли совет свою цену. Держим на виду, а не
+          в разовом разборе — иначе наблюдение забывается, а решение принимается на глаз. */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <h2 className={h2}>{tr({ en: 'Council vs single', ru: 'Совет против одиночки' }, lang)}</h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile
+            label={tr({ en: 'Council · accepted', ru: 'Совет · принято' }, lang)}
+            value={m.engines.council.gens ? pct(m.engines.council.accepted / m.engines.council.gens) : '—'}
+            hint={tr(
+              { en: `${m.engines.council.accepted} of ${m.engines.council.gens}`, ru: `${m.engines.council.accepted} из ${m.engines.council.gens}` },
+              lang,
+            )}
+            tone={m.engines.council.gens && m.engines.council.accepted === 0 ? 'warn' : 'ink'}
+          />
+          <StatTile
+            label={tr({ en: 'Single · accepted', ru: 'Одиночка · принято' }, lang)}
+            value={m.engines.single.gens ? pct(m.engines.single.accepted / m.engines.single.gens) : '—'}
+            hint={tr(
+              { en: `${m.engines.single.accepted} of ${m.engines.single.gens}`, ru: `${m.engines.single.accepted} из ${m.engines.single.gens}` },
+              lang,
+            )}
+          />
+        </div>
+        <p className="text-[12px] text-muted">
+          {tr(
+            {
+              en: 'The council costs several model calls per list; single generation costs one. If its acceptance is not higher, the extra cost buys nothing — that is a measurement, not an opinion.',
+              ru: 'Совет стоит нескольких вызовов модели на список, одиночка — одного. Если его приёмка не выше, доплата ничего не покупает — и это замер, а не мнение.',
+            },
+            lang,
+          )}
+        </p>
+      </section>
+
       {/* Корпус знаний */}
       <section className="flex min-w-0 flex-col gap-3">
         <h2 className={h2}>{tr({ en: 'Knowledge corpus', ru: 'Корпус знаний' }, lang)}</h2>
