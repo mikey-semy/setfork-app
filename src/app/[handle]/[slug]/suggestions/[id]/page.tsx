@@ -17,6 +17,10 @@ import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
 import { ReviewPanel } from '@/features/library/ReviewPanel'
+import { getSuggestionThreads } from '@/features/comments/queries'
+import { threadState } from '@/features/comments/state'
+import type { RowThread } from '@/features/library/DiffComments'
+import type { AnchorableBlock } from '@/features/comments/fields'
 import { getSuggestionReviews } from '@/features/library/review-actions'
 import { diffSteps } from '@/features/library/suggestion-diff'
 import { getReactionsFor } from '@/features/reactions/queries'
@@ -73,6 +77,18 @@ export default async function SuggestionThreadPage({
 
   // Ревью правки: список вердиктов + свой текущий (форма показывает выбор, а не
   // плодит копии — вердикт один на рецензента и перезаписывается).
+  // Review-комментарии к пунктам правки. Состояние якоря считаем ЗДЕСЬ, против
+  // предложенных пунктов: у review-комментария актуальность меняется вместе с
+  // правкой, поэтому хранить её в колонках значило бы держать заведомо отстающие.
+  const threads = await getSuggestionThreads(sug.id)
+  const threadsByBlock = new Map<string, RowThread[]>()
+  for (const th of threads) {
+    const state = threadState(th.anchorOriginal, th.field, th.blockId, items as unknown as AnchorableBlock[], lang)
+    const list = threadsByBlock.get(th.blockId)
+    if (list) list.push({ thread: th, state })
+    else threadsByBlock.set(th.blockId, [{ thread: th, state }])
+  }
+
   const reviews = await getSuggestionReviews(sug.id)
   const myVerdict = session ? (reviews.find((r) => r.reviewer.handle === session.handle)?.verdict ?? null) : null
 
@@ -160,7 +176,32 @@ export default async function SuggestionThreadPage({
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → правка` : `v${sug.baseVersion} → suggestion`}
         </div>
-        <SuggestionDiff rows={diff.rows} summary={diff.summary} lang={lang} />
+        <SuggestionDiff
+          rows={diff.rows}
+          summary={diff.summary}
+          lang={lang}
+          comments={{
+            owner,
+            slug,
+            suggestionId: sug.id,
+            canComment: !!session && sug.status === 'open',
+            byBlock: threadsByBlock,
+            labels: {
+              add: t('commentAdd', lang),
+              placeholder: t('commentPlaceholder', lang),
+              send: t('commentSend', lang),
+              cancel: t('commentCancel', lang),
+              reply: t('commentReply', lang),
+              resolve: t('commentResolve', lang),
+              unresolve: t('commentUnresolve', lang),
+              resolved: t('commentResolvedCount', lang),
+              onSelection: t('commentOnSelection', lang),
+              onBlock: t('commentOnBlock', lang),
+              stateReanchored: t('commentReanchored', lang),
+              orphanHint: t('commentOrphaned', lang),
+            },
+          }}
+        />
         <div className="mt-2">
           <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
         </div>

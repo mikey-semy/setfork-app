@@ -1,4 +1,5 @@
 import { tr } from '@/shared/i18n'
+import { DiffComments, type DiffCommentLabels, type RowThread } from './DiffComments'
 import type { DiffRow, DiffStep, DiffSummary } from './suggestion-diff'
 
 type Lang = Parameters<typeof tr>[1]
@@ -25,10 +26,12 @@ const KIND = {
 function Title({ step, lang, strike }: { step: DiffStep; lang: Lang; strike?: boolean }) {
   const title = tr(step.title, lang)
   const desc = tr(step.desc, lang)
+  // data-cfield помечает поле: комментарий к выделению должен знать, в какой
+  // исходной строке искать якорь (заголовок и описание — разные поля).
   return (
     <div className="min-w-0">
-      <span className={`text-[13.5px] text-ink ${strike ? 'line-through opacity-70' : ''}`}>{title || '—'}</span>
-      {desc && <span className="text-[13px] text-ink-2"> — {desc}</span>}
+      <span data-cfield="title" className={`text-[13.5px] text-ink ${strike ? 'line-through opacity-70' : ''}`}>{title || '—'}</span>
+      {desc && <span data-cfield="desc" className="text-[13px] text-ink-2"> — {desc}</span>}
     </div>
   )
 }
@@ -37,10 +40,21 @@ export function SuggestionDiff({
   rows,
   summary,
   lang,
+  comments,
 }: {
   rows: DiffRow[]
   summary: DiffSummary
   lang: Lang
+  /** Review-комментарии к пунктам правки. Без него дифф — просто дифф. */
+  comments?: {
+    owner: string
+    slug: string
+    suggestionId: string
+    canComment: boolean
+    labels: DiffCommentLabels
+    /** blockId → треды этого пункта с уже посчитанным состоянием якоря. */
+    byBlock: Map<string, RowThread[]>
+  }
 }) {
   const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
   return (
@@ -63,7 +77,7 @@ export function SuggestionDiff({
           return (
             // Ключ — вид строки + заголовок шага: матчинг диффа сам идёт по заголовку (LCS),
             // так что пара kind:title однозначно идентифицирует строку.
-            <li key={`${r.kind}:${tr(r.step.title, lang)}`} className={`flex gap-2.5 border-l-2 px-3 py-2 ${meta.bar} ${meta.bg}`}>
+            <li key={`${r.kind}:${tr(r.step.title, lang)}`} className={`group flex gap-2.5 border-l-2 px-3 py-2 ${meta.bar} ${meta.bg}`}>
               <span
                 className={`mt-0.5 select-none font-mono text-[13px] font-bold ${
                   r.kind === 'add' ? 'text-ok' : r.kind === 'del' ? 'text-danger' : r.kind === 'mod' ? 'text-warn' : 'text-muted'
@@ -84,6 +98,18 @@ export function SuggestionDiff({
                       </li>
                     ))}
                   </ul>
+                )}
+                {comments && (
+                  <DiffComments
+                    owner={comments.owner}
+                    slug={comments.slug}
+                    suggestionId={comments.suggestionId}
+                    blockId={r.step.blockId ?? null}
+                    rowThreads={(r.step.blockId && comments.byBlock.get(r.step.blockId)) || []}
+                    canComment={comments.canComment}
+                    lang={lang}
+                    labels={comments.labels}
+                  />
                 )}
               </div>
             </li>

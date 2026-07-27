@@ -2,33 +2,33 @@
 
 import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { blockComments, blockCommentThreads, db } from '@/shared/db'
+import { blockComments, blockCommentThreads, db, suggestions } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-// eslint-disable-next-line boundaries/dependencies -- права коллаборатора из collab (тот же кросс-фич-паттерн, что у library/gardener)
+// eslint-disable-next-line boundaries/dependencies -- права коллаборатора из collab
 import { isCollaborator } from '@/features/collab/queries'
-// eslint-disable-next-line boundaries/dependencies -- гейт видимости списка и его блоки из library
-import { requireViewableMeta, requireViewableDetail } from '@/features/library/guard'
+// eslint-disable-next-line boundaries/dependencies -- гейт видимости списка из library
+import { requireViewableMeta } from '@/features/library/guard'
 import { makeAnchor } from './anchor'
 import { locateQuote } from './quote'
 import { fieldText, isCommentField, type AnchorableBlock } from './fields'
 
 const MAX_BODY = 10_000
 
-
 /**
- * Завести тред к блоку. Якорь снимается СЕРВЕРОМ по присланному смещению —
- * клиенту доверять диапазон нельзя, а текст поля мы и так знаем.
+ * Завести review-тред к пункту ВНУТРИ ПРЕДЛОЖЕНИЯ (как комментарий к строке в
+ * Files changed). Вне предложения комментариев к пунктам нет — при обычном
+ * просмотре списка их не бывает, как и в GitHub при чтении кода.
  *
- * Клиент присылает ВЫДЕЛЕННЫЙ ТЕКСТ, а не координаты: описание рендерится
- * Markdown'ом, и смещения в DOM не совпадают со смещениями в исходной строке,
- * по которой потом идёт пере-привязка. Цитата не нашлась (выделение зацепило
- * разметку) или пуста — тред становится комментарием к блоку целиком, а не
- * привязывается наугад.
+ * Клиент присылает ВЫДЕЛЕННЫЙ ТЕКСТ (или пусто = ко всему пункту), а не
+ * координаты: тексты рендерятся Markdown'ом, и смещения в DOM не совпадают со
+ * смещениями в исходной строке, по которой потом ищется якорь. Место находит
+ * сервер; не нашёл — тред честно становится комментарием ко всему пункту.
  */
 export async function createBlockThread(
   owner: string,
   slug: string,
+  suggestionId: string,
   blockId: string,
   field: string,
   quote: string,
@@ -38,11 +38,16 @@ export async function createBlockThread(
   const text = body.trim().slice(0, MAX_BODY)
   if (!text || !isCommentField(field)) return
 
-  const [lang, detail] = await Promise.all([getLang(), requireViewableDetail(owner, slug)])
-  if (!detail) return // приватный/скрытый список — как будто его нет
+  const [lang, meta] = await Promise.all([getLang(), requireViewableMeta(owner, slug)])
+  if (!meta) return // приватный/скрытый список — как будто его нет
 
-  const block = (detail.steps as AnchorableBlock[]).find((s) => s.blockId === blockId)
-  if (!block) return // комментировать можно только существующий блок текущей версии
+  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId) })
+  if (!sug || sug.templateId !== meta.id) return
+
+  // Якорь снимаем по ПРЕДЛОЖЕННОМУ блоку: обсуждают то, что предлагают.
+  const blocks = (sug.items ?? []) as unknown as AnchorableBlock[]
+  const block = blocks.find((b) => b.blockId === blockId)
+  if (!block) return
 
   const source = fieldText(block, field, lang)
   const at = locateQuote(source, quote.trim())
@@ -51,24 +56,21 @@ export async function createBlockThread(
   const [thread] = await db
     .insert(blockCommentThreads)
     .values({
-      templateId: detail.tpl.id,
+      suggestionId,
       blockId,
       field,
-      createdVersion: detail.currentVersion?.version ?? detail.tpl.currentVersion,
+      createdVersion: sug.baseVersion,
       anchorOriginal: anchor as unknown as Record<string, unknown>,
-      anchorCurrent: anchor as unknown as Record<string, unknown>,
-      anchorState: 'anchored',
-      anchorConfidence: 100,
-      // Вмороженный контекст: тред покажет своё окружение даже когда текст уедет.
+      // Вмороженный контекст: тред покажет своё окружение, даже когда правку обновят.
       contextSnapshot: source,
     })
     .returning()
 
   await db.insert(blockComments).values({ threadId: thread.id, authorId: session.userId, body: text })
-  revalidatePath(`/${owner}/${slug}`)
+  revalidatePath(`/${owner}/${slug}/suggestions/${suggestionId}`)
 }
 
-/** Ответить в тред (реплика не имеет своего якоря — наследует тред, как в GitHub). */
+/** Ответить в тред (реплика без своего якоря — наследует тред, как в GitHub). */
 export async function replyToBlockThread(owner: string, slug: string, threadId: string, body: string): Promise<void> {
   const session = await requireSession()
   const text = body.trim().slice(0, MAX_BODY)
@@ -76,26 +78,26 @@ export async function replyToBlockThread(owner: string, slug: string, threadId: 
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) return
 
-  const [thread] = await db.select().from(blockCommentThreads).where(eq(blockCommentThreads.id, threadId)).limit(1)
-  if (!thread || thread.templateId !== meta.id) return
+  const thread = await threadInList(threadId, meta.id)
+  if (!thread) return
 
   await db.insert(blockComments).values({ threadId, authorId: session.userId, body: text })
   await db.update(blockCommentThreads).set({ updatedAt: new Date() }).where(eq(blockCommentThreads.id, threadId))
-  revalidatePath(`/${owner}/${slug}`)
+  revalidatePath(`/${owner}/${slug}/suggestions/${thread.suggestionId}`)
 }
 
 /**
  * Разрешить/переоткрыть тред. Единица разрешения — ТРЕД, а не отдельная реплика
- * (модель PullRequestReviewThread у GitHub). Право: владелец, коллаборатор или
- * автор первой реплики.
+ * (модель PullRequestReviewThread у GitHub). Право: владелец списка,
+ * коллаборатор или автор первой реплики.
  */
 export async function setBlockThreadResolved(owner: string, slug: string, threadId: string, resolved: boolean): Promise<void> {
   const session = await requireSession()
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) return
 
-  const [thread] = await db.select().from(blockCommentThreads).where(eq(blockCommentThreads.id, threadId)).limit(1)
-  if (!thread || thread.templateId !== meta.id) return
+  const thread = await threadInList(threadId, meta.id)
+  if (!thread) return
 
   const [first] = await db
     .select({ authorId: blockComments.authorId })
@@ -114,7 +116,17 @@ export async function setBlockThreadResolved(owner: string, slug: string, thread
       updatedAt: new Date(),
     })
     .where(eq(blockCommentThreads.id, threadId))
-  revalidatePath(`/${owner}/${slug}`)
+  revalidatePath(`/${owner}/${slug}/suggestions/${thread.suggestionId}`)
 }
 
-
+/** Тред + проверка, что он принадлежит предложению ЭТОГО списка (защита от подмены id). */
+async function threadInList(threadId: string, listId: string): Promise<{ suggestionId: string } | null> {
+  const [row] = await db
+    .select({ suggestionId: blockCommentThreads.suggestionId, templateId: suggestions.templateId })
+    .from(blockCommentThreads)
+    .innerJoin(suggestions, eq(suggestions.id, blockCommentThreads.suggestionId))
+    .where(eq(blockCommentThreads.id, threadId))
+    .limit(1)
+  if (!row || row.templateId !== listId) return null
+  return { suggestionId: row.suggestionId }
+}

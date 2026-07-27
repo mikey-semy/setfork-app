@@ -1608,42 +1608,35 @@ export type TemplateVersion = typeof templateVersions.$inferSelect
 export type Step = typeof steps.$inferSelect
 export type Run = typeof runs.$inferSelect
 export type RunStepState = typeof runStepState.$inferSelect
-// ── Комментарии к пункту (и к выделенной части его текста) ───────────
-// Тред — единица обсуждения, разрешения И устаревания (как PullRequestReviewThread
-// у GitHub: isResolved/isOutdated живут на треде, а не на отдельной реплике).
+// ── Review-комментарии к пункту внутри ПРЕДЛОЖЕНИЯ (PR) ──────────────
+// Живут ТОЛЬКО в предложении, как review-комментарии в pull request: при обычном
+// просмотре списка их нет (в GitHub при чтении кода комментировать тоже нельзя —
+// только во вкладке Files changed и в Conversation).
 //
-// Якорь file-relative, а не diff-relative: блок опознаётся стабильным block_id,
-// место внутри блока — W3C-селекторами. Индекс строки внутри диффа (position
-// у GitHub) сознательно НЕ реализуем: он хрупок, и GitHub сам пометил его
-// deprecated в своей OpenAPI-спеке.
+// Тред — единица обсуждения и разрешения (модель PullRequestReviewThread).
+// Якорь file-relative: блок опознаётся стабильным block_id, место внутри блока —
+// W3C-селекторами (exact/prefix/suffix + start/end). Индекс строки внутри диффа
+// (position у GitHub) не реализуем: он хрупок и помечен deprecated самим GitHub.
 //
-// Три позиции — контракт GitLab (lib/gitlab/diff/position_tracer, MIT):
-//   anchor_original — иммутабельна, «где это было сказано»;
-//   anchor_current  — сдвигается вперёд, пока якорь находится;
-//   anchor_changed_at — версия, на которой якорь потеряли (пусто = не терялся).
-// Плюс вмороженный снимок текста (роль diff_hunk у GitHub / note_diff_files у
-// GitLab): тред всегда может показать свой контекст, ничего не переспрашивая.
+// Храним ТОЛЬКО исходный якорь и вмороженный снимок текста. Текущее состояние
+// («привязан / перепривязан N% / потерян») считается на рендере против
+// предложенных пунктов — как дешёвая проверка active? у GitLab, только без
+// колонок, которые пришлось бы синхронизировать и которые всё равно устаревают.
 export const blockCommentThreads = pgTable(
   'block_comment_threads',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    templateId: uuid('template_id')
+    suggestionId: uuid('suggestion_id')
       .notNull()
-      .references(() => templates.id, { onDelete: 'cascade' }),
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
     /** Стабильная идентичность блока (steps.block_id) — переживает версии. */
     blockId: uuid('block_id').notNull(),
-    /** Поле блока: 'title' | 'desc' | 'why' | 'command' | 'content.md' и т.п. */
+    /** Поле блока: 'title' | 'desc' | 'why' | 'command' | 'content.md'. */
     field: text('field').notNull().default('desc'),
-    /** Версия, на которой тред заведён. */
+    /** Версия, на которой тред заведён (для контекста в Conversation). */
     createdVersion: integer('created_version').notNull(),
+    /** Иммутабельный якорь «как было сказано» (W3C-селекторы). */
     anchorOriginal: jsonb('anchor_original').notNull().$type<Record<string, unknown>>(),
-    anchorCurrent: jsonb('anchor_current').$type<Record<string, unknown> | null>(),
-    /** 'anchored' | 'reanchored' | 'orphaned' — три состояния, а не два. */
-    anchorState: text('anchor_state').notNull().default('anchored'),
-    /** Уверенность последней пере-привязки, 0..100 (пусто — не перепривязывался). */
-    anchorConfidence: integer('anchor_confidence'),
-    /** Версия, на которой якорь потеряли (аналог change_position у GitLab). */
-    anchorChangedAt: integer('anchor_changed_at'),
     /** Вмороженный текст поля на момент создания — контекст треда навсегда. */
     contextSnapshot: text('context_snapshot').notNull().default(''),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
@@ -1651,7 +1644,7 @@ export const blockCommentThreads = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('bct_tpl_idx').on(t.templateId), index('bct_block_idx').on(t.blockId)],
+  (t) => [index('bct_sug_idx').on(t.suggestionId), index('bct_block_idx').on(t.blockId)],
 )
 
 export const blockComments = pgTable(
