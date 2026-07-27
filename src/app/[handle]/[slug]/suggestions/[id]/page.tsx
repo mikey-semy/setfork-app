@@ -31,6 +31,7 @@ import { diffSteps } from '@/features/library/suggestion-diff'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
+import { CommentActions } from '@/features/collab/CommentActions'
 import type { ProposedItem } from '@/shared/db'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; id: string }> }) {
@@ -373,6 +374,25 @@ export default async function SuggestionThreadPage({
             {comments.map((c) => (
               <CommentCard
                 key={c.id}
+                id={c.id}
+                actions={
+                  <CommentActions
+                    commentId={c.id}
+                    body={c.body}
+                    path={path}
+                    canEdit={session?.userId === c.authorId}
+                    lang={lang}
+                    labels={{
+                      more: t('cmMore', lang),
+                      copyLink: t('cmCopyLink', lang),
+                      copyMarkdown: t('cmCopyMarkdown', lang),
+                      quoteReply: t('cmQuoteReply', lang),
+                      edit: t('cmEdit', lang),
+                      save: t('cmSave', lang),
+                      cancel: t('commentCancel', lang),
+                    }}
+                  />
+                }
                 handle={c.authorHandle}
                 avatarUrl={c.authorAvatarUrl}
                 date={c.createdAt}

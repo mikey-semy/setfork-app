@@ -49,8 +49,23 @@ export function clearMediaCache(): void {
   cachedAt = 0
 }
 
+// Single-flight: пока запрос настроек в полёте, параллельные вызовы ЖДУТ его, а
+// не заводят свои. Страница резолвит десятки аватаров разом, и на холодном
+// старте (или сразу после истечения TTL) кэш ещё пуст — без этого каждый аватар
+// начинал СВОЙ select из app_settings, десяток соединений разом, и часть падала
+// по таймауту подключения, роняя всю страницу («Failed query: … app_settings»).
+let inflight: Promise<MediaSettings> | null = null
+
 export async function getMediaSettings(): Promise<MediaSettings> {
   if (cache && Date.now() - cachedAt < CACHE_TTL_MS) return cache
+  if (inflight) return inflight
+  inflight = loadMediaSettings().finally(() => {
+    inflight = null
+  })
+  return inflight
+}
+
+async function loadMediaSettings(): Promise<MediaSettings> {
   const rows = await db.select().from(appSettings).where(inArray(appSettings.key, Object.values(MEDIA_KEYS)))
   const m = Object.fromEntries(rows.map((r) => [r.key, r.value]))
   const val = (key: string, env: string) => (m[key]?.trim() || process.env[env] || '').trim()

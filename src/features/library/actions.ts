@@ -3,7 +3,7 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
+import { db, steps, suggestionComments, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
@@ -509,6 +509,39 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
 }
 
 // ── Обсуждение предложения (review-комментарии) ──────────────────────
+/**
+ * Правка своего комментария к предложению.
+ *
+ * Только автор: чужие реплики не редактирует даже владелец списка — иначе в
+ * обсуждении нельзя было бы доверять тому, что написано от чьего-то имени.
+ * Пустое тело трактуем как отмену, а не как удаление: удаление — отдельное
+ * намерение, и делать его побочным эффектом пустой формы опасно.
+ */
+export async function editSuggestionComment(commentId: string, body: string): Promise<{ ok: boolean }> {
+  const session = await requireSession()
+  const text = body.trim().slice(0, 20000)
+  if (!text) return { ok: false }
+
+  const [row] = await db
+    .select({ authorId: suggestionComments.authorId, suggestionId: suggestionComments.suggestionId })
+    .from(suggestionComments)
+    .where(eq(suggestionComments.id, commentId))
+    .limit(1)
+  if (!row || row.authorId !== session.userId) return { ok: false }
+
+  await db
+    .update(suggestionComments)
+    .set({ body: text, updatedAt: new Date() })
+    .where(eq(suggestionComments.id, commentId))
+
+  const sug = await db.query.suggestions.findFirst({ where: (x) => eq(x.id, row.suggestionId), with: { template: true } })
+  if (sug) {
+    const handle = await ownerHandle(sug.template.ownerId)
+    revalidatePath(`/${handle}/${sug.template.slug}/suggestions/${sug.number ?? sug.id}`)
+  }
+  return { ok: true }
+}
+
 export async function addSuggestionComment(formData: FormData): Promise<void> {
   const session = await requireSession()
   const suggestionId = String(formData.get('suggestionId') ?? '')
