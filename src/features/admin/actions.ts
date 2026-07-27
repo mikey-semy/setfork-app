@@ -83,6 +83,7 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.readiness_min_grade': (['start', 'solid', 'full'] as const).includes(formData.get('readinessMinGrade') as 'start' | 'solid' | 'full')
       ? String(formData.get('readinessMinGrade'))
       : 'solid',
+    'ai.readiness_per_day': String(Math.max(0, Math.min(50, Number(formData.get('readinessPerDay')) || 0))),
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
   if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)

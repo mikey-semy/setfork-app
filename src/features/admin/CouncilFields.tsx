@@ -28,6 +28,8 @@ export interface CouncilValues {
   readinessMinSteps: number
   /** Минимальный класс полноты для автопубликации. */
   readinessMinGrade: 'start' | 'solid' | 'full'
+  /** Канарейка: сколько списков петля вправе опубликовать без человека за сутки. */
+  readinessPerDay: number
 }
 
 export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: boolean; modelOptions: Option[] }) {
@@ -183,6 +185,17 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
               </SelectContent>
             </Select>
           </div>
+        </div>
+        <div className="mt-3">
+          {/* КАНАРЕЙКА: ошибка в планке не должна за ночь залить каталог. */}
+          <label className={lbl}>{say('Autonomous publications per day', 'Автопубликаций в сутки')}</label>
+          <input type="number" name="readinessPerDay" min="0" max="50" step="1" defaultValue={v.readinessPerDay} className={field} />
+          <p className="mt-1.5 text-[12px] text-muted">
+            {say(
+              'A safety quota: beyond it lists stay drafts even if they pass the bar. 0 = never publish автоматически.',
+              'Предохранитель: сверх квоты списки остаются черновиками, даже если планку прошли. 0 = не публиковать автоматически.',
+            )}
+          </p>
         </div>
       </div>
     </div>

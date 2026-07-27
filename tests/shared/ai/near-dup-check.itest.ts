@@ -29,6 +29,14 @@ const rewordedFresh = {
   tags: ['кулинария'],
 }
 
+/** Очистка списков между сценариями: точечные удаления вместо truncate cascade — под
+ *  нагрузкой полного прогона cascade упирался в 5-секундный таймаут теста. */
+const clearLists = async () => {
+  await db.delete(steps)
+  await db.delete(templateVersions)
+  await db.delete(templates)
+}
+
 beforeAll(async () => {
   await db.execute(sql`truncate table ${steps}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
   const [o] = await db.insert(users).values({ handle: 'nd-owner' }).returning({ id: users.id })
@@ -56,20 +64,20 @@ describe('выборка кандидатов для сравнения', () => 
   })
 
   it('архивный не считается — он больше не в библиотеке', async () => {
-    await db.execute(sql`truncate table ${steps}, ${templateVersions}, ${templates} cascade`)
+    await clearLists()
     await seed(otherId, 'bread-arch', 'Как испечь хлеб дома', ['кулинария'], breadItems, { archivedAt: new Date() })
     expect((await findExistingNearDuplicate(rewordedFresh, { ownerId })).match).toBeNull()
   })
 
   it('исключение по id работает — список не дубликат сам себе при пересчёте', async () => {
-    await db.execute(sql`truncate table ${steps}, ${templateVersions}, ${templates} cascade`)
+    await clearLists()
     const id = await seed(ownerId, 'bread-self', 'Как испечь хлеб дома', ['кулинария'], breadItems)
     expect((await findExistingNearDuplicate(rewordedFresh, { ownerId, excludeId: id })).match).toBeNull()
     expect((await findExistingNearDuplicate(rewordedFresh, { ownerId })).match?.id).toBe(id)
   })
 
   it('сравнивается ТЕКУЩАЯ версия, а не первая: список изменился — сравнение тоже', async () => {
-    await db.execute(sql`truncate table ${steps}, ${templateVersions}, ${templates} cascade`)
+    await clearLists()
     const id = await seed(otherId, 'bread-v', 'Как испечь хлеб дома', ['кулинария'], breadItems)
     // v2 уводит список в другую тему — теперь наш хлеб ему не дубль.
     const [v2] = await db.insert(templateVersions).values({ templateId: id, version: 2, note: 'ушли в другое' }).returning({ id: templateVersions.id })

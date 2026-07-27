@@ -21,6 +21,7 @@ import { toProposed, toStepInput } from '@/shared/lib/step-input'
 import { HOME_REALM } from '@/shared/ai/gnome-names'
 import { agentUserIds, professionOf, tenderForTags } from '@/shared/ai/gnome-account'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
+import { autonomyHealthy, publishQuotaLeft } from '@/shared/agents/canary'
 import { moderateNewPublication } from '@/shared/agents/publication'
 import { getRoster, type Expert } from '@/shared/ai/roster'
 import { t, type Lang, type LocaleText } from '@/shared/i18n'
@@ -221,6 +222,14 @@ export async function gateOwnDraft(
   const verdicts = structural.length ? [] : await runReadinessLenses(snapshot, { userId: ctx.tenderId, refId: tpl.id })
   const decision = readinessDecision(facts, verdicts, bar)
 
+  // КАНАРЕЙКА: даже пройденная планка не даёт публиковать больше суточной квоты. Это не
+  // ошибка и не срыв предохранителя — просто дальше ждём человека.
+  const quotaLeft = decision.publish ? await publishQuotaLeft('gardener', settings.readinessPerDay) : 0
+  if (decision.publish && quotaLeft <= 0) {
+    decision.publish = false
+    decision.blockers.push(`суточная квота автопубликаций исчерпана (${settings.readinessPerDay})`)
+  }
+
   if (decision.publish) {
     await db.update(templates).set({ status: 'published', updatedAt: new Date() }).where(eq(templates.id, tpl.id))
     // Публикация компании проходит МОДЕРАЦИЮ как любая другая: гейт готовности решает
@@ -237,7 +246,7 @@ export async function gateOwnDraft(
     resultStatus: decision.publish ? 'ok' : 'skipped',
     agentId: ctx.agentId,
     actorUserId: ctx.tenderId,
-    signal: { slug: tpl.slug, ...facts, gradeReasons: verdict.reasons },
+    signal: { templateId: tpl.id, slug: tpl.slug, ...facts, gradeReasons: verdict.reasons },
     decision: {
       mode: bar.mode,
       wouldPass: decision.wouldPass,
@@ -357,6 +366,12 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
   // Фоновый расход без участия человека — уважаем глобальный дневной кап инстанса.
   if (!(await globalBudgetOk())) {
     log.info('gardener: global AI budget exhausted, skipping')
+    return { proposed: 0, skipped: 0, published: 0, diverged: 0 }
+  }
+  // Здоровье автономии — ДО работы: серия ошибок или снятая модерацией автопубликация
+  // срывают предохранитель, и проход не начинается (снимает предохранитель только человек).
+  if (!(await autonomyHealthy('gardener'))) {
+    log.warn?.('gardener: circuit tripped by canary, skipping sweep')
     return { proposed: 0, skipped: 0, published: 0, diverged: 0 }
   }
   const loop = await loopPolicy('gardener')
