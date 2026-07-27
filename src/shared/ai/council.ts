@@ -165,7 +165,10 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // ОДИН ретрай на транзиентной ошибке (таймаут/сеть/429/5xx): бенч показал, что 33% отказов —
   // это упавшие под нагрузкой ОДИНОЧНЫЕ вызовы (чаще синтез старейшины), а не детерминированный сбой.
   // Ретрай именно транзиента бьёт по хвосту, не удваивая цену на стабильных ответах.
-  async function run(model: string, system: string, prompt: string, maxTokens = settings.maxTokens, temp = settings.temperature): Promise<{ text: string } | null> {
+  // gnomeId — КТО расходовал: без него журнал знал только модель, и «сколько тратит этот
+  // мастер» нельзя было отделить от «как ведёт себя эта модель». Служебные шаги
+  // (распорядитель, критик, старейшина) передают свою роль, а не пустоту.
+  async function run(model: string, system: string, prompt: string, maxTokens = settings.maxTokens, temp = settings.temperature, gnomeId = ''): Promise<{ text: string } | null> {
     for (let attempt = 0; attempt < 2; attempt++) {
       const startedAt = Date.now()
       try {
@@ -178,13 +181,13 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
           abortSignal: AbortSignal.timeout(CALL_TIMEOUT_MS),
         })
         const u = extractUsage(result)
-        await recordUsage({ userId: opts.userId, feature, model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType ?? 'council', refId: opts.refId, outcome: 'ok', durationMs: Date.now() - startedAt, provider: providerId })
+        await recordUsage({ userId: opts.userId, feature, model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: opts.refType ?? 'council', refId: opts.refId, outcome: 'ok', durationMs: Date.now() - startedAt, provider: providerId, gnomeId })
         return { text: result.text }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         // Каждый ФИЗИЧЕСКИЙ вызов попадает в журнал (и ретраи) — иначе щиток
         // надёжности видел бы только успехи и карантин никогда бы не срабатывал.
-        await recordUsage({ userId: opts.userId, feature, model, input: 0, output: 0, total: 0, cost: 0, refType: opts.refType ?? 'council', refId: opts.refId, outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: providerId })
+        await recordUsage({ userId: opts.userId, feature, model, input: 0, output: 0, total: 0, cost: 0, refType: opts.refType ?? 'council', refId: opts.refId, outcome: outcomeOf(e), durationMs: Date.now() - startedAt, provider: providerId, gnomeId })
         const transient = /timeout|abort|econnreset|fetch failed|network|socket|429|50[234]/i.test(msg)
         if (attempt === 0 && transient) {
           console.warn('[council] call retry', msg)
