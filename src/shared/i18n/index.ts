@@ -113,6 +113,7 @@ const DICT = {
   submitNewIssue: { en: 'Submit new issue', ru: 'Создать задачу' },
   titleRequired: { en: 'A title is required.', ru: 'Нужен заголовок.' },
   labelsLabel: { en: 'Labels', ru: 'Метки' },
+  assigneesLabel: { en: 'Assignees', ru: 'Исполнители' },
   milestonesTitle: { en: 'Milestones', ru: 'Вехи' },
   milestoneLabel: { en: 'Milestone', ru: 'Веха' },
   noMilestone: { en: 'No milestone', ru: 'Без вехи' },

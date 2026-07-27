@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, embeddings, stars, steps, suggestionComments, suggestions, templates, templateVersions, users } from '@/shared/db'
+import { db, embeddings, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { Lang, LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
@@ -637,4 +637,25 @@ export async function getTemplateDetail(ownerHandle: string, slug: string) {
     : []
 
   return { tpl, currentVersion, steps: stepRows }
+}
+
+/** Исполнители правки — форма как у задач (для общего AssigneePicker). */
+export async function getSuggestionAssignees(suggestionId: string) {
+  const rows = await db
+    .select({ handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(suggestionAssignees)
+    .innerJoin(users, eq(users.id, suggestionAssignees.userId))
+    .where(eq(suggestionAssignees.suggestionId, suggestionId))
+  return Promise.all(rows.map(async (r) => ({ handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
+/** Текущий этап правки для пикера ({id,title} или null). */
+export async function getSuggestionMilestone(suggestionId: string): Promise<{ id: string; title: string } | null> {
+  const [r] = await db
+    .select({ id: milestones.id, title: milestones.title })
+    .from(suggestions)
+    .innerJoin(milestones, eq(milestones.id, suggestions.milestoneId))
+    .where(eq(suggestions.id, suggestionId))
+    .limit(1)
+  return r ?? null
 }

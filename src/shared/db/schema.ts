@@ -624,6 +624,11 @@ export const suggestions = pgTable('suggestions', {
   // Nullable — строки, созданные до введения поля (бэкфилл проставит).
   number: integer('number'),
   status: suggestionStatus('status').notNull().default('open'),
+  // Метки и этап — ТА ЖЕ модель, что у задач (labels: jsonb-массив ярлыков,
+  // milestone_id → milestones): благодаря совпадению формы к правкам подходят
+  // готовые LabelEditor/этапы, а не их копии.
+  labels: jsonb('labels').notNull().default([]).$type<string[]>(),
+  milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
   note: text('note').notNull().default(''),
   baseVersion: integer('base_version').notNull(),
   items: jsonb('items').notNull().default([]).$type<ProposedItem[]>(),
@@ -659,6 +664,23 @@ export const suggestionReviews = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('sug_review_one_per_reviewer').on(t.suggestionId, t.reviewerId)],
+)
+
+// Исполнители правки — форма как у issue_assignees (пара «правка + человек»,
+// уникальная): позволяет переиспользовать AssigneePicker, параметризованный экшеном.
+export const suggestionAssignees = pgTable(
+  'suggestion_assignees',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_assignee_uniq').on(t.suggestionId, t.userId)],
 )
 
 export type SuggestionReview = typeof suggestionReviews.$inferSelect

@@ -11,6 +11,7 @@ export function MilestonePicker({
   owner,
   slug,
   number,
+  onSet,
   current,
   options,
   canEdit,
@@ -18,15 +19,20 @@ export function MilestonePicker({
 }: {
   owner: string
   slug: string
-  number: number
+  /** Номер задачи; для правки не нужен — действие приходит пропом. */
+  number?: number
   current: { id: string; title: string } | null
   options: Opt[]
   canEdit: boolean
+  /** Своё присвоение этапа (правка). Пусто — задачное. */
+  onSet?: (milestoneId: string) => Promise<void>
   lang?: string
 }) {
   const [pending, start] = useTransition()
   const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
-  const set = (id: string) => start(() => void setIssueMilestone(owner, slug, number, id))
+  // Своё присвоение (правка) или задачное по умолчанию — один пикер на обе сущности.
+  const set = (id: string) =>
+    start(() => void (onSet ? onSet(id) : number != null ? setIssueMilestone(owner, slug, number, id) : Promise.resolve()))
 
   return (
     <div className="flex flex-col gap-2">

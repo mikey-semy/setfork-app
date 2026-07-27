@@ -6,6 +6,7 @@ import { SearchField } from '@/shared/ui/SearchField'
 import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { toggleIssueAssignee } from './actions'
 
+
 type Person = { handle: string; avatarUrl: string | null }
 
 // Исполнители issue: текущий список + поповер-поиск (для владельца/коллаборатора).
@@ -15,13 +16,18 @@ export function AssigneePicker({
   number,
   assignees,
   canEdit,
+  onToggle,
   lang = 'en',
 }: {
   owner: string
   slug: string
-  number: number
+  /** Номер задачи; для правки не нужен — там переключение идёт через onToggle. */
+  number?: number
   assignees: Person[]
   canEdit: boolean
+  /** Своё переключение исполнителя. Пусто — задачное (toggleIssueAssignee).
+   *  Так один пикер обслуживает и задачи, и правки, вместо двух копий. */
+  onToggle?: (handle: string) => Promise<void>
   lang?: string
 }) {
   const [pending, start] = useTransition()
@@ -29,7 +35,9 @@ export function AssigneePicker({
   const [found, setFound] = useState<Person[]>([])
   const L = (ru: string, en: string) => (lang === 'ru' ? ru : en)
   const has = new Set(assignees.map((a) => a.handle))
-  const toggle = (handle: string) => start(() => void toggleIssueAssignee(owner, slug, number, handle))
+  // Переключение: своё (правка) или задачное по умолчанию — один пикер на обе сущности.
+  const toggle = (handle: string) =>
+    start(() => void (onToggle ? onToggle(handle) : number != null ? toggleIssueAssignee(owner, slug, number, handle) : Promise.resolve()))
 
   async function search(v: string) {
     if (!v.trim()) return setFound([])

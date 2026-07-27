@@ -35,6 +35,13 @@ import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
 import { CommentActions } from '@/features/collab/CommentActions'
 import { WatchButton } from '@/features/watch/WatchButton'
+import { AssigneePicker } from '@/features/issues/AssigneePicker'
+import { LabelEditor } from '@/features/issues/LabelEditor'
+import { MilestonePicker } from '@/features/issues/MilestonePicker'
+import { getListLabels } from '@/features/issues/queries'
+import { getMilestonesForPicker } from '@/features/milestones/queries'
+import { getSuggestionAssignees, getSuggestionMilestone } from '@/features/library/queries'
+import { setSuggestionLabels, setSuggestionMilestone, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
 
@@ -99,10 +106,14 @@ export default async function SuggestionThreadPage({
     else threadsByBlock.set(th.blockId, [{ thread: th, state }])
   }
 
-  const [reviews, watchState, watchCount] = await Promise.all([
+  const [reviews, watchState, watchCount, assignees, customLabels, msOptions, curMilestone] = await Promise.all([
     getSuggestionReviews(sug.id),
     session ? getWatchState(session.userId, meta.id) : Promise.resolve(null),
     getWatchCount(meta.id),
+    getSuggestionAssignees(sug.id),
+    getListLabels(meta.id),
+    getMilestonesForPicker(meta.id),
+    getSuggestionMilestone(sug.id),
   ])
   const myVerdict = session ? (reviews.find((r) => r.reviewer.handle === session.handle)?.verdict ?? null) : null
 
@@ -188,6 +199,15 @@ export default async function SuggestionThreadPage({
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold ${statusCls}`}>
             <GitPullRequest size={14} /> {statusLabel}
           </span>
+          {/* Индикатор объёма правки в шапке (как +137 −9 у GitHub): видно ДО
+              перехода на изменения, насколько правка велика. */}
+          {(summary.added > 0 || summary.removed > 0 || summary.changed > 0) && (
+            <span className="inline-flex items-center gap-2 font-mono text-[12.5px]">
+              {summary.added > 0 && <span className="text-ok">+{summary.added}</span>}
+              {summary.removed > 0 && <span className="text-danger">−{summary.removed}</span>}
+              {summary.changed > 0 && <span className="text-warn">~{summary.changed}</span>}
+            </span>
+          )}
           <span className="text-[13px] text-ink-2">
             {t('proposedBy', lang)}{' '}
             <Link href={`/${sug.author.handle}`} className="font-semibold text-ink hover:text-accent">
@@ -497,6 +517,41 @@ export default async function SuggestionThreadPage({
                 />
               </AsideCard>
             )}
+
+            <AsideCard title={t('labelsLabel', lang)}>
+              <LabelEditor
+                owner={owner}
+                slug={slug}
+                labels={(sug.labels as string[]) ?? []}
+                canEdit={canMerge}
+                lang={lang}
+                custom={customLabels}
+                onSave={setSuggestionLabels.bind(null, sug.id)}
+              />
+            </AsideCard>
+
+            <AsideCard>
+              <AssigneePicker
+                owner={owner}
+                slug={slug}
+                assignees={assignees}
+                canEdit={canMerge}
+                lang={lang}
+                onToggle={toggleSuggestionAssignee.bind(null, sug.id)}
+              />
+            </AsideCard>
+
+            <AsideCard>
+              <MilestonePicker
+                owner={owner}
+                slug={slug}
+                current={curMilestone}
+                options={msOptions}
+                canEdit={canMerge}
+                lang={lang}
+                onSet={setSuggestionMilestone.bind(null, sug.id)}
+              />
+            </AsideCard>
 
             <AsideCard title={t('participants', lang)}>
               <div className="flex flex-wrap gap-1.5">
