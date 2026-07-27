@@ -1870,6 +1870,10 @@ export const blockComments = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     body: text('body').notNull(),
+    // Черновик ревью: замечание написано, но ещё не отправлено. Видно только автору,
+    // пока он не отправит ревью пачкой (как «Start a review» у GitHub). Отдельный
+    // флаг, а не отдельная таблица: тред, якорь и ответы у черновика те же самые.
+    pending: boolean('pending').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

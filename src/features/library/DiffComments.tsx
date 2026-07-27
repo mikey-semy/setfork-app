@@ -20,6 +20,10 @@ export interface DiffCommentLabels {
   add: string
   placeholder: string
   send: string
+  /** «Добавить в ревью» — отправка пачкой, замечание пока видно только автору. */
+  startReview: string
+  /** Пометка на своём черновике замечания. */
+  pendingBadge: string
   cancel: string
   reply: string
   resolve: string
@@ -84,12 +88,12 @@ export function DiffComments({
     setOpen(true)
   }
 
-  const submit = () => {
+  const submit = (asDraft: boolean) => {
     const body = draft.trim()
     if (!body || !blockId) return
     startTransition(async () => {
-      if (replyTo) await replyToBlockThread(owner, slug, replyTo, body)
-      else await createBlockThread(owner, slug, suggestionId, blockId, field, quote, body)
+      if (replyTo) await replyToBlockThread(owner, slug, replyTo, body, asDraft)
+      else await createBlockThread(owner, slug, suggestionId, blockId, field, quote, body, asDraft)
       setDraft('')
       setQuote('')
       setReplyTo(null)
@@ -165,7 +169,12 @@ export function DiffComments({
                 <Button variant="ghost" className="h-[38px]" onClick={() => setOpen(false)} disabled={pending}>
                   {labels.cancel}
                 </Button>
-                <Button variant="primary" className="h-[38px]" onClick={submit} disabled={pending || !draft.trim()}>
+                {/* Два способа отправки, как в GitHub: сразу или в пачку ревью.
+                    Пачка — чтобы рецензент мог подумать и переписать до показа. */}
+                <Button variant="ghost" className="h-[38px]" onClick={() => submit(true)} disabled={pending || !draft.trim()}>
+                  {labels.startReview}
+                </Button>
+                <Button variant="primary" className="h-[38px]" onClick={() => submit(false)} disabled={pending || !draft.trim()}>
                   {pending ? <Loader2 size={13} className="animate-spin" /> : labels.send}
                 </Button>
               </div>
@@ -222,6 +231,11 @@ function ThreadCard({
               <div className="flex flex-wrap items-baseline gap-x-2 text-[12px]">
                 <span className="font-semibold text-ink">{c.author.name || c.author.handle}</span>
                 <span className="text-muted">{timeAgo(c.createdAt, lang)}</span>
+                {/* Свой неотправленный черновик: видно только автору — говорим об этом
+                    прямо, иначе он решит, что замечание уже прочитали. */}
+                {c.pending && (
+                  <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[10.5px] font-semibold text-warn">{labels.pendingBadge}</span>
+                )}
               </div>
               <Markdown className="text-[13px]">{c.body}</Markdown>
             </div>

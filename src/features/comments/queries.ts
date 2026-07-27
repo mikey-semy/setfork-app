@@ -10,6 +10,8 @@ export interface ThreadComment {
   body: string
   createdAt: Date
   author: { handle: string; name: string | null; avatarUrl: string | null }
+  /** Черновик ревью: видно только автору, пока он не отправит ревью. */
+  pending: boolean
 }
 
 export interface BlockThread {
@@ -34,14 +36,22 @@ export interface BlockThread {
  * «нельзя слить» и «в проверках красное» никогда не расходились.
  */
 export async function countUnresolvedThreads(suggestionId: string): Promise<number> {
+  // Тред из одних черновиков не блокирует: автор ревью его ещё никому не показал.
+  // Поэтому считаем только треды, где есть хотя бы одна ОТПРАВЛЕННАЯ реплика.
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(blockCommentThreads)
-    .where(and(eq(blockCommentThreads.suggestionId, suggestionId), isNull(blockCommentThreads.resolvedAt)))
+    .where(
+      and(
+        eq(blockCommentThreads.suggestionId, suggestionId),
+        isNull(blockCommentThreads.resolvedAt),
+        sql`exists (select 1 from ${blockComments} bc where bc.thread_id = ${blockCommentThreads.id} and bc.pending = false)`,
+      ),
+    )
   return row?.n ?? 0
 }
 
-export async function getSuggestionThreads(suggestionId: string): Promise<BlockThread[]> {
+export async function getSuggestionThreads(suggestionId: string, viewerId?: string): Promise<BlockThread[]> {
   const threads = await db
     .select()
     .from(blockCommentThreads)
@@ -58,14 +68,20 @@ export async function getSuggestionThreads(suggestionId: string): Promise<BlockT
       handle: users.handle,
       name: users.name,
       avatarUrl: users.avatarUrl,
+      pending: blockComments.pending,
+      authorId: blockComments.authorId,
     })
     .from(blockComments)
     .innerJoin(users, eq(users.id, blockComments.authorId))
     .orderBy(asc(blockComments.createdAt))
 
+  // Черновики ревью видит только их автор — фильтруем ДО резолва аватаров,
+  // чтобы не подписывать URL для того, что не будет показано.
+  const visible = rows.filter((r) => !r.pending || (!!viewerId && r.authorId === viewerId))
+
   // Аватары резолвятся параллельно: подпись URL — сетевая операция, а реплик
   // в треде бывает много.
-  const withAvatars = await Promise.all(rows.map(async (r) => ({ r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+  const withAvatars = await Promise.all(visible.map(async (r) => ({ r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
 
   const byThread = new Map<string, ThreadComment[]>()
   for (const { r, avatarUrl } of withAvatars) {
@@ -74,13 +90,18 @@ export async function getSuggestionThreads(suggestionId: string): Promise<BlockT
       body: r.body,
       createdAt: r.createdAt,
       author: { handle: r.handle, name: r.name, avatarUrl },
+      pending: r.pending,
     }
     const list = byThread.get(r.threadId)
     if (list) list.push(item)
     else byThread.set(r.threadId, [item])
   }
 
-  return threads.map((t) => ({
+  // Тред, у которого нет ни одной видимой реплики (только чужие черновики), не
+  // показываем: иначе на диффе висел бы пустой значок обсуждения.
+  return threads
+    .filter((t) => (byThread.get(t.id) ?? []).length > 0)
+    .map((t) => ({
     id: t.id,
     blockId: t.blockId,
     field: t.field as CommentField,

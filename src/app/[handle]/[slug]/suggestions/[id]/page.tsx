@@ -25,7 +25,9 @@ import { SuggestionTitle } from '@/features/library/SuggestionTitle'
 import { ChecksList } from '@/features/library/ChecksList'
 import { CommitsList } from '@/features/library/CommitsList'
 import { DraftToggle } from '@/features/library/DraftToggle'
+import { PendingReviewBar } from '@/features/library/PendingReviewBar'
 import { suggestionChecks } from '@/features/library/suggestion-checks'
+import { blocksFrom } from '@/features/library/suggestion-blocks'
 import { closingRefs } from '@/features/library/closing-refs'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
@@ -33,6 +35,7 @@ import { AsideCard, PageAside } from '@/shared/ui/PageAside'
 import { DiffStat } from '@/shared/ui/DiffStat'
 import { ReviewPanel } from '@/features/library/ReviewPanel'
 import { getSuggestionThreads } from '@/features/comments/queries'
+import { submitPendingComments } from '@/features/comments/actions'
 import { threadState } from '@/features/comments/state'
 import type { RowThread } from '@/features/library/DiffComments'
 import type { AnchorableBlock } from '@/features/comments/fields'
@@ -89,7 +92,9 @@ export default async function SuggestionThreadPage({
       ])
     : [null, null]
   const branchMissing = !!sug.branchRef && !snapshot
-  const items: ProposedItem[] = snapshot ? (snapshotSteps(snapshot) as unknown as ProposedItem[]) : (sug.items as ProposedItem[])
+  // Предлагаемые блоки — по общему правилу (тому же, что у экшена комментариев),
+  // но на уже загруженном снапшоте: второй запрос к git дал бы то же самое.
+  const items: ProposedItem[] = blocksFrom(sug, snapshot)
   // База диффа. У branch-PR обе стороны берём ИЗ GIT: list.json одноязычный, а
   // шаги в БД двуязычные — сравнение «ветка против БД» показывало бы двуязычный
   // список заменённым целиком (ru в базе против единственного языка в git).
@@ -106,7 +111,7 @@ export default async function SuggestionThreadPage({
   // Review-комментарии к пунктам правки. Состояние якоря считаем ЗДЕСЬ, против
   // предложенных пунктов: у review-комментария актуальность меняется вместе с
   // правкой, поэтому хранить её в колонках значило бы держать заведомо отстающие.
-  const threads = await getSuggestionThreads(sug.id)
+  const threads = await getSuggestionThreads(sug.id, session?.userId)
   const threadsByBlock = new Map<string, RowThread[]>()
   for (const th of threads) {
     const state = threadState(th.anchorOriginal, th.field, th.blockId, items as unknown as AnchorableBlock[], lang)
@@ -117,6 +122,10 @@ export default async function SuggestionThreadPage({
 
   // Задачи, которые предложение закроет при слиянии («closes #12» в тексте).
   const linkedIssues = await getIssuesByNumbers(meta.id, closingRefs(sug.note))
+  // Свои неотправленные замечания — из тех же тредов (чужие сюда не попадают).
+  const myPending = session
+    ? threads.reduce((n, th) => n + th.comments.filter((c) => c.pending).length, 0)
+    : 0
   // Нерешённые считаем из УЖЕ загруженных тредов: второй запрос дал бы то же число.
   const unresolvedThreads = threads.filter((th) => !th.resolvedAt).length
   const [reviews, watchState, watchCount, assignees, reviewRequests, customLabels, msOptions, curMilestone] = await Promise.all([
@@ -390,6 +399,8 @@ export default async function SuggestionThreadPage({
                 add: t('commentAdd', lang),
                 placeholder: t('commentPlaceholder', lang),
                 send: t('commentSend', lang),
+                startReview: t('prStartReview', lang),
+                pendingBadge: t('prPendingBadge', lang),
                 cancel: t('commentCancel', lang),
                 reply: t('commentReply', lang),
                 resolve: t('commentResolve', lang),
@@ -403,6 +414,12 @@ export default async function SuggestionThreadPage({
             }}
           />
         )}
+        <PendingReviewBar
+          count={myPending}
+          action={submitPendingComments.bind(null, owner, slug, sug.id)}
+          labels={{ pending: t('prPendingReview', lang), submit: t('prSubmitReview', lang) }}
+        />
+
         {reviewPanel}
         </>)}
 
