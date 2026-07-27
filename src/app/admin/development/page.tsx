@@ -4,6 +4,7 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr, type Lang } from '@/shared/i18n'
 import { getCompanyDay, getDevelopmentMetrics, UNAVAILABLE, type NaReason } from '@/features/admin/development-queries'
+import { getDomainScorecards } from '@/features/admin/scorecard-queries'
 import { StatTile } from '@/shared/ui/StatTile'
 import { TagChip } from '@/shared/ui/TagChip'
 import { allLoopPolicies } from '@/shared/agents/policy'
@@ -38,7 +39,7 @@ const h2 = 'text-[13px] font-semibold uppercase tracking-wide text-ink-2'
 export default async function AdminDevelopmentPage() {
   await requireAdmin()
   const lang = await getLang()
-  const [m, loops, today, yesterday] = await Promise.all([getDevelopmentMetrics(30), allLoopPolicies(), getCompanyDay(0), getCompanyDay(1)])
+  const [m, loops, today, yesterday, cards] = await Promise.all([getDevelopmentMetrics(30), allLoopPolicies(), getCompanyDay(0), getCompanyDay(1), getDomainScorecards()])
   const period = tr({ en: `in ${m.periodDays} days`, ru: `за ${m.periodDays} дн.` }, lang)
 
   return (
@@ -128,6 +129,49 @@ export default async function AdminDevelopmentPage() {
                     <td className="whitespace-nowrap px-3 py-2 text-ink-2">{e.action}</td>
                     <td className="px-3 py-2 text-ink-2 [overflow-wrap:anywhere]">{e.ref || '—'}</td>
                     <td className="hidden px-3 py-2 text-muted [overflow-wrap:anywhere] sm:table-cell">{e.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* СКОРКАРТ ПО РЕМЕСЛУ — теневой режим: считаем и объясняем, никого не наймём и не
+          уволим. Две оси обязательны (одна обманывает), доверие в домен не переносится. */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <h2 className={h2}>{tr({ en: 'Scorecard by craft (shadow)', ru: 'Скоркарт по ремеслу (теневой)' }, lang)}</h2>
+        <p className="text-[12.5px] text-muted">
+          {tr(
+            {
+              en: 'Two axes are required: acceptance and facet delivery. A craft with no direct attempts gets no score at all — not a zero, not an average. Nothing here triggers hiring or firing.',
+              ru: 'Двух осей требуем нарочно: приёмка и доезжаемость граней. У ремесла без прямых попыток оценки нет вовсе — ни нуля, ни среднего. Ни одно число здесь никого не наймёт и не уволит.',
+            },
+            lang,
+          )}
+        </p>
+        {cards.length === 0 ? (
+          <p className="text-[12.5px] text-muted">{tr({ en: 'No data yet.', ru: 'Данных пока нет.' }, lang)}</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+            <table className="w-full min-w-[520px] text-[12.5px]">
+              <thead>
+                <tr className="border-b border-border text-left text-muted">
+                  <th className="px-3 py-2 font-medium">{tr({ en: 'Specialist', ru: 'Специалист' }, lang)}</th>
+                  <th className="px-3 py-2 font-medium">{tr({ en: 'Craft', ru: 'Ремесло' }, lang)}</th>
+                  <th className="px-3 py-2 font-medium">{tr({ en: 'Acceptance', ru: 'Приёмка' }, lang)}</th>
+                  <th className="px-3 py-2 font-medium">{tr({ en: 'Facets delivered', ru: 'Граней доехало' }, lang)}</th>
+                  <th className="px-3 py-2 font-medium">{tr({ en: 'Verdict', ru: 'Вердикт' }, lang)}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cards.slice(0, 14).map((c) => (
+                  <tr key={`${c.gnomeId}:${c.domain}`} className="border-b border-border last:border-0">
+                    <td className="px-3 py-2 text-ink-2">{c.gnomeId}</td>
+                    <td className="px-3 py-2 text-ink-2 [overflow-wrap:anywhere]">{c.domain}</td>
+                    <td className="px-3 py-2 font-mono text-ink-2">{c.card.acceptance == null ? '—' : pct(c.card.acceptance)}</td>
+                    <td className="px-3 py-2 font-mono text-ink-2">{c.card.facetDelivery == null ? '—' : pct(c.card.facetDelivery)}</td>
+                    <td className="px-3 py-2 text-muted [overflow-wrap:anywhere]">{c.card.why}</td>
                   </tr>
                 ))}
               </tbody>
