@@ -37,8 +37,12 @@ import { toProposed, toStepInput } from '@/shared/lib/step-input'
 
 export type SelfGenMode = 'off' | 'manual' | 'auto'
 
-/** Как часто просыпается авто-режим. Сутки: список в день на компанию — уже много. */
-const EVERY_HOURS = 24
+/**
+ * Как часто просыпается авто-режим. Раньше стояли сутки при одном списке за проход — то есть
+ * потолок был 1 список в день, и «сотни списков» набирались бы кварталами. Компания должна
+ * наполнять портал, поэтому темп = размер батча × число пробуждений.
+ */
+const EVERY_HOURS = Number(process.env.SELFGEN_EVERY_HOURS ?? 6)
 
 /** Существующие заголовки в доменах специалиста — чтобы не плодить дубли. */
 async function existingTitles(e: Expert, limit = 40): Promise<string[]> {
@@ -176,46 +180,74 @@ export async function runSelfGenSweep(): Promise<{ created: number; skipped: num
   // самогенерация должна расти вглубь домена, а не размазываться).
   const roster = (await getRoster()).filter((e) => !e.domains.includes('*'))
   if (!roster.length) return { created: 0, skipped: 1 }
-  // По одному списку за проход: пусть компания растёт ровно, а не рывками.
-  const pick = roster[already % roster.length]
   const policy = await loopPolicy('selfgen')
-  const signal = { trigger: 'schedule', createdToday: already, cap }
-  const decision = { expert: pick.id, profession: professionOf(pick, 'en'), reason: 'round-robin over domain specialists' }
 
-  // СУХОЙ ПРОГОН: решение принимаем и записываем, действие не производим. Так первое
-  // наблюдение за петлёй делается ДО того, как она начнёт что-то создавать на живых данных.
-  if (policy.dryRun) {
+  // БАТЧ. Сколько за один проход — но не больше, чем осталось до суточного капа: кап
+  // ограничивает СУТКИ, а не проход, и батч не имеет права его перескочить.
+  const room = cap > 0 ? Math.max(0, cap - already) : Number.POSITIVE_INFINITY
+  // Нулевой остаток → НОЛЬ, а не один. Раньше здесь стоял Math.max(1, …), и при
+  // исчерпанном капе партия всё равно делала бы один список: сейчас это прикрыто ранним
+  // выходом выше, но такая арифметика сломается, если тот выход уберут. Не полагаемся на
+  // соседнюю проверку — считаем правильно здесь.
+  const perSweep = Math.max(1, settings.selfGenPerSweep)
+  const batch = room <= 0 ? 0 : Math.min(perSweep, room)
+  let created = 0
+  let skipped = 0
+
+  for (let i = 0; i < batch; i++) {
+    // Бюджет перепроверяем НА КАЖДОМ элементе. Проверка один раз на входе позволила бы
+    // батчу пробить дневной потолок: к середине партии денег может уже не быть.
+    if (!(await globalBudgetOk())) {
+      log.info('selfgen: budget exhausted mid-batch, stopping', { created, planned: batch })
+      break
+    }
+    // Разным специалистам, а не одному N раз: цель прохода — ширина охвата доменов.
+    const pick = roster[(already + i) % roster.length]
+    const signal = { trigger: 'schedule', createdToday: already + created, cap, batch, index: i }
+    const decision = { expert: pick.id, profession: professionOf(pick, 'en'), reason: 'round-robin over domain specialists' }
+
+    // СУХОЙ ПРОГОН: решение принимаем и записываем, действие не производим. Так первое
+    // наблюдение за петлёй делается ДО того, как она начнёт создавать на живых данных.
+    if (policy.dryRun) {
+      await recordAgentAction({
+        loop: 'selfgen',
+        action: 'list.draft',
+        resultStatus: 'dry-run',
+        agentId: pick.id,
+        signal,
+        decision,
+        policyVersion: policy.policyVersion,
+      })
+      skipped++
+      continue
+    }
+
+    const res = await selfGenerateOne(pick.id)
     await recordAgentAction({
       loop: 'selfgen',
       action: 'list.draft',
-      resultStatus: 'dry-run',
+      resultStatus: res.error ? 'error' : 'ok',
       agentId: pick.id,
+      actorUserId: pick.userId,
       signal,
-      decision,
+      decision: { ...decision, topic: res.topic ?? null },
+      resultRef: res.ref ?? '',
+      error: res.error ?? '',
       policyVersion: policy.policyVersion,
     })
-    log.info('selfgen: dry-run, nothing created', { expert: pick.id })
-    return { created: 0, skipped: 1 }
+    if (res.error) {
+      log.info('selfgen: nothing created', { expert: pick.id, reason: res.error })
+      skipped++
+      // Отказ по бюджету — общий для всей партии, дальше идти незачем: остальные
+      // элементы упрутся в тот же потолок и только сожгут время воркера.
+      if (res.error === 'budget-exhausted' || res.error === 'ai-unavailable') break
+      continue
+    }
+    created++
   }
 
-  const res = await selfGenerateOne(pick.id)
-  await recordAgentAction({
-    loop: 'selfgen',
-    action: 'list.draft',
-    resultStatus: res.error ? 'error' : 'ok',
-    agentId: pick.id,
-    actorUserId: pick.userId,
-    signal,
-    decision: { ...decision, topic: res.topic ?? null },
-    resultRef: res.ref ?? '',
-    error: res.error ?? '',
-    policyVersion: policy.policyVersion,
-  })
-  if (res.error) {
-    log.info('selfgen: nothing created', { expert: pick.id, reason: res.error })
-    return { created: 0, skipped: 1 }
-  }
-  return { created: 1, skipped: 0 }
+  log.info('selfgen: sweep done', { created, skipped, planned: batch })
+  return { created, skipped }
 }
 
 /** Одна pending/processing джоба в очереди — самоподдержание без внешнего cron. */

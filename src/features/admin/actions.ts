@@ -72,7 +72,8 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.selfgen_mode': (['off', 'manual', 'auto'] as const).includes(formData.get('selfGenMode') as 'off' | 'manual' | 'auto')
       ? String(formData.get('selfGenMode'))
       : 'off',
-    'ai.selfgen_per_day': String(Math.max(0, Math.min(50, Number(formData.get('selfGenPerDay')) || 0))),
+    'ai.selfgen_per_day': String(Math.max(0, Math.min(200, Number(formData.get('selfGenPerDay')) || 0))),
+    'ai.selfgen_per_sweep': String(Math.max(1, Math.min(20, Number(formData.get('selfGenPerSweep')) || 1))),
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
   if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)
