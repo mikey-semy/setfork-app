@@ -21,6 +21,7 @@ interface Prov {
   precedents?: { title: string }[]
   precedentSteps?: string[]
   craftRules?: string[]
+  noBasis?: string[]
   critique?: string
   models?: Record<string, string>
 }
@@ -29,7 +30,7 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   const [open, setOpen] = useState(false)
   const p = provenance as Prov
-  const hasAny = Boolean(p.experts?.length || p.precedents?.length || p.craftRules?.length || p.critique || p.depth)
+  const hasAny = Boolean(p.experts?.length || p.precedents?.length || p.craftRules?.length || p.noBasis?.length || p.critique || p.depth)
   if (!hasAny) return null
   const nameOf = (id: string) => gnomeNames?.[id] || id.charAt(0).toUpperCase() + id.slice(1)
 
@@ -71,6 +72,15 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
           )}
           {row(say('Leaned on similar lists', 'Опирались на похожие списки'), (p.precedents ?? []).map((x) => x.title))}
           {row(say('Craft rules held', 'Держали правила ремесла'), p.craftRules ?? [])}
+          {/* ГДЕ НЕ БЫЛО ОПОРЫ — самая честная строка панели: показывает, что тут додумывали,
+              а не опирались. Без неё «опирались на похожие списки» звучит одинаково и когда
+              опирались, и когда линза не нашла ничего и сработал фолбэк. */}
+          {(p.noBasis ?? []).length > 0 && (
+            <div>
+              <span className="font-semibold text-warn">{say('No basis here', 'Здесь не было опоры')}:</span>{' '}
+              <span className="text-muted">{(p.noBasis ?? []).join(' · ')}</span>
+            </div>
+          )}
           {p.critique && (
             <div>
               <span className="font-semibold text-ink-2">{say('Critic said', 'Критик заметил')}:</span>
