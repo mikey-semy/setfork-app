@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, Eye, FileText, GitBranch, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
+import { ExternalLink, Eye, FileText, UserRound, GitBranch, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, revertToVersion, useTemplate } from '@/features/library/actions'
@@ -106,6 +106,10 @@ export default async function ListPage({
         command: s.command,
         level: s.level as (typeof dbSteps)[number]['level'],
         why: { en: s.why } as (typeof dbSteps)[number]['why'],
+        // Пометка «здесь нужен человек» в git не сериализуется (golden-паритет с Rust),
+        // поэтому на ветке её нет — не ложное false, а честное «неизвестно из снимка».
+        needsHuman: false,
+        needsHumanAsk: {} as (typeof dbSteps)[number]['needsHumanAsk'],
         section: { en: s.section } as (typeof dbSteps)[number]['section'],
         subtasks: s.subtasks.map((t) => ({ en: t })),
         refs: s.refs.map((r) => ({ label: { en: r.label }, ...(r.url ? { url: r.url } : {}) })),
@@ -628,6 +632,27 @@ export default async function ListPage({
                             <Info size={13} className="mt-0.5 shrink-0 text-muted" />
                             <span>
                               <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> {tr(s.why, lang)}
+                            </span>
+                          </div>
+                        )}
+                        {/* «ЗДЕСЬ НУЖЕН ЧЕЛОВЕК»: место, где машина честно не знает —
+                            местные цены, вкус, время на вашем оборудовании. Не дефект, а
+                            приглашение: реальный опыт доступен человеку, не модели.
+                            Приглашение ведёт в тот же поток правки, что и кнопка сверху. */}
+                        {s.needsHuman && (
+                          <div className="mt-1.5 flex gap-1.5 rounded-md border border-dashed border-border bg-surface-2 px-2.5 py-2 text-[12.5px] text-ink-2">
+                            <UserRound size={13} className="mt-0.5 shrink-0 text-muted" />
+                            <span className="min-w-0">
+                              <span className="font-medium text-ink-2">{t('needsHumanLabel', lang)}:</span>{' '}
+                              {tr(s.needsHumanAsk, lang) || t('needsHumanGeneric', lang)}
+                              {!readOnlyView && (
+                                <>
+                                  {' '}
+                                  <Link href={isOwner ? `${base}/edit` : `${base}/suggest`} className="underline decoration-dotted hover:text-ink">
+                                    {t('needsHumanAnswer', lang)}
+                                  </Link>
+                                </>
+                              )}
                             </span>
                           </div>
                         )}

@@ -59,6 +59,10 @@ export type EditorItem = {
   imagePreview: string // отображаемый URL превью (imgproxy/objectURL); только клиент
   level: StepLevel
   why: string
+  /** «Здесь нужен человек»: машина не может знать — местные цены, вкус, личный опыт. */
+  needsHuman: boolean
+  /** Что спросить у человека ('' → общий текст приглашения). */
+  needsHumanAsk: string
   section: string // заголовок секции-группы ('' — без секции)
   subtasks: string[]
   refs: EditorRef[]
@@ -68,7 +72,7 @@ const emptyPoll = (): EditorPoll => ({ question: '', options: [], multi: false, 
 const emptyQuiz = (): EditorQuiz => ({ kind: 'choice', question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], items: [], explain: '' })
 
 export function emptyItem(): EditorItem {
-  return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', fileUrl: '', fileName: '', poll: emptyPoll(), quiz: emptyQuiz(), products: [], title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', section: '', subtasks: [], refs: [] }
+  return { type: 'step', bid: '', text: '', caption: '', videoUrl: '', fileUrl: '', fileName: '', poll: emptyPoll(), quiz: emptyQuiz(), products: [], title: '', desc: '', command: '', imageKey: '', imagePreview: '', level: 'required', why: '', needsHuman: false, needsHumanAsk: '', section: '', subtasks: [], refs: [] }
 }
 
 /** Пустой блок заданного типа (для инсертера). Стабильный bid получает ЛЮБОЙ
@@ -88,7 +92,7 @@ export const isStepItem = (it: EditorItem): boolean => it.type === 'step'
 /** Плоские (одноязычные) пункты редактора → locale-JSON снимок.
  *  Шаг без заголовка — мусор (отбрасываем); text/image валидны и без title. */
 export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[] {
-  const base = { title: {} as LocaleText, desc: {} as LocaleText, command: '', hasImage: false, level: 'required' as StepLevel, why: {} as LocaleText, section: {} as LocaleText, subtasks: [] as LocaleText[], refs: [] as { label: LocaleText; url?: string }[] }
+  const base = { title: {} as LocaleText, desc: {} as LocaleText, command: '', hasImage: false, level: 'required' as StepLevel, why: {} as LocaleText, needsHuman: false, needsHumanAsk: {} as LocaleText, section: {} as LocaleText, subtasks: [] as LocaleText[], refs: [] as { label: LocaleText; url?: string }[] }
   const kept = items.filter((it) => !isStepItem(it) || it.title.trim())
   // Стабильный blockId проставляем ОДНИМ местом поверх всех веток: у не-step он
   // заодно лежит в content.bid (git-merge, голоса), у шага — только здесь.
@@ -211,6 +215,10 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
         imageKey: it.imageKey || undefined,
         level: asLevel(it.level),
         why: it.why.trim() ? { [lang]: it.why.trim() } : {},
+        // Снял галочку — пометка уходит вместе с вопросом: «человек ответил» и есть
+        // единственный способ её закрыть.
+        needsHuman: it.needsHuman,
+        needsHumanAsk: it.needsHuman && it.needsHumanAsk.trim() ? { [lang]: it.needsHumanAsk.trim() } : {},
         section: it.section.trim() ? { [lang]: it.section.trim() } : {},
         subtasks: it.subtasks.filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
         refs: it.refs
@@ -232,6 +240,8 @@ type LocaleItem = {
   imageKey?: string | null
   level?: StepLevel
   why?: LocaleText
+  needsHuman?: boolean
+  needsHumanAsk?: LocaleText
   section?: LocaleText
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
@@ -358,6 +368,8 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
       imagePreview: it.imageKey ? (previews[it.imageKey] ?? '') : '',
       level: asLevel(it.level),
       why: it.why ? tr(it.why, lang) : '',
+      needsHuman: it.needsHuman === true,
+      needsHumanAsk: it.needsHumanAsk ? tr(it.needsHumanAsk, lang) : '',
       section: it.section ? tr(it.section, lang) : '',
       subtasks: (it.subtasks ?? []).map((s) => tr(s, lang)),
       refs: (it.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' })),
@@ -421,6 +433,8 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
       imagePreview: String(it?.imagePreview ?? ''),
       level: asLevel(it?.level),
       why: String(it?.why ?? ''),
+      needsHuman: it?.needsHuman === true,
+      needsHumanAsk: String(it?.needsHumanAsk ?? ''),
       section: String(it?.section ?? ''),
       subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s: unknown) => String(s)) : [],
       refs: Array.isArray(it?.refs)

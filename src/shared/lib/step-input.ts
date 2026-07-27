@@ -21,6 +21,9 @@ export function toProposed(items: GeneratedItem[], lang: Lang): ProposedItem[] {
     hasImage: false,
     level: it.level ?? 'required',
     why: it.why?.trim() ? { [lang]: it.why.trim() } : {},
+    // Пометка «здесь нужен человек» переносится ВМЕСТЕ с вопросом: без вопроса это
+    // просто «мы не знаем», с вопросом — приглашение ответить из опыта.
+    ...(it.needsHuman ? { needsHuman: true, needsHumanAsk: it.needsHumanAsk?.trim() ? { [lang]: it.needsHumanAsk.trim() } : {} } : {}),
     section: it.section?.trim() ? { [lang]: it.section.trim() } : {},
     subtasks: (it.subtasks ?? []).filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
     refs: (it.refs ?? [])
@@ -40,6 +43,8 @@ export function toStepInput(items: ProposedItem[]) {
     command: it.command,
     level: it.level,
     why: it.why,
+    needsHuman: it.needsHuman ?? false,
+    needsHumanAsk: it.needsHumanAsk ?? {},
     section: it.section,
     subtasks: it.subtasks,
     refs: it.refs,
