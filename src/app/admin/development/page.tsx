@@ -1,11 +1,13 @@
 import Link from 'next/link'
-import { ArrowLeft, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Pause, Play, TrendingUp } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr, type Lang } from '@/shared/i18n'
 import { getDevelopmentMetrics, UNAVAILABLE, type NaReason } from '@/features/admin/development-queries'
 import { StatTile } from '@/shared/ui/StatTile'
 import { TagChip } from '@/shared/ui/TagChip'
+import { allLoopPolicies } from '@/shared/agents/policy'
+import { resetLoopCircuit, toggleLoopDryRun, toggleLoopPause } from '@/features/admin/actions'
 
 /**
  * Дашборд РАЗВИТИЯ (Ф-D0) — компания гномов, видимая сверху: куда движемся, а не
@@ -36,7 +38,7 @@ const h2 = 'text-[13px] font-semibold uppercase tracking-wide text-ink-2'
 export default async function AdminDevelopmentPage() {
   await requireAdmin()
   const lang = await getLang()
-  const m = await getDevelopmentMetrics(30)
+  const [m, loops] = await Promise.all([getDevelopmentMetrics(30), allLoopPolicies()])
   const period = tr({ en: `in ${m.periodDays} days`, ru: `за ${m.periodDays} дн.` }, lang)
 
   return (
@@ -231,11 +233,74 @@ export default async function AdminDevelopmentPage() {
         )}
       </section>
 
+      {/* ПЕТЛИ: рубильник, сухой прогон, предохранитель. Здесь, а не в настройках ИИ —
+          это мостик, место, откуда останавливают работу, увидев неладное. */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <h2 className={h2}>{tr({ en: 'Autonomous loops', ru: 'Автономные петли' }, lang)}</h2>
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+          <div className="grid min-w-[560px] grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
+            <span>{tr({ en: 'Loop', ru: 'Петля' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'State', ru: 'Состояние' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'Dry run', ru: 'Сухой прогон' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'Switch', ru: 'Рубильник' }, lang)}</span>
+          </div>
+          {loops.map((l) => (
+            <div key={l.type} className="grid min-w-[560px] grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-0">
+              <span className="truncate font-mono text-[12.5px] text-ink">{l.type}</span>
+              <span className={`text-right text-[12px] ${l.circuitTripped ? 'text-danger' : l.paused ? 'text-warn' : 'text-ok'}`}>
+                {l.circuitTripped
+                  ? tr({ en: 'breaker tripped', ru: 'предохранитель' }, lang)
+                  : l.paused
+                    ? tr({ en: 'paused', ru: 'остановлена' }, lang)
+                    : tr({ en: 'running', ru: 'работает' }, lang)}
+              </span>
+              <form action={toggleLoopDryRun} className="text-right">
+                <input type="hidden" name="type" value={l.type} />
+                <input type="hidden" name="dryRun" value={String(l.dryRun)} />
+                <button type="submit" className="inline-flex h-[38px] items-center rounded-md border border-border px-3 text-[12px] text-ink-2 hover:text-ink">
+                  {l.dryRun ? tr({ en: 'on', ru: 'вкл' }, lang) : tr({ en: 'off', ru: 'выкл' }, lang)}
+                </button>
+              </form>
+              <div className="flex justify-end gap-2">
+                {l.circuitTripped && (
+                  <form action={resetLoopCircuit}>
+                    <input type="hidden" name="type" value={l.type} />
+                    <button type="submit" className="inline-flex h-[38px] items-center rounded-md border border-danger/40 px-3 text-[12px] text-danger">
+                      {tr({ en: 'Reset', ru: 'Сбросить' }, lang)}
+                    </button>
+                  </form>
+                )}
+                <form action={toggleLoopPause}>
+                  <input type="hidden" name="type" value={l.type} />
+                  <input type="hidden" name="paused" value={String(l.paused)} />
+                  <button
+                    type="submit"
+                    className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border px-3 text-[12px] text-ink hover:border-border-strong"
+                  >
+                    {l.paused ? <Play size={13} /> : <Pause size={13} />}
+                    {l.paused ? tr({ en: 'Resume', ru: 'Пустить' }, lang) : tr({ en: 'Pause', ru: 'Стоп' }, lang)}
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))}
+          <div className="px-4 py-2.5 text-[11.5px] text-muted">
+            {tr(
+              {
+                en: 'Pause stops the queue from handing out this loop’s jobs — atomically, on every instance, without a restart. The breaker is tripped by code and cleared by a human.',
+                ru: 'Стоп прекращает выдачу задач этой петли — атомарно, на всех инстансах, без рестарта. Предохранитель ставит код, снимает человек.',
+              },
+              lang,
+            )}
+          </div>
+        </div>
+      </section>
+
       <p className="text-[12px] text-muted">
         {tr(
           {
-            en: 'Read-only page: it aggregates what is already stored and never calls a model. «—» means the source does not exist yet, not zero.',
-            ru: 'Страница только читает: агрегирует уже собранное и не зовёт модель. «—» значит источника ещё нет, а не ноль.',
+            en: 'Metrics are read-only aggregates and never call a model. «—» means the source does not exist yet, not zero. The loop switches above do write.',
+            ru: 'Метрики только читают и не зовут модель. «—» значит источника ещё нет, а не ноль. Рубильники петель выше — пишут.',
           },
           lang,
         )}

@@ -14,6 +14,7 @@ import { enqueueJob } from '@/shared/jobs/queue'
 import { listStore } from './list-store'
 import { uniqueSlug } from './slug'
 import { log } from '@/shared/observability'
+import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { spotlight } from '@/shared/ai/spotlight'
 import { detectTextLang } from '@/shared/lib/translit'
 import { toProposed, toStepInput } from '@/shared/lib/step-input'
@@ -177,7 +178,39 @@ export async function runSelfGenSweep(): Promise<{ created: number; skipped: num
   if (!roster.length) return { created: 0, skipped: 1 }
   // По одному списку за проход: пусть компания растёт ровно, а не рывками.
   const pick = roster[already % roster.length]
+  const policy = await loopPolicy('selfgen')
+  const signal = { trigger: 'schedule', createdToday: already, cap }
+  const decision = { expert: pick.id, profession: professionOf(pick, 'en'), reason: 'round-robin over domain specialists' }
+
+  // СУХОЙ ПРОГОН: решение принимаем и записываем, действие не производим. Так первое
+  // наблюдение за петлёй делается ДО того, как она начнёт что-то создавать на живых данных.
+  if (policy.dryRun) {
+    await recordAgentAction({
+      loop: 'selfgen',
+      action: 'list.draft',
+      resultStatus: 'dry-run',
+      agentId: pick.id,
+      signal,
+      decision,
+      policyVersion: policy.policyVersion,
+    })
+    log.info('selfgen: dry-run, nothing created', { expert: pick.id })
+    return { created: 0, skipped: 1 }
+  }
+
   const res = await selfGenerateOne(pick.id)
+  await recordAgentAction({
+    loop: 'selfgen',
+    action: 'list.draft',
+    resultStatus: res.error ? 'error' : 'ok',
+    agentId: pick.id,
+    actorUserId: pick.userId,
+    signal,
+    decision: { ...decision, topic: res.topic ?? null },
+    resultRef: res.ref ?? '',
+    error: res.error ?? '',
+    policyVersion: policy.policyVersion,
+  })
   if (res.error) {
     log.info('selfgen: nothing created', { expert: pick.id, reason: res.error })
     return { created: 0, skipped: 1 }

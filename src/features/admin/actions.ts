@@ -463,6 +463,44 @@ export async function selfGenerateNow(formData: FormData): Promise<void> {
   redirect(res.ref ? `/${res.ref}` : `/admin/council?selfgen=${res.error ?? 'failed'}`)
 }
 
+/**
+ * Рубильник петли. Останавливает выдачу её задач воркеру (проверка в claimJob) —
+ * атомарно и на все инстансы, без рестарта и без выключения всего ИИ.
+ */
+export async function toggleLoopPause(formData: FormData): Promise<void> {
+  const admin = await requireAdmin()
+  const type = String(formData.get('type') ?? '').trim()
+  const paused = formData.get('paused') === 'true'
+  if (!type) redirect('/admin/development')
+  const { pauseLoop, resumeLoop } = await import('@/shared/agents/policy')
+  if (paused) await resumeLoop(type)
+  else await pauseLoop(type, admin.userId, String(formData.get('reason') ?? '').trim())
+  revalidatePath('/admin/development')
+  redirect('/admin/development')
+}
+
+/** Сухой прогон: петля решает и пишет журнал, но не действует. */
+export async function toggleLoopDryRun(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const type = String(formData.get('type') ?? '').trim()
+  if (!type) redirect('/admin/development')
+  const { setLoopDryRun } = await import('@/shared/agents/policy')
+  await setLoopDryRun(type, formData.get('dryRun') !== 'true')
+  revalidatePath('/admin/development')
+  redirect('/admin/development')
+}
+
+/** Снять автоматический предохранитель — только человеком, разобравшись в причине. */
+export async function resetLoopCircuit(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const type = String(formData.get('type') ?? '').trim()
+  if (!type) redirect('/admin/development')
+  const { resetCircuit } = await import('@/shared/agents/policy')
+  await resetCircuit(type)
+  revalidatePath('/admin/development')
+  redirect('/admin/development')
+}
+
 export async function hireGnome(formData: FormData): Promise<void> {
   const admin = await requireAdmin()
   const tag = String(formData.get('tag') ?? '').trim().toLowerCase().slice(0, 40)
