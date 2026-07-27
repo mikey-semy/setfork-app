@@ -21,6 +21,8 @@ export interface CouncilValues {
   /** Режим самогенерации: off (дефолт) | manual (кнопкой) | auto (петля). */
   selfGenMode: 'off' | 'manual' | 'auto'
   selfGenPerDay: number
+  /** Сколько черновиков за один проход петли (темп = это число × число пробуждений). */
+  selfGenPerSweep: number
   /** Планка готовности: off (дефолт) | shadow (считаем, не публикуем) | on (публикуем). */
   readinessMode: 'off' | 'shadow' | 'on'
   readinessMinSteps: number
@@ -124,9 +126,18 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
             'Результат всегда ЧЕРНОВИК — машинный список не публикуется без человека. Авто-режим вдобавок уважает дневной потолок расхода ИИ.',
           )}
         </p>
-        <div className="mt-3">
-          <label className={lbl}>{say('Drafts per day (0 = no cap)', 'Черновиков в сутки (0 = без капа)')}</label>
-          <input type="number" name="selfGenPerDay" min="0" max="50" step="1" defaultValue={v.selfGenPerDay} className={field} />
+        {/* Оба числа обязаны быть В ФОРМЕ: экшен пишет ai.selfgen_* из formData, и поле,
+            которого в форме нет, при сохранении настроек уедет в минимум клампа. Так
+            «за проход» молча схлопнулось бы в 1 и партия перестала бы работать. */}
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className={lbl}>{say('Drafts per day (0 = no cap)', 'Черновиков в сутки (0 = без капа)')}</label>
+            <input type="number" name="selfGenPerDay" min="0" max="200" step="1" defaultValue={v.selfGenPerDay} className={field} />
+          </div>
+          <div>
+            <label className={lbl}>{say('Drafts per sweep', 'Черновиков за проход')}</label>
+            <input type="number" name="selfGenPerSweep" min="1" max="20" step="1" defaultValue={v.selfGenPerSweep} className={field} />
+          </div>
         </div>
       </div>
 
