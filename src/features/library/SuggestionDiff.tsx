@@ -77,7 +77,7 @@ export function SuggestionDiff({
           return (
             // Ключ — вид строки + заголовок шага: матчинг диффа сам идёт по заголовку (LCS),
             // так что пара kind:title однозначно идентифицирует строку.
-            <li key={`${r.kind}:${tr(r.step.title, lang)}`} className={`group flex gap-2.5 border-l-2 px-3 py-2 ${meta.bar} ${meta.bg}`}>
+            <li key={`${r.kind}:${tr(r.step.title, lang)}`} className={`group relative flex gap-2.5 border-l-2 px-3 py-2 pr-12 ${meta.bar} ${meta.bg}`}>
               <span
                 className={`mt-0.5 select-none font-mono text-[13px] font-bold ${
                   r.kind === 'add' ? 'text-ok' : r.kind === 'del' ? 'text-danger' : r.kind === 'mod' ? 'text-warn' : 'text-muted'

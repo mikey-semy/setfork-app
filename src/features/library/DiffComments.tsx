@@ -104,19 +104,20 @@ export function DiffComments({
     <>
       {/* Кнопка «прокомментировать» — как «+» у строки диффа в GitHub: не мозолит
           глаза, появляется по наведению на строку (и всегда видна с клавиатуры). */}
+      {/* Кнопка лежит в «жёлобе» строки (absolute), а не в потоке: иначе скрытая
+          кнопка резервирует высоту и строки диффа раздуваются. Появляется по
+          наведению на строку, на мобиле видна всегда, с клавиатуры — по фокусу. */}
       {canComment && blockId && (
-        <div className="mt-1 flex justify-end">
         <Tooltip label={labels.add}>
           <button
             type="button"
             onClick={openComposer}
             aria-label={labels.add}
-            className="grid size-9 shrink-0 place-items-center rounded-md text-muted opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 hover:bg-surface-2 hover:text-ink max-sm:opacity-100"
+            className="absolute right-1.5 top-1 grid size-9 place-items-center rounded-md bg-surface/80 text-muted opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 hover:text-ink max-sm:opacity-100"
           >
             <MessageSquarePlus size={15} />
           </button>
         </Tooltip>
-        </div>
       )}
 
       {(visible.length > 0 || resolved.length > 0 || open) && (
