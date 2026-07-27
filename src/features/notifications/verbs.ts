@@ -14,6 +14,7 @@ import type { NotificationType } from './queries'
 export const NOTIF_VERB: Record<NotificationType, TKey> = {
   suggestion_new: 'notifSuggestionNew',
   suggestion_accepted: 'notifAccepted',
+  suggestion_edited: 'notifSuggestionEdited',
   suggestion_rejected: 'notifRejected',
   suggestion_comment: 'notifSuggestionComment',
   issue_new: 'notifIssueNew',

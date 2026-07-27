@@ -20,9 +20,16 @@ export function withPrDefaults(raw: unknown): Required<PrSettings> {
     requiredApprovals: Number.isFinite(approvals) ? Math.min(10, Math.max(0, Math.trunc(approvals))) : PR_DEFAULTS.requiredApprovals,
     autoDeleteBranch: bool('autoDeleteBranch'),
     autoCloseIssues: bool('autoCloseIssues'),
+    allowMaintainerEdits: bool('allowMaintainerEdits'),
   }
 }
 
 /** Ключи, которые UI умеет переключать (валидация входа экшена). */
-export const PR_BOOL_KEYS = ['linearOnly', 'blockOnUnresolved', 'autoDeleteBranch', 'autoCloseIssues'] as const
+export const PR_BOOL_KEYS = [
+  'linearOnly',
+  'blockOnUnresolved',
+  'autoDeleteBranch',
+  'autoCloseIssues',
+  'allowMaintainerEdits',
+] as const
 export type PrBoolKey = (typeof PR_BOOL_KEYS)[number]

@@ -695,6 +695,22 @@ export async function getUsersByEmails(emails: string[]): Promise<Record<string,
   return Object.fromEntries(resolved)
 }
 
+/**
+ * Пользователи по id — соавторы предложения (`coauthor_ids`).
+ *
+ * Рядом с `getUsersByEmails` и по её же схеме: аватары резолвятся параллельно,
+ * потому что подпись URL — сетевая операция, а соавторов бывает несколько.
+ */
+export async function getUsersByIds(ids: string[]): Promise<{ handle: string; name: string | null; avatarUrl: string | null }[]> {
+  const uniq = [...new Set(ids.filter(Boolean))]
+  if (uniq.length === 0) return []
+  const rows = await db
+    .select({ handle: users.handle, name: users.name, avatarUrl: users.avatarUrl })
+    .from(users)
+    .where(inArray(users.id, uniq))
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
 /** Текущий этап правки для пикера ({id,title} или null). */
 export async function getSuggestionMilestone(suggestionId: string): Promise<{ id: string; title: string } | null> {
   const [r] = await db

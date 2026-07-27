@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { GitMerge, MessagesSquare, Trash2, CircleCheck } from 'lucide-react'
+import { GitMerge, MessagesSquare, Pencil, Trash2, CircleCheck } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { t, type Lang } from '@/shared/i18n'
@@ -24,7 +24,15 @@ export function PrSettingsSection({
   lang,
 }: {
   templateId: string
-  settings: { allowFrom: 'all' | 'collaborators'; blockOnUnresolved: boolean; requiredApprovals: number; autoDeleteBranch: boolean; autoCloseIssues: boolean; linearOnly: boolean }
+  settings: {
+    allowFrom: 'all' | 'collaborators'
+    blockOnUnresolved: boolean
+    requiredApprovals: number
+    autoDeleteBranch: boolean
+    autoCloseIssues: boolean
+    linearOnly: boolean
+    allowMaintainerEdits: boolean
+  }
   lang: Lang
 }) {
   return (
@@ -48,6 +56,14 @@ export function PrSettingsSection({
           icon={<GitMerge size={16} className="text-muted" />}
           label={t('prSetLinear', lang)}
           hint={t('prSetLinearHint', lang)}
+        />
+        <BoolRow
+          templateId={templateId}
+          k="allowMaintainerEdits"
+          initial={settings.allowMaintainerEdits}
+          icon={<Pencil size={16} className="text-muted" />}
+          label={t('prSetMaintainerEdits', lang)}
+          hint={t('prSetMaintainerEditsHint', lang)}
         />
         <BoolRow
           templateId={templateId}

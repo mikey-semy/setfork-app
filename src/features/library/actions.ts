@@ -3,7 +3,7 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, issues, steps, suggestionComments, suggestions, templates, users, type ProposedItem } from '@/shared/db'
+import { db, issues, steps, suggestionAssignees, suggestionComments, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
@@ -33,6 +33,7 @@ import { countUnresolvedThreads } from '@/features/comments/queries'
 import { listStore } from './list-store'
 import { closingRefs } from './closing-refs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from './pr-settings'
+import { canEditSuggestionItems } from './suggestion-perms'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
 import { canEditList, canViewList } from '@/core'
@@ -64,15 +65,24 @@ async function closeLinkedIssues(templateId: string, text: string, actorId: stri
 }
 
 /**
- * Ленивый доступ к git-порту и его ошибкам.
+ * Ленивый доступ к git-порту, его ошибкам и канонической сериализации.
  *
  * Импорт динамический не ради красоты: серверные экшены этого файла в большинстве
  * своём git не трогают, а порт тянет за собой ядро. Один помощник вместо копии
- * этой пары импортов в каждом git-экшене (их уже четыре).
+ * этих импортов в каждом git-экшене (их уже пять).
+ *
+ * `listJson` идёт отсюда же намеренно: это ЕДИНСТВЕННОЕ место файла, знающее про
+ * `features/git`. Каждый новый прямой импорт туда — ещё одно кросс-фичевое
+ * нарушение границ, а их счётчик в baseline линтера ограничен: превысишь — и он
+ * начинает сыпать по всему файлу разом.
  */
 async function gitPort() {
-  const [core, ports] = await Promise.all([import('@/features/git/core'), import('@/core')])
-  return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError }
+  const [core, ports, ser] = await Promise.all([
+    import('@/features/git/core'),
+    import('@/core'),
+    import('@/features/git/serialize'),
+  ])
+  return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError, listJson: ser.listJson }
 }
 
 /** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
@@ -552,10 +562,9 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
     redirect(`${path}?e=unresolved`)
   }
 
-  const [{ gitCore }, { threeWayMerge, applyChoices }, { BranchOpError }] = await Promise.all([
-    import('@/features/git/core'),
+  const [{ gitCore, BranchOpError, listJson }, { threeWayMerge, applyChoices }] = await Promise.all([
+    gitPort(),
     import('@/features/git/three-way'),
-    import('@/core'),
   ])
 
   const state = await gitCore.mergeState({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
@@ -564,23 +573,21 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   const final = applyChoices(res, stepChoices, metaChoices)
   if (!final) redirect(`${path}?e=unresolved`) // выбраны не все конфликты (или state изменился)
 
-  // Каноничный формат list.json — как versionFiles (serialize.ts).
-  const listJson =
-    JSON.stringify(
-      {
-        title: final.title,
-        desc: final.desc,
-        tags: final.tags,
-        ordered: final.ordered,
-        version: tpl.currentVersion + 1,
-        steps: final.steps.map((s, i) => ({ n: i + 1, ...s })),
-      },
-      null,
-      2,
-    ) + '\n'
+  // Каноничный формат list.json — ТОЙ ЖЕ функцией, что пишет версии в git:
+  // собранный руками JSON молча разошёлся бы с ней при первой правке формата.
+  const json = listJson({
+    title: final.title,
+    desc: final.desc,
+    tags: final.tags,
+    ordered: final.ordered,
+    version: tpl.currentVersion + 1,
+    // blockId у трёхстороннего merge — nullable; сериализатор пишет поле только
+    // когда оно есть (иначе ломается golden-паритет с Rust), поэтому null убираем.
+    steps: final.steps.map(({ blockId, ...s }, i) => ({ ...s, n: i + 1, ...(blockId ? { blockId } : {}) })),
+  })
 
   try {
-    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, listJson)
+    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, json)
   } catch (e) {
     const code = e instanceof BranchOpError ? e.code : 'internal'
     redirect(`${path}?e=${code}`)
@@ -675,6 +682,102 @@ export async function editSuggestionNote(suggestionId: string, note: string): Pr
   const handle = await ownerHandle(sug.template.ownerId)
   revalidatePath(`/${handle}/${sug.template.slug}/suggestions/${sug.number ?? sug.id}`)
   return { ok: true }
+}
+
+// Правило прав живёт в suggestion-perms (без 'use server'): каждый экспорт
+// отсюда — сетевая точка входа, а предикату быть вызываемым снаружи незачем.
+
+/**
+ * ПРАВКА ПУНКТОВ предложения после создания — то, чего не было вовсе.
+ *
+ * До сих пор `suggestions.items` записывались ровно один раз, при создании: ни
+ * второй человек не мог внести вклад, ни сам автор — поправить опечатку. На
+ * GitHub на правку просто дописывают коммит; у нас пути не было.
+ *
+ * Один вход на оба вида предложений — разница только в том, где живут пункты:
+ * у ветки это `list.json` в её tip (пишем коммитом, авторство человека
+ * сохраняется в git), у старых предложений — колонка в БД.
+ */
+export async function updateSuggestionItems(suggestionId: string, formData: FormData): Promise<void> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+  if (!sug || sug.status !== 'open') return
+  if (!(await canEditSuggestionItems(sug, session.userId))) return
+  const tpl = sug.template
+  if (!canEditList(tpl)) return // архив/заморозка — список только на чтение
+
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
+  const owner = await ownerHandle(tpl.ownerId)
+  const path = `/${owner}/${tpl.slug}/suggestions/${sug.number ?? sug.id}`
+
+  if (sug.branchRef) {
+    // Пункты ветки живут в git. Базу берём из снапшота: заголовок/теги/порядок
+    // принадлежат ветке, а не БД, и перетирать их правкой пунктов нельзя.
+    const { gitCore, BranchOpError, listJson } = await gitPort()
+    const snap = await gitCore.branchSnapshot({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
+    if (!snap) redirect(`${path}?e=not-found`)
+    const json = listJson({
+      title: snap.title,
+      desc: snap.desc,
+      tags: snap.tags,
+      ordered: snap.ordered,
+      version: tpl.currentVersion + 1,
+      steps: proposed.map((it, i) => ({
+        n: i + 1,
+        ...(it.type && it.type !== 'step' ? { type: it.type, content: (it.content ?? {}) as Record<string, unknown> } : {}),
+        // blockId только когда он есть: строки без него дают байт-в-байт прежний
+        // list.json, и golden-паритет с Rust не ломается (см. serialize.ts).
+        ...(it.blockId ? { blockId: String(it.blockId) } : {}),
+        title: tr(it.title as LocaleText, lang),
+        desc: tr(it.desc as LocaleText, lang),
+        command: it.command ?? '',
+        level: it.level ?? 'required',
+        why: tr(it.why as LocaleText, lang),
+        section: tr(it.section as LocaleText, lang),
+        subtasks: (it.subtasks ?? []).map((s) => tr(s as LocaleText, lang)),
+        refs: (it.refs ?? []).map((r) => ({ label: tr(r.label as LocaleText, lang), ...(r.url ? { url: r.url } : {}) })),
+      })),
+    })
+    try {
+      // expectedTip — снапшот, который правил человек: если ветку подвинули, пишем
+      // не поверх чужого пуша, а честно отказываем.
+      await gitCore.commitToBranch({ owner, slug: tpl.slug }, sug.branchRef, json, {
+        message: `Update suggestion by @${session.handle}`,
+        expectedTip: snap.tipSha,
+        author: { name: session.handle, email: await gitEmail(session.userId, session.handle) },
+      })
+    } catch (e) {
+      const code = e instanceof BranchOpError ? e.code : 'internal'
+      redirect(`${path}?e=${code}`)
+    }
+  } else {
+    await db.update(suggestions).set({ items: proposed }).where(eq(suggestions.id, sug.id))
+  }
+
+  // Соавторство: правку внёс не автор — запоминаем, иначе вклад исчезнет
+  // (у ветки он остался бы в git, у items — нигде).
+  if (sug.authorId !== session.userId) {
+    const prev = (sug.coauthorIds as string[] | null) ?? []
+    if (!prev.includes(session.userId)) {
+      await db.update(suggestions).set({ coauthorIds: [...prev, session.userId] }).where(eq(suggestions.id, sug.id))
+    }
+    await notify({
+      recipientId: sug.authorId,
+      actorId: session.userId,
+      type: 'suggestion_edited',
+      templateId: tpl.id,
+      suggestionId: sug.id,
+    })
+  }
+  revalidatePath(path)
+  redirect(path)
+}
+
+/** Адрес для авторства коммита: свой e-mail, иначе стабильный noreply по handle. */
+async function gitEmail(userId: string, handle: string): Promise<string> {
+  const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1)
+  return u?.email || `${handle}@users.noreply.setfork.com`
 }
 
 /**

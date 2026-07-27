@@ -356,6 +356,71 @@ export const gitCoreInproc: GitCore = {
     const res = await exec('git', args, { maxBuffer: 8 * 1024 * 1024 }).catch(() => null)
     return res ? parseGitLog(res.stdout) : null
   },
+
+  // Записать list.json в ветку одним коммитом — зеркало git::write в Rust-ядре.
+  // Отличие от mergeResolved: пишем в ВЕТКУ, родитель один, main не двигается.
+  async commitToBranch(repo, branch, listJson, opts) {
+    if (badBranch(branch) || branch === 'main') throw new BranchOpError('bad-name')
+    try {
+      const parsed: unknown = JSON.parse(listJson)
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object')
+    } catch {
+      throw new BranchOpError('bad-name')
+    }
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) throw new BranchOpError('not-found')
+    const listId = await resolveListId(repo.owner, repo.slug)
+    if (!listId) throw new BranchOpError('not-found')
+    const ref = `refs/heads/${branch}`
+    const content = listJson.endsWith('\n') ? listJson : listJson + '\n'
+    // Тот же лок, что у merge/push: tip читаем ПОСЛЕ захвата, иначе конкурентный
+    // пуш в ветку потерялся бы.
+    return gitStore.withRepoLock(listId, async () => {
+      const tip = await exec('git', ['--git-dir', bare, 'rev-parse', '--verify', ref]).then(
+        (r) => r.stdout.trim(),
+        () => null,
+      )
+      if (!tip) throw new BranchOpError('not-found')
+      // Оптимистичная блокировка: пока человек смотрел на дифф, ветку могли подвинуть.
+      if (opts?.expectedTip && opts.expectedTip !== tip) throw new BranchOpError('stale')
+      // Содержимое не изменилось → коммита нет: пустые коммиты замусоривают
+      // вкладку «Коммиты» и сбивают счётчик вклада ветки.
+      const current = await exec('git', ['--git-dir', bare, 'show', `${tip}:list.json`], {
+        maxBuffer: 8 * 1024 * 1024,
+      }).then(
+        (r) => r.stdout,
+        () => null,
+      )
+      if (current !== null && current === content) return { tipSha: tip, changed: false }
+
+      const [hash, { stdout: lsTree }] = await Promise.all([
+        execStdin(['--git-dir', bare, 'hash-object', '-w', '--stdin'], content),
+        exec('git', ['--git-dir', bare, 'ls-tree', tip]),
+      ])
+      // steps/ убираем вслед за каноном — как в mergeResolved.
+      const entries = lsTree
+        .split('\n')
+        .filter(Boolean)
+        .filter((l) => !l.endsWith('\tsteps') && !l.endsWith('\tlist.json'))
+      entries.push(`100644 blob ${hash}\tlist.json`)
+      const tree = await execStdin(['--git-dir', bare, 'mktree'], entries.join('\n') + '\n')
+      // Авторство человека, если передали: иначе вкладка «Коммиты» показала бы
+      // служебного автора там, где правку внёс пользователь.
+      const who = opts?.author
+      const env = {
+        ...process.env,
+        GIT_AUTHOR_NAME: who?.name || 'SetFork',
+        GIT_AUTHOR_EMAIL: who?.email || 'git@setfork.com',
+        GIT_COMMITTER_NAME: 'SetFork',
+        GIT_COMMITTER_EMAIL: 'git@setfork.com',
+      }
+      const msg = opts?.message?.trim() || 'Apply suggested edit'
+      const { stdout: commit } = await exec('git', ['--git-dir', bare, 'commit-tree', tree, '-p', tip, '-m', msg], { env })
+      const tipSha = commit.trim()
+      await exec('git', ['--git-dir', bare, 'update-ref', ref, tipSha, tip])
+      return { tipSha, changed: true }
+    })
+  },
 }
 
 // git-команда с данными на stdin (hash-object/mktree).

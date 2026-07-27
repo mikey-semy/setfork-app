@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, RefreshCw, X } from 'lucide-react'
+import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, Pencil, RefreshCw, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -12,6 +12,7 @@ import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr, updateBranchFromMain } from '@/features/library/actions'
+import { canEditSuggestionItems } from '@/features/library/suggestion-perms'
 import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
@@ -52,7 +53,7 @@ import { LabelEditor } from '@/features/issues/LabelEditor'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
 import { getListLabels } from '@/features/issues/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
-import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails } from '@/features/library/queries'
+import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails, getUsersByIds } from '@/features/library/queries'
 import { setSuggestionDraft, setSuggestionLabels, setSuggestionMilestone, toggleReviewRequest, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
@@ -84,6 +85,10 @@ export default async function SuggestionThreadPage({
 
   const isOwner = session?.userId === meta.ownerId
   const canMerge = isOwner || (!!session && (await isCollaborator(meta.id, session.userId)))
+  // Правка ПУНКТОВ — не то же, что слияние: её ведут автор и исполнители, а
+  // мейнтейнеры только если список это разрешил. Правило одно с экшеном.
+  const canEditItems =
+    !!session && sug.status === 'open' && (await canEditSuggestionItems({ ...sug, template: meta }, session.userId))
 
   // A3: branch-PR — предлагаемые шаги живут в tip ветки, а не в items;
   // diff строим против ТЕКУЩЕЙ версии main (PR = «ветка → main»).
@@ -170,6 +175,8 @@ export default async function SuggestionThreadPage({
       en: 'This list requires linear history: only fast-forward merges are allowed. Update the branch from main and retry.',
     },
     unresolved: { ru: 'Разрешены не все конфликты (или ветка изменилась) — выбери версии заново.', en: 'Not all conflicts were resolved (or the branch changed) — pick again.' },
+    // Правку не записали, потому что ветку подвинули: чужой пуш не затираем.
+    stale: { ru: t('prStaleWrite', 'ru'), en: t('prStaleWrite', 'en') },
   }
   const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? { ru: 'Не удалось выполнить merge.', en: 'Merge failed.' }) : null
 
@@ -256,6 +263,16 @@ export default async function SuggestionThreadPage({
   const commits = sug.branchRef && !branchMissing ? await gitCore.listCommits({ owner, slug }, sug.branchRef, { notIn: 'main' }) : null
   const commitAuthors = commits?.length ? await getUsersByEmails(commits.map((c) => c.authorEmail)) : {}
 
+  // СОАВТОРЫ: над одной правкой работают несколько человек. У ветки это авторы
+  // коммитов (git знает их и без нас), у предложений с items — те, кто правил
+  // пункты. Открывшего сюда не включаем: он показан отдельно.
+  const coauthorRows = await getUsersByIds(((sug.coauthorIds as string[] | null) ?? []).filter((u) => u !== sug.authorId))
+  const seenCo = new Set([sug.author.handle])
+  const coauthors = [
+    ...coauthorRows,
+    ...Object.values(commitAuthors),
+  ].filter((c) => c.handle && !seenCo.has(c.handle) && seenCo.add(c.handle))
+
   const statusCls = isDraft
     ? 'bg-surface-2 text-ink-2'
     : sug.status === 'accepted'
@@ -334,7 +351,23 @@ export default async function SuggestionThreadPage({
             {t('proposedBy', lang)}{' '}
             <Link href={`/${sug.author.handle}`} className="font-semibold text-ink hover:text-accent">
               {sug.author.handle}
-            </Link>{' '}
+            </Link>
+            {/* Соавторы: над правкой работают несколько человек, и «предложил X»
+                в одиночку это скрывало. У ветки вклад берём из авторства коммитов,
+                у старых предложений — из тех, кто правил пункты. */}
+            {coauthors.length > 0 && (
+              <>
+                {' '}
+                <Tooltip label={`${t('prCoauthors', lang)}: ${coauthors.map((c) => c.handle).join(', ')}`}>
+                  <span className="inline-flex shrink-0 items-center gap-0.5 align-middle">
+                    {coauthors.slice(0, 3).map((c) => (
+                      <Avatar key={c.handle} handle={c.handle} avatarUrl={c.avatarUrl} size={18} />
+                    ))}
+                    {coauthors.length > 3 && <span className="font-mono text-[11px] text-muted">+{coauthors.length - 3}</span>}
+                  </span>
+                </Tooltip>
+              </>
+            )}{' '}
             · {fmt.format(new Date(sug.createdAt))} ·{' '}
             {sug.branchRef ? (
               <>
@@ -414,8 +447,17 @@ export default async function SuggestionThreadPage({
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → предложение` : `v${sug.baseVersion} → suggestion`}
         </div>
-        {/* Переключатель вида — общий с сравнением версий. */}
-        <div className="mb-3 flex justify-end">
+        {/* Ряд действий над диффом: правка пунктов слева от переключателя вида —
+            обе кнопки одной высоты, ряд прижат вправо (эталон настроек). */}
+        <div className="mb-3 flex items-center justify-end gap-2">
+          {canEditItems && (
+            <Link
+              href={`${path}/edit`}
+              className="inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-[13px] font-semibold text-ink hover:border-border-strong"
+            >
+              <Pencil size={14} /> {t('prEdit', lang)}
+            </Link>
+          )}
           <DiffViewToggle path={path} tab="files" view={view} labels={{ code: t('viewCode', lang), list: t('viewList', lang) }} />
         </div>
         {view === 'code' ? (

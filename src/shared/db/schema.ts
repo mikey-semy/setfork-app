@@ -51,6 +51,7 @@ export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine
 export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
+  'suggestion_edited',
   'suggestion_rejected',
   'suggestion_comment',
   'issue_new',
@@ -220,6 +221,15 @@ export interface PrSettings {
   autoDeleteBranch?: boolean
   /** Закрывать задачи по «closes #N» при слиянии. */
   autoCloseIssues?: boolean
+  /**
+   * Разрешить владельцу и коллаборантам править ЧУЖОЕ предложение.
+   *
+   * Аналог «Allow edits by maintainers» у GitHub, но решение принимает владелец
+   * списка, а не автор правки: у нас список — единица владения, и держать флаг
+   * на каждом предложении значило бы спрашивать одно и то же каждый раз.
+   * Автор своё предложение правит всегда, независимо от настройки.
+   */
+  allowMaintainerEdits?: boolean
 }
 
 /** Дефолты настроек предложений = поведение до их появления. */
@@ -230,6 +240,9 @@ export const PR_DEFAULTS: Required<PrSettings> = {
   requiredApprovals: 0,
   autoDeleteBranch: false,
   autoCloseIssues: true,
+  // Выключено по умолчанию: правка чужого текста — это то, на что соглашаются
+  // осознанно, а не обнаруживают постфактум.
+  allowMaintainerEdits: false,
 }
 
 export const templates = pgTable(
@@ -685,6 +698,11 @@ export const suggestions = pgTable('suggestions', {
   // готовые LabelEditor/этапы, а не их копии.
   labels: jsonb('labels').notNull().default([]).$type<string[]>(),
   milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
+  // Соавторы: кто, кроме открывшего, правил пункты. У ветки вклад и так виден в
+  // авторстве коммитов, а у предложений с items он не оставался НИГДЕ — правка
+  // просто перезаписывала колонку. Массив id, а не таблица: порядок не нужен,
+  // связей нет, а запрос всегда идёт вместе с самим предложением.
+  coauthorIds: jsonb('coauthor_ids').notNull().default([]).$type<string[]>(),
   note: text('note').notNull().default(''),
   baseVersion: integer('base_version').notNull(),
   items: jsonb('items').notNull().default([]).$type<ProposedItem[]>(),

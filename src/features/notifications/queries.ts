@@ -8,6 +8,7 @@ import { avatarSrc } from '@/shared/media'
 export type NotificationType =
   | 'suggestion_new'
   | 'suggestion_accepted'
+  | 'suggestion_edited'
   | 'suggestion_rejected'
   | 'suggestion_comment'
   | 'issue_new'

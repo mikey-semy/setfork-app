@@ -145,6 +145,23 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
+  async commitToBranch(repo, branch, listJson, opts) {
+    try {
+      const res = await client.commitToBranch({
+        repo: toRepoRef(repo),
+        branch,
+        listJson: new TextEncoder().encode(listJson.endsWith('\n') ? listJson : listJson + '\n'),
+        message: opts?.message ?? '',
+        expectedTip: opts?.expectedTip ?? '',
+        authorName: opts?.author?.name ?? '',
+        authorEmail: opts?.author?.email ?? '',
+      })
+      return { tipSha: res.tipSha, changed: res.changed }
+    } catch (e) {
+      throw toBranchOpError(e)
+    }
+  },
+
   async listTags(repo) {
     const res = await client.listTags(toRepoRef(repo)).catch(() => null)
     return res ? res.tags.map((t) => ({ name: t.name, targetSha: t.targetSha })) : []
@@ -220,6 +237,7 @@ function toBranchOpError(e: unknown): BranchOpError {
   if (e.code === Code.FailedPrecondition) {
     if (e.rawMessage.includes('conflict')) return new BranchOpError('conflict')
     if (e.rawMessage.includes('nothing-to-merge')) return new BranchOpError('nothing-to-merge')
+    if (e.rawMessage.includes('stale')) return new BranchOpError('stale')
     return new BranchOpError('protected')
   }
   return new BranchOpError('internal')

@@ -13,6 +13,7 @@ import { extractHandles } from './mentions'
 type NotifType =
   | 'suggestion_new'
   | 'suggestion_accepted'
+  | 'suggestion_edited'
   | 'suggestion_rejected'
   | 'suggestion_comment'
   | 'issue_new'
@@ -35,6 +36,9 @@ const TYPE_PREF: Partial<Record<NotifType, keyof NotifyPrefs>> = {
   suggestion_accepted: 'suggestionResolved',
   suggestion_rejected: 'suggestionResolved',
   suggestion_comment: 'comments',
+  // Правку СВОЕГО предложения чужими руками относим к тем же уведомлениям, что и
+  // обсуждение: это разговор о правке, а не её судьба.
+  suggestion_edited: 'comments',
   issue_new: 'issues',
   issue_comment: 'comments',
   issue_closed_by_merge: 'issues',

@@ -10,6 +10,8 @@ describe('withPrDefaults', () => {
       requiredApprovals: 0,
       autoDeleteBranch: false,
       autoCloseIssues: true,
+      // Правка чужого предложения мейнтейнером — только по явному согласию.
+      allowMaintainerEdits: false,
     })
     expect(withPrDefaults(null)).toEqual(withPrDefaults({}))
     expect(withPrDefaults(undefined)).toEqual(withPrDefaults({}))
