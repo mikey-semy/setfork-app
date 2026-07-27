@@ -69,7 +69,12 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
 
       <div className="mx-auto w-full max-w-[1180px] px-4 pt-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          {/* Название скрыто на узких экранах — оно уже в бредкрамбе шапки. */}
+          {/* Название скрыто на узких экранах — оно уже в бредкрамбе шапки. На
+              под-вкладках (Задачи/Предложения/…) скрыто и на широких: там оно
+              дублировало бредкрамб сверху, отнимая экран у самого содержимого.
+              Тот же приём, что у действий репозитория ниже — как GitHub, где на
+              под-вкладках видны только табы. */}
+          <ShowOnListRoot base={base}>
           <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
             <Link href={`/${meta.ownerHandle}`} className="shrink-0">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
@@ -100,6 +105,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               </span>
             ) : null}
           </div>
+          </ShowOnListRoot>
 
           {/* Действия репозитория — только на корне «Список» (как GitHub: на
               под-вкладках видны только табы, без Watch/Fork/Star). */}

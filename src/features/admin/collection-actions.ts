@@ -7,7 +7,7 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { db, collectionItems, collections, repositories, templates, users } from '@/shared/db'
 import { removeImageFile, uploadImageFile } from '@/shared/media/upload'
 import { slugify } from '@/features/library/slug'
-import { isHexColor } from '@/features/issues/labels'
+import { isHexColor } from '@/shared/lib/labels'
 
 export async function createCollection(formData: FormData): Promise<void> {
   const admin = await requireAdmin()

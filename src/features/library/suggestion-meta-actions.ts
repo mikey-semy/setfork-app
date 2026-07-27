@@ -6,12 +6,58 @@ import { db, milestones, suggestionAssignees, suggestionReviewRequests, suggesti
 import { requireSession } from '@/shared/auth/session'
 // eslint-disable-next-line boundaries/dependencies -- права коллаборатора из collab
 import { isCollaborator } from '@/features/collab/queries'
-// eslint-disable-next-line boundaries/dependencies -- ОДНО правило ярлыков на задачи и правки
-import { cleanLabels } from '@/features/issues/labels'
+import { cleanLabels } from '@/shared/lib/labels'
 // eslint-disable-next-line boundaries/dependencies -- набор кастомных метоk списка
 import { getListLabels } from '@/features/issues/queries'
 // eslint-disable-next-line boundaries/dependencies -- уведомление о просьбе посмотреть правку
 import { notify } from '@/features/notifications/notify'
+
+/**
+ * ПАКЕТНЫЕ действия над выбранными предложениями — как множественный выбор в
+ * списке PR у GitHub: отметил несколько, поставил метку или закрыл разом.
+ *
+ * Права проверяются НА КАЖДОМ предложении отдельно (теми же экшенами), а не один
+ * раз на пачку: иначе достаточно было бы подмешать в список чужой id. То, на что
+ * права нет, молча пропускаем — как и одиночные экшены.
+ */
+export async function bulkSuggestionAction(
+  ids: string[],
+  op: { kind: 'label'; label: string } | { kind: 'milestone'; milestoneId: string } | { kind: 'close' },
+): Promise<void> {
+  const uniq = [...new Set(ids.filter(Boolean))].slice(0, 100)
+  for (const id of uniq) {
+    if (op.kind === 'close') {
+      await closeSuggestion(id)
+    } else if (op.kind === 'milestone') {
+      await setSuggestionMilestone(id, op.milestoneId)
+    } else {
+      // Метку ДОБАВЛЯЕМ к имеющимся, а не заменяем набор: пакетное «поставить
+      // метку» не должно снимать чужие.
+      const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, id) })
+      if (!sug) continue
+      const cur = (sug.labels as string[] | null) ?? []
+      if (!cur.includes(op.label)) await setSuggestionLabels(id, [...cur, op.label])
+    }
+  }
+}
+
+/** Закрыть предложение — то же право, что у остальных пакетных действий. */
+async function closeSuggestion(suggestionId: string): Promise<void> {
+  const loaded = await loadForManage(suggestionId)
+  if (!loaded || loaded.sug.status !== 'open') return
+  const { sug, session } = loaded
+  await db.update(suggestions).set({ status: 'rejected', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
+  if (sug.authorId !== session.userId) {
+    await notify({
+      recipientId: sug.authorId,
+      actorId: session.userId,
+      type: 'suggestion_rejected',
+      templateId: sug.templateId,
+      suggestionId: sug.id,
+    })
+  }
+  await revalidateSuggestion(sug.template.ownerId, sug.template.slug, sug.number ?? sug.id)
+}
 
 /**
  * Метки, исполнители и этап ПРАВКИ — та же модель, что у задач.

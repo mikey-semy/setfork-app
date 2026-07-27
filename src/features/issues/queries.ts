@@ -2,7 +2,7 @@ import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
-import type { CustomLabel } from './labels'
+import type { CustomLabel } from '@/shared/lib/labels'
 
 /** Кастомные метки списка (для пикеров/чипов/менеджера). */
 export async function getListLabels(templateId: string): Promise<CustomLabel[]> {

@@ -848,7 +848,7 @@ export const issues = pgTable(
 )
 
 // Кастомные метки списка (сверх встроенной палитры): имя + hex-цвет, задаёт
-// владелец. На issue хранятся ключом `c:<id>` (см. features/issues/labels).
+// владелец. На issue хранятся ключом `c:<id>` (см. shared/lib/labels).
 export const listLabels = pgTable(
   'list_labels',
   {

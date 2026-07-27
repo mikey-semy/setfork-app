@@ -3,7 +3,12 @@ import Link from 'next/link'
 import { Check, ChevronDown } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 
-// Фильтр-дропдаун: кнопка + меню ссылок (навигация по query-параметрам).
+/**
+ * Фильтр-дропдаун: кнопка + меню ссылок (навигация по query-параметрам).
+ *
+ * Переехал из features/issues в shared без изменений: ничего задачного в нём не
+ * было, а нужен он и списку предложений.
+ */
 export function FilterMenu({ label, items }: { label: string; items: { label: string; href: string; active?: boolean }[] }) {
   return (
     <DropdownMenu>

@@ -12,7 +12,7 @@ import { notify, notifyMany, notifyMentions } from '@/features/notifications/not
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { collabStore, issueCommenterIds } from '@/features/collab-store/store'
-import { cleanLabels, customId, isCustomKey, isLabelKey } from './labels'
+import { cleanLabels, customId, isCustomKey, isLabelKey } from '@/shared/lib/labels'
 import { getListLabels } from './queries'
 
 const customIdSet = async (templateId: string) => new Set((await getListLabels(templateId)).map((l) => l.id))

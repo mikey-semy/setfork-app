@@ -6,7 +6,7 @@ import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { t, type Lang } from '@/shared/i18n'
 import { createIssue } from './actions'
 import { LabelPicker } from './LabelPicker'
-import type { CustomLabel } from './labels'
+import type { CustomLabel } from '@/shared/lib/labels'
 
 const inputCls = 'px-3 py-2 text-[14px]'
 
