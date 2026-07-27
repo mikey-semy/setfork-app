@@ -1,6 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { desc, sql } from 'drizzle-orm'
+import { desc, inArray, sql } from 'drizzle-orm'
 import { db, tags } from '@/shared/db'
 
 // Реестр тегов (чтение). templates.tags хранит slug'и; здесь — метаданные тега.
@@ -58,6 +58,6 @@ export const getTag = cache(async (slug: string): Promise<TagRow | null> => {
 /** Известен ли slug в реестре (для валидации «только курируемые»). */
 export async function knownTagSlugs(slugs: string[]): Promise<Set<string>> {
   if (!slugs.length) return new Set()
-  const rows = await db.select({ slug: tags.slug }).from(tags).where(sql`${tags.slug} = any(${slugs})`)
+  const rows = await db.select({ slug: tags.slug }).from(tags).where(inArray(tags.slug, slugs))
   return new Set(rows.map((r) => r.slug))
 }
