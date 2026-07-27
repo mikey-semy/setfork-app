@@ -32,6 +32,8 @@ import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
 import { CommentActions } from '@/features/collab/CommentActions'
+import { WatchButton } from '@/features/watch/WatchButton'
+import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; id: string }> }) {
@@ -96,7 +98,11 @@ export default async function SuggestionThreadPage({
     else threadsByBlock.set(th.blockId, [{ thread: th, state }])
   }
 
-  const reviews = await getSuggestionReviews(sug.id)
+  const [reviews, watchState, watchCount] = await Promise.all([
+    getSuggestionReviews(sug.id),
+    session ? getWatchState(session.userId, meta.id) : Promise.resolve(null),
+    getWatchCount(meta.id),
+  ])
   const myVerdict = session ? (reviews.find((r) => r.reviewer.handle === session.handle)?.verdict ?? null) : null
 
   // A4: для открытого branch-PR заранее считаем трёхсторонний merge — при
@@ -445,6 +451,34 @@ export default async function SuggestionThreadPage({
                 </ul>
               )}
             </AsideCard>
+
+            {session && watchState && (
+              <AsideCard title={t('notifications', lang)}>
+                <WatchButton
+                  templateId={meta.id}
+                  state={watchState}
+                  count={watchCount}
+                  labels={{
+                    watch: t('watch', lang),
+                    unwatch: t('unwatch', lang),
+                    title: t('watchTitle', lang),
+                    participating: t('watchParticipating', lang),
+                    participatingDesc: t('watchParticipatingDesc', lang),
+                    all: t('watchAll', lang),
+                    allDesc: t('watchAllDesc', lang),
+                    ignore: t('watchIgnore', lang),
+                    ignoreDesc: t('watchIgnoreDesc', lang),
+                    custom: t('watchCustom', lang),
+                    customDesc: t('watchCustomDesc', lang),
+                    customTitle: t('watchCustomTitle', lang),
+                    evVersions: t('versionsTab', lang),
+                    evIssues: t('issuesTab', lang),
+                    evSuggestions: t('suggestions', lang),
+                    apply: t('apply', lang),
+                  }}
+                />
+              </AsideCard>
+            )}
 
             <AsideCard title={t('participants', lang)}>
               <div className="flex flex-wrap gap-1.5">
