@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { t, type Lang } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { safeHref } from '@/shared/lib/safe-url'
+import { DiffStat } from '@/shared/ui/DiffStat'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { blockLabel, diffSteps, isStepBlock, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from './diff'
 import { DiffComments, type DiffCommentLabels, type RowThread } from './DiffComments'
@@ -29,10 +30,7 @@ export function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: Cmp
     return <div className="rounded-lg border border-dashed border-border py-12 text-center text-[13.5px] text-muted">{t('diffNothing', lang)}</div>
   return (
     <>
-      <div className="mb-3 flex gap-3 text-[12.5px]">
-        <span className="text-ok">+{added}</span>
-        <span className="text-danger">−{removed}</span>
-      </div>
+      <DiffStat counts={{ added, removed }} squares className="mb-3" />
       <div className="overflow-x-auto rounded-lg border border-border font-mono text-[12px] leading-[1.55]">
         {rows.map((r) => {
           const clr = r.type === 'add' ? 'var(--ok)' : r.type === 'del' ? 'var(--danger)' : ''
@@ -93,12 +91,7 @@ export function ListDiff({
     return <div className="rounded-lg border border-dashed border-border py-12 text-center text-[13.5px] text-muted">{t('diffNothing', lang)}</div>
   return (
     <>
-      <div className="mb-3 flex gap-3 text-[12.5px]">
-        <span className="text-ok">+{summary.added}</span>
-        <span className="text-danger">−{summary.removed}</span>
-        <span className="text-warn">~{summary.changed}</span>
-        {summary.moved > 0 && <span className="text-ink-2">⇅{summary.moved}</span>}
-      </div>
+      <DiffStat counts={summary} squares className="mb-3" />
       <div className="flex flex-col gap-2.5">
         {entries.map((e, i) => {
           const st = STATUS[e.status]

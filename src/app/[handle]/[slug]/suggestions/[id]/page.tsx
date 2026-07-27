@@ -24,6 +24,7 @@ import { SuggestionTitle } from '@/features/library/SuggestionTitle'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
+import { DiffStat } from '@/shared/ui/DiffStat'
 import { ReviewPanel } from '@/features/library/ReviewPanel'
 import { getSuggestionThreads } from '@/features/comments/queries'
 import { threadState } from '@/features/comments/state'
@@ -199,15 +200,8 @@ export default async function SuggestionThreadPage({
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold ${statusCls}`}>
             <GitPullRequest size={14} /> {statusLabel}
           </span>
-          {/* Индикатор объёма правки в шапке (как +137 −9 у GitHub): видно ДО
-              перехода на изменения, насколько правка велика. */}
-          {(summary.added > 0 || summary.removed > 0 || summary.changed > 0) && (
-            <span className="inline-flex items-center gap-2 font-mono text-[12.5px]">
-              {summary.added > 0 && <span className="text-ok">+{summary.added}</span>}
-              {summary.removed > 0 && <span className="text-danger">−{summary.removed}</span>}
-              {summary.changed > 0 && <span className="text-warn">~{summary.changed}</span>}
-            </span>
-          )}
+          {/* Объём правки в шапке — тот же индикатор, что в диффе и в коммитах. */}
+          <DiffStat counts={summary} squares />
           <span className="text-[13px] text-ink-2">
             {t('proposedBy', lang)}{' '}
             <Link href={`/${sug.author.handle}`} className="font-semibold text-ink hover:text-accent">
