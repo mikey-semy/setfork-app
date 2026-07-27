@@ -9,6 +9,7 @@ import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
+import { applySuggestion } from '@/features/library/actions'
 import { slugify, uniqueSlug } from '@/features/library/slug'
 import { recordAgentAction } from '@/shared/agents/policy'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
@@ -393,7 +394,6 @@ export async function mcpBulkCreate(userId: string, lists: McpCreateInput[], dry
  * Логика приёма НЕ дублируется — зовём то же ядро, что и кнопка на сайте.
  */
 export async function mcpApplySuggestion(userId: string, suggestionId: string) {
-  const { applySuggestion } = await import('@/features/library/actions')
   const res = await applySuggestion(suggestionId, userId)
   if (!res.ok) return { error: res.reason }
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
