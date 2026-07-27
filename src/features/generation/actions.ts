@@ -336,7 +336,7 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       imageRef: it.imageKey ?? null,
     })),
   })
-  await db.update(generations).set({ chosenTemplateId: list.id }).where(eq(generations.id, gen.id))
+  await db.update(generations).set({ chosenTemplateId: list.id, chosenIdx: cand.idx }).where(eq(generations.id, gen.id))
   // Тип списка переезжает на template — иначе он умирал вместе с generation,
   // и садовник/refine не знали, что перед ними рецепт (ломали структуру).
   if (gen.listKind) await db.update(templates).set({ listKind: gen.listKind }).where(eq(templates.id, list.id))
