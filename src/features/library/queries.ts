@@ -649,6 +649,26 @@ export async function getSuggestionAssignees(suggestionId: string) {
   return Promise.all(rows.map(async (r) => ({ handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
 }
 
+/**
+ * Наши пользователи по e-mail подписей git-коммитов (ключ — e-mail в нижнем
+ * регистре). Подпись коммита ставит сам автор и совпадать с аккаунтом не обязана —
+ * кто не нашёлся, показывается именем из подписи.
+ */
+export async function getUsersByEmails(emails: string[]): Promise<Record<string, { handle: string; name: string | null; avatarUrl: string | null }>> {
+  const uniq = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))]
+  if (uniq.length === 0) return {}
+  const rows = await db
+    .select({ email: users.email, handle: users.handle, name: users.name, avatarUrl: users.avatarUrl })
+    .from(users)
+    .where(inArray(sql`lower(${users.email})`, uniq))
+  const out: Record<string, { handle: string; name: string | null; avatarUrl: string | null }> = {}
+  for (const r of rows) {
+    if (!r.email) continue
+    out[r.email.toLowerCase()] = { handle: r.handle, name: r.name, avatarUrl: await avatarSrc(r.avatarUrl, 48) }
+  }
+  return out
+}
+
 /** Текущий этап правки для пикера ({id,title} или null). */
 export async function getSuggestionMilestone(suggestionId: string): Promise<{ id: string; title: string } | null> {
   const [r] = await db

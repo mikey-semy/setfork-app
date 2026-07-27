@@ -6,6 +6,7 @@ import type { BranchSnapshot, GitBranch, GitCore } from '@/core'
 import { BranchOpError } from '@/core'
 import { db, templates, users } from '@/shared/db'
 import { gitStore } from './adapter'
+import { GIT_LOG_FORMAT, parseGitLog } from './log-parse'
 
 const exec = promisify(execFile)
 
@@ -291,6 +292,22 @@ export const gitCoreInproc: GitCore = {
       })
       .sort((a, b) => a.name.localeCompare(b.name))
   },
+
+  // Коммиты рефа за вычетом базы — зеркало git::history в Rust-ядре
+  // (revwalk c hide(base) = `git log rev --not base`).
+  async listCommits(repo, rev, opts) {
+    if (badBranch(rev)) return null
+    const notIn = opts?.notIn
+    if (notIn && badBranch(notIn)) return null
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) return null
+    const limit = Math.min(Math.max(opts?.limit ?? 100, 1), 500)
+    const args = ['--git-dir', bare, 'log', `--max-count=${limit}`, `--format=${GIT_LOG_FORMAT}%x01`, rev]
+    if (notIn) args.push('--not', notIn)
+    // Несуществующий реф — не ошибка: ветку могли удалить, вкладка покажет пусто.
+    const res = await exec('git', args, { maxBuffer: 8 * 1024 * 1024 }).catch(() => null)
+    return res ? parseGitLog(res.stdout) : null
+  },
 }
 
 // git-команда с данными на stdin (hash-object/mktree).
@@ -395,7 +412,7 @@ async function snapshotAt(bare: string, rev: string): Promise<BranchSnapshot | n
     desc?: string
     tags?: string[]
     ordered?: boolean
-    steps?: { n?: number; type?: string; content?: Record<string, unknown>; title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
+    steps?: { n?: number; type?: string; content?: Record<string, unknown>; blockId?: string; title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
   }
   try {
     parsed = JSON.parse(raw)
@@ -415,6 +432,8 @@ async function snapshotAt(bare: string, rev: string): Promise<BranchSnapshot | n
         n: i + 1,
         // type/content несём только у не-step блоков (у шага — undefined, byte-compat).
         ...(isStep(st) ? {} : { type: st.type, content: st.content && typeof st.content === 'object' ? st.content : {} }),
+        // Идентичность блока: с ней дифф ветки видит переименование как «изменён».
+        blockId: st.blockId?.trim() ? st.blockId.trim() : null,
         title: o?.title?.trim() ? o.title : (st.title ?? ''),
         desc: o?.desc !== undefined ? o.desc : (st.desc ?? ''),
         command: o?.command !== undefined ? o.command : (st.command ?? ''),

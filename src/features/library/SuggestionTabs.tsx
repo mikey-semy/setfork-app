@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { MessagesSquare, FileDiff, CircleCheck } from 'lucide-react'
+import { MessagesSquare, FileDiff, CircleCheck, GitCommitHorizontal } from 'lucide-react'
 
-export type SuggestionTab = 'conversation' | 'checks' | 'files'
+export type SuggestionTab = 'conversation' | 'commits' | 'checks' | 'files'
 
 /**
- * Вкладки правки (PR): Обсуждение | Изменения.
+ * Вкладки правки (PR): Обсуждение | Коммиты | Проверки | Изменения.
  *
  * Переключение через ?tab= — адрес остаётся ссылабельным (можно кинуть коллеге
  * ссылку прямо на изменения), в отличие от клиентского состояния. Отдельного
@@ -17,6 +17,7 @@ export function SuggestionTabs({
   path,
   active,
   conversationCount,
+  commitsCount,
   filesCount,
   checksFailed,
   labels,
@@ -24,10 +25,12 @@ export function SuggestionTabs({
   path: string
   active: SuggestionTab
   conversationCount: number
+  /** Коммиты ветки; у правок без ветки их нет — вкладку не показываем. */
+  commitsCount: number | null
   filesCount: number
   /** Сколько проверок блокирует — счётчик показываем только когда есть что чинить. */
   checksFailed: number
-  labels: { conversation: string; checks: string; files: string }
+  labels: { conversation: string; commits: string; checks: string; files: string }
 }) {
   const item = (tab: SuggestionTab, icon: React.ReactNode, label: string, count: number) => {
     const on = tab === active
@@ -49,6 +52,7 @@ export function SuggestionTabs({
     // Ряд листается в своём контейнере — страница горизонтально не едет.
     <div className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
       {item('conversation', <MessagesSquare size={14} />, labels.conversation, conversationCount)}
+      {commitsCount !== null && item('commits', <GitCommitHorizontal size={14} />, labels.commits, commitsCount)}
       {item('checks', <CircleCheck size={14} />, labels.checks, checksFailed)}
       {item('files', <FileDiff size={14} />, labels.files, filesCount)}
     </div>

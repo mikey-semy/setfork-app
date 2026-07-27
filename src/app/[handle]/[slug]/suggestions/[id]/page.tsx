@@ -16,12 +16,14 @@ import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
+import { snapshotSteps } from '@/features/git/snapshot-steps'
 import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
 import { diffSteps, rowsToCmp } from '@/features/library/diff'
 import { DiffViewToggle } from '@/features/library/DiffViewToggle'
 import { SuggestionTabs, type SuggestionTab } from '@/features/library/SuggestionTabs'
 import { SuggestionTitle } from '@/features/library/SuggestionTitle'
 import { ChecksList } from '@/features/library/ChecksList'
+import { CommitsList } from '@/features/library/CommitsList'
 import { suggestionChecks } from '@/features/library/suggestion-checks'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
@@ -43,7 +45,7 @@ import { LabelEditor } from '@/features/issues/LabelEditor'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
 import { getListLabels } from '@/features/issues/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
-import { getSuggestionAssignees, getSuggestionMilestone } from '@/features/library/queries'
+import { getSuggestionAssignees, getSuggestionMilestone, getUsersByEmails } from '@/features/library/queries'
 import { setSuggestionLabels, setSuggestionMilestone, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
@@ -78,22 +80,24 @@ export default async function SuggestionThreadPage({
 
   // A3: branch-PR — предлагаемые шаги живут в tip ветки, а не в items;
   // diff строим против ТЕКУЩЕЙ версии main (PR = «ветка → main»).
-  const snapshot = sug.branchRef ? await gitCore.branchSnapshot({ owner, slug }, sug.branchRef).catch(() => null) : null
+  const [snapshot, mainSnapshot] = sug.branchRef
+    ? await Promise.all([
+        gitCore.branchSnapshot({ owner, slug }, sug.branchRef).catch(() => null),
+        gitCore.branchSnapshot({ owner, slug }, 'main').catch(() => null),
+      ])
+    : [null, null]
   const branchMissing = !!sug.branchRef && !snapshot
-  const items: ProposedItem[] = snapshot
-    ? snapshot.steps.map((st) => ({
-        title: { en: st.title },
-        desc: { en: st.desc },
-        command: st.command,
-        hasImage: false,
-        level: st.level as ProposedItem['level'],
-        why: { en: st.why },
-        section: { en: st.section },
-        subtasks: st.subtasks.map((x) => ({ en: x })),
-        refs: st.refs.map((r) => ({ label: { en: r.label }, ...(r.url ? { url: r.url } : {}) })),
-      }))
-    : (sug.items as ProposedItem[])
-  const diffBase = sug.branchRef ? (await getVersionSteps(meta.id, meta.currentVersion))?.steps ?? [] : base?.steps ?? []
+  const items: ProposedItem[] = snapshot ? (snapshotSteps(snapshot) as unknown as ProposedItem[]) : (sug.items as ProposedItem[])
+  // База диффа. У branch-PR обе стороны берём ИЗ GIT: list.json одноязычный, а
+  // шаги в БД двуязычные — сравнение «ветка против БД» показывало бы двуязычный
+  // список заменённым целиком (ru в базе против единственного языка в git).
+  // Снапшота main нет только у репо без main — тогда честнее показать дифф
+  // против версии из БД, чем ничего.
+  const diffBase = sug.branchRef
+    ? mainSnapshot
+      ? (snapshotSteps(mainSnapshot, 'main') as unknown as ProposedItem[])
+      : ((await getVersionSteps(meta.id, meta.currentVersion))?.steps ?? [])
+    : (base?.steps ?? [])
 
   // Ревью правки: список вердиктов + свой текущий (форма показывает выбор, а не
   // плодит копии — вердикт один на рецензента и перезаписывается).
@@ -148,7 +152,8 @@ export default async function SuggestionThreadPage({
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
   const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
   // Вкладка из ?tab= — адрес ссылабелен (можно послать ссылку сразу на изменения).
-  const tab: SuggestionTab = sp.tab === 'files' ? 'files' : sp.tab === 'checks' ? 'checks' : 'conversation'
+  const tab: SuggestionTab =
+    sp.tab === 'files' ? 'files' : sp.tab === 'checks' ? 'checks' : sp.tab === 'commits' && sug.branchRef ? 'commits' : 'conversation'
   // Вид диффа — ТОТ ЖЕ ?view=, что на сравнении версий: одно изменение выглядит
   // одинаково, откуда бы на него ни смотрели.
   const view = sp.view === 'list' ? 'list' : 'code'
@@ -191,6 +196,11 @@ export default async function SuggestionThreadPage({
     lang: lang === 'ru' ? 'ru' : 'en',
   })
   const checksFailed = checks.filter((c) => c.status === 'fail').length
+
+  // Коммиты ветки за вычетом main — ровно то, что уйдёт в main при слиянии.
+  // У правок без ветки (старые, items в БД) коммитов нет — вкладки тоже нет.
+  const commits = sug.branchRef && !branchMissing ? await gitCore.listCommits({ owner, slug }, sug.branchRef, { notIn: 'main' }) : null
+  const commitAuthors = commits?.length ? await getUsersByEmails(commits.map((c) => c.authorEmail)) : {}
 
   const statusCls =
     sug.status === 'accepted' ? 'bg-ok text-white' : sug.status === 'rejected' ? 'bg-surface-2 text-muted' : 'bg-accent text-white'
@@ -271,9 +281,10 @@ export default async function SuggestionThreadPage({
           path={path}
           active={tab}
           conversationCount={threadCount}
+          commitsCount={commits ? commits.length : null}
           filesCount={changedCount}
           checksFailed={checksFailed}
-          labels={{ conversation: t('conversationTab', lang), checks: t('checksTab', lang), files: t('proposedChanges', lang) }}
+          labels={{ conversation: t('conversationTab', lang), commits: t('versionsTab', lang), checks: t('checksTab', lang), files: t('proposedChanges', lang) }}
         />
 
         {/* Две колонки: содержимое вкладки + боковая панель (общий примитив). */}
@@ -306,6 +317,15 @@ export default async function SuggestionThreadPage({
               ? `Ветка «${sug.branchRef}» удалена — PR неактуален, можно только отклонить.`
               : `Branch “${sug.branchRef}” was deleted — this PR is stale and can only be closed.`}
           </div>
+        )}
+
+        {tab === 'commits' && commits && (
+          <CommitsList
+            commits={commits}
+            authors={commitAuthors}
+            lang={lang}
+            labels={{ count: t('prCommitsCount', lang), empty: t('prCommitsEmpty', lang), merge: t('prCommitMerge', lang) }}
+          />
         )}
 
         {tab === 'checks' && (

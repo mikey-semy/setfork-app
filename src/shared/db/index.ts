@@ -21,11 +21,16 @@ function getDb(): NodePgDatabase<typeof schema> {
   // (SETFORK_JOB_CONCURRENCY) + поллинге статуса десятками клиентов 10 коннектов насыщались.
   // connectionTimeoutMillis: без него acquire ждал коннект БЕСКОНЕЧНО (дефолт 0) — под нагрузкой
   // весь сайт тихо вис. Лучше быстрый явный отказ, чем зависание. Крутится env'ом.
+  // min (DB_POOL_MIN, дефолт 0 = как было): столько соединений пул не отпускает по
+  // idle-таймауту. Нужно там, где дорог сам КОННЕКТ, а не запрос: на Windows
+  // порт-прокси Docker Desktop теряет часть коннектов из пачки (замер: 6 из 25
+  // параллельных → timeout), и каждая холодная страница ловила это заново.
   const pool =
     global.__pgPool ??
     new Pool({
       connectionString: url,
       max: Math.max(10, Number(process.env.DB_POOL_MAX) || 20),
+      min: Math.max(0, Number(process.env.DB_POOL_MIN) || 0),
       connectionTimeoutMillis: 10_000,
     })
   if (!global.__pgPool) global.__pgPool = pool

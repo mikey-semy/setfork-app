@@ -157,6 +157,8 @@ export interface BranchSnapshot {
     // Блочная модель: не-step блоки несут type/content (у step — undefined).
     type?: string
     content?: Record<string, unknown>
+    /** Стабильная идентичность блока из list.json (ADR-0013); null — её там нет. */
+    blockId?: string | null
     title: string
     desc: string
     command: string
@@ -196,6 +198,20 @@ export interface GitCore {
   createTag(repo: GitRepoRef, name: string, version: number): Promise<string>
   /** Все git-теги репо (vN + релизные), по имени. */
   listTags(repo: GitRepoRef): Promise<GitTag[]>
+  /** Коммиты рефа, свежие первыми. `notIn` (обычно 'main') скрывает достижимое
+   *  из базы — остаётся ровно вклад ветки. null — рефа нет (ветку удалили). */
+  listCommits(repo: GitRepoRef, rev: string, opts?: { notIn?: string; limit?: number }): Promise<GitCommit[] | null>
+}
+
+export interface GitCommit {
+  sha: string
+  /** Полное сообщение; первая строка — заголовок. */
+  message: string
+  authorName: string
+  authorEmail: string
+  at: Date
+  /** 2 и больше — merge-коммит. */
+  parents: number
 }
 
 export interface GitTag {
