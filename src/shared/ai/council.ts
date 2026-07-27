@@ -82,8 +82,18 @@ export interface CouncilProvenance {
   draftAuthors?: { letter: string; who: string }[]
 }
 
+/** Черновик эксперта как есть — сырьё для замера многогранности (см. generation_drafts). */
+export interface CouncilDraft {
+  letter: string
+  who: string
+  text: string
+}
+
 /** Результат совета: готовый список (+провенанс), ИЛИ уточняющие вопросы (диалог), ИЛИ null (ошибка/выкл → фолбэк). */
-export type CouncilResult = (GeneratedList & { provenance?: CouncilProvenance }) | { clarify: string[] } | null
+export type CouncilResult =
+  | (GeneratedList & { provenance?: CouncilProvenance; drafts?: CouncilDraft[] })
+  | { clarify: string[] }
+  | null
 
 /** Мультимодельный «совет гномов». null при ошибке/выкл — caller фолбэкает на generateListDraft. */
 export async function generateListCouncil(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<CouncilResult> {
@@ -501,6 +511,9 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
     if (list)
       return {
         ...list,
+        // Черновики отдаём НАРУЖУ, а не в провенанс: провенанс уезжает клиенту, а полные
+        // черновики нужны только серверу — для замера многогранности (generation_drafts).
+        drafts: alive.map((s, i) => ({ letter: letterOf(i), who: s.who, text: s.text })),
         provenance: {
           engine: 'council',
           depth: 'council',
