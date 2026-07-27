@@ -32,6 +32,9 @@ export interface SnapshotStepRow {
   refs: { label: LocaleText; url?: string }[]
   imageKey: string | null
   hasImage: boolean
+  /** Пометка «здесь нужен человек» — в git не сериализуется (golden-паритет). */
+  needsHuman: boolean
+  needsHumanAsk: Record<string, unknown>
 }
 
 export function snapshotSteps(snapshot: BranchSnapshot, idPrefix = 'br'): SnapshotStepRow[] {
@@ -54,5 +57,9 @@ export function snapshotSteps(snapshot: BranchSnapshot, idPrefix = 'br'): Snapsh
     // Картинок у снапшота нет: изображения живут в объектном хранилище, а не в git.
     imageKey: null,
     hasImage: false,
+    // «Нужен человек» в list.json не пишется (golden-паритет с Rust) — на ветке
+    // это не ложное false, а честное «из снимка неизвестно».
+    needsHuman: false,
+    needsHumanAsk: {},
   }))
 }

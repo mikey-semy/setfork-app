@@ -27,6 +27,15 @@ export async function register() {
   ])
   registerAfterVersion(recheckList)
 
+  // Тот же барьер для АВТОНОМНОЙ публикации: список, опубликованный гейтом готовности
+  // без человека, обязан пройти модерацию — иначе петля стала бы единственным путём в
+  // паблик мимо проверки.
+  const [{ registerModerationGate }, { gateListPublication }] = await Promise.all([
+    import('@/shared/agents/publication'),
+    import('@/features/moderation/moderate-list'),
+  ])
+  registerModerationGate(gateListPublication)
+
   // Фоновый воркер очереди задач. Idempotent, безопасен между инстансами.
   // Реестр обработчиков: по одному модулю jobs.ts на фичу-владельца.
   const [{ startWorker }, notifications, generation, library, digest, moderation, gardener, knowledge, linkcheck, selfgen] = await Promise.all([

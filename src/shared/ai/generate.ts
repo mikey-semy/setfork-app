@@ -32,6 +32,10 @@ export interface GeneratedItem {
   why: string
   subtasks: string[]
   refs: GeneratedRef[]
+  /** «Здесь нужен человек» — модель сама признаёт, что знать этого не может. */
+  needsHuman?: boolean
+  /** Что именно спросить у человека (коротко, на языке списка). */
+  needsHumanAsk?: string
 }
 export interface GeneratedList {
   title: string
@@ -67,7 +71,7 @@ export interface GenerateOptions {
  */
 export function jsonShapeFor(kind: ListKind = 'procedure'): string {
   return `Return ONLY valid JSON (no markdown fences), exactly this shape:
-{"title": string, "desc": string, "tags": string[], "hint": string, "items": [{"title": string, "desc": string, "command": string, "section": string, "level": "required"|"recommended"|"optional", "why": string, "subtasks": string[], "refs": [{"label": string, "url": string}]}]}
+{"title": string, "desc": string, "tags": string[], "hint": string, "items": [{"title": string, "desc": string, "command": string, "section": string, "level": "required"|"recommended"|"optional", "why": string, "subtasks": string[], "refs": [{"label": string, "url": string}], "needsHuman": boolean, "needsHumanAsk": string}]}
 Rules:
 - title: concise noun phrase naming the list.
 - desc: one sentence describing it.
@@ -76,6 +80,7 @@ Rules:
 - refs: put ALL URLs here (never in command). Each ref: label = short human name, url = full https URL. Use [] when there is no good link.
 - command: ONLY a REAL, runnable shell/CLI command (git, docker, npm, psql…). If the step is not technical — cooking, everyday life, physical actions, reading, decisions — leave it "". NEVER turn prose into a fake command (e.g. "boil water", "buy milk", "call the vendor").
 - section: a group heading for the item; "" unless the list type below asks to split items into groups.
+- needsHuman: true when the step depends on something you CANNOT know — local prices and availability, taste and feel, how long it takes on THEIR equipment, regional rules, personal circumstances. Then needsHumanAsk = one short question a person could answer from real experience (max 10 words, same language as the list), and do NOT invent a plausible number instead. false + "" otherwise. Marking honestly is BETTER than filling the gap with an invented specific — a real person will answer it later.
 ${shapeFor(kind)}`
 }
 
@@ -107,6 +112,8 @@ export function parseList(text: string, fallbackTitle: string): GeneratedList | 
           section: String(it?.section ?? '').trim().slice(0, 80),
           level: (LEVELS.includes(String(it?.level)) ? String(it?.level) : 'required') as GeneratedItem['level'],
           why: String(it?.why ?? '').trim(),
+          needsHuman: it?.needsHuman === true,
+          needsHumanAsk: String(it?.needsHumanAsk ?? '').trim().slice(0, 160),
           subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s) => String(s).trim()).filter(Boolean).slice(0, 6) : [],
           refs: Array.isArray(it?.refs)
             ? it.refs

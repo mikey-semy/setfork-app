@@ -302,6 +302,8 @@ export async function acceptCandidate(generationId: string, candidateId: string)
       imagePreview: '',
       level: it.level ?? 'required',
       why: it.why ?? '',
+      needsHuman: it.needsHuman === true,
+      needsHumanAsk: it.needsHumanAsk ?? '',
       // section раньше хардкодился '' — принятые AI-рецепты становились плоскими.
       section: it.section ?? '',
       subtasks: it.subtasks,

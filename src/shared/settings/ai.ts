@@ -40,6 +40,21 @@ export interface AiSettings {
   selfGenMode: 'off' | 'manual' | 'auto'
   /** Суточный кап черновиков самогенерации (сверх денежного потолка). 0 = без капа. */
   selfGenPerDay: number
+  /**
+   * Сколько списков за ОДИН проход петли. Темп компании = это число × число пробуждений
+   * в сутки, и он ограничен сверху selfGenPerDay. Раньше было жёстко 1 при пробуждении
+   * раз в сутки — то есть «сотни списков» набирались бы кварталами.
+   */
+  selfGenPerSweep: number
+  /**
+   * ПЛАНКА ГОТОВНОСТИ: при каких условиях черновик компании публикуется БЕЗ человека.
+   * 'off' (дефолт) — не проверяем и не публикуем; 'shadow' — считаем решение и пишем в
+   * журнал, но не публикуем (наблюдение перед включением); 'on' — публикуем прошедшие.
+   * Человек утверждает планку, а не каждый список — иначе автономности нет.
+   */
+  readinessMode: 'off' | 'shadow' | 'on'
+  /** Минимум шагов, ниже которого список не готов (структурная проверка кодом). */
+  readinessMinSteps: number
   /** «Помощь на шаге»: AI-подсказка застрявшему в прогоне. OFF по умолчанию. */
   assistEnabled: boolean
   /** Аудитория помощи (гейт цены/раскатки): 'admin' — только админам, 'all' — всем. */
@@ -65,8 +80,17 @@ const KEYS = [
   'ai.council_web_seek',
   'ai.council_clarify',
   'ai.council_max_per_month',
+  'ai.readiness_mode',
+  'ai.readiness_min_steps',
   'ai.assist_enabled',
   'ai.assist_audience',
+  // Ключи самогенерации ОБЯЗАНЫ быть здесь: KEYS — это то, что реально читается из БД.
+  // Без них настройка из админки не применялась вовсе и режим всегда падал в 'off'
+  // (латентный баг PR #488). Смоук этого не поймал, потому что 'manual' и 'off' дают
+  // одинаковое поведение петли — тест проходил по неверной причине.
+  'ai.selfgen_mode',
+  'ai.selfgen_per_day',
+  'ai.selfgen_per_sweep',
   'ai.free_monthly_gens',
 ] as const
 
@@ -312,7 +336,15 @@ export async function getAiSettings(): Promise<AiSettings> {
     councilMaxPerMonth: num(m['ai.council_max_per_month'], Number(process.env.SETFORK_COUNCIL_MAX_PER_MONTH) || 0),
     // Неизвестное значение → 'off': опечатка в настройке не должна ВКЛЮЧАТЬ трату.
     selfGenMode: m['ai.selfgen_mode'] === 'auto' ? 'auto' : m['ai.selfgen_mode'] === 'manual' ? 'manual' : 'off',
-    selfGenPerDay: num(m['ai.selfgen_per_day'], 3),
+    // Дефолты подняты осознанно: компания должна НАПОЛНЯТЬ портал. 4 за проход × 4
+    // пробуждения = до 16 в сутки; денежный потолок всё равно главнее и проверяется на
+    // каждом элементе партии.
+    selfGenPerDay: num(m['ai.selfgen_per_day'], 16),
+    selfGenPerSweep: num(m['ai.selfgen_per_sweep'], 4),
+    // Неизвестное значение → 'off' по той же причине: опечатка не должна включать
+    // автопубликацию. Планка — самое необратимое из всего, что решает петля.
+    readinessMode: m['ai.readiness_mode'] === 'on' ? 'on' : m['ai.readiness_mode'] === 'shadow' ? 'shadow' : 'off',
+    readinessMinSteps: num(m['ai.readiness_min_steps'], 5),
     assistEnabled: m['ai.assist_enabled'] === 'true',
     assistAudience: m['ai.assist_audience'] === 'all' ? 'all' : 'admin',
     freeMonthlyGens: num(m['ai.free_monthly_gens'], Number(process.env.SETFORK_FREE_MONTHLY_GENS) || 0),

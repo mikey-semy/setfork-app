@@ -21,6 +21,11 @@ export interface CouncilValues {
   /** Режим самогенерации: off (дефолт) | manual (кнопкой) | auto (петля). */
   selfGenMode: 'off' | 'manual' | 'auto'
   selfGenPerDay: number
+  /** Сколько черновиков за один проход петли (темп = это число × число пробуждений). */
+  selfGenPerSweep: number
+  /** Планка готовности: off (дефолт) | shadow (считаем, не публикуем) | on (публикуем). */
+  readinessMode: 'off' | 'shadow' | 'on'
+  readinessMinSteps: number
 }
 
 export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: boolean; modelOptions: Option[] }) {
@@ -121,9 +126,44 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
             'Результат всегда ЧЕРНОВИК — машинный список не публикуется без человека. Авто-режим вдобавок уважает дневной потолок расхода ИИ.',
           )}
         </p>
+        {/* Оба числа обязаны быть В ФОРМЕ: экшен пишет ai.selfgen_* из formData, и поле,
+            которого в форме нет, при сохранении настроек уедет в минимум клампа. Так
+            «за проход» молча схлопнулось бы в 1 и партия перестала бы работать. */}
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className={lbl}>{say('Drafts per day (0 = no cap)', 'Черновиков в сутки (0 = без капа)')}</label>
+            <input type="number" name="selfGenPerDay" min="0" max="200" step="1" defaultValue={v.selfGenPerDay} className={field} />
+          </div>
+          <div>
+            <label className={lbl}>{say('Drafts per sweep', 'Черновиков за проход')}</label>
+            <input type="number" name="selfGenPerSweep" min="1" max="20" step="1" defaultValue={v.selfGenPerSweep} className={field} />
+          </div>
+        </div>
+      </div>
+
+      {/* ПЛАНКА ГОТОВНОСТИ: при каких условиях черновик уходит в паблик без человека.
+          Утверждается планка, а не каждый список — иначе автономности нет. Дефолт off. */}
+      <div className="border-t border-border pt-4">
+        <label className={lbl}>{say('Readiness bar (publish without a human)', 'Планка готовности (публикация без человека)')}</label>
+        <Select name="readinessMode" defaultValue={v.readinessMode}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="off">{say('Off — everything waits for you', 'Выключено — всё ждёт вас')}</SelectItem>
+            <SelectItem value="shadow">{say('Observe — decide and log, do not publish', 'Наблюдение — решать и писать в журнал, не публиковать')}</SelectItem>
+            <SelectItem value="on">{say('On — publish what passes the bar', 'Включено — публиковать прошедшее планку')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="mt-1.5 text-[12px] text-muted">
+          {say(
+            'Three independent checks — can it be followed, are specifics invented, is it a usable starting point. The quorum is counted in code and fails closed: a check that says “unsure” or does not answer keeps the list a draft. Costs 3 calls per list checked; “Off” spends nothing.',
+            'Три независимые проверки — можно ли выполнить, не выдуманы ли детали, годится ли как основа. Кворум считает код и по умолчанию НЕ пропускает: «не уверен» или отсутствие ответа оставляют список черновиком. Стоит 3 вызова на проверенный список; «Выключено» не тратит ничего.',
+          )}
+        </p>
         <div className="mt-3">
-          <label className={lbl}>{say('Drafts per day (0 = no cap)', 'Черновиков в сутки (0 = без капа)')}</label>
-          <input type="number" name="selfGenPerDay" min="0" max="50" step="1" defaultValue={v.selfGenPerDay} className={field} />
+          <label className={lbl}>{say('Minimum steps to publish', 'Минимум шагов для публикации')}</label>
+          <input type="number" name="readinessMinSteps" min="1" max="50" step="1" defaultValue={v.readinessMinSteps} className={field} />
         </div>
       </div>
     </div>

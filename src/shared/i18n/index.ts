@@ -319,6 +319,15 @@ const DICT = {
   levelRecommended: { en: 'Recommended', ru: 'Рекомендуется' },
   levelOptional: { en: 'Optional', ru: 'Опционально' },
   whyLabel: { en: 'Why', ru: 'Зачем' },
+  // Пометка «здесь нужен человек»: слово «гном» в пользовательском тексте не звучит.
+  needsHumanLabel: { en: 'A person is needed here', ru: 'Здесь нужен человек' },
+  needsHumanAskLabel: { en: 'What to ask a person', ru: 'Что спросить у человека' },
+  needsHumanAskPlaceholder: { en: 'What does this cost where you live?', ru: 'Сколько это стоит в вашем городе?' },
+  needsHumanAnswer: { en: 'answer from experience', ru: 'ответить из опыта' },
+  needsHumanGeneric: {
+    en: 'This depends on real-world experience — add yours.',
+    ru: 'Это зависит от реального опыта — добавьте свой.',
+  },
   whyPh: { en: 'Why this step matters (optional)', ru: 'Зачем этот шаг (необязательно)' },
   runStart: { en: 'Start run', ru: 'Начать прогон' },
   myRuns: { en: 'Runs', ru: 'Прогоны' },

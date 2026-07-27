@@ -72,7 +72,13 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     'ai.selfgen_mode': (['off', 'manual', 'auto'] as const).includes(formData.get('selfGenMode') as 'off' | 'manual' | 'auto')
       ? String(formData.get('selfGenMode'))
       : 'off',
-    'ai.selfgen_per_day': String(Math.max(0, Math.min(50, Number(formData.get('selfGenPerDay')) || 0))),
+    'ai.selfgen_per_day': String(Math.max(0, Math.min(200, Number(formData.get('selfGenPerDay')) || 0))),
+    'ai.selfgen_per_sweep': String(Math.max(1, Math.min(20, Number(formData.get('selfGenPerSweep')) || 1))),
+    // Неизвестное значение → 'off': опечатка не должна включать автопубликацию.
+    'ai.readiness_mode': (['off', 'shadow', 'on'] as const).includes(formData.get('readinessMode') as 'off' | 'shadow' | 'on')
+      ? String(formData.get('readinessMode'))
+      : 'off',
+    'ai.readiness_min_steps': String(Math.max(1, Math.min(50, Number(formData.get('readinessMinSteps')) || 5))),
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
   if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)
