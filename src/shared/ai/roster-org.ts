@@ -22,7 +22,7 @@ import type { Expert, OrgRole } from './roster'
  * (assignMythicNames переименует тех, у кого имя ещё равно профессии).
  */
 
-type OrgSeed = Omit<Expert, 'professionEn' | 'professionRu' | 'userId' | 'lifecycle' | 'tier' | 'dreams'> & {
+type OrgSeed = Omit<Expert, 'professionEn' | 'professionRu' | 'userId' | 'ownerId' | 'lifecycle' | 'tier' | 'dreams'> & {
   orgRole: OrgRole
 }
 

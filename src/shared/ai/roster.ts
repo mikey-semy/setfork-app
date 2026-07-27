@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { councilExperts, db } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
 import { ORG_SEED } from './roster-org'
@@ -31,6 +31,8 @@ export interface Expert {
   professionRu: string
   /** Аккаунт уровня пользователя (ADR-0004: account_type='agent'). null = не заведён. */
   userId: string | null
+  /** Владелец личного специалиста; null = общий (виден всем). Чекпоинт приватности №1. */
+  ownerId: string | null
   /** Карьера: active → dormant → archived. Архив обратим (персона и опыт сохранены). */
   lifecycle: 'active' | 'dormant' | 'archived'
   /** Место в компании: партнёр / начальник гильдии / менеджер / эксперт / бэк-офис. */
@@ -66,7 +68,7 @@ export interface Expert {
  * специалисты. Источник каждой указан — чтобы правку можно было проверить, а не спорить о вкусе.
  */
 /** Исходный состав задаётся без профессии/аккаунта — они выводятся ниже. */
-type SeedExpert = Omit<Expert, 'professionEn' | 'professionRu' | 'userId' | 'lifecycle' | 'tier' | 'dreams' | 'orgRole'>
+type SeedExpert = Omit<Expert, 'professionEn' | 'professionRu' | 'userId' | 'ownerId' | 'lifecycle' | 'tier' | 'dreams' | 'orgRole'>
 
 const SEED_BASE: SeedExpert[] = [
   {
@@ -258,6 +260,7 @@ const withDefaults = (e: SeedExpert, orgRole: OrgRole): Expert => ({
   professionEn: e.nameEn,
   professionRu: e.nameRu,
   userId: null,
+  ownerId: null, // исходный состав — общий
   lifecycle: 'active',
   tier: '', // лестницу мастерства заводим по надобности; у части профессий её нет
   dreams: '',
@@ -275,6 +278,7 @@ const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   professionEn: r.professionEn,
   professionRu: r.professionRu,
   userId: r.userId,
+  ownerId: r.ownerId,
   lifecycle: r.lifecycle,
   orgRole: r.orgRole,
   tier: r.tier,
@@ -335,7 +339,7 @@ async function backfillGuilds(rows: (typeof councilExperts.$inferSelect)[]): Pro
  * Действующий ростер (только включённые, в заданном порядке). Пустая таблица → сеем и читаем снова.
  * Любая ошибка БД → SEED: совет обязан работать, даже если менеджер сломан.
  */
-export async function getRoster(): Promise<Expert[]> {
+export async function getRoster(viewerId?: string | null): Promise<Expert[]> {
   try {
     // Пул созыва = рубильник админа включён, карьера активна И роль пишущая. Спящих и
     // архивных не созываем (архив обратим). Бэк-офис (бухгалтер, летописец, HR) и
@@ -349,6 +353,12 @@ export async function getRoster(): Promise<Expert[]> {
             eq(councilExperts.enabled, true),
             eq(councilExperts.lifecycle, 'active'),
             inArray(councilExperts.orgRole, [...COUNCIL_ROLES]),
+            // ЧЕКПОИНТ ПРИВАТНОСТИ №1: общие (owner_id is null) + личные ТОЛЬКО зрителя.
+            // Без viewerId личных не отдаём вовсе — фоновые петли работают с общим составом,
+            // и чужой личный специалист не может попасть в чужой совет даже случайно.
+            viewerId
+              ? sql`(${councilExperts.ownerId} is null or ${councilExperts.ownerId} = ${viewerId})`
+              : sql`${councilExperts.ownerId} is null`,
           ),
         )
         .orderBy(asc(councilExperts.sort))
