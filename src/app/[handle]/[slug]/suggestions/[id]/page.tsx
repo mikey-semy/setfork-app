@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, X } from 'lucide-react'
+import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, RefreshCw, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -11,7 +11,7 @@ import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
-import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr } from '@/features/library/actions'
+import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr, updateBranchFromMain } from '@/features/library/actions'
 import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
@@ -133,11 +133,16 @@ export default async function SuggestionThreadPage({
 
   // A4: для открытого branch-PR заранее считаем трёхсторонний merge — при
   // конфликте вместо кнопки Merge показываем резолвер (выбор по шагам).
+  // Состояние merge нужно не только тому, кто сливает: по нему же видно, что ветка
+  // отстала от main — а обновляет её обычно АВТОР предложения, а не мейнтейнер.
   const mergeState =
-    sug.branchRef && sug.status === 'open' && canMerge && !branchMissing
+    sug.branchRef && sug.status === 'open' && (canMerge || session?.userId === sug.authorId) && !branchMissing
       ? await gitCore.mergeState({ owner, slug }, sug.branchRef).catch(() => null)
       : null
   const threeWay = mergeState ? threeWayMerge(mergeState.base, mergeState.ours, mergeState.theirs) : null
+  // Ветка отстала, если merge-base ≠ tip main: в ветке нет части main. Считаем по
+  // уже полученному mergeState — отдельный запрос дал бы тот же ответ.
+  const branchBehind = !!mergeState && mergeState.mergeBaseSha !== mergeState.ours.tipSha
   const hasConflicts = !!threeWay && (threeWay.conflicts.length > 0 || threeWay.metaConflicts.length > 0)
 
   const MERGE_ERR: Record<string, { ru: string; en: string }> = {
@@ -492,6 +497,19 @@ export default async function SuggestionThreadPage({
           />
         )}
 
+        {/* Ветка отстала от main — обратное слияние одной кнопкой. Показываем и при
+            конфликте: как раз тогда обновление чаще всего и решает дело. */}
+        {branchBehind && sug.status === 'open' && !branchMissing && (
+          <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3.5 py-2.5">
+            <span className="text-[12.5px] text-ink-2">{t('prBranchBehind', lang)}</span>
+            <form action={updateBranchFromMain.bind(null, sug.id)} className="ml-auto">
+              <SubmitButton className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border px-3.5 text-[13px] font-semibold text-ink hover:border-border-strong">
+                <RefreshCw size={14} /> {t('prUpdateBranch', lang)}
+              </SubmitButton>
+            </form>
+          </div>
+        )}
+
         {blockReasons.length > 0 && sug.status === 'open' && !isDraft && (
           <div className="mt-3 rounded-md border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[12.5px] text-danger">
             {t('prMergeBlocked', lang)}: {blockReasons.join('; ')}
@@ -534,7 +552,9 @@ export default async function SuggestionThreadPage({
           />
         )}
 
-        {hasConflicts && threeWay && sug.branchRef && (
+        {/* Резолвер — только тому, кто может сливать: его экшен всё равно требует
+            прав, а показывать автору форму, которая ничего не сделает, — обман. */}
+        {hasConflicts && threeWay && sug.branchRef && canMerge && (
           <ConflictResolver
             conflicts={threeWay.conflicts}
             metaConflicts={threeWay.metaConflicts}

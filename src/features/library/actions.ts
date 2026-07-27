@@ -61,6 +61,18 @@ async function closeLinkedIssues(templateId: string, text: string, actorId: stri
   }
 }
 
+/**
+ * Ленивый доступ к git-порту и его ошибкам.
+ *
+ * Импорт динамический не ради красоты: серверные экшены этого файла в большинстве
+ * своём git не трогают, а порт тянет за собой ядро. Один помощник вместо копии
+ * этой пары импортов в каждом git-экшене (их уже четыре).
+ */
+async function gitPort() {
+  const [core, ports] = await Promise.all([import('@/features/git/core'), import('@/core')])
+  return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError }
+}
+
 /** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
 function toStepInput(items: ProposedItem[]) {
   return items.map((it, i) => ({
@@ -401,6 +413,40 @@ export async function openBranchPr(templateId: string, branch: string): Promise<
   redirect(`/${owner}/${tpl.slug}/suggestions/${created.id}`)
 }
 
+/**
+ * Влить main в ветку предложения («обновить ветку»).
+ *
+ * Нужно, когда main ушёл вперёд: без этого единственный выход из расхождения —
+ * ручной резолвер конфликтов, хотя обычно достаточно обратного слияния. Версию не
+ * создаёт: main не двигается.
+ */
+export async function updateBranchFromMain(suggestionId: string): Promise<void> {
+  const session = await requireSession()
+  const sug = await db.query.suggestions.findFirst({
+    where: (s) => eq(s.id, suggestionId),
+    with: { template: true },
+  })
+  if (!sug || sug.status !== 'open' || !sug.branchRef) return
+  const tpl = sug.template
+  // Обновлять ветку может автор предложения (это его ветка) или тот, кто может пушить.
+  const can =
+    session.userId === sug.authorId ||
+    tpl.ownerId === session.userId ||
+    (await isCollaborator(tpl.id, session.userId))
+  if (!can) return
+
+  const owner = await ownerHandle(tpl.ownerId)
+  const path = `/${owner}/${tpl.slug}/suggestions/${sug.number ?? sug.id}`
+  const { gitCore, BranchOpError } = await gitPort()
+  try {
+    await gitCore.updateBranch({ owner, slug: tpl.slug }, sug.branchRef)
+  } catch (e) {
+    const code = e instanceof BranchOpError ? e.code : 'internal'
+    redirect(`${path}?e=${code}`)
+  }
+  revalidatePath(path)
+}
+
 /** Владелец/коллаборатор: влить branch-PR (ff или merge-commit + проекция). */
 export async function mergeBranchPr(suggestionId: string): Promise<void> {
   const session = await requireSession()
@@ -423,7 +469,7 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
 
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
-  const [{ gitCore }, { BranchOpError }] = await Promise.all([import('@/features/git/core'), import('@/core')])
+  const { gitCore, BranchOpError } = await gitPort()
   try {
     await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef)
   } catch (e) {

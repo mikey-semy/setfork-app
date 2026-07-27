@@ -136,6 +136,15 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
+  async updateBranch(repo, name) {
+    try {
+      const res = await client.updateBranch({ repo: toRepoRef(repo), name })
+      return { tipSha: res.tipSha, fastForward: res.fastForward }
+    } catch (e) {
+      throw toBranchOpError(e)
+    }
+  },
+
   async listTags(repo) {
     const res = await client.listTags(toRepoRef(repo)).catch(() => null)
     return res ? res.tags.map((t) => ({ name: t.name, targetSha: t.targetSha })) : []

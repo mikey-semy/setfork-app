@@ -196,6 +196,9 @@ export interface GitCore {
   mergeResolved(repo: GitRepoRef, branch: string, listJson: string): Promise<MergeResult>
   /** Git-тег релиза на коммит версии (у версии уже есть тег vN). → sha коммита. */
   createTag(repo: GitRepoRef, name: string, version: number): Promise<string>
+  /** A5: влить main в ветку (обратное слияние). main не двигается → версии нет.
+   *  Бросает BranchOpError('conflict'|'nothing-to-merge'|'not-found'). */
+  updateBranch(repo: GitRepoRef, name: string): Promise<{ tipSha: string; fastForward: boolean }>
   /** Все git-теги репо (vN + релизные), по имени. */
   listTags(repo: GitRepoRef): Promise<GitTag[]>
   /** Коммиты рефа, свежие первыми. `notIn` (обычно 'main') скрывает достижимое

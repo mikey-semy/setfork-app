@@ -175,6 +175,8 @@ const DICT = {
   checksDraft: { en: 'Still a draft', ru: 'Пока черновик' },
   prMergeBlocked: { en: 'Merging is blocked', ru: 'Слияние заблокировано' },
   prLinkedIssues: { en: 'Linked issues', ru: 'Связанные задачи' },
+  prBranchBehind: { en: 'The branch is behind main', ru: 'Ветка отстала от main' },
+  prUpdateBranch: { en: 'Update from main', ru: 'Обновить из main' },
   prLinkedIssuesHint: { en: 'They close when this suggestion is merged.', ru: 'Закроются при слиянии предложения.' },
   prBlockedThreads: { en: 'unresolved conversations on items', ru: 'нерешённые обсуждения на пунктах' },
   prBlockedReview: { en: 'a reviewer requested changes', ru: 'рецензент запросил правки' },

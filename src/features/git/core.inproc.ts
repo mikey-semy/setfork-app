@@ -29,6 +29,35 @@ async function mainTip(bare: string): Promise<string | null> {
   )
 }
 
+/** Идентичность merge-коммитов — та же, что у детерминированных коммитов bundle. */
+const MERGE_ENV = {
+  GIT_AUTHOR_NAME: 'SetFork',
+  GIT_AUTHOR_EMAIL: 'git@setfork.com',
+  GIT_COMMITTER_NAME: 'SetFork',
+  GIT_COMMITTER_EMAIL: 'git@setfork.com',
+}
+
+/**
+ * Merge двух рефов в bare-репо БЕЗ рабочего дерева: merge-tree --write-tree
+ * (exit 1 = конфликт) + commit-tree. Ref НЕ двигается — это делает вызывающий.
+ *
+ * Один помощник на два направления: «ветка → main» (слияние предложения) и
+ * «main → ветка» (обновление ветки). Различаются только порядком родителей.
+ */
+async function mergeCommit(bare: string, ours: string, theirs: string, message: string): Promise<string> {
+  const tree = await exec('git', ['--git-dir', bare, 'merge-tree', '--write-tree', ours, theirs]).then(
+    (r) => r.stdout.split('\n')[0].trim(),
+    () => null,
+  )
+  if (!tree) throw new BranchOpError('conflict')
+  const { stdout } = await exec(
+    'git',
+    ['--git-dir', bare, 'commit-tree', tree, '-p', ours, '-p', theirs, '-m', message],
+    { env: { ...process.env, ...MERGE_ENV } },
+  )
+  return stdout.trim()
+}
+
 async function resolveListId(owner: string, slug: string): Promise<string | null> {
   const [r] = await db
     .select({ id: templates.id })
@@ -166,25 +195,7 @@ export const gitCoreInproc: GitCore = {
         tipSha = branchTip
         fastForward = true
       } else {
-        // Bare-friendly merge: merge-tree --write-tree (exit 1 = конфликт) + commit-tree.
-        const tree = await exec('git', ['--git-dir', bare, 'merge-tree', '--write-tree', 'main', name]).then(
-          (r) => r.stdout.split('\n')[0].trim(),
-          () => null,
-        )
-        if (!tree) throw new BranchOpError('conflict')
-        const env = {
-          ...process.env,
-          GIT_AUTHOR_NAME: 'SetFork',
-          GIT_AUTHOR_EMAIL: 'git@setfork.com',
-          GIT_COMMITTER_NAME: 'SetFork',
-          GIT_COMMITTER_EMAIL: 'git@setfork.com',
-        }
-        const { stdout: commit } = await exec(
-          'git',
-          ['--git-dir', bare, 'commit-tree', tree, '-p', 'main', '-p', name, '-m', `Merge branch '${name}'`],
-          { env },
-        )
-        tipSha = commit.trim()
+        tipSha = await mergeCommit(bare, 'main', name, `Merge branch '${name}'`)
         await exec('git', ['--git-dir', bare, 'update-ref', 'refs/heads/main', tipSha])
       }
       // main сдвинулся → проекция (null = list.json не менялся).
@@ -276,6 +287,43 @@ export const gitCoreInproc: GitCore = {
       throw new BranchOpError('internal')
     })
     return target
+  },
+
+  // Влить main в ветку — зеркало UpdateBranch в ядре (ours = ветка, theirs = main).
+  async updateBranch(repo, name) {
+    if (badBranch(name) || name === 'main') throw new BranchOpError('bad-name')
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) throw new BranchOpError('not-found')
+    const listId = await resolveListId(repo.owner, repo.slug)
+    if (!listId) throw new BranchOpError('not-found')
+    const tipOf = (ref: string) =>
+      exec('git', ['--git-dir', bare, 'rev-parse', '--verify', `refs/heads/${ref}`]).then(
+        (r) => r.stdout.trim(),
+        () => null,
+      )
+    if (!(await tipOf(name))) throw new BranchOpError('not-found')
+    // Тот же лок, что у merge/push: tip читаем ПОСЛЕ захвата (иначе конкурентный
+    // пуш в ветку потерялся бы) — совпадает с Rust.
+    return gitStore.withRepoLock(listId, async () => {
+      const branchTip = await tipOf(name)
+      const mainTip = await tipOf('main')
+      if (!branchTip || !mainTip) throw new BranchOpError('not-found')
+      // Ветка уже содержит main → обновлять нечего.
+      const hasMain = await exec('git', ['--git-dir', bare, 'merge-base', '--is-ancestor', 'main', name]).then(() => true, () => false)
+      if (hasMain) throw new BranchOpError('nothing-to-merge')
+      // В ветке нет своих коммитов → просто двигаем ref на main.
+      const branchIsAncestor = await exec('git', ['--git-dir', bare, 'merge-base', '--is-ancestor', name, 'main']).then(() => true, () => false)
+      if (branchIsAncestor) {
+        await exec('git', ['--git-dir', bare, 'update-ref', `refs/heads/${name}`, mainTip]).catch(() => {
+          throw new BranchOpError('internal')
+        })
+        return { tipSha: mainTip, fastForward: true }
+      }
+      // ours = ветка, theirs = main — порядок обратный слиянию предложения.
+      const merged = await mergeCommit(bare, name, 'main', "Merge branch 'main'")
+      await exec('git', ['--git-dir', bare, 'update-ref', `refs/heads/${name}`, merged])
+      return { tipSha: merged, fastForward: false }
+    })
   },
 
   async listTags(repo) {
