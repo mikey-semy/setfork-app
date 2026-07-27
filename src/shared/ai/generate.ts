@@ -313,6 +313,10 @@ All content MUST be in ${langName}.
 Translation is never an improvement: if the CURRENT LIST is written in a different language than ${langName}, keep the language of the CURRENT LIST — unless the INSTRUCTION explicitly asks to translate.
 Preserve good existing content and ordering; change only what the instruction requires. Do not drop unrelated steps.
 Preserve each item's "section" value; keep items grouped in their sections.
+Preserve each item's "needsHuman" and "needsHumanAsk" as they are — they mark where a real person's
+experience is required (local prices, taste, timing on their equipment). Removing an honest mark is
+worse than leaving it: only drop it when your edit actually ANSWERS the question. You may add a new
+mark where the current text states something you cannot know.
 ${web ? 'You may use web search to ground new content.\n' : ''}${jsonShapeFor(opts.kind ?? 'procedure')}
 - Everything in ${langName}.
 ${sp.rule()}`

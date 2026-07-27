@@ -417,6 +417,11 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         section: loc(s.section, lang),
         level: s.level,
         why: loc(s.why, lang),
+        // Пометки «здесь нужен человек» ОБЯЗАНЫ входить в снимок: refine получает список
+        // JSON'ом и возвращает его целиком, поэтому поле, которого в снимке нет, исчезает
+        // из результата — то есть каждый проход ухода СТИРАЛ бы честные пометки.
+        needsHuman: s.needsHuman,
+        needsHumanAsk: loc(s.needsHumanAsk, lang),
         subtasks: (s.subtasks ?? []).map((x) => loc(x, lang)).filter(Boolean),
         refs: (s.refs ?? []).map((r) => ({ label: loc(r.label, lang), url: r.url ?? '' })),
       })),
