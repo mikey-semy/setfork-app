@@ -32,7 +32,8 @@ import { AchievementsAdmin } from '@/features/admin/AchievementsAdmin'
 import { MaintenanceSection } from '@/features/admin/MaintenanceSection'
 import { MonetizationSettingsForm } from '@/features/admin/MonetizationSettingsForm'
 import { getAchievementDisplay } from '@/features/profile/achievement-config'
-import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
+import type { SettingsSection } from '@/features/settings/SettingsShell'
+import { AdminShell } from '@/features/admin/AdminShell'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
@@ -126,7 +127,10 @@ export default async function AdminPage() {
   const fallbackOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.fallbackModel)
   const embOpts = ensure(buildOpts(models.embedding, true, lang, 'USD', true), settings.embeddingModel)
 
-  const card = 'rounded-lg border border-border bg-surface p-5'
+  // Карточка настроек держит ЧИТАЕМУЮ ширину, даже когда страница во всю ширину экрана:
+  // поле ввода на два метра удобнее не становится, а глаз по такой строке не ходит.
+  // Всю ширину забирают таблицы и сетки — они от неё действительно выигрывают.
+  const card = 'w-full max-w-[860px] rounded-lg border border-border bg-surface p-5'
 
   // Заголовки секций: ровно один двуязычный литерал на строку (i18n-правило),
   // используется и в липком меню, и в карточке.
@@ -444,83 +448,48 @@ export default async function AdminPage() {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[920px] flex-wrap items-end justify-between gap-3 px-6 pt-8">
-        <div>
-          <h1 className="mb-1 text-[18px] font-bold text-ink">{t('adminTitle', lang)}</h1>
-          <p className="text-[13px] text-ink-2">
-            {t('adminSubtitle', lang)}
-          </p>
-        </div>
-        {/* Мобилка: ряд разделов не переносим и не сжимаем — он ЕДЕТ горизонтально (свайп),
-            край-в-край за счёт -mx-6/px-6. На sm+ — обычный ряд. Паттерн как в TabNav. */}
-        {/* Строй разделов — edge-to-edge скролл на мобильном: ширина = контент+2×px-6,
-            а -mx-6 гасит её обратно (нетто-след = 100% родителя). Так правый край
-            строя совпадает с отступом контента ниже (раньше w-full+-mx-6 обрезал
-            последнюю кнопку). На sm+ — обычный ряд. */}
-        <div className="no-scrollbar -mx-6 flex w-[calc(100%+3rem)] shrink-0 items-center gap-2 overflow-x-auto px-6 sm:mx-0 sm:w-auto sm:px-0">
-          <Link
-            href="/admin/dashboard"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-          >
-            <LayoutDashboard size={14} /> {tr({ en: 'Dashboard', ru: 'Дашборд' }, lang)}
-          </Link>
-          <Link
-            href="/admin/development"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-          >
-            <TrendingUp size={14} /> {tr({ en: 'Development', ru: 'Развитие' }, lang)}
-          </Link>
-          <Link
-            href="/admin/collections"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-          >
-            <FolderGit2 size={14} /> {ru ? 'Подборки' : 'Collections'}
-          </Link>
-          <Link
-            href="/admin/audit"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-          >
-            <ScrollText size={14} /> {ru ? 'Аудит' : 'Audit'}
-          </Link>
-          <Link
-            href="/admin/usage"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-          >
-            <BarChart3 size={14} /> {ru ? 'Расход на черновики' : 'Draft usage'}
-          </Link>
-          <Link
-            href="/admin/feedback"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-          >
-            <MessageSquare size={14} /> {t('feedback', lang)}
-          </Link>
-          <Link
-            href="/admin/reports"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-          >
-            <Flag size={14} /> {t('reports', lang)}
-          </Link>
-          <Link
-            href="/admin/tags"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-          >
-            <Tag size={14} /> {t('tags', lang)}
-          </Link>
-          <Link
-            href="/admin/landing"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-border bg-surface px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-          >
-            <Megaphone size={14} /> {say('Landing', 'Лендинг')}
-          </Link>
-          <Link
-            href="/admin/moderation"
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg"
-          >
-            <Shield size={14} /> {ru ? 'Модерация' : 'Moderation'}
-          </Link>
-        </div>
+      {/* Шапка во всю ширину с теми же полями, что у оболочки ниже. Разделы уехали в
+          боковое меню: их больше десятка, и горизонтальным рядом они не помещаются нигде. */}
+      <div className="w-full min-w-0 px-5 pt-6 md:px-8">
+        <h1 className="mb-1 text-[18px] font-bold text-ink">{t('adminTitle', lang)}</h1>
+        <p className="text-[13px] text-ink-2">{t('adminSubtitle', lang)}</p>
       </div>
-      <SettingsShell sections={sections} lang={lang} />
+      <AdminShell
+        sections={sections}
+        lang={lang}
+        currentPath="/admin"
+        groups={[
+          {
+            title: say('Overview', 'Обзор'),
+            links: [
+              { href: '/admin/dashboard', label: tr({ en: 'Dashboard', ru: 'Дашборд' }, lang), icon: <LayoutDashboard size={14} /> },
+              { href: '/admin/development', label: tr({ en: 'Development', ru: 'Развитие' }, lang), icon: <TrendingUp size={14} /> },
+              { href: '/admin/usage', label: say('Draft usage', 'Расход на черновики'), icon: <BarChart3 size={14} /> },
+              { href: '/admin/audit', label: say('Audit', 'Аудит'), icon: <ScrollText size={14} /> },
+            ],
+          },
+          {
+            title: say('Content', 'Контент'),
+            links: [
+              { href: '/admin/collections', label: say('Collections', 'Подборки'), icon: <FolderGit2 size={14} /> },
+              { href: '/admin/tags', label: t('tags', lang), icon: <Tag size={14} /> },
+              { href: '/admin/landing', label: say('Landing', 'Лендинг'), icon: <Megaphone size={14} /> },
+            ],
+          },
+          {
+            title: say('People & complaints', 'Люди и жалобы'),
+            links: [
+              { href: '/admin/moderation', label: say('Moderation', 'Модерация'), icon: <Shield size={14} /> },
+              { href: '/admin/reports', label: t('reports', lang), icon: <Flag size={14} /> },
+              { href: '/admin/feedback', label: t('feedback', lang), icon: <MessageSquare size={14} /> },
+            ],
+          },
+          {
+            title: say('Instance settings', 'Настройки инстанса'),
+            sectionIds: sections.map((x) => x.id),
+          },
+        ]}
+      />
     </>
   )
 }

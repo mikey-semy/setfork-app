@@ -43,7 +43,7 @@ export default async function AdminDevelopmentPage() {
   const period = tr({ en: `in ${m.periodDays} days`, ru: `за ${m.periodDays} дн.` }, lang)
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] min-w-0 flex-col gap-6 px-6 py-8">
+    <div className="flex w-full min-w-0 flex-col gap-6 px-5 py-6 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           {/* -ml-2/px-2 + py-2.5 — тач-цель ≥44px, но визуально ссылка остаётся на месте. */}
@@ -321,8 +321,8 @@ export default async function AdminDevelopmentPage() {
                 )}
               </span>
             </div>
-            <div className="grid min-w-[520px] grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
-              <span>{tr({ en: 'Gnome', ru: 'Гном' }, lang)}</span>
+            <div className="grid min-w-[520px] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
+              <span>{tr({ en: 'Specialist', ru: 'Специалист' }, lang)}</span>
               <span className="text-right">{tr({ en: 'Rank', ru: 'Ранг' }, lang)}</span>
               <span className="text-right">{tr({ en: 'Councils', ru: 'Советов' }, lang)}</span>
               <span className="text-right">{tr({ en: 'Accepted', ru: 'Принято' }, lang)}</span>
@@ -332,13 +332,13 @@ export default async function AdminDevelopmentPage() {
               <Link
                 key={g.id}
                 href={`/admin/council/${g.id}`}
-                className="grid min-w-[520px] grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-3 hover:bg-surface-2"
+                className="grid min-w-[520px] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-3 hover:bg-surface-2"
               >
                 <span className="truncate text-[13px] font-medium text-ink">{lang === 'ru' ? g.nameRu : g.nameEn}</span>
                 <span className="text-right text-[12px] text-muted">{lang === 'ru' ? g.rankRu : g.rankEn}</span>
-                <span className="text-right font-mono text-[13px] tabular-nums text-ink-2">{num(g.gens)}</span>
-                <span className="text-right font-mono text-[13px] tabular-nums text-ink-2">{num(g.accepted)}</span>
-                <span className="text-right font-mono text-[13px] tabular-nums text-ink-2">{g.trusted ? pct(g.score) : '—'}</span>
+                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(g.gens)}</span>
+                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(g.accepted)}</span>
+                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{g.trusted ? pct(g.score) : '—'}</span>
               </Link>
             ))}
             <div className="px-4 py-2.5 text-[11.5px] text-muted">
@@ -385,14 +385,14 @@ export default async function AdminDevelopmentPage() {
       <section className="flex min-w-0 flex-col gap-3">
         <h2 className={h2}>{tr({ en: 'Autonomous loops', ru: 'Автономные петли' }, lang)}</h2>
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-          <div className="grid min-w-[560px] grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
+          <div className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_112px_112px_112px] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
             <span>{tr({ en: 'Loop', ru: 'Петля' }, lang)}</span>
             <span className="text-right">{tr({ en: 'State', ru: 'Состояние' }, lang)}</span>
             <span className="text-right">{tr({ en: 'Dry run', ru: 'Сухой прогон' }, lang)}</span>
             <span className="text-right">{tr({ en: 'Switch', ru: 'Рубильник' }, lang)}</span>
           </div>
           {loops.map((l) => (
-            <div key={l.type} className="grid min-w-[560px] grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-3 last:border-0">
+            <div key={l.type} className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_112px_112px_112px] items-center gap-4 border-b border-border px-4 py-3 last:border-0">
               <span className="truncate font-mono text-[12.5px] text-ink">{l.type}</span>
               <span className={`text-right text-[12px] ${l.circuitTripped ? 'text-danger' : l.paused ? 'text-warn' : 'text-ok'}`}>
                 {l.circuitTripped
