@@ -1241,6 +1241,40 @@ export const generationMessages = pgTable(
   (t) => [index('generation_messages_gen_idx').on(t.generationId, t.createdAt)],
 )
 
+/**
+ * ЧЕРНОВИКИ СОВЕТА — сырьё для замера многогранности.
+ *
+ * Смысл совета (решение владельца) — не добротность, а РАЗНЫЕ УГЛЫ ЗРЕНИЯ. Проверить это
+ * можно только сравнив черновики экспертов с финальным сведением: сколько своих граней
+ * принёс каждый и сколько из них старейшина потерял при синтезе. До сих пор ответить было
+ * НЕЧЕМ: черновики жили в памяти одного вызова и выбрасывались, в generation_messages
+ * оставалась только театральная реплика («набрасывает список…»).
+ *
+ * Отдельная таблица, а не JSONB кандидата: провенанс уезжает клиенту вместе с кандидатом,
+ * и полные черновики раздували бы каждый ответ. Здесь они server-only.
+ *
+ * Анонимность синтеза этим НЕ нарушается: критик и старейшина по-прежнему получают только
+ * буквы (A/B/C), а соответствие «буква → автор» лежит рядом, для людей и для замера.
+ */
+export const generationDrafts = pgTable(
+  'generation_drafts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    generationId: uuid('generation_id')
+      .notNull()
+      .references(() => generations.id, { onDelete: 'cascade' }),
+    /** Индекс кандидата витка (совпадает с generation_candidates.idx). */
+    idx: integer('idx').notNull().default(0),
+    /** Буква анонимного черновика в промпте критика/синтезатора ('A', 'B', …). */
+    letter: text('letter').notNull(),
+    /** Автор: id эксперта из ростера либо 'innovator'. */
+    who: text('who').notNull(),
+    text: text('text').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('generation_drafts_gen_idx').on(t.generationId, t.idx)],
+)
+
 export const generationCandidates = pgTable(
   'generation_candidates',
   {
