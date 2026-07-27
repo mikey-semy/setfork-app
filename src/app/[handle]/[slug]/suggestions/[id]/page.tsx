@@ -18,6 +18,8 @@ import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
 import { SuggestionTabs, type SuggestionTab } from '@/features/library/SuggestionTabs'
+import { MergedPanel } from '@/features/library/MergedPanel'
+import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
 import { ReviewPanel } from '@/features/library/ReviewPanel'
 import { getSuggestionThreads } from '@/features/comments/queries'
@@ -128,6 +130,25 @@ export default async function SuggestionThreadPage({
   const changedCount = diff.summary.added + diff.summary.removed + diff.summary.modified
   const threadCount = threads.length + comments.length
 
+  // История действий — из источников (правка, ревью, треды), а не из отдельной
+  // таблицы событий: та неизбежно разошлась бы с реальным состоянием.
+  const timeline: TimelineEvent[] = [
+    {
+      kind: 'opened' as const,
+      at: new Date(sug.createdAt),
+      actor: { handle: sug.author.handle, name: sug.author.name, avatarUrl: sug.author.avatarUrl },
+    },
+    ...reviews.map((r) => ({
+      kind: (r.verdict === 'approve' ? 'review-approve' : r.verdict === 'changes' ? 'review-changes' : 'review-comment') as TimelineEvent['kind'],
+      at: r.createdAt,
+      actor: r.reviewer,
+    })),
+    ...threads.filter((th) => th.resolvedAt).map((th) => ({ kind: 'resolved' as const, at: th.resolvedAt as Date, actor: null })),
+    ...(sug.resolvedAt
+      ? [{ kind: (sug.status === 'accepted' ? 'merged' : 'closed') as TimelineEvent['kind'], at: new Date(sug.resolvedAt), actor: null }]
+      : []),
+  ].sort((a, b) => a.at.getTime() - b.at.getTime())
+
   const statusCls =
     sug.status === 'accepted' ? 'bg-ok text-white' : sug.status === 'rejected' ? 'bg-surface-2 text-muted' : 'bg-accent text-white'
 
@@ -180,6 +201,22 @@ export default async function SuggestionThreadPage({
         {/* Две колонки: содержимое вкладки + боковая панель (общий примитив). */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <div className="min-w-0 flex-1">
+        {sug.status !== 'open' && (
+          <MergedPanel
+            owner={owner}
+            slug={slug}
+            branch={sug.status === 'accepted' && sug.branchRef && !branchMissing && canMerge ? sug.branchRef : null}
+            accepted={sug.status === 'accepted'}
+            labels={{
+              merged: t('prMerged', lang),
+              closed: t('prClosed', lang),
+              branchSafeToDelete: t('prBranchSafeDelete', lang),
+              deleteBranch: t('prDeleteBranch', lang),
+              branchDeleted: t('prBranchDeleted', lang),
+              deleteFailed: t('prDeleteFailed', lang),
+            }}
+          />
+        )}
         {mergeErr && (
           <div className="mb-3 rounded-md border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">
             {lang === 'ru' ? mergeErr.ru : mergeErr.en}
@@ -315,6 +352,19 @@ export default async function SuggestionThreadPage({
         {/* Обсуждение — вкладка по умолчанию. Заметка правки и ревью видны здесь,
             чтобы разговор шёл при полном контексте, как в Conversation у GitHub. */}
         {tab === 'conversation' && (<>
+        <SuggestionTimeline
+          events={timeline}
+          lang={lang}
+          labels={{
+            opened: t('tlOpened', lang),
+            approved: t('tlApproved', lang),
+            requestedChanges: t('tlRequestedChanges', lang),
+            commented: t('tlCommented', lang),
+            resolved: t('tlResolved', lang),
+            merged: t('tlMerged', lang),
+            closed: t('tlClosed', lang),
+          }}
+        />
         <h2 className="mt-6 mb-3 text-[14px] font-bold text-ink">{t('discussionHeading', lang)}</h2>
         {comments.length === 0 ? (
           <p className="mb-3 text-[13px] text-muted">{t('noCommentsYet', lang)}</p>
