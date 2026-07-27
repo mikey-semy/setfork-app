@@ -415,6 +415,7 @@ const DICT = {
   about: { en: 'About', ru: 'О списке' },
   currentVersion: { en: 'current', ru: 'текущая' },
   viewVersion: { en: 'View this version', ru: 'Посмотреть версию' },
+  defaultBranchHint: { en: 'default branch', ru: 'главная ветка' },
   // Комментарии к пункту (и к выделенной части его текста)
   commentAdd: { en: 'Comment on this item', ru: 'Прокомментировать пункт' },
   commentPlaceholder: { en: 'What is unclear or worth fixing?', ru: 'Что непонятно или стоит поправить?' },

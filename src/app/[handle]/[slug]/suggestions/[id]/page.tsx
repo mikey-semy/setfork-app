@@ -5,6 +5,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
@@ -140,7 +141,7 @@ export default async function SuggestionThreadPage({
                 <Link href={`/${owner}/${slug}?ref=${encodeURIComponent(sug.branchRef)}`} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[12px] text-ink hover:text-accent">
                   <GitBranch size={11} /> {sug.branchRef}
                 </Link>{' '}
-                → <span className="font-mono text-[12px]">main</span>
+                → <Tooltip label={t('defaultBranchHint', lang)}><span className="font-mono text-[12px]">main</span></Tooltip>
               </>
             ) : (
               <>{lang === 'ru' ? `на основе v${sug.baseVersion}` : `based on v${sug.baseVersion}`}</>
