@@ -3,7 +3,7 @@ import { ArrowLeft, Pause, Play, TrendingUp } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr, type Lang } from '@/shared/i18n'
-import { getDevelopmentMetrics, UNAVAILABLE, type NaReason } from '@/features/admin/development-queries'
+import { getCompanyDay, getDevelopmentMetrics, UNAVAILABLE, type NaReason } from '@/features/admin/development-queries'
 import { StatTile } from '@/shared/ui/StatTile'
 import { TagChip } from '@/shared/ui/TagChip'
 import { allLoopPolicies } from '@/shared/agents/policy'
@@ -38,7 +38,7 @@ const h2 = 'text-[13px] font-semibold uppercase tracking-wide text-ink-2'
 export default async function AdminDevelopmentPage() {
   await requireAdmin()
   const lang = await getLang()
-  const [m, loops] = await Promise.all([getDevelopmentMetrics(30), allLoopPolicies()])
+  const [m, loops, today, yesterday] = await Promise.all([getDevelopmentMetrics(30), allLoopPolicies(), getCompanyDay(0), getCompanyDay(1)])
   const period = tr({ en: `in ${m.periodDays} days`, ru: `за ${m.periodDays} дн.` }, lang)
 
   return (
@@ -66,6 +66,75 @@ export default async function AdminDevelopmentPage() {
           {tr({ en: 'Live monitoring →', ru: 'Живой мониторинг →' }, lang)}
         </Link>
       </div>
+
+      {/* ДЕНЬ КОМПАНИИ: что она сделала сама. С включённой планкой она публикует без
+          человека — значит отчёт постфактум обязателен, иначе автономия это чёрный ящик.
+          Считается по журналу действий: ни снимков, ни джобы, ни вызовов модели. */}
+      <section className="flex min-w-0 flex-col gap-3">
+        <h2 className={h2}>{tr({ en: 'Company day', ru: 'День компании' }, lang)}</h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <StatTile
+            label={tr({ en: 'Created', ru: 'Создано' }, lang)}
+            value={num(today.created)}
+            hint={tr({ en: `yesterday ${today.created === 0 && yesterday.created === 0 ? '0' : num(yesterday.created)}`, ru: `вчера ${num(yesterday.created)}` }, lang)}
+          />
+          <StatTile label={tr({ en: 'Improved', ru: 'Улучшено' }, lang)} value={num(today.improved)} hint={tr({ en: `yesterday ${num(yesterday.improved)}`, ru: `вчера ${num(yesterday.improved)}` }, lang)} />
+          <StatTile label={tr({ en: 'Published by the bar', ru: 'Опубликовано по планке' }, lang)} value={num(today.published)} tone={today.published > 0 ? 'ok' : undefined} />
+          <StatTile label={tr({ en: 'Held for you', ru: 'Оставлено вам' }, lang)} value={num(today.held)} />
+          <StatTile label={tr({ en: 'Diverged (forks)', ru: 'Расхождений форком' }, lang)} value={num(today.forked)} />
+          <StatTile label={tr({ en: 'Errors', ru: 'Ошибок' }, lang)} value={num(today.errors)} tone={today.errors > 0 ? 'warn' : undefined} />
+        </div>
+
+        {today.dryRun > 0 && (
+          <p className="text-[12.5px] text-muted">
+            {tr(
+              { en: `${today.dryRun} decisions made in dry run — logged, not acted on.`, ru: `${today.dryRun} решений принято в сухом прогоне — записаны, но не выполнены.` },
+              lang,
+            )}
+          </p>
+        )}
+
+        {/* ПОЧЕМУ не прошло планку — «не прошло» без причины это та же vanity-метрика. */}
+        {today.holdReasons.length > 0 && (
+          <div className="rounded-lg border border-border bg-surface p-3">
+            <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
+              {tr({ en: 'Why lists did not pass the bar', ru: 'Почему списки не прошли планку' }, lang)}
+            </div>
+            <ul className="flex flex-col gap-1.5">
+              {today.holdReasons.map((r) => (
+                <li key={r.reason} className="flex min-w-0 items-start justify-between gap-3 text-[12.5px] text-ink-2">
+                  <span className="min-w-0 [overflow-wrap:anywhere]">{r.reason}</span>
+                  <span className="shrink-0 font-mono text-muted">×{r.times}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Лента событий дня. Пусто — так и пишем: «сегодня компания ничего не делала». */}
+        {today.events.length === 0 ? (
+          <p className="text-[12.5px] text-muted">
+            {tr({ en: 'Nothing today — the loops are off, paused or had no work.', ru: 'Сегодня ничего — петли выключены, на паузе или работы не было.' }, lang)}
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+            <table className="w-full min-w-[420px] text-[12.5px]">
+              <tbody>
+                {today.events.map((e, i) => (
+                  <tr key={i} className="border-b border-border last:border-0">
+                    <td className="whitespace-nowrap px-3 py-2 font-mono text-muted">
+                      {new Intl.DateTimeFormat('ru', { hour: '2-digit', minute: '2-digit' }).format(e.at)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-ink-2">{e.action}</td>
+                    <td className="px-3 py-2 text-ink-2 [overflow-wrap:anywhere]">{e.ref || '—'}</td>
+                    <td className="hidden px-3 py-2 text-muted [overflow-wrap:anywhere] sm:table-cell">{e.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       {/* Рост библиотеки */}
       <section className="flex min-w-0 flex-col gap-3">
