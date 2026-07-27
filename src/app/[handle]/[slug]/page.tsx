@@ -7,6 +7,7 @@ import { startRun } from '@/features/runs/actions'
 import { openBranchPr, revertToVersion, useTemplate } from '@/features/library/actions'
 import { Button } from '@/shared/ui/button'
 import { gitCore } from '@/features/git/core'
+import { snapshotSteps } from '@/features/git/snapshot-steps'
 import { BranchPicker } from '@/features/git/BranchPicker'
 import { isCollaborator } from '@/features/collab/queries'
 import { getSession } from '@/shared/auth/session'
@@ -93,29 +94,7 @@ export default async function ListPage({
   const histVer = histNum && !refBranch ? await getVersionSteps(tpl.id, histNum) : null
   // На ветке рендерим её шаги (маппинг plain→LocaleText-шейп; картинок у снапшота нет).
   const allSteps = snapshot
-    ? snapshot.steps.map((s) => ({
-        id: `br-${s.n}`,
-        n: s.n,
-        // Идентичности у git-снимка нет: block_id в git не сериализуется (golden-
-        // паритет с Rust), поэтому на ветке комментарии к пунктам недоступны.
-        blockId: null as string | null,
-        type: s.type ?? 'step', // не-step блоки снапшота (inproc); Rust пока только шаги
-        content: (s.content ?? {}) as Record<string, unknown>,
-        title: { en: s.title } as (typeof dbSteps)[number]['title'],
-        desc: { en: s.desc } as (typeof dbSteps)[number]['desc'],
-        command: s.command,
-        level: s.level as (typeof dbSteps)[number]['level'],
-        why: { en: s.why } as (typeof dbSteps)[number]['why'],
-        // Пометка «здесь нужен человек» в git не сериализуется (golden-паритет с Rust),
-        // поэтому на ветке её нет — не ложное false, а честное «неизвестно из снимка».
-        needsHuman: false,
-        needsHumanAsk: {} as (typeof dbSteps)[number]['needsHumanAsk'],
-        section: { en: s.section } as (typeof dbSteps)[number]['section'],
-        subtasks: s.subtasks.map((t) => ({ en: t })),
-        refs: s.refs.map((r) => ({ label: { en: r.label }, ...(r.url ? { url: r.url } : {}) })),
-        imageKey: null,
-        hasImage: false,
-      }))
+    ? (snapshotSteps(snapshot) as unknown as typeof dbSteps)
     : (histVer?.steps ?? dbSteps)
 
   // Любой альтернативный снимок (ветка или прошлая версия) — только чтение:

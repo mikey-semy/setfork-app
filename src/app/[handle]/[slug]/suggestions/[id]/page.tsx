@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Check, GitBranch, GitMerge, GitPullRequest, X } from 'lucide-react'
+import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, RefreshCw, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -11,30 +11,49 @@ import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
-import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr } from '@/features/library/actions'
+import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr, updateBranchFromMain } from '@/features/library/actions'
 import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
-import { SuggestionDiff } from '@/features/library/SuggestionDiff'
+import { snapshotSteps } from '@/features/git/snapshot-steps'
+import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
+import { diffSteps, rowsToCmp } from '@/features/library/diff'
+import { DiffViewToggle } from '@/features/library/DiffViewToggle'
 import { SuggestionResult } from '@/features/library/SuggestionResult'
 import { SuggestionTabs, type SuggestionTab } from '@/features/library/SuggestionTabs'
 import { SuggestionTitle } from '@/features/library/SuggestionTitle'
+import { ChecksList } from '@/features/library/ChecksList'
+import { CommitsList } from '@/features/library/CommitsList'
+import { DraftToggle } from '@/features/library/DraftToggle'
+import { PendingReviewBar } from '@/features/library/PendingReviewBar'
+import { suggestionChecks } from '@/features/library/suggestion-checks'
+import { withPrDefaults } from '@/features/library/pr-settings'
+import { blocksFrom } from '@/features/library/suggestion-blocks'
+import { closingRefs } from '@/features/library/closing-refs'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
+import { DiffStat } from '@/shared/ui/DiffStat'
 import { ReviewPanel } from '@/features/library/ReviewPanel'
 import { getSuggestionThreads } from '@/features/comments/queries'
+import { submitPendingComments } from '@/features/comments/actions'
 import { threadState } from '@/features/comments/state'
 import type { RowThread } from '@/features/library/DiffComments'
 import type { AnchorableBlock } from '@/features/comments/fields'
 import { getSuggestionReviews } from '@/features/library/review-actions'
-import { diffSteps } from '@/features/library/suggestion-diff'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
 import { CommentActions } from '@/features/collab/CommentActions'
 import { WatchButton } from '@/features/watch/WatchButton'
+import { AssigneePicker } from '@/features/issues/AssigneePicker'
+import { LabelEditor } from '@/features/issues/LabelEditor'
+import { MilestonePicker } from '@/features/issues/MilestonePicker'
+import { getListLabels } from '@/features/issues/queries'
+import { getMilestonesForPicker } from '@/features/milestones/queries'
+import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails } from '@/features/library/queries'
+import { setSuggestionDraft, setSuggestionLabels, setSuggestionMilestone, toggleReviewRequest, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
 
@@ -48,7 +67,7 @@ export default async function SuggestionThreadPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string; id: string }>
-  searchParams: Promise<{ e?: string; tab?: string }>
+  searchParams: Promise<{ e?: string; tab?: string; view?: string }>
 }) {
   const [{ handle: owner, slug, id }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
@@ -68,30 +87,33 @@ export default async function SuggestionThreadPage({
 
   // A3: branch-PR — предлагаемые шаги живут в tip ветки, а не в items;
   // diff строим против ТЕКУЩЕЙ версии main (PR = «ветка → main»).
-  const snapshot = sug.branchRef ? await gitCore.branchSnapshot({ owner, slug }, sug.branchRef).catch(() => null) : null
+  const [snapshot, mainSnapshot] = sug.branchRef
+    ? await Promise.all([
+        gitCore.branchSnapshot({ owner, slug }, sug.branchRef).catch(() => null),
+        gitCore.branchSnapshot({ owner, slug }, 'main').catch(() => null),
+      ])
+    : [null, null]
   const branchMissing = !!sug.branchRef && !snapshot
-  const items: ProposedItem[] = snapshot
-    ? snapshot.steps.map((st) => ({
-        title: { en: st.title },
-        desc: { en: st.desc },
-        command: st.command,
-        hasImage: false,
-        level: st.level as ProposedItem['level'],
-        why: { en: st.why },
-        section: { en: st.section },
-        subtasks: st.subtasks.map((x) => ({ en: x })),
-        refs: st.refs.map((r) => ({ label: { en: r.label }, ...(r.url ? { url: r.url } : {}) })),
-      }))
-    : (sug.items as ProposedItem[])
-  const diffBase = sug.branchRef ? (await getVersionSteps(meta.id, meta.currentVersion))?.steps ?? [] : base?.steps ?? []
-  const diff = diffSteps(diffBase, items, lang)
+  // Предлагаемые блоки — по общему правилу (тому же, что у экшена комментариев),
+  // но на уже загруженном снапшоте: второй запрос к git дал бы то же самое.
+  const items: ProposedItem[] = blocksFrom(sug, snapshot)
+  // База диффа. У branch-PR обе стороны берём ИЗ GIT: list.json одноязычный, а
+  // шаги в БД двуязычные — сравнение «ветка против БД» показывало бы двуязычный
+  // список заменённым целиком (ru в базе против единственного языка в git).
+  // Снапшота main нет только у репо без main — тогда честнее показать дифф
+  // против версии из БД, чем ничего.
+  const diffBase = sug.branchRef
+    ? mainSnapshot
+      ? (snapshotSteps(mainSnapshot, 'main') as unknown as ProposedItem[])
+      : ((await getVersionSteps(meta.id, meta.currentVersion))?.steps ?? [])
+    : (base?.steps ?? [])
 
   // Ревью правки: список вердиктов + свой текущий (форма показывает выбор, а не
   // плодит копии — вердикт один на рецензента и перезаписывается).
   // Review-комментарии к пунктам правки. Состояние якоря считаем ЗДЕСЬ, против
   // предложенных пунктов: у review-комментария актуальность меняется вместе с
   // правкой, поэтому хранить её в колонках значило бы держать заведомо отстающие.
-  const threads = await getSuggestionThreads(sug.id)
+  const threads = await getSuggestionThreads(sug.id, session?.userId)
   const threadsByBlock = new Map<string, RowThread[]>()
   for (const th of threads) {
     const state = threadState(th.anchorOriginal, th.field, th.blockId, items as unknown as AnchorableBlock[], lang)
@@ -100,20 +122,41 @@ export default async function SuggestionThreadPage({
     else threadsByBlock.set(th.blockId, [{ thread: th, state }])
   }
 
-  const [reviews, watchState, watchCount] = await Promise.all([
+  // Задачи, которые предложение закроет при слиянии («closes #12» в тексте).
+  const linkedIssues = await getIssuesByNumbers(meta.id, closingRefs(sug.note))
+  // Свои неотправленные замечания — из тех же тредов (чужие сюда не попадают).
+  const myPending = session
+    ? threads.reduce((n, th) => n + th.comments.filter((c) => c.pending).length, 0)
+    : 0
+  // Нерешённые считаем из УЖЕ загруженных тредов: второй запрос дал бы то же число.
+  // Условие — ровно то же, что у гейта (countUnresolvedThreads): тред из одних
+  // черновиков не блокирует, иначе свой неотправленный черновик прятал бы кнопку
+  // слияния от того, кто его пишет, а экшен при этом слить разрешал.
+  const unresolvedThreads = threads.filter((th) => !th.resolvedAt && th.comments.some((c) => !c.pending)).length
+  const [reviews, watchState, watchCount, assignees, reviewRequests, customLabels, msOptions, curMilestone] = await Promise.all([
     getSuggestionReviews(sug.id),
     session ? getWatchState(session.userId, meta.id) : Promise.resolve(null),
     getWatchCount(meta.id),
+    getSuggestionAssignees(sug.id),
+    getSuggestionReviewRequests(sug.id),
+    getListLabels(meta.id),
+    getMilestonesForPicker(meta.id),
+    getSuggestionMilestone(sug.id),
   ])
   const myVerdict = session ? (reviews.find((r) => r.reviewer.handle === session.handle)?.verdict ?? null) : null
 
   // A4: для открытого branch-PR заранее считаем трёхсторонний merge — при
   // конфликте вместо кнопки Merge показываем резолвер (выбор по шагам).
+  // Состояние merge нужно не только тому, кто сливает: по нему же видно, что ветка
+  // отстала от main — а обновляет её обычно АВТОР предложения, а не мейнтейнер.
   const mergeState =
-    sug.branchRef && sug.status === 'open' && canMerge && !branchMissing
+    sug.branchRef && sug.status === 'open' && (canMerge || session?.userId === sug.authorId) && !branchMissing
       ? await gitCore.mergeState({ owner, slug }, sug.branchRef).catch(() => null)
       : null
   const threeWay = mergeState ? threeWayMerge(mergeState.base, mergeState.ours, mergeState.theirs) : null
+  // Ветка отстала, если merge-base ≠ tip main: в ветке нет части main. Считаем по
+  // уже полученному mergeState — отдельный запрос дал бы тот же ответ.
+  const branchBehind = !!mergeState && mergeState.mergeBaseSha !== mergeState.ours.tipSha
   const hasConflicts = !!threeWay && (threeWay.conflicts.length > 0 || threeWay.metaConflicts.length > 0)
 
   const MERGE_ERR: Record<string, { ru: string; en: string }> = {
@@ -122,6 +165,10 @@ export default async function SuggestionThreadPage({
       en: 'Conflict: main has diverged and cannot be merged automatically. Update the branch (merge main into it) and retry.',
     },
     'nothing-to-merge': { ru: 'Ветка не содержит новых коммитов относительно main.', en: 'The branch has no new commits over main.' },
+    'not-linear': {
+      ru: 'На списке включена линейная история: сливать можно только fast-forward. Обнови ветку из main и попробуй снова.',
+      en: 'This list requires linear history: only fast-forward merges are allowed. Update the branch from main and retry.',
+    },
     unresolved: { ru: 'Разрешены не все конфликты (или ветка изменилась) — выбери версии заново.', en: 'Not all conflicts were resolved (or the branch changed) — pick again.' },
   }
   const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? { ru: 'Не удалось выполнить merge.', en: 'Merge failed.' }) : null
@@ -133,10 +180,32 @@ export default async function SuggestionThreadPage({
     ...comments.map((c) => ({ handle: c.authorHandle, avatarUrl: c.authorAvatarUrl })),
   ].filter((p) => p.handle && !sugSeen.has(p.handle) && sugSeen.add(p.handle))
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
-  const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
+  const isDraft = sug.status === 'open' && sug.draft
+  const statusLabel = isDraft
+    ? t('prDraft', lang)
+    : sug.status === 'accepted'
+      ? t('statusAccepted', lang)
+      : sug.status === 'rejected'
+        ? t('statusRejected', lang)
+        : t('statusOpen', lang)
   // Вкладка из ?tab= — адрес ссылабелен (можно послать ссылку сразу на изменения).
-  const tab: SuggestionTab = sp.tab === 'files' ? 'files' : sp.tab === 'result' ? 'result' : 'conversation'
-  const changedCount = diff.summary.added + diff.summary.removed + diff.summary.modified
+  const tab: SuggestionTab =
+    sp.tab === 'files'
+      ? 'files'
+      : sp.tab === 'result'
+        ? 'result'
+        : sp.tab === 'checks'
+          ? 'checks'
+          : sp.tab === 'commits' && sug.branchRef
+            ? 'commits'
+            : 'conversation'
+  // Вид диффа — ТОТ ЖЕ ?view=, что на сравнении версий: одно изменение выглядит
+  // одинаково, откуда бы на него ни смотрели.
+  const view = sp.view === 'list' ? 'list' : 'code'
+  const baseCmp = rowsToCmp(diffBase as Parameters<typeof rowsToCmp>[0], lang)
+  const propCmp = rowsToCmp(items as unknown as Parameters<typeof rowsToCmp>[0], lang)
+  const summary = diffSteps(baseCmp, propCmp).summary
+  const changedCount = summary.added + summary.removed + summary.changed + summary.moved
   const threadCount = threads.length + comments.length
 
   // История действий — из источников (правка, ревью, треды), а не из отдельной
@@ -158,8 +227,84 @@ export default async function SuggestionThreadPage({
       : []),
   ].sort((a, b) => a.at.getTime() - b.at.getTime())
 
-  const statusCls =
-    sug.status === 'accepted' ? 'bg-ok text-white' : sug.status === 'rejected' ? 'bg-surface-2 text-muted' : 'bg-accent text-white'
+  // Проверки правки: сигналы, уже посчитанные выше, передаём аргументами —
+  // считать их второй раз значило бы разойтись с тем, что показано на странице.
+  // Настройки предложений — ОДИН источник и для проверок, и для причин блокировки,
+  // и для экшенов (те читают их сами из списка).
+  const prs = withPrDefaults(meta.prSettings)
+  const approvals = reviews.filter((r) => r.verdict === 'approve').length
+  const checks = await suggestionChecks({
+    items: items as unknown[],
+    changedCount,
+    baseVersion: sug.baseVersion,
+    currentVersion: meta.currentVersion,
+    hasConflicts,
+    branchMissing,
+    draft: sug.draft,
+    blockingReview: reviews.some((r) => r.blocking),
+    unresolvedThreads,
+    blockOnUnresolved: prs.blockOnUnresolved,
+    approvals,
+    requiredApprovals: prs.requiredApprovals,
+    moderation: meta.moderation,
+    lang: lang === 'ru' ? 'ru' : 'en',
+  })
+  const checksFailed = checks.filter((c) => c.status === 'fail').length
+
+  // Коммиты ветки за вычетом main — ровно то, что уйдёт в main при слиянии.
+  // У правок без ветки (старые, items в БД) коммитов нет — вкладки тоже нет.
+  const commits = sug.branchRef && !branchMissing ? await gitCore.listCommits({ owner, slug }, sug.branchRef, { notIn: 'main' }) : null
+  const commitAuthors = commits?.length ? await getUsersByEmails(commits.map((c) => c.authorEmail)) : {}
+
+  const statusCls = isDraft
+    ? 'bg-surface-2 text-ink-2'
+    : sug.status === 'accepted'
+      ? 'bg-ok text-white'
+      : sug.status === 'rejected'
+        ? 'bg-surface-2 text-muted'
+        : 'bg-accent text-white'
+
+  // Ревью нужно в ДВУХ вкладках: в обсуждении (там идёт разговор) и сразу под
+  // изменениями (отревьюил — тут же вынес вердикт). Один элемент, а не две копии
+  // одной формы: вкладки взаимоисключающие, так что в дерево попадёт ровно одна.
+  // Почему нельзя слить. Раньше блокирующее ревью просто заставляло экшен молча
+  // вернуться: пользователь жал кнопку и не получал ничего. Теперь причина названа,
+  // а кнопки нет — состояние видно до клика.
+  // Причины считаем ПО ТЕМ ЖЕ настройкам, что и экшены. Иначе настройка «не
+  // блокировать при нерешённых обсуждениях» выключалась бы только наполовину
+  // (экшен пропускает, а кнопки нет), а «требовать N одобрений» — наоборот: кнопка
+  // есть, экшен молча отказывает. Оба перекоса уже были на этой странице.
+  const blockReasons: string[] = []
+  if (reviews.some((r) => r.blocking)) blockReasons.push(t('prBlockedReview', lang))
+  if (prs.blockOnUnresolved && unresolvedThreads > 0) blockReasons.push(`${t('prBlockedThreads', lang)}: ${unresolvedThreads}`)
+  if (prs.requiredApprovals > approvals)
+    blockReasons.push(`${t('prBlockedApprovals', lang)}: ${approvals}/${prs.requiredApprovals}`)
+
+  const reviewPanel =
+    sug.status === 'open' ? (
+      <div className="mt-3">
+        <ReviewPanel
+          suggestionId={sug.id}
+          reviews={reviews}
+          myVerdict={myVerdict}
+          canReview={!!session}
+          isAuthor={session?.userId === sug.authorId}
+          lang={lang}
+          labels={{
+            title: t('reviewTitle', lang),
+            approve: t('reviewApprove', lang),
+            requestChanges: t('reviewRequestChanges', lang),
+            commentOnly: t('reviewCommentOnly', lang),
+            placeholder: t('reviewPlaceholder', lang),
+            send: t('commentSend', lang),
+            withdraw: t('reviewWithdraw', lang),
+            blocked: t('reviewBlocked', lang),
+            yourReview: t('reviewYours', lang),
+            ownAuthor: t('reviewOwnAuthor', lang),
+          }}
+        />
+      </div>
+    ) : null
 
   return (
     <>
@@ -181,8 +326,10 @@ export default async function SuggestionThreadPage({
         />
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold ${statusCls}`}>
-            <GitPullRequest size={14} /> {statusLabel}
+            {isDraft ? <GitPullRequestDraft size={14} /> : <GitPullRequest size={14} />} {statusLabel}
           </span>
+          {/* Объём правки в шапке — тот же индикатор, что в диффе и в коммитах. */}
+          <DiffStat counts={summary} squares />
           <span className="text-[13px] text-ink-2">
             {t('proposedBy', lang)}{' '}
             <Link href={`/${sug.author.handle}`} className="font-semibold text-ink hover:text-accent">
@@ -206,8 +353,16 @@ export default async function SuggestionThreadPage({
           path={path}
           active={tab}
           conversationCount={threadCount}
+          commitsCount={commits ? commits.length : null}
           filesCount={changedCount}
-          labels={{ conversation: t('conversationTab', lang), files: t('proposedChanges', lang), result: t('resultTab', lang) }}
+          checksFailed={checksFailed}
+          labels={{
+            conversation: t('conversationTab', lang),
+            commits: t('versionsTab', lang),
+            checks: t('checksTab', lang),
+            files: t('proposedChanges', lang),
+            result: t('resultTab', lang),
+          }}
         />
 
         {/* Две колонки: содержимое вкладки + боковая панель (общий примитив). */}
@@ -237,134 +392,76 @@ export default async function SuggestionThreadPage({
         {branchMissing && (
           <div className="mb-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[13px] text-warn">
             {lang === 'ru'
-              ? `Ветка «${sug.branchRef}» удалена — PR неактуален, можно только отклонить.`
+              ? `Ветка «${sug.branchRef}» удалена — предложение неактуально, можно только отклонить.`
               : `Branch “${sug.branchRef}” was deleted — this PR is stale and can only be closed.`}
           </div>
         )}
 
-        {sug.note && (
-          <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface">
-            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px] text-ink-2">
-              <Avatar handle={sug.author.handle} avatarUrl={sug.author.avatarUrl} size={22} />
-              <span className="font-semibold text-ink">{sug.author.handle}</span>
-            </div>
-            <div className="px-4 py-3">
-              <Markdown refBase={`/${owner}/${slug}/issues`}>{sug.note}</Markdown>
-            </div>
-          </div>
+        {tab === 'commits' && commits && (
+          <CommitsList
+            commits={commits}
+            authors={commitAuthors}
+            lang={lang}
+            labels={{ count: t('prCommitsCount', lang), empty: t('prCommitsEmpty', lang), merge: t('prCommitMerge', lang) }}
+          />
+        )}
+
+        {tab === 'checks' && (
+          <ChecksList items={checks} labels={{ blocking: t('checksBlocking', lang), allGood: t('checksAllGood', lang) }} />
         )}
 
         {tab === 'files' && (<>
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
-          {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → правка` : `v${sug.baseVersion} → suggestion`}
+          {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → предложение` : `v${sug.baseVersion} → suggestion`}
         </div>
-        <SuggestionDiff
-          rows={diff.rows}
-          summary={diff.summary}
-          lang={lang}
-          comments={{
-            owner,
-            slug,
-            suggestionId: sug.id,
-            canComment: !!session && sug.status === 'open',
-            byBlock: threadsByBlock,
-            labels: {
-              add: t('commentAdd', lang),
-              placeholder: t('commentPlaceholder', lang),
-              send: t('commentSend', lang),
-              cancel: t('commentCancel', lang),
-              reply: t('commentReply', lang),
-              resolve: t('commentResolve', lang),
-              unresolve: t('commentUnresolve', lang),
-              resolved: t('commentResolvedCount', lang),
-              onSelection: t('commentOnSelection', lang),
-              onBlock: t('commentOnBlock', lang),
-              stateReanchored: t('commentReanchored', lang),
-              orphanHint: t('commentOrphaned', lang),
-            },
-          }}
-        />
-        <div className="mt-2">
-          <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
+        {/* Переключатель вида — общий с сравнением версий. */}
+        <div className="mb-3 flex justify-end">
+          <DiffViewToggle path={path} tab="files" view={view} labels={{ code: t('viewCode', lang), list: t('viewList', lang) }} />
         </div>
-
-        {/* Ревью: вердикты рецензентов + своя форма. «Нужны правки» от владельца
-            или коллаборатора блокирует принятие — панель говорит об этом прямо. */}
-        {sug.status === 'open' && (
-          <div className="mt-3">
-            <ReviewPanel
-              suggestionId={sug.id}
-              reviews={reviews}
-              myVerdict={myVerdict}
-              canReview={!!session}
-              isAuthor={session?.userId === sug.authorId}
-              lang={lang}
-              labels={{
-                title: t('reviewTitle', lang),
-                approve: t('reviewApprove', lang),
-                requestChanges: t('reviewRequestChanges', lang),
-                commentOnly: t('reviewCommentOnly', lang),
-                placeholder: t('reviewPlaceholder', lang),
-                send: t('commentSend', lang),
-                withdraw: t('reviewWithdraw', lang),
-                blocked: t('reviewBlocked', lang),
-                yourReview: t('reviewYours', lang),
-                ownAuthor: t('reviewOwnAuthor', lang),
-              }}
-            />
-          </div>
-        )}
-
-        {isOwner && !sug.branchRef && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
-          <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">
-            {lang === 'ru'
-              ? `Правка основана на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
-              : `This suggestion is based on v${sug.baseVersion}, but the list is now at v${meta.currentVersion}. Accepting will overwrite the newer changes (v${sug.baseVersion + 1}–v${meta.currentVersion}).`}
-          </div>
-        )}
-
-        {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open') && (
-          <div className="mt-3 flex gap-2.5">
-            {sug.branchRef ? (
-              !branchMissing &&
-              !hasConflicts && (
-                <form action={mergeBranchPr.bind(null, sug.id)}>
-                  <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
-                    <GitMerge size={14} /> {lang === 'ru' ? 'Влить в main' : 'Merge to main'}
-                  </SubmitButton>
-                </form>
-              )
-            ) : (
-            <form action={acceptSuggestion.bind(null, sug.id)}>
-              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
-                <Check size={14} /> {t('accept', lang)}
-              </SubmitButton>
-            </form>
-            )}
-            <form action={rejectSuggestion.bind(null, sug.id)}>
-              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
-                <X size={14} /> {t('reject', lang)}
-              </SubmitButton>
-            </form>
-          </div>
-        )}
-
-        {hasConflicts && threeWay && sug.branchRef && (
-          <ConflictResolver
-            conflicts={threeWay.conflicts}
-            metaConflicts={threeWay.metaConflicts}
-            branch={sug.branchRef}
+        {view === 'code' ? (
+          <CodeDiff fromSteps={baseCmp} toSteps={propCmp} ordered={meta.ordered} lang={lang} />
+        ) : (
+          <ListDiff
+            fromSteps={baseCmp}
+            toSteps={propCmp}
             lang={lang}
-            action={resolveBranchPr.bind(null, sug.id)}
+            comments={{
+              owner,
+              slug,
+              suggestionId: sug.id,
+              canComment: !!session && sug.status === 'open',
+              byBlock: threadsByBlock,
+              labels: {
+                add: t('commentAdd', lang),
+                placeholder: t('commentPlaceholder', lang),
+                send: t('commentSend', lang),
+                startReview: t('prStartReview', lang),
+                pendingBadge: t('prPendingBadge', lang),
+                cancel: t('commentCancel', lang),
+                reply: t('commentReply', lang),
+                resolve: t('commentResolve', lang),
+                unresolve: t('commentUnresolve', lang),
+                resolved: t('commentResolvedCount', lang),
+                onSelection: t('commentOnSelection', lang),
+                onBlock: t('commentOnBlock', lang),
+                stateReanchored: t('commentReanchored', lang),
+                orphanHint: t('commentOrphaned', lang),
+              },
+            }}
           />
         )}
+        <PendingReviewBar
+          count={myPending}
+          action={submitPendingComments.bind(null, owner, slug, sug.id)}
+          labels={{ pending: t('prPendingReview', lang), submit: t('prSubmitReview', lang) }}
+        />
 
+        {reviewPanel}
         </>)}
 
-        {/* Обсуждение — вкладка по умолчанию. Заметка правки и ревью видны здесь,
-            чтобы разговор шёл при полном контексте, как в Conversation у GitHub. */}
-        {/* ИТОГ: каким станет список, если правку принять. Решение принимают по результату,
-            а не по плюсам и минусам — именно поэтому правки копились непринятыми. */}
+        {/* ИТОГ: каким станет список, если предложение принять. Решение принимают по
+            результату, а не по плюсам и минусам — именно поэтому предложения от
+            компании копились непринятыми: посмотреть результат было негде. */}
         {tab === 'result' && (
           <>
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
@@ -374,7 +471,26 @@ export default async function SuggestionThreadPage({
           </>
         )}
 
+        {/* Обсуждение — вкладка по умолчанию. Заметка правки и ревью видны здесь,
+            чтобы разговор шёл при полном контексте, как в Conversation у GitHub. */}
         {tab === 'conversation' && (<>
+        {/* Заметка правки — первое сообщение обсуждения (как тело PR у GitHub), а
+            не шапка на всех вкладках: в «Проверках» и «Изменениях» она мешала. */}
+        {sug.note && (
+          <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface">
+            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px] text-ink-2">
+              <Avatar handle={sug.author.handle} avatarUrl={sug.author.avatarUrl} size={22} />
+              <span className="font-semibold text-ink">{sug.author.handle}</span>
+            </div>
+            <div className="px-4 py-3">
+              <Markdown refBase={`/${owner}/${slug}/issues`}>{sug.note}</Markdown>
+              <div className="mt-2">
+                <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
+              </div>
+            </div>
+          </div>
+        )}
+
         <SuggestionTimeline
           events={timeline}
           lang={lang}
@@ -426,6 +542,95 @@ export default async function SuggestionThreadPage({
             ))}
           </div>
         )}
+
+        {/* Блок слияния — там же, где обсуждение: решение принимают, прочитав
+            разговор. Предупреждение про устаревшую базу и резолвер конфликтов
+            стоят рядом с кнопкой, а не на вкладке изменений. */}
+        {isOwner && !sug.branchRef && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
+          <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">
+            {lang === 'ru'
+              ? `Предложение основано на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
+              : `This suggestion is based on v${sug.baseVersion}, but the list is now at v${meta.currentVersion}. Accepting will overwrite the newer changes (v${sug.baseVersion + 1}–v${meta.currentVersion}).`}
+          </div>
+        )}
+
+        {/* Черновик: слияния нет, вместо него — отметка готовности (автор или мейнтейнер). */}
+        {isDraft && (session?.userId === sug.authorId || canMerge) && (
+          <DraftToggle
+            draft
+            action={setSuggestionDraft.bind(null, sug.id)}
+            labels={{ ready: t('prReadyForReview', lang), back: t('prBackToDraft', lang), hint: t('prDraftHint', lang) }}
+          />
+        )}
+
+        {/* Ветка отстала от main — обратное слияние одной кнопкой. Показываем и при
+            конфликте: как раз тогда обновление чаще всего и решает дело. */}
+        {branchBehind && sug.status === 'open' && !branchMissing && (
+          <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3.5 py-2.5">
+            <span className="text-[12.5px] text-ink-2">{t('prBranchBehind', lang)}</span>
+            <form action={updateBranchFromMain.bind(null, sug.id)} className="ml-auto">
+              <SubmitButton className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border px-3.5 text-[13px] font-semibold text-ink hover:border-border-strong">
+                <RefreshCw size={14} /> {t('prUpdateBranch', lang)}
+              </SubmitButton>
+            </form>
+          </div>
+        )}
+
+        {blockReasons.length > 0 && sug.status === 'open' && !isDraft && (
+          <div className="mt-3 rounded-md border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[12.5px] text-danger">
+            {t('prMergeBlocked', lang)}: {blockReasons.join('; ')}
+          </div>
+        )}
+
+        {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open' && !isDraft) && (
+          <div className="mt-3 flex gap-2.5">
+            {/* Кнопка слияния прячется при блокировке, «Отклонить» — нет: отклонить
+                предложение можно в любом состоянии, это не обход гейта. */}
+            {blockReasons.length > 0 ? null : sug.branchRef ? (
+              !branchMissing &&
+              !hasConflicts && (
+                <form action={mergeBranchPr.bind(null, sug.id)}>
+                  <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+                    <GitMerge size={14} /> {lang === 'ru' ? 'Влить в main' : 'Merge to main'}
+                  </SubmitButton>
+                </form>
+              )
+            ) : (
+              <form action={acceptSuggestion.bind(null, sug.id)}>
+                <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+                  <Check size={14} /> {t('accept', lang)}
+                </SubmitButton>
+              </form>
+            )}
+            <form action={rejectSuggestion.bind(null, sug.id)}>
+              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
+                <X size={14} /> {t('reject', lang)}
+              </SubmitButton>
+            </form>
+          </div>
+        )}
+
+        {!isDraft && sug.status === 'open' && (session?.userId === sug.authorId || canMerge) && (
+          <DraftToggle
+            draft={false}
+            action={setSuggestionDraft.bind(null, sug.id)}
+            labels={{ ready: t('prReadyForReview', lang), back: t('prBackToDraft', lang), hint: t('prDraftHint', lang) }}
+          />
+        )}
+
+        {/* Резолвер — только тому, кто может сливать: его экшен всё равно требует
+            прав, а показывать автору форму, которая ничего не сделает, — обман. */}
+        {hasConflicts && threeWay && sug.branchRef && canMerge && (
+          <ConflictResolver
+            conflicts={threeWay.conflicts}
+            metaConflicts={threeWay.metaConflicts}
+            branch={sug.branchRef}
+            lang={lang}
+            action={resolveBranchPr.bind(null, sug.id)}
+          />
+        )}
+
+        {reviewPanel}
 
         {session ? (
           <div className="mt-4 rounded-lg border border-border bg-surface p-4">
@@ -493,6 +698,76 @@ export default async function SuggestionThreadPage({
                     apply: t('apply', lang),
                   }}
                 />
+              </AsideCard>
+            )}
+
+            <AsideCard title={t('labelsLabel', lang)}>
+              <LabelEditor
+                owner={owner}
+                slug={slug}
+                labels={(sug.labels as string[]) ?? []}
+                canEdit={canMerge}
+                lang={lang}
+                custom={customLabels}
+                onSave={setSuggestionLabels.bind(null, sug.id)}
+              />
+            </AsideCard>
+
+            {/* Запрошенные рецензенты — ТОТ ЖЕ пикер, что исполнители: набор людей
+                с поиском по handle. Разница только в подписях и в действии. */}
+            <AsideCard>
+              <AssigneePicker
+                owner={owner}
+                slug={slug}
+                assignees={reviewRequests}
+                canEdit={canMerge || session?.userId === sug.authorId}
+                lang={lang}
+                onToggle={toggleReviewRequest.bind(null, sug.id)}
+                labels={{
+                  title: t('prReviewers', lang),
+                  add: t('prRequestReview', lang),
+                  empty: t('prReviewersEmpty', lang),
+                  remove: t('prCancelRequest', lang),
+                }}
+              />
+            </AsideCard>
+
+            <AsideCard>
+              <AssigneePicker
+                owner={owner}
+                slug={slug}
+                assignees={assignees}
+                canEdit={canMerge}
+                lang={lang}
+                onToggle={toggleSuggestionAssignee.bind(null, sug.id)}
+              />
+            </AsideCard>
+
+            <AsideCard>
+              <MilestonePicker
+                owner={owner}
+                slug={slug}
+                current={curMilestone}
+                options={msOptions}
+                canEdit={canMerge}
+                lang={lang}
+                onSet={setSuggestionMilestone.bind(null, sug.id)}
+              />
+            </AsideCard>
+
+            {linkedIssues.length > 0 && (
+              <AsideCard title={t('prLinkedIssues', lang)}>
+                <ul className="flex flex-col gap-1.5">
+                  {linkedIssues.map((iss) => (
+                    <li key={iss.number} className="flex items-start gap-1.5 text-[12.5px]">
+                      <Link href={`/${owner}/${slug}/issues/${iss.number}`} className="font-mono text-muted hover:text-accent">
+                        #{iss.number}
+                      </Link>
+                      <span className={`min-w-0 flex-1 ${iss.status === 'closed' ? 'text-muted line-through' : 'text-ink-2'}`}>{iss.title}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-[11.5px] text-muted">{t('prLinkedIssuesHint', lang)}</p>
               </AsideCard>
             )}
 

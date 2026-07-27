@@ -55,12 +55,14 @@ export const notificationType = pgEnum('notification_type', [
   'suggestion_comment',
   'issue_new',
   'issue_comment',
+  'issue_closed_by_merge', // твою задачу закрыли принятым предложением
   'new_version',
   'star',
   'fork',
   'follow',
   'mention',
   'assigned',
+  'review_requested', // тебя попросили посмотреть правку
   'transfer_incoming', // тебе предлагают принять владение списком
   'transfer_accepted', // получатель принял твою передачу
   'transfer_declined', // получатель отклонил твою передачу
@@ -199,6 +201,37 @@ export const tags = pgTable('tags', {
 })
 
 // ── Templates (список) ─────────────────────────────────────────────
+/**
+ * Настройки предложений на списке — аналог раздела Pull Requests у GitHub.
+ *
+ * Все поля опциональны: отсутствие = дефолт, описанный в `PR_DEFAULTS`. Так
+ * добавление нового флага не требует миграции существующих строк.
+ */
+export interface PrSettings {
+  /** Кто может создавать предложения: все или только коллаборанты. */
+  allowFrom?: 'all' | 'collaborators'
+  /** Требовать линейную историю: сливать только fast-forward, иначе просить обновить ветку. */
+  linearOnly?: boolean
+  /** Нерешённые обсуждения блокируют слияние. */
+  blockOnUnresolved?: boolean
+  /** Сколько одобрений нужно (0 = не требуются). */
+  requiredApprovals?: number
+  /** Удалять ветку сразу после слияния. */
+  autoDeleteBranch?: boolean
+  /** Закрывать задачи по «closes #N» при слиянии. */
+  autoCloseIssues?: boolean
+}
+
+/** Дефолты настроек предложений = поведение до их появления. */
+export const PR_DEFAULTS: Required<PrSettings> = {
+  allowFrom: 'all',
+  linearOnly: false,
+  blockOnUnresolved: true,
+  requiredApprovals: 0,
+  autoDeleteBranch: false,
+  autoCloseIssues: true,
+}
+
 export const templates = pgTable(
   'templates',
   {
@@ -224,6 +257,11 @@ export const templates = pgTable(
     // (≈ PR) — ядро fork-модели, не отключаются. default true — старые списки как есть.
     issuesEnabled: boolean('issues_enabled').notNull().default(true),
     discussionsEnabled: boolean('discussions_enabled').notNull().default(true),
+    // Настройки предложений (≈ раздел Pull Requests в настройках репо GitHub).
+    // Одним jsonb, а не колонкой на галочку: набор будет расти, а формы под
+    // «одно поле = одна колонка» на каждый флаг мы уже проходили.
+    // Дефолты = поведение до появления настроек, чтобы старые списки не менялись.
+    prSettings: jsonb('pr_settings').notNull().default({}).$type<PrSettings>(),
     visibility: listVisibility('visibility').notNull().default('public'),
     moderation: moderationStatus('moderation').notNull().default('active'),
     moderationReason: text('moderation_reason'),
@@ -638,6 +676,15 @@ export const suggestions = pgTable('suggestions', {
   // Nullable — строки, созданные до введения поля (бэкфилл проставит).
   number: integer('number'),
   status: suggestionStatus('status').notNull().default('open'),
+  // Черновик: правка ещё не предъявлена к слиянию (draft PR у GitHub, WIP: у Gitea).
+  // Отдельным полем, а не значением status: черновик — это ОТКРЫТАЯ правка, у которой
+  // просто закрыт путь к слиянию, и после снятия она не меняет свою историю статусов.
+  draft: boolean('draft').notNull().default(false),
+  // Метки и этап — ТА ЖЕ модель, что у задач (labels: jsonb-массив ярлыков,
+  // milestone_id → milestones): благодаря совпадению формы к правкам подходят
+  // готовые LabelEditor/этапы, а не их копии.
+  labels: jsonb('labels').notNull().default([]).$type<string[]>(),
+  milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
   note: text('note').notNull().default(''),
   baseVersion: integer('base_version').notNull(),
   items: jsonb('items').notNull().default([]).$type<ProposedItem[]>(),
@@ -673,6 +720,45 @@ export const suggestionReviews = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('sug_review_one_per_reviewer').on(t.suggestionId, t.reviewerId)],
+)
+
+// Исполнители правки — форма как у issue_assignees (пара «правка + человек»,
+// уникальная): позволяет переиспользовать AssigneePicker, параметризованный экшеном.
+export const suggestionAssignees = pgTable(
+  'suggestion_assignees',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_assignee_uniq').on(t.suggestionId, t.userId)],
+)
+
+// ── Запрос ревью (кого ПОПРОСИЛИ посмотреть) ─────────────────────────
+// Отдельно от suggestion_reviews: там ВЕРДИКТ (уже посмотрел), тут ПРОСЬБА (ещё нет).
+// Смешивать нельзя — иначе «запросили ревью» невозможно отличить от «отревьюил
+// без вердикта», а именно на этом различии стоит уведомление и гейт готовности.
+export const suggestionReviewRequests = pgTable(
+  'suggestion_review_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    // Кого просят.
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // Кто попросил (для истории действий).
+    requestedById: uuid('requested_by_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_review_req_uniq').on(t.suggestionId, t.userId)],
 )
 
 export type SuggestionReview = typeof suggestionReviews.$inferSelect
@@ -1854,6 +1940,10 @@ export const blockComments = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     body: text('body').notNull(),
+    // Черновик ревью: замечание написано, но ещё не отправлено. Видно только автору,
+    // пока он не отправит ревью пачкой (как «Start a review» у GitHub). Отдельный
+    // флаг, а не отдельная таблица: тред, якорь и ответы у черновика те же самые.
+    pending: boolean('pending').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, embeddings, stars, steps, suggestionComments, suggestions, templates, templateVersions, users } from '@/shared/db'
+import { db, embeddings, issues, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { Lang, LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
@@ -401,7 +401,9 @@ export async function getSuggestions(templateId: string) {
   const rows = await db
     .select({
       id: suggestions.id,
+      number: suggestions.number,
       status: suggestions.status,
+      draft: suggestions.draft,
       note: suggestions.note,
       baseVersion: suggestions.baseVersion,
       items: suggestions.items,
@@ -562,6 +564,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       status: templates.status,
       ordered: templates.ordered,
       issuesEnabled: templates.issuesEnabled,
+      prSettings: templates.prSettings,
       discussionsEnabled: templates.discussionsEnabled,
       pinned: templates.pinned,
       isTemplate: templates.isTemplate,
@@ -637,4 +640,68 @@ export async function getTemplateDetail(ownerHandle: string, slug: string) {
     : []
 
   return { tpl, currentVersion, steps: stepRows }
+}
+
+/** Исполнители правки — форма как у задач (для общего AssigneePicker). */
+export async function getSuggestionAssignees(suggestionId: string) {
+  const rows = await db
+    .select({ handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(suggestionAssignees)
+    .innerJoin(users, eq(users.id, suggestionAssignees.userId))
+    .where(eq(suggestionAssignees.suggestionId, suggestionId))
+  return Promise.all(rows.map(async (r) => ({ handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
+/** Задачи по номерам (для связей «closes #N» у предложения). Порядок как в nums. */
+export async function getIssuesByNumbers(templateId: string, nums: number[]) {
+  if (nums.length === 0) return []
+  const rows = await db
+    .select({ number: issues.number, title: issues.title, status: issues.status })
+    .from(issues)
+    .where(and(eq(issues.templateId, templateId), inArray(issues.number, nums)))
+  const byNum = new Map(rows.map((r) => [r.number, r]))
+  return nums.map((n) => byNum.get(n)).filter((r): r is (typeof rows)[number] => !!r)
+}
+
+/** У кого ПОПРОСИЛИ ревью правки (та же форма, что исполнители — один пикер). */
+export async function getSuggestionReviewRequests(suggestionId: string) {
+  const rows = await db
+    .select({ handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(suggestionReviewRequests)
+    .innerJoin(users, eq(users.id, suggestionReviewRequests.userId))
+    .where(eq(suggestionReviewRequests.suggestionId, suggestionId))
+  return Promise.all(rows.map(async (r) => ({ handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
+/**
+ * Наши пользователи по e-mail подписей git-коммитов (ключ — e-mail в нижнем
+ * регистре). Подпись коммита ставит сам автор и совпадать с аккаунтом не обязана —
+ * кто не нашёлся, показывается именем из подписи.
+ */
+export async function getUsersByEmails(emails: string[]): Promise<Record<string, { handle: string; name: string | null; avatarUrl: string | null }>> {
+  const uniq = [...new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean))]
+  if (uniq.length === 0) return {}
+  const rows = await db
+    .select({ email: users.email, handle: users.handle, name: users.name, avatarUrl: users.avatarUrl })
+    .from(users)
+    .where(inArray(sql`lower(${users.email})`, uniq))
+  // Аватары резолвим ПАРАЛЛЕЛЬНО: в цикле с await это был бы один поход за другим
+  // на каждого автора коммита (тот же приём, что в getSuggestionAssignees).
+  const resolved = await Promise.all(
+    rows
+      .filter((r) => r.email)
+      .map(async (r) => [r.email!.toLowerCase(), { handle: r.handle, name: r.name, avatarUrl: await avatarSrc(r.avatarUrl, 48) }] as const),
+  )
+  return Object.fromEntries(resolved)
+}
+
+/** Текущий этап правки для пикера ({id,title} или null). */
+export async function getSuggestionMilestone(suggestionId: string): Promise<{ id: string; title: string } | null> {
+  const [r] = await db
+    .select({ id: milestones.id, title: milestones.title })
+    .from(suggestions)
+    .innerJoin(milestones, eq(milestones.id, suggestions.milestoneId))
+    .where(eq(suggestions.id, suggestionId))
+    .limit(1)
+  return r ?? null
 }

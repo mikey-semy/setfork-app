@@ -136,9 +136,34 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
+  async updateBranch(repo, name) {
+    try {
+      const res = await client.updateBranch({ repo: toRepoRef(repo), name })
+      return { tipSha: res.tipSha, fastForward: res.fastForward }
+    } catch (e) {
+      throw toBranchOpError(e)
+    }
+  },
+
   async listTags(repo) {
     const res = await client.listTags(toRepoRef(repo)).catch(() => null)
     return res ? res.tags.map((t) => ({ name: t.name, targetSha: t.targetSha })) : []
+  },
+
+  async listCommits(repo, rev, opts) {
+    const res = await client
+      .listCommits({ repo: toRepoRef(repo), rev, notIn: opts?.notIn ?? '', limit: opts?.limit ?? 0 })
+      .catch(() => null)
+    if (!res || !res.found) return null
+    return res.commits.map((c) => ({
+      sha: c.sha,
+      message: c.message.trim(),
+      authorName: c.authorName,
+      authorEmail: c.authorEmail,
+      // proto отдаёт секунды (int64 → bigint у protobuf-es).
+      at: new Date(Number(c.atUnix) * 1000),
+      parents: c.parents,
+    }))
   },
 }
 
@@ -149,7 +174,7 @@ function toSnapshot(res: {
   desc: string
   tags: string[]
   ordered: boolean
-  steps: { n: number; type: string; contentJson: string; title: string; desc: string; command: string; level: string; why: string; section: string; subtasks: string[]; refs: { label: string; url: string }[] }[]
+  steps: { n: number; type: string; contentJson: string; blockId: string; title: string; desc: string; command: string; level: string; why: string; section: string; subtasks: string[]; refs: { label: string; url: string }[] }[]
 }) {
   const parseContent = (json: string): Record<string, unknown> => {
     if (!json) return {}
@@ -170,6 +195,8 @@ function toSnapshot(res: {
       n: s.n,
       // Блочная модель: type/content_json из ядра (R2); '' = шаг (поля опускаем).
       ...(s.type && s.type !== 'step' ? { type: s.type, content: parseContent(s.contentJson) } : {}),
+      // '' в proto = «идентичности нет» (данные старше ADR-0013).
+      blockId: s.blockId || null,
       title: s.title,
       desc: s.desc,
       command: s.command,

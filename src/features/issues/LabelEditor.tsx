@@ -13,6 +13,7 @@ export function LabelEditor({
   owner,
   slug,
   number,
+  onSave,
   labels,
   canEdit,
   lang,
@@ -20,9 +21,12 @@ export function LabelEditor({
 }: {
   owner: string
   slug: string
-  number: number
+  /** Номер задачи; для правки не нужен — действие приходит пропом. */
+  number?: number
   labels: string[]
   canEdit: boolean
+  /** Своё сохранение метоk (правка). Пусто — задачное. */
+  onSave?: (labels: string[]) => Promise<void>
   lang: Lang
   custom?: CustomLabel[]
 }) {
@@ -33,7 +37,8 @@ export function LabelEditor({
   const toggle = (k: string) => {
     const next = sel.includes(k) ? sel.filter((x) => x !== k) : [...sel, k]
     setSel(next) // оптимистично
-    start(() => void setIssueLabels(owner, slug, number, next))
+    // Своё сохранение (правка) или задачное по умолчанию — один редактор на обе сущности.
+    start(() => void (onSave ? onSave(next) : number != null ? setIssueLabels(owner, slug, number, next) : Promise.resolve()))
   }
 
   return (

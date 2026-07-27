@@ -61,6 +61,46 @@ service GitCore {
   // ListTags — интроспекция (сверка releases-БД ↔ git-теги при инцидентах,
   // grpcurl через reflection); UI-потребителя нет и не планируется (HQ ADR-0012).
   rpc ListTags(RepoRef) returns (TagsResponse);
+  // A5: обновить ветку из main (ОБРАТНОЕ слияние). Нужно, когда main ушёл вперёд:
+  // без этого единственный выход из расхождения — ручной резолвер конфликтов,
+  // хотя обычно достаточно влить main в ветку. main не двигается → проекции нет.
+  // Ошибки как у MergeBranch: 'conflict' | 'nothing-to-merge' | not_found.
+  rpc UpdateBranch(UpdateBranchRequest) returns (UpdateBranchResponse);
+  // Коммиты рефа — вкладка «Коммиты» у правки: что именно принесла ветка.
+  // not_in скрывает достижимое из базы (обычно main), поэтому вернётся ровно
+  // тот набор, который уйдёт в main при слиянии.
+  rpc ListCommits(ListCommitsRequest) returns (CommitsResponse);
+}
+
+message UpdateBranchRequest {
+  RepoRef repo = 1;
+  string name = 2; // ветка, в которую вливаем main
+}
+
+message UpdateBranchResponse {
+  string tip_sha = 1;    // новый tip ВЕТКИ
+  bool fast_forward = 2; // ветка просто передвинута на main
+}
+
+message ListCommitsRequest {
+  RepoRef repo = 1;
+  string rev = 2;     // ветка, тег или sha
+  string not_in = 3;  // скрыть достижимое отсюда ('' — не скрывать)
+  int32 limit = 4;    // 0 → 100; больше 500 обрезается
+}
+
+message Commit {
+  string sha = 1;
+  string message = 2; // полное сообщение (первая строка — заголовок)
+  string author_name = 3;
+  string author_email = 4;
+  int64 at_unix = 5;  // время автора, секунды
+  int32 parents = 6;  // 2+ — merge-коммит
+}
+
+message CommitsResponse {
+  bool found = 1;               // rev существует
+  repeated Commit commits = 2;  // свежие первыми
 }
 
 message CreateTagRequest {
@@ -153,6 +193,10 @@ message SnapshotStep {
   // Блочная модель: '' | 'step' = шаг; 'text'|'image' — презентационный блок.
   string type = 10;
   string content_json = 11; // JSON payload не-step блока ('' = нет)
+  // Стабильная идентичность блока (ADR-0013): с ней переименование пункта в
+  // диффе ветки читается как «изменён», а не «удалён + добавлен». '' = нет
+  // (данные старше идентичности).
+  string block_id = 12;
 }
 
 message SnapshotRef {

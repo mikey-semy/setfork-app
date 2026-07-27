@@ -72,3 +72,11 @@ export function resolveChip(key: string, custom: CustomLabel[], lang: Lang): Res
   const m = labelMeta(key)
   return m ? { text: lang === 'ru' ? m.ru : m.en, cls: m.cls } : { text: key }
 }
+
+/**
+ * Оставляем встроенные ключи + кастомные `c:<id>`, чьи id реально есть у списка.
+ * Правило ОДНО на задачи и правки: список допустимых ярлыков у списка один,
+ * и раздваивать его проверку нельзя — иначе метки разъедутся между сущностями.
+ */
+export const cleanLabels = (raw: string[], validCustom: Set<string>): string[] =>
+  [...new Set(raw.filter((k) => isLabelKey(k) || (isCustomKey(k) && validCustom.has(customId(k)))))]

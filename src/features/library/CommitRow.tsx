@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ChevronRight, Eye, GitCompare, Loader2 } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { DiffStat } from '@/shared/ui/DiffStat'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
 import { getCommitDiff, type CommitDiff } from './commit-diff'
@@ -119,12 +120,7 @@ export function CommitRow({
             <div className="text-[12.5px] text-muted">{labels.noChanges}</div>
           ) : (
             <>
-              <div className="mb-2 flex flex-wrap gap-3 text-[12px] font-medium">
-                {diff.counts.added > 0 && <span className="text-ok">+{diff.counts.added}</span>}
-                {diff.counts.removed > 0 && <span className="text-danger">−{diff.counts.removed}</span>}
-                {diff.counts.changed > 0 && <span className="text-warn">~{diff.counts.changed}</span>}
-                {diff.counts.moved > 0 && <span className="text-accent">⇅{diff.counts.moved}</span>}
-              </div>
+              <DiffStat counts={diff.counts} squares className="mb-2" />
               <ul className="flex flex-col gap-1 text-[13px]">
                 {diff.entries.map((e, i) => (
                   <li key={i} className="flex items-start gap-2">

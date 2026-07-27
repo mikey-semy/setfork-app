@@ -7,24 +7,8 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { getNotifications, type NotificationItem } from '@/features/notifications/queries'
 import { MarkRead } from '@/features/notifications/MarkRead'
+import { NOTIF_VERB } from '@/features/notifications/verbs'
 
-const VERB: Record<NotificationItem['type'], TKey> = {
-  suggestion_new: 'notifSuggestionNew',
-  suggestion_accepted: 'notifAccepted',
-  suggestion_rejected: 'notifRejected',
-  suggestion_comment: 'notifSuggestionComment',
-  issue_new: 'notifIssueNew',
-  issue_comment: 'notifIssueComment',
-  new_version: 'notifNewVersion',
-  star: 'notifStar',
-  fork: 'notifFork',
-  follow: 'notifFollow',
-  mention: 'notifMention',
-  assigned: 'notifAssigned',
-  transfer_incoming: 'notifTransferIncoming',
-  transfer_accepted: 'notifTransferAccepted',
-  transfer_declined: 'notifTransferDeclined',
-}
 
 export const metadata = { title: 'Notifications' }
 
@@ -62,7 +46,7 @@ export default async function NotificationsPage() {
               >
                 <Avatar handle={n.actorHandle ?? '?'} avatarUrl={n.actorAvatarUrl} size={30} />
                 <div className="min-w-0 flex-1 text-[13.5px] text-ink-2">
-                  <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(VERB[n.type], lang)}
+                  <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(NOTIF_VERB[n.type], lang)}
                   {isFollow ? null : href ? (
                     <>
                       {' '}

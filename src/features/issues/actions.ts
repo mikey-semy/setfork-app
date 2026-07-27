@@ -12,12 +12,9 @@ import { notify, notifyMany, notifyMentions } from '@/features/notifications/not
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { collabStore, issueCommenterIds } from '@/features/collab-store/store'
-import { customId, isCustomKey, isLabelKey } from './labels'
+import { cleanLabels, customId, isCustomKey, isLabelKey } from './labels'
 import { getListLabels } from './queries'
 
-// Оставляем встроенные ключи + кастомные `c:<id>`, чьи id реально есть у списка.
-const cleanLabels = (raw: string[], validCustom: Set<string>) =>
-  [...new Set(raw.filter((k) => isLabelKey(k) || (isCustomKey(k) && validCustom.has(customId(k)))))]
 const customIdSet = async (templateId: string) => new Set((await getListLabels(templateId)).map((l) => l.id))
 
 /** Открыть issue. Любой залогиненный на публичном списке; на приватном — только владелец. */

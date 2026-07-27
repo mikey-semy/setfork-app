@@ -104,6 +104,15 @@ export async function hasBlockingReview(suggestionId: string): Promise<boolean> 
   return reviews.some((r) => r.blocking)
 }
 
+/**
+ * Сколько одобрений у предложения. Нужно гейту «требовать N одобрений»: считаем
+ * вердикты, а не людей в списке рецензентов — просьба посмотреть это ещё не «за».
+ */
+export async function countApprovals(suggestionId: string): Promise<number> {
+  const reviews = await getSuggestionReviews(suggestionId)
+  return reviews.filter((r) => r.verdict === 'approve').length
+}
+
 /** Снять своё ревью (передумал высказываться). */
 export async function withdrawSuggestionReview(suggestionId: string): Promise<void> {
   const session = await requireSession()

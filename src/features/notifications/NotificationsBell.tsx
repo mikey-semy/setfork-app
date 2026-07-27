@@ -8,24 +8,8 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { t, tr, type Lang, type TKey } from '@/shared/i18n'
 import type { NotificationItem } from './queries'
 import { markNotificationsRead } from './actions'
+import { NOTIF_VERB } from './verbs'
 
-const VERB: Record<NotificationItem['type'], TKey> = {
-  suggestion_new: 'notifSuggestionNew',
-  suggestion_accepted: 'notifAccepted',
-  suggestion_rejected: 'notifRejected',
-  suggestion_comment: 'notifSuggestionComment',
-  issue_new: 'notifIssueNew',
-  issue_comment: 'notifIssueComment',
-  new_version: 'notifNewVersion',
-  star: 'notifStar',
-  fork: 'notifFork',
-  follow: 'notifFollow',
-  mention: 'notifMention',
-  assigned: 'notifAssigned',
-  transfer_incoming: 'notifTransferIncoming',
-  transfer_accepted: 'notifTransferAccepted',
-  transfer_declined: 'notifTransferDeclined',
-}
 
 export function NotificationsBell({ unread, items, lang }: { unread: number; items: NotificationItem[]; lang: Lang }) {
   const [count, setCount] = useState(unread)
@@ -78,7 +62,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
                 >
                   <Avatar handle={n.actorHandle ?? '?'} avatarUrl={n.actorAvatarUrl} size={26} />
                   <div className="min-w-0 flex-1 text-[12.5px] leading-snug text-ink-2">
-                    <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(VERB[n.type], lang)}
+                    <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(NOTIF_VERB[n.type], lang)}
                     {!isFollow && <> <span className="text-ink">{n.title ? tr(n.title, lang) : t('aList', lang)}</span></>}
                   </div>
                   <span className="shrink-0 font-mono text-[10.5px] text-muted">{fmt.format(new Date(n.createdAt))}</span>

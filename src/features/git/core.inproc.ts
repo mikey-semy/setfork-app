@@ -6,6 +6,7 @@ import type { BranchSnapshot, GitBranch, GitCore } from '@/core'
 import { BranchOpError } from '@/core'
 import { db, templates, users } from '@/shared/db'
 import { gitStore } from './adapter'
+import { GIT_LOG_FORMAT, parseGitLog } from './log-parse'
 
 const exec = promisify(execFile)
 
@@ -26,6 +27,35 @@ async function mainTip(bare: string): Promise<string | null> {
     (r) => r.stdout.trim(),
     () => null,
   )
+}
+
+/** Идентичность merge-коммитов — та же, что у детерминированных коммитов bundle. */
+const MERGE_ENV = {
+  GIT_AUTHOR_NAME: 'SetFork',
+  GIT_AUTHOR_EMAIL: 'git@setfork.com',
+  GIT_COMMITTER_NAME: 'SetFork',
+  GIT_COMMITTER_EMAIL: 'git@setfork.com',
+}
+
+/**
+ * Merge двух рефов в bare-репо БЕЗ рабочего дерева: merge-tree --write-tree
+ * (exit 1 = конфликт) + commit-tree. Ref НЕ двигается — это делает вызывающий.
+ *
+ * Один помощник на два направления: «ветка → main» (слияние предложения) и
+ * «main → ветка» (обновление ветки). Различаются только порядком родителей.
+ */
+async function mergeCommit(bare: string, ours: string, theirs: string, message: string): Promise<string> {
+  const tree = await exec('git', ['--git-dir', bare, 'merge-tree', '--write-tree', ours, theirs]).then(
+    (r) => r.stdout.split('\n')[0].trim(),
+    () => null,
+  )
+  if (!tree) throw new BranchOpError('conflict')
+  const { stdout } = await exec(
+    'git',
+    ['--git-dir', bare, 'commit-tree', tree, '-p', ours, '-p', theirs, '-m', message],
+    { env: { ...process.env, ...MERGE_ENV } },
+  )
+  return stdout.trim()
 }
 
 async function resolveListId(owner: string, slug: string): Promise<string | null> {
@@ -165,25 +195,7 @@ export const gitCoreInproc: GitCore = {
         tipSha = branchTip
         fastForward = true
       } else {
-        // Bare-friendly merge: merge-tree --write-tree (exit 1 = конфликт) + commit-tree.
-        const tree = await exec('git', ['--git-dir', bare, 'merge-tree', '--write-tree', 'main', name]).then(
-          (r) => r.stdout.split('\n')[0].trim(),
-          () => null,
-        )
-        if (!tree) throw new BranchOpError('conflict')
-        const env = {
-          ...process.env,
-          GIT_AUTHOR_NAME: 'SetFork',
-          GIT_AUTHOR_EMAIL: 'git@setfork.com',
-          GIT_COMMITTER_NAME: 'SetFork',
-          GIT_COMMITTER_EMAIL: 'git@setfork.com',
-        }
-        const { stdout: commit } = await exec(
-          'git',
-          ['--git-dir', bare, 'commit-tree', tree, '-p', 'main', '-p', name, '-m', `Merge branch '${name}'`],
-          { env },
-        )
-        tipSha = commit.trim()
+        tipSha = await mergeCommit(bare, 'main', name, `Merge branch '${name}'`)
         await exec('git', ['--git-dir', bare, 'update-ref', 'refs/heads/main', tipSha])
       }
       // main сдвинулся → проекция (null = list.json не менялся).
@@ -277,6 +289,43 @@ export const gitCoreInproc: GitCore = {
     return target
   },
 
+  // Влить main в ветку — зеркало UpdateBranch в ядре (ours = ветка, theirs = main).
+  async updateBranch(repo, name) {
+    if (badBranch(name) || name === 'main') throw new BranchOpError('bad-name')
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) throw new BranchOpError('not-found')
+    const listId = await resolveListId(repo.owner, repo.slug)
+    if (!listId) throw new BranchOpError('not-found')
+    const tipOf = (ref: string) =>
+      exec('git', ['--git-dir', bare, 'rev-parse', '--verify', `refs/heads/${ref}`]).then(
+        (r) => r.stdout.trim(),
+        () => null,
+      )
+    if (!(await tipOf(name))) throw new BranchOpError('not-found')
+    // Тот же лок, что у merge/push: tip читаем ПОСЛЕ захвата (иначе конкурентный
+    // пуш в ветку потерялся бы) — совпадает с Rust.
+    return gitStore.withRepoLock(listId, async () => {
+      const branchTip = await tipOf(name)
+      const mainTip = await tipOf('main')
+      if (!branchTip || !mainTip) throw new BranchOpError('not-found')
+      // Ветка уже содержит main → обновлять нечего.
+      const hasMain = await exec('git', ['--git-dir', bare, 'merge-base', '--is-ancestor', 'main', name]).then(() => true, () => false)
+      if (hasMain) throw new BranchOpError('nothing-to-merge')
+      // В ветке нет своих коммитов → просто двигаем ref на main.
+      const branchIsAncestor = await exec('git', ['--git-dir', bare, 'merge-base', '--is-ancestor', name, 'main']).then(() => true, () => false)
+      if (branchIsAncestor) {
+        await exec('git', ['--git-dir', bare, 'update-ref', `refs/heads/${name}`, mainTip]).catch(() => {
+          throw new BranchOpError('internal')
+        })
+        return { tipSha: mainTip, fastForward: true }
+      }
+      // ours = ветка, theirs = main — порядок обратный слиянию предложения.
+      const merged = await mergeCommit(bare, name, 'main', "Merge branch 'main'")
+      await exec('git', ['--git-dir', bare, 'update-ref', `refs/heads/${name}`, merged])
+      return { tipSha: merged, fastForward: false }
+    })
+  },
+
   async listTags(repo) {
     const bare = await gitStore.ensureRepo(repo)
     if (!bare) return []
@@ -290,6 +339,22 @@ export const gitCoreInproc: GitCore = {
         return { name, targetSha }
       })
       .sort((a, b) => a.name.localeCompare(b.name))
+  },
+
+  // Коммиты рефа за вычетом базы — зеркало git::history в Rust-ядре
+  // (revwalk c hide(base) = `git log rev --not base`).
+  async listCommits(repo, rev, opts) {
+    if (badBranch(rev)) return null
+    const notIn = opts?.notIn
+    if (notIn && badBranch(notIn)) return null
+    const bare = await gitStore.ensureRepo(repo)
+    if (!bare) return null
+    const limit = Math.min(Math.max(opts?.limit ?? 100, 1), 500)
+    const args = ['--git-dir', bare, 'log', `--max-count=${limit}`, `--format=${GIT_LOG_FORMAT}%x01`, rev]
+    if (notIn) args.push('--not', notIn)
+    // Несуществующий реф — не ошибка: ветку могли удалить, вкладка покажет пусто.
+    const res = await exec('git', args, { maxBuffer: 8 * 1024 * 1024 }).catch(() => null)
+    return res ? parseGitLog(res.stdout) : null
   },
 }
 
@@ -395,7 +460,7 @@ async function snapshotAt(bare: string, rev: string): Promise<BranchSnapshot | n
     desc?: string
     tags?: string[]
     ordered?: boolean
-    steps?: { n?: number; type?: string; content?: Record<string, unknown>; title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
+    steps?: { n?: number; type?: string; content?: Record<string, unknown>; blockId?: string; title?: string; desc?: string; command?: string; level?: string; why?: string; section?: string; subtasks?: string[]; refs?: { label?: string; url?: string }[] }[]
   }
   try {
     parsed = JSON.parse(raw)
@@ -415,6 +480,8 @@ async function snapshotAt(bare: string, rev: string): Promise<BranchSnapshot | n
         n: i + 1,
         // type/content несём только у не-step блоков (у шага — undefined, byte-compat).
         ...(isStep(st) ? {} : { type: st.type, content: st.content && typeof st.content === 'object' ? st.content : {} }),
+        // Идентичность блока: с ней дифф ветки видит переименование как «изменён».
+        blockId: st.blockId?.trim() ? st.blockId.trim() : null,
         title: o?.title?.trim() ? o.title : (st.title ?? ''),
         desc: o?.desc !== undefined ? o.desc : (st.desc ?? ''),
         command: o?.command !== undefined ? o.command : (st.command ?? ''),
