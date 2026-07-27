@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Check, GitBranch, GitMerge, GitPullRequest, X } from 'lucide-react'
+import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -24,6 +24,7 @@ import { SuggestionTabs, type SuggestionTab } from '@/features/library/Suggestio
 import { SuggestionTitle } from '@/features/library/SuggestionTitle'
 import { ChecksList } from '@/features/library/ChecksList'
 import { CommitsList } from '@/features/library/CommitsList'
+import { DraftToggle } from '@/features/library/DraftToggle'
 import { suggestionChecks } from '@/features/library/suggestion-checks'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
@@ -45,8 +46,8 @@ import { LabelEditor } from '@/features/issues/LabelEditor'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
 import { getListLabels } from '@/features/issues/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
-import { getSuggestionAssignees, getSuggestionMilestone, getUsersByEmails } from '@/features/library/queries'
-import { setSuggestionLabels, setSuggestionMilestone, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
+import { getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails } from '@/features/library/queries'
+import { setSuggestionDraft, setSuggestionLabels, setSuggestionMilestone, toggleReviewRequest, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
 
@@ -113,11 +114,12 @@ export default async function SuggestionThreadPage({
     else threadsByBlock.set(th.blockId, [{ thread: th, state }])
   }
 
-  const [reviews, watchState, watchCount, assignees, customLabels, msOptions, curMilestone] = await Promise.all([
+  const [reviews, watchState, watchCount, assignees, reviewRequests, customLabels, msOptions, curMilestone] = await Promise.all([
     getSuggestionReviews(sug.id),
     session ? getWatchState(session.userId, meta.id) : Promise.resolve(null),
     getWatchCount(meta.id),
     getSuggestionAssignees(sug.id),
+    getSuggestionReviewRequests(sug.id),
     getListLabels(meta.id),
     getMilestonesForPicker(meta.id),
     getSuggestionMilestone(sug.id),
@@ -150,7 +152,14 @@ export default async function SuggestionThreadPage({
     ...comments.map((c) => ({ handle: c.authorHandle, avatarUrl: c.authorAvatarUrl })),
   ].filter((p) => p.handle && !sugSeen.has(p.handle) && sugSeen.add(p.handle))
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
-  const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
+  const isDraft = sug.status === 'open' && sug.draft
+  const statusLabel = isDraft
+    ? t('prDraft', lang)
+    : sug.status === 'accepted'
+      ? t('statusAccepted', lang)
+      : sug.status === 'rejected'
+        ? t('statusRejected', lang)
+        : t('statusOpen', lang)
   // Вкладка из ?tab= — адрес ссылабелен (можно послать ссылку сразу на изменения).
   const tab: SuggestionTab =
     sp.tab === 'files' ? 'files' : sp.tab === 'checks' ? 'checks' : sp.tab === 'commits' && sug.branchRef ? 'commits' : 'conversation'
@@ -191,6 +200,7 @@ export default async function SuggestionThreadPage({
     currentVersion: meta.currentVersion,
     hasConflicts,
     branchMissing,
+    draft: sug.draft,
     blockingReview: reviews.some((r) => r.blocking),
     moderation: meta.moderation,
     lang: lang === 'ru' ? 'ru' : 'en',
@@ -202,8 +212,13 @@ export default async function SuggestionThreadPage({
   const commits = sug.branchRef && !branchMissing ? await gitCore.listCommits({ owner, slug }, sug.branchRef, { notIn: 'main' }) : null
   const commitAuthors = commits?.length ? await getUsersByEmails(commits.map((c) => c.authorEmail)) : {}
 
-  const statusCls =
-    sug.status === 'accepted' ? 'bg-ok text-white' : sug.status === 'rejected' ? 'bg-surface-2 text-muted' : 'bg-accent text-white'
+  const statusCls = isDraft
+    ? 'bg-surface-2 text-ink-2'
+    : sug.status === 'accepted'
+      ? 'bg-ok text-white'
+      : sug.status === 'rejected'
+        ? 'bg-surface-2 text-muted'
+        : 'bg-accent text-white'
 
   // Ревью нужно в ДВУХ вкладках: в обсуждении (там идёт разговор) и сразу под
   // изменениями (отревьюил — тут же вынес вердикт). Один элемент, а не две копии
@@ -254,7 +269,7 @@ export default async function SuggestionThreadPage({
         />
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold ${statusCls}`}>
-            <GitPullRequest size={14} /> {statusLabel}
+            {isDraft ? <GitPullRequestDraft size={14} /> : <GitPullRequest size={14} />} {statusLabel}
           </span>
           {/* Объём правки в шапке — тот же индикатор, что в диффе и в коммитах. */}
           <DiffStat counts={summary} squares />
@@ -455,7 +470,16 @@ export default async function SuggestionThreadPage({
           </div>
         )}
 
-        {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open') && (
+        {/* Черновик: слияния нет, вместо него — отметка готовности (автор или мейнтейнер). */}
+        {isDraft && (session?.userId === sug.authorId || canMerge) && (
+          <DraftToggle
+            draft
+            action={setSuggestionDraft.bind(null, sug.id)}
+            labels={{ ready: t('prReadyForReview', lang), back: t('prBackToDraft', lang), hint: t('prDraftHint', lang) }}
+          />
+        )}
+
+        {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open' && !isDraft) && (
           <div className="mt-3 flex gap-2.5">
             {sug.branchRef ? (
               !branchMissing &&
@@ -479,6 +503,14 @@ export default async function SuggestionThreadPage({
               </SubmitButton>
             </form>
           </div>
+        )}
+
+        {!isDraft && sug.status === 'open' && (session?.userId === sug.authorId || canMerge) && (
+          <DraftToggle
+            draft={false}
+            action={setSuggestionDraft.bind(null, sug.id)}
+            labels={{ ready: t('prReadyForReview', lang), back: t('prBackToDraft', lang), hint: t('prDraftHint', lang) }}
+          />
         )}
 
         {hasConflicts && threeWay && sug.branchRef && (
@@ -571,6 +603,25 @@ export default async function SuggestionThreadPage({
                 lang={lang}
                 custom={customLabels}
                 onSave={setSuggestionLabels.bind(null, sug.id)}
+              />
+            </AsideCard>
+
+            {/* Запрошенные рецензенты — ТОТ ЖЕ пикер, что исполнители: набор людей
+                с поиском по handle. Разница только в подписях и в действии. */}
+            <AsideCard>
+              <AssigneePicker
+                owner={owner}
+                slug={slug}
+                assignees={reviewRequests}
+                canEdit={canMerge || session?.userId === sug.authorId}
+                lang={lang}
+                onToggle={toggleReviewRequest.bind(null, sug.id)}
+                labels={{
+                  title: t('prReviewers', lang),
+                  add: t('prRequestReview', lang),
+                  empty: t('prReviewersEmpty', lang),
+                  remove: t('prCancelRequest', lang),
+                }}
               />
             </AsideCard>
 

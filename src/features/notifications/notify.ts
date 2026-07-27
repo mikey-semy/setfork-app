@@ -23,6 +23,7 @@ type NotifType =
   | 'follow'
   | 'mention'
   | 'assigned'
+  | 'review_requested'
   | 'transfer_incoming'
   | 'transfer_accepted'
   | 'transfer_declined'

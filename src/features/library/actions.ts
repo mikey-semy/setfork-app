@@ -380,6 +380,9 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
     with: { template: true },
   })
   if (!sug || sug.status !== 'open' || !sug.branchRef) return
+  // Черновик не сливается: кнопку мы и так не показываем, но экшен — сетевая точка
+  // входа, и полагаться на скрытую кнопку значит не иметь проверки вовсе.
+  if (sug.draft) return
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
   // Тот же гейт, что у принятия items-правки: иначе «Влить в main» обходило бы
@@ -417,6 +420,7 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
     with: { template: true },
   })
   if (!sug || sug.status !== 'open' || !sug.branchRef) return
+  if (sug.draft) return // резолвер конфликтов тоже завершается слиянием — см. mergeBranchPr
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
 
@@ -488,6 +492,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     with: { template: true },
   })
   if (!sug || sug.status !== 'open' || sug.template.ownerId !== session.userId) return
+  if (sug.draft) return // черновик не принимаем — см. mergeBranchPr
   // Запрошенные правки блокируют принятие — иначе вердикт «просит доработать»
   // был бы декоративным. Разблокировать может сам рецензент, сменив свой голос.
   if (await hasBlockingReview(sug.id)) return

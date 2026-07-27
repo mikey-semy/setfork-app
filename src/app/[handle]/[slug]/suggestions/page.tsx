@@ -24,12 +24,20 @@ export default async function SuggestionsPage({
   const list = await getSuggestions(meta.id)
   const base = `/${owner}/${slug}/suggestions`
 
-  const statusLabel = (s: string) =>
-    s === 'accepted' ? t('statusAccepted', lang) : s === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
-  const statusCls = (s: string) =>
+  // Черновик — открытая правка, которую ещё не предъявили к слиянию: свой ярлык,
+  // иначе в списке он неотличим от готовой к ревью.
+  const statusLabel = (s: string, draft: boolean) =>
+    s === 'accepted'
+      ? t('statusAccepted', lang)
+      : s === 'rejected'
+        ? t('statusRejected', lang)
+        : draft
+          ? t('prDraft', lang)
+          : t('statusOpen', lang)
+  const statusCls = (s: string, draft: boolean) =>
     s === 'accepted'
       ? 'bg-(--accent-soft) text-ok'
-      : s === 'rejected'
+      : s === 'rejected' || draft
         ? 'bg-surface-2 text-muted'
         : 'bg-(--accent-soft) text-accent'
 
@@ -46,7 +54,7 @@ export default async function SuggestionsPage({
             const items = s.items as ProposedItem[]
             const first = items[0] ? tr(items[0].title as LocaleText, lang) : ''
             return (
-              <Link key={s.id} href={`${base}/${s.id}`} className="block rounded-lg border border-border bg-surface p-4 hover:border-border-strong">
+              <Link key={s.id} href={`${base}/${s.number ?? s.id}`} className="block rounded-lg border border-border bg-surface p-4 hover:border-border-strong">
                 <div className="flex items-center gap-2.5">
                   <Avatar handle={s.author.handle} avatarUrl={s.author.avatarUrl} size={26} />
                   <span className="text-[13px] text-ink-2">
@@ -62,8 +70,8 @@ export default async function SuggestionsPage({
                       <MessageSquare size={12} /> {s.commentCount}
                     </span>
                   )}
-                  <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusCls(s.status)}`}>
-                    {statusLabel(s.status)}
+                  <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusCls(s.status, s.draft)}`}>
+                    {statusLabel(s.status, s.draft)}
                   </span>
                 </div>
 

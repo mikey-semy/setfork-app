@@ -9,7 +9,10 @@ import { toggleIssueAssignee } from './actions'
 
 type Person = { handle: string; avatarUrl: string | null }
 
-// Исполнители issue: текущий список + поповер-поиск (для владельца/коллаборатора).
+// Люди при сущности: текущий список + поповер-поиск (для владельца/коллаборатора).
+// Один пикер на исполнителей задачи, исполнителей правки и ЗАПРОШЕННЫХ рецензентов —
+// форма одинаковая (набор людей + поиск по handle), различаются только подписи и
+// действие. Копировать его третий раз было бы ровно то, чего просили не делать.
 export function AssigneePicker({
   owner,
   slug,
@@ -17,6 +20,7 @@ export function AssigneePicker({
   assignees,
   canEdit,
   onToggle,
+  labels,
   lang = 'en',
 }: {
   owner: string
@@ -28,6 +32,8 @@ export function AssigneePicker({
   /** Своё переключение исполнителя. Пусто — задачное (toggleIssueAssignee).
    *  Так один пикер обслуживает и задачи, и правки, вместо двух копий. */
   onToggle?: (handle: string) => Promise<void>
+  /** Свои подписи (напр. «Рецензенты» / «никого не просили»); пусто — исполнительские. */
+  labels?: { title: string; add: string; empty: string; remove: string }
   lang?: string
 }) {
   const [pending, start] = useTransition()
@@ -52,7 +58,7 @@ export function AssigneePicker({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.04em] text-muted">{L('Исполнители', 'Assignees')}</span>
+        <span className="text-[12px] font-semibold uppercase tracking-[0.04em] text-muted">{labels?.title ?? L('Исполнители', 'Assignees')}</span>
         {canEdit && (
           <AnchoredMenu
             align="right"
@@ -61,7 +67,7 @@ export function AssigneePicker({
               <button
                 type="button"
                 onClick={toggleMenu}
-                aria-label={L('назначить', 'assign')}
+                aria-label={labels?.add ?? L('назначить', 'assign')}
                 className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-ink"
               >
                 <UserPlus size={14} />
@@ -110,7 +116,7 @@ export function AssigneePicker({
       </div>
 
       {assignees.length === 0 ? (
-        <span className="text-[13px] text-muted">{L('никого', 'no one')}</span>
+        <span className="text-[13px] text-muted">{labels?.empty ?? L('никого', 'no one')}</span>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {assignees.map((a) => (
@@ -118,7 +124,7 @@ export function AssigneePicker({
               <Avatar handle={a.handle} avatarUrl={a.avatarUrl} size={20} />
               <span className="text-ink">{a.handle}</span>
               {canEdit && (
-                <button type="button" disabled={pending} onClick={() => toggle(a.handle)} aria-label={L('снять', 'unassign')} className="text-muted hover:text-danger">
+                <button type="button" disabled={pending} onClick={() => toggle(a.handle)} aria-label={labels?.remove ?? L('снять', 'unassign')} className="text-muted hover:text-danger">
                   <X size={13} />
                 </button>
               )}

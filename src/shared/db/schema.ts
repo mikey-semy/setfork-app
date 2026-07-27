@@ -61,6 +61,7 @@ export const notificationType = pgEnum('notification_type', [
   'follow',
   'mention',
   'assigned',
+  'review_requested', // тебя попросили посмотреть правку
   'transfer_incoming', // тебе предлагают принять владение списком
   'transfer_accepted', // получатель принял твою передачу
   'transfer_declined', // получатель отклонил твою передачу
@@ -638,6 +639,10 @@ export const suggestions = pgTable('suggestions', {
   // Nullable — строки, созданные до введения поля (бэкфилл проставит).
   number: integer('number'),
   status: suggestionStatus('status').notNull().default('open'),
+  // Черновик: правка ещё не предъявлена к слиянию (draft PR у GitHub, WIP: у Gitea).
+  // Отдельным полем, а не значением status: черновик — это ОТКРЫТАЯ правка, у которой
+  // просто закрыт путь к слиянию, и после снятия она не меняет свою историю статусов.
+  draft: boolean('draft').notNull().default(false),
   // Метки и этап — ТА ЖЕ модель, что у задач (labels: jsonb-массив ярлыков,
   // milestone_id → milestones): благодаря совпадению формы к правкам подходят
   // готовые LabelEditor/этапы, а не их копии.
@@ -695,6 +700,28 @@ export const suggestionAssignees = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('sug_assignee_uniq').on(t.suggestionId, t.userId)],
+)
+
+// ── Запрос ревью (кого ПОПРОСИЛИ посмотреть) ─────────────────────────
+// Отдельно от suggestion_reviews: там ВЕРДИКТ (уже посмотрел), тут ПРОСЬБА (ещё нет).
+// Смешивать нельзя — иначе «запросили ревью» невозможно отличить от «отревьюил
+// без вердикта», а именно на этом различии стоит уведомление и гейт готовности.
+export const suggestionReviewRequests = pgTable(
+  'suggestion_review_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    // Кого просят.
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // Кто попросил (для истории действий).
+    requestedById: uuid('requested_by_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_review_req_uniq').on(t.suggestionId, t.userId)],
 )
 
 export type SuggestionReview = typeof suggestionReviews.$inferSelect

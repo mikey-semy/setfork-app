@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, embeddings, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestions, templates, templateVersions, users } from '@/shared/db'
+import { db, embeddings, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { Lang, LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
@@ -401,7 +401,9 @@ export async function getSuggestions(templateId: string) {
   const rows = await db
     .select({
       id: suggestions.id,
+      number: suggestions.number,
       status: suggestions.status,
+      draft: suggestions.draft,
       note: suggestions.note,
       baseVersion: suggestions.baseVersion,
       items: suggestions.items,
@@ -646,6 +648,16 @@ export async function getSuggestionAssignees(suggestionId: string) {
     .from(suggestionAssignees)
     .innerJoin(users, eq(users.id, suggestionAssignees.userId))
     .where(eq(suggestionAssignees.suggestionId, suggestionId))
+  return Promise.all(rows.map(async (r) => ({ handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
+}
+
+/** У кого ПОПРОСИЛИ ревью правки (та же форма, что исполнители — один пикер). */
+export async function getSuggestionReviewRequests(suggestionId: string) {
+  const rows = await db
+    .select({ handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(suggestionReviewRequests)
+    .innerJoin(users, eq(users.id, suggestionReviewRequests.userId))
+    .where(eq(suggestionReviewRequests.suggestionId, suggestionId))
   return Promise.all(rows.map(async (r) => ({ handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
 }
 

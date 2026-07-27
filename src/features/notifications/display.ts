@@ -4,25 +4,9 @@ import { alias } from 'drizzle-orm/pg-core'
 import { db, issues, templates, users } from '@/shared/db'
 import { t, tr, type Lang, type TKey } from '@/shared/i18n'
 import type { NotificationType } from './queries'
+import { NOTIF_VERB } from './verbs'
 
 // Тип события → ключ глагола (тот же набор, что в колокольчике).
-const VERB: Record<NotificationType, TKey> = {
-  suggestion_new: 'notifSuggestionNew',
-  suggestion_accepted: 'notifAccepted',
-  suggestion_rejected: 'notifRejected',
-  suggestion_comment: 'notifSuggestionComment',
-  issue_new: 'notifIssueNew',
-  issue_comment: 'notifIssueComment',
-  new_version: 'notifNewVersion',
-  star: 'notifStar',
-  fork: 'notifFork',
-  follow: 'notifFollow',
-  mention: 'notifMention',
-  assigned: 'notifAssigned',
-  transfer_incoming: 'notifTransferIncoming',
-  transfer_accepted: 'notifTransferAccepted',
-  transfer_declined: 'notifTransferDeclined',
-}
 
 const appUrl = () => (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '')
 
@@ -71,7 +55,7 @@ export async function resolveNotificationDisplay(p: NotificationRef): Promise<No
 
   const actorHandle = actor?.handle ?? 'someone'
   const listTitle = tpl ? tr(tpl.title, p.lang) : ''
-  const verb = t(VERB[p.type], p.lang)
+  const verb = t(NOTIF_VERB[p.type], p.lang)
 
   const base = tpl ? `${appUrl()}/${tpl.owner}/${tpl.slug}` : appUrl()
   const url =

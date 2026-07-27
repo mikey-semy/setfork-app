@@ -18,6 +18,7 @@ export type NotificationType =
   | 'follow'
   | 'mention'
   | 'assigned'
+  | 'review_requested'
   | 'transfer_incoming'
   | 'transfer_accepted'
   | 'transfer_declined'

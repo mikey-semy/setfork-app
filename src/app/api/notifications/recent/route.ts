@@ -3,25 +3,9 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type TKey } from '@/shared/i18n'
 import { getNotifications, type NotificationType } from '@/features/notifications/queries'
+import { NOTIF_VERB } from '@/features/notifications/verbs'
 
 // Тип события → глагол (как в колокольчике) — для тела браузерного уведомления.
-const VERB: Record<NotificationType, TKey> = {
-  suggestion_new: 'notifSuggestionNew',
-  suggestion_accepted: 'notifAccepted',
-  suggestion_rejected: 'notifRejected',
-  suggestion_comment: 'notifSuggestionComment',
-  issue_new: 'notifIssueNew',
-  issue_comment: 'notifIssueComment',
-  new_version: 'notifNewVersion',
-  star: 'notifStar',
-  fork: 'notifFork',
-  follow: 'notifFollow',
-  mention: 'notifMention',
-  assigned: 'notifAssigned',
-  transfer_incoming: 'notifTransferIncoming',
-  transfer_accepted: 'notifTransferAccepted',
-  transfer_declined: 'notifTransferDeclined',
-}
 
 /** Последние непрочитанные уведомления для браузерных оповещений (клиент поллит). */
 export async function GET() {
@@ -32,7 +16,7 @@ export async function GET() {
     .filter((n) => !n.read)
     .map((n) => {
       const actor = n.actorHandle ?? '—'
-      const verb = t(VERB[n.type], lang)
+      const verb = t(NOTIF_VERB[n.type], lang)
       const title = n.title ? tr(n.title, lang) : ''
       const listHref = n.ownerHandle && n.slug ? `/${n.ownerHandle}/${n.slug}` : null
       const url =

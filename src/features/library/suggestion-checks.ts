@@ -52,6 +52,8 @@ export async function suggestionChecks(input: {
   currentVersion: number
   hasConflicts: boolean
   branchMissing: boolean
+  /** Черновик: слить нельзя, пока автор не отметил готовность. */
+  draft: boolean
   blockingReview: boolean
   moderation: string
   lang: 'ru' | 'en'
@@ -67,7 +69,17 @@ export async function suggestionChecks(input: {
       : { key: 'has-changes', status: 'fail', title: say('Изменений нет', 'No changes'), detail: say('принимать нечего', 'nothing to accept') },
   )
 
-  // 2. Слияние: конфликты и пропавшая ветка — блокирующие.
+  // 2. Черновик — блокирующий по определению: правка ещё не предъявлена.
+  if (input.draft) {
+    out.push({
+      key: 'draft',
+      status: 'fail',
+      title: say('Пока черновик', 'Still a draft'),
+      detail: say('слить нельзя, пока не отмечена готовность', 'cannot merge until marked ready'),
+    })
+  }
+
+  // 3. Слияние: конфликты и пропавшая ветка — блокирующие.
   if (input.branchMissing) {
     out.push({ key: 'branch', status: 'fail', title: say('Ветка удалена', 'Branch deleted'), detail: say('PR неактуален, можно только отклонить', 'the PR is stale and can only be closed') })
   } else if (input.hasConflicts) {
@@ -76,7 +88,7 @@ export async function suggestionChecks(input: {
     out.push({ key: 'merge', status: 'ok', title: say('Слияние без конфликтов', 'Merges cleanly') })
   }
 
-  // 3. База правки. Не ошибка, но принятие перезапишет более новое.
+  // 4. База правки. Не ошибка, но принятие перезапишет более новое.
   if (input.currentVersion > input.baseVersion) {
     out.push({
       key: 'base',
@@ -88,21 +100,21 @@ export async function suggestionChecks(input: {
     out.push({ key: 'base', status: 'ok', title: say('База актуальна', 'Base is current') })
   }
 
-  // 4. Ревью, запросившее правки, блокирует принятие — то же определение, что у гейта.
+  // 5. Ревью, запросившее правки, блокирует принятие — то же определение, что у гейта.
   out.push(
     input.blockingReview
       ? { key: 'review', status: 'fail', title: say('Запрошены правки', 'Changes requested'), detail: say('принятие заблокировано до смены вердикта', 'accepting is blocked until the verdict changes') }
       : { key: 'review', status: 'ok', title: say('Блокирующих ревью нет', 'No blocking reviews') },
   )
 
-  // 5. Модерация списка: во flagged/hidden принимать правку бессмысленно.
+  // 6. Модерация списка: во flagged/hidden принимать правку бессмысленно.
   if (input.moderation === 'flagged' || input.moderation === 'hidden') {
     out.push({ key: 'moderation', status: 'fail', title: say('Список снят модерацией', 'List is taken down'), detail: input.moderation })
   } else if (input.moderation === 'pending') {
     out.push({ key: 'moderation', status: 'warn', title: say('Список на проверке', 'List is under review') })
   }
 
-  // 6. Ссылки в предложенных пунктах — по уже собранным вердиктам linkcheck.
+  // 7. Ссылки в предложенных пунктах — по уже собранным вердиктам linkcheck.
   const urls = proposedUrls(input.items)
   if (urls.length === 0) {
     out.push({ key: 'links', status: 'neutral', title: say('Ссылок в правке нет', 'No links in this suggestion') })
