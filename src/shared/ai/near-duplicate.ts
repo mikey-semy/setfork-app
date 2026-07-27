@@ -39,6 +39,15 @@ import { stem } from './facets'
 /** Порог по словам, выше которого список считается тем же самым. Измерен, см. таблицу. */
 export const NEAR_DUP_THRESHOLD = 0.3
 
+/**
+ * КОРОТКИЕ СПИСКИ судим строже. На тексте из пяти значимых слов Жаккар — шум: два списка
+ * «X: подготовка / X: основной шаг» делят служебные слова и дают 0.43, ничего общего по сути
+ * не имея. Поэтому пока значимых слов мало, совпадением считается только почти-копия.
+ * (Замечено на живом тесте, а не придумано: фикстура из двух шаблонных шагов ловилась как дубль.)
+ */
+export const MIN_STEMS_FOR_SOFT_THRESHOLD = 10
+export const SHORT_TEXT_THRESHOLD = 0.7
+
 /** Значимые слова текста: без регистра, пунктуации, коротких обрывков; с грубым стеммингом. */
 function stems(text: string): string[] {
   return text
@@ -107,11 +116,14 @@ export function findNearDuplicate(
   let match: NearDupVerdict['match'] = null
   for (const cand of existing) {
     const candText = listText(cand)
-    const score = jaccard(mine, wordSet(candText))
+    const theirs = wordSet(candText)
+    const score = jaccard(mine, theirs)
+    // Порог адаптивный: короткому тексту веры меньше (см. MIN_STEMS_FOR_SOFT_THRESHOLD).
+    const need = Math.min(mine.size, theirs.size) < MIN_STEMS_FOR_SOFT_THRESHOLD ? Math.max(threshold, SHORT_TEXT_THRESHOLD) : threshold
     if (score > best) {
       best = score
       match =
-        score >= threshold
+        score >= need
           ? { id: cand.id, title: cand.title, score: Number(score.toFixed(3)), phrases: Number(jaccard(minePhrases, shingles(candText)).toFixed(3)) }
           : match
     }
