@@ -33,7 +33,7 @@ const seedList = async (ownerId: string, slug: string, title: string, over: Part
     .insert(templates)
     .values({ ownerId, slug, title: { ru: title }, tags: ['кулинария'], ...over })
     .returning({ id: templates.id })
-  await db.insert(embeddings).values({ kind: 'list', refId: row.id, content: title, embedding: axis(0), model: 'test' })
+  await db.insert(embeddings).values({ kind: 'list', refId: row.id, content: title, embedding: axis(0) })
   return row.id
 }
 
