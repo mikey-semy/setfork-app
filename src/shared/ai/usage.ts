@@ -3,7 +3,7 @@ import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import { aiUsage, db, users } from '@/shared/db'
 import type { AiProviderId } from '@/shared/settings/ai'
 
-export type AiFeature = 'generate' | 'regenerate' | 'refine' | 'note' | 'moderate' | 'embed' | 'translate' | 'mcp-gnome' | 'dig' | 'assist'
+export type AiFeature = 'generate' | 'regenerate' | 'refine' | 'note' | 'moderate' | 'embed' | 'translate' | 'mcp-gnome' | 'dig' | 'assist' | 'gate'
 
 // Форма usage-объекта OpenRouter (providerMetadata.openrouter.usage).
 export interface OpenRouterUsage {

@@ -45,7 +45,9 @@ export const stepStatus = pgEnum('step_status', ['todo', 'cur', 'done', 'blocked
 export const stepLevel = pgEnum('step_level', ['required', 'recommended', 'optional'])
 export const suggestionStatus = pgEnum('suggestion_status', ['open', 'accepted', 'rejected'])
 // Тип AI-вызова для учёта расхода (токены/деньги).
-export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'mcp-gnome', 'dig', 'assist'])
+// 'gate' — линзы готовности к публикации (отдельно от 'moderate': та решает «безопасно ли
+// показывать», эта — «готово ли к показу»; смешивать их в учёте расхода нельзя).
+export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine', 'note', 'moderate', 'embed', 'translate', 'mcp-gnome', 'dig', 'assist', 'gate'])
 export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
