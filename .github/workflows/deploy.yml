@@ -32,6 +32,10 @@ env:
 jobs:
   deploy:
     runs-on: [self-hosted, setfork]
+    # issues: write — для тревоги о красном деплое (шаг ниже). Остальное read.
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
 
@@ -52,3 +56,49 @@ jobs:
           SSH="ssh -i /tmp/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
           sleep 10
           $SSH "docker ps --filter name=setfork-frontend --format '{{.Names}} {{.Status}}' | grep -q 'healthy\|Up' " || { echo "::error::контейнер фронта не поднялся"; $SSH "docker logs --tail 50 setfork-frontend"; exit 1; }
+
+      # ТРЕВОГА О КРАСНОМ ДЕПЛОЕ. Появилась по факту: деплой падал на КАЖДОМ пуше в
+      # master (VPN на раннере → ssh 22 refused), прод стоял, и обнаружилось это
+      # случайно — красная джоба сама себя никому не показывает.
+      #
+      # Канал — issue в этом же репо: не нужны ни секреты, ни внешние сервисы
+      # (telegram с RF-IP недоступен без моста, почта — отдельная зависимость).
+      # Дедуп по заголовку: повторные падения идут КОММЕНТАРИЕМ в открытую тревогу,
+      # иначе очередь мержей завалила бы трекер копиями.
+      - name: Тревога — деплой упал
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: '🔴 Деплой на прод падает'
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          command -v gh >/dev/null || { echo "::warning::нет gh CLI на раннере — тревога не отправлена"; exit 0; }
+          BODY="Деплой упал на \`${SHA:0:7}\`.
+          Прод остался на предыдущей рабочей сборке (compose не заменяет контейнер при неудачной сборке).
+
+          Лог: $RUN_URL
+
+          Частая причина (уже ловили): VPN на self-hosted раннере → \`ssh: connect to host … port 22: Connection refused\`, сервер при этом жив. Проверка: \`Test-NetConnection 31.177.83.219 -Port 22\`. Лечение: выключить VPN и перезапустить джобу.
+          Эта тревога закроется сама при следующем зелёном деплое."
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            gh issue comment "$EXISTING" --body "$BODY" || echo "::warning::не удалось дописать в тревогу #$EXISTING"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" || echo "::warning::не удалось создать тревогу"
+          fi
+
+      # Зелёный деплой закрывает тревогу сам: иначе она живёт вечно и перестаёт
+      # что-либо значить — а протухшая тревога хуже отсутствующей.
+      - name: Снять тревогу — деплой прошёл
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: '🔴 Деплой на прод падает'
+          SHA: ${{ github.sha }}
+        run: |
+          command -v gh >/dev/null || exit 0
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            gh issue close "$EXISTING" --comment "Деплой прошёл на \`${SHA:0:7}\` — прод снова свежий." || true
+          fi
