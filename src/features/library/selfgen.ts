@@ -16,6 +16,7 @@ import { uniqueSlug } from './slug'
 import { log } from '@/shared/observability'
 import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
+import { autonomyHealthy } from '@/shared/agents/canary'
 import { spotlight } from '@/shared/ai/spotlight'
 import { detectTextLang } from '@/shared/lib/translit'
 import { toProposed, toStepInput } from '@/shared/lib/step-input'
@@ -173,6 +174,12 @@ async function createdToday(): Promise<number> {
  */
 export async function runSelfGenSweep(): Promise<{ created: number; skipped: number }> {
   await ensureSelfGenScheduled()
+  // Здоровье автономии — как у петли ухода (R5 капитального ревью: проверка стояла только
+  // там, и серия ошибок в самогенерации предохранитель не срывала).
+  if (!(await autonomyHealthy('selfgen'))) {
+    log.info('selfgen: circuit tripped by canary, skipping sweep')
+    return { created: 0, skipped: 1 }
+  }
   const settings = await getAiSettings()
   if (settings.selfGenMode !== 'auto') {
     log.info('selfgen: mode is not auto, skipping', { mode: settings.selfGenMode })

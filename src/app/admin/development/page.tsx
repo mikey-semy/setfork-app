@@ -7,7 +7,8 @@ import { getCompanyDay, getDevelopmentMetrics, UNAVAILABLE, type NaReason } from
 import { getDomainScorecards } from '@/features/admin/scorecard-queries'
 import { StatTile } from '@/shared/ui/StatTile'
 import { TagChip } from '@/shared/ui/TagChip'
-import { allLoopPolicies } from '@/shared/agents/policy'
+import { AUTONOMOUS_LOOPS, allLoopPolicies } from '@/shared/agents/policy'
+import { stallReports } from '@/shared/agents/stall'
 import { resetLoopCircuit, toggleLoopDryRun, toggleLoopPause } from '@/features/admin/actions'
 
 /**
@@ -39,7 +40,14 @@ const h2 = 'text-[13px] font-semibold uppercase tracking-wide text-ink-2'
 export default async function AdminDevelopmentPage() {
   await requireAdmin()
   const lang = await getLang()
-  const [m, loops, today, yesterday, cards] = await Promise.all([getDevelopmentMetrics(30), allLoopPolicies(), getCompanyDay(0), getCompanyDay(1), getDomainScorecards()])
+  const [m, loops, today, yesterday, cards, stalls] = await Promise.all([
+    getDevelopmentMetrics(30),
+    allLoopPolicies(),
+    getCompanyDay(0),
+    getCompanyDay(1),
+    getDomainScorecards(),
+    stallReports(AUTONOMOUS_LOOPS),
+  ])
   const period = tr({ en: `in ${m.periodDays} days`, ru: `за ${m.periodDays} дн.` }, lang)
 
   return (
@@ -67,6 +75,33 @@ export default async function AdminDevelopmentPage() {
           {tr({ en: 'Live monitoring →', ru: 'Живой мониторинг →' }, lang)}
         </Link>
       </div>
+
+      {/* ХОЛОСТОЙ ХОД: петля работает, деньги идут, а библиотека не меняется. «Улучшать
+          нечего» — законный режим (он ведёт к расхождению форком), поэтому это не тревога
+          предохранителя, а строка отчёта: узнать надо раньше, чем из счёта за модель. */}
+      {Object.entries(stalls).some(([, r]) => r.stalled) && (
+        <section className="flex min-w-0 flex-col gap-2">
+          <h2 className={h2}>{tr({ en: 'Idling loops', ru: 'Петли на холостом ходу' }, lang)}</h2>
+          <ul className="flex flex-col gap-1">
+            {Object.entries(stalls)
+              .filter(([, r]) => r.stalled)
+              .map(([loop, r]) => (
+                <li key={loop} className="min-w-0 text-[12.5px] text-ink-2">
+                  <span className="font-mono text-ink-2">{loop}</span>{' '}
+                  <span className="text-muted">
+                    {tr(
+                      {
+                        en: `${r.seen} recent actions, none changed the library`,
+                        ru: `${r.seen} последних действий, ни одно не изменило библиотеку`,
+                      },
+                      lang,
+                    )}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </section>
+      )}
 
       {/* ДЕНЬ КОМПАНИИ: что она сделала сама. С включённой планкой она публикует без
           человека — значит отчёт постфактум обязателен, иначе автономия это чёрный ящик.
