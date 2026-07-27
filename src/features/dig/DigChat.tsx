@@ -126,6 +126,22 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   }
 
   const current = gnomes.find((g) => g.id === gnome)
+
+  /**
+   * Ответ гнома → фрагмент переписки для буфера: предшествующий вопрос и подпись
+   * отвечавшего. Копия голого текста теряла, КТО это сказал и НА ЧТО — вставлять
+   * такое в задачу или переписку бессмысленно.
+   */
+  const transcriptOf = (i: number): string => {
+    const m = messages[i]
+    if (!m) return ''
+    const who = gnomes.find((g) => g.id === m.who)?.name ?? m.who ?? say('expert', 'эксперт')
+    const asked = [...messages.slice(0, i)].reverse().find((x) => x.role === 'user')
+    const q = asked ? `**${say('You', 'Вы')}:** ${asked.text}
+
+` : ''
+    return `${q}**${who}:** ${m.text}`
+  }
   // Готовые вопросы на старте: копать можно вообще без клавиатуры — дальше
   // ведут фоллоу-апы самого гнома (кнопки после каждого ответа).
   const starterQuestions = [
@@ -187,6 +203,8 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
             {say('Ask anything about this step — reasons, pitfalls, alternatives. The master digs where you point.', 'Спрашивай что угодно про этот пункт — причины, подводные камни, альтернативы. Мастер копает туда, куда покажешь.')}
           </p>
         )}
+        {/* Фрагмент переписки для копирования: предшествующий вопрос + ответ с
+            именем гнома. Без этого из буфера выпадает вся атрибуция. */}
         {messages.map((m, i) =>
           m.role === 'user' ? (
             <div key={i} className="flex justify-end">
@@ -200,7 +218,9 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
                 {/* «Спасибо» гному (одушевление) + копировать — проявляются при наведении. */}
                 <div className="mt-1 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <ThankButton who={m.who ?? 'generalist'} thanked={thanked.has(i)} onThank={() => thank(i, m.who ?? 'generalist')} lang={lang} />
-                  <CopyButton text={m.text} />
+                  {/* Копируем КАК ИЗ ЧАТА: с вопросом и подписью отвечавшего —
+                      иначе вставленный кусок теряет, кто это сказал и на что. */}
+                  <CopyButton text={transcriptOf(i)} />
                 </div>
               </div>
             </div>

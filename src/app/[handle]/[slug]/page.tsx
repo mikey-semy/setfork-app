@@ -16,6 +16,7 @@ import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
+import { AsideCard, PageAside } from '@/shared/ui/PageAside'
 import { DismissibleHint } from '@/shared/ui/DismissibleHint'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
@@ -38,8 +39,6 @@ import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutl
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
-import { BlockComments } from '@/features/comments/BlockComments'
-import { getBlockThreads } from '@/features/comments/queries'
 import { db, listLinks, templates as templatesTable, users as usersTable } from '@/shared/db'
 import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
@@ -119,31 +118,6 @@ export default async function ListPage({
   // раскопки/трекинг ссылок/перевод привязаны к ТЕКУЩЕЙ версии.
   const readOnlyView = !!snapshot || !!histVer
 
-  // Обсуждения пунктов: раскладываем по стабильному block_id (не по steps.id —
-  // тот новый в каждой версии). На альтернативном снимке не показываем: треды
-  // живут на текущей версии.
-  const threads = readOnlyView ? [] : await getBlockThreads(tpl.id)
-  const threadsByBlock = new Map<string, typeof threads>()
-  for (const th of threads) {
-    const list = threadsByBlock.get(th.blockId)
-    if (list) list.push(th)
-    else threadsByBlock.set(th.blockId, [th])
-  }
-  const commentLabels = {
-    add: t('commentAdd', lang),
-    placeholder: t('commentPlaceholder', lang),
-    send: t('commentSend', lang),
-    cancel: t('commentCancel', lang),
-    reply: t('commentReply', lang),
-    resolve: t('commentResolve', lang),
-    unresolve: t('commentUnresolve', lang),
-    resolved: t('commentResolvedCount', lang),
-    onSelection: t('commentOnSelection', lang),
-    onBlock: t('commentOnBlock', lang),
-    stateReanchored: t('commentReanchored', lang),
-    stateOrphaned: t('commentOrphaned', lang),
-    orphanHint: t('commentOrphaned', lang),
-  }
 
   // Поиск ВНУТРИ списка (?find= из поиска в шапке): фильтр шагов по подстроке —
   // аналог поиска по файлам в GitHub-репо, для больших списков.
@@ -708,20 +682,6 @@ export default async function ListPage({
                             })}
                           </div>
                         )}
-                        {/* Обсуждение пункта: треды + композер. Выделение текста
-                            выше → комментарий «к части», иначе ко всему пункту. */}
-                        {s.blockId && !readOnlyView && (
-                          <BlockComments
-                            owner={owner}
-                            slug={slug}
-                            blockId={s.blockId}
-                            field="desc"
-                            threads={threadsByBlock.get(s.blockId) ?? []}
-                            canComment={!!viewer}
-                            lang={lang}
-                            labels={commentLabels}
-                          />
-                        )}
                       </div>
                     </div>
                   </div>
@@ -732,13 +692,10 @@ export default async function ListPage({
           </main>
 
           {/* About-сайдбар */}
-          <aside className="flex shrink-0 flex-col gap-4 print:hidden lg:w-[300px]">
+          <PageAside>
             <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
             {backlinks.length > 0 && (
-              <div className="rounded-lg border border-border bg-surface p-4">
-                <SectionLabel className="mb-2">
-                  {say('Linked from', 'Ссылаются на этот список')}
-                </SectionLabel>
+              <AsideCard title={say('Linked from', 'Ссылаются на этот список')}>
                 <ul className="flex flex-col gap-1.5">
                   {backlinks.map((b) => (
                     <li key={`${b.handle}/${b.slug}`}>
@@ -748,7 +705,7 @@ export default async function ListPage({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </AsideCard>
             )}
             <div className="rounded-lg border border-border bg-surface p-4">
               <SectionLabel className="mb-2">
@@ -806,7 +763,7 @@ export default async function ListPage({
                 </div>
               )}
             </div>
-          </aside>
+          </PageAside>
         </div>
       </div>
     </>

@@ -423,9 +423,20 @@ export async function getSuggestions(templateId: string) {
 }
 
 /** Одно предложение с автором (для страницы-обсуждения). */
-export async function getSuggestion(templateId: string, id: string) {
+/**
+ * Предложение по НОМЕРУ (#12) или по uuid.
+ *
+ * Номер — адрес для людей и ссылок; uuid остаётся рабочим, чтобы ранее выданные
+ * ссылки не протухли (и чтобы строки без номера, созданные до его введения, всё
+ * ещё открывались).
+ */
+export async function getSuggestion(templateId: string, idOrNumber: string) {
+  const asNumber = /^\d+$/.test(idOrNumber) ? Number(idOrNumber) : null
   const row = await db.query.suggestions.findFirst({
-    where: (s, { and: a, eq: e }) => a(e(s.id, id), e(s.templateId, templateId)),
+    where: (s, { and: a, eq: e }) =>
+      asNumber !== null
+        ? a(e(s.number, asNumber), e(s.templateId, templateId))
+        : a(e(s.id, idOrNumber), e(s.templateId, templateId)),
     with: { author: true },
   })
   if (!row) return null

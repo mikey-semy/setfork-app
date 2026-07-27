@@ -2,11 +2,15 @@ import { tr, type LocaleText } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
 
 // Пошаговый diff правки против базовой версии (аналог «Files changed» в PR).
-// Матчинг шагов — LCS по нормализованному заголовку; для совпавших — пофайловое сравнение.
+// Матчинг — LCS по ключу идентичности: стабильный blockId, если он есть, иначе
+// нормализованный заголовок. С идентичностью переименование пункта в правке
+// показывается как ИЗМЕНЕНИЕ (mod), а не как «удалён + добавлен» двумя строками.
 
 type Lang = Parameters<typeof tr>[1]
 
 export type DiffStep = {
+  /** Стабильная идентичность блока сквозь версии (ProposedItem/steps.block_id). */
+  blockId?: string
   title: LocaleText
   desc: LocaleText
   command: string
@@ -30,6 +34,7 @@ export type DiffSummary = { added: number; removed: number; modified: number; un
 // StepRow (БД) или ProposedItem → общая форма для diff.
 export function toDiffStep(s: Record<string, unknown>): DiffStep {
   return {
+    blockId: typeof s.blockId === 'string' && s.blockId ? s.blockId : undefined,
     title: (s.title ?? {}) as LocaleText,
     desc: (s.desc ?? {}) as LocaleText,
     command: (s.command as string) ?? '',
@@ -69,7 +74,9 @@ export function diffSteps(
 ): { rows: DiffRow[]; summary: DiffSummary } {
   const base = baseRaw.map(toDiffStep)
   const prop = proposedRaw.map(toDiffStep)
-  const key = (s: DiffStep) => tr(s.title, lang).trim().toLowerCase()
+  // Идентичность сильнее заголовка: у пункта с blockId ключ не меняется при
+  // переименовании, поэтому LCS видит его как ту же строку.
+  const key = (s: DiffStep) => (s.blockId ? `id#${s.blockId}` : tr(s.title, lang).trim().toLowerCase())
   const bk = base.map(key)
   const pk = prop.map(key)
   const n = base.length

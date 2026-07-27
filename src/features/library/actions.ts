@@ -3,7 +3,7 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
+import { db, steps, suggestionComments, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
@@ -18,8 +18,6 @@ import { aiQuota, listQuota } from '@/shared/quota'
 import { textLang } from '@/shared/i18n/detect-text-lang'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { enqueueReindex } from './jobs'
-// eslint-disable-next-line boundaries/dependencies -- пере-привязка якорей комментариев (кросс-фич, как watch/collab)
-import { syncBlockThreadAnchors } from '@/features/comments/sync'
 import { ensureWatch } from '@/features/watch/actions'
 import { getWatcherIds } from '@/features/watch/queries'
 import { isCollaborator } from '@/features/collab/queries'
@@ -28,6 +26,7 @@ import { collabStore, suggestionCommenterIds } from '@/features/collab-store/sto
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { getVersionSteps } from './queries'
+import { hasBlockingReview } from './review-actions'
 import { listStore } from './list-store'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
@@ -273,9 +272,6 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await registerTags(tags)
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await notifyWatchersNewVersion(tpl.id, session.userId)
-  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
-  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
-  await syncBlockThreadAnchors(tpl.id)
   await enqueueReindex(tpl.id)
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
@@ -305,9 +301,6 @@ export async function revertToVersion(templateId: string, version: number): Prom
     authorId: session.userId,
   })
   await notifyWatchersNewVersion(tpl.id, session.userId)
-  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
-  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
-  await syncBlockThreadAnchors(tpl.id)
   await enqueueReindex(tpl.id)
 
   const handle = await ownerHandle(tpl.ownerId)
@@ -369,6 +362,7 @@ export async function openBranchPr(templateId: string, branch: string): Promise<
       baseVersion: tpl.currentVersion,
       items: [], // источник правды — tip ветки, материализуется при просмотре
       branchRef: branch,
+      number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${tpl.id})`,
     })
     .returning({ id: suggestions.id })
   await ensureWatch(tpl.id)
@@ -388,6 +382,9 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   if (!sug || sug.status !== 'open' || !sug.branchRef) return
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+  // Тот же гейт, что у принятия items-правки: иначе «Влить в main» обходило бы
+  // запрошенные правки, и вердикт зависел бы от того, каким путём пришёл PR.
+  if (await hasBlockingReview(sug.id)) return
 
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
@@ -405,9 +402,6 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   // git-merge создаёт версию МИМО listStore.addVersion → фасадный барьер её не ловит, recheck явно.
   if (tpl.visibility === 'public') await recheckList(tpl.id)
   await notifyWatchersNewVersion(tpl.id, session.userId)
-  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
-  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
-  await syncBlockThreadAnchors(tpl.id)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
   redirect(`/${owner}/${tpl.slug}`)
@@ -481,9 +475,6 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   // git-merge создаёт версию МИМО listStore.addVersion → фасадный барьер её не ловит, recheck явно.
   if (tpl.visibility === 'public') await recheckList(tpl.id)
   await notifyWatchersNewVersion(tpl.id, session.userId)
-  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
-  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
-  await syncBlockThreadAnchors(tpl.id)
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
   redirect(`/${owner}/${tpl.slug}`)
@@ -497,6 +488,9 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     with: { template: true },
   })
   if (!sug || sug.status !== 'open' || sug.template.ownerId !== session.userId) return
+  // Запрошенные правки блокируют принятие — иначе вердикт «просит доработать»
+  // был бы декоративным. Разблокировать может сам рецензент, сменив свой голос.
+  if (await hasBlockingReview(sug.id)) return
 
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
@@ -508,9 +502,6 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     .where(eq(suggestions.id, sug.id))
   await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   await notifyWatchersNewVersion(tpl.id, session.userId)
-  // Якоря комментариев переезжают на новую версию: часть сдвинется, часть
-  // осиротеет — тред честно покажет своё состояние вместо молчаливой пропажи.
-  await syncBlockThreadAnchors(tpl.id)
   await enqueueReindex(tpl.id)
 
   revalidatePath('/', 'layout')
@@ -518,6 +509,61 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
 }
 
 // ── Обсуждение предложения (review-комментарии) ──────────────────────
+/**
+ * Переименовать правку (заголовок PR = её сообщение).
+ *
+ * Право: автор правки или владелец списка — как в GitHub, где заголовок PR
+ * правят и автор, и мейнтейнер. Пустой заголовок не принимаем: у правки должно
+ * остаться человеческое имя, иначе список PR превращается в «(без описания)».
+ */
+export async function editSuggestionNote(suggestionId: string, note: string): Promise<{ ok: boolean }> {
+  const session = await requireSession()
+  const text = note.trim().slice(0, 300)
+  if (!text) return { ok: false }
+
+  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+  if (!sug) return { ok: false }
+  if (sug.authorId !== session.userId && sug.template.ownerId !== session.userId) return { ok: false }
+
+  await db.update(suggestions).set({ note: text }).where(eq(suggestions.id, suggestionId))
+  const handle = await ownerHandle(sug.template.ownerId)
+  revalidatePath(`/${handle}/${sug.template.slug}/suggestions/${sug.number ?? sug.id}`)
+  return { ok: true }
+}
+
+/**
+ * Правка своего комментария к предложению.
+ *
+ * Только автор: чужие реплики не редактирует даже владелец списка — иначе в
+ * обсуждении нельзя было бы доверять тому, что написано от чьего-то имени.
+ * Пустое тело трактуем как отмену, а не как удаление: удаление — отдельное
+ * намерение, и делать его побочным эффектом пустой формы опасно.
+ */
+export async function editSuggestionComment(commentId: string, body: string): Promise<{ ok: boolean }> {
+  const session = await requireSession()
+  const text = body.trim().slice(0, 20000)
+  if (!text) return { ok: false }
+
+  const [row] = await db
+    .select({ authorId: suggestionComments.authorId, suggestionId: suggestionComments.suggestionId })
+    .from(suggestionComments)
+    .where(eq(suggestionComments.id, commentId))
+    .limit(1)
+  if (!row || row.authorId !== session.userId) return { ok: false }
+
+  await db
+    .update(suggestionComments)
+    .set({ body: text, updatedAt: new Date() })
+    .where(eq(suggestionComments.id, commentId))
+
+  const sug = await db.query.suggestions.findFirst({ where: (x) => eq(x.id, row.suggestionId), with: { template: true } })
+  if (sug) {
+    const handle = await ownerHandle(sug.template.ownerId)
+    revalidatePath(`/${handle}/${sug.template.slug}/suggestions/${sug.number ?? sug.id}`)
+  }
+  return { ok: true }
+}
+
 export async function addSuggestionComment(formData: FormData): Promise<void> {
   const session = await requireSession()
   const suggestionId = String(formData.get('suggestionId') ?? '')

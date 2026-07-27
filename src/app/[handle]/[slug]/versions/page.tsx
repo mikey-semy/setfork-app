@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { GitBranch, GitCommitHorizontal } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getCommits } from '@/features/library/queries'
 import { CommitFilters } from '@/features/library/CommitFilters'
@@ -75,9 +76,13 @@ export default async function CommitsPage({
       {/* Шапка: ветка + счётчики слева, фильтры автор/дата справа (как GitHub Commits). */}
       <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 font-semibold text-ink">
-            <GitBranch size={14} className="text-muted" /> main
-          </span>
+          {/* Оставляем ИМЯ РЕФА main (его же пользователь набирает в git push
+              origin main), а по-русски поясняем тултипом — UI не расходится с git. */}
+          <Tooltip label={t('defaultBranchHint', lang)}>
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5 font-semibold text-ink">
+              <GitBranch size={14} className="text-muted" /> main
+            </span>
+          </Tooltip>
           <span className="text-ink-2">
             <b className="text-ink">{commits.length}</b> {t('commitsLabel', lang)}
           </span>

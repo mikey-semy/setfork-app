@@ -620,6 +620,9 @@ export const suggestions = pgTable('suggestions', {
   authorId: uuid('author_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+  // Номер в рамках списка (#12), как у задач: адресуемость и ссылки в тексте.
+  // Nullable — строки, созданные до введения поля (бэкфилл проставит).
+  number: integer('number'),
   status: suggestionStatus('status').notNull().default('open'),
   note: text('note').notNull().default(''),
   baseVersion: integer('base_version').notNull(),
@@ -629,7 +632,36 @@ export const suggestions = pgTable('suggestions', {
   branchRef: text('branch_ref'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
-}, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status)])
+}, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status), uniqueIndex('suggestions_tpl_number').on(t.templateId, t.number)])
+
+// ── Ревью правки (вердикт рецензента, как review в PR) ───────────────
+// Вердикты по модели GitHub/Gitea, но без их ловушек: у Gitea «request changes»
+// закодирован как ReviewTypeReject, а сторона диффа — ЗНАКОМ номера строки (на
+// этом у них же висит собственный FIXME). Здесь всё явными значениями.
+//   comment — оставил замечания, не блокирует;
+//   approve — одобрил;
+//   changes — просит доработать (блокирует принятие).
+// Один активный вердикт на рецензента: повторное ревью ПЕРЕЗАПИСЫВАЕТ прежний,
+// иначе «одобрил → передумал» оставляло бы оба состояния сразу.
+export const suggestionReviews = pgTable(
+  'suggestion_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    reviewerId: uuid('reviewer_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    verdict: text('verdict').notNull(), // 'comment' | 'approve' | 'changes'
+    body: text('body').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_review_one_per_reviewer').on(t.suggestionId, t.reviewerId)],
+)
+
+export type SuggestionReview = typeof suggestionReviews.$inferSelect
 
 // Комментарии-обсуждение к правке (review-комментарии, как в PR).
 export const suggestionComments = pgTable(
@@ -1713,42 +1745,35 @@ export type TemplateVersion = typeof templateVersions.$inferSelect
 export type Step = typeof steps.$inferSelect
 export type Run = typeof runs.$inferSelect
 export type RunStepState = typeof runStepState.$inferSelect
-// ── Комментарии к пункту (и к выделенной части его текста) ───────────
-// Тред — единица обсуждения, разрешения И устаревания (как PullRequestReviewThread
-// у GitHub: isResolved/isOutdated живут на треде, а не на отдельной реплике).
+// ── Review-комментарии к пункту внутри ПРЕДЛОЖЕНИЯ (PR) ──────────────
+// Живут ТОЛЬКО в предложении, как review-комментарии в pull request: при обычном
+// просмотре списка их нет (в GitHub при чтении кода комментировать тоже нельзя —
+// только во вкладке Files changed и в Conversation).
 //
-// Якорь file-relative, а не diff-relative: блок опознаётся стабильным block_id,
-// место внутри блока — W3C-селекторами. Индекс строки внутри диффа (position
-// у GitHub) сознательно НЕ реализуем: он хрупок, и GitHub сам пометил его
-// deprecated в своей OpenAPI-спеке.
+// Тред — единица обсуждения и разрешения (модель PullRequestReviewThread).
+// Якорь file-relative: блок опознаётся стабильным block_id, место внутри блока —
+// W3C-селекторами (exact/prefix/suffix + start/end). Индекс строки внутри диффа
+// (position у GitHub) не реализуем: он хрупок и помечен deprecated самим GitHub.
 //
-// Три позиции — контракт GitLab (lib/gitlab/diff/position_tracer, MIT):
-//   anchor_original — иммутабельна, «где это было сказано»;
-//   anchor_current  — сдвигается вперёд, пока якорь находится;
-//   anchor_changed_at — версия, на которой якорь потеряли (пусто = не терялся).
-// Плюс вмороженный снимок текста (роль diff_hunk у GitHub / note_diff_files у
-// GitLab): тред всегда может показать свой контекст, ничего не переспрашивая.
+// Храним ТОЛЬКО исходный якорь и вмороженный снимок текста. Текущее состояние
+// («привязан / перепривязан N% / потерян») считается на рендере против
+// предложенных пунктов — как дешёвая проверка active? у GitLab, только без
+// колонок, которые пришлось бы синхронизировать и которые всё равно устаревают.
 export const blockCommentThreads = pgTable(
   'block_comment_threads',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    templateId: uuid('template_id')
+    suggestionId: uuid('suggestion_id')
       .notNull()
-      .references(() => templates.id, { onDelete: 'cascade' }),
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
     /** Стабильная идентичность блока (steps.block_id) — переживает версии. */
     blockId: uuid('block_id').notNull(),
-    /** Поле блока: 'title' | 'desc' | 'why' | 'command' | 'content.md' и т.п. */
+    /** Поле блока: 'title' | 'desc' | 'why' | 'command' | 'content.md'. */
     field: text('field').notNull().default('desc'),
-    /** Версия, на которой тред заведён. */
+    /** Версия, на которой тред заведён (для контекста в Conversation). */
     createdVersion: integer('created_version').notNull(),
+    /** Иммутабельный якорь «как было сказано» (W3C-селекторы). */
     anchorOriginal: jsonb('anchor_original').notNull().$type<Record<string, unknown>>(),
-    anchorCurrent: jsonb('anchor_current').$type<Record<string, unknown> | null>(),
-    /** 'anchored' | 'reanchored' | 'orphaned' — три состояния, а не два. */
-    anchorState: text('anchor_state').notNull().default('anchored'),
-    /** Уверенность последней пере-привязки, 0..100 (пусто — не перепривязывался). */
-    anchorConfidence: integer('anchor_confidence'),
-    /** Версия, на которой якорь потеряли (аналог change_position у GitLab). */
-    anchorChangedAt: integer('anchor_changed_at'),
     /** Вмороженный текст поля на момент создания — контекст треда навсегда. */
     contextSnapshot: text('context_snapshot').notNull().default(''),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
@@ -1756,7 +1781,7 @@ export const blockCommentThreads = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('bct_tpl_idx').on(t.templateId), index('bct_block_idx').on(t.blockId)],
+  (t) => [index('bct_sug_idx').on(t.suggestionId), index('bct_block_idx').on(t.blockId)],
 )
 
 export const blockComments = pgTable(
