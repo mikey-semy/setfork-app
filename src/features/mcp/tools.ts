@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, eq, sql } from 'drizzle-orm'
-import { db, runs, runStepState, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
+import { and, desc, eq, sql } from 'drizzle-orm'
+import { db, knowledgeSources, runs, runStepState, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
@@ -13,6 +13,7 @@ import { applySuggestion } from '@/features/library/actions'
 import { slugify, uniqueSlug } from '@/features/library/slug'
 import { recordAgentAction } from '@/shared/agents/policy'
 import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
+import { attributionLine, checkLicense } from '@/shared/ai/source-license'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
 import { isCollaborator } from '@/features/collab/queries'
@@ -436,6 +437,75 @@ export async function mcpPendingSuggestions(userId: string, limit = 20) {
     pending: rows.length,
     suggestions: rows.map((r) => ({ id: r.id, list: r.slug, number: r.number, note: r.note, items: r.items, author: r.authorHandle, at: r.createdAt })),
   }
+}
+
+/**
+ * РЕГИСТРАЦИЯ ИСТОЧНИКА — единственная дверь, через которую чужой материал попадает в корпус.
+ *
+ * Лицензию называет ЧЕЛОВЕК, а не угадывает алгоритм по домену: доступность страницы в
+ * интернете не означает права копировать. Проверка fail-closed — невнятная лицензия равна
+ * запрету, потому что материал возьмут один раз, а отвечать за него придётся всё время, пока
+ * он лежит в библиотеке.
+ *
+ * Повторная регистрация того же адреса ОБНОВЛЯЕТ запись, а не плодит вторую с другой
+ * лицензией: иначе вопрос «какая из них настоящая» решать нечем.
+ */
+export async function mcpRegisterSource(
+  userId: string,
+  input: { url: string; title?: string; license: string; attribution?: string; note?: string },
+) {
+  const url = (input.url ?? '').trim()
+  if (!/^https?:\/\//i.test(url)) return { error: 'url must be an http(s) address' }
+  const verdict = checkLicense(input.license ?? '', input.attribution ?? '')
+  if (!verdict.ok || !verdict.license) return { error: `нельзя брать: ${verdict.reason}` }
+
+  const [row] = await db
+    .insert(knowledgeSources)
+    .values({
+      url,
+      title: (input.title ?? '').trim().slice(0, 200),
+      license: verdict.license,
+      attribution: (input.attribution ?? '').trim().slice(0, 200),
+      note: (input.note ?? '').trim().slice(0, 500),
+      addedBy: userId,
+    })
+    .onConflictDoUpdate({
+      target: knowledgeSources.url,
+      set: {
+        title: (input.title ?? '').trim().slice(0, 200),
+        license: verdict.license,
+        attribution: (input.attribution ?? '').trim().slice(0, 200),
+        note: (input.note ?? '').trim().slice(0, 500),
+      },
+    })
+    .returning({ id: knowledgeSources.id, license: knowledgeSources.license })
+
+  await recordAgentAction({
+    loop: 'mcp',
+    action: 'source.register',
+    resultStatus: 'ok',
+    actorUserId: userId,
+    principalMode: 'on_behalf_of',
+    signal: { url },
+    decision: { license: row.license, requiresAttribution: !!(input.attribution ?? '').trim() },
+    resultRef: url.slice(0, 300),
+  })
+  return {
+    id: row.id,
+    license: row.license,
+    attribution: attributionLine(verdict.license, input.attribution ?? '', url),
+    note: verdict.reason,
+  }
+}
+
+/** Зарегистрированные источники — что вообще разрешено цитировать и копировать. */
+export async function mcpListSources(limit = 50) {
+  const rows = await db
+    .select({ url: knowledgeSources.url, title: knowledgeSources.title, license: knowledgeSources.license, attribution: knowledgeSources.attribution, note: knowledgeSources.note })
+    .from(knowledgeSources)
+    .orderBy(desc(knowledgeSources.createdAt))
+    .limit(Math.min(200, Math.max(1, limit)))
+  return { sources: rows.length, allowed: rows }
 }
 
 export interface McpUpdateInput {
