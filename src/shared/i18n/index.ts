@@ -212,6 +212,11 @@ const DICT = {
     ru: 'Сохранение добавит коммит в ветку — авторство останется в истории git.',
   },
   prEdit: { en: 'Edit', ru: 'Править' },
+  prSuggestEdit: { en: 'Suggest a replacement', ru: 'Предложить текст' },
+  prSuggestHint: { en: 'This text replaces the field when applied', ru: 'Этот текст заменит поле при применении' },
+  prSuggestPh: { en: 'Install Docker Engine 24 or newer', ru: 'Установите Docker Engine 24 или новее' },
+  prApply: { en: 'Apply', ru: 'Применить' },
+  prApplied: { en: 'applied', ru: 'применено' },
   prCoauthors: { en: 'Co-authors', ru: 'Соавторы' },
   prSetMaintainerEdits: { en: 'Maintainers can edit suggestions', ru: 'Мейнтейнеры могут править предложения' },
   prSetMaintainerEditsHint: {

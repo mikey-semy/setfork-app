@@ -1962,6 +1962,20 @@ export const blockComments = pgTable(
     // пока он не отправит ревью пачкой (как «Start a review» у GitHub). Отдельный
     // флаг, а не отдельная таблица: тред, якорь и ответы у черновика те же самые.
     pending: boolean('pending').notNull().default(false),
+    /**
+     * ПРЕДЛОЖЕННЫЙ ТЕКСТ поля — замечание, которое применяется кнопкой.
+     *
+     * У GitHub это патч строк файла, и он рассыпается, когда строки уехали. У нас
+     * единица — блок с устойчивой идентичностью (ADR-0013), а поле названо в
+     * треде, поэтому «применить» — это подстановка значения, а не наложение
+     * патча: перенос пункта её не ломает.
+     *
+     * null — обычное замечание словами. Пустая строка — тоже осмысленное
+     * предложение: «здесь ничего не нужно».
+     */
+    suggestedText: text('suggested_text'),
+    /** Когда предложение применили (null — ещё нет). Дважды не применяем. */
+    appliedAt: timestamp('applied_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

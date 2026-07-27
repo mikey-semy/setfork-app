@@ -37,6 +37,8 @@ export async function createBlockThread(
   body: string,
   /** true — черновик ревью: замечание видно только автору до отправки пачкой. */
   pending = false,
+  /** Предложенный текст поля: замечание, которое применяется кнопкой. */
+  suggestedText: string | null = null,
 ): Promise<void> {
   const session = await requireSession()
   const text = body.trim().slice(0, MAX_BODY)
@@ -71,12 +73,21 @@ export async function createBlockThread(
     })
     .returning()
 
-  await db.insert(blockComments).values({ threadId: thread.id, authorId: session.userId, body: text, pending })
+  await db
+    .insert(blockComments)
+    .values({ threadId: thread.id, authorId: session.userId, body: text, pending, suggestedText })
   revalidatePath(`/${owner}/${slug}/suggestions/${suggestionId}`)
 }
 
 /** Ответить в тред (реплика без своего якоря — наследует тред, как в GitHub). */
-export async function replyToBlockThread(owner: string, slug: string, threadId: string, body: string, pending = false): Promise<void> {
+export async function replyToBlockThread(
+  owner: string,
+  slug: string,
+  threadId: string,
+  body: string,
+  pending = false,
+  suggestedText: string | null = null,
+): Promise<void> {
   const session = await requireSession()
   const text = body.trim().slice(0, MAX_BODY)
   if (!text) return
@@ -86,7 +97,7 @@ export async function replyToBlockThread(owner: string, slug: string, threadId: 
   const thread = await threadInList(threadId, meta.id)
   if (!thread) return
 
-  await db.insert(blockComments).values({ threadId, authorId: session.userId, body: text, pending })
+  await db.insert(blockComments).values({ threadId, authorId: session.userId, body: text, pending, suggestedText })
   await db.update(blockCommentThreads).set({ updatedAt: new Date() }).where(eq(blockCommentThreads.id, threadId))
   revalidatePath(`/${owner}/${slug}/suggestions/${thread.suggestionId}`)
 }

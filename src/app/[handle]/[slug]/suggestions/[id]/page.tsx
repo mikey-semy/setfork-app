@@ -177,6 +177,11 @@ export default async function SuggestionThreadPage({
     unresolved: { ru: 'Разрешены не все конфликты (или ветка изменилась) — выбери версии заново.', en: 'Not all conflicts were resolved (or the branch changed) — pick again.' },
     // Правку не записали, потому что ветку подвинули: чужой пуш не затираем.
     stale: { ru: t('prStaleWrite', 'ru'), en: t('prStaleWrite', 'en') },
+    // Применяли предложенную правку, а пункта уже нет — применять некуда.
+    orphaned: {
+      ru: 'Пункт, к которому относилась предложенная правка, исчез из предложения — применять некуда.',
+      en: 'The item this suggestion pointed at is gone — there is nothing to apply it to.',
+    },
   }
   const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? { ru: 'Не удалось выполнить merge.', en: 'Merge failed.' }) : null
 
@@ -472,6 +477,7 @@ export default async function SuggestionThreadPage({
               slug,
               suggestionId: sug.id,
               canComment: !!session && sug.status === 'open',
+              canApply: canEditItems,
               byBlock: threadsByBlock,
               labels: {
                 add: t('commentAdd', lang),
@@ -488,6 +494,11 @@ export default async function SuggestionThreadPage({
                 onBlock: t('commentOnBlock', lang),
                 stateReanchored: t('commentReanchored', lang),
                 orphanHint: t('commentOrphaned', lang),
+                suggestLabel: t('prSuggestEdit', lang),
+                suggestHint: t('prSuggestHint', lang),
+                suggestPh: t('prSuggestPh', lang),
+                apply: t('prApply', lang),
+                applied: t('prApplied', lang),
               },
             }}
           />
