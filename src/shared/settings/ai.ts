@@ -201,6 +201,30 @@ export async function getAiProviderRaw(): Promise<{
   }
 }
 
+/**
+ * Конфиг УКАЗАННОГО провайдера (а не сохранённого). Нужен админке: там провайдера выбирают
+ * ДО сохранения, и каталог моделей обязан показываться для выбранного — иначе выбор ничего не
+ * меняет, а при сохранении в неймспейс нового провайдера уезжает модель старого.
+ */
+export async function getProviderConfigFor(provider: AiProviderId): Promise<AiProviderConfig | null> {
+  const rows = await db
+    .select()
+    .from(appSettings)
+    .where(inArray(appSettings.key, [PROVIDER_SETTING, API_KEY_SETTING, SELECTEL_KEY_SETTING, YANDEX_KEY_SETTING, YANDEX_FOLDER_SETTING, GIGACHAT_KEY_SETTING]))
+  const m = Object.fromEntries(rows.map((r) => [r.key, r.value ?? '']))
+  // Подменяем ТОЛЬКО выбор провайдера: ключи и папка берутся настоящие, каждый из своего поля.
+  return resolveAiProvider({ ...m, [PROVIDER_SETTING]: provider })
+}
+
+/** Сохранённые модельные настройки указанного провайдера (для показа при переключении). */
+export async function getModelSettings(provider: AiProviderId): Promise<ModelSettings> {
+  const rows = await db
+    .select()
+    .from(appSettings)
+    .where(inArray(appSettings.key, [...AI_PROVIDERS.flatMap((pr) => NS_MODEL_KEYS.map((k) => nsKey(pr, k))), YANDEX_FOLDER_SETTING, 'ai.chat_model', 'ai.fallback_model', 'ai.council_models', 'ai.cheap_mode_threshold']))
+  return resolveModelSettings(Object.fromEntries(rows.map((r) => [r.key, r.value ?? ''])), provider)
+}
+
 /** Активный провайдер чата (null = ИИ не сконфигурирован). */
 export async function getAiProviderConfig(): Promise<AiProviderConfig | null> {
   const rows = await db

@@ -18,6 +18,7 @@ export function AiKeyAndSwitch({
   yandexFolder,
   searchKeyMasked,
   ru,
+  onProviderChange,
 }: {
   enabled: boolean
   provider: AiProviderChoice
@@ -30,6 +31,8 @@ export function AiKeyAndSwitch({
   /** Маска ключа Yandex Search API (веб-гора); пусто = не задан. */
   searchKeyMasked: string
   ru: boolean
+  /** Смена провайдера — родитель подтягивает каталог моделей ВЫБРАННОГО провайдера. */
+  onProviderChange?: (provider: AiProviderChoice) => void
 }) {
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [prov, setProv] = useState<AiProviderChoice>(provider)
@@ -91,8 +94,10 @@ export function AiKeyAndSwitch({
           name="provider"
           value={prov}
           onValueChange={(v) => {
-            setProv(v as AiProviderChoice)
+            const next = v as AiProviderChoice
+            setProv(next)
             setKeyInput('')
+            onProviderChange?.(next)
           }}
         >
           <SelectTrigger className="text-[13px]">

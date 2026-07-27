@@ -18,7 +18,8 @@ import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
-import { AiKeyAndSwitch } from '@/features/admin/AiKeyAndSwitch'
+import { buildOpts, CUR_SIGN } from '@/features/admin/model-options'
+import { AiProviderModels } from '@/features/admin/AiProviderModels'
 import { AssistFields } from '@/features/admin/AssistFields'
 import { CouncilFields } from '@/features/admin/CouncilFields'
 import { CouncilRoster } from '@/features/admin/CouncilRoster'
@@ -37,39 +38,6 @@ const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 tex
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 // OpenRouter возвращает отрицательную цену (-1/токен) у авто-роутеров — она «плавающая».
-function isVariable(m: ModelOption): boolean {
-  return m.promptPrice < 0 || m.completionPrice < 0
-}
-// Цена, по которой красим и сортируем: для эмбеддингов — prompt, для чата — completion (или prompt).
-function priceMetric(m: ModelOption, embedding?: boolean): number {
-  if (!m.priceKnown) return Number.POSITIVE_INFINITY // цена неизвестна — в конец, серым
-  if (isVariable(m)) return Number.POSITIVE_INFINITY // «плавающие» — в конец списка
-  return embedding ? m.promptPrice : m.completionPrice || m.promptPrice
-}
-type Currency = 'USD' | 'RUB'
-const CUR_SIGN: Record<Currency, string> = { USD: '$', RUB: '₽' }
-function priceText(m: ModelOption, embedding: boolean, ru: boolean, cur: Currency): string {
-  if (!m.priceKnown) return '—' // провайдер не прислал цену: неизвестно ≠ бесплатно
-  if (isVariable(m)) return ru ? 'Плавающая' : 'Variable'
-  if (!m.promptPrice && !m.completionPrice) return ru ? 'Бесплатно' : 'Free'
-  const s = CUR_SIGN[cur]
-  return embedding ? `${s}${m.promptPrice.toFixed(2)}` : `${s}${m.promptPrice.toFixed(2)} / ${s}${m.completionPrice.toFixed(2)}`
-}
-// Зелёный — дёшево, жёлтый — средне, красный — дорого, серый — плавающая.
-// Пороги в валюте каталога (₽-цены Selectel на два порядка «крупнее» долларовых).
-function priceClass(metric: number, cur: Currency): string {
-  if (!Number.isFinite(metric)) return 'text-muted'
-  const [ok, warn] = cur === 'RUB' ? [100, 1000] : [1, 10]
-  if (metric <= ok) return 'text-ok'
-  if (metric <= warn) return 'text-warn'
-  return 'text-danger'
-}
-function buildOpts(models: ModelOption[], embedding: boolean, ru: boolean, cur: Currency, pricesKnown: boolean): Option[] {
-  if (!pricesKnown) return [...models].map((m) => ({ value: m.id, id: m.id, label: m.label, family: m.family }))
-  return [...models]
-    .sort((a, b) => priceMetric(a, embedding) - priceMetric(b, embedding))
-    .map((m) => ({ value: m.id, id: m.id, label: m.label, family: m.family, price: priceText(m, embedding, ru, cur), priceClass: priceClass(priceMetric(m, embedding), cur) }))
-}
 function ensure(opts: Option[], current: string): Option[] {
   return current && !opts.some((o) => o.value === current) ? [{ value: current, id: current }, ...opts] : opts
 }
@@ -150,13 +118,13 @@ export default async function AdminPage() {
   }
   const models = await fetchModels() // сам вернёт пустой каталог, если провайдер не сконфигурирован
 
-  const chatOpts = ensure(buildOpts(models.chat, false, ru, models.currency, models.pricesKnown), settings.chatModel)
+  const chatOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.chatModel)
   // Ростер и галерея встроенных персонажей — читаем на сервере: клиенту не нужен доступ к БД и fs.
   const [rosterRows, gallery, uploaded] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars()])
   // Загруженная картинка идёт готовым URL (imgproxy/диск) — клиент не должен знать про S3-ключи.
   const roster = rosterRows.map((e) => ({ ...e, uploadedUrl: e.avatarUploaded ? uploaded[e.id] : undefined }))
-  const fallbackOpts = ensure(buildOpts(models.chat, false, ru, models.currency, models.pricesKnown), settings.fallbackModel)
-  const embOpts = ensure(buildOpts(models.embedding, true, ru, 'USD', true), settings.embeddingModel)
+  const fallbackOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.fallbackModel)
+  const embOpts = ensure(buildOpts(models.embedding, true, lang, 'USD', true), settings.embeddingModel)
 
   const card = 'rounded-lg border border-border bg-surface p-5'
 
@@ -232,7 +200,7 @@ export default async function AdminPage() {
           )}
 
           <form action={setAiSettings} className="flex flex-col gap-5">
-            <AiKeyAndSwitch
+            <AiProviderModels
               enabled={settings.enabled}
               provider={aiProv.provider}
               hasKey={hasKeyByProvider}
@@ -240,42 +208,22 @@ export default async function AdminPage() {
               yandexFolder={aiProv.yandexFolder}
               searchKeyMasked={maskKey(aiProv.yandexSearchKey)}
               ru={ru}
+              initial={{
+                chat: chatOpts,
+                embedding: embOpts,
+                chatModel: settings.chatModel,
+                fallbackModel: settings.fallbackModel,
+                embeddingModel: settings.embeddingModel,
+              }}
+              labels={{
+                chat: say('Chat model', 'Модель генерации'),
+                fallback: say('Fallback model (cheap mode)', 'Запасная модель (для дешёвого режима)'),
+                embedding: say('Embedding model (RAG, 1536-dim)', 'Модель эмбеддингов (RAG, 1536-мерная)'),
+                pick: say('Pick a model', 'Выбери модель'),
+                loading: say('Loading this provider’s models…', 'Загружаю модели этого провайдера…'),
+                noKey: say('No key for this provider — the catalog is unavailable, type the model id manually.', 'У этого провайдера нет ключа — каталог недоступен, id модели вводится вручную.'),
+              }}
             />
-
-            <div>
-              <label className={lbl}>{ru ? 'Модель генерации' : 'Chat model'}</label>
-              {chatOpts.length > 0 ? (
-                <ModelSelect name="chatModel" defaultValue={settings.chatModel} options={chatOpts} placeholder={ru ? 'Выбери модель' : 'Pick a model'} />
-              ) : (
-                <input name="chatModel" defaultValue={settings.chatModel} className={`${field} font-mono`} />
-              )}
-            </div>
-
-            <div>
-              <label className={lbl}>{ru ? 'Запасная модель (для дешёвого режима)' : 'Fallback model (cheap mode)'}</label>
-              {fallbackOpts.length > 0 ? (
-                <ModelSelect name="fallbackModel" defaultValue={settings.fallbackModel} options={fallbackOpts} allowEmpty placeholder="—" />
-              ) : (
-                <input name="fallbackModel" defaultValue={settings.fallbackModel} className={`${field} font-mono`} />
-              )}
-            </div>
-
-            <div>
-              <label className={lbl}>{ru ? 'Модель эмбеддингов (RAG, 1536-мерная)' : 'Embedding model (RAG, 1536-dim)'}</label>
-              {embOpts.length > 0 ? (
-                <ModelSelect name="embeddingModel" defaultValue={settings.embeddingModel} options={embOpts} placeholder={ru ? 'Выбери модель' : 'Pick a model'} />
-              ) : (
-                <input name="embeddingModel" defaultValue={settings.embeddingModel} className={`${field} font-mono`} />
-              )}
-              {models.provider !== 'openrouter' && (
-                <p className="mt-1.5 text-[12px] text-muted">
-                  {say(
-                    'Embedding model applies to the OpenRouter space; the space itself (incl. Yandex v2) is switched in the reindex panel.',
-                    'Модель эмбеддингов относится к OpenRouter-пространству; само пространство (в т.ч. Yandex v2) переключается в панели реиндекса.',
-                  )}
-                </p>
-              )}
-            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>

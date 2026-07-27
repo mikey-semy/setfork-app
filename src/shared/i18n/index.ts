@@ -359,6 +359,8 @@ const DICT = {
   // Пометка «здесь нужен человек»: слово «гном» в пользовательском тексте не звучит.
   needsHumanLabel: { en: 'A person is needed here', ru: 'Здесь нужен человек' },
   resultTab: { en: 'Result', ru: 'Итог' },
+  priceVariable: { en: 'Variable', ru: 'Плавающая' },
+  priceFree: { en: 'Free', ru: 'Бесплатно' },
   needsHumanAskLabel: { en: 'What to ask a person', ru: 'Что спросить у человека' },
   needsHumanAskPlaceholder: { en: 'What does this cost where you live?', ru: 'Сколько это стоит в вашем городе?' },
   needsHumanAnswer: { en: 'answer from experience', ru: 'ответить из опыта' },
