@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm'
-import { appSettings, db, jobs, steps, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
+import { agentActions, appSettings, db, jobs, steps, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
 import { listStore } from '@/features/library/list-store'
 import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
@@ -21,8 +21,9 @@ import { HOME_REALM } from '@/shared/ai/gnome-names'
 import { agentUserIds, professionOf, tenderForTags } from '@/shared/ai/gnome-account'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { moderateNewPublication } from '@/shared/agents/publication'
-import { getRoster } from '@/shared/ai/roster'
+import { getRoster, type Expert } from '@/shared/ai/roster'
 import { t, type Lang, type LocaleText } from '@/shared/i18n'
+import { uniqueSlug } from '@/shared/lib/slug'
 
 // ── ИИ-садовник (Э2 → ось B «живые списки») ──────────────────────────
 // Прозрачный ИИ-участник: раз в GARDENER_EVERY_DAYS выбирает несколько публичных
@@ -243,16 +244,113 @@ export async function gateOwnDraft(
   return decision.publish ? 'published' : 'held'
 }
 
+/**
+ * ПРАВИЛО ОСТАНОВКИ И РАСХОЖДЕНИЕ ФОРКОМ.
+ *
+ * Решение владельца: «нужно понимать, когда стоит остановиться в улучшении и начать делать
+ * аналогии с форками, потому что бывает так, что улучшения только портят». Список, который
+ * два прохода подряд не меняется, УЖЕ хорош настолько, насколько его умеет сделать машина.
+ * Третий проход по нему — не улучшение, а трата денег и риск испортить.
+ *
+ * Что вместо: РАСХОЖДЕНИЕ. Другой профильный мастер форкает список и уводит его в другой
+ * контекст — не «лучше», а ДЛЯ ДРУГОГО СЛУЧАЯ (бюджет, съёмное жильё, команда вместо
+ * одиночки, другой уровень подготовки). Так растёт покрытие, а не глянец: два разных списка
+ * полезнее одного отполированного.
+ *
+ * Счётчик берём из журнала действий — он и так пишется, отдельного состояния не надо.
+ */
+const STABLE_PASSES_BEFORE_FORK = 2
+
+/** Сколько раз ПОДРЯД список признан устоявшимся (refine не нашёл, что менять). */
+export async function stablePasses(templateId: string): Promise<number> {
+  const rows = await db
+    .select({ action: agentActions.action })
+    .from(agentActions)
+    .where(and(eq(agentActions.loop, 'gardener'), sql`${agentActions.signal}->>'templateId' = ${templateId}`))
+    .orderBy(desc(agentActions.occurredAt))
+    .limit(6)
+  let n = 0
+  for (const r of rows) {
+    // Любое ДЕЙСТВИЕ по списку (правка, форк) обнуляет счётчик: считаем именно «подряд».
+    if (r.action !== 'list.stable') break
+    n++
+  }
+  return n
+}
+
+/** Уже расходились от этого списка? Один форк на источник — иначе плодим клоны. */
+export async function alreadyForked(templateId: string, agents: string[]): Promise<boolean> {
+  const [row] = await db
+    .select({ id: templates.id })
+    .from(templates)
+    .where(and(eq(templates.forkedFromId, templateId), inArray(templates.ownerId, agents)))
+    .limit(1)
+  return !!row
+}
+
+/**
+ * Расхождение форком: другой мастер берёт устоявшийся список и уводит в ДРУГОЙ контекст.
+ * Форк — черновик: публиковать его будет гейт готовности, как и всё остальное.
+ */
+async function divergeByFork(
+  tpl: { id: string; slug: string; desc: LocaleText | null; tags: string[] },
+  current: { title: string; desc: string; tags: string[]; items: GeneratedItem[] },
+  lang: Lang,
+  kind: ListKind,
+  ctx: { roster: Expert[]; excludeUserId: string; agents: string[]; policyVersion: number },
+): Promise<boolean> {
+  // Форкает ДРУГОЙ мастер: тот же гном по тому же списку даст ту же полировку.
+  const other = await tenderForTags(tpl.tags, ctx.roster.filter((e) => e.userId !== ctx.excludeUserId))
+  if (!other?.userId) return false
+  if (!(await globalBudgetOk())) return false
+
+  const instruction = `${policyFor(kind, {})}
+DIVERGE, do not polish. The list is already good for its original case. Produce a variant for a DIFFERENT concrete situation of the same topic (tighter budget, rented place, a team instead of one person, a different skill level, another climate or season). Change what the situation actually changes and keep the shape. Name the situation in the first item's description.`
+  const variant = await generateListRefine(current, instruction, lang, { userId: other.userId, feature: 'refine', refType: 'template', refId: tpl.id, kind })
+  if (!variant || !variant.items.length) return false
+
+  const slug = await uniqueSlug(variant.title || current.title, other.userId)
+  const created = await listStore.create({
+    ownerId: other.userId,
+    slug,
+    title: { [lang]: variant.title || current.title },
+    desc: variant.desc ? { [lang]: variant.desc } : (tpl.desc ?? {}),
+    tags: variant.tags.length ? variant.tags.slice(0, 8) : tpl.tags,
+    ordered: true,
+    visibility: 'public',
+    // Черновик: расхождение — гипотеза, а не улучшение. Публикует гейт готовности.
+    status: 'draft',
+    origin: 'forked',
+    forkedFromId: tpl.id,
+    note: `diverged from ${tpl.slug}`,
+    steps: toStepInput(toProposed(variant.items, lang)),
+  })
+  await enqueueReindex(created.id)
+  await recordAgentAction({
+    loop: 'gardener',
+    action: 'list.fork',
+    resultStatus: 'ok',
+    agentId: other.expert.id,
+    actorUserId: other.userId,
+    signal: { templateId: tpl.id, slug: tpl.slug, reason: 'stable for 2 passes - polishing further only risks harm' },
+    decision: { mode: 'diverge', profession: professionOf(other.expert, 'en'), newSlug: slug },
+    resultRef: slug,
+    policyVersion: ctx.policyVersion,
+  })
+  log.info('gardener: diverged by fork', { from: tpl.slug, to: slug, by: other.expert.id })
+  return true
+}
+
 /** Прогон садовника: до BATCH списков за раз, каждый — refine → suggestion. */
-export async function runGardenerSweep(): Promise<{ proposed: number; skipped: number; published: number }> {
+export async function runGardenerSweep(): Promise<{ proposed: number; skipped: number; published: number; diverged: number }> {
   if (!(await isAiAvailable())) {
     log.info('gardener: AI unavailable, skipping')
-    return { proposed: 0, skipped: 0, published: 0 }
+    return { proposed: 0, skipped: 0, published: 0, diverged: 0 }
   }
   // Фоновый расход без участия человека — уважаем глобальный дневной кап инстанса.
   if (!(await globalBudgetOk())) {
     log.info('gardener: global AI budget exhausted, skipping')
-    return { proposed: 0, skipped: 0, published: 0 }
+    return { proposed: 0, skipped: 0, published: 0, diverged: 0 }
   }
   const loop = await loopPolicy('gardener')
   const gardener = await ensureGardenerUser()
@@ -262,6 +360,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
   let proposed = 0
   let skipped = 0
   let published = 0
+  let diverged = 0
   for (const tpl of candidates) {
     const [ver] = await db
       .select({ id: templateVersions.id })
@@ -355,11 +454,28 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     const norm = (xs: GeneratedItem[]) => JSON.stringify(toProposed(xs, lang))
     if (norm(refined.items) === norm(current.items as GeneratedItem[])) {
       // Для СВОЕГО черновика «улучшать нечего» — не пропуск, а сигнал: список устоялся,
-      // самое время спросить планку. Это же и есть правило остановки в мягком виде —
-      // полировать до бесконечности вредно, улучшения тоже портят.
+      // самое время спросить планку.
       if (ownedByCompany && tpl.status === 'draft') {
         const res = await gateOwnDraft(tpl, { ...current, items: current.items }, gateCtx)
         if (res === 'published') published++
+      }
+      // «Устоялся» пишем в журнал — по нему и считается правило остановки.
+      await recordAgentAction({
+        loop: 'gardener',
+        action: 'list.stable',
+        resultStatus: 'skipped',
+        agentId: tender?.expert.id ?? '',
+        actorUserId: tenderId,
+        signal: { templateId: tpl.id, slug: tpl.slug },
+        decision: { reason: 'refine returned the same content' },
+        resultRef: tpl.slug,
+        policyVersion: loop.policyVersion,
+      })
+      // Два прохода подряд без изменений → хватит полировать. РАСХОДИМСЯ форком: другой
+      // мастер уводит список в другой контекст. Один форк на источник.
+      if ((await stablePasses(tpl.id)) >= STABLE_PASSES_BEFORE_FORK && !(await alreadyForked(tpl.id, agents))) {
+        const forked = await divergeByFork(tpl, current, lang, kind, { roster, excludeUserId: tenderId, agents, policyVersion: loop.policyVersion })
+        if (forked) diverged++
       }
       skipped++
       continue
@@ -425,6 +541,6 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     }
     proposed++
   }
-  log.info('gardener sweep done', { candidates: candidates.length, proposed, skipped, published })
-  return { proposed, skipped, published }
+  log.info('gardener sweep done', { candidates: candidates.length, proposed, skipped, published, diverged })
+  return { proposed, skipped, published, diverged }
 }
