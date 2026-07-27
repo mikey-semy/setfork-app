@@ -68,6 +68,11 @@ export async function setAiSettings(formData: FormData): Promise<void> {
     // «Помощь на шаге» (AI-подсказка застрявшему в прогоне) — свой флаг+аудитория.
     'ai.assist_enabled': formData.get('assistEnabled') === 'on' ? 'true' : 'false',
     'ai.assist_audience': formData.get('assistAudience') === 'all' ? 'all' : 'admin',
+    // Самогенерация. Неизвестное значение → 'off': опечатка не должна ВКЛЮЧАТЬ трату.
+    'ai.selfgen_mode': (['off', 'manual', 'auto'] as const).includes(formData.get('selfGenMode') as 'off' | 'manual' | 'auto')
+      ? String(formData.get('selfGenMode'))
+      : 'off',
+    'ai.selfgen_per_day': String(Math.max(0, Math.min(50, Number(formData.get('selfGenPerDay')) || 0))),
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
   if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)
@@ -440,6 +445,22 @@ export async function createGnomeAccounts(): Promise<void> {
   await ensureGnomeUsers(await getRoster())
   revalidatePath('/admin/council')
   redirect('/admin/council')
+}
+
+/**
+ * Ручной режим самогенерации: поручить специалисту написать черновик списка по его
+ * теме. Тот же путь, что у авто-петли — поэтому режимы не разъезжаются.
+ * Результат — ЧЕРНОВИК: публикует человек.
+ */
+export async function selfGenerateNow(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const expertId = String(formData.get('expertId') ?? '').trim()
+  const topic = String(formData.get('topic') ?? '').trim() || undefined
+  if (!expertId) redirect('/admin/council')
+  const { selfGenerateOne } = await import('@/features/library/selfgen')
+  const res = await selfGenerateOne(expertId, topic)
+  revalidatePath('/admin/council')
+  redirect(res.ref ? `/${res.ref}` : `/admin/council?selfgen=${res.error ?? 'failed'}`)
 }
 
 export async function hireGnome(formData: FormData): Promise<void> {

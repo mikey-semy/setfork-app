@@ -18,6 +18,9 @@ export interface CouncilValues {
   webSeek: boolean
   clarify: boolean
   maxPerMonth: number
+  /** Режим самогенерации: off (дефолт) | manual (кнопкой) | auto (петля). */
+  selfGenMode: 'off' | 'manual' | 'auto'
+  selfGenPerDay: number
 }
 
 export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: boolean; modelOptions: Option[] }) {
@@ -95,6 +98,33 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
           <p className="text-[12px] text-muted">{say('Ask before generating when the request is too vague.', 'Спрашивать перед генерацией, если запрос слишком расплывчатый.')}</p>
         </div>
         <Switch name="councilClarify" checked={clarify} onCheckedChange={setClarify} />
+      </div>
+
+      {/* САМОГЕНЕРАЦИЯ: инициатива компании, а не ответ на запрос пользователя.
+          off — дефолт (автономная трата не включается сама), manual — только кнопкой
+          в зале совета, auto — петля раз в сутки. Результат в любом режиме — черновик. */}
+      <div className="border-t border-border pt-4">
+        <label className={lbl}>{say('Self-generation (specialists write their own lists)', 'Самогенерация (специалисты сами пишут списки)')}</label>
+        <Select name="selfGenMode" defaultValue={v.selfGenMode}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="off">{say('Off', 'Выключено')}</SelectItem>
+            <SelectItem value="manual">{say('Manual — by button only', 'Вручную — только по кнопке')}</SelectItem>
+            <SelectItem value="auto">{say('Auto — once a day', 'Автоматически — раз в сутки')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="mt-1.5 text-[12px] text-muted">
+          {say(
+            'The result is always a DRAFT — a machine-written list is never published without a human. Auto mode also respects the daily AI spend ceiling.',
+            'Результат всегда ЧЕРНОВИК — машинный список не публикуется без человека. Авто-режим вдобавок уважает дневной потолок расхода ИИ.',
+          )}
+        </p>
+        <div className="mt-3">
+          <label className={lbl}>{say('Drafts per day (0 = no cap)', 'Черновиков в сутки (0 = без капа)')}</label>
+          <input type="number" name="selfGenPerDay" min="0" max="50" step="1" defaultValue={v.selfGenPerDay} className={field} />
+        </div>
       </div>
     </div>
   )

@@ -13,6 +13,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { isAiAvailable } from '@/shared/settings/ai'
 import { notify } from '@/features/notifications/notify'
 import { log } from '@/shared/observability'
+import { toProposed, toStepInput } from '@/shared/lib/step-input'
 import { HOME_REALM } from '@/shared/ai/gnome-names'
 import { agentUserIds, tenderForTags } from '@/shared/ai/gnome-account'
 import { getRoster } from '@/shared/ai/roster'
@@ -122,41 +123,6 @@ function noteFor(kind: ListKind, lang: Lang): string {
 }
 
 
-// Форма шагов для listStore.addVersion (та же, что toStepInput в library/actions).
-function toStepInput(items: ProposedItem[]) {
-  return items.map((it, i) => ({
-    n: i + 1,
-    type: it.type ?? 'step',
-    content: it.content ?? {},
-    title: it.title,
-    desc: it.desc,
-    command: it.command,
-    level: it.level,
-    why: it.why,
-    section: it.section,
-    subtasks: it.subtasks,
-    refs: it.refs,
-    imageRef: it.imageKey ?? null,
-  }))
-}
-
-function toProposed(items: GeneratedItem[], lang: Lang): ProposedItem[] {
-  return items.map((it) => ({
-    title: { [lang]: it.title.trim() },
-    desc: it.desc.trim() ? { [lang]: it.desc.trim() } : {},
-    command: (it.command ?? '').trim(),
-    hasImage: false,
-    level: it.level ?? 'required',
-    why: it.why?.trim() ? { [lang]: it.why.trim() } : {},
-    // section раньше терялся здесь (второй разрыв цепочки после parseList) —
-    // из-за этого секционные списки были исключены из свипа целиком.
-    section: it.section?.trim() ? { [lang]: it.section.trim() } : {},
-    subtasks: (it.subtasks ?? []).filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
-    refs: (it.refs ?? [])
-      .filter((r) => r.label?.trim())
-      .map((r) => ({ label: { [lang]: r.label.trim() }, ...(r.url?.trim() ? { url: r.url.trim() } : {}) })),
-  }))
-}
 
 /** Прогон садовника: до BATCH списков за раз, каждый — refine → suggestion. */
 export async function runGardenerSweep(): Promise<{ proposed: number; skipped: number }> {

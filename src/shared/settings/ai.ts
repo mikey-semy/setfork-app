@@ -31,6 +31,15 @@ export interface AiSettings {
   councilClarify: boolean
   /** Лимит советов на пользователя за ~месяц (не для админов); исчерпал → откат на одиночную. 0 = безлимит. */
   councilMaxPerMonth: number
+  /**
+   * Самогенерация: специалист сам пишет черновик списка по своей теме.
+   * 'off' (дефолт) — выключено; 'manual' — только по кнопке из зала совета;
+   * 'auto' — петля раз в сутки. Дефолт именно off: автономная трата денег не
+   * должна включаться сама. Результат в любом режиме — ЧЕРНОВИК.
+   */
+  selfGenMode: 'off' | 'manual' | 'auto'
+  /** Суточный кап черновиков самогенерации (сверх денежного потолка). 0 = без капа. */
+  selfGenPerDay: number
   /** «Помощь на шаге»: AI-подсказка застрявшему в прогоне. OFF по умолчанию. */
   assistEnabled: boolean
   /** Аудитория помощи (гейт цены/раскатки): 'admin' — только админам, 'all' — всем. */
@@ -301,6 +310,9 @@ export async function getAiSettings(): Promise<AiSettings> {
     // вопросов, а clarify на проде молчал — настройка нигде не была включена).
     councilClarify: m['ai.council_clarify'] != null ? m['ai.council_clarify'] === 'true' : process.env.SETFORK_COUNCIL_CLARIFY !== 'false',
     councilMaxPerMonth: num(m['ai.council_max_per_month'], Number(process.env.SETFORK_COUNCIL_MAX_PER_MONTH) || 0),
+    // Неизвестное значение → 'off': опечатка в настройке не должна ВКЛЮЧАТЬ трату.
+    selfGenMode: m['ai.selfgen_mode'] === 'auto' ? 'auto' : m['ai.selfgen_mode'] === 'manual' ? 'manual' : 'off',
+    selfGenPerDay: num(m['ai.selfgen_per_day'], 3),
     assistEnabled: m['ai.assist_enabled'] === 'true',
     assistAudience: m['ai.assist_audience'] === 'all' ? 'all' : 'admin',
     freeMonthlyGens: num(m['ai.free_monthly_gens'], Number(process.env.SETFORK_FREE_MONTHLY_GENS) || 0),

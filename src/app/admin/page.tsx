@@ -354,6 +354,8 @@ export default async function AdminPage() {
                 webSeek: settings.councilWebSeek,
                 clarify: settings.councilClarify,
                 maxPerMonth: settings.councilMaxPerMonth,
+                selfGenMode: settings.selfGenMode,
+                selfGenPerDay: settings.selfGenPerDay,
               }}
               ru={ru}
             />
