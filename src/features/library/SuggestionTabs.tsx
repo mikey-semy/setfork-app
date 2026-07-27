@@ -1,10 +1,14 @@
 import Link from 'next/link'
-import { MessagesSquare, FileDiff } from 'lucide-react'
+import { MessagesSquare, FileDiff, Eye } from 'lucide-react'
 
-export type SuggestionTab = 'conversation' | 'files'
+export type SuggestionTab = 'conversation' | 'files' | 'result'
 
 /**
- * Вкладки правки (PR): Обсуждение | Изменения.
+ * Вкладки правки (PR): Обсуждение | Изменения | Итог.
+ *
+ * «Итог» — как список будет выглядеть, ЕСЛИ правку принять. Дифф отвечает на другой вопрос
+ * («что изменилось»), а решение принимают по результату; без этого вида правки от компании
+ * копились непринятыми — посмотреть результат было негде.
  *
  * Переключение через ?tab= — адрес остаётся ссылабельным (можно кинуть коллеге
  * ссылку прямо на изменения), в отличие от клиентского состояния. Отдельного
@@ -24,7 +28,7 @@ export function SuggestionTabs({
   active: SuggestionTab
   conversationCount: number
   filesCount: number
-  labels: { conversation: string; files: string }
+  labels: { conversation: string; files: string; result: string }
 }) {
   const item = (tab: SuggestionTab, icon: React.ReactNode, label: string, count: number) => {
     const on = tab === active
@@ -47,6 +51,7 @@ export function SuggestionTabs({
     <div className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
       {item('conversation', <MessagesSquare size={14} />, labels.conversation, conversationCount)}
       {item('files', <FileDiff size={14} />, labels.files, filesCount)}
+      {item('result', <Eye size={14} />, labels.result, 0)}
     </div>
   )
 }

@@ -17,6 +17,7 @@ import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
+import { SuggestionResult } from '@/features/library/SuggestionResult'
 import { SuggestionTabs, type SuggestionTab } from '@/features/library/SuggestionTabs'
 import { SuggestionTitle } from '@/features/library/SuggestionTitle'
 import { MergedPanel } from '@/features/library/MergedPanel'
@@ -134,7 +135,7 @@ export default async function SuggestionThreadPage({
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
   const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
   // Вкладка из ?tab= — адрес ссылабелен (можно послать ссылку сразу на изменения).
-  const tab: SuggestionTab = sp.tab === 'files' ? 'files' : 'conversation'
+  const tab: SuggestionTab = sp.tab === 'files' ? 'files' : sp.tab === 'result' ? 'result' : 'conversation'
   const changedCount = diff.summary.added + diff.summary.removed + diff.summary.modified
   const threadCount = threads.length + comments.length
 
@@ -206,7 +207,7 @@ export default async function SuggestionThreadPage({
           active={tab}
           conversationCount={threadCount}
           filesCount={changedCount}
-          labels={{ conversation: t('conversationTab', lang), files: t('proposedChanges', lang) }}
+          labels={{ conversation: t('conversationTab', lang), files: t('proposedChanges', lang), result: t('resultTab', lang) }}
         />
 
         {/* Две колонки: содержимое вкладки + боковая панель (общий примитив). */}
@@ -362,6 +363,17 @@ export default async function SuggestionThreadPage({
 
         {/* Обсуждение — вкладка по умолчанию. Заметка правки и ревью видны здесь,
             чтобы разговор шёл при полном контексте, как в Conversation у GitHub. */}
+        {/* ИТОГ: каким станет список, если правку принять. Решение принимают по результату,
+            а не по плюсам и минусам — именно поэтому правки копились непринятыми. */}
+        {tab === 'result' && (
+          <>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
+              {t('resultTab', lang)} · {lang === 'ru' ? `станет v${meta.currentVersion + 1}` : `becomes v${meta.currentVersion + 1}`}
+            </div>
+            <SuggestionResult items={items} lang={lang} ordered={meta.ordered} />
+          </>
+        )}
+
         {tab === 'conversation' && (<>
         <SuggestionTimeline
           events={timeline}
