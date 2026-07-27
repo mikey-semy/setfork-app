@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 /**
@@ -36,19 +36,19 @@ export function ScrollRow({
   const ref = scrollerRef ?? own
   const [edges, setEdges] = useState({ left: false, right: false })
 
-  const measure = useCallback(() => {
-    const el = ref.current
-    if (!el) return
-    // 1px допуск: дробный zoom и субпиксельные ширины иначе оставляют «хвост»,
-    // и стрелка висит на до конца долистанном ряду.
-    const left = el.scrollLeft > 1
-    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
-    setEdges((p) => (p.left === left && p.right === right ? p : { left, right }))
-  }, [ref])
-
+  // measure объявлена ВНУТРИ эффекта, а не через useCallback: ref сюда может
+  // прийти снаружи (TabNav), и мемоизация по такому ref не сохраняется —
+  // React Compiler честно отказывается компилировать компонент целиком.
   useEffect(() => {
     const el = ref.current
     if (!el) return
+    const measure = () => {
+      // 1px допуск: дробный zoom и субпиксельные ширины иначе оставляют «хвост»,
+      // и стрелка висит на до конца долистанном ряду.
+      const left = el.scrollLeft > 1
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+      setEdges((p) => (p.left === left && p.right === right ? p : { left, right }))
+    }
     measure()
     el.addEventListener('scroll', measure, { passive: true })
     // Содержимое меняется (счётчики, появление вкладки «Коммиты») — следим за
@@ -60,7 +60,7 @@ export function ScrollRow({
       el.removeEventListener('scroll', measure)
       ro.disconnect()
     }
-  }, [measure, ref])
+  }, [ref])
 
   const nudge = (dir: -1 | 1) => {
     const el = ref.current
