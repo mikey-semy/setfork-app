@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { DatePicker } from '@/shared/ui/DatePicker'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
+import { Switch } from '@/shared/ui/switch'
 import { CodeEditor } from '@/shared/ui/CodeEditor'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorProduct, type EditorQuiz } from './editor'
 import { t } from '@/shared/i18n'
@@ -508,6 +509,29 @@ export function ListEditor({
               ariaLabel={ru ? 'Зачем этот шаг' : 'Why this step matters'}
               placeholder={ru ? 'Зачем этот шаг (необязательно)' : 'Why this step matters (optional)'}
             />
+
+            {/* «ЗДЕСЬ НУЖЕН ЧЕЛОВЕК»: пункт зависит от того, чего не знает никакая модель —
+                местные цены, вкус, время на вашем оборудовании. Снятая галочка = «человек
+                ответил», это единственный способ закрыть пометку. Тумблер — как в
+                настройках (Switch из shared/ui), поле вопроса появляется только при вкл. */}
+            <div className="flex items-center justify-between gap-3">
+              <span className="min-w-0 text-[11.5px] text-muted">{t('needsHumanLabel', lang)}</span>
+              <Switch
+                checked={it.needsHuman}
+                onCheckedChange={(on) => patch(i, { needsHuman: on, ...(on ? {} : { needsHumanAsk: '' }) })}
+                aria-label={`${i + 1}: ${t('needsHumanLabel', lang)}`}
+              />
+            </div>
+            {it.needsHuman && (
+              <BubbleTextEditor
+                value={it.needsHumanAsk}
+                onChange={(v) => patch(i, { needsHumanAsk: v })}
+                singleLine
+                lang={ru ? 'ru' : 'en'}
+                ariaLabel={t('needsHumanAskLabel', lang)}
+                placeholder={t('needsHumanAskPlaceholder', lang)}
+              />
+            )}
 
             {/* Подпункты */}
             {it.subtasks.length > 0 && (

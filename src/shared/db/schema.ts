@@ -89,6 +89,10 @@ export type ProposedItem = {
   imageKey?: string // storage_key скриншота в S3 (если есть)
   level: StepLevel
   why: LocaleText // «зачем/почему» — обоснование шага
+  /** «Здесь нужен человек»: машина не может знать этого — местные цены, вкус, опыт. */
+  needsHuman?: boolean
+  /** Что спросить у человека (пусто при needsHuman → общий текст). */
+  needsHumanAsk?: LocaleText
   section: LocaleText // заголовок секции-группы (пусто — без секции)
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
@@ -342,6 +346,14 @@ export const steps = pgTable('steps', {
   imageKey: text('image_key'), // storage_key скриншота в S3
   level: stepLevel('level').notNull().default('required'),
   why: jsonb('why').notNull().default({}).$type<LocaleText>(), // «зачем/почему»
+
+  // «ЗДЕСЬ НУЖЕН ЧЕЛОВЕК» — честная пометка там, где машина знать не может: местные
+  // цены и наличие, вкус и ощущение, время на ВАШЕМ оборудовании, региональные правила.
+  // Это не дефект списка, а приглашение: реальность и опыт доступны человеку, не модели.
+  // Выдумка вреднее скудности — пусть лучше стоит пометка, чем правдоподобная цифра.
+  needsHuman: boolean('needs_human').notNull().default(false),
+  /** Что именно спросить у человека («сколько стоит в вашем городе»). Пусто — общий текст. */
+  needsHumanAsk: jsonb('needs_human_ask').notNull().default({}).$type<LocaleText>(),
   section: jsonb('section').notNull().default({}).$type<LocaleText>(), // заголовок секции-группы
 
   // Подшаги и ссылки — простой контент шага, храним как locale-JSON.
@@ -1040,7 +1052,9 @@ export const courseCompletions = pgTable(
 // ── Generations (AI-генерация: запрос + варианты-кандидаты) ──────────
 // Кандидат = один сгенерированный вариант списка. «Перегенерировать» добавляет
 // ещё кандидата (idx 1,2,3…); выбранный превращается в черновик-список.
-export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; section?: string; level?: StepLevel; why?: string; refs?: { label: string; url: string }[] }
+// needsHuman/needsHumanAsk — пометка «здесь нужен человек» из генерации: доезжает до
+// принятого списка, иначе честное признание модели теряется на пути кандидат → список.
+export type CandidateItem = { title: string; desc: string; command: string; subtasks: string[]; section?: string; level?: StepLevel; why?: string; refs?: { label: string; url: string }[]; needsHuman?: boolean; needsHumanAsk?: string }
 
 export const generations = pgTable(
   'generations',

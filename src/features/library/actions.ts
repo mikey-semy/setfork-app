@@ -671,6 +671,8 @@ export async function refineList(input: {
     imagePreview: '',
     level: it.level,
     why: it.why,
+    needsHuman: it.needsHuman === true,
+    needsHumanAsk: it.needsHumanAsk ?? '',
     section: '',
     subtasks: it.subtasks,
     refs: (it.refs ?? []).map((r) => ({ label: r.label, url: r.url })),
