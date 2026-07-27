@@ -1,5 +1,5 @@
 import 'server-only'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, isNull, sql } from 'drizzle-orm'
 import { blockComments, blockCommentThreads, db, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
 import type { TextAnchor } from './anchor'
@@ -27,6 +27,20 @@ export interface BlockThread {
  * Review-треды одного предложения (PR). Состояние якоря здесь НЕ считается —
  * его вычисляет threadState() на рендере против предложенных пунктов.
  */
+/**
+ * Сколько обсуждений на пунктах ещё не решено.
+ *
+ * Нужен и гейту слияния, и вкладке проверок — считаем в одном месте, чтобы
+ * «нельзя слить» и «в проверках красное» никогда не расходились.
+ */
+export async function countUnresolvedThreads(suggestionId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(blockCommentThreads)
+    .where(and(eq(blockCommentThreads.suggestionId, suggestionId), isNull(blockCommentThreads.resolvedAt)))
+  return row?.n ?? 0
+}
+
 export async function getSuggestionThreads(suggestionId: string): Promise<BlockThread[]> {
   const threads = await db
     .select()

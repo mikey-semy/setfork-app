@@ -26,6 +26,7 @@ import { ChecksList } from '@/features/library/ChecksList'
 import { CommitsList } from '@/features/library/CommitsList'
 import { DraftToggle } from '@/features/library/DraftToggle'
 import { suggestionChecks } from '@/features/library/suggestion-checks'
+import { closingRefs } from '@/features/library/closing-refs'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
@@ -46,7 +47,7 @@ import { LabelEditor } from '@/features/issues/LabelEditor'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
 import { getListLabels } from '@/features/issues/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
-import { getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails } from '@/features/library/queries'
+import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails } from '@/features/library/queries'
 import { setSuggestionDraft, setSuggestionLabels, setSuggestionMilestone, toggleReviewRequest, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
@@ -114,6 +115,10 @@ export default async function SuggestionThreadPage({
     else threadsByBlock.set(th.blockId, [{ thread: th, state }])
   }
 
+  // Задачи, которые предложение закроет при слиянии («closes #12» в тексте).
+  const linkedIssues = await getIssuesByNumbers(meta.id, closingRefs(sug.note))
+  // Нерешённые считаем из УЖЕ загруженных тредов: второй запрос дал бы то же число.
+  const unresolvedThreads = threads.filter((th) => !th.resolvedAt).length
   const [reviews, watchState, watchCount, assignees, reviewRequests, customLabels, msOptions, curMilestone] = await Promise.all([
     getSuggestionReviews(sug.id),
     session ? getWatchState(session.userId, meta.id) : Promise.resolve(null),
@@ -202,6 +207,7 @@ export default async function SuggestionThreadPage({
     branchMissing,
     draft: sug.draft,
     blockingReview: reviews.some((r) => r.blocking),
+    unresolvedThreads,
     moderation: meta.moderation,
     lang: lang === 'ru' ? 'ru' : 'en',
   })
@@ -223,6 +229,13 @@ export default async function SuggestionThreadPage({
   // Ревью нужно в ДВУХ вкладках: в обсуждении (там идёт разговор) и сразу под
   // изменениями (отревьюил — тут же вынес вердикт). Один элемент, а не две копии
   // одной формы: вкладки взаимоисключающие, так что в дерево попадёт ровно одна.
+  // Почему нельзя слить. Раньше блокирующее ревью просто заставляло экшен молча
+  // вернуться: пользователь жал кнопку и не получал ничего. Теперь причина названа,
+  // а кнопки нет — состояние видно до клика.
+  const blockReasons: string[] = []
+  if (reviews.some((r) => r.blocking)) blockReasons.push(t('prBlockedReview', lang))
+  if (unresolvedThreads > 0) blockReasons.push(`${t('prBlockedThreads', lang)}: ${unresolvedThreads}`)
+
   const reviewPanel =
     sug.status === 'open' ? (
       <div className="mt-3">
@@ -329,7 +342,7 @@ export default async function SuggestionThreadPage({
         {branchMissing && (
           <div className="mb-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[13px] text-warn">
             {lang === 'ru'
-              ? `Ветка «${sug.branchRef}» удалена — PR неактуален, можно только отклонить.`
+              ? `Ветка «${sug.branchRef}» удалена — предложение неактуально, можно только отклонить.`
               : `Branch “${sug.branchRef}” was deleted — this PR is stale and can only be closed.`}
           </div>
         )}
@@ -349,7 +362,7 @@ export default async function SuggestionThreadPage({
 
         {tab === 'files' && (<>
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
-          {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → правка` : `v${sug.baseVersion} → suggestion`}
+          {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → предложение` : `v${sug.baseVersion} → suggestion`}
         </div>
         {/* Переключатель вида — общий с сравнением версий. */}
         <div className="mb-3 flex justify-end">
@@ -465,7 +478,7 @@ export default async function SuggestionThreadPage({
         {isOwner && !sug.branchRef && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
           <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">
             {lang === 'ru'
-              ? `Правка основана на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
+              ? `Предложение основано на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
               : `This suggestion is based on v${sug.baseVersion}, but the list is now at v${meta.currentVersion}. Accepting will overwrite the newer changes (v${sug.baseVersion + 1}–v${meta.currentVersion}).`}
           </div>
         )}
@@ -479,9 +492,17 @@ export default async function SuggestionThreadPage({
           />
         )}
 
+        {blockReasons.length > 0 && sug.status === 'open' && !isDraft && (
+          <div className="mt-3 rounded-md border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[12.5px] text-danger">
+            {t('prMergeBlocked', lang)}: {blockReasons.join('; ')}
+          </div>
+        )}
+
         {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open' && !isDraft) && (
           <div className="mt-3 flex gap-2.5">
-            {sug.branchRef ? (
+            {/* Кнопка слияния прячется при блокировке, «Отклонить» — нет: отклонить
+                предложение можно в любом состоянии, это не обход гейта. */}
+            {blockReasons.length > 0 ? null : sug.branchRef ? (
               !branchMissing &&
               !hasConflicts && (
                 <form action={mergeBranchPr.bind(null, sug.id)}>
@@ -647,6 +668,22 @@ export default async function SuggestionThreadPage({
                 onSet={setSuggestionMilestone.bind(null, sug.id)}
               />
             </AsideCard>
+
+            {linkedIssues.length > 0 && (
+              <AsideCard title={t('prLinkedIssues', lang)}>
+                <ul className="flex flex-col gap-1.5">
+                  {linkedIssues.map((iss) => (
+                    <li key={iss.number} className="flex items-start gap-1.5 text-[12.5px]">
+                      <Link href={`/${owner}/${slug}/issues/${iss.number}`} className="font-mono text-muted hover:text-accent">
+                        #{iss.number}
+                      </Link>
+                      <span className={`min-w-0 flex-1 ${iss.status === 'closed' ? 'text-muted line-through' : 'text-ink-2'}`}>{iss.title}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-[11.5px] text-muted">{t('prLinkedIssuesHint', lang)}</p>
+              </AsideCard>
+            )}
 
             <AsideCard title={t('participants', lang)}>
               <div className="flex flex-wrap gap-1.5">

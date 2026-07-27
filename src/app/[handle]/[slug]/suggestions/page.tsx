@@ -2,11 +2,25 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { MessageSquare } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
-import { t, tr, type LocaleText } from '@/shared/i18n'
+import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { getSuggestions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import type { ProposedItem } from '@/shared/db'
+
+// Черновик — открытое предложение, которое ещё не предъявили к слиянию: свой
+// ярлык, иначе в списке он неотличим от готового к ревью. Функции на уровне
+// модуля: от рендера они не зависят, пересобирать их каждый раз незачем.
+function statusLabel(s: string, draft: boolean, lang: Lang): string {
+  if (s === 'accepted') return t('statusAccepted', lang)
+  if (s === 'rejected') return t('statusRejected', lang)
+  return draft ? t('prDraft', lang) : t('statusOpen', lang)
+}
+
+function statusCls(s: string, draft: boolean): string {
+  if (s === 'accepted') return 'bg-(--accent-soft) text-ok'
+  return s === 'rejected' || draft ? 'bg-surface-2 text-muted' : 'bg-(--accent-soft) text-accent'
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -23,23 +37,6 @@ export default async function SuggestionsPage({
   if (!meta) notFound()
   const list = await getSuggestions(meta.id)
   const base = `/${owner}/${slug}/suggestions`
-
-  // Черновик — открытая правка, которую ещё не предъявили к слиянию: свой ярлык,
-  // иначе в списке он неотличим от готовой к ревью.
-  const statusLabel = (s: string, draft: boolean) =>
-    s === 'accepted'
-      ? t('statusAccepted', lang)
-      : s === 'rejected'
-        ? t('statusRejected', lang)
-        : draft
-          ? t('prDraft', lang)
-          : t('statusOpen', lang)
-  const statusCls = (s: string, draft: boolean) =>
-    s === 'accepted'
-      ? 'bg-(--accent-soft) text-ok'
-      : s === 'rejected' || draft
-        ? 'bg-surface-2 text-muted'
-        : 'bg-(--accent-soft) text-accent'
 
   return (
     <>
@@ -71,12 +68,12 @@ export default async function SuggestionsPage({
                     </span>
                   )}
                   <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusCls(s.status, s.draft)}`}>
-                    {statusLabel(s.status, s.draft)}
+                    {statusLabel(s.status, s.draft, lang)}
                   </span>
                 </div>
 
                 <p className="mt-2.5 text-[13.5px] font-medium text-ink">
-                  {s.note || first || (lang === 'ru' ? `Правка · ${items.length} пунктов` : `Edit · ${items.length} items`)}
+                  {s.note || first || (lang === 'ru' ? `Предложение · ${items.length} пунктов` : `Edit · ${items.length} items`)}
                 </p>
                 <div className="mt-1 font-mono text-[11px] text-muted">
                   {lang === 'ru' ? `${items.length} пунктов · на основе v${s.baseVersion}` : `${items.length} items · based on v${s.baseVersion}`}

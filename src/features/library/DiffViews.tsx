@@ -103,7 +103,7 @@ export function ListDiff({
           const block = !isStepBlock(e)
           const body = block ? (e.type === 'text' ? String(e.content?.md ?? '') : '') : e.desc
           return (
-            <div key={`${e.status}:${e.type ?? 'step'}:${i}`} style={cardStyle} className={`group relative rounded-lg border p-4 ${comments ? 'pr-12' : ''} ${st.color ? '' : 'border-border opacity-60'}`}>
+            <div key={e.blockId ?? `${e.status}:${e.type ?? 'step'}:${i}`} style={cardStyle} className={`group relative rounded-lg border p-4 ${comments ? 'pr-12' : ''} ${st.color ? '' : 'border-border opacity-60'}`}>
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`text-[14.5px] font-semibold text-ink ${e.status === 'removed' ? 'line-through opacity-70' : ''}`}>{blockLabel(e)}</span>
                 {!block && <StepLevelBadge level={e.level} lang={lang} />}

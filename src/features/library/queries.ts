@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, embeddings, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, templates, templateVersions, users } from '@/shared/db'
+import { db, embeddings, issues, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, templates, templateVersions, users } from '@/shared/db'
 import type { Lang, LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
@@ -651,6 +651,17 @@ export async function getSuggestionAssignees(suggestionId: string) {
   return Promise.all(rows.map(async (r) => ({ handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
 }
 
+/** Задачи по номерам (для связей «closes #N» у предложения). Порядок как в nums. */
+export async function getIssuesByNumbers(templateId: string, nums: number[]) {
+  if (nums.length === 0) return []
+  const rows = await db
+    .select({ number: issues.number, title: issues.title, status: issues.status })
+    .from(issues)
+    .where(and(eq(issues.templateId, templateId), inArray(issues.number, nums)))
+  const byNum = new Map(rows.map((r) => [r.number, r]))
+  return nums.map((n) => byNum.get(n)).filter((r): r is (typeof rows)[number] => !!r)
+}
+
 /** У кого ПОПРОСИЛИ ревью правки (та же форма, что исполнители — один пикер). */
 export async function getSuggestionReviewRequests(suggestionId: string) {
   const rows = await db
@@ -673,12 +684,14 @@ export async function getUsersByEmails(emails: string[]): Promise<Record<string,
     .select({ email: users.email, handle: users.handle, name: users.name, avatarUrl: users.avatarUrl })
     .from(users)
     .where(inArray(sql`lower(${users.email})`, uniq))
-  const out: Record<string, { handle: string; name: string | null; avatarUrl: string | null }> = {}
-  for (const r of rows) {
-    if (!r.email) continue
-    out[r.email.toLowerCase()] = { handle: r.handle, name: r.name, avatarUrl: await avatarSrc(r.avatarUrl, 48) }
-  }
-  return out
+  // Аватары резолвим ПАРАЛЛЕЛЬНО: в цикле с await это был бы один поход за другим
+  // на каждого автора коммита (тот же приём, что в getSuggestionAssignees).
+  const resolved = await Promise.all(
+    rows
+      .filter((r) => r.email)
+      .map(async (r) => [r.email!.toLowerCase(), { handle: r.handle, name: r.name, avatarUrl: await avatarSrc(r.avatarUrl, 48) }] as const),
+  )
+  return Object.fromEntries(resolved)
 }
 
 /** Текущий этап правки для пикера ({id,title} или null). */

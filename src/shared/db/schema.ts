@@ -55,6 +55,7 @@ export const notificationType = pgEnum('notification_type', [
   'suggestion_comment',
   'issue_new',
   'issue_comment',
+  'issue_closed_by_merge', // твою задачу закрыли принятым предложением
   'new_version',
   'star',
   'fork',

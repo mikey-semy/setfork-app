@@ -17,6 +17,7 @@ type NotifType =
   | 'suggestion_comment'
   | 'issue_new'
   | 'issue_comment'
+  | 'issue_closed_by_merge'
   | 'new_version'
   | 'star'
   | 'fork'
@@ -36,6 +37,7 @@ const TYPE_PREF: Partial<Record<NotifType, keyof NotifyPrefs>> = {
   suggestion_comment: 'comments',
   issue_new: 'issues',
   issue_comment: 'comments',
+  issue_closed_by_merge: 'issues',
   new_version: 'watchedUpdates',
   star: 'stars',
   fork: 'forks',

@@ -3,10 +3,11 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, steps, suggestionComments, suggestions, templates, users, type ProposedItem } from '@/shared/db'
+import { db, issues, steps, suggestionComments, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
+import { captureError } from '@/shared/observability'
 import { getLang } from '@/shared/i18n/server'
 import { isLang, langEnName, tr, type LocaleText } from '@/shared/i18n'
 import { imageUrl, uploadAttachmentFile, uploadImageFile, uploadVideoFile } from '@/shared/media'
@@ -27,10 +28,38 @@ import { gateListPublication, recheckList } from '@/features/moderation/moderate
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { getVersionSteps } from './queries'
 import { hasBlockingReview } from './review-actions'
+// eslint-disable-next-line boundaries/dependencies -- гейт «нерешённые обсуждения» живёт с комментариями
+import { countUnresolvedThreads } from '@/features/comments/queries'
 import { listStore } from './list-store'
+import { closingRefs } from './closing-refs'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
 import { canEditList, canViewList } from '@/core'
+
+/**
+ * Закрыть задачи, названные в тексте предложения («closes #12», «закрывает #7»).
+ *
+ * Вызывается ПОСЛЕ успешного слияния: до него задача ещё не решена. Ошибки не
+ * поднимаем — предложение уже влито, и падать из-за побочного эффекта нельзя.
+ */
+async function closeLinkedIssues(templateId: string, text: string, actorId: string): Promise<void> {
+  const nums = closingRefs(text)
+  if (nums.length === 0) return
+  try {
+    const rows = await db
+      .select({ id: issues.id, number: issues.number, authorId: issues.authorId })
+      .from(issues)
+      .where(and(eq(issues.templateId, templateId), inArray(issues.number, nums), eq(issues.status, 'open')))
+    for (const iss of rows) {
+      await db.update(issues).set({ status: 'closed', closedAt: new Date() }).where(eq(issues.id, iss.id))
+      if (iss.authorId !== actorId) {
+        await notify({ recipientId: iss.authorId, actorId, type: 'issue_closed_by_merge', templateId, issueId: iss.id })
+      }
+    }
+  } catch (e) {
+    captureError(e, { where: 'closeLinkedIssues' })
+  }
+}
 
 /** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
 function toStepInput(items: ProposedItem[]) {
@@ -385,9 +414,12 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   if (sug.draft) return
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  // Тот же гейт, что у принятия items-правки: иначе «Влить в main» обходило бы
-  // запрошенные правки, и вердикт зависел бы от того, каким путём пришёл PR.
+  // Тот же гейт, что у принятия items-предложения: иначе «Влить в main» обходило бы
+  // запрошенные правки, и вердикт зависел бы от того, каким путём пришло предложение.
   if (await hasBlockingReview(sug.id)) return
+  // Нерешённые обсуждения на пунктах тоже блокируют: иначе ответ на замечание
+  // можно не давать вовсе — достаточно не менять вердикт ревью.
+  if (await countUnresolvedThreads(sug.id)) return
 
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
@@ -399,6 +431,9 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
     redirect(`${path}?e=${code}`)
   }
   await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
+  // «closes #12» в тексте предложения закрывает задачу — но только теперь, когда
+  // изменения действительно в main.
+  await closeLinkedIssues(tpl.id, sug.note, session.userId)
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
@@ -421,6 +456,7 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   })
   if (!sug || sug.status !== 'open' || !sug.branchRef) return
   if (sug.draft) return // резолвер конфликтов тоже завершается слиянием — см. mergeBranchPr
+  if (await hasBlockingReview(sug.id) || (await countUnresolvedThreads(sug.id))) return
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
 
@@ -473,6 +509,9 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
     redirect(`${path}?e=${code}`)
   }
   await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
+  // «closes #12» в тексте предложения закрывает задачу — но только теперь, когда
+  // изменения действительно в main.
+  await closeLinkedIssues(tpl.id, sug.note, session.userId)
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
@@ -496,6 +535,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
   // Запрошенные правки блокируют принятие — иначе вердикт «просит доработать»
   // был бы декоративным. Разблокировать может сам рецензент, сменив свой голос.
   if (await hasBlockingReview(sug.id)) return
+  if (await countUnresolvedThreads(sug.id)) return // см. mergeBranchPr
 
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
@@ -505,6 +545,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
+  await closeLinkedIssues(tpl.id, sug.note, session.userId)
   await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)

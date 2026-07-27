@@ -55,6 +55,8 @@ export async function suggestionChecks(input: {
   /** Черновик: слить нельзя, пока автор не отметил готовность. */
   draft: boolean
   blockingReview: boolean
+  /** Нерешённые обсуждения на пунктах — блокируют, как и вердикт «нужны правки». */
+  unresolvedThreads: number
   moderation: string
   lang: 'ru' | 'en'
 }): Promise<CheckItem[]> {
@@ -65,7 +67,7 @@ export async function suggestionChecks(input: {
   // 1. Правка вообще что-то меняет?
   out.push(
     input.changedCount > 0
-      ? { key: 'has-changes', status: 'ok', title: say('Правка содержит изменения', 'Suggestion has changes'), detail: say(`затронуто пунктов: ${input.changedCount}`, `items touched: ${input.changedCount}`) }
+      ? { key: 'has-changes', status: 'ok', title: say('Предложение содержит изменения', 'Suggestion has changes'), detail: say(`затронуто пунктов: ${input.changedCount}`, `items touched: ${input.changedCount}`) }
       : { key: 'has-changes', status: 'fail', title: say('Изменений нет', 'No changes'), detail: say('принимать нечего', 'nothing to accept') },
   )
 
@@ -81,7 +83,7 @@ export async function suggestionChecks(input: {
 
   // 3. Слияние: конфликты и пропавшая ветка — блокирующие.
   if (input.branchMissing) {
-    out.push({ key: 'branch', status: 'fail', title: say('Ветка удалена', 'Branch deleted'), detail: say('PR неактуален, можно только отклонить', 'the PR is stale and can only be closed') })
+    out.push({ key: 'branch', status: 'fail', title: say('Ветка удалена', 'Branch deleted'), detail: say('предложение неактуально, можно только отклонить', 'the suggestion is stale and can only be closed') })
   } else if (input.hasConflicts) {
     out.push({ key: 'merge', status: 'fail', title: say('Конфликты слияния', 'Merge conflicts'), detail: say('нужно разрешить перед принятием', 'must be resolved before accepting') })
   } else {
@@ -94,7 +96,7 @@ export async function suggestionChecks(input: {
       key: 'base',
       status: 'warn',
       title: say('База устарела', 'Base is outdated'),
-      detail: say(`правка на v${input.baseVersion}, список уже на v${input.currentVersion}`, `based on v${input.baseVersion}, list is at v${input.currentVersion}`),
+      detail: say(`предложение на v${input.baseVersion}, список уже на v${input.currentVersion}`, `based on v${input.baseVersion}, list is at v${input.currentVersion}`),
     })
   } else {
     out.push({ key: 'base', status: 'ok', title: say('База актуальна', 'Base is current') })
@@ -107,17 +109,29 @@ export async function suggestionChecks(input: {
       : { key: 'review', status: 'ok', title: say('Блокирующих ревью нет', 'No blocking reviews') },
   )
 
-  // 6. Модерация списка: во flagged/hidden принимать правку бессмысленно.
+  // 6. Нерешённые обсуждения на пунктах.
+  out.push(
+    input.unresolvedThreads > 0
+      ? {
+          key: 'threads',
+          status: 'fail',
+          title: say(`Нерешённых обсуждений: ${input.unresolvedThreads}`, `Unresolved conversations: ${input.unresolvedThreads}`),
+          detail: say('закройте их или отметьте решёнными', 'close them or mark them resolved'),
+        }
+      : { key: 'threads', status: 'ok', title: say('Все обсуждения решены', 'All conversations resolved') },
+  )
+
+  // 7. Модерация списка: во flagged/hidden принимать правку бессмысленно.
   if (input.moderation === 'flagged' || input.moderation === 'hidden') {
     out.push({ key: 'moderation', status: 'fail', title: say('Список снят модерацией', 'List is taken down'), detail: input.moderation })
   } else if (input.moderation === 'pending') {
     out.push({ key: 'moderation', status: 'warn', title: say('Список на проверке', 'List is under review') })
   }
 
-  // 7. Ссылки в предложенных пунктах — по уже собранным вердиктам linkcheck.
+  // 8. Ссылки в предложенных пунктах — по уже собранным вердиктам linkcheck.
   const urls = proposedUrls(input.items)
   if (urls.length === 0) {
-    out.push({ key: 'links', status: 'neutral', title: say('Ссылок в правке нет', 'No links in this suggestion') })
+    out.push({ key: 'links', status: 'neutral', title: say('Ссылок в предложении нет', 'No links in this suggestion') })
   } else {
     const rows = await db
       .select({ urlNorm: linkChecks.urlNorm, verdict: linkChecks.verdict })
