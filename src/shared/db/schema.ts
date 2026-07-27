@@ -1313,6 +1313,10 @@ export const councilExperts = pgTable(
     // Не служебная заметка: это сигнал развития продукта со стороны исполнителя.
     dreams: text('dreams').notNull().default(''),
     sort: integer('sort').notNull().default(0),
+    // Дата найма. Была нужна дашборду («новых профессий за период») и до сих пор
+    // показывалась как честное «нет источника»: updatedAt для этого не годится — он
+    // меняется при любой правке персоны, и рост штата им не измерить.
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('council_experts_sort_idx').on(t.enabled, t.sort)],
@@ -1334,6 +1338,13 @@ export const aiUsage = pgTable(
     costUsd: numeric('cost_usd', { precision: 12, scale: 6 }).notNull().default('0'),
     refType: text('ref_type'), // 'generation' | 'template' | …
     refId: uuid('ref_id'),
+    /**
+     * КТО расходовал: id специалиста в ростере ('chef', 'devops'). Раньше здесь была
+     * только модель, поэтому здоровье считалось по model id, а «сколько тратит этот
+     * специалист» и «какая модель ему подходит» ответить было нельзя — вопросы про
+     * инструмент и про мастера сливались в один. Пусто = вызов не от специалиста.
+     */
+    gnomeId: text('gnome_id').notNull().default(''),
     // Исход вызова — сырьё для щитка надёжности и авторотации пула совета:
     // ok | timeout | invalid (модель ответила мусором/не-JSON) | error (сеть/провайдер).
     outcome: text('outcome').notNull().default('ok'),

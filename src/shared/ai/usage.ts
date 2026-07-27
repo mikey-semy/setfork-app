@@ -50,6 +50,12 @@ export async function recordUsage(row: {
   durationMs?: number
   /** Провайдер вызова — для оценки стоимости, когда API её не отдаёт. */
   provider?: AiProviderId
+  /**
+   * Кто расходовал: id специалиста в ростере. Отвечает на «сколько тратит ЭТОТ
+   * мастер» отдельно от «как ведёт себя эта модель» — раньше оба вопроса сливались
+   * в model id, и разделить вклад инструмента и исполнителя было нельзя.
+   */
+  gnomeId?: string
 }): Promise<void> {
   try {
     // RU-провайдеры cost в ответе не присылают (писалось 0 → денежные квоты не
@@ -72,6 +78,7 @@ export async function recordUsage(row: {
       refId: row.refId ?? null,
       outcome: row.outcome ?? 'ok',
       durationMs: Math.max(0, Math.round(row.durationMs ?? 0)),
+      gnomeId: row.gnomeId ?? '',
     })
   } catch (e) {
     console.warn('[ai-usage] record failed', e instanceof Error ? e.message : e)
