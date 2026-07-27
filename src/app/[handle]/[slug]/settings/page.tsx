@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { FolderGit2, Image as ImageIcon, Info, LayoutTemplate, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
+import { FolderGit2, GitPullRequest, Image as ImageIcon, Info, LayoutTemplate, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -15,6 +15,8 @@ import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
 import { GeneralSection } from '@/features/library/GeneralSection'
 import { FeaturesSection } from '@/features/library/FeaturesSection'
+import { PrSettingsSection } from '@/features/library/PrSettingsSection'
+import { withPrDefaults } from '@/features/library/pr-settings'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -87,6 +89,13 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           lang={lang}
         />
       ),
+    },
+    {
+      id: 'suggestions',
+      title: t('prSettingsTitle', lang),
+      icon: <GitPullRequest size={15} />,
+      keywords: ['pull request', 'suggestions', 'merge', 'approvals', 'предложения', 'слияние', 'одобрения', 'ревью'],
+      content: <PrSettingsSection templateId={meta.id} settings={withPrDefaults(meta.prSettings)} lang={lang} />,
     },
     {
       id: 'template',

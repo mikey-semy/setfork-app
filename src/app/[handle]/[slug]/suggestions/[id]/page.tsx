@@ -160,6 +160,10 @@ export default async function SuggestionThreadPage({
       en: 'Conflict: main has diverged and cannot be merged automatically. Update the branch (merge main into it) and retry.',
     },
     'nothing-to-merge': { ru: 'Ветка не содержит новых коммитов относительно main.', en: 'The branch has no new commits over main.' },
+    'not-linear': {
+      ru: 'На списке включена линейная история: сливать можно только fast-forward. Обнови ветку из main и попробуй снова.',
+      en: 'This list requires linear history: only fast-forward merges are allowed. Update the branch from main and retry.',
+    },
     unresolved: { ru: 'Разрешены не все конфликты (или ветка изменилась) — выбери версии заново.', en: 'Not all conflicts were resolved (or the branch changed) — pick again.' },
   }
   const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? { ru: 'Не удалось выполнить merge.', en: 'Merge failed.' }) : null

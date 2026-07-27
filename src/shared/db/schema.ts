@@ -201,6 +201,37 @@ export const tags = pgTable('tags', {
 })
 
 // ── Templates (список) ─────────────────────────────────────────────
+/**
+ * Настройки предложений на списке — аналог раздела Pull Requests у GitHub.
+ *
+ * Все поля опциональны: отсутствие = дефолт, описанный в `PR_DEFAULTS`. Так
+ * добавление нового флага не требует миграции существующих строк.
+ */
+export interface PrSettings {
+  /** Кто может создавать предложения: все или только коллаборанты. */
+  allowFrom?: 'all' | 'collaborators'
+  /** Требовать линейную историю: сливать только fast-forward, иначе просить обновить ветку. */
+  linearOnly?: boolean
+  /** Нерешённые обсуждения блокируют слияние. */
+  blockOnUnresolved?: boolean
+  /** Сколько одобрений нужно (0 = не требуются). */
+  requiredApprovals?: number
+  /** Удалять ветку сразу после слияния. */
+  autoDeleteBranch?: boolean
+  /** Закрывать задачи по «closes #N» при слиянии. */
+  autoCloseIssues?: boolean
+}
+
+/** Дефолты настроек предложений = поведение до их появления. */
+export const PR_DEFAULTS: Required<PrSettings> = {
+  allowFrom: 'all',
+  linearOnly: false,
+  blockOnUnresolved: true,
+  requiredApprovals: 0,
+  autoDeleteBranch: false,
+  autoCloseIssues: true,
+}
+
 export const templates = pgTable(
   'templates',
   {
@@ -226,6 +257,11 @@ export const templates = pgTable(
     // (≈ PR) — ядро fork-модели, не отключаются. default true — старые списки как есть.
     issuesEnabled: boolean('issues_enabled').notNull().default(true),
     discussionsEnabled: boolean('discussions_enabled').notNull().default(true),
+    // Настройки предложений (≈ раздел Pull Requests в настройках репо GitHub).
+    // Одним jsonb, а не колонкой на галочку: набор будет расти, а формы под
+    // «одно поле = одна колонка» на каждый флаг мы уже проходили.
+    // Дефолты = поведение до появления настроек, чтобы старые списки не менялись.
+    prSettings: jsonb('pr_settings').notNull().default({}).$type<PrSettings>(),
     visibility: listVisibility('visibility').notNull().default('public'),
     moderation: moderationStatus('moderation').notNull().default('active'),
     moderationReason: text('moderation_reason'),

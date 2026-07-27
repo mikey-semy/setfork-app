@@ -27,11 +27,12 @@ import { collabStore, suggestionCommenterIds } from '@/features/collab-store/sto
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { getVersionSteps } from './queries'
-import { hasBlockingReview } from './review-actions'
+import { countApprovals, hasBlockingReview } from './review-actions'
 // eslint-disable-next-line boundaries/dependencies -- гейт «нерешённые обсуждения» живёт с комментариями
 import { countUnresolvedThreads } from '@/features/comments/queries'
 import { listStore } from './list-store'
 import { closingRefs } from './closing-refs'
+import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from './pr-settings'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
 import { canEditList, canViewList } from '@/core'
@@ -42,7 +43,8 @@ import { canEditList, canViewList } from '@/core'
  * Вызывается ПОСЛЕ успешного слияния: до него задача ещё не решена. Ошибки не
  * поднимаем — предложение уже влито, и падать из-за побочного эффекта нельзя.
  */
-async function closeLinkedIssues(templateId: string, text: string, actorId: string): Promise<void> {
+async function closeLinkedIssues(templateId: string, text: string, actorId: string, enabled: boolean): Promise<void> {
+  if (!enabled) return
   const nums = closingRefs(text)
   if (nums.length === 0) return
   try {
@@ -360,6 +362,12 @@ export async function submitSuggestion(templateId: string, formData: FormData): 
   if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) return
   // Архив/заморозка: предложения запрещены в обоих состояниях (список только-чтение).
   if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+  // Настройка списка «кто может предлагать»: аналог Creation allowed by у GitHub.
+  // Владелец может предлагать всегда — иначе он запирал бы сам себя.
+  const prs = withPrDefaults(tpl.prSettings)
+  if (prs.allowFrom === 'collaborators' && tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) {
+    redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=suggest-closed`)
+  }
   // Анти-спам: правки — запись в чужую очередь + пинг владельца/упомянутых. Кап на автора.
   if (!(await rateLimit(`suggest:${session.userId}`, 10, 10 * 60_000)).ok) {
     redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/suggestions?e=ratelimited`)
@@ -460,26 +468,39 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
   if (sug.draft) return
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  // Тот же гейт, что у принятия items-предложения: иначе «Влить в main» обходило бы
-  // запрошенные правки, и вердикт зависел бы от того, каким путём пришло предложение.
+  // Гейты — по настройкам списка (раздел «Предложения»), а не захардкожены: у
+  // GitHub это тоже настройки репозитория, и на разных списках нужны разные.
+  const prs = withPrDefaults(tpl.prSettings)
+  // Запрошенные правки блокируют всегда: иначе вердикт «просит доработать» был бы
+  // декоративным, а это не настройка, а смысл ревью.
   if (await hasBlockingReview(sug.id)) return
-  // Нерешённые обсуждения на пунктах тоже блокируют: иначе ответ на замечание
-  // можно не давать вовсе — достаточно не менять вердикт ревью.
-  if (await countUnresolvedThreads(sug.id)) return
+  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
+  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals) return
 
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
   const { gitCore, BranchOpError } = await gitPort()
+  // Линейная история: сливаем только когда это fast-forward. Проверяем ДО merge —
+  // иначе merge-коммит уже создан, и «запрет» опоздал.
+  if (prs.linearOnly) {
+    const state = await gitCore.mergeState({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
+    if (state && state.mergeBaseSha !== state.ours.tipSha) redirect(`${path}?e=not-linear`)
+  }
   try {
     await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef)
   } catch (e) {
     const code = e instanceof BranchOpError ? e.code : 'internal'
     redirect(`${path}?e=${code}`)
   }
+  // Ветка после слияния больше не нужна — удаляем, если так настроено. Ошибку
+  // глотаем: предложение уже влито, и падать из-за уборки нельзя.
+  if (prs.autoDeleteBranch) {
+    await gitCore.deleteBranch({ owner, slug: tpl.slug }, sug.branchRef).catch(() => {})
+  }
   await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
   // «closes #12» в тексте предложения закрывает задачу — но только теперь, когда
   // изменения действительно в main.
-  await closeLinkedIssues(tpl.id, sug.note, session.userId)
+  await closeLinkedIssues(tpl.id, sug.note, session.userId, prs.autoCloseIssues)
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
@@ -502,7 +523,9 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   })
   if (!sug || sug.status !== 'open' || !sug.branchRef) return
   if (sug.draft) return // резолвер конфликтов тоже завершается слиянием — см. mergeBranchPr
-  if (await hasBlockingReview(sug.id) || (await countUnresolvedThreads(sug.id))) return
+  const prs = withPrDefaults(sug.template.prSettings)
+  if (await hasBlockingReview(sug.id)) return
+  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
   const tpl = sug.template
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
 
@@ -557,7 +580,7 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
   // «closes #12» в тексте предложения закрывает задачу — но только теперь, когда
   // изменения действительно в main.
-  await closeLinkedIssues(tpl.id, sug.note, session.userId)
+  await closeLinkedIssues(tpl.id, sug.note, session.userId, prs.autoCloseIssues)
   if (sug.authorId !== session.userId) {
     await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   }
@@ -578,10 +601,12 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
   })
   if (!sug || sug.status !== 'open' || sug.template.ownerId !== session.userId) return
   if (sug.draft) return // черновик не принимаем — см. mergeBranchPr
-  // Запрошенные правки блокируют принятие — иначе вердикт «просит доработать»
-  // был бы декоративным. Разблокировать может сам рецензент, сменив свой голос.
+  // Гейты — по настройкам списка (раздел «Предложения»), кроме блокирующего ревью:
+  // оно не настройка, а смысл вердикта «просит доработать».
+  const prs = withPrDefaults(sug.template.prSettings)
   if (await hasBlockingReview(sug.id)) return
-  if (await countUnresolvedThreads(sug.id)) return // см. mergeBranchPr
+  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
+  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals) return
 
   const tpl = sug.template
   // Новая версия из принятого предложения — через доменный порт.
@@ -591,7 +616,7 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
     .update(suggestions)
     .set({ status: 'accepted', resolvedAt: new Date() })
     .where(eq(suggestions.id, sug.id))
-  await closeLinkedIssues(tpl.id, sug.note, session.userId)
+  await closeLinkedIssues(tpl.id, sug.note, session.userId, prs.autoCloseIssues)
   await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
@@ -1149,4 +1174,34 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
 
   revalidatePath('/explore')
   redirect(`/${session.handle}/${slug}`)
+}
+
+/** Переключить флаг настроек предложений (владелец списка). */
+export async function setPrSetting(templateId: string, key: PrBoolKey, on: boolean): Promise<void> {
+  const session = await requireSession()
+  if (!PR_BOOL_KEYS.includes(key)) return
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  const next = { ...withPrDefaults(tpl.prSettings), [key]: on }
+  await db.update(templates).set({ prSettings: next }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+}
+
+/** Сколько одобрений нужно (0 = не требуются) и кто может предлагать. */
+export async function setPrNumber(templateId: string, key: 'requiredApprovals', value: number): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId || key !== 'requiredApprovals') return
+  const next = withPrDefaults({ ...withPrDefaults(tpl.prSettings), requiredApprovals: value })
+  await db.update(templates).set({ prSettings: next }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+}
+
+export async function setPrAllowFrom(templateId: string, value: 'all' | 'collaborators'): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  const next = withPrDefaults({ ...withPrDefaults(tpl.prSettings), allowFrom: value })
+  await db.update(templates).set({ prSettings: next }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
 }
