@@ -21,6 +21,8 @@ import { diffSteps, rowsToCmp } from '@/features/library/diff'
 import { DiffViewToggle } from '@/features/library/DiffViewToggle'
 import { SuggestionTabs, type SuggestionTab } from '@/features/library/SuggestionTabs'
 import { SuggestionTitle } from '@/features/library/SuggestionTitle'
+import { ChecksList } from '@/features/library/ChecksList'
+import { suggestionChecks } from '@/features/library/suggestion-checks'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
@@ -146,7 +148,7 @@ export default async function SuggestionThreadPage({
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
   const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
   // Вкладка из ?tab= — адрес ссылабелен (можно послать ссылку сразу на изменения).
-  const tab: SuggestionTab = sp.tab === 'files' ? 'files' : 'conversation'
+  const tab: SuggestionTab = sp.tab === 'files' ? 'files' : sp.tab === 'checks' ? 'checks' : 'conversation'
   // Вид диффа — ТОТ ЖЕ ?view=, что на сравнении версий: одно изменение выглядит
   // одинаково, откуда бы на него ни смотрели.
   const view = sp.view === 'list' ? 'list' : 'code'
@@ -175,8 +177,52 @@ export default async function SuggestionThreadPage({
       : []),
   ].sort((a, b) => a.at.getTime() - b.at.getTime())
 
+  // Проверки правки: сигналы, уже посчитанные выше, передаём аргументами —
+  // считать их второй раз значило бы разойтись с тем, что показано на странице.
+  const checks = await suggestionChecks({
+    items: items as unknown[],
+    changedCount,
+    baseVersion: sug.baseVersion,
+    currentVersion: meta.currentVersion,
+    hasConflicts,
+    branchMissing,
+    blockingReview: reviews.some((r) => r.blocking),
+    moderation: meta.moderation,
+    lang: lang === 'ru' ? 'ru' : 'en',
+  })
+  const checksFailed = checks.filter((c) => c.status === 'fail').length
+
   const statusCls =
     sug.status === 'accepted' ? 'bg-ok text-white' : sug.status === 'rejected' ? 'bg-surface-2 text-muted' : 'bg-accent text-white'
+
+  // Ревью нужно в ДВУХ вкладках: в обсуждении (там идёт разговор) и сразу под
+  // изменениями (отревьюил — тут же вынес вердикт). Один элемент, а не две копии
+  // одной формы: вкладки взаимоисключающие, так что в дерево попадёт ровно одна.
+  const reviewPanel =
+    sug.status === 'open' ? (
+      <div className="mt-3">
+        <ReviewPanel
+          suggestionId={sug.id}
+          reviews={reviews}
+          myVerdict={myVerdict}
+          canReview={!!session}
+          isAuthor={session?.userId === sug.authorId}
+          lang={lang}
+          labels={{
+            title: t('reviewTitle', lang),
+            approve: t('reviewApprove', lang),
+            requestChanges: t('reviewRequestChanges', lang),
+            commentOnly: t('reviewCommentOnly', lang),
+            placeholder: t('reviewPlaceholder', lang),
+            send: t('commentSend', lang),
+            withdraw: t('reviewWithdraw', lang),
+            blocked: t('reviewBlocked', lang),
+            yourReview: t('reviewYours', lang),
+            ownAuthor: t('reviewOwnAuthor', lang),
+          }}
+        />
+      </div>
+    ) : null
 
   return (
     <>
@@ -226,7 +272,8 @@ export default async function SuggestionThreadPage({
           active={tab}
           conversationCount={threadCount}
           filesCount={changedCount}
-          labels={{ conversation: t('conversationTab', lang), files: t('proposedChanges', lang) }}
+          checksFailed={checksFailed}
+          labels={{ conversation: t('conversationTab', lang), checks: t('checksTab', lang), files: t('proposedChanges', lang) }}
         />
 
         {/* Две колонки: содержимое вкладки + боковая панель (общий примитив). */}
@@ -261,16 +308,8 @@ export default async function SuggestionThreadPage({
           </div>
         )}
 
-        {sug.note && (
-          <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface">
-            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px] text-ink-2">
-              <Avatar handle={sug.author.handle} avatarUrl={sug.author.avatarUrl} size={22} />
-              <span className="font-semibold text-ink">{sug.author.handle}</span>
-            </div>
-            <div className="px-4 py-3">
-              <Markdown refBase={`/${owner}/${slug}/issues`}>{sug.note}</Markdown>
-            </div>
-          </div>
+        {tab === 'checks' && (
+          <ChecksList items={checks} labels={{ blocking: t('checksBlocking', lang), allGood: t('checksAllGood', lang) }} />
         )}
 
         {tab === 'files' && (<>
@@ -311,86 +350,28 @@ export default async function SuggestionThreadPage({
             }}
           />
         )}
-        <div className="mt-2">
-          <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
-        </div>
-
-        {/* Ревью: вердикты рецензентов + своя форма. «Нужны правки» от владельца
-            или коллаборатора блокирует принятие — панель говорит об этом прямо. */}
-        {sug.status === 'open' && (
-          <div className="mt-3">
-            <ReviewPanel
-              suggestionId={sug.id}
-              reviews={reviews}
-              myVerdict={myVerdict}
-              canReview={!!session}
-              isAuthor={session?.userId === sug.authorId}
-              lang={lang}
-              labels={{
-                title: t('reviewTitle', lang),
-                approve: t('reviewApprove', lang),
-                requestChanges: t('reviewRequestChanges', lang),
-                commentOnly: t('reviewCommentOnly', lang),
-                placeholder: t('reviewPlaceholder', lang),
-                send: t('commentSend', lang),
-                withdraw: t('reviewWithdraw', lang),
-                blocked: t('reviewBlocked', lang),
-                yourReview: t('reviewYours', lang),
-                ownAuthor: t('reviewOwnAuthor', lang),
-              }}
-            />
-          </div>
-        )}
-
-        {isOwner && !sug.branchRef && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
-          <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">
-            {lang === 'ru'
-              ? `Правка основана на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
-              : `This suggestion is based on v${sug.baseVersion}, but the list is now at v${meta.currentVersion}. Accepting will overwrite the newer changes (v${sug.baseVersion + 1}–v${meta.currentVersion}).`}
-          </div>
-        )}
-
-        {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open') && (
-          <div className="mt-3 flex gap-2.5">
-            {sug.branchRef ? (
-              !branchMissing &&
-              !hasConflicts && (
-                <form action={mergeBranchPr.bind(null, sug.id)}>
-                  <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
-                    <GitMerge size={14} /> {lang === 'ru' ? 'Влить в main' : 'Merge to main'}
-                  </SubmitButton>
-                </form>
-              )
-            ) : (
-            <form action={acceptSuggestion.bind(null, sug.id)}>
-              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
-                <Check size={14} /> {t('accept', lang)}
-              </SubmitButton>
-            </form>
-            )}
-            <form action={rejectSuggestion.bind(null, sug.id)}>
-              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
-                <X size={14} /> {t('reject', lang)}
-              </SubmitButton>
-            </form>
-          </div>
-        )}
-
-        {hasConflicts && threeWay && sug.branchRef && (
-          <ConflictResolver
-            conflicts={threeWay.conflicts}
-            metaConflicts={threeWay.metaConflicts}
-            branch={sug.branchRef}
-            lang={lang}
-            action={resolveBranchPr.bind(null, sug.id)}
-          />
-        )}
-
+        {reviewPanel}
         </>)}
 
         {/* Обсуждение — вкладка по умолчанию. Заметка правки и ревью видны здесь,
             чтобы разговор шёл при полном контексте, как в Conversation у GitHub. */}
         {tab === 'conversation' && (<>
+        {/* Заметка правки — первое сообщение обсуждения (как тело PR у GitHub), а
+            не шапка на всех вкладках: в «Проверках» и «Изменениях» она мешала. */}
+        {sug.note && (
+          <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface">
+            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px] text-ink-2">
+              <Avatar handle={sug.author.handle} avatarUrl={sug.author.avatarUrl} size={22} />
+              <span className="font-semibold text-ink">{sug.author.handle}</span>
+            </div>
+            <div className="px-4 py-3">
+              <Markdown refBase={`/${owner}/${slug}/issues`}>{sug.note}</Markdown>
+              <div className="mt-2">
+                <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
+              </div>
+            </div>
+          </div>
+        )}
         <SuggestionTimeline
           events={timeline}
           lang={lang}
@@ -442,6 +423,55 @@ export default async function SuggestionThreadPage({
             ))}
           </div>
         )}
+
+        {/* Блок слияния — там же, где обсуждение: решение принимают, прочитав
+            разговор. Предупреждение про устаревшую базу и резолвер конфликтов
+            стоят рядом с кнопкой, а не на вкладке изменений. */}
+        {isOwner && !sug.branchRef && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
+          <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">
+            {lang === 'ru'
+              ? `Правка основана на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
+              : `This suggestion is based on v${sug.baseVersion}, but the list is now at v${meta.currentVersion}. Accepting will overwrite the newer changes (v${sug.baseVersion + 1}–v${meta.currentVersion}).`}
+          </div>
+        )}
+
+        {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open') && (
+          <div className="mt-3 flex gap-2.5">
+            {sug.branchRef ? (
+              !branchMissing &&
+              !hasConflicts && (
+                <form action={mergeBranchPr.bind(null, sug.id)}>
+                  <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+                    <GitMerge size={14} /> {lang === 'ru' ? 'Влить в main' : 'Merge to main'}
+                  </SubmitButton>
+                </form>
+              )
+            ) : (
+              <form action={acceptSuggestion.bind(null, sug.id)}>
+                <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+                  <Check size={14} /> {t('accept', lang)}
+                </SubmitButton>
+              </form>
+            )}
+            <form action={rejectSuggestion.bind(null, sug.id)}>
+              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
+                <X size={14} /> {t('reject', lang)}
+              </SubmitButton>
+            </form>
+          </div>
+        )}
+
+        {hasConflicts && threeWay && sug.branchRef && (
+          <ConflictResolver
+            conflicts={threeWay.conflicts}
+            metaConflicts={threeWay.metaConflicts}
+            branch={sug.branchRef}
+            lang={lang}
+            action={resolveBranchPr.bind(null, sug.id)}
+          />
+        )}
+
+        {reviewPanel}
 
         {session ? (
           <div className="mt-4 rounded-lg border border-border bg-surface p-4">

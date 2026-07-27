@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { MessagesSquare, FileDiff } from 'lucide-react'
+import { MessagesSquare, FileDiff, CircleCheck } from 'lucide-react'
 
-export type SuggestionTab = 'conversation' | 'files'
+export type SuggestionTab = 'conversation' | 'checks' | 'files'
 
 /**
  * Вкладки правки (PR): Обсуждение | Изменения.
@@ -18,13 +18,16 @@ export function SuggestionTabs({
   active,
   conversationCount,
   filesCount,
+  checksFailed,
   labels,
 }: {
   path: string
   active: SuggestionTab
   conversationCount: number
   filesCount: number
-  labels: { conversation: string; files: string }
+  /** Сколько проверок блокирует — счётчик показываем только когда есть что чинить. */
+  checksFailed: number
+  labels: { conversation: string; checks: string; files: string }
 }) {
   const item = (tab: SuggestionTab, icon: React.ReactNode, label: string, count: number) => {
     const on = tab === active
@@ -46,6 +49,7 @@ export function SuggestionTabs({
     // Ряд листается в своём контейнере — страница горизонтально не едет.
     <div className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
       {item('conversation', <MessagesSquare size={14} />, labels.conversation, conversationCount)}
+      {item('checks', <CircleCheck size={14} />, labels.checks, checksFailed)}
       {item('files', <FileDiff size={14} />, labels.files, filesCount)}
     </div>
   )
