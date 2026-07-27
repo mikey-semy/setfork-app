@@ -356,6 +356,9 @@ export default async function AdminPage() {
                 maxPerMonth: settings.councilMaxPerMonth,
                 selfGenMode: settings.selfGenMode,
                 selfGenPerDay: settings.selfGenPerDay,
+                selfGenPerSweep: settings.selfGenPerSweep,
+                readinessMode: settings.readinessMode,
+                readinessMinSteps: settings.readinessMinSteps,
               }}
               ru={ru}
             />

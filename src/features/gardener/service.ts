@@ -10,13 +10,17 @@ import { generateListRefine, type GeneratedItem } from '@/shared/ai/generate'
 import { LIST_KINDS, type ListKind } from '@/shared/ai/list-kind'
 import { POLICY_SETTING_KEYS, dominantLang, inferListKind, policyFor, policySettingKey } from '@/shared/ai/gardener-policies'
 import { globalBudgetOk } from '@/shared/quota'
-import { isAiAvailable } from '@/shared/settings/ai'
+import { countDuplicateSteps, readinessDecision, structuralBlockers, DEFAULT_BAR, type ReadinessBar, type ReadinessFacts } from '@/shared/ai/readiness'
+import { runReadinessLenses, type ReadinessInput } from '@/shared/ai/readiness-lenses'
+import { checkUrls } from '@/shared/lib/link-health'
+import { getAiSettings, isAiAvailable } from '@/shared/settings/ai'
 import { notify } from '@/features/notifications/notify'
 import { log } from '@/shared/observability'
 import { toProposed, toStepInput } from '@/shared/lib/step-input'
 import { HOME_REALM } from '@/shared/ai/gnome-names'
 import { agentUserIds, professionOf, tenderForTags } from '@/shared/ai/gnome-account'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
+import { moderateNewPublication } from '@/shared/agents/publication'
 import { getRoster } from '@/shared/ai/roster'
 import { t, type Lang, type LocaleText } from '@/shared/i18n'
 
@@ -107,7 +111,7 @@ export async function pickCandidates(agentIds: string[], limit: number) {
   // с открытой правкой Фьялара попадал бы в выборку снова → повторный refine).
   const agents = agentIds.length ? agentIds : ['00000000-0000-0000-0000-000000000000']
   return db
-    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, listKind: templates.listKind, ownerCurated: users.curated, ownerAccountType: users.accountType })
+    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, listKind: templates.listKind, status: templates.status, ownerCurated: users.curated, ownerAccountType: users.accountType })
     .from(templates)
     .innerJoin(users, eq(users.id, templates.ownerId))
     .where(
@@ -170,16 +174,85 @@ function noteFor(kind: ListKind, lang: Lang): string {
 
 
 
+/**
+ * ГЕЙТ ГОТОВНОСТИ своего черновика: публикуем без человека или оставляем с причинами.
+ *
+ * Почему здесь, а не отдельной петлёй: гейт имеет смысл сразу после того, как контент
+ * изменился (или подтверждённо НЕ изменился — это признак, что список устоялся). Отдельная
+ * петля повторяла бы выборку и расходилась бы с уходом по времени.
+ *
+ * Стоимость: 3 вызова модели на список, поэтому в режиме 'off' (дефолт) не тратится ничего —
+ * ни линз, ни проверки ссылок.
+ */
+export async function gateOwnDraft(
+  tpl: { id: string; slug: string; tags: string[]; desc: unknown; status: string | null },
+  snapshot: ReadinessInput,
+  ctx: { tenderId: string; agentId: string; policyVersion: number; lang: Lang },
+): Promise<'published' | 'held' | 'skipped'> {
+  const settings = await getAiSettings()
+  const bar: ReadinessBar = { ...DEFAULT_BAR, mode: settings.readinessMode, minSteps: settings.readinessMinSteps }
+  if (bar.mode === 'off') return 'skipped'
+  // Линзы — платные: тот же per-item предохранитель, что в самогенерации.
+  if (!(await globalBudgetOk())) return 'skipped'
+
+  // Мёртвые ссылки считаем по ФИНАЛЬНОМУ содержимому: refine мог их заменить, и планка
+  // должна судить то, что публикуется, а не то, что было до правки.
+  const urls = snapshot.items.flatMap((it) => it.refs?.map((r) => r.url) ?? []).filter(Boolean)
+  const verdictsByUrl = urls.length ? await checkUrls(urls) : new Map<string, string>()
+  const facts: ReadinessFacts = {
+    steps: snapshot.items.length,
+    deadLinks: [...verdictsByUrl.values()].filter((v) => v === 'dead').length,
+    hasDesc: !!snapshot.desc.trim(),
+    hasTags: snapshot.tags.length > 0,
+    duplicateSteps: countDuplicateSteps(snapshot.items.map((it) => it.title)),
+  }
+
+  // Структурные блокеры — кодом и БЕСПЛАТНО: если список не дотягивает по ним, линзы не
+  // зовём вовсе (нет смысла платить за мнение о списке из двух шагов).
+  const structural = structuralBlockers(facts, bar)
+  const verdicts = structural.length ? [] : await runReadinessLenses(snapshot, { userId: ctx.tenderId, refId: tpl.id })
+  const decision = readinessDecision(facts, verdicts, bar)
+
+  if (decision.publish) {
+    await db.update(templates).set({ status: 'published', updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+    // Публикация компании проходит МОДЕРАЦИЮ как любая другая: гейт готовности решает
+    // «готово ли», а не «безопасно ли». Смешивать эти два вопроса нельзя.
+    // Публикация компании проходит МОДЕРАЦИЮ как любая другая: гейт готовности решает
+    // «готово ли», модерация — «безопасно ли показывать». Смешивать эти вопросы нельзя.
+    await moderateNewPublication(tpl.id)
+    await enqueueReindex(tpl.id)
+  }
+
+  await recordAgentAction({
+    loop: 'gardener',
+    action: decision.publish ? 'list.publish' : 'list.hold',
+    resultStatus: decision.publish ? 'ok' : 'skipped',
+    agentId: ctx.agentId,
+    actorUserId: ctx.tenderId,
+    signal: { slug: tpl.slug, ...facts },
+    decision: {
+      mode: bar.mode,
+      wouldPass: decision.wouldPass,
+      blockers: decision.blockers,
+      lenses: decision.verdicts.map((v) => `${v.lens}:${v.answer}`),
+    },
+    resultRef: tpl.slug,
+    policyVersion: ctx.policyVersion,
+  })
+  log.info('gardener: readiness gate', { slug: tpl.slug, mode: bar.mode, wouldPass: decision.wouldPass, blockers: decision.blockers.length })
+  return decision.publish ? 'published' : 'held'
+}
+
 /** Прогон садовника: до BATCH списков за раз, каждый — refine → suggestion. */
-export async function runGardenerSweep(): Promise<{ proposed: number; skipped: number }> {
+export async function runGardenerSweep(): Promise<{ proposed: number; skipped: number; published: number }> {
   if (!(await isAiAvailable())) {
     log.info('gardener: AI unavailable, skipping')
-    return { proposed: 0, skipped: 0 }
+    return { proposed: 0, skipped: 0, published: 0 }
   }
   // Фоновый расход без участия человека — уважаем глобальный дневной кап инстанса.
   if (!(await globalBudgetOk())) {
     log.info('gardener: global AI budget exhausted, skipping')
-    return { proposed: 0, skipped: 0 }
+    return { proposed: 0, skipped: 0, published: 0 }
   }
   const loop = await loopPolicy('gardener')
   const gardener = await ensureGardenerUser()
@@ -188,6 +261,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
 
   let proposed = 0
   let skipped = 0
+  let published = 0
   for (const tpl of candidates) {
     const [ver] = await db
       .select({ id: templateVersions.id })
@@ -230,7 +304,6 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     // Сорняки (HQ §9): обход ссылок списка КОДОМ до refine. Уверенно мёртвые
     // (404/410) отдаём садовнику-LLM на замену — подбор живого источника как раз
     // его работа. 'unknown' (geo-блок/бот-защита с RU-сервера) не трогаем.
-    const { checkUrls } = await import('@/shared/lib/link-health')
     const refUrls = current.items.flatMap((it) => it.refs.map((r) => r.url)).filter(Boolean)
     const verdicts = refUrls.length ? await checkUrls(refUrls) : new Map<string, string>()
     const deadUrls = [...verdicts.entries()].filter(([, v]) => v === 'dead').map(([u]) => u)
@@ -247,6 +320,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     const tender = await tenderForTags(tpl.tags, roster)
     const tenderId = tender?.userId ?? gardener.id
     const ownedByCompany = tpl.ownerAccountType === 'agent'
+    const gateCtx = { tenderId, agentId: tender?.expert.id ?? '', policyVersion: loop.policyVersion, lang }
 
     // СУХОЙ ПРОГОН: кого выбрали и что нашли — в журнал, refine НЕ зовём (он платный).
     // Проверка стоит до вызова модели и после выбора мастера, чтобы в журнале было
@@ -280,6 +354,13 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     // Без изменений — правку не открываем (сравнение по нормализованному контенту).
     const norm = (xs: GeneratedItem[]) => JSON.stringify(toProposed(xs, lang))
     if (norm(refined.items) === norm(current.items as GeneratedItem[])) {
+      // Для СВОЕГО черновика «улучшать нечего» — не пропуск, а сигнал: список устоялся,
+      // самое время спросить планку. Это же и есть правило остановки в мягком виде —
+      // полировать до бесконечности вредно, улучшения тоже портят.
+      if (ownedByCompany && tpl.status === 'draft') {
+        const res = await gateOwnDraft(tpl, { ...current, items: current.items }, gateCtx)
+        if (res === 'published') published++
+      }
       skipped++
       continue
     }
@@ -307,6 +388,11 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
       })
       proposed++
       log.info('gardener: own list improved directly', { slug: tpl.slug, tender: tender?.expert.id ?? 'generic' })
+      // Улучшили свой черновик → сразу спрашиваем планку по НОВОМУ содержимому.
+      if (tpl.status === 'draft') {
+        const res = await gateOwnDraft(tpl, { title: current.title, desc: current.desc, tags: current.tags, items: refined.items }, gateCtx)
+        if (res === 'published') published++
+      }
       continue
     }
 
@@ -339,6 +425,6 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     }
     proposed++
   }
-  log.info('gardener sweep done', { candidates: candidates.length, proposed, skipped })
-  return { proposed, skipped }
+  log.info('gardener sweep done', { candidates: candidates.length, proposed, skipped, published })
+  return { proposed, skipped, published }
 }
