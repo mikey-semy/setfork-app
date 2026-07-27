@@ -10,8 +10,22 @@ import { db, generationMessages, generations } from '@/shared/db'
  */
 export interface GnomeRep {
   gens: number
+  /** Сколько принятых генераций, в которых гном УЧАСТВОВАЛ (не «его выбрали»). */
   accepted: number
+  /**
+   * Кредит с СОХРАНЕНИЕМ: сумма 1/N по принятым генерациям, где N — число давших
+   * черновик. Сумма кредита по всем гномам за генерацию = 1, поэтому счёт больше не
+   * растёт от размера ростера. Без этого «accepted» измерял участие: чем шире совет,
+   * тем выше цифра у каждого — и авто-найм калибровался бы по инфляции.
+   */
+  acceptedShare: number
 }
+
+/**
+ * Что нужно настроению/званию: только участие. Доля кредита им не требуется, поэтому
+ * параметр сужен — вызывающему не приходится выдумывать acceptedShare.
+ */
+export type RepBasics = Pick<GnomeRep, 'gens' | 'accepted'>
 
 /** Меньше — цифре нельзя верить: на 2 генерациях «50%» вводит в заблуждение. */
 export const REP_MIN_GENS = 5
@@ -21,18 +35,33 @@ let cache: { at: number; data: Record<string, GnomeRep> } | null = null
 export async function gnomeReputation(): Promise<Record<string, GnomeRep>> {
   if (cache && Date.now() - cache.at < 5 * 60_000) return cache.data
   try {
+    // drafters — сколько РАЗНЫХ гномов дало черновик в каждой генерации. Нужен, чтобы
+    // разделить кредит: без него принятие засчитывалось каждому целиком.
+    const drafters = db
+      .select({
+        gid: generationMessages.generationId,
+        n: sql<number>`count(distinct ${generationMessages.who})::int`.as('n'),
+      })
+      .from(generationMessages)
+      .where(and(eq(generationMessages.kind, 'draft'), isNotNull(generationMessages.who)))
+      .groupBy(generationMessages.generationId)
+      .as('drafters')
+
     const rows = await db
       .select({
         who: generationMessages.who,
         gens: sql<number>`count(distinct ${generations.id})::int`,
         accepted: sql<number>`count(distinct ${generations.id}) filter (where ${generations.chosenTemplateId} is not null)::int`,
+        // Σ 1/N по принятым — кредит сохраняется: сумма по всем гномам за генерацию = 1.
+        acceptedShare: sql<number>`coalesce(sum(1.0 / greatest(${drafters.n}, 1)) filter (where ${generations.chosenTemplateId} is not null), 0)::float8`,
       })
       .from(generationMessages)
       .innerJoin(generations, eq(generations.id, generationMessages.generationId))
+      .innerJoin(drafters, eq(drafters.gid, generationMessages.generationId))
       .where(and(eq(generationMessages.kind, 'draft'), isNotNull(generationMessages.who)))
       .groupBy(generationMessages.who)
     const data: Record<string, GnomeRep> = {}
-    for (const r of rows) if (r.who) data[r.who] = { gens: r.gens, accepted: r.accepted }
+    for (const r of rows) if (r.who) data[r.who] = { gens: r.gens, accepted: r.accepted, acceptedShare: r.acceptedShare }
     cache = { at: Date.now(), data }
     return data
   } catch {
@@ -47,7 +76,9 @@ export async function gnomeReputation(): Promise<Record<string, GnomeRep>> {
 export function repScore(rep: Record<string, GnomeRep>, id: string): number {
   const r = rep[id]
   if (!r || r.gens < REP_MIN_GENS) return 0.5
-  return r.accepted / r.gens
+  // Считаем по РАЗДЕЛЁННОМУ кредиту, а не по участию: иначе балл рос от одного факта
+  // присутствия в широком совете, и отбор взвешивался инфляцией, а не качеством.
+  return Math.min(1, r.acceptedShare / r.gens)
 }
 
 /**
@@ -66,7 +97,7 @@ export interface GnomeMood {
   style: string
 }
 
-export function gnomeMood(rep: Record<string, GnomeRep>, id: string, thanks = 0): GnomeMood {
+export function gnomeMood(rep: Record<string, RepBasics>, id: string, thanks = 0): GnomeMood {
   const r = rep[id]
   // «Спасибо» — сильный тёплый сигнал (идея владельца: поблагодарят → добрый и
   // счастливый). Даже без достаточной статистики принятий пара благодарностей
@@ -106,7 +137,7 @@ export function gnomeMood(rep: Record<string, GnomeRep>, id: string, thanks = 0)
  * Research: Generative Agents — рефлексия как синтез накопленного опыта в устойчивое
  * самоощущение поверх сиюминутных наблюдений.
  */
-export function gnomeReflection(rep: Record<string, GnomeRep>, id: string): string {
+export function gnomeReflection(rep: Record<string, RepBasics>, id: string): string {
   const accepted = rep[id]?.accepted ?? 0
   if (accepted >= 30) return 'a seasoned master — many lists out there carry your hand; let quiet, earned confidence show, nothing to prove'
   if (accepted >= 10) return 'you have a real track record now — a good number of lists were built on your drafts; speak with settled competence'
@@ -127,7 +158,7 @@ export interface GnomeRank {
   labelEn: string
   labelRu: string
 }
-export function gnomeRank(rep: Record<string, GnomeRep>, id: string): GnomeRank {
+export function gnomeRank(rep: Record<string, RepBasics>, id: string): GnomeRank {
   const accepted = rep[id]?.accepted ?? 0
   if (accepted >= 30) return { tier: 3, labelEn: 'Senior Master', labelRu: 'Старший мастер' }
   if (accepted >= 10) return { tier: 2, labelEn: 'Master', labelRu: 'Мастер' }
