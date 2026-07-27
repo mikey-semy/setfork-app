@@ -49,6 +49,7 @@ export async function createBlockThread(
 
   const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId) })
   if (!sug || sug.templateId !== meta.id) return
+  if (sug.lockedAt) return // обсуждение заперто — новых замечаний нет
 
   // Якорь снимаем по ПРЕДЛОЖЕННОМУ блоку: обсуждают то, что предлагают. У branch-PR
   // это tip ветки, а не items — иначе на ветке блок не находился и тред не создавался.
@@ -136,14 +137,25 @@ export async function setBlockThreadResolved(owner: string, slug: string, thread
 }
 
 /** Тред + проверка, что он принадлежит предложению ЭТОГО списка (защита от подмены id). */
+/**
+ * Тред принадлежит списку — и обсуждение не заперто.
+ *
+ * Замок проверяется ЗДЕСЬ, а не у каждого вызывающего: через этот помощник идут
+ * и ответ в тред, и resolve. Пропустить его в одном месте значило бы оставить
+ * лазейку в запертом обсуждении.
+ */
 async function threadInList(threadId: string, listId: string): Promise<{ suggestionId: string } | null> {
   const [row] = await db
-    .select({ suggestionId: blockCommentThreads.suggestionId, templateId: suggestions.templateId })
+    .select({
+      suggestionId: blockCommentThreads.suggestionId,
+      templateId: suggestions.templateId,
+      lockedAt: suggestions.lockedAt,
+    })
     .from(blockCommentThreads)
     .innerJoin(suggestions, eq(suggestions.id, blockCommentThreads.suggestionId))
     .where(eq(blockCommentThreads.id, threadId))
     .limit(1)
-  if (!row || row.templateId !== listId) return null
+  if (!row || row.templateId !== listId || row.lockedAt) return null
   return { suggestionId: row.suggestionId }
 }
 

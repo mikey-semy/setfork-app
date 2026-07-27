@@ -908,6 +908,9 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
     with: { template: true },
   })
   if (!sug) return
+  // Заперто — новых реплик нет ни у кого, включая владельца: замок, который
+  // обходит тот, кто его повесил, ничего не значит для остальных.
+  if (sug.lockedAt) return
   // Комментарий к правке — запись в тред списка: только если список видим комментатору
   // (список мог стать приватным/скрытым после публикации PR; reactions уже так гейтят).
   if (!canViewList(sug.template, { isOwner: sug.template.ownerId === session.userId })) return

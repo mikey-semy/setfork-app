@@ -703,6 +703,15 @@ export const suggestions = pgTable('suggestions', {
   // просто перезаписывала колонку. Массив id, а не таблица: порядок не нужен,
   // связей нет, а запрос всегда идёт вместе с самим предложением.
   coauthorIds: jsonb('coauthor_ids').notNull().default([]).$type<string[]>(),
+  /**
+   * Обсуждение заперто: новые реплики запрещены (аналог Lock conversation).
+   *
+   * Нужен, когда спор ушёл в сторону, а правка уже решена: закрывать её ради
+   * тишины неправильно — решение и обсуждение это разные вещи. Кто запер,
+   * хранится рядом: «заперто» без имени выглядит как поломка, а не как решение.
+   */
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lockedById: uuid('locked_by_id').references(() => users.id, { onDelete: 'set null' }),
   note: text('note').notNull().default(''),
   baseVersion: integer('base_version').notNull(),
   items: jsonb('items').notNull().default([]).$type<ProposedItem[]>(),

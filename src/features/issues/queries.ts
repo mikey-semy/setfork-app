@@ -64,6 +64,21 @@ export async function getIssues(
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
 }
 
+/**
+ * Открытые задачи списка для пикера привязки — только номер и заголовок.
+ *
+ * Кап в 200: пикер с фильтром, а не бесконечный список; для выбора «какую задачу
+ * закроет эта правка» свежих открытых заведомо достаточно.
+ */
+export async function getOpenIssuesForPicker(templateId: string): Promise<{ number: number; title: string }[]> {
+  return db
+    .select({ number: issues.number, title: issues.title })
+    .from(issues)
+    .where(and(eq(issues.templateId, templateId), eq(issues.status, 'open')))
+    .orderBy(desc(issues.number))
+    .limit(200)
+}
+
 /** Уникальные label'ы, использованные в issue списка (для фильтра). */
 export async function getIssueLabelsInUse(templateId: string): Promise<string[]> {
   const rows = await db.select({ labels: issues.labels }).from(issues).where(eq(issues.templateId, templateId))

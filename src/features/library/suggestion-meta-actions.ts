@@ -9,6 +9,7 @@ import { enqueueJob } from '@/shared/jobs/queue'
 // eslint-disable-next-line boundaries/dependencies -- права коллаборатора из collab
 import { isCollaborator } from '@/features/collab/queries'
 import { cleanLabels } from '@/shared/lib/labels'
+import { addClosingRef, closingRefs, removeClosingRef } from './closing-refs'
 // eslint-disable-next-line boundaries/dependencies -- набор кастомных метоk списка
 import { getListLabels } from '@/features/issues/queries'
 // eslint-disable-next-line boundaries/dependencies -- уведомление о просьбе посмотреть правку
@@ -41,6 +42,52 @@ export async function bulkSuggestionAction(
       if (!cur.includes(op.label)) await setSuggestionLabels(id, [...cur, op.label])
     }
   }
+}
+
+/**
+ * Привязать/отвязать задачу — дописать или убрать `closes #N` в тексте правки.
+ *
+ * Источник правды остаётся ОДИН: строка в тексте. Пикер и набранное руками
+ * «closes #12» — одно и то же, поэтому авто-закрытие при слиянии не пришлось
+ * трогать вовсе, а связь видна прямо в описании правки.
+ *
+ * Право — у автора и у тех, кто ведёт предложения: это утверждение о том, что
+ * правка закрывает задачу, а не косметика.
+ */
+export async function toggleClosingRef(suggestionId: string, number: number): Promise<void> {
+  const session = await requireSession()
+  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+  if (!sug || sug.status !== 'open' || !Number.isInteger(number) || number <= 0) return
+  const can =
+    session.userId === sug.authorId ||
+    session.userId === sug.template.ownerId ||
+    (await isCollaborator(sug.templateId, session.userId))
+  if (!can) return
+
+  // Добавление и удаление — в модуле, который ВЛАДЕЕТ синтаксисом ссылки: своя
+  // регулярка здесь разошлась бы с разбором при первом же новом ключевом слове.
+  const next = closingRefs(sug.note).includes(number)
+    ? removeClosingRef(sug.note, number)
+    : addClosingRef(sug.note, number)
+  await db.update(suggestions).set({ note: next.slice(0, 300) }).where(eq(suggestions.id, sug.id))
+  await revalidateSuggestion(sug.template.ownerId, sug.template.slug, sug.number ?? sug.id)
+}
+
+/**
+ * Запереть/отпереть обсуждение предложения (владелец и коллаборанты).
+ *
+ * Отдельно от закрытия правки: спор может уйти в сторону, когда решение уже
+ * принято, и закрывать правку ради тишины — подмена. Заперто ≠ решено.
+ */
+export async function setSuggestionLocked(suggestionId: string, locked: boolean): Promise<void> {
+  const loaded = await loadForManage(suggestionId)
+  if (!loaded) return
+  const { sug, session } = loaded
+  await db
+    .update(suggestions)
+    .set({ lockedAt: locked ? new Date() : null, lockedById: locked ? session.userId : null })
+    .where(eq(suggestions.id, sug.id))
+  await revalidateSuggestion(sug.template.ownerId, sug.template.slug, sug.number ?? sug.id)
 }
 
 /** Закрыть предложение — то же право, что у остальных пакетных действий. */

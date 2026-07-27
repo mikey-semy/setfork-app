@@ -33,6 +33,8 @@ import { suggestionChecks } from '@/features/library/suggestion-checks'
 import { withPrDefaults } from '@/features/library/pr-settings'
 import { blocksFrom } from '@/features/library/suggestion-blocks'
 import { closingRefs } from '@/features/library/closing-refs'
+import { LinkIssuePicker } from '@/features/library/LinkIssuePicker'
+import { LockToggle } from '@/features/library/LockToggle'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
@@ -52,7 +54,7 @@ import { WatchButton } from '@/features/watch/WatchButton'
 import { AssigneePicker } from '@/features/issues/AssigneePicker'
 import { LabelEditor } from '@/features/issues/LabelEditor'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
-import { getListLabels } from '@/features/issues/queries'
+import { getListLabels, getOpenIssuesForPicker } from '@/features/issues/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails, getUsersByIds } from '@/features/library/queries'
 import { setSuggestionDraft, setSuggestionLabels, setSuggestionMilestone, toggleReviewRequest, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
@@ -130,6 +132,9 @@ export default async function SuggestionThreadPage({
 
   // Задачи, которые предложение закроет при слиянии («closes #12» в тексте).
   const linkedIssues = await getIssuesByNumbers(meta.id, closingRefs(sug.note))
+  // Открытые задачи списка — из чего выбирать в пикере привязки.
+  const canLinkIssues = !!session && sug.status === 'open' && (canMerge || session.userId === sug.authorId)
+  const openIssues = canLinkIssues ? await getOpenIssuesForPicker(meta.id) : []
   // Свои неотправленные замечания — из тех же тредов (чужие сюда не попадают).
   const myPending = session
     ? threads.reduce((n, th) => n + th.comments.filter((c) => c.pending).length, 0)
@@ -825,19 +830,48 @@ export default async function SuggestionThreadPage({
               />
             </AsideCard>
 
-            {linkedIssues.length > 0 && (
+            {/* Development у GitHub: какие задачи закроет слияние. Привязка живёт
+                строкой `closes #N` в тексте — пикер её дописывает, поэтому набранное
+                руками и выбранное мышью это одно и то же. */}
+            {(linkedIssues.length > 0 || (canLinkIssues && openIssues.length > 0)) && (
               <AsideCard title={t('prLinkedIssues', lang)}>
-                <ul className="flex flex-col gap-1.5">
-                  {linkedIssues.map((iss) => (
-                    <li key={iss.number} className="flex items-start gap-1.5 text-[12.5px]">
-                      <Link href={`/${owner}/${slug}/issues/${iss.number}`} className="font-mono text-muted hover:text-accent">
-                        #{iss.number}
-                      </Link>
-                      <span className={`min-w-0 flex-1 ${iss.status === 'closed' ? 'text-muted line-through' : 'text-ink-2'}`}>{iss.title}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-1.5 text-[11.5px] text-muted">{t('prLinkedIssuesHint', lang)}</p>
+                {linkedIssues.length > 0 && (
+                  <ul className="mb-1.5 flex flex-col gap-1.5">
+                    {linkedIssues.map((iss) => (
+                      <li key={iss.number} className="flex items-start gap-1.5 text-[12.5px]">
+                        <Link href={`/${owner}/${slug}/issues/${iss.number}`} className="font-mono text-muted hover:text-accent">
+                          #{iss.number}
+                        </Link>
+                        <span className={`min-w-0 flex-1 ${iss.status === 'closed' ? 'text-muted line-through' : 'text-ink-2'}`}>{iss.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <LinkIssuePicker
+                  suggestionId={sug.id}
+                  issues={openIssues}
+                  linked={closingRefs(sug.note)}
+                  canEdit={canLinkIssues}
+                  labels={{
+                    add: t('prLinkIssue', lang),
+                    empty: t('prLinkIssueEmpty', lang),
+                    filter: t('prLinkIssueFilter', lang),
+                    remove: t('prLinkIssueRemove', lang),
+                    hint: t('prLinkedIssuesHint', lang),
+                  }}
+                />
+              </AsideCard>
+            )}
+
+            {/* Замок обсуждения — служебное и редкое, поэтому в самом низу панели,
+                а не рядом с частыми действиями. */}
+            {canMerge && (
+              <AsideCard>
+                <LockToggle
+                  suggestionId={sug.id}
+                  locked={!!sug.lockedAt}
+                  labels={{ lock: t('prLock', lang), unlock: t('prUnlock', lang), hint: t('prLockHint', lang) }}
+                />
               </AsideCard>
             )}
 
