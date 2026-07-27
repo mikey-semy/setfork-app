@@ -16,7 +16,9 @@ import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
-import { SuggestionDiff } from '@/features/library/SuggestionDiff'
+import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
+import { diffSteps, rowsToCmp } from '@/features/library/diff'
+import { DiffViewToggle } from '@/features/library/DiffViewToggle'
 import { SuggestionTabs, type SuggestionTab } from '@/features/library/SuggestionTabs'
 import { SuggestionTitle } from '@/features/library/SuggestionTitle'
 import { MergedPanel } from '@/features/library/MergedPanel'
@@ -28,7 +30,6 @@ import { threadState } from '@/features/comments/state'
 import type { RowThread } from '@/features/library/DiffComments'
 import type { AnchorableBlock } from '@/features/comments/fields'
 import { getSuggestionReviews } from '@/features/library/review-actions'
-import { diffSteps } from '@/features/library/suggestion-diff'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
@@ -47,7 +48,7 @@ export default async function SuggestionThreadPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string; id: string }>
-  searchParams: Promise<{ e?: string; tab?: string }>
+  searchParams: Promise<{ e?: string; tab?: string; view?: string }>
 }) {
   const [{ handle: owner, slug, id }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
@@ -83,7 +84,6 @@ export default async function SuggestionThreadPage({
       }))
     : (sug.items as ProposedItem[])
   const diffBase = sug.branchRef ? (await getVersionSteps(meta.id, meta.currentVersion))?.steps ?? [] : base?.steps ?? []
-  const diff = diffSteps(diffBase, items, lang)
 
   // Ревью правки: список вердиктов + свой текущий (форма показывает выбор, а не
   // плодит копии — вердикт один на рецензента и перезаписывается).
@@ -135,7 +135,13 @@ export default async function SuggestionThreadPage({
   const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
   // Вкладка из ?tab= — адрес ссылабелен (можно послать ссылку сразу на изменения).
   const tab: SuggestionTab = sp.tab === 'files' ? 'files' : 'conversation'
-  const changedCount = diff.summary.added + diff.summary.removed + diff.summary.modified
+  // Вид диффа — ТОТ ЖЕ ?view=, что на сравнении версий: одно изменение выглядит
+  // одинаково, откуда бы на него ни смотрели.
+  const view = sp.view === 'list' ? 'list' : 'code'
+  const baseCmp = rowsToCmp(diffBase as Parameters<typeof rowsToCmp>[0], lang)
+  const propCmp = rowsToCmp(items as unknown as Parameters<typeof rowsToCmp>[0], lang)
+  const summary = diffSteps(baseCmp, propCmp).summary
+  const changedCount = summary.added + summary.removed + summary.changed + summary.moved
   const threadCount = threads.length + comments.length
 
   // История действий — из источников (правка, ревью, треды), а не из отдельной
@@ -257,32 +263,40 @@ export default async function SuggestionThreadPage({
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → правка` : `v${sug.baseVersion} → suggestion`}
         </div>
-        <SuggestionDiff
-          rows={diff.rows}
-          summary={diff.summary}
-          lang={lang}
-          comments={{
-            owner,
-            slug,
-            suggestionId: sug.id,
-            canComment: !!session && sug.status === 'open',
-            byBlock: threadsByBlock,
-            labels: {
-              add: t('commentAdd', lang),
-              placeholder: t('commentPlaceholder', lang),
-              send: t('commentSend', lang),
-              cancel: t('commentCancel', lang),
-              reply: t('commentReply', lang),
-              resolve: t('commentResolve', lang),
-              unresolve: t('commentUnresolve', lang),
-              resolved: t('commentResolvedCount', lang),
-              onSelection: t('commentOnSelection', lang),
-              onBlock: t('commentOnBlock', lang),
-              stateReanchored: t('commentReanchored', lang),
-              orphanHint: t('commentOrphaned', lang),
-            },
-          }}
-        />
+        {/* Переключатель вида — общий с сравнением версий. */}
+        <div className="mb-3 flex justify-end">
+          <DiffViewToggle path={path} tab="files" view={view} labels={{ code: t('viewCode', lang), list: t('viewList', lang) }} />
+        </div>
+        {view === 'code' ? (
+          <CodeDiff fromSteps={baseCmp} toSteps={propCmp} ordered={meta.ordered} lang={lang} />
+        ) : (
+          <ListDiff
+            fromSteps={baseCmp}
+            toSteps={propCmp}
+            lang={lang}
+            comments={{
+              owner,
+              slug,
+              suggestionId: sug.id,
+              canComment: !!session && sug.status === 'open',
+              byBlock: threadsByBlock,
+              labels: {
+                add: t('commentAdd', lang),
+                placeholder: t('commentPlaceholder', lang),
+                send: t('commentSend', lang),
+                cancel: t('commentCancel', lang),
+                reply: t('commentReply', lang),
+                resolve: t('commentResolve', lang),
+                unresolve: t('commentUnresolve', lang),
+                resolved: t('commentResolvedCount', lang),
+                onSelection: t('commentOnSelection', lang),
+                onBlock: t('commentOnBlock', lang),
+                stateReanchored: t('commentReanchored', lang),
+                orphanHint: t('commentOrphaned', lang),
+              },
+            }}
+          />
+        )}
         <div className="mt-2">
           <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
         </div>
