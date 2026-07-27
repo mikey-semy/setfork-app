@@ -11,7 +11,9 @@ const { MCP_BULK_MAX, mcpApplySuggestion, mcpBulkCreate, mcpPendingSuggestions }
 let ownerId = ''
 let botId = ''
 
-const list = (title: string) => ({ title, items: [{ title: 'Шаг один' }, { title: 'Шаг два' }] })
+// Пункты выводим ИЗ ЗАГОЛОВКА: с общим набором шагов любые два списка стали бы почти-дублями
+// (и правильно — содержимое одинаковое). Фикстура должна отличаться содержимым, как в жизни.
+const list = (title: string) => ({ title, items: [{ title: `${title}: подготовка` }, { title: `${title}: основной шаг` }] })
 const countMine = async () => (await db.select({ n: sql<number>`count(*)::int` }).from(templates).where(eq(templates.ownerId, ownerId)))[0].n
 
 beforeAll(async () => {
@@ -67,6 +69,51 @@ describe('дедуп: повтор после обрыва не удваивае
     const res = await mcpBulkCreate(ownerId, [list('Дубль'), list('дубль')])
     if ('error' in res) throw new Error(res.error)
     expect(res.duplicates).toBe(1)
+  })
+})
+
+describe('почти-дубли в пачке', () => {
+  const breadItems = ['Смешать муку воду соль дрожжи', 'Замесить тесто до гладкости', 'Дать подняться два часа', 'Сформовать буханку', 'Испечь при 240 градусах']
+  const reworded = {
+    title: 'Печём хлеб дома своими руками',
+    tags: ['кулинария'],
+    items: [
+      { title: 'Смешайте муку с водой солью и дрожжами' },
+      { title: 'Вымешивайте тесто пока не станет гладким' },
+      { title: 'Оставьте подниматься на два часа' },
+      { title: 'Сформуйте буханку' },
+      { title: 'Выпекайте при 240 градусах' },
+    ],
+  }
+
+  it('переписанный другими словами список — не создаётся (заголовок другой, содержимое то же)', async () => {
+    const first = await mcpBulkCreate(ownerId, [{ title: 'Как испечь хлеб дома', tags: ['кулинария'], items: breadItems.map((t) => ({ title: t })) }], false)
+    if ('error' in first) throw new Error(first.error)
+    expect(first.created).toBe(1)
+
+    const second = await mcpBulkCreate(ownerId, [reworded], false)
+    if ('error' in second) throw new Error(second.error)
+    expect(second).toMatchObject({ created: 0, duplicates: 1 })
+    expect(second.lists[0].reason).toContain('почти дубль')
+    expect(await countMine()).toBe(1)
+  })
+
+  it('сухой прогон тоже показывает почти-дубли: план обязан говорить правду', async () => {
+    await mcpBulkCreate(ownerId, [{ title: 'Как испечь хлеб дома', tags: ['кулинария'], items: breadItems.map((t) => ({ title: t })) }], false)
+    const plan = await mcpBulkCreate(ownerId, [reworded])
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan).toMatchObject({ dryRun: true, duplicates: 1 })
+  })
+
+  it('список на ту же тему, но другой — создаётся (не глушим нормальные варианты)', async () => {
+    await mcpBulkCreate(ownerId, [{ title: 'Как испечь хлеб дома', tags: ['кулинария'], items: breadItems.map((t) => ({ title: t })) }], false)
+    const other = await mcpBulkCreate(
+      ownerId,
+      [{ title: 'Хлеб на закваске без дрожжей', tags: ['кулинария'], items: ['Вывести закваску за пять дней', 'Освежить закваску утром', 'Складывать тесто каждый час', 'Холодная ферментация в холодильнике', 'Печь на камне с паром'].map((t) => ({ title: t })) }],
+      false,
+    )
+    if ('error' in other) throw new Error(other.error)
+    expect(other).toMatchObject({ created: 1, duplicates: 0 })
   })
 })
 

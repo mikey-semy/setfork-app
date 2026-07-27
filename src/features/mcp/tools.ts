@@ -12,6 +12,7 @@ import { listStore } from '@/features/library/list-store'
 import { applySuggestion } from '@/features/library/actions'
 import { slugify, uniqueSlug } from '@/features/library/slug'
 import { recordAgentAction } from '@/shared/agents/policy'
+import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
 import { isCollaborator } from '@/features/collab/queries'
@@ -360,6 +361,19 @@ export async function mcpBulkCreate(userId: string, lists: McpCreateInput[], dry
       out.failed++
       break
     }
+    // ПОЧТИ-ДУБЛЬ по содержимому, а не по заголовку: пачка — главный способ наплодить
+    // клонов («Как испечь хлеб дома» и «Печём хлеб дома своими руками» с теми же шагами).
+    // Считается кодом, порог измерен (см. shared/ai/near-duplicate). Проверяем и в сухом
+    // прогоне: план обязан говорить правду о том, что будет создано.
+    const near = await findExistingNearDuplicate(
+      { title, items: (input.items ?? []).map((it) => it.title ?? '').filter(Boolean), tags: input.tags ?? [] },
+      { ownerId: userId },
+    )
+    if (near.match) {
+      out.duplicates++
+      out.lists.push({ title, status: 'duplicate', reason: `почти дубль «${near.match.title}» (совпадение ${Math.round(near.match.score * 100)}%)` })
+      continue
+    }
     if (dryRun) {
       seen.add(key)
       out.lists.push({ title, status: 'would-create', slug: slugify(title) })
@@ -382,7 +396,7 @@ export async function mcpBulkCreate(userId: string, lists: McpCreateInput[], dry
     resultStatus: out.failed && !out.created ? 'error' : dryRun ? 'dry-run' : 'ok',
     actorUserId: userId,
     principalMode: 'on_behalf_of',
-    signal: { planned: out.planned, duplicates: out.duplicates },
+    signal: { planned: out.planned, duplicates: out.duplicates, nearDuplicates: out.lists.filter((l) => l.reason?.startsWith('почти дубль')).length },
     decision: { dryRun, created: out.created, failed: out.failed, quotaStopped: out.quotaStopped },
   })
   return out
