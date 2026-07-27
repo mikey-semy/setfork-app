@@ -1141,6 +1141,36 @@ export const listLinks = pgTable(
  * извлечение той же связи из ДРУГОГО списка инкрементит confidence
  * (подтверждение практикой). Словарь relation ограничен (см. shared/ai/triples).
  */
+/**
+ * ИСТОЧНИКИ КОРПУСА — что компании РАЗРЕШЕНО брать, с лицензией и атрибуцией.
+ *
+ * Правило владельца: только CC-BY/CC0/open-access, лицензия и цитируемость фиксируются НА
+ * ИСТОЧНИК. Реестр — то место, где это правило перестаёт быть пожеланием: материал попадает
+ * в корпус только через запись здесь, а запись невозможна без разрешённой лицензии
+ * (проверка fail-closed в shared/ai/source-license).
+ *
+ * Адрес уникален: один источник — одна запись, повторная регистрация обновляет описание, а
+ * не плодит дубли с разными лицензиями (иначе «какая из них настоящая» решить нечем).
+ */
+export const knowledgeSources = pgTable(
+  'knowledge_sources',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    url: text('url').notNull(),
+    title: text('title').notNull().default(''),
+    /** Нормализованный код: CC0 | PUBLIC-DOMAIN | CC-BY | CC-BY-SA | MIT | APACHE-2.0. */
+    license: text('license').notNull(),
+    /** Кого указывать. Обязательна там, где её требует лицензия (проверяется до вставки). */
+    attribution: text('attribution').notNull().default(''),
+    /** Заметка человека: что именно взято и зачем. */
+    note: text('note').notNull().default(''),
+    /** Кто зарегистрировал — служебный аккаунт или человек через ассистента. */
+    addedBy: uuid('added_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('knowledge_sources_url_idx').on(t.url)],
+)
+
 export const knowledgeTriples = pgTable(
   'knowledge_triples',
   {
