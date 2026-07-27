@@ -542,7 +542,7 @@ export const appSettings = pgTable('app_settings', {
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
 // selfgen — самогенерация: специалист сам пишет черновик списка по своей теме
 // (инициатива компании, а не ответ на запрос пользователя).
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review'
 
 export const jobs = pgTable(
   'jobs',

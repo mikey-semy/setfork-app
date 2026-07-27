@@ -225,6 +225,8 @@ const DICT = {
   prNoneClosed: { en: 'No closed suggestions', ru: 'Закрытых предложений нет' },
   prSelectAll: { en: 'Select all', ru: 'Выбрать все' },
   prSelected: { en: 'Selected', ru: 'Выбрано' },
+  scrollPrev: { en: 'Scroll left', ru: 'Листать влево' },
+  scrollNext: { en: 'Scroll right', ru: 'Листать вправо' },
   allLabels: { en: 'All labels', ru: 'Все метки' },
   allMilestones: { en: 'All milestones', ru: 'Все вехи' },
   prCoauthors: { en: 'Co-authors', ru: 'Соавторы' },

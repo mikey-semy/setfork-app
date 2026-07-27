@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
+import { ScrollRow } from './ScrollRow'
 
 // Единый таб-бар под шапкой (GitHub-стиль) — ОДИН источник правды для профиля,
 // страницы списка, Explore и любых будущих разделов. Активная вкладка подчёркнута
@@ -18,6 +19,7 @@ export function TabNav({
   maxWidthClass = 'max-w-[1180px]',
   scope = 'default',
   center = false,
+  arrows,
 }: {
   children: React.ReactNode
   maxWidthClass?: string
@@ -25,8 +27,10 @@ export function TabNav({
   scope?: string
   /** Центрировать вкладки (витрина Explore); по умолчанию слева (GitHub-стиль). */
   center?: boolean
+  /** Подписи стрелок листания (обязательны там, где ряд длинный). */
+  arrows: { prev: string; next: string }
 }) {
-  const ref = useRef<HTMLElement>(null)
+  const ref = useRef<HTMLDivElement>(null)
   const [bar, setBar] = useState<{ left: number; width: number } | null>(() => lastPos.get(scope) ?? null)
 
   useEffect(() => {
@@ -53,7 +57,14 @@ export function TabNav({
           в НЕДОСКРОЛЛИВАЕМУЮ зону — слева край не видно и достать его нельзя. `safe`
           центрирует, пока влезает, а при переполнении ведёт себя как start (прижимает
           влево), и ряд нормально листается. */}
-      <nav ref={ref} className={`no-scrollbar relative mx-auto flex w-full gap-1 overflow-x-auto px-4 text-[14px] ${center ? 'justify-center-safe' : ''} ${maxWidthClass}`}>
+      {/* Ряд листается со стрелками (ScrollRow): пряча полосу прокрутки, надо
+          дать взамен подсказку, иначе на узком экране вкладки выглядят просто
+          обрезанными и до дальних не догадаться добраться. */}
+      <ScrollRow
+        scrollerRef={ref}
+        label={arrows}
+        className={`mx-auto flex w-full gap-1 px-4 text-[14px] ${center ? 'justify-center-safe' : ''} ${maxWidthClass}`}
+      >
         {children}
         {bar && (
           <span
@@ -62,7 +73,7 @@ export function TabNav({
             style={{ left: bar.left, width: bar.width }}
           />
         )}
-      </nav>
+      </ScrollRow>
     </div>
   )
 }

@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, Pencil, RefreshCw, X } from 'lucide-react'
+import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, Pencil, RefreshCw, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Badge, type BadgeVariant } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
@@ -278,13 +279,17 @@ export default async function SuggestionThreadPage({
     ...Object.values(commitAuthors),
   ].filter((c) => c.handle && !seenCo.has(c.handle) && seenCo.add(c.handle))
 
-  const statusCls = isDraft
-    ? 'bg-surface-2 text-ink-2'
+  // Состояние — общим бейджем (shared/ui/badge), а не своей плашкой: раньше
+  // здесь были залитые bg-accent/bg-ok с белым текстом — они кричали громче
+  // заголовка правки, ради которого человек и пришёл. Варианты бейджа тихие:
+  // подложка в 15% и цветной текст, как у остальных чипов приложения.
+  const statusVariant: BadgeVariant = isDraft
+    ? 'soft'
     : sug.status === 'accepted'
-      ? 'bg-ok text-white'
+      ? 'ok'
       : sug.status === 'rejected'
-        ? 'bg-surface-2 text-muted'
-        : 'bg-accent text-white'
+        ? 'soft'
+        : 'accent'
 
   // Ревью нужно в ДВУХ вкладках: в обсуждении (там идёт разговор) и сразу под
   // изменениями (отревьюил — тут же вынес вердикт). Один элемент, а не две копии
@@ -347,9 +352,20 @@ export default async function SuggestionThreadPage({
           }}
         />
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold ${statusCls}`}>
-            {isDraft ? <GitPullRequestDraft size={14} /> : <GitPullRequest size={14} />} {statusLabel}
-          </span>
+          {/* Крупнее рядового чипа (это главный статус страницы), но той же
+              тихой палитры. */}
+          <Badge variant={statusVariant} className="px-3 py-1 text-[12.5px]">
+            {sug.status === 'accepted' ? (
+              <GitMerge size={14} />
+            ) : sug.status === 'rejected' ? (
+              <GitPullRequestClosed size={14} />
+            ) : isDraft ? (
+              <GitPullRequestDraft size={14} />
+            ) : (
+              <GitPullRequest size={14} />
+            )}{' '}
+            {statusLabel}
+          </Badge>
           {/* Объём правки в шапке — тот же индикатор, что в диффе и в коммитах. */}
           <DiffStat counts={summary} squares />
           <span className="text-[13px] text-ink-2">
@@ -401,6 +417,7 @@ export default async function SuggestionThreadPage({
             files: t('proposedChanges', lang),
             result: t('resultTab', lang),
           }}
+          arrows={{ prev: t('scrollPrev', lang), next: t('scrollNext', lang) }}
         />
 
         {/* Две колонки: содержимое вкладки + боковая панель (общий примитив). */}

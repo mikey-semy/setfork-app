@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ScrollRow } from '@/shared/ui/ScrollRow'
 import { MessagesSquare, FileDiff, CircleCheck, GitCommitHorizontal, Eye } from 'lucide-react'
 
 export type SuggestionTab = 'conversation' | 'commits' | 'checks' | 'files' | 'result'
@@ -25,6 +26,7 @@ export function SuggestionTabs({
   filesCount,
   checksFailed,
   labels,
+  arrows,
 }: {
   path: string
   active: SuggestionTab
@@ -35,6 +37,8 @@ export function SuggestionTabs({
   /** Сколько проверок блокирует — счётчик показываем только когда есть что чинить. */
   checksFailed: number
   labels: { conversation: string; commits: string; checks: string; files: string; result: string }
+  /** Подписи стрелок листания — ряд из пяти вкладок на мобиле не влезает. */
+  arrows: { prev: string; next: string }
 }) {
   const item = (tab: SuggestionTab, icon: React.ReactNode, label: string, count: number) => {
     const on = tab === active
@@ -53,13 +57,15 @@ export function SuggestionTabs({
     )
   }
   return (
-    // Ряд листается в своём контейнере — страница горизонтально не едет.
-    <div className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
+    // Ряд листается В СВОЁМ контейнере (страница горизонтально не едет) и ПОКАЗЫВАЕТ,
+    // что листается: тем же ScrollRow, что и верхние вкладки списка. Без стрелок
+    // пятая вкладка на мобиле выглядела просто обрезанной.
+    <ScrollRow outerClassName="mb-4" className="flex gap-1 rounded-lg border border-border bg-surface p-1" label={arrows}>
       {item('conversation', <MessagesSquare size={14} />, labels.conversation, conversationCount)}
       {commitsCount !== null && item('commits', <GitCommitHorizontal size={14} />, labels.commits, commitsCount)}
       {item('checks', <CircleCheck size={14} />, labels.checks, checksFailed)}
       {item('files', <FileDiff size={14} />, labels.files, filesCount)}
       {item('result', <Eye size={14} />, labels.result, 0)}
-    </div>
+    </ScrollRow>
   )
 }

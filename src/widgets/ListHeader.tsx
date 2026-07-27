@@ -62,6 +62,8 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
           versions: t('versionsTab', lang),
           insights: t('insightsTab', lang),
           settings: t('settings', lang),
+          scrollPrev: t('scrollPrev', lang),
+          scrollNext: t('scrollNext', lang),
         }}
         counts={{ issues: issueCount, suggestions: suggCount, discussions: discCount }}
         flags={{ issues: meta.issuesEnabled, discussions: meta.discussionsEnabled, owner: isOwner }}

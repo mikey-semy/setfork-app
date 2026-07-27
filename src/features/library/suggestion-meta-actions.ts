@@ -2,8 +2,10 @@
 
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { db, milestones, suggestionAssignees, suggestionReviewRequests, suggestions, users } from '@/shared/db'
+import { councilExperts, db, milestones, suggestionAssignees, suggestionReviewRequests, suggestions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { getLang } from '@/shared/i18n/server'
+import { enqueueJob } from '@/shared/jobs/queue'
 // eslint-disable-next-line boundaries/dependencies -- права коллаборатора из collab
 import { isCollaborator } from '@/features/collab/queries'
 import { cleanLabels } from '@/shared/lib/labels'
@@ -176,6 +178,17 @@ export async function toggleReviewRequest(suggestionId: string, handle: string):
     await db.delete(suggestionReviewRequests).where(eq(suggestionReviewRequests.id, existing.id))
   } else {
     await db.insert(suggestionReviewRequests).values({ suggestionId: sug.id, userId: u.id, requestedById: session.userId })
+    // Гном — такой же рецензент, но его просьбу можно исполнить: ставим задачу,
+    // и вердикт приходит фоном в ту же таблицу, что у людей. Ради этого гномы и
+    // заведены настоящими пользователями.
+    const [expert] = await db
+      .select({ id: councilExperts.id })
+      .from(councilExperts)
+      .where(eq(councilExperts.userId, u.id))
+      .limit(1)
+    if (expert) {
+      await enqueueJob('gnome_review', { suggestionId: sug.id, expertId: expert.id, lang: await getLang() }).catch(() => {})
+    }
     await notify({
       recipientId: u.id,
       actorId: session.userId,
