@@ -6,7 +6,8 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
-import { submitSuggestionReview, withdrawSuggestionReview, type ReviewView, type Verdict } from './review-actions'
+import { submitSuggestionReview, withdrawSuggestionReview } from './review-actions'
+import type { ReviewView, Verdict } from './review-model'
 
 export interface ReviewLabels {
   title: string

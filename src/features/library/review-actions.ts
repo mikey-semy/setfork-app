@@ -9,11 +9,8 @@ import { avatarSrc } from '@/shared/media'
 import { notify } from '@/features/notifications/notify'
 // eslint-disable-next-line boundaries/dependencies -- права коллаборатора из collab
 import { isCollaborator } from '@/features/collab/queries'
+import { isVerdict, type ReviewView, type Verdict } from './review-model'
 
-/** Вердикты ревью. Явные значения — у Gitea «request changes» спрятан за Reject. */
-export const VERDICTS = ['comment', 'approve', 'changes'] as const
-export type Verdict = (typeof VERDICTS)[number]
-const isVerdict = (v: unknown): v is Verdict => typeof v === 'string' && (VERDICTS as readonly string[]).includes(v)
 
 const MAX_BODY = 10_000
 
@@ -52,16 +49,6 @@ export async function submitSuggestionReview(suggestionId: string, verdict: stri
     suggestionId,
   })
   revalidatePath('/', 'layout')
-}
-
-export interface ReviewView {
-  id: string
-  verdict: Verdict
-  body: string
-  createdAt: Date
-  /** Голос блокирует принятие (запрошены правки от владельца/коллаборатора). */
-  blocking: boolean
-  reviewer: { handle: string; name: string | null; avatarUrl: string | null }
 }
 
 /**
