@@ -499,6 +499,86 @@ export const jobs = pgTable(
   }),
 )
 
+// ── Фундамент автономии: реестр петель + журнал действий ─────────────
+// Появилось вместе с самогенерацией: с этого момента петля тратит деньги БЕЗ человека,
+// а рубильника на конкретную петлю не было — только глобальное «выключить весь ИИ» или
+// режим обслуживания. Здесь ровно то, чего не хватало: пауза, сухой прогон, автоматический
+// предохранитель и след «сигнал → решение → действие → результат».
+
+/**
+ * Политика петли. Строка на тип джобы, которая работает сама (садовник, самогенерация,
+ * рудник знаний, проверка ссылок, дайджест).
+ *
+ * pausedAt — РУЧНОЙ рубильник (человек увидел неладное и остановил).
+ * circuitTrippedAt — АВТОМАТИЧЕСКИЙ предохранитель (сорвалась скорость расхода/ошибок).
+ * Это разные вещи, и их нельзя сливать в один флаг: первый снимает человек, второй —
+ * восстановление показателей. Обе колонки участвуют в claimJob: пока стоит любая, задачи
+ * этого типа не выдаются воркеру.
+ */
+export const agentLoops = pgTable('agent_loops', {
+  // Совпадает с JobType петли — так claimJob фильтрует по одному полю без маппинга.
+  type: text('type').primaryKey(),
+  pausedAt: timestamp('paused_at', { withTimezone: true }),
+  pausedBy: uuid('paused_by').references(() => users.id, { onDelete: 'set null' }),
+  pauseReason: text('pause_reason').notNull().default(''),
+  // Сухой прогон: петля считает и пишет в журнал, но НЕ производит действий. Обязателен
+  // перед включением автономии — иначе первое наблюдение делается уже на живых данных.
+  dryRun: boolean('dry_run').notNull().default(false),
+  circuitTrippedAt: timestamp('circuit_tripped_at', { withTimezone: true }),
+  circuitReason: text('circuit_reason').notNull().default(''),
+  // Версия правил. Пишется в каждое действие журнала: без неё через полгода нельзя
+  // ответить, по каким порогам петля тогда решала. Бампится при правке политики.
+  policyVersion: integer('policy_version').notNull().default(1),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+/**
+ * Журнал действий агента: сигнал → решение → действие → результат.
+ *
+ * Пишется В ОДНОЙ ТРАНЗАКЦИИ с самим действием — иначе «сделал» и «записал, что сделал»
+ * расходятся, и именно на таком расхождении разбор инцидента и застревает. Внешние
+ * трейс-хранилища этого дать не могут (сэмплирование, retention), а Postgres у нас уже есть.
+ *
+ * principalMode различает «действовал сам» и «действовал за пользователя» — без него
+ * нельзя ответить, была ли операция автономной; это признанный пробел, который ни один
+ * стандарт агентской идентичности пока не закрывает.
+ */
+export const agentActions = pgTable(
+  'agent_actions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+    loop: text('loop').notNull(), // тип петли (или 'manual' — запуск человеком)
+    /** Служебный аккаунт, от чьего имени шло действие (ADR-0004). */
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    /** id в ростере — «какой именно специалист» (аккаунт может быть переиспользован). */
+    agentId: text('agent_id').notNull().default(''),
+    principalMode: text('principal_mode').notNull().default('autonomous').$type<'autonomous' | 'on_behalf_of'>(),
+    /** Что запустило: расписание, сигнал, кнопка человека. */
+    signal: jsonb('signal').notNull().default({}),
+    /** Что решили и почему (включая отвергнутые варианты, если были). */
+    decision: jsonb('decision').notNull().default({}),
+    /** Что сделали: 'list.draft', 'suggestion.open', 'noop' … */
+    action: text('action').notNull(),
+    resultStatus: text('result_status').notNull().$type<'ok' | 'skipped' | 'error' | 'dry-run'>(),
+    /** Ссылка на созданное (handle/slug, id правки) — чтобы след вёл к результату. */
+    resultRef: text('result_ref').notNull().default(''),
+    error: text('error').notNull().default(''),
+    policyVersion: integer('policy_version').notNull().default(1),
+    /**
+     * Ключ идемпотентности: повторный прогон с тем же ключом не должен породить второе
+     * действие. Уникальный индекс — единственная надёжная защита; проверка «а нет ли уже»
+     * в коде проигрывает гонке двух воркеров.
+     */
+    idempotencyKey: text('idempotency_key'),
+  },
+  (t) => [
+    index('agent_actions_loop_idx').on(t.loop, t.occurredAt.desc()),
+    index('agent_actions_agent_idx').on(t.agentId, t.occurredAt.desc()),
+    uniqueIndex('agent_actions_idem_idx').on(t.idempotencyKey),
+  ],
+)
+
 // ── Web Push подписки (фоновые браузерные уведомления через service worker) ──
 export const pushSubscriptions = pgTable(
   'push_subscriptions',

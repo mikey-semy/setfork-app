@@ -28,6 +28,15 @@ export async function enqueueJob(
 /**
  * Атомарно захватывает одну готовую задачу и переводит в processing.
  * `FOR UPDATE SKIP LOCKED` — параллельные воркеры/инстансы не берут одну задачу дважды.
+ *
+ * РУБИЛЬНИК ПЕТЕЛЬ живёт здесь, а не в каждом сервисе. Захват — единственное место,
+ * через которое проходит ЛЮБАЯ фоновая работа, поэтому пауза из agent_loops действует
+ * атомарно и сразу на все инстансы: остановленная петля просто не получает задач.
+ * Проверка внутри сервиса такой гарантии не даёт — сервис уже запущен, и его ещё надо
+ * уговорить остановиться.
+ *
+ * Ручная пауза (paused_at) и автоматический предохранитель (circuit_tripped_at) обе
+ * блокируют выдачу; снимаются они по-разному, но эффект здесь один.
  */
 export async function claimJob(): Promise<Job | null> {
   const res = await db.execute(sql`
@@ -35,6 +44,10 @@ export async function claimJob(): Promise<Job | null> {
     WHERE id = (
       SELECT id FROM jobs
       WHERE status = 'pending' AND run_at <= now()
+        AND type NOT IN (
+          SELECT type FROM agent_loops
+          WHERE paused_at IS NOT NULL OR circuit_tripped_at IS NOT NULL
+        )
       ORDER BY run_at ASC
       FOR UPDATE SKIP LOCKED
       LIMIT 1
