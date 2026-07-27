@@ -5,8 +5,8 @@ import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { CouncilRoster } from '@/features/admin/CouncilRoster'
 import { hireSignals } from '@/features/admin/hire'
-import { createGnomeAccounts, hireGnome } from '@/features/admin/actions'
-import { UserPlus } from 'lucide-react'
+import { createGnomeAccounts, hireGnome, selfGenerateNow } from '@/features/admin/actions'
+import { Sparkles, UserPlus } from 'lucide-react'
 import type { Option } from '@/features/admin/ModelSelect'
 
 export const metadata = { title: 'Council' }
@@ -50,7 +50,7 @@ async function builtinAvatars(): Promise<string[]> {
  * Заголовка на странице нет: он живёт в шапке (TopNav, ключ councilHall) — как у остальных
  * разделов. Подзаголовков в проекте нет вовсе.
  */
-export default async function CouncilPage({ searchParams }: { searchParams: Promise<{ hire?: string }> }) {
+export default async function CouncilPage({ searchParams }: { searchParams: Promise<{ hire?: string; selfgen?: string }> }) {
   await requireAdmin()
   const [lang, settings, apiKey, sp] = await Promise.all([getLang(), getAiSettings(), getApiKey(), searchParams])
   const ru = lang === 'ru'
@@ -136,6 +136,42 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
               <UserPlus size={14} /> {say('Create accounts', 'Завести аккаунты')}
             </button>
           </form>
+        </div>
+      )}
+      {sp.selfgen && (
+        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[12.5px] text-warn">
+          {say(`Self-generation did not produce a draft: ${sp.selfgen}`, `Самогенерация не дала черновик: ${sp.selfgen}`)}
+        </p>
+      )}
+      {/* САМОГЕНЕРАЦИЯ, ручной режим: поручить специалисту список по его теме. Тот же
+          путь, что у авто-петли. Кнопки видны только когда режим не 'off' — иначе
+          обещали бы действие, которое настройками запрещено. */}
+      {settings.selfGenMode !== 'off' && (
+        <div className="mb-4 rounded-lg border border-border bg-surface p-3.5">
+          <div className="mb-1 text-[12.5px] font-semibold text-ink">
+            {say('Assign a list', 'Поручить список')}
+          </div>
+          <p className="mb-2.5 text-[11.5px] text-ink-2">
+            {say(
+              'The specialist picks what his area is missing and writes it. The result is a DRAFT authored by him — you publish it.',
+              'Специалист сам выберет, чего не хватает в его области, и напишет. Результат — ЧЕРНОВИК от его имени, публикуешь ты.',
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {roster
+              .filter((e) => e.enabled && e.lifecycle === 'active' && !e.domains.includes('*'))
+              .map((e) => (
+                <form key={e.id} action={selfGenerateNow}>
+                  <input type="hidden" name="expertId" value={e.id} />
+                  <button
+                    type="submit"
+                    className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12.5px] text-ink hover:border-border-strong"
+                  >
+                    <Sparkles size={13} className="text-muted" /> {ru ? e.nameRu : e.nameEn}
+                  </button>
+                </form>
+              ))}
+          </div>
         </div>
       )}
       <CouncilRoster experts={roster} modelOptions={modelOptions} gallery={gallery} ru={ru} />

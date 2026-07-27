@@ -29,7 +29,7 @@ export async function register() {
 
   // Фоновый воркер очереди задач. Idempotent, безопасен между инстансами.
   // Реестр обработчиков: по одному модулю jobs.ts на фичу-владельца.
-  const [{ startWorker }, notifications, generation, library, digest, moderation, gardener, knowledge, linkcheck] = await Promise.all([
+  const [{ startWorker }, notifications, generation, library, digest, moderation, gardener, knowledge, linkcheck, selfgen] = await Promise.all([
     import('@/shared/jobs/worker'),
     import('@/features/notifications/jobs'),
     import('@/features/generation/jobs'),
@@ -39,6 +39,7 @@ export async function register() {
     import('@/features/gardener/jobs'),
     import('@/features/knowledge/jobs'),
     import('@/features/linkcheck/jobs'),
+    import('@/features/library/selfgen-jobs'),
   ])
   startWorker({
     email: notifications.runEmailJob,
@@ -50,6 +51,7 @@ export async function register() {
     gardener: gardener.runGardenerJob,
     triples: knowledge.runTriplesJob,
     linkcheck: linkcheck.runLinkcheckJob,
+    selfgen: selfgen.runSelfGenJob,
   })
 
   // Самоподдерживающиеся джобы: на старте гарантируем первую постановку в очередь;
@@ -66,6 +68,11 @@ export async function register() {
   void import('@/features/linkcheck/service')
     .then((m) => m.ensureLinkcheckScheduled())
     .catch((e) => captureError(e, { where: 'linkcheck.ensure' }))
+  // Ставим в очередь всегда: сама джоба проверит режим и в off/manual ничего не потратит.
+  // Так переключение в 'auto' из админки начинает работать без рестарта.
+  void import('@/features/library/selfgen')
+    .then((m) => m.ensureSelfGenScheduled())
+    .catch((e) => captureError(e, { where: 'selfgen.ensure' }))
   void import('@/features/moderation/moderate-list')
     .then((m) => m.ensureModerationFingerprints())
     .catch((e) => captureError(e, { where: 'moderation.fingerprints' }))
