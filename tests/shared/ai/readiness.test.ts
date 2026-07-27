@@ -72,6 +72,31 @@ describe('кворум линз', () => {
   })
 })
 
+describe('класс полноты как планка', () => {
+  const withGrade = (grade: 'stub' | 'start' | 'solid' | 'full', next: string[] = []) => ({ ...goodFacts, grade, gradeNext: next })
+
+  it('класс ниже планки — блокер с объяснением, чего не хватает', () => {
+    const d = readinessDecision(withGrade('start', ['источников меньше двух']), allPass, barOn)
+    expect(d.publish).toBe(false)
+    expect(d.blockers[0]).toContain('класс «start» ниже планки «solid»')
+    expect(d.blockers[0]).toContain('источников меньше двух')
+  })
+
+  it('класс на уровне планки или выше — не мешает', () => {
+    expect(readinessDecision(withGrade('solid'), allPass, barOn).publish).toBe(true)
+    expect(readinessDecision(withGrade('full'), allPass, barOn).publish).toBe(true)
+  })
+
+  it('планку можно поднять до full — тогда solid уже мало', () => {
+    const d = readinessDecision(withGrade('solid'), allPass, { ...barOn, minGrade: 'full' })
+    expect(d.publish).toBe(false)
+  })
+
+  it('класс не посчитан — по классу не судим (старые вызовы не ломаются)', () => {
+    expect(readinessDecision(goodFacts, allPass, barOn).publish).toBe(true)
+  })
+})
+
 describe('режимы', () => {
   it("'shadow' считает решение, но НЕ публикует", () => {
     const d = readinessDecision(goodFacts, allPass, { ...DEFAULT_BAR, mode: 'shadow' })

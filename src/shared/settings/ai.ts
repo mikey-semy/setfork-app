@@ -53,8 +53,10 @@ export interface AiSettings {
    * Человек утверждает планку, а не каждый список — иначе автономности нет.
    */
   readinessMode: 'off' | 'shadow' | 'on'
-  /** Минимум шагов, ниже которого список не готов (структурная проверка кодом). */
+  /** Минимум шагов, ниже которого список не готов (жёсткий пол). */
   readinessMinSteps: number
+  /** Минимальный класс полноты для публикации без человека: start | solid | full. */
+  readinessMinGrade: 'start' | 'solid' | 'full'
   /** «Помощь на шаге»: AI-подсказка застрявшему в прогоне. OFF по умолчанию. */
   assistEnabled: boolean
   /** Аудитория помощи (гейт цены/раскатки): 'admin' — только админам, 'all' — всем. */
@@ -82,6 +84,7 @@ const KEYS = [
   'ai.council_max_per_month',
   'ai.readiness_mode',
   'ai.readiness_min_steps',
+  'ai.readiness_min_grade',
   'ai.assist_enabled',
   'ai.assist_audience',
   // Ключи самогенерации ОБЯЗАНЫ быть здесь: KEYS — это то, что реально читается из БД.
@@ -345,6 +348,9 @@ export async function getAiSettings(): Promise<AiSettings> {
     // автопубликацию. Планка — самое необратимое из всего, что решает петля.
     readinessMode: m['ai.readiness_mode'] === 'on' ? 'on' : m['ai.readiness_mode'] === 'shadow' ? 'shadow' : 'off',
     readinessMinSteps: num(m['ai.readiness_min_steps'], 5),
+    // Неизвестное значение → 'solid' (дефолт планки), а не самая мягкая ступень: ошибка в
+    // настройке не должна ОСЛАБЛЯТЬ требования к автопубликации.
+    readinessMinGrade: m['ai.readiness_min_grade'] === 'start' ? 'start' : m['ai.readiness_min_grade'] === 'full' ? 'full' : 'solid',
     assistEnabled: m['ai.assist_enabled'] === 'true',
     assistAudience: m['ai.assist_audience'] === 'all' ? 'all' : 'admin',
     freeMonthlyGens: num(m['ai.free_monthly_gens'], Number(process.env.SETFORK_FREE_MONTHLY_GENS) || 0),

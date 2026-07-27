@@ -11,6 +11,7 @@ import { LIST_KINDS, type ListKind } from '@/shared/ai/list-kind'
 import { POLICY_SETTING_KEYS, dominantLang, inferListKind, policyFor, policySettingKey } from '@/shared/ai/gardener-policies'
 import { globalBudgetOk } from '@/shared/quota'
 import { countDuplicateSteps, readinessDecision, structuralBlockers, DEFAULT_BAR, type ReadinessBar, type ReadinessFacts } from '@/shared/ai/readiness'
+import { featuresOf, gradeList } from '@/shared/ai/list-grade'
 import { runReadinessLenses, type ReadinessInput } from '@/shared/ai/readiness-lenses'
 import { checkUrls } from '@/shared/lib/link-health'
 import { getAiSettings, isAiAvailable } from '@/shared/settings/ai'
@@ -191,7 +192,7 @@ export async function gateOwnDraft(
   ctx: { tenderId: string; agentId: string; policyVersion: number; lang: Lang },
 ): Promise<'published' | 'held' | 'skipped'> {
   const settings = await getAiSettings()
-  const bar: ReadinessBar = { ...DEFAULT_BAR, mode: settings.readinessMode, minSteps: settings.readinessMinSteps }
+  const bar: ReadinessBar = { ...DEFAULT_BAR, mode: settings.readinessMode, minSteps: settings.readinessMinSteps, minGrade: settings.readinessMinGrade }
   if (bar.mode === 'off') return 'skipped'
   // Линзы — платные: тот же per-item предохранитель, что в самогенерации.
   if (!(await globalBudgetOk())) return 'skipped'
@@ -200,12 +201,18 @@ export async function gateOwnDraft(
   // должна судить то, что публикуется, а не то, что было до правки.
   const urls = snapshot.items.flatMap((it) => it.refs?.map((r) => r.url) ?? []).filter(Boolean)
   const verdictsByUrl = urls.length ? await checkUrls(urls) : new Map<string, string>()
+  const deadLinks = [...verdictsByUrl.values()].filter((v) => v === 'dead').length
+  // Класс полноты считаем ЗДЕСЬ же, по тем же пунктам: одна поездка по данным, один портрет
+  // списка. Он и в блокеры пойдёт, и в журнал — чтобы видно было, куда список дорос.
+  const verdict = gradeList(featuresOf(snapshot.items, deadLinks))
   const facts: ReadinessFacts = {
     steps: snapshot.items.length,
-    deadLinks: [...verdictsByUrl.values()].filter((v) => v === 'dead').length,
+    deadLinks,
     hasDesc: !!snapshot.desc.trim(),
     hasTags: snapshot.tags.length > 0,
     duplicateSteps: countDuplicateSteps(snapshot.items.map((it) => it.title)),
+    grade: verdict.grade,
+    gradeNext: verdict.next,
   }
 
   // Структурные блокеры — кодом и БЕСПЛАТНО: если список не дотягивает по ним, линзы не
@@ -230,7 +237,7 @@ export async function gateOwnDraft(
     resultStatus: decision.publish ? 'ok' : 'skipped',
     agentId: ctx.agentId,
     actorUserId: ctx.tenderId,
-    signal: { slug: tpl.slug, ...facts },
+    signal: { slug: tpl.slug, ...facts, gradeReasons: verdict.reasons },
     decision: {
       mode: bar.mode,
       wouldPass: decision.wouldPass,

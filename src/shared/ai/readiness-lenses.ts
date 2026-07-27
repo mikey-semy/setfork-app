@@ -60,7 +60,7 @@ export interface ReadinessInput {
   title: string
   desc: string
   tags: string[]
-  items: Array<{ title: string; desc?: string; command?: string; why?: string; refs?: Array<{ url: string }> }>
+  items: Array<{ title: string; desc?: string; command?: string; why?: string; section?: string; needsHuman?: boolean; refs?: Array<{ url: string }> }>
 }
 
 function render(input: ReadinessInput): string {

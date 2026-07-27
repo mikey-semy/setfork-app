@@ -23,6 +23,8 @@
  * «готово ли к показу». Опубликованный гейтом список идёт через модерацию как любой другой.
  */
 
+import { gradeRank, type ListGrade } from './list-grade'
+
 /** Линзы гейта. Каждая — узкий функциональный вопрос, а не «оцени качество». */
 export const READINESS_LENSES = ['actionable', 'grounded', 'improvable'] as const
 export type ReadinessLens = (typeof READINESS_LENSES)[number]
@@ -42,8 +44,14 @@ export interface ReadinessBar {
   mode: 'off' | 'shadow' | 'on'
   /** Какие линзы обязаны пройти. Пустой набор = гейт не может пропустить ничего. */
   required: readonly ReadinessLens[]
-  /** Минимум шагов в списке (структурная проверка кодом, без модели). */
+  /** Минимум шагов в списке (жёсткий пол, ниже которого разговора нет). */
   minSteps: number
+  /**
+   * Минимальный КЛАСС ПОЛНОТЫ (см. list-grade). Осмысленная планка вместо «минимум N шагов»:
+   * класс учитывает описания, «зачем», источники и мёртвые ссылки разом, и — главное — умеет
+   * сказать, чего не хватает до следующей ступени. Это задание петле, а не отметка.
+   */
+  minGrade: ListGrade
   /** Разрешать публикацию при мёртвых ссылках. По умолчанию нет. */
   allowDeadLinks: boolean
 }
@@ -52,6 +60,9 @@ export const DEFAULT_BAR: ReadinessBar = {
   mode: 'off',
   required: READINESS_LENSES,
   minSteps: 5,
+  // 'solid' = список, который человек реально может выполнить и проверить: описания у
+  // большинства шагов и хотя бы один источник. Ниже — публиковать без человека рано.
+  minGrade: 'solid',
   allowDeadLinks: false,
 }
 
@@ -63,6 +74,10 @@ export interface ReadinessFacts {
   hasTags: boolean
   /** Сколько шагов с повторяющимся заголовком (набивка объёма). */
   duplicateSteps: number
+  /** Класс полноты. Не задан — гейт по классу не судит (старые вызовы, тесты). */
+  grade?: ListGrade
+  /** Чего не хватает до следующего класса — попадает в блокеры как задание. */
+  gradeNext?: string[]
 }
 
 export interface ReadinessDecision {
@@ -84,6 +99,11 @@ export function structuralBlockers(facts: ReadinessFacts, bar: ReadinessBar): st
   if (!facts.hasDesc) out.push('нет описания')
   if (!facts.hasTags) out.push('нет тегов')
   if (facts.duplicateSteps > 0) out.push(`повторяющихся шагов: ${facts.duplicateSteps}`)
+  // Класс полноты — одна проверка вместо россыпи порогов, и она объясняет себя сама.
+  if (facts.grade && gradeRank(facts.grade) < gradeRank(bar.minGrade)) {
+    const why = (facts.gradeNext ?? []).join('; ')
+    out.push(`класс «${facts.grade}» ниже планки «${bar.minGrade}»${why ? ` — ${why}` : ''}`)
+  }
   return out
 }
 
