@@ -645,15 +645,19 @@ export default async function ListPage({
                       <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? displayNum[si] : '•'}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 pr-7">
-                          <span className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</span>
+                          <span data-cfield="title" className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
                         </div>
-                        {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}
+                        {tr(s.desc, lang) && (
+                          <div data-cfield="desc">
+                            <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>
+                          </div>
+                        )}
                         {tr(s.why, lang) && (
                           <div className="mt-1.5 flex gap-1.5 text-[12.5px] text-ink-2">
                             <Info size={13} className="mt-0.5 shrink-0 text-muted" />
                             <span>
-                              <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> {tr(s.why, lang)}
+                              <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> <span data-cfield="why">{tr(s.why, lang)}</span>
                             </span>
                           </div>
                         )}

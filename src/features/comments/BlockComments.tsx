@@ -39,7 +39,7 @@ export function BlockComments({
   owner,
   slug,
   blockId,
-  field,
+  field: defaultField,
   threads,
   canComment,
   lang,
@@ -57,13 +57,29 @@ export function BlockComments({
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [quote, setQuote] = useState('')
+  const [field, setField] = useState<CommentField>(defaultField)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   const openComposer = () => {
     // Что пользователь выделил ПРЯМО СЕЙЧАС — цитата треда. Пусто = к блоку целиком.
-    const sel = typeof window !== 'undefined' ? (window.getSelection()?.toString() ?? '') : ''
-    setQuote(sel.trim().slice(0, 500))
+    const sel = typeof window === 'undefined' ? null : window.getSelection()
+    const text = sel?.toString().trim() ?? ''
+    // В КАКОМ поле выделили: карточка пункта показывает несколько полей (заголовок,
+    // описание, «зачем», команду), а якорь ищется в исходной строке ОДНОГО поля.
+    // Выделение вне помеченных полей (подшаги, ссылки, служебное) якорить нечем —
+    // тогда честно делаем комментарий ко всему пункту, а не обещаем привязку.
+    const host = sel?.anchorNode
+      ? (sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode.parentElement)?.closest('[data-cfield]')
+      : null
+    const detected = host?.getAttribute('data-cfield') ?? ''
+    if (text && detected) {
+      setField(detected as CommentField)
+      setQuote(text.slice(0, 500))
+    } else {
+      setField(defaultField)
+      setQuote('')
+    }
     setReplyTo(null)
     setOpen(true)
   }
@@ -76,6 +92,7 @@ export function BlockComments({
       else await createBlockThread(owner, slug, blockId, field, quote, body)
       setDraft('')
       setQuote('')
+      setField(defaultField)
       setReplyTo(null)
       setOpen(false)
     })
@@ -87,20 +104,22 @@ export function BlockComments({
 
   return (
     <>
-      {/* Служебная иконка — в правом верхнем углу карточки (mobile-ui: не в потоке,
-          иначе при переносе заголовка уплывает в середину). */}
+      {/* Кнопка обсуждения — к ПРАВОМУ краю карточки (mobile-ui: пользовательские
+          действия в thumb-зону, а служебный верхний угол занят киркой). */}
       {canComment && (
-        <Tooltip label={labels.add}>
-          <button
-            type="button"
-            onClick={openComposer}
-            aria-label={labels.add}
-            className="grid size-7 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-          >
-            <MessageSquare size={14} />
-            {count > 0 && <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-accent" />}
-          </button>
-        </Tooltip>
+        <div className="mt-2 flex justify-end">
+          <Tooltip label={labels.add}>
+            <button
+              type="button"
+              onClick={openComposer}
+              aria-label={labels.add}
+              className="relative grid size-9 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
+            >
+              <MessageSquare size={15} />
+              {count > 0 && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" />}
+            </button>
+          </Tooltip>
+        </div>
       )}
 
       {(visible.length > 0 || resolved.length > 0 || open) && (
