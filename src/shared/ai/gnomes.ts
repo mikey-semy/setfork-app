@@ -2,6 +2,7 @@ import 'server-only'
 import { generateText } from 'ai'
 import { getAiChatClient } from './provider'
 import { getAiSettings } from '@/shared/settings/ai'
+import { dehydrateScaffold } from './dehydrate'
 import { pickChatModel } from './credits'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight } from './spotlight'
@@ -125,7 +126,8 @@ Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now
 
   const task = opts.short
     ? `A user just spoke to you in the workshop chat. Reply with ONE short in-character line (max 120 chars, no quotes): acknowledge and say concretely what you will do. Answer in ${langEnName(opts.lang)}.`
-    : `A user is talking to you in the SetFork workshop. Answer as this expert — practical, specific, in character; admit "no reliable data" instead of inventing. Keep it tight (2-5 short paragraphs or a compact list)${opts.followups ? ', ~4 sentences so there is room for the NEXT line' : ''}. Answer in ${langEnName(opts.lang)}.`
+    : `A user is talking to you in the SetFork workshop. Answer as this expert — practical, specific, in character; admit "no reliable data" instead of inventing. Keep it tight (2-5 short paragraphs or a compact list)${opts.followups ? ', ~4 sentences so there is room for the NEXT line' : ''}. Answer in ${langEnName(opts.lang)}.
+SPEAK LIKE A PERSON, NOT A FORM. Never expose your working method: no headings or labels such as "Task/Method/Understanding/Plan/Execution/Verification" (or their equivalents in any language), no restating the question, no announcing what you are about to do, no closing self-assessment. Just say the answer the way a knowledgeable colleague would say it out loud.`
 
   const lore = opts.precedents?.length
     ? `\n\nFrom the SetFork knowledge base (use what helps, don't copy blindly):\n${sp.wrap('PRECEDENTS', opts.precedents.join('\n'))}`
@@ -159,8 +161,11 @@ ${sp.rule()}`
       }
     }
     const { text, followups } = parseFollowups(raw)
-    if (!text) return null
-    return { text, followups, summonId }
+    // Модель может ответить бланком «Задача/Метод/План/Проверка» — это внутренняя
+    // кухня, наружу она не идёт (промпт запрещает, зачистка страхует).
+    const human = dehydrateScaffold(text)
+    if (!human) return null
+    return { text: human, followups, summonId }
   } catch (err) {
     await recordUsage({ userId: opts.userId ?? null, feature: opts.feature, model, input: 0, output: 0, total: 0, cost: 0, refType: opts.refType, refId: opts.refId, outcome: outcomeOf(err), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
     return null
