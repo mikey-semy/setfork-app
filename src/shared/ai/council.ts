@@ -73,6 +73,13 @@ export interface CouncilProvenance {
   webSeek?: boolean
   /** Разбор критика (срез 2000) — раньше терялся вовсе. */
   critique?: string
+  /**
+   * Карта «буква анонимного черновика → автор». Критик и синтезатор имён НЕ видят
+   * (анонимность обязательна: иначе оценка плывёт к репутации, а не к качеству текста),
+   * но для скоркарта и для людей соответствие нужно — раньше оно вычислялось для
+   * промпта и выбрасывалось, поэтому «чей черновик выбрали» восстановить было нельзя.
+   */
+  draftAuthors?: { letter: string; who: string }[]
 }
 
 /** Результат совета: готовый список (+провенанс), ИЛИ уточняющие вопросы (диалог), ИЛИ null (ошибка/выкл → фолбэк). */
@@ -437,11 +444,24 @@ ${roster}`,
     INNOVATOR_TEMP,
   )
   const [drafts, innovation] = await Promise.all([Promise.all(draftJobs), innovatorJob])
-  const pooled = [...drafts, innovation].filter((d): d is { text: string } => Boolean(d))
-  if (pooled.length === 0) return null // всё упало → пусть caller фолбэкнет
+  // Слоты «черновик + автор». Соответствие буквы автору строим ЗДЕСЬ и сохраняем: ниже
+  // идёт filter, и упавший черновик СДВИГАЕТ индексы — после него experts[i] уже не
+  // соответствует букве DRAFT. Раньше это соответствие выводилось для промпта и молча
+  // выбрасывалось, из-за чего атрибуцию («чей черновик выбрали») восстановить было нельзя.
+  const slots: { text?: string; who: string }[] = [
+    ...drafts.map((d, i) => ({ text: d?.text, who: experts[i].id })),
+    { text: innovation?.text, who: 'innovator' },
+  ]
+  const alive = slots.filter((s): s is { text: string; who: string } => Boolean(s.text))
+  if (alive.length === 0) return null // всё упало → пусть caller фолбэкнет
+  const letterOf = (i: number) => String.fromCharCode(65 + i)
   // Черновики — свободный текст (не JSON): передаём СЫРЬЁМ. firstJson здесь порезал бы шаги со скобками
   // (напр. `awk '{print $1}'`, `${HOME}/bin`) — только для JSON-ответа распорядителя/синтеза.
-  const anon = pooled.map((d, i) => `--- DRAFT ${String.fromCharCode(65 + i)} ---\n${d.text.trim()}`).join('\n\n')
+  const anon = alive.map((s, i) => `--- DRAFT ${letterOf(i)} ---\n${s.text.trim()}`).join('\n\n')
+  // Родословная авторства: буква ↔ гном. Анонимность для критика и синтезатора при этом
+  // СОХРАНЯЕТСЯ — им уходит только `anon`, без имён (иначе оценка поплыла бы к репутации,
+  // а не к качеству текста). Карту храним в провенансе, для людей и для скоркарта.
+  const draftAuthors = alive.map((s, i) => ({ letter: letterOf(i), who: s.who }))
 
   // 4) Адвокат дьявола (Janis: обязательная оппозиция). Кодексы гильдий — как мерило:
   // объединением и БЕЗ авторства (черновики анонимны сознательно — иначе критик судит
@@ -487,6 +507,7 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
           precedentSteps: stepPrecedents.map((s) => s.content.slice(0, 120)),
           craftRules: rules.length ? rules : undefined,
           experts: expertProv,
+          draftAuthors,
           models: { steward: fast, innovator: pool[0], critic: fast, elder: base },
           webSeek: settings.councilWebSeek,
           critique: critiqueBody ? critiqueBody.slice(0, 2000) : undefined,
