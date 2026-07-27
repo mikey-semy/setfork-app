@@ -34,20 +34,37 @@ export interface StepPrecedent {
  * FSD-граница запрещает shared/ai импортить features/*. Держать published/public/moderation='active'
  * В СИНХРОНЕ с visibleFilter() там (при смене правил видимости/модерации — править оба места).
  */
+/**
+ * Мир знаний, из которого копаем (вторая ручка кирки: глубина × МИР).
+ *   'public'   — общая шахта: только публичные опубликованные активные списки;
+ *   'personal' — общая ПЛЮС личные списки самого зрителя.
+ * Чужое приватное недостижимо ни при каком значении.
+ */
+export type PrecedentScope = 'public' | 'personal'
+
 export async function findPrecedents(
   query: string,
   lang: Lang,
-  opts: { userId?: string | null; limit?: number; stepLimit?: number } = {},
+  opts: { userId?: string | null; limit?: number; stepLimit?: number; scope?: PrecedentScope } = {},
 ): Promise<{ lists: Precedent[]; steps: StepPrecedent[] }> {
   // Вектор может отсутствовать (эмбеддинги выключены/сбой) — с гибридом это больше
   // НЕ приговор: лексическая ветка работает без него.
   const vec = await embedOne(query, 'query', { userId: opts.userId ?? null, refType: 'council-seek' })
   const distance = vec ? cosineDistance(embeddings.embedding, vec) : sql`1`
+  // МИР ЗНАНИЙ (вторая ручка кирки): 'public' — общая шахта; 'personal' — общая ПЛЮС
+  // личные списки самого пользователя. Раньше userId шёл только в учёт embed-вызова, а
+  // выборка всегда была public-only — то есть личный мир не существовал вовсе.
+  //
+  // ЧЕКПОИНТ ПРИВАТНОСТИ: расширение допускается ТОЛЬКО на списки самого зрителя
+  // (owner_id = его id). Чужое приватное не подмешивается ни при каком scope — публичное
+  // втекает в личную работу, личное наружу не вытекает (рамка NDA).
+  const scope = opts.scope ?? 'public'
+  const viewer = opts.userId ?? null
+  const mine = scope === 'personal' && viewer ? sql`or ${templates.ownerId} = ${viewer}` : sql``
+  const reachable = sql`((${templates.status} = 'published' and ${templates.visibility} = 'public' and ${templates.moderation} = 'active') ${mine})`
   const visible = and(
     isNotNull(embeddings.embedding),
-    eq(templates.status, 'published'),
-    eq(templates.visibility, 'public'),
-    eq(templates.moderation, 'active'),
+    reachable,
     sql`${distance} <= ${1 - MIN_SIMILARITY}`, // #8: только реально похожие (similarity >= порога)
   )
   const stepLimit = opts.stepLimit ?? 5
@@ -59,7 +76,10 @@ export async function findPrecedents(
   // (FTS 'simple', без стемминга: контент EN/RU). На малом корпусе семантика промахивается
   // по точным терминам («pgvector», «маршмеллоу»); слияние — Reciprocal Rank Fusion.
   const listLimit = opts.limit ?? 3
-  const pubVisible = and(eq(templates.status, 'published'), eq(templates.visibility, 'public'), eq(templates.moderation, 'active'))
+  // Лексическая ветка обязана видеть РОВНО тот же мир, что векторная: иначе один и тот
+  // же список то попадал бы в прецеденты, то нет — в зависимости от того, какая ветка
+  // сработала. Поэтому один и тот же предикат, а не две копии правил.
+  const pubVisible = reachable
   const listText = sql`(coalesce(${templates.title}->>'en','') || ' ' || coalesce(${templates.title}->>'ru','') || ' ' || coalesce(${templates.desc}->>'en','') || ' ' || coalesce(${templates.desc}->>'ru',''))`
   const FETCH_N = 10 // с запасом под RRF-слияние и срез «≤2 шагов со списка»
   const [vecLists, lexLists, vecSteps, lexSteps] = await Promise.all([
