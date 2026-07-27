@@ -18,6 +18,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
 import { SuggestionTabs, type SuggestionTab } from '@/features/library/SuggestionTabs'
+import { SuggestionTitle } from '@/features/library/SuggestionTitle'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
@@ -164,16 +165,19 @@ export default async function SuggestionThreadPage({
       <div className="mx-auto w-full max-w-[1100px] px-4 py-6">
         {/* Шапка PR: сообщение правки как заголовок + номер #N. Номер — адрес для
             людей: /suggestions/12 работает наравне с uuid (getSuggestion берёт оба). */}
-        <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
-          <h1 className="min-w-0 text-[20px] font-bold leading-tight text-ink [overflow-wrap:anywhere]">
-            {sug.note || t('noCommitMessage', lang)}
-          </h1>
-          {sug.number != null && (
-            <Link href={path} className="text-[20px] font-normal text-muted hover:text-accent">
-              #{sug.number}
-            </Link>
-          )}
-        </div>
+        <SuggestionTitle
+          note={sug.note || t('noCommitMessage', lang)}
+          number={sug.number}
+          path={path}
+          suggestionId={sug.id}
+          canEdit={!!session && (session.userId === sug.authorId || session.userId === meta.ownerId)}
+          labels={{
+            edit: t('cmEdit', lang),
+            save: t('cmSave', lang),
+            cancel: t('commentCancel', lang),
+            placeholder: t('prTitlePlaceholder', lang),
+          }}
+        />
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold ${statusCls}`}>
             <GitPullRequest size={14} /> {statusLabel}

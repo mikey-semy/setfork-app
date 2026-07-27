@@ -157,6 +157,7 @@ const DICT = {
   suggestionHeading: { en: 'Suggested edit', ru: 'Предложенная правка' },
   proposedChanges: { en: 'Proposed changes', ru: 'Предлагаемые изменения' },
   conversationTab: { en: 'Conversation', ru: 'Обсуждение' },
+  prTitlePlaceholder: { en: 'What does this change?', ru: 'Что меняет эта правка?' },
   cmMore: { en: 'More', ru: 'Ещё' },
   cmCopyLink: { en: 'Copy link', ru: 'Скопировать ссылку' },
   cmCopyMarkdown: { en: 'Copy Markdown', ru: 'Скопировать Markdown' },

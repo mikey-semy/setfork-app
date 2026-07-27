@@ -510,6 +510,28 @@ export async function acceptSuggestion(suggestionId: string): Promise<void> {
 
 // ── Обсуждение предложения (review-комментарии) ──────────────────────
 /**
+ * Переименовать правку (заголовок PR = её сообщение).
+ *
+ * Право: автор правки или владелец списка — как в GitHub, где заголовок PR
+ * правят и автор, и мейнтейнер. Пустой заголовок не принимаем: у правки должно
+ * остаться человеческое имя, иначе список PR превращается в «(без описания)».
+ */
+export async function editSuggestionNote(suggestionId: string, note: string): Promise<{ ok: boolean }> {
+  const session = await requireSession()
+  const text = note.trim().slice(0, 300)
+  if (!text) return { ok: false }
+
+  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+  if (!sug) return { ok: false }
+  if (sug.authorId !== session.userId && sug.template.ownerId !== session.userId) return { ok: false }
+
+  await db.update(suggestions).set({ note: text }).where(eq(suggestions.id, suggestionId))
+  const handle = await ownerHandle(sug.template.ownerId)
+  revalidatePath(`/${handle}/${sug.template.slug}/suggestions/${sug.number ?? sug.id}`)
+  return { ok: true }
+}
+
+/**
  * Правка своего комментария к предложению.
  *
  * Только автор: чужие реплики не редактирует даже владелец списка — иначе в
