@@ -1,4 +1,5 @@
 import 'server-only'
+import { DEFAULT_PUBLISH_PER_DAY } from '@/shared/agents/canary'
 import { eq, inArray } from 'drizzle-orm'
 import { appSettings, db } from '@/shared/db'
 
@@ -57,6 +58,12 @@ export interface AiSettings {
   readinessMinSteps: number
   /** Минимальный класс полноты для публикации без человека: start | solid | full. */
   readinessMinGrade: 'start' | 'solid' | 'full'
+  /**
+   * КАНАРЕЙКА: сколько списков петля вправе опубликовать без человека за сутки. Ошибка в
+   * настройке планки не должна за ночь залить каталог, поэтому дефолт маленький.
+   * 0 = не публиковать вовсе (равносильно выключенной планке).
+   */
+  readinessPerDay: number
   /** «Помощь на шаге»: AI-подсказка застрявшему в прогоне. OFF по умолчанию. */
   assistEnabled: boolean
   /** Аудитория помощи (гейт цены/раскатки): 'admin' — только админам, 'all' — всем. */
@@ -85,6 +92,7 @@ const KEYS = [
   'ai.readiness_mode',
   'ai.readiness_min_steps',
   'ai.readiness_min_grade',
+  'ai.readiness_per_day',
   'ai.assist_enabled',
   'ai.assist_audience',
   // Ключи самогенерации ОБЯЗАНЫ быть здесь: KEYS — это то, что реально читается из БД.
@@ -351,6 +359,7 @@ export async function getAiSettings(): Promise<AiSettings> {
     // Неизвестное значение → 'solid' (дефолт планки), а не самая мягкая ступень: ошибка в
     // настройке не должна ОСЛАБЛЯТЬ требования к автопубликации.
     readinessMinGrade: m['ai.readiness_min_grade'] === 'start' ? 'start' : m['ai.readiness_min_grade'] === 'full' ? 'full' : 'solid',
+    readinessPerDay: num(m['ai.readiness_per_day'], DEFAULT_PUBLISH_PER_DAY),
     assistEnabled: m['ai.assist_enabled'] === 'true',
     assistAudience: m['ai.assist_audience'] === 'all' ? 'all' : 'admin',
     freeMonthlyGens: num(m['ai.free_monthly_gens'], Number(process.env.SETFORK_FREE_MONTHLY_GENS) || 0),

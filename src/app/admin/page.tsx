@@ -360,6 +360,7 @@ export default async function AdminPage() {
                 readinessMode: settings.readinessMode,
                 readinessMinSteps: settings.readinessMinSteps,
                 readinessMinGrade: settings.readinessMinGrade,
+                readinessPerDay: settings.readinessPerDay,
               }}
               ru={ru}
             />
