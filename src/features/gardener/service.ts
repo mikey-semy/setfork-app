@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, notInArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm'
 import { appSettings, db, jobs, steps, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
 import { listStore } from '@/features/library/list-store'
 import { notifyMany } from '@/features/notifications/notify'
@@ -15,7 +15,8 @@ import { notify } from '@/features/notifications/notify'
 import { log } from '@/shared/observability'
 import { toProposed, toStepInput } from '@/shared/lib/step-input'
 import { HOME_REALM } from '@/shared/ai/gnome-names'
-import { agentUserIds, tenderForTags } from '@/shared/ai/gnome-account'
+import { agentUserIds, professionOf, tenderForTags } from '@/shared/ai/gnome-account'
+import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { getRoster } from '@/shared/ai/roster'
 import { t, type Lang, type LocaleText } from '@/shared/i18n'
 
@@ -99,30 +100,51 @@ export async function ensureGardenerScheduled(): Promise<void> {
 
 /** Кандидаты: публичные активные, без открытой правки садовника, без секций
  *  (refine пока не сохраняет section) — сначала популярные и давно не обновлявшиеся. */
-async function pickCandidates(agentIds: string[], limit: number) {
+export async function pickCandidates(agentIds: string[], limit: number) {
   // Дедуп и исключение владельца — по ВСЕМ служебным аккаунтам, а не по одному
   // садовнику: с раздачей ухода профильным специалистам автором правки может быть
   // любой из них, и проверка «уже предлагал» обязана это учитывать (иначе список
   // с открытой правкой Фьялара попадал бы в выборку снова → повторный refine).
   const agents = agentIds.length ? agentIds : ['00000000-0000-0000-0000-000000000000']
   return db
-    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, listKind: templates.listKind, ownerCurated: users.curated })
+    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, listKind: templates.listKind, ownerCurated: users.curated, ownerAccountType: users.accountType })
     .from(templates)
     .innerJoin(users, eq(users.id, templates.ownerId))
     .where(
       and(
-        eq(templates.status, 'published'),
+        // Опубликованные — у любого владельца. СВОИ ЧЕРНОВИКИ — тоже: самогенерация
+        // осознанно рождает черновик («публикует человек»), и без этой ветки уход
+        // за собственным творчеством не начинался бы вообще — измерено на дев-БД
+        // 2026-07-27: у компании 0 опубликованных списков и все её работы в черновиках.
+        // Черновик чужого владельца не трогаем: это его незаконченная работа.
+        or(eq(templates.status, 'published'), and(eq(templates.status, 'draft'), inArray(users.id, agents))),
         eq(templates.visibility, 'public'),
         eq(templates.moderation, 'active'),
         // Архивные/замороженные списки садовник не трогает (read-only от правок).
         sql`${templates.archivedAt} is null and ${templates.frozenAt} is null`,
-        // Списки самих служебных участников они ведут сами — правку себе не предлагают.
-        notInArray(templates.ownerId, agents),
+        // Списки служебных аккаунтов БОЛЬШЕ НЕ исключаем: раньше стояло
+        // notInArray(ownerId, agents) — «правку себе не предлагают», и следствие было
+        // обратным задуманному: всё, что компания создала сама, НИКОГДА не улучшалось.
+        // Теперь свои списки правятся НАПРЯМУЮ (см. ownerIsAgent ниже), без церемонии
+        // «предложить себе», а чужие — предложением, как раньше.
+        //
+        // Зато исключаем владельцев БЕЗ ВХОДА (сид-фикстуры): проверено 2026-07-27, что
+        // все 7 висевших правок были адресованы именно им — принять их некому физически,
+        // и такие предложения только копят мусор. Служебные аккаунты тоже без входа,
+        // поэтому условие пропускает их отдельно.
+        or(
+          inArray(users.id, agents),
+          isNotNull(users.passwordHash),
+          isNotNull(users.githubId),
+          isNotNull(users.yandexId),
+          isNotNull(users.telegramId),
+          isNotNull(users.email),
+        ),
         // Не берём список, где служебный участник уже оставил ОТКРЫТУЮ правку ЛИБО
         // что-либо предлагал за последние GARDENER_EVERY_DAYS дней. Второе условие важно
         // для кураторских списков: их правка авто-мёрджится (status='accepted', не 'open'),
         // и без учёта свежести список попадал бы в выборку снова → повторный refine.
-        sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = any(${agents})
+        sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = any(${sql.param(agents)}::uuid[])
              and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS}::int * interval '1 day')))`,
       ),
     )
@@ -159,6 +181,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     log.info('gardener: global AI budget exhausted, skipping')
     return { proposed: 0, skipped: 0 }
   }
+  const loop = await loopPolicy('gardener')
   const gardener = await ensureGardenerUser()
   const [agents, roster] = await Promise.all([agentUserIds(), getRoster()])
   const [candidates, overrides] = await Promise.all([pickCandidates(agents, BATCH), policyOverrides()])
@@ -223,6 +246,25 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     // не подошёл → общий служебный аккаунт, как раньше.
     const tender = await tenderForTags(tpl.tags, roster)
     const tenderId = tender?.userId ?? gardener.id
+    const ownedByCompany = tpl.ownerAccountType === 'agent'
+
+    // СУХОЙ ПРОГОН: кого выбрали и что нашли — в журнал, refine НЕ зовём (он платный).
+    // Проверка стоит до вызова модели и после выбора мастера, чтобы в журнале было
+    // видно настоящее решение петли, а не заготовку.
+    if (loop.dryRun) {
+      await recordAgentAction({
+        loop: 'gardener',
+        action: ownedByCompany ? 'list.improve' : 'list.suggest',
+        resultStatus: 'dry-run',
+        agentId: tender?.expert.id ?? '',
+        actorUserId: tenderId,
+        signal: { trigger: 'schedule', slug: tpl.slug, deadLinks: deadUrls.length },
+        decision: { mode: ownedByCompany ? 'direct-edit' : 'suggestion', profession: tender ? professionOf(tender.expert, 'en') : 'generic' },
+        policyVersion: loop.policyVersion,
+      })
+      skipped++
+      continue
+    }
 
     const refined = await generateListRefine(current, instruction, lang, {
       userId: tenderId,
@@ -243,12 +285,37 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     }
 
     const items = toProposed(refined.items, lang)
+    const note = noteFor(kind, lang) + (deadUrls.length ? ' ' + t('gardenerNoteDeadLinks', lang).replace('{n}', String(deadUrls.length)) : '')
+
+    // СВОЙ СПИСОК компания правит НАПРЯМУЮ. Предложение самому себе — церемония без
+    // получателя: принимать его некому, и оно просто копилось бы открытым. Именно из-за
+    // такого разрыва всё, созданное компанией, ранее не улучшалось вовсе.
+    if (ownedByCompany) {
+      await listStore.addVersion(tpl.id, { note: note, steps: toStepInput(items), authorId: tenderId })
+      await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: tenderId, type: 'new_version', templateId: tpl.id })
+      await enqueueReindex(tpl.id)
+      await recordAgentAction({
+        loop: 'gardener',
+        action: 'list.improve',
+        resultStatus: 'ok',
+        agentId: tender?.expert.id ?? '',
+        actorUserId: tenderId,
+        signal: { trigger: 'schedule', slug: tpl.slug, deadLinks: deadUrls.length },
+        decision: { mode: 'direct-edit', reason: 'company-owned list — no receiver for a suggestion' },
+        resultRef: tpl.slug,
+        policyVersion: loop.policyVersion,
+      })
+      proposed++
+      log.info('gardener: own list improved directly', { slug: tpl.slug, tender: tender?.expert.id ?? 'generic' })
+      continue
+    }
+
     const [created] = await db
       .insert(suggestions)
       .values({
         templateId: tpl.id,
         authorId: tenderId,
-        note: noteFor(kind, lang) + (deadUrls.length ? ' ' + t('gardenerNoteDeadLinks', lang).replace('{n}', String(deadUrls.length)) : ''),
+        note,
         baseVersion: tpl.currentVersion,
         items,
       })

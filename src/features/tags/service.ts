@@ -24,7 +24,7 @@ export async function recomputeTagUsage(only?: string[]): Promise<void> {
       where t.slug = any(tp.tags)
         and tp.visibility = 'public' and tp.status = 'published' and tp.moderation = 'active'
     ), 0)
-    ${only && only.length ? sql`where t.slug = any(${only})` : sql``}
+    ${only && only.length ? sql`where t.slug = any(${sql.param(only)}::text[])` : sql``}
   `)
 }
 
