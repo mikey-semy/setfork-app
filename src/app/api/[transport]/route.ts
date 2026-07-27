@@ -4,7 +4,19 @@ import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { z } from 'zod'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
-import { mcpCheckStep, mcpCreateList, mcpGetList, mcpGetRun, mcpGetScript, mcpSearch, mcpStartRun, mcpUpdateList } from '@/features/mcp/tools'
+import {
+  mcpApplySuggestion,
+  mcpBulkCreate,
+  mcpCheckStep,
+  mcpCreateList,
+  mcpGetList,
+  mcpGetRun,
+  mcpGetScript,
+  mcpPendingSuggestions,
+  mcpSearch,
+  mcpStartRun,
+  mcpUpdateList,
+} from '@/features/mcp/tools'
 import { mcpAskGnome, mcpGnomeReview, mcpListGnomes } from '@/features/mcp/gnome'
 import { mcpCouncilDraft, mcpGetCouncilDraft } from '@/features/mcp/council'
 
@@ -260,6 +272,61 @@ const handler = createMcpHandler(
       },
       async (userId, { handle, slug, ...rest }) => {
         const res = await mcpUpdateList(userId, handle, slug, rest)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    // Массовая генерация — ускоритель под рукой человека. По умолчанию СУХОЙ ПРОГОН:
+    // одним вызовом можно налить сотню списков, и «ой, не то» тут стоит дорого.
+    writeTool(
+      'bulk_create_lists',
+      {
+        title: 'Create many lists at once',
+        description:
+          'Create SEVERAL lists in one call (max 25). DRY RUN BY DEFAULT: it reports what would be created — slugs and duplicates — and writes nothing until you pass dryRun:false. Lists whose title matches one you already have are skipped as duplicates, so re-running after an interruption does not double your library. Each list is created as a PRIVATE DRAFT and the per-account list quota still applies.',
+        inputSchema: {
+          dryRun: z.boolean().optional().describe('Default TRUE — report the plan without writing. Pass false to actually create.'),
+          lists: z
+            .array(
+              z.object({
+                title: z.string().describe('List title'),
+                lang: z.enum(['en', 'ru']).optional(),
+                desc: z.string().optional(),
+                tags: z.array(z.string()).optional(),
+                ordered: z.boolean().optional(),
+                items: z.array(itemShape).min(1),
+              }),
+            )
+            .min(1)
+            .max(25)
+            .describe('The lists to create'),
+        },
+      },
+      async (userId, { lists, dryRun }) => {
+        const res = await mcpBulkCreate(userId, lists, dryRun !== false)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    readTool(
+      'pending_suggestions',
+      {
+        title: 'Suggested edits waiting for you',
+        description: 'List the OPEN suggested edits on lists you own — what is waiting for your decision. Use apply_suggestion to accept one.',
+        inputSchema: { limit: z.number().int().min(1).max(50).optional().describe('Max results (default 20)') },
+      },
+      async (userId, { limit }) => json(await mcpPendingSuggestions(userId, limit ?? 20)),
+    )
+
+    writeTool(
+      'apply_suggestion',
+      {
+        title: 'Accept a suggested edit',
+        description: 'Accept an open suggested edit on a list you own: it becomes a new version of the list. Get ids from pending_suggestions. A suggestion blocked by a reviewer who requested changes cannot be accepted.',
+        inputSchema: { suggestionId: z.string().describe('Suggestion id from pending_suggestions') },
+      },
+      async (userId, { suggestionId }) => {
+        const res = await mcpApplySuggestion(userId, suggestionId)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )
