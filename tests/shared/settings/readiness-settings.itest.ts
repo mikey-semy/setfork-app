@@ -30,6 +30,16 @@ describe('планка готовности: настройка доезжает
     expect((await getAiSettings()).readinessMode).toBe('on')
   })
 
+  it('класс полноты читается; мусор → solid, а не самая мягкая ступень', async () => {
+    expect((await getAiSettings()).readinessMinGrade).toBe('solid') // дефолт
+    await set('ai.readiness_min_grade', 'full')
+    expect((await getAiSettings()).readinessMinGrade).toBe('full')
+    await set('ai.readiness_min_grade', 'start')
+    expect((await getAiSettings()).readinessMinGrade).toBe('start')
+    await set('ai.readiness_min_grade', 'ЛЮБОЙ')
+    expect((await getAiSettings()).readinessMinGrade).toBe('solid')
+  })
+
   it('мусор в значении → off (опечатка не включает автопубликацию)', async () => {
     await set('ai.readiness_mode', 'ON!!')
     expect((await getAiSettings()).readinessMode).toBe('off')

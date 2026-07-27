@@ -26,6 +26,8 @@ export interface CouncilValues {
   /** Планка готовности: off (дефолт) | shadow (считаем, не публикуем) | on (публикуем). */
   readinessMode: 'off' | 'shadow' | 'on'
   readinessMinSteps: number
+  /** Минимальный класс полноты для автопубликации. */
+  readinessMinGrade: 'start' | 'solid' | 'full'
 }
 
 export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: boolean; modelOptions: Option[] }) {
@@ -161,9 +163,26 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
             'Три независимые проверки — можно ли выполнить, не выдуманы ли детали, годится ли как основа. Кворум считает код и по умолчанию НЕ пропускает: «не уверен» или отсутствие ответа оставляют список черновиком. Стоит 3 вызова на проверенный список; «Выключено» не тратит ничего.',
           )}
         </p>
-        <div className="mt-3">
-          <label className={lbl}>{say('Minimum steps to publish', 'Минимум шагов для публикации')}</label>
-          <input type="number" name="readinessMinSteps" min="1" max="50" step="1" defaultValue={v.readinessMinSteps} className={field} />
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className={lbl}>{say('Minimum steps to publish', 'Минимум шагов для публикации')}</label>
+            <input type="number" name="readinessMinSteps" min="1" max="50" step="1" defaultValue={v.readinessMinSteps} className={field} />
+          </div>
+          <div>
+            {/* Класс полноты — осмысленная планка вместо одного числа: он учитывает описания,
+                «зачем», источники и мёртвые ссылки разом и сам говорит, чего не хватает. */}
+            <label className={lbl}>{say('Minimum completeness class', 'Минимальный класс полноты')}</label>
+            <Select name="readinessMinGrade" defaultValue={v.readinessMinGrade}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="start">{say('start — 4+ steps, half described', 'start — 4+ шага, половина с описанием')}</SelectItem>
+                <SelectItem value="solid">{say('solid — 6+ steps, 70% described, a source', 'solid — 6+ шагов, 70% с описанием, источник')}</SelectItem>
+                <SelectItem value="full">{say('full — 8+ steps, «why», two sources', 'full — 8+ шагов, «зачем», два источника')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </div>
