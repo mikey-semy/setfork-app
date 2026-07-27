@@ -17,6 +17,8 @@ import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
 import { SuggestionDiff } from '@/features/library/SuggestionDiff'
+import { SuggestionTabs, type SuggestionTab } from '@/features/library/SuggestionTabs'
+import { AsideCard, PageAside } from '@/shared/ui/PageAside'
 import { ReviewPanel } from '@/features/library/ReviewPanel'
 import { getSuggestionThreads } from '@/features/comments/queries'
 import { threadState } from '@/features/comments/state'
@@ -39,7 +41,7 @@ export default async function SuggestionThreadPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string; id: string }>
-  searchParams: Promise<{ e?: string }>
+  searchParams: Promise<{ e?: string; tab?: string }>
 }) {
   const [{ handle: owner, slug, id }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
@@ -47,7 +49,8 @@ export default async function SuggestionThreadPage({
   const sug = await getSuggestion(meta.id, id)
   if (!sug) notFound()
   const [comments, base] = await Promise.all([getSuggestionComments(sug.id), getVersionSteps(meta.id, sug.baseVersion)])
-  const path = `/${owner}/${slug}/suggestions/${sug.id}`
+  // Канонический адрес — по номеру (человеческий), uuid остаётся рабочим входом.
+  const path = `/${owner}/${slug}/suggestions/${sug.number ?? sug.id}`
   const [sugR, cmtR] = await Promise.all([
     getReactionsFor('suggestion', [sug.id], session?.userId),
     getReactionsFor('suggestion_comment', comments.map((c) => c.id), session?.userId),
@@ -120,12 +123,29 @@ export default async function SuggestionThreadPage({
   ].filter((p) => p.handle && !sugSeen.has(p.handle) && sugSeen.add(p.handle))
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', year: 'numeric' })
   const statusLabel = sug.status === 'accepted' ? t('statusAccepted', lang) : sug.status === 'rejected' ? t('statusRejected', lang) : t('statusOpen', lang)
+  // Вкладка из ?tab= — адрес ссылабелен (можно послать ссылку сразу на изменения).
+  const tab: SuggestionTab = sp.tab === 'files' ? 'files' : 'conversation'
+  const changedCount = diff.summary.added + diff.summary.removed + diff.summary.modified
+  const threadCount = threads.length + comments.length
+
   const statusCls =
     sug.status === 'accepted' ? 'bg-ok text-white' : sug.status === 'rejected' ? 'bg-surface-2 text-muted' : 'bg-accent text-white'
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[1100px] px-4 py-6">
+        {/* Шапка PR: сообщение правки как заголовок + номер #N. Номер — адрес для
+            людей: /suggestions/12 работает наравне с uuid (getSuggestion берёт оба). */}
+        <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
+          <h1 className="min-w-0 text-[20px] font-bold leading-tight text-ink [overflow-wrap:anywhere]">
+            {sug.note || t('noCommitMessage', lang)}
+          </h1>
+          {sug.number != null && (
+            <Link href={path} className="text-[20px] font-normal text-muted hover:text-accent">
+              #{sug.number}
+            </Link>
+          )}
+        </div>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold ${statusCls}`}>
             <GitPullRequest size={14} /> {statusLabel}
@@ -149,6 +169,17 @@ export default async function SuggestionThreadPage({
           </span>
         </div>
 
+        <SuggestionTabs
+          path={path}
+          active={tab}
+          conversationCount={threadCount}
+          filesCount={changedCount}
+          labels={{ conversation: t('conversationTab', lang), files: t('proposedChanges', lang) }}
+        />
+
+        {/* Две колонки: содержимое вкладки + боковая панель (общий примитив). */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <div className="min-w-0 flex-1">
         {mergeErr && (
           <div className="mb-3 rounded-md border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">
             {lang === 'ru' ? mergeErr.ru : mergeErr.en}
@@ -174,6 +205,7 @@ export default async function SuggestionThreadPage({
           </div>
         )}
 
+        {tab === 'files' && (<>
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → правка` : `v${sug.baseVersion} → suggestion`}
         </div>
@@ -278,7 +310,11 @@ export default async function SuggestionThreadPage({
           />
         )}
 
-        {/* Обсуждение */}
+        </>)}
+
+        {/* Обсуждение — вкладка по умолчанию. Заметка правки и ревью видны здесь,
+            чтобы разговор шёл при полном контексте, как в Conversation у GitHub. */}
+        {tab === 'conversation' && (<>
         <h2 className="mt-6 mb-3 text-[14px] font-bold text-ink">{t('discussionHeading', lang)}</h2>
         {comments.length === 0 ? (
           <p className="mb-3 text-[13px] text-muted">{t('noCommentsYet', lang)}</p>
@@ -313,11 +349,44 @@ export default async function SuggestionThreadPage({
           </div>
         ) : (
           <div className="mt-4 rounded-lg border border-border bg-surface px-4 py-3 text-[13.5px] text-ink-2">
-            <Link href={`/login?next=/${owner}/${slug}/suggestions/${sug.id}`} className="font-semibold text-accent hover:underline">
+            <Link href={`/login?next=${path}`} className="font-semibold text-accent hover:underline">
               {t('signInToComment', lang)}
             </Link>
           </div>
         )}
+        </>)}
+          </div>
+
+          <PageAside>
+            <AsideCard title={t('reviewTitle', lang)}>
+              {reviews.length === 0 ? (
+                <p className="text-[12.5px] text-muted">{t('reviewNobodyYet', lang)}</p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {reviews.map((r) => (
+                    <li key={r.id} className="flex items-center gap-2 text-[12.5px]">
+                      <Avatar handle={r.reviewer.handle} avatarUrl={r.reviewer.avatarUrl} size={20} />
+                      <span className="min-w-0 flex-1 truncate text-ink-2">{r.reviewer.name || r.reviewer.handle}</span>
+                      <span className={r.verdict === 'approve' ? 'text-ok' : r.verdict === 'changes' ? 'text-danger' : 'text-muted'}>
+                        {r.verdict === 'approve' ? t('reviewApprove', lang) : r.verdict === 'changes' ? t('reviewRequestChanges', lang) : t('reviewCommentOnly', lang)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </AsideCard>
+
+            <AsideCard title={t('participants', lang)}>
+              <div className="flex flex-wrap gap-1.5">
+                {sugPeople.map((p) => (
+                  <Link key={p.handle} href={`/${p.handle}`} title={p.handle}>
+                    <Avatar handle={p.handle} avatarUrl={p.avatarUrl} size={24} />
+                  </Link>
+                ))}
+              </div>
+            </AsideCard>
+          </PageAside>
+        </div>
       </div>
     </>
   )

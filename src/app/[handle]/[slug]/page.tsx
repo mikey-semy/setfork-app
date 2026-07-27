@@ -16,6 +16,7 @@ import { detectTextLang } from '@/shared/i18n/detect-text-lang'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
+import { AsideCard, PageAside } from '@/shared/ui/PageAside'
 import { DismissibleHint } from '@/shared/ui/DismissibleHint'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SmartImage } from '@/shared/ui/SmartImage'
@@ -691,13 +692,10 @@ export default async function ListPage({
           </main>
 
           {/* About-сайдбар */}
-          <aside className="flex shrink-0 flex-col gap-4 print:hidden lg:w-[300px]">
+          <PageAside>
             <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
             {backlinks.length > 0 && (
-              <div className="rounded-lg border border-border bg-surface p-4">
-                <SectionLabel className="mb-2">
-                  {say('Linked from', 'Ссылаются на этот список')}
-                </SectionLabel>
+              <AsideCard title={say('Linked from', 'Ссылаются на этот список')}>
                 <ul className="flex flex-col gap-1.5">
                   {backlinks.map((b) => (
                     <li key={`${b.handle}/${b.slug}`}>
@@ -707,7 +705,7 @@ export default async function ListPage({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </AsideCard>
             )}
             <div className="rounded-lg border border-border bg-surface p-4">
               <SectionLabel className="mb-2">
@@ -765,7 +763,7 @@ export default async function ListPage({
                 </div>
               )}
             </div>
-          </aside>
+          </PageAside>
         </div>
       </div>
     </>

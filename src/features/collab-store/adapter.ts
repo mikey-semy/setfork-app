@@ -106,7 +106,15 @@ export const collabStore: CollabStore = {
     const [tpl] = await db.select({ currentVersion: templates.currentVersion }).from(templates).where(eq(templates.id, listId)).limit(1)
     const [r] = await db
       .insert(suggestions)
-      .values({ templateId: listId, authorId, note, baseVersion: tpl?.currentVersion ?? 1, items: steps.map(domainStepToProposed) })
+      .values({
+        templateId: listId,
+        authorId,
+        note,
+        baseVersion: tpl?.currentVersion ?? 1,
+        items: steps.map(domainStepToProposed),
+        // Номер в рамках списка — тем же приёмом, что у задач (одно место правды).
+        number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${listId})`,
+      })
       .returning()
     return mapSuggestion(r)
   },

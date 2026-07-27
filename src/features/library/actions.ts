@@ -362,6 +362,7 @@ export async function openBranchPr(templateId: string, branch: string): Promise<
       baseVersion: tpl.currentVersion,
       items: [], // источник правды — tip ветки, материализуется при просмотре
       branchRef: branch,
+      number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${tpl.id})`,
     })
     .returning({ id: suggestions.id })
   await ensureWatch(tpl.id)

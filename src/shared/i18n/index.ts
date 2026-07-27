@@ -156,6 +156,7 @@ const DICT = {
   emailFooter: { en: 'You receive this because email notifications are on in your SetFork settings.', ru: 'Вы получили это письмо, потому что в настройках SetFork включены уведомления на почту.' },
   suggestionHeading: { en: 'Suggested edit', ru: 'Предложенная правка' },
   proposedChanges: { en: 'Proposed changes', ru: 'Предлагаемые изменения' },
+  conversationTab: { en: 'Conversation', ru: 'Обсуждение' },
   discussionHeading: { en: 'Discussion', ru: 'Обсуждение' },
   noCommentsYet: { en: 'No comments yet.', ru: 'Пока нет комментариев.' },
   watch: { en: 'Watch', ru: 'Следить' },
@@ -428,6 +429,8 @@ const DICT = {
   commentOnSelection: { en: 'On selection', ru: 'К выделенному' },
   // Ревью правки (вердикты рецензентов)
   reviewTitle: { en: 'Review', ru: 'Ревью' },
+  reviewNobodyYet: { en: 'No reviews yet', ru: 'Пока никто не отревьюил' },
+  participants: { en: 'Participants', ru: 'Участники' },
   reviewApprove: { en: 'Approve', ru: 'Одобрить' },
   reviewRequestChanges: { en: 'Request changes', ru: 'Нужны правки' },
   reviewCommentOnly: { en: 'Comment', ru: 'Замечание' },

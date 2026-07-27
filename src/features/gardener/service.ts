@@ -239,6 +239,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         note: noteFor(kind, lang) + (deadUrls.length ? ' ' + t('gardenerNoteDeadLinks', lang).replace('{n}', String(deadUrls.length)) : ''),
         baseVersion: tpl.currentVersion,
         items,
+        number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${tpl.id})`,
       })
       .returning({ id: suggestions.id })
 

@@ -530,6 +530,9 @@ export const suggestions = pgTable('suggestions', {
   authorId: uuid('author_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+  // Номер в рамках списка (#12), как у задач: адресуемость и ссылки в тексте.
+  // Nullable — строки, созданные до введения поля (бэкфилл проставит).
+  number: integer('number'),
   status: suggestionStatus('status').notNull().default('open'),
   note: text('note').notNull().default(''),
   baseVersion: integer('base_version').notNull(),
@@ -539,7 +542,7 @@ export const suggestions = pgTable('suggestions', {
   branchRef: text('branch_ref'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
-}, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status)])
+}, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status), uniqueIndex('suggestions_tpl_number').on(t.templateId, t.number)])
 
 // ── Ревью правки (вердикт рецензента, как review в PR) ───────────────
 // Вердикты по модели GitHub/Gitea, но без их ловушек: у Gitea «request changes»
