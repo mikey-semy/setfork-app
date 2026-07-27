@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, eq, sql } from 'drizzle-orm'
-import { db, runs, runStepState, steps, templates, users, type ProposedItem } from '@/shared/db'
+import { db, runs, runStepState, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
@@ -9,7 +9,8 @@ import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
-import { uniqueSlug } from '@/features/library/slug'
+import { slugify, uniqueSlug } from '@/features/library/slug'
+import { recordAgentAction } from '@/shared/agents/policy'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
 import { isCollaborator } from '@/features/collab/queries'
@@ -299,6 +300,127 @@ export async function mcpCreateList(userId: string, input: McpCreateInput) {
     ref: `${u.handle}/${slug}`,
     status: 'draft',
     note: 'Created as a private draft — the owner publishes it on the site to make it public.',
+  }
+}
+
+/**
+ * МАССОВОЕ СОЗДАНИЕ — ускоритель ПОД РУКОЙ ЧЕЛОВЕКА, а не автономная петля.
+ *
+ * Цель компании — наполнить портал; часть фактуры быстрее получить пачкой через ассистента,
+ * чем ждать проходов петли. Но пачка опасна ровно тем, чем полезна: одним вызовом можно
+ * налить сотню мусорных списков. Поэтому три ограничения, все обязательные:
+ *
+ *   1. СУХОЙ ПРОГОН по умолчанию: сначала видно, что БУДЕТ создано (слаг, дубль ли),
+ *      и только осознанный `dryRun: false` пишет. Ошибиться в сотне списков молча нельзя;
+ *   2. ДЕДУП по нормализованному заголовку среди своих списков: повторный вызов после
+ *      обрыва не удваивает библиотеку (идемпотентность по смыслу, а не по случайному ключу);
+ *   3. КВОТА и ЧЕРНОВИК как в одиночном создании: пачка не обходит лимит и не публикует.
+ *
+ * Каждая пачка пишется в журнал действий (principal_mode='on_behalf_of'): видно, что это
+ * сделал человек через ассистента, а не петля сама.
+ */
+export const MCP_BULK_MAX = 25
+
+/** Нормализация заголовка для дедупа: регистр/пунктуация/пробелы не считаются различием. */
+const titleKey = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+
+export interface McpBulkResult {
+  dryRun: boolean
+  planned: number
+  created: number
+  duplicates: number
+  failed: number
+  quotaStopped: boolean
+  lists: { title: string; ref?: string; slug?: string; status: 'created' | 'would-create' | 'duplicate' | 'error'; reason?: string }[]
+}
+
+export async function mcpBulkCreate(userId: string, lists: McpCreateInput[], dryRun = true): Promise<McpBulkResult | { error: string }> {
+  const batch = (lists ?? []).filter((l) => l?.title?.trim())
+  if (!batch.length) return { error: 'nothing to create: every entry needs a title' }
+  if (batch.length > MCP_BULK_MAX) return { error: `too many lists in one call: ${batch.length} > ${MCP_BULK_MAX}` }
+
+  const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
+  const mine = await db.select({ title: templates.title }).from(templates).where(eq(templates.ownerId, userId))
+  const seen = new Set(mine.map((r) => titleKey(Object.values((r.title ?? {}) as Record<string, string>).find(Boolean) ?? '')).filter(Boolean))
+
+  const out: McpBulkResult = { dryRun, planned: batch.length, created: 0, duplicates: 0, failed: 0, quotaStopped: false, lists: [] }
+  for (const input of batch) {
+    const title = input.title.trim()
+    const key = titleKey(title)
+    if (key && seen.has(key)) {
+      out.duplicates++
+      out.lists.push({ title, status: 'duplicate', reason: 'you already have a list with this title' })
+      continue
+    }
+    // Квоту проверяем ПЕРЕД каждым списком: пачка не должна пробивать лимит «с разгона».
+    if (!(await listQuota(userId, u?.handle)).ok) {
+      out.quotaStopped = true
+      out.lists.push({ title, status: 'error', reason: 'list quota reached' })
+      out.failed++
+      break
+    }
+    if (dryRun) {
+      seen.add(key)
+      out.lists.push({ title, status: 'would-create', slug: slugify(title) })
+      continue
+    }
+    const res = await mcpCreateList(userId, input)
+    if ('error' in res) {
+      out.failed++
+      out.lists.push({ title, status: 'error', reason: res.error as string })
+      continue
+    }
+    seen.add(key)
+    out.created++
+    out.lists.push({ title, status: 'created', ref: res.ref })
+  }
+
+  await recordAgentAction({
+    loop: 'mcp',
+    action: 'list.bulk',
+    resultStatus: out.failed && !out.created ? 'error' : dryRun ? 'dry-run' : 'ok',
+    actorUserId: userId,
+    principalMode: 'on_behalf_of',
+    signal: { planned: out.planned, duplicates: out.duplicates },
+    decision: { dryRun, created: out.created, failed: out.failed, quotaStopped: out.quotaStopped },
+  })
+  return out
+}
+
+/**
+ * Принять правку своего списка. Нужно затем, что правки компании копились без разбора:
+ * заходить на страницу каждой — работа, а из ассистента это одна фраза.
+ * Логика приёма НЕ дублируется — зовём то же ядро, что и кнопка на сайте.
+ */
+export async function mcpApplySuggestion(userId: string, suggestionId: string) {
+  const { applySuggestion } = await import('@/features/library/actions')
+  const res = await applySuggestion(suggestionId, userId)
+  if (!res.ok) return { error: res.reason }
+  const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
+  return { ref: `${u?.handle ?? ''}/${res.slug}`, version: res.version, note: 'Accepted — a new version was created.' }
+}
+
+/** Открытые правки на списках пользователя — что вообще ждёт его решения. */
+export async function mcpPendingSuggestions(userId: string, limit = 20) {
+  const rows = await db
+    .select({
+      id: suggestions.id,
+      number: suggestions.number,
+      note: suggestions.note,
+      slug: templates.slug,
+      items: sql<number>`jsonb_array_length(${suggestions.items})`,
+      authorHandle: users.handle,
+      createdAt: suggestions.createdAt,
+    })
+    .from(suggestions)
+    .innerJoin(templates, eq(templates.id, suggestions.templateId))
+    .innerJoin(users, eq(users.id, suggestions.authorId))
+    .where(and(eq(templates.ownerId, userId), eq(suggestions.status, 'open')))
+    .orderBy(suggestions.createdAt)
+    .limit(Math.min(50, Math.max(1, limit)))
+  return {
+    pending: rows.length,
+    suggestions: rows.map((r) => ({ id: r.id, list: r.slug, number: r.number, note: r.note, items: r.items, author: r.authorHandle, at: r.createdAt })),
   }
 }
 
