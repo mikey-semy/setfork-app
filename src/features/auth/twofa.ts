@@ -1,16 +1,15 @@
 'use server'
 
 import { and, eq, isNull, lt, or, sql } from 'drizzle-orm'
-import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { SignJWT, jwtVerify } from 'jose'
 import QRCode from 'qrcode'
 import { db, recoveryCodes, users } from '@/shared/db'
 import { requireSession, startSession } from '@/shared/auth/session'
 import { clientIpFromHeaders } from '@/shared/auth/app-origin'
 import { rateLimit } from '@/shared/rate-limit'
 import { recordAudit } from '@/shared/audit'
+import { ENROLL_COOKIE, PENDING_COOKIE, clearCookie, readSigned, setSigned } from './signed-cookies'
 import { avatarSrc } from '@/shared/media'
 import {
   decryptSecret,
@@ -24,45 +23,6 @@ import {
 
 // 2FA-флоу. Промежуточные состояния — короткоживущие подписанные куки
 // (JWT на AUTH_SECRET): enroll-секрет до подтверждения и pending-логин.
-
-const ENROLL_COOKIE = 'sf-2fa-enroll'
-const PENDING_COOKIE = 'sf-2fa-pending'
-const TTL_SEC = 5 * 60
-
-function secretKey(): Uint8Array {
-  const s = process.env.AUTH_SECRET
-  if (!s) throw new Error('AUTH_SECRET is not set')
-  return new TextEncoder().encode(s)
-}
-
-// purpose в клейме привязывает токен к назначению — исключает подмену enroll↔pending
-// (и любых будущих потребителей), даже если совпадёт имя куки.
-async function setSigned(name: string, purpose: string, payload: Record<string, string>): Promise<void> {
-  const token = await new SignJWT({ ...payload, purpose })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(`${TTL_SEC}s`)
-    .sign(secretKey())
-  const c = await cookies()
-  c.set(name, token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: TTL_SEC })
-}
-
-async function readSigned(name: string, purpose: string): Promise<Record<string, string> | null> {
-  const c = await cookies()
-  const raw = c.get(name)?.value
-  if (!raw) return null
-  try {
-    const { payload } = await jwtVerify(raw, secretKey())
-    return payload.purpose === purpose ? (payload as Record<string, string>) : null
-  } catch {
-    return null
-  }
-}
-
-async function clearCookie(name: string): Promise<void> {
-  const c = await cookies()
-  c.delete(name)
-}
 
 // ── Включение (настройки) ────────────────────────────────────────────
 export interface EnrollStart {
@@ -157,10 +117,8 @@ export async function regenerateRecoveryCodes(code: string): Promise<TwoFaResult
 }
 
 // ── Шаг логина ───────────────────────────────────────────────────────
-/** Пароль верен, но включён 2FA → ставим pending-куку и ведём на /login/2fa. */
-export async function startPendingLogin(userId: string): Promise<void> {
-  await setSigned(PENDING_COOKIE, 'pending', { uid: userId })
-}
+// startPendingLogin живёт в signed-cookies.ts: личность там приходит аргументом,
+// а экспорт из этого файла ('use server') сделал бы её сетевой точкой входа.
 
 export async function verify2faLogin(_prev: { error?: string } | null, formData: FormData): Promise<{ error?: string }> {
   const code = String(formData.get('code') ?? '').trim()

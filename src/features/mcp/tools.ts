@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, desc, eq, sql } from 'drizzle-orm'
-import { db, knowledgeSources, runs, runStepState, steps, suggestions, templates, users, type ProposedItem } from '@/shared/db'
+import { db, knowledgeSources, runs, runStepState, steps, suggestionReportedChecks, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { tr } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
@@ -9,7 +9,7 @@ import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
-import { applySuggestion } from '@/features/library/actions'
+import { applySuggestion } from '@/features/library/suggestion-core'
 import { slugify, uniqueSlug } from '@/features/library/slug'
 import { recordAgentAction } from '@/shared/agents/policy'
 import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
@@ -17,6 +17,7 @@ import { attributionLine, checkLicense } from '@/shared/ai/source-license'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
 import { isCollaborator } from '@/features/collab/queries'
+import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/features/library/suggestion-checks'
 import { recordRunCompletionIfDone } from '@/features/library/completion'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 
@@ -413,6 +414,80 @@ export async function mcpApplySuggestion(userId: string, suggestionId: string) {
   if (!res.ok) return { error: res.reason }
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
   return { ref: `${u?.handle ?? ''}/${res.slug}`, version: res.version, note: 'Accepted — a new version was created.' }
+}
+
+/**
+ * Отчёт внешней проверки о предложении — наш аналог status check.
+ *
+ * Кто вправе отчитываться: владелец списка и коллаборанты. НЕ автор предложения:
+ * проверки видны рядом с гейтами слияния, и «сам себе поставил зелёное» превратило
+ * бы их в украшение. Своё предложение автор всё равно не принимает сам.
+ *
+ * Ключ — пара (предложение, имя): повторный отчёт ОБНОВЛЯЕТ прежний. Длинный прогон
+ * так и работает: сначала 'pending', потом настоящий итог.
+ */
+export async function mcpReportCheck(
+  userId: string,
+  input: { list: string; number: number; name: string; status: string; summary?: string; url?: string },
+) {
+  const name = input.name.trim().slice(0, 60)
+  if (!name) return { error: 'name is required' }
+  if (!(REPORTED_STATUSES as readonly string[]).includes(input.status)) {
+    return { error: `status must be one of: ${REPORTED_STATUSES.join(', ')}` }
+  }
+  // Ссылка на лог — снаружи, поэтому только http(s): javascript:/data: в атрибуте
+  // href на странице предложения были бы дырой, а не удобством.
+  const url = (input.url ?? '').trim()
+  if (url && !/^https?:\/\//i.test(url)) return { error: 'url must be http(s)' }
+
+  const ref = input.list.includes('/') ? input.list.split('/') : [null, input.list]
+  const [tpl] = await db
+    .select({ id: templates.id, ownerId: templates.ownerId, slug: templates.slug })
+    .from(templates)
+    .innerJoin(users, eq(users.id, templates.ownerId))
+    .where(ref[0] ? and(eq(users.handle, ref[0]), eq(templates.slug, ref[1]!)) : eq(templates.slug, ref[1]!))
+    .limit(1)
+  if (!tpl) return { error: 'list not found' }
+  if (tpl.ownerId !== userId && !(await isCollaborator(tpl.id, userId))) {
+    return { error: 'only the list owner or a collaborator can report checks' }
+  }
+
+  const [sug] = await db
+    .select({ id: suggestions.id, authorId: suggestions.authorId, status: suggestions.status })
+    .from(suggestions)
+    .where(and(eq(suggestions.templateId, tpl.id), eq(suggestions.number, input.number)))
+    .limit(1)
+  if (!sug) return { error: 'suggestion not found' }
+  if (sug.status !== 'open') return { error: 'suggestion is closed' }
+
+  await db
+    .insert(suggestionReportedChecks)
+    .values({
+      suggestionId: sug.id,
+      name,
+      status: input.status as ReportedStatus,
+      summary: (input.summary ?? '').trim().slice(0, 500) || null,
+      url: url || null,
+      reporterId: userId,
+    })
+    .onConflictDoUpdate({
+      target: [suggestionReportedChecks.suggestionId, suggestionReportedChecks.name],
+      set: {
+        status: input.status as ReportedStatus,
+        summary: (input.summary ?? '').trim().slice(0, 500) || null,
+        url: url || null,
+        reporterId: userId,
+        updatedAt: new Date(),
+      },
+    })
+
+  const all = await reportedChecks(sug.id)
+  return {
+    reported: name,
+    status: input.status,
+    url: `${SITE_URL}/${ref[0] ?? ''}/${tpl.slug}/suggestions/${input.number}?tab=checks`,
+    checks: all.map((c) => ({ name: c.title, status: c.status, summary: c.detail })),
+  }
 }
 
 /** Открытые правки на списках пользователя — что вообще ждёт его решения. */

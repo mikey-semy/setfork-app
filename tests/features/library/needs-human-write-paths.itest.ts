@@ -28,7 +28,10 @@ vi.mock('@/shared/media', () => ({ avatarSrc: async () => null, imageUrl: () => 
 
 const { db, steps, suggestions, templateVersions, templates, users } = await import('@/shared/db')
 import type { ProposedItem } from '@/shared/db'
-const { applySuggestion, revertToVersion } = await import('@/features/library/actions')
+const { revertToVersion } = await import('@/features/library/actions')
+// applySuggestion живёт вне экшен-файла намеренно: её личность действующего лица
+// приходит аргументом, и сетевой точкой входа она быть не должна.
+const { applySuggestion } = await import('@/features/library/suggestion-core')
 
 let ownerId = ''
 let authorId = ''

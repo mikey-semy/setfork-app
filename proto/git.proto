@@ -166,6 +166,13 @@ message MergeResolvedRequest {
 message MergeBranchRequest {
   RepoRef repo = 1;
   string name = 2; // ветка, вливаемая в main
+  // Способ слияния. '' и 'merge' — как было (ff, иначе merge-коммит).
+  // 'squash' — ОДИН коммит с одним родителем: история ветки в main не уезжает,
+  // а вклад авторов сохраняется трейлерами Co-authored-by в сообщении.
+  string mode = 3;
+  // Сообщение squash-коммита ('' → 'Squashed branch <name>'). Для 'merge' не
+  // используется: у merge-коммита сообщение каноническое.
+  string message = 4;
 }
 
 message MergeBranchResponse {
