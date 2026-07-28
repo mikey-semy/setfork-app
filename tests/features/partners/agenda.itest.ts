@@ -33,6 +33,14 @@ beforeEach(async () => {
   await db.delete(agendaItems)
   await db.delete(agentActions)
   await db.delete(agentLoops)
+  // Ростер приводим к ОДНОМУ мастеру перед каждым тестом. Иначе при полном штате (20 доменов)
+  // сигналов больше, чем срез повестки, и наша «кулинария» законно не попадает в двенадцать —
+  // тест падал бы не на поведении, а на длине списка. В CI это и случилось.
+  await db.delete(councilExperts)
+  await db.insert(councilExperts).values({
+    id: 'cook-x', nameEn: 'Cook', nameRu: 'Повар', persona: 'a cook', code: 'C',
+    lens: 'cooking', domains: ['кулинария'], model: '', avatar: 'cook', sort: 1,
+  })
 })
 
 const items = async () => db.select().from(agendaItems)
@@ -50,6 +58,10 @@ describe('повестка растёт из чисел', () => {
   })
 
   it('повторный проход дублей не плодит — обновляет тот же пункт', async () => {
+    // ПЕРВЫЙ проход досевает штат (getRoster дозаполняет ростер), поэтому второй видит уже
+    // двадцать доменов вместо одного — сравнивать первый со вторым значит сравнивать разные
+    // миры. Прогреваем дважды и сравниваем УСТОЯВШИЕСЯ проходы.
+    await runPartnersSweep()
     await runPartnersSweep()
     const before = (await items()).length
     const res = await runPartnersSweep()
@@ -90,10 +102,11 @@ describe('решение человека неприкосновенно', () =>
   it('одобренная тема доезжает до производства', async () => {
     await runPartnersSweep()
     const rows = await items()
-    const cook = rows.find((r) => r.domain === 'кулинария')!
+    const cook = rows.find((r) => r.domain === 'кулинария')
+    expect(cook, 'пункт по теме мастера не попал в повестку').toBeDefined()
     expect(await approvedDomains()).toEqual([])
 
-    await db.update(agendaItems).set({ status: 'approved', decidedBy: ownerId, decidedAt: new Date() }).where(eq(agendaItems.id, cook.id))
+    await db.update(agendaItems).set({ status: 'approved', decidedBy: ownerId, decidedAt: new Date() }).where(eq(agendaItems.id, cook!.id))
 
     expect(await approvedDomains()).toContain('кулинария')
   })
