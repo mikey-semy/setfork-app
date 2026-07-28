@@ -225,6 +225,8 @@ const DICT = {
   prNoneClosed: { en: 'No closed suggestions', ru: 'Закрытых предложений нет' },
   prSelectAll: { en: 'Select all', ru: 'Выбрать все' },
   prSelected: { en: 'Selected', ru: 'Выбрано' },
+  prCommitDiff: { en: 'Show what changed in this commit', ru: 'Показать, что изменилось в коммите' },
+  prAllCommits: { en: 'All commits', ru: 'Все коммиты' },
   prLinkIssue: { en: 'Link an issue', ru: 'Привязать задачу' },
   prLinkIssueEmpty: { en: 'No issues to link', ru: 'Задач для привязки нет' },
   prLinkIssueFilter: { en: 'deploy script', ru: 'скрипт деплоя' },
