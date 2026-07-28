@@ -15,6 +15,7 @@ export function withPrDefaults(raw: unknown): Required<PrSettings> {
   return {
     allowFrom: o.allowFrom === 'collaborators' ? 'collaborators' : 'all',
     linearOnly: bool('linearOnly'),
+    mergeMethod: o.mergeMethod === 'squash' ? 'squash' : 'merge',
     blockOnUnresolved: bool('blockOnUnresolved'),
     // Отрицательное и нечисловое → 0; больше 10 одобрений на список — заведомо опечатка.
     requiredApprovals: Number.isFinite(approvals) ? Math.min(10, Math.max(0, Math.trunc(approvals))) : PR_DEFAULTS.requiredApprovals,

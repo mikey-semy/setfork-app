@@ -776,7 +776,13 @@ export default async function SuggestionThreadPage({
               !hasConflicts && (
                 <form action={mergeBranchPr.bind(null, sug.id)}>
                   <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
-                    <GitMerge size={14} /> {lang === 'ru' ? 'Влить в main' : 'Merge to main'}
+                    <GitMerge size={14} />
+                    {/* На мобиле одно слово, на широком — полное действие: способ
+                        слияния меняет результат, и знать о нём надо ДО нажатия. */}
+                    <span className="sm:hidden">{t('prMergeShort', lang)}</span>
+                    <span className="hidden sm:inline">
+                      {prs.mergeMethod === 'squash' ? t('prSquashAndMerge', lang) : t('prMergeToMain', lang)}
+                    </span>
                   </SubmitButton>
                 </form>
               )

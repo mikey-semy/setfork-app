@@ -185,9 +185,9 @@ export interface GitCore {
   createBranch(repo: GitRepoRef, name: string, from?: string): Promise<string>
   /** A2: удалить ветку (main защищён). Бросает BranchOpError. */
   deleteBranch(repo: GitRepoRef, name: string): Promise<void>
-  /** A3: влить ветку в main (ff или merge-commit) + проекция новой версии.
+  /** A3: влить ветку в main (ff, merge-commit или squash) + проекция новой версии.
    *  Конфликт/нечего вливать → BranchOpError('conflict'|'nothing-to-merge'). */
-  mergeBranch(repo: GitRepoRef, name: string): Promise<MergeResult>
+  mergeBranch(repo: GitRepoRef, name: string, opts?: MergeOptions): Promise<MergeResult>
   /** A4: вход конфликтного merge — base (merge-base), ours (main), theirs (ветка).
    *  null — ветки/merge-base/материализаций нет. */
   mergeState(repo: GitRepoRef, branch: string): Promise<MergeState | null>
@@ -230,6 +230,21 @@ export interface GitCommit {
 export interface GitTag {
   name: string
   targetSha: string
+}
+
+/**
+ * Как вливать ветку.
+ *
+ * `merge` — как было: fast-forward, если можно, иначе merge-коммит с двумя родителями.
+ * `squash` — ОДИН коммит с одним родителем: в main не уезжает промежуточная история
+ * ветки, а вклад авторов сохраняется трейлерами `Co-authored-by`. Fast-forward при
+ * squash не применяется намеренно: он затащил бы ровно ту историю, ради отсутствия
+ * которой squash и выбирают.
+ */
+export interface MergeOptions {
+  mode?: 'merge' | 'squash'
+  /** Заголовок squash-коммита; пусто → «Squashed branch <name>». Для merge не используется. */
+  message?: string
 }
 
 export interface MergeResult {
