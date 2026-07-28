@@ -15,6 +15,7 @@ import { getRoster, type Expert } from './roster'
 import { voiceLine, type VoiceKind } from './voice'
 import { gnomeCard, rivalryHints } from './gnome-character'
 import { pickPrecedents, pickPrecedentsDetailed } from './precedent-filter'
+import { pruneDrafts } from './prune'
 import { craftRules } from './triples'
 import { lawBlock } from './list-laws'
 import { pushMessage, type GenMessageKind } from './generation-messages'
@@ -82,6 +83,11 @@ export interface CouncilProvenance {
    * хватало витку в целом — читается как «вот тут мы додумывали».
    */
   noBasis?: string[]
+  /**
+   * Подрезка контекста на рёбрах: символов до/после и сколько черновиков подрезано. Умножать
+   * на два — черновики идут и критику, и старейшине. Ноль подрезанных = обычный виток.
+   */
+  pruning?: { before: number; after: number; trimmed: number }
   /**
    * Карта «буква анонимного черновика → автор». Критик и синтезатор имён НЕ видят
    * (анонимность обязательна: иначе оценка плывёт к репутации, а не к качеству текста),
@@ -504,7 +510,11 @@ ${roster}`,
   ]
   const alive = slots.filter((s): s is { text: string; who: string } => Boolean(s.text))
   if (alive.length === 0) return null // всё упало → пусть caller фолбэкнет
-  const anon = anonymizeDrafts(alive)
+  // КОНТЕКСТ-ПРУННИНГ: черновики уходят в промпт дважды (критику и старейшине), поэтому
+  // раздутый текст оплачивается два раза. Подрезаем выбросы по границе строки; типичный
+  // черновик не трогается вовсе, а сколько сэкономлено — считаем, а не декларируем.
+  const pruned = pruneDrafts(alive)
+  const anon = anonymizeDrafts(pruned.drafts)
   // Родословная авторства: буква ↔ гном. Анонимность для критика и синтезатора при этом
   // СОХРАНЯЕТСЯ — им уходит только `anon`, без имён (иначе оценка поплыла бы к репутации,
   // а не к качеству текста). Карту храним в провенансе, для людей и для скоркарта.
@@ -547,6 +557,8 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
         ...list,
         // Черновики отдаём НАРУЖУ, а не в провенанс: провенанс уезжает клиенту, а полные
         // черновики нужны только серверу — для замера многогранности (generation_drafts).
+        // ВАЖНО: сохраняем ПОЛНЫЙ текст (alive), а не подрезанный: подрезка — экономия на
+        // промпте, а замер должен видеть то, что участник реально написал.
         drafts: alive.map((s, i) => ({ letter: draftLetter(i), who: s.who, text: s.text })),
         provenance: {
           engine: 'council',
@@ -558,6 +570,7 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
           craftRules: rules.length ? rules : undefined,
           experts: expertProv,
           noBasis: noBasis.length ? noBasis : undefined,
+          pruning: pruned.stat.trimmed > 0 ? pruned.stat : undefined,
           draftAuthors,
           models: { steward: fast, innovator: pool[0], critic: fast, elder: base },
           webSeek: settings.councilWebSeek,
