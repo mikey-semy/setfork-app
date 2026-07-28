@@ -14,6 +14,7 @@ import { countDuplicateSteps, readinessDecision, structuralBlockers, DEFAULT_BAR
 import { featuresOf, gradeList } from '@/shared/ai/list-grade'
 import { runReadinessLenses, type ReadinessInput } from '@/shared/ai/readiness-lenses'
 import { checkUrls } from '@/shared/lib/link-health'
+import { freshForDomains, freshestUsedAt, markUsed } from '@/shared/ai/feed-pick'
 import { getAiSettings, isAiAvailable } from '@/shared/settings/ai'
 import { notify } from '@/features/notifications/notify'
 import { log } from '@/shared/observability'
@@ -37,6 +38,13 @@ import { uniqueSlug } from '@/shared/lib/slug'
 
 const GARDENER_HANDLE = 'gardener'
 const GARDENER_EVERY_DAYS = 2
+
+/**
+ * Ритм для живых списков. Шесть часов, а не час: материал в поток приходит по своему
+ * расписанию, и чаще будить проход значит платить за refine там, где новостей ещё нет.
+ * Проверка «нечего добавить» стоит один запрос и вызова модели не делает.
+ */
+const LIVING_EVERY_HOURS = 6
 const BATCH = Number(process.env.GARDENER_BATCH ?? 3)
 
 /** Значение LocaleText на языке списка (фолбэк en → первый непустой). */
@@ -98,11 +106,18 @@ export async function ensureGardenerScheduled(): Promise<void> {
     .where(and(eq(jobs.type, 'gardener'), inArray(jobs.status, ['pending', 'processing'])))
     .limit(1)
   if (pending.length) return
+  // РИТМ ЗАДАЁТ СОДЕРЖИМОЕ. Раз в двое суток — нормальный темп для полировки, но для ленты
+  // это не темп: новость, добавленная через два дня, уже не новость. Пока в библиотеке есть
+  // хоть один живой список, проход встаёт чаще. Отдельную петлю не заводим: рубильник,
+  // журнал, предохранитель и бюджет у ухода уже есть, а второй петле их пришлось бы
+  // повторить — и разъехаться с этой при первой же правке.
+  const [alive] = await db.select({ id: templates.id }).from(templates).where(eq(templates.living, true)).limit(1)
+  const delayMs = alive ? LIVING_EVERY_HOURS * 60 * 60 * 1000 : GARDENER_EVERY_DAYS * 24 * 60 * 60 * 1000
   // maxAttempts:1 — без ретрая всего прохода: при повторе уже авто-смёрдженные
   // кураторские списки рефайнились бы заново (двойной расход). Пропуск одного
   // прохода не страшен — следующий встаёт по расписанию.
-  await enqueueJob('gardener', {}, { delayMs: GARDENER_EVERY_DAYS * 24 * 60 * 60 * 1000, maxAttempts: 1 })
-  log.info('gardener scheduled', { inDays: GARDENER_EVERY_DAYS })
+  await enqueueJob('gardener', {}, { delayMs, maxAttempts: 1 })
+  log.info('gardener scheduled', { inHours: delayMs / 3_600_000, living: !!alive })
 }
 
 /** Кандидаты: публичные активные, без открытой правки садовника, без секций
@@ -114,7 +129,7 @@ export async function pickCandidates(agentIds: string[], limit: number) {
   // с открытой правкой Фьялара попадал бы в выборку снова → повторный refine).
   const agents = agentIds.length ? agentIds : ['00000000-0000-0000-0000-000000000000']
   return db
-    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, listKind: templates.listKind, status: templates.status, ownerCurated: users.curated, ownerAccountType: users.accountType })
+    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, listKind: templates.listKind, living: templates.living, status: templates.status, ownerCurated: users.curated, ownerAccountType: users.accountType })
     .from(templates)
     .innerJoin(users, eq(users.id, templates.ownerId))
     .where(
@@ -155,7 +170,9 @@ export async function pickCandidates(agentIds: string[], limit: number) {
              and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS}::int * interval '1 day')))`,
       ),
     )
-    .orderBy(desc(templates.starsCount), asc(templates.updatedAt))
+    // Живые списки — первыми: у ленты ценность в свежести, и ждать своей очереди за
+    // популярностью она не может. Дальше как раньше: популярные и давно не обновлявшиеся.
+    .orderBy(desc(templates.living), desc(templates.starsCount), asc(templates.updatedAt))
     .limit(limit)
 }
 
@@ -188,7 +205,7 @@ function noteFor(kind: ListKind, lang: Lang): string {
  * ни линз, ни проверки ссылок.
  */
 export async function gateOwnDraft(
-  tpl: { id: string; slug: string; tags: string[]; desc: unknown; status: string | null },
+  tpl: { id: string; slug: string; tags: string[]; desc: unknown; status: string | null; living?: boolean; freshestAgeDays?: number },
   snapshot: ReadinessInput,
   ctx: { tenderId: string; agentId: string; policyVersion: number; lang: Lang },
 ): Promise<'published' | 'held' | 'skipped'> {
@@ -214,6 +231,10 @@ export async function gateOwnDraft(
     duplicateSteps: countDuplicateSteps(snapshot.items.map((it) => it.title)),
     grade: verdict.grade,
     gradeNext: verdict.next,
+    // Ленту планка судит свежестью вместо класса: класс мерит «полон ли список навсегда», а
+    // лента полной не бывает. Возраст материала считает вызывающий — у него список целиком.
+    living: tpl.living,
+    freshestAgeDays: tpl.freshestAgeDays,
   }
 
   // Структурные блокеры — кодом и БЕСПЛАТНО: если список не дотягивает по ним, линзы не
@@ -357,6 +378,95 @@ DIVERGE, do not polish. The list is already good for its original case. Produce 
   return true
 }
 
+/** Сколько новостей добавляем за один проход. Больше — и лента за раз меняется до неузнаваемости. */
+const FEED_PER_UPDATE = 3
+
+/**
+ * Сколько пунктов держим в АКТУАЛЬНОЙ версии живого списка. Разбор ответа модели режет список
+ * на 20 (`parseList`), поэтому предел нужен свой и ниже: иначе модель сама решала бы, что
+ * выкинуть, ровно на границе. Вытесненное не теряется — предыдущие версии его хранят, и
+ * история версий и есть «архив ленты».
+ */
+const FEED_MAX_ITEMS = 16
+
+/**
+ * РОСТ ЖИВОГО СПИСКА: добавить в ленту то, что пришло из потока.
+ *
+ * Отличие от полировки принципиальное. Обычный список улучшают: тот же материал, лучше
+ * сказанный. Лента РАСТЁТ: приходит новое событие — появляется новый пункт, а старые уходят
+ * вниз и в конце вытесняются в историю версий.
+ *
+ * Чего здесь нет намеренно:
+ *   - нет вызова модели, когда потоку нечего дать. «Нет новостей» — это не «устоялся» и не
+ *     повод для форка, это просто тишина: платить за неё нельзя;
+ *   - нет пересказа. Промпт требует своей формулировки и практического пункта, а адрес
+ *     источника уходит в `refs` пункта — сноска, а не копия. Тела статей у нас и не хранятся.
+ */
+export async function growLiving(
+  tpl: { id: string; slug: string; tags: string[] },
+  current: { title: string; desc: string; tags: string[]; items: GeneratedItem[] },
+  lang: Lang,
+  kind: ListKind,
+  ctx: { tenderId: string; agentId: string; policyVersion: number; domains?: string[] },
+): Promise<{ result: 'grown' | 'nothing-new' | 'failed'; snapshot?: ReadinessInput }> {
+  // Ищем материал по тегам списка И по доменам мастера, который за него отвечает. Только по
+  // тегам списка искать нельзя: теги списку придумала МОДЕЛЬ при создании («kubernetes», «ci»),
+  // а тему подписки задавал ЧЕЛОВЕК («devops») — они законно не совпадают, и лента, которая
+  // родилась из новости, больше никогда не нашла бы себе материала. Домен мастера — тот самый
+  // мостик: по нему материал и достался ему в первый раз.
+  const domains = [...new Set([...tpl.tags, ...(ctx.domains ?? [])])]
+  const fresh = await freshForDomains(domains, FEED_PER_UPDATE)
+  if (!fresh.length) return { result: 'nothing-new' }
+
+  // События идут в ИНСТРУКЦИЮ, а она обёрнута spotlight внутри refine: заголовки чужих лент —
+  // недоверенный ввод, и лента с инъекцией не должна перехватывать задачу.
+  const events = fresh
+    .map((f, i) => `${i + 1}. ${f.title}${f.publishedAt ? ` [${f.publishedAt.toISOString().slice(0, 10)}]` : ''} — ${f.url}${f.hint ? `\n   ${f.hint}` : ''}`)
+    .join('\n')
+  const instruction = `${policyFor(kind, {})}
+GROW THE LIST, do not polish it. New events happened in this list's topic:
+${events}
+
+For EACH event add ONE new item at the TOP of the list:
+- your OWN wording of what a person should DO about it — never a retelling or summary of the news;
+- start the description with the event date if it is given;
+- put the event URL into the item's refs (label = the source name).
+Keep the existing items below in their current order and wording. If the list then has more than ${FEED_MAX_ITEMS} items, drop the OLDEST ones from the bottom — the version history keeps them.`
+
+  const grown = await generateListRefine(current, instruction, lang, {
+    userId: ctx.tenderId,
+    feature: 'refine',
+    refType: 'template',
+    refId: tpl.id,
+    kind,
+  })
+  if (!grown || !grown.items.length) return { result: 'failed' }
+
+  const items = toProposed(grown.items.slice(0, FEED_MAX_ITEMS), lang)
+  await listStore.addVersion(tpl.id, { note: noteFor(kind, lang), steps: toStepInput(items), authorId: ctx.tenderId })
+  await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: ctx.tenderId, type: 'new_version', templateId: tpl.id })
+  await enqueueReindex(tpl.id)
+  // Материал списываем ПОСЛЕ версии: упади запись — новости остались бы «использованными»
+  // без списка, и повод пропал бы навсегда.
+  await markUsed(fresh.map((f) => f.id), tpl.id)
+  await recordAgentAction({
+    loop: 'gardener',
+    action: 'list.grow',
+    resultStatus: 'ok',
+    agentId: ctx.agentId,
+    actorUserId: ctx.tenderId,
+    signal: { templateId: tpl.id, slug: tpl.slug, events: fresh.length },
+    decision: { mode: 'grow-feed', sources: fresh.map((f) => f.url).slice(0, FEED_PER_UPDATE) },
+    resultRef: tpl.slug,
+    policyVersion: ctx.policyVersion,
+  })
+  log.info('gardener: living list grown', { slug: tpl.slug, events: fresh.length })
+  return {
+    result: 'grown',
+    snapshot: { title: grown.title || current.title, desc: grown.desc || current.desc, tags: grown.tags.length ? grown.tags : current.tags, items: grown.items.slice(0, FEED_MAX_ITEMS) },
+  }
+}
+
 /** Прогон садовника: до BATCH списков за раз, каждый — refine → suggestion. */
 export async function runGardenerSweep(): Promise<{ proposed: number; skipped: number; published: number; diverged: number }> {
   if (!(await isAiAvailable())) {
@@ -463,6 +573,41 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
         policyVersion: loop.policyVersion,
       })
       skipped++
+      continue
+    }
+
+    // ЖИВОЙ СПИСОК растёт, а не полируется: ветка стоит ДО refine, потому что полировать
+    // ленту незачем — её ценность в свежести. Нет новостей → уходим молча и БЕЗ вызова
+    // модели: «нет новостей» это не «устоялся», и правило остановки к ленте не применяется,
+    // иначе тихая неделя уводила бы ленту в форк.
+    if (tpl.living) {
+      const res = await growLiving(tpl, current, lang, kind, { ...gateCtx, domains: tender?.expert.domains })
+      if (res.result === 'grown') {
+        proposed++
+        // Выросшая лента идёт на планку — она судит её свежестью, а не полнотой. Иначе
+        // самое живое, что есть у компании, вечно лежало бы в черновиках.
+        if (ownedByCompany && tpl.status === 'draft' && res.snapshot) {
+          const fresh = await freshestUsedAt(tpl.id)
+          const ageDays = fresh ? Math.floor((Date.now() - fresh.getTime()) / 86_400_000) : undefined
+          const gated = await gateOwnDraft({ ...tpl, living: true, freshestAgeDays: ageDays }, res.snapshot, gateCtx)
+          if (gated === 'published') published++
+        }
+      } else {
+        if (res.result === 'nothing-new') {
+          await recordAgentAction({
+            loop: 'gardener',
+            action: 'list.fresh-none',
+            resultStatus: 'skipped',
+            agentId: tender?.expert.id ?? '',
+            actorUserId: tenderId,
+            signal: { templateId: tpl.id, slug: tpl.slug },
+            decision: { reason: 'living list: the stream had nothing new' },
+            resultRef: tpl.slug,
+            policyVersion: loop.policyVersion,
+          })
+        }
+        skipped++
+      }
       continue
     }
 

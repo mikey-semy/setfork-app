@@ -110,3 +110,38 @@ describe('ключ дедупа', () => {
     expect(feedItemKey('не адрес')).toBe('не адрес')
   })
 })
+
+describe('разметка в подсказке (найдено на живых лентах)', () => {
+  // kubernetes.io отдаёт описание ЭКРАНИРОВАННЫМ. При одной чистке теги оживали уже ПОСЛЕ
+  // вырезания — подсказка приезжала как «<p>Kubernetes ships with…» и уехала бы в промпт.
+  it('экранированная разметка снимается, а не оживает', () => {
+    const xml = `<rss><channel><item>
+      <title>Custom metrics exporter</title>
+      <link>https://kubernetes.io/blog/a/</link>
+      <description>&lt;p&gt;Kubernetes ships with built-in awareness&lt;/p&gt;</description>
+    </item></channel></rss>`
+    const [it] = parseFeed(xml)
+    expect(it.hint).toBe('Kubernetes ships with built-in awareness')
+    expect(it.hint).not.toContain('<')
+  })
+
+  it('разметка внутри CDATA тоже снимается', () => {
+    const xml = `<rss><channel><item>
+      <title><![CDATA[Заголовок]]></title>
+      <link>https://a.example/x</link>
+      <description><![CDATA[<p>Текст <b>жирным</b></p>]]></description>
+    </item></channel></rss>`
+    expect(parseFeed(xml)[0].hint).toBe('Текст жирным')
+  })
+
+  it('намеренно экранированный текст остаётся текстом, а не считается тегом', () => {
+    // &amp;lt;p&amp;gt; — автор ХОТЕЛ показать разметку буквами. Раскодируй &amp; первым, и мы
+    // выкинули бы его текст как тег.
+    const xml = `<rss><channel><item>
+      <title>Про теги</title>
+      <link>https://a.example/tags</link>
+      <description>Пиши &amp;lt;p&amp;gt; для абзаца</description>
+    </item></channel></rss>`
+    expect(parseFeed(xml)[0].hint).toBe('Пиши &lt;p&gt; для абзаца')
+  })
+})
