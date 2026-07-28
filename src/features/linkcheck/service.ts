@@ -19,7 +19,7 @@ export async function ensureLinkcheckScheduled(): Promise<void> {
   const pending = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(eq(jobs.type, 'linkcheck'), inArray(jobs.status, ['pending', 'processing'])))
+    .where(and(eq(jobs.type, 'linkcheck'), eq(jobs.status, 'pending')))
     .limit(1)
   if (pending.length) return
   const s = await getLinkcheckSettings()

@@ -338,7 +338,7 @@ export async function ensureSelfGenScheduled(): Promise<void> {
   const [pending] = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(eq(jobs.type, 'selfgen'), sql`${jobs.status} in ('pending','processing')`))
+    .where(and(eq(jobs.type, 'selfgen'), eq(jobs.status, 'pending')))
     .limit(1)
   if (pending) return
   await enqueueJob('selfgen', {}, { delayMs: EVERY_HOURS * 60 * 60 * 1000, maxAttempts: 1 })

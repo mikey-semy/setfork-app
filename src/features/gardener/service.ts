@@ -98,12 +98,19 @@ export async function ensureGardenerUser(): Promise<{ id: string }> {
   return created
 }
 
-/** Одна pending/processing джоба садовника в очереди — самоподдержание без cron. */
+/**
+ * Одна ОЖИДАЮЩАЯ джоба садовника в очереди — самоподдержание без cron.
+ *
+ * Считаем только `pending`, и это принципиально: планировщик зовётся ИЗ САМОЙ задачи, а она в
+ * этот момент `processing`. Учитывая её, проверка видела бы «работа уже стоит» и преемника не
+ * ставила — петля тихо умирала бы после первого прогона и оживала только рестартом инстанса
+ * (нашёл ревьюер Codex на #532; проверено тестом контракта петель).
+ */
 export async function ensureGardenerScheduled(): Promise<void> {
   const pending = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(eq(jobs.type, 'gardener'), inArray(jobs.status, ['pending', 'processing'])))
+    .where(and(eq(jobs.type, 'gardener'), eq(jobs.status, 'pending')))
     .limit(1)
   if (pending.length) return
   // РИТМ ЗАДАЁТ СОДЕРЖИМОЕ. Раз в двое суток — нормальный темп для полировки, но для ленты
@@ -172,7 +179,9 @@ export async function pickCandidates(agentIds: string[], limit: number) {
     )
     // Живые списки — первыми: у ленты ценность в свежести, и ждать своей очереди за
     // популярностью она не может. Дальше как раньше: популярные и давно не обновлявшиеся.
-    .orderBy(desc(templates.living), desc(templates.starsCount), asc(templates.updatedAt))
+    // Внутри лент — сначала те, кого дольше не трогали: иначе одна звёздная лента забирала бы
+    // каждый проход, а соседние молчали.
+    .orderBy(desc(templates.living), asc(templates.updatedAt), desc(templates.starsCount))
     .limit(limit)
 }
 
@@ -442,6 +451,14 @@ Keep the existing items below in their current order and wording. If the list th
   })
   if (!grown || !grown.items.length) return { result: 'failed' }
 
+  // Модель могла вернуть тот же список (события проигнорированы). Тогда версии нет и материал
+  // НЕ сжигаем: иначе новость исчезала бы, ни разу не появившись в ленте (находка Codex).
+  const norm = (xs: GeneratedItem[]) => JSON.stringify(toProposed(xs, lang))
+  if (norm(grown.items) === norm(current.items)) {
+    log.info('gardener: living list unchanged, material kept', { slug: tpl.slug })
+    return { result: 'failed' }
+  }
+
   const items = toProposed(grown.items.slice(0, FEED_MAX_ITEMS), lang)
   await listStore.addVersion(tpl.id, { note: noteFor(kind, lang), steps: toStepInput(items), authorId: ctx.tenderId })
   await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: ctx.tenderId, type: 'new_version', templateId: tpl.id })
@@ -487,7 +504,15 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
   const loop = await loopPolicy('gardener')
   const gardener = await ensureGardenerUser()
   const [agents, roster] = await Promise.all([agentUserIds(), getRoster()])
-  const [candidates, overrides] = await Promise.all([pickCandidates(agents, BATCH), policyOverrides()])
+  // Партия прохода: лентам отдаём не больше половины. Иначе, как только живых списков станет
+  // три (размер партии), обычные списки перестали бы обслуживаться совсем — уход выродился бы
+  // в одну только ленту (находка Codex на #535).
+  const all = await pickCandidates(agents, BATCH * 2)
+  const livingCap = Math.max(1, Math.floor(BATCH / 2))
+  const livingPicked = all.filter((t) => t.living).slice(0, livingCap)
+  const rest = all.filter((t) => !t.living).slice(0, BATCH - livingPicked.length)
+  const candidates = [...livingPicked, ...rest]
+  const overrides = await policyOverrides()
 
   let proposed = 0
   let skipped = 0
@@ -580,7 +605,10 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     // ленту незачем — её ценность в свежести. Нет новостей → уходим молча и БЕЗ вызова
     // модели: «нет новостей» это не «устоялся», и правило остановки к ленте не применяется,
     // иначе тихая неделя уводила бы ленту в форк.
-    if (tpl.living) {
+    // Рост напрямую — только по СВОИМ спискам. Живой список человека компания правит обычным
+    // путём, предложением: писать в чужой список от своего имени нельзя, даже если владелец
+    // включил «живой» (находка ревьюера Codex на #535).
+    if (tpl.living && ownedByCompany) {
       const res = await growLiving(tpl, current, lang, kind, { ...gateCtx, domains: tender?.expert.domains })
       if (res.result === 'grown') {
         proposed++
