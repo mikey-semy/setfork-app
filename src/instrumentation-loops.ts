@@ -22,6 +22,10 @@ export interface LoopWiring {
 }
 
 export const LOOP_WIRING: Record<LoopName, LoopWiring> = {
+  partners: {
+    handler: () => import('@/features/partners/jobs').then((m) => m.runPartnersJob),
+    schedule: () => import('@/features/partners/service').then((m) => m.ensurePartnersScheduled()),
+  },
   gardener: {
     handler: () => import('@/features/gardener/jobs').then((m) => m.runGardenerJob),
     schedule: () => import('@/features/gardener/service').then((m) => m.ensureGardenerScheduled()),

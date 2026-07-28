@@ -36,6 +36,16 @@ export interface LoopSpec {
 
 export const LOOPS: LoopSpec[] = [
   {
+    name: 'partners',
+    jobType: 'partners',
+    jobsModule: '@/features/partners/jobs',
+    handler: 'runPartnersJob',
+    serviceModule: '@/features/partners/service',
+    ensure: 'ensurePartnersScheduled',
+    paid: false,
+    what: { en: 'turns signals into the development agenda', ru: 'превращает сигналы в повестку развития' },
+  },
+  {
     name: 'gardener',
     jobType: 'gardener',
     jobsModule: '@/features/gardener/jobs',
