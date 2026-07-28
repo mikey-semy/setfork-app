@@ -5,7 +5,9 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 // что без новостей мы НЕ платим за вызов, что материал списывается со ссылкой на список, что
 // появляется новая версия и что в журнале это «рост», а не «устоялся» (иначе тихая неделя
 // уводила бы ленту в расхождение форком).
-const ai = vi.hoisted(() => ({ calls: [] as string[], reply: null as null | { title: string; desc: string; tags: string[]; items: { title: string; desc: string }[] } }))
+type Item = { title: string; desc: string; command: string; level: 'required'; why: string; subtasks: string[]; refs: { label: string; url: string }[] }
+const item = (title: string, desc: string, refs: { label: string; url: string }[] = []): Item => ({ title, desc, command: '', level: 'required', why: '', subtasks: [], refs })
+const ai = vi.hoisted(() => ({ calls: [] as string[], reply: null as null | { title: string; desc: string; tags: string[]; items: unknown[] } }))
 vi.mock('@/shared/ai/generate', () => ({
   generateListRefine: vi.fn(async (_current: unknown, instruction: string) => {
     ai.calls.push(instruction)
@@ -24,7 +26,7 @@ const current = () => ({
   title: 'Что происходит в DevOps',
   desc: 'Лента изменений по инструментам',
   tags: ['devops'],
-  items: [{ title: 'Старый пункт', desc: 'что делать' }],
+  items: [item('Старый пункт', 'что делать')],
 })
 const tpl = () => ({ id: tplId, slug: 'devops-feed', tags: ['devops'] })
 const ctx = () => ({ tenderId: ownerId, agentId: 'coder', policyVersion: 1 })
@@ -55,7 +57,12 @@ beforeEach(async () => {
     .returning({ id: templates.id })
   tplId = t.id
   ai.calls = []
-  ai.reply = { title: 'Что происходит в DevOps', desc: 'Лента изменений', tags: ['devops'], items: [{ title: 'Новое: перейти на v2', desc: '2026-07-28 что сделать' }, { title: 'Старый пункт', desc: 'что делать' }] }
+  ai.reply = {
+    title: 'Что происходит в DevOps',
+    desc: 'Лента изменений',
+    tags: ['devops'],
+    items: [item('Новое: перейти на v2', '2026-07-28 что сделать', [{ label: 'a.example', url: 'https://a.example/v2' }]), item('Старый пункт', 'что делать')],
+  }
 })
 
 const journal = async () => db.select().from(agentActions)
@@ -80,9 +87,9 @@ describe('рост живого списка', () => {
     const vers = await db.select().from(templateVersions).where(eq(templateVersions.templateId, tplId))
     expect(vers.length).toBeGreaterThanOrEqual(1)
     // Материал помечен использованным И связан с этим списком: по паре видно, что выросло.
-    const [item] = await db.select().from(feedItems).where(eq(feedItems.id, id))
-    expect(item.usedAt).not.toBeNull()
-    expect(item.usedTemplateId).toBe(tplId)
+    const [row] = await db.select().from(feedItems).where(eq(feedItems.id, id))
+    expect(row.usedAt).not.toBeNull()
+    expect(row.usedTemplateId).toBe(tplId)
     const acts = await journal()
     expect(acts).toHaveLength(1)
     expect(acts[0]).toMatchObject({ action: 'list.grow', resultStatus: 'ok' })
@@ -110,8 +117,24 @@ describe('рост живого списка', () => {
     const res = await growLiving(tpl(), current(), 'ru', 'procedure', ctx())
 
     expect(res.result).toBe('failed')
-    const [item] = await db.select().from(feedItems).where(eq(feedItems.id, id))
-    expect(item.usedAt).toBeNull()
+    const [row] = await db.select().from(feedItems).where(eq(feedItems.id, id))
+    expect(row.usedAt).toBeNull()
     expect(await journal()).toHaveLength(0)
+  })
+})
+
+describe('чем ищем материал', () => {
+  // Теги списку придумала МОДЕЛЬ при создании, а тему подписки задавал ЧЕЛОВЕК — они законно
+  // не совпадают. Ищи мы только по тегам списка, лента, рождённая из новости, больше никогда
+  // не нашла бы себе материала: молчала бы вечно и выглядела бы «просто не растущей».
+  it('домены мастера расширяют поиск: тег списка с темой подписки не совпал', async () => {
+    await db.update(templates).set({ tags: ['kubernetes'] }).where(eq(templates.id, tplId))
+    await addItem('Вышел релиз v2', 'https://a.example/v2', ['devops'])
+
+    const byTagsOnly = await growLiving({ ...tpl(), tags: ['kubernetes'] }, current(), 'ru', 'procedure', ctx())
+    expect(byTagsOnly.result).toBe('nothing-new')
+
+    const withDomains = await growLiving({ ...tpl(), tags: ['kubernetes'] }, current(), 'ru', 'procedure', { ...ctx(), domains: ['devops'] })
+    expect(withDomains.result).toBe('grown')
   })
 })

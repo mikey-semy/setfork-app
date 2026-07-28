@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm'
-import { agentActions, aiUsage, councilExperts, db, generationMessages, generations, knowledgeTriples, runs, stars, suggestions, templates, users } from '@/shared/db'
+import { agentActions, aiUsage, councilExperts, db, feedItems, generationMessages, generations, knowledgeTriples, linkClicks, runs, stars, suggestions, templates, users } from '@/shared/db'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { getUsageTotals } from '@/shared/ai/usage'
 import { AI_DAILY_USD } from '@/shared/quota'
@@ -81,9 +81,84 @@ export interface DevelopmentMetrics {
   gnomes: GnomeParticipation[]
   /** Темы роста = сырой сигнал найма (LLM-теги кандидатов, не таксономия). */
   topics: HireSignal[]
+  /** Живые списки: меряются пользой для читателя, а не числом сгенерированного. */
+  feeds: FeedValue[]
+}
+
+/**
+ * ЦЕННОСТЬ ЛЕНТЫ. «Сколько пунктов добавили» — мера нашего РАСХОДА, а не пользы, и хвалиться ею
+ * значит обманывать себя. Лента полезна, если её читают, ходят по её источникам и ПРАВЯТ руками:
+ * последнее сильнее всего — своё время человек тратит только на нужное.
+ */
+export interface FeedValue {
+  id: string
+  slug: string
+  handle: string
+  title: string
+  status: string
+  /** Сколько раз лента росла (по журналу петли) и когда в последний раз. */
+  grown: number
+  lastGrownAt: Date | null
+  /** Дней с самого свежего материала из потока; null — материала из потока не было вовсе. */
+  freshestAgeDays: number | null
+  views: number
+  /** Клики по ссылкам ленты: ходят ли читатели к источникам. */
+  clicks: number
+  /** Правки от ЛЮДЕЙ (не служебных аккаунтов) — самый честный сигнал нужности. */
+  humanEdits: number
 }
 
 const DAY = sql`date_trunc('day', now())`
+
+/**
+ * Ценность живых списков — ОДНИМ запросом на все ленты. По запросу на ленту было бы N+1, а лент
+ * со временем станут десятки; и это страница чтения, она не должна дорожать от роста библиотеки.
+ *
+ * Правки людей отделены от правок компании по `account_type`: правка от служебного аккаунта —
+ * наш собственный расход, и считать её сигналом пользы значит хвалить себя своей же работой.
+ */
+async function feedValue(limit = 12): Promise<FeedValue[]> {
+  const rows = await db
+    .select({
+      id: templates.id,
+      slug: templates.slug,
+      handle: users.handle,
+      title: templates.title,
+      status: templates.status,
+      views: templates.viewsCount,
+      grown: sql<number>`(select count(*) from ${agentActions} a
+          where a.action = 'list.grow' and a.result_status = 'ok' and a.signal->>'templateId' = ${templates.id}::text)::int`,
+      lastGrownAt: sql<Date | null>`(select max(a.occurred_at) from ${agentActions} a
+          where a.action = 'list.grow' and a.result_status = 'ok' and a.signal->>'templateId' = ${templates.id}::text)`,
+      clicks: sql<number>`(select count(*) from ${linkClicks} c where c.template_id = ${templates.id})::int`,
+      humanEdits: sql<number>`(select count(*) from ${suggestions} sg
+          join ${users} au on au.id = sg.author_id
+          where sg.template_id = ${templates.id} and au.account_type <> 'agent')::int`,
+      freshestAt: sql<Date | null>`(select max(coalesce(fi.published_at, fi.created_at)) from ${feedItems} fi
+          where fi.used_template_id = ${templates.id})`,
+    })
+    .from(templates)
+    .innerJoin(users, eq(users.id, templates.ownerId))
+    .where(eq(templates.living, true))
+    .orderBy(desc(templates.viewsCount), asc(templates.slug))
+    .limit(limit)
+
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    handle: r.handle ?? '',
+    title: Object.values((r.title ?? {}) as Record<string, string>)[0] ?? r.slug,
+    status: r.status,
+    grown: r.grown,
+    lastGrownAt: r.lastGrownAt ? new Date(r.lastGrownAt) : null,
+    // Возраст считаем здесь, а не в SQL: страница показывает дни, а не метку времени, и
+    // одно место для арифметики лучше двух.
+    freshestAgeDays: r.freshestAt ? Math.floor((Date.now() - new Date(r.freshestAt).getTime()) / 86_400_000) : null,
+    views: r.views,
+    clicks: r.clicks,
+    humanEdits: r.humanEdits,
+  }))
+}
 
 /** Живая публичная библиотека — та же тройка условий, что и у публичного чтения. */
 const publicLive = () =>
@@ -279,7 +354,7 @@ export async function getCompanyDay(daysAgo = 0): Promise<CompanyDay> {
 
 export async function getDevelopmentMetrics(periodDays = 30): Promise<DevelopmentMetrics> {
   const since = new Date(Date.now() - periodDays * 86_400_000)
-  const [lib, starRows, runRows, gardener, corpus, spendToday, spendPeriod, credits, totals30, staff, topics, engines] = await Promise.all([
+  const [lib, starRows, runRows, gardener, corpus, spendToday, spendPeriod, credits, totals30, staff, topics, engines, feeds] = await Promise.all([
     db
       .select({
         published: sql<number>`count(*) filter (where ${templates.status} = 'published' and ${templates.visibility} = 'public' and ${templates.moderation} = 'active')::int`,
@@ -304,6 +379,7 @@ export async function getDevelopmentMetrics(periodDays = 30): Promise<Developmen
     gnomeParticipation(),
     hireSignals(),
     acceptanceByEngine(),
+    feedValue(),
   ])
   const [minedRow] = await db
     .select({ n: sql<number>`count(*)::int` })
@@ -335,5 +411,6 @@ export async function getDevelopmentMetrics(periodDays = 30): Promise<Developmen
     engines,
     gnomes: staff.gnomes,
     topics,
+    feeds,
   }
 }
