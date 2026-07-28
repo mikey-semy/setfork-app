@@ -407,9 +407,15 @@ export async function growLiving(
   current: { title: string; desc: string; tags: string[]; items: GeneratedItem[] },
   lang: Lang,
   kind: ListKind,
-  ctx: { tenderId: string; agentId: string; policyVersion: number },
+  ctx: { tenderId: string; agentId: string; policyVersion: number; domains?: string[] },
 ): Promise<{ result: 'grown' | 'nothing-new' | 'failed'; snapshot?: ReadinessInput }> {
-  const fresh = await freshForDomains(tpl.tags, FEED_PER_UPDATE)
+  // Ищем материал по тегам списка И по доменам мастера, который за него отвечает. Только по
+  // тегам списка искать нельзя: теги списку придумала МОДЕЛЬ при создании («kubernetes», «ci»),
+  // а тему подписки задавал ЧЕЛОВЕК («devops») — они законно не совпадают, и лента, которая
+  // родилась из новости, больше никогда не нашла бы себе материала. Домен мастера — тот самый
+  // мостик: по нему материал и достался ему в первый раз.
+  const domains = [...new Set([...tpl.tags, ...(ctx.domains ?? [])])]
+  const fresh = await freshForDomains(domains, FEED_PER_UPDATE)
   if (!fresh.length) return { result: 'nothing-new' }
 
   // События идут в ИНСТРУКЦИЮ, а она обёрнута spotlight внутри refine: заголовки чужих лент —
@@ -575,7 +581,7 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     // модели: «нет новостей» это не «устоялся», и правило остановки к ленте не применяется,
     // иначе тихая неделя уводила бы ленту в форк.
     if (tpl.living) {
-      const res = await growLiving(tpl, current, lang, kind, gateCtx)
+      const res = await growLiving(tpl, current, lang, kind, { ...gateCtx, domains: tender?.expert.domains })
       if (res.result === 'grown') {
         proposed++
         // Выросшая лента идёт на планку — она судит её свежестью, а не полнотой. Иначе

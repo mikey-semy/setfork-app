@@ -37,6 +37,10 @@ function naText(reason: NaReason, lang: Lang): string {
 
 const h2 = 'text-[13px] font-semibold uppercase tracking-wide text-ink-2'
 
+// Столбцы лент фиксированной ширины: `auto` подгоняется под содержимое КАЖДОЙ строки, и шапка
+// со строками разъезжаются «волной» (за это уже досталось на щитке моделей).
+const FEED_COLS = 'grid-cols-[minmax(0,1fr)_92px_84px_104px_88px_112px]'
+
 export default async function AdminDevelopmentPage() {
   await requireAdmin()
   const lang = await getLang()
@@ -309,6 +313,50 @@ export default async function AdminDevelopmentPage() {
           )}
         </p>
       </section>
+
+      {/* ЛЕНТЫ. Меряем не «сколько добавили» — это мера нашего расхода, — а читают ли, ходят ли
+          по источникам и правят ли руками. Последнее сильнее всего: своё время человек тратит
+          только на нужное. Блока нет, когда лент нет: пустая таблица обещала бы работу. */}
+      {m.feeds.length > 0 && (
+        <section className="flex min-w-0 flex-col gap-3">
+          <h2 className={h2}>{tr({ en: 'Living lists', ru: 'Живые списки' }, lang)}</h2>
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+            <div className={`grid min-w-[720px] ${FEED_COLS} gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted`}>
+              <span>{tr({ en: 'Feed', ru: 'Лента' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'Fresh', ru: 'Свежесть' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'Grown', ru: 'Роста' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'Views', ru: 'Просмотров' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'Source clicks', ru: 'Кликов' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'Human edits', ru: 'Правок людей' }, lang)}</span>
+            </div>
+            {m.feeds.map((f) => (
+              <div key={f.id} className={`grid min-w-[720px] ${FEED_COLS} items-center gap-4 border-b border-border px-4 py-2.5 last:border-0`}>
+                <Link href={`/${f.handle}/${f.slug}`} className="min-w-0 truncate text-[13px] text-ink hover:text-accent" title={f.title}>
+                  {f.title}
+                </Link>
+                <span className={`text-right font-mono tabular-nums text-[12.5px] ${f.freshestAgeDays == null ? 'text-muted' : f.freshestAgeDays > 7 ? 'text-warn' : 'text-ok'}`}>
+                  {f.freshestAgeDays == null ? '—' : tr({ en: `${f.freshestAgeDays}d`, ru: `${f.freshestAgeDays} дн.` }, lang)}
+                </span>
+                <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{num(f.grown)}</span>
+                <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{num(f.views)}</span>
+                <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{num(f.clicks)}</span>
+                {/* Правки людей выделены: это единственная цифра здесь, которую нельзя получить,
+                    потратив свои же деньги. */}
+                <span className={`text-right font-mono tabular-nums text-[12.5px] ${f.humanEdits > 0 ? 'text-ok' : 'text-muted'}`}>{num(f.humanEdits)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[12px] text-muted">
+            {tr(
+              {
+                en: 'A feed is worth its cost when people read it, follow its sources and edit it by hand — not when it grows. Freshness over 7 days means the gate holds it back.',
+                ru: 'Лента оправдывает расход, когда её читают, ходят по её источникам и правят руками, — а не когда она растёт. Свежесть больше 7 дней означает, что планка её не пропустит.',
+              },
+              lang,
+            )}
+          </p>
+        </section>
+      )}
 
       {/* Корпус знаний */}
       <section className="flex min-w-0 flex-col gap-3">
