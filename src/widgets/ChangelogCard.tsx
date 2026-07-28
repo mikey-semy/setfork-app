@@ -4,6 +4,12 @@ import { t } from '@/shared/i18n'
 import { entryText, getChangelog } from '@/features/changelog/service'
 import { getChangelogSettings } from '@/shared/settings/changelog'
 
+// Форматтеры дорогие в создании и не зависят от данных — держим по одному на язык.
+const FMT: Record<string, Intl.DateTimeFormat> = {
+  ru: new Intl.DateTimeFormat('ru', { month: 'short', day: 'numeric' }),
+  en: new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }),
+}
+
 /**
  * Сайдбар-блок «Свежее из changelog» (как у GitHub). Полный список — /changelog.
  *
@@ -17,7 +23,7 @@ export async function ChangelogCard({ lang, limit = 4 }: { lang: Lang; limit?: n
   if (!s.enabled) return null
   const entries = await getChangelog(limit)
   if (entries.length === 0) return null
-  const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { month: 'short', day: 'numeric' })
+  const fmt = FMT[lang === 'ru' ? 'ru' : 'en']
 
   return (
     <div className="rounded-lg border border-border bg-surface p-3.5">

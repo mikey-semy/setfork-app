@@ -118,6 +118,9 @@ export async function refreshChangelog(): Promise<{ added: number; skipped: stri
   const fresh = items.filter((i) => !known.has(i.externalId))
   if (fresh.length === 0) return { added: 0, skipped: 'up to date' }
 
+  // Переводы идут ПОСЛЕДОВАТЕЛЬНО намеренно (react-doctor предлагает Promise.all).
+  // Это платные вызовы модели: пачка из 30 разом бьёт в лимиты провайдера и
+  // проскакивает мимо суточного потолка, который проверяется перед каждым.
   let added = 0
   for (const it of fresh.slice(0, 30)) {
     const { en, ru } = await bilingual(it.title, s.translate)
@@ -174,10 +177,9 @@ async function translateLine(text: string, to: Lang): Promise<string> {
       import('@/shared/ai/usage'),
       import('@/shared/quota'),
     ])
-  const client = await getAiChatClient()
-  const settings = await getAiSettings()
-  if (!client || !settings.enabled) return ''
-  if (!(await globalBudgetOk())) return ''
+  // Клиент, настройки и бюджет друг от друга не зависят — спрашиваем разом.
+  const [client, settings, budgetOk] = await Promise.all([getAiChatClient(), getAiSettings(), globalBudgetOk()])
+  if (!client || !settings.enabled || !budgetOk) return ''
 
   const model = await pickChatModel(settings)
   const sp = spotlight()

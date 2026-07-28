@@ -64,9 +64,11 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
       </div>
 
       <div>
-        <label className={lbl}>{t('changelogWhat', lang)}</label>
+        <label className={lbl} htmlFor="cl-source">
+          {t('changelogWhat', lang)}
+        </label>
         <Select value={source} onValueChange={(v) => setSource(v as ChangelogSource)}>
-          <SelectTrigger className="w-[320px] max-w-full">
+          <SelectTrigger id="cl-source" className="w-[320px] max-w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
