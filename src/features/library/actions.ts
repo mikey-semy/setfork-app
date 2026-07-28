@@ -481,7 +481,12 @@ export async function mergeBranchPr(suggestionId: string): Promise<void> {
     if (state && state.mergeBaseSha !== state.ours.tipSha) redirect(`${path}?e=not-linear`)
   }
   try {
-    await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef)
+    // Заголовок squash-коммита — «<название предложения> (#N)»: по нему в истории
+    // main видно, откуда изменение, когда самой ветки уже нет. Название = первая
+    // строка описания; описание бывает пустым — тогда имя ветки, лишь бы не безымянно.
+    const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 120)
+    const title = sug.number ? `${head || sug.branchRef} (#${sug.number})` : head || sug.branchRef
+    await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef, { mode: prs.mergeMethod, message: title })
   } catch (e) {
     const code = e instanceof BranchOpError ? e.code : 'internal'
     redirect(`${path}?e=${code}`)
@@ -1412,6 +1417,15 @@ export async function setPrNumber(templateId: string, key: 'requiredApprovals', 
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl || tpl.ownerId !== session.userId || key !== 'requiredApprovals') return
   const next = withPrDefaults({ ...withPrDefaults(tpl.prSettings), requiredApprovals: value })
+  await db.update(templates).set({ prSettings: next }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+}
+
+export async function setPrMergeMethod(templateId: string, value: 'merge' | 'squash'): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  const next = withPrDefaults({ ...withPrDefaults(tpl.prSettings), mergeMethod: value })
   await db.update(templates).set({ prSettings: next }).where(eq(templates.id, templateId))
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
 }

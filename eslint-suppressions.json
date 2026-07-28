@@ -59,11 +59,6 @@
       "count": 1
     }
   },
-  "src/app/[handle]/[slug]/suggestions/[id]/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/app/[handle]/page.tsx": {
     "no-restricted-syntax": {
       "count": 3

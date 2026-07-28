@@ -5,7 +5,7 @@ import { GitMerge, MessagesSquare, Pencil, Trash2, CircleCheck } from 'lucide-re
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { t, type Lang } from '@/shared/i18n'
-import { setPrAllowFrom, setPrNumber, setPrSetting } from './actions'
+import { setPrAllowFrom, setPrMergeMethod, setPrNumber, setPrSetting } from './actions'
 import type { PrBoolKey } from './pr-settings'
 
 const card = 'rounded-lg border border-border bg-surface p-5'
@@ -31,6 +31,7 @@ export function PrSettingsSection({
     autoDeleteBranch: boolean
     autoCloseIssues: boolean
     linearOnly: boolean
+    mergeMethod: 'merge' | 'squash'
     allowMaintainerEdits: boolean
   }
   lang: Lang
@@ -49,6 +50,7 @@ export function PrSettingsSection({
           label={t('prSetUnresolved', lang)}
           hint={t('prSetUnresolvedHint', lang)}
         />
+        <MethodRow templateId={templateId} initial={settings.mergeMethod} lang={lang} />
         <BoolRow
           templateId={templateId}
           k="linearOnly"
@@ -147,6 +149,41 @@ function WhoRow({ templateId, initial, lang }: { templateId: string; initial: 'a
         <SelectContent>
           <SelectItem value="all">{t('prSetWhoAll', lang)}</SelectItem>
           <SelectItem value="collaborators">{t('prSetWhoCollab', lang)}</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+/** Способ слияния — аналог «Allow merge commits / Allow squash merging» у GitHub. */
+function MethodRow({ templateId, initial, lang }: { templateId: string; initial: 'merge' | 'squash'; lang: Lang }) {
+  const [val, setVal] = useState(initial)
+  const [, start] = useTransition()
+  return (
+    <div className={row}>
+      <div className="flex min-w-0 items-start gap-2.5">
+        <span className="mt-0.5">
+          <GitMerge size={16} className="text-muted" />
+        </span>
+        <div className="min-w-0">
+          <div className="text-[13.5px] font-medium text-ink">{t('prSetMethod', lang)}</div>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{t('prSetMethodHint', lang)}</p>
+        </div>
+      </div>
+      <Select
+        value={val}
+        onValueChange={(v) => {
+          const next = v as 'merge' | 'squash'
+          setVal(next)
+          start(() => void setPrMergeMethod(templateId, next))
+        }}
+      >
+        <SelectTrigger className="h-[38px] w-auto shrink-0 text-[13px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="merge">{t('prSetMethodMerge', lang)}</SelectItem>
+          <SelectItem value="squash">{t('prSetMethodSquash', lang)}</SelectItem>
         </SelectContent>
       </Select>
     </div>

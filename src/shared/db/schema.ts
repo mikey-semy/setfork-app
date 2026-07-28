@@ -213,6 +213,8 @@ export interface PrSettings {
   allowFrom?: 'all' | 'collaborators'
   /** Требовать линейную историю: сливать только fast-forward, иначе просить обновить ветку. */
   linearOnly?: boolean
+  /** Способ слияния: обычный (ff/merge-коммит) или squash — один коммит с трейлерами соавторов. */
+  mergeMethod?: 'merge' | 'squash'
   /** Нерешённые обсуждения блокируют слияние. */
   blockOnUnresolved?: boolean
   /** Сколько одобрений нужно (0 = не требуются). */
@@ -236,6 +238,9 @@ export interface PrSettings {
 export const PR_DEFAULTS: Required<PrSettings> = {
   allowFrom: 'all',
   linearOnly: false,
+  // Обычное слияние по умолчанию: squash теряет промежуточную историю, и выбирать
+  // такую потерю должен человек, а не установка по умолчанию.
+  mergeMethod: 'merge',
   blockOnUnresolved: true,
   requiredApprovals: 0,
   autoDeleteBranch: false,
