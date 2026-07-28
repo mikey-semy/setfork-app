@@ -1230,6 +1230,22 @@ export async function setListTemplate(templateId: string, isTemplate: boolean): 
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
 }
 
+/**
+ * Признак «живой список» (лента). Меняет не вид, а правила: у планки свежесть вместо полноты,
+ * никакого «устоялся» и расхождения форком, уход ДОБАВЛЯЕТ новое по теме вместо полировки.
+ *
+ * Ставит и снимает ЧЕЛОВЕК: список, выросший из события, петля помечает живым сама — но это
+ * догадка, и снять её должно быть так же просто, как поставить.
+ */
+export async function setListLiving(templateId: string, living: boolean): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  await db.update(templates).set({ living }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}`)
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+}
+
 // Владелец включает/выключает опциональные разделы списка (Issues/Discussions).
 // Suggestions — ядро fork-модели, не отключается. Выключенный раздел прячется из
 // шапки, а его роуты отдают notFound (гейт на самих страницах).

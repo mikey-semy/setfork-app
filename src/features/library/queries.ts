@@ -651,6 +651,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       discussionsEnabled: templates.discussionsEnabled,
       pinned: templates.pinned,
       isTemplate: templates.isTemplate,
+      living: templates.living, // лента: свежесть вместо полноты, рост вместо полировки
       repositoryId: templates.repositoryId,
       visibility: templates.visibility,
       moderation: templates.moderation,
