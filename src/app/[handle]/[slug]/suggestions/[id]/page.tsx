@@ -125,7 +125,7 @@ export default async function SuggestionThreadPage({
   const threads = await getSuggestionThreads(sug.id, session?.userId)
   const threadsByBlock = new Map<string, RowThread[]>()
   for (const th of threads) {
-    const state = threadState(th.anchorOriginal, th.field, th.blockId, items as unknown as AnchorableBlock[], lang)
+    const state = threadState(th.anchorOriginal, th.field, th.blockId, items as unknown as AnchorableBlock[], lang, th.contextSnapshot, th.contextLang)
     const list = threadsByBlock.get(th.blockId)
     if (list) list.push({ thread: th, state })
     else threadsByBlock.set(th.blockId, [{ thread: th, state }])
@@ -624,6 +624,8 @@ export default async function SuggestionThreadPage({
                 onBlock: t('commentOnBlock', lang),
                 stateReanchored: t('commentReanchored', lang),
                 orphanHint: t('commentOrphaned', lang),
+                outdated: t('prThreadOutdated', lang),
+                toIssue: t('prThreadToIssue', lang),
                 suggestLabel: t('prSuggestEdit', lang),
                 suggestHint: t('prSuggestHint', lang),
                 suggestPh: t('prSuggestPh', lang),
