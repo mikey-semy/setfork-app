@@ -3,8 +3,10 @@ import { getLang } from '@/shared/i18n/server'
 import { getAiSettings, getApiKey } from '@/shared/settings/ai'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
-import { CouncilRoster } from '@/features/admin/CouncilRoster'
+import { CouncilList, type CouncilRow } from '@/features/admin/CouncilList'
+import { gnomeReputation } from '@/shared/ai/gnome-reputation'
 import { hireSignals } from '@/features/admin/hire'
+import { builtinAvatars } from '@/features/admin/avatar-gallery'
 import { createGnomeAccounts, hireGnome, selfGenerateNow } from '@/features/admin/actions'
 import { Sparkles, UserPlus } from 'lucide-react'
 import type { Option } from '@/features/admin/ModelSelect'
@@ -31,21 +33,11 @@ function priceClass(m: ModelOption, cur: Currency): string {
   return 'text-danger'
 }
 
-/** Встроенные персонажи — читаем каталог, а не список руками: дорисовал картинку → она в выборе. */
-async function builtinAvatars(): Promise<string[]> {
-  const { readdir } = await import('node:fs/promises')
-  const { join } = await import('node:path')
-  try {
-    const files = await readdir(join(process.cwd(), 'public', 'gnomes'))
-    return files.filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -5)).sort()
-  } catch {
-    return []
-  }
-}
-
 /**
- * «Зал совета» — отдельная страница вместо секции в настройках: экспертов много, у каждого
- * инструкция в несколько строк, и в узкой колонке они не помещались. Здесь вся ширина и сетка.
+ * «Зал совета» — СОСТАВ специалистов: кто есть, в каком состоянии, куда нажать. Настройки
+ * каждого — на его собственной странице (/admin/council/<id>), как у списка на странице списка.
+ * Раньше здесь стояли двадцать полных форм сеткой: это была стена, в которой нельзя ни найти
+ * нужного, ни увидеть состав целиком.
  *
  * Заголовка на странице нет: он живёт в шапке (TopNav, ключ councilHall) — как у остальных
  * разделов. Подзаголовков в проекте нет вовсе.
@@ -65,14 +57,39 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
         : { value: m.id, id: m.id, label: m.label, family: m.family },
     )
 
-  const [rows, gallery, uploaded, signals] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars(), hireSignals()])
+  const [rows, gallery, uploaded, signals, reps] = await Promise.all([
+    getRosterAll(),
+    builtinAvatars(),
+    rosterAvatars(),
+    hireSignals(),
+    gnomeReputation(),
+  ])
+  // Хэндлы аккаунтов: у ростера их нет, а состав должен вести на публичный профиль
+  // специалиста — «через их аккаунты» это и означает. Нет аккаунта — так и покажем.
+  const { agentHandles } = await import('@/shared/ai/gnome-account')
+  const handles = await agentHandles(rows.map((e) => e.userId).filter((x): x is string => !!x))
   // Загруженная картинка уходит готовым URL (imgproxy/диск) — клиенту незачем знать про S3-ключи.
   const roster = rows.map((e) => ({ ...e, uploadedUrl: e.avatarUploaded ? uploaded[e.id] : undefined }))
+  // Строки состава: только то, что нужно для обзора. Настройки — на странице специалиста.
+  const listRows: CouncilRow[] = rows.map((e) => ({
+    id: e.id,
+    name: ru ? e.nameRu : e.nameEn,
+    profession: ru ? e.professionRu : e.professionEn,
+    guild: ru ? e.guildRu : e.guildEn,
+    role: e.orgRole,
+    lifecycle: e.lifecycle,
+    enabled: e.enabled,
+    handle: (e.userId && handles[e.userId]) || null,
+    avatarUrl: e.avatarUploaded ? (uploaded[e.id] ?? '') : `/gnomes/${e.avatar || e.id}.webp`,
+    domains: e.domains,
+    gens: reps[e.id]?.gens ?? 0,
+    accepted: reps[e.id]?.accepted ?? 0,
+  }))
   // Сколько действующих специалистов ещё без аккаунта — только они и мешают.
   const noAccounts = rows.filter((e) => e.enabled && e.lifecycle === 'active' && !e.userId).length
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6">
+    <div className="flex w-full min-w-0 flex-col gap-4 px-5 py-6 md:px-8">
       {settings.councilEnabled ? null : (
         <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[12.5px] text-warn">
           {say(
@@ -143,38 +160,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
           {say(`Self-generation did not produce a draft: ${sp.selfgen}`, `Самогенерация не дала черновик: ${sp.selfgen}`)}
         </p>
       )}
-      {/* САМОГЕНЕРАЦИЯ, ручной режим: поручить специалисту список по его теме. Тот же
-          путь, что у авто-петли. Кнопки видны только когда режим не 'off' — иначе
-          обещали бы действие, которое настройками запрещено. */}
-      {settings.selfGenMode !== 'off' && (
-        <div className="mb-4 rounded-lg border border-border bg-surface p-3.5">
-          <div className="mb-1 text-[12.5px] font-semibold text-ink">
-            {say('Assign a list', 'Поручить список')}
-          </div>
-          <p className="mb-2.5 text-[11.5px] text-ink-2">
-            {say(
-              'The specialist picks what his area is missing and writes it. The result is a DRAFT authored by him — you publish it.',
-              'Специалист сам выберет, чего не хватает в его области, и напишет. Результат — ЧЕРНОВИК от его имени, публикуешь ты.',
-            )}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {roster
-              .filter((e) => e.enabled && e.lifecycle === 'active' && !e.domains.includes('*'))
-              .map((e) => (
-                <form key={e.id} action={selfGenerateNow}>
-                  <input type="hidden" name="expertId" value={e.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12.5px] text-ink hover:border-border-strong"
-                  >
-                    <Sparkles size={13} className="text-muted" /> {ru ? e.nameRu : e.nameEn}
-                  </button>
-                </form>
-              ))}
-          </div>
-        </div>
-      )}
-      <CouncilRoster experts={roster} modelOptions={modelOptions} gallery={gallery} ru={ru} />
+      <CouncilList rows={listRows} lang={lang} canAssign={settings.selfGenMode !== 'off'} />
     </div>
   )
 }

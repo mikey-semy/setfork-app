@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, BookOpen, CheckCircle2, Gauge, Users } from 'lucide-react'
+import { ArrowLeft, BookOpen, CheckCircle2, CircleUser, Gauge, Users } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
@@ -9,11 +9,17 @@ import { prettyModelName } from '@/shared/ai/models'
 import { gnomeKpi } from '@/features/admin/gnome-stats'
 import { gnomeMood, gnomeThanksCounts } from '@/shared/ai/gnome-reputation'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { ExpertSettings } from '@/features/admin/ExpertSettings'
 
 /**
- * Личная страница гнома (пока только админу) — этап (б) профразвития: KPI,
- * база знаний и текущие настройки в одном месте. Правки — в зале совета
- * (/admin/council): здесь смотрим на развитие, там крутим ручки.
+ * СТРАНИЦА СПЕЦИАЛИСТА (админу): его развитие И его настройки — в одном месте.
+ *
+ * Было: настройки всех двадцати жили одной стеной форм в зале совета, а здесь их можно было
+ * только смотреть со ссылкой «править там». Теперь как у списка: у списка настройки на
+ * странице списка, у специалиста — на его странице. Зал совета показывает СОСТАВ.
+ *
+ * «Через их аккаунты»: у специалиста есть аккаунт уровня пользователя (ADR-0004), поэтому
+ * отсюда ведёт ссылка на его публичный профиль — то, что видят люди.
  */
 export const metadata = { title: 'Expert' }
 
@@ -27,6 +33,20 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   const e = roster.find((x) => x.id === id)
   if (!e) notFound()
   const kpi = await gnomeKpi(e.id, e.domains, e.model)
+  // Настройки этого специалиста живут ЗДЕСЬ: каталог моделей и галерея аватаров нужны форме.
+  const [{ agentHandles }, { fetchModels }, { getApiKey }] = await Promise.all([
+    import('@/shared/ai/gnome-account'),
+    import('@/shared/ai/models'),
+    import('@/shared/settings/ai'),
+  ])
+  const handle = e.userId ? (await agentHandles([e.userId]))[e.userId] : null
+  const apiKey = await getApiKey()
+  const models = apiKey ? await fetchModels() : null
+  const modelOptions = [...(models?.chat ?? [])]
+    .sort((a, b) => (a.completionPrice || a.promptPrice) - (b.completionPrice || b.promptPrice))
+    .map((m) => ({ value: m.id, id: m.id, label: m.label, family: m.family }))
+  const { builtinAvatars } = await import('@/features/admin/avatar-gallery')
+  const gallery = await builtinAvatars()
 
   const name = ru ? e.nameRu : e.nameEn
   const avatarUrl = e.avatarUploaded ? avatars[e.id] : `/gnomes/${e.avatar || e.id}.webp`
@@ -48,7 +68,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   )
 
   return (
-    <div className="mx-auto w-full max-w-[960px] px-4 py-6 sm:px-6">
+    <div className="flex w-full min-w-0 flex-col px-5 py-6 md:px-8">
       <Link href="/admin/council" className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {say('Council hall', 'Зал совета')}
       </Link>
@@ -65,6 +85,16 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
             )}
           </h1>
           {(ru ? e.guildRu : e.guildEn) && <div className="mt-0.5 text-[13px] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
+          {/* Аккаунт специалиста — то, что видят люди: списки, комментарии, авторство. */}
+          {handle ? (
+            <Link href={`/${handle}`} className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] text-ink-2 hover:text-accent">
+              <CircleUser size={12} /> @{handle}
+            </Link>
+          ) : (
+            <div className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] text-warn">
+              <CircleUser size={12} /> {say('no account yet — create it in the council hall', 'аккаунта пока нет — заводится в зале совета')}
+            </div>
+          )}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
             <span className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[11.5px] text-ink-2" title={mood.style || say('not enough data yet', 'пока мало данных')}>
@@ -126,9 +156,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
               <p className="whitespace-pre-wrap text-[12.5px] leading-[1.55] text-ink-2">{e.memory}</p>
             </>
           )}
-          <Link href="/admin/council" className="mt-3 inline-block text-[12.5px] font-semibold text-accent hover:underline">
-            {say('Edit in the council hall →', 'Править в зале совета →')}
-          </Link>
+
         </div>
         <div className={card}>
           <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{say('Recent councils', 'Последние советы')}</div>
@@ -151,6 +179,13 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
             </div>
           )}
         </div>
+      </div>
+
+      {/* НАСТРОЙКИ — здесь, а не в общем зале: у списка настройки на странице списка, у
+          специалиста на его странице. Одна форма на одного, а не стена из двадцати. */}
+      <div className="mt-5">
+        <div className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-ink-2">{say('Settings', 'Настройки')}</div>
+        <ExpertSettings e={{ ...e, uploadedUrl: e.avatarUploaded ? avatars[e.id] : undefined }} modelOptions={modelOptions} gallery={gallery} ru={ru} />
       </div>
     </div>
   )
