@@ -34,7 +34,7 @@ export interface Expert {
   /** Владелец личного специалиста; null = общий (виден всем). Чекпоинт приватности №1. */
   ownerId: string | null
   /** Карьера: active → dormant → archived. Архив обратим (персона и опыт сохранены). */
-  lifecycle: 'active' | 'dormant' | 'archived'
+  lifecycle: 'active' | 'idle' | 'dormant' | 'archived'
   /** Место в компании: партнёр / начальник гильдии / менеджер / эксперт / бэк-офис. */
   orgRole: OrgRole
   /** Тир мастерства по профессии (джун/мидл/сеньор, commis→шеф). Пусто = плоская. */
@@ -351,7 +351,10 @@ export async function getRoster(viewerId?: string | null): Promise<Expert[]> {
         .where(
           and(
             eq(councilExperts.enabled, true),
-            eq(councilExperts.lifecycle, 'active'),
+            // 'idle' (под риском) — РАБОЧАЯ стадия: такой специалист обязан попадать в ростер,
+            // иначе он не получит работу и не вернётся в активные. Спящих и архивных не берём;
+            // спящего будит петля, когда его ремесло больше некому закрыть (activation.ts).
+            inArray(councilExperts.lifecycle, ['active', 'idle']),
             inArray(councilExperts.orgRole, [...COUNCIL_ROLES]),
             // ЧЕКПОИНТ ПРИВАТНОСТИ №1: общие (owner_id is null) + личные ТОЛЬКО зрителя.
             // Без viewerId личных не отдаём вовсе — фоновые петли работают с общим составом,

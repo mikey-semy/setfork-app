@@ -8,6 +8,7 @@ import { pickChatModel } from '@/shared/ai/credits'
 import { extractUsage, outcomeOf, recordUsage } from '@/shared/ai/usage'
 import { generateListDraft } from '@/shared/ai/generate'
 import { getRoster, type Expert } from '@/shared/ai/roster'
+import { pickWorkQueue, syncLifecycles, wakeForWork } from '@/shared/ai/activation-db'
 import { ensureGnomeUser, professionOf } from '@/shared/ai/gnome-account'
 import { globalBudgetOk } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
@@ -200,6 +201,13 @@ export async function runSelfGenSweep(): Promise<{ created: number; skipped: num
   // самогенерация должна расти вглубь домена, а не размазываться).
   const roster = (await getRoster()).filter((e) => !e.domains.includes('*'))
   if (!roster.length) return { created: 0, skipped: 1 }
+  // Стадии по бездействию (активен → под риском → спит) синхронизируем ПЕРЕД выдачей работы:
+  // очередь должна знать, кто спит, а спящий — иметь шанс вернуться прямо на этом проходе.
+  await syncLifecycles(roster)
+  // Очередь работы: кому НЕТ ОСНОВАНИЙ — первым. Круговая очередь (было) отдавала работу «по
+  // порядку», то есть тем, у кого её и так хватало, и скоркарт по остальным не наполнялся.
+  const queue = await pickWorkQueue(roster)
+  if (!queue.length) return { created: 0, skipped: 1 }
   const policy = await loopPolicy('selfgen')
 
   // БАТЧ. Сколько за один проход — но не больше, чем осталось до суточного капа: кап
@@ -221,10 +229,13 @@ export async function runSelfGenSweep(): Promise<{ created: number; skipped: num
       log.info('selfgen: budget exhausted mid-batch, stopping', { created, planned: batch })
       break
     }
-    // Разным специалистам, а не одному N раз: цель прохода — ширина охвата доменов.
-    const pick = roster[(already + i) % roster.length]
+    // По очереди активации: первым — тот, по кому нет оснований. Разным специалистам, а не
+    // одному N раз: цель прохода — ширина охвата доменов.
+    const slot = queue[i % queue.length]
+    const pick = roster.find((e) => e.id === slot.id)
+    if (!pick) continue
     const signal = { trigger: 'schedule', createdToday: already + created, cap, batch, index: i }
-    const decision = { expert: pick.id, profession: professionOf(pick, 'en'), reason: 'round-robin over domain specialists' }
+    const decision = { expert: pick.id, profession: professionOf(pick, 'en'), reason: slot.why }
 
     // СУХОЙ ПРОГОН: решение принимаем и записываем, действие не производим. Так первое
     // наблюдение за петлёй делается ДО того, как она начнёт создавать на живых данных.
@@ -242,6 +253,7 @@ export async function runSelfGenSweep(): Promise<{ created: number; skipped: num
       continue
     }
 
+    await wakeForWork(pick.id, pick.lifecycle ?? 'active')
     const res = await selfGenerateOne(pick.id)
     await recordAgentAction({
       loop: 'selfgen',
