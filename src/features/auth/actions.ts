@@ -6,7 +6,7 @@ import { db, users } from '@/shared/db'
 import { startSession } from '@/shared/auth/session'
 import { dummyVerify, hashPassword, verifyPassword } from '@/shared/auth/password'
 import { clientIpFromHeaders } from '@/shared/auth/app-origin'
-import { HANDLE_RE, RESERVED_HANDLES as RESERVED } from '@/shared/auth/handle'
+import { isHandleShapeValid } from '@/shared/auth/handle'
 import { rateLimit } from '@/shared/rate-limit'
 import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
@@ -33,7 +33,10 @@ export async function registerWithPassword(_prev: AuthResult | null, formData: F
   const password = String(formData.get('password') ?? '')
 
   if (!EMAIL_RE.test(email)) return { error: t('invalidEmailMsg', lang) }
-  if (!HANDLE_RE.test(handle) || RESERVED.has(handle)) return { error: t('invalidHandleMsg', lang) }
+  // isHandleShapeValid, а не «форма + RESERVED»: он же запрещает ники из ADMIN_HANDLES.
+  // Их нельзя занять и регистрацией — иначе свободный админ-ник (новый админ в списке,
+  // свежий инстанс) достаётся первому желающему, а getAdmin() выдаёт права по НИКУ из БД.
+  if (!isHandleShapeValid(handle)) return { error: t('invalidHandleMsg', lang) }
   if (password.length < 8) return { error: t('passwordShort', lang) }
 
   const [byEmail] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
