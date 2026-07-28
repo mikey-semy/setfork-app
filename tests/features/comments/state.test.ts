@@ -66,3 +66,39 @@ describe('threadState — состояние якоря считается на 
     expect(threadState(a, 'desc', 'b1', [block({ blockId: null })], 'ru').state).toBe('orphaned')
   })
 })
+
+/**
+ * «Устарел» — отдельное измерение от привязки (аналог Outdated у GitHub).
+ * Ошибка здесь дезориентирует ревьюера: либо он спорит о тексте, которого нет,
+ * либо видит пугающую метку на нетронутом пункте.
+ */
+describe('threadState — метка «устарел»', () => {
+  const a = anchorOn(DESC, 'холодной воды')
+
+  it('снимок совпадает с текущим текстом → не устарел', () => {
+    expect(threadState(a, 'desc', 'b1', [block()], 'ru', DESC).outdated).toBe(false)
+  })
+
+  it('пункт переписали → устарел, даже если якорь нашёлся', () => {
+    const next = DESC.replace('15 минут', '30 минут')
+    const st = threadState(a, 'desc', 'b1', [block({ desc: { ru: next } })], 'ru', DESC)
+    expect(st.outdated).toBe(true)
+    // Цитата на месте — привязка и устаревание независимы.
+    expect(st.state).toBe('anchored')
+  })
+
+  it('пустой снимок — НЕ устарел: «не знаем» это не «устарело»', () => {
+    // Треды, созданные до появления снимка, не должны разом покрыться метками.
+    expect(threadState(a, 'desc', 'b1', [block()], 'ru', '').outdated).toBe(false)
+  })
+
+  it('блок исчез → и осиротел, и устарел', () => {
+    const st = threadState(a, 'desc', 'b1', [block({ blockId: 'other' })], 'ru', DESC)
+    expect(st.state).toBe('orphaned')
+    expect(st.outdated).toBe(true)
+  })
+
+  it('различие только в обрамляющих пробелах устареванием не считается', () => {
+    expect(threadState(a, 'desc', 'b1', [block()], 'ru', `  ${DESC}\n`).outdated).toBe(false)
+  })
+})
