@@ -76,12 +76,21 @@ describe('threadState — метка «устарел»', () => {
   const a = anchorOn(DESC, 'холодной воды')
 
   it('снимок совпадает с текущим текстом → не устарел', () => {
-    expect(threadState(a, 'desc', 'b1', [block()], 'ru', DESC).outdated).toBe(false)
+    expect(threadState(a, 'desc', 'b1', [block()], 'ru', DESC, 'ru').outdated).toBe(false)
+  })
+
+  it('снимок снят на ДРУГОМ языке → не судим (двуязычный список)', () => {
+    // Иначе переключение ru↔en помечало бы нетронутые треды устаревшими.
+    expect(threadState(a, 'desc', 'b1', [block()], 'ru', 'Soak the gelatin', 'en').outdated).toBe(false)
+  })
+
+  it('язык снимка неизвестен (старые треды) → не судим', () => {
+    expect(threadState(a, 'desc', 'b1', [block()], 'ru', 'что-то другое', '').outdated).toBe(false)
   })
 
   it('пункт переписали → устарел, даже если якорь нашёлся', () => {
     const next = DESC.replace('15 минут', '30 минут')
-    const st = threadState(a, 'desc', 'b1', [block({ desc: { ru: next } })], 'ru', DESC)
+    const st = threadState(a, 'desc', 'b1', [block({ desc: { ru: next } })], 'ru', DESC, 'ru')
     expect(st.outdated).toBe(true)
     // Цитата на месте — привязка и устаревание независимы.
     expect(st.state).toBe('anchored')
@@ -89,11 +98,11 @@ describe('threadState — метка «устарел»', () => {
 
   it('пустой снимок — НЕ устарел: «не знаем» это не «устарело»', () => {
     // Треды, созданные до появления снимка, не должны разом покрыться метками.
-    expect(threadState(a, 'desc', 'b1', [block()], 'ru', '').outdated).toBe(false)
+    expect(threadState(a, 'desc', 'b1', [block()], 'ru', '', 'ru').outdated).toBe(false)
   })
 
   it('блок исчез → и осиротел, и устарел', () => {
-    const st = threadState(a, 'desc', 'b1', [block({ blockId: 'other' })], 'ru', DESC)
+    const st = threadState(a, 'desc', 'b1', [block({ blockId: 'other' })], 'ru', DESC, 'ru')
     expect(st.state).toBe('orphaned')
     expect(st.outdated).toBe(true)
   })

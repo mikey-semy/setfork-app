@@ -4,6 +4,9 @@ import { asc, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { blockComments, blockCommentThreads, db, suggestions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
+import { resolveListBySlug } from '@/shared/db/resolve-list'
 // eslint-disable-next-line boundaries/dependencies -- открытие задачи через доменный порт
 import { collabStore } from '@/features/collab-store/store'
 
@@ -23,6 +26,7 @@ import { collabStore } from '@/features/collab-store/store'
  */
 export async function threadToIssue(owner: string, slug: string, threadId: string): Promise<void> {
   const session = await requireSession()
+  const lang = await getLang()
 
   const [row] = await db
     .select({
@@ -40,6 +44,16 @@ export async function threadToIssue(owner: string, slug: string, threadId: strin
     .limit(1)
   if (!row || row.lockedAt) return // заперто — новых записей в тред не делаем
 
+  // Права — ТЕ ЖЕ, что у обычного создания задачи: `collabStore.openIssue` сам
+  // ничего не проверяет, и без этого любой, кто видит предложение, заводил бы
+  // задачи в приватном списке. Заодно сверяем, что owner/slug из адреса — это
+  // действительно список треда, а не чужой, подставленный в аргументы.
+  const tpl = await resolveListBySlug(owner, slug)
+  if (!tpl || tpl.id !== row.templateId) return
+  const isOwner = tpl.ownerId === session.userId
+  if (tpl.visibility === 'private' && !isOwner) return
+  if (tpl.moderation !== 'active' && !isOwner) return
+
   // Реплики треда — тело задачи. Черновики ревью НЕ берём: они ещё никому не
   // показаны, и вытаскивать их в публичную задачу нельзя.
   const replies = await db
@@ -50,12 +64,15 @@ export async function threadToIssue(owner: string, slug: string, threadId: strin
     .orderBy(asc(blockComments.createdAt))
   const visible = replies.filter((r) => !r.pending)
   if (visible.length === 0) return
+  // Уже переносили — второй раз не заводим. Кнопка остаётся на месте, и без этой
+  // проверки повторный клик плодил бы задачи-двойники с тем же обсуждением.
+  if (visible.some((r) => /^→ #\d+$/.test(r.body.trim()))) return
 
   const sugPath = `/${owner}/${slug}/suggestions/${row.sugNumber ?? row.suggestionId}`
   const first = visible[0].body.replace(/\s+/g, ' ').trim()
   const title = (first.slice(0, 120) || row.sugNote.slice(0, 120) || 'discussion').trim()
   const body = [
-    `Из обсуждения в предложении [#${row.sugNumber ?? ''}](${sugPath}).`,
+    `${t('prThreadFromDiscussion', lang)} [#${row.sugNumber ?? ''}](${sugPath}).`,
     row.contextSnapshot ? `\n> ${row.contextSnapshot.replace(/\n/g, '\n> ').slice(0, 1000)}` : '',
     '',
     ...visible.map((r) => `**@${r.handle}:** ${r.body}`),

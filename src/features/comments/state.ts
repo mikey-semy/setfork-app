@@ -44,15 +44,21 @@ export function threadState(
   lang: Lang,
   /** Вмороженный снимок текста поля на момент создания треда (для «устарел»). */
   contextSnapshot = '',
+  /** Язык, на котором снят снимок. Пусто — язык неизвестен (старые треды). */
+  contextLang = '',
 ): ThreadState {
+  // Сравнивать снимок можно ТОЛЬКО с текстом того же языка: на двуязычном
+  // списке иначе переключение ru↔en помечало бы нетронутый тред устаревшим.
+  // Язык неизвестен → не судим: «не знаем» это не «устарело».
+  const canJudge = !!contextLang && contextLang === lang
   const block = blocks.find((b) => b.blockId && b.blockId === blockId)
   // Блока нет — он и осиротел, и заведомо устарел: текста, о котором спорили,
   // в предложении больше нет.
-  if (!block) return { state: 'orphaned', outdated: !!contextSnapshot }
+  if (!block) return { state: 'orphaned', outdated: canJudge && !!contextSnapshot }
 
   const text = fieldText(block, field, lang)
-  if (!text) return { state: 'orphaned', outdated: !!contextSnapshot }
-  const outdated = isOutdated(contextSnapshot, text)
+  if (!text) return { state: 'orphaned', outdated: canJudge && !!contextSnapshot }
+  const outdated = canJudge && isOutdated(contextSnapshot, text)
 
   const res = resolveAnchor(anchor, text)
   if (res.state === 'orphaned') return { state: 'orphaned', outdated }

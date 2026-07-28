@@ -124,7 +124,7 @@ export default async function SuggestionThreadPage({
   const threads = await getSuggestionThreads(sug.id, session?.userId)
   const threadsByBlock = new Map<string, RowThread[]>()
   for (const th of threads) {
-    const state = threadState(th.anchorOriginal, th.field, th.blockId, items as unknown as AnchorableBlock[], lang, th.contextSnapshot)
+    const state = threadState(th.anchorOriginal, th.field, th.blockId, items as unknown as AnchorableBlock[], lang, th.contextSnapshot, th.contextLang)
     const list = threadsByBlock.get(th.blockId)
     if (list) list.push({ thread: th, state })
     else threadsByBlock.set(th.blockId, [{ thread: th, state }])
