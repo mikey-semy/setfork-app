@@ -37,7 +37,7 @@ export interface ExpertRow {
   /** Тир мастерства по профессии (джун/мидл/сеньор, commis→шеф). Пусто = плоская. */
   tier: string
   /** Карьера: active → dormant → archived (архив обратим). */
-  lifecycle: 'active' | 'dormant' | 'archived'
+  lifecycle: 'active' | 'idle' | 'dormant' | 'archived'
   /** «Чего не хватает» — сигнал в фиче-бэклог владельца. */
   dreams: string
   persona: string
@@ -224,13 +224,17 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
             </div>
             <div>
               <label className={lbl}>{say('Career', 'Карьера')}</label>
-              {/* Спящих и архивных совет не созывает; архив обратим — персона и опыт целы. */}
+              {/* Стадии ставит и петля (по бездействию: в строю → под риском → спит), и человек
+                  здесь же. «Под риском» — рабочая стадия: такой специалист идёт ПЕРВЫМ в очереди
+                  на работу, чтобы вернуться в строй. Спящих совет не созывает, но петля будит
+                  их, когда их ремесло больше некому закрыть. Архив ставит только человек. */}
               <Select name="lifecycle" defaultValue={e.lifecycle}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">{say('active', 'в строю')}</SelectItem>
+                  <SelectItem value="idle">{say('at risk — no work lately', 'под риском — давно без работы')}</SelectItem>
                   <SelectItem value="dormant">{say('dormant', 'спит')}</SelectItem>
                   <SelectItem value="archived">{say('archived', 'в архиве')}</SelectItem>
                 </SelectContent>
