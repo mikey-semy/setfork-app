@@ -38,6 +38,11 @@ export function toStepInput(items: ProposedItem[]) {
     n: i + 1,
     type: it.type ?? 'step',
     content: it.content ?? {},
+    // Идентичность блока сквозь версии: на ней держатся комментарии к пункту и
+    // merge по идентичности. Раньше её переносила только копия конвертера в
+    // features/library/actions.ts — а та, в свою очередь, теряла пометку
+    // «здесь нужен человек». Обе половины должны жить в ОДНОЙ функции.
+    blockId: it.blockId ?? null,
     title: it.title,
     desc: it.desc,
     command: it.command,

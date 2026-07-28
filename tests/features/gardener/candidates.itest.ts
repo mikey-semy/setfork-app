@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { db, suggestions, templates, users } from '@/shared/db'
 import { pickCandidates } from '@/features/gardener/service'
@@ -51,6 +51,9 @@ beforeAll(async () => {
   ids.humanDraft = await seedList(humanId, 'human-draft', { status: 'draft' })
   ids.ownOpenSug = await seedList(agentId, 'own-open-sug')
   await db.insert(suggestions).values({ templateId: ids.ownOpenSug, authorId: agentId, baseVersion: 1, items: [] })
+  // Живой список без звёзд: по прежнему порядку (звёзды → давность) он стоял бы в хвосте.
+  ids.living = await seedList(agentId, 'own-living', { living: true })
+  await db.update(templates).set({ starsCount: 99 }).where(eq(templates.id, ids.human))
 })
 
 const slugs = async () => (await pickCandidates([agentId], 50)).map((r) => r.slug).sort()
@@ -84,6 +87,13 @@ describe('gardener: кого берём в уход', () => {
 
   it('свой список с ОТКРЫТОЙ правкой служебного аккаунта — не берём повторно', async () => {
     expect(await slugs()).not.toContain('own-open-sug')
+  })
+
+  it('живой список идёт ПЕРВЫМ: у ленты ценность в свежести, ждать за популярностью нельзя', async () => {
+    const rows = await pickCandidates([agentId], 50)
+    expect(rows[0]?.slug).toBe('own-living')
+    // И признак доезжает до вызывающего — по нему выбирается ветка роста вместо полировки.
+    expect(rows[0]?.living).toBe(true)
   })
 
   it('владелец помечен служебным — признак доезжает до вызывающего (ветка прямой правки)', async () => {

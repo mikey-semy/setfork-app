@@ -114,3 +114,37 @@ describe('режимы', () => {
     expect(readinessDecision(goodFacts, extra, barOn).publish).toBe(false)
   })
 })
+
+describe('живой список (лента): планка на свежести, а не на полноте', () => {
+  // Лента полной не бывает по устройству: у новости нет «зачем» и «источника лучшей
+  // практики». Судить её классом значит держать в черновиках вечно.
+  const feed: ReadinessFacts = { ...goodFacts, living: true, grade: 'stub', gradeNext: ['нет описаний'], freshestAgeDays: 1 }
+
+  it('свежая лента проходит, хотя класс ниже планки', () => {
+    expect(structuralBlockers(feed, DEFAULT_BAR)).toEqual([])
+    expect(readinessDecision(feed, allPass, barOn).publish).toBe(true)
+  })
+
+  it('устаревшая лента не проходит — и причина названа числом', () => {
+    const stale = { ...feed, freshestAgeDays: 30 }
+    const blockers = structuralBlockers(stale, DEFAULT_BAR)
+    expect(blockers).toHaveLength(1)
+    expect(blockers[0]).toContain('30')
+    expect(readinessDecision(stale, allPass, barOn).publish).toBe(false)
+  })
+
+  it('свежесть неизвестна — блокер, а не «пропустим» (fail-closed как у линз)', () => {
+    const unknown = { ...feed, freshestAgeDays: undefined }
+    expect(structuralBlockers(unknown, DEFAULT_BAR)).toEqual(['свежесть неизвестна'])
+  })
+
+  it('мёртвые ссылки ленте не прощаются даже свежей', () => {
+    const dead = { ...feed, deadLinks: 2 }
+    expect(structuralBlockers(dead, DEFAULT_BAR).some((b) => b.includes('мёртвых'))).toBe(true)
+  })
+
+  it('обычному списку свежесть не мешает: без признака living проверка не включается', () => {
+    const normal = { ...goodFacts, freshestAgeDays: 999 }
+    expect(structuralBlockers(normal, DEFAULT_BAR)).toEqual([])
+  })
+})

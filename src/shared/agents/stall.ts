@@ -23,7 +23,9 @@ import { agentActions, db } from '@/shared/db'
  */
 
 /** Действия, которые считаются прогрессом: после них библиотека ДРУГАЯ. */
-const PROGRESS = ['list.draft', 'list.improve', 'list.publish', 'list.fork'] as const
+// list.grow — рост живого списка. Для ленты это и есть работа: без него петля, исправно
+// пополняющая ленты новостями, выглядела бы застрявшей и слала бы ложную тревогу.
+const PROGRESS = ['list.draft', 'list.improve', 'list.publish', 'list.fork', 'list.grow'] as const
 
 /** Сколько последних записей смотрим. Больше — дольше «помним» давний прогресс. */
 const WINDOW = 12

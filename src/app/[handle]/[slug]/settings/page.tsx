@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
-import { FolderGit2, GitPullRequest, Image as ImageIcon, Info, LayoutTemplate, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
+import { FolderGit2, GitPullRequest, Image as ImageIcon, Info, LayoutTemplate, Radio, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- owner-only: доступ строже canViewList (session.userId === ownerId)
 import { getListCover, getListMeta } from '@/features/library/queries'
 import { getCollaborators } from '@/features/collab/queries'
@@ -15,6 +15,7 @@ import { TemplateSection } from '@/features/library/TemplateSection'
 import { CoverSection } from '@/features/library/CoverSection'
 import { GeneralSection } from '@/features/library/GeneralSection'
 import { FeaturesSection } from '@/features/library/FeaturesSection'
+import { LivingSection } from '@/features/library/LivingSection'
 import { PrSettingsSection } from '@/features/library/PrSettingsSection'
 import { withPrDefaults } from '@/features/library/pr-settings'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
@@ -96,6 +97,13 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       icon: <GitPullRequest size={15} />,
       keywords: ['pull request', 'suggestions', 'merge', 'approvals', 'предложения', 'слияние', 'одобрения', 'ревью'],
       content: <PrSettingsSection templateId={meta.id} settings={withPrDefaults(meta.prSettings)} lang={lang} />,
+    },
+    {
+      id: 'living',
+      title: tr({ en: 'Living list', ru: 'Живой список' }, lang),
+      icon: <Radio size={15} />,
+      keywords: ['living', 'feed', 'fresh', 'news', 'updates', 'живой', 'лента', 'свежесть', 'новости', 'обновления'],
+      content: <LivingSection templateId={meta.id} living={meta.living} lang={lang} />,
     },
     {
       id: 'template',
