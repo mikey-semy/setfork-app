@@ -74,4 +74,15 @@ describe('ник администратора нельзя занять НИ О�
     expect(row?.email).toBe('ok@example.com')
     expect(isAdminHandle(row!.handle)).toBe(false)
   })
+
+  it('без ADMIN_HANDLES проверка не строже прежней — ники персон смока проходят', async () => {
+    const saved = process.env.ADMIN_HANDLES
+    process.env.ADMIN_HANDLES = '' // как в smoke.yml: переменная не задана
+    try {
+      expect(await register('sim-sms4c1dt6-pavel-runs-0', 'sim@example.com')).toBe('redirect')
+      expect(await rowOf('sim-sms4c1dt6-pavel-runs-0')).toBeDefined()
+    } finally {
+      process.env.ADMIN_HANDLES = saved
+    }
+  })
 })
