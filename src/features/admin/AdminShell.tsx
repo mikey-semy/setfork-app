@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { SearchField } from '@/shared/ui/SearchField'
 import { t, type Lang } from '@/shared/i18n'
 import type { SettingsSection } from '@/features/settings/SettingsShell'
@@ -85,8 +86,16 @@ export function AdminShell({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-6 px-5 py-6 md:flex-row md:gap-8 md:px-8">
-      {/* Меню: на мобиле обычным блоком сверху, на md+ — липкая колонка. */}
+      {/* МОБИЛА: двадцать пунктов над контентом — это экран прокрутки до первой настройки,
+          поэтому на телефоне меню СВЁРНУТО в одну строку и раскрывается тапом. На md+ —
+          обычная липкая колонка, свёртка там только мешала бы. */}
       <aside className="shrink-0 md:sticky md:top-[73px] md:h-[calc(100vh-89px)] md:w-[232px] md:overflow-y-auto md:pb-6">
+        <details className="group rounded-lg border border-border bg-surface md:contents">
+          <summary className="flex min-h-[44px] cursor-pointer items-center justify-between gap-2 px-3 text-[13px] font-semibold text-ink md:hidden">
+            {t('adminNavLabel', lang)}
+            <ChevronDown size={16} className="text-muted transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="px-3 pb-3 md:contents">
         <SearchField value={q} onValueChange={setQ} placeholder={t('settingsSearchPh', lang)} className="mb-3" clearLabel={t('clear', lang)} />
         <nav className="flex flex-col gap-4">
           {groups.map((g) => (
@@ -127,6 +136,8 @@ export function AdminShell({
             </div>
           ))}
         </nav>
+          </div>
+        </details>
       </aside>
 
       <div className="min-w-0 flex-1 space-y-6">
