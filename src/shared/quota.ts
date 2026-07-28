@@ -3,6 +3,7 @@ import { and, eq, gte, sql } from 'drizzle-orm'
 import { aiUsage, db, generations, templates } from '@/shared/db'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { isPro } from '@/shared/entitlements'
+import { envNumber } from '@/shared/env'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 
 // Квоты — мягкая защита от абьюза, не биллинг. Лимиты щедрые и настраиваются
@@ -10,19 +11,22 @@ import { getOpenRouterCredits } from '@/shared/ai/credits'
 // (createTemplate/useTemplate/forkTemplate/acceptCandidate) и AI-расход
 // (генерация/refine). Проверяем ПЕРЕД дорогой операцией.
 
-export const MAX_LISTS_PER_USER = Number(process.env.SETFORK_MAX_LISTS_PER_USER ?? 200)
+// envNumber, а не Number(): мусор в значении обязан давать дефолт, а не NaN. С NaN эти
+// константы вели себя противоположно (кап тихо выключался, месячная квота тихо закрывалась
+// всем) — см. реестр контрольной проверки 2026-07-28, находки M1/M4.
+export const MAX_LISTS_PER_USER = envNumber('SETFORK_MAX_LISTS_PER_USER', 200)
 // Потолок AI-расхода на пользователя за календарный месяц (в USD ≈ кредиты OpenRouter).
-export const AI_MONTHLY_USD = Number(process.env.SETFORK_AI_MONTHLY_USD ?? 5)
+export const AI_MONTHLY_USD = envNumber('SETFORK_AI_MONTHLY_USD', 5)
 // Глобальный потолок AI-расхода на ВЕСЬ инстанс за календарные сутки (страховка от runaway: бага
 // или коллективный абьюз). ВКЛЮЧЁН по умолчанию ($10/день). Измеренная цена (v2-бенч Яндекса,
 // research/2026-07-22-unit-economics-v2): совет ~5.57₽ ≈ $0.062, одиночная ~1.8₽; при этом $10/день ≈
 // 150+ советов/день — покрывает первые десятки активных и тормозит утечку; под аудиторию поднимать
 // env'ом. 0 = выкл (сознательно). Раньше дефолт был 0 — глобального капа не было вообще.
-export const AI_DAILY_USD = Number(process.env.SETFORK_AI_DAILY_USD ?? 10)
+export const AI_DAILY_USD = envNumber('SETFORK_AI_DAILY_USD', 10)
 // Пол живого остатка на счёте OpenRouter. Ниже — стоп-генерация: при $0 система раньше просто
 // продолжала звать и получать ошибки. 0 = выкл. Best-effort: сбой credits-эндпоинта не блокирует
 // (полагаемся на дневной кап), иначе флейк статуса провайдера ронял бы весь продукт.
-export const AI_BALANCE_FLOOR_USD = Number(process.env.SETFORK_AI_BALANCE_FLOOR_USD ?? 0.5)
+export const AI_BALANCE_FLOOR_USD = envNumber('SETFORK_AI_BALANCE_FLOOR_USD', 0.5)
 
 export interface QuotaState {
   used: number
