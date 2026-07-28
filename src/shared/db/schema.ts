@@ -2149,6 +2149,46 @@ export const blockComments = pgTable(
   (t) => [index('bc_thread_idx').on(t.threadId)],
 )
 
+/**
+ * ОТМЕТКА «ПРОСМОТРЕНО» на пункте предложения — как «Viewed» у файла в GitHub.
+ *
+ * Личная и НЕ общая: это состояние ревьюера («я это уже смотрел»), а не свойство
+ * правки. Поэтому ключ — пара (предложение, пункт, зритель), и чужие галочки
+ * никому не видны.
+ *
+ * `atFingerprint` — отпечаток СОДЕРЖИМОГО пункта на момент отметки. Пункт правят
+ * дальше, и отметка, поставленная до правки, врала бы. Отпечаток именно пункта,
+ * а не sha ветки: иначе любой чужой коммит гасил бы отметки на всех пунктах,
+ * включая нетронутые. Не совпало → «просмотрено до изменений», а не галочка.
+ */
+export const suggestionViewed = pgTable(
+  'suggestion_viewed',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Идентичность блока (ADR-0013) — переживает перестановку пунктов. */
+    blockId: text('block_id').notNull(),
+    atFingerprint: text('at_fingerprint').notNull().default(''),
+    /**
+     * Язык, на котором считали отпечаток.
+     *
+     * Отпечаток берётся с УЖЕ ЛОКАЛИЗОВАННОГО текста, поэтому на двуязычном
+     * списке смена языка интерфейса меняла бы его и гасила все отметки разом.
+     * Язык не совпал → об устаревании не судим (как у снимка треда).
+     */
+    atLang: text('at_lang').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_viewed_uq').on(t.suggestionId, t.userId, t.blockId)],
+)
+
+export type SuggestionViewed = typeof suggestionViewed.$inferSelect
+
 export type BlockCommentThread = typeof blockCommentThreads.$inferSelect
 export type BlockComment = typeof blockComments.$inferSelect
 
