@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, inArray, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db, feedItems } from '@/shared/db'
 
 /**
@@ -47,6 +47,23 @@ export async function freshForDomains(domains: string[], limit = 20): Promise<Fe
     .orderBy(desc(feedItems.publishedAt), desc(feedItems.createdAt))
     .limit(limit)
   return rows
+}
+
+/**
+ * Когда в списке появлялся самый свежий материал из потока — время, по которому судится
+ * свежесть ленты (планка живого списка, см. shared/ai/readiness).
+ *
+ * Берём дату ПУБЛИКАЦИИ материала, а не время попадания к нам: лента, набитая вчера
+ * прошлогодними статьями, свежей не является. Даты нет — тогда время попадания, другого
+ * ответа у нас всё равно нет. `null` = материала из потока в списке не было вовсе; решать,
+ * что это значит, вызывающему (для планки это «свежесть неизвестна», то есть блокер).
+ */
+export async function freshestUsedAt(templateId: string): Promise<Date | null> {
+  const [row] = await db
+    .select({ at: sql<Date | null>`max(coalesce(${feedItems.publishedAt}, ${feedItems.createdAt}))` })
+    .from(feedItems)
+    .where(eq(feedItems.usedTemplateId, templateId))
+  return row?.at ? new Date(row.at) : null
 }
 
 /**

@@ -1,0 +1,50 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { Radio } from 'lucide-react'
+import { Switch } from '@/shared/ui/switch'
+import { tr, type Lang } from '@/shared/i18n'
+import { setListLiving } from './actions'
+
+/**
+ * Настройки списка → «Живой список» (лента).
+ *
+ * Признак меняет не оформление, а правила: такой список судится СВЕЖЕСТЬЮ вместо полноты,
+ * не «устаивается» (значит и форком от него не расходятся), и уход ДОБАВЛЯЕТ в него новое по
+ * теме вместо полировки старого.
+ *
+ * Выключатель нужен именно человеку: список, выросший из события, помечается живым
+ * автоматически, и это догадка. Ошиблись — владелец снимает признак одним касанием.
+ */
+export function LivingSection({ templateId, living, lang }: { templateId: string; living: boolean; lang: Lang }) {
+  const [on, setOn] = useState(living)
+  const [, start] = useTransition()
+
+  return (
+    <section className="rounded-lg border border-border bg-surface p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 font-semibold text-ink">
+            <Radio size={15} className="text-muted" /> {tr({ en: 'Living list', ru: 'Живой список' }, lang)}
+          </div>
+          <p className="mt-1 text-[12.5px] leading-snug text-ink-2">
+            {tr(
+              {
+                en: 'A list on a topic that keeps going: new entries land on top, old ones move into the version history. It is judged by freshness rather than completeness, and never “polished till done”.',
+                ru: 'Список по теме, которая продолжается: новое по ней добавляется сверху, старое уходит в историю версий. Такой список оценивается свежестью, а не полнотой, и его не «дополировывают» до готового.',
+              },
+              lang,
+            )}
+          </p>
+        </div>
+        <Switch
+          checked={on}
+          onCheckedChange={(v) => {
+            setOn(v)
+            start(() => setListLiving(templateId, v))
+          }}
+        />
+      </div>
+    </section>
+  )
+}
