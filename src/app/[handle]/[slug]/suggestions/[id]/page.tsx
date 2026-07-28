@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, Pencil, RefreshCw, X } from 'lucide-react'
+import { ArrowLeft, Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, Pencil, RefreshCw, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -71,7 +71,7 @@ export default async function SuggestionThreadPage({
   searchParams,
 }: {
   params: Promise<{ handle: string; slug: string; id: string }>
-  searchParams: Promise<{ e?: string; tab?: string; view?: string }>
+  searchParams: Promise<{ e?: string; tab?: string; view?: string; commit?: string }>
 }) {
   const [{ handle: owner, slug, id }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
@@ -274,6 +274,31 @@ export default async function SuggestionThreadPage({
   const commits = sug.branchRef && !branchMissing ? await gitCore.listCommits({ owner, slug }, sug.branchRef, { notIn: 'main' }) : null
   const commitAuthors = commits?.length ? await getUsersByEmails(commits.map((c) => c.authorEmail)) : {}
 
+  // Дифф ОДНОГО коммита (?commit=sha). Стороны: сам коммит против предыдущего в
+  // этой ветке; у самого раннего предыдущего нет — сравниваем с main, потому что
+  // именно оттуда ветка и выросла.
+  const wantSha = sp.commit && commits ? commits.findIndex((c) => c.sha === sp.commit) : -1
+  const commitDiff =
+    wantSha >= 0 && commits && sug.branchRef
+      ? await (async () => {
+          const cur = commits[wantSha]
+          const prev = commits[wantSha + 1]?.sha ?? 'main'
+          const [toSnap, fromSnap] = await Promise.all([
+            gitCore.branchSnapshot({ owner, slug }, cur.sha).catch(() => null),
+            gitCore.branchSnapshot({ owner, slug }, prev).catch(() => null),
+          ])
+          if (!toSnap || !fromSnap) return null
+          return {
+            sha: cur.sha,
+            title: cur.message.split(/\r?\n/)[0] || cur.sha.slice(0, 7),
+            // Обе стороны — из GIT (как и у диффа всей правки): смешивать снапшот
+            // с шагами из БД нельзя, у двуязычного списка это красит всё заменой.
+            from: rowsToCmp(snapshotSteps(fromSnap, 'prev') as Parameters<typeof rowsToCmp>[0], lang),
+            to: rowsToCmp(snapshotSteps(toSnap, 'cur') as Parameters<typeof rowsToCmp>[0], lang),
+          }
+        })()
+      : null
+
   // СОАВТОРЫ: над одной правкой работают несколько человек. У ветки это авторы
   // коммитов (git знает их и без нас), у предложений с items — те, кто правил
   // пункты. Открывшего сюда не включаем: он показан отдельно.
@@ -457,13 +482,54 @@ export default async function SuggestionThreadPage({
           </div>
         )}
 
-        {tab === 'commits' && commits && (
+        {tab === 'commits' && commits && !commitDiff && (
           <CommitsList
             commits={commits}
             authors={commitAuthors}
             lang={lang}
-            labels={{ count: t('prCommitsCount', lang), empty: t('prCommitsEmpty', lang), merge: t('prCommitMerge', lang) }}
+            diffBase={`${path}?tab=commits`}
+            snapshotBase={`/${owner}/${slug}`}
+            labels={{
+              count: t('prCommitsCount', lang),
+              empty: t('prCommitsEmpty', lang),
+              merge: t('prCommitMerge', lang),
+              diff: t('prCommitDiff', lang),
+              openAt: t('prOpenAtCommit', lang),
+            }}
           />
+        )}
+
+        {/* ДИФФ ОДНОГО КОММИТА. Тот же дифф, что у всей правки, только стороны
+            другие: этот коммит против предыдущего В ЭТОЙ ЖЕ ветке (а у самого
+            раннего — против main). Предыдущий берём из уже загруженного списка
+            коммитов: спрашивать git о родителе значило бы второй поход за тем,
+            что уже на руках. */}
+        {tab === 'commits' && commitDiff && (
+          <>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Link
+                href={`${path}?tab=commits`}
+                className="inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-[13px] font-semibold text-ink hover:border-border-strong"
+              >
+                <ArrowLeft size={14} /> <span className="max-sm:hidden">{t('prAllCommits', lang)}</span>
+              </Link>
+              <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-ink">{commitDiff.title}</span>
+              <span className="shrink-0 font-mono text-[12px] text-muted">{commitDiff.sha.slice(0, 7)}</span>
+              <div className="ml-auto max-sm:w-full max-sm:justify-end">
+                <DiffViewToggle
+                  path={`${path}?tab=commits&commit=${commitDiff.sha}`}
+                  tab="commits"
+                  view={view}
+                  labels={{ code: t('viewCode', lang), list: t('viewList', lang) }}
+                />
+              </div>
+            </div>
+            {view === 'code' ? (
+              <CodeDiff fromSteps={commitDiff.from} toSteps={commitDiff.to} ordered={meta.ordered} lang={lang} />
+            ) : (
+              <ListDiff fromSteps={commitDiff.from} toSteps={commitDiff.to} lang={lang} />
+            )}
+          </>
         )}
 
         {tab === 'checks' && (

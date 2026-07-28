@@ -1,7 +1,9 @@
-import { GitMerge } from 'lucide-react'
+import { FileCode2, GitMerge } from 'lucide-react'
 import type { GitCommit } from '@/core'
+import Link from 'next/link'
 import { Avatar } from '@/shared/ui/Avatar'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
 
@@ -26,12 +28,18 @@ export function CommitsList({
   authors,
   lang,
   labels,
+  diffBase,
+  snapshotBase,
 }: {
   commits: GitCommit[]
   /** handle по e-mail — подпись коммита не обязана совпадать с нашим аккаунтом. */
   authors: Record<string, CommitAuthor>
   lang: Lang
-  labels: { count: string; empty: string; merge: string }
+  labels: { count: string; empty: string; merge: string; diff: string; openAt: string }
+  /** База ссылки на дифф коммита; без неё строки не кликабельны. */
+  diffBase?: string
+  /** База ссылки на СНИМОК списка (`?ref=sha`) — «открыть как обычный список». */
+  snapshotBase?: string
 }) {
   if (commits.length === 0) return <div className="rounded-lg border border-border bg-surface px-4 py-6 text-center text-[13px] text-muted">{labels.empty}</div>
 
@@ -55,9 +63,22 @@ export function CommitsList({
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-start gap-1.5">
-                  <span className="min-w-0 flex-1 text-[13.5px] font-semibold text-ink [overflow-wrap:anywhere]" title={rest || undefined}>
-                    {title || '—'}
-                  </span>
+                  {/* Заголовок ведёт в дифф ЭТОГО коммита: список коммитов без
+                      возможности посмотреть, что в нём, отвечает только на
+                      «сколько», но не на «что». */}
+                  {diffBase ? (
+                    <Link
+                      href={`${diffBase}${diffBase.includes('?') ? '&' : '?'}commit=${c.sha}`}
+                      className="min-w-0 flex-1 text-[13.5px] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]"
+                      title={rest || labels.diff}
+                    >
+                      {title || '—'}
+                    </Link>
+                  ) : (
+                    <span className="min-w-0 flex-1 text-[13.5px] font-semibold text-ink [overflow-wrap:anywhere]" title={rest || undefined}>
+                      {title || '—'}
+                    </span>
+                  )}
                   {c.parents > 1 && (
                     <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-1.5 py-0.5 text-[10.5px] font-semibold text-accent">
                       <GitMerge size={11} /> {labels.merge}
@@ -70,10 +91,24 @@ export function CommitsList({
                   <span title={c.at.toLocaleString(lang)}>{timeAgo(c.at, lang)}</span>
                 </div>
               </div>
-              {/* sha — то, чем коммит называют в терминале; отсюда его и копируют. */}
+              {/* Правый край строки: sha (им коммит называют в терминале, отсюда
+                  и копируют) и вход в СНИМОК списка на этом коммите. Иконка с
+                  тултипом, а не подпись: на мобиле текст сюда не влезает, а
+                  тач-цель добирается padding'ом до полной. */}
               <span className="flex shrink-0 items-center gap-1.5 font-mono text-[12px] text-ink-2">
                 {c.sha.slice(0, 7)}
                 <CopyButton text={c.sha} />
+                {snapshotBase && (
+                  <Tooltip label={labels.openAt}>
+                    <Link
+                      href={`${snapshotBase}${snapshotBase.includes('?') ? '&' : '?'}ref=${c.sha}`}
+                      aria-label={labels.openAt}
+                      className="grid size-9 place-items-center rounded-md text-muted hover:text-ink"
+                    >
+                      <FileCode2 size={14} />
+                    </Link>
+                  </Tooltip>
+                )}
               </span>
             </li>
           )
