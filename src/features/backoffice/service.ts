@@ -35,6 +35,7 @@ const MAIL_OFF = 'почта не настроена'
 const QUIET_DAY = 'день без событий — писать не о чем'
 const NO_EVENTS = 'нет событий'
 const DRY_RUN = 'сухой прогон'
+const ALREADY_SENT = 'за этот день уже отправлено'
 
 const FINANCE_EVERY_HOURS = 6
 const CHRONICLE_EVERY_HOURS = 24
@@ -123,20 +124,35 @@ export async function runFinanceSweep(): Promise<FinanceResult> {
 
   const day = new Date().toISOString().slice(0, 10)
   for (const a of alerts) {
-    const delivery = await tellOwner(`SetFork: ${a.subject}`, `<p>${a.text}</p><p><a href="https://setfork.ru/admin/development">Дашборд развития</a></p>`)
-    out.alerts++
-    out.sent += delivery.sent
-    await recordAgentAction({
+    // Ключ заявляем ДО отправки: запись с уникальным ключом — это и есть заявка на право
+    // отправить. Пиши мы журнал после письма, два инстанса (или проход после рестарта)
+    // отправили бы одну тревогу дважды, а владелец перестал бы читать письма.
+    const claimed = await recordAgentAction({
       loop: 'finance',
       action: 'money.alert',
-      resultStatus: delivery.sent ? 'ok' : 'skipped',
+      resultStatus: 'ok',
       signal: { ...m },
       decision: { kind: a.kind, text: a.text },
-      error: delivery.skipped,
-      // Ключ идемпотентности не даст повторить ту же тревогу в те же сутки.
       idempotencyKey: `finance:${a.kind}:${day}`,
       policyVersion: policy.policyVersion,
     })
+    if (!claimed) continue // ключ уже занят: эту тревогу сегодня уже отправляли
+    out.alerts++
+    const delivery = await tellOwner(`SetFork: ${a.subject}`, `<p>${a.text}</p><p><a href="https://setfork.ru/admin/development">Дашборд развития</a></p>`)
+    out.sent += delivery.sent
+    // Не дошло — записываем ОТДЕЛЬНОЙ строкой без ключа: заявка уже занята, но факт «тревога
+    // не доставлена» обязан быть виден, иначе журнал врал бы бодрым 'ok'.
+    if (!delivery.sent) {
+      await recordAgentAction({
+        loop: 'finance',
+        action: 'money.alert',
+        resultStatus: 'skipped',
+        signal: { ...m },
+        decision: { kind: a.kind },
+        error: delivery.skipped,
+        policyVersion: policy.policyVersion,
+      })
+    }
   }
   if (!alerts.length) {
     await recordAgentAction({
@@ -167,8 +183,10 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   if (!(await autonomyHealthy('chronicle'))) return out
   const policy = await loopPolicy('chronicle')
   const { getCompanyDay } = await import('@/shared/agents/company-day')
-  const day = await getCompanyDay(0)
-  const date = new Date().toISOString().slice(0, 10)
+  // Отчитываемся о ЗАВЕРШЁННОМ дне, а не о текущем: проход встаёт раз в сутки от старта
+  // процесса, а не в полночь, поэтому «сегодня» — это всегда обрезанный кусок дня.
+  const day = await getCompanyDay(1)
+  const date = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
 
   const rows: [string, number][] = [
     ['создано', day.created],
@@ -197,19 +215,36 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
   const html = `<p>День компании, ${date}:</p><ul>${rows.map(([k, n]) => `<li>${k}: ${n}</li>`).join('')}</ul>` +
     (day.holdReasons.length ? `<p>Почему не пропустила планка: ${day.holdReasons.map((r) => `${r.reason} (${r.times})`).join('; ')}</p>` : '') +
     `<p><a href="https://setfork.ru/admin/development">Дашборд развития</a></p>`
-  const delivery = await tellOwner(`SetFork: день компании ${date}`, html)
-  out.sent = delivery.sent
-  out.skipped = delivery.skipped
-  await recordAgentAction({
+  // Ключ на дату — ДО отправки: две задачи на один день (рестарт, второй инстанс) иначе
+  // прислали бы сводку дважды.
+  const claimed = await recordAgentAction({
     loop: 'chronicle',
     action: 'day.report',
-    resultStatus: delivery.sent ? 'ok' : 'skipped',
+    resultStatus: 'ok',
     signal: { date, ...Object.fromEntries(rows) },
-    decision: { recipients: delivery.sent },
-    error: delivery.skipped,
+    decision: { day: date },
     idempotencyKey: `chronicle:${date}`,
     policyVersion: policy.policyVersion,
   })
+  if (!claimed) {
+    // Ключ занят — сводку за этот день уже отправили (рестарт, второй инстанс).
+    out.skipped = ALREADY_SENT
+    return out
+  }
+  const delivery = await tellOwner(`SetFork: день компании ${date}`, html)
+  out.sent = delivery.sent
+  out.skipped = delivery.skipped
+  if (!delivery.sent) {
+    await recordAgentAction({
+      loop: 'chronicle',
+      action: 'day.report',
+      resultStatus: 'skipped',
+      signal: { date },
+      decision: { day: date },
+      error: delivery.skipped,
+      policyVersion: policy.policyVersion,
+    })
+  }
   return out
 }
 

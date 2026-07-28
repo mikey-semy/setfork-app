@@ -129,7 +129,7 @@ export async function ensureGardenerScheduled(): Promise<void> {
 
 /** Кандидаты: публичные активные, без открытой правки садовника, без секций
  *  (refine пока не сохраняет section) — сначала популярные и давно не обновлявшиеся. */
-export async function pickCandidates(agentIds: string[], limit: number) {
+export async function pickCandidates(agentIds: string[], limit: number, only?: 'living' | 'ordinary') {
   // Дедуп и исключение владельца — по ВСЕМ служебным аккаунтам, а не по одному
   // садовнику: с раздачей ухода профильным специалистам автором правки может быть
   // любой из них, и проверка «уже предлагал» обязана это учитывать (иначе список
@@ -175,6 +175,9 @@ export async function pickCandidates(agentIds: string[], limit: number) {
         // и без учёта свежести список попадал бы в выборку снова → повторный refine.
         sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = any(${sql.param(agents)}::uuid[])
              and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS}::int * interval '1 day')))`,
+        // Ленты и обычные списки выбираем РАЗНЫМИ запросами: при общей выборке живые (они идут
+        // первыми) вытесняли бы обычные из лимита, и уход выродился бы в одну ленту.
+        only === 'living' ? eq(templates.living, true) : only === 'ordinary' ? eq(templates.living, false) : undefined,
       ),
     )
     // Живые списки — первыми: у ленты ценность в свежести, и ждать своей очереди за
@@ -416,7 +419,7 @@ export async function growLiving(
   current: { title: string; desc: string; tags: string[]; items: GeneratedItem[] },
   lang: Lang,
   kind: ListKind,
-  ctx: { tenderId: string; agentId: string; policyVersion: number; domains?: string[] },
+  ctx: { tenderId: string; agentId: string; policyVersion: number; domains?: string[]; mode?: 'version' | 'suggestion'; ownerId?: string; baseVersion?: number },
 ): Promise<{ result: 'grown' | 'nothing-new' | 'failed'; snapshot?: ReadinessInput }> {
   // Ищем материал по тегам списка И по доменам мастера, который за него отвечает. Только по
   // тегам списка искать нельзя: теги списку придумала МОДЕЛЬ при создании («kubernetes», «ci»),
@@ -460,9 +463,26 @@ Keep the existing items below in their current order and wording. If the list th
   }
 
   const items = toProposed(grown.items.slice(0, FEED_MAX_ITEMS), lang)
-  await listStore.addVersion(tpl.id, { note: noteFor(kind, lang), steps: toStepInput(items), authorId: ctx.tenderId })
-  await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: ctx.tenderId, type: 'new_version', templateId: tpl.id })
-  await enqueueReindex(tpl.id)
+  if (ctx.mode === 'suggestion') {
+    // Чужой живой список растёт ПРЕДЛОЖЕНИЕМ: свежесть ему нужна так же, как своему, но писать
+    // в список человека от своего имени нельзя. Обе находки ревью держатся вместе только так.
+    const [created] = await db
+      .insert(suggestions)
+      .values({
+        templateId: tpl.id,
+        authorId: ctx.tenderId,
+        note: noteFor(kind, lang),
+        baseVersion: ctx.baseVersion ?? 1,
+        items,
+        number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${tpl.id})`,
+      })
+      .returning({ id: suggestions.id })
+    await notify({ recipientId: ctx.ownerId ?? '', actorId: ctx.tenderId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+  } else {
+    await listStore.addVersion(tpl.id, { note: noteFor(kind, lang), steps: toStepInput(items), authorId: ctx.tenderId })
+    await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: ctx.tenderId, type: 'new_version', templateId: tpl.id })
+    await enqueueReindex(tpl.id)
+  }
   // Материал списываем ПОСЛЕ версии: упади запись — новости остались бы «использованными»
   // без списка, и повод пропал бы навсегда.
   await markUsed(fresh.map((f) => f.id), tpl.id)
@@ -473,7 +493,7 @@ Keep the existing items below in their current order and wording. If the list th
     agentId: ctx.agentId,
     actorUserId: ctx.tenderId,
     signal: { templateId: tpl.id, slug: tpl.slug, events: fresh.length },
-    decision: { mode: 'grow-feed', sources: fresh.map((f) => f.url).slice(0, FEED_PER_UPDATE) },
+    decision: { mode: ctx.mode === 'suggestion' ? 'grow-feed-suggestion' : 'grow-feed', sources: fresh.map((f) => f.url).slice(0, FEED_PER_UPDATE) },
     resultRef: tpl.slug,
     policyVersion: ctx.policyVersion,
   })
@@ -507,12 +527,13 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
   // Партия прохода: лентам отдаём не больше половины. Иначе, как только живых списков станет
   // три (размер партии), обычные списки перестали бы обслуживаться совсем — уход выродился бы
   // в одну только ленту (находка Codex на #535).
-  const all = await pickCandidates(agents, BATCH * 2)
   const livingCap = Math.max(1, Math.floor(BATCH / 2))
-  const livingPicked = all.filter((t) => t.living).slice(0, livingCap)
-  const rest = all.filter((t) => !t.living).slice(0, BATCH - livingPicked.length)
-  const candidates = [...livingPicked, ...rest]
-  const overrides = await policyOverrides()
+  const [livingPicked, ordinary, overrides] = await Promise.all([
+    pickCandidates(agents, livingCap, 'living'),
+    pickCandidates(agents, BATCH, 'ordinary'),
+    policyOverrides(),
+  ])
+  const candidates = [...livingPicked, ...ordinary.slice(0, BATCH - livingPicked.length)]
 
   let proposed = 0
   let skipped = 0
@@ -608,8 +629,14 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     // Рост напрямую — только по СВОИМ спискам. Живой список человека компания правит обычным
     // путём, предложением: писать в чужой список от своего имени нельзя, даже если владелец
     // включил «живой» (находка ревьюера Codex на #535).
-    if (tpl.living && ownedByCompany) {
-      const res = await growLiving(tpl, current, lang, kind, { ...gateCtx, domains: tender?.expert.domains })
+    if (tpl.living) {
+      const res = await growLiving(tpl, current, lang, kind, {
+        ...gateCtx,
+        domains: tender?.expert.domains,
+        mode: ownedByCompany ? 'version' : 'suggestion',
+        ownerId: tpl.ownerId,
+        baseVersion: tpl.currentVersion,
+      })
       if (res.result === 'grown') {
         proposed++
         // Выросшая лента идёт на планку — она судит её свежестью, а не полнотой. Иначе

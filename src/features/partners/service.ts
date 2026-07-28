@@ -202,7 +202,11 @@ export async function runPartnersSweep(): Promise<AgendaSweepResult> {
   const policy = await loopPolicy('partners')
 
   const signals = (await Promise.all([coverageSignals(), demandSignals(), qualitySignals(), feedSignals(), hireSignalsAsAgenda()])).flat()
-  const agenda = rankAgenda(signals, AGENDA_LIMIT)
+  // РАНЖИР БЕЗ ЛИМИТА для учёта живых сигналов и ОТДЕЛЬНО срез для повестки: если срезать
+  // раньше, пункт ниже двенадцатого закрывался бы как «сделано», хотя его сигнал жив, — и
+  // следующую неделю открывался заново. Повестка мигала бы, а не показывала картину.
+  const ranked = rankAgenda(signals, Number.MAX_SAFE_INTEGER)
+  const agenda = ranked.slice(0, AGENDA_LIMIT)
 
   if (policy.dryRun) {
     await recordAgentAction({
@@ -216,10 +220,11 @@ export async function runPartnersSweep(): Promise<AgendaSweepResult> {
     return out
   }
 
-  const seen = new Set<string>()
+  // Живым считаем ВЕСЬ ранжир, а пишем только срез: закрывать пункт можно, лишь когда сигнал
+  // действительно исчез.
+  const seen = new Set(ranked.map((i) => agendaKey(i.kind, i.domain)))
   for (const item of agenda) {
     const key = agendaKey(item.kind, item.domain)
-    seen.add(key)
     const [existing] = await db.select({ id: agendaItems.id, status: agendaItems.status }).from(agendaItems).where(eq(agendaItems.key, key))
     if (!existing) {
       await db.insert(agendaItems).values({ kind: item.kind, domain: item.domain, key, score: item.score, why: item.why })
