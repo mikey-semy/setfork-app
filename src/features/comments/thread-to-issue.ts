@@ -25,8 +25,8 @@ import { collabStore } from '@/features/collab-store/store'
  * человек, а перенос в задачу его не снимает — он лишь меняет место.
  */
 export async function threadToIssue(owner: string, slug: string, threadId: string): Promise<void> {
-  const session = await requireSession()
-  const lang = await getLang()
+  // Сессия и язык друг от друга не зависят — берём разом.
+  const [session, lang] = await Promise.all([requireSession(), getLang()])
 
   const [row] = await db
     .select({
