@@ -25,6 +25,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { curationStore } from '@/features/curation/store'
 import { collabStore, suggestionCommenterIds } from '@/features/collab-store/store'
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
+import { toStepInput } from '@/shared/lib/step-input'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { getVersionSteps } from './queries'
 import { countApprovals, hasBlockingReview } from './review-actions'
@@ -85,25 +86,6 @@ async function gitPort() {
     import('@/features/git/serialize'),
   ])
   return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError, listJson: ser.listJson }
-}
-
-/** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
-function toStepInput(items: ProposedItem[]) {
-  return items.map((it, i) => ({
-    n: i + 1,
-    type: it.type ?? 'step',
-    content: it.content ?? {},
-    blockId: it.blockId ?? null,
-    title: it.title,
-    desc: it.desc,
-    command: it.command,
-    level: it.level,
-    why: it.why,
-    section: it.section,
-    subtasks: it.subtasks,
-    refs: it.refs,
-    imageRef: it.imageKey ?? null,
-  }))
 }
 
 // ── Видимость списка (public/private) и удаление ─────────────────────
