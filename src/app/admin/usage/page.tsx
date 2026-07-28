@@ -59,7 +59,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
   )
 
   return (
-    <div className="mx-auto flex w-full max-w-[820px] flex-col gap-5 px-6 py-8">
+    <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
       <Link href="/admin" className="inline-flex w-fit items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink">
         <ArrowLeft size={14} /> {tr({ en: 'Back to settings', ru: 'К настройкам' }, lang)}
       </Link>
@@ -158,7 +158,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               )}
             </span>
           </div>
-          <div className="grid min-w-[560px] grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
+          <div className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
             <span>{tr({ en: 'Model', ru: 'Модель' }, lang)}</span>
             <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
             <span className="text-right">{tr({ en: 'Success', ru: 'Успех' }, lang)}</span>
@@ -168,13 +168,13 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           {[...health]
             .sort((a, b) => a.okRate - b.okRate || b.calls - a.calls)
             .map((h) => (
-              <div key={h.model} className="grid min-w-[560px] grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0">
+              <div key={h.model} className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0">
                 <span className="truncate font-mono text-[12.5px] text-ink" title={h.model}>{prettyModelName(h.model)}</span>
-                <span className="text-right font-mono text-[13px] text-ink-2">{num(h.calls)}</span>
-                <span className={`text-right font-mono text-[13px] font-semibold ${h.okRate >= 0.95 ? 'text-ok' : h.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}>
+                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(h.calls)}</span>
+                <span className={`text-right font-mono tabular-nums text-[13px] font-semibold ${h.okRate >= 0.95 ? 'text-ok' : h.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}>
                   {(h.okRate * 100).toFixed(1)}%
                 </span>
-                <span className="text-right font-mono text-[13px] text-ink-2">{h.p95Ms ? `${(h.p95Ms / 1000).toFixed(1)}s` : '—'}</span>
+                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{h.p95Ms ? `${(h.p95Ms / 1000).toFixed(1)}s` : '—'}</span>
                 <span className="text-right">
                   {quarantinedNow.has(h.model) ? (
                     <span className="rounded-full border border-danger/40 bg-danger/10 px-2 py-0.5 text-[11px] font-semibold text-danger">
@@ -191,7 +191,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
       {/* По пользователям */}
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <div className="grid min-w-[440px] grid-cols-[1fr_auto_auto_auto] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
+        <div className="grid min-w-[440px] grid-cols-[minmax(0,1fr)_112px_112px_112px] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
           <span>{tr({ en: 'User', ru: 'Пользователь' }, lang)}</span>
           <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
           <span className="text-right">{tr({ en: 'Tokens', ru: 'Токены' }, lang)}</span>
@@ -203,7 +203,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           rows.map((r) => (
             <div
               key={r.userId ?? 'system'}
-              className="grid min-w-[440px] grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0"
+              className="grid min-w-[440px] grid-cols-[minmax(0,1fr)_112px_112px_112px] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0"
             >
               <span className="flex min-w-0 items-center gap-2">
                 {r.handle ? (
@@ -217,9 +217,9 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
                   <span className="text-[13.5px] text-muted">{tr({ en: 'system / deleted', ru: 'система / удалён' }, lang)}</span>
                 )}
               </span>
-              <span className="text-right font-mono text-[13px] text-ink-2">{num(r.calls)}</span>
-              <span className="text-right font-mono text-[13px] text-ink-2">{num(r.totalTokens)}</span>
-              <span className="text-right font-mono text-[13px] font-semibold text-ink">{money(r.costUsd)}</span>
+              <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(r.calls)}</span>
+              <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(r.totalTokens)}</span>
+              <span className="text-right font-mono tabular-nums text-[13px] font-semibold text-ink">{money(r.costUsd)}</span>
             </div>
           ))
         )}
