@@ -77,9 +77,9 @@ describe('бухгалтер', () => {
     await spend(1)
     mail.ok = false
     await runFinanceSweep()
-    const [alert] = (await journal()).filter((a) => a.action === 'money.alert')
-    expect(alert.resultStatus).toBe('skipped')
-    expect(alert.error).toContain('почта')
+    const undelivered = (await journal()).filter((a) => a.action === 'money.alert' && a.resultStatus === 'skipped')
+    expect(undelivered).toHaveLength(1)
+    expect(undelivered[0].error).toContain('почта')
   })
 
   it('сухой прогон считает, но не пишет владельцу', async () => {
@@ -103,7 +103,8 @@ describe('летописец', () => {
   })
 
   it('был день с событиями — сводка уходит владельцу', async () => {
-    await db.insert(agentActions).values({ loop: 'selfgen', action: 'list.draft', resultStatus: 'ok', signal: {}, decision: {} })
+    // Летописец отчитывается о ЗАВЕРШЁННОМ дне — событие кладём вчерашним числом.
+    await db.insert(agentActions).values({ loop: 'selfgen', action: 'list.draft', resultStatus: 'ok', signal: {}, decision: {}, occurredAt: sql`now() - interval '1 day'` })
     const res = await runChronicleSweep()
     expect(res.sent).toBe(1)
     expect(mail.sent[0].subject).toContain('день компании')
