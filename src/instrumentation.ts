@@ -38,54 +38,41 @@ export async function register() {
 
   // Фоновый воркер очереди задач. Idempotent, безопасен между инстансами.
   // Реестр обработчиков: по одному модулю jobs.ts на фичу-владельца.
-  const [{ startWorker }, notifications, generation, library, digest, moderation, gardener, knowledge, linkcheck, selfgen, gnomeReview, feeds] = await Promise.all([
+  //
+  // РАЗОВЫЕ джобы перечислены здесь руками — их ставит пользовательское действие.
+  // ПЕТЛИ берутся из реестра shared/agents/loops: раньше их приходилось вписывать дважды
+  // (обработчик + самозапуск), и `feedpull` уехал в прод с обработчиком, но без запуска.
+  const [{ startWorker }, { LOOPS }, { LOOP_WIRING }, notifications, generation, library, moderation, gnomeReview] = await Promise.all([
     import('@/shared/jobs/worker'),
+    import('@/shared/agents/loops'),
+    import('@/instrumentation-loops'),
     import('@/features/notifications/jobs'),
     import('@/features/generation/jobs'),
     import('@/features/library/jobs'),
-    import('@/features/digest/jobs'),
     import('@/features/moderation/jobs'),
-    import('@/features/gardener/jobs'),
-    import('@/features/knowledge/jobs'),
-    import('@/features/linkcheck/jobs'),
-    import('@/features/library/selfgen-jobs'),
     import('@/features/library/gnome-review-jobs'),
-    import('@/features/feeds/jobs'),
   ])
+  const loopHandlers = Object.fromEntries(
+    await Promise.all(LOOPS.map(async (l) => [l.jobType, await LOOP_WIRING[l.name].handler()] as const)),
+  )
   startWorker({
     email: notifications.runEmailJob,
     push: notifications.runPushJob,
     generate: generation.runGenerateJob,
     reindex: library.runReindexJob,
-    digest: digest.runDigestJob,
     moderate: moderation.runModerateJobHandler,
-    gardener: gardener.runGardenerJob,
-    triples: knowledge.runTriplesJob,
-    linkcheck: linkcheck.runLinkcheckJob,
-    selfgen: selfgen.runSelfGenJob,
-    feedpull: feeds.runFeedPullJob,
     gnome_review: gnomeReview.runGnomeReviewJob,
+    ...loopHandlers,
   })
 
-  // Самоподдерживающиеся джобы: на старте гарантируем первую постановку в очередь;
-  // отпечатки ранее скрытого/flagged — база для ловли повторных заливок.
-  void import('@/features/digest/service')
-    .then((m) => m.ensureDigestScheduled())
-    .catch((e) => captureError(e, { where: 'digest.ensure' }))
-  void import('@/features/gardener/service')
-    .then((m) => m.ensureGardenerScheduled())
-    .catch((e) => captureError(e, { where: 'gardener.ensure' }))
-  void import('@/features/knowledge/service')
-    .then((m) => m.ensureTriplesScheduled())
-    .catch((e) => captureError(e, { where: 'triples.ensure' }))
-  void import('@/features/linkcheck/service')
-    .then((m) => m.ensureLinkcheckScheduled())
-    .catch((e) => captureError(e, { where: 'linkcheck.ensure' }))
-  // Ставим в очередь всегда: сама джоба проверит режим и в off/manual ничего не потратит.
-  // Так переключение в 'auto' из админки начинает работать без рестарта.
-  void import('@/features/library/selfgen')
-    .then((m) => m.ensureSelfGenScheduled())
-    .catch((e) => captureError(e, { where: 'selfgen.ensure' }))
+  // САМОЗАПУСК ПЕТЕЛЬ — из того же реестра, что и обработчики: два рукописных списка
+  // неизбежно разъезжаются, и один раз уже разъехались (feedpull зарегистрирован, но не
+  // запущен). Ставим в очередь ВСЕГДА: сама задача проверит режим и в off/manual ничего не
+  // потратит — так переключение в 'auto' из админки начинает работать без рестарта.
+  for (const l of LOOPS) {
+    void LOOP_WIRING[l.name].schedule().catch((e) => captureError(e, { where: `${l.name}.ensure` }))
+  }
+  // Отпечатки ранее скрытого/flagged — база для ловли повторных заливок.
   void import('@/features/moderation/moderate-list')
     .then((m) => m.ensureModerationFingerprints())
     .catch((e) => captureError(e, { where: 'moderation.fingerprints' }))
