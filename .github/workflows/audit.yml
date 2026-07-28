@@ -23,7 +23,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          # cache: npm НЕ используем: на self-hosted раннере это скачивание архива
+          # кэша из GitHub (из РФ — минуты на джобу). Вместо него ~/.npm смонтирован
+          # персистентным томом раннера (setfork-ci-runner/docker-compose.yml), а
+          # установка идёт --prefer-offline.
       - run: npm audit --audit-level=high
 
   # Скан секретов в ИСТОРИИ коммитов (git-режим). Не --no-git: тот сканирует и .git/
