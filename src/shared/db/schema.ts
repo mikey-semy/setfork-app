@@ -536,13 +536,44 @@ export const appSettings = pgTable('app_settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+/**
+ * ПУБЛИЧНЫЙ CHANGELOG продукта.
+ *
+ * Раньше это был массив в коде, который надо было править руками — и он, конечно,
+ * отстал на три недели: ручной changelog не ведут, его забывают. Теперь записи
+ * лежат в БД и пополняются джобой из GitHub (релизы или слитые предложения), а
+ * руками добавленное живёт рядом и не затирается.
+ *
+ * `externalId` — ключ идемпотентности («pr:519», «rel:v1.2»): повторный проход
+ * джобы обновляет ту же запись, а не плодит копии. У ручных записей его нет.
+ */
+export const changelogEntries = pgTable(
+  'changelog_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** День, за который запись показывают (не время джобы). */
+    at: timestamp('at', { withTimezone: true }).notNull(),
+    /** Оба языка: интерфейс двуязычный, и changelog не исключение. */
+    en: text('en').notNull(),
+    ru: text('ru').notNull(),
+    /** Куда ведёт запись: PR/релиз на GitHub или своя страница. */
+    href: text('href'),
+    source: text('source').notNull().default('manual'), // 'manual' | 'github'
+    externalId: text('external_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('changelog_ext_idx').on(t.externalId), index('changelog_at_idx').on(t.at)],
+)
+
+export type ChangelogEntryRow = typeof changelogEntries.$inferSelect
+
 // ── Фоновые задачи (durable-очередь поверх Postgres) ──────────────────
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
 // selfgen — самогенерация: специалист сам пишет черновик списка по своей теме
 // (инициатива компании, а не ответ на запрос пользователя).
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review' | 'changelog'
 
 export const jobs = pgTable(
   'jobs',

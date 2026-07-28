@@ -3,6 +3,8 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { getAiProviderRaw, getAiSettings, maskKey } from '@/shared/settings/ai'
 import { getMediaSettings, maskSecret } from '@/shared/settings/media'
+import { getChangelogSettings } from '@/shared/settings/changelog'
+import { ChangelogSettingsForm } from '@/features/admin/ChangelogSettingsForm'
 import { getSearchSettings } from '@/shared/settings/search'
 import { getEmailSettings } from '@/shared/settings/email'
 import { maintenanceEnvOverride, maintenanceFlag } from '@/shared/settings/maintenance'
@@ -91,7 +93,7 @@ export const metadata = { title: 'Admin' }
 
 export default async function AdminPage() {
   await requireAdmin()
-  const [lang, settings, aiProv, media, search, email, online, vapid, achDisplay, maintOn, monetization] = await Promise.all([
+  const [lang, settings, aiProv, media, search, email, online, vapid, achDisplay, maintOn, monetization, changelogSettings] = await Promise.all([
     getLang(),
     getAiSettings(),
     getAiProviderRaw(),
@@ -103,6 +105,7 @@ export default async function AdminPage() {
     getAchievementDisplay(),
     maintenanceFlag(),
     getMonetizationSettings(),
+    getChangelogSettings(),
   ])
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
@@ -452,6 +455,19 @@ export default async function AdminPage() {
               : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'}
           </p>
           <SearchSettingsForm current={search} ru={ru} />
+        </section>
+      ),
+    },
+    {
+      id: 'changelog',
+      title: 'Changelog',
+      icon: <ScrollText size={14} />,
+      keywords: ['changelog', 'релизы', 'github', 'история', 'обновления'],
+      content: (
+        <section className={card}>
+          <div className="mb-1 font-semibold text-ink">Changelog</div>
+          <p className="mb-4 text-[13px] text-ink-2">{t('changelogAdminHint', lang)}</p>
+          <ChangelogSettingsForm current={changelogSettings} lang={lang} />
         </section>
       ),
     },

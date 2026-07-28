@@ -8,6 +8,7 @@ import { maintenanceFlag, setMaintenance } from '@/shared/settings/maintenance'
 import { AI_PROVIDERS, API_KEY_SETTING, GIGACHAT_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_FOLDER_SETTING, YANDEX_KEY_SETTING, YANDEX_SEARCH_KEY_SETTING, defaultEmbeddingModel, getAiProviderRaw, hasApiKey, nsKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
+import { CHANGELOG_KEYS, clearChangelogCache } from '@/shared/settings/changelog'
 import { clearEmailCache, EMAIL_KEYS, emailEnabled } from '@/shared/settings/email'
 import { clearMonetizationCache, DEFAULT_AD_MARKING, DEFAULT_DISCLOSURE, MONETIZATION_KEYS, sanitizeDonateUrl } from '@/shared/settings/monetization'
 import { parseAffiliateRules } from '@/core'
@@ -207,6 +208,37 @@ export async function setSearchSettings(formData: FormData): Promise<void> {
   clearSearchCache()
   revalidatePath('/admin')
   revalidatePath('/explore')
+}
+
+/**
+ * Настройки публичного changelog.
+ *
+ * Репозиторий валидируется формой owner/name ЗДЕСЬ и ещё раз при чтении: строка
+ * уходит в URL к api.github.com, и одной проверки на входе мало — значение может
+ * оказаться в БД и другим путём.
+ */
+export async function setChangelogSettings(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const repo = String(formData.get('repo') ?? '').trim()
+  const source = String(formData.get('source') ?? 'merged')
+  const hours = Math.min(24 * 7, Math.max(1, Math.round(Number(formData.get('everyHours')) || 6)))
+  await saveSettings({
+    [CHANGELOG_KEYS.enabled]: formData.get('enabled') ? 'true' : 'false',
+    [CHANGELOG_KEYS.repo]: /^[\w.-]+\/[\w.-]+$/.test(repo) ? repo : '',
+    [CHANGELOG_KEYS.source]: source === 'releases' ? 'releases' : 'merged',
+    [CHANGELOG_KEYS.everyHours]: String(hours),
+    [CHANGELOG_KEYS.translate]: formData.get('translate') ? 'true' : 'false',
+    // Пустое поле = «оставить как есть»: иначе каждое сохранение формы стирало бы
+    // токен, который в неё и не показывался.
+    ...(String(formData.get('token') ?? '').trim() ? { [CHANGELOG_KEYS.token]: String(formData.get('token')).trim() } : {}),
+  })
+  clearChangelogCache()
+  // Сразу подтягиваем: иначе после включения витрина оставалась бы пустой до
+  // ближайшего прохода джобы, и настройка выглядела бы нерабочей.
+  await import('@/features/changelog/service').then((m) => m.refreshChangelog()).catch(() => {})
+  revalidatePath('/admin')
+  revalidatePath('/changelog')
+  revalidatePath('/', 'layout')
 }
 
 // ── Монетизация и трафик ─────────────────────────────────────────────
