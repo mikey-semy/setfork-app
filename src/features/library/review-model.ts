@@ -20,5 +20,9 @@ export interface ReviewView {
   createdAt: Date
   /** Голос блокирует принятие (правки запрошены владельцем/коллаборатором). */
   blocking: boolean
+  /** Снят мейнтейнером: голос остаётся в истории, но принятие больше не держит. */
+  dismissed: { by: string | null; reason: string; at: Date } | null
+  /** Это вердикт самого зрителя — своё снимают «убрать ревью», а не снятием. */
+  isMine: boolean
   reviewer: { handle: string; name: string | null; avatarUrl: string | null }
 }
