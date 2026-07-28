@@ -77,7 +77,7 @@ export async function loginWithPassword(_prev: AuthResult | null, formData: Form
 
   // Включён 2FA → сессию НЕ создаём: pending-кука (5 мин) и шаг с кодом.
   if (user.totpEnabled) {
-    const { startPendingLogin } = await import('./twofa')
+    const { startPendingLogin } = await import('./signed-cookies')
     await startPendingLogin(user.id)
     redirect('/login/2fa')
   }
