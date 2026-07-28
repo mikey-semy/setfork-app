@@ -32,6 +32,7 @@ import { PendingReviewBar } from '@/features/library/PendingReviewBar'
 import { suggestionChecks } from '@/features/library/suggestion-checks'
 import { withPrDefaults } from '@/features/library/pr-settings'
 import { blocksFrom } from '@/features/library/suggestion-blocks'
+import { blockFingerprint, isStaleMark } from '@/features/library/viewed-fingerprint'
 import { closingRefs } from '@/features/library/closing-refs'
 import { LinkIssuePicker } from '@/features/library/LinkIssuePicker'
 import { LockToggle } from '@/features/library/LockToggle'
@@ -272,10 +273,19 @@ export default async function SuggestionThreadPage({
   // Личные отметки «просмотрено». Только свои: это состояние ревьюера, а не
   // свойство правки, и чужие галочки никому не показываются.
   const viewedMarks = session ? await getViewedMarks(sug.id, session.userId) : null
-  // Прогресс — по пунктам С ИДЕНТИЧНОСТЬЮ: у блоков без blockId отметку ставить
-  // некуда, и включать их в знаменатель значило бы обещать недостижимые 100%.
-  const markable = items.filter((it) => it.blockId).length
-  const viewedCount = viewedMarks ? items.filter((it) => it.blockId && viewedMarks.has(String(it.blockId))).length : 0
+  // Прогресс считаем по ТЕМ ЖЕ строкам диффа, которые получают галочку, а не по
+  // предложенным пунктам: у правки-удаления предложенной стороны нет вовсе, и по
+  // items прогресс показывал бы ноль из нуля (или 100% без просмотра удалённого).
+  const diffEntries = diffSteps(baseCmp, propCmp).entries.filter((e) => e.blockId)
+  const markable = diffEntries.length
+  // Устаревшая отметка просмотром НЕ считается: иначе счётчик показывал бы N/N
+  // рядом с карточкой, на которой написано «просмотрено до изменения».
+  const viewedCount = viewedMarks
+    ? diffEntries.filter((e) => {
+        const m = viewedMarks.get(String(e.blockId))
+        return !!m && !isStaleMark(m, blockFingerprint(e), lang)
+      }).length
+    : 0
 
   // Коммиты ветки за вычетом main — ровно то, что уйдёт в main при слиянии.
   // У правок без ветки (старые, items в БД) коммитов нет — вкладки тоже нет.

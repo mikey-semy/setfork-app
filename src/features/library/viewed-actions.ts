@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, suggestions, suggestionViewed, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
+import { getLang } from '@/shared/i18n/server'
 
 /**
  * Отметить пункт просмотренным — как «Viewed» у файла в GitHub.
@@ -17,8 +18,11 @@ import { requireSession } from '@/shared/auth/session'
  * переписали».
  */
 export async function toggleViewed(suggestionId: string, blockId: string, fingerprint: string): Promise<void> {
+  // Ранний выход ДО await'ов: без идентичности отмечать нечего, и незачем
+  // ходить в сессию и в БД ради заведомо пустого пути (react-doctor).
+  if (!blockId) return
   const session = await requireSession()
-  if (!blockId) return // у пункта нет идентичности — отмечать нечего
+  const lang = await getLang()
 
   const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
   if (!sug) return
@@ -40,7 +44,7 @@ export async function toggleViewed(suggestionId: string, blockId: string, finger
   } else {
     await db
       .insert(suggestionViewed)
-      .values({ suggestionId, userId: session.userId, blockId, atFingerprint: fingerprint.slice(0, 64) })
+      .values({ suggestionId, userId: session.userId, blockId, atFingerprint: fingerprint.slice(0, 64), atLang: lang })
       // Двойной клик/гонка вкладок не должны падать: отметка идемпотентна.
       .onConflictDoNothing()
   }

@@ -7,7 +7,7 @@ import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { blockLabel, diffSteps, isStepBlock, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from './diff'
 import { DiffComments, type DiffCommentLabels, type RowThread } from './DiffComments'
 import { ViewedToggle } from './ViewedToggle'
-import { blockFingerprint } from './viewed-fingerprint'
+import { blockFingerprint, isStaleMark } from './viewed-fingerprint'
 
 // Два вида диффа версий — ОДИН источник правды для сравнения версий И для правки
 // (PR). Раньше «код»/«список» жили локальными функциями внутри страницы
@@ -93,8 +93,8 @@ export function ListDiff({
   /** Личные отметки «просмотрено» текущего зрителя (null — не залогинен). */
   viewed?: {
     suggestionId: string
-    /** blockId → отпечаток содержимого, на котором отмечали. */
-    marks: Map<string, string>
+    /** blockId → отпечаток содержимого и язык, на котором отмечали. */
+    marks: Map<string, { fp: string; lang: string }>
     labels: { mark: string; unmark: string; stale: string }
   } | null
 }) {
@@ -125,7 +125,10 @@ export function ListDiff({
                     blockId={e.blockId}
                     fingerprint={blockFingerprint(e)}
                     viewed={viewed.marks.has(e.blockId)}
-                    stale={viewed.marks.has(e.blockId) && viewed.marks.get(e.blockId) !== blockFingerprint(e)}
+                    // Отпечаток берётся с локализованного текста, поэтому сравнивать
+                    // его можно только с отметкой ТОГО ЖЕ языка: иначе смена языка
+                    // интерфейса гасила бы все отметки разом.
+                    stale={isStaleMark(viewed.marks.get(e.blockId), blockFingerprint(e), lang)}
                     labels={viewed.labels}
                   />
                 </span>

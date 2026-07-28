@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blockFingerprint } from '@/features/library/viewed-fingerprint'
+import { blockFingerprint, isStaleMark } from '@/features/library/viewed-fingerprint'
 
 const base = { title: 'Установить Docker', desc: 'Через apt', why: 'нужен рантайм', level: 'required' }
 
@@ -51,5 +51,32 @@ describe('blockFingerprint', () => {
 
   it('пустой вход не падает', () => {
     expect(typeof blockFingerprint({})).toBe('string')
+  })
+})
+
+/**
+ * Отпечаток считается с ЛОКАЛИЗОВАННОГО текста, поэтому сравнивать его можно
+ * только с отметкой того же языка. Иначе переключение ru↔en гасило бы все
+ * отметки разом — ревьюер при этом ничего не менял.
+ */
+describe('isStaleMark', () => {
+  it('нет отметки — не устарела', () => {
+    expect(isStaleMark(undefined, 'abc', 'ru')).toBe(false)
+  })
+
+  it('тот же язык, тот же отпечаток — свежая', () => {
+    expect(isStaleMark({ fp: 'abc', lang: 'ru' }, 'abc', 'ru')).toBe(false)
+  })
+
+  it('тот же язык, другой отпечаток — устарела', () => {
+    expect(isStaleMark({ fp: 'abc', lang: 'ru' }, 'xyz', 'ru')).toBe(true)
+  })
+
+  it('ДРУГОЙ язык — не судим, даже если отпечатки разные', () => {
+    expect(isStaleMark({ fp: 'abc', lang: 'en' }, 'xyz', 'ru')).toBe(false)
+  })
+
+  it('язык отметки неизвестен (старые записи) — не судим', () => {
+    expect(isStaleMark({ fp: 'abc', lang: '' }, 'xyz', 'ru')).toBe(false)
   })
 })

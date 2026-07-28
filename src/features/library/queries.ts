@@ -427,12 +427,15 @@ export async function getSuggestionsAssignees(
  * blockId → отпечаток содержимого на момент отметки. Чужие отметки не выбираем
  * вовсе: это личное состояние ревьюера, и показывать его другим нельзя.
  */
-export async function getViewedMarks(suggestionId: string, userId: string): Promise<Map<string, string>> {
+export async function getViewedMarks(
+  suggestionId: string,
+  userId: string,
+): Promise<Map<string, { fp: string; lang: string }>> {
   const rows = await db
-    .select({ blockId: suggestionViewed.blockId, fp: suggestionViewed.atFingerprint })
+    .select({ blockId: suggestionViewed.blockId, fp: suggestionViewed.atFingerprint, lang: suggestionViewed.atLang })
     .from(suggestionViewed)
     .where(and(eq(suggestionViewed.suggestionId, suggestionId), eq(suggestionViewed.userId, userId)))
-  return new Map(rows.map((r) => [r.blockId, r.fp]))
+  return new Map(rows.map((r) => [r.blockId, { fp: r.fp, lang: r.lang }]))
 }
 
 /** «Открыто» = живые предложения; «закрыто» = принятые и отклонённые (как у GitHub). */
