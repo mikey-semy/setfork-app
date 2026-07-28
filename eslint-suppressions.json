@@ -89,11 +89,6 @@
       "count": 9
     }
   },
-  "src/app/changelog/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/app/collections/[slug]/page.tsx": {
     "no-restricted-syntax": {
       "count": 4
@@ -542,11 +537,6 @@
   "src/shared/ui/timeAgo.ts": {
     "no-restricted-syntax": {
       "count": 1
-    }
-  },
-  "src/widgets/ChangelogCard.tsx": {
-    "no-restricted-syntax": {
-      "count": 2
     }
   },
   "src/widgets/Dashboard.tsx": {

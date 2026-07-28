@@ -35,37 +35,13 @@ import { listStore } from './list-store'
 import { closingRefs } from './closing-refs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from './pr-settings'
 import { canEditSuggestionItems } from './suggestion-perms'
+import { applySuggestion } from './suggestion-core'
+import { closeLinkedIssues, notifyWatchersNewVersion } from './suggestion-side-effects'
 import { suggestionBlocks } from './suggestion-blocks'
 import { applyFieldValue } from './suggestion-apply'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
 import { canEditList, canViewList } from '@/core'
-
-/**
- * Закрыть задачи, названные в тексте предложения («closes #12», «закрывает #7»).
- *
- * Вызывается ПОСЛЕ успешного слияния: до него задача ещё не решена. Ошибки не
- * поднимаем — предложение уже влито, и падать из-за побочного эффекта нельзя.
- */
-async function closeLinkedIssues(templateId: string, text: string, actorId: string, enabled: boolean): Promise<void> {
-  if (!enabled) return
-  const nums = closingRefs(text)
-  if (nums.length === 0) return
-  try {
-    const rows = await db
-      .select({ id: issues.id, number: issues.number, authorId: issues.authorId })
-      .from(issues)
-      .where(and(eq(issues.templateId, templateId), inArray(issues.number, nums), eq(issues.status, 'open')))
-    for (const iss of rows) {
-      await db.update(issues).set({ status: 'closed', closedAt: new Date() }).where(eq(issues.id, iss.id))
-      if (iss.authorId !== actorId) {
-        await notify({ recipientId: iss.authorId, actorId, type: 'issue_closed_by_merge', templateId, issueId: iss.id })
-      }
-    }
-  } catch (e) {
-    captureError(e, { where: 'closeLinkedIssues' })
-  }
-}
 
 /**
  * Ленивый доступ к git-порту, его ошибкам и канонической сериализации.
@@ -205,11 +181,6 @@ export async function uploadStepFile(formData: FormData): Promise<{ url: string;
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Не удалось загрузить.' }
   }
-}
-
-async function notifyWatchersNewVersion(templateId: string, actorId: string): Promise<void> {
-  const watchers = await getWatcherIds(templateId, 'versions')
-  await notifyMany(watchers, { actorId, type: 'new_version', templateId })
 }
 
 async function ownerHandle(userId: string): Promise<string> {
@@ -594,52 +565,6 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
   redirect(`/${owner}/${tpl.slug}`)
-}
-
-// ── Автор списка: принять предложение → новая версия ─────────────────
-/**
- * ЯДРО принятия правки — без сессии и без редиректа.
- *
- * Вынесено из экшена, потому что принимать правки нужно не только со страницы: у владельца
- * копятся правки от компании, и разбирать их удобно из ассистента (MCP). Копировать эти пять
- * шагов во второй раз нельзя — копии уже расходились (в садовнике терялся `section`).
- *
- * Возвращает результат вместо редиректа: вызывающий сам решает, куда вести человека.
- */
-export async function applySuggestion(
-  suggestionId: string,
-  actorUserId: string,
-): Promise<{ ok: true; templateId: string; slug: string; version: number } | { ok: false; reason: string }> {
-  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
-  if (!sug) return { ok: false, reason: 'not found' }
-  if (sug.status !== 'open') return { ok: false, reason: `already ${sug.status}` }
-  if (sug.template.ownerId !== actorUserId) return { ok: false, reason: 'not your list' }
-  if (sug.draft) return { ok: false, reason: 'draft' } // черновик не принимаем — см. mergeBranchPr
-  // Запрошенные правки блокируют принятие — иначе вердикт «просит доработать»
-  // был бы декоративным. Разблокировать может сам рецензент, сменив свой голос.
-  if (await hasBlockingReview(sug.id)) return { ok: false, reason: 'a reviewer requested changes' }
-  // Остальные гейты — по настройкам списка (раздел «Предложения»). Проверяем ЗДЕСЬ,
-  // а не в экшене: через MCP правку принимают тем же ядром, и гейты не должны
-  // зависеть от того, пришёл человек со страницы или агент.
-  const prs = withPrDefaults(sug.template.prSettings)
-  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return { ok: false, reason: 'unresolved discussions' }
-  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals)
-    return { ok: false, reason: `needs ${prs.requiredApprovals} approval(s)` }
-
-  const tpl = sug.template
-  // Новая версия из принятого предложения — через доменный порт.
-  const ver = await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items), authorId: actorUserId })
-  // Пере-проверку делает фасад listStore.addVersion (барьер) — здесь не дублируем.
-  await db
-    .update(suggestions)
-    .set({ status: 'accepted', resolvedAt: new Date() })
-    .where(eq(suggestions.id, sug.id))
-  // «closes #12» в заметке закрывает задачи — но только теперь, когда изменения приняты.
-  await closeLinkedIssues(tpl.id, sug.note, actorUserId, prs.autoCloseIssues)
-  await notify({ recipientId: sug.authorId, actorId: actorUserId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
-  await notifyWatchersNewVersion(tpl.id, actorUserId)
-  await enqueueReindex(tpl.id)
-  return { ok: true, templateId: tpl.id, slug: tpl.slug, version: ver.version }
 }
 
 export async function acceptSuggestion(suggestionId: string): Promise<void> {
