@@ -486,6 +486,9 @@ export default async function SuggestionThreadPage({
             owner={owner}
             slug={slug}
             branch={sug.status === 'accepted' && sug.branchRef && !branchMissing && canMerge ? sug.branchRef : null}
+            // Откат предлагаем только мейнтейнеру и только у принятого: отменять
+            // отклонённое нечего, а версия слияния нужна, чтобы знать ЧТО отменять.
+            revertOf={sug.status === 'accepted' && canMerge && sug.mergedVersion ? sug.id : null}
             accepted={sug.status === 'accepted'}
             labels={{
               merged: t('prMerged', lang),
@@ -494,6 +497,8 @@ export default async function SuggestionThreadPage({
               deleteBranch: t('prDeleteBranch', lang),
               branchDeleted: t('prBranchDeleted', lang),
               deleteFailed: t('prDeleteFailed', lang),
+              revert: t('prRevert', lang),
+              revertBlocked: t('prRevertBlocked', lang),
             }}
           />
         )}

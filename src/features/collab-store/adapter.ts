@@ -28,7 +28,14 @@ const mapIssueComment = (r: typeof issueComments.$inferSelect): IssueComment => 
   createdAt: r.createdAt,
 })
 
+// blockId и type/content переносим ЯВНО: без них предложение теряет идентичность
+// блоков (ADR-0013) прямо при создании, и всё, что на ней стоит — привязка
+// review-комментариев, отметки «просмотрено», применение предложенной правки,
+// откат — молча перестаёт находить, к чему относится.
 const domainStepToProposed = (s: Suggestion['steps'][number]): ProposedItem => ({
+  blockId: s.blockId ?? undefined,
+  type: s.type,
+  content: s.content,
   title: s.title,
   desc: s.desc,
   command: s.command,
@@ -43,6 +50,9 @@ const domainStepToProposed = (s: Suggestion['steps'][number]): ProposedItem => (
 
 const proposedToDomainStep = (it: ProposedItem, i: number): Suggestion['steps'][number] => ({
   n: i + 1,
+  blockId: it.blockId ?? null,
+  type: it.type,
+  content: it.content,
   title: it.title,
   desc: it.desc,
   command: it.command,

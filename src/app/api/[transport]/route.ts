@@ -16,6 +16,7 @@ import {
   mcpPendingSuggestions,
   mcpMergeSuggestion,
   mcpReportCheck,
+  mcpRevertSuggestion,
   mcpReviewSuggestion,
   mcpSuggestEdit,
   mcpRegisterSource,
@@ -389,6 +390,23 @@ const handler = createMcpHandler(
       },
       async (userId, args) => {
         const res = await mcpMergeSuggestion(userId, args)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    writeTool(
+      'revert_suggestion',
+      {
+        title: 'Revert a merged suggestion',
+        description:
+          'Undo a suggestion that was already accepted. It does NOT rewrite history: a NEW suggestion is opened that reverses the change, and it goes through review and merging like any other. Only what that suggestion actually changed is undone — items edited by someone else since the merge are refused by name instead of being overwritten.',
+        inputSchema: {
+          list: z.string().describe('List reference: "handle/slug" or just "slug"'),
+          number: z.number().int().min(1).describe('Number of the ACCEPTED suggestion to revert'),
+        },
+      },
+      async (userId, args) => {
+        const res = await mcpRevertSuggestion(userId, args)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )

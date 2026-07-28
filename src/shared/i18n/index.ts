@@ -322,6 +322,11 @@ const DICT = {
   prDeleteBranch: { en: 'Delete branch', ru: 'Удалить ветку' },
   prBranchDeleted: { en: 'Branch deleted', ru: 'Ветка удалена' },
   prDeleteFailed: { en: 'Could not delete the branch', ru: 'Не удалось удалить ветку' },
+  prRevert: { en: 'Revert', ru: 'Откатить' },
+  prRevertBlocked: {
+    en: 'These items changed after the merge — undo them by hand',
+    ru: 'Эти пункты меняли после слияния — их придётся отменить вручную',
+  },
   discussionHeading: { en: 'Discussion', ru: 'Обсуждение' },
   noCommentsYet: { en: 'No comments yet.', ru: 'Пока нет комментариев.' },
   watch: { en: 'Watch', ru: 'Следить' },

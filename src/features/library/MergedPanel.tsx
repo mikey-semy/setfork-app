@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { GitMerge, Trash2, Loader2, X } from 'lucide-react'
+import { GitMerge, Trash2, Loader2, Undo2, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 // eslint-disable-next-line boundaries/dependencies -- удаление ветки уже реализовано в git-фиче
 import { deleteBranchAction } from '@/features/git/actions'
+import { revertSuggestionAction } from './suggestion-revert-action'
 
 export interface MergedPanelLabels {
   merged: string
@@ -13,6 +14,8 @@ export interface MergedPanelLabels {
   deleteBranch: string
   branchDeleted: string
   deleteFailed: string
+  revert: string
+  revertBlocked: string
 }
 
 /**
@@ -27,6 +30,7 @@ export function MergedPanel({
   slug,
   branch,
   accepted,
+  revertOf,
   labels,
 }: {
   owner: string
@@ -35,11 +39,24 @@ export function MergedPanel({
   branch: string | null
   /** true — слито/принято, false — отклонено. */
   accepted: boolean
+  /** id принятого предложения, если его вообще можно откатить (мейнтейнеру). */
+  revertOf: string | null
   labels: MergedPanelLabels
 }) {
   const [pending, startTransition] = useTransition()
   const [done, setDone] = useState(false)
   const [failed, setFailed] = useState(false)
+  // Отказ отката НЕ прячем: он объясняет, какие пункты трогали после слияния —
+  // без этого «кнопка не сработала» выглядит как поломка.
+  const [revertError, setRevertError] = useState('')
+
+  const revert = () => {
+    if (!revertOf) return
+    startTransition(async () => {
+      const res = await revertSuggestionAction(revertOf)
+      if (!res.ok) setRevertError(res.conflicts?.length ? `${labels.revertBlocked}: ${res.conflicts.join(', ')}` : res.reason)
+    })
+  }
 
   const remove = () => {
     if (!branch) return
@@ -59,8 +76,14 @@ export function MergedPanel({
         {branch && !done && <div className="text-[12.5px] text-ink-2">{labels.branchSafeToDelete}</div>}
         {done && <div className="text-[12.5px] text-muted">{labels.branchDeleted}</div>}
         {failed && <div className="text-[12.5px] text-danger">{labels.deleteFailed}</div>}
+        {revertError && <div className="text-[12.5px] text-danger [overflow-wrap:anywhere]">{revertError}</div>}
       </div>
       {/* Действие — к правому краю (thumb-зона), единая высота ряда. */}
+      {revertOf && (
+        <Button variant="outline" className="h-[38px]" disabled={pending} onClick={revert}>
+          {pending ? <Loader2 size={13} className="animate-spin" /> : <Undo2 size={13} />} {labels.revert}
+        </Button>
+      )}
       {branch && !done && (
         <Button variant="outline" className="h-[38px]" disabled={pending} onClick={remove}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} {labels.deleteBranch}
