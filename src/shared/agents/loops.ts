@@ -36,6 +36,26 @@ export interface LoopSpec {
 
 export const LOOPS: LoopSpec[] = [
   {
+    name: 'finance',
+    jobType: 'finance',
+    jobsModule: '@/features/backoffice/jobs',
+    handler: 'runFinanceJob',
+    serviceModule: '@/features/backoffice/service',
+    ensure: 'ensureFinanceScheduled',
+    paid: false,
+    what: { en: 'watches spend and warns the owner', ru: 'следит за расходом и предупреждает владельца' },
+  },
+  {
+    name: 'chronicle',
+    jobType: 'chronicle',
+    jobsModule: '@/features/backoffice/jobs',
+    handler: 'runChronicleJob',
+    serviceModule: '@/features/backoffice/service',
+    ensure: 'ensureChronicleScheduled',
+    paid: false,
+    what: { en: 'sends the company day summary to the owner', ru: 'отправляет владельцу сводку дня компании' },
+  },
+  {
     name: 'partners',
     jobType: 'partners',
     jobsModule: '@/features/partners/jobs',

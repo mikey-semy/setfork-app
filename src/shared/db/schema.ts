@@ -602,7 +602,7 @@ export type ChangelogEntryRow = typeof changelogEntries.$inferSelect
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
 // selfgen — самогенерация: специалист сам пишет черновик списка по своей теме
 // (инициатива компании, а не ответ на запрос пользователя).
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review' | 'gnome_task' | 'feedpull' | 'changelog' | 'partners'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review' | 'gnome_task' | 'feedpull' | 'changelog' | 'partners' | 'finance' | 'chronicle'
 
 export const jobs = pgTable(
   'jobs',
