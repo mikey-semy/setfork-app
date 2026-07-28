@@ -148,8 +148,6 @@ describe('разбор правок из ассистента', () => {
     expect(res.suggestions[0]).toMatchObject({ list: 'mine', author: 'bulk-bot', items: 1 })
   })
 
-  // 20с: путь приёма тянет модуль серверных экшенов и делает реальную запись версии —
-  // на раннере CI дефолтные 5с этого не покрывают (проверено: 5166мс).
   it('принять чужую правку нельзя, свою — можно, и создаётся версия', async () => {
     const [t] = await db.insert(templates).values({ ownerId, slug: 'mine2', title: { ru: 'Моё 2' }, currentVersion: 1 }).returning({ id: templates.id })
     const [sug] = await db
@@ -161,5 +159,5 @@ describe('разбор правок из ассистента', () => {
     expect(await mcpApplySuggestion(ownerId, sug.id)).toMatchObject({ version: 2 })
     // Повторный приём — уже принято, а не «ещё одна версия».
     expect(await mcpApplySuggestion(ownerId, sug.id)).toMatchObject({ error: 'already accepted' })
-  }, 20_000)
+  })
 })
