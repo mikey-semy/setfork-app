@@ -16,7 +16,7 @@ import { log } from '@/shared/observability'
  */
 
 /** Петли, которые работают сами. Ключ = JobType, чтобы claimJob фильтровал без маппинга. */
-export const AUTONOMOUS_LOOPS = ['gardener', 'selfgen', 'triples', 'linkcheck', 'digest'] as const
+export const AUTONOMOUS_LOOPS = ['gardener', 'selfgen', 'triples', 'linkcheck', 'digest', 'feedpull', 'changelog'] as const
 export type LoopName = (typeof AUTONOMOUS_LOOPS)[number]
 
 export interface LoopPolicy {

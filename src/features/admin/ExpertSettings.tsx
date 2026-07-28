@@ -1,5 +1,11 @@
 'use client'
 
+// Настройки ОДНОГО специалиста — форма, вынесенная из зала совета на его страницу.
+// Причина переезда: двадцать таких форм на одной странице были стеной, в которой нельзя ни
+// найти нужного, ни увидеть состав. У списка настройки на странице списка — здесь так же.
+// Файл не переписан, а перенесён: поведение формы уже выстрадано (аватар не в форме, чтобы
+// устаревшее значение не затирало свежую картинку, и т.д.).
+
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { BarChart3, Check, Loader2 } from 'lucide-react'
@@ -316,16 +322,8 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
   )
 }
 
-export function CouncilRoster({ experts, modelOptions, gallery, ru }: { experts: ExpertRow[]; modelOptions: Option[]; gallery: string[]; ru: boolean }) {
-  return (
-    // Сетка, а не колонка: у эксперта инструкция в несколько строк, и списком они уходили в
-    // бесконечность. Пояснение к разделу живёт на странице — здесь бы оно дублировалось.
-    <div className="grid items-start gap-3 xl:grid-cols-2 min-[1800px]:grid-cols-3">
-      {experts.map((e) => (
-        <ExpertCard key={e.id} e={e} modelOptions={modelOptions} gallery={gallery} ru={ru} />
-      ))}
-    </div>
-  )
+export function ExpertSettings({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptions: Option[]; gallery: string[]; ru: boolean }) {
+  return <ExpertCard e={e} modelOptions={modelOptions} gallery={gallery} ru={ru} />
 }
 
 export { NONE }

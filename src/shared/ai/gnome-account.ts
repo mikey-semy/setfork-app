@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, arrayOverlaps, desc, eq, sql } from 'drizzle-orm'
+import { and, arrayOverlaps, desc, eq, inArray, sql } from 'drizzle-orm'
 import { councilExperts, db, templates, users } from '@/shared/db'
 import type { Expert } from './roster'
 import { HOME_REALM, isMythicName, mythicName } from './gnome-names'
@@ -131,6 +131,18 @@ export async function tenderForTags(tags: string[], roster: Expert[]): Promise<{
  * а ранжирует уже доменная линза — она умеет производные формы и отсекает отрицания,
  * чего SQL-пересечение не умеет.
  */
+/**
+ * Хэндлы аккаунтов по их id — одним запросом. Нужны там, где показывают СОСТАВ специалистов и
+ * каждая строка ведёт на публичный профиль: запрос на строку дал бы N обращений к БД на ровном
+ * месте.
+ */
+export async function agentHandles(userIds: string[]): Promise<Record<string, string>> {
+  const ids = [...new Set(userIds.filter(Boolean))]
+  if (!ids.length) return {}
+  const rows = await db.select({ id: users.id, handle: users.handle }).from(users).where(inArray(users.id, ids))
+  return Object.fromEntries(rows.map((r) => [r.id, r.handle]))
+}
+
 export async function agentProfile(userId: string, limit = 12) {
   const [expert] = await db.select().from(councilExperts).where(eq(councilExperts.userId, userId))
   if (!expert) return null

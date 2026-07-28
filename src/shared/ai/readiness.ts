@@ -54,6 +54,16 @@ export interface ReadinessBar {
   minGrade: ListGrade
   /** Разрешать публикацию при мёртвых ссылках. По умолчанию нет. */
   allowDeadLinks: boolean
+  /**
+   * ЖИВОЙ СПИСОК (лента): сколько дней материал считается свежим.
+   *
+   * У ленты планка стоит на другом: не «полон ли список», а «не устарел ли он». Класс полноты
+   * ленту не измеряет вообще — у новости не бывает «зачем» и «источника лучшей практики», она
+   * либо свежая, либо нет. Поэтому для живого списка класс из проверок ВЫПАДАЕТ, а вместо него
+   * появляется возраст последнего материала. Мёртвые ссылки, наоборот, для ленты критичнее:
+   * лента из битых ссылок бесполезна, и послабления ей не даётся.
+   */
+  livingMaxAgeDays: number
 }
 
 export const DEFAULT_BAR: ReadinessBar = {
@@ -64,6 +74,9 @@ export const DEFAULT_BAR: ReadinessBar = {
   // большинства шагов и хотя бы один источник. Ниже — публиковать без человека рано.
   minGrade: 'solid',
   allowDeadLinks: false,
+  // 7 дней: лента, в которой неделю ничего не появилось, читателю уже врёт самим фактом
+  // существования. Число заведомо грубое — уточнять его надо на живых лентах, а не в уме.
+  livingMaxAgeDays: 7,
 }
 
 /** Структурные факты о списке — считаются кодом, стоят ноль и не врут. */
@@ -78,6 +91,14 @@ export interface ReadinessFacts {
   grade?: ListGrade
   /** Чего не хватает до следующего класса — попадает в блокеры как задание. */
   gradeNext?: string[]
+  /** Живой список (лента): судится по свежести, а не по полноте. */
+  living?: boolean
+  /**
+   * Возраст самого свежего материала в днях. Для живого списка это ГЛАВНОЕ число.
+   * Не задан у живого списка = «свежесть неизвестна», и это блокер: fail-closed здесь тот же,
+   * что у линз — отсутствие ответа никогда не читается как «годно».
+   */
+  freshestAgeDays?: number
 }
 
 export interface ReadinessDecision {
@@ -99,6 +120,14 @@ export function structuralBlockers(facts: ReadinessFacts, bar: ReadinessBar): st
   if (!facts.hasDesc) out.push('нет описания')
   if (!facts.hasTags) out.push('нет тегов')
   if (facts.duplicateSteps > 0) out.push(`повторяющихся шагов: ${facts.duplicateSteps}`)
+  // ЖИВОЙ СПИСОК судится свежестью ВМЕСТО класса полноты, а не вместе с ним: класс мерит
+  // «полон ли список навсегда», а лента полной не бывает по устройству — она либо свежая,
+  // либо устарела. Оставить обе проверки значило бы держать ленту вечно в черновиках.
+  if (facts.living) {
+    if (facts.freshestAgeDays == null) out.push('свежесть неизвестна')
+    else if (facts.freshestAgeDays > bar.livingMaxAgeDays) out.push(`последнему материалу ${facts.freshestAgeDays} дн. > планки ${bar.livingMaxAgeDays}`)
+    return out
+  }
   // Класс полноты — одна проверка вместо россыпи порогов, и она объясняет себя сама.
   if (facts.grade && gradeRank(facts.grade) < gradeRank(bar.minGrade)) {
     const why = (facts.gradeNext ?? []).join('; ')

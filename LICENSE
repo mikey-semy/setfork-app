@@ -1,0 +1,25 @@
+SetFork — proprietary license
+Copyright (c) 2026 SetFork. All rights reserved.
+
+This source code is NOT open source. It is made available only to people who
+have been granted access by the copyright holder, and only for the purpose of
+developing and operating SetFork itself.
+
+You MAY NOT, without prior written permission from the copyright holder:
+
+  * copy, publish or redistribute this code, in whole or in part;
+  * create derivative works from it;
+  * run it as a service, whether public, internal or commercial;
+  * remove or alter this notice.
+
+The SetFork name, logo and visual identity are not covered by any code license
+and remain the property of the copyright holder.
+
+Components published under their own terms are excluded from this license and
+carry their own LICENSE file (for example, the git subsystem `setfork-core` is
+released under AGPL-3.0). Third-party dependencies remain under their own
+licenses.
+
+No warranty. The software is provided "as is", without warranty of any kind.
+
+For licensing enquiries: see the contacts published on the SetFork website.
