@@ -42,7 +42,7 @@ export async function register() {
   // РАЗОВЫЕ джобы перечислены здесь руками — их ставит пользовательское действие.
   // ПЕТЛИ берутся из реестра shared/agents/loops: раньше их приходилось вписывать дважды
   // (обработчик + самозапуск), и `feedpull` уехал в прод с обработчиком, но без запуска.
-  const [{ startWorker }, { LOOPS }, { LOOP_WIRING }, notifications, generation, library, moderation, gnomeReview] = await Promise.all([
+  const [{ startWorker }, { LOOPS }, { LOOP_WIRING }, notifications, generation, library, moderation, gnomeReview, gnomeTask] = await Promise.all([
     import('@/shared/jobs/worker'),
     import('@/shared/agents/loops'),
     import('@/instrumentation-loops'),
@@ -51,6 +51,7 @@ export async function register() {
     import('@/features/library/jobs'),
     import('@/features/moderation/jobs'),
     import('@/features/library/gnome-review-jobs'),
+    import('@/features/library/gnome-task-jobs'),
   ])
   const loopHandlers = Object.fromEntries(
     await Promise.all(LOOPS.map(async (l) => [l.jobType, await LOOP_WIRING[l.name].handler()] as const)),
@@ -62,6 +63,7 @@ export async function register() {
     reindex: library.runReindexJob,
     moderate: moderation.runModerateJobHandler,
     gnome_review: gnomeReview.runGnomeReviewJob,
+    gnome_task: gnomeTask.runGnomeTaskJob,
     ...loopHandlers,
   })
 
