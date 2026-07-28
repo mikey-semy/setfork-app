@@ -488,11 +488,13 @@ export default async function SuggestionThreadPage({
             authors={commitAuthors}
             lang={lang}
             diffBase={`${path}?tab=commits`}
+            snapshotBase={`/${owner}/${slug}`}
             labels={{
               count: t('prCommitsCount', lang),
               empty: t('prCommitsEmpty', lang),
               merge: t('prCommitMerge', lang),
               diff: t('prCommitDiff', lang),
+              openAt: t('prOpenAtCommit', lang),
             }}
           />
         )}
