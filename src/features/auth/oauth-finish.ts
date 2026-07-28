@@ -13,7 +13,7 @@ export async function finishOauthLogin(session: SessionUser, appUrl: string): Pr
     .where(eq(users.id, session.userId))
     .limit(1)
   if (u?.totpEnabled) {
-    const { startPendingLogin } = await import('./twofa')
+    const { startPendingLogin } = await import('./signed-cookies')
     await startPendingLogin(session.userId)
     return `${appUrl}/login/2fa`
   }
