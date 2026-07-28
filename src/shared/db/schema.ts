@@ -542,7 +542,7 @@ export const appSettings = pgTable('app_settings', {
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
 // selfgen — самогенерация: специалист сам пишет черновик списка по своей теме
 // (инициатива компании, а не ответ на запрос пользователя).
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review' | 'gnome_task'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review' | 'gnome_task' | 'feedpull'
 
 export const jobs = pgTable(
   'jobs',
@@ -1270,6 +1270,71 @@ export const listLinks = pgTable(
  * Адрес уникален: один источник — одна запись, повторная регистрация обновляет описание, а
  * не плодит дубли с разными лицензиями (иначе «какая из них настоящая» решить нечем).
  */
+/**
+ * ПОДПИСКИ НА ПОТОК — источник свежего материала для живых списков (лент).
+ *
+ * Подписку добавляет ЧЕЛОВЕК и сам указывает тему: угадывать тематику по домену мы не будем —
+ * ровно та же логика, что с лицензией источника. Цена ошибки здесь чужие права и мусор в
+ * библиотеке, а не неудобство.
+ *
+ * Тело статей НЕ храним (и не будем): новости не под свободной лицензией, копировать их текст
+ * нельзя. Нужен факт события и адрес — формулировку специалист пишет сам, источник остаётся
+ * сноской (tracks/living-lists.md).
+ */
+export const feedSources = pgTable(
+  'feed_sources',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Адрес потока: RSS, Atom или JSON Feed — формат определяется по содержимому. */
+    url: text('url').notNull(),
+    title: text('title').notNull().default(''),
+    /** Тема подписки: теги, по которым материал попадёт к профильному специалисту. */
+    tags: text('tags').array().notNull().default([]),
+    /** Как часто тянуть. Реже — дешевле и вежливее к источнику. */
+    everyHours: integer('every_hours').notNull().default(6),
+    enabled: boolean('enabled').notNull().default(true),
+    addedBy: uuid('added_by').references(() => users.id, { onDelete: 'set null' }),
+    /** Когда тянули в последний раз и что вышло — чтобы петля не молчала о сбоях. */
+    lastPulledAt: timestamp('last_pulled_at', { withTimezone: true }),
+    lastError: text('last_error').notNull().default(''),
+    lastItems: integer('last_items').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('feed_sources_url_idx').on(t.url)],
+)
+
+/**
+ * ЭЛЕМЕНТЫ ПОТОКА — то, из чего специалист выбирает, о чём написать.
+ *
+ * Уникальность по ключу дедупа (адрес без метокотслеживания): один материал приходит в двух
+ * лентах с разными utm — по сырому адресу он выглядел бы двумя новостями.
+ *
+ * `used_at` отмечает, что материал уже пошёл в список: без этой отметки петля будет
+ * пережёвывать одно и то же, а лента — повторяться.
+ */
+export const feedItems = pgTable(
+  'feed_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceId: uuid('source_id')
+      .notNull()
+      .references(() => feedSources.id, { onDelete: 'cascade' }),
+    /** Ключ дедупа (см. shared/ai/feed-parse.feedItemKey). */
+    key: text('key').notNull(),
+    url: text('url').notNull(),
+    title: text('title').notNull(),
+    /** Короткая подсказка из потока — для ОТБОРА, не для публикации. */
+    hint: text('hint').notNull().default(''),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    tags: text('tags').array().notNull().default([]),
+    /** Уже использован в списке — второй раз не предлагаем. */
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    usedTemplateId: uuid('used_template_id').references(() => templates.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('feed_items_key_idx').on(t.key), index('feed_items_fresh_idx').on(t.usedAt, t.publishedAt)],
+)
+
 export const knowledgeSources = pgTable(
   'knowledge_sources',
   {
