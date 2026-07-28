@@ -14,7 +14,10 @@ import {
   mcpGetScript,
   mcpListSources,
   mcpPendingSuggestions,
+  mcpMergeSuggestion,
   mcpReportCheck,
+  mcpReviewSuggestion,
+  mcpSuggestEdit,
   mcpRegisterSource,
   mcpSearch,
   mcpStartRun,
@@ -330,6 +333,62 @@ const handler = createMcpHandler(
       },
       async (userId, { suggestionId }) => {
         const res = await mcpApplySuggestion(userId, suggestionId)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    // Предложение правки: агент — такой же участник, как человек. Правка ЖДЁТ
+    // решения владельца, а не применяется сама (для своих списков есть update_list).
+    writeTool(
+      'suggest_edit',
+      {
+        title: 'Suggest an edit to a list',
+        description:
+          "Propose a change to someone else's list: it becomes a suggestion the owner can accept or reject. The items you pass REPLACE the list content when accepted, so send the full intended list, not just the new lines. Use get_list first to see what is there. For your own lists use update_list instead — it edits directly.",
+        inputSchema: {
+          list: z.string().describe('List reference: "handle/slug" or just "slug"'),
+          note: z.string().describe('What you changed and why — the owner reads this first'),
+          items: z.array(itemShape).min(1).describe('The full list content as it should look after the change'),
+        },
+      },
+      async (userId, args) => {
+        const res = await mcpSuggestEdit(userId, args as Parameters<typeof mcpSuggestEdit>[1])
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    writeTool(
+      'review_suggestion',
+      {
+        title: 'Review a suggestion',
+        description:
+          'Leave a verdict on an open suggestion: "approve", "changes" (asks the author to rework it — this BLOCKS merging until the verdict changes) or "comment" (an opinion that blocks nothing). One verdict per reviewer: reviewing again replaces your previous one. You cannot review your own suggestion.',
+        inputSchema: {
+          list: z.string().describe('List reference: "handle/slug" or just "slug"'),
+          number: z.number().int().min(1).describe('Suggestion number within the list, e.g. 12'),
+          verdict: z.enum(['approve', 'changes', 'comment']).describe('Your verdict'),
+          body: z.string().optional().describe('What exactly you want changed, or why you approve'),
+        },
+      },
+      async (userId, args) => {
+        const res = await mcpReviewSuggestion(userId, args)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    writeTool(
+      'merge_suggestion',
+      {
+        title: 'Merge a suggestion',
+        description:
+          'Merge an open suggestion into the list — the maintainer decision. Works for both kinds: a branch suggestion is merged in git (squash if the list is set that way), an items suggestion becomes a new version. Refuses while a gate holds: a reviewer requested changes, unresolved discussions, missing approvals, a draft, or conflicts. Only the list owner or a collaborator may merge.',
+        inputSchema: {
+          list: z.string().describe('List reference: "handle/slug" or just "slug"'),
+          number: z.number().int().min(1).describe('Suggestion number within the list, e.g. 12'),
+        },
+      },
+      async (userId, args) => {
+        const res = await mcpMergeSuggestion(userId, args)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )

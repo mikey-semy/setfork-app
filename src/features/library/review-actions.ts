@@ -10,6 +10,7 @@ import { notify } from '@/features/notifications/notify'
 // eslint-disable-next-line boundaries/dependencies -- права коллаборатора из collab
 import { isCollaborator } from '@/features/collab/queries'
 import { isVerdict, type ReviewView, type Verdict } from './review-model'
+import { reviewSuggestion } from './suggestion-core'
 
 
 const MAX_BODY = 10_000
@@ -25,31 +26,7 @@ const MAX_BODY = 10_000
  */
 export async function submitSuggestionReview(suggestionId: string, verdict: string, body: string): Promise<void> {
   const session = await requireSession()
-  if (!isVerdict(verdict)) return
-  const text = body.trim().slice(0, MAX_BODY)
-
-  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
-  if (!sug || sug.status !== 'open') return // закрытую правку не ревьюят
-  if (sug.authorId === session.userId) return // себя не ревьюим
-
-  await db
-    .insert(suggestionReviews)
-    .values({ suggestionId, reviewerId: session.userId, verdict, body: text })
-    .onConflictDoUpdate({
-      target: [suggestionReviews.suggestionId, suggestionReviews.reviewerId],
-      // Новый вердикт СНИМАЕТ прежнее снятие: иначе рецензент, переголосовавший
-      // после dismiss, оставался бы снятым — то есть его голос молча не считался.
-      set: { verdict, body: text, updatedAt: new Date(), dismissedAt: null, dismissedById: null, dismissReason: null },
-    })
-
-  // Автор правки должен узнать, что по ней высказались.
-  await notify({
-    recipientId: sug.authorId,
-    actorId: session.userId,
-    type: 'suggestion_comment',
-    templateId: sug.templateId,
-    suggestionId,
-  })
+  await reviewSuggestion(session.userId, suggestionId, verdict, body)
   revalidatePath('/', 'layout')
 }
 

@@ -9,7 +9,7 @@ import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
-import { applySuggestion } from '@/features/library/suggestion-core'
+import { applySuggestion, createSuggestion, mergeSuggestion, reviewSuggestion } from '@/features/library/suggestion-core'
 import { slugify, uniqueSlug } from '@/features/library/slug'
 import { recordAgentAction } from '@/shared/agents/policy'
 import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
@@ -488,6 +488,77 @@ export async function mcpReportCheck(
     url: `${SITE_URL}/${ref[0] ?? ''}/${tpl.slug}/suggestions/${input.number}?tab=checks`,
     checks: all.map((c) => ({ name: c.title, status: c.status, summary: c.detail })),
   }
+}
+
+/**
+ * Предложить правку к списку через MCP.
+ *
+ * Ворота те же, что у формы (их держит ядро): видимость списка, архив/заморозка,
+ * настройка «кто может предлагать», кап на автора. Агент здесь такой же участник,
+ * как человек, — и правка так же ждёт решения владельца, а не применяется сама.
+ */
+export async function mcpSuggestEdit(
+  userId: string,
+  input: { list: string; note: string; items: McpItemInput[] },
+) {
+  const tpl = await resolveListRef(input.list)
+  if (!tpl) return { error: 'list not found' }
+  const items = toProposed(input.items ?? [])
+  if (items.length === 0) return { error: 'items must not be empty — a suggestion with no changes has nothing to accept' }
+  const res = await createSuggestion(userId, tpl.id, { note: input.note ?? '', items })
+  if (!res.ok) return { error: res.reason }
+  return {
+    id: res.id,
+    number: res.number,
+    url: `${SITE_URL}/${tpl.ownerHandle}/${tpl.slug}/suggestions/${res.number ?? res.id}`,
+    note: 'Suggested — the list owner decides whether to accept it.',
+  }
+}
+
+/** Оставить вердикт по предложению: одобрить, попросить правки или просто высказаться. */
+export async function mcpReviewSuggestion(userId: string, input: { list: string; number: number; verdict: string; body?: string }) {
+  const sug = await resolveSuggestionRef(input.list, input.number)
+  if ('error' in sug) return sug
+  const res = await reviewSuggestion(userId, sug.id, input.verdict, input.body ?? '')
+  return res.ok ? { reviewed: input.number, verdict: res.verdict } : { error: res.reason }
+}
+
+/** Влить предложение (ветка или пункты — ядро решает само). */
+export async function mcpMergeSuggestion(userId: string, input: { list: string; number: number }) {
+  const sug = await resolveSuggestionRef(input.list, input.number)
+  if ('error' in sug) return sug
+  const res = await mergeSuggestion(sug.id, userId)
+  if (!res.ok) return { error: res.reason }
+  return {
+    merged: input.number,
+    kind: res.kind,
+    version: res.version,
+    url: `${SITE_URL}/${res.owner}/${res.slug}`,
+  }
+}
+
+/** Список по ссылке «handle/slug» или просто «slug». */
+async function resolveListRef(ref: string): Promise<{ id: string; slug: string; ownerHandle: string } | null> {
+  const parts = ref.includes('/') ? ref.split('/') : [null, ref]
+  const [row] = await db
+    .select({ id: templates.id, slug: templates.slug, ownerHandle: users.handle })
+    .from(templates)
+    .innerJoin(users, eq(users.id, templates.ownerId))
+    .where(parts[0] ? and(eq(users.handle, parts[0]), eq(templates.slug, parts[1]!)) : eq(templates.slug, parts[1]!))
+    .limit(1)
+  return row ?? null
+}
+
+/** Предложение по паре «список + номер» — человеческий адрес, тот же, что в UI. */
+async function resolveSuggestionRef(ref: string, number: number): Promise<{ id: string } | { error: string }> {
+  const tpl = await resolveListRef(ref)
+  if (!tpl) return { error: 'list not found' }
+  const [row] = await db
+    .select({ id: suggestions.id })
+    .from(suggestions)
+    .where(and(eq(suggestions.templateId, tpl.id), eq(suggestions.number, number)))
+    .limit(1)
+  return row ? { id: row.id } : { error: 'suggestion not found' }
 }
 
 /** Открытые правки на списках пользователя — что вообще ждёт его решения. */
