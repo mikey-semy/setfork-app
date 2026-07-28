@@ -84,7 +84,13 @@ export default async function ListPage({
   // Ветки (A1 read-only): селектор + просмотр снапшота ветки по ?ref=.
   const branches = await gitCore.listBranches({ owner, slug }).catch(() => [])
   const refBranch = sp.ref && sp.ref !== 'main' && branches.some((b) => b.name === sp.ref) ? sp.ref : null
-  const snapshot = refBranch ? await gitCore.branchSnapshot({ owner, slug }, refBranch) : null
+  // ?ref= принимает и КОММИТ — «открыть список таким, каким он был на этом
+  // коммите» (аналог /tree/<sha> у GitHub). Отдельной страницы это не требует:
+  // просмотр «на рефе» уже умеет рендерить снапшот, коммит — такой же реф.
+  // Строгая проверка формы sha: реф уходит в git-команду, и чужие строки здесь
+  // не нужны (сам снапшот вернёт null, если такого объекта в репо нет).
+  const refCommit = !refBranch && sp.ref && /^[0-9a-f]{7,40}$/i.test(sp.ref) ? sp.ref : null
+  const snapshot = refBranch || refCommit ? await gitCore.branchSnapshot({ owner, slug }, (refBranch ?? refCommit)!) : null
   const branchInfo = refBranch ? branches.find((b) => b.name === refBranch) : null
 
   // Просмотр ПРОШЛОЙ версии по ?v=N (снимок из template_versions, только чтение).
@@ -93,7 +99,7 @@ export default async function ListPage({
   const askedV = Number(sp.v)
   const curNum = currentVersion?.version ?? tpl.currentVersion
   const histNum = Number.isInteger(askedV) && askedV > 0 && askedV !== curNum ? askedV : null
-  const histVer = histNum && !refBranch ? await getVersionSteps(tpl.id, histNum) : null
+  const histVer = histNum && !refBranch && !refCommit ? await getVersionSteps(tpl.id, histNum) : null
   // На ветке рендерим её шаги (маппинг plain→LocaleText-шейп; картинок у снапшота нет).
   const allSteps = snapshot
     ? (snapshotSteps(snapshot) as unknown as typeof dbSteps)
@@ -388,6 +394,21 @@ export default async function ListPage({
                     </form>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Просмотр «на коммите»: снимок списка, каким он был тогда. Отдельная
+                плашка, а не ветковая: у коммита нет ahead/behind, и предлагать
+                «открыть pull request» с исторического снимка бессмысленно. */}
+            {refCommit && snapshot && (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[12.5px] text-ink print:hidden">
+                <GitCommitHorizontal size={13} className="shrink-0 text-muted" />
+                <span className="min-w-0">
+                  {t('viewingAtCommit', lang)} <b className="font-mono">{refCommit.slice(0, 7)}</b>
+                </span>
+                <Link href={base} className="ml-auto font-semibold text-accent hover:underline">
+                  {t('backToMain', lang)}
+                </Link>
               </div>
             )}
 

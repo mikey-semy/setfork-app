@@ -38,7 +38,7 @@ export async function register() {
 
   // Фоновый воркер очереди задач. Idempotent, безопасен между инстансами.
   // Реестр обработчиков: по одному модулю jobs.ts на фичу-владельца.
-  const [{ startWorker }, notifications, generation, library, digest, moderation, gardener, knowledge, linkcheck, selfgen, gnomeReview, changelog] = await Promise.all([
+  const [{ startWorker }, notifications, generation, library, digest, moderation, gardener, knowledge, linkcheck, selfgen, gnomeReview, changelog, gnomeTask] = await Promise.all([
     import('@/shared/jobs/worker'),
     import('@/features/notifications/jobs'),
     import('@/features/generation/jobs'),
@@ -51,6 +51,7 @@ export async function register() {
     import('@/features/library/selfgen-jobs'),
     import('@/features/library/gnome-review-jobs'),
     import('@/features/changelog/jobs'),
+    import('@/features/library/gnome-task-jobs'),
   ])
   startWorker({
     email: notifications.runEmailJob,
@@ -65,6 +66,7 @@ export async function register() {
     selfgen: selfgen.runSelfGenJob,
     gnome_review: gnomeReview.runGnomeReviewJob,
     changelog: changelog.runChangelogJob,
+    gnome_task: gnomeTask.runGnomeTaskJob,
   })
 
   // Самоподдерживающиеся джобы: на старте гарантируем первую постановку в очередь;

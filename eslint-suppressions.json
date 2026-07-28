@@ -86,7 +86,7 @@
   },
   "src/app/admin/page.tsx": {
     "no-restricted-syntax": {
-      "count": 25
+      "count": 14
     }
   },
   "src/app/change-email/page.tsx": {

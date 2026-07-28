@@ -573,7 +573,22 @@ export type ChangelogEntryRow = typeof changelogEntries.$inferSelect
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
 // selfgen — самогенерация: специалист сам пишет черновик списка по своей теме
 // (инициатива компании, а не ответ на запрос пользователя).
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review' | 'changelog'
+export type JobType =
+  | 'email'
+  | 'generate'
+  | 'reindex'
+  | 'push'
+  | 'digest'
+  | 'gardener'
+  | 'moderate'
+  | 'triples'
+  | 'linkcheck'
+  | 'selfgen'
+  | 'gnome_review'
+  // gnome_task — гном берёт назначенную задачу и приносит предложение.
+  | 'gnome_task'
+  // changelog — обновление публичного changelog из GitHub.
+  | 'changelog'
 
 export const jobs = pgTable(
   'jobs',
@@ -1564,7 +1579,9 @@ export const councilExperts = pgTable(
     // в вычислениях (простой на событийной модели ~бесплатен), а в том, чтобы действующий
     // состав оставался обозримым для маршрутизации.
     // Ортогонально enabled: enabled — рубильник админа, lifecycle — состояние карьеры.
-    lifecycle: text('lifecycle').notNull().default('active').$type<'active' | 'dormant' | 'archived'>(),
+    // 'idle' — стадия ПОД РИСКОМ между активностью и сном: специалист не падает в сон
+    // молча, сначала он идёт первым в очереди на работу (см. shared/ai/activation.ts).
+    lifecycle: text('lifecycle').notNull().default('active').$type<'active' | 'idle' | 'dormant' | 'archived'>(),
     // МЕСТО В КОМПАНИИ. Гендиректор — владелец (человек), в ростере его нет.
     //   partner    — партнёр-старейшина: методология, качество, повестка. Не домен-эксперт.
     //   chief      — начальник гильдии: зонтик над специализациями, созывает своих.

@@ -3,7 +3,9 @@
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, issueAssignees, issues, users } from '@/shared/db'
+import { councilExperts, db, issueAssignees, issues, users } from '@/shared/db'
+import { enqueueJob } from '@/shared/jobs/queue'
+import { getLang } from '@/shared/i18n/server'
 import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
@@ -132,6 +134,13 @@ export async function toggleIssueAssignee(owner: string, slug: string, number: n
   } else {
     await db.insert(issueAssignees).values({ issueId: iss.id, userId })
     await notify({ recipientId: userId, actorId: session.userId, type: 'assigned', templateId: tpl.id, issueId: iss.id })
+    // Назначили ГНОМА — он и правда возьмётся: ставим задачу, предложение придёт
+    // фоном. Гномы у нас настоящие пользователи, поэтому назначение — обычное,
+    // и никакой отдельной «панели агентов» для этого не нужно.
+    const [expert] = await db.select({ id: councilExperts.id }).from(councilExperts).where(eq(councilExperts.userId, userId)).limit(1)
+    if (expert) {
+      await enqueueJob('gnome_task', { issueId: iss.id, expertId: expert.id, lang: await getLang() }).catch(() => {})
+    }
   }
   revalidatePath(`/${owner}/${slug}/issues/${number}`)
 }

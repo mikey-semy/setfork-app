@@ -21,6 +21,8 @@ import { prettyModelName, modelFamily } from './model-names'
 
 export interface ModelsResult {
   provider: AiProviderId
+  /** false = у провайдера нет ключа: каталог недоступен, id вводится руками. */
+  configured: boolean
   /** Валюта цен каталога: OpenRouter — USD, Selectel — RUB. */
   currency: 'USD' | 'RUB'
   /** false = провайдер не отдаёт цены в /models (Яндекс) — в UI цен не показываем. */
@@ -65,14 +67,30 @@ async function fetchList(url: string, init?: RequestInit): Promise<RawModel[]> {
   }
 }
 
-const EMPTY: ModelsResult = { provider: 'openrouter', currency: 'USD', pricesKnown: true, chat: [], embedding: [] }
+const EMPTY: ModelsResult = { provider: 'openrouter', currency: 'USD', pricesKnown: true, configured: false, chat: [], embedding: [] }
 
 /** Каталог моделей АКТИВНОГО провайдера (OpenAI-совместимый /models) — для
  *  селектов в админке. Список эмбеддингов — только у OpenRouter (фаза 2).
  *  Цены: OpenRouter — USD/токен из API, Selectel — RUB/токен из API; Яндекс в
  *  API цен не отдаёт — подставляем хардкод-прайс (yandex-pricing, ₽/1M). */
 export async function fetchModels(): Promise<ModelsResult> {
-  const cfg = await getAiProviderConfig()
+  return fetchModelsForConfig(await getAiProviderConfig())
+}
+
+/**
+ * Каталог УКАЗАННОГО провайдера — для админки: там провайдера выбирают до сохранения.
+ * Без этого выбор в селекте ничего не менял в списке моделей (баг 2026-07-27).
+ */
+export async function fetchModelsFor(provider: AiProviderId): Promise<ModelsResult> {
+  const { getProviderConfigFor } = await import('@/shared/settings/ai')
+  const cfg = await getProviderConfigFor(provider)
+  // Ключа нет — каталог пуст, но провайдера возвращаем ВЫБРАННОГО: интерфейс должен
+  // сказать «у этого провайдера нет ключа», а не молча показать чужой список.
+  if (!cfg) return { ...EMPTY, provider }
+  return fetchModelsForConfig(cfg)
+}
+
+async function fetchModelsForConfig(cfg: Awaited<ReturnType<typeof getAiProviderConfig>>): Promise<ModelsResult> {
   if (!cfg) return EMPTY
   const init = { headers: { Authorization: `Bearer ${cfg.apiKey}`, ...(cfg.headers ?? {}) } }
   const [chat, embedding] = await Promise.all([
@@ -109,6 +127,7 @@ export async function fetchModels(): Promise<ModelsResult> {
   }
   return {
     provider: cfg.provider,
+    configured: true,
     currency: cfg.provider === 'openrouter' ? 'USD' : 'RUB',
     pricesKnown: true, // per-model приоритетнее: без прайса опция покажет «—»
     chat: chatOpts,

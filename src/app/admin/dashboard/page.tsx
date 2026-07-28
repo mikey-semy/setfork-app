@@ -47,7 +47,7 @@ export default async function AdminDashboardPage() {
   ]
 
   return (
-    <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-6 px-6 py-8">
+    <div className="flex w-full min-w-0 flex-col gap-6 px-5 py-6 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link href="/admin" className="mb-2 inline-flex w-fit items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink">
