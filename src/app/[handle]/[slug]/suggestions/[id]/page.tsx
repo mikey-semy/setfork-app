@@ -29,7 +29,7 @@ import { ChecksList } from '@/features/library/ChecksList'
 import { CommitsList } from '@/features/library/CommitsList'
 import { DraftToggle } from '@/features/library/DraftToggle'
 import { PendingReviewBar } from '@/features/library/PendingReviewBar'
-import { suggestionChecks } from '@/features/library/suggestion-checks'
+import { reportedChecks, suggestionChecks } from '@/features/library/suggestion-checks'
 import { withPrDefaults } from '@/features/library/pr-settings'
 import { blocksFrom } from '@/features/library/suggestion-blocks'
 import { blockFingerprint, isStaleMark } from '@/features/library/viewed-fingerprint'
@@ -252,22 +252,28 @@ export default async function SuggestionThreadPage({
   // и для экшенов (те читают их сами из списка).
   const prs = withPrDefaults(meta.prSettings)
   const approvals = reviews.filter((r) => r.verdict === 'approve').length
-  const checks = await suggestionChecks({
-    items: items as unknown[],
-    changedCount,
-    baseVersion: sug.baseVersion,
-    currentVersion: meta.currentVersion,
-    hasConflicts,
-    branchMissing,
-    draft: sug.draft,
-    blockingReview: reviews.some((r) => r.blocking),
-    unresolvedThreads,
-    blockOnUnresolved: prs.blockOnUnresolved,
-    approvals,
-    requiredApprovals: prs.requiredApprovals,
-    moderation: meta.moderation,
-    lang: lang === 'ru' ? 'ru' : 'en',
-  })
+  // Внешние проверки (агент/CI через MCP) идут ПОСЛЕ своих: сначала то, что
+  // приложение знает само, потом то, что прислали снаружи.
+  const [ownChecks, extChecks] = await Promise.all([
+    suggestionChecks({
+      items: items as unknown[],
+      changedCount,
+      baseVersion: sug.baseVersion,
+      currentVersion: meta.currentVersion,
+      hasConflicts,
+      branchMissing,
+      draft: sug.draft,
+      blockingReview: reviews.some((r) => r.blocking),
+      unresolvedThreads,
+      blockOnUnresolved: prs.blockOnUnresolved,
+      approvals,
+      requiredApprovals: prs.requiredApprovals,
+      moderation: meta.moderation,
+      lang: lang === 'ru' ? 'ru' : 'en',
+    }),
+    reportedChecks(sug.id),
+  ])
+  const checks = [...ownChecks, ...extChecks]
   const checksFailed = checks.filter((c) => c.status === 'fail').length
 
   // Личные отметки «просмотрено». Только свои: это состояние ревьюера, а не
@@ -551,7 +557,7 @@ export default async function SuggestionThreadPage({
         )}
 
         {tab === 'checks' && (
-          <ChecksList items={checks} labels={{ blocking: t('checksBlocking', lang), allGood: t('checksAllGood', lang) }} />
+          <ChecksList items={checks} labels={{ blocking: t('checksBlocking', lang), allGood: t('checksAllGood', lang), details: t('checksDetails', lang) }} />
         )}
 
         {tab === 'files' && (<>

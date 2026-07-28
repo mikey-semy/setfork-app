@@ -841,6 +841,36 @@ export const suggestionReviewRequests = pgTable(
   (t) => [uniqueIndex('sug_review_req_uniq').on(t.suggestionId, t.userId)],
 )
 
+// ── Внешние проверки предложения (наш аналог status checks) ──────────
+// Их присылает агент/CI снаружи через MCP: у нас самих нет прогонов чужого кода,
+// зато у интеграций они есть. Ключ — ПАРА (предложение, имя проверки), как context
+// у GitHub: повторный отчёт той же проверки ПЕРЕЗАПИСЫВАЕТ прежний, иначе на
+// странице копились бы «tests: fail, tests: ok, tests: fail» без понятного текущего.
+export const suggestionReportedChecks = pgTable(
+  'suggestion_reported_checks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    // Имя проверки в отчёте («tests», «lint», «build») — оно же ключ обновления.
+    name: text('name').notNull(),
+    // 'ok' | 'warn' | 'fail' | 'neutral' | 'pending' — те же статусы, что у своих
+    // проверок, плюс pending: длинный прогон отчитывается дважды.
+    status: text('status').notNull(),
+    summary: text('summary'),
+    // Куда смотреть подробности (лог прогона). Может отсутствовать.
+    url: text('url'),
+    // Кто отчитался: проверку видно как чужую, и снять её может только он.
+    reporterId: uuid('reporter_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_reported_check_uniq').on(t.suggestionId, t.name)],
+)
+
+export type SuggestionReportedCheck = typeof suggestionReportedChecks.$inferSelect
+
 export type SuggestionReview = typeof suggestionReviews.$inferSelect
 
 // Комментарии-обсуждение к правке (review-комментарии, как в PR).
