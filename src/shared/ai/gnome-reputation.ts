@@ -47,19 +47,29 @@ export async function gnomeReputation(): Promise<Record<string, GnomeRep>> {
       .groupBy(generationMessages.generationId)
       .as('drafters')
 
+    // Участие сворачиваем до УНИКАЛЬНОЙ пары (генерация, гном). Иначе несколько витков одной
+    // беседы («ещё вариант») дают гному по строке за виток, а Σ 1/N считается по строкам:
+    // кредит за одну принятую генерацию вырастал до числа витков, и инвариант «сумма по всем
+    // гномам за генерацию = 1» ломался. Балл потом упирался в clamp Math.min(1, …), поэтому
+    // длинные беседы поднимали гнома в отборе сильнее, чем принятые черновики.
+    const parts = db
+      .selectDistinct({ gid: generationMessages.generationId, who: generationMessages.who })
+      .from(generationMessages)
+      .where(and(eq(generationMessages.kind, 'draft'), isNotNull(generationMessages.who)))
+      .as('parts')
+
     const rows = await db
       .select({
-        who: generationMessages.who,
+        who: parts.who,
         gens: sql<number>`count(distinct ${generations.id})::int`,
         accepted: sql<number>`count(distinct ${generations.id}) filter (where ${generations.chosenTemplateId} is not null)::int`,
         // Σ 1/N по принятым — кредит сохраняется: сумма по всем гномам за генерацию = 1.
         acceptedShare: sql<number>`coalesce(sum(1.0 / greatest(${drafters.n}, 1)) filter (where ${generations.chosenTemplateId} is not null), 0)::float8`,
       })
-      .from(generationMessages)
-      .innerJoin(generations, eq(generations.id, generationMessages.generationId))
-      .innerJoin(drafters, eq(drafters.gid, generationMessages.generationId))
-      .where(and(eq(generationMessages.kind, 'draft'), isNotNull(generationMessages.who)))
-      .groupBy(generationMessages.who)
+      .from(parts)
+      .innerJoin(generations, eq(generations.id, parts.gid))
+      .innerJoin(drafters, eq(drafters.gid, parts.gid))
+      .groupBy(parts.who)
     const data: Record<string, GnomeRep> = {}
     for (const r of rows) if (r.who) data[r.who] = { gens: r.gens, accepted: r.accepted, acceptedShare: r.acceptedShare }
     cache = { at: Date.now(), data }
