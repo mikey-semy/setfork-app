@@ -188,6 +188,7 @@ const DICT = {
   prSetApprovalsNone: { en: 'not required', ru: 'не требуются' },
   prSetUnresolved: { en: 'Unresolved conversations block merging', ru: 'Нерешённые обсуждения блокируют слияние' },
   prSetUnresolvedHint: { en: 'Every conversation on an item must be resolved first.', ru: 'Каждое обсуждение на пункте должно быть закрыто.' },
+  checksDetails: { en: 'Open details', ru: 'Открыть подробности' },
   prSetLinear: { en: 'Linear history only', ru: 'Только линейная история' },
   prSetLinearHint: { en: 'Merge only when it is a fast-forward; otherwise update the branch first.', ru: 'Сливать только fast-forward; иначе сначала обновить ветку.' },
   prSetAutoClose: { en: 'Auto-close linked issues', ru: 'Закрывать связанные задачи' },
