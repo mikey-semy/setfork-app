@@ -55,8 +55,8 @@ export async function activationCandidates(roster: Expert[]): Promise<Candidate[
 }
 
 /** Очередь работы по данным: кому нет оснований — первым (см. activation.ts). */
-export async function pickWorkQueue(roster: Expert[], domain?: string): Promise<WorkSlot[]> {
-  return workQueue(await activationCandidates(roster), domain)
+export async function pickWorkQueue(roster: Expert[], domain?: string, priorityDomains: string[] = []): Promise<WorkSlot[]> {
+  return workQueue(await activationCandidates(roster), domain, priorityDomains)
 }
 
 /**
