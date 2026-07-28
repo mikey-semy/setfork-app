@@ -39,7 +39,7 @@ export async function ensurePartnersScheduled(): Promise<void> {
   const [pending] = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(eq(jobs.type, 'partners'), inArray(jobs.status, ['pending', 'processing'])))
+    .where(and(eq(jobs.type, 'partners'), eq(jobs.status, 'pending')))
     .limit(1)
   if (pending) return
   await enqueueJob('partners', {}, { delayMs: EVERY_DAYS * 24 * 60 * 60 * 1000, maxAttempts: 1 })
