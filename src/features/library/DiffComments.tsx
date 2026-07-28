@@ -1,16 +1,18 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MessageSquarePlus, Check, Loader2, RotateCcw } from 'lucide-react'
+import { MessageSquarePlus, Check, Loader2, Replace, RotateCcw, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
+import { Textarea } from '@/shared/ui/textarea'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
 // eslint-disable-next-line boundaries/dependencies -- review-комментарии предложения из comments
 import { createBlockThread, replyToBlockThread, setBlockThreadResolved } from '@/features/comments/actions'
+import { applySuggestedEdit } from './actions'
 // eslint-disable-next-line boundaries/dependencies -- тип треда из comments
 import type { BlockThread } from '@/features/comments/queries'
 // eslint-disable-next-line boundaries/dependencies -- тип состояния якоря из comments
@@ -33,6 +35,12 @@ export interface DiffCommentLabels {
   onBlock: string
   stateReanchored: string
   orphanHint: string
+  /** Предложенная правка пункта: подпись поля, кнопка «Применить», пометки. */
+  suggestLabel: string
+  suggestHint: string
+  suggestPh: string
+  apply: string
+  applied: string
 }
 
 export interface RowThread {
@@ -53,6 +61,7 @@ export function DiffComments({
   blockId,
   rowThreads,
   canComment,
+  canApply,
   lang,
   labels,
 }: {
@@ -63,6 +72,8 @@ export function DiffComments({
   blockId: string | null
   rowThreads: RowThread[]
   canComment: boolean
+  /** Может ли зритель применить предложенную правку (право = правка пунктов). */
+  canApply: boolean
   lang: Lang
   labels: DiffCommentLabels
 }) {
@@ -70,6 +81,9 @@ export function DiffComments({
   const [draft, setDraft] = useState('')
   const [quote, setQuote] = useState('')
   const [field, setField] = useState('desc')
+  // Предложенный текст поля. null — обычное замечание словами; '' — осмысленное
+  // предложение «здесь ничего не нужно», поэтому пустая строка и null различаются.
+  const [suggest, setSuggest] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -84,6 +98,9 @@ export function DiffComments({
     const detected = host?.getAttribute('data-cfield') ?? ''
     setQuote(text && detected ? text.slice(0, 500) : '')
     setField(text && detected ? detected : 'desc')
+    // Предзаполняем предложение выделенным текстом: рецензент правит существующее,
+    // а не пишет с нуля — так же ведёт себя suggested change у GitHub.
+    setSuggest(null)
     setReplyTo(null)
     setOpen(true)
   }
@@ -92,10 +109,11 @@ export function DiffComments({
     const body = draft.trim()
     if (!body || !blockId) return
     startTransition(async () => {
-      if (replyTo) await replyToBlockThread(owner, slug, replyTo, body, asDraft)
-      else await createBlockThread(owner, slug, suggestionId, blockId, field, quote, body, asDraft)
+      if (replyTo) await replyToBlockThread(owner, slug, replyTo, body, asDraft, suggest)
+      else await createBlockThread(owner, slug, suggestionId, blockId, field, quote, body, asDraft, suggest)
       setDraft('')
       setQuote('')
+      setSuggest(null)
       setReplyTo(null)
       setOpen(false)
     })
@@ -135,6 +153,7 @@ export function DiffComments({
               lang={lang}
               labels={labels}
               canComment={canComment}
+              canApply={canApply}
               onReply={() => {
                 setReplyTo(x.thread.id)
                 setQuote('')
@@ -165,6 +184,43 @@ export function DiffComments({
                 refScope={{ owner, slug }}
                 onValueChange={setDraft}
               />
+              {/* ПРЕДЛОЖЕННАЯ ПРАВКА. Свёрнута по умолчанию: обычное замечание —
+                  частый случай, а поле ввода сверху отпугивало бы от простого
+                  «тут опечатка». Развёрнутая — обычная textarea, а не редактор
+                  markdown: это ЗНАЧЕНИЕ поля, а не текст сообщения. */}
+              {suggest === null ? (
+                <button
+                  type="button"
+                  onClick={() => setSuggest(quote || '')}
+                  className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-[12.5px] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"
+                >
+                  <Replace size={14} /> {labels.suggestLabel}
+                </button>
+              ) : (
+                <div className="mt-2 rounded-md border border-accent/40 bg-(--accent-soft) p-2">
+                  <div className="mb-1.5 flex items-center gap-1.5 text-[12px] text-ink-2">
+                    <Replace size={13} className="shrink-0 text-accent" />
+                    <span className="min-w-0 truncate">{labels.suggestHint}</span>
+                    <Tooltip label={labels.cancel}>
+                      <button
+                        type="button"
+                        onClick={() => setSuggest(null)}
+                        aria-label={labels.cancel}
+                        className="ml-auto grid size-9 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
+                      >
+                        <X size={14} />
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <Textarea
+                    value={suggest}
+                    onChange={(e) => setSuggest(e.target.value)}
+                    rows={3}
+                    placeholder={labels.suggestPh}
+                    className="text-[13px]"
+                  />
+                </div>
+              )}
               <div className="mt-2 flex items-center justify-end gap-2">
                 <Button variant="ghost" className="h-[38px]" onClick={() => setOpen(false)} disabled={pending}>
                   {labels.cancel}
@@ -193,6 +249,7 @@ function ThreadCard({
   lang,
   labels,
   canComment,
+  canApply,
   onReply,
 }: {
   row: RowThread
@@ -201,6 +258,7 @@ function ThreadCard({
   lang: Lang
   labels: DiffCommentLabels
   canComment: boolean
+  canApply: boolean
   onReply: () => void
 }) {
   const [pending, startTransition] = useTransition()
@@ -238,6 +296,36 @@ function ThreadCard({
                 )}
               </div>
               <Markdown className="text-[13px]">{c.body}</Markdown>
+              {/* ПРЕДЛОЖЕННЫЙ ТЕКСТ — применяется кнопкой. Показываем как значение
+                  поля (моноширинно, с переносом), а не как разметку: применится
+                  ровно то, что видно. */}
+              {c.suggestedText !== null && (
+                <div className="mt-1.5 overflow-hidden rounded-md border border-accent/40">
+                  <div className="flex items-center gap-1.5 border-b border-accent/30 bg-(--accent-soft) px-2 py-1 text-[11.5px] text-ink-2">
+                    <Replace size={12} className="shrink-0 text-accent" />
+                    <span className="min-w-0 truncate">{labels.suggestLabel}</span>
+                    {c.appliedAt ? (
+                      <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-semibold text-ok">
+                        <Check size={12} /> {labels.applied}
+                      </span>
+                    ) : (
+                      canApply && (
+                        <Button
+                          variant="ghost"
+                          className="ml-auto h-9 shrink-0 px-2 text-[12px]"
+                          disabled={pending}
+                          onClick={() => startTransition(async () => void (await applySuggestedEdit(c.id)))}
+                        >
+                          {pending ? <Loader2 size={12} className="animate-spin" /> : labels.apply}
+                        </Button>
+                      )
+                    )}
+                  </div>
+                  <pre className="whitespace-pre-wrap break-words px-2 py-1.5 font-mono text-[12.5px] text-ink">
+                    {c.suggestedText || '—'}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
         ))}

@@ -396,8 +396,86 @@ export async function getActivity(
   return withAvatar(rows as ActivityItem[])
 }
 
-/** Предложения правок для списка (с авторами). */
-export async function getSuggestions(templateId: string) {
+/**
+ * Исполнители СРАЗУ для пачки предложений — по образцу `getIssueAssigneesFor`.
+ *
+ * Одним запросом, а не по одному на строку: в списке их десятки, и цикл с await
+ * превратился бы в столько же походов в БД (та же причина, что у аватаров).
+ */
+export async function getSuggestionsAssignees(
+  ids: string[],
+): Promise<Record<string, { handle: string; avatarUrl: string | null }[]>> {
+  const out: Record<string, { handle: string; avatarUrl: string | null }[]> = {}
+  if (ids.length === 0) return out
+  const rows = await db
+    .select({ suggestionId: suggestionAssignees.suggestionId, handle: users.handle, avatarUrl: users.avatarUrl })
+    .from(suggestionAssignees)
+    .innerJoin(users, eq(suggestionAssignees.userId, users.id))
+    .where(inArray(suggestionAssignees.suggestionId, ids))
+    .orderBy(asc(users.handle))
+  const byId: Record<string, typeof rows> = {}
+  for (const r of rows) (byId[r.suggestionId] ??= []).push(r)
+  for (const [id, list] of Object.entries(byId)) {
+    out[id] = await Promise.all(list.map(async (r) => ({ handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 36) })))
+  }
+  return out
+}
+
+/** «Открыто» = живые предложения; «закрыто» = принятые и отклонённые (как у GitHub). */
+export type SuggestionFilter = 'open' | 'closed'
+export type SuggestionSort = 'newest' | 'oldest'
+
+/** Сколько открытых и закрытых — для вкладок; считаем одним проходом. */
+export async function getSuggestionCounts(templateId: string): Promise<{ open: number; closed: number }> {
+  const [row] = await db
+    .select({
+      open: sql<number>`count(*) filter (where ${suggestions.status} = 'open')::int`,
+      closed: sql<number>`count(*) filter (where ${suggestions.status} <> 'open')::int`,
+    })
+    .from(suggestions)
+    .where(eq(suggestions.templateId, templateId))
+  return { open: row?.open ?? 0, closed: row?.closed ?? 0 }
+}
+
+/** Метки, реально использованные в предложениях списка (для фильтра). */
+export async function getSuggestionLabelsInUse(templateId: string): Promise<string[]> {
+  const rows = await db.select({ labels: suggestions.labels }).from(suggestions).where(eq(suggestions.templateId, templateId))
+  const set = new Set<string>()
+  for (const r of rows) for (const l of (r.labels as string[] | null) ?? []) set.add(l)
+  return [...set].sort((a, b) => a.localeCompare(b))
+}
+
+/** Авторы предложений списка — для фильтра «кто предложил». */
+export async function getSuggestionAuthors(templateId: string): Promise<{ handle: string }[]> {
+  const rows = await db
+    .selectDistinct({ handle: users.handle })
+    .from(suggestions)
+    .innerJoin(users, eq(suggestions.authorId, users.id))
+    .where(eq(suggestions.templateId, templateId))
+  return rows.sort((a, b) => a.handle.localeCompare(b.handle))
+}
+
+/**
+ * Предложения списка с фильтрами — та же форма, что у задач (`getIssues`).
+ *
+ * `itemCount` считаем В ЗАПРОСЕ и только для предложений с items: у ветковых
+ * пункты лежат в git, и `jsonb_array_length(items)` даёт честный ноль, из-за
+ * чего список писал «0 пунктов» у явно непустой правки. Для ветки отдаём null —
+ * «неизвестно отсюда», и страница показывает ветку вместо вранья.
+ */
+export async function getSuggestions(
+  templateId: string,
+  opts: { status?: SuggestionFilter; q?: string; label?: string; milestone?: string; author?: string; sort?: SuggestionSort } = {},
+) {
+  const conds = [eq(suggestions.templateId, templateId)]
+  if (opts.status === 'closed') conds.push(sql`${suggestions.status} <> 'open'`)
+  else if (opts.status === 'open') conds.push(eq(suggestions.status, 'open'))
+  const q = opts.q?.trim()
+  if (q) conds.push(sql`${suggestions.note} ilike ${'%' + q + '%'}`)
+  if (opts.label) conds.push(sql`${opts.label} = any(${suggestions.labels})`)
+  if (opts.milestone) conds.push(eq(suggestions.milestoneId, opts.milestone))
+  if (opts.author) conds.push(sql`${users.handle} = ${opts.author}`)
+
   const rows = await db
     .select({
       id: suggestions.id,
@@ -406,19 +484,24 @@ export async function getSuggestions(templateId: string) {
       draft: suggestions.draft,
       note: suggestions.note,
       baseVersion: suggestions.baseVersion,
-      items: suggestions.items,
+      branchRef: suggestions.branchRef,
+      labels: suggestions.labels,
       createdAt: suggestions.createdAt,
       authorHandle: users.handle,
       authorAvatarUrl: users.avatarUrl,
+      milestoneTitle: milestones.title,
       commentCount: sql<number>`(select count(*)::int from ${suggestionComments} sc where sc.suggestion_id = ${suggestions.id})`,
+      itemCount: sql<number | null>`case when ${suggestions.branchRef} is null then jsonb_array_length(${suggestions.items}) else null end`,
     })
     .from(suggestions)
     .innerJoin(users, eq(suggestions.authorId, users.id))
-    .where(eq(suggestions.templateId, templateId))
-    .orderBy(asc(suggestions.status), desc(suggestions.createdAt))
+    .leftJoin(milestones, eq(milestones.id, suggestions.milestoneId))
+    .where(and(...conds))
+    .orderBy(opts.sort === 'oldest' ? asc(suggestions.createdAt) : desc(suggestions.createdAt))
   return Promise.all(
     rows.map(async (r) => ({
       ...r,
+      labels: (r.labels as string[] | null) ?? [],
       author: { handle: r.authorHandle, avatarUrl: await avatarSrc(r.authorAvatarUrl, 64) },
     })),
   )
@@ -693,6 +776,22 @@ export async function getUsersByEmails(emails: string[]): Promise<Record<string,
       .map(async (r) => [r.email!.toLowerCase(), { handle: r.handle, name: r.name, avatarUrl: await avatarSrc(r.avatarUrl, 48) }] as const),
   )
   return Object.fromEntries(resolved)
+}
+
+/**
+ * Пользователи по id — соавторы предложения (`coauthor_ids`).
+ *
+ * Рядом с `getUsersByEmails` и по её же схеме: аватары резолвятся параллельно,
+ * потому что подпись URL — сетевая операция, а соавторов бывает несколько.
+ */
+export async function getUsersByIds(ids: string[]): Promise<{ handle: string; name: string | null; avatarUrl: string | null }[]> {
+  const uniq = [...new Set(ids.filter(Boolean))]
+  if (uniq.length === 0) return []
+  const rows = await db
+    .select({ handle: users.handle, name: users.name, avatarUrl: users.avatarUrl })
+    .from(users)
+    .where(inArray(users.id, uniq))
+  return Promise.all(rows.map(async (r) => ({ ...r, avatarUrl: await avatarSrc(r.avatarUrl, 48) })))
 }
 
 /** Текущий этап правки для пикера ({id,title} или null). */

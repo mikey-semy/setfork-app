@@ -12,6 +12,10 @@ export interface ThreadComment {
   author: { handle: string; name: string | null; avatarUrl: string | null }
   /** Черновик ревью: видно только автору, пока он не отправит ревью. */
   pending: boolean
+  /** Предложенный текст поля (null — обычное замечание словами). */
+  suggestedText: string | null
+  /** Когда предложение применили — второй раз применять нечего. */
+  appliedAt: Date | null
 }
 
 export interface BlockThread {
@@ -70,6 +74,8 @@ export async function getSuggestionThreads(suggestionId: string, viewerId?: stri
       avatarUrl: users.avatarUrl,
       pending: blockComments.pending,
       authorId: blockComments.authorId,
+      suggestedText: blockComments.suggestedText,
+      appliedAt: blockComments.appliedAt,
     })
     .from(blockComments)
     .innerJoin(users, eq(users.id, blockComments.authorId))
@@ -91,6 +97,8 @@ export async function getSuggestionThreads(suggestionId: string, viewerId?: stri
       createdAt: r.createdAt,
       author: { handle: r.handle, name: r.name, avatarUrl },
       pending: r.pending,
+      suggestedText: r.suggestedText,
+      appliedAt: r.appliedAt,
     }
     const list = byThread.get(r.threadId)
     if (list) list.push(item)

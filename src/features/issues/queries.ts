@@ -2,7 +2,7 @@ import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, issueAssignees, issueComments, issues, listLabels, milestones, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
-import type { CustomLabel } from './labels'
+import type { CustomLabel } from '@/shared/lib/labels'
 
 /** Кастомные метки списка (для пикеров/чипов/менеджера). */
 export async function getListLabels(templateId: string): Promise<CustomLabel[]> {
@@ -62,6 +62,21 @@ export async function getIssues(
     .where(and(...conds))
     .orderBy(order)
   return Promise.all(rows.map(async (r) => ({ ...r, authorAvatarUrl: await avatarSrc(r.authorAvatarUrl, 48) })))
+}
+
+/**
+ * Открытые задачи списка для пикера привязки — только номер и заголовок.
+ *
+ * Кап в 200: пикер с фильтром, а не бесконечный список; для выбора «какую задачу
+ * закроет эта правка» свежих открытых заведомо достаточно.
+ */
+export async function getOpenIssuesForPicker(templateId: string): Promise<{ number: number; title: string }[]> {
+  return db
+    .select({ number: issues.number, title: issues.title })
+    .from(issues)
+    .where(and(eq(issues.templateId, templateId), eq(issues.status, 'open')))
+    .orderBy(desc(issues.number))
+    .limit(200)
 }
 
 /** Уникальные label'ы, использованные в issue списка (для фильтра). */

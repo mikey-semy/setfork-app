@@ -70,6 +70,32 @@ service GitCore {
   // not_in скрывает достижимое из базы (обычно main), поэтому вернётся ровно
   // тот набор, который уйдёт в main при слиянии.
   rpc ListCommits(ListCommitsRequest) returns (CommitsResponse);
+  // Записать list.json в ВЕТКУ одним коммитом. Нужно «предложенным правкам»:
+  // рецензент даёт готовый текст пункта, автор жмёт «Применить» — и правка
+  // ложится в ветку предложения, а не требует локального клона.
+  //
+  // MergeResolved пишет в main, здесь main НЕ трогается: ветка — черновик,
+  // версии рождаются только из main, поэтому проекции нет.
+  //
+  // expected_tip — оптимистичная блокировка: между чтением ветки и записью в неё
+  // мог прийти чужой пуш, и без сверки мы бы молча его перезаписали.
+  // Не совпало → failed_precondition('stale').
+  rpc CommitToBranch(CommitToBranchRequest) returns (CommitToBranchResponse);
+}
+
+message CommitToBranchRequest {
+  RepoRef repo = 1;
+  string branch = 2;      // ветка предложения; 'main' запрещён
+  bytes list_json = 3;    // новый list.json целиком (канон)
+  string message = 4;     // заголовок коммита ('' → значение по умолчанию)
+  string expected_tip = 5; // sha, на который рассчитывает вызывающий ('' — не сверять)
+  string author_name = 6;  // автор коммита ('' → SetFork)
+  string author_email = 7; // '' → служебный адрес SetFork
+}
+
+message CommitToBranchResponse {
+  string tip_sha = 1;  // новый tip ВЕТКИ
+  bool changed = 2;    // false — list.json совпал с текущим, коммита нет
 }
 
 message UpdateBranchRequest {

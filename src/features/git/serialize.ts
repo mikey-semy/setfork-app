@@ -117,15 +117,23 @@ function stepFile(s: SerStep, width: number): RepoFile {
   }
 }
 
+/**
+ * list.json — машиночитаемый снимок версии (для инструментов/CI).
+ *
+ * Отдельная функция, потому что запись в ВЕТКУ (правка предложения, «применить
+ * предложенную правку») отдаёт ядру именно этот файл, а не весь набор. Раньше
+ * такой вызывающий собирал JSON руками, и любая правка формата здесь молча
+ * расходилась бы с ним — а формат обязан быть байт-в-байт как у Rust (golden).
+ */
+export function listJson(v: SerVersion): string {
+  return JSON.stringify({ title: v.title, desc: v.desc, tags: v.tags, ordered: v.ordered, version: v.version, steps: v.steps }, null, 2) + '\n'
+}
+
 /** Полный набор файлов версии (снимок рабочего дерева коммита). */
 export function versionFiles(v: SerVersion): RepoFile[] {
   const width = Math.max(2, String(v.steps.length).length)
   const files: RepoFile[] = [{ path: 'README.md', content: readme(v) }]
-  // list.json — машиночитаемый снимок (для инструментов/CI).
-  files.push({
-    path: 'list.json',
-    content: JSON.stringify({ title: v.title, desc: v.desc, tags: v.tags, ordered: v.ordered, version: v.version, steps: v.steps }, null, 2) + '\n',
-  })
+  files.push({ path: 'list.json', content: listJson(v) })
   // .md пишем ТОЛЬКО шаг-блокам; text/image живут в README + list.json.
   for (const s of v.steps) if (isStepBlock(s)) files.push(stepFile(s, width))
   return files

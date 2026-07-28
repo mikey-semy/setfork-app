@@ -51,6 +51,7 @@ export const aiFeature = pgEnum('ai_feature', ['generate', 'regenerate', 'refine
 export const notificationType = pgEnum('notification_type', [
   'suggestion_new',
   'suggestion_accepted',
+  'suggestion_edited',
   'suggestion_rejected',
   'suggestion_comment',
   'issue_new',
@@ -220,6 +221,15 @@ export interface PrSettings {
   autoDeleteBranch?: boolean
   /** Закрывать задачи по «closes #N» при слиянии. */
   autoCloseIssues?: boolean
+  /**
+   * Разрешить владельцу и коллаборантам править ЧУЖОЕ предложение.
+   *
+   * Аналог «Allow edits by maintainers» у GitHub, но решение принимает владелец
+   * списка, а не автор правки: у нас список — единица владения, и держать флаг
+   * на каждом предложении значило бы спрашивать одно и то же каждый раз.
+   * Автор своё предложение правит всегда, независимо от настройки.
+   */
+  allowMaintainerEdits?: boolean
 }
 
 /** Дефолты настроек предложений = поведение до их появления. */
@@ -230,6 +240,9 @@ export const PR_DEFAULTS: Required<PrSettings> = {
   requiredApprovals: 0,
   autoDeleteBranch: false,
   autoCloseIssues: true,
+  // Выключено по умолчанию: правка чужого текста — это то, на что соглашаются
+  // осознанно, а не обнаруживают постфактум.
+  allowMaintainerEdits: false,
 }
 
 export const templates = pgTable(
@@ -529,7 +542,7 @@ export const appSettings = pgTable('app_settings', {
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
 // selfgen — самогенерация: специалист сам пишет черновик списка по своей теме
 // (инициатива компании, а не ответ на запрос пользователя).
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review'
 
 export const jobs = pgTable(
   'jobs',
@@ -685,6 +698,20 @@ export const suggestions = pgTable('suggestions', {
   // готовые LabelEditor/этапы, а не их копии.
   labels: jsonb('labels').notNull().default([]).$type<string[]>(),
   milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
+  // Соавторы: кто, кроме открывшего, правил пункты. У ветки вклад и так виден в
+  // авторстве коммитов, а у предложений с items он не оставался НИГДЕ — правка
+  // просто перезаписывала колонку. Массив id, а не таблица: порядок не нужен,
+  // связей нет, а запрос всегда идёт вместе с самим предложением.
+  coauthorIds: jsonb('coauthor_ids').notNull().default([]).$type<string[]>(),
+  /**
+   * Обсуждение заперто: новые реплики запрещены (аналог Lock conversation).
+   *
+   * Нужен, когда спор ушёл в сторону, а правка уже решена: закрывать её ради
+   * тишины неправильно — решение и обсуждение это разные вещи. Кто запер,
+   * хранится рядом: «заперто» без имени выглядит как поломка, а не как решение.
+   */
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lockedById: uuid('locked_by_id').references(() => users.id, { onDelete: 'set null' }),
   note: text('note').notNull().default(''),
   baseVersion: integer('base_version').notNull(),
   items: jsonb('items').notNull().default([]).$type<ProposedItem[]>(),
@@ -830,7 +857,7 @@ export const issues = pgTable(
 )
 
 // Кастомные метки списка (сверх встроенной палитры): имя + hex-цвет, задаёт
-// владелец. На issue хранятся ключом `c:<id>` (см. features/issues/labels).
+// владелец. На issue хранятся ключом `c:<id>` (см. shared/lib/labels).
 export const listLabels = pgTable(
   'list_labels',
   {
@@ -1979,6 +2006,20 @@ export const blockComments = pgTable(
     // пока он не отправит ревью пачкой (как «Start a review» у GitHub). Отдельный
     // флаг, а не отдельная таблица: тред, якорь и ответы у черновика те же самые.
     pending: boolean('pending').notNull().default(false),
+    /**
+     * ПРЕДЛОЖЕННЫЙ ТЕКСТ поля — замечание, которое применяется кнопкой.
+     *
+     * У GitHub это патч строк файла, и он рассыпается, когда строки уехали. У нас
+     * единица — блок с устойчивой идентичностью (ADR-0013), а поле названо в
+     * треде, поэтому «применить» — это подстановка значения, а не наложение
+     * патча: перенос пункта её не ломает.
+     *
+     * null — обычное замечание словами. Пустая строка — тоже осмысленное
+     * предложение: «здесь ничего не нужно».
+     */
+    suggestedText: text('suggested_text'),
+    /** Когда предложение применили (null — ещё нет). Дважды не применяем. */
+    appliedAt: timestamp('applied_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Check } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
-import { ISSUE_LABELS, chipColors, customKey, type CustomLabel } from './labels'
+import { ISSUE_LABELS, chipColors, customKey, type CustomLabel } from '@/shared/lib/labels'
 
 /** Выбор меток чипами (без нативного select). Пишет скрытые inputs name="labels".
  *  custom — кастомные метки списка (сверх встроенной палитры). */

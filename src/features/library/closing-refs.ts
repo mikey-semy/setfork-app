@@ -53,3 +53,28 @@ export function closingRefs(text: string): number[] {
   }
   return out
 }
+
+/**
+ * Дописать связь с задачей — то, что делает пикер «привязать задачу».
+ *
+ * Живёт РЯДОМ с разбором намеренно: синтаксис ссылки один, и вторая его копия в
+ * экшене разошлась бы с этой при первом же новом ключевом слове.
+ */
+export function addClosingRef(text: string, n: number): string {
+  if (closingRefs(text).includes(n)) return text
+  const base = text.trimEnd()
+  return base ? `${base}\ncloses #${n}` : `closes #${n}`
+}
+
+/** Убрать ровно ЭТУ связь, не трогая остальной текст и другие ссылки. */
+export function removeClosingRef(text: string, n: number): string {
+  if (!text) return text
+  const one = new RegExp(String.raw`(?<!${EDGE})(?:${KEYWORDS.join('|')})(?!${EDGE})\s*:?\s+#${n}\b`, 'giu')
+  return text
+    .replace(one, '')
+    // Осиротевшие пустые строки и хвостовые пробелы после выреза — иначе текст
+    // постепенно обрастает дырами от привязок-отвязок.
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}

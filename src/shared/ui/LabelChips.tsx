@@ -1,7 +1,7 @@
 import type { Lang } from '@/shared/i18n'
-import { resolveChip, type CustomLabel } from './labels'
+import { resolveChip, type CustomLabel } from '@/shared/lib/labels'
 
-export function IssueLabelChips({ labels, lang, custom = [] }: { labels: string[]; lang: Lang; custom?: CustomLabel[] }) {
+export function LabelChips({ labels, lang, custom = [] }: { labels: string[]; lang: Lang; custom?: CustomLabel[] }) {
   if (!labels.length) return null
   return (
     <>

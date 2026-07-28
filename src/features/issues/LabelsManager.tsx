@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Loader2, Plus, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
-import { chipColors, type CustomLabel } from './labels'
+import { chipColors, type CustomLabel } from '@/shared/lib/labels'
 import { createLabel, deleteLabel } from './label-actions'
 
 const PRESET = ['#2159d6', '#7c3aed', '#15803d', '#c2570c', '#be123c', '#0f766e', '#b45309', '#475569']

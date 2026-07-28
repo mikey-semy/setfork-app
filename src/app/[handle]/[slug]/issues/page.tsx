@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CircleCheck, CircleDot, MessageSquare, Milestone as MilestoneIcon, Plus } from 'lucide-react'
-import { IssuesSearch } from '@/features/issues/IssuesSearch'
+import { SearchForm } from '@/shared/ui/SearchForm'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -9,10 +9,10 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, getListLabels, type IssueFilter, type IssueSort } from '@/features/issues/queries'
-import { IssueLabelChips } from '@/features/issues/IssueLabelChips'
+import { LabelChips } from '@/shared/ui/LabelChips'
 import { LabelsManager } from '@/features/issues/LabelsManager'
-import { FilterMenu } from '@/features/issues/FilterMenu'
-import { resolveChip } from '@/features/issues/labels'
+import { FilterMenu } from '@/shared/ui/FilterMenu'
+import { resolveChip } from '@/shared/lib/labels'
 import { isCollaborator } from '@/features/collab/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { Tag } from 'lucide-react'
@@ -72,7 +72,7 @@ export default async function IssuesPage({
             {status === 'closed' && <input type="hidden" name="status" value="closed" />}
             {label && <input type="hidden" name="label" value={label} />}
             {sort === 'oldest' && <input type="hidden" name="sort" value="oldest" />}
-            <IssuesSearch initial={q ?? ''} placeholder={t('searchIssuesPh', lang)} />
+            <SearchForm initial={q ?? ''} placeholder={t('searchIssuesPh', lang)} />
           </form>
           {session && (
             <Link href={`${base}/new`} className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
@@ -154,7 +154,7 @@ export default async function IssuesPage({
                     <Link href={`${base}/${it.number}`} className="text-[14.5px] font-semibold text-ink hover:text-accent">
                       {it.title}
                     </Link>
-                    <IssueLabelChips labels={it.labels} lang={lang} custom={custom} />
+                    <LabelChips labels={it.labels} lang={lang} custom={custom} />
                     {it.milestoneTitle && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[11.5px] text-ink-2">
                         <MilestoneIcon size={11} className="text-accent" /> {it.milestoneTitle}

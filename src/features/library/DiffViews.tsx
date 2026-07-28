@@ -82,6 +82,8 @@ export function ListDiff({
     slug: string
     suggestionId: string
     canComment: boolean
+    /** Право применить предложенную правку — то же, что право править пункты. */
+    canApply: boolean
     labels: DiffCommentLabels
     byBlock: Map<string, RowThread[]>
   }
@@ -174,6 +176,7 @@ export function ListDiff({
                   blockId={e.blockId ?? null}
                   rowThreads={(e.blockId && comments.byBlock.get(e.blockId)) || []}
                   canComment={comments.canComment}
+                  canApply={comments.canApply}
                   lang={lang}
                   labels={comments.labels}
                 />

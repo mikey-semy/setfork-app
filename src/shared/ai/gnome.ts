@@ -37,6 +37,31 @@ ${sp.rule()}`
   return { system, prompt }
 }
 
+/**
+ * Ревью ПРЕДЛОЖЕНИЯ (а не списка целиком): гном смотрит на изменение и выносит
+ * вердикт, который ляжет в `suggestion_reviews` наравне с человеческим.
+ *
+ * Отдельный промпт от `buildReviewPrompt`: там разбор всего списка ради советов,
+ * здесь — решение «принимать или дорабатывать». Формат вердикта совпадает с
+ * человеческим (approve/changes/comment), иначе гейт слияния не смог бы
+ * учитывать голос гнома так же, как голос человека.
+ */
+export function buildPrReviewPrompt(e: Expert, changeJson: string): { system: string; prompt: string } {
+  const sp = spotlight()
+  const guild = e.code ? `
+GUILD CODE — the quality standard you review against:
+${e.code}` : ''
+  const system = `You are ${e.persona}${guild}
+A contributor proposes a CHANGE to a list. Review it as a guild master reviewing a pull request: judge the CHANGE, not the whole list. Judge content in ITS OWN language and answer in that language.
+Return ONLY JSON:
+{"verdict":"approve"|"changes"|"comment","summary":"two or three sentences on the change as a whole","issues":[{"where":"item title or number","problem":"what is wrong","fix":"concrete replacement"}]}
+"approve" — the change is sound as is. "changes" — there is something that must be fixed first (then issues MUST be non-empty). "comment" — worth saying something, but you are not blocking.
+0-5 issues. No praise padding.
+${sp.rule()}`
+  const prompt = sp.wrap('CHANGE', changeJson)
+  return { system, prompt }
+}
+
 export function buildGnomePrompt(e: Expert, question: string, listContext?: string, precedents?: string[]): { system: string; prompt: string } {
   const sp = spotlight()
   const guild = e.code ? `\nYou represent ${e.guildEn || 'your guild'}. GUILD CODE — quality standards your answer must uphold:\n${e.code}` : ''

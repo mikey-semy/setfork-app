@@ -4,8 +4,8 @@ import { useState, useTransition } from 'react'
 import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
 import { Check, Tag } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
-import { ISSUE_LABELS, customKey, labelText, type CustomLabel } from './labels'
-import { IssueLabelChips } from './IssueLabelChips'
+import { ISSUE_LABELS, customKey, labelText, type CustomLabel } from '@/shared/lib/labels'
+import { LabelChips } from '@/shared/ui/LabelChips'
 import { setIssueLabels } from './actions'
 
 // Метки issue: текущие чипы + поповер-редактор (владелец/коллаборатор), как AssigneePicker.
@@ -43,7 +43,7 @@ export function LabelEditor({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <IssueLabelChips labels={sel} lang={lang} custom={custom} />
+      <LabelChips labels={sel} lang={lang} custom={custom} />
       {canEdit ? (
         <AnchoredMenu
           align="left"

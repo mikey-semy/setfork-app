@@ -3,13 +3,13 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, issues, steps, suggestionComments, suggestions, templates, users, type ProposedItem } from '@/shared/db'
+import { blockComments, blockCommentThreads, db, issues, steps, suggestionAssignees, suggestionComments, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
 import { captureError } from '@/shared/observability'
 import { getLang } from '@/shared/i18n/server'
-import { isLang, langEnName, tr, type LocaleText } from '@/shared/i18n'
+import { isLang, langEnName, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { imageUrl, uploadAttachmentFile, uploadImageFile, uploadVideoFile } from '@/shared/media'
 import { generateChangeNote, generateListRefine, generateListTranslation } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
@@ -33,6 +33,9 @@ import { countUnresolvedThreads } from '@/features/comments/queries'
 import { listStore } from './list-store'
 import { closingRefs } from './closing-refs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from './pr-settings'
+import { canEditSuggestionItems } from './suggestion-perms'
+import { suggestionBlocks } from './suggestion-blocks'
+import { applyFieldValue } from './suggestion-apply'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
 import { canEditList, canViewList } from '@/core'
@@ -64,15 +67,24 @@ async function closeLinkedIssues(templateId: string, text: string, actorId: stri
 }
 
 /**
- * Ленивый доступ к git-порту и его ошибкам.
+ * Ленивый доступ к git-порту, его ошибкам и канонической сериализации.
  *
  * Импорт динамический не ради красоты: серверные экшены этого файла в большинстве
  * своём git не трогают, а порт тянет за собой ядро. Один помощник вместо копии
- * этой пары импортов в каждом git-экшене (их уже четыре).
+ * этих импортов в каждом git-экшене (их уже пять).
+ *
+ * `listJson` идёт отсюда же намеренно: это ЕДИНСТВЕННОЕ место файла, знающее про
+ * `features/git`. Каждый новый прямой импорт туда — ещё одно кросс-фичевое
+ * нарушение границ, а их счётчик в baseline линтера ограничен: превысишь — и он
+ * начинает сыпать по всему файлу разом.
  */
 async function gitPort() {
-  const [core, ports] = await Promise.all([import('@/features/git/core'), import('@/core')])
-  return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError }
+  const [core, ports, ser] = await Promise.all([
+    import('@/features/git/core'),
+    import('@/core'),
+    import('@/features/git/serialize'),
+  ])
+  return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError, listJson: ser.listJson }
 }
 
 /** ProposedItem[] → доменный вход шагов для ListStore.addVersion. */
@@ -552,10 +564,9 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
     redirect(`${path}?e=unresolved`)
   }
 
-  const [{ gitCore }, { threeWayMerge, applyChoices }, { BranchOpError }] = await Promise.all([
-    import('@/features/git/core'),
+  const [{ gitCore, BranchOpError, listJson }, { threeWayMerge, applyChoices }] = await Promise.all([
+    gitPort(),
     import('@/features/git/three-way'),
-    import('@/core'),
   ])
 
   const state = await gitCore.mergeState({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
@@ -564,23 +575,21 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   const final = applyChoices(res, stepChoices, metaChoices)
   if (!final) redirect(`${path}?e=unresolved`) // выбраны не все конфликты (или state изменился)
 
-  // Каноничный формат list.json — как versionFiles (serialize.ts).
-  const listJson =
-    JSON.stringify(
-      {
-        title: final.title,
-        desc: final.desc,
-        tags: final.tags,
-        ordered: final.ordered,
-        version: tpl.currentVersion + 1,
-        steps: final.steps.map((s, i) => ({ n: i + 1, ...s })),
-      },
-      null,
-      2,
-    ) + '\n'
+  // Каноничный формат list.json — ТОЙ ЖЕ функцией, что пишет версии в git:
+  // собранный руками JSON молча разошёлся бы с ней при первой правке формата.
+  const json = listJson({
+    title: final.title,
+    desc: final.desc,
+    tags: final.tags,
+    ordered: final.ordered,
+    version: tpl.currentVersion + 1,
+    // blockId у трёхстороннего merge — nullable; сериализатор пишет поле только
+    // когда оно есть (иначе ломается golden-паритет с Rust), поэтому null убираем.
+    steps: final.steps.map(({ blockId, ...s }, i) => ({ ...s, n: i + 1, ...(blockId ? { blockId } : {}) })),
+  })
 
   try {
-    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, listJson)
+    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, json)
   } catch (e) {
     const code = e instanceof BranchOpError ? e.code : 'internal'
     redirect(`${path}?e=${code}`)
@@ -677,6 +686,186 @@ export async function editSuggestionNote(suggestionId: string, note: string): Pr
   return { ok: true }
 }
 
+// Правило прав живёт в suggestion-perms (без 'use server'): каждый экспорт
+// отсюда — сетевая точка входа, а предикату быть вызываемым снаружи незачем.
+
+/**
+ * ПРАВКА ПУНКТОВ предложения после создания — то, чего не было вовсе.
+ *
+ * До сих пор `suggestions.items` записывались ровно один раз, при создании: ни
+ * второй человек не мог внести вклад, ни сам автор — поправить опечатку. На
+ * GitHub на правку просто дописывают коммит; у нас пути не было.
+ *
+ * Один вход на оба вида предложений — разница только в том, где живут пункты:
+ * у ветки это `list.json` в её tip (пишем коммитом, авторство человека
+ * сохраняется в git), у старых предложений — колонка в БД.
+ */
+export async function updateSuggestionItems(suggestionId: string, formData: FormData): Promise<void> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+  if (!sug || sug.status !== 'open') return
+  if (!(await canEditSuggestionItems(sug, session.userId))) return
+  const tpl = sug.template
+  if (!canEditList(tpl)) return // архив/заморозка — список только на чтение
+
+  const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
+  const err = await writeSuggestionItems(sug, proposed, session, lang, `Update suggestion by @${session.handle}`)
+  const owner = await ownerHandle(tpl.ownerId)
+  const path = `/${owner}/${tpl.slug}/suggestions/${sug.number ?? sug.id}`
+  if (err) redirect(`${path}?e=${err}`)
+  revalidatePath(path)
+  redirect(path)
+}
+
+/**
+ * ЗАПИСЬ предложенных пунктов — общая для правки редактором и для «применить
+ * предложенную правку».
+ *
+ * Разница между видами предложений только в том, ГДЕ живут пункты: у ветки это
+ * `list.json` в её tip, у старых — колонка БД. Два вызывающих не должны знать
+ * этой развилки по отдельности, иначе один из них рано или поздно забудет про
+ * ветку (ровно так комментарии к пунктам не создавались на branch-PR).
+ *
+ * Возвращает код ошибки для `?e=`, либо null при успехе.
+ */
+async function writeSuggestionItems(
+  sug: { id: string; authorId: string; branchRef: string | null; coauthorIds: unknown; template: { id: string; ownerId: string; slug: string; currentVersion: number } },
+  proposed: ProposedItem[],
+  session: { userId: string; handle: string },
+  lang: Lang,
+  message: string,
+): Promise<string | null> {
+  const tpl = sug.template
+  const owner = await ownerHandle(tpl.ownerId)
+
+  if (sug.branchRef) {
+    // Пункты ветки живут в git. Базу берём из снапшота: заголовок/теги/порядок
+    // принадлежат ветке, а не БД, и перетирать их правкой пунктов нельзя.
+    const { gitCore, BranchOpError, listJson } = await gitPort()
+    const snap = await gitCore.branchSnapshot({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
+    if (!snap) return 'not-found'
+    const json = listJson({
+      title: snap.title,
+      desc: snap.desc,
+      tags: snap.tags,
+      ordered: snap.ordered,
+      version: tpl.currentVersion + 1,
+      steps: proposed.map((it, i) => ({
+        n: i + 1,
+        ...(it.type && it.type !== 'step' ? { type: it.type, content: (it.content ?? {}) as Record<string, unknown> } : {}),
+        // blockId только когда он есть: строки без него дают байт-в-байт прежний
+        // list.json, и golden-паритет с Rust не ломается (см. serialize.ts).
+        ...(it.blockId ? { blockId: String(it.blockId) } : {}),
+        title: tr(it.title as LocaleText, lang),
+        desc: tr(it.desc as LocaleText, lang),
+        command: it.command ?? '',
+        level: it.level ?? 'required',
+        why: tr(it.why as LocaleText, lang),
+        section: tr(it.section as LocaleText, lang),
+        subtasks: (it.subtasks ?? []).map((s) => tr(s as LocaleText, lang)),
+        refs: (it.refs ?? []).map((r) => ({ label: tr(r.label as LocaleText, lang), ...(r.url ? { url: r.url } : {}) })),
+      })),
+    })
+    try {
+      // expectedTip — снапшот, который правил человек: если ветку подвинули, пишем
+      // не поверх чужого пуша, а честно отказываем.
+      await gitCore.commitToBranch({ owner, slug: tpl.slug }, sug.branchRef, json, {
+        message,
+        expectedTip: snap.tipSha,
+        author: { name: session.handle, email: await gitEmail(session.userId, session.handle) },
+      })
+    } catch (e) {
+      return e instanceof BranchOpError ? e.code : 'internal'
+    }
+  } else {
+    await db.update(suggestions).set({ items: proposed }).where(eq(suggestions.id, sug.id))
+  }
+
+  // Соавторство: правку внёс не автор — запоминаем, иначе вклад исчезнет
+  // (у ветки он остался бы в git, у items — нигде).
+  if (sug.authorId !== session.userId) {
+    const prev = (sug.coauthorIds as string[] | null) ?? []
+    if (!prev.includes(session.userId)) {
+      await db.update(suggestions).set({ coauthorIds: [...prev, session.userId] }).where(eq(suggestions.id, sug.id))
+    }
+    await notify({
+      recipientId: sug.authorId,
+      actorId: session.userId,
+      type: 'suggestion_edited',
+      templateId: tpl.id,
+      suggestionId: sug.id,
+    })
+  }
+  return null
+}
+
+/**
+ * ПРИМЕНИТЬ предложенную правку пункта одной кнопкой.
+ *
+ * Наш случай сильнее, чем у GitHub: там suggested change — патч строк файла, и он
+ * рассыпается, стоит строкам уехать. У нас тред знает БЛОК (устойчивая
+ * идентичность, ADR-0013) и ПОЛЕ, поэтому применение — это подстановка значения:
+ * пункт можно было переставить, переименовать соседей — правка всё равно ляжет
+ * туда, куда задумано.
+ *
+ * Право — то же, что у правки пунктов: применяет тот, кто и так мог бы вписать
+ * этот текст руками.
+ */
+export async function applySuggestedEdit(commentId: string): Promise<void> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const [row] = await db
+    .select({
+      suggestedText: blockComments.suggestedText,
+      appliedAt: blockComments.appliedAt,
+      pending: blockComments.pending,
+      threadId: blockCommentThreads.id,
+      blockId: blockCommentThreads.blockId,
+      field: blockCommentThreads.field,
+      suggestionId: blockCommentThreads.suggestionId,
+    })
+    .from(blockComments)
+    .innerJoin(blockCommentThreads, eq(blockCommentThreads.id, blockComments.threadId))
+    .where(eq(blockComments.id, commentId))
+    .limit(1)
+  // Черновик ещё никому не показан — применять нечего.
+  if (!row || row.suggestedText === null || row.appliedAt || row.pending) return
+
+  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, row.suggestionId), with: { template: true } })
+  if (!sug || sug.status !== 'open') return
+  if (!(await canEditSuggestionItems(sug, session.userId))) return
+  const tpl = sug.template
+  if (!canEditList(tpl)) return
+
+  const owner = await ownerHandle(tpl.ownerId)
+  const path = `/${owner}/${tpl.slug}/suggestions/${sug.number ?? sug.id}`
+  // Пункты берём тем же правилом, что и вся страница: у ветки — из tip.
+  const items = await suggestionBlocks(sug, owner, tpl.slug)
+  const idx = items.findIndex((it) => it.blockId === row.blockId)
+  if (idx < 0) redirect(`${path}?e=orphaned`) // блок исчез — применять некуда
+
+  const next = items.map((it, i) => (i === idx ? applyFieldValue(it, row.field, row.suggestedText!, lang) : it))
+  const err = await writeSuggestionItems(sug, next, session, lang, `Apply suggestion from @${session.handle}`)
+  if (err) redirect(`${path}?e=${err}`)
+
+  // Применили — отмечаем и закрываем тред: обсуждать больше нечего (так же
+  // поступает GitHub, и без этого счётчик нерешённых врал бы.)
+  await db.update(blockComments).set({ appliedAt: new Date() }).where(eq(blockComments.id, commentId))
+  await db
+    .update(blockCommentThreads)
+    .set({ resolvedAt: new Date(), resolvedById: session.userId })
+    .where(eq(blockCommentThreads.id, row.threadId))
+  revalidatePath(path)
+  redirect(path)
+}
+
+/** Адрес для авторства коммита: свой e-mail, иначе стабильный noreply по handle. */
+async function gitEmail(userId: string, handle: string): Promise<string> {
+  const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1)
+  return u?.email || `${handle}@users.noreply.setfork.com`
+}
+
 /**
  * Правка своего комментария к предложению.
  *
@@ -719,6 +908,9 @@ export async function addSuggestionComment(formData: FormData): Promise<void> {
     with: { template: true },
   })
   if (!sug) return
+  // Заперто — новых реплик нет ни у кого, включая владельца: замок, который
+  // обходит тот, кто его повесил, ничего не значит для остальных.
+  if (sug.lockedAt) return
   // Комментарий к правке — запись в тред списка: только если список видим комментатору
   // (список мог стать приватным/скрытым после публикации PR; reactions уже так гейтят).
   if (!canViewList(sug.template, { isOwner: sug.template.ownerId === session.userId })) return

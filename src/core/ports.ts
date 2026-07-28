@@ -204,6 +204,16 @@ export interface GitCore {
   /** Коммиты рефа, свежие первыми. `notIn` (обычно 'main') скрывает достижимое
    *  из базы — остаётся ровно вклад ветки. null — рефа нет (ветку удалили). */
   listCommits(repo: GitRepoRef, rev: string, opts?: { notIn?: string; limit?: number }): Promise<GitCommit[] | null>
+  /** Записать list.json в ВЕТКУ одним коммитом (правка предложения, «применить
+   *  предложенную правку»). main не двигается → версии нет.
+   *  `expectedTip` — оптимистичная блокировка: не совпал → BranchOpError('stale').
+   *  `changed:false` — содержимое совпало, коммита не было. */
+  commitToBranch(
+    repo: GitRepoRef,
+    branch: string,
+    listJson: string,
+    opts?: { message?: string; expectedTip?: string; author?: { name: string; email: string } },
+  ): Promise<{ tipSha: string; changed: boolean }>
 }
 
 export interface GitCommit {
@@ -237,7 +247,18 @@ export interface MergeState {
 
 /** Ошибка операций над ветками с машиночитаемой причиной (для UI-сообщений). */
 export class BranchOpError extends Error {
-  constructor(public code: 'bad-name' | 'exists' | 'not-found' | 'protected' | 'conflict' | 'nothing-to-merge' | 'internal') {
+  constructor(
+    public code:
+      | 'bad-name'
+      | 'exists'
+      | 'not-found'
+      | 'protected'
+      | 'conflict'
+      | 'nothing-to-merge'
+      // Ветку подвинули с момента чтения — писать поверх нельзя (см. commitToBranch).
+      | 'stale'
+      | 'internal',
+  ) {
     super(code)
     this.name = 'BranchOpError'
   }

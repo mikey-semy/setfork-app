@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { db, issues, listLabels, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isCollaborator } from '@/features/collab/queries'
-import { customKey, isHexColor, type CustomLabel } from './labels'
+import { customKey, isHexColor, type CustomLabel } from '@/shared/lib/labels'
 
 // Кастомные метки списка (CRUD) — владелец или коллаборатор, как assignees/labels.
 async function canManage(templateId: string, userId: string): Promise<{ owner: string; slug: string } | null> {

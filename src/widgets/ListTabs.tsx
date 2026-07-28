@@ -30,6 +30,9 @@ export interface ListTabLabels {
   versions: string
   insights: string
   settings: string
+  /** Подписи стрелок листания ряда вкладок (узкий экран). */
+  scrollPrev: string
+  scrollNext: string
 }
 
 export function ListTabs({
@@ -46,7 +49,7 @@ export function ListTabs({
   const pathname = usePathname()
   const active = activeFor(base, pathname)
   return (
-    <TabNav scope="list">
+    <TabNav scope="list" arrows={{ prev: labels.scrollPrev, next: labels.scrollNext }}>
       {/* Первый таб — сам список (как «Code» у GitHub-репо), не «Overview». */}
       <TabItem href={base} on={active === 'overview'} icon={<ListChecks size={15} />} label={labels.list} />
       {flags.issues && (

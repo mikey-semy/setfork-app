@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestDraft, RefreshCw, X } from 'lucide-react'
+import { Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, Pencil, RefreshCw, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Badge, type BadgeVariant } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
@@ -12,6 +13,7 @@ import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr, updateBranchFromMain } from '@/features/library/actions'
+import { canEditSuggestionItems } from '@/features/library/suggestion-perms'
 import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
@@ -31,6 +33,8 @@ import { suggestionChecks } from '@/features/library/suggestion-checks'
 import { withPrDefaults } from '@/features/library/pr-settings'
 import { blocksFrom } from '@/features/library/suggestion-blocks'
 import { closingRefs } from '@/features/library/closing-refs'
+import { LinkIssuePicker } from '@/features/library/LinkIssuePicker'
+import { LockToggle } from '@/features/library/LockToggle'
 import { MergedPanel } from '@/features/library/MergedPanel'
 import { SuggestionTimeline, type TimelineEvent } from '@/features/library/SuggestionTimeline'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
@@ -50,9 +54,9 @@ import { WatchButton } from '@/features/watch/WatchButton'
 import { AssigneePicker } from '@/features/issues/AssigneePicker'
 import { LabelEditor } from '@/features/issues/LabelEditor'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
-import { getListLabels } from '@/features/issues/queries'
+import { getListLabels, getOpenIssuesForPicker } from '@/features/issues/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
-import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails } from '@/features/library/queries'
+import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails, getUsersByIds } from '@/features/library/queries'
 import { setSuggestionDraft, setSuggestionLabels, setSuggestionMilestone, toggleReviewRequest, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
@@ -84,6 +88,10 @@ export default async function SuggestionThreadPage({
 
   const isOwner = session?.userId === meta.ownerId
   const canMerge = isOwner || (!!session && (await isCollaborator(meta.id, session.userId)))
+  // Правка ПУНКТОВ — не то же, что слияние: её ведут автор и исполнители, а
+  // мейнтейнеры только если список это разрешил. Правило одно с экшеном.
+  const canEditItems =
+    !!session && sug.status === 'open' && (await canEditSuggestionItems({ ...sug, template: meta }, session.userId))
 
   // A3: branch-PR — предлагаемые шаги живут в tip ветки, а не в items;
   // diff строим против ТЕКУЩЕЙ версии main (PR = «ветка → main»).
@@ -124,6 +132,9 @@ export default async function SuggestionThreadPage({
 
   // Задачи, которые предложение закроет при слиянии («closes #12» в тексте).
   const linkedIssues = await getIssuesByNumbers(meta.id, closingRefs(sug.note))
+  // Открытые задачи списка — из чего выбирать в пикере привязки.
+  const canLinkIssues = !!session && sug.status === 'open' && (canMerge || session.userId === sug.authorId)
+  const openIssues = canLinkIssues ? await getOpenIssuesForPicker(meta.id) : []
   // Свои неотправленные замечания — из тех же тредов (чужие сюда не попадают).
   const myPending = session
     ? threads.reduce((n, th) => n + th.comments.filter((c) => c.pending).length, 0)
@@ -170,6 +181,13 @@ export default async function SuggestionThreadPage({
       en: 'This list requires linear history: only fast-forward merges are allowed. Update the branch from main and retry.',
     },
     unresolved: { ru: 'Разрешены не все конфликты (или ветка изменилась) — выбери версии заново.', en: 'Not all conflicts were resolved (or the branch changed) — pick again.' },
+    // Правку не записали, потому что ветку подвинули: чужой пуш не затираем.
+    stale: { ru: t('prStaleWrite', 'ru'), en: t('prStaleWrite', 'en') },
+    // Применяли предложенную правку, а пункта уже нет — применять некуда.
+    orphaned: {
+      ru: 'Пункт, к которому относилась предложенная правка, исчез из предложения — применять некуда.',
+      en: 'The item this suggestion pointed at is gone — there is nothing to apply it to.',
+    },
   }
   const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? { ru: 'Не удалось выполнить merge.', en: 'Merge failed.' }) : null
 
@@ -256,13 +274,27 @@ export default async function SuggestionThreadPage({
   const commits = sug.branchRef && !branchMissing ? await gitCore.listCommits({ owner, slug }, sug.branchRef, { notIn: 'main' }) : null
   const commitAuthors = commits?.length ? await getUsersByEmails(commits.map((c) => c.authorEmail)) : {}
 
-  const statusCls = isDraft
-    ? 'bg-surface-2 text-ink-2'
+  // СОАВТОРЫ: над одной правкой работают несколько человек. У ветки это авторы
+  // коммитов (git знает их и без нас), у предложений с items — те, кто правил
+  // пункты. Открывшего сюда не включаем: он показан отдельно.
+  const coauthorRows = await getUsersByIds(((sug.coauthorIds as string[] | null) ?? []).filter((u) => u !== sug.authorId))
+  const seenCo = new Set([sug.author.handle])
+  const coauthors = [
+    ...coauthorRows,
+    ...Object.values(commitAuthors),
+  ].filter((c) => c.handle && !seenCo.has(c.handle) && seenCo.add(c.handle))
+
+  // Состояние — общим бейджем (shared/ui/badge), а не своей плашкой: раньше
+  // здесь были залитые bg-accent/bg-ok с белым текстом — они кричали громче
+  // заголовка правки, ради которого человек и пришёл. Варианты бейджа тихие:
+  // подложка в 15% и цветной текст, как у остальных чипов приложения.
+  const statusVariant: BadgeVariant = isDraft
+    ? 'soft'
     : sug.status === 'accepted'
-      ? 'bg-ok text-white'
+      ? 'ok'
       : sug.status === 'rejected'
-        ? 'bg-surface-2 text-muted'
-        : 'bg-accent text-white'
+        ? 'soft'
+        : 'accent'
 
   // Ревью нужно в ДВУХ вкладках: в обсуждении (там идёт разговор) и сразу под
   // изменениями (отревьюил — тут же вынес вердикт). Один элемент, а не две копии
@@ -325,16 +357,43 @@ export default async function SuggestionThreadPage({
           }}
         />
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold ${statusCls}`}>
-            {isDraft ? <GitPullRequestDraft size={14} /> : <GitPullRequest size={14} />} {statusLabel}
-          </span>
+          {/* Крупнее рядового чипа (это главный статус страницы), но той же
+              тихой палитры. */}
+          <Badge variant={statusVariant} className="px-3 py-1 text-[12.5px]">
+            {sug.status === 'accepted' ? (
+              <GitMerge size={14} />
+            ) : sug.status === 'rejected' ? (
+              <GitPullRequestClosed size={14} />
+            ) : isDraft ? (
+              <GitPullRequestDraft size={14} />
+            ) : (
+              <GitPullRequest size={14} />
+            )}{' '}
+            {statusLabel}
+          </Badge>
           {/* Объём правки в шапке — тот же индикатор, что в диффе и в коммитах. */}
           <DiffStat counts={summary} squares />
           <span className="text-[13px] text-ink-2">
             {t('proposedBy', lang)}{' '}
             <Link href={`/${sug.author.handle}`} className="font-semibold text-ink hover:text-accent">
               {sug.author.handle}
-            </Link>{' '}
+            </Link>
+            {/* Соавторы: над правкой работают несколько человек, и «предложил X»
+                в одиночку это скрывало. У ветки вклад берём из авторства коммитов,
+                у старых предложений — из тех, кто правил пункты. */}
+            {coauthors.length > 0 && (
+              <>
+                {' '}
+                <Tooltip label={`${t('prCoauthors', lang)}: ${coauthors.map((c) => c.handle).join(', ')}`}>
+                  <span className="inline-flex shrink-0 items-center gap-0.5 align-middle">
+                    {coauthors.slice(0, 3).map((c) => (
+                      <Avatar key={c.handle} handle={c.handle} avatarUrl={c.avatarUrl} size={18} />
+                    ))}
+                    {coauthors.length > 3 && <span className="font-mono text-[11px] text-muted">+{coauthors.length - 3}</span>}
+                  </span>
+                </Tooltip>
+              </>
+            )}{' '}
             · {fmt.format(new Date(sug.createdAt))} ·{' '}
             {sug.branchRef ? (
               <>
@@ -363,6 +422,7 @@ export default async function SuggestionThreadPage({
             files: t('proposedChanges', lang),
             result: t('resultTab', lang),
           }}
+          arrows={{ prev: t('scrollPrev', lang), next: t('scrollNext', lang) }}
         />
 
         {/* Две колонки: содержимое вкладки + боковая панель (общий примитив). */}
@@ -414,8 +474,17 @@ export default async function SuggestionThreadPage({
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → предложение` : `v${sug.baseVersion} → suggestion`}
         </div>
-        {/* Переключатель вида — общий с сравнением версий. */}
-        <div className="mb-3 flex justify-end">
+        {/* Ряд действий над диффом: правка пунктов слева от переключателя вида —
+            обе кнопки одной высоты, ряд прижат вправо (эталон настроек). */}
+        <div className="mb-3 flex items-center justify-end gap-2">
+          {canEditItems && (
+            <Link
+              href={`${path}/edit`}
+              className="inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-[13px] font-semibold text-ink hover:border-border-strong"
+            >
+              <Pencil size={14} /> {t('prEdit', lang)}
+            </Link>
+          )}
           <DiffViewToggle path={path} tab="files" view={view} labels={{ code: t('viewCode', lang), list: t('viewList', lang) }} />
         </div>
         {view === 'code' ? (
@@ -430,6 +499,7 @@ export default async function SuggestionThreadPage({
               slug,
               suggestionId: sug.id,
               canComment: !!session && sug.status === 'open',
+              canApply: canEditItems,
               byBlock: threadsByBlock,
               labels: {
                 add: t('commentAdd', lang),
@@ -446,6 +516,11 @@ export default async function SuggestionThreadPage({
                 onBlock: t('commentOnBlock', lang),
                 stateReanchored: t('commentReanchored', lang),
                 orphanHint: t('commentOrphaned', lang),
+                suggestLabel: t('prSuggestEdit', lang),
+                suggestHint: t('prSuggestHint', lang),
+                suggestPh: t('prSuggestPh', lang),
+                apply: t('prApply', lang),
+                applied: t('prApplied', lang),
               },
             }}
           />
@@ -755,19 +830,48 @@ export default async function SuggestionThreadPage({
               />
             </AsideCard>
 
-            {linkedIssues.length > 0 && (
+            {/* Development у GitHub: какие задачи закроет слияние. Привязка живёт
+                строкой `closes #N` в тексте — пикер её дописывает, поэтому набранное
+                руками и выбранное мышью это одно и то же. */}
+            {(linkedIssues.length > 0 || (canLinkIssues && openIssues.length > 0)) && (
               <AsideCard title={t('prLinkedIssues', lang)}>
-                <ul className="flex flex-col gap-1.5">
-                  {linkedIssues.map((iss) => (
-                    <li key={iss.number} className="flex items-start gap-1.5 text-[12.5px]">
-                      <Link href={`/${owner}/${slug}/issues/${iss.number}`} className="font-mono text-muted hover:text-accent">
-                        #{iss.number}
-                      </Link>
-                      <span className={`min-w-0 flex-1 ${iss.status === 'closed' ? 'text-muted line-through' : 'text-ink-2'}`}>{iss.title}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-1.5 text-[11.5px] text-muted">{t('prLinkedIssuesHint', lang)}</p>
+                {linkedIssues.length > 0 && (
+                  <ul className="mb-1.5 flex flex-col gap-1.5">
+                    {linkedIssues.map((iss) => (
+                      <li key={iss.number} className="flex items-start gap-1.5 text-[12.5px]">
+                        <Link href={`/${owner}/${slug}/issues/${iss.number}`} className="font-mono text-muted hover:text-accent">
+                          #{iss.number}
+                        </Link>
+                        <span className={`min-w-0 flex-1 ${iss.status === 'closed' ? 'text-muted line-through' : 'text-ink-2'}`}>{iss.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <LinkIssuePicker
+                  suggestionId={sug.id}
+                  issues={openIssues}
+                  linked={closingRefs(sug.note)}
+                  canEdit={canLinkIssues}
+                  labels={{
+                    add: t('prLinkIssue', lang),
+                    empty: t('prLinkIssueEmpty', lang),
+                    filter: t('prLinkIssueFilter', lang),
+                    remove: t('prLinkIssueRemove', lang),
+                    hint: t('prLinkedIssuesHint', lang),
+                  }}
+                />
+              </AsideCard>
+            )}
+
+            {/* Замок обсуждения — служебное и редкое, поэтому в самом низу панели,
+                а не рядом с частыми действиями. */}
+            {canMerge && (
+              <AsideCard>
+                <LockToggle
+                  suggestionId={sug.id}
+                  locked={!!sug.lockedAt}
+                  labels={{ lock: t('prLock', lang), unlock: t('prUnlock', lang), hint: t('prLockHint', lang) }}
+                />
               </AsideCard>
             )}
 
