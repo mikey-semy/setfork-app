@@ -35,7 +35,7 @@ import { listStore } from './list-store'
 import { closingRefs } from './closing-refs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from './pr-settings'
 import { canEditSuggestionItems } from './suggestion-perms'
-import { applySuggestion } from './suggestion-core'
+import { applySuggestion, mergeSuggestion } from './suggestion-core'
 import { closeLinkedIssues, notifyWatchersNewVersion } from './suggestion-side-effects'
 import { suggestionBlocks } from './suggestion-blocks'
 import { applyFieldValue } from './suggestion-apply'
@@ -420,66 +420,26 @@ export async function updateBranchFromMain(suggestionId: string): Promise<void> 
   revalidatePath(path)
 }
 
-/** Владелец/коллаборатор: влить branch-PR (ff или merge-commit + проекция). */
+/**
+ * Владелец/коллаборатор: влить предложение.
+ *
+ * Гейты и само слияние живут в ядре (`suggestion-core`): его же зовёт MCP, и
+ * второй набор проверок здесь неизбежно разошёлся бы с первым. Экшен делает то,
+ * чего ядро не умеет и не должно: берёт сессию и ведёт человека — с кодом отказа
+ * в адресе, как было.
+ */
 export async function mergeBranchPr(suggestionId: string): Promise<void> {
   const session = await requireSession()
-  const sug = await db.query.suggestions.findFirst({
-    where: (s) => eq(s.id, suggestionId),
-    with: { template: true },
-  })
-  if (!sug || sug.status !== 'open' || !sug.branchRef) return
-  // Черновик не сливается: кнопку мы и так не показываем, но экшен — сетевая точка
-  // входа, и полагаться на скрытую кнопку значит не иметь проверки вовсе.
-  if (sug.draft) return
-  const tpl = sug.template
-  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  // Гейты — по настройкам списка (раздел «Предложения»), а не захардкожены: у
-  // GitHub это тоже настройки репозитория, и на разных списках нужны разные.
-  const prs = withPrDefaults(tpl.prSettings)
-  // Запрошенные правки блокируют всегда: иначе вердикт «просит доработать» был бы
-  // декоративным, а это не настройка, а смысл ревью.
-  if (await hasBlockingReview(sug.id)) return
-  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
-  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals) return
-
-  const owner = await ownerHandle(tpl.ownerId)
-  const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
-  const { gitCore, BranchOpError } = await gitPort()
-  // Линейная история: сливаем только когда это fast-forward. Проверяем ДО merge —
-  // иначе merge-коммит уже создан, и «запрет» опоздал.
-  if (prs.linearOnly) {
-    const state = await gitCore.mergeState({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
-    if (state && state.mergeBaseSha !== state.ours.tipSha) redirect(`${path}?e=not-linear`)
+  const res = await mergeSuggestion(suggestionId, session.userId)
+  if (!res.ok) {
+    // Куда вести с ошибкой, знает только страница — ядру адреса не нужны.
+    const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+    if (!sug) return
+    const owner = await ownerHandle(sug.template.ownerId)
+    redirect(`/${owner}/${sug.template.slug}/suggestions/${sug.number ?? sug.id}?e=${encodeURIComponent(res.reason)}`)
   }
-  try {
-    // Заголовок squash-коммита — «<название предложения> (#N)»: по нему в истории
-    // main видно, откуда изменение, когда самой ветки уже нет. Название = первая
-    // строка описания; описание бывает пустым — тогда имя ветки, лишь бы не безымянно.
-    const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 120)
-    const title = sug.number ? `${head || sug.branchRef} (#${sug.number})` : head || sug.branchRef
-    await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef, { mode: prs.mergeMethod, message: title })
-  } catch (e) {
-    const code = e instanceof BranchOpError ? e.code : 'internal'
-    redirect(`${path}?e=${code}`)
-  }
-  // Ветка после слияния больше не нужна — удаляем, если так настроено. Ошибку
-  // глотаем: предложение уже влито, и падать из-за уборки нельзя.
-  if (prs.autoDeleteBranch) {
-    await gitCore.deleteBranch({ owner, slug: tpl.slug }, sug.branchRef).catch(() => {})
-  }
-  await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
-  // «closes #12» в тексте предложения закрывает задачу — но только теперь, когда
-  // изменения действительно в main.
-  await closeLinkedIssues(tpl.id, sug.note, session.userId, prs.autoCloseIssues)
-  if (sug.authorId !== session.userId) {
-    await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
-  }
-  // git-merge создаёт версию МИМО listStore.addVersion → фасадный барьер её не ловит, recheck явно.
-  if (tpl.visibility === 'public') await recheckList(tpl.id)
-  await notifyWatchersNewVersion(tpl.id, session.userId)
-  await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
-  redirect(`/${owner}/${tpl.slug}`)
+  redirect(`/${res.owner}/${res.slug}`)
 }
 
 /** A4: merge branch-PR c ручным разрешением конфликтов по шагам.

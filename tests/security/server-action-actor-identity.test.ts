@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -26,11 +26,14 @@ const TARGET_NOT_ACTOR: Record<string, string> = {
   'src/features/collab/actions.ts#removeCollaborator': 'userId — КОГО убирают; действующее лицо берётся из requireSession выше',
 }
 
+// withFileTypes, а не statSync на каждый файл: обход src это тысячи записей, и на
+// Windows под параллельными тестами лишний системный вызов на каждую превращал
+// караул в падение по таймауту — то есть в ложную тревогу вместо проверки.
 function walk(dir: string, out: string[] = []): string[] {
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name)
-    if (statSync(p).isDirectory()) walk(p, out)
-    else if (name.endsWith('.ts') || name.endsWith('.tsx')) out.push(p)
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name)
+    if (e.isDirectory()) walk(p, out)
+    else if (e.name.endsWith('.ts') || e.name.endsWith('.tsx')) out.push(p)
   }
   return out
 }
@@ -61,7 +64,8 @@ function findOffenders(): Offender[] {
 }
 
 describe('личность действующего лица не приходит аргументом в экшен', () => {
-  it('ни один экспорт из "use server" не принимает чужой userId', () => {
+  // Запас по времени: тест читает весь src, а на холодной ФС это секунды.
+  it('ни один экспорт из "use server" не принимает чужой userId', { timeout: 60_000 }, () => {
     const offenders = findOffenders()
     expect(
       offenders,
