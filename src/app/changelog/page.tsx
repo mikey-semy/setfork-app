@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { ArrowLeft } from 'lucide-react'
+import { notFound } from 'next/navigation'
 import { getLang } from '@/shared/i18n/server'
+import { getChangelogSettings } from '@/shared/settings/changelog'
 import { t } from '@/shared/i18n'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -17,8 +19,11 @@ export const metadata: Metadata = { title: 'Changelog' }
  * было только через шапку или футер.
  */
 export default async function ChangelogPage() {
-  const lang = await getLang()
-  const entries = await getChangelog(200)
+  // Тумблер выключает и СТРАНИЦУ, а не только карточку: иначе «выключено» в
+  // админке оставляло публичный адрес доступным, да ещё с сидовой историей.
+  // Независимые запросы — параллельно (react-doctor).
+  const [lang, settings, entries] = await Promise.all([getLang(), getChangelogSettings(), getChangelog(200)])
+  if (!settings.enabled) notFound()
   const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { year: 'numeric', month: 'long', day: 'numeric' })
 
   return (

@@ -233,9 +233,10 @@ export async function setChangelogSettings(formData: FormData): Promise<void> {
     ...(String(formData.get('token') ?? '').trim() ? { [CHANGELOG_KEYS.token]: String(formData.get('token')).trim() } : {}),
   })
   clearChangelogCache()
-  // Сразу подтягиваем: иначе после включения витрина оставалась бы пустой до
-  // ближайшего прохода джобы, и настройка выглядела бы нерабочей.
-  await import('@/features/changelog/service').then((m) => m.refreshChangelog()).catch(() => {})
+  // Обновление СТАВИМ В ОЧЕРЕДЬ, а не выполняем здесь: оно последовательно ждёт
+  // до 30 вызовов модели по 20 секунд, и сохранение формы висело бы минутами
+  // (или упиралось в таймаут запроса) уже ПОСЛЕ того, как настройки сохранены.
+  await import('@/features/changelog/service').then((m) => m.ensureChangelogScheduled()).catch(() => {})
   revalidatePath('/admin')
   revalidatePath('/changelog')
   revalidatePath('/', 'layout')

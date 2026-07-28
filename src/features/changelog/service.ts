@@ -37,6 +37,8 @@ export const entryText = (e: ChangelogItem, lang: Lang): string => (lang === 'ru
 
 // ── Обновление из GitHub ─────────────────────────────────────────────
 
+/** Внешний ключ включает РЕПОЗИТОРИЙ: номера PR уникальны только внутри него,
+ *  и после смены репозитория «pr:519» сталкивался бы со старой записью. */
 interface Pulled {
   externalId: string
   at: Date
@@ -75,7 +77,7 @@ async function pull(repo: string, source: 'releases' | 'merged'): Promise<Pulled
       .map((r) => r as Record<string, unknown>)
       .filter((r) => !r.draft && typeof r.tag_name === 'string')
       .map((r) => ({
-        externalId: `rel:${String(r.tag_name)}`,
+        externalId: `${repo}#rel:${String(r.tag_name)}`,
         at: new Date(String(r.published_at ?? r.created_at ?? Date.now())),
         title: String(r.name || r.tag_name),
         href: String(r.html_url ?? ''),
@@ -85,7 +87,7 @@ async function pull(repo: string, source: 'releases' | 'merged'): Promise<Pulled
     .map((r) => r as Record<string, unknown>)
     .filter((r) => typeof r.merged_at === 'string') // закрытый ≠ слитый
     .map((r) => ({
-      externalId: `pr:${String(r.number)}`,
+      externalId: `${repo}#pr:${String(r.number)}`,
       at: new Date(String(r.merged_at)),
       title: String(r.title ?? ''),
       href: String(r.html_url ?? ''),
@@ -148,27 +150,66 @@ async function bilingual(title: string, translate: boolean): Promise<{ en: strin
   return isRu ? { en: other, ru: clean } : { en: clean, ru: other }
 }
 
-/** Перевод ОДНОЙ строки — короткий вызов, без обвязки генерации списков. */
+/**
+ * Перевод ОДНОЙ строки — короткий вызов, без обвязки генерации списков.
+ *
+ * Три вещи, без которых этот вызов был бы дырой в общих правилах:
+ *
+ * 1. Общий бюджет спрашивается ПЕРЕД вызовом. Джоба ходит по расписанию и могла
+ *    выдать до 30 платных переводов за проход мимо суточного потолка.
+ * 2. Расход пишется в `ai_usage` — иначе стоимость changelog не видна в админке
+ *    и не участвует в том же потолке.
+ * 3. Заголовок приходит ИЗВНЕ (с GitHub) и оборачивается spotlight'ом: строка
+ *    вида «ignore previous instructions…» иначе управляла бы моделью, а её ответ
+ *    уезжал бы на публичную витрину.
+ */
 async function translateLine(text: string, to: Lang): Promise<string> {
-  const [{ getAiChatClient }, { getAiSettings }, { pickChatModel }, { generateText }] = await Promise.all([
-    import('@/shared/ai/provider'),
-    import('@/shared/settings/ai'),
-    import('@/shared/ai/credits'),
-    import('ai'),
-  ])
+  const [{ getAiChatClient }, { getAiSettings }, { pickChatModel }, { generateText }, { spotlight }, usage, { globalBudgetOk }] =
+    await Promise.all([
+      import('@/shared/ai/provider'),
+      import('@/shared/settings/ai'),
+      import('@/shared/ai/credits'),
+      import('ai'),
+      import('@/shared/ai/spotlight'),
+      import('@/shared/ai/usage'),
+      import('@/shared/quota'),
+    ])
   const client = await getAiChatClient()
   const settings = await getAiSettings()
   if (!client || !settings.enabled) return ''
+  if (!(await globalBudgetOk())) return ''
+
   const model = await pickChatModel(settings)
-  const res = await generateText({
-    model: client.chat(model),
-    system: `Translate the changelog line to ${to === 'ru' ? 'Russian' : 'English'}. Keep it one line, keep product and code names as is. Return ONLY the translation.`,
-    prompt: text,
-    temperature: 0,
-    maxOutputTokens: 200,
-    abortSignal: AbortSignal.timeout(20_000),
-  })
-  return res.text.trim().split(/\r?\n/)[0].slice(0, 300)
+  const sp = spotlight()
+  const startedAt = Date.now()
+  const record = (u: { input: number; output: number; total: number; cost: number }, outcome: string) =>
+    usage.recordUsage({
+      userId: null,
+      feature: 'translate',
+      model,
+      ...u,
+      refType: 'changelog',
+      outcome: outcome as Parameters<typeof usage.recordUsage>[0]['outcome'],
+      durationMs: Date.now() - startedAt,
+      provider: client.cfg.provider,
+    })
+
+  try {
+    const res = await generateText({
+      model: client.chat(model),
+      system: `Translate the changelog line to ${to === 'ru' ? 'Russian' : 'English'}. Keep it one line, keep product and code names as is. Return ONLY the translation.\n${sp.rule()}`,
+      prompt: sp.wrap('LINE', text),
+      temperature: 0,
+      maxOutputTokens: 200,
+      abortSignal: AbortSignal.timeout(20_000),
+    })
+    const u = usage.extractUsage(res)
+    await record({ input: u.input, output: u.output, total: u.total, cost: u.cost }, 'ok')
+    return res.text.trim().split(/\r?\n/)[0].slice(0, 300)
+  } catch (e) {
+    await record({ input: 0, output: 0, total: 0, cost: 0 }, usage.outcomeOf(e))
+    return ''
+  }
 }
 
 /**
