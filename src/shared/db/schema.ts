@@ -64,6 +64,7 @@ export const notificationType = pgEnum('notification_type', [
   'mention',
   'assigned',
   'review_requested', // тебя попросили посмотреть правку
+  'review_dismissed', // твой вердикт снял мейнтейнер
   'transfer_incoming', // тебе предлагают принять владение списком
   'transfer_accepted', // получатель принял твою передачу
   'transfer_declined', // получатель отклонил твою передачу
@@ -760,6 +761,12 @@ export const suggestionReviews = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     verdict: text('verdict').notNull(), // 'comment' | 'approve' | 'changes'
     body: text('body').notNull().default(''),
+    // Снятое ревью НЕ удаляется: «правки запрошены и сняты мейнтейнером» — часть
+    // истории решения. Удаление выглядело бы так, будто рецензент и не высказывался.
+    dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
+    dismissedById: uuid('dismissed_by_id').references(() => users.id, { onDelete: 'set null' }),
+    // Причина обязательна: снятие чужого голоса без объяснения — тихий обход ревью.
+    dismissReason: text('dismiss_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

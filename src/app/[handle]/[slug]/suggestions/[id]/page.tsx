@@ -145,7 +145,7 @@ export default async function SuggestionThreadPage({
   // слияния от того, кто его пишет, а экшен при этом слить разрешал.
   const unresolvedThreads = threads.filter((th) => !th.resolvedAt && th.comments.some((c) => !c.pending)).length
   const [reviews, watchState, watchCount, assignees, reviewRequests, customLabels, msOptions, curMilestone] = await Promise.all([
-    getSuggestionReviews(sug.id),
+    getSuggestionReviews(sug.id, session?.userId),
     session ? getWatchState(session.userId, meta.id) : Promise.resolve(null),
     getWatchCount(meta.id),
     getSuggestionAssignees(sug.id),
@@ -345,6 +345,7 @@ export default async function SuggestionThreadPage({
           reviews={reviews}
           myVerdict={myVerdict}
           canReview={!!session}
+          canDismiss={canMerge}
           isAuthor={session?.userId === sug.authorId}
           lang={lang}
           labels={{
@@ -358,6 +359,9 @@ export default async function SuggestionThreadPage({
             blocked: t('reviewBlocked', lang),
             yourReview: t('reviewYours', lang),
             ownAuthor: t('reviewOwnAuthor', lang),
+            dismiss: t('reviewDismiss', lang),
+            dismissReason: t('reviewDismissReason', lang),
+            dismissedBy: t('reviewDismissedBy', lang),
           }}
         />
       </div>

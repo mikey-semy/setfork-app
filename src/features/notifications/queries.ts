@@ -21,6 +21,7 @@ export type NotificationType =
   | 'mention'
   | 'assigned'
   | 'review_requested'
+  | 'review_dismissed'
   | 'transfer_incoming'
   | 'transfer_accepted'
   | 'transfer_declined'

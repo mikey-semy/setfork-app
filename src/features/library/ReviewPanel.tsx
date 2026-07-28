@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, MessageSquare, GitPullRequestClosed, Loader2, X } from 'lucide-react'
+import { Check, MessageSquare, GitPullRequestClosed, Loader2, X, ShieldOff } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import { Textarea } from '@/shared/ui/textarea'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
-import { submitSuggestionReview, withdrawSuggestionReview } from './review-actions'
+import { dismissSuggestionReview, submitSuggestionReview, withdrawSuggestionReview } from './review-actions'
 import type { ReviewView, Verdict } from './review-model'
 
 export interface ReviewLabels {
@@ -20,6 +22,9 @@ export interface ReviewLabels {
   blocked: string
   yourReview: string
   ownAuthor: string
+  dismiss: string
+  dismissReason: string
+  dismissedBy: string
 }
 
 const VERDICT_META: Record<Verdict, { key: keyof ReviewLabels; cls: string; icon: typeof Check }> = {
@@ -41,6 +46,7 @@ export function ReviewPanel({
   reviews,
   myVerdict,
   canReview,
+  canDismiss,
   isAuthor,
   lang,
   labels,
@@ -49,6 +55,8 @@ export function ReviewPanel({
   reviews: ReviewView[]
   myVerdict: Verdict | null
   canReview: boolean
+  /** Мейнтейнер: может снять ЧУЖОЙ вердикт (своё снимается «убрать ревью»). */
+  canDismiss: boolean
   isAuthor: boolean
   lang: Lang
   labels: ReviewLabels
@@ -85,15 +93,26 @@ export function ReviewPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2 text-[12px]">
                     <span className="font-semibold text-ink">{r.reviewer.name || r.reviewer.handle}</span>
-                    <span className={`inline-flex items-center gap-1 font-medium ${meta.cls}`}>
+                    {/* Снятый вердикт показываем приглушённо и зачёркнуто: он был,
+                        но принятие больше не держит — обе половины важны. */}
+                    <span className={`inline-flex items-center gap-1 font-medium ${r.dismissed ? 'text-muted line-through' : meta.cls}`}>
                       <Icon size={12} /> {labels[meta.key]}
                     </span>
                     <span className="text-muted">{timeAgo(r.createdAt, lang)}</span>
                   </div>
                   {r.body && (
-                    <div className="whitespace-pre-wrap text-[13px] text-ink-2 [overflow-wrap:anywhere]">{r.body}</div>
+                    <div className={`whitespace-pre-wrap text-[13px] [overflow-wrap:anywhere] ${r.dismissed ? 'text-muted' : 'text-ink-2'}`}>{r.body}</div>
+                  )}
+                  {r.dismissed && (
+                    <div className="mt-0.5 text-[12px] text-muted [overflow-wrap:anywhere]">
+                      {labels.dismissedBy}
+                      {r.dismissed.by ? ` @${r.dismissed.by}` : ''}: {r.dismissed.reason}
+                    </div>
                   )}
                 </div>
+                {canDismiss && !r.dismissed && !r.isMine && (
+                  <DismissButton suggestionId={suggestionId} reviewerHandle={r.reviewer.handle} labels={labels} />
+                )}
               </div>
             )
           })}
@@ -144,5 +163,68 @@ export function ReviewPanel({
         )
       )}
     </div>
+  )
+}
+
+/**
+ * Снять чужой вердикт — иконка в углу строки ревью.
+ *
+ * Причина обязательна, поэтому это не мгновенная кнопка, а поповер с полем: снятие
+ * чужого голоса — заметное решение, и объяснение остаётся рядом с ним навсегда.
+ * Иконка, а не подпись: на мобиле длинному тексту в ряду с аватаром места нет.
+ */
+function DismissButton({
+  suggestionId,
+  reviewerHandle,
+  labels,
+}: {
+  suggestionId: string
+  reviewerHandle: string
+  labels: ReviewLabels
+}) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  const [pending, startTransition] = useTransition()
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${labels.dismiss} @${reviewerHandle}`}
+          title={labels.dismiss}
+          className="grid size-8 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
+        >
+          <ShieldOff size={14} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-3">
+        <div className="mb-2 text-[12.5px] font-medium text-ink">{labels.dismiss}</div>
+        <Textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={labels.dismissReason}
+          rows={3}
+          className="text-[13px]"
+        />
+        <div className="mt-2 flex justify-end">
+          <Button
+            variant="primary"
+            className="h-[38px]"
+            disabled={pending || !reason.trim()}
+            onClick={() =>
+              startTransition(async () => {
+                const res = await dismissSuggestionReview(suggestionId, reviewerHandle, reason)
+                if (res.ok) {
+                  setReason('')
+                  setOpen(false)
+                }
+              })
+            }
+          >
+            {pending ? <Loader2 size={13} className="animate-spin" /> : <ShieldOff size={13} />} {labels.dismiss}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
