@@ -12,7 +12,7 @@ import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
 import { Megaphone } from 'lucide-react'
-import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, LayoutDashboard, Mail, MessageSquare, RefreshCw, ScrollText, Search, Shield, Tag, TrendingUp, Users, Wrench } from 'lucide-react'
+import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, LayoutDashboard, Mail, MessageSquare, RefreshCw, Rss, ScrollText, Search, Shield, Tag, TrendingUp, Users, Wrench } from 'lucide-react'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { setAiSettings } from '@/features/admin/actions'
@@ -471,6 +471,7 @@ export default async function AdminPage() {
             title: say('Content', 'Контент'),
             links: [
               { href: '/admin/collections', label: say('Collections', 'Подборки'), icon: <FolderGit2 size={14} /> },
+              { href: '/admin/feeds', label: say('Feeds', 'Потоки'), icon: <Rss size={14} /> },
               { href: '/admin/tags', label: t('tags', lang), icon: <Tag size={14} /> },
               { href: '/admin/landing', label: say('Landing', 'Лендинг'), icon: <Megaphone size={14} /> },
             ],

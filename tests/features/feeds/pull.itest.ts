@@ -14,7 +14,9 @@ vi.mock('@/shared/lib/safe-fetch', () => ({
 }))
 
 const { agentActions, db, feedItems, feedSources, templates, users } = await import('@/shared/db')
-const { freshForDomains, markUsed, pullSource, runFeedPullSweep } = await import('@/features/feeds/service')
+const { pullSource, runFeedPullSweep } = await import('@/features/feeds/service')
+// Выбор материала живёт в shared: читает его производство, а фича из фичи не импортируется.
+const { freshForDomains, markUsed } = await import('@/shared/ai/feed-pick')
 
 const rss = (items: { t: string; u: string }[]) =>
   `<rss><channel>${items.map((i) => `<item><title>${i.t}</title><link>${i.u}</link><pubDate>Mon, 27 Jul 2026 09:00:00 +0000</pubDate><description>кратко</description></item>`).join('')}</channel></rss>`
@@ -148,5 +150,38 @@ describe('материал для специалиста', () => {
 
   it('универсал («*») материала не получает — лента растёт вглубь темы', async () => {
     expect(await freshForDomains(['*'])).toEqual([])
+  })
+
+  it('связь «новость → список» сохраняется: по паре видно, что из потока выросло', async () => {
+    const src = await addSource('https://a.example/rss', ['кулинария'])
+    fetchMock.body = rss([{ t: 'Новый сорт муки', u: 'https://a.example/flour' }])
+    await pullSource(src)
+    const [item] = await freshForDomains(['кулинария'])
+    const [tpl] = await db
+      .insert(templates)
+      .values({ ownerId: userId, slug: 'flour-list', title: { ru: 'Что делать с новой мукой' } })
+      .returning({ id: templates.id })
+
+    await markUsed([item.id], tpl.id)
+
+    const [row] = await db.select().from(feedItems).where(eq(feedItems.id, item.id))
+    expect(row.usedTemplateId).toBe(tpl.id)
+    expect(row.usedAt).not.toBeNull()
+  })
+
+  it('материал списан без списка (тема не родилась) — второй раз не предлагается', async () => {
+    const src = await addSource('https://a.example/rss', ['кулинария'])
+    fetchMock.body = rss([{ t: 'Ничего полезного', u: 'https://a.example/nothing' }])
+    await pullSource(src)
+    const [item] = await freshForDomains(['кулинария'])
+
+    // Так поступает самогенерация, когда модель ответила без темы: элемент сгорел, но
+    // очередь двигается — иначе петля жевала бы его каждый проход.
+    await markUsed([item.id], null)
+
+    const [row] = await db.select().from(feedItems).where(eq(feedItems.id, item.id))
+    expect(row.usedAt).not.toBeNull()
+    expect(row.usedTemplateId).toBeNull()
+    expect(await freshForDomains(['кулинария'])).toHaveLength(0)
   })
 })

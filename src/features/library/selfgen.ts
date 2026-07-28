@@ -16,6 +16,7 @@ import { listStore } from './list-store'
 import { uniqueSlug } from './slug'
 import { log } from '@/shared/observability'
 import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
+import { freshForDomains, markUsed, type FeedPick } from '@/shared/ai/feed-pick'
 import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { autonomyHealthy } from '@/shared/agents/canary'
 import { spotlight } from '@/shared/ai/spotlight'
@@ -67,21 +68,39 @@ async function existingTitles(e: Expert, limit = 40): Promise<string[]> {
  * Дёшево (один короткий вызов) и по делу — он знает своё ремесло. Список уже
  * существующих заголовков отдаём, чтобы не предлагал дубль; чужой текст оборачиваем
  * spotlight — заголовки пишут пользователи, это недоверенный ввод.
+ *
+ * ПОВОД ИЗ ПОТОКА (Ф1.3 живых списков). Если по темам специалиста есть свежий материал из
+ * подписок — тема растёт из него: «что произошло» вместо «чего не хватает». Берём РОВНО ОДИН
+ * элемент, самый свежий: тогда видно, из какой новости вырос какой список, а материал
+ * списывается точно. Заголовки из чужих лент — недоверенный ввод такой же, как пользовательский
+ * текст, поэтому тоже в spotlight: лента с инъекцией в заголовке не должна перехватывать задачу.
+ *
+ * Пересказывать новость запрещено промптом: список — практический, из него человек что-то
+ * ДЕЛАЕТ. Это и правовая граница (чужой текст не воспроизводим), и продуктовая: пересказ
+ * новости никому не нужен, а «что теперь делать» — нужен.
+ *
+ * `asked` отвечает на вопрос «спросили ли модель вообще». По нему решается, списывать ли
+ * материал: если до вызова не дошло (нет провайдера — поломка настроек), сжигать новость
+ * нельзя, она не виновата.
  */
-async function proposeTopic(e: Expert, userId: string): Promise<string | null> {
+async function proposeTopic(e: Expert, userId: string, fresh: FeedPick | null): Promise<{ topic: string | null; asked: boolean }> {
   const client = await getAiChatClient()
   const settings = await getAiSettings()
-  if (!client || !settings.enabled) return null
+  if (!client || !settings.enabled) return { topic: null, asked: false }
   const model = await pickChatModel(settings)
   const sp = spotlight()
   const have = await existingTitles(e)
-  const system = `You are ${e.persona}\nPropose ONE practical list the library is MISSING in your professional area. It must be a concrete, actionable checklist or procedure a real person would follow — not a topic overview. Do not repeat anything from the existing titles. Return ONLY the title, 3-9 words, no quotes, no explanation.\n${sp.rule()}`
+  const system = fresh
+    ? `You are ${e.persona}\nSomething just happened in your professional area. Propose ONE practical list that people NEED BECAUSE of it — a concrete, actionable checklist or procedure a real person would follow. NEVER retell or summarise the news itself; the list must be usable without reading it. Do not repeat anything from the existing titles. Return ONLY the title, 3-9 words, no quotes, no explanation.\n${sp.rule()}`
+    : `You are ${e.persona}\nPropose ONE practical list the library is MISSING in your professional area. It must be a concrete, actionable checklist or procedure a real person would follow — not a topic overview. Do not repeat anything from the existing titles. Return ONLY the title, 3-9 words, no quotes, no explanation.\n${sp.rule()}`
   const startedAt = Date.now()
   try {
     const result = await generateText({
       model: client.chat(model),
       system,
-      prompt: `Your domains: ${e.domains.join(', ')}.\n${sp.wrap('EXISTING TITLES', have.join('\n') || '(none)')}\nPropose the missing list title.`,
+      prompt: fresh
+        ? `Your domains: ${e.domains.join(', ')}.\n${sp.wrap('WHAT HAPPENED', `${fresh.title}\n${fresh.hint}`.trim())}\n${sp.wrap('EXISTING TITLES', have.join('\n') || '(none)')}\nPropose the practical list this event calls for.`
+        : `Your domains: ${e.domains.join(', ')}.\n${sp.wrap('EXISTING TITLES', have.join('\n') || '(none)')}\nPropose the missing list title.`,
       temperature: 0.7, // тема — место для разнообразия, иначе каждый прогон даёт одно и то же
       maxOutputTokens: 60,
       abortSignal: AbortSignal.timeout(45_000),
@@ -89,20 +108,24 @@ async function proposeTopic(e: Expert, userId: string): Promise<string | null> {
     const u = extractUsage(result)
     await recordUsage({ userId, feature: 'generate', model, input: u.input, output: u.output, total: u.total, cost: u.cost, refType: 'selfgen', outcome: 'ok', durationMs: Date.now() - startedAt, provider: client.cfg.provider })
     const topic = result.text.trim().replace(/^["'«]|["'»]$/g, '').split('\n')[0].slice(0, 120)
-    if (topic.length < 6) return null
+    if (topic.length < 6) return { topic: null, asked: true }
     // Дубль по существующим заголовкам ловим и здесь: модель могла проигнорировать запрет.
     const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
-    if (have.some((h) => norm(h) === norm(topic))) return null
-    return topic
+    if (have.some((h) => norm(h) === norm(topic))) return { topic: null, asked: true }
+    // Заголовок новости, повторённый один в один, — это и есть пересказ: не берём.
+    if (fresh && norm(topic) === norm(fresh.title)) return { topic: null, asked: true }
+    return { topic, asked: true }
   } catch (err) {
     await recordUsage({ userId, feature: 'generate', model, input: 0, output: 0, total: 0, cost: 0, refType: 'selfgen', outcome: outcomeOf(err), durationMs: Date.now() - startedAt, provider: client.cfg.provider })
-    return null
+    return { topic: null, asked: true }
   }
 }
 
 export interface SelfGenResult {
   ref?: string
   topic?: string
+  /** Адрес материала из потока, если тема выросла из новости — для журнала. */
+  fromFeed?: string
   error?: string
 }
 
@@ -120,12 +143,25 @@ export async function selfGenerateOne(expertId: string, topicOverride?: string):
   const userId = await ensureGnomeUser(expert)
   if (!userId) return { error: 'no-account' } // без аккаунта список некому подписать
 
-  const topic = topicOverride?.trim() || (await proposeTopic(expert, userId))
-  if (!topic) return { error: 'no-topic' }
+  // Повод из потока — только когда тему не назвал человек: его слово главнее свежести.
+  // Материал списываем в ЛЮБОМ исходе после вызова модели (см. markUsed): иначе неудачный
+  // элемент застрянет в голове очереди, и петля будет жевать его каждый проход.
+  const fresh = topicOverride?.trim() ? null : ((await freshForDomains(expert.domains, 1))[0] ?? null)
+  const proposed = topicOverride?.trim() ? { topic: topicOverride.trim(), asked: false } : await proposeTopic(expert, userId, fresh)
+  const topic = proposed.topic
+  if (!topic) {
+    // Списываем только если модель ОТВЕТИЛА без темы. Не дошли до вызова (нет провайдера) —
+    // новость не виновата, пусть достанется следующему проходу.
+    if (fresh && proposed.asked) await markUsed([fresh.id], null)
+    return { error: 'no-topic' }
+  }
 
   const lang = detectTextLang(topic)
   const draft = await generateListDraft(topic, lang, { userId, refType: 'selfgen' })
-  if (!draft || !draft.items.length) return { error: 'generation-failed', topic }
+  if (!draft || !draft.items.length) {
+    if (fresh) await markUsed([fresh.id], null)
+    return { error: 'generation-failed', topic }
+  }
 
   // ПОЧТИ-ДУБЛЬ: тема была новой по заголовкам, но список мог получиться клоном уже
   // существующего другими словами. Проверка кодом (шинглы+Жаккар), без вызовов модели —
@@ -136,12 +172,13 @@ export async function selfGenerateOne(expertId: string, topicOverride?: string):
   )
   if (dup.match) {
     log.info('selfgen: near-duplicate, not creating', { topic, of: dup.match.title, score: dup.match.score })
+    if (fresh) await markUsed([fresh.id], null)
     return { error: 'near-duplicate', topic }
   }
 
   const slug = await uniqueSlug(draft.title || topic, userId)
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
-  await listStore.create({
+  const created = await listStore.create({
     ownerId: userId,
     slug,
     title: { [lang]: draft.title || topic },
@@ -156,8 +193,12 @@ export async function selfGenerateOne(expertId: string, topicOverride?: string):
     note: `self-generated by ${professionOf(expert, 'en')}`,
     steps: toStepInput(toProposed(draft.items, lang)),
   })
-  log.info('selfgen: draft created', { expert: expert.id, slug, topic })
-  return { ref: `${u?.handle ?? ''}/${slug}`, topic }
+  // Связь «новость → список»: по ней видно, что из потока выросло, и материал не предложится
+  // второй раз. Ссылка на источник в самом списке — это Ф2.2 (у пункта появятся дата и сноска);
+  // здесь она была бы приписана к списку целиком, а повод относится не к каждому пункту.
+  if (fresh) await markUsed([fresh.id], created.id)
+  log.info('selfgen: draft created', { expert: expert.id, slug, topic, fromFeed: fresh?.url ?? null })
+  return { ref: `${u?.handle ?? ''}/${slug}`, topic, fromFeed: fresh?.url }
 }
 
 /** Сколько черновиков самогенерации создано за сутки — свой кап, помимо денежного. */
@@ -262,7 +303,9 @@ export async function runSelfGenSweep(): Promise<{ created: number; skipped: num
       agentId: pick.id,
       actorUserId: pick.userId,
       signal,
-      decision: { ...decision, topic: res.topic ?? null },
+      // fromFeed в журнале — единственный способ потом ответить, растёт ли лента из потока
+      // или специалист по-прежнему выдумывает темы из головы.
+      decision: { ...decision, topic: res.topic ?? null, fromFeed: res.fromFeed ?? null },
       resultRef: res.ref ?? '',
       error: res.error ?? '',
       policyVersion: policy.policyVersion,

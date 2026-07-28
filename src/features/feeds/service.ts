@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm'
 import { db, feedItems, feedSources, jobs } from '@/shared/db'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { feedItemKey, parseFeed } from '@/shared/ai/feed-parse'
@@ -157,27 +157,6 @@ export async function pullSource(src: typeof feedSources.$inferSelect): Promise<
     .set({ lastPulledAt: new Date(), lastError: '', lastItems: items.length })
     .where(eq(feedSources.id, src.id))
   return { fetched: items.length, fresh, error: '' }
-}
-
-/**
- * Свежий неиспользованный материал по темам специалиста — то, из чего он выберет, о чём писать.
- * Порядок: сначала новое по дате публикации; без даты — по времени попадания к нам.
- */
-export async function freshForDomains(domains: string[], limit = 20) {
-  const tags = domains.filter((d) => d && d !== '*')
-  if (!tags.length) return []
-  return db
-    .select({ id: feedItems.id, title: feedItems.title, url: feedItems.url, hint: feedItems.hint, publishedAt: feedItems.publishedAt, tags: feedItems.tags })
-    .from(feedItems)
-    .where(and(isNull(feedItems.usedAt), sql`${feedItems.tags} && ${sql.param(tags)}::text[]`))
-    .orderBy(desc(feedItems.publishedAt), desc(feedItems.createdAt))
-    .limit(limit)
-}
-
-/** Отметить материал использованным: иначе петля будет пережёвывать одно и то же. */
-export async function markUsed(ids: string[], templateId: string | null): Promise<void> {
-  if (!ids.length) return
-  await db.update(feedItems).set({ usedAt: new Date(), usedTemplateId: templateId }).where(inArray(feedItems.id, ids))
 }
 
 /** Хендлер джобы для composition root. */
