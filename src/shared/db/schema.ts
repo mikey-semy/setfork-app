@@ -2067,6 +2067,14 @@ export const blockCommentThreads = pgTable(
     anchorOriginal: jsonb('anchor_original').notNull().$type<Record<string, unknown>>(),
     /** Вмороженный текст поля на момент создания — контекст треда навсегда. */
     contextSnapshot: text('context_snapshot').notNull().default(''),
+    /**
+     * Язык, на котором снят `contextSnapshot`.
+     *
+     * Без него сравнение «устарело ли обсуждение» врало на двуязычных списках:
+     * снимок пишется на языке АВТОРА треда, а сверяется с текстом на языке
+     * ЗРИТЕЛЯ — переключение ru↔en помечало нетронутый тред устаревшим.
+     */
+    contextLang: text('context_lang').notNull().default(''),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
     resolvedById: uuid('resolved_by_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
