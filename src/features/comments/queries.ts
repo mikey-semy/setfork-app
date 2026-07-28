@@ -25,6 +25,8 @@ export interface BlockThread {
   createdVersion: number
   anchorOriginal: TextAnchor
   contextSnapshot: string
+  /** Язык снимка — на нём и надо сверять «устарело» (см. schema). */
+  contextLang: string
   resolvedAt: Date | null
   comments: ThreadComment[]
 }
@@ -116,6 +118,7 @@ export async function getSuggestionThreads(suggestionId: string, viewerId?: stri
     createdVersion: t.createdVersion,
     anchorOriginal: t.anchorOriginal as unknown as TextAnchor,
     contextSnapshot: t.contextSnapshot,
+    contextLang: t.contextLang,
     resolvedAt: t.resolvedAt,
     comments: byThread.get(t.id) ?? [],
   }))

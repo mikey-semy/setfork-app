@@ -98,9 +98,16 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
-  async mergeBranch(repo, name) {
+  async mergeBranch(repo, name, opts) {
     try {
-      const res = await client.mergeBranch({ repo: toRepoRef(repo), name })
+      // Пустые строки = «как было»: старое ядро игнорирует неизвестный режим и
+      // сливает по-обычному, а не падает.
+      const res = await client.mergeBranch({
+        repo: toRepoRef(repo),
+        name,
+        mode: opts?.mode ?? '',
+        message: opts?.message ?? '',
+      })
       return { tipSha: res.tipSha, newVersion: toNewVersion(res.newVersion), fastForward: res.fastForward }
     } catch (e) {
       throw toBranchOpError(e)

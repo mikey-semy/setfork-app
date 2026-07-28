@@ -213,6 +213,8 @@ export interface PrSettings {
   allowFrom?: 'all' | 'collaborators'
   /** Требовать линейную историю: сливать только fast-forward, иначе просить обновить ветку. */
   linearOnly?: boolean
+  /** Способ слияния: обычный (ff/merge-коммит) или squash — один коммит с трейлерами соавторов. */
+  mergeMethod?: 'merge' | 'squash'
   /** Нерешённые обсуждения блокируют слияние. */
   blockOnUnresolved?: boolean
   /** Сколько одобрений нужно (0 = не требуются). */
@@ -236,6 +238,9 @@ export interface PrSettings {
 export const PR_DEFAULTS: Required<PrSettings> = {
   allowFrom: 'all',
   linearOnly: false,
+  // Обычное слияние по умолчанию: squash теряет промежуточную историю, и выбирать
+  // такую потерю должен человек, а не установка по умолчанию.
+  mergeMethod: 'merge',
   blockOnUnresolved: true,
   requiredApprovals: 0,
   autoDeleteBranch: false,
@@ -553,13 +558,44 @@ export const appSettings = pgTable('app_settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+/**
+ * ПУБЛИЧНЫЙ CHANGELOG продукта.
+ *
+ * Раньше это был массив в коде, который надо было править руками — и он, конечно,
+ * отстал на три недели: ручной changelog не ведут, его забывают. Теперь записи
+ * лежат в БД и пополняются джобой из GitHub (релизы или слитые предложения), а
+ * руками добавленное живёт рядом и не затирается.
+ *
+ * `externalId` — ключ идемпотентности («pr:519», «rel:v1.2»): повторный проход
+ * джобы обновляет ту же запись, а не плодит копии. У ручных записей его нет.
+ */
+export const changelogEntries = pgTable(
+  'changelog_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** День, за который запись показывают (не время джобы). */
+    at: timestamp('at', { withTimezone: true }).notNull(),
+    /** Оба языка: интерфейс двуязычный, и changelog не исключение. */
+    en: text('en').notNull(),
+    ru: text('ru').notNull(),
+    /** Куда ведёт запись: PR/релиз на GitHub или своя страница. */
+    href: text('href'),
+    source: text('source').notNull().default('manual'), // 'manual' | 'github'
+    externalId: text('external_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('changelog_ext_idx').on(t.externalId), index('changelog_at_idx').on(t.at)],
+)
+
+export type ChangelogEntryRow = typeof changelogEntries.$inferSelect
+
 // ── Фоновые задачи (durable-очередь поверх Postgres) ──────────────────
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
 // selfgen — самогенерация: специалист сам пишет черновик списка по своей теме
 // (инициатива компании, а не ответ на запрос пользователя).
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review' | 'gnome_task' | 'feedpull'
+export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review' | 'gnome_task' | 'feedpull' | 'changelog'
 
 export const jobs = pgTable(
   'jobs',
@@ -2097,6 +2133,14 @@ export const blockCommentThreads = pgTable(
     anchorOriginal: jsonb('anchor_original').notNull().$type<Record<string, unknown>>(),
     /** Вмороженный текст поля на момент создания — контекст треда навсегда. */
     contextSnapshot: text('context_snapshot').notNull().default(''),
+    /**
+     * Язык, на котором снят `contextSnapshot`.
+     *
+     * Без него сравнение «устарело ли обсуждение» врало на двуязычных списках:
+     * снимок пишется на языке АВТОРА треда, а сверяется с текстом на языке
+     * ЗРИТЕЛЯ — переключение ru↔en помечало нетронутый тред устаревшим.
+     */
+    contextLang: text('context_lang').notNull().default(''),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
     resolvedById: uuid('resolved_by_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -2139,6 +2183,46 @@ export const blockComments = pgTable(
   },
   (t) => [index('bc_thread_idx').on(t.threadId)],
 )
+
+/**
+ * ОТМЕТКА «ПРОСМОТРЕНО» на пункте предложения — как «Viewed» у файла в GitHub.
+ *
+ * Личная и НЕ общая: это состояние ревьюера («я это уже смотрел»), а не свойство
+ * правки. Поэтому ключ — пара (предложение, пункт, зритель), и чужие галочки
+ * никому не видны.
+ *
+ * `atFingerprint` — отпечаток СОДЕРЖИМОГО пункта на момент отметки. Пункт правят
+ * дальше, и отметка, поставленная до правки, врала бы. Отпечаток именно пункта,
+ * а не sha ветки: иначе любой чужой коммит гасил бы отметки на всех пунктах,
+ * включая нетронутые. Не совпало → «просмотрено до изменений», а не галочка.
+ */
+export const suggestionViewed = pgTable(
+  'suggestion_viewed',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Идентичность блока (ADR-0013) — переживает перестановку пунктов. */
+    blockId: text('block_id').notNull(),
+    atFingerprint: text('at_fingerprint').notNull().default(''),
+    /**
+     * Язык, на котором считали отпечаток.
+     *
+     * Отпечаток берётся с УЖЕ ЛОКАЛИЗОВАННОГО текста, поэтому на двуязычном
+     * списке смена языка интерфейса меняла бы его и гасила все отметки разом.
+     * Язык не совпал → об устаревании не судим (как у снимка треда).
+     */
+    atLang: text('at_lang').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_viewed_uq').on(t.suggestionId, t.userId, t.blockId)],
+)
+
+export type SuggestionViewed = typeof suggestionViewed.$inferSelect
 
 export type BlockCommentThread = typeof blockCommentThreads.$inferSelect
 export type BlockComment = typeof blockComments.$inferSelect

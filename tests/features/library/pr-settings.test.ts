@@ -2,10 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { withPrDefaults } from '@/features/library/pr-settings'
 
 describe('withPrDefaults', () => {
+  it('способ слияния: squash только по точному значению, мусор → обычное', () => {
+    expect(withPrDefaults({ mergeMethod: 'squash' }).mergeMethod).toBe('squash')
+    expect(withPrDefaults({ mergeMethod: 'SQUASH' }).mergeMethod).toBe('merge')
+    expect(withPrDefaults({ mergeMethod: 1 }).mergeMethod).toBe('merge')
+  })
+
   it('пусто → дефолты (поведение до появления настроек)', () => {
     expect(withPrDefaults({})).toEqual({
       allowFrom: 'all',
       linearOnly: false,
+      // Обычное слияние: squash теряет промежуточную историю — это выбор человека.
+      mergeMethod: 'merge',
       blockOnUnresolved: true,
       requiredApprovals: 0,
       autoDeleteBranch: false,

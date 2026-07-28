@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, embeddings, issues, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, templates, templateVersions, users } from '@/shared/db'
+import { db, embeddings, issues, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, templateVersions, users } from '@/shared/db'
 import type { Lang, LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
@@ -419,6 +419,23 @@ export async function getSuggestionsAssignees(
     out[id] = await Promise.all(list.map(async (r) => ({ handle: r.handle, avatarUrl: await avatarSrc(r.avatarUrl, 36) })))
   }
   return out
+}
+
+/**
+ * Личные отметки «просмотрено» зрителя по одному предложению.
+ *
+ * blockId → отпечаток содержимого на момент отметки. Чужие отметки не выбираем
+ * вовсе: это личное состояние ревьюера, и показывать его другим нельзя.
+ */
+export async function getViewedMarks(
+  suggestionId: string,
+  userId: string,
+): Promise<Map<string, { fp: string; lang: string }>> {
+  const rows = await db
+    .select({ blockId: suggestionViewed.blockId, fp: suggestionViewed.atFingerprint, lang: suggestionViewed.atLang })
+    .from(suggestionViewed)
+    .where(and(eq(suggestionViewed.suggestionId, suggestionId), eq(suggestionViewed.userId, userId)))
+  return new Map(rows.map((r) => [r.blockId, { fp: r.fp, lang: r.lang }]))
 }
 
 /** «Открыто» = живые предложения; «закрыто» = принятые и отклонённые (как у GitHub). */

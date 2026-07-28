@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MessageSquarePlus, Check, Loader2, Replace, RotateCcw, X } from 'lucide-react'
+import { MessageSquarePlus, Check, CircleDot, Loader2, Replace, RotateCcw, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
 import { Markdown } from '@/shared/ui/Markdown'
@@ -13,6 +13,8 @@ import type { Lang } from '@/shared/i18n'
 // eslint-disable-next-line boundaries/dependencies -- review-комментарии предложения из comments
 import { createBlockThread, replyToBlockThread, setBlockThreadResolved } from '@/features/comments/actions'
 import { applySuggestedEdit } from './actions'
+// eslint-disable-next-line boundaries/dependencies -- перенос треда в задачу живёт с комментариями
+import { threadToIssue } from '@/features/comments/thread-to-issue'
 // eslint-disable-next-line boundaries/dependencies -- тип треда из comments
 import type { BlockThread } from '@/features/comments/queries'
 // eslint-disable-next-line boundaries/dependencies -- тип состояния якоря из comments
@@ -35,6 +37,10 @@ export interface DiffCommentLabels {
   onBlock: string
   stateReanchored: string
   orphanHint: string
+  /** Обсуждение шло о тексте, которого больше нет (Outdated у GitHub). */
+  outdated: string
+  /** Перенести обсуждение в задачу списка. */
+  toIssue: string
   /** Предложенная правка пункта: подпись поля, кнопка «Применить», пометки. */
   suggestLabel: string
   suggestHint: string
@@ -275,9 +281,14 @@ function ThreadCard({
           <span className="[overflow-wrap:anywhere]">«{quote}»</span>
         </div>
       )}
-      {(orphaned || state.state === 'reanchored') && (
-        <div className="mb-1.5 text-[11.5px] text-muted">
-          {orphaned ? labels.orphanHint : `${labels.stateReanchored} · ${state.confidence}%`}
+      {(orphaned || state.state === 'reanchored' || state.outdated) && (
+        <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-muted">
+          {/* «Устарел» — отдельно от привязки: якорь может отлично находиться, а
+              пункт вокруг него переписан, и спор ниже уже про другое. */}
+          {state.outdated && (
+            <span className="rounded-full bg-warn/15 px-1.5 py-0.5 font-semibold text-warn">{labels.outdated}</span>
+          )}
+          {orphaned ? labels.orphanHint : state.state === 'reanchored' ? `${labels.stateReanchored} · ${state.confidence}%` : null}
         </div>
       )}
 
@@ -336,6 +347,20 @@ function ThreadCard({
           <Button variant="ghost" className="h-[38px]" onClick={onReply}>
             {labels.reply}
           </Button>
+          {/* Перенести разговор в задачу: обсуждение на пункте часто упирается в
+              то, что решать надо не здесь. Значок с тултипом — подпись в этот
+              ряд не влезет на мобиле. */}
+          <Tooltip label={labels.toIssue}>
+            <Button
+              variant="ghost"
+              className="h-[38px]"
+              aria-label={labels.toIssue}
+              disabled={pending}
+              onClick={() => startTransition(async () => void (await threadToIssue(owner, slug, thread.id)))}
+            >
+              <CircleDot size={14} />
+            </Button>
+          </Tooltip>
           <Tooltip label={labels.resolve}>
             <Button
               variant="ghost"
