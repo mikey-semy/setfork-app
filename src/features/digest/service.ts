@@ -6,6 +6,7 @@ import { sendMail } from '@/shared/email/mailer'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 import { log } from '@/shared/observability'
+import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { buildDigest, digestSize, type Digest } from './queries'
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
@@ -32,6 +33,15 @@ export async function ensureDigestScheduled(): Promise<void> {
  * пустой дайджест не отправляется и не двигает точку отсчёта.
  */
 export async function runWeeklyDigestSweep(): Promise<{ sent: number; empty: number }> {
+  // Сухой прогон — как у остальных петель, и здесь он особенно уместен: петля
+  // ОТПРАВЛЯЕТ ПИСЬМА людям. «Посмотреть, что она сделает» без рассылки — ровно то,
+  // ради чего сухой прогон и заведён.
+  const loop = await loopPolicy('digest')
+  if (loop.dryRun) {
+    await recordAgentAction({ loop: 'digest', action: 'send', resultStatus: 'dry-run', decision: { mode: 'skip-live-run' }, policyVersion: loop.policyVersion })
+    log.info('digest: сухой прогон — письма не отправляем')
+    return { sent: 0, empty: 0 }
+  }
   const recipients = await db
     .select({ id: users.id, handle: users.handle, email: users.email })
     .from(users)

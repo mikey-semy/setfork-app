@@ -6,6 +6,7 @@ import { extractTriples, saveTriples } from '@/shared/ai/triples'
 import { globalBudgetOk } from '@/shared/quota'
 import { isAiAvailable } from '@/shared/settings/ai'
 import { log } from '@/shared/observability'
+import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import type { LocaleText } from '@/shared/i18n'
 
 /**
@@ -31,6 +32,16 @@ export async function ensureTriplesScheduled(): Promise<void> {
 const flat = (t: LocaleText | null | undefined): string => (t ? Object.values(t).filter(Boolean).join(' / ') : '')
 
 export async function runTriplesSweep(): Promise<{ mined: number; skipped: number }> {
+  // СУХОЙ ПРОГОН обязателен для КАЖДОЙ петли, а не только для тех, где о нём вспомнили.
+  // Рубильник показан в админке для всех; петля, которая его не читает, хуже отсутствия
+  // рубильника — он обещает безопасность, которой нет: человек видит «сухой прогон
+  // включён», а петля тем временем тратит деньги на модель.
+  const loop = await loopPolicy('triples')
+  if (loop.dryRun) {
+    await recordAgentAction({ loop: 'triples', action: 'mine', resultStatus: 'dry-run', decision: { mode: 'skip-live-run' }, policyVersion: loop.policyVersion })
+    log.info('triples: сухой прогон — добычу не запускаем')
+    return { mined: 0, skipped: 0 }
+  }
   if (!(await isAiAvailable())) return { mined: 0, skipped: 0 }
   if (!(await globalBudgetOk())) {
     log.info('triples: global AI budget exhausted, skipping')

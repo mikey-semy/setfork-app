@@ -5,6 +5,7 @@ import { enqueueJob } from '@/shared/jobs/queue'
 import { rateStore } from '@/shared/rate-limit-store'
 import { getLinkcheckSettings } from '@/shared/settings/linkcheck'
 import { log } from '@/shared/observability'
+import { loopPolicy, recordAgentAction } from '@/shared/agents/policy'
 import { classifyProbe, nextVerdict } from './classify'
 import { probeUrl, type ProbeFn } from './probe'
 import { harvestAll } from './harvest'
@@ -46,6 +47,14 @@ export async function runLinkcheckSweep(payload: LinkcheckPayload = {}, probe: P
   const s = await getLinkcheckSettings()
   if (!s.enabled) {
     log.info('linkcheck: disabled, skipping')
+    return { probed: 0, chained: false }
+  }
+  // Сухой прогон — как у остальных петель: рубильник показан для всех, и петля,
+  // которая его не читает, обещает безопасность, которой нет.
+  const loop = await loopPolicy('linkcheck')
+  if (loop.dryRun) {
+    await recordAgentAction({ loop: 'linkcheck', action: 'probe', resultStatus: 'dry-run', decision: { mode: 'skip-live-run' }, policyVersion: loop.policyVersion })
+    log.info('linkcheck: сухой прогон — ссылки не проверяем')
     return { probed: 0, chained: false }
   }
   const startedAt = Date.now()
