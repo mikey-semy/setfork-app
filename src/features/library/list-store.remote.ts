@@ -118,31 +118,39 @@ const toPbLoc = (l: LocaleText) => ({ v: Object.fromEntries(Object.entries(l).fi
 
 /** WRITE-методы порта ListStore поверх Rust ListWrite (фаза write, отдельный флаг).
  *
- *  ⚠️ ДОЛГ КАТОВЕРА: NewStepInput.blockId сюда НЕ уезжает — в proto NewStep поля
- *  нет. Пока SETFORK_DOMAIN_WRITES выключен, это безвредно: версии пишет
- *  Postgres-адаптер, идентичность блоков живёт. При включении Rust-записи она
- *  потеряется, и дифф молча откатится на сопоставление по заголовку.
- *  Чинить парой: block_id в domain_read.proto + Rust db.rs/serialize.rs. */
+ *  Долг катовера закрыт 29.07: blockId и пометка «здесь нужен человек» теперь
+ *  уезжают в ядро. Раньше их в proto не было, и включение SETFORK_DOMAIN_WRITES
+ *  СТЁРЛО бы идентичность блоков и пометку — молча, потому что набор шагов
+ *  перезаписывается целиком, и поле, о котором путь не знает, просто исчезает. */
+/** Шаг → proto NewStep. ОДИН маппер на addVersion и create: две копии уже разошлись
+ *  однажды — поле, добавленное в одну, во второй забыли. */
+const toPbStep = (s: NewVersionInput['steps'][number]) => ({
+  title: toPbLoc(s.title),
+  desc: toPbLoc(s.desc),
+  command: s.command,
+  level: s.level,
+  why: toPbLoc(s.why),
+  section: toPbLoc(s.section),
+  subtasks: s.subtasks.map(toPbLoc),
+  refs: s.refs.map((r) => ({ label: toPbLoc(r.label), url: r.url ?? '' })),
+  imageRef: s.imageRef ?? '',
+  // Блочная модель: type/content_json — только у не-step блоков.
+  type: s.type && s.type !== 'step' ? s.type : '',
+  contentJson: s.type && s.type !== 'step' ? JSON.stringify(s.content ?? {}) : '',
+  // Идентичность блока сквозь версии (ADR-0013): '' = неизвестна.
+  blockId: s.blockId ?? '',
+  // Пометка «здесь нужен человек» — часть шага, а не украшение.
+  needsHuman: s.needsHuman ?? false,
+  needsHumanAsk: toPbLoc(s.needsHumanAsk ?? {}),
+})
+
 export const listWriteRemote = {
   async addVersion(listId: string, input: NewVersionInput): Promise<Version> {
     const res = await writeClient.addVersion({
       listId,
       note: input.note,
       authorId: input.authorId ?? '', // '' = null (parity с Postgres-адаптером/proto author_id)
-      steps: input.steps.map((s) => ({
-        title: toPbLoc(s.title),
-        desc: toPbLoc(s.desc),
-        command: s.command,
-        level: s.level,
-        why: toPbLoc(s.why),
-        section: toPbLoc(s.section),
-        subtasks: s.subtasks.map(toPbLoc),
-        refs: s.refs.map((r) => ({ label: toPbLoc(r.label), url: r.url ?? '' })),
-        imageRef: s.imageRef ?? '',
-        // Блочная модель: type/content_json — только у не-step блоков.
-        type: s.type && s.type !== 'step' ? s.type : '',
-        contentJson: s.type && s.type !== 'step' ? JSON.stringify(s.content ?? {}) : '',
-      })),
+      steps: input.steps.map(toPbStep),
     })
     return toVersion(res)
   },
@@ -159,20 +167,7 @@ export const listWriteRemote = {
       origin: input.origin,
       forkedFromId: input.forkedFromId ?? '',
       note: input.note,
-      steps: input.steps.map((s) => ({
-        title: toPbLoc(s.title),
-        desc: toPbLoc(s.desc),
-        command: s.command,
-        level: s.level,
-        why: toPbLoc(s.why),
-        section: toPbLoc(s.section),
-        subtasks: s.subtasks.map(toPbLoc),
-        refs: s.refs.map((r) => ({ label: toPbLoc(r.label), url: r.url ?? '' })),
-        imageRef: s.imageRef ?? '',
-        // Блочная модель: type/content_json — только у не-step блоков.
-        type: s.type && s.type !== 'step' ? s.type : '',
-        contentJson: s.type && s.type !== 'step' ? JSON.stringify(s.content ?? {}) : '',
-      })),
+      steps: input.steps.map(toPbStep),
     })
     return toList(res)
   },
