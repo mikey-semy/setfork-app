@@ -80,31 +80,31 @@ export function AiProviderModels({
       {!configured && !pending && <p className="text-[12.5px] text-warn">{labels.noKey}</p>}
 
       <div>
-        <label className={lbl}>{labels.chat}</label>
+        <label className={lbl} htmlFor="chatModel">{labels.chat}</label>
         {/* key={провайдер+длина} — при смене каталога селект пересоздаётся со свежим значением:
             иначе внутри остаётся выбранная модель ЧУЖОГО провайдера. */}
         {chat.length > 0 ? (
-          <ModelSelect key={`chat-${chat.length}-${values.chatModel}`} name="chatModel" defaultValue={values.chatModel} options={chat} placeholder={labels.pick} />
+          <ModelSelect key={`chat-${chat.length}-${values.chatModel}`} id="chatModel" name="chatModel" defaultValue={values.chatModel} options={chat} placeholder={labels.pick} />
         ) : (
-          <input key={`chat-input-${values.chatModel}`} name="chatModel" defaultValue={values.chatModel} className={`${field} font-mono`} />
+          <input key={`chat-input-${values.chatModel}`} id="chatModel" name="chatModel" defaultValue={values.chatModel} className={`${field} font-mono`} />
         )}
       </div>
 
       <div>
-        <label className={lbl}>{labels.fallback}</label>
+        <label className={lbl} htmlFor="fallbackModel">{labels.fallback}</label>
         {chat.length > 0 ? (
-          <ModelSelect key={`fb-${chat.length}-${values.fallbackModel}`} name="fallbackModel" defaultValue={values.fallbackModel} options={chat} allowEmpty placeholder="—" />
+          <ModelSelect key={`fb-${chat.length}-${values.fallbackModel}`} id="fallbackModel" name="fallbackModel" defaultValue={values.fallbackModel} options={chat} allowEmpty placeholder="—" />
         ) : (
-          <input key={`fb-input-${values.fallbackModel}`} name="fallbackModel" defaultValue={values.fallbackModel} className={`${field} font-mono`} />
+          <input key={`fb-input-${values.fallbackModel}`} id="fallbackModel" name="fallbackModel" defaultValue={values.fallbackModel} className={`${field} font-mono`} />
         )}
       </div>
 
       <div>
-        <label className={lbl}>{labels.embedding}</label>
+        <label className={lbl} htmlFor="embeddingModel">{labels.embedding}</label>
         {embedding.length > 0 ? (
-          <ModelSelect name="embeddingModel" defaultValue={initial.embeddingModel} options={embedding} placeholder={labels.pick} />
+          <ModelSelect id="embeddingModel" name="embeddingModel" defaultValue={initial.embeddingModel} options={embedding} placeholder={labels.pick} />
         ) : (
-          <input name="embeddingModel" defaultValue={initial.embeddingModel} className={`${field} font-mono`} />
+          <input id="embeddingModel" name="embeddingModel" defaultValue={initial.embeddingModel} className={`${field} font-mono`} />
         )}
       </div>
     </>
