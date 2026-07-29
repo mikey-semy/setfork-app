@@ -15,6 +15,9 @@ describe('withPrDefaults', () => {
       // Обычное слияние: squash теряет промежуточную историю — это выбор человека.
       mergeMethod: 'merge',
       blockOnUnresolved: true,
+      // Выключено: проверку присылает кто-то снаружи, и включённый по умолчанию
+      // гейт означал бы, что первый же чужой отчёт запирает список.
+      blockOnFailedChecks: false,
       requiredApprovals: 0,
       autoDeleteBranch: false,
       autoCloseIssues: true,
