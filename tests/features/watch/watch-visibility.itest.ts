@@ -20,7 +20,7 @@ const { db, users, templates, templateVersions, steps, watches, notifications, c
 const { ensureWatch, toggleWatch } = await import('@/features/watch/actions')
 const { getWatcherIds } = await import('@/features/watch/queries')
 const { notifyMany } = await import('@/features/notifications/notify')
-const { getNotifications } = await import('@/features/notifications/queries')
+const { getNotifications, getUnreadCount } = await import('@/features/notifications/queries')
 
 const uid: Record<string, string> = {}
 const ids: Record<string, string> = {}
@@ -101,6 +101,32 @@ describe('список закрыли постфактум', () => {
     expect(await watchRows(pub, uid.stranger)).toHaveLength(1)
     await db.update(templates).set({ visibility: 'public' }).where(eq(templates.id, pub))
     expect(await getWatcherIds(pub, 'versions')).toContain(uid.stranger)
+  })
+
+  it('УЖЕ ПРИШЕДШЕЕ уведомление про закрытый список пропадает из ленты', async () => {
+    // Дыра не в рассылке, а в чтении: строка уведомления живёт вечно, а лента брала у
+    // списка ТЕКУЩИЕ заголовок и слаг без проверки доступа. Значит приватные
+    // переименования читались бывшим наблюдателем из своей ленты (P1 из авто-ревью).
+    const pub = await makeList('old-notif-list', {}, 'OLDCANARY')
+    await notifyMany([uid.stranger, uid.owner], { type: 'new_version', templateId: pub })
+    expect(JSON.stringify(await getNotifications(uid.stranger))).toContain('OLDCANARY')
+    const before = await getUnreadCount(uid.stranger)
+
+    // Список закрывают и переименовывают уже приватно.
+    await db
+      .update(templates)
+      .set({ visibility: 'private', slug: 'renamed-privately', title: { en: 'PRIVATE-RENAME' } })
+      .where(eq(templates.id, pub))
+
+    const feed = JSON.stringify(await getNotifications(uid.stranger))
+    expect(feed).not.toContain('PRIVATE-RENAME')
+    expect(feed).not.toContain('renamed-privately')
+    expect(feed).not.toContain('OLDCANARY')
+    // Счётчик считает по тем же правилам: бейдж «1» с пустой лентой — тоже сигнал.
+    expect(await getUnreadCount(uid.stranger)).toBe(before - 1)
+
+    // Владельцу его же уведомление видно по-прежнему.
+    expect(JSON.stringify(await getNotifications(uid.owner))).toContain('PRIVATE-RENAME')
   })
 
   it('снятый модерацией: рассылка остаётся только владельцу', async () => {

@@ -61,6 +61,7 @@ import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, get
 import { setSuggestionDraft, setSuggestionLabels, setSuggestionMilestone, toggleReviewRequest, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
+import { isAdminHandle } from '@/shared/auth/admin'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; id: string }> }) {
   const { handle, slug } = await params
@@ -146,7 +147,7 @@ export default async function SuggestionThreadPage({
   // слияния от того, кто его пишет, а экшен при этом слить разрешал.
   const unresolvedThreads = threads.filter((th) => !th.resolvedAt && th.comments.some((c) => !c.pending)).length
   const [reviews, watchState, watchCount, assignees, reviewRequests, customLabels, msOptions, curMilestone] = await Promise.all([
-    getSuggestionReviews(sug.id, session?.userId),
+    getSuggestionReviews(sug.id, session?.userId, isAdminHandle(session?.handle)),
     session ? getWatchState(session.userId, meta.id) : Promise.resolve(null),
     getWatchCount(meta.id),
     getSuggestionAssignees(sug.id),

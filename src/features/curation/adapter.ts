@@ -137,8 +137,10 @@ export const curationStore: CurationStore = {
           .where(eq(collaborators.templateId, listId))
       ).map((r) => r.userId),
     )
-    return rows
-      .filter((r) => canViewList(list, { isOwner: r.id === list.ownerId, isCollaborator: collabIds.has(r.id) }))
-      .map((r) => r.id)
+    // Один проход: .filter().map() гонял бы список дважды (react-doctor).
+    return rows.reduce<string[]>((acc, r) => {
+      if (canViewList(list, { isOwner: r.id === list.ownerId, isCollaborator: collabIds.has(r.id) })) acc.push(r.id)
+      return acc
+    }, [])
   },
 }

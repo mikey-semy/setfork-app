@@ -104,14 +104,18 @@ async function readReviews(suggestionId: string, meta: ListMeta | undefined, vie
  *
  * Зритель, который не видит список, не видит и переписку по правкам к нему: тексты
  * ревью и ники рецензентов — внутренняя кухня приватного/черновика/снятого модерацией.
+ * Админ — видит: он разбирает жалобы, и переписка ему для этого и нужна.
  */
-export async function getSuggestionReviews(suggestionId: string, viewerId?: string): Promise<ReviewView[]> {
+export async function getSuggestionReviews(suggestionId: string, viewerId?: string, isAdmin = false): Promise<ReviewView[]> {
   const meta = await listOfSuggestion(suggestionId)
   if (!meta) return []
   const isOwner = !!viewerId && meta.ownerId === viewerId
+  // isAdmin передаём ТЕМ ЖЕ значением, что и гейт страницы (requireViewableMeta): у
+  // публичного списка, снятого модерацией, админ страницу видит, а переписка по правкам
+  // без этого признака схлопывалась в пустоту — ровно у того, кто и разбирает takedown.
   const visible =
-    canViewList(meta, { isOwner }) ||
-    (!!viewerId && canViewList(meta, { isOwner, isCollaborator: await isCollaborator(meta.templateId, viewerId) }))
+    canViewList(meta, { isOwner, isAdmin }) ||
+    (!!viewerId && canViewList(meta, { isOwner, isAdmin, isCollaborator: await isCollaborator(meta.templateId, viewerId) }))
   if (!visible) return []
   return readReviews(suggestionId, meta, viewerId)
 }
