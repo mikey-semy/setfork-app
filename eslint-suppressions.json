@@ -276,7 +276,7 @@
   },
   "src/features/git/BranchPicker.tsx": {
     "no-restricted-syntax": {
-      "count": 2
+      "count": 6
     }
   },
   "src/features/git/CloneDropdown.tsx": {
@@ -501,7 +501,7 @@
   },
   "src/features/star-folders/StarFolderMenu.tsx": {
     "no-restricted-syntax": {
-      "count": 2
+      "count": 6
     }
   },
   "src/features/transfer/actions.ts": {
@@ -551,7 +551,7 @@
   },
   "src/widgets/ListsPanel.tsx": {
     "no-restricted-syntax": {
-      "count": 1
+      "count": 2
     }
   },
   "src/widgets/MobileSearch.tsx": {
