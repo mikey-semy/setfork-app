@@ -81,6 +81,22 @@ export async function addCandidate(
   lang: Lang,
   idx: number,
 ): Promise<boolean> {
+  // ИДЕМПОТЕНТНОСТЬ ПО РАСХОДУ. Задача 'generate' ставится с maxAttempts: 2, плюс её
+  // переподхватывает reapStalledJobs — то есть повтор штатный. А самая дорогая часть
+  // (совет ≈ 6.5 вызовов моделей) шла ДО вставки кандидата, поэтому «упало после дорогой
+  // части» и «процесс умер на деплое» оплачивались второй раз: уникальность
+  // (generation_id, idx) защищала данные, но не деньги (линза 03, №5). Готовый кандидат
+  // с этим idx означает, что работа уже сделана и оплачена — второй раз не платим.
+  const [done] = await db
+    .select({ idx: generationCandidates.idx })
+    .from(generationCandidates)
+    .where(and(eq(generationCandidates.generationId, generationId), eq(generationCandidates.idx, idx)))
+    .limit(1)
+  if (done) {
+    await setGenerationStatus(generationId, 'done')
+    return true
+  }
+
   // Ленту больше НЕ чистим: реплики группируются по витку (attempt = idx), поэтому прошлые прогоны
   // не мешаются — а история придумывания остаётся навсегда, в этом весь смысл беседы.
   await setGenerationStatus(generationId, 'pending')

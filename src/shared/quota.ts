@@ -71,19 +71,35 @@ export async function aiQuota(userId: string, handle?: string | null): Promise<Q
 
 // Глобальный дневной бюджет кэшируем на 30с: проверяется на каждом дорогом AI-вызове,
 // но суммировать ai_usage на каждый запрос незачем — расход меняется медленно.
-let dailyBudgetCache: { ok: boolean; at: number } | null = null
+const BUDGET_TTL_MS = 30_000
+// ...пока до капа далеко. У границы кэш положительного решения — это дыра: решение
+// «бюджет ЕСТЬ», принятое до пробития капа, продолжало пропускать ЛЮБОЕ число дорогих
+// вызовов ещё до 30 секунд (прогон линзы 03: 200 из 200 проверок внутри окна). При
+// одновременности это десятки советов сверх капа, а кэш ещё и процессный — у каждого
+// воркера своё окно, и эффекты складываются. В горячей зоне считаем честно: это один
+// индексный агрегат на дорогой вызов и только на последних 20% дневного бюджета.
+const BUDGET_HOT_ZONE = 0.8
+
+let dailyBudgetCache: { ok: boolean; at: number; ttl: number } | null = null
+
+/** Сбросить кэш решения о бюджете (тесты и админские правки настроек). */
+export function clearBudgetCache(): void {
+  dailyBudgetCache = null
+}
 
 /**
  * Есть ли ещё глобальный бюджет на весь инстанс — ДВА независимых предохранителя:
  *  1) дневной кап расхода по нашему ai_usage (надёжный, считаем сами);
  *  2) пол живого остатка на счёте OpenRouter (реальность важнее нашего учёта: он может отставать).
- * Оба кэшируются на 30с. При исчерпании один раз пишем предупреждение — алерт оператору.
+ * Решение кэшируется на 30с, КРОМЕ горячей зоны у границы (см. BUDGET_HOT_ZONE).
+ * При исчерпании один раз пишем предупреждение — алерт оператору.
  */
 export async function globalBudgetOk(now: number = Date.now()): Promise<boolean> {
-  if (dailyBudgetCache && now - dailyBudgetCache.at < 30_000) return dailyBudgetCache.ok
+  if (dailyBudgetCache && now - dailyBudgetCache.at < dailyBudgetCache.ttl) return dailyBudgetCache.ok
 
   // 1) Дневной кап по нашему учёту.
   let ok = true
+  let hot = false
   let reason = ''
   if (AI_DAILY_USD > 0) {
     const [r] = await db
@@ -91,6 +107,7 @@ export async function globalBudgetOk(now: number = Date.now()): Promise<boolean>
       .from(aiUsage)
       .where(gte(aiUsage.createdAt, sql`date_trunc('day', now())`))
     const used = r?.usd ?? 0
+    hot = used >= AI_DAILY_USD * BUDGET_HOT_ZONE
     if (used >= AI_DAILY_USD) {
       ok = false
       reason = `дневной кап: $${used.toFixed(2)} ≥ $${AI_DAILY_USD}`
@@ -101,14 +118,20 @@ export async function globalBudgetOk(now: number = Date.now()): Promise<boolean>
   //    полагаемся на дневной кап, иначе флейк статуса провайдера остановил бы весь продукт.
   if (ok && AI_BALANCE_FLOOR_USD > 0) {
     const credits = await getOpenRouterCredits()
-    if (credits && credits.remaining < AI_BALANCE_FLOOR_USD) {
-      ok = false
-      reason = `остаток OpenRouter $${credits.remaining.toFixed(2)} < пол $${AI_BALANCE_FLOOR_USD}`
+    if (credits) {
+      if (credits.remaining < AI_BALANCE_FLOOR_USD) {
+        ok = false
+        reason = `остаток OpenRouter $${credits.remaining.toFixed(2)} < пол $${AI_BALANCE_FLOOR_USD}`
+      } else if (credits.remaining < AI_BALANCE_FLOOR_USD * 1.25) {
+        hot = true
+      }
     }
   }
 
   if (!ok && (!dailyBudgetCache || dailyBudgetCache.ok))
     console.warn(`[ai-budget] генерация приостановлена — ${reason}`)
-  dailyBudgetCache = { ok, at: now }
+  // Отрицательное решение кэшируем всегда: оно и так запрещающее, а лишние агрегаты
+  // при исчерпанном бюджете не нужны.
+  dailyBudgetCache = { ok, at: now, ttl: ok && hot ? 0 : BUDGET_TTL_MS }
   return ok
 }

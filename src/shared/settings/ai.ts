@@ -339,9 +339,27 @@ export async function getAiSettings(): Promise<AiSettings> {
   ]
   const rows = await db.select().from(appSettings).where(inArray(appSettings.key, allKeys))
   const m = Object.fromEntries(rows.map((r) => [r.key, r.value]))
+  /**
+   * Число из app_settings по тому же правилу, что `envNumber` для env: непонятное
+   * значение = «настройки нет» → дефолт + громкое предупреждение.
+   *
+   * Прежний разбор отбрасывал 'abc', но пропускал два значения, числами по смыслу не
+   * являющиеся: ПУСТУЮ строку (`Number('') === 0`) и ОТРИЦАТЕЛЬНОЕ (`-5` конечно —
+   * значит «валидно»). Дальше начиналась разница семантики нуля: у councilMaxPerMonth
+   * 0 = БЕЗЛИМИТ, то есть пустая строка снимала потолок советов (каждый ≈5.57₽), а у
+   * readinessPerDay 0 = НОЛЬ публикаций, fail-closed. Одна и та же ошибка — исходы
+   * противоположные, и оба тихие (линза 03, №8). Через админку мусор не пролезает (там
+   * клампы) — это мина под прямую правку app_settings, миграцию или сид.
+   */
   const num = (v: string | undefined, fallback: number) => {
-    const n = Number(v)
-    return Number.isFinite(n) ? n : fallback
+    const raw = v?.trim()
+    if (!raw) return fallback
+    const n = Number(raw)
+    if (!Number.isFinite(n) || n < 0) {
+      console.warn(`[ai-settings] значение ${JSON.stringify(raw)} — не число, беру дефолт ${fallback}`)
+      return fallback
+    }
+    return n
   }
   const providerRaw = m[PROVIDER_SETTING]?.trim() || process.env.AI_PROVIDER || 'openrouter'
   const provider = (AI_PROVIDERS as readonly string[]).includes(providerRaw) ? (providerRaw as AiProviderId) : 'openrouter'

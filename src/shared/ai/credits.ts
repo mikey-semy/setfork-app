@@ -40,10 +40,14 @@ export async function getOpenRouterCredits(opts?: { fresh?: boolean }): Promise<
 }
 
 // Дневной ₽-расход для яндекс-cheap-mode кэшируем на 60с (дёргается на каждом вызове).
+// У ПОРОГА кэш выключаем: иначе после превышения работа ещё до минуты идёт по дорогой
+// модели — тот же приём, из-за которого дневной кап пропускал вызовы окном (линза 03,
+// №2 и №9). Порог передаёт вызывающий: он им и меряет.
 let daySpendCache: { rub: number; at: number } | null = null
 
-async function dailySpendRub(): Promise<number> {
-  if (daySpendCache && Date.now() - daySpendCache.at < 60_000) return daySpendCache.rub
+async function dailySpendRub(threshold: number): Promise<number> {
+  const nearThreshold = !!daySpendCache && daySpendCache.rub >= threshold * 0.8
+  if (daySpendCache && !nearThreshold && Date.now() - daySpendCache.at < 60_000) return daySpendCache.rub
   const [{ db, aiUsage }, { sql, gte }, { rubPerUsd }] = await Promise.all([
     import('@/shared/db'),
     import('drizzle-orm'),
@@ -69,7 +73,7 @@ export async function pickChatModel(settings: AiSettings): Promise<string> {
     if (credits && credits.remaining < settings.cheapModeThreshold) return settings.fallbackModel
   }
   if (provider === 'yandex' && settings.cheapModeThreshold > 0 && settings.fallbackModel.startsWith('gpt://')) {
-    if ((await dailySpendRub()) > settings.cheapModeThreshold) return settings.fallbackModel
+    if ((await dailySpendRub(settings.cheapModeThreshold)) > settings.cheapModeThreshold) return settings.fallbackModel
   }
   // Неймспейсы дают провайдер-корректную модель уже на чтении; этот гвард —
   // последний рубеж (руками вписали чужой id в яндекс-неймспейс).
