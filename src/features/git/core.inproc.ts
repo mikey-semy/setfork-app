@@ -271,7 +271,7 @@ export const gitCoreInproc: GitCore = {
     return { mergeBaseSha: baseSha, base, ours, theirs }
   },
 
-  async mergeResolved(repo, branch, listJson) {
+  async mergeResolved(repo, branch, listJson, opts) {
     if (badBranch(branch) || branch === 'main') throw new BranchOpError('bad-name')
     try {
       JSON.parse(listJson)
@@ -310,9 +310,31 @@ export const gitCoreInproc: GitCore = {
         GIT_COMMITTER_NAME: 'SetFork',
         GIT_COMMITTER_EMAIL: 'git@setfork.com',
       }
+      // Способ слияния уважается и ЗДЕСЬ. Резолвер конфликтов пишет в main так же,
+      // как обычное слияние, и раньше всегда делал коммит с двумя родителями: список,
+      // настроенный на squash, молча получал историю ветки, стоило разрешить конфликт.
+      const squash = opts?.mode === 'squash'
+      const title = squash ? opts?.message?.trim() || `Squashed branch '${branch}'` : `Merge branch '${branch}' (resolved)`
+      // При squash вклад авторов сохраняем трейлерами — иначе он исчезает вместе с
+      // историей ветки (то же правило, что в mergeBranch).
+      const authors: CommitAuthor[] = squash
+        ? await exec('git', ['--git-dir', bare, 'log', '--format=%an%x1f%ae', `main..refs/heads/${branch}`]).then(
+            (r) =>
+              r.stdout
+                .split('\n')
+                .map((l) => l.trim())
+                .filter(Boolean)
+                .map((l) => {
+                  const [name, email] = l.split('\x1f')
+                  return { name: name ?? '', email: email ?? '' }
+                }),
+            () => [],
+          )
+        : []
+      const parents = squash ? ['-p', 'main'] : ['-p', 'main', '-p', `refs/heads/${branch}`]
       const { stdout: commit } = await exec(
         'git',
-        ['--git-dir', bare, 'commit-tree', tree, '-p', 'main', '-p', `refs/heads/${branch}`, '-m', `Merge branch '${branch}' (resolved)`],
+        ['--git-dir', bare, 'commit-tree', tree, ...parents, '-m', squash ? withCoauthors(title, authors) : title],
         { env },
       )
       const tipSha = commit.trim()

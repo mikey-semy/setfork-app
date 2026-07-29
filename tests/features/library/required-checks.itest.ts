@@ -23,6 +23,16 @@ let authorSeq = 0
 
 const items = () => toProposedItems([{ ...emptyBlock('step'), title: 'Шаг' }], 'en')
 
+/** Второе предложение того же списка — чтобы номера не пересекались. */
+async function newSuggestion2(): Promise<string> {
+  const [author] = await db.insert(users).values({ handle: `chk-author-${++authorSeq}` }).returning({ id: users.id })
+  const created = await createSuggestion(author.id, templateId, { note: 'вторая', items: items() })
+  if (!created.ok) throw new Error(created.reason)
+  return created.id
+}
+
+const items2 = () => toProposedItems([{ ...emptyBlock('step'), title: 'Шаг ДРУГОЙ' }], 'en')
+
 async function newSuggestion(): Promise<string> {
   const [author] = await db.insert(users).values({ handle: `chk-author-${++authorSeq}` }).returning({ id: users.id })
   const created = await createSuggestion(author.id, templateId, { note: 'правка', items: items() })
@@ -93,6 +103,18 @@ describe('гейт включён', () => {
     await report('warn')
     await mcpReportCheck(ownerId, { list: 'gate-owner/gate-list', number: 1, name: 'lint', status: 'neutral' })
     expect(await mergeSuggestion(id, ownerId)).toMatchObject({ ok: true })
+  })
+
+  it('зелёная проверка ПРОТУХАЕТ, когда предложение поменяли', async () => {
+    const id = await newSuggestion()
+    await report('ok')
+    expect(await mergeSuggestion(id, ownerId)).toMatchObject({ ok: true })
+
+    // Второе предложение: отчитались «ок», ПОТОМ поменяли содержимое.
+    const id2 = await newSuggestion2()
+    await mcpReportCheck(ownerId, { list: 'gate-owner/gate-list', number: 2, name: 'tests', status: 'ok' })
+    await db.update(suggestions).set({ items: items2() }).where(eq(suggestions.id, id2))
+    expect(await mergeSuggestion(id2, ownerId)).toMatchObject({ ok: false, reason: expect.stringContaining('older revision') })
   })
 
   it('упавшая проверка держит и путь «принять пункты» — правило одно на оба пути', async () => {
