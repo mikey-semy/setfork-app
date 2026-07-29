@@ -5,6 +5,7 @@ import { Loader2, Send } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { t } from '@/shared/i18n'
 import { setEmailSettings, sendTestEmail } from './actions'
+import { FormSaveBar } from '@/features/settings/FormSaveBar'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
@@ -89,9 +90,7 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
           <Switch name="secure" defaultChecked={v.secure} />
         </div>
 
-        <div className="flex justify-end border-t border-border pt-4">
-          <button className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">{ru ? 'Сохранить' : 'Save'}</button>
-        </div>
+        <FormSaveBar ru={ru} />
       </form>
 
       {/* Тест-отправка использует СОХРАНЁННЫЕ настройки — сначала сохрани. */}

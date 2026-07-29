@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { KeyRound, Loader2 } from 'lucide-react'
 import { generateVapidKeys, setPushSubject } from './actions'
+import { FormSaveBar } from '@/features/settings/FormSaveBar'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
@@ -67,9 +68,7 @@ export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) 
           <label className={lbl}>{ru ? 'Subject (mailto: или URL сайта)' : 'Subject (mailto: or site URL)'}</label>
           <input name="subject" defaultValue={v.subject} placeholder="mailto:admin@setfork.com" className={`${field} font-mono`} />
         </div>
-        <div className="flex justify-end">
-          <button className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">{ru ? 'Сохранить' : 'Save'}</button>
-        </div>
+        <FormSaveBar ru={ru} />
       </form>
     </div>
   )
