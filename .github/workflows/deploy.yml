@@ -1,12 +1,19 @@
 # Автодеплой на прод setfork (31.177.83.219, без Dokploy) на КАЖДЫЙ пуш в master.
 #
-# Триггер — push (не workflow_run CI): раньше Deploy ждал завершения воркфлоу CI,
-# но `cancel-in-progress` + частые мержи параллельных сессий отменяли master-CI
-# за 2-4 мин (не доживал до конца) → Deploy вечно skipped, автодеплой не работал.
-# Теперь деплой не зависит от гонки CI. Гейт качества: (1) PR-CI зелёный ПЕРЕД
-# мержем (linkcheck-флейк починен, CI снова доверяемый); (2) сборка `--build` идёт
-# НА СЕРВЕРЕ — битый код не соберётся, а `compose up` НЕ заменит рабочий контейнер
-# (прод остаётся на последней рабочей сборке, джоба краснеет — видно).
+# Триггер — push, но перед доставкой стоят ДВА гейта (оба из авто-ревью, #468 и #321):
+#
+# 1. ЗЕЛЁНЫЙ CI ЭТОГО ЖЕ КОММИТА. Раньше деплой уезжал сразу по пушу: сборка на
+#    сервере ловила только то, что не компилируется, а красные тесты, линт и
+#    разъехавшийся proto попадали на прод беспрепятственно. Триггер `workflow_run`
+#    когда-то это закрывал, но master-CI отменялся `cancel-in-progress` и деплой
+#    вечно был skipped — поэтому гейт тогда сняли. Теперь master-CI не отменяется
+#    (см. ci.yml), и деплой честно ждёт его вердикта.
+# 2. КОММИТ ВСЁ ЕЩЁ ВЕРШИНА master. Очередь деплоя не гарантирует порядок (о чём
+#    прямо сказано в документации про concurrency), поэтому опоздавший прогон
+#    старого коммита мог собрать прод НАЗАД. Устаревший деплой теперь не катится.
+#
+# Сборка `--build` идёт НА СЕРВЕРЕ; `compose up` не заменит рабочий контейнер, если
+# сборка упала — прод остаётся на последней рабочей версии, а джоба краснеет.
 #
 # Исходники уезжают tar-ом по ssh в /opt/setfork/src/setfork-frontend, образ
 # собирается НА СЕРВЕРЕ (npm registry с RF-сервера работает; .env сервиса лежит
@@ -32,14 +39,65 @@ env:
 jobs:
   deploy:
     runs-on: [self-hosted, setfork]
-    # issues: write — для тревоги о красном деплое (шаг ниже). Остальное read.
+    # issues: write — для тревоги о красном деплое (шаг ниже).
+    # actions: read — гейт спрашивает у API вердикт CI по этому же коммиту.
     permissions:
       contents: read
       issues: write
+      actions: read
+    # 40 минут: master-CI идёт ~25 мин на своих раннерах, плюс очередь.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
+      - name: CI этого коммита зелёный?
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Ждём вердикт воркфлоу CI по ЭТОМУ head_sha. Успех → катим. Провал или
+            // отмена → не катим: прод не должен получать то, что не прошло проверки.
+            const sha = context.sha
+            const deadline = Date.now() + 40 * 60 * 1000
+            let last = 'нет прогона'
+            while (Date.now() < deadline) {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                ...context.repo,
+                workflow_id: 'ci.yml',
+                head_sha: sha,
+                per_page: 10,
+              })
+              const run = data.workflow_runs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+              if (run) {
+                last = `${run.status}/${run.conclusion ?? '—'} (${run.html_url})`
+                if (run.conclusion === 'success') {
+                  core.info(`CI зелёный: ${run.html_url}`)
+                  return
+                }
+                if (run.conclusion) {
+                  core.setFailed(`CI этого коммита ${run.conclusion} — деплой отменён. ${run.html_url}`)
+                  return
+                }
+              }
+              core.info(`жду CI: ${last}`)
+              await new Promise((r) => setTimeout(r, 30_000))
+            }
+            core.setFailed(`CI этого коммита не завершился за 40 минут (${last}) — деплой отменён.`)
+
+      - name: Коммит всё ещё вершина master?
+        id: fresh
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Очередь деплоя не гарантирует порядок: опоздавший прогон старого коммита
+            // собрал бы прод НАЗАД. Если master уже ушёл вперёд — уступаем свежему.
+            const { data: ref } = await github.rest.git.getRef({ ...context.repo, ref: 'heads/master' })
+            const tip = ref.object.sha
+            const ok = tip === context.sha
+            if (!ok) core.notice(`master уже на ${tip.slice(0, 7)}, а это прогон ${context.sha.slice(0, 7)} — деплой уступает свежему коммиту`)
+            core.setOutput('ok', String(ok))
+
       - name: Ключ деплоя (ro-mount раннера)
+        if: steps.fresh.outputs.ok == 'true'
         run: |
           test -f /ssh/setfork || { echo "::error::нет /ssh/setfork — подними раннер из setfork-ci-runner/docker-compose.yml (там ro-mount ключа)"; exit 1; }
           command -v ssh >/dev/null || (apt-get update -qq && apt-get install -y -qq openssh-client)
@@ -61,6 +119,7 @@ jobs:
       # Прежнее дерево остаётся как .old на один цикл: если серверного файла всё же
       # не предусмотрели, он не потерян, а лежит рядом.
       - name: Доставка исходников → сборка на сервере → up
+        if: steps.fresh.outputs.ok == 'true'
         run: |
           SSH="ssh -i /tmp/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
           tar --exclude=.git -czf - . | $SSH "rm -rf $APP_DIR.new && mkdir -p $APP_DIR.new && tar -xzf - -C $APP_DIR.new"
@@ -87,6 +146,7 @@ jobs:
           $SSH "docker builder prune -f --filter until=24h >/dev/null 2>&1 || true"
 
       - name: Health-check
+        if: steps.fresh.outputs.ok == 'true'
         run: |
           SSH="ssh -i /tmp/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
           sleep 10
@@ -126,7 +186,9 @@ jobs:
       # Зелёный деплой закрывает тревогу сам: иначе она живёт вечно и перестаёт
       # что-либо значить — а протухшая тревога хуже отсутствующей.
       - name: Снять тревогу — деплой прошёл
-        if: success()
+        # Уступивший старый прогон тревогу НЕ снимает: он ничего не катил, и его
+        # «успех» не означает, что прод здоров.
+        if: success() && steps.fresh.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TITLE: '🔴 Деплой на прод падает'
