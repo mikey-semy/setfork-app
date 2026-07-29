@@ -42,8 +42,22 @@ export const VOICE: Record<string, Partial<Record<VoiceKind, VoiceSet>>> = {
   },
   reporter: {
     clarify: {
-      en: ['The request is vague — a couple of questions will sharpen it.', 'Hm, missing details. Let me ask — the list will come out better.'],
-      ru: ['Запрос размытый — задам пару вопросов, будет точнее.', 'Хм, деталей не хватает. Спрошу — список выйдет лучше.'],
+      en: [
+        'The request is vague — a couple of questions will sharpen it.',
+        'Hm, missing details. Let me ask — the list will come out better.',
+        'Too many readings of this one. Two questions and we are on track.',
+        'I can guess, but guessing makes a worse list. Asking.',
+        'A short question now saves a wrong list later.',
+        'The answer depends on things you have not said yet — let me ask.',
+      ],
+      ru: [
+        'Запрос размытый — задам пару вопросов, будет точнее.',
+        'Хм, деталей не хватает. Спрошу — список выйдет лучше.',
+        'Тут несколько прочтений. Два вопроса — и не промахнёмся.',
+        'Могу и угадать, но угаданный список выйдет хуже. Спрошу.',
+        'Короткий вопрос сейчас дешевле неверного списка потом.',
+        'Ответ зависит от того, чего вы ещё не сказали. Уточню.',
+      ],
     },
   },
   crier: {
@@ -54,14 +68,40 @@ export const VOICE: Record<string, Partial<Record<VoiceKind, VoiceSet>>> = {
   },
   'seek-lists': {
     seek: {
-      en: ['Dug through the library: {n} similar lists. Putting them on the table.', 'The archives turned up {n} similar ones. These will help.'],
-      ru: ['Порылся в библиотеке: похожих списков — {n}. Кладу на стол.', 'В архивах нашлось похожее: {n}. Пригодится.'],
+      en: [
+        'Dug through the library: {n} similar lists. Putting them on the table.',
+        'The archives turned up {n} similar ones. These will help.',
+        '{n} precedents from our own shelves — better than starting blank.',
+        'Found {n} lists on neighbouring topics. Taking what fits.',
+        'Our library already knows something: {n} relevant lists.',
+        '{n} of ours to lean on. The rest we write ourselves.',
+      ],
+      ru: [
+        'Порылся в библиотеке: похожих списков — {n}. Кладу на стол.',
+        'В архивах нашлось похожее: {n}. Пригодится.',
+        'Прецедентов с наших полок — {n}. Это лучше, чем с чистого листа.',
+        'Нашёл {n} списков по соседним темам. Беру, что подходит.',
+        'Библиотека кое-что уже знает: {n} подходящих списков.',
+        'Опереться есть на что — {n} наших. Остальное напишем сами.',
+      ],
     },
   },
   'seek-web': {
     seek: {
-      en: ['Off to the web for precedents…', 'Checking how it is done out there…'],
-      ru: ['Слетаю в интернет за прецедентами…', 'Гляну, как это делают снаружи…'],
+      en: [
+        'Off to the web for precedents…',
+        'Checking how it is done out there…',
+        'One query is not a search yet — trying different wordings…',
+        'Looking for who has already solved this…',
+        'Going outside: our shelves are thin on this one…',
+      ],
+      ru: [
+        'Слетаю в интернет за прецедентами…',
+        'Гляну, как это делают снаружи…',
+        'Один запрос — ещё не поиск. Пробую разные формулировки…',
+        'Ищу, кто уже решал это до нас…',
+        'Иду наружу: на наших полках по этой теме пусто…',
+      ],
     },
   },
   innovator: {
