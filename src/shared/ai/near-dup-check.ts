@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, arrayOverlaps, eq, inArray, sql } from 'drizzle-orm'
+import { and, arrayOverlaps, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, steps, templates, templateVersions } from '@/shared/db'
 import { findNearDuplicate, type NearDupCandidate, type NearDupVerdict } from './near-duplicate'
 
@@ -13,7 +13,11 @@ import { findNearDuplicate, type NearDupCandidate, type NearDupVerdict } from '.
  * Ограничение осознанное: у кандидата берём ТЕКУЩУЮ версию (то, что читает человек), а не
  * все версии — история дубликатом не считается.
  */
-const CANDIDATE_LIMIT = 40
+// Публичных по тегам может быть сколько угодно — их берём пачкой. СВОИ списки берём
+// ВСЕ: обещание «свои сравниваем всегда» иначе не выполняется, а их число ограничено
+// квотой на человека, то есть выборка остаётся дешёвой.
+const PUBLIC_CANDIDATE_LIMIT = 40
+const OWN_CANDIDATE_LIMIT = 500
 
 export async function findExistingNearDuplicate(
   fresh: { title: string; items: string[]; tags: string[] },
@@ -22,21 +26,30 @@ export async function findExistingNearDuplicate(
   const tags = fresh.tags.filter((t) => t && t !== '*')
   // Кандидаты: публичные живые списки по пересечению тегов + все свои (свои сравниваем
   // всегда — повторно генерировать себе же одно и то же обиднее всего).
-  const rows = await db
-    .select({ id: templates.id, title: templates.title, currentVersion: templates.currentVersion })
-    .from(templates)
-    .where(
-      and(
-        sql`${templates.archivedAt} is null`,
-        opts.excludeId ? sql`${templates.id} <> ${opts.excludeId}` : sql`true`,
-        opts.ownerId && tags.length
-          ? sql`(${templates.ownerId} = ${opts.ownerId} or (${templates.visibility} = 'public' and ${templates.status} = 'published' and ${arrayOverlaps(templates.tags, tags)}))`
-          : opts.ownerId
-            ? eq(templates.ownerId, opts.ownerId)
-            : and(eq(templates.visibility, 'public'), eq(templates.status, 'published'), tags.length ? arrayOverlaps(templates.tags, tags) : sql`false`),
-      ),
-    )
-    .limit(CANDIDATE_LIMIT)
+  const alive = and(sql`${templates.archivedAt} is null`, opts.excludeId ? sql`${templates.id} <> ${opts.excludeId}` : sql`true`)
+  const pick = { id: templates.id, title: templates.title, currentVersion: templates.currentVersion }
+
+  // ДВА запроса вместо одного с общим лимитом. Раньше стоял `limit(40)` БЕЗ сортировки:
+  // у кого больше сорока подходящих списков (а это ровно сценарий массовой генерации,
+  // ради которого проверка и заведена), в выборку попадали произвольные сорок — клон за
+  // их пределами не сравнивался никогда и создавался как новый.
+  const [own, byTag] = await Promise.all([
+    opts.ownerId
+      ? db.select(pick).from(templates).where(and(alive, eq(templates.ownerId, opts.ownerId))).orderBy(desc(templates.updatedAt)).limit(OWN_CANDIDATE_LIMIT)
+      : Promise.resolve([]),
+    tags.length
+      ? db
+          .select(pick)
+          .from(templates)
+          .where(and(alive, eq(templates.visibility, 'public'), eq(templates.status, 'published'), arrayOverlaps(templates.tags, tags)))
+          // Свежие первыми: если резать пачку, то по понятному правилу, а не «как легло».
+          .orderBy(desc(templates.updatedAt))
+          .limit(PUBLIC_CANDIDATE_LIMIT)
+      : Promise.resolve([]),
+  ])
+  const seen = new Set<string>()
+  const rows = [...own, ...byTag].filter((r) => !seen.has(r.id) && seen.add(r.id))
+
   if (!rows.length) return { match: null, best: 0 }
 
   // Заголовки пунктов текущих версий — одним запросом на всех кандидатов.
