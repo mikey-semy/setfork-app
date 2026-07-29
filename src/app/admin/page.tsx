@@ -34,6 +34,7 @@ import { MonetizationSettingsForm } from '@/features/admin/MonetizationSettingsF
 import { getAchievementDisplay } from '@/features/profile/achievement-config'
 import type { SettingsSection } from '@/features/settings/SettingsShell'
 import { AdminShell } from '@/features/admin/AdminShell'
+import { adminNavGroups, adminSettingsGroup } from '@/features/admin/nav-groups'
 
 const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
@@ -428,51 +429,11 @@ export default async function AdminPage() {
     },
   ]
 
+  // Своего заголовка у страницы нет: «Админка» уже написана в шапке приложения, а
+  // подзаголовок про «хранятся в БД» — рассказ про устройство, а не подпись к экрану.
+  // Дублировать название и объяснять внутреннее устройство ради занятого экрана незачем;
+  // то же правило, что и в настройках списка: секции сами себя называют, навигация — в меню.
   return (
-    <>
-      {/* Шапка во всю ширину с теми же полями, что у оболочки ниже. Разделы уехали в
-          боковое меню: их больше десятка, и горизонтальным рядом они не помещаются нигде. */}
-      <div className="w-full min-w-0 px-5 pt-6 md:px-8">
-        <h1 className="mb-1 text-[18px] font-bold text-ink">{t('adminTitle', lang)}</h1>
-        <p className="text-[13px] text-ink-2">{t('adminSubtitle', lang)}</p>
-      </div>
-      <AdminShell
-        sections={sections}
-        lang={lang}
-        currentPath="/admin"
-        groups={[
-          {
-            title: say('Overview', 'Обзор'),
-            links: [
-              { href: '/admin/dashboard', label: tr({ en: 'Dashboard', ru: 'Дашборд' }, lang), icon: <LayoutDashboard size={14} /> },
-              { href: '/admin/development', label: tr({ en: 'Development', ru: 'Развитие' }, lang), icon: <TrendingUp size={14} /> },
-              { href: '/admin/usage', label: say('Draft usage', 'Расход на черновики'), icon: <BarChart3 size={14} /> },
-              { href: '/admin/audit', label: say('Audit', 'Аудит'), icon: <ScrollText size={14} /> },
-            ],
-          },
-          {
-            title: say('Content', 'Контент'),
-            links: [
-              { href: '/admin/collections', label: say('Collections', 'Подборки'), icon: <FolderGit2 size={14} /> },
-              { href: '/admin/feeds', label: say('Feeds', 'Потоки'), icon: <Rss size={14} /> },
-              { href: '/admin/tags', label: t('tags', lang), icon: <Tag size={14} /> },
-              { href: '/admin/landing', label: say('Landing', 'Лендинг'), icon: <Megaphone size={14} /> },
-            ],
-          },
-          {
-            title: say('People & complaints', 'Люди и жалобы'),
-            links: [
-              { href: '/admin/moderation', label: say('Moderation', 'Модерация'), icon: <Shield size={14} /> },
-              { href: '/admin/reports', label: t('reports', lang), icon: <Flag size={14} /> },
-              { href: '/admin/feedback', label: t('feedback', lang), icon: <MessageSquare size={14} /> },
-            ],
-          },
-          {
-            title: say('Instance settings', 'Настройки инстанса'),
-            sectionIds: sections.map((x) => x.id),
-          },
-        ]}
-      />
-    </>
+    <AdminShell sections={sections} lang={lang} groups={[...adminNavGroups(lang), adminSettingsGroup(lang, sections.map((x) => x.id))]} />
   )
 }

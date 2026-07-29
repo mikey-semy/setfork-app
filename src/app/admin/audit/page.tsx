@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowLeft, AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
+import { AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { getAuditLog, type AuditEntry } from '@/features/admin/audit-queries'
@@ -68,9 +68,6 @@ export default async function AuditPage() {
 
   return (
     <div className="mx-auto w-full max-w-[960px] px-6 py-8">
-      <Link href="/admin" className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
-        <ArrowLeft size={15} /> Admin
-      </Link>
       <h1 className="mb-1 text-[18px] font-bold text-ink">{ru ? 'Журнал аудита' : 'Audit log'}</h1>
       <p className="mb-5 text-[13px] text-ink-2">
         {ru

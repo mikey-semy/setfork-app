@@ -61,7 +61,12 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
   const onCooldown = !running && !stalled && cooldownLeft > 0 && status?.status !== 'idle'
   const pct = status && status.total ? Math.round((status.doneItems / status.total) * 100) : 0
 
-  const cols = gridWidth > 0 ? Math.max(1, Math.min(60, Math.floor(gridWidth / 14))) : 24
+  // Колонки считаем по ширине: клетка ~14px. Потолок высокий (было 60) — на мониторе
+  // 1920 колонка админки даёт 1548px, и при потолке в 60 клетка выходила 23.8×12: сетка
+  // расползалась лежачими прямоугольниками, потому что высота фиксированная, а ширина
+  // тянется на 1fr. Клетка теперь квадратная по построению (aspect-square), так что
+  // упереться в потолок = получить клетки покрупнее, а не деформированные.
+  const cols = gridWidth > 0 ? Math.max(1, Math.min(120, Math.floor(gridWidth / 14))) : 24
   const totalCells = ROWS * cols
   const ratio = status && status.total > 0 ? status.doneItems / status.total : 0
   const greenCells = Math.round(ratio * totalCells)
@@ -196,7 +201,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
             return (
               <span
                 key={i}
-                className={`h-3 w-full rounded-[2px] transition-colors ${
+                className={`aspect-square w-full rounded-[2px] transition-colors ${
                   filled ? 'animate-cell-pop bg-ok' : errored ? 'bg-danger' : 'bg-(--border)'
                 }`}
               />
