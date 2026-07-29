@@ -76,7 +76,17 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
 
       <div>
         <label className={lbl}>{say('Council models (empty = default)', 'Модели совета (пусто = дефолт)')}</label>
-        <ModelSelect name="councilModels" defaultValue={v.models} options={modelOptions} multiple placeholder={say('Pick models', 'Выбери модели')} />
+        {/* allowCustom — каталог провайдера может не приехать (сеть/ключ), и без ручного
+            ввода совет тогда невозможно настроить вообще. */}
+        <ModelSelect
+          name="councilModels"
+          defaultValue={v.models}
+          options={modelOptions}
+          multiple
+          placeholder={say('Pick models', 'Выбери модели')}
+          allowCustom
+          customHint={say('Use', 'Использовать')}
+        />
         <p className="mt-1.5 text-[12px] text-muted">
           {say(
             'Order matters: the 1st model runs the intermediate steps (planner, critic) — pick a fast one; the rest go to experts in turn. Different vendors = more diverse opinions.',

@@ -38,6 +38,18 @@ function priceClass(metric: number, cur: Currency): string {
   if (metric <= warn) return 'text-warn'
   return 'text-danger'
 }
+/**
+ * Сохранённая модель ВСЕГДА присутствует опцией — даже если каталог пуст или её в нём нет.
+ *
+ * Одна реализация на оба пути (серверный рендер страницы и серверный экшен смены провайдера):
+ * раньше это были две копии, экшен свою потерял — и после переключения провайдера селект
+ * оставался без единой опции, а поле подменялось голым вводом. Выглядело как «выбор моделей
+ * с ценами откатили», хотя откатывать было нечего.
+ */
+export function withSavedOption(opts: Option[], current: string): Option[] {
+  return current && !opts.some((o) => o.value === current) ? [{ value: current, id: current }, ...opts] : opts
+}
+
 export function buildOpts(models: ModelOption[], embedding: boolean, lang: Lang, cur: Currency, pricesKnown: boolean): Option[] {
   if (!pricesKnown) return [...models].map((m) => ({ value: m.id, id: m.id, label: m.label, family: m.family }))
   return [...models]

@@ -15,16 +15,15 @@ import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
 import { Megaphone } from 'lucide-react'
 import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, LayoutDashboard, Mail, MessageSquare, RefreshCw, Rss, ScrollText, Search, Shield, Tag, TrendingUp, Users, Wrench } from 'lucide-react'
-import { fetchModels, type ModelOption } from '@/shared/ai/models'
+import { fetchModels, EMBEDDING_DIM, type ModelOption } from '@/shared/ai/models'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
-import { buildOpts, CUR_SIGN } from '@/features/admin/model-options'
+import { buildOpts, withSavedOption } from '@/features/admin/model-options'
 import { AiProviderModels } from '@/features/admin/AiProviderModels'
 import { AssistFields } from '@/features/admin/AssistFields'
 import { CouncilFields } from '@/features/admin/CouncilFields'
-import { CreditsWidget } from '@/features/admin/CreditsWidget'
 import { MediaSettingsForm } from '@/features/admin/MediaSettingsForm'
 import { EmailSettingsForm } from '@/features/admin/EmailSettingsForm'
 import { PushSettingsForm } from '@/features/admin/PushSettingsForm'
@@ -40,9 +39,9 @@ const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 tex
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 // OpenRouter возвращает отрицательную цену (-1/токен) у авто-роутеров — она «плавающая».
-function ensure(opts: Option[], current: string): Option[] {
-  return current && !opts.some((o) => o.value === current) ? [{ value: current, id: current }, ...opts] : opts
-}
+// Общая с серверным экшеном смены провайдера (model-options): две копии этой логики
+// и разъехались — экшен свою потерял, и селект после переключения оставался пустым.
+const ensure = withSavedOption
 
 /** Встроенные персонажи для галереи — читаем каталог, а не держим список руками:
  *  дорисовали картинку в public/gnomes — она появилась в выборе сама. */
@@ -127,7 +126,8 @@ export default async function AdminPage() {
   // Загруженная картинка идёт готовым URL (imgproxy/диск) — клиент не должен знать про S3-ключи.
   const roster = rosterRows.map((e) => ({ ...e, uploadedUrl: e.avatarUploaded ? uploaded[e.id] : undefined }))
   const fallbackOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.fallbackModel)
-  const embOpts = ensure(buildOpts(models.embedding, true, lang, 'USD', true), settings.embeddingModel)
+  // Валюта — из каталога, а не 'USD' константой: эмбеддинги у RU-провайдеров считаются в ₽.
+  const embOpts = ensure(buildOpts(models.embedding, true, lang, models.currency, models.pricesKnown), settings.embeddingModel)
 
   // Карточка настроек держит ЧИТАЕМУЮ ширину, даже когда страница во всю ширину экрана:
   // поле ввода на два метра удобнее не становится, а глаз по такой строке не ходит.
@@ -220,11 +220,17 @@ export default async function AdminPage() {
                 chatModel: settings.chatModel,
                 fallbackModel: settings.fallbackModel,
                 embeddingModel: settings.embeddingModel,
+                cheapModeThreshold: settings.cheapModeThreshold,
+                currency: models.currency,
+                pricesKnown: models.pricesKnown,
+                error: models.error,
               }}
               labels={{
                 chat: say('Chat model', 'Модель генерации'),
                 fallback: say('Fallback model (cheap mode)', 'Запасная модель (для дешёвого режима)'),
-                embedding: say('Embedding model (RAG, 1536-dim)', 'Модель эмбеддингов (RAG, 1536-мерная)'),
+                // Размерность подставляется из EMBEDDING_DIM: она задана схемой БД (pgvector),
+                // и подпись не должна расходиться со схемой из-за числа, набранного в тексте.
+                embedding: say(`Embedding model (RAG, ${EMBEDDING_DIM}-dim)`, `Модель эмбеддингов (RAG, ${EMBEDDING_DIM}-мерная)`),
                 pick: say('Pick a model', 'Выбери модель'),
                 loading: say('Loading this provider’s models…', 'Загружаю модели этого провайдера…'),
                 noKey: say('No key for this provider — the catalog is unavailable, type the model id manually.', 'У этого провайдера нет ключа — каталог недоступен, id модели вводится вручную.'),
@@ -256,47 +262,8 @@ export default async function AdminPage() {
               </p>
             </div>
 
-            <p className="text-[12px] text-muted">
-              {models.pricesKnown
-                ? say(
-                    `Prices are per 1M tokens (prompt/completion), in ${CUR_SIGN[models.currency]}. Green = cheap, yellow = mid, red = expensive.`,
-                    `Цены в списках — за 1М токенов (prompt/completion), в ${CUR_SIGN[models.currency]}. Зелёные дешевле, жёлтые средние, красные дорогие.`,
-                  )
-                : say(
-                    'This provider does not expose prices via API — check the Yandex Cloud console.',
-                    'Провайдер не отдаёт цены по API — смотри тарифы в консоли Yandex Cloud.',
-                  )}
-            </p>
-
-            {(models.provider === 'openrouter' || models.provider === 'yandex') && (
-              <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
-                <div className="text-[13px] font-medium text-ink">
-                  {models.provider === 'openrouter'
-                    ? say('OpenRouter cost control', 'Контроль расходов OpenRouter')
-                    : say('Yandex cost control', 'Контроль расходов Яндекса')}
-                </div>
-                {models.provider === 'openrouter' && <CreditsWidget ru={ru} />}
-                <div>
-                  <label className={lbl}>
-                    {models.provider === 'openrouter'
-                      ? say('Auto-fallback threshold ($ balance)', 'Порог авто-fallback (остаток, $)')
-                      : say('Auto-fallback threshold (₽ per day)', 'Порог авто-fallback (расход, ₽/день)')}
-                  </label>
-                  <input type="number" name="cheapModeThreshold" step="any" min="0" defaultValue={settings.cheapModeThreshold} className={field} />
-                  <p className="mt-1.5 text-[12px] text-muted">
-                    {models.provider === 'openrouter'
-                      ? say(
-                          'When the balance drops below this, generation switches to the fallback model. 0 = off.',
-                          'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.',
-                        )
-                      : say(
-                          'Balance is not exposed by the API, so the threshold is DAILY spend (our journal, hardcoded prices): above it generation switches to the fallback model. 0 = off.',
-                          'Баланс в API Яндекс не отдаёт, поэтому порог — ДНЕВНОЙ расход (наш журнал, хардкод-прайс): выше него генерация переключается на запасную модель. 0 — выключено.',
-                        )}
-                  </p>
-                </div>
-              </div>
-            )}
+            {/* Подпись про валюту цен и блок контроля расходов переехали в AiProviderModels:
+                здесь они рендерились по СОХРАНЁННОМУ провайдеру и врали при переключении. */}
 
             <CouncilFields
               modelOptions={chatOpts}

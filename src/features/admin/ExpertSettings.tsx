@@ -300,7 +300,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
 
           <div>
             <label className={lbl}>{say('Model (empty = from council pool)', 'Модель (пусто = из пула совета)')}</label>
-            <ModelSelect name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" />
+            <ModelSelect name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" allowCustom customHint={say('Use', 'Использовать')} />
           </div>
 
           <div className="flex items-center justify-between gap-3 pt-0.5">

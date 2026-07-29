@@ -1,7 +1,7 @@
 'use server'
 import { requireAdmin } from '@/shared/auth/admin'
 import { fetchModelsFor } from '@/shared/ai/models'
-import { buildOpts } from './model-options'
+import { buildOpts, withSavedOption } from './model-options'
 import type { Option } from './ModelSelect'
 import type { Lang } from '@/shared/i18n'
 import { AI_PROVIDERS, getModelSettings, type AiProviderId } from '@/shared/settings/ai'
@@ -25,7 +25,9 @@ export interface ProviderCatalog {
   pricesKnown: boolean
   /** Ключа нет — каталог недоступен, id вводится руками. */
   configured: boolean
-  saved: { chatModel: string; fallbackModel: string }
+  /** Каталог не приехал: 'no-key' | HTTP-код | сетевая ошибка. Пусто = всё в порядке. */
+  error?: string
+  saved: { chatModel: string; fallbackModel: string; cheapModeThreshold: number }
 }
 
 export async function loadProviderCatalog(providerRaw: string, lang: Lang = 'ru'): Promise<ProviderCatalog> {
@@ -36,11 +38,12 @@ export async function loadProviderCatalog(providerRaw: string, lang: Lang = 'ru'
     provider,
     // Опции строит СЕРВЕР той же функцией, что и страница: у провайдеров разная валюта и
     // разные пороги «дёшево/дорого», и вторая копия правил формата разъехалась бы.
-    chat: buildOpts(models.chat, false, lang, models.currency, models.pricesKnown),
+    chat: withSavedOption(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), saved.chatModel),
     embedding: buildOpts(models.embedding, true, lang, models.currency, models.pricesKnown),
     currency: models.currency,
     pricesKnown: models.pricesKnown,
     configured: models.configured,
-    saved: { chatModel: saved.chatModel, fallbackModel: saved.fallbackModel },
+    error: models.error,
+    saved: { chatModel: saved.chatModel, fallbackModel: saved.fallbackModel, cheapModeThreshold: saved.cheapModeThreshold },
   }
 }
