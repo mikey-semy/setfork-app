@@ -60,7 +60,13 @@ export async function findPrecedents(
   // втекает в личную работу, личное наружу не вытекает (рамка NDA).
   const scope = opts.scope ?? 'public'
   const viewer = opts.userId ?? null
-  const mine = scope === 'personal' && viewer ? sql`or ${templates.ownerId} = ${viewer}` : sql``
+  // Свои списки — да, но СНЯТОЕ МОДЕРАЦИЕЙ не подмешиваем даже владельцу: прецеденты
+  // уезжают в промпт модели, и материал, признанный недопустимым, расползался бы по
+  // новым спискам. Утечки тут нет (материал свой), но вердикт модерации — не про
+  // видимость, а про то, что этому не место в работе. Черновики и приватные свои
+  // остаются: они просто ещё не показаны миру.
+  const mine =
+    scope === 'personal' && viewer ? sql`or (${templates.ownerId} = ${viewer} and ${templates.moderation} <> 'flagged' and ${templates.moderation} <> 'hidden')` : sql``
   const reachable = sql`((${templates.status} = 'published' and ${templates.visibility} = 'public' and ${templates.moderation} = 'active') ${mine})`
   const visible = and(
     isNotNull(embeddings.embedding),
