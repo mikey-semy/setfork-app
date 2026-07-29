@@ -205,9 +205,20 @@ export async function addCandidate(
     // но так неудачная запись замера не мешает доставке результата человеку.
     if (draft.drafts?.length) {
       try {
-        await db.insert(generationDrafts).values(
-          draft.drafts.map((d) => ({ generationId, idx, letter: d.letter, who: d.who, text: d.text.slice(0, 20_000) })),
-        )
+        // ЗАМЕНА, а не досыпка. Обычная вставка задваивала строки при каждом повторе
+        // попытки: воркер перезапустил задачу (reap/retry) или две задачи разошлись на
+        // одном (generationId, idx) — и к прежнему набору A/B/C добавлялся ещё один.
+        // Замер многогранности группирует строки одного витка и считает КАЖДУЮ, поэтому
+        // дубли завышали вклад и приписывали его не тем граням: цифра врала молча.
+        //
+        // Транзакцией: между удалением и вставкой не должно существовать состояния
+        // «черновиков нет», иначе параллельный замер прочитал бы пустой виток.
+        await db.transaction(async (tx) => {
+          await tx.delete(generationDrafts).where(and(eq(generationDrafts.generationId, generationId), eq(generationDrafts.idx, idx)))
+          await tx.insert(generationDrafts).values(
+            draft.drafts!.map((d) => ({ generationId, idx, letter: d.letter, who: d.who, text: d.text.slice(0, 20_000) })),
+          )
+        })
       } catch (e) {
         log.warn?.('generation drafts not saved', { generationId, err: e instanceof Error ? e.message : String(e) })
       }
