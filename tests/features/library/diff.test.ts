@@ -240,3 +240,25 @@ describe('дифф по стабильному blockId', () => {
     expect(summary).toMatchObject({ added: 1, removed: 1, changed: 0 })
   })
 })
+
+describe('переход к идентичностям не читается как переписанный список', () => {
+  const step = (title: string, blockId?: string) => ({ title, desc: '', command: '', level: 'required', why: '', section: '', subtasks: [], refs: [], blockId }) as never
+
+  it('у старой версии нет blockId, у новой есть — пункты сопоставляются по заголовку', () => {
+    // Обычное состояние всего, что записано до ADR-0013 (и после переводов, терявших
+    // идентичность). Раньше такой дифф объявлял КАЖДЫЙ пункт добавленным, и человек
+    // видел «список переписан заново» вместо «ничего не изменилось».
+    const from = [step('Сварить бульон'), step('Нашинковать свёклу')]
+    const to = [step('Сварить бульон', 'id-1'), step('Нашинковать свёклу', 'id-2')]
+    const d = diffSteps(from, to)
+    expect(d.summary.added, 'пункты объявлены новыми, хотя это те же самые').toBe(0)
+    expect(d.summary.removed).toBe(0)
+  })
+
+  it('когда у старой версии идентичности ЕСТЬ, новый id по-прежнему значит новый пункт', () => {
+    const from = [step('Сварить бульон', 'id-1')]
+    const to = [step('Сварить бульон', 'id-1'), step('Сварить бульон', 'id-new')]
+    const d = diffSteps(from, to)
+    expect(d.summary.added, 'дубль заголовка слился со старым вместо «добавлен»').toBe(1)
+  })
+})
