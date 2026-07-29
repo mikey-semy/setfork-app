@@ -1,6 +1,6 @@
 import 'server-only'
-import { eq } from 'drizzle-orm'
-import { db, suggestionReviews, suggestions, templates, users } from '@/shared/db'
+import { and, eq } from 'drizzle-orm'
+import { db, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { toStepInput } from '@/shared/lib/step-input'
 // eslint-disable-next-line boundaries/dependencies -- уведомления автору и наблюдателям: тот же кросс-фич-паттерн, что в actions.ts
 import { notify } from '@/features/notifications/notify'
@@ -13,6 +13,8 @@ import { countUnresolvedThreads } from '@/features/comments/queries'
 import { closeLinkedIssues, notifyWatchersNewVersion } from './suggestion-side-effects'
 import { canEditList, canViewList } from '@/core'
 import { isVerdict } from './review-model'
+import { revertPlan } from './suggestion-revert'
+import { getVersionSteps } from './queries'
 import { rateLimit } from '@/shared/rate-limit'
 // eslint-disable-next-line boundaries/dependencies -- подписка автора: доменный порт curation, а не экшен (тот берёт сессию)
 import { curationStore } from '@/features/curation/store'
@@ -56,6 +58,8 @@ export async function mergeSuggestion(
   if (!sug.branchRef) {
     const res = await applySuggestion(suggestionId, actorUserId)
     if (!res.ok) return res
+    // Какой версией стала правка — иначе откат гадал бы по времени и тексту заметки.
+    await db.update(suggestions).set({ mergedVersion: res.version }).where(eq(suggestions.id, suggestionId))
     const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, sug.template.ownerId))
     return { ok: true, owner: u?.handle ?? '', slug: res.slug, kind: 'items', version: res.version }
   }
@@ -76,6 +80,7 @@ export async function mergeSuggestion(
   const [ownerRow] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId))
   const owner = ownerRow?.handle ?? ''
   const { gitCore, BranchOpError } = await gitPort()
+  let mergedVersion: number | null = null
 
   // Линейная история: сливаем только когда это fast-forward. Проверяем ДО merge —
   // иначе merge-коммит уже создан, и «запрет» опоздал.
@@ -89,7 +94,8 @@ export async function mergeSuggestion(
     // main видно, откуда изменение, когда самой ветки уже нет.
     const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 120)
     const title = sug.number ? `${head || sug.branchRef} (#${sug.number})` : head || sug.branchRef
-    await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef, { mode: prs.mergeMethod, message: title })
+    const merged = await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef, { mode: prs.mergeMethod, message: title })
+    mergedVersion = merged.newVersion
   } catch (e) {
     return { ok: false, reason: e instanceof BranchOpError ? e.code : 'internal' }
   }
@@ -98,7 +104,7 @@ export async function mergeSuggestion(
   // предложение уже влито, и падать из-за уборки нельзя.
   if (prs.autoDeleteBranch) await gitCore.deleteBranch({ owner, slug: tpl.slug }, sug.branchRef).catch(() => {})
 
-  await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
+  await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date(), mergedVersion }).where(eq(suggestions.id, sug.id))
   await closeLinkedIssues(tpl.id, sug.note, actorUserId, prs.autoCloseIssues)
   if (sug.authorId !== actorUserId) {
     await notify({ recipientId: sug.authorId, actorId: actorUserId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
@@ -236,4 +242,68 @@ export async function reviewSuggestion(
   // Автор правки должен узнать, что по ней высказались.
   await notify({ recipientId: sug.authorId, actorId: actorUserId, type: 'suggestion_comment', templateId: sug.templateId, suggestionId })
   return { ok: true, verdict }
+}
+
+/**
+ * ОТКАТ принятого предложения — как Revert у GitHub.
+ *
+ * Откат НЕ правит историю тихо: он создаёт новое предложение, которое отменяет
+ * старое и проходит те же ворота — ревью, гейты, слияние. Мгновенная отмена в обход
+ * ревью была бы дырой ровно того размера, что и слияние без ревью.
+ *
+ * Отменяем ВКЛАД, а не «возвращаем список к старой версии»: между слиянием и
+ * откатом список живёт своей жизнью, и откат к снимку затёр бы чужую работу. Что
+ * именно внесла правка, считает `revertPlan` по идентичности блоков.
+ *
+ * Пункты, которые с тех пор трогали, возвращаются СПИСКОМ, а не разрешаются
+ * догадкой: отменить их автоматически нельзя, и человек должен увидеть, какие
+ * именно.
+ */
+export async function revertSuggestion(
+  actorUserId: string,
+  suggestionId: string,
+): Promise<{ ok: true; id: string; number: number | null } | { ok: false; reason: string; conflicts?: { title: string }[] }> {
+  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+  if (!sug) return { ok: false, reason: 'not found' }
+  if (sug.status !== 'accepted') return { ok: false, reason: 'only an accepted suggestion can be reverted' }
+  const tpl = sug.template
+  if (tpl.ownerId !== actorUserId && !(await isCollaborator(tpl.id, actorUserId))) return { ok: false, reason: 'not a maintainer' }
+  // Правки, принятые до появления этого поля, откату не поддаются: что именно они
+  // внесли, пришлось бы угадывать по времени и тексту заметки.
+  if (!sug.mergedVersion) return { ok: false, reason: 'accepted before revert existed — revert it by hand' }
+
+  // Уже отменено — второй откат отменял бы отмену.
+  const dup = await db.query.suggestions.findFirst({
+    where: (s) => and(eq(s.revertOfId, sug.id), eq(s.status, 'open')),
+  })
+  if (dup) return { ok: false, reason: `already being reverted in #${dup.number ?? dup.id}` }
+
+  const [before, after, current] = await Promise.all([
+    getVersionSteps(tpl.id, sug.mergedVersion - 1),
+    getVersionSteps(tpl.id, sug.mergedVersion),
+    getVersionSteps(tpl.id, tpl.currentVersion),
+  ])
+  if (!after || !current) return { ok: false, reason: 'versions are gone' }
+
+  const plan = revertPlan(
+    (before?.steps ?? []) as unknown as ProposedItem[],
+    after.steps as unknown as ProposedItem[],
+    current.steps as unknown as ProposedItem[],
+  )
+  if (plan.conflicts.length > 0) {
+    return {
+      ok: false,
+      reason: 'these items changed after the merge — revert cannot undo them safely',
+      conflicts: plan.conflicts.map((c) => ({ title: c.title })),
+    }
+  }
+
+  const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 100)
+  const created = await createSuggestion(actorUserId, tpl.id, {
+    note: `Revert «${head || `#${sug.number ?? ''}`}»${sug.number ? ` (#${sug.number})` : ''}`,
+    items: plan.items,
+  })
+  if (!created.ok) return created
+  await db.update(suggestions).set({ revertOfId: sug.id }).where(eq(suggestions.id, created.id))
+  return created
 }

@@ -9,7 +9,7 @@ import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
-import { applySuggestion, createSuggestion, mergeSuggestion, reviewSuggestion } from '@/features/library/suggestion-core'
+import { applySuggestion, createSuggestion, mergeSuggestion, reviewSuggestion, revertSuggestion } from '@/features/library/suggestion-core'
 import { slugify, uniqueSlug } from '@/features/library/slug'
 import { recordAgentAction } from '@/shared/agents/policy'
 import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
@@ -535,6 +535,17 @@ export async function mcpMergeSuggestion(userId: string, input: { list: string; 
     version: res.version,
     url: `${SITE_URL}/${res.owner}/${res.slug}`,
   }
+}
+
+/** Откатить принятое предложение: создаётся НОВОЕ, отменяющее его. */
+export async function mcpRevertSuggestion(userId: string, input: { list: string; number: number }) {
+  const sug = await resolveSuggestionRef(input.list, input.number)
+  if ('error' in sug) return sug
+  const res = await revertSuggestion(userId, sug.id)
+  if (!res.ok) {
+    return { error: res.conflicts?.length ? `${res.reason}: ${res.conflicts.map((c) => c.title).join(', ')}` : res.reason }
+  }
+  return { revertOf: input.number, opened: res.number, note: 'A revert suggestion was opened — it still needs review and merging.' }
 }
 
 /** Список по ссылке «handle/slug» или просто «slug». */

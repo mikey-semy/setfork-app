@@ -774,6 +774,13 @@ export const suggestions = pgTable('suggestions', {
   branchRef: text('branch_ref'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  // Версия, которой предложение стало при слиянии. Нужна откату: без неё «что
+  // именно внесла эта правка» приходится угадывать по времени и тексту заметки.
+  // Пусто у принятых ДО появления отката — им он и не предлагается.
+  mergedVersion: integer('merged_version'),
+  // Откат — это НОВОЕ предложение, отменяющее старое (как Revert у GitHub), а не
+  // тихая правка истории. Связь видна с обеих сторон: «отменяет #7» / «отменено в #9».
+  revertOfId: uuid('revert_of_id'),
 }, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status), uniqueIndex('suggestions_tpl_number').on(t.templateId, t.number)])
 
 // ── Ревью правки (вердикт рецензента, как review в PR) ───────────────
