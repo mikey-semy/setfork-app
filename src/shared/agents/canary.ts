@@ -88,14 +88,8 @@ export async function autonomyHealthy(loop: string): Promise<boolean> {
   return true
 }
 
-/** Для отчёта: сколько автономных публикаций сегодня и остаток квоты. */
-export async function publishedToday(loop: string, perDay = DEFAULT_PUBLISH_PER_DAY): Promise<{ used: number; left: number }> {
-  const left = await publishQuotaLeft(loop, perDay)
-  return { used: Math.max(0, perDay - left), left }
-}
-
-/** Сорвать предохранитель вручную из кода петли (например при неожиданном состоянии). */
-export async function tripWithReason(loop: string, reason: string): Promise<void> {
-  log.warn?.('canary trip', { loop, reason })
-  await tripCircuit(loop, reason)
-}
+// Здесь были publishedToday() и tripWithReason(): первую звал только собственный
+// тест, вторую — никто. Удалены 29.07 по реестру проверки (п.12). Отчёт админки
+// показывает опубликованное за день своим запросом, а сорвать предохранитель умеет
+// tripCircuit — обёртка ради одной строки лога смысла не имела. Понадобится снова —
+// это четыре строки, но тогда у них будет вызывающий.

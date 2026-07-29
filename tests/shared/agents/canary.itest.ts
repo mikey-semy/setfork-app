@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { agentActions, agentLoops, db, templates, users } from '@/shared/db'
-import { autonomyHealthy, publishQuotaLeft, publishedToday, ERROR_STREAK_TRIP } from '@/shared/agents/canary'
+import { autonomyHealthy, publishQuotaLeft, ERROR_STREAK_TRIP } from '@/shared/agents/canary'
 import { loopPolicy, resetCircuit } from '@/shared/agents/policy'
 
 // КАНАРЕЙКА — триггеры к предохранителю, который до этого никто не срывал: механизм без
@@ -37,7 +37,7 @@ describe('квота автопубликаций', () => {
     await act({ action: 'list.hold', resultStatus: 'skipped' })
     await act({ loop: 'selfgen' }) // чужая петля
     expect(await publishQuotaLeft('gardener', 3)).toBe(2)
-    expect(await publishedToday('gardener', 3)).toEqual({ used: 1, left: 2 })
+    expect(await publishQuotaLeft('gardener', 3)).toBe(2) // одна публикация из трёх израсходована
   })
 
   it('квота 0 — публиковать нельзя вовсе (равносильно выключенной планке)', async () => {
