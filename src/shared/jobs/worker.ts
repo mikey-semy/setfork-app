@@ -1,5 +1,6 @@
 import 'server-only'
 import { captureError, log } from '@/shared/observability'
+import { JOB_TYPES, type JobType } from '@/shared/db'
 import { claimJob, completeJob, failJob, reapStalledJobs, type Job } from './queue'
 
 /** Обработчик задачи. Второй аргумент — сама джоба (attempts/maxAttempts)
@@ -25,12 +26,28 @@ let started = false
  * (instrumentation.ts) — shared/jobs про фичи не знает. Вызывается из
  * instrumentation.register() на старте Node-сервера. Между инстансами
  * задачи не дублируются за счёт FOR UPDATE SKIP LOCKED в claimJob.
+ *
+ * На старте проверяется ПОЛНОТА реестра по JOB_TYPES: забытый обработчик роняет запуск с
+ * внятной ошибкой. Так уже уезжало в прод дважды — `feedpull` без самозапуска и `gnome_task`
+ * без обработчика вовсе. Пусть об этом говорит старт, а не failed-задачи через неделю.
  */
 export function startWorker(handlers: Record<string, JobHandler>): void {
   if (started) return
   started = true
 
+  // ПОЛНОТА РЕЕСТРА — на старте, а не в проде по failed-задачам. Забытый обработчик
+  // означает, что задачи этого типа ставятся, падают с «no handler» и после ретраев тихо
+  // уходят в failed: фича написана, но не исполняется ни разу. Так уехал `gnome_task`.
+  const missing = JOB_TYPES.filter((t) => !handlers[t])
+  if (missing.length) {
+    throw new Error(
+      `[jobs] нет обработчика для типов задач: ${missing.join(', ')}. ` +
+        'Зарегистрируй их в instrumentation.ts — иначе такие задачи будут молча уходить в failed.',
+    )
+  }
+
   const processOne = async (job: Job): Promise<void> => {
+    // Проверку на отсутствие оставляем и здесь: в базе может лежать тип от старой версии кода.
     const handler = handlers[job.type]
     try {
       if (!handler) throw new Error(`no handler for job type: ${job.type}`)

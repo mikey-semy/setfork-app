@@ -601,7 +601,26 @@ export type ChangelogEntryRow = typeof changelogEntries.$inferSelect
 export const jobStatus = pgEnum('job_status', ['pending', 'processing', 'done', 'failed'])
 // selfgen — самогенерация: специалист сам пишет черновик списка по своей теме
 // (инициатива компании, а не ответ на запрос пользователя).
-export type JobType = 'email' | 'generate' | 'reindex' | 'push' | 'digest' | 'gardener' | 'moderate' | 'triples' | 'linkcheck' | 'selfgen' | 'gnome_review' | 'gnome_task' | 'feedpull' | 'changelog'
+// Список типов задач нужен И в типах, И в рантайме: по нему воркер на старте проверяет,
+// что у КАЖДОГО типа есть обработчик. Иначе забытая регистрация видна только в проде и
+// только по failed-задачам — так уехал `gnome_task` (задачи ставились, обработчика не было).
+export const JOB_TYPES = [
+  'email',
+  'generate',
+  'reindex',
+  'push',
+  'digest',
+  'gardener',
+  'moderate',
+  'triples',
+  'linkcheck',
+  'selfgen',
+  'gnome_review',
+  'gnome_task',
+  'feedpull',
+  'changelog',
+] as const
+export type JobType = (typeof JOB_TYPES)[number]
 
 export const jobs = pgTable(
   'jobs',
