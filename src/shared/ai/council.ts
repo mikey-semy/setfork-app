@@ -20,7 +20,6 @@ import { craftRules } from './triples'
 import { lawBlock } from './list-laws'
 import { pushMessage, type GenMessageKind } from './generation-messages'
 import { langEnName, type Lang } from '@/shared/i18n'
-import { detectTextLang } from '@/shared/lib/translit'
 
 /**
  * «Совет гномов» — мультимодельная генерация списка (research 2026-07-13):
@@ -116,8 +115,15 @@ export const draftLetter = (i: number) => String.fromCharCode(65 + i)
  * незачем знать нашу внутреннюю нумерацию, а латиница посреди русской реплики — это утечка
  * потрохов наружу, чем она и является.
  */
-export function clip(raw: string, max: number): string {
-  const human = raw.replace(/DRAFT\s+([A-Z])/g, (_m, letter) => `вариант ${letter}`)
+/** Подпись черновика словами — картой, а не тернарником: правило i18n не пускает
+ *  «строка ? строка», и справедливо: это пользовательский текст, а не техническая метка. */
+const DRAFT_LABEL = { ru: 'вариант', en: 'draft' } as const
+
+export function clip(raw: string, max: number, ru = true): string {
+  // Подпись следует языку интерфейса: русское слово в английской ленте — та же утечка
+  // наизнанку, что и латинский ярлык в русской (находка ревью на #555).
+  const label = DRAFT_LABEL[ru ? 'ru' : 'en']
+  const human = raw.replace(/DRAFT\s+([A-Z])/g, (_m, letter) => `${label} ${letter}`)
   if (human.length <= max) return human
   const cut = human.slice(0, max)
   const at = cut.lastIndexOf(' ')
@@ -345,7 +351,15 @@ ${sp.rule()}`,
         // той самой, про которую известно, что она роняет именно эту задачу. Опросник на
         // чужом языке хуже, чем его отсутствие: он выглядит поломкой, а не заботой. Поэтому
         // при несовпадении просто идём в совет без беседы.
-        if (gateQuestions.length && detectTextLang(gateQuestions.join(' ')) !== lang) {
+        // Правило слабее, чем «определённый язык совпал», и это НАМЕРЕННО: у русского
+        // технического опросника («Стек? | Node.js | Python | Docker») латиница по долям
+        // символов побеждает, и строгая проверка отрезала бы беседу ровно там, где она нужнее
+        // всего — у недоопределённых технических запросов (находка ревью). Поэтому судим по
+        // ПРИСУТСТВИЮ письменности: для русского хватает кириллицы где угодно в опроснике.
+        const asked = gateQuestions.join(' ')
+        const hasCyrillic = /[а-яА-Я]/.test(asked)
+        const wrongLanguage = lang === 'ru' ? !hasCyrillic : hasCyrillic
+        if (gateQuestions.length && wrongLanguage) {
           gateQuestions = []
         }
       } catch { /* не распарсили — идём как обычно */ }
@@ -561,7 +575,7 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
   const vm = critique?.text ? /(?:^|\n)\s*VERDICT:\s*(.+)/i.exec(critique.text) : null
   // Режем по ГРАНИЦЕ СЛОВА и ставим знак обрыва: сырой slice давал «надо отсеять пусты» и
   // «мотивирующий эфф» — обрывок посреди слова читается как поломка, а не как сокращение.
-  if (vm) emit('critique', clip(vm[1].trim(), 120), 'critic', say('Critic', 'Критик'))
+  if (vm) emit('critique', clip(vm[1].trim(), 120, lang === 'ru'), 'critic', say('Critic', 'Критик'))
   const critiqueBody = vm ? critique!.text.replace(vm[0], '').trim() : (critique?.text ?? '')
 
   // 5) Старейшина-синтез → строгий JSON. Конвергенция, но СОХРАНИ лучшую новизну (не усредняй).

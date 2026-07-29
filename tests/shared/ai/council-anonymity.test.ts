@@ -92,3 +92,10 @@ describe('реплика в ленте хода совета', () => {
     expect(clip('a'.repeat(50), 20)).toHaveLength(21)
   })
 })
+
+describe('подпись черновика следует языку интерфейса', () => {
+  it('в английском интерфейсе не появляется русское слово', () => {
+    expect(clip('DRAFT B misses the sources', 120, false)).toContain('draft B')
+    expect(clip('DRAFT B misses the sources', 120, false)).not.toContain('вариант')
+  })
+})
