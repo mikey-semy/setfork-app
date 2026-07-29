@@ -14,9 +14,13 @@
 // preflight: идемпотентно приводит руками те места, о которые push спотыкается.
 // Пополнять при добавлении unique-колонок в существующие таблицы и сменах типа
 // вектор-колонок.
-// verify: после push маркеры свежей схемы обязаны существовать — «молчаливый
-// зелёный» невозможен. Пополнять маркером при КАЖДОЙ волне схемы (маркер —
-// последняя по времени появления колонка/таблица).
+// verify: после push схема БД сверяется со схемой КОДА целиком и автоматически.
+//
+// Раньше здесь стоял рукописный список маркеров — и он оказался ровно тем, чем
+// бывает любой рукописный список: его перестали пополнять. Инцидент 2026-07-29:
+// прод отстал на 10 таблиц и 21 колонку, push молча не применился (TTY-промпт с
+// EXIT 0), а verify отчитался «маркеры на месте» — потому что проверял старые.
+// Теперь сверяется ВСЁ: пропущенная волна схемы физически не может пройти мимо.
 import 'dotenv/config'
 import { spawnSync } from 'node:child_process'
 import { Pool } from 'pg'
@@ -35,18 +39,31 @@ const PREFLIGHT_HALFVEC: Array<{ table: string; column: string; dims: number; in
   { table: 'embeddings', column: 'embedding', dims: 768, index: 'embeddings_hnsw_idx' },
 ]
 
-// Маркеры свежей схемы: таблица (и опционально колонка/тип), которые обязаны
-// существовать после успешного push.
-const MARKERS: Array<{ table: string; column?: string; udt?: string }> = [
-  { table: 'users', column: 'ui_font' },
-  { table: 'users', column: 'profile_private' }, // privacy #383
+// Типы, которые проверяем ОТДЕЛЬНО: наличия колонки мало, важен udt (push умеет
+// сменить тип наполовину — см. случай 2 в шапке).
+const TYPE_MARKERS: Array<{ table: string; column: string; udt: string }> = [
   { table: 'embeddings', column: 'embedding', udt: 'halfvec' }, // P4 #380
-  { table: 'list_links' },
-  { table: 'saved_queries' },
-  { table: 'knowledge_triples' },
-  { table: 'dig_chat_messages' }, // мини-чат раскопки как сессия
-  { table: 'gnome_thanks' }, // благодарности гному (одушевление)
 ]
+
+/** Ожидаемая схема ИЗ КОДА: таблицы и колонки, как их описывает schema.ts. */
+function expectedSchema(): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>()
+  // drizzle-kit export печатает полный DDL по schema.ts, ни к чему не подключаясь.
+  const res = spawnSync('npx', ['drizzle-kit', 'export'], { encoding: 'utf8', shell: true })
+  if (res.status !== 0 || !res.stdout) throw new Error(`drizzle-kit export не отработал: ${res.stderr?.slice(0, 300)}`)
+  for (const m of res.stdout.matchAll(/CREATE TABLE(?: IF NOT EXISTS)? "?(\w+)"?\s*\(([\s\S]*?)\n\);/g)) {
+    const cols = new Set<string>()
+    for (const line of m[2].split('\n')) {
+      const t = line.trim()
+      if (/^(CONSTRAINT|PRIMARY|UNIQUE|FOREIGN|CHECK)/i.test(t)) continue
+      const c = /^"(\w+)"\s+/.exec(t)
+      if (c) cols.add(c[1])
+    }
+    out.set(m[1], cols)
+  }
+  if (out.size === 0) throw new Error('drizzle-kit export не дал ни одной таблицы — сверять нечем')
+  return out
+}
 
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
@@ -83,22 +100,47 @@ async function main() {
     process.exit(1)
   }
 
-  for (const m of MARKERS) {
-    const { rows } = m.column
-      ? await pool.query(
-          `SELECT udt_name FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
-          [m.table, m.column],
-        )
-      : await pool.query(`SELECT 1 FROM information_schema.tables WHERE table_name = $1`, [m.table])
-    const missing = rows.length === 0 || (m.udt && (rows[0] as { udt_name?: string }).udt_name !== m.udt)
-    if (missing) {
-      console.error(`[verify] маркер схемы отсутствует: ${m.table}${m.column ? '.' + m.column : ''}${m.udt ? ` (${m.udt})` : ''} — push не применился`)
+  // ПОЛНАЯ сверка: что описано в коде — то обязано быть в БД.
+  const expected = expectedSchema()
+  const { rows: actual } = await pool.query<{ table_name: string; column_name: string }>(
+    `SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public'`,
+  )
+  const have = new Map<string, Set<string>>()
+  for (const r of actual) {
+    if (!have.has(r.table_name)) have.set(r.table_name, new Set())
+    have.get(r.table_name)!.add(r.column_name)
+  }
+  const missingTables: string[] = []
+  const missingCols: string[] = []
+  for (const [table, cols] of expected) {
+    const got = have.get(table)
+    if (!got) {
+      missingTables.push(table)
+      continue
+    }
+    for (const c of cols) if (!got.has(c)) missingCols.push(`${table}.${c}`)
+  }
+  if (missingTables.length || missingCols.length) {
+    console.error('[verify] СХЕМА БД ОТСТАЛА ОТ КОДА — push не применился полностью.')
+    if (missingTables.length) console.error(`[verify] нет таблиц (${missingTables.length}): ${missingTables.join(', ')}`)
+    if (missingCols.length) console.error(`[verify] нет колонок (${missingCols.length}): ${missingCols.slice(0, 40).join(', ')}`)
+    console.error('[verify] приложение с такой схемой упадёт на первом же запросе — запуск остановлен.')
+    process.exit(1)
+  }
+
+  for (const m of TYPE_MARKERS) {
+    const { rows } = await pool.query(
+      `SELECT udt_name FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
+      [m.table, m.column],
+    )
+    if (rows.length === 0 || (rows[0] as { udt_name?: string }).udt_name !== m.udt) {
+      console.error(`[verify] тип не тот: ${m.table}.${m.column} ожидался ${m.udt} — push применился наполовину`)
       process.exit(1)
     }
   }
 
   await pool.end()
-  console.log('[migrate] push применён, маркеры схемы на месте')
+  console.log(`[migrate] push применён, схема сверена целиком: ${expected.size} таблиц`)
 }
 
 main().catch((e) => {
