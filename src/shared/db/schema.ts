@@ -64,6 +64,7 @@ export const notificationType = pgEnum('notification_type', [
   'mention',
   'assigned',
   'review_requested', // тебя попросили посмотреть правку
+  'review_dismissed', // твой вердикт снял мейнтейнер
   'transfer_incoming', // тебе предлагают принять владение списком
   'transfer_accepted', // получатель принял твою передачу
   'transfer_declined', // получатель отклонил твою передачу
@@ -213,6 +214,8 @@ export interface PrSettings {
   allowFrom?: 'all' | 'collaborators'
   /** Требовать линейную историю: сливать только fast-forward, иначе просить обновить ветку. */
   linearOnly?: boolean
+  /** Способ слияния: обычный (ff/merge-коммит) или squash — один коммит с трейлерами соавторов. */
+  mergeMethod?: 'merge' | 'squash'
   /** Нерешённые обсуждения блокируют слияние. */
   blockOnUnresolved?: boolean
   /** Сколько одобрений нужно (0 = не требуются). */
@@ -236,6 +239,9 @@ export interface PrSettings {
 export const PR_DEFAULTS: Required<PrSettings> = {
   allowFrom: 'all',
   linearOnly: false,
+  // Обычное слияние по умолчанию: squash теряет промежуточную историю, и выбирать
+  // такую потерю должен человек, а не установка по умолчанию.
+  mergeMethod: 'merge',
   blockOnUnresolved: true,
   requiredApprovals: 0,
   autoDeleteBranch: false,
@@ -553,6 +559,37 @@ export const appSettings = pgTable('app_settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+/**
+ * ПУБЛИЧНЫЙ CHANGELOG продукта.
+ *
+ * Раньше это был массив в коде, который надо было править руками — и он, конечно,
+ * отстал на три недели: ручной changelog не ведут, его забывают. Теперь записи
+ * лежат в БД и пополняются джобой из GitHub (релизы или слитые предложения), а
+ * руками добавленное живёт рядом и не затирается.
+ *
+ * `externalId` — ключ идемпотентности («pr:519», «rel:v1.2»): повторный проход
+ * джобы обновляет ту же запись, а не плодит копии. У ручных записей его нет.
+ */
+export const changelogEntries = pgTable(
+  'changelog_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** День, за который запись показывают (не время джобы). */
+    at: timestamp('at', { withTimezone: true }).notNull(),
+    /** Оба языка: интерфейс двуязычный, и changelog не исключение. */
+    en: text('en').notNull(),
+    ru: text('ru').notNull(),
+    /** Куда ведёт запись: PR/релиз на GitHub или своя страница. */
+    href: text('href'),
+    source: text('source').notNull().default('manual'), // 'manual' | 'github'
+    externalId: text('external_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('changelog_ext_idx').on(t.externalId), index('changelog_at_idx').on(t.at)],
+)
+
+export type ChangelogEntryRow = typeof changelogEntries.$inferSelect
+
 // ── Фоновые задачи (durable-очередь поверх Postgres) ──────────────────
 // Воркер тянет задачи `FOR UPDATE SKIP LOCKED` (безопасно между инстансами),
 // при ошибке — ретрай с backoff (run_at в будущем), после max_attempts → failed.
@@ -576,6 +613,7 @@ export const JOB_TYPES = [
   'gnome_review',
   'gnome_task',
   'feedpull',
+  'changelog',
 ] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
@@ -755,6 +793,13 @@ export const suggestions = pgTable('suggestions', {
   branchRef: text('branch_ref'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  // Версия, которой предложение стало при слиянии. Нужна откату: без неё «что
+  // именно внесла эта правка» приходится угадывать по времени и тексту заметки.
+  // Пусто у принятых ДО появления отката — им он и не предлагается.
+  mergedVersion: integer('merged_version'),
+  // Откат — это НОВОЕ предложение, отменяющее старое (как Revert у GitHub), а не
+  // тихая правка истории. Связь видна с обеих сторон: «отменяет #7» / «отменено в #9».
+  revertOfId: uuid('revert_of_id'),
 }, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status), uniqueIndex('suggestions_tpl_number').on(t.templateId, t.number)])
 
 // ── Ревью правки (вердикт рецензента, как review в PR) ───────────────
@@ -778,6 +823,12 @@ export const suggestionReviews = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     verdict: text('verdict').notNull(), // 'comment' | 'approve' | 'changes'
     body: text('body').notNull().default(''),
+    // Снятое ревью НЕ удаляется: «правки запрошены и сняты мейнтейнером» — часть
+    // истории решения. Удаление выглядело бы так, будто рецензент и не высказывался.
+    dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
+    dismissedById: uuid('dismissed_by_id').references(() => users.id, { onDelete: 'set null' }),
+    // Причина обязательна: снятие чужого голоса без объяснения — тихий обход ревью.
+    dismissReason: text('dismiss_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -822,6 +873,36 @@ export const suggestionReviewRequests = pgTable(
   },
   (t) => [uniqueIndex('sug_review_req_uniq').on(t.suggestionId, t.userId)],
 )
+
+// ── Внешние проверки предложения (наш аналог status checks) ──────────
+// Их присылает агент/CI снаружи через MCP: у нас самих нет прогонов чужого кода,
+// зато у интеграций они есть. Ключ — ПАРА (предложение, имя проверки), как context
+// у GitHub: повторный отчёт той же проверки ПЕРЕЗАПИСЫВАЕТ прежний, иначе на
+// странице копились бы «tests: fail, tests: ok, tests: fail» без понятного текущего.
+export const suggestionReportedChecks = pgTable(
+  'suggestion_reported_checks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    // Имя проверки в отчёте («tests», «lint», «build») — оно же ключ обновления.
+    name: text('name').notNull(),
+    // 'ok' | 'warn' | 'fail' | 'neutral' | 'pending' — те же статусы, что у своих
+    // проверок, плюс pending: длинный прогон отчитывается дважды.
+    status: text('status').notNull(),
+    summary: text('summary'),
+    // Куда смотреть подробности (лог прогона). Может отсутствовать.
+    url: text('url'),
+    // Кто отчитался: проверку видно как чужую, и снять её может только он.
+    reporterId: uuid('reporter_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_reported_check_uniq').on(t.suggestionId, t.name)],
+)
+
+export type SuggestionReportedCheck = typeof suggestionReportedChecks.$inferSelect
 
 export type SuggestionReview = typeof suggestionReviews.$inferSelect
 
@@ -2085,6 +2166,14 @@ export const blockCommentThreads = pgTable(
     anchorOriginal: jsonb('anchor_original').notNull().$type<Record<string, unknown>>(),
     /** Вмороженный текст поля на момент создания — контекст треда навсегда. */
     contextSnapshot: text('context_snapshot').notNull().default(''),
+    /**
+     * Язык, на котором снят `contextSnapshot`.
+     *
+     * Без него сравнение «устарело ли обсуждение» врало на двуязычных списках:
+     * снимок пишется на языке АВТОРА треда, а сверяется с текстом на языке
+     * ЗРИТЕЛЯ — переключение ru↔en помечало нетронутый тред устаревшим.
+     */
+    contextLang: text('context_lang').notNull().default(''),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
     resolvedById: uuid('resolved_by_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -2127,6 +2216,46 @@ export const blockComments = pgTable(
   },
   (t) => [index('bc_thread_idx').on(t.threadId)],
 )
+
+/**
+ * ОТМЕТКА «ПРОСМОТРЕНО» на пункте предложения — как «Viewed» у файла в GitHub.
+ *
+ * Личная и НЕ общая: это состояние ревьюера («я это уже смотрел»), а не свойство
+ * правки. Поэтому ключ — пара (предложение, пункт, зритель), и чужие галочки
+ * никому не видны.
+ *
+ * `atFingerprint` — отпечаток СОДЕРЖИМОГО пункта на момент отметки. Пункт правят
+ * дальше, и отметка, поставленная до правки, врала бы. Отпечаток именно пункта,
+ * а не sha ветки: иначе любой чужой коммит гасил бы отметки на всех пунктах,
+ * включая нетронутые. Не совпало → «просмотрено до изменений», а не галочка.
+ */
+export const suggestionViewed = pgTable(
+  'suggestion_viewed',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    suggestionId: uuid('suggestion_id')
+      .notNull()
+      .references(() => suggestions.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Идентичность блока (ADR-0013) — переживает перестановку пунктов. */
+    blockId: text('block_id').notNull(),
+    atFingerprint: text('at_fingerprint').notNull().default(''),
+    /**
+     * Язык, на котором считали отпечаток.
+     *
+     * Отпечаток берётся с УЖЕ ЛОКАЛИЗОВАННОГО текста, поэтому на двуязычном
+     * списке смена языка интерфейса меняла бы его и гасила все отметки разом.
+     * Язык не совпал → об устаревании не судим (как у снимка треда).
+     */
+    atLang: text('at_lang').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('sug_viewed_uq').on(t.suggestionId, t.userId, t.blockId)],
+)
+
+export type SuggestionViewed = typeof suggestionViewed.$inferSelect
 
 export type BlockCommentThread = typeof blockCommentThreads.$inferSelect
 export type BlockComment = typeof blockComments.$inferSelect

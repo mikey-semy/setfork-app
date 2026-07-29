@@ -6,6 +6,7 @@ import type { BranchSnapshot, GitBranch, GitCore } from '@/core'
 import { BranchOpError } from '@/core'
 import { db, templates, users } from '@/shared/db'
 import { gitStore } from './adapter'
+import { withCoauthors, type CommitAuthor } from './coauthors'
 import { GIT_LOG_FORMAT, parseGitLog } from './log-parse'
 
 const exec = promisify(execFile)
@@ -53,6 +54,48 @@ async function mergeCommit(bare: string, ours: string, theirs: string, message: 
   const { stdout } = await exec(
     'git',
     ['--git-dir', bare, 'commit-tree', tree, '-p', ours, '-p', theirs, '-m', message],
+    { env: { ...process.env, ...MERGE_ENV } },
+  )
+  return stdout.trim()
+}
+
+/**
+ * Squash: ОДИН коммит с ОДНИМ родителем (main).
+ *
+ * Дерево берём тем же merge-tree, что и обычное слияние — результат по содержимому
+ * совпадает, разница только в родителях. Fast-forward здесь не применяется намеренно:
+ * он затащил бы в main ровно ту промежуточную историю, ради отсутствия которой squash
+ * и выбирают.
+ */
+async function squashCommit(bare: string, ours: string, theirs: string, title: string): Promise<string> {
+  const tree = await exec('git', ['--git-dir', bare, 'merge-tree', '--write-tree', ours, theirs]).then(
+    (r) => r.stdout.split('\n')[0].trim(),
+    () => null,
+  )
+  if (!tree) throw new BranchOpError('conflict')
+  // Авторы коммитов ВКЛАДА (то, чего нет в main). Разделителем берём управляющий
+  // символ: он не встречается в именах, а по пробелу имя от почты не отделить.
+  const authors: CommitAuthor[] = await exec('git', [
+    '--git-dir',
+    bare,
+    'log',
+    '--format=%an%x1f%ae',
+    `${ours}..${theirs}`,
+  ]).then(
+    (r) =>
+      r.stdout
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((l) => {
+          const [name, email] = l.split('\x1f')
+          return { name: name ?? '', email: email ?? '' }
+        }),
+    () => [], // украшение сообщения не повод ронять слияние
+  )
+  const { stdout } = await exec(
+    'git',
+    ['--git-dir', bare, 'commit-tree', tree, '-p', ours, '-m', withCoauthors(title, authors)],
     { env: { ...process.env, ...MERGE_ENV } },
   )
   return stdout.trim()
@@ -165,7 +208,7 @@ export const gitCoreInproc: GitCore = {
     })
   },
 
-  async mergeBranch(repo, name) {
+  async mergeBranch(repo, name, opts) {
     if (badBranch(name) || name === 'main') throw new BranchOpError('bad-name')
     const bare = await gitStore.ensureRepo(repo)
     if (!bare) throw new BranchOpError('not-found')
@@ -190,7 +233,13 @@ export const gitCoreInproc: GitCore = {
       const isAncestor = await exec('git', ['--git-dir', bare, 'merge-base', '--is-ancestor', 'main', name]).then(() => true, () => false)
       let tipSha: string
       let fastForward = false
-      if (isAncestor) {
+      if (opts?.mode === 'squash') {
+        // Проверка squash идёт ПЕРЕД fast-forward: иначе линейная ветка уехала бы в
+        // main своей историей, и настройка молча не работала бы там, где она заметнее
+        // всего (совпадает с порядком в ядре).
+        tipSha = await squashCommit(bare, 'main', name, opts.message?.trim() || `Squashed branch '${name}'`)
+        await exec('git', ['--git-dir', bare, 'update-ref', 'refs/heads/main', tipSha])
+      } else if (isAncestor) {
         await exec('git', ['--git-dir', bare, 'update-ref', 'refs/heads/main', branchTip])
         tipSha = branchTip
         fastForward = true

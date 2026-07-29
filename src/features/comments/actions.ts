@@ -71,6 +71,7 @@ export async function createBlockThread(
       anchorOriginal: anchor as unknown as Record<string, unknown>,
       // Вмороженный контекст: тред покажет своё окружение, даже когда правку обновят.
       contextSnapshot: source,
+      contextLang: lang,
     })
     .returning()
 

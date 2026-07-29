@@ -6,6 +6,8 @@ import { DiffStat } from '@/shared/ui/DiffStat'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { blockLabel, diffSteps, isStepBlock, lineDiff, serializeSteps, type CmpStep, type DiffEntry } from './diff'
 import { DiffComments, type DiffCommentLabels, type RowThread } from './DiffComments'
+import { ViewedToggle } from './ViewedToggle'
+import { blockFingerprint, isStaleMark } from './viewed-fingerprint'
 
 // Два вида диффа версий — ОДИН источник правды для сравнения версий И для правки
 // (PR). Раньше «код»/«список» жили локальными функциями внутри страницы
@@ -72,6 +74,7 @@ export function ListDiff({
   toSteps,
   lang,
   comments,
+  viewed,
 }: {
   fromSteps: CmpStep[]
   toSteps: CmpStep[]
@@ -87,6 +90,13 @@ export function ListDiff({
     labels: DiffCommentLabels
     byBlock: Map<string, RowThread[]>
   }
+  /** Личные отметки «просмотрено» текущего зрителя (null — не залогинен). */
+  viewed?: {
+    suggestionId: string
+    /** blockId → отпечаток содержимого и язык, на котором отмечали. */
+    marks: Map<string, { fp: string; lang: string }>
+    labels: { mark: string; unmark: string; stale: string }
+  } | null
 }) {
   const { entries, summary } = diffSteps(fromSteps, toSteps)
   if (summary.added + summary.removed + summary.changed + summary.moved === 0)
@@ -106,6 +116,23 @@ export function ListDiff({
           const body = block ? (e.type === 'text' ? String(e.content?.md ?? '') : '') : e.desc
           return (
             <div key={e.blockId ?? `${e.status}:${e.type ?? 'step'}:${i}`} style={cardStyle} className={`group relative rounded-lg border p-4 ${comments ? 'pr-12' : ''} ${st.color ? '' : 'border-border opacity-60'}`}>
+              {/* Отметка «просмотрено» — СТРОГО в углу карточки, а не в потоке
+                  заголовка: при переносе строки она уплыла бы в середину. */}
+              {viewed && e.blockId && (
+                <span className="absolute right-1.5 top-1.5 z-10">
+                  <ViewedToggle
+                    suggestionId={viewed.suggestionId}
+                    blockId={e.blockId}
+                    fingerprint={blockFingerprint(e)}
+                    viewed={viewed.marks.has(e.blockId)}
+                    // Отпечаток берётся с локализованного текста, поэтому сравнивать
+                    // его можно только с отметкой ТОГО ЖЕ языка: иначе смена языка
+                    // интерфейса гасила бы все отметки разом.
+                    stale={isStaleMark(viewed.marks.get(e.blockId), blockFingerprint(e), lang)}
+                    labels={viewed.labels}
+                  />
+                </span>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`text-[14.5px] font-semibold text-ink ${e.status === 'removed' ? 'line-through opacity-70' : ''}`}>{blockLabel(e)}</span>
                 {!block && <StepLevelBadge level={e.level} lang={lang} />}

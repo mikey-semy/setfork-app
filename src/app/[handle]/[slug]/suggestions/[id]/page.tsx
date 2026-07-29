@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Check, GitBranch, GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, Pencil, RefreshCw, X } from 'lucide-react'
+import { ArrowLeft, Check, Eye, GitBranch, GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, Pencil, RefreshCw, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -29,9 +29,10 @@ import { ChecksList } from '@/features/library/ChecksList'
 import { CommitsList } from '@/features/library/CommitsList'
 import { DraftToggle } from '@/features/library/DraftToggle'
 import { PendingReviewBar } from '@/features/library/PendingReviewBar'
-import { suggestionChecks } from '@/features/library/suggestion-checks'
+import { reportedChecks, suggestionChecks } from '@/features/library/suggestion-checks'
 import { withPrDefaults } from '@/features/library/pr-settings'
 import { blocksFrom } from '@/features/library/suggestion-blocks'
+import { blockFingerprint, isStaleMark } from '@/features/library/viewed-fingerprint'
 import { closingRefs } from '@/features/library/closing-refs'
 import { LinkIssuePicker } from '@/features/library/LinkIssuePicker'
 import { LockToggle } from '@/features/library/LockToggle'
@@ -56,7 +57,7 @@ import { LabelEditor } from '@/features/issues/LabelEditor'
 import { MilestonePicker } from '@/features/issues/MilestonePicker'
 import { getListLabels, getOpenIssuesForPicker } from '@/features/issues/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
-import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails, getUsersByIds } from '@/features/library/queries'
+import { getIssuesByNumbers, getSuggestionAssignees, getSuggestionMilestone, getSuggestionReviewRequests, getUsersByEmails, getUsersByIds, getViewedMarks } from '@/features/library/queries'
 import { setSuggestionDraft, setSuggestionLabels, setSuggestionMilestone, toggleReviewRequest, toggleSuggestionAssignee } from '@/features/library/suggestion-meta-actions'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
@@ -124,7 +125,7 @@ export default async function SuggestionThreadPage({
   const threads = await getSuggestionThreads(sug.id, session?.userId)
   const threadsByBlock = new Map<string, RowThread[]>()
   for (const th of threads) {
-    const state = threadState(th.anchorOriginal, th.field, th.blockId, items as unknown as AnchorableBlock[], lang)
+    const state = threadState(th.anchorOriginal, th.field, th.blockId, items as unknown as AnchorableBlock[], lang, th.contextSnapshot, th.contextLang)
     const list = threadsByBlock.get(th.blockId)
     if (list) list.push({ thread: th, state })
     else threadsByBlock.set(th.blockId, [{ thread: th, state }])
@@ -145,7 +146,7 @@ export default async function SuggestionThreadPage({
   // слияния от того, кто его пишет, а экшен при этом слить разрешал.
   const unresolvedThreads = threads.filter((th) => !th.resolvedAt && th.comments.some((c) => !c.pending)).length
   const [reviews, watchState, watchCount, assignees, reviewRequests, customLabels, msOptions, curMilestone] = await Promise.all([
-    getSuggestionReviews(sug.id),
+    getSuggestionReviews(sug.id, session?.userId),
     session ? getWatchState(session.userId, meta.id) : Promise.resolve(null),
     getWatchCount(meta.id),
     getSuggestionAssignees(sug.id),
@@ -251,23 +252,46 @@ export default async function SuggestionThreadPage({
   // и для экшенов (те читают их сами из списка).
   const prs = withPrDefaults(meta.prSettings)
   const approvals = reviews.filter((r) => r.verdict === 'approve').length
-  const checks = await suggestionChecks({
-    items: items as unknown[],
-    changedCount,
-    baseVersion: sug.baseVersion,
-    currentVersion: meta.currentVersion,
-    hasConflicts,
-    branchMissing,
-    draft: sug.draft,
-    blockingReview: reviews.some((r) => r.blocking),
-    unresolvedThreads,
-    blockOnUnresolved: prs.blockOnUnresolved,
-    approvals,
-    requiredApprovals: prs.requiredApprovals,
-    moderation: meta.moderation,
-    lang: lang === 'ru' ? 'ru' : 'en',
-  })
+  // Внешние проверки (агент/CI через MCP) идут ПОСЛЕ своих: сначала то, что
+  // приложение знает само, потом то, что прислали снаружи.
+  const [ownChecks, extChecks] = await Promise.all([
+    suggestionChecks({
+      items: items as unknown[],
+      changedCount,
+      baseVersion: sug.baseVersion,
+      currentVersion: meta.currentVersion,
+      hasConflicts,
+      branchMissing,
+      draft: sug.draft,
+      blockingReview: reviews.some((r) => r.blocking),
+      unresolvedThreads,
+      blockOnUnresolved: prs.blockOnUnresolved,
+      approvals,
+      requiredApprovals: prs.requiredApprovals,
+      moderation: meta.moderation,
+      lang: lang === 'ru' ? 'ru' : 'en',
+    }),
+    reportedChecks(sug.id),
+  ])
+  const checks = [...ownChecks, ...extChecks]
   const checksFailed = checks.filter((c) => c.status === 'fail').length
+
+  // Личные отметки «просмотрено». Только свои: это состояние ревьюера, а не
+  // свойство правки, и чужие галочки никому не показываются.
+  const viewedMarks = session ? await getViewedMarks(sug.id, session.userId) : null
+  // Прогресс считаем по ТЕМ ЖЕ строкам диффа, которые получают галочку, а не по
+  // предложенным пунктам: у правки-удаления предложенной стороны нет вовсе, и по
+  // items прогресс показывал бы ноль из нуля (или 100% без просмотра удалённого).
+  const diffEntries = diffSteps(baseCmp, propCmp).entries.filter((e) => e.blockId)
+  const markable = diffEntries.length
+  // Устаревшая отметка просмотром НЕ считается: иначе счётчик показывал бы N/N
+  // рядом с карточкой, на которой написано «просмотрено до изменения».
+  const viewedCount = viewedMarks
+    ? diffEntries.filter((e) => {
+        const m = viewedMarks.get(String(e.blockId))
+        return !!m && !isStaleMark(m, blockFingerprint(e), lang)
+      }).length
+    : 0
 
   // Коммиты ветки за вычетом main — ровно то, что уйдёт в main при слиянии.
   // У правок без ветки (старые, items в БД) коммитов нет — вкладки тоже нет.
@@ -345,6 +369,7 @@ export default async function SuggestionThreadPage({
           reviews={reviews}
           myVerdict={myVerdict}
           canReview={!!session}
+          canDismiss={canMerge}
           isAuthor={session?.userId === sug.authorId}
           lang={lang}
           labels={{
@@ -358,6 +383,9 @@ export default async function SuggestionThreadPage({
             blocked: t('reviewBlocked', lang),
             yourReview: t('reviewYours', lang),
             ownAuthor: t('reviewOwnAuthor', lang),
+            dismiss: t('reviewDismiss', lang),
+            dismissReason: t('reviewDismissReason', lang),
+            dismissedBy: t('reviewDismissedBy', lang),
           }}
         />
       </div>
@@ -458,6 +486,9 @@ export default async function SuggestionThreadPage({
             owner={owner}
             slug={slug}
             branch={sug.status === 'accepted' && sug.branchRef && !branchMissing && canMerge ? sug.branchRef : null}
+            // Откат предлагаем только мейнтейнеру и только у принятого: отменять
+            // отклонённое нечего, а версия слияния нужна, чтобы знать ЧТО отменять.
+            revertOf={sug.status === 'accepted' && canMerge && sug.mergedVersion ? sug.id : null}
             accepted={sug.status === 'accepted'}
             labels={{
               merged: t('prMerged', lang),
@@ -466,6 +497,8 @@ export default async function SuggestionThreadPage({
               deleteBranch: t('prDeleteBranch', lang),
               branchDeleted: t('prBranchDeleted', lang),
               deleteFailed: t('prDeleteFailed', lang),
+              revert: t('prRevert', lang),
+              revertBlocked: t('prRevertBlocked', lang),
             }}
           />
         )}
@@ -533,16 +566,27 @@ export default async function SuggestionThreadPage({
         )}
 
         {tab === 'checks' && (
-          <ChecksList items={checks} labels={{ blocking: t('checksBlocking', lang), allGood: t('checksAllGood', lang) }} />
+          <ChecksList items={checks} labels={{ blocking: t('checksBlocking', lang), allGood: t('checksAllGood', lang), details: t('checksDetails', lang) }} />
         )}
 
         {tab === 'files' && (<>
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → предложение` : `v${sug.baseVersion} → suggestion`}
         </div>
-        {/* Ряд действий над диффом: правка пунктов слева от переключателя вида —
-            обе кнопки одной высоты, ряд прижат вправо (эталон настроек). */}
+        {/* Ряд действий над диффом: слева прогресс ревью, справа правка и
+            переключатель вида — одной высоты (эталон настроек). */}
         <div className="mb-3 flex items-center justify-end gap-2">
+          {/* Прогресс — только своему ревьюеру и только когда есть что отмечать.
+              На мобиле остаются цифры, слово прячется: оно предсказуемо. */}
+          {viewedMarks && sug.status === 'open' && markable > 0 && (
+            <span className="mr-auto inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+              <Eye size={14} className={viewedCount === markable ? 'text-ok' : 'text-muted'} />
+              <span className="font-mono">
+                {viewedCount}/{markable}
+              </span>
+              <span className="max-sm:hidden">{t('prViewedProgress', lang)}</span>
+            </span>
+          )}
           {canEditItems && (
             <Link
               href={`${path}/edit`}
@@ -560,6 +604,19 @@ export default async function SuggestionThreadPage({
             fromSteps={baseCmp}
             toSteps={propCmp}
             lang={lang}
+            viewed={
+              viewedMarks && sug.status === 'open'
+                ? {
+                    suggestionId: sug.id,
+                    marks: viewedMarks,
+                    labels: {
+                      mark: t('prViewedMark', lang),
+                      unmark: t('prViewedUnmark', lang),
+                      stale: t('prViewedStale', lang),
+                    },
+                  }
+                : null
+            }
             comments={{
               owner,
               slug,
@@ -582,6 +639,8 @@ export default async function SuggestionThreadPage({
                 onBlock: t('commentOnBlock', lang),
                 stateReanchored: t('commentReanchored', lang),
                 orphanHint: t('commentOrphaned', lang),
+                outdated: t('prThreadOutdated', lang),
+                toIssue: t('prThreadToIssue', lang),
                 suggestLabel: t('prSuggestEdit', lang),
                 suggestHint: t('prSuggestHint', lang),
                 suggestPh: t('prSuggestPh', lang),
@@ -732,7 +791,13 @@ export default async function SuggestionThreadPage({
               !hasConflicts && (
                 <form action={mergeBranchPr.bind(null, sug.id)}>
                   <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
-                    <GitMerge size={14} /> {lang === 'ru' ? 'Влить в main' : 'Merge to main'}
+                    <GitMerge size={14} />
+                    {/* На мобиле одно слово, на широком — полное действие: способ
+                        слияния меняет результат, и знать о нём надо ДО нажатия. */}
+                    <span className="sm:hidden">{t('prMergeShort', lang)}</span>
+                    <span className="hidden sm:inline">
+                      {prs.mergeMethod === 'squash' ? t('prSquashAndMerge', lang) : t('prMergeToMain', lang)}
+                    </span>
                   </SubmitButton>
                 </form>
               )

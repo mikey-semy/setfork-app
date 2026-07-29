@@ -18,8 +18,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+          # cache: npm НЕ используем: на self-hosted раннере это скачивание архива
+          # кэша из GitHub (из РФ — минуты на джобу). Вместо него ~/.npm смонтирован
+          # персистентным томом раннера (setfork-ci-runner/docker-compose.yml), а
+          # установка идёт --prefer-offline.
+      - run: npm ci --prefer-offline --no-audit --no-fund
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
@@ -62,8 +65,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+          # cache: npm НЕ используем: на self-hosted раннере это скачивание архива
+          # кэша из GitHub (из РФ — минуты на джобу). Вместо него ~/.npm смонтирован
+          # персистентным томом раннера (setfork-ci-runner/docker-compose.yml), а
+          # установка идёт --prefer-offline.
+      - run: npm ci --prefer-offline --no-audit --no-fund
       # Расширение vector нужно схеме (embeddings). Ставим через pg (уже в deps), без psql на раннере.
       - run: node -e "const{Client}=require('pg');(async()=>{const c=new Client(process.env.DATABASE_URL);await c.connect();await c.query('CREATE EXTENSION IF NOT EXISTS vector');await c.end()})().catch(e=>{console.error(e);process.exit(1)})"
       - run: npx drizzle-kit push --force
@@ -81,7 +87,11 @@ jobs:
 
   # Барьер покрытия: честная цифра = unit + integration (unit-репорт врёт 0% на data-layer).
   # Сливаем оба coverage-final.json и держим порог, чтобы покрытие не проседало.
+  # Барьер покрытия — на push в master, а НЕ на каждый PR: юниты уже прогнаны в
+  # check, интеграционные — в integration, и третий прогон под инструментацией
+  # (~12 мин раннера) про сам PR ничего нового не говорит. Порог стережёт master.
   coverage:
+    if: github.event_name == 'push'
     runs-on: [self-hosted, setfork]
     steps:
       # Sibling-контейнер в сети раннера — см. пояснение у job integration выше.
@@ -104,8 +114,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+          # cache: npm НЕ используем: на self-hosted раннере это скачивание архива
+          # кэша из GitHub (из РФ — минуты на джобу). Вместо него ~/.npm смонтирован
+          # персистентным томом раннера (setfork-ci-runner/docker-compose.yml), а
+          # установка идёт --prefer-offline.
+      - run: npm ci --prefer-offline --no-audit --no-fund
       - run: node -e "const{Client}=require('pg');(async()=>{const c=new Client(process.env.DATABASE_URL);await c.connect();await c.query('CREATE EXTENSION IF NOT EXISTS vector');await c.end()})().catch(e=>{console.error(e);process.exit(1)})"
       - run: npx drizzle-kit push --force
       - run: npm run coverage:unit

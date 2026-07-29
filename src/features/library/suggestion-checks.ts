@@ -1,6 +1,6 @@
 import 'server-only'
-import { inArray } from 'drizzle-orm'
-import { db, linkChecks } from '@/shared/db'
+import { eq, inArray } from 'drizzle-orm'
+import { db, linkChecks, suggestionReportedChecks, users } from '@/shared/db'
 import { extractUrls, normalizeUrl, productItems, walkStrings } from '@/core'
 
 // Проверки ПРАВКИ — наш аналог вкладки Checks. Наполнена тем, что у нас реально
@@ -10,7 +10,11 @@ import { extractUrls, normalizeUrl, productItems, walkStrings } from '@/core'
 // Задел на будущее (владелец): сюда же лягут actions и рецензии гномов —
 // достаточно добавить пункт в список, форма ответа уже общая.
 
-export type CheckStatus = 'ok' | 'warn' | 'fail' | 'neutral'
+export type CheckStatus = 'ok' | 'warn' | 'fail' | 'neutral' | 'pending'
+
+/** Статусы, которыми разрешено отчитаться снаружи. Всё прочее — отказ, а не «neutral». */
+export const REPORTED_STATUSES = ['ok', 'warn', 'fail', 'neutral', 'pending'] as const
+export type ReportedStatus = (typeof REPORTED_STATUSES)[number]
 
 export interface CheckItem {
   key: string
@@ -18,6 +22,41 @@ export interface CheckItem {
   /** Короткая суть — «что проверено». Подробность — в detail. */
   title: string
   detail?: string
+  /** Ссылка на подробности (лог прогона) — только у внешних проверок. */
+  url?: string
+  /** Кто отчитался. Пусто у своих проверок: их считает само приложение. */
+  reportedBy?: string
+}
+
+/**
+ * Внешние проверки предложения — то, что прислал агент или CI снаружи.
+ *
+ * Отдельным запросом, а не внутри suggestionChecks(): страница считает свои
+ * проверки из уже загруженных данных, а эти живут в БД и нужны ещё и MCP-ответу.
+ */
+export async function reportedChecks(suggestionId: string): Promise<CheckItem[]> {
+  const rows = await db
+    .select({
+      name: suggestionReportedChecks.name,
+      status: suggestionReportedChecks.status,
+      summary: suggestionReportedChecks.summary,
+      url: suggestionReportedChecks.url,
+      handle: users.handle,
+      updatedAt: suggestionReportedChecks.updatedAt,
+    })
+    .from(suggestionReportedChecks)
+    .leftJoin(users, eq(users.id, suggestionReportedChecks.reporterId))
+    .where(eq(suggestionReportedChecks.suggestionId, suggestionId))
+    .orderBy(suggestionReportedChecks.name)
+  return rows.map((r) => ({
+    // Префикс, чтобы внешняя проверка с именем «merge» не выдавала себя за нашу.
+    key: `ext:${r.name}`,
+    status: (REPORTED_STATUSES as readonly string[]).includes(r.status) ? (r.status as CheckStatus) : 'neutral',
+    title: r.name,
+    detail: r.summary ?? undefined,
+    url: r.url ?? undefined,
+    reportedBy: r.handle ?? undefined,
+  }))
 }
 
 /** Ссылки в ПРЕДЛОЖЕННЫХ пунктах: те же поверхности, что харвестит linkcheck. */

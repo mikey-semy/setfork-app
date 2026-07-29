@@ -95,6 +95,17 @@ export const LOOPS: LoopSpec[] = [
     paid: false,
     what: { en: 'sends subscription digests to people', ru: 'рассылает людям дайджесты подписок' },
   },
+  {
+    name: 'changelog',
+    jobType: 'changelog',
+    jobsModule: '@/features/changelog/jobs',
+    handler: 'runChangelogJob',
+    serviceModule: '@/features/changelog/service',
+    ensure: 'ensureChangelogScheduled',
+    // Платная: второй язык записи добирается переводом через модель.
+    paid: true,
+    what: { en: 'keeps the public changelog fresh from GitHub', ru: 'держит публичный changelog свежим из GitHub' },
+  },
 ]
 
 /** Быстрый доступ по имени — админке и рунбукам. */

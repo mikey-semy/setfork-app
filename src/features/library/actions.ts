@@ -35,37 +35,13 @@ import { listStore } from './list-store'
 import { closingRefs } from './closing-refs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from './pr-settings'
 import { canEditSuggestionItems } from './suggestion-perms'
+import { applySuggestion, mergeSuggestion } from './suggestion-core'
+import { closeLinkedIssues, notifyWatchersNewVersion } from './suggestion-side-effects'
 import { suggestionBlocks } from './suggestion-blocks'
 import { applyFieldValue } from './suggestion-apply'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
 import { canEditList, canViewList } from '@/core'
-
-/**
- * Закрыть задачи, названные в тексте предложения («closes #12», «закрывает #7»).
- *
- * Вызывается ПОСЛЕ успешного слияния: до него задача ещё не решена. Ошибки не
- * поднимаем — предложение уже влито, и падать из-за побочного эффекта нельзя.
- */
-async function closeLinkedIssues(templateId: string, text: string, actorId: string, enabled: boolean): Promise<void> {
-  if (!enabled) return
-  const nums = closingRefs(text)
-  if (nums.length === 0) return
-  try {
-    const rows = await db
-      .select({ id: issues.id, number: issues.number, authorId: issues.authorId })
-      .from(issues)
-      .where(and(eq(issues.templateId, templateId), inArray(issues.number, nums), eq(issues.status, 'open')))
-    for (const iss of rows) {
-      await db.update(issues).set({ status: 'closed', closedAt: new Date() }).where(eq(issues.id, iss.id))
-      if (iss.authorId !== actorId) {
-        await notify({ recipientId: iss.authorId, actorId, type: 'issue_closed_by_merge', templateId, issueId: iss.id })
-      }
-    }
-  } catch (e) {
-    captureError(e, { where: 'closeLinkedIssues' })
-  }
-}
 
 /**
  * Ленивый доступ к git-порту, его ошибкам и канонической сериализации.
@@ -205,11 +181,6 @@ export async function uploadStepFile(formData: FormData): Promise<{ url: string;
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Не удалось загрузить.' }
   }
-}
-
-async function notifyWatchersNewVersion(templateId: string, actorId: string): Promise<void> {
-  const watchers = await getWatcherIds(templateId, 'versions')
-  await notifyMany(watchers, { actorId, type: 'new_version', templateId })
 }
 
 async function ownerHandle(userId: string): Promise<string> {
@@ -449,61 +420,26 @@ export async function updateBranchFromMain(suggestionId: string): Promise<void> 
   revalidatePath(path)
 }
 
-/** Владелец/коллаборатор: влить branch-PR (ff или merge-commit + проекция). */
+/**
+ * Владелец/коллаборатор: влить предложение.
+ *
+ * Гейты и само слияние живут в ядре (`suggestion-core`): его же зовёт MCP, и
+ * второй набор проверок здесь неизбежно разошёлся бы с первым. Экшен делает то,
+ * чего ядро не умеет и не должно: берёт сессию и ведёт человека — с кодом отказа
+ * в адресе, как было.
+ */
 export async function mergeBranchPr(suggestionId: string): Promise<void> {
   const session = await requireSession()
-  const sug = await db.query.suggestions.findFirst({
-    where: (s) => eq(s.id, suggestionId),
-    with: { template: true },
-  })
-  if (!sug || sug.status !== 'open' || !sug.branchRef) return
-  // Черновик не сливается: кнопку мы и так не показываем, но экшен — сетевая точка
-  // входа, и полагаться на скрытую кнопку значит не иметь проверки вовсе.
-  if (sug.draft) return
-  const tpl = sug.template
-  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  // Гейты — по настройкам списка (раздел «Предложения»), а не захардкожены: у
-  // GitHub это тоже настройки репозитория, и на разных списках нужны разные.
-  const prs = withPrDefaults(tpl.prSettings)
-  // Запрошенные правки блокируют всегда: иначе вердикт «просит доработать» был бы
-  // декоративным, а это не настройка, а смысл ревью.
-  if (await hasBlockingReview(sug.id)) return
-  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
-  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals) return
-
-  const owner = await ownerHandle(tpl.ownerId)
-  const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
-  const { gitCore, BranchOpError } = await gitPort()
-  // Линейная история: сливаем только когда это fast-forward. Проверяем ДО merge —
-  // иначе merge-коммит уже создан, и «запрет» опоздал.
-  if (prs.linearOnly) {
-    const state = await gitCore.mergeState({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
-    if (state && state.mergeBaseSha !== state.ours.tipSha) redirect(`${path}?e=not-linear`)
+  const res = await mergeSuggestion(suggestionId, session.userId)
+  if (!res.ok) {
+    // Куда вести с ошибкой, знает только страница — ядру адреса не нужны.
+    const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
+    if (!sug) return
+    const owner = await ownerHandle(sug.template.ownerId)
+    redirect(`/${owner}/${sug.template.slug}/suggestions/${sug.number ?? sug.id}?e=${encodeURIComponent(res.reason)}`)
   }
-  try {
-    await gitCore.mergeBranch({ owner, slug: tpl.slug }, sug.branchRef)
-  } catch (e) {
-    const code = e instanceof BranchOpError ? e.code : 'internal'
-    redirect(`${path}?e=${code}`)
-  }
-  // Ветка после слияния больше не нужна — удаляем, если так настроено. Ошибку
-  // глотаем: предложение уже влито, и падать из-за уборки нельзя.
-  if (prs.autoDeleteBranch) {
-    await gitCore.deleteBranch({ owner, slug: tpl.slug }, sug.branchRef).catch(() => {})
-  }
-  await db.update(suggestions).set({ status: 'accepted', resolvedAt: new Date() }).where(eq(suggestions.id, sug.id))
-  // «closes #12» в тексте предложения закрывает задачу — но только теперь, когда
-  // изменения действительно в main.
-  await closeLinkedIssues(tpl.id, sug.note, session.userId, prs.autoCloseIssues)
-  if (sug.authorId !== session.userId) {
-    await notify({ recipientId: sug.authorId, actorId: session.userId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
-  }
-  // git-merge создаёт версию МИМО listStore.addVersion → фасадный барьер её не ловит, recheck явно.
-  if (tpl.visibility === 'public') await recheckList(tpl.id)
-  await notifyWatchersNewVersion(tpl.id, session.userId)
-  await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
-  redirect(`/${owner}/${tpl.slug}`)
+  redirect(`/${res.owner}/${res.slug}`)
 }
 
 /** A4: merge branch-PR c ручным разрешением конфликтов по шагам.
@@ -589,52 +525,6 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   await enqueueReindex(tpl.id)
   revalidatePath('/', 'layout')
   redirect(`/${owner}/${tpl.slug}`)
-}
-
-// ── Автор списка: принять предложение → новая версия ─────────────────
-/**
- * ЯДРО принятия правки — без сессии и без редиректа.
- *
- * Вынесено из экшена, потому что принимать правки нужно не только со страницы: у владельца
- * копятся правки от компании, и разбирать их удобно из ассистента (MCP). Копировать эти пять
- * шагов во второй раз нельзя — копии уже расходились (в садовнике терялся `section`).
- *
- * Возвращает результат вместо редиректа: вызывающий сам решает, куда вести человека.
- */
-export async function applySuggestion(
-  suggestionId: string,
-  actorUserId: string,
-): Promise<{ ok: true; templateId: string; slug: string; version: number } | { ok: false; reason: string }> {
-  const sug = await db.query.suggestions.findFirst({ where: (s) => eq(s.id, suggestionId), with: { template: true } })
-  if (!sug) return { ok: false, reason: 'not found' }
-  if (sug.status !== 'open') return { ok: false, reason: `already ${sug.status}` }
-  if (sug.template.ownerId !== actorUserId) return { ok: false, reason: 'not your list' }
-  if (sug.draft) return { ok: false, reason: 'draft' } // черновик не принимаем — см. mergeBranchPr
-  // Запрошенные правки блокируют принятие — иначе вердикт «просит доработать»
-  // был бы декоративным. Разблокировать может сам рецензент, сменив свой голос.
-  if (await hasBlockingReview(sug.id)) return { ok: false, reason: 'a reviewer requested changes' }
-  // Остальные гейты — по настройкам списка (раздел «Предложения»). Проверяем ЗДЕСЬ,
-  // а не в экшене: через MCP правку принимают тем же ядром, и гейты не должны
-  // зависеть от того, пришёл человек со страницы или агент.
-  const prs = withPrDefaults(sug.template.prSettings)
-  if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return { ok: false, reason: 'unresolved discussions' }
-  if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals)
-    return { ok: false, reason: `needs ${prs.requiredApprovals} approval(s)` }
-
-  const tpl = sug.template
-  // Новая версия из принятого предложения — через доменный порт.
-  const ver = await listStore.addVersion(tpl.id, { note: sug.note || 'suggested edit', steps: toStepInput(sug.items), authorId: actorUserId })
-  // Пере-проверку делает фасад listStore.addVersion (барьер) — здесь не дублируем.
-  await db
-    .update(suggestions)
-    .set({ status: 'accepted', resolvedAt: new Date() })
-    .where(eq(suggestions.id, sug.id))
-  // «closes #12» в заметке закрывает задачи — но только теперь, когда изменения приняты.
-  await closeLinkedIssues(tpl.id, sug.note, actorUserId, prs.autoCloseIssues)
-  await notify({ recipientId: sug.authorId, actorId: actorUserId, type: 'suggestion_accepted', templateId: tpl.id, suggestionId: sug.id })
-  await notifyWatchersNewVersion(tpl.id, actorUserId)
-  await enqueueReindex(tpl.id)
-  return { ok: true, templateId: tpl.id, slug: tpl.slug, version: ver.version }
 }
 
 export async function acceptSuggestion(suggestionId: string): Promise<void> {
@@ -1412,6 +1302,15 @@ export async function setPrNumber(templateId: string, key: 'requiredApprovals', 
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl || tpl.ownerId !== session.userId || key !== 'requiredApprovals') return
   const next = withPrDefaults({ ...withPrDefaults(tpl.prSettings), requiredApprovals: value })
+  await db.update(templates).set({ prSettings: next }).where(eq(templates.id, templateId))
+  revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
+}
+
+export async function setPrMergeMethod(templateId: string, value: 'merge' | 'squash'): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl || tpl.ownerId !== session.userId) return
+  const next = withPrDefaults({ ...withPrDefaults(tpl.prSettings), mergeMethod: value })
   await db.update(templates).set({ prSettings: next }).where(eq(templates.id, templateId))
   revalidatePath(`/${session.handle}/${tpl.slug}/settings`)
 }

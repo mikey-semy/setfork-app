@@ -27,6 +27,7 @@ export const NOTIF_VERB: Record<NotificationType, TKey> = {
   mention: 'notifMention',
   assigned: 'notifAssigned',
   review_requested: 'notifReviewRequested',
+  review_dismissed: 'notifReviewDismissed',
   transfer_incoming: 'notifTransferIncoming',
   transfer_accepted: 'notifTransferAccepted',
   transfer_declined: 'notifTransferDeclined',
