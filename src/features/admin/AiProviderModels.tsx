@@ -134,11 +134,13 @@ export function AiProviderModels({
       )}
 
       <div>
-        <label className={lbl}>{labels.chat}</label>
+        {/* htmlFor/id — из фикса доступности (#571): подпись связана с кнопкой-триггером. */}
+        <label className={lbl} htmlFor="chatModel">{labels.chat}</label>
         {/* key по значению — при смене каталога селект пересоздаётся со свежим значением:
             иначе внутри остаётся выбранная модель ЧУЖОГО провайдера. */}
         <ModelSelect
           key={`chat-${values.chatModel}`}
+          id="chatModel"
           name="chatModel"
           defaultValue={values.chatModel}
           options={chat}
@@ -149,9 +151,10 @@ export function AiProviderModels({
       </div>
 
       <div>
-        <label className={lbl}>{labels.fallback}</label>
+        <label className={lbl} htmlFor="fallbackModel">{labels.fallback}</label>
         <ModelSelect
           key={`fb-${values.fallbackModel}`}
+          id="fallbackModel"
           name="fallbackModel"
           defaultValue={values.fallbackModel}
           options={chat}
@@ -163,9 +166,10 @@ export function AiProviderModels({
       </div>
 
       <div>
-        <label className={lbl}>{labels.embedding}</label>
+        <label className={lbl} htmlFor="embeddingModel">{labels.embedding}</label>
         <ModelSelect
           key={`emb-${prov}`}
+          id="embeddingModel"
           name="embeddingModel"
           defaultValue={initial.embeddingModel}
           options={embedding}

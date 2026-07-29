@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { blockComments, blockCommentThreads, db, users } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
 import type { TextAnchor } from './anchor'
@@ -81,6 +81,11 @@ export async function getSuggestionThreads(suggestionId: string, viewerId?: stri
     })
     .from(blockComments)
     .innerJoin(users, eq(users.id, blockComments.authorId))
+    // ТОЛЬКО реплики этих тредов. Условия не было вовсе: страница читала ВСЕ
+    // комментарии базы и подписывала аватар каждому автору — по сетевому вызову на
+    // строку. Наружу лишнее не попадало (отсеивалось при группировке), поэтому и не
+    // замечалось: дефект был не в ответе, а в его цене.
+    .where(inArray(blockComments.threadId, threads.map((t) => t.id)))
     .orderBy(asc(blockComments.createdAt))
 
   // Черновики ревью видит только их автор — фильтруем ДО резолва аватаров,

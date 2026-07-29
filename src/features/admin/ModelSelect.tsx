@@ -28,6 +28,7 @@ export function ModelSelect({
   multiple,
   allowCustom,
   customHint,
+  id,
 }: {
   name: string
   defaultValue?: string
@@ -41,6 +42,8 @@ export function ModelSelect({
   allowCustom?: boolean
   /** Подпись строки свободного ввода, например «Использовать». */
   customHint?: string
+  /** id кнопки-триггера: по нему подпись связывается с полем (label htmlFor). */
+  id?: string
 }) {
   const [values, setValues] = useState<string[]>(() => (multiple ? parseCsv(defaultValue) : defaultValue ? [defaultValue] : []))
   const [open, setOpen] = useState(false)
@@ -124,6 +127,7 @@ export function ModelSelect({
       <div className="relative">
         <button
           type="button"
+          id={id}
           onClick={() => setOpen((v) => !v)}
           className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] outline-hidden focus:border-border-strong"
         >
