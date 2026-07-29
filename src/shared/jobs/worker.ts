@@ -2,6 +2,24 @@ import 'server-only'
 import { captureError, log } from '@/shared/observability'
 import { JOB_TYPES, type JobType } from '@/shared/db'
 import { claimJob, completeJob, failJob, reapStalledJobs, type Job } from './queue'
+import { AUTONOMOUS_LOOPS, recordAgentAction } from '@/shared/agents/policy'
+
+/** Записать падение задачи ПЕТЛИ в журнал действий (обычные задачи туда не пишем). */
+async function recordLoopFailure(jobType: string, e: unknown): Promise<void> {
+  if (!(AUTONOMOUS_LOOPS as readonly string[]).includes(jobType)) return
+  try {
+    await recordAgentAction({
+      loop: jobType,
+      action: 'job.run',
+      resultStatus: 'error',
+      signal: {},
+      decision: { what: 'задача петли упала' },
+      error: e instanceof Error ? e.message.slice(0, 500) : String(e).slice(0, 500),
+    })
+  } catch {
+    // Журнал — наблюдение, а не работа: если не записалось, падение задачи важнее.
+  }
+}
 
 /** Обработчик задачи. Второй аргумент — сама джоба (attempts/maxAttempts)
  *  для обработчиков, которым важен номер попытки (moderate: fail-open на последней). */
@@ -55,6 +73,11 @@ export function startWorker(handlers: Record<string, JobHandler>): void {
       await completeJob(job.id)
     } catch (e) {
       captureError(e, { where: 'jobs.handle', jobType: job.type, jobId: job.id })
+      // ПАДЕНИЕ ПЕТЛИ — в журнал действий, а не только в таблицу задач. Предохранитель
+      // считает серию ошибок по журналу, а туда падения не писал никто: пять подряд
+      // упавших проходов оставляли журнал чистым, и «пять ошибок подряд» не наступало
+      // никогда. То есть предохранитель был описан, но не мог сработать.
+      await recordLoopFailure(job.type, e)
       await failJob(job, e instanceof Error ? e.message : String(e))
     }
   }

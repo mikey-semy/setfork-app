@@ -205,7 +205,14 @@ export default async function ListPage({
   // Родословная: как список появился (запрос, участники витка, прецеденты, разбор критика,
   // где не было опоры) и какие варианты не выбрали. Ничего не рисуется у списков, сделанных
   // руками — там объяснять нечего.
-  const [lineage, lineageExact] = readOnlyView ? [null, false] : await Promise.all([getListLineage(tpl.id), isLineageExact(tpl.id)])
+  // РОДОСЛОВНАЯ — ТОЛЬКО ХОЗЯЕВАМ СПИСКА. В ней лежит содержимое личной сессии
+  // генерации: исходный запрос владельца, отвергнутые варианты и разбор критика.
+  // Раньше условие смотрело лишь на readOnlyView, поэтому у опубликованного
+  // ИИ-черновика всё это доставалось анониму: публикация списка молча публиковала и
+  // черновой диалог, которого автор не показывал. Те же данные через getGeneration
+  // всегда требовали совпадения владельца — здесь правило теперь такое же.
+  const [lineage, lineageExact] =
+    readOnlyView || !canManageBranches ? [null, false] : await Promise.all([getListLineage(tpl.id), isLineageExact(tpl.id)])
   // Имена специалистов для родословной: id вроде 'coder' человеку ничего не говорят.
   // Ростер тянем только если родословная есть — на рукотворных списках лишнего запроса нет.
   const lineageNames = lineage ? Object.fromEntries((await getRoster()).map((e) => [e.id, lang === 'ru' ? e.nameRu : e.nameEn])) : undefined

@@ -669,6 +669,10 @@ export const agentLoops = pgTable('agent_loops', {
   dryRun: boolean('dry_run').notNull().default(false),
   circuitTrippedAt: timestamp('circuit_tripped_at', { withTimezone: true }),
   circuitReason: text('circuit_reason').notNull().default(''),
+  // Когда человек в последний раз снял предохранитель. Серия ошибок считается ПОСЛЕ
+  // этой отметки: без неё сброс не работал — те же пять записей оставались последними,
+  // и первый же проход после снятия срывал предохранитель заново.
+  circuitResetAt: timestamp('circuit_reset_at', { withTimezone: true }),
   // Версия правил. Пишется в каждое действие журнала: без неё через полгода нельзя
   // ответить, по каким порогам петля тогда решала. Бампится при правке политики.
   policyVersion: integer('policy_version').notNull().default(1),

@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { agentActions, agentLoops, db, templates, users } from '@/shared/db'
 import { autonomyHealthy, publishQuotaLeft, publishedToday, ERROR_STREAK_TRIP } from '@/shared/agents/canary'
-import { loopPolicy, resetCircuit } from '@/shared/agents/policy'
+import { loopPolicy, recordAgentAction, resetCircuit } from '@/shared/agents/policy'
 
 // КАНАРЕЙКА — триггеры к предохранителю, который до этого никто не срывал: механизм без
 // триггера это иллюзия защиты. Проверяем на реальной БД, потому что все три сигнала —
@@ -111,5 +111,25 @@ describe('здоровье автономии', () => {
     for (let i = 0; i < ERROR_STREAK_TRIP; i++) await act({ loop: 'selfgen', resultStatus: 'error' })
     expect(await autonomyHealthy('gardener')).toBe(true)
     await db.delete(agentLoops).where(eq(agentLoops.type, 'selfgen'))
+  })
+})
+
+describe('серия ошибок и снятие предохранителя человеком', () => {
+  const fail = () => recordAgentAction({ loop: 'gardener', action: 'job.run', resultStatus: 'error', error: 'упало' })
+
+  it('пять упавших проходов подряд срывают предохранитель', async () => {
+    // Падения задач петли пишет воркер. Раньше их не писал НИКТО, и обещанные
+    // «пять ошибок подряд» не наступали никогда: механизм был, срабатывания не было.
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await fail()
+    expect(await autonomyHealthy('gardener')).toBe(false)
+  })
+
+  it('после снятия человеком петля работает, а не срывается на тех же записях', async () => {
+    for (let i = 0; i < ERROR_STREAK_TRIP; i++) await fail()
+    expect(await autonomyHealthy('gardener')).toBe(false)
+    await resetCircuit('gardener')
+    // Прежние ошибки из журнала никуда не делись, но относятся к состоянию ДО снятия.
+    // Без этой границы человек снимал предохранитель, и первый же проход срывал его снова.
+    expect(await autonomyHealthy('gardener')).toBe(true)
   })
 })
