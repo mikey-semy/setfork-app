@@ -34,6 +34,27 @@ export interface CheckItem {
  * Отдельным запросом, а не внутри suggestionChecks(): страница считает свои
  * проверки из уже загруженных данных, а эти живут в БД и нужны ещё и MCP-ответу.
  */
+/**
+ * Внешние проверки, мешающие слиянию: упавшие и ещё идущие.
+ *
+ * Отдельно от `reportedChecks()`: гейту не нужны ни подписи, ни ссылки, ни ники —
+ * ему нужен ответ «можно ли», и тащить ради него весь список с join'ом по авторам
+ * значило бы платить за витрину на каждом слиянии.
+ *
+ * Незавершённая проверка держит слияние так же, как упавшая: «ещё не прошла» — это
+ * не «прошла». Иначе гейт обходился бы гонкой: слить, пока прогон не отчитался.
+ */
+export async function blockingReportedChecks(suggestionId: string): Promise<{ failed: string[]; pending: string[] }> {
+  const rows = await db
+    .select({ name: suggestionReportedChecks.name, status: suggestionReportedChecks.status })
+    .from(suggestionReportedChecks)
+    .where(eq(suggestionReportedChecks.suggestionId, suggestionId))
+  return {
+    failed: rows.filter((r) => r.status === 'fail').map((r) => r.name),
+    pending: rows.filter((r) => r.status === 'pending').map((r) => r.name),
+  }
+}
+
 export async function reportedChecks(suggestionId: string): Promise<CheckItem[]> {
   const rows = await db
     .select({

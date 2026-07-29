@@ -218,6 +218,8 @@ export interface PrSettings {
   mergeMethod?: 'merge' | 'squash'
   /** Нерешённые обсуждения блокируют слияние. */
   blockOnUnresolved?: boolean
+  /** Внешние проверки должны пройти: упавшая или незавершённая держит слияние. */
+  blockOnFailedChecks?: boolean
   /** Сколько одобрений нужно (0 = не требуются). */
   requiredApprovals?: number
   /** Удалять ветку сразу после слияния. */
@@ -243,6 +245,9 @@ export const PR_DEFAULTS: Required<PrSettings> = {
   // такую потерю должен человек, а не установка по умолчанию.
   mergeMethod: 'merge',
   blockOnUnresolved: true,
+  // Выключено по умолчанию: проверку присылает кто-то снаружи, и включённый по
+  // умолчанию гейт означал бы, что первый же чужой отчёт запирает список.
+  blockOnFailedChecks: false,
   requiredApprovals: 0,
   autoDeleteBranch: false,
   autoCloseIssues: true,

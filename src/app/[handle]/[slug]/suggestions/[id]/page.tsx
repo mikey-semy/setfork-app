@@ -358,6 +358,12 @@ export default async function SuggestionThreadPage({
   const blockReasons: string[] = []
   if (reviews.some((r) => r.blocking)) blockReasons.push(t('prBlockedReview', lang))
   if (prs.blockOnUnresolved && unresolvedThreads > 0) blockReasons.push(`${t('prBlockedThreads', lang)}: ${unresolvedThreads}`)
+  // Внешние проверки — по тем же данным, что на вкладке проверок: причина блокировки
+  // и сама проверка не должны расходиться.
+  if (prs.blockOnFailedChecks) {
+    const held = extChecks.filter((c) => c.status === 'fail' || c.status === 'pending')
+    if (held.length > 0) blockReasons.push(`${t('prBlockedChecks', lang)}: ${held.map((c) => c.title).join(', ')}`)
+  }
   if (prs.requiredApprovals > approvals)
     blockReasons.push(`${t('prBlockedApprovals', lang)}: ${approvals}/${prs.requiredApprovals}`)
 

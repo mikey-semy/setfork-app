@@ -17,6 +17,7 @@ export function withPrDefaults(raw: unknown): Required<PrSettings> {
     linearOnly: bool('linearOnly'),
     mergeMethod: o.mergeMethod === 'squash' ? 'squash' : 'merge',
     blockOnUnresolved: bool('blockOnUnresolved'),
+    blockOnFailedChecks: bool('blockOnFailedChecks'),
     // Отрицательное и нечисловое → 0; больше 10 одобрений на список — заведомо опечатка.
     requiredApprovals: Number.isFinite(approvals) ? Math.min(10, Math.max(0, Math.trunc(approvals))) : PR_DEFAULTS.requiredApprovals,
     autoDeleteBranch: bool('autoDeleteBranch'),
@@ -29,6 +30,7 @@ export function withPrDefaults(raw: unknown): Required<PrSettings> {
 export const PR_BOOL_KEYS = [
   'linearOnly',
   'blockOnUnresolved',
+  'blockOnFailedChecks',
   'autoDeleteBranch',
   'autoCloseIssues',
   'allowMaintainerEdits',

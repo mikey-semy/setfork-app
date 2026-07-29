@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { GitMerge, MessagesSquare, Pencil, Trash2, CircleCheck } from 'lucide-react'
+import { GitMerge, MessagesSquare, Pencil, Trash2, CircleCheck, ShieldCheck } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { t, type Lang } from '@/shared/i18n'
@@ -27,6 +27,7 @@ export function PrSettingsSection({
   settings: {
     allowFrom: 'all' | 'collaborators'
     blockOnUnresolved: boolean
+    blockOnFailedChecks: boolean
     requiredApprovals: number
     autoDeleteBranch: boolean
     autoCloseIssues: boolean
@@ -49,6 +50,14 @@ export function PrSettingsSection({
           icon={<MessagesSquare size={16} className="text-muted" />}
           label={t('prSetUnresolved', lang)}
           hint={t('prSetUnresolvedHint', lang)}
+        />
+        <BoolRow
+          templateId={templateId}
+          k="blockOnFailedChecks"
+          initial={settings.blockOnFailedChecks}
+          icon={<ShieldCheck size={16} className="text-muted" />}
+          label={t('prSetChecks', lang)}
+          hint={t('prSetChecksHint', lang)}
         />
         <MethodRow templateId={templateId} initial={settings.mergeMethod} lang={lang} />
         <BoolRow

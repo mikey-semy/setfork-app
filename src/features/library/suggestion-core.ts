@@ -10,6 +10,21 @@ import { withPrDefaults } from './pr-settings'
 import { countApprovals, hasBlockingReview } from './review-actions'
 // eslint-disable-next-line boundaries/dependencies -- счётчик нерешённых обсуждений живёт в comments
 import { countUnresolvedThreads } from '@/features/comments/queries'
+import { blockingReportedChecks } from './suggestion-checks'
+
+/**
+ * Гейт внешних проверок — ОДИН на оба пути слияния.
+ *
+ * Пути два (ветка и пункты), и правило должно быть одно: иначе «required checks»
+ * работали бы у branch-предложений и молча не работали у остальных.
+ */
+async function checksGate(suggestionId: string, enabled: boolean): Promise<string | null> {
+  if (!enabled) return null
+  const { failed, pending } = await blockingReportedChecks(suggestionId)
+  if (failed.length) return `checks failed: ${failed.join(', ')}`
+  if (pending.length) return `checks still running: ${pending.join(', ')}`
+  return null
+}
 import { closeLinkedIssues, notifyWatchersNewVersion } from './suggestion-side-effects'
 import { canEditList, canViewList } from '@/core'
 import { isVerdict } from './review-model'
@@ -76,6 +91,8 @@ export async function mergeSuggestion(
   if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return { ok: false, reason: 'unresolved discussions' }
   if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals)
     return { ok: false, reason: `needs ${prs.requiredApprovals} approval(s)` }
+  const checksBlocked = await checksGate(sug.id, prs.blockOnFailedChecks)
+  if (checksBlocked) return { ok: false, reason: checksBlocked }
 
   const [ownerRow] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId))
   const owner = ownerRow?.handle ?? ''
@@ -146,6 +163,8 @@ export async function applySuggestion(
   // зависеть от того, пришёл человек со страницы или агент.
   const prs = withPrDefaults(sug.template.prSettings)
   if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return { ok: false, reason: 'unresolved discussions' }
+  const checksBlock = await checksGate(sug.id, prs.blockOnFailedChecks)
+  if (checksBlock) return { ok: false, reason: checksBlock }
   if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals)
     return { ok: false, reason: `needs ${prs.requiredApprovals} approval(s)` }
 
