@@ -1,11 +1,18 @@
 // Callback GitHub OAuth: проверяем state, меняем code на токен, тянем юзера, ставим сессию.
 import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
+import { oauthEnabled } from '@/shared/auth/oauth'
 import { upsertGithubUser } from '@/shared/auth/users'
 import { finishOauthLogin } from '@/features/auth/oauth-finish'
 
 export async function GET(req: NextRequest) {
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000'
+  // Провайдер обязан проверяться на ОБОИХ концах: стартовый роут — не гейт, а удобство.
+  // Иначе при AUTH_DISABLED_PROVIDERS=github обмен кода на сессию остаётся рабочим, и
+  // «выключенный» вход держится только на побочном эффекте — куке state (линза 02, F6).
+  if (!oauthEnabled().github) {
+    return NextResponse.redirect(`${appUrl}/login?e=oauth_off`)
+  }
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
   const state = searchParams.get('state')
