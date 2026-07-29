@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { anonymizeDrafts, draftLetter } from '@/shared/ai/council'
+import { anonymizeDrafts, clip, draftLetter } from '@/shared/ai/council'
 import { pickPrecedentsDetailed } from '@/shared/ai/precedent-filter'
 
 // ИНВАРИАНТ АНОНИМНОСТИ. Критик и старейшина не должны видеть, кто написал черновик: как
@@ -68,5 +68,34 @@ describe('пробел опоры (noBasis) виден структурно', ()
   it('универсал «*» опирается на всё, что есть; на пустом — тоже пробел', () => {
     expect(pickPrecedentsDetailed(lists, ['*']).matched).toBe(true)
     expect(pickPrecedentsDetailed([], ['*']).matched).toBe(false)
+  })
+})
+
+describe('реплика в ленте хода совета', () => {
+  it('короткая реплика не трогается', () => {
+    expect(clip('Всё ясно', 120)).toBe('Всё ясно')
+  })
+
+  it('длинная режется по границе слова со знаком обрыва — не «мотивирующий эфф»', () => {
+    const out = clip('надо отсеять пустые формулировки и оставить проверяемое утверждение', 30)
+    expect(out.endsWith('…')).toBe(true)
+    expect(out.slice(0, -1).trim().split(' ').pop()).not.toBe('форм')
+    expect(out.length).toBeLessThanOrEqual(31)
+  })
+
+  it('внутренний ярлык DRAFT B наружу не уходит', () => {
+    expect(clip('DRAFT B предлагает креативные подходы', 120)).toContain('вариант B')
+    expect(clip('DRAFT B предлагает креативные подходы', 120)).not.toContain('DRAFT')
+  })
+
+  it('одно длинное слово без пробелов режется, а не остаётся целым', () => {
+    expect(clip('a'.repeat(50), 20)).toHaveLength(21)
+  })
+})
+
+describe('подпись черновика следует языку интерфейса', () => {
+  it('в английском интерфейсе не появляется русское слово', () => {
+    expect(clip('DRAFT B misses the sources', 120, false)).toContain('draft B')
+    expect(clip('DRAFT B misses the sources', 120, false)).not.toContain('вариант')
   })
 })
