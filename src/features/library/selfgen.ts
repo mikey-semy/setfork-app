@@ -9,7 +9,7 @@ import { extractUsage, outcomeOf, recordUsage } from '@/shared/ai/usage'
 import { generateListDraft } from '@/shared/ai/generate'
 import { getRoster, type Expert } from '@/shared/ai/roster'
 import { pickWorkQueue, syncLifecycles, wakeForWork } from '@/shared/ai/activation-db'
-import { approvedDomains } from '@/shared/agents/agenda-db'
+import { approvedDomains, approvedOwners } from '@/shared/agents/agenda-db'
 import { ensureGnomeUser, professionOf } from '@/shared/ai/gnome-account'
 import { globalBudgetOk } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
@@ -255,7 +255,7 @@ export async function runSelfGenSweep(): Promise<{ created: number; skipped: num
   // порядку», то есть тем, у кого её и так хватало, и скоркарт по остальным не наполнялся.
   // Одобренные темы повестки — впереди очереди: так решение гендиректора доходит до работы,
   // а не остаётся отметкой в интерфейсе.
-  const queue = await pickWorkQueue(roster, undefined, await approvedDomains())
+  const queue = await pickWorkQueue(roster, undefined, await approvedDomains(), await approvedOwners())
   if (!queue.length) return { created: 0, skipped: 1 }
   const policy = await loopPolicy('selfgen')
 
