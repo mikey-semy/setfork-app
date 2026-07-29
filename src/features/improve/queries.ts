@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, eq, inArray, sql } from 'drizzle-orm'
-import { db, issues, runs, stars, suggestions, templates, users } from '@/shared/db'
+import { db, issues, runs, stars, suggestions, templates, users, publiclyVisible } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 
 export interface ImproveItem {
@@ -41,7 +41,7 @@ export async function getImprovementFeed(userId: string, limit = 20): Promise<Im
       .select({ id: templates.id, ownerId: templates.ownerId, ownerHandle: users.handle, slug: templates.slug, title: templates.title, desc: templates.desc, starsCount: templates.starsCount })
       .from(templates)
       .innerJoin(users, eq(users.id, templates.ownerId))
-      .where(and(inArray(templates.id, ids), eq(templates.visibility, 'public'), eq(templates.status, 'published'), eq(templates.moderation, 'active'))),
+      .where(and(inArray(templates.id, ids), publiclyVisible())),
     db.select({ id: issues.templateId, c: sql<number>`count(*)::int` }).from(issues).where(and(inArray(issues.templateId, ids), eq(issues.status, 'open'))).groupBy(issues.templateId),
     db.select({ id: suggestions.templateId, c: sql<number>`count(*)::int` }).from(suggestions).where(and(inArray(suggestions.templateId, ids), eq(suggestions.status, 'open'))).groupBy(suggestions.templateId),
   ])

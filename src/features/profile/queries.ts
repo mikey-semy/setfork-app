@@ -1,7 +1,7 @@
 import 'server-only'
 import { cache } from 'react'
 import { and, desc, eq, or, sql } from 'drizzle-orm'
-import { courseCompletions, db, runs, stars, suggestions, templateVersions, templates, users } from '@/shared/db'
+import { courseCompletions, db, runs, stars, suggestions, templateVersions, templates, users, publiclyVisible } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import type { FeedItem } from '@/features/library/queries'
 import { avatarSrc } from '@/shared/media'
@@ -138,9 +138,7 @@ export async function getUserCompletions(userId: string): Promise<CompletedCours
     .where(
       and(
         eq(courseCompletions.userId, userId),
-        eq(templates.visibility, 'public'),
-        eq(templates.status, 'published'),
-        eq(templates.moderation, 'active'),
+        publiclyVisible(),
       ),
     )
     .orderBy(desc(courseCompletions.completedAt))
@@ -162,9 +160,7 @@ export async function getStarredTemplates(userId: string, viewerId?: string): Pr
   // visibility → в публичной вкладке «Starred» светились ставшие flagged/hidden списки
   // и чужие публичные черновики. Свои (owner) видны в любом статусе.
   const publicVisible = and(
-    eq(templates.visibility, 'public'),
-    eq(templates.status, 'published'),
-    eq(templates.moderation, 'active'),
+    publiclyVisible(),
   )!
   const visible = viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
   const rows = await db

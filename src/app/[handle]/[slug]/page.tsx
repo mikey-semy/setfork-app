@@ -46,7 +46,7 @@ import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutl
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
-import { db, listLinks, templates as templatesTable, users as usersTable } from '@/shared/db'
+import { db, listLinks, templates as templatesTable, users as usersTable, publiclyVisible } from '@/shared/db'
 import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
@@ -165,9 +165,7 @@ export default async function ListPage({
     .where(
       andOp(
         eq(listLinks.toId, tpl.id),
-        eq(templatesTable.status, 'published'),
-        eq(templatesTable.visibility, 'public'),
-        eq(templatesTable.moderation, 'active'),
+        publiclyVisible(),
       ),
     )
     .limit(10)

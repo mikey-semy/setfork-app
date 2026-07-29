@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, eq, sql } from 'drizzle-orm'
-import { db, issues, linkChecks, linkOccurrences, templates } from '@/shared/db'
+import { db, issues, linkChecks, linkOccurrences, templates, publiclyVisible } from '@/shared/db'
 import { dominantLang } from '@/shared/ai/gardener-policies'
 import { t, type LocaleText } from '@/shared/i18n'
 import { getLinkcheckSettings } from '@/shared/settings/linkcheck'
@@ -52,9 +52,7 @@ export async function deliverBrokenLinks(): Promise<{ opened: number }> {
     .where(
       and(
         eq(linkChecks.verdict, 'broken'),
-        eq(templates.status, 'published'),
-        eq(templates.visibility, 'public'),
-        eq(templates.moderation, 'active'),
+        publiclyVisible(),
         // Архивные/замороженные списки не трогаем (как и садовник).
         sql`${templates.archivedAt} is null and ${templates.frozenAt} is null`,
       ),

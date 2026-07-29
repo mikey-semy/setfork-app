@@ -57,3 +57,4 @@ export const db: NodePgDatabase<typeof schema> = new Proxy(
 )
 
 export * from './schema'
+export { publiclyVisible } from './visibility'

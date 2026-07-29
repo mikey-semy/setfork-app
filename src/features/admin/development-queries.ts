@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm'
-import { agentActions, aiUsage, councilExperts, db, feedItems, generationMessages, generations, knowledgeTriples, linkClicks, runs, stars, suggestions, templates, users } from '@/shared/db'
+import { agentActions, aiUsage, councilExperts, db, feedItems, generationMessages, generations, knowledgeTriples, linkClicks, runs, stars, suggestions, templates, users, publiclyVisible } from '@/shared/db'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { getUsageTotals } from '@/shared/ai/usage'
 import { AI_DAILY_USD } from '@/shared/quota'
@@ -162,7 +162,7 @@ async function feedValue(limit = 12): Promise<FeedValue[]> {
 
 /** Живая публичная библиотека — та же тройка условий, что и у публичного чтения. */
 const publicLive = () =>
-  and(eq(templates.status, 'published'), eq(templates.visibility, 'public'), eq(templates.moderation, 'active'))
+  and(publiclyVisible())
 
 const n = (rows: { n: number }[]) => rows[0]?.n ?? 0
 

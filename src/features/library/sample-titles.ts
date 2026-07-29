@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from 'drizzle-orm'
-import { db, templates } from '@/shared/db'
+import { db, templates, publiclyVisible } from '@/shared/db'
 import { tr, type Lang } from '@/shared/i18n'
 
 // Заголовки НАСТОЯЩИХ публичных списков — общий источник «живых» подсказок для
@@ -12,7 +12,7 @@ export async function sampleListTitles(lang: Lang, max = POOL): Promise<string[]
   const rows = await db
     .select({ title: templates.title })
     .from(templates)
-    .where(and(eq(templates.visibility, 'public'), eq(templates.status, 'published'), eq(templates.moderation, 'active')))
+    .where(and(publiclyVisible()))
     .orderBy(desc(sql`${templates.starsCount} + ${templates.forksCount}`))
     .limit(POOL)
   const titles = [...new Set(rows.map((r) => tr(r.title, lang).trim()).filter((s) => s.length > 0 && s.length <= 46))]
