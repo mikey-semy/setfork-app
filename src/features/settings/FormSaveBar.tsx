@@ -20,36 +20,89 @@ import { Button } from '@/shared/ui/button'
  * Почему не автосохранение на каждый чих: в этих формах есть ключи API и id папок —
  * поле в процессе набора представляет собой мусор, а пустое поле у ключей означает
  * «оставить прежний». Сохранять такое по таймеру нельзя.
+ *
+ * «Изменили» считаем СНИМКОМ значений, а не событиями input/change. Половина полей тут
+ * — свои компоненты (выбор модели, тумблеры): они пишут значение в скрытый input через
+ * React, а DOM-событие при этом не возникает. На событиях полоса не появилась бы при
+ * смене модели вообще — то есть модель стало бы не сохранить (P1 из авто-ревью).
+ * Снимок ловит любое изменение, откуда бы оно ни пришло, и сам гаснет, если значения
+ * вернули к исходным.
  */
+
+/**
+ * Снимок значений формы. Файлы пропускаем (в настройках их нет, а читать их для
+ * сравнения дорого и бессмысленно), флажки берём по checked.
+ */
+function snapshot(form: HTMLFormElement): string {
+  const parts: string[] = []
+  for (const el of Array.from(form.elements)) {
+    const f = el as HTMLInputElement
+    if (!f.name || f.type === 'file' || f.type === 'submit' || f.type === 'button') continue
+    parts.push(`${f.name}=${f.type === 'checkbox' || f.type === 'radio' ? String(f.checked) : f.value}`)
+  }
+  return parts.join('&')
+}
+
 export function FormSaveBar({ ru }: { ru: boolean }) {
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const anchor = useRef<HTMLDivElement>(null)
   const [dirty, setDirty] = useState(false)
   const { pending } = useFormStatus()
-  const wasPending = useRef(false)
+  const saved = useRef('')
+  const touched = useRef(false)
 
   useEffect(() => {
     const form = anchor.current?.closest('form')
     if (!form) return
-    const touch = () => setDirty(true)
+    saved.current = snapshot(form)
+    // Пока форму не тронули, снимок ПЕРЕСНИМАЕМ: свои компоненты дописывают значения в
+    // скрытые input уже после монтирования, и без этого полоса всплывала бы сразу при
+    // открытии страницы — «есть несохранённые изменения», которых никто не делал.
+    // Правкой считается то, что произошло после первого касания формы.
+    const check = () => {
+      if (!touched.current) {
+        saved.current = snapshot(form)
+        return
+      }
+      setDirty(snapshot(form) !== saved.current)
+    }
+    const touch = () => {
+      touched.current = true
+      check()
+    }
+    form.addEventListener('pointerdown', touch)
+    form.addEventListener('keydown', touch)
     form.addEventListener('input', touch)
     form.addEventListener('change', touch)
+    // Опрос — ради полей, которые меняются программно (свои компоненты пишут в скрытый
+    // input через React, событий не шлют). Полсекунды на десяток строк — незаметно.
+    const timer = setInterval(check, 500)
     return () => {
+      form.removeEventListener('pointerdown', touch)
+      form.removeEventListener('keydown', touch)
       form.removeEventListener('input', touch)
       form.removeEventListener('change', touch)
+      clearInterval(timer)
     }
   }, [])
 
-  // Отправка завершилась (pending: true → false) — менять больше нечего.
+  // Отправка завершилась (pending: true → false) — то, что на экране, теперь и есть
+  // сохранённое: берём новый эталон, иначе полоса висела бы вечно (снимок-то изменился).
+  const wasPending = useRef(false)
   useEffect(() => {
-    if (wasPending.current && !pending) setDirty(false)
+    const done = wasPending.current && !pending
     wasPending.current = pending
+    if (!done) return
+    const form = anchor.current?.closest('form')
+    if (form) saved.current = snapshot(form)
+    touched.current = false
+    setDirty(false)
   }, [pending])
 
-  const reset = () => {
-    anchor.current?.closest('form')?.reset()
-    setDirty(false)
-  }
+  // «Отменить» — перезагрузка страницы, а не form.reset(). reset() возвращает только
+  // нативные поля: состояние своих компонентов (выбранная модель, тумблеры) осталось бы
+  // изменённым, полоса бы погасла, и «отменённое» уехало бы со следующим сохранением.
+  const discard = () => window.location.reload()
 
   return (
     <div ref={anchor}>
@@ -66,7 +119,7 @@ export function FormSaveBar({ ru }: { ru: boolean }) {
               {say('Unsaved changes', 'Есть несохранённые изменения')}
             </span>
             <div className="flex flex-1 items-center justify-end gap-2 sm:flex-none">
-              <Button type="button" variant="outline" size="md" onClick={reset} disabled={pending} className="h-11 max-sm:flex-1 sm:h-[38px]">
+              <Button type="button" variant="outline" size="md" onClick={discard} disabled={pending} className="h-11 max-sm:flex-1 sm:h-[38px]">
                 {say('Discard', 'Отменить')}
               </Button>
               <Button type="submit" variant="primary" size="md" disabled={pending} className="h-11 max-sm:flex-1 sm:h-[38px]">
