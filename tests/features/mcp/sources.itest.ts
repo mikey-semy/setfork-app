@@ -5,6 +5,10 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 // Проверяем на реальной БД: fail-closed по лицензии, обязательность атрибуции там, где её
 // требует лицензия, и что повторная регистрация ОБНОВЛЯЕТ запись, а не заводит вторую с
 // другой лицензией (иначе «какая настоящая» решать нечем).
+// Реестр источников теперь только для администратора: юридический вердикт даёт тот,
+// кто за него отвечает. Ник владельца объявляем админским ДО импорта модулей.
+process.env.ADMIN_HANDLES = 'src-owner'
+
 const { agentActions, db, knowledgeSources, users } = await import('@/shared/db')
 const { mcpListSources, mcpRegisterSource } = await import('@/features/mcp/tools')
 
@@ -61,5 +65,16 @@ describe('регистрация источника', () => {
   it('отказ записи в журнал не оставляет — регистрации не было', async () => {
     await mcpRegisterSource(userId, { url: 'https://example.com/d', license: 'проприетарная' })
     expect(await db.select().from(agentActions)).toHaveLength(0)
+  })
+})
+
+describe('кто вправе пополнять реестр', () => {
+  it('обычный пользователь — отказ: это юридический вердикт, а не рядовая запись', async () => {
+    const [u] = await db.insert(users).values({ handle: 'src-stranger' }).returning({ id: users.id })
+    expect(await mcpRegisterSource(u.id, { url: 'https://example.com/z', license: 'CC0' })).toMatchObject({
+      error: expect.stringContaining('administrator'),
+    })
+    // Записи не появилось — отказ настоящий, а не косметический.
+    expect((await mcpListSources()).sources).toBe(0)
   })
 })
