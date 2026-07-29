@@ -3,7 +3,7 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { blockComments, blockCommentThreads, db, issues, steps, suggestionAssignees, suggestionComments, suggestions, templates, users, type ProposedItem } from '@/shared/db'
+import { blockComments, blockCommentThreads, db, issues, steps, suggestionAssignees, suggestionComments, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { recordAudit } from '@/shared/audit'
@@ -655,7 +655,7 @@ async function writeSuggestionItems(
       await gitCore.commitToBranch({ owner, slug: tpl.slug }, sug.branchRef, json, {
         message,
         expectedTip: snap.tipSha,
-        author: { name: session.handle, email: await gitEmail(session.userId, session.handle) },
+        author: { name: session.handle, email: gitEmail(session.handle) },
       })
     } catch (e) {
       return e instanceof BranchOpError ? e.code : 'internal'
@@ -663,6 +663,18 @@ async function writeSuggestionItems(
   } else {
     await db.update(suggestions).set({ items: proposed }).where(eq(suggestions.id, sug.id))
   }
+
+  // СОДЕРЖИМОЕ ИЗМЕНИЛОСЬ → прежние одобрения к нему не относятся. Рецензент
+  // одобрял то, что читал; без сброса автор мог дождаться нужного числа одобрений,
+  // подменить пункты и слить непроверенное — гейт «нужно N одобрений» становился
+  // формальностью. Так же поступает GitHub с dismiss stale reviews.
+  //
+  // Снимаем ТОЛЬКО «одобряю»: «просит доработать» относится к самой правке, и
+  // стирать его правкой значило бы дать обход блокировки — достаточно было бы
+  // тронуть пункт. Комментарии тоже остаются: они не гейт.
+  await db
+    .delete(suggestionReviews)
+    .where(and(eq(suggestionReviews.suggestionId, sug.id), eq(suggestionReviews.verdict, 'approve')))
 
   // Соавторство: правку внёс не автор — запоминаем, иначе вклад исчезнет
   // (у ветки он остался бы в git, у items — нигде).
@@ -742,10 +754,20 @@ export async function applySuggestedEdit(commentId: string): Promise<void> {
   redirect(path)
 }
 
-/** Адрес для авторства коммита: свой e-mail, иначе стабильный noreply по handle. */
-async function gitEmail(userId: string, handle: string): Promise<string> {
-  const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1)
-  return u?.email || `${handle}@users.noreply.setfork.com`
+/**
+ * Адрес для авторства коммита — ВСЕГДА стабильный noreply по нику.
+ *
+ * Раньше сюда подставлялась почта аккаунта. Список публичный и клонируется целиком:
+ * почта уезжала в git-историю навсегда и доставалась любому, кто сделал clone. При
+ * этом человек её оставлял для входа и писем, а не для публикации — согласия на
+ * публикацию он не давал.
+ *
+ * Ник и так виден на странице, поэтому авторство остаётся человеческим: `@ник` в
+ * имени, стабильный адрес в поле почты. Захочет показать настоящую — это отдельная
+ * осознанная настройка, а не поведение по умолчанию.
+ */
+function gitEmail(handle: string): string {
+  return `${handle}@users.noreply.setfork.com`
 }
 
 /**

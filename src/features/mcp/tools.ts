@@ -17,6 +17,7 @@ import { attributionLine, checkLicense } from '@/shared/ai/source-license'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
 import { isCollaborator } from '@/features/collab/queries'
+import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/features/library/suggestion-checks'
 import { currentRevision } from '@/features/library/suggestion-core'
 import { recordRunCompletionIfDone } from '@/features/library/completion'
@@ -617,6 +618,14 @@ export async function mcpRegisterSource(
   userId: string,
   input: { url: string; title?: string; license: string; attribution?: string; note?: string },
 ) {
+  // Реестр источников ОБЩИЙ для компании: по нему решают, что можно брать в корпус.
+  // Обычный write-токен сюда пускать нельзя — любой вошедший мог бы объявить чужой
+  // материал свободным или переписать лицензию у уже проверенного источника.
+  // Юридический вердикт даёт человек, отвечающий за него, а не всякий, у кого есть токен.
+  const [me] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId)).limit(1)
+  if (!isAdminHandle(me?.handle ?? null)) {
+    return { error: 'only an administrator can register sources — the license verdict is a legal decision' }
+  }
   const url = (input.url ?? '').trim()
   if (!/^https?:\/\//i.test(url)) return { error: 'url must be an http(s) address' }
   const verdict = checkLicense(input.license ?? '', input.attribution ?? '')

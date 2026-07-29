@@ -441,7 +441,7 @@ const handler = createMcpHandler(
       {
         title: 'Register an external source',
         description:
-          'Register an external source the company is allowed to draw on. The license is FAIL-CLOSED: only CC0, public domain, CC-BY, CC-BY-SA, MIT and Apache-2.0 are accepted, and licenses requiring attribution are rejected until you provide it. NC/ND variants are refused. Re-registering the same URL updates the record instead of creating a second one.',
+          'Register an external source the company is allowed to draw on. ADMIN ONLY: the license verdict is a legal decision, not a routine write. The license is FAIL-CLOSED: only CC0, public domain, CC-BY, CC-BY-SA, MIT and Apache-2.0 are accepted, and licenses requiring attribution are rejected until you provide it. NC/ND variants are refused. Re-registering the same URL updates the record instead of creating a second one.',
         inputSchema: {
           url: z.string().describe('Source URL (http/https)'),
           license: z.string().describe('License as stated by the source, e.g. "CC BY 4.0", "CC0 1.0", "MIT"'),

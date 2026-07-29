@@ -70,3 +70,27 @@ describe('строка атрибуции', () => {
     expect(attributionLine('CC0', '', 'https://example.com/a')).toBe('')
   })
 })
+
+describe('лицензия с довеском не превращается в чистую', () => {
+  // «MIT License with Commons Clause» — это НЕ MIT: довесок запрещает продажу.
+  // Раньше семейство определялось префиксом, и ограничение исчезало при нормализации,
+  // а материал попадал в корпус как свободный.
+  it.each([
+    'MIT License with Commons Clause',
+    'MIT modified',
+    'Apache-2.0 with LLVM exception',
+    'CC BY 4.0 with additional terms',
+    'CC0 with reservations',
+  ])('«%s» — отказ, а не опознание семейства', (raw) => {
+    expect(checkLicense(raw, 'Иван Петров').ok).toBe(false)
+  })
+
+  it('обычные записи тех же лицензий по-прежнему проходят', () => {
+    expect(checkLicense('MIT', 'Иван Петров').ok).toBe(true)
+    expect(checkLicense('MIT License', 'Иван Петров').ok).toBe(true)
+    expect(checkLicense('Apache License 2.0', 'Иван Петров').ok).toBe(true)
+    expect(checkLicense('CC BY 4.0', 'Иван Петров').ok).toBe(true)
+    expect(checkLicense('CC BY-SA 4.0 International', 'Иван Петров').ok).toBe(true)
+    expect(checkLicense('CC0 1.0 Universal').ok).toBe(true)
+  })
+})

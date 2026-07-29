@@ -34,13 +34,27 @@ export function normalizeLicense(raw: string): AllowedLicense | null {
   if (!s) return null
   const flat = s.replace(/[^A-Z0-9]/g, '')
   // Порядок важен: CC-BY-SA и NC/ND проверяем ДО общего CC-BY, иначе «CC BY-NC» пройдёт как CC-BY.
-  if (/\bNC\b/.test(s) || flat.includes('NONCOMMERCIAL') || /\bND\b/.test(s) || flat.includes('NODERIV')) return null
-  if (flat.startsWith('CC0') || flat.includes('CCZERO')) return 'CC0'
+  if (/NC/.test(s) || flat.includes('NONCOMMERCIAL') || /ND/.test(s) || flat.includes('NODERIV')) return null
+
+  // FAIL-CLOSED по ХВОСТУ. Раньше семейство определялось префиксом, и «MIT License with
+  // Commons Clause» нормализовалось в чистый MIT: добавленное ограничение исчезало, а
+  // материал попадал в корпус как свободный. Теперь после опознания семейства остаток
+  // обязан состоять только из известных слов версии — любое чужое слово («WITH»,
+  // «COMMONSCLAUSE», «MODIFIED») означает ДРУГУЮ лицензию, и мы её не знаем.
+  const VERSIONWORDS = /^(LICENSE|LICENCE|VERSION|V|UNIVERSAL|INTERNATIONAL|GENERIC|DEED|ONLY|ORLATER|PLUS|CC|BY|SA|[0-9])*$/
+  const family = (prefix: string, out: AllowedLicense): AllowedLicense | null =>
+    VERSIONWORDS.test(flat.slice(prefix.length)) ? out : null
+
+  if (flat.startsWith('CC0') || flat.includes('CCZERO')) return family(flat.startsWith('CC0') ? 'CC0' : 'CCZERO', 'CC0')
   if (flat.includes('PUBLICDOMAIN') || s === 'PD') return 'PUBLIC-DOMAIN'
-  if (flat.startsWith('CCBYSA') || flat.includes('ATTRIBUTIONSHAREALIKE')) return 'CC-BY-SA'
-  if (flat.startsWith('CCBY') || flat.includes('CREATIVECOMMONSATTRIBUTION')) return 'CC-BY'
-  if (flat === 'MIT' || flat.startsWith('MITLICENSE')) return 'MIT'
-  if (flat.startsWith('APACHE2') || flat.startsWith('APACHELICENSE2')) return 'APACHE-2.0'
+  if (flat.startsWith('CCBYSA')) return family('CCBYSA', 'CC-BY-SA')
+  if (flat.includes('ATTRIBUTIONSHAREALIKE')) return 'CC-BY-SA'
+  if (flat.startsWith('CCBY')) return family('CCBY', 'CC-BY')
+  if (flat.includes('CREATIVECOMMONSATTRIBUTION')) return 'CC-BY'
+  if (flat === 'MIT') return 'MIT'
+  if (flat.startsWith('MIT')) return family('MIT', 'MIT')
+  if (flat.startsWith('APACHELICENSE2')) return family('APACHELICENSE2', 'APACHE-2.0')
+  if (flat.startsWith('APACHE2')) return family('APACHE2', 'APACHE-2.0')
   return null
 }
 
