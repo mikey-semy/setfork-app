@@ -1,5 +1,6 @@
 // eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
+import { canEditList } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { gitCore } from '@/features/git/core'
@@ -43,14 +44,24 @@ async function authorizeRead(req: Request, meta: Meta): Promise<'ok' | 401 | 404
   return auth.userId === meta.ownerId ? 'ok' : 404
 }
 
-/** Доступ на запись (push): владелец/коллаборатор по токену со scope 'write'.
- *  Возвращает userId пушащего (для аудита) или 401. */
-async function authorizeWrite(req: Request, meta: Meta): Promise<string | 401> {
+/** Доступ на запись (push): владелец/коллаборатор по токену со scope 'write' и список,
+ *  в который вообще можно писать. Возвращает userId пушащего (для аудита), 401 или 403. */
+async function authorizeWrite(req: Request, meta: Meta): Promise<string | 401 | 403> {
   const auth = await userFromBasic(req)
   if (!auth || auth.scope !== 'write') return 401 // read-only токен не может пушить
-  if (auth.userId === meta.ownerId) return auth.userId
-  return (await isCollaborator(meta.id, auth.userId)) ? auth.userId : 401
+  const allowed = auth.userId === meta.ownerId || (await isCollaborator(meta.id, auth.userId))
+  if (!allowed) return 401
+  // Архив и заморозка — ограничения ЗАПИСИ, и git-путь обязан их соблюдать. Проверка
+  // здесь, а не в ядре: на проде git идёт в Rust-ядро (SETFORK_CORE_URL), где понятий
+  // frozen/archived нет вовсе, и push замороженного списка создавал новую версию —
+  // ровно то, что заморозка обязана останавливать (линза 02, F3). Роут общий для
+  // обоих режимов ядра, поэтому правило остаётся в одном месте.
+  if (!canEditList(meta)) return 403
+  return auth.userId
 }
+
+const writeDisabled = () =>
+  new Response('List is archived or frozen: writes are disabled', { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
   const rl = await rateLimit(`git:${clientIp(req)}`, 240, 60_000)
@@ -74,6 +85,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   if (service === 'git-receive-pack') {
     const az = await authorizeWrite(req, meta)
     if (az === 401) return unauthorized()
+    if (az === 403) return writeDisabled()
     const body = await gitCore.infoRefsReceivePack({ owner: handle, slug }, gitProtocol)
     if (!body) return new Response('Repository unavailable', { status: 500 })
     return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-receive-pack-advertisement', ...noCache } })
@@ -104,6 +116,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
   if (path === 'git-receive-pack') {
     const az = await authorizeWrite(req, meta)
     if (az === 401) return unauthorized()
+    if (az === 403) return writeDisabled()
     const raw = Buffer.from(await req.arrayBuffer())
     const body = maybeGunzip(raw, req.headers.get('content-encoding'))
     const res = await gitCore.receivePack({ owner: handle, slug }, body, gitProtocol)

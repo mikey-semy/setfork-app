@@ -19,7 +19,8 @@ import { getListLabels } from './queries'
 
 const customIdSet = async (templateId: string) => new Set((await getListLabels(templateId)).map((l) => l.id))
 
-/** Открыть issue. Любой залогиненный на публичном списке; на приватном — только владелец. */
+/** Открыть issue. Любой залогиненный на видимом списке; приватный/черновик/снятый
+ *  модерацией — владелец и коллабораторы (те, кто список и так видит). */
 export async function createIssue(formData: FormData): Promise<void> {
   const session = await requireSession()
   const owner = String(formData.get('owner') ?? '')
@@ -31,9 +32,16 @@ export async function createIssue(formData: FormData): Promise<void> {
 
   const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
+  // Единый предикат, а не своя пара проверок: копия здесь забывала про ЧЕРНОВИК —
+  // посторонний открывал задачу в чужом неопубликованном списке (слаг предсказуем по
+  // заголовку), владельцу летело уведомление, notifyMentions рассылал упоминания
+  // (линза 02, F4). Заодно уходит перекос: коллаборатор приватного списка, который
+  // список видит, теперь может завести в нём задачу.
   const isOwner = tpl.ownerId === session.userId
-  if (tpl.visibility === 'private' && !isOwner) redirect(`/${owner}/${slug}`)
-  if (tpl.moderation !== 'active' && !isOwner) redirect(`/${owner}/${slug}`)
+  const canView =
+    canViewList(tpl, { isOwner }) ||
+    canViewList(tpl, { isOwner, isCollaborator: await isCollaborator(tpl.id, session.userId) })
+  if (!canView) redirect(`/${owner}/${slug}`)
 
   const labels = cleanLabels(rawLabels, await customIdSet(tpl.id))
   const ins = await collabStore.openIssue(tpl.id, session.userId, title, body, labels)
