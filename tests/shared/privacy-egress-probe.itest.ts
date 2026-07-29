@@ -106,6 +106,39 @@ describe('линза 04 · эмбеддинги: что уезжает пров�
     expect(row.hasVec).toBe(true)
   })
 
+  it('НА ЯНДЕКС-ПУТИ эмбеддингов запрета логирования тоже нет (в отличие от чата)', async () => {
+    // Прод-конфигурация: и чат, и эмбеддинги на Яндексе. ВАЖНО: маршрут задаёт не
+    // цель (embed.provider), а ПРОСТРАНСТВО ИНДЕКСА — оно пишется полным реиндексом.
+    const space = {
+      provider: 'yandex',
+      docModel: 'emb://folder-test/text-embeddings-v2-doc/latest',
+      queryModel: 'emb://folder-test/text-embeddings-v2-query/latest',
+      dim: 768,
+      at: 1,
+    }
+    await db.insert(appSettings).values([
+      { key: 'embed.provider', value: 'yandex' },
+      { key: 'embed.index_space', value: JSON.stringify(space) },
+    ])
+    const { clearEmbedSpaceCache } = await import('@/shared/ai/embed-space')
+    clearEmbedSpaceCache()
+
+    const id = await seedList('yandex-path', 'private')
+    const { reindexList } = await import('@/features/library/reindex')
+    calls.length = 0
+    await reindexList(id)
+
+    const embedCall = calls.find((c) => c.url.includes('/embeddings'))!
+    expect(embedCall.url).toContain('ai.api.cloud.yandex.net')
+    const sent = (embedCall.body.input ?? []).join('\n')
+    expect(sent).toContain(SECRET) // текст приватного списка уезжает и здесь
+    const hk = Object.keys(embedCall.headers).map((k) => k.toLowerCase())
+    // Чат к Яндексу идёт с 'x-data-logging-enabled: false' (resolveAiProvider),
+    // а этот путь строит заголовки сам (embeddings.ts:endpointFor) — и запрет теряет.
+    expect(hk).not.toContain('x-data-logging-enabled')
+    expect(hk).not.toContain('x-folder-id')
+  })
+
   it('запрет логирования у провайдера: есть только у Яндекса', async () => {
     const { resolveAiProvider } = await import('@/shared/settings/ai')
     const keys = {
