@@ -98,12 +98,19 @@ export async function ensureGardenerUser(): Promise<{ id: string }> {
   return created
 }
 
-/** Одна pending/processing джоба садовника в очереди — самоподдержание без cron. */
+/**
+ * Одна ОЖИДАЮЩАЯ джоба садовника в очереди — самоподдержание без cron.
+ *
+ * Считаем только `pending`, и это принципиально: планировщик зовётся ИЗ САМОЙ задачи, а она в
+ * этот момент `processing`. Учитывая её, проверка видела бы «работа уже стоит» и преемника не
+ * ставила — петля тихо умирала бы после первого прогона и оживала только рестартом инстанса
+ * (нашёл ревьюер Codex на #532; проверено тестом контракта петель).
+ */
 export async function ensureGardenerScheduled(): Promise<void> {
   const pending = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(eq(jobs.type, 'gardener'), inArray(jobs.status, ['pending', 'processing'])))
+    .where(and(eq(jobs.type, 'gardener'), eq(jobs.status, 'pending')))
     .limit(1)
   if (pending.length) return
   // РИТМ ЗАДАЁТ СОДЕРЖИМОЕ. Раз в двое суток — нормальный темп для полировки, но для ленты
@@ -122,7 +129,7 @@ export async function ensureGardenerScheduled(): Promise<void> {
 
 /** Кандидаты: публичные активные, без открытой правки садовника, без секций
  *  (refine пока не сохраняет section) — сначала популярные и давно не обновлявшиеся. */
-export async function pickCandidates(agentIds: string[], limit: number) {
+export async function pickCandidates(agentIds: string[], limit: number, only?: 'living' | 'ordinary') {
   // Дедуп и исключение владельца — по ВСЕМ служебным аккаунтам, а не по одному
   // садовнику: с раздачей ухода профильным специалистам автором правки может быть
   // любой из них, и проверка «уже предлагал» обязана это учитывать (иначе список
@@ -168,11 +175,16 @@ export async function pickCandidates(agentIds: string[], limit: number) {
         // и без учёта свежести список попадал бы в выборку снова → повторный refine.
         sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = any(${sql.param(agents)}::uuid[])
              and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS}::int * interval '1 day')))`,
+        // Ленты и обычные списки выбираем РАЗНЫМИ запросами: при общей выборке живые (они идут
+        // первыми) вытесняли бы обычные из лимита, и уход выродился бы в одну ленту.
+        only === 'living' ? eq(templates.living, true) : only === 'ordinary' ? eq(templates.living, false) : undefined,
       ),
     )
     // Живые списки — первыми: у ленты ценность в свежести, и ждать своей очереди за
     // популярностью она не может. Дальше как раньше: популярные и давно не обновлявшиеся.
-    .orderBy(desc(templates.living), desc(templates.starsCount), asc(templates.updatedAt))
+    // Внутри лент — сначала те, кого дольше не трогали: иначе одна звёздная лента забирала бы
+    // каждый проход, а соседние молчали.
+    .orderBy(desc(templates.living), asc(templates.updatedAt), desc(templates.starsCount))
     .limit(limit)
 }
 
@@ -407,7 +419,7 @@ export async function growLiving(
   current: { title: string; desc: string; tags: string[]; items: GeneratedItem[] },
   lang: Lang,
   kind: ListKind,
-  ctx: { tenderId: string; agentId: string; policyVersion: number; domains?: string[] },
+  ctx: { tenderId: string; agentId: string; policyVersion: number; domains?: string[]; mode?: 'version' | 'suggestion'; ownerId?: string; baseVersion?: number },
 ): Promise<{ result: 'grown' | 'nothing-new' | 'failed'; snapshot?: ReadinessInput }> {
   // Ищем материал по тегам списка И по доменам мастера, который за него отвечает. Только по
   // тегам списка искать нельзя: теги списку придумала МОДЕЛЬ при создании («kubernetes», «ci»),
@@ -442,13 +454,54 @@ Keep the existing items below in their current order and wording. If the list th
   })
   if (!grown || !grown.items.length) return { result: 'failed' }
 
+  // Модель могла вернуть тот же список (события проигнорированы). Тогда версии нет и материал
+  // НЕ сжигаем: иначе новость исчезала бы, ни разу не появившись в ленте (находка Codex).
+  const norm = (xs: GeneratedItem[]) => JSON.stringify(toProposed(xs, lang))
+  if (norm(grown.items) === norm(current.items)) {
+    log.info('gardener: living list unchanged, material kept', { slug: tpl.slug })
+    return { result: 'failed' }
+  }
+
   const items = toProposed(grown.items.slice(0, FEED_MAX_ITEMS), lang)
-  await listStore.addVersion(tpl.id, { note: noteFor(kind, lang), steps: toStepInput(items), authorId: ctx.tenderId })
-  await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: ctx.tenderId, type: 'new_version', templateId: tpl.id })
-  await enqueueReindex(tpl.id)
+  if (ctx.mode === 'suggestion') {
+    // Чужой живой список растёт ПРЕДЛОЖЕНИЕМ: свежесть ему нужна так же, как своему, но писать
+    // в список человека от своего имени нельзя. Обе находки ревью держатся вместе только так.
+    const [created] = await db
+      .insert(suggestions)
+      .values({
+        templateId: tpl.id,
+        authorId: ctx.tenderId,
+        note: noteFor(kind, lang),
+        baseVersion: ctx.baseVersion ?? 1,
+        items,
+        number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${tpl.id})`,
+      })
+      .returning({ id: suggestions.id })
+    await notify({ recipientId: ctx.ownerId ?? '', actorId: ctx.tenderId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
+  } else {
+    await listStore.addVersion(tpl.id, { note: noteFor(kind, lang), steps: toStepInput(items), authorId: ctx.tenderId })
+    await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: ctx.tenderId, type: 'new_version', templateId: tpl.id })
+    await enqueueReindex(tpl.id)
+  }
   // Материал списываем ПОСЛЕ версии: упади запись — новости остались бы «использованными»
   // без списка, и повод пропал бы навсегда.
-  await markUsed(fresh.map((f) => f.id), tpl.id)
+  //
+  // И списываем ТОЛЬКО то, что реально попало в результат. Проверки «список не изменился»
+  // недостаточно: модель могла добавить два события из трёх, а помечались все — третье
+  // исчезало навсегда, ни разу не появившись в ленте. Ищем адрес события в готовых
+  // пунктах: промпт требует класть его в refs, значит адрес — честный признак того,
+  // что событие обработано. Не нашли ни одного (модель переписала ссылки) — списываем
+  // всё, как раньше: иначе одни и те же новости крутились бы вечно.
+  const produced = JSON.stringify(items).toLowerCase()
+  const landed = fresh.filter((f) => produced.includes(f.url.toLowerCase()))
+  await markUsed((landed.length ? landed : fresh).map((f) => f.id), tpl.id)
+  if (landed.length && landed.length < fresh.length) {
+    log.info('gardener: часть событий не вошла в ленту — остаются для следующего прохода', {
+      slug: tpl.slug,
+      landed: landed.length,
+      kept: fresh.length - landed.length,
+    })
+  }
   await recordAgentAction({
     loop: 'gardener',
     action: 'list.grow',
@@ -456,7 +509,7 @@ Keep the existing items below in their current order and wording. If the list th
     agentId: ctx.agentId,
     actorUserId: ctx.tenderId,
     signal: { templateId: tpl.id, slug: tpl.slug, events: fresh.length },
-    decision: { mode: 'grow-feed', sources: fresh.map((f) => f.url).slice(0, FEED_PER_UPDATE) },
+    decision: { mode: ctx.mode === 'suggestion' ? 'grow-feed-suggestion' : 'grow-feed', sources: fresh.map((f) => f.url).slice(0, FEED_PER_UPDATE) },
     resultRef: tpl.slug,
     policyVersion: ctx.policyVersion,
   })
@@ -487,7 +540,16 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
   const loop = await loopPolicy('gardener')
   const gardener = await ensureGardenerUser()
   const [agents, roster] = await Promise.all([agentUserIds(), getRoster()])
-  const [candidates, overrides] = await Promise.all([pickCandidates(agents, BATCH), policyOverrides()])
+  // Партия прохода: лентам отдаём не больше половины. Иначе, как только живых списков станет
+  // три (размер партии), обычные списки перестали бы обслуживаться совсем — уход выродился бы
+  // в одну только ленту (находка Codex на #535).
+  const livingCap = Math.max(1, Math.floor(BATCH / 2))
+  const [livingPicked, ordinary, overrides] = await Promise.all([
+    pickCandidates(agents, livingCap, 'living'),
+    pickCandidates(agents, BATCH, 'ordinary'),
+    policyOverrides(),
+  ])
+  const candidates = [...livingPicked, ...ordinary.slice(0, BATCH - livingPicked.length)]
 
   let proposed = 0
   let skipped = 0
@@ -580,8 +642,17 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     // ленту незачем — её ценность в свежести. Нет новостей → уходим молча и БЕЗ вызова
     // модели: «нет новостей» это не «устоялся», и правило остановки к ленте не применяется,
     // иначе тихая неделя уводила бы ленту в форк.
+    // Рост напрямую — только по СВОИМ спискам. Живой список человека компания правит обычным
+    // путём, предложением: писать в чужой список от своего имени нельзя, даже если владелец
+    // включил «живой» (находка ревьюера Codex на #535).
     if (tpl.living) {
-      const res = await growLiving(tpl, current, lang, kind, { ...gateCtx, domains: tender?.expert.domains })
+      const res = await growLiving(tpl, current, lang, kind, {
+        ...gateCtx,
+        domains: tender?.expert.domains,
+        mode: ownedByCompany ? 'version' : 'suggestion',
+        ownerId: tpl.ownerId,
+        baseVersion: tpl.currentVersion,
+      })
       if (res.result === 'grown') {
         proposed++
         // Выросшая лента идёт на планку — она судит её свежестью, а не полнотой. Иначе

@@ -1,9 +1,12 @@
 import Link from 'next/link'
-import { ArrowLeft, Pause, Play, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Check, Pause, Play, TrendingUp, X } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr, type Lang } from '@/shared/i18n'
 import { getCompanyDay, getDevelopmentMetrics, UNAVAILABLE, type NaReason } from '@/features/admin/development-queries'
+import { currentAgenda } from '@/features/partners/service'
+import { agendaLabel, type AgendaKind } from '@/shared/agents/agenda'
+import { decideAgendaItem } from '@/features/admin/agenda-actions'
 import { getDomainScorecards } from '@/features/admin/scorecard-queries'
 import { StatTile } from '@/shared/ui/StatTile'
 import { TagChip } from '@/shared/ui/TagChip'
@@ -41,16 +44,19 @@ const h2 = 'text-[13px] font-semibold uppercase tracking-wide text-ink-2'
 // со строками разъезжаются «волной» (за это уже досталось на щитке моделей).
 const FEED_COLS = 'grid-cols-[minmax(0,1fr)_92px_84px_104px_88px_112px]'
 
+const AGENDA_COLS = 'grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_96px_128px]'
+
 export default async function AdminDevelopmentPage() {
   await requireAdmin()
   const lang = await getLang()
-  const [m, loops, today, yesterday, cards, stalls] = await Promise.all([
+  const [m, loops, today, yesterday, cards, stalls, agenda] = await Promise.all([
     getDevelopmentMetrics(30),
     allLoopPolicies(),
     getCompanyDay(0),
     getCompanyDay(1),
     getDomainScorecards(),
     stallReports(AUTONOMOUS_LOOPS),
+    currentAgenda(),
   ])
   const period = tr({ en: `in ${m.periodDays} days`, ru: `за ${m.periodDays} дн.` }, lang)
 
@@ -308,6 +314,73 @@ export default async function AdminDevelopmentPage() {
             {
               en: 'The council costs several model calls per list; single generation costs one. If its acceptance is not higher, the extra cost buys nothing — that is a measurement, not an opinion.',
               ru: 'Совет стоит нескольких вызовов модели на список, одиночка — одного. Если его приёмка не выше, доплата ничего не покупает — и это замер, а не мнение.',
+            },
+            lang,
+          )}
+        </p>
+      </section>
+
+      {/* ПОВЕСТКА РАЗВИТИЯ — «что растим и почему». Стоит выше метрик намеренно: метрики
+          отвечают «как дела», повестка — «что делать», и это единственное место, где компания
+          смотрит на себя целиком. Пункт предлагает петля, решает человек. */}
+      <section id="agenda" className="flex min-w-0 flex-col gap-3">
+        <h2 className={h2}>{tr({ en: 'Development agenda', ru: 'Повестка развития' }, lang)}</h2>
+        {agenda.length === 0 ? (
+          <p className="text-[12.5px] text-muted">
+            {tr(
+              { en: 'Nothing proposed yet — the partners loop runs weekly.', ru: 'Пока нечего предложить — петля партнёров работает раз в неделю.' },
+              lang,
+            )}
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+            <div className={`grid min-w-[720px] ${AGENDA_COLS} gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted`}>
+              <span>{tr({ en: 'What to grow', ru: 'Что растим' }, lang)}</span>
+              <span>{tr({ en: 'Why (numbers)', ru: 'Почему (числа)' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'Priority', ru: 'Приоритет' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'Decision', ru: 'Решение' }, lang)}</span>
+            </div>
+            {agenda.map((a) => (
+              <div key={a.id} className={`grid min-w-[720px] ${AGENDA_COLS} items-center gap-4 border-b border-border px-4 py-2.5 last:border-0`}>
+                <span className="min-w-0 truncate text-[13px] text-ink">{agendaLabel(a.kind as AgendaKind, a.domain, lang === 'ru')}</span>
+                {/* Числа как есть: «списков 1 при пороге 5» проверяемо, «усилить направление» — нет. */}
+                <span className="min-w-0 truncate font-mono text-[11.5px] text-ink-2">
+                  {Object.entries(a.why).map(([k, v]) => `${k}=${v}`).join(' · ')}
+                </span>
+                <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{a.score.toFixed(2)}</span>
+                <div className="flex items-center justify-end gap-0.5">
+                  {a.status === 'proposed' ? (
+                    <>
+                      <form action={decideAgendaItem}>
+                        <input type="hidden" name="id" value={a.id} />
+                        <input type="hidden" name="decision" value="approved" />
+                        <button type="submit" aria-label={tr({ en: 'Approve', ru: 'Одобрить' }, lang)} title={tr({ en: 'Approve', ru: 'Одобрить' }, lang)} className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ok">
+                          <Check size={16} />
+                        </button>
+                      </form>
+                      <form action={decideAgendaItem}>
+                        <input type="hidden" name="id" value={a.id} />
+                        <input type="hidden" name="decision" value="dismissed" />
+                        <button type="submit" aria-label={tr({ en: 'Dismiss', ru: 'Отклонить' }, lang)} title={tr({ en: 'Dismiss', ru: 'Отклонить' }, lang)} className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-warn">
+                          <X size={16} />
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <span className={`text-[12px] ${a.status === 'approved' ? 'text-ok' : 'text-muted'}`} title={a.ownerExpertId ?? ''}>
+                      {a.status === 'approved' ? tr({ en: 'approved', ru: 'одобрено' }, lang) : tr({ en: 'dismissed', ru: 'отклонено' }, lang)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-[12px] text-muted">
+          {tr(
+            {
+              en: 'Approved topics are what production picks first. Dismissed ones are never proposed again.',
+              ru: 'Одобренные темы производство берёт первыми. Отклонённые больше не предлагаются.',
             },
             lang,
           )}

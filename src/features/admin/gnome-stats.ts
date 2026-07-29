@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, arrayOverlaps, desc, eq, gte, sql } from 'drizzle-orm'
-import { aiUsage, db, generationMessages, generations, templates } from '@/shared/db'
+import { aiUsage, db, generationMessages, generations, templates, publiclyVisible } from '@/shared/db'
 
 /**
  * KPI гнома — этап (а) профразвития (HQ research/2026-07-21-gnome-workshop.md, раздел 4).
@@ -66,15 +66,13 @@ export async function gnomeKpi(id: string, domains: string[], model: string): Pr
       ? db
           .select({ n: sql<number>`count(*)::int` })
           .from(templates)
-          .where(and(eq(templates.status, 'published'), eq(templates.visibility, 'public'), eq(templates.moderation, 'active')))
+          .where(and(publiclyVisible()))
       : db
           .select({ n: sql<number>`count(*)::int` })
           .from(templates)
           .where(
             and(
-              eq(templates.status, 'published'),
-              eq(templates.visibility, 'public'),
-              eq(templates.moderation, 'active'),
+              publiclyVisible(),
               arrayOverlaps(templates.tags, domains),
             ),
           ),

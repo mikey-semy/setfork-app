@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
-import { db, issueComments, issues, templates, users } from '@/shared/db'
+import { db, issueComments, issues, templates, users, publiclyVisible } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 
 export type IssueStateFilter = 'open' | 'closed' | 'all'
@@ -20,9 +20,7 @@ export interface IssueSearchRow {
 // Issue виден в глобальном поиске только если его список публичный и опубликован.
 function issuesWhere(q?: string, state: IssueStateFilter = 'open'): SQL {
   const conds: SQL[] = [
-    eq(templates.visibility, 'public'),
-    eq(templates.status, 'published'),
-    eq(templates.moderation, 'active'),
+    publiclyVisible(),
   ]
   if (state !== 'all') conds.push(eq(issues.status, state))
   const term = q?.trim()

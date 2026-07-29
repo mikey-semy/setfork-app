@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
-import { db, jobs, steps, templates, templateVersions } from '@/shared/db'
+import { db, jobs, steps, templates, templateVersions, publiclyVisible } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { extractTriples, saveTriples } from '@/shared/ai/triples'
 import { globalBudgetOk } from '@/shared/quota'
@@ -21,7 +21,7 @@ export async function ensureTriplesScheduled(): Promise<void> {
   const pending = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(eq(jobs.type, 'triples'), inArray(jobs.status, ['pending', 'processing'])))
+    .where(and(eq(jobs.type, 'triples'), eq(jobs.status, 'pending')))
     .limit(1)
   if (pending.length) return
   await enqueueJob('triples', {}, { delayMs: TRIPLES_EVERY_DAYS * 24 * 60 * 60 * 1000, maxAttempts: 1 })
@@ -45,9 +45,7 @@ export async function runTriplesSweep(): Promise<{ mined: number; skipped: numbe
     .from(templates)
     .where(
       and(
-        eq(templates.status, 'published'),
-        eq(templates.visibility, 'public'),
-        eq(templates.moderation, 'active'),
+        publiclyVisible(),
         sql`(${templates.triplesMinedAt} is null or ${templates.triplesMinedAt} < ${templates.updatedAt})`,
       ),
     )
@@ -137,9 +135,7 @@ export async function updateGnomeMemories(): Promise<{ updated: number }> {
       .from(templates)
       .where(
         and(
-          eq(templates.status, 'published'),
-          eq(templates.visibility, 'public'),
-          eq(templates.moderation, 'active'),
+          publiclyVisible(),
           arrayOverlaps(templates.tags, e.domains),
         ),
       )

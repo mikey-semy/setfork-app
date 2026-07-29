@@ -109,6 +109,28 @@ export interface CouncilDraft {
 export const draftLetter = (i: number) => String.fromCharCode(65 + i)
 
 /**
+ * Обрезка реплики для ленты хода совета: по границе слова, с многоточием.
+ *
+ * Внутренние ярлыки черновиков (DRAFT A/B/C) заодно переводим на человеческий: пользователю
+ * незачем знать нашу внутреннюю нумерацию, а латиница посреди русской реплики — это утечка
+ * потрохов наружу, чем она и является.
+ */
+/** Подпись черновика словами — картой, а не тернарником: правило i18n не пускает
+ *  «строка ? строка», и справедливо: это пользовательский текст, а не техническая метка. */
+const DRAFT_LABEL = { ru: 'вариант', en: 'draft' } as const
+
+export function clip(raw: string, max: number, ru = true): string {
+  // Подпись следует языку интерфейса: русское слово в английской ленте — та же утечка
+  // наизнанку, что и латинский ярлык в русской (находка ревью на #555).
+  const label = DRAFT_LABEL[ru ? 'ru' : 'en']
+  const human = raw.replace(/DRAFT\s+([A-Z])/g, (_m, letter) => `${label} ${letter}`)
+  if (human.length <= max) return human
+  const cut = human.slice(0, max)
+  const at = cut.lastIndexOf(' ')
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).trimEnd()}…`
+}
+
+/**
  * Анонимный блок черновиков для критика и старейшины.
  *
  * ИНВАРИАНТ: в этот текст не попадает НИЧЕГО об авторстве — ни id гнома, ни имя, ни гильдия.
@@ -312,7 +334,7 @@ Return ONLY a JSON object mapping every event key to its line.\n${sp.rule()}`,
 ASK when the request is underspecified — a bare fragment/pronoun ("organize it", "help me"), or a broad activity/goal whose good list depends on unstated parameters: stack/OS, skill level, budget, goal, scope, audience, constraints.
   Examples that MUST ask: "Deploy to a VPS" (which stack? OS? zero-downtime?), "Deploy an app on a VPS", "Learn guitar" (genre? level?), "Plan a trip" (where? days? budget?), "Start a business", "Get fit", "Организовать переезд".
 PROCEED (no questions) when the request already names a concrete, self-contained subject: a specific dish ("домашний зефир"), a specific book/topic list ("книги про гномов"), a specific well-scoped how-to ("настроить бэкапы Postgres на VPS в S3").
-When asking: write 2-3 SHORT questions in the request's language. Where natural, append 2-4 quick answer OPTIONS after a "|": "Which stack? | Node.js | Python | PHP | Docker". Starting with questions is GOOD service, not friction.
+When asking: write 2-3 SHORT questions. ALL questions and options MUST be written in ${langName} — this is not a preference, it is the language of the person who asked. Where natural, append 2-4 quick answer OPTIONS after a "|": "Which stack? | Node.js | Python | PHP | Docker". Starting with questions is GOOD service, not friction.
 Return ONLY JSON: {"ask": true|false, "questions": ["...only if ask"]}
 ${sp.rule()}`,
       `REQUEST:\n${topic}`,
@@ -325,6 +347,21 @@ ${sp.rule()}`,
         const g = JSON.parse(firstJson(gate.text)) as { ask?: boolean; questions?: string[] }
         ask = g.ask === true
         gateQuestions = Array.isArray(g.questions) ? g.questions.filter((q) => typeof q === 'string' && q.trim()).map((q) => q.trim()).slice(0, 3) : []
+        // ПРОВЕРКА ЯЗЫКА КОДОМ. Просьба «пиши на языке запроса» адресована быстрой модели —
+        // той самой, про которую известно, что она роняет именно эту задачу. Опросник на
+        // чужом языке хуже, чем его отсутствие: он выглядит поломкой, а не заботой. Поэтому
+        // при несовпадении просто идём в совет без беседы.
+        // Правило слабее, чем «определённый язык совпал», и это НАМЕРЕННО: у русского
+        // технического опросника («Стек? | Node.js | Python | Docker») латиница по долям
+        // символов побеждает, и строгая проверка отрезала бы беседу ровно там, где она нужнее
+        // всего — у недоопределённых технических запросов (находка ревью). Поэтому судим по
+        // ПРИСУТСТВИЮ письменности: для русского хватает кириллицы где угодно в опроснике.
+        const asked = gateQuestions.join(' ')
+        const hasCyrillic = /[а-яА-Я]/.test(asked)
+        const wrongLanguage = lang === 'ru' ? !hasCyrillic : hasCyrillic
+        if (gateQuestions.length && wrongLanguage) {
+          gateQuestions = []
+        }
       } catch { /* не распарсили — идём как обычно */ }
     }
     if (ask && gateQuestions.length) {
@@ -536,7 +573,9 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
   // «разбираю…» показываем РЕАЛЬНЫЙ вывод критика этого витка — ценой ноль
   // (вызов уже сделан). VERDICT-строку отделяем, дальше в синтез идёт полный текст.
   const vm = critique?.text ? /(?:^|\n)\s*VERDICT:\s*(.+)/i.exec(critique.text) : null
-  if (vm) emit('critique', vm[1].trim().slice(0, 120), 'critic', say('Critic', 'Критик'))
+  // Режем по ГРАНИЦЕ СЛОВА и ставим знак обрыва: сырой slice давал «надо отсеять пусты» и
+  // «мотивирующий эфф» — обрывок посреди слова читается как поломка, а не как сокращение.
+  if (vm) emit('critique', clip(vm[1].trim(), 120, lang === 'ru'), 'critic', say('Critic', 'Критик'))
   const critiqueBody = vm ? critique!.text.replace(vm[0], '').trim() : (critique?.text ?? '')
 
   // 5) Старейшина-синтез → строгий JSON. Конвергенция, но СОХРАНИ лучшую новизну (не усредняй).

@@ -299,14 +299,16 @@ export default async function SuggestionThreadPage({
   const commitAuthors = commits?.length ? await getUsersByEmails(commits.map((c) => c.authorEmail)) : {}
 
   // Дифф ОДНОГО коммита (?commit=sha). Стороны: сам коммит против предыдущего в
-  // этой ветке; у самого раннего предыдущего нет — сравниваем с main, потому что
-  // именно оттуда ветка и выросла.
+  // этой ветке. У самого раннего предыдущего нет — сравниваем с ТОЧКОЙ ВЕТВЛЕНИЯ
+  // (merge-base), а не с нынешним main: main мог уйти вперёд после создания ветки,
+  // и тогда его более поздние правки читались бы как изменения этого коммита. Точки
+  // ветвления нет (репозиторий без main) — тогда честнее main, чем ничего.
   const wantSha = sp.commit && commits ? commits.findIndex((c) => c.sha === sp.commit) : -1
   const commitDiff =
     wantSha >= 0 && commits && sug.branchRef
       ? await (async () => {
           const cur = commits[wantSha]
-          const prev = commits[wantSha + 1]?.sha ?? 'main'
+          const prev = commits[wantSha + 1]?.sha ?? mergeState?.mergeBaseSha ?? 'main'
           const [toSnap, fromSnap] = await Promise.all([
             gitCore.branchSnapshot({ owner, slug }, cur.sha).catch(() => null),
             gitCore.branchSnapshot({ owner, slug }, prev).catch(() => null),
@@ -556,7 +558,8 @@ export default async function SuggestionThreadPage({
               <span className="shrink-0 font-mono text-[12px] text-muted">{commitDiff.sha.slice(0, 7)}</span>
               <div className="ml-auto max-sm:w-full max-sm:justify-end">
                 <DiffViewToggle
-                  path={`${path}?tab=commits&commit=${commitDiff.sha}`}
+                  path={path}
+                  commit={commitDiff.sha}
                   tab="commits"
                   view={view}
                   labels={{ code: t('viewCode', lang), list: t('viewList', lang) }}
