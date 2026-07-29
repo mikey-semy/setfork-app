@@ -301,6 +301,9 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
   // Индексы from, уже отданные какому-то блоку из to: одна строка старой версии
   // не может быть источником для двух новых (иначе дубли подписей врут в счётчиках).
   const taken = new Set<number>()
+  // Есть ли в СТАРОЙ версии пункты без идентичности. Это не редкость, а обычное
+  // состояние всего, что записано до ADR-0013 и до переводов, терявших blockId.
+  const fromHasIdless = from.some((s) => !s.blockId)
   /** Индекс блока в from + как он найден: по идентичности или по подписи. */
   const pick = (s: CmpStep): { i: number; byIdentity: boolean } | null => {
     if (s.blockId) {
@@ -308,7 +311,12 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
       if (i != null && !taken.has(i)) return { i, byIdentity: true }
       // Блок с известной идентичностью, которой не было раньше, — точно новый:
       // по подписи не ищем, иначе «добавили пункт с тем же заголовком» слипнется.
-      if (i == null) return null
+      //
+      // НО только когда у старой версии идентичности вообще были. Если там есть
+      // пункты без blockId, короткий вывод неверен: первая же запись после появления
+      // идентичностей выдавала бы «всё удалено и всё добавлено» — весь список читался
+      // бы как переписанный заново.
+      if (i == null && !fromHasIdless) return null
     }
     const queue = byKey.get(skey(s)) ?? []
     for (const i of queue) if (!taken.has(i)) return { i, byIdentity: false }

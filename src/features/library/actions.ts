@@ -973,6 +973,11 @@ export async function translateList(templateId: string, targetLang: string): Pro
     const subs = s.subtasks as LocaleText[]
     const refs = s.refs as { label: LocaleText; url?: string }[]
     return {
+      // ИДЕНТИЧНОСТЬ БЛОКА переносим: перевод — это то же содержимое на другом языке,
+      // а не новые пункты. Без blockId следующая версия получала новые id, и всё, что
+      // на идентичности держится (привязка обсуждений, отметки «просмотрено», дифф),
+      // читало перевод как «всё удалено и всё добавлено» (ADR-0013).
+      blockId: s.blockId ?? undefined,
       type: s.type,
       content: s.content, // poll/quiz/product-контент в v1 не переводим (оставляем как есть)
       title: add(s.title, t.title),
@@ -983,6 +988,10 @@ export async function translateList(templateId: string, targetLang: string): Pro
       level: s.level,
       why: add(s.why, t.why),
       section: s.section as LocaleText, // секция — заголовок урока; переведём в v2
+      // Пометка «здесь нужен человек» — свойство пункта, а не языка: перевод её не
+      // отменяет. Набор шагов переписывается целиком, поэтому не перенести = стереть.
+      needsHuman: s.needsHuman,
+      needsHumanAsk: s.needsHumanAsk as LocaleText,
       subtasks: subs.map((st, k) => add(st, t.subtasks[k] ?? '')),
       refs: refs.map((r, k) => ({ label: add(r.label, t.refs[k]?.label ?? ''), ...(r.url ? { url: r.url } : {}) })),
     }
