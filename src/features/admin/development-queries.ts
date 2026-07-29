@@ -190,28 +190,32 @@ async function gardenerContribution(): Promise<Pick<DevelopmentMetrics['quality'
  * продукта. Разовое наблюдение забывается, поэтому делаем его постоянной цифрой:
  * вопрос решается замером, а не рассуждением о том, должен ли совет быть лучше.
  *
- * Совет отличаем по наличию черновиков С АВТОРОМ (kind='draft', who) — это факт в
- * данных, а не догадка по провенансу, которого у части записей может не быть.
+ * Совет отличаем по СОХРАНЁННЫМ ЧЕРНОВИКАМ доставленного витка, а не по репликам
+ * прогресса. Реплика `kind='draft'` пишется ПЕРЕД вызовом эксперта: если совет потом
+ * упал и результат доставила одиночная генерация, по репликам он всё равно
+ * засчитывался совету — и приёмка приписывалась дорогому пути, который её не давал.
+ * Цифра при этом ровно та, по которой решают, стоит ли мультиагент своих денег.
+ *
+ * Черновики (`generation_drafts`) пишутся ПОСЛЕ доставки кандидата и привязаны к
+ * витку (idx) — это факт о результате, а не о намерении. Знаем принятый виток
+ * (chosen_idx) — сверяем именно его; не знаем — засчитываем совет по любому витку.
  */
 async function acceptanceByEngine(): Promise<DevelopmentMetrics['engines']> {
-  const drafted = db
-    .select({
-      gid: generationMessages.generationId,
-      n: sql<number>`count(distinct ${generationMessages.who})::int`.as('n'),
-    })
-    .from(generationMessages)
-    .where(and(eq(generationMessages.kind, 'draft'), isNotNull(generationMessages.who)))
-    .groupBy(generationMessages.generationId)
-    .as('drafted')
-
   const rows = await db
     .select({
-      engine: sql<string>`case when coalesce(${drafted.n}, 0) > 0 then 'council' else 'single' end`,
+      // Имена таблиц в подзапросе пишем ЯВНО. Подстановка колонок дала бы здесь
+      // `d.generation_id = "id"` без имени таблицы: внутри подзапроса такое `id`
+      // читается как колонка generation_drafts, условие не совпадает никогда, и
+      // совету не засчитывалось бы ничего. Поймано тестом, а не глазами.
+      engine: sql<string>`case when exists (
+          select 1 from generation_drafts d
+          where d.generation_id = generations.id
+            and (generations.chosen_idx is null or d.idx = generations.chosen_idx)
+        ) then 'council' else 'single' end`,
       gens: sql<number>`count(*)::int`,
       accepted: sql<number>`count(*) filter (where ${generations.chosenTemplateId} is not null)::int`,
     })
     .from(generations)
-    .leftJoin(drafted, eq(drafted.gid, generations.id))
     .groupBy(sql`1`)
 
   const pick = (name: string) => {
