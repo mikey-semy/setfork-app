@@ -3,6 +3,8 @@ import { GOLDEN, DUP_PAIRS } from './fixtures'
 import { featuresOf, gradeList } from '@/shared/ai/list-grade'
 import { findNearDuplicate } from '@/shared/ai/near-duplicate'
 import { countDuplicateSteps, structuralBlockers, DEFAULT_BAR } from '@/shared/ai/readiness'
+import { KIND_WEIGHT, rankAgenda } from '@/shared/agents/agenda'
+import { budgetAlerts, type Money } from '@/shared/agents/budget'
 
 /**
  * EVALS СУДЯЩЕЙ МАШИНЕРИИ — гейт против дрейфа правил, а не против дрейфа модели.
@@ -89,5 +91,64 @@ describe('evals: почти-дубли', () => {
       if (p.duplicate) expect(v.best, p.name).toBeGreaterThan(0.35)
       else expect(v.best, p.name).toBeLessThan(0.25)
     }
+  })
+})
+
+/**
+ * ДОБАВЛЕНО 2026-07-29: судьи, появившиеся после первой редакции набора. Правило то же —
+ * фикстура утверждает «вот такое мы считаем годным», и менять её можно только осознанно.
+ */
+describe('планка живого списка судит свежестью, а не полнотой', () => {
+  const feed = { steps: 6, deadLinks: 0, hasDesc: true, hasTags: true, duplicateSteps: 0, living: true, grade: 'stub' as const }
+
+  it('свежая лента проходит с классом stub — у новости не бывает «зачем»', () => {
+    expect(structuralBlockers({ ...feed, freshestAgeDays: 1 }, DEFAULT_BAR)).toEqual([])
+  })
+
+  it('устаревшая не проходит, и причина названа числом', () => {
+    const b = structuralBlockers({ ...feed, freshestAgeDays: 30 }, DEFAULT_BAR)
+    expect(b).toHaveLength(1)
+    expect(b[0]).toContain('30')
+  })
+
+  it('неизвестная свежесть = блокер: отсутствие ответа никогда не «годно»', () => {
+    expect(structuralBlockers({ ...feed, freshestAgeDays: undefined }, DEFAULT_BAR)).toHaveLength(1)
+  })
+
+  it('мёртвые ссылки ленте не прощаются даже свежей', () => {
+    expect(structuralBlockers({ ...feed, freshestAgeDays: 1, deadLinks: 2 }, DEFAULT_BAR).some((x) => x.includes('мёртвых'))).toBe(true)
+  })
+})
+
+describe('повестка развития: чем решается очередь роста', () => {
+  const sig = (kind: Parameters<typeof rankAgenda>[0][number]['kind'], domain: string, strength: number) => ({ kind, domain, strength, why: {} })
+
+  it('стратегия весомее спроса при равной остроте — пока трафика мало', () => {
+    expect(rankAgenda([sig('demand', '', 1), sig('deepen', 'devops', 1)])[0].kind).toBe('deepen')
+  })
+
+  it('собственные нужды не тонут: починка обходит слабый рост', () => {
+    expect(rankAgenda([sig('deepen', 'devops', 0.2), sig('quality', 'кулинария', 1)])[0].kind).toBe('quality')
+  })
+
+  it('шумный сигнал не перевешивает повестку — сила зажата в [0..1]', () => {
+    expect(rankAgenda([sig('demand', '', 99)])[0].score).toBeLessThanOrEqual(KIND_WEIGHT.demand)
+  })
+})
+
+describe('бухгалтер: когда компания обязана позвать человека', () => {
+  const m = (o: Partial<Money> = {}): Money => ({ spentToday: 0, avgDay: 0, dailyCap: 10, balance: 100, ...o })
+
+  it('спокойный день тревог не даёт', () => {
+    expect(budgetAlerts(m({ spentToday: 1, avgDay: 1 }))).toEqual([])
+  })
+
+  it('остаток на исходе — тревога, и меряется в ДНЯХ', () => {
+    const a = budgetAlerts(m({ balance: 2, avgDay: 1, spentToday: 1 })).find((x) => x.kind === 'runway-short')
+    expect(a?.text).toContain('дн.')
+  })
+
+  it('провайдер не ответил про остаток — молчим, а не выдумываем тревогу', () => {
+    expect(budgetAlerts(m({ balance: null, avgDay: 1, spentToday: 1 })).map((x) => x.kind)).not.toContain('runway-short')
   })
 })
