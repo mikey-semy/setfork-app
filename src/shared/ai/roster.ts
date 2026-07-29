@@ -384,9 +384,22 @@ export async function getRoster(viewerId?: string | null): Promise<Expert[]> {
  * Нужна чату: он строит путь из who (`/gnomes/<who>.webp`), и без этой карты смена аватарки в
  * админке была бы видна только в админке. Пустая запись = картинка по умолчанию, путь строит UI.
  */
-export async function rosterAvatars(): Promise<Record<string, string>> {
+/**
+ * Аватары состава. `viewerId` — ЧЕЙ личный состав можно показать.
+ *
+ * Без него отдаём только общих. Раньше справочник брал таблицу целиком и уезжал в
+ * клиент страницы генерации: любой вошедший получал id, имя и аватар ЧУЖОГО личного
+ * специалиста. Сам подбор давно фильтруется по зрителю (чекпоинт приватности №1),
+ * а справочники к нему не привели — и приватность обходилась через витрину.
+ *
+ * Админке нужен весь состав: у неё есть getRosterAll, она и зовёт его.
+ */
+export async function rosterAvatars(viewerId?: string | null): Promise<Record<string, string>> {
   try {
-    const rows = await db.select().from(councilExperts)
+    const rows = await db
+      .select()
+      .from(councilExperts)
+      .where(viewerId ? sql`(${councilExperts.ownerId} is null or ${councilExperts.ownerId} = ${viewerId})` : sql`${councilExperts.ownerId} is null`)
     const out: Record<string, string> = {}
     for (const r of rows) {
       if (r.avatarUploaded && r.avatar) {
@@ -407,9 +420,13 @@ export async function rosterAvatars(): Promise<Record<string, string>> {
  * (родословная кандидата хранит id экспертов) — чтобы показать «Универсал», а не
  * «generalist». Ошибка/пусто → UI капитализирует id как фолбэк.
  */
-export async function rosterNames(lang: Lang): Promise<Record<string, string>> {
+/** Имена состава. `viewerId` — чей личный состав виден; без него только общие. */
+export async function rosterNames(lang: Lang, viewerId?: string | null): Promise<Record<string, string>> {
   try {
-    const rows = await db.select().from(councilExperts)
+    const rows = await db
+      .select()
+      .from(councilExperts)
+      .where(viewerId ? sql`(${councilExperts.ownerId} is null or ${councilExperts.ownerId} = ${viewerId})` : sql`${councilExperts.ownerId} is null`)
     const out: Record<string, string> = {}
     for (const r of rows) {
       const e = row2expert(r)

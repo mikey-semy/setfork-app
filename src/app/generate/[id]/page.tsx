@@ -37,7 +37,7 @@ export default async function GenerationPage({
 
   // Беседа — из БД: переживает уход со страницы, перезапуск и неделю. Статус — колонка, а не
   // догадка по таблице jobs. Уточнения пока отдельным стором.
-  const [messages, clarifyQuestions, avatars, names, rep] = await Promise.all([getMessages(gen.id), getClarify(gen.id), rosterAvatars(), rosterNames(lang), gnomeReputation()])
+  const [messages, clarifyQuestions, avatars, names, rep] = await Promise.all([getMessages(gen.id), getClarify(gen.id), rosterAvatars(session.userId), rosterNames(lang, session.userId), gnomeReputation()])
   // Репутация НАРУЖУ (HQ §6): бейдж «✓ N%» = доля генераций с участием гнома, где список
   // приняли. Меньше REP_MIN_GENS выходов ИЛИ ноль принятых — не показываем: «✓ 0%» читался
   // как «этому гному нельзя верить» и ставил в тупик (фидбек владельца со скрина).
