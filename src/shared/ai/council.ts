@@ -4,7 +4,7 @@ import { getAiSettings, modelAllowed, parseModelAllowlist } from '@/shared/setti
 import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
-import { baseModelId, filterByQuarantine, quarantinedModels } from './health'
+import { baseModelId, quarantinedModels } from './health'
 import { gnomeMood, gnomeReputation, gnomeThanksCounts, repScore } from './gnome-reputation'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
@@ -186,7 +186,12 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const quarantined = await quarantinedModels()
   const allowlist = parseModelAllowlist()
   const usable = (m: string) => forProvider(m) && modelAllowed(m, allowlist) && !quarantined.has(baseModelId(m))
-  const pool = filterByQuarantine(rawPool.filter(forProvider), quarantined)
+  // Пул собираем ТЕМ ЖЕ правилом `usable`, что и модели личных специалистов. Раньше
+  // здесь стоял только фильтр провайдера: при заданном AI_MODEL_ALLOWLIST белый список
+  // защищал личных экспертов, а пул совета (быстрая модель, ротация, критик, старейшина)
+  // собирался мимо него — то есть ограничение, ради которого список и заводят, обходилось
+  // самым дорогим путём.
+  const pool = rawPool.filter(usable)
   // Быстрая модель для ПРОМЕЖУТОЧНЫХ шагов (распорядитель-классификатор, критик, веб-поиск):
   // reasoning-модель там не нужна, а совет из 6-7 вызовов на ней тормозит минутами. Финал — на base.
   const fast = pool[0] || base
