@@ -18,7 +18,7 @@ vi.mock('@/shared/auth/session', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 
 const { collaborators, db, suggestions, templates, users } = await import('@/shared/db')
-const { dismissSuggestionReview, getSuggestionReviews, hasBlockingReview, submitSuggestionReview } = await import(
+const { countApprovals, dismissSuggestionReview, getSuggestionReviews, hasBlockingReview, submitSuggestionReview } = await import(
   '@/features/library/review-actions'
 )
 
@@ -129,5 +129,18 @@ describe('после снятия', () => {
     expect(await dismissSuggestionReview(suggestionId, 'dis-reviewer', 'вторая причина')).toEqual({ ok: true })
     const [r] = await getSuggestionReviews(suggestionId, ownerId)
     expect(r.dismissed?.reason).toBe('вторая причина')
+  })
+})
+
+describe('снятое одобрение не считается голосом', () => {
+  it('гейт требуемых одобрений перестаёт быть закрытым после снятия', async () => {
+    // Коллаборатор ОДОБРИЛ, владелец снял вердикт — счётчик одобрений обязан упасть.
+    // Иначе снятие выглядит сделанным, а слияние по-прежнему считает зачёркнутый голос.
+    asReviewer()
+    await submitSuggestionReview(suggestionId, 'approve', 'ок')
+    expect(await countApprovals(suggestionId)).toBe(1)
+    asOwner()
+    expect(await dismissSuggestionReview(suggestionId, 'dis-reviewer', 'одобрение выдано по ошибке')).toEqual({ ok: true })
+    expect(await countApprovals(suggestionId)).toBe(0)
   })
 })

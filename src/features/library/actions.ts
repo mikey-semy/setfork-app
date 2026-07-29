@@ -35,7 +35,7 @@ import { listStore } from './list-store'
 import { closingRefs } from './closing-refs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from './pr-settings'
 import { canEditSuggestionItems } from './suggestion-perms'
-import { applySuggestion, mergeSuggestion } from './suggestion-core'
+import { applySuggestion, checksGate, currentRevision, mergeSuggestion } from './suggestion-core'
 import { closeLinkedIssues, notifyWatchersNewVersion } from './suggestion-side-effects'
 import { suggestionBlocks } from './suggestion-blocks'
 import { applyFieldValue } from './suggestion-apply'
@@ -462,6 +462,10 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   if (await hasBlockingReview(sug.id)) return
   if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return
   if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals) return
+  // Внешние проверки — ТОТ ЖЕ гейт, что у обычного слияния. Резолвер конфликтов тоже
+  // пишет в main: без этой строки достаточно было собрать конфликт, и упавшая проверка
+  // переставала держать. Ровно та же дыра, что и с остальными гейтами выше.
+  if (await checksGate(sug.id, prs.blockOnFailedChecks, await currentRevision(sug))) return
 
   const owner = await ownerHandle(tpl.ownerId)
   const path = `/${owner}/${tpl.slug}/suggestions/${sug.id}`
@@ -507,7 +511,13 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   })
 
   try {
-    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, json)
+    // Способ слияния — тот же, что у обычного пути: список, настроенный на squash, не
+    // должен получать историю ветки только потому, что случился конфликт.
+    const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 120)
+    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, json, {
+      mode: prs.mergeMethod,
+      message: sug.number ? `${head || sug.branchRef} (#${sug.number})` : head || sug.branchRef,
+    })
   } catch (e) {
     const code = e instanceof BranchOpError ? e.code : 'internal'
     redirect(`${path}?e=${code}`)

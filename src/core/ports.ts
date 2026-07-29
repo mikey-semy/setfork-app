@@ -193,7 +193,7 @@ export interface GitCore {
   mergeState(repo: GitRepoRef, branch: string): Promise<MergeState | null>
   /** A4: merge с ручным резолвом — финальный list.json (строка). Дерево =
    *  main c заменённым list.json без steps/ (md-оверрайды сбрасываются). */
-  mergeResolved(repo: GitRepoRef, branch: string, listJson: string): Promise<MergeResult>
+  mergeResolved(repo: GitRepoRef, branch: string, listJson: string, opts?: MergeOptions): Promise<MergeResult>
   /** Git-тег релиза на коммит версии (у версии уже есть тег vN). → sha коммита. */
   createTag(repo: GitRepoRef, name: string, version: number): Promise<string>
   /** A5: влить main в ветку (обратное слияние). main не двигается → версии нет.

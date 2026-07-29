@@ -18,17 +18,21 @@ import { blockingReportedChecks } from './suggestion-checks'
  * Пути два (ветка и пункты), и правило должно быть одно: иначе «required checks»
  * работали бы у branch-предложений и молча не работали у остальных.
  */
-async function checksGate(suggestionId: string, enabled: boolean): Promise<string | null> {
+export async function checksGate(suggestionId: string, enabled: boolean, currentRevision?: string | null): Promise<string | null> {
   if (!enabled) return null
-  const { failed, pending } = await blockingReportedChecks(suggestionId)
+  const { failed, pending, stale } = await blockingReportedChecks(suggestionId, currentRevision)
   if (failed.length) return `checks failed: ${failed.join(', ')}`
   if (pending.length) return `checks still running: ${pending.join(', ')}`
+  // Проверяли ДРУГУЮ ревизию — держим так же: «проверено» относится к содержимому,
+  // а не к предложению вообще.
+  if (stale.length) return `checks ran on an older revision: ${stale.join(', ')}`
   return null
 }
 import { closeLinkedIssues, notifyWatchersNewVersion } from './suggestion-side-effects'
 import { canEditList, canViewList } from '@/core'
 import { isVerdict } from './review-model'
 import { revertPlan } from './suggestion-revert'
+import { branchRevision, itemsRevision } from './suggestion-revision'
 import { getVersionSteps } from './queries'
 import { rateLimit } from '@/shared/rate-limit'
 // eslint-disable-next-line boundaries/dependencies -- подписка автора: доменный порт curation, а не экшен (тот берёт сессию)
@@ -91,7 +95,7 @@ export async function mergeSuggestion(
   if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return { ok: false, reason: 'unresolved discussions' }
   if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals)
     return { ok: false, reason: `needs ${prs.requiredApprovals} approval(s)` }
-  const checksBlocked = await checksGate(sug.id, prs.blockOnFailedChecks)
+  const checksBlocked = await checksGate(sug.id, prs.blockOnFailedChecks, await currentRevision(sug))
   if (checksBlocked) return { ok: false, reason: checksBlocked }
 
   const [ownerRow] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId))
@@ -163,7 +167,7 @@ export async function applySuggestion(
   // зависеть от того, пришёл человек со страницы или агент.
   const prs = withPrDefaults(sug.template.prSettings)
   if (prs.blockOnUnresolved && (await countUnresolvedThreads(sug.id))) return { ok: false, reason: 'unresolved discussions' }
-  const checksBlock = await checksGate(sug.id, prs.blockOnFailedChecks)
+  const checksBlock = await checksGate(sug.id, prs.blockOnFailedChecks, await currentRevision(sug))
   if (checksBlock) return { ok: false, reason: checksBlock }
   if (prs.requiredApprovals > 0 && (await countApprovals(sug.id)) < prs.requiredApprovals)
     return { ok: false, reason: `needs ${prs.requiredApprovals} approval(s)` }
@@ -325,4 +329,22 @@ export async function revertSuggestion(
   if (!created.ok) return created
   await db.update(suggestions).set({ revertOfId: sug.id }).where(eq(suggestions.id, created.id))
   return created
+}
+
+/**
+ * Текущая ревизия предложения — то, что сейчас предлагается слить.
+ *
+ * У предложения из ветки это её tip (новый коммит меняет ревизию), у предложения из
+ * пунктов — отпечаток самих пунктов. Ветка недоступна (репозитория нет, ветку
+ * удалили) → null: тогда сверять не с чем, и устаревшими проверки не объявляем —
+ * иначе недоступность git превращалась бы в блокировку слияния.
+ */
+export async function currentRevision(sug: { id: string; branchRef: string | null; items: unknown; templateId: string }): Promise<string | null> {
+  if (!sug.branchRef) return itemsRevision((sug.items ?? []) as ProposedItem[])
+  const [tpl] = await db.select({ slug: templates.slug, ownerId: templates.ownerId }).from(templates).where(eq(templates.id, sug.templateId)).limit(1)
+  if (!tpl) return null
+  const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
+  const { gitCore } = await gitPort()
+  const snap = await gitCore.branchSnapshot({ owner: owner?.handle ?? '', slug: tpl.slug }, sug.branchRef).catch(() => null)
+  return snap?.tipSha ? branchRevision(snap.tipSha) : null
 }

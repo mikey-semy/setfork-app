@@ -903,6 +903,10 @@ export const suggestionReportedChecks = pgTable(
     summary: text('summary'),
     // Куда смотреть подробности (лог прогона). Может отсутствовать.
     url: text('url'),
+    // РЕВИЗИЯ, которую проверяли: tip ветки или отпечаток предложенных пунктов.
+    // Без неё «ок» жил вечно: автор дописывал предложение после зелёного отчёта и
+    // сливал непроверенное. Не совпала с текущей — отчёт устарел.
+    revision: text('revision'),
     // Кто отчитался: проверку видно как чужую, и снять её может только он.
     reporterId: uuid('reporter_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

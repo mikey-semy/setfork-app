@@ -107,7 +107,11 @@ export async function hasBlockingReview(suggestionId: string): Promise<boolean> 
  */
 export async function countApprovals(suggestionId: string): Promise<number> {
   const reviews = await getSuggestionReviews(suggestionId)
-  return reviews.filter((r) => r.verdict === 'approve').length
+  // СНЯТОЕ одобрение не считается. Снятие задумано против бессрочной блокировки
+  // («просит доработать»), но снять можно любой вердикт — и зачёркнутое «одобряю»
+  // продолжало закрывать гейт требуемых одобрений. То есть мейнтейнер снимал чужое
+  // одобрение, оно исчезало из панели, а слияние по-прежнему считало его за голос.
+  return reviews.filter((r) => r.verdict === 'approve' && !r.dismissed).length
 }
 
 /**

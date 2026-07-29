@@ -44,14 +44,25 @@ export interface CheckItem {
  * Незавершённая проверка держит слияние так же, как упавшая: «ещё не прошла» — это
  * не «прошла». Иначе гейт обходился бы гонкой: слить, пока прогон не отчитался.
  */
-export async function blockingReportedChecks(suggestionId: string): Promise<{ failed: string[]; pending: string[] }> {
+export async function blockingReportedChecks(
+  suggestionId: string,
+  currentRevision?: string | null,
+): Promise<{ failed: string[]; pending: string[]; stale: string[] }> {
   const rows = await db
-    .select({ name: suggestionReportedChecks.name, status: suggestionReportedChecks.status })
+    .select({ name: suggestionReportedChecks.name, status: suggestionReportedChecks.status, revision: suggestionReportedChecks.revision })
     .from(suggestionReportedChecks)
     .where(eq(suggestionReportedChecks.suggestionId, suggestionId))
+  // Отчёт о ДРУГОЙ ревизии — это не «пройдено», а «проверяли не то». Держит слияние
+  // так же, как незавершённый: иначе после зелёного отчёта достаточно дописать
+  // предложение — и непроверенное уезжает в main.
+  //
+  // Отчёты БЕЗ ревизии (сделаны до появления поля) устаревшими не считаем: иначе
+  // включение гейта задним числом заперло бы уже отчитавшиеся предложения.
+  const isStale = (r: { revision: string | null }) => !!currentRevision && !!r.revision && r.revision !== currentRevision
   return {
-    failed: rows.filter((r) => r.status === 'fail').map((r) => r.name),
-    pending: rows.filter((r) => r.status === 'pending').map((r) => r.name),
+    failed: rows.filter((r) => r.status === 'fail' && !isStale(r)).map((r) => r.name),
+    pending: rows.filter((r) => r.status === 'pending' && !isStale(r)).map((r) => r.name),
+    stale: rows.filter(isStale).map((r) => r.name),
   }
 }
 

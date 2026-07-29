@@ -18,6 +18,7 @@ import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library
 import { isBlockType, newOptionId } from '@/features/library/blocks'
 import { isCollaborator } from '@/features/collab/queries'
 import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/features/library/suggestion-checks'
+import { currentRevision } from '@/features/library/suggestion-core'
 import { recordRunCompletionIfDone } from '@/features/library/completion'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 
@@ -453,19 +454,23 @@ export async function mcpReportCheck(
   }
 
   const [sug] = await db
-    .select({ id: suggestions.id, authorId: suggestions.authorId, status: suggestions.status })
+    .select({ id: suggestions.id, authorId: suggestions.authorId, status: suggestions.status, branchRef: suggestions.branchRef, items: suggestions.items, templateId: suggestions.templateId })
     .from(suggestions)
     .where(and(eq(suggestions.templateId, tpl.id), eq(suggestions.number, input.number)))
     .limit(1)
   if (!sug) return { error: 'suggestion not found' }
   if (sug.status !== 'open') return { error: 'suggestion is closed' }
 
+  // К КАКОЙ ревизии относится отчёт. Без этого «ок» жил вечно: автор дописывал
+  // предложение и сливал непроверенное.
+  const revision = await currentRevision(sug)
   await db
     .insert(suggestionReportedChecks)
     .values({
       suggestionId: sug.id,
       name,
       status: input.status as ReportedStatus,
+      revision,
       summary: (input.summary ?? '').trim().slice(0, 500) || null,
       url: url || null,
       reporterId: userId,
@@ -474,6 +479,7 @@ export async function mcpReportCheck(
       target: [suggestionReportedChecks.suggestionId, suggestionReportedChecks.name],
       set: {
         status: input.status as ReportedStatus,
+        revision,
         summary: (input.summary ?? '').trim().slice(0, 500) || null,
         url: url || null,
         reporterId: userId,

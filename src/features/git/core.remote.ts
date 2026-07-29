@@ -125,8 +125,14 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
-  async mergeResolved(repo, branch, listJson) {
+  async mergeResolved(repo, branch, listJson, opts) {
     try {
+      // ЯДРО пока не принимает способ слияния для резолвера: в proto MergeResolvedRequest
+      // полей mode/message нет (в MergeBranchRequest — есть). Пока их нет, squash на
+      // remote-пути невозможен, и молчать об этом нельзя: список, настроенный на squash,
+      // получил бы историю ветки. Отказываем явно — резолвер доступен на inproc-пути,
+      // а полноценно чинится парой (proto ядра + services/git_core.rs).
+      if (opts?.mode === 'squash') throw new BranchOpError('conflict')
       const res = await client.mergeResolved({ repo: toRepoRef(repo), branch, listJson: new TextEncoder().encode(listJson) })
       return { tipSha: res.tipSha, newVersion: toNewVersion(res.newVersion), fastForward: res.fastForward }
     } catch (e) {
