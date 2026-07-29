@@ -19,6 +19,7 @@ import {
   pgEnum,
   primaryKey,
   pgTable,
+  real,
   smallint,
   halfvec,
   text,
@@ -619,6 +620,9 @@ export const JOB_TYPES = [
   'gnome_task',
   'feedpull',
   'changelog',
+  'partners',
+  'finance',
+  'chronicle',
 ] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
@@ -1454,6 +1458,45 @@ export const feedItems = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('feed_items_key_idx').on(t.key), index('feed_items_fresh_idx').on(t.usedAt, t.publishedAt)],
+)
+
+/**
+ * ПОВЕСТКА РАЗВИТИЯ — «что растим и почему», единственный объект, где компания смотрит на
+ * себя целиком.
+ *
+ * Пункт рождает петля партнёров из ЧИСЕЛ (покрытие, спрос, качество, свежесть), а судьбу ему
+ * назначает человек: одобрено → производство берёт как приоритет; отклонено → больше не
+ * предлагаем. Без одобрения не происходит ничего — предлагает компания, решает гендиректор.
+ *
+ * `why` хранит числа, из которых пункт вырос, а не формулировку: «списков по теме 1 при пороге
+ * 5» проверяемо, «нужно усилить направление» — нет.
+ */
+export const agendaItems = pgTable(
+  'agenda_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Класс работы: deepen | canon | hire | demand | quality | feed (shared/agents/agenda). */
+    kind: text('kind').notNull(),
+    /** Тема/домен; '' — общефирменный пункт. */
+    domain: text('domain').notNull().default(''),
+    /** Ключ дедупа kind:domain — один пункт на пару, иначе повестка растёт каждый проход. */
+    key: text('key').notNull(),
+    /** Вес класса × сила сигнала. */
+    score: real('score').notNull().default(0),
+    why: jsonb('why').notNull().default({}).$type<Record<string, number | string>>(),
+    status: text('status').notNull().default('proposed').$type<'proposed' | 'approved' | 'dismissed' | 'done'>(),
+    decidedBy: uuid('decided_by').references(() => users.id, { onDelete: 'set null' }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    doneAt: timestamp('done_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Уникальность по ключу: повторный проход ОБНОВЛЯЕТ пункт, а не плодит копии. Решение
+    // человека (approved/dismissed) при этом сохраняется — см. службу партнёров.
+    uniqueIndex('agenda_items_key_idx').on(t.key),
+    index('agenda_items_status_idx').on(t.status, t.score),
+  ],
 )
 
 export const knowledgeSources = pgTable(

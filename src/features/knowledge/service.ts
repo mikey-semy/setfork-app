@@ -21,7 +21,7 @@ export async function ensureTriplesScheduled(): Promise<void> {
   const pending = await db
     .select({ id: jobs.id })
     .from(jobs)
-    .where(and(eq(jobs.type, 'triples'), inArray(jobs.status, ['pending', 'processing'])))
+    .where(and(eq(jobs.type, 'triples'), eq(jobs.status, 'pending')))
     .limit(1)
   if (pending.length) return
   await enqueueJob('triples', {}, { delayMs: TRIPLES_EVERY_DAYS * 24 * 60 * 60 * 1000, maxAttempts: 1 })

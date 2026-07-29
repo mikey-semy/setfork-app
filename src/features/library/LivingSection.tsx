@@ -17,8 +17,11 @@ import { setListLiving } from './actions'
  * автоматически, и это догадка. Ошиблись — владелец снимает признак одним касанием.
  */
 export function LivingSection({ templateId, living, lang }: { templateId: string; living: boolean; lang: Lang }) {
-  const [on, setOn] = useState(living)
+  // Оптимистичное значение поверх пропа, а не копия пропа: useState(living) держал бы старое
+  // значение после ревалидации страницы (react-doctor/no-derived-useState).
+  const [pending, setPending] = useState<boolean | null>(null)
   const [, start] = useTransition()
+  const on = pending ?? living
 
   return (
     <section className="rounded-lg border border-border bg-surface p-5">
@@ -40,8 +43,11 @@ export function LivingSection({ templateId, living, lang }: { templateId: string
         <Switch
           checked={on}
           onCheckedChange={(v) => {
-            setOn(v)
-            start(() => setListLiving(templateId, v))
+            setPending(v)
+            start(async () => {
+              await setListLiving(templateId, v)
+              setPending(null) // дальше показываем то, что реально в базе
+            })
           }}
         />
       </div>

@@ -225,7 +225,7 @@ export async function ensureChangelogScheduled(): Promise<void> {
     const [dup] = await db
       .select({ id: jobs.id })
       .from(jobs)
-      .where(and(eq(jobs.type, 'changelog'), inArray(jobs.status, ['pending', 'processing'])))
+      .where(and(eq(jobs.type, 'changelog'), eq(jobs.status, 'pending')))
       .limit(1)
     if (dup) return
     await enqueueJob('changelog', {})
