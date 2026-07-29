@@ -11,7 +11,9 @@ import { recordAudit } from '@/shared/audit'
 export async function createApiToken(name: string, scope: 'read' | 'write' = 'write', expiresInDays?: number): Promise<{ token: string } | { error: string }> {
   const session = await requireSession()
   const label = name.trim().slice(0, 60) || 'token'
-  const sc = scope === 'read' ? 'read' : 'write'
+  // Ровно два допустимых значения; всё прочее — 'read' (см. verifyApiToken: там
+  // неизвестное значение тоже отнимает права, а не добавляет).
+  const sc = scope === 'write' ? 'write' : 'read'
   const expiresAt = expiresInDays && expiresInDays > 0 ? new Date(Date.now() + expiresInDays * 86_400_000) : null
   const { token, hash, prefix } = newToken()
   await db.insert(apiTokens).values({ userId: session.userId, name: label, tokenHash: hash, prefix, scope: sc, expiresAt })
