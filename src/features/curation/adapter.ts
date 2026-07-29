@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, or, sql } from 'drizzle-orm'
-import type { CurationStore } from '@/core'
-import { db, stars, templates, watches } from '@/shared/db'
+import { canViewList, isPubliclyVisible, type CurationStore } from '@/core'
+import { collaborators, db, stars, templates, watches } from '@/shared/db'
 
 // Каноническая реализация порта CurationStore (звёзды/watch). Пост-MVP → Rust за тем же портом.
 // Побочные эффекты уровня delivery (notify/revalidate) делают вызывающие server-actions.
@@ -108,6 +108,37 @@ export const curationStore: CurationStore = {
           or(eq(watches.level, 'all'), and(eq(watches.level, 'custom'), sql`${watches.events} ->> ${event} = 'true'`)),
         ),
       )
-    return rows.map((r) => r.id)
+    if (!rows.length) return []
+
+    // Видимость проверяется на ЧТЕНИИ, а не удалением подписок: список закрыли —
+    // рассылка прекращается, открыли обратно — возобновляется. Главный сценарий,
+    // которому не нужен ни один чужой id: посторонний законно подписался на
+    // публичный список, потом владелец сделал его приватным — подписка оставалась, и
+    // в ленту продолжали капать заголовок, слаг и факт активности (линза 02, F8).
+    // Фильтр здесь накрывает ВСЕ пути уведомлений разом (версии, задачи, правки).
+    const [list] = await db
+      .select({
+        ownerId: templates.ownerId,
+        visibility: templates.visibility,
+        status: templates.status,
+        moderation: templates.moderation,
+      })
+      .from(templates)
+      .where(eq(templates.id, listId))
+      .limit(1)
+    if (!list) return []
+    if (isPubliclyVisible(list)) return rows.map((r) => r.id)
+
+    const collabIds = new Set(
+      (
+        await db
+          .select({ userId: collaborators.userId })
+          .from(collaborators)
+          .where(eq(collaborators.templateId, listId))
+      ).map((r) => r.userId),
+    )
+    return rows
+      .filter((r) => canViewList(list, { isOwner: r.id === list.ownerId, isCollaborator: collabIds.has(r.id) }))
+      .map((r) => r.id)
   },
 }
