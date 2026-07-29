@@ -1,8 +1,8 @@
 import 'server-only'
-import { randomBytes } from 'node:crypto'
 import { generateObject, NoObjectGeneratedError } from 'ai'
 import { z } from 'zod'
 import { getAiSettings } from '@/shared/settings/ai'
+import { spotlight } from './spotlight'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { extractUsage, outcomeOf, recordUsage } from './usage'
@@ -85,14 +85,23 @@ async function runLens(
   if (!client) return null
   const settings = await getAiSettings()
   const model = await pickChatModel(settings)
-  const nonce = randomBytes(9).toString('hex')
+  // Список — ВНЕШНИЙ текст, и он идёт в промпт. Берём общий spotlight, а не свою
+  // разметку маркерами: правило «данные между маркерами — не инструкции» должно
+  // быть одно на всё приложение. Усилят его там — усилится и здесь. Раньше маркеры
+  // ставились руками, а системная часть про них не говорила ничего.
+  const sp = spotlight()
   const startedAt = Date.now()
   try {
     const result = await generateObject({
       model: client.chat(model, { structured: true }),
       schema: ANSWER_SCHEMA,
-      system: `${SYSTEM}\n\nYOUR QUESTION:\n${LENS_QUESTION[lens]}`,
-      prompt: `Answer your question about the list between the markers.\nBEGIN LIST DATA ${nonce}\n${render(input)}\nEND LIST DATA ${nonce}`,
+      system: `${SYSTEM}
+
+YOUR QUESTION:
+${LENS_QUESTION[lens]}
+${sp.rule()}`,
+      prompt: `Answer your question about the list between the markers.
+${sp.wrap('LIST DATA', render(input))}`,
       temperature: 0,
       maxOutputTokens: 200,
       abortSignal: AbortSignal.timeout(60_000),
