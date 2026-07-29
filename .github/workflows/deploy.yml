@@ -45,10 +45,25 @@ jobs:
           command -v ssh >/dev/null || (apt-get update -qq && apt-get install -y -qq openssh-client)
           install -m 600 /ssh/setfork /tmp/deploy_key
 
+      # Дерево доставляется ЦЕЛИКОМ в новый каталог и подменяется, а не распаковывается
+      # поверх старого. Причина: `tar -x` перезаписывает файлы, но НИКОГДА не удаляет —
+      # стёртое в репозитории оставалось на сервере навсегда. Так деплой падал с 27.07:
+      # удалённый в #487 BlockComments.tsx жил на сервере призраком, и `npm run build`
+      # внутри Docker спотыкался о него на проверке типов при каждом пуше в master.
+      #
+      # .env сервиса лежит на сервере и в репозитории его нет — переносим явно.
+      # Прежнее дерево остаётся как .old на один цикл: если серверного файла не
+      # предусмотрели, он не потерян, а лежит рядом.
       - name: Доставка исходников → сборка на сервере → up
         run: |
           SSH="ssh -i /tmp/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
-          tar --exclude=.git -czf - . | $SSH "mkdir -p $APP_DIR && tar -xzf - -C $APP_DIR"
+          tar --exclude=.git -czf - . | $SSH "rm -rf $APP_DIR.new && mkdir -p $APP_DIR.new && tar -xzf - -C $APP_DIR.new"
+          $SSH "set -e
+                if [ -d $APP_DIR ]; then cp -a $APP_DIR/.env* $APP_DIR.new/ 2>/dev/null || true; fi
+                rm -rf $APP_DIR.old
+                if [ -d $APP_DIR ]; then mv $APP_DIR $APP_DIR.old; fi
+                mv $APP_DIR.new $APP_DIR
+                test -f $APP_DIR/.env || { echo '::error::на сервере нет $APP_DIR/.env — прежнее дерево в $APP_DIR.old'; exit 1; }"
           $SSH "cd $APP_DIR && docker compose -f docker-compose.dokploy.yml up -d --build --remove-orphans"
 
       - name: Health-check
