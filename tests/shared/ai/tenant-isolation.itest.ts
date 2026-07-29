@@ -48,6 +48,10 @@ beforeAll(async () => {
   await seedList(alice, 'alice-secret', 'Секретный борщ Алисы', { visibility: 'private' })
   await seedList(bob, 'bob-secret', 'Секретный борщ Боба', { visibility: 'private' })
   await seedList(bob, 'bob-draft', 'Черновик Боба', { status: 'draft' })
+  // Свой список, снятый модерацией: в личный мир он попадать НЕ должен — прецеденты
+  // уезжают в промпт, и недопустимый материал расползался бы по новым спискам.
+  await seedList(alice, 'alice-flagged', 'Снятый борщ Алисы', { moderation: 'flagged' })
+  await seedList(alice, 'alice-hidden', 'Скрытый борщ Алисы', { moderation: 'hidden' })
 
   // Специалисты: общий (ownerId=null), личный Алисы, личный Боба.
   const base = { persona: 'p', code: '', lens: '', domains: ['кулинария'], model: '', avatar: 'generalist', online: false, enabled: true, sort: 1 }
@@ -69,6 +73,14 @@ describe('матрица: чей мир видно в прецедентах', (
 
   it('личный мир Алисы — публичное ПЛЮС её собственное', async () => {
     expect(await titlesFor(alice, 'personal')).toEqual(['Борщ на всех', 'Секретный борщ Алисы'])
+  })
+
+  it('своё, снятое модерацией, в личный мир НЕ подмешивается', async () => {
+    // Вердикт модерации — не про видимость, а про то, что этому не место в работе:
+    // прецедент уезжает в промпт модели и расползается по новым спискам.
+    const mine = await titlesFor(alice, 'personal')
+    expect(mine).not.toContain('Снятый борщ Алисы')
+    expect(mine).not.toContain('Скрытый борщ Алисы')
   })
 
   it('ЧУЖОЙ мир не виден: у Боба нет списков Алисы ни при каком scope', async () => {
