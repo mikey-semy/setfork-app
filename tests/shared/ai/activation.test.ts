@@ -96,3 +96,17 @@ describe('стадии по бездействию', () => {
     expect(stageAfterWork('idle')).toBe('active')
   })
 })
+
+describe('хозяин одобренного пункта идёт первым', () => {
+  const cand = (id: string, attempts: number, domains: string[]) => ({ id, attempts, daysSinceWork: 1, lifecycle: 'active' as const, domains })
+
+  it('исполняет тот, кто записан ответственным, а не тот, кому «пора»', () => {
+    const pool = [cand('cook', 5, ['кулинария']), cand('baker', 0, ['кулинария'])]
+    // По обычным правилам первым был бы baker («нет оснований — работа первым»).
+    expect(workQueue(pool)[0].id).toBe('baker')
+    // Но у темы есть хозяин — и работать должен он, иначе «один владелец» это запись в базе.
+    const q = workQueue(pool, undefined, ['кулинария'], ['cook'])
+    expect(q[0].id).toBe('cook')
+    expect(q[0].why).toContain('хозяин')
+  })
+})

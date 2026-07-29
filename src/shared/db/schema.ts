@@ -1485,6 +1485,16 @@ export const agendaItems = pgTable(
     score: real('score').notNull().default(0),
     why: jsonb('why').notNull().default({}).$type<Record<string, number | string>>(),
     status: text('status').notNull().default('proposed').$type<'proposed' | 'approved' | 'dismissed' | 'done'>(),
+    /**
+     * ХОЗЯИН РАБОТЫ — один специалист, отвечающий за пункт от начала до конца.
+     *
+     * «Один владелец на задачу: имя, а не отдел» из докладной. До сих пор у длинной работы
+     * ответственного не было вовсе: производство брало тему из повестки, но спросить за неё
+     * было не с кого — журнал помнил лишь того, кто выполнил очередной такт.
+     *
+     * Ставится при ОДОБРЕНИИ: пока пункт не одобрен, назначать некого — работы ещё нет.
+     */
+    ownerExpertId: text('owner_expert_id'),
     decidedBy: uuid('decided_by').references(() => users.id, { onDelete: 'set null' }),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
     doneAt: timestamp('done_at', { withTimezone: true }),

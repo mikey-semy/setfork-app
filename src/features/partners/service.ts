@@ -272,6 +272,7 @@ export async function currentAgenda(limit = 20) {
       score: agendaItems.score,
       why: agendaItems.why,
       status: agendaItems.status,
+      ownerExpertId: agendaItems.ownerExpertId,
       createdAt: agendaItems.createdAt,
       decidedBy: users.handle,
     })
