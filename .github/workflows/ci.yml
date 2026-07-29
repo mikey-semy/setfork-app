@@ -25,6 +25,19 @@ jobs:
       - run: npm ci --prefer-offline --no-audit --no-fund
       - run: npm run lint
       - run: npm run typecheck
+      # Клиент proto собран из ЭТОГО proto? Расхождение молчаливое: правку .proto
+      # видно в ревью, а забытый кодоген — нет, и на проводе оказывается контракт
+      # прошлой версии. Ровно так уехал block_id (реестр 28.07, п.7).
+      - name: proto ↔ кодоген не разъехались
+        run: |
+          npm run gen:proto
+          # --ignore-all-space: генератор и форматтер расходятся на пробелах в
+          # комментариях, и на этом гейт падал бы вхолостую. Ловим РАЗЪЕЗД КОНТРАКТА
+          # (поля, типы, номера), а не расстановку пробелов.
+          git diff --exit-code --ignore-all-space src/shared/gen || {
+            echo "::error::src/shared/gen устарел — прогони npm run gen:proto и закоммить"
+            exit 1
+          }
       - run: npm test
       - run: npm run build
         env:
