@@ -71,6 +71,11 @@ jobs:
                 mv $APP_DIR.new $APP_DIR
                 test -f $APP_DIR/.env || { echo '::error::на сервере нет $APP_DIR/.env — прежнее дерево в $APP_DIR.old'; exit 1; }"
           $SSH "cd $APP_DIR && docker compose -f docker-compose.dokploy.yml up -d --build --remove-orphans"
+          # Кэш сборки чистим СРАЗУ после сборки. Образ собирается на сервере, и кэш
+          # растёт с каждым деплоем без потолка: 29.07 он занял 15 ГБ из 35 и вывел
+          # диск на 80%, а авто-чистка мониторинга включается только с 90%.
+          # Оставляем свежее (сутки) — следующая сборка не начнётся с нуля.
+          $SSH "docker builder prune -f --filter until=24h >/dev/null 2>&1 || true"
 
       - name: Health-check
         run: |
