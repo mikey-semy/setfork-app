@@ -51,15 +51,21 @@ jobs:
       # удалённый в #487 BlockComments.tsx жил на сервере призраком, и `npm run build`
       # внутри Docker спотыкался о него на проверке типов при каждом пуше в master.
       #
-      # .env сервиса лежит на сервере и в репозитории его нет — переносим явно.
-      # Прежнее дерево остаётся как .old на один цикл: если серверного файла не
-      # предусмотрели, он не потерян, а лежит рядом.
+      # ЧТО ЖИВЁТ ТОЛЬКО НА СЕРВЕРЕ (сверено сравнением дерева сервера с `git ls-files`
+      # 29.07): .env и его бэкапы .env.bak*, плюс docker-compose.override.yml (права
+      # 600, в репозитории его нет). Эти файлы переносим в новое дерево явно.
+      # .env.example НЕ переносим намеренно: он есть в репозитории, и версия из
+      # репозитория должна побеждать серверную.
+      # Прежнее дерево остаётся как .old на один цикл: если серверного файла всё же
+      # не предусмотрели, он не потерян, а лежит рядом.
       - name: Доставка исходников → сборка на сервере → up
         run: |
           SSH="ssh -i /tmp/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new $DEPLOY"
           tar --exclude=.git -czf - . | $SSH "rm -rf $APP_DIR.new && mkdir -p $APP_DIR.new && tar -xzf - -C $APP_DIR.new"
           $SSH "set -e
-                if [ -d $APP_DIR ]; then cp -a $APP_DIR/.env* $APP_DIR.new/ 2>/dev/null || true; fi
+                for f in $APP_DIR/.env $APP_DIR/.env.bak* $APP_DIR/docker-compose.override.yml; do
+                  test -e \$f && cp -a \$f $APP_DIR.new/ || true
+                done
                 rm -rf $APP_DIR.old
                 if [ -d $APP_DIR ]; then mv $APP_DIR $APP_DIR.old; fi
                 mv $APP_DIR.new $APP_DIR
