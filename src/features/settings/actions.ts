@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { eq, inArray, sql } from 'drizzle-orm'
-import { db, stars, suggestions, templates, users } from '@/shared/db'
+import { and, eq, inArray, ne, sql } from 'drizzle-orm'
+import { db, stars, suggestions, templates, users, sessions } from '@/shared/db'
 import type { Social } from '@/shared/db/schema'
 import { clearSessionCookie, refreshSessionCookie, requireSession } from '@/shared/auth/session'
 import { recordAudit } from '@/shared/audit'
@@ -119,6 +119,17 @@ export async function changeHandle(_prev: ActionResult | null, formData: FormDat
     targetId: session.userId,
     meta: { from: session.handle, to: next },
   })
+  // ОСТАЛЬНЫЕ СЕССИИ ОТЗЫВАЕМ. Ник лежит в cookie сессии, а по нику считаются права
+  // администратора (ADMIN_HANDLES) и ключи квот. Сессии, открытые до переименования,
+  // продолжали бы носить СТАРЫЙ ник: на другом устройстве человек оставался бы прежним
+  // собой — с прежними правами и прежними счётчиками. Текущую сессию не трогаем, ей
+  // ниже обновляется cookie: разлогинивать того, кто сам только что переименовался,
+  // незачем.
+  if (session.sid) {
+    await db.delete(sessions).where(and(eq(sessions.userId, session.userId), ne(sessions.id, session.sid)))
+  } else {
+    await db.delete(sessions).where(eq(sessions.userId, session.userId))
+  }
   // Сессия хранит handle (используется в revalidatePath/quota-ключах) — обновляем без ре-логина.
   await refreshSessionCookie({ userId: session.userId, handle: next, name: session.name, avatarUrl: session.avatarUrl })
   revalidatePath('/', 'layout')
