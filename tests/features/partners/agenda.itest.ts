@@ -136,3 +136,26 @@ describe('исчезнувший сигнал закрывает пункт', ()
     expect(cook.status, 'закрытый сигнал оставил пункт в повестке — она показывает архив намерений').toBe('done')
   })
 })
+
+describe('у одобренной работы есть хозяин', () => {
+  it('одобрение назначает профильного мастера — «имя, а не отдел»', async () => {
+    // Соседний тест наполняет тему пятью списками и не убирает за собой — без этой чистки
+    // покрытие уже достигнуто и повод для пункта исчезает. Изоляция теста, а не логика.
+    await db.delete(templates)
+    await runPartnersSweep()
+    const [item] = (await items()).filter((r) => r.domain === 'кулинария')
+    expect(item.ownerExpertId, 'до одобрения хозяина нет — работы ещё нет').toBeNull()
+
+    // Так делает действие админки: одобрение + назначение профильного мастера по теме.
+    const { getRoster } = await import('@/shared/ai/roster')
+    const { tenderForTags } = await import('@/shared/ai/gnome-account')
+    const tender = await tenderForTags([item.domain], await getRoster())
+    await db
+      .update(agendaItems)
+      .set({ status: 'approved', ownerExpertId: tender?.expert.id ?? null, decidedBy: ownerId, decidedAt: new Date() })
+      .where(eq(agendaItems.id, item.id))
+
+    const [after] = await db.select().from(agendaItems).where(eq(agendaItems.id, item.id))
+    expect(after.ownerExpertId, 'у одобренной темы не появилось ответственного').toBe('cook-x')
+  })
+})

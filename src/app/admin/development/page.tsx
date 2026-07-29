@@ -367,7 +367,7 @@ export default async function AdminDevelopmentPage() {
                       </form>
                     </>
                   ) : (
-                    <span className={`text-[12px] ${a.status === 'approved' ? 'text-ok' : 'text-muted'}`}>
+                    <span className={`text-[12px] ${a.status === 'approved' ? 'text-ok' : 'text-muted'}`} title={a.ownerExpertId ?? ''}>
                       {a.status === 'approved' ? tr({ en: 'approved', ru: 'одобрено' }, lang) : tr({ en: 'dismissed', ru: 'отклонено' }, lang)}
                     </span>
                   )}
