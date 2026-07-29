@@ -11,16 +11,31 @@ import { Code2, List } from 'lucide-react'
 export function DiffViewToggle({
   path,
   tab,
+  commit,
   view,
   labels,
 }: {
+  /** Адрес БЕЗ параметров запроса. Параметры собираем здесь — см. href ниже. */
   path: string
   /** Вкладка правки (сохраняется при переключении вида); пусто — страница сравнения. */
   tab?: string
+  /** Показываемый коммит (вкладка «коммиты»): переключение вида его не теряет. */
+  commit?: string
   view: 'code' | 'list'
   labels: { code: string; list: string }
 }) {
-  const href = (v: 'code' | 'list') => `${path}?${tab ? `tab=${tab}&` : ''}view=${v}`
+  // Параметры собираем ОДНИМ местом, а не дописываем к готовой строке. Раньше сюда
+  // приходил путь, где уже стояли `?tab=commits&commit=<sha>`, и хвост `?tab=…`
+  // приписывался вторым: в `commit` попадало значение вида «<sha>?tab=commits», оно
+  // не совпадало ни с одним коммитом, и переключение вида выбрасывало на список
+  // коммитов вместо смены вида.
+  const href = (v: 'code' | 'list') => {
+    const qs = new URLSearchParams()
+    if (tab) qs.set('tab', tab)
+    if (commit) qs.set('commit', commit)
+    qs.set('view', v)
+    return `${path}?${qs.toString()}`
+  }
   const item = (v: 'code' | 'list', icon: React.ReactNode, label: string) => (
     <Link
       href={href(v)}
