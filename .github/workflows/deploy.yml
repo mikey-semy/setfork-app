@@ -53,7 +53,9 @@ jobs:
       #
       # ЧТО ЖИВЁТ ТОЛЬКО НА СЕРВЕРЕ (сверено сравнением дерева сервера с `git ls-files`
       # 29.07): .env и его бэкапы .env.bak*, плюс docker-compose.override.yml (права
-      # 600, в репозитории его нет). Эти файлы переносим в новое дерево явно.
+      # 600, в репозитории его нет). Эти файлы переносим в новое дерево явно — но
+      # override при этом НЕ подключается к compose (см. шаг запуска): он остаётся
+      # только чтобы ничего не потерять, конфигурация живёт в репозитории.
       # .env.example НЕ переносим намеренно: он есть в репозитории, и версия из
       # репозитория должна побеждать серверную.
       # Прежнее дерево остаётся как .old на один цикл: если серверного файла всё же
@@ -70,16 +72,14 @@ jobs:
                 if [ -d $APP_DIR ]; then mv $APP_DIR $APP_DIR.old; fi
                 mv $APP_DIR.new $APP_DIR
                 test -f $APP_DIR/.env || { echo '::error::на сервере нет $APP_DIR/.env — прежнее дерево в $APP_DIR.old'; exit 1; }"
-          # docker-compose.override.yml ПОДКЛЮЧАЕМ ЯВНО. Compose подхватывает override
-          # сам только для пары docker-compose.yml + override; с явным -f он его
-          # игнорирует — молча. На проде в override живёт RU-мост
-          # (extra_hosts: openrouter.ai → equiply), потому что OpenRouter отдаёт 403 на
-          # российский IP. Мост не применялся: у контейнера extra_hosts было пусто, и
-          # админка показывала «каталог моделей не загрузился (403)», а выглядело это
-          # как «неверный ключ». Файл серверный, в репозитории его нет — включаем, только
-          # если он есть.
-          $SSH "cd $APP_DIR && test -f docker-compose.override.yml && echo -f docker-compose.override.yml > /tmp/sf-override.args || : >/tmp/sf-override.args"
-          $SSH "cd $APP_DIR && docker compose -f docker-compose.dokploy.yml \$(cat /tmp/sf-override.args) up -d --build --remove-orphans"
+          # Серверный docker-compose.override.yml НЕ подключаем: конфигурация живёт в
+          # репозитории. Именно из-за него RU-мост к OpenRouter (extra_hosts, обход 403
+          # на российский IP) держался на честном слове — файла в репозитории нет,
+          # compose с явным -f его не читает, и работал мост лишь пока не пересоздавали
+          # контейнер. Мост переехал в docker-compose.dokploy.yml (RU_EGRESS_IP).
+          # Подключать override вдобавок нельзя: последний -f перекрывает предыдущие, и
+          # старый файл с прежним адресом молча вернул бы 403.
+          $SSH "cd $APP_DIR && docker compose -f docker-compose.dokploy.yml up -d --build --remove-orphans"
           # Кэш сборки чистим СРАЗУ после сборки. Образ собирается на сервере, и кэш
           # растёт с каждым деплоем без потолка: 29.07 он занял 15 ГБ из 35 и вывел
           # диск на 80%, а авто-чистка мониторинга включается только с 90%.
