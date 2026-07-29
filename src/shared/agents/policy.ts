@@ -132,7 +132,13 @@ export async function resetCircuit(type: string): Promise<void> {
   await db
     .insert(agentLoops)
     .values({ type })
-    .onConflictDoUpdate({ target: agentLoops.type, set: { circuitTrippedAt: null, circuitReason: '', updatedAt: new Date() } })
+    // circuitResetAt — ГРАНИЦА: всё, что записано до неё, к нынешнему состоянию петли
+    // не относится. Иначе человек снимает предохранитель, а прежние пять ошибок
+    // по-прежнему последние — и он срывается снова, не дав петле ни одного прохода.
+    .onConflictDoUpdate({
+      target: agentLoops.type,
+      set: { circuitTrippedAt: null, circuitReason: '', circuitResetAt: new Date(), updatedAt: new Date() },
+    })
 }
 
 export interface AgentActionInput {

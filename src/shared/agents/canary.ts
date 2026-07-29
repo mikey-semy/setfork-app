@@ -1,6 +1,6 @@
 import 'server-only'
-import { and, desc, eq, sql } from 'drizzle-orm'
-import { agentActions, db, templates } from '@/shared/db'
+import { and, desc, eq, gt, sql } from 'drizzle-orm'
+import { agentActions, agentLoops, db, templates } from '@/shared/db'
 import { tripCircuit } from './policy'
 import { log } from '@/shared/observability'
 
@@ -55,10 +55,14 @@ export async function publishQuotaLeft(loop: string, perDay = DEFAULT_PUBLISH_PE
 export async function autonomyHealthy(loop: string): Promise<boolean> {
   // 1. Серия ошибок подряд. Считаем по последним записям: «подряд» важнее, чем «всего»,
   // иначе одна давняя серия навсегда держала бы петлю на грани.
+  // Считаем ТОЛЬКО после последнего снятия предохранителя человеком: записи до него
+  // относятся к прошлому состоянию петли, и без этой границы сброс не работал вовсе.
+  const [pol] = await db.select({ resetAt: agentLoops.circuitResetAt }).from(agentLoops).where(eq(agentLoops.type, loop)).limit(1)
+  const since = pol?.resetAt
   const recent = await db
     .select({ status: agentActions.resultStatus })
     .from(agentActions)
-    .where(eq(agentActions.loop, loop))
+    .where(since ? and(eq(agentActions.loop, loop), gt(agentActions.occurredAt, since)) : eq(agentActions.loop, loop))
     .orderBy(desc(agentActions.occurredAt))
     .limit(ERROR_STREAK_TRIP)
   if (recent.length === ERROR_STREAK_TRIP && recent.every((r) => r.status === 'error')) {
