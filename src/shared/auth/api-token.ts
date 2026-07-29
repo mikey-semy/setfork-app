@@ -34,5 +34,9 @@ export async function verifyApiToken(token: string | undefined): Promise<TokenAu
     .limit(1)
   if (!row || tokenExpired(row.expiresAt)) return null
   await db.update(apiTokens).set({ lastUsedAt: new Date() }).where(eq(apiTokens.id, row.id))
-  return { userId: row.userId, scope: row.scope === 'read' ? 'read' : 'write' }
+  // FAIL-CLOSED: правом записи считается ТОЛЬКО точное 'write'. Колонка — свободный
+  // текст, и прежнее «всё, что не read → write» означало, что опечатка, пустая строка
+  // или значение из будущей версии молча выдавали полный доступ. Неизвестное значение
+  // должно ОТНИМАТЬ права, а не добавлять.
+  return { userId: row.userId, scope: row.scope === 'write' ? 'write' : 'read' }
 }
