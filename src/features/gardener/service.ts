@@ -730,6 +730,40 @@ export async function runGardenerSweep(): Promise<{ proposed: number; skipped: n
     // СВОЙ СПИСОК компания правит НАПРЯМУЮ. Предложение самому себе — церемония без
     // получателя: принимать его некому, и оно просто копилось бы открытым. Именно из-за
     // такого разрыва всё, созданное компанией, ранее не улучшалось вовсе.
+    // РЕЦЕПТ — исключение из прямой правки, и оно шире, чем «кураторские».
+    // Ниже стоит защита: количества, переписанные моделью, требуют человеческого
+    // глаза. Но ветка «свой список компании» возвращалась ДО неё, и рецепт компании
+    // переписывался сразу — то есть защита существовала ровно для чужих списков, а
+    // для своих её обходила очерёдность проверок. Ценность правки не теряем:
+    // открываем предложение, оно ждёт человека.
+    if (ownedByCompany && kind === 'recipe') {
+      const [rec] = await db
+        .insert(suggestions)
+        .values({
+          templateId: tpl.id,
+          authorId: tenderId,
+          note,
+          baseVersion: tpl.currentVersion,
+          items,
+          number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${tpl.id})`,
+        })
+        .returning({ id: suggestions.id })
+      await recordAgentAction({
+        loop: 'gardener',
+        action: 'list.suggest',
+        resultStatus: 'ok',
+        agentId: tender?.expert.id ?? '',
+        actorUserId: tenderId,
+        signal: { trigger: 'schedule', slug: tpl.slug, deadLinks: deadUrls.length },
+        decision: { mode: 'suggestion', reason: 'recipe — правку количеств смотрит человек' },
+        resultRef: tpl.slug,
+        policyVersion: loop.policyVersion,
+      })
+      proposed++
+      log.info('gardener: recipe suggestion opened on own list', { slug: tpl.slug, suggestionId: rec.id })
+      continue
+    }
+
     if (ownedByCompany) {
       await listStore.addVersion(tpl.id, { note: note, steps: toStepInput(items), authorId: tenderId })
       await notifyMany(await getWatcherIds(tpl.id, 'versions'), { actorId: tenderId, type: 'new_version', templateId: tpl.id })
