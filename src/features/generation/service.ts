@@ -11,14 +11,21 @@ import { pushMessage, setGenerationStatus } from '@/shared/ai/generation-message
 import { recordUsage } from '@/shared/ai/usage'
 import { getAiSettings } from '@/shared/settings/ai'
 import { log } from '@/shared/observability'
-import { isAdminHandle } from '@/shared/auth/admin-handle'
+import { isPro } from '@/shared/entitlements'
 import { parseTags } from '@/features/library/slug'
 
-/** Админ ли пользователь (по handle из ADMIN_HANDLES) — для гейта аудитории совета. */
-async function isAdminUser(userId: string): Promise<boolean> {
+/**
+ * Тариф пользователя — для гейта аудитории совета.
+ *
+ * Спрашиваем `isPro`, а не «админ ли он». Разница нулевая СЕГОДНЯ (planFor: админ →
+ * pro) и решающая завтра: когда появится оплата, `planFor` начнёт читать подписку из
+ * БД — и совет пойдёт платящим сам собой. Прежняя проверка админа осталась бы на
+ * месте, и купивший Pro совета бы не получил, хотя в описании тарифа он значится.
+ */
+async function isProUser(userId: string): Promise<boolean> {
   try {
     const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId)).limit(1)
-    return isAdminHandle(u?.handle ?? null)
+    return isPro(u?.handle ?? null)
   } catch {
     return false
   }
@@ -105,13 +112,13 @@ export async function addCandidate(
   let delivered = false
   let clarified = false
   try {
-    // «Совет» (за флагом + гейт аудитории). Дорогие проверки (админ/лимит) — ТОЛЬКО когда фича включена.
+    // «Совет» (за флагом + гейт аудитории). Дорогие проверки (тариф/лимит) — ТОЛЬКО когда фича включена.
     let useCouncil = false
     if (settings.councilEnabled) {
-      const admin = await isAdminUser(userId)
-      useCouncil = settings.councilAudience === 'all' || admin
-      // Лимит (не для админов): по ДОСТАВЛЕННЫМ советам за месяц; исчерпал → одиночная генерация.
-      if (useCouncil && !admin && settings.councilMaxPerMonth > 0 && (await councilRunsThisMonth(userId)) >= settings.councilMaxPerMonth) {
+      const pro = await isProUser(userId)
+      useCouncil = settings.councilAudience === 'all' || pro
+      // Лимит (не для Pro): по ДОСТАВЛЕННЫМ советам за месяц; исчерпал → одиночная генерация.
+      if (useCouncil && !pro && settings.councilMaxPerMonth > 0 && (await councilRunsThisMonth(userId)) >= settings.councilMaxPerMonth) {
         useCouncil = false
       }
     }
