@@ -4,10 +4,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
-import { listsHealth } from '@/features/library/health'
 import { applySavedQuery, listSavedQueries } from '@/features/library/saved-queries'
-import { SavedQueryBar } from '@/features/library/SavedQueryBar'
-import { HealthBoard } from '@/features/library/HealthBoard'
 
 export const metadata = { title: 'My lists' }
 
@@ -24,7 +21,6 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
     items = items.filter((it) => keep.has(it.id))
   }
   // Панель здоровья (HQ §11): «где болит прямо сейчас» — выше ленты.
-  const health = session ? await listsHealth(session.userId) : []
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-6 py-6">
@@ -45,8 +41,12 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
             <div className="py-16 text-center text-[13.5px] text-muted">{t('emptyMyLists', lang)}</div>
           ) : (
             <>
-              <HealthBoard items={health} lang={lang} ownerHandle={session.handle} />
-              <SavedQueryBar queries={queries} active={activeQuery?.id} lang={lang} />
+              {/* Щиток здоровья и конструктор сохранённых запросов отсюда УБРАНЫ (решение
+                  владельца 2026-07-29). «Мои списки» — страница, куда приходят открыть свой
+                  список, а не настраивать выборку: два блока инструментов отжимали контент
+                  вниз и требовали внимания раньше, чем сам список. Оба инструмента осмысленны,
+                  когда списков сотни, — тогда им место в отдельном разделе, а не здесь.
+                  Код фич не удалён: вернуть их дешевле, чем написать заново. */}
               {items.length === 0 ? (
                 <div className="py-10 text-center text-[13.5px] text-muted">{say('Nothing matches this query', 'Под запрос ничего не попало')}</div>
               ) : (

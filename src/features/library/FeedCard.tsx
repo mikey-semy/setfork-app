@@ -49,9 +49,10 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
                   <BadgeCheck size={14} className="shrink-0 text-accent" />
                 </Tooltip>
               )}
-              {/* Версия/черновик/приватность — В строке заголовка: своим рядом они
-                  занимали целую строку высоты ради одного крошечного бейджа. */}
-              <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">v{item.version}</span>
+              {/* Версия уехала ВНИЗ, к счётчикам: в строке заголовка она на мобиле
+                  переносилась на свою строку и рвала карточку пустотой посередине —
+                  ровно то, чего строка заголовка должна была избежать. Статусы
+                  (черновик/приватный) остаются здесь: это не счётчик, а состояние. */}
               {item.status === 'draft' && (
                 <span className="rounded border border-warn px-1.5 py-0.5 text-[10.5px] font-medium text-warn">{t('draftBadge', lang)}</span>
               )}
@@ -91,9 +92,10 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
 
         {/* 4. Строка-инфо со счётчиками (аналог вкладок GitHub «со всей информацией»). */}
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted">
-          <span className="inline-flex items-center gap-1">
-            <Star size={12} /> {fmt(item.starsCount)}
-          </span>
+          {/* Версия первой: она отвечает на «что это за список», а не «как его оценили». */}
+          <span className="font-mono text-[11px]">v{item.version}</span>
+          {/* Звёзд здесь БОЛЬШЕ НЕТ: их счётчик уже стоит в кнопке справа вверху, и одно и то
+              же число дважды на одной карточке — это не акцент, а шум. */}
           <span className="inline-flex items-center gap-1">
             <GitFork size={12} /> {fmt(item.forksCount)}
           </span>

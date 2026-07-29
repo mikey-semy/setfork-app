@@ -288,9 +288,10 @@ export default async function ListPage({
                 {tpl.visibility === 'private' && (
                   <span className="inline-flex items-center gap-1.5 text-ink-2 sm:hidden"><Lock size={14} className="text-muted" /> {t('privateLabel', lang)}</span>
                 )}
-                <span className="inline-flex items-center gap-1.5"><Star size={14} className="text-muted" /> <b className="text-ink">{tpl.starsCount}</b> {t('starsLabel', lang)}</span>
-                <span className="inline-flex items-center gap-1.5"><GitFork size={14} className="text-muted" /> <b className="text-ink">{tpl.forksCount}</b> {t('forksLabel', lang)}</span>
-                <Link href={`${base}/insights`} className="inline-flex items-center gap-1.5 hover:text-accent"><Eye size={14} className="text-muted" /> <b className="text-ink">{tpl.viewsCount}</b> {t('viewsLabel', lang)}</Link>
+                {/* Звёзд, форков и просмотров здесь НЕТ: те же числа стоят кнопками прямо
+                    над этой строкой. Дважды одно и то же на одном экране — не акцент, а шум
+                    (замечание владельца 2026-07-29). Остаются ветки и версия: их кнопок нет,
+                    и это навигация, а не счётчики. */}
                 <Link href={`${base}/versions`} className="inline-flex items-center gap-1.5 hover:text-accent"><GitBranch size={14} className="text-muted" /> <b className="text-ink">{Math.max(1, branches.length)}</b> {t('branchesLabel', lang)}</Link>
                 <Link href={`${base}/versions`} className="inline-flex items-center gap-1.5 hover:text-accent"><Tag size={14} className="text-muted" /> v{currentVersion?.version ?? tpl.currentVersion}</Link>
               </div>
@@ -770,10 +771,10 @@ export default async function ListPage({
               )}
               <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3 text-[13px] text-ink-2">
                 <span className="inline-flex items-center gap-2">
-                  <Star size={14} /> <b className="text-ink">{fmt(tpl.starsCount)}</b> stars
+                  <Star size={14} /> <b className="text-ink">{fmt(tpl.starsCount)}</b> {t('starsLabel', lang)}
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <GitFork size={14} /> <b className="text-ink">{fmt(tpl.forksCount)}</b> forks
+                  <GitFork size={14} /> <b className="text-ink">{fmt(tpl.forksCount)}</b> {t('forksLabel', lang)}
                 </span>
                 <Link href={`${base}/releases`} className="inline-flex items-center gap-2 hover:text-accent">
                   <Tag size={14} /> {t('releasesLabel', lang)}:{' '}
