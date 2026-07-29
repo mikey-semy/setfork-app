@@ -4,7 +4,7 @@ import { getAiSettings, modelAllowed, parseModelAllowlist } from '@/shared/setti
 import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
-import { baseModelId, quarantinedModels } from './health'
+import { baseModelId, filterByQuarantine, quarantinedModels } from './health'
 import { gnomeMood, gnomeReputation, gnomeThanksCounts, repScore } from './gnome-reputation'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { spotlight, type Spotlight } from './spotlight'
@@ -153,6 +153,28 @@ export type CouncilResult =
   | null
 
 /** Мультимодельный «совет гномов». null при ошибке/выкл — caller фолбэкает на generateListDraft. */
+/**
+ * ПУЛ СОВЕТА из сырого списка моделей. Три правила, и все три нужны:
+ *
+ * 1. Провайдер и белый список — жёсткие. Модель чужого провайдера просто не ответит,
+ *    а белый список — прямой запрет владельца стенда.
+ * 2. Карантин — мягкий. Если просели ВСЕ модели, работаем на просевших: медленный совет
+ *    лучше отсутствующего (так вёл себя filterByQuarantine и до белого списка).
+ * 3. Пустым пул быть не может. Новатору достаётся pool[0], и на пустом пуле это
+ *    undefined — вызов без модели вместо расходящегося черновика (P1 из авто-ревью).
+ *    Когда жёсткие фильтры выметают всё, остаётся base: она уже прошла белый список
+ *    при чтении настроек (shared/settings/ai.ts).
+ */
+export function buildCouncilPool(
+  rawPool: string[],
+  permitted: (m: string) => boolean,
+  quarantined: ReadonlySet<string>,
+  base: string,
+): string[] {
+  const hard = rawPool.filter(permitted)
+  return hard.length ? filterByQuarantine(hard, quarantined) : [base]
+}
+
 export async function generateListCouncil(query: string, lang: Lang, opts: GenerateOptions = {}): Promise<CouncilResult> {
   const client = await getAiChatClient()
   if (!client) return null
@@ -185,13 +207,13 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // временно выпадают из ротации; окно скользящее — возврат автоматический.
   const quarantined = await quarantinedModels()
   const allowlist = parseModelAllowlist()
-  const usable = (m: string) => forProvider(m) && modelAllowed(m, allowlist) && !quarantined.has(baseModelId(m))
-  // Пул собираем ТЕМ ЖЕ правилом `usable`, что и модели личных специалистов. Раньше
-  // здесь стоял только фильтр провайдера: при заданном AI_MODEL_ALLOWLIST белый список
-  // защищал личных экспертов, а пул совета (быстрая модель, ротация, критик, старейшина)
-  // собирался мимо него — то есть ограничение, ради которого список и заводят, обходилось
-  // самым дорогим путём.
-  const pool = rawPool.filter(usable)
+  // Провайдер и белый список — ЖЁСТКИЕ: их обходить нельзя, ради этого список и заводят.
+  const permitted = (m: string) => forProvider(m) && modelAllowed(m, allowlist)
+  const usable = (m: string) => permitted(m) && !quarantined.has(baseModelId(m))
+  // Пул собираем тем же правилом, что и модели личных специалистов: раньше здесь стоял
+  // только фильтр провайдера, и при заданном AI_MODEL_ALLOWLIST ограничение обходилось
+  // самым дорогим путём — быстрой моделью, ротацией экспертов, критиком и старейшиной.
+  const pool = buildCouncilPool(rawPool, permitted, quarantined, base)
   // Быстрая модель для ПРОМЕЖУТОЧНЫХ шагов (распорядитель-классификатор, критик, веб-поиск):
   // reasoning-модель там не нужна, а совет из 6-7 вызовов на ней тормозит минутами. Финал — на base.
   const fast = pool[0] || base
