@@ -20,6 +20,7 @@ import { craftRules } from './triples'
 import { lawBlock } from './list-laws'
 import { pushMessage, type GenMessageKind } from './generation-messages'
 import { langEnName, type Lang } from '@/shared/i18n'
+import { detectTextLang } from '@/shared/lib/translit'
 
 /**
  * «Совет гномов» — мультимодельная генерация списка (research 2026-07-13):
@@ -107,6 +108,21 @@ export interface CouncilDraft {
 
 /** Буква черновика в анонимном блоке: A, B, C… — единственное, чем он подписан. */
 export const draftLetter = (i: number) => String.fromCharCode(65 + i)
+
+/**
+ * Обрезка реплики для ленты хода совета: по границе слова, с многоточием.
+ *
+ * Внутренние ярлыки черновиков (DRAFT A/B/C) заодно переводим на человеческий: пользователю
+ * незачем знать нашу внутреннюю нумерацию, а латиница посреди русской реплики — это утечка
+ * потрохов наружу, чем она и является.
+ */
+export function clip(raw: string, max: number): string {
+  const human = raw.replace(/DRAFT\s+([A-Z])/g, (_m, letter) => `вариант ${letter}`)
+  if (human.length <= max) return human
+  const cut = human.slice(0, max)
+  const at = cut.lastIndexOf(' ')
+  return `${(at > max * 0.6 ? cut.slice(0, at) : cut).trimEnd()}…`
+}
 
 /**
  * Анонимный блок черновиков для критика и старейшины.
@@ -312,7 +328,7 @@ Return ONLY a JSON object mapping every event key to its line.\n${sp.rule()}`,
 ASK when the request is underspecified — a bare fragment/pronoun ("organize it", "help me"), or a broad activity/goal whose good list depends on unstated parameters: stack/OS, skill level, budget, goal, scope, audience, constraints.
   Examples that MUST ask: "Deploy to a VPS" (which stack? OS? zero-downtime?), "Deploy an app on a VPS", "Learn guitar" (genre? level?), "Plan a trip" (where? days? budget?), "Start a business", "Get fit", "Организовать переезд".
 PROCEED (no questions) when the request already names a concrete, self-contained subject: a specific dish ("домашний зефир"), a specific book/topic list ("книги про гномов"), a specific well-scoped how-to ("настроить бэкапы Postgres на VPS в S3").
-When asking: write 2-3 SHORT questions in the request's language. Where natural, append 2-4 quick answer OPTIONS after a "|": "Which stack? | Node.js | Python | PHP | Docker". Starting with questions is GOOD service, not friction.
+When asking: write 2-3 SHORT questions. ALL questions and options MUST be written in ${langName} — this is not a preference, it is the language of the person who asked. Where natural, append 2-4 quick answer OPTIONS after a "|": "Which stack? | Node.js | Python | PHP | Docker". Starting with questions is GOOD service, not friction.
 Return ONLY JSON: {"ask": true|false, "questions": ["...only if ask"]}
 ${sp.rule()}`,
       `REQUEST:\n${topic}`,
@@ -325,6 +341,13 @@ ${sp.rule()}`,
         const g = JSON.parse(firstJson(gate.text)) as { ask?: boolean; questions?: string[] }
         ask = g.ask === true
         gateQuestions = Array.isArray(g.questions) ? g.questions.filter((q) => typeof q === 'string' && q.trim()).map((q) => q.trim()).slice(0, 3) : []
+        // ПРОВЕРКА ЯЗЫКА КОДОМ. Просьба «пиши на языке запроса» адресована быстрой модели —
+        // той самой, про которую известно, что она роняет именно эту задачу. Опросник на
+        // чужом языке хуже, чем его отсутствие: он выглядит поломкой, а не заботой. Поэтому
+        // при несовпадении просто идём в совет без беседы.
+        if (gateQuestions.length && detectTextLang(gateQuestions.join(' ')) !== lang) {
+          gateQuestions = []
+        }
       } catch { /* не распарсили — идём как обычно */ }
     }
     if (ask && gateQuestions.length) {
@@ -536,7 +559,9 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
   // «разбираю…» показываем РЕАЛЬНЫЙ вывод критика этого витка — ценой ноль
   // (вызов уже сделан). VERDICT-строку отделяем, дальше в синтез идёт полный текст.
   const vm = critique?.text ? /(?:^|\n)\s*VERDICT:\s*(.+)/i.exec(critique.text) : null
-  if (vm) emit('critique', vm[1].trim().slice(0, 120), 'critic', say('Critic', 'Критик'))
+  // Режем по ГРАНИЦЕ СЛОВА и ставим знак обрыва: сырой slice давал «надо отсеять пусты» и
+  // «мотивирующий эфф» — обрывок посреди слова читается как поломка, а не как сокращение.
+  if (vm) emit('critique', clip(vm[1].trim(), 120), 'critic', say('Critic', 'Критик'))
   const critiqueBody = vm ? critique!.text.replace(vm[0], '').trim() : (critique?.text ?? '')
 
   // 5) Старейшина-синтез → строгий JSON. Конвергенция, но СОХРАНИ лучшую новизну (не усредняй).
