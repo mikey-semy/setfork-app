@@ -485,7 +485,23 @@ Keep the existing items below in their current order and wording. If the list th
   }
   // Материал списываем ПОСЛЕ версии: упади запись — новости остались бы «использованными»
   // без списка, и повод пропал бы навсегда.
-  await markUsed(fresh.map((f) => f.id), tpl.id)
+  //
+  // И списываем ТОЛЬКО то, что реально попало в результат. Проверки «список не изменился»
+  // недостаточно: модель могла добавить два события из трёх, а помечались все — третье
+  // исчезало навсегда, ни разу не появившись в ленте. Ищем адрес события в готовых
+  // пунктах: промпт требует класть его в refs, значит адрес — честный признак того,
+  // что событие обработано. Не нашли ни одного (модель переписала ссылки) — списываем
+  // всё, как раньше: иначе одни и те же новости крутились бы вечно.
+  const produced = JSON.stringify(items).toLowerCase()
+  const landed = fresh.filter((f) => produced.includes(f.url.toLowerCase()))
+  await markUsed((landed.length ? landed : fresh).map((f) => f.id), tpl.id)
+  if (landed.length && landed.length < fresh.length) {
+    log.info('gardener: часть событий не вошла в ленту — остаются для следующего прохода', {
+      slug: tpl.slug,
+      landed: landed.length,
+      kept: fresh.length - landed.length,
+    })
+  }
   await recordAgentAction({
     loop: 'gardener',
     action: 'list.grow',
