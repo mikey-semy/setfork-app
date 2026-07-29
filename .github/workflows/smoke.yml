@@ -9,9 +9,14 @@ name: Smoke (setfork-sim)
 # contents репо mikey-semy/setfork-sim (кросс-репо checkout приватного репо;
 # дефолтный GITHUB_TOKEN туда не ходит). Без него шаг checkout sim упадёт.
 
+# НЕ на каждый PR: полный стек + Playwright занимают раннер ~25 минут, а сценарии
+# ловят регресс продукта, а не конкретной правки. На PR это только очередь. Гоняем
+# ночью, на push в master и руками, когда трогали пользовательский путь.
 on:
   workflow_dispatch:
-  pull_request:
+  schedule:
+    - cron: '0 2 * * *'
+  push:
     branches: [master]
 
 
@@ -53,10 +58,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          # cache: npm НЕ используем: на self-hosted раннере это скачивание архива
+          # кэша из GitHub (из РФ — минуты на джобу). Вместо него ~/.npm смонтирован
+          # персистентным томом раннера (setfork-ci-runner/docker-compose.yml), а
+          # установка идёт --prefer-offline.
 
       - name: Install deps
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Apply DB schema (drizzle export → psql)
         # push интерактивен (TTY), migrate падает на журнале миграций (известная
@@ -92,7 +100,7 @@ jobs:
       - name: Run smoke (c1–c6)
         working-directory: _sim
         run: |
-          npm ci
+          npm ci --prefer-offline --no-audit --no-fund
           npx playwright install --with-deps chromium
           npm run smoke
 
