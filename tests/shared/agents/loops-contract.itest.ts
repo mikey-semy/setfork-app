@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 /**
@@ -66,6 +66,24 @@ describe('планировщик ставит первую задачу', () => 
     await LOOP_WIRING.gardener.schedule()
     const rows = await db.select({ id: jobs.id }).from(jobs).where(eq(jobs.type, 'gardener'))
     expect(rows).toHaveLength(1)
+  })
+})
+
+describe('петля переживает собственный прогон', () => {
+  it('пока задача выполняется, планировщик ставит СЛЕДУЮЩУЮ', async () => {
+    // Планировщик зовётся из самой задачи, когда она уже `processing`. Учитывай он её —
+    // преемник бы не встал, и петля умирала бы после первого прогона, оживая лишь рестартом.
+    for (const l of LOOPS) {
+      await db.delete(jobs)
+      await enqueueJob(l.jobType, {}, { maxAttempts: 1 })
+      const claimed = await claimJob()
+      expect(claimed?.type).toBe(l.jobType)
+
+      await LOOP_WIRING[l.name].schedule()
+
+      const pending = await db.select({ id: jobs.id }).from(jobs).where(and(eq(jobs.type, l.jobType), eq(jobs.status, 'pending')))
+      expect(pending.length, `петля ${l.name} не поставила преемника — умерла бы после первого прогона`).toBe(1)
+    }
   })
 })
 

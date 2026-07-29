@@ -1,4 +1,4 @@
-import { Info, UserRound } from 'lucide-react'
+import { FileText, Image as ImageIcon, Info, ListChecks, ShoppingBag, UserRound, Video } from 'lucide-react'
 import type { ProposedItem } from '@/shared/db'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { CodeCard } from '@/shared/ui/CodeCard'
@@ -17,6 +17,68 @@ import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
  * Рендер намеренно СКРОМНЕЕ страницы списка (без прогонов, комментариев, кирки): это
  * предпросмотр, а не вторая копия страницы, которая разъедется с оригиналом.
  */
+/**
+ * Не-step блок в предпросмотре: тип, суть и ничего лишнего.
+ *
+ * Раньше сюда попадал только текст (у него есть content.md), а картинка, видео,
+ * файл, товары, опрос и тест проваливались в рендер ШАГА: читатель видел пустую
+ * строчку с маркером и бейджем уровня, то есть предпросмотр показывал не тот
+ * список, который получится после принятия.
+ *
+ * Показываем скромно и статично (без голосования и проверки ответов): это
+ * предпросмотр, а не вторая копия страницы списка.
+ */
+function BlockPreview({ item, lang }: { item: ProposedItem; lang: Lang }) {
+  const c = (item.content ?? {}) as Record<string, unknown>
+  const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
+  const head = (icon: React.ReactNode, text: string) => (
+    <div className="flex items-center gap-2 text-[13px] text-ink-2">
+      <span className="text-muted">{icon}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">{text}</span>
+    </div>
+  )
+  const caption = str(c.caption)
+  switch (item.type) {
+    case 'image':
+      return head(<ImageIcon size={14} />, caption || t('blockImage', lang))
+    case 'video':
+      return head(<Video size={14} />, caption || str(c.url) || t('blockVideo', lang))
+    case 'file':
+      return head(<FileText size={14} />, str(c.fileName) || str(c.url) || t('blockFile', lang))
+    case 'product': {
+      const items = Array.isArray(c.items) ? (c.items as Record<string, unknown>[]) : []
+      return (
+        <div className="flex flex-col gap-1">
+          {head(<ShoppingBag size={14} />, t('blockProduct', lang))}
+          <ul className="ml-6 list-disc text-[13px] text-ink">
+            {items.slice(0, 8).map((p, k) => (
+              <li key={k} className="[overflow-wrap:anywhere]">{str(p.name) || str(p.url)}</li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+    case 'poll':
+    case 'quiz': {
+      const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
+      return (
+        <div className="flex flex-col gap-1">
+          {head(<ListChecks size={14} />, str(c.question) || (item.type === 'poll' ? t('blockPoll', lang) : t('blockQuiz', lang)))}
+          <ul className="ml-6 list-disc text-[13px] text-ink">
+            {/* Верные ответы в предпросмотре НЕ помечаем: рецензент читает вопрос,
+                а не проходит тест. */}
+            {opts.slice(0, 8).map((o, k) => (
+              <li key={k} className="[overflow-wrap:anywhere]">{str(o.text)}</li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
+    default:
+      return null
+  }
+}
+
 export function SuggestionResult({ items, lang, ordered = true }: { items: ProposedItem[]; lang: Lang; ordered?: boolean }) {
   // Презентационные блоки (text/image/…) в нумерацию не входят — как на странице списка.
   let seq = 0
@@ -31,6 +93,8 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
           <div key={i} className="rounded-lg border border-border bg-surface p-4">
             {!isStep && md ? (
               <Markdown>{md}</Markdown>
+            ) : !isStep ? (
+              <BlockPreview item={it} lang={lang} />
             ) : (
               <div className="flex gap-3">
                 <span className="mt-0.5 font-mono text-[13px] text-muted">{ordered && num ? num : '•'}</span>

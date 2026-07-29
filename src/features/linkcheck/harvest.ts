@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, eq, sql } from 'drizzle-orm'
-import { db, linkChecks, linkOccurrences, steps, templateVersions, templates } from '@/shared/db'
+import { db, linkChecks, linkOccurrences, steps, templateVersions, templates, publiclyVisible } from '@/shared/db'
 import { extractUrls, normalizeUrl, productItems, urlHost, walkStrings } from '@/core'
 import { log } from '@/shared/observability'
 
@@ -74,7 +74,7 @@ export async function harvestAll(limit = 500): Promise<number> {
   const tpls = await db
     .select({ id: templates.id })
     .from(templates)
-    .where(and(eq(templates.status, 'published'), eq(templates.visibility, 'public'), eq(templates.moderation, 'active')))
+    .where(and(publiclyVisible()))
     .orderBy(sql`${templates.updatedAt} desc`)
     .limit(limit)
   for (const t of tpls) await harvestTemplate(t.id)

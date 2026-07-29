@@ -138,3 +138,17 @@ describe('чем ищем материал', () => {
     expect(withDomains.result).toBe('grown')
   })
 })
+
+describe('находки ревью (Codex #535)', () => {
+  it('модель вернула тот же список — материал НЕ сжигаем: новость не должна исчезать', async () => {
+    const id = await addItem('Вышел релиз v2', 'https://a.example/v2')
+    // Ответ модели = текущее содержимое: события проигнорированы.
+    ai.reply = { title: 'Что происходит в DevOps', desc: 'Лента изменений по инструментам', tags: ['devops'], items: [item('Старый пункт', 'что делать')] }
+
+    const res = await growLiving(tpl(), current(), 'ru', 'procedure', ctx())
+
+    expect(res.result).toBe('failed')
+    const [row] = await db.select().from(feedItems).where(eq(feedItems.id, id))
+    expect(row.usedAt, 'материал сгорел, хотя в ленте не появился').toBeNull()
+  })
+})

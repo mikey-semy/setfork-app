@@ -1,3 +1,7 @@
+// БЕЗ loading.tsx намеренно. Скелетон на этом сегменте включает потоковую отдачу:
+// шапка ответа уходит клиенту сразу, и notFound() ниже уже не может поставить 404 —
+// прод отдавал страницу «не найдено» с кодом 200, а поисковик считал её живой.
+// Замер после снятия скелетона: первый байт 0,3 с — ждать нечего.
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -42,7 +46,7 @@ import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutl
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
-import { db, listLinks, templates as templatesTable, users as usersTable } from '@/shared/db'
+import { db, listLinks, templates as templatesTable, users as usersTable, publiclyVisible } from '@/shared/db'
 import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
@@ -161,9 +165,7 @@ export default async function ListPage({
     .where(
       andOp(
         eq(listLinks.toId, tpl.id),
-        eq(templatesTable.status, 'published'),
-        eq(templatesTable.visibility, 'public'),
-        eq(templatesTable.moderation, 'active'),
+        publiclyVisible(),
       ),
     )
     .limit(10)

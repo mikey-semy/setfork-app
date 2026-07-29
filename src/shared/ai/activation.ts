@@ -65,15 +65,26 @@ export function stageFor(c: Pick<Candidate, 'lifecycle' | 'daysSinceWork'>): Lif
  * Архивные не участвуют. Спящие участвуют ТОЛЬКО когда работа их ремесла никем из
  * неспящих не покрыта — иначе сон был бы билетом в один конец.
  */
-export function workQueue(candidates: Candidate[], domain?: string): WorkSlot[] {
+export function workQueue(candidates: Candidate[], domain?: string, priorityDomains: string[] = [], owners: string[] = []): WorkSlot[] {
   const fits = (c: Candidate) => !domain || c.domains.some((d) => d.toLowerCase() === domain.toLowerCase())
   const eligible = candidates.filter((c) => c.lifecycle !== 'archived' && fits(c))
   const awake = eligible.filter((c) => c.lifecycle !== 'dormant')
   // Спящих подключаем, только если бодрых по этому ремеслу нет вовсе.
   const pool = awake.length ? awake : eligible
+  // ОДОБРЕННАЯ ПОВЕСТКА идёт ПЕРЕД всеми прочими правилами очереди: гендиректор сказал, что
+  // растим эту тему, и «нет оснований» тут уже не аргумент — иначе одобрение ничего не меняет,
+  // и повестка остаётся отчётом.
+  // ХОЗЯИН одобренного пункта идёт первым — раньше всех прочих правил, включая тему: тема
+  // говорит «что растим», хозяин — «кто за это отвечает», и делать должен именно он.
+  const ownerSet = new Set(owners.filter(Boolean))
+  const wanted = new Set(priorityDomains.map((d) => d.toLowerCase().trim()).filter(Boolean))
+  const onAgenda = (c: Candidate) => (wanted.size ? c.domains.some((d) => wanted.has(d.toLowerCase())) : false)
 
   return [...pool]
     .sort((a, b) => {
+      const ownerA = ownerSet.has(a.id), ownerB = ownerSet.has(b.id)
+      if (ownerA !== ownerB) return ownerA ? -1 : 1
+      if (onAgenda(a) !== onAgenda(b)) return onAgenda(a) ? -1 : 1
       if ((a.attempts === 0) !== (b.attempts === 0)) return a.attempts === 0 ? -1 : 1
       if (a.attempts !== b.attempts) return a.attempts - b.attempts
       const da = a.daysSinceWork ?? Number.POSITIVE_INFINITY
@@ -81,8 +92,19 @@ export function workQueue(candidates: Candidate[], domain?: string): WorkSlot[] 
       if (da !== db) return db - da // дольше не работал → раньше в очереди
       return a.id.localeCompare(b.id)
     })
-    .map((c) => ({ id: c.id, why: reasonFor(c, pool === eligible && c.lifecycle === 'dormant') }))
+    .map((c) => {
+      // Причина словами: по ней в журнале видно, ПОЧЕМУ работа досталась именно этому мастеру.
+      const why = ownerSet.has(c.id) ? OWNER_REASON : onAgenda(c) ? AGENDA_REASON : reasonFor(c, pool === eligible && c.lifecycle === 'dormant')
+      return { id: c.id, why }
+    })
 }
+
+/** Причина «тема в одобренной повестке» — отдельной строкой: тернарник с двумя литералами
+ *  правило i18n принимает за двуязычную строку, а это технический текст журнала. */
+const AGENDA_REASON = 'в повестке развития — одобрено гендиректором'
+
+/** Причина «он хозяин одобренного пункта» — по ней в журнале видно единственного ответственного. */
+const OWNER_REASON = 'хозяин одобренного пункта повестки'
 
 function reasonFor(c: Candidate, revived: boolean): string {
   if (revived) return 'разбужен: работа его ремесла, бодрых по этому домену нет'

@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, embeddings, issues, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, templateVersions, users } from '@/shared/db'
+import { db, embeddings, issues, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, templateVersions, users, publiclyVisible } from '@/shared/db'
 import type { Lang, LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
@@ -127,9 +127,7 @@ function searchCondition(q: string): SQL {
 // (черновики/flagged/hidden не публикуются). Владелец видит свои списки в любом статусе.
 function visibleFilter(viewerId?: string): SQL {
   const publicVisible = and(
-    eq(templates.status, 'published'),
-    eq(templates.visibility, 'public'),
-    eq(templates.moderation, 'active'),
+    publiclyVisible(),
   )!
   return viewerId ? or(publicVisible, eq(templates.ownerId, viewerId))! : publicVisible
 }
@@ -302,9 +300,7 @@ export async function searchListSuggestions(q: string, limit = 6): Promise<ListS
     .innerJoin(users, eq(templates.ownerId, users.id))
     .where(
       and(
-        eq(templates.status, 'published'),
-        eq(templates.visibility, 'public'),
-        eq(templates.moderation, 'active'),
+        publiclyVisible(),
         or(ilike(titleText, like), ilike(templates.slug, like), sql`${term} <% ${titleText}`)!,
       ),
     )
