@@ -29,6 +29,10 @@ export interface ModelsResult {
   pricesKnown: boolean
   chat: ModelOption[]
   embedding: ModelOption[]
+  /** Причина, по которой каталог не приехал (сеть, HTTP-код, нет ключа).
+   *  Пусто = всё в порядке. Молчаливый пустой список читается как «фичу
+   *  выпилили» — интерфейс обязан назвать причину, а не прятать её. */
+  error?: string
 }
 
 interface RawModel {
@@ -53,17 +57,33 @@ function toOptions(raw: RawModel[] | undefined): ModelOption[] {
     .sort((a, b) => a.label.localeCompare(b.label))
 }
 
-// Только 1536-мерные эмбеддинги совместимы с колонкой embeddings.embedding (pgvector 1536).
-const EMBEDDING_1536 = new Set(['openai/text-embedding-3-small', 'openai/text-embedding-ada-002'])
+/** Размерность колонки embeddings.embedding (pgvector) — совместимы только модели с ней.
+ *  Число живёт ЗДЕСЬ, а не в подписи поля: подпись его подставляет, схема БД и UI не разъезжаются. */
+export const EMBEDDING_DIM = 1536
 
-async function fetchList(url: string, init?: RequestInit): Promise<RawModel[]> {
+/** Размерности эмбеддинг-моделей: провайдеры их в /models не отдают, а совместимость
+ *  определяется именно ими. Данные, а не «магический» фильтр по двум именам. */
+const EMBEDDING_DIMS: Record<string, number> = {
+  'openai/text-embedding-3-small': 1536,
+  'openai/text-embedding-ada-002': 1536,
+  'openai/text-embedding-3-large': 3072,
+}
+
+interface ListResult {
+  models: RawModel[]
+  /** Причина отказа: сеть или HTTP-код. Раньше глоталась в catch — и любой сбой
+   *  выглядел как «у провайдера нет моделей». */
+  error?: string
+}
+
+async function fetchList(url: string, init?: RequestInit): Promise<ListResult> {
   try {
     const res = await fetch(url, init)
-    if (!res.ok) return []
+    if (!res.ok) return { models: [], error: `HTTP ${res.status}` }
     const data = (await res.json()) as { data?: RawModel[] }
-    return data.data ?? []
-  } catch {
-    return []
+    return { models: data.data ?? [] }
+  } catch (e) {
+    return { models: [], error: e instanceof Error ? e.message : 'network error' }
   }
 }
 
@@ -86,17 +106,22 @@ export async function fetchModelsFor(provider: AiProviderId): Promise<ModelsResu
   const cfg = await getProviderConfigFor(provider)
   // Ключа нет — каталог пуст, но провайдера возвращаем ВЫБРАННОГО: интерфейс должен
   // сказать «у этого провайдера нет ключа», а не молча показать чужой список.
-  if (!cfg) return { ...EMPTY, provider }
+  if (!cfg) return { ...EMPTY, provider, error: 'no-key' }
   return fetchModelsForConfig(cfg)
 }
 
 async function fetchModelsForConfig(cfg: Awaited<ReturnType<typeof getAiProviderConfig>>): Promise<ModelsResult> {
   if (!cfg) return EMPTY
   const init = { headers: { Authorization: `Bearer ${cfg.apiKey}`, ...(cfg.headers ?? {}) } }
-  const [chat, embedding] = await Promise.all([
+  const [chatRes, embeddingRes] = await Promise.all([
     fetchList(`${cfg.baseUrl}/models`, init),
-    cfg.provider === 'openrouter' ? fetchList(`${cfg.baseUrl}/embeddings/models`, init) : Promise.resolve([]),
+    cfg.provider === 'openrouter' ? fetchList(`${cfg.baseUrl}/embeddings/models`, init) : Promise.resolve({ models: [] } as ListResult),
   ])
+  const { models: chat } = chatRes
+  const { models: embedding } = embeddingRes
+  // Отказ каталога пишем в лог: на проде «пустой список» иначе неотличим от «моделей нет»
+  // (RU-IP не видит openrouter.ai напрямую — ходит через egress-мост, и его падение выглядит так же).
+  if (chatRes.error) console.warn(`[ai/models] каталог ${cfg.provider} не загрузился: ${chatRes.error}`)
   // У Яндекса в общем /models лежат и эмбеддинги (emb://), и картинки (art://),
   // и realtime-речь — в chat-селекте им не место; rc/deprecated-версии тоже
   // прячем (мусорят выбор, для них есть явный ввод id руками).
@@ -131,6 +156,7 @@ async function fetchModelsForConfig(cfg: Awaited<ReturnType<typeof getAiProvider
     currency: cfg.provider === 'openrouter' ? 'USD' : 'RUB',
     pricesKnown: true, // per-model приоритетнее: без прайса опция покажет «—»
     chat: chatOpts,
-    embedding: toOptions(embedding).filter((m) => EMBEDDING_1536.has(m.id)),
+    embedding: toOptions(embedding).filter((m) => EMBEDDING_DIMS[m.id] === EMBEDDING_DIM),
+    error: chatRes.error,
   }
 }

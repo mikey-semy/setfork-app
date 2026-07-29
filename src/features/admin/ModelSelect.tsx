@@ -26,6 +26,8 @@ export function ModelSelect({
   placeholder,
   allowEmpty,
   multiple,
+  allowCustom,
+  customHint,
   id,
 }: {
   name: string
@@ -34,6 +36,12 @@ export function ModelSelect({
   placeholder?: string
   allowEmpty?: boolean
   multiple?: boolean
+  /** Каталог провайдера не приехал (или модели в нём нет) — id можно ввести прямо в поиске.
+   *  Раньше на этот случай поле подменялось голым input: связка выглядела как удалённая
+   *  фича выбора моделей. Виджет один, деградирует только наполнение списка. */
+  allowCustom?: boolean
+  /** Подпись строки свободного ввода, например «Использовать». */
+  customHint?: string
   /** id кнопки-триггера: по нему подпись связывается с полем (label htmlFor). */
   id?: string
 }) {
@@ -85,6 +93,11 @@ export function ModelSelect({
     setOpen(false)
   }
 
+  // Свободный id: показываем, только когда в каталоге нет ровно такого значения —
+  // иначе строка дублировала бы обычную опцию.
+  const custom = allowCustom ? query.trim() : ''
+  const showCustom = custom.length > 0 && !options.some((o) => o.value === custom)
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
@@ -95,7 +108,10 @@ export function ModelSelect({
     } else if (e.key === 'Enter') {
       e.preventDefault()
       const o = filtered[highlight]
+      // Ничего не подошло, но id набран руками — Enter принимает его: с пустым
+      // каталогом это единственный способ ввести модель.
       if (o) pick(o.value)
+      else if (showCustom) pick(custom)
     } else if (e.key === 'Escape') {
       e.preventDefault()
       setOpen(false)
@@ -174,7 +190,16 @@ export function ModelSelect({
                   {o.price && <span className={`ml-auto shrink-0 pl-4 tabular-nums text-[11.5px] ${o.priceClass ?? ''}`}>{o.price}</span>}
                 </Row>
               ))}
-              {filtered.length === 0 && <div className="px-3 py-4 text-center text-[12.5px] text-muted">Ничего не найдено</div>}
+              {showCustom && (
+                <Row selected={values.includes(custom)} highlighted={false} onClick={() => pick(custom)}>
+                  <span className="truncate text-[12.5px]">
+                    {customHint ?? 'Использовать'} <span className="font-mono text-ink-2">{custom}</span>
+                  </span>
+                </Row>
+              )}
+              {filtered.length === 0 && !showCustom && (
+                <div className="px-3 py-4 text-center text-[12.5px] text-muted">Ничего не найдено</div>
+              )}
             </div>
           </div>
         )}
@@ -216,12 +241,13 @@ function Row({
   onClick: () => void
   onMouseEnter?: () => void
 }) {
+  // min-h-11 = 44px: строка списка — тач-цель, на мобиле в неё целятся пальцем.
   return (
     <button
       type="button"
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-left text-[13.5px] text-ink ${
+      className={`relative flex min-h-11 w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-left text-[13.5px] text-ink ${
         highlighted ? 'bg-(--accent-soft) text-accent' : ''
       }`}
     >
