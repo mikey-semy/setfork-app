@@ -30,6 +30,11 @@ beforeAll(async () => {
     list(alice, 'alice-public'),
     list(alice, 'alice-private', { visibility: 'private' }),
     list(alice, 'alice-draft', { status: 'draft' }),
+    // У Боба СВОИ списки того же набора: без них проверка симметрии пустая — «у Боба
+    // ничего нет» верно и при полностью сломанном фильтре.
+    list(bob, 'bob-public'),
+    list(bob, 'bob-private', { visibility: 'private' }),
+    list(bob, 'bob-draft', { status: 'draft' }),
   ])
 })
 
@@ -48,7 +53,15 @@ describe('чужие списки на странице владельца', () 
     expect(await slugs(alice, alice)).toEqual(['alice-draft', 'alice-private', 'alice-public'])
   })
 
-  it('правило не про конкретного человека: у Боба чужого не появляется', async () => {
-    expect(await slugs(bob, bob)).toEqual([])
+  it('правило не про конкретного человека: со страницы Боба Алиса видит только публичное', async () => {
+    expect(await slugs(bob, alice)).toEqual(['bob-public'])
+  })
+
+  it('Боб на своей странице видит всё своё и ничего чужого', async () => {
+    expect(await slugs(bob, bob)).toEqual(['bob-draft', 'bob-private', 'bob-public'])
+  })
+
+  it('аноним на странице Боба — только публичное', async () => {
+    expect(await slugs(bob)).toEqual(['bob-public'])
   })
 })
