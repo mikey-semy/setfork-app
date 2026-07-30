@@ -64,6 +64,16 @@ const FAMILIES: Record<string, string> = {
  * считаются совпавшими. Барьер скорее пропустит редкий случай, чем встанет поперёк
  * каждой миграции: он страхует от тихой потери, а не заменяет чтение диффа схемы.
  */
+/** Числа-модификаторы типа: numeric(12, 6) → [12, 6], varchar(64) → [64], halfvec(768) → [768]. */
+export function typeMods(raw: string): number[] {
+  const m = /\(([^)]*)\)/.exec(raw)
+  if (!m) return []
+  return m[1]
+    .split(',')
+    .map((x) => Number(x.trim()))
+    .filter((n) => Number.isFinite(n))
+}
+
 export function typeFamily(raw: string): string | null {
   const t = raw.trim().toLowerCase().replace(/\(.*\)$/, '') // varchar(64) → varchar
   if (t.endsWith('[]') || t.startsWith('_')) {
@@ -109,7 +119,19 @@ export function plannedDrops(expected: Schema, have: Schema): PlannedChanges {
       }
       const from = typeFamily(haveType)
       const to = typeFamily(expType)
-      if (from && to && from !== to) retypes.push({ column: `${table}.${col}`, from: haveType, to: expType })
+      if (from && to && from !== to) {
+        retypes.push({ column: `${table}.${col}`, from: haveType, to: expType })
+        continue
+      }
+      // Семейство то же, но СУЖЕНИЕ модификатора тоже теряет данные: numeric(12,6) →
+      // numeric(12,2) округлит уже записанное, varchar(128) → varchar(64) обрежет,
+      // halfvec(1536) → halfvec(768) выбросит половину вектора. Расширение (в другую
+      // сторону) безопасно и тревогу не поднимает (P1 из авто-ревью #600).
+      const fromMods = typeMods(haveType)
+      const toMods = typeMods(expType)
+      if (fromMods.length && fromMods.length === toMods.length && toMods.some((n, i) => n < fromMods[i])) {
+        retypes.push({ column: `${table}.${col}`, from: haveType, to: expType })
+      }
     }
   }
   return { tables, columns, retypes }

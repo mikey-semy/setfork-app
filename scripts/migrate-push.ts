@@ -80,10 +80,22 @@ function expectedSchema(): Schema {
   return out
 }
 
-/** Таблицы, колонки и их типы, которые СЕЙЧАС есть в БД. */
+/**
+ * Таблицы, колонки и их типы, которые СЕЙЧАС есть в БД.
+ *
+ * Тип берём через format_type, а не udt_name: udt_name отдаёт только базовый тип
+ * («numeric»), без модификаторов, — и сужение numeric(12,6) → numeric(12,2) выглядело бы
+ * совпадением, хотя оно округляет уже записанные значения (P1 из авто-ревью #600).
+ * format_type даёт ровно то же, что стоит в DDL: numeric(12,6), character varying(64),
+ * halfvec(768).
+ */
 async function dbSchema(pool: Pool): Promise<Schema> {
   const { rows } = await pool.query<{ table_name: string; column_name: string; udt_name: string }>(
-    `SELECT table_name, column_name, udt_name FROM information_schema.columns WHERE table_schema = 'public'`,
+    `SELECT c.relname AS table_name, a.attname AS column_name, format_type(a.atttypid, a.atttypmod) AS udt_name
+       FROM pg_attribute a
+       JOIN pg_class c ON c.oid = a.attrelid
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND a.attnum > 0 AND NOT a.attisdropped`,
   )
   const out: Schema = new Map()
   for (const r of rows) {

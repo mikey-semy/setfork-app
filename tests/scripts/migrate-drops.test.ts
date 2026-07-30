@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { plannedDrops, typeFamily, type Schema } from '../../scripts/migrate-drops'
+import { plannedDrops, typeFamily, typeMods, type Schema } from '../../scripts/migrate-drops'
 
 /**
  * ПРОД-МИГРАЦИЯ НЕ УДАЛЯЕТ МОЛЧА.
@@ -78,6 +78,33 @@ describe('смена типа при том же имени', () => {
   })
 })
 
+describe('сужение модификатора типа', () => {
+  it('numeric(12,6) → numeric(12,2) округлит записанное — ловим', () => {
+    const d = plannedDrops(m({ ai_usage: { cost_usd: 'numeric(12, 2)' } }), m({ ai_usage: { cost_usd: 'numeric(12,6)' } }))
+    expect(d.retypes).toEqual([{ column: 'ai_usage.cost_usd', from: 'numeric(12,6)', to: 'numeric(12, 2)' }])
+  })
+
+  it('varchar(128) → varchar(64) обрежет строки — ловим', () => {
+    const d = plannedDrops(m({ users: { bio: 'varchar(64)' } }), m({ users: { bio: 'character varying(128)' } }))
+    expect(d.retypes).toHaveLength(1)
+  })
+
+  it('расширение (varchar(64) → varchar(128)) безопасно — молчим', () => {
+    const d = plannedDrops(m({ users: { bio: 'varchar(128)' } }), m({ users: { bio: 'character varying(64)' } }))
+    expect(d.retypes).toEqual([])
+  })
+
+  it('половина вектора: halfvec(1536) → halfvec(768) — ловим', () => {
+    const d = plannedDrops(m({ embeddings: { embedding: 'halfvec(768)' } }), m({ embeddings: { embedding: 'halfvec(1536)' } }))
+    expect(d.retypes).toHaveLength(1)
+  })
+
+  it('без модификаторов сравнивать нечего — молчим', () => {
+    const d = plannedDrops(m({ users: { handle: 'text' } }), m({ users: { handle: 'text' } }))
+    expect(d.retypes).toEqual([])
+  })
+})
+
 describe('семейства типов', () => {
   it('сводят синонимы к одному', () => {
     expect(typeFamily('timestamptz')).toBe(typeFamily('timestamp with time zone'))
@@ -88,5 +115,11 @@ describe('семейства типов', () => {
 
   it('незнакомое даёт null, а не ложное совпадение', () => {
     expect(typeFamily('list_status')).toBeNull()
+  })
+
+  it('модификаторы читаются числами', () => {
+    expect(typeMods('numeric(12, 6)')).toEqual([12, 6])
+    expect(typeMods('character varying(64)')).toEqual([64])
+    expect(typeMods('text')).toEqual([])
   })
 })
