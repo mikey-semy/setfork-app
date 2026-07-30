@@ -71,7 +71,9 @@ export function StarFolderMenu({
             bare ? '' : 'rounded-r-md border border-l-0 border-border'
           }`}
         >
-          <ChevronDown size={14} />
+          {/* 13 — общий размер каретки у сплитов (Следить/Звезда): раньше здесь было 14,
+              и рядом кнопки выглядели разнокалиберными. */}
+          <ChevronDown size={13} />
         </button>
       </Tooltip>
       <OverlayPanel open={open} onClose={() => setOpen(false)} width={280} className="p-0">

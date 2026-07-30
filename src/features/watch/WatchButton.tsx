@@ -88,8 +88,12 @@ export function WatchButton({
             <span className="hidden sm:inline">{watching ? labels.unwatch : labels.watch}</span>
             {/* Ноль не показываем: пустой счётчик занимает место и ничего не сообщает. */}
             {count_ > 0 && <span className="font-mono text-[12px] text-muted">{count_}</span>}
-            {/* Каретка за разделителем — единый вид со сплитами Star/Fork. */}
-            <span className="flex h-full items-center self-stretch border-l border-border pl-1.5 pr-2 max-sm:pr-1.5">
+            {/* Каретка за разделителем — единый вид со сплитами Star/Fork: размер 13,
+                цвет каретки всегда приглушённый, а РАЗДЕЛИТЕЛЬ следует за состоянием
+                кнопки. Раньше он оставался серым внутри подсвеченной кнопки, и рядом со
+                звездой (там разделитель перекрашивается) это читалось как две разные
+                кнопки: у одной каретку «разукрасили», у другой нет. */}
+            <span className={`flex h-full items-center self-stretch border-l pl-1.5 pr-2 max-sm:pr-1.5 ${watching ? 'border-accent/40' : 'border-border'}`}>
               <ChevronDown size={13} className="text-muted" />
             </span>
           </button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronRight, Eye, GitCompare, Loader2 } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
@@ -60,6 +60,13 @@ export function CommitRow({
   labels: Labels
 }) {
   const [open, setOpen] = useState(false)
+  // Ссылка «v6» из строки коммита в шапке ведёт сюда якорем: строка не только
+  // подсвечивается прокруткой, но и сразу раскрывает свой дифф — иначе переход по
+  // номеру версии приводил бы «куда-то в список», а не к этому коммиту.
+  useEffect(() => {
+    if (window.location.hash === `#v${version}`) void toggle()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- один раз на монтировании
+  }, [])
   const [diff, setDiff] = useState<CommitDiff | null>(null)
   const [loading, setLoading] = useState(false)
   const createdAt = new Date(createdAtMs)
@@ -76,7 +83,7 @@ export function CommitRow({
   }
 
   return (
-    <div className="relative rounded-lg border border-border bg-surface transition-colors hover:border-border-strong">
+    <div id={`v${version}`} className="relative scroll-mt-24 rounded-lg border border-border bg-surface transition-colors hover:border-border-strong">
       {/* Узел-точка на ветви (акцент — текущая версия). */}
       <span aria-hidden className={`absolute -left-5 top-[21px] size-2 rounded-full ${isCurrent ? 'bg-accent' : 'bg-muted'}`} />
       <button

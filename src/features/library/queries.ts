@@ -568,6 +568,46 @@ export async function getSuggestion(templateId: string, idOrNumber: string) {
   return { ...row, author: { ...row.author, avatarUrl: await avatarSrc(row.author.avatarUrl, 64) } }
 }
 
+/**
+ * АВТОРЫ ВЕРСИИ — их может быть несколько, как у GitHub «mikey-semy and claude».
+ *
+ * У самой версии автор один (кто записал), но версия часто рождается из ПРИНЯТОЙ правки,
+ * а у правки есть автор и соавторы (`suggestions.coauthor_ids` — их дописывает тот, кто
+ * дорабатывал чужую правку). Показывать только записавшего значит стирать вклад
+ * остальных: в строке последнего коммита это ровно то место, где вклад и виден.
+ *
+ * Порядок: сначала записавший версию, затем автор правки, затем соавторы; дубли убраны.
+ */
+export async function getVersionAuthors(templateId: string, version: number) {
+  const [ver] = await db
+    .select({ authorId: templateVersions.authorId })
+    .from(templateVersions)
+    .where(and(eq(templateVersions.templateId, templateId), eq(templateVersions.version, version)))
+    .limit(1)
+  const [sug] = await db
+    .select({ authorId: suggestions.authorId, coauthorIds: suggestions.coauthorIds })
+    .from(suggestions)
+    .where(and(eq(suggestions.templateId, templateId), eq(suggestions.mergedVersion, version)))
+    .limit(1)
+
+  const ids = [ver?.authorId, sug?.authorId, ...((sug?.coauthorIds as string[] | null) ?? [])].filter((v): v is string => !!v)
+  const uniq = [...new Set(ids)]
+  if (!uniq.length) return []
+
+  const rows = await db
+    .select({ id: users.id, handle: users.handle, name: users.name, avatarUrl: users.avatarUrl })
+    .from(users)
+    .where(inArray(users.id, uniq))
+  const byId = new Map(rows.map((r) => [r.id, r]))
+  const out = await Promise.all(
+    uniq.map(async (id) => {
+      const u = byId.get(id)
+      return u ? { handle: u.handle, name: u.name, avatarUrl: await avatarSrc(u.avatarUrl, 48) } : null
+    }),
+  )
+  return out.filter((v): v is { handle: string; name: string | null; avatarUrl: string | null } => !!v)
+}
+
 /** «Коммиты» списка: версии с автором (аватар/ник) для GitHub-подобной страницы.
  *  leftJoin — у старых версий и фоновых (gardener/API) автора нет (authorId null). */
 export async function getCommits(templateId: string) {

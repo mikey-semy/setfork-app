@@ -31,7 +31,8 @@ import { digStepsWithSession } from '@/features/dig/queries'
 import { getRoster } from '@/shared/ai/roster'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import { getContributors, getStepPreviews, getVersionSteps } from '@/features/library/queries'
+import { getContributors, getStepPreviews, getVersionAuthors, getVersionSteps } from '@/features/library/queries'
+import { CommitBar } from '@/features/library/CommitBar'
 import { ListStats } from '@/features/library/ListStats'
 import { getWatchCount } from '@/features/watch/queries'
 import { getListLineage, isLineageExact } from '@/features/library/lineage'
@@ -214,7 +215,14 @@ export default async function ListPage({
   let stepSeq = 0
   const displayNum = steps.map((s) => (isStepBlock(s) ? ++stepSeq : 0))
   // Наблюдатели — для сводки показателей (ListStats): в самом tpl их нет.
-  const [contributors, watchers] = await Promise.all([getContributors(tpl.id, tpl.ownerId), getWatchCount(tpl.id)])
+  // Авторы ПОСЛЕДНЕЙ версии (их может быть несколько — принятая правка с соавторами) и
+  // число версий: и то и другое стоит в строке коммита, как у GitHub.
+  const [contributors, watchers, versionAuthors] = await Promise.all([
+    getContributors(tpl.id, tpl.ownerId),
+    getWatchCount(tpl.id),
+    currentVersion ? getVersionAuthors(tpl.id, currentVersion.version) : Promise.resolve([]),
+  ])
+  const commitsCount = tpl.versions.length
   // Родословная: как список появился (запрос, участники витка, прецеденты, разбор критика,
   // где не было опоры) и какие варианты не выбрали. Ничего не рисуется у списков, сделанных
   // руками — там объяснять нечего.
@@ -362,9 +370,12 @@ export default async function ListPage({
                 Всё лишнее для узкого экрана (note, счётчики, blame) — только sm+.
                 На sm+ прежний вид: инфо слева, действия справа. */}
             {currentVersion && (
-              <div className="mb-3 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] text-ink-2 print:hidden sm:px-3.5">
-                {/* ВЕРХ — управление: ветка слева, действия к правому краю. */}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <>
+                {/* УПРАВЛЕНИЕ — вне рамки, отдельной строкой над коробкой коммита: ровно
+                    как у GitHub, где «main ▾» и «Code» стоят НАД коробкой последнего
+                    коммита, а не внутри неё. Рамка вокруг кнопок читалась как лишний
+                    контейнер: она ничего не группировала, кроме самой себя. */}
+                <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-[12.5px] text-ink-2 print:hidden">
                   {/* Пикер веток показываем ВСЕГДА, когда ветка есть (как GitHub «main ▾» —
                       даже одна ветка и на чужом списке; canManage лишь гейтит создание). */}
                   {branches.length > 0 && (
@@ -410,30 +421,24 @@ export default async function ListPage({
                 </div>
                 </div>
 
-                {/* НИЗ — кто и когда трогал список в последний раз (как строка последнего
-                    коммита у GitHub под панелью веток). */}
-                <div className="mt-2 flex min-w-0 items-center gap-2 border-t border-border pt-2">
-                  <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
-                  <Link href={`/${tpl.owner.handle}`} className="min-w-0 shrink truncate font-semibold text-ink hover:text-accent">
-                    {tpl.owner.handle}
-                  </Link>
-                  {/* Время — сразу за именем, а не у правого края: авторов может быть
-                      несколько, и время должно читаться как часть «кто и когда». */}
-                  <span className="shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
-                  {latestNote && <span className="hidden min-w-0 flex-1 truncate text-ink-2 sm:inline">{latestNote}</span>}
-                  {/* История правок — иконкой у правого края (как значок истории у GitHub
-                      справа от последнего коммита); из «...»-меню пункт убран. */}
-                  <Tooltip label={t('versionsTab', lang)}>
-                    <Link
-                      href={`${base}/versions`}
-                      aria-label={t('versionsTab', lang)}
-                      className="ml-auto grid size-7 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-                    >
-                      <History size={15} />
-                    </Link>
-                  </Tooltip>
-                </div>
-              </div>
+                <CommitBar
+                  authors={versionAuthors}
+                  message={latestNote || t('noCommitMessage', lang)}
+                  version={currentVersion.version}
+                  createdAt={currentVersion.createdAt}
+                  commitsCount={commitsCount}
+                  versionsHref={`${base}/versions`}
+                  lang={lang}
+                  labels={{
+                    history: t('versionsTab', lang),
+                    expand: say('Show full message', 'Показать сообщение целиком'),
+                    collapse: say('Hide message', 'Свернуть сообщение'),
+                    commitLink: say('This commit in history', 'Этот коммит в истории'),
+                    and: say(' and ', ' и '),
+                    others: say('and {n} others', 'и ещё {n}'),
+                  }}
+                />
+              </>
             )}
 
             {/* Просмотр «на коммите»: снимок списка, каким он был тогда. Отдельная
@@ -785,13 +790,18 @@ export default async function ListPage({
                 Дубль внизу — это лишний экран прокрутки ни за чем. Поэтому на мобиле от
                 карточки остаются только КОНТРИБЬЮТОРЫ, а описание, теги и сам заголовок
                 карточки показываются с lg, где сайдбар — отдельная колонка. */}
-            <div className="rounded-lg border border-border bg-surface p-4">
-              <SectionLabel className="mb-2 hidden lg:flex">
+            {/* Секции сайдбара — БЕЗ рамки и подложки, разделены волосяной линией (как «About /
+                Releases / Contributors» у GitHub). Карточка-контейнер тут ничего не
+                группировала: на десктопе она обводила и без того отдельную колонку, а на
+                мобиле, где внутри остаются одни контрибьюторы, давала пустую рамку с
+                отступами — то самое «странное пустое место». */}
+            <div className="flex flex-col gap-4">
+              <SectionLabel className="hidden lg:flex">
                 {t('about', lang)}
               </SectionLabel>
               {tr(tpl.desc, lang) && <p className="hidden text-[13.5px] leading-relaxed text-ink-2 lg:block">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
-                <div className="mt-3 hidden flex-wrap gap-1.5 lg:flex">
+                <div className="hidden flex-wrap gap-1.5 lg:flex">
                   {tpl.tags.map((tag) => (
                     <Link
                       key={tag}
@@ -803,11 +813,11 @@ export default async function ListPage({
                   ))}
                 </div>
               )}
-              <div className="mt-4 flex flex-col gap-2 text-[13px] text-ink-2 lg:border-t lg:border-border lg:pt-3">
-                {/* Тот же состав показателей, что в сводке на мобиле — колонкой. На узком
-                    экране сайдбар уезжает ПОД содержимое, и показатели вышли бы дважды:
-                    там показывает сводка наверху, здесь — только с lg. */}
-                <div className="hidden lg:block">
+              {/* Тот же состав показателей, что в сводке на мобиле — колонкой. На узком
+                  экране сайдбар уезжает ПОД содержимое, и показатели вышли бы дважды:
+                  там показывает сводка наверху, здесь — только с lg. */}
+              <div className="hidden flex-col gap-2 border-t border-border pt-4 text-[13px] text-ink-2 lg:flex">
+                <div>
                 <ListStats
                   base={base}
                   lang={lang}
@@ -833,7 +843,7 @@ export default async function ListPage({
               )}
 
               {contributors.length > 0 && (
-                <div className="mt-4 border-t border-border pt-3">
+                <div className="border-t border-border pt-4">
                   {/* Как у GitHub: счётчик бейджем в заголовке, ниже — строки «ник имя».
                       Сеткой аватаров было не разобрать, кто есть кто. */}
                   <SectionLabel className="mb-2 flex items-center gap-1.5">
@@ -867,7 +877,7 @@ export default async function ListPage({
               {/* Жалоба — последней строкой карточки: на узком экране от неё остаются
                   только контрибьюторы, и начинать блок кнопкой «пожаловаться» странно. */}
               {!isOwner && (
-                <div className="mt-4 text-[13px] text-ink-2">
+                <div className="border-t border-border pt-4 text-[13px] text-ink-2">
                   <ReportButton templateId={tpl.id} lang={lang} />
                 </div>
               )}
