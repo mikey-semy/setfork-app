@@ -58,9 +58,11 @@ jobs:
     # Красный/отменённый CI до деплоя не доходит вовсе. Ручной запуск идёт без условия.
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     # issues: write — для тревоги о красном деплое (шаг ниже).
+    # deployments: write — витрина Deployments в сайдбаре GitHub (история выкаток).
     permissions:
       contents: read
       issues: write
+      deployments: write
     # Ожидания CI внутри джобы больше нет: сюда попадают только после его вердикта.
     # Потолок — про саму доставку и сборку на сервере.
     timeout-minutes: 40
@@ -84,6 +86,32 @@ jobs:
             const ok = tip === mine
             if (!ok) core.notice(`master уже на ${tip.slice(0, 7)}, а это прогон ${mine.slice(0, 7)} — деплой уступает свежему коммиту`)
             core.setOutput('ok', String(ok))
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      # GitHub Deployment — только витрина/история в сайдбаре: сам деплой от него
+      # не зависит, сбой API не роняет доставку (continue-on-error). Уступивший
+      # прогон (fresh != ok) записи не создаёт — он ничего не катит.
+      - name: 'Deployment: старт'
+        id: dep
+        if: steps.fresh.outputs.ok == 'true'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: dep } = await github.rest.repos.createDeployment({
+              ...context.repo,
+              ref: process.env.DEPLOY_SHA,
+              environment: 'production',
+              auto_merge: false,
+              required_contexts: [],
+              description: 'фронт на прод (tar по ssh + сборка на сервере)',
+            })
+            await github.rest.repos.createDeploymentStatus({
+              ...context.repo, deployment_id: dep.id, state: 'in_progress',
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            })
+            core.setOutput('id', String(dep.id))
         env:
           DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
@@ -173,6 +201,23 @@ jobs:
           else
             gh issue create --title "$TITLE" --body "$BODY" || echo "::warning::не удалось создать тревогу"
           fi
+
+      - name: 'Deployment: итог'
+        if: always() && steps.dep.outputs.id
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              ...context.repo,
+              deployment_id: Number(process.env.DEP_ID),
+              state: process.env.JOB_STATUS === 'success' ? 'success' : 'failure',
+              environment_url: 'https://setfork.ru',
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            })
+        env:
+          DEP_ID: ${{ steps.dep.outputs.id }}
+          JOB_STATUS: ${{ job.status }}
 
       # Зелёный деплой закрывает тревогу сам: иначе она живёт вечно и перестаёт
       # что-либо значить — а протухшая тревога хуже отсутствующей.
