@@ -2,8 +2,9 @@
 # СВОЙ Postgres (demo-база), свой git-том, свой домен. Реальный sethub.ru не видит
 # этот контент вообще. Тот же образ приложения, что и прод.
 #
-# git — в inproc-режиме (без отдельного Rust-ядра): SETFORK_CORE_URL не задан, фронт
-# шеллит git сам. Для демо этого достаточно и меньше движущихся частей.
+# git обслуживает Rust-ядро (setfork-demo-core) — второй реализации больше нет.
+# Образом из GHCR, а не сборкой: соседнего чекаута ../setfork-core тут не бывает.
+# Том git-объектов принадлежит ЯДРУ; приложение его не монтирует вовсе.
 #
 # ВАЖНО (урок с проды): все имена сервисов УНИКАЛЬНЫЕ (setfork-demo-*), чтобы алиасы
 # в общей dokploy-network не пересекались с другими проектами.
@@ -79,15 +80,39 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@setfork-demo-db:5432/${POSTGRES_DB:-sethub_demo}
-      # git — inproc (нет SETFORK_CORE_URL); данные в своём томе
-      GIT_DATA_DIR: /data/git
+      # git — только через ядро; GIT_DATA_DIR приложению больше не нужен
+      SETFORK_CORE_URL: '1'
+      SETFORK_CORE_ADDR: setfork-demo-core:50051
+      SETFORK_CORE_TOKEN: ${SETFORK_CORE_TOKEN:-}
       NEXT_PUBLIC_SITE_URL: ${DEMO_SITE_URL:-https://demo.sethub.ru}
       APP_URL: ${DEMO_SITE_URL:-https://demo.sethub.ru}
+    depends_on:
+      setfork-demo-db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+      setfork-demo-core: { condition: service_healthy }
+    networks: [dokploy-network]
+
+  # git-ядро демо-стенда. Своя копия — демо не должно ходить в прод-репозитории.
+  setfork-demo-core:
+    image: ghcr.io/mikey-semy/setfork-core:latest
+    container_name: setfork-demo-core
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@setfork-demo-db:5432/${POSTGRES_DB:-sethub_demo}
+      GIT_DATA_DIR: /data/git
+      SETFORK_CORE_ADDR: 0.0.0.0:50051
+      SETFORK_CORE_TOKEN: ${SETFORK_CORE_TOKEN:-}
+      # Токена может не быть — демо во внутренней сети, наружу порт не публикуется.
+      SETFORK_ALLOW_INSECURE: ${SETFORK_CORE_TOKEN:+0}${SETFORK_CORE_TOKEN:-1}
     volumes:
       - demo_gitdata:/data/git
     depends_on:
       setfork-demo-db: { condition: service_healthy }
-      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ['CMD', 'grpc_health_probe', '-addr=127.0.0.1:50051']
+      interval: 10s
+      timeout: 5s
+      retries: 12
     networks: [dokploy-network]
 
 volumes:

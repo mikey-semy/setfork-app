@@ -1,14 +1,11 @@
-// Содержимое версии списка (порт `ListContent`) → две целевые формы:
-//   * pb-сообщение для ЯДРА (remote-путь) — канон соберёт оно само;
-//   * канонический list.json (inproc-путь) — пока формат живёт и здесь.
+// Содержимое версии списка (порт `ListContent`) → форма провода.
+// pb-сообщение для ЯДРА: канон list.json соберёт оно само — фронт правила формата
+// не знает вовсе.
 //
-// Отдельным модулем без `server-only` намеренно: маппинг — чистая функция, и
-// держать его внутри core.remote/core.inproc значило бы, что он не покрывается
-// тестами вовсе (ровно так и было до Ф0a.2).
-//
-// Вторая половина файла уйдёт вместе с inproc-веткой в Ф0b; первая останется.
+// Отдельным модулем без `server-only` намеренно: маппинг — чистая функция, и держать
+// его внутри core.remote значило бы, что он не покрывается тестами (ровно так и было
+// до Ф0a.2).
 import type { ListContent } from '@/core'
-import { listJson } from './serialize'
 
 /** Форма шага в pb-сообщении (SnapshotStep): proto3 не различает '' и отсутствие
  *  поля, поэтому необязательное отдаётся пустой строкой, а не undefined. */
@@ -62,22 +59,4 @@ export function toWireContent(c: ListContent): WireContent {
       refs: s.refs.map((r) => ({ label: r.label, url: r.url ?? '' })),
     })),
   }
-}
-
-/** Домен → канонический list.json (только inproc-путь; на remote это делает ядро).
- *  Необязательные поля пишутся ТОЛЬКО когда есть — иначе ломается байтовый
- *  паритет с Rust: у старых данных `blockId` нет, и лишний ключ сдвинул бы байты. */
-export function toCanonJson(c: ListContent): string {
-  return listJson({
-    title: c.title,
-    desc: c.desc,
-    tags: c.tags,
-    ordered: c.ordered,
-    version: c.version,
-    steps: c.steps.map(({ blockId, type, content, ...s }) => ({
-      ...s,
-      ...(type && type !== 'step' ? { type, content: content ?? {} } : {}),
-      ...(blockId ? { blockId } : {}),
-    })),
-  })
 }

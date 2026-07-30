@@ -294,11 +294,6 @@
       "count": 1
     }
   },
-  "src/features/git/project.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/features/issues/LabelsManager.tsx": {
     "no-restricted-syntax": {
       "count": 7
