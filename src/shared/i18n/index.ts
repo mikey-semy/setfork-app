@@ -613,6 +613,7 @@ const DICT = {
   commitsLabel: { en: 'commits', ru: 'коммитов' },
   branchesLabel: { en: 'branches', ru: 'веток' },
   noCommitMessage: { en: '(no message)', ru: '(без описания)' },
+  quizSnapshotReadOnly: { en: 'Version snapshot — answers are not accepted', ru: 'Снимок версии — ответы не принимаются' },
   authorNotRecorded: { en: 'author not recorded', ru: 'автор не записан' },
   loadingChanges: { en: 'Loading changes…', ru: 'Загружаю изменения…' },
   expandCommit: { en: 'Show changes', ru: 'Показать изменения' },

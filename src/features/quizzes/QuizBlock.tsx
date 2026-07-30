@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Check, ChevronDown, ChevronUp, GraduationCap, Loader2, RotateCcw, X } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { submitQuiz } from './actions'
 import type { QuizState } from './queries'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -10,28 +10,43 @@ import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort,
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
- *  - Авторизованный (canSubmit): оценка на СЕРВЕРЕ, попытка сохраняется; ответы
- *    не приходят в разметку, раскрываются только после отправки.
- *  - Аноним: клиентская самопроверка (ответы в content), без сохранения. */
+ *  - Авторизованный: оценка на СЕРВЕРЕ, попытка сохраняется; ответы не приходят в
+ *    разметку, раскрываются только после отправки.
+ *  - Аноним: клиентская самопроверка (ответы в content), без сохранения.
+ *
+ *  РЕЖИМ РАЗМЕТКИ И ПРАВО ОТВЕЧАТЬ — РАЗНЫЕ ВЕЩИ. Раньше оба выводились из одного
+ *  canSubmit, и на снимке прошлой версии авторизованный зритель проваливался в
+ *  анонимный режим: разметка приходила БЕЗ ответов (их вырезает stripQuizAnswers), а
+ *  клиентская проверка их как раз и ждёт — «нет ответа для проверки», пустые match и
+ *  sort (P2 из авто-ревью #584). Поэтому режим берётся из answersStripped (пришли ли
+ *  ответы), а canSubmit отвечает только за «можно ли отправлять». */
 export function QuizBlock({
   content,
   lang,
   templateId,
   bid,
   canSubmit,
+  answersStripped,
   initial,
 }: {
   content: QuizBlockContent
   lang: Lang
   templateId: string
   bid: string
+  /** Можно ли отправить ответ (на снимке прошлой версии — нельзя). */
   canSubmit: boolean
+  /** Пришла ли разметка БЕЗ ответов (stripQuizAnswers). По умолчанию — как раньше:
+   *  выводим из canSubmit, чтобы вызывающие без этого пропа вели себя по-старому. */
+  answersStripped?: boolean
   initial: QuizState
 }) {
   const ru = lang === 'ru'
   const kind = quizKind(content)
   const multi = content.multi === true
-  const clientMode = !canSubmit
+  // Клиентская самопроверка возможна ТОЛЬКО когда ответы реально пришли в разметку.
+  const clientMode = !(answersStripped ?? canSubmit)
+  // Только чтение: смотрим снимок прошлой версии/ветки — отвечать некуда.
+  const readOnly = !canSubmit && (answersStripped ?? false)
 
   const nBlanks = blankCount(content.template ?? '')
   // match: левые/правые части (у авторизованного — из stripped lefts/rights; у анонима — из pairs).
@@ -314,7 +329,10 @@ export function QuizBlock({
       )}
 
       <div className="mt-3 flex items-center gap-2">
-        {!checked ? (
+        {readOnly ? (
+          // Снимок прошлой версии: отвечать некуда — вместо кнопки честная подпись.
+          <span className="text-[12px] text-muted">{t('quizSnapshotReadOnly', lang)}</span>
+        ) : !checked ? (
           <button
             type="button"
             disabled={!hasInput || pending || (clientMode && !clientHasAnswer)}

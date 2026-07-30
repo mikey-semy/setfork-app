@@ -635,6 +635,10 @@ export default async function ListPage({
                           templateId={tpl.id}
                           bid={bid}
                           canSubmit={canInteract}
+                          // Режим разметки — по тому, вырезаны ли ответы, а не по праву
+                          // отвечать: иначе на снимке авторизованный зритель попадал в
+                          // анонимный режим, которому нужны ответы (их уже нет).
+                          answersStripped={!!viewer}
                           initial={quizStates[bid] ?? { selected: [], correct: false, attempts: 0, submitted: false }}
                         />
                       </div>
