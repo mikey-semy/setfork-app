@@ -106,7 +106,32 @@ jobs:
       # Расширение vector нужно схеме (embeddings). Ставим через pg (уже в deps), без psql на раннере.
       - run: node -e "const{Client}=require('pg');(async()=>{const c=new Client(process.env.DATABASE_URL);await c.connect();await c.query('CREATE EXTENSION IF NOT EXISTS vector');await c.end()})().catch(e=>{console.error(e);process.exit(1)})"
       - run: npx drizzle-kit push --force
+      # Ядро — sibling-контейнер ПОСЛЕ применения схемы (на старте оно ходит в БД).
+      # С Ф1 (git-first) запись версий идёт ТОЛЬКО через ядро — без него все
+      # итесты путей записи падают ECONNREFUSED. Пакет GHCR приватный, но образ
+      # всегда лежит в кэше этого же docker-демона: job image ядра собирает его
+      # здесь на каждый push в master (pull — попытка освежить, не условие).
+      # Если образа вдруг нет — прогнать master-CI ядра или дать фронту read к пакету.
+      - name: setfork-core (sibling из GHCR — git-first запись версий, Ф1)
+        run: |
+          IMAGE=ghcr.io/mikey-semy/setfork-core:latest
+          docker pull "$IMAGE" >/dev/null 2>&1 || true
+          docker rm -f "core-$CI_NET" >/dev/null 2>&1 || true
+          docker run -d --name "core-$CI_NET" --network "$CI_NET" \
+            -e DATABASE_URL="postgresql://ci:ci@pg-$CI_NET:5432/ci" \
+            -e SETFORK_ALLOW_INSECURE=1 \
+            "$IMAGE" >/dev/null
+          for i in $(seq 1 60); do
+            docker logs "core-$CI_NET" 2>&1 | grep -q "слушает" && { echo "core up"; break; }
+            sleep 1
+          done
+          docker logs "core-$CI_NET" 2>&1 | tail -3
+          echo "SETFORK_CORE_URL=1" >> "$GITHUB_ENV"
+          echo "SETFORK_CORE_ADDR=core-$CI_NET:50051" >> "$GITHUB_ENV"
       - run: npm run test:integration
+      - name: core log (on failure)
+        if: failure()
+        run: docker logs "core-${CI_NET}" 2>&1 | tail -100 || true
       # Redis-бэкенд rate-limit против настоящего Redis (Lua fixedWindow/tokenBucket).
       - run: npx vitest run tests/shared/rate-limit-store.redis.test.ts
         env:
@@ -114,7 +139,7 @@ jobs:
       - name: cleanup (контейнеры и сеть)
         if: always()
         run: |
-          docker rm -f "pg-${CI_NET}" "redis-${CI_NET}" >/dev/null 2>&1 || true
+          docker rm -f "pg-${CI_NET}" "redis-${CI_NET}" "core-${CI_NET}" >/dev/null 2>&1 || true
           docker network disconnect "${CI_NET}" "$(hostname)" >/dev/null 2>&1 || true
           docker network rm "${CI_NET}" >/dev/null 2>&1 || true
 
@@ -154,12 +179,28 @@ jobs:
       - run: npm ci --prefer-offline --no-audit --no-fund
       - run: node -e "const{Client}=require('pg');(async()=>{const c=new Client(process.env.DATABASE_URL);await c.connect();await c.query('CREATE EXTENSION IF NOT EXISTS vector');await c.end()})().catch(e=>{console.error(e);process.exit(1)})"
       - run: npx drizzle-kit push --force
+      # Ядро для интеграционной части покрытия — та же причина и приём, что в job integration.
+      - name: setfork-core (sibling из GHCR — git-first запись версий, Ф1)
+        run: |
+          IMAGE=ghcr.io/mikey-semy/setfork-core:latest
+          docker pull "$IMAGE" >/dev/null 2>&1 || true
+          docker rm -f "core-$CI_NET" >/dev/null 2>&1 || true
+          docker run -d --name "core-$CI_NET" --network "$CI_NET" \
+            -e DATABASE_URL="postgresql://ci:ci@pg-$CI_NET:5432/ci" \
+            -e SETFORK_ALLOW_INSECURE=1 \
+            "$IMAGE" >/dev/null
+          for i in $(seq 1 60); do
+            docker logs "core-$CI_NET" 2>&1 | grep -q "слушает" && { echo "core up"; break; }
+            sleep 1
+          done
+          echo "SETFORK_CORE_URL=1" >> "$GITHUB_ENV"
+          echo "SETFORK_CORE_ADDR=core-$CI_NET:50051" >> "$GITHUB_ENV"
       - run: npm run coverage:unit
       - run: npm run coverage:integration
       - run: npm run coverage:check # порог --min из package.json
       - name: cleanup (контейнер и сеть)
         if: always()
         run: |
-          docker rm -f "pg-${CI_NET}" >/dev/null 2>&1 || true
+          docker rm -f "pg-${CI_NET}" "core-${CI_NET}" >/dev/null 2>&1 || true
           docker network disconnect "${CI_NET}" "$(hostname)" >/dev/null 2>&1 || true
           docker network rm "${CI_NET}" >/dev/null 2>&1 || true

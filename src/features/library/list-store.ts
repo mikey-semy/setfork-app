@@ -7,18 +7,20 @@ import { listStore as drizzleStore } from './list-store.adapter'
 import { listReadRemote, listWriteRemote } from './list-store.remote'
 
 // Фасад порта ListStore — точка катовера домена на Rust.
-// READS → Rust ListRead при SETFORK_DOMAIN_READS=1; WRITES (addVersion И create) →
-// Rust ListWrite при SETFORK_DOMAIN_WRITES=1 (отдельный, более осторожный флаг —
-// транзакции). Требует работающего ядра (SETFORK_CORE_URL/ADDR).
+// READS → Rust ListRead при SETFORK_DOMAIN_READS=1 (переходный флаг).
+// WRITES (addVersion И create) — ВСЕГДА Rust ListWrite, без флага (Ф1 трека
+// git-format): версия рождается git-first в ядре (коммит main → проекция в
+// Postgres), локального drizzle-пути записи больше нет — он был второй
+// половиной двойного канона. Требует работающего ядра (SETFORK_CORE_URL/ADDR),
+// как и весь git-слой после Ф0b.
 // Потребители импортируют ТОЛЬКО отсюда.
 const coreOn = !!process.env.SETFORK_CORE_URL
 const remoteReads = coreOn && process.env.SETFORK_DOMAIN_READS === '1'
-const remoteWrites = coreOn && process.env.SETFORK_DOMAIN_WRITES === '1'
 
 const base: ListStore = {
   ...drizzleStore,
   ...(remoteReads ? listReadRemote : {}),
-  ...(remoteWrites ? listWriteRemote : {}),
+  ...listWriteRemote,
 }
 
 // Хук «после addVersion»: регистрируется в composition root (instrumentation),

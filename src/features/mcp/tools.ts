@@ -4,7 +4,7 @@ import { db, knowledgeSources, runs, runStepState, steps, suggestionReportedChec
 import { tr } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
-import { canViewList } from '@/core'
+import { canEditList, canViewList } from '@/core'
 import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
@@ -704,6 +704,10 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
     ? input.tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
     : tpl.tags
 
+  // Архив/заморозка: гейт нужен ЗДЕСЬ, а не только в фасадном бэкстопе addVersion —
+  // мета (tags/ordered) обновляется до версии и не должна утечь в read-only список.
+  if (!canEditList(tpl)) return { error: 'forbidden: list is archived or frozen' }
+
   if (tpl.status === 'draft') {
     // черновик — перезаписываем текущую версию на месте (без плодения версий)
     const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
@@ -713,11 +717,13 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
     return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version }
   }
 
-  const ver = await listStore.addVersion(tpl.id, { note: input.note?.trim() || 'updated via API', steps: stepInput(proposed) })
+  // Мета — ДО addVersion: ядро собирает канон list.json из templates в момент
+  // git-коммита версии (Ф1), обновлённые tags/ordered должны попасть в этот коммит.
   await db
     .update(templates)
     .set({ tags, ordered: input.ordered ?? tpl.ordered, updatedAt: new Date() })
     .where(eq(templates.id, tpl.id))
+  const ver = await listStore.addVersion(tpl.id, { note: input.note?.trim() || 'updated via API', steps: stepInput(proposed) })
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающий
   // контент, залитый через MCP, не минует модерацию, и здесь её дублировать не нужно.
   const { enqueueReindex } = await import('@/features/library/jobs')
