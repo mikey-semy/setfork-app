@@ -16,6 +16,13 @@
 // вектор-колонок.
 // verify: после push схема БД сверяется со схемой КОДА целиком и автоматически.
 //
+// БАРЬЕР ПРОТИВ УДАЛЕНИЯ. `push --force` принимает и разрушающие statements — то есть
+// будущее переименование или удаление колонки прод потерял бы данные МОЛЧА, вместо того
+// чтобы остановить одноразовый контейнер и позвать человека (P1 из авто-ревью #347).
+// Поэтому ДО push сверяем, что ничего не пропадает: таблица или колонка, которая есть в
+// БД и отсутствует в схеме кода, останавливает миграцию. Осознанное удаление проходит
+// явным разрешением ALLOW_DESTRUCTIVE_MIGRATION=1 (и попадает в лог деплоя).
+//
 // Раньше здесь стоял рукописный список маркеров — и он оказался ровно тем, чем
 // бывает любой рукописный список: его перестали пополнять. Инцидент 2026-07-29:
 // прод отстал на 10 таблиц и 21 колонку, push молча не применился (TTY-промпт с
@@ -24,6 +31,7 @@
 import 'dotenv/config'
 import { spawnSync } from 'node:child_process'
 import { Pool } from 'pg'
+import { plannedDrops } from './migrate-drops'
 
 // Unique-колонки существующих таблиц: [таблица, колонка, тип, констрейнт]
 const PREFLIGHT_UNIQUE: Array<[string, string, string, string]> = [
@@ -65,6 +73,19 @@ function expectedSchema(): Map<string, Set<string>> {
   return out
 }
 
+/** Таблицы и колонки, которые СЕЙЧАС есть в БД. */
+async function dbSchema(pool: Pool): Promise<Map<string, Set<string>>> {
+  const { rows } = await pool.query<{ table_name: string; column_name: string }>(
+    `SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public'`,
+  )
+  const out = new Map<string, Set<string>>()
+  for (const r of rows) {
+    if (!out.has(r.table_name)) out.set(r.table_name, new Set())
+    out.get(r.table_name)!.add(r.column_name)
+  }
+  return out
+}
+
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
@@ -94,6 +115,24 @@ async function main() {
     console.log(`[preflight] ${table}.${column}: ${rows[0].udt_name} → halfvec(${dims}), индекс пересоздан`)
   }
 
+  // ── барьер против удаления ──────────────────────────────────────────
+  const { tables: dropTables, columns: dropCols } = plannedDrops(expectedSchema(), await dbSchema(pool))
+  if (dropTables.length || dropCols.length) {
+    const what = [
+      dropTables.length ? `таблицы: ${dropTables.join(', ')}` : '',
+      dropCols.length ? `колонки: ${dropCols.slice(0, 40).join(', ')}` : '',
+    ].filter(Boolean).join('; ')
+    if (process.env.ALLOW_DESTRUCTIVE_MIGRATION === '1') {
+      console.warn(`[preflight] РАЗРУШАЮЩАЯ МИГРАЦИЯ РАЗРЕШЕНА явно (ALLOW_DESTRUCTIVE_MIGRATION=1) → ${what}`)
+    } else {
+      console.error('[preflight] В БД есть то, чего нет в схеме кода — push --force это УДАЛИТ вместе с данными.')
+      console.error(`[preflight] ${what}`)
+      console.error('[preflight] Миграция остановлена. Это либо забытая правка схемы, либо осознанное удаление;')
+      console.error('[preflight] во втором случае запусти с ALLOW_DESTRUCTIVE_MIGRATION=1 (и сделай бэкап).')
+      process.exit(1)
+    }
+  }
+
   const push = spawnSync('npx', ['drizzle-kit', 'push', '--force'], { stdio: 'inherit', shell: true })
   if (push.status !== 0) {
     console.error(`[migrate] drizzle-kit push вернул ${push.status}`)
@@ -102,14 +141,7 @@ async function main() {
 
   // ПОЛНАЯ сверка: что описано в коде — то обязано быть в БД.
   const expected = expectedSchema()
-  const { rows: actual } = await pool.query<{ table_name: string; column_name: string }>(
-    `SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public'`,
-  )
-  const have = new Map<string, Set<string>>()
-  for (const r of actual) {
-    if (!have.has(r.table_name)) have.set(r.table_name, new Set())
-    have.get(r.table_name)!.add(r.column_name)
-  }
+  const have = await dbSchema(pool)
   const missingTables: string[] = []
   const missingCols: string[] = []
   for (const [table, cols] of expected) {
