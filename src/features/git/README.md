@@ -26,14 +26,18 @@ persists** on reclone (no divergence); pushing without `list.json` is rejected b
 
 ## Architecture
 
-- `store.ts` — **persistent bare repo per list** under `GIT_DATA_DIR` (the source of
-  truth). `ensureRepo()` bootstraps from history on first access and lazily appends
-  web-created versions on top (preserving pushed commits). Per-`templateId` in-process
-  lock serialises repo ops. Installs the `pre-receive` validation hook.
-- `smart-http.ts` — pkt-line advertisement + `upload-pack`/`receive-pack --stateless-rpc`
-  glue (protocol v2 via `Git-Protocol`, gzip bodies).
-- `project.ts` — parses the pushed tip's `list.json` → new version + steps in Postgres,
-  tags the commit `vN`, notifies watchers.
+**Одна реализация: git обслуживает Rust-ядро** (`setfork-core`). Прежняя TS-цепочка
+(`core.inproc.ts` → `adapter/store/bundle/project/serialize/smart-http`) удалена в Ф0b:
+две реализации одного формата означали побайтовые эталоны и двойную стоимость любой
+правки формата. Локальная разработка **требует запущенного ядра**
+(`docker compose up core`) — без него git-функции не обслуживаются.
+
+- `core.remote.ts` — Connect-ES клиент к ядру; `core.ts` его экспортирует.
+- `list-content.ts` — содержимое версии → форма провода. Канон `list.json` собирает
+  ЯДРО: фронт правила формата не знает.
+- `http-body.ts` — распаковка gzip у POST-тела (git-клиент вправе сжать).
+- Персистентные bare-репо, `pre-receive`, проекция пуша в версии, bundle — всё внутри
+  ядра, см. `setfork-core/src/git/`.
 - route `app/[handle]/[slug]/[...git]/route.ts` — GET `info/refs` (upload/receive
   advertise) + POST `git-upload-pack` / `git-receive-pack` (push runs receive-pack +
   projection under the repo lock).
