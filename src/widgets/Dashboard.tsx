@@ -46,8 +46,14 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
   }
   const [recommended, improve] = await Promise.all([getRecommended(userId, starred, 4), getImprovementFeed(userId, 3)])
 
+  // ТРИ КОЛОНКИ ВКЛЮЧАЮТСЯ НЕ НА lg. На 1024px в этот же момент появляется левое меню
+  // приложения (240px), и на ленту оставалось ~70px: слова переносились по одному, а сама
+  // лента читалась как сломанная вёрстка. Считаем честно: 1024 − 240 меню − 64 поля =
+  // 720px, из которых 300+300 забирают боковые колонки.
+  // Поэтому на lg — ДВЕ колонки (списки + лента), три — только с xl, где ширины хватает:
+  // 1280 − 240 − 64 = 976, минус 260+260 боковых = ~410 на ленту.
   return (
-    <div className="grid w-full gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[300px_minmax(0,1fr)_300px] lg:px-8">
+    <div className="grid w-full gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 xl:grid-cols-[260px_minmax(0,1fr)_260px] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
       {/* Слева: твои списки (переиспользуемая панель). top = высота шапки (57) + верхний
           паддинг сетки (py-6 = 24) → панель НЕ подпрыгивает к шапке при скролле. */}
       <aside className="lg:sticky lg:top-[81px] lg:self-start">
@@ -88,7 +94,8 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
       </div>
 
       {/* Справа: промо-слот + changelog */}
-      <aside className="hidden lg:sticky lg:top-[81px] lg:flex lg:flex-col lg:gap-4 lg:self-start">
+      {/* Промо и changelog — только там, где под них есть третья колонка (см. выше). */}
+      <aside className="hidden xl:sticky xl:top-[81px] xl:flex xl:flex-col xl:gap-4 xl:self-start">
         <PromoCard lang={lang} />
         <ChangelogCard lang={lang} />
       </aside>

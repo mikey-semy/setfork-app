@@ -66,7 +66,9 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
             collapsible
             storageKey="sf.sidebar.topLists"
             searchable
-            showOwner
+            // Без showOwner: в этом рейке лежат СВОИ списки зрителя (layout берёт их
+            // getUserTemplates по нему же), поэтому «ник/» повторялся в каждой строке и
+            // съедал больше половины ширины — от названия оставалось «Приготовле…».
             headerStyle="plain"
             onNavigate={onNavigate}
           />
