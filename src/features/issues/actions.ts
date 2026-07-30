@@ -19,7 +19,8 @@ import { getListLabels } from './queries'
 
 const customIdSet = async (templateId: string) => new Set((await getListLabels(templateId)).map((l) => l.id))
 
-/** Открыть issue. Любой залогиненный на публичном списке; на приватном — только владелец. */
+/** Открыть issue. Любой залогиненный на видимом списке; приватный/черновик/снятый
+ *  модерацией — владелец и коллабораторы (те, кто список и так видит). */
 export async function createIssue(formData: FormData): Promise<void> {
   const session = await requireSession()
   const owner = String(formData.get('owner') ?? '')
@@ -31,9 +32,16 @@ export async function createIssue(formData: FormData): Promise<void> {
 
   const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
+  // Единый предикат, а не своя пара проверок: копия здесь забывала про ЧЕРНОВИК —
+  // посторонний открывал задачу в чужом неопубликованном списке (слаг предсказуем по
+  // заголовку), владельцу летело уведомление, notifyMentions рассылал упоминания
+  // (линза 02, F4). Заодно уходит перекос: коллаборатор приватного списка, который
+  // список видит, теперь может завести в нём задачу.
   const isOwner = tpl.ownerId === session.userId
-  if (tpl.visibility === 'private' && !isOwner) redirect(`/${owner}/${slug}`)
-  if (tpl.moderation !== 'active' && !isOwner) redirect(`/${owner}/${slug}`)
+  const canView =
+    canViewList(tpl, { isOwner }) ||
+    canViewList(tpl, { isOwner, isCollaborator: await isCollaborator(tpl.id, session.userId) })
+  if (!canView) redirect(`/${owner}/${slug}`)
 
   const labels = cleanLabels(rawLabels, await customIdSet(tpl.id))
   const ins = await collabStore.openIssue(tpl.id, session.userId, title, body, labels)
@@ -72,7 +80,14 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   const { tpl, iss } = loaded
   // Комментарий — запись в тред списка: нельзя к issue приватного/скрытого/черновика
   // (иначе инъекция в приватную ветку + пинги владельцу + оракул по перебору номеров).
-  if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
+  // Коллаборатор проходит так же, как при СОЗДАНИИ задачи выше: иначе он открывал бы
+  // задачу в приватном списке, видел форму ответа и не мог отправить ни одного
+  // комментария — тред, доступный только на запись первой строки (P2 авто-ревью #582).
+  const isOwnerC = tpl.ownerId === session.userId
+  const canComment =
+    canViewList(tpl, { isOwner: isOwnerC }) ||
+    canViewList(tpl, { isOwner: isOwnerC, isCollaborator: await isCollaborator(tpl.id, session.userId) })
+  if (!canComment) redirect(`/${owner}/${slug}`)
 
   await collabStore.addIssueComment(iss.id, session.userId, body)
   await ensureWatch(tpl.id) // комментатор начинает следить
