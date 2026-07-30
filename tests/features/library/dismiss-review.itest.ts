@@ -18,9 +18,9 @@ vi.mock('@/shared/auth/session', () => ({
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 
 const { collaborators, db, suggestions, templates, users } = await import('@/shared/db')
-const { countApprovals, dismissSuggestionReview, getSuggestionReviews, hasBlockingReview, submitSuggestionReview } = await import(
-  '@/features/library/review-actions'
-)
+const { dismissSuggestionReview, submitSuggestionReview } = await import('@/features/library/review-actions')
+// Чтение переехало в review-queries (файл без 'use server') — см. линза 02, F2.
+const { countApprovals, getSuggestionReviews, hasBlockingReview } = await import('@/features/library/review-queries')
 
 let ownerId = ''
 let reviewerId = ''

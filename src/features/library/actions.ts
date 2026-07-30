@@ -28,7 +28,7 @@ import { gateListPublication, recheckList } from '@/features/moderation/moderate
 import { toStepInput } from '@/shared/lib/step-input'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { getVersionSteps } from './queries'
-import { countApprovals, hasBlockingReview } from './review-actions'
+import { countApprovals, hasBlockingReview } from './review-queries'
 // eslint-disable-next-line boundaries/dependencies -- гейт «нерешённые обсуждения» живёт с комментариями
 import { countUnresolvedThreads } from '@/features/comments/queries'
 import { listStore } from './list-store'

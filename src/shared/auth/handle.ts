@@ -1,6 +1,6 @@
 // Handle (ник) — правила и генерация уникального при OAuth-регистрации.
 import { randomBytes } from 'crypto'
-import { eq } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { translitRu } from '@/shared/lib/translit'
@@ -13,6 +13,9 @@ export const RESERVED_HANDLES = new Set([
   // 'demo' зарезервирован: getOrCreateDemoUser ищет по handle — регистрация ника
   // «demo» отдала бы чужой аккаунт публичному demo-входу.
   'demo',
+  // 'gardener' — по тому же правилу: сервисный аккаунт садовника ищется по нику
+  // (features/gardener/service.ts, admin/development-queries.ts).
+  'gardener',
 ])
 
 /** Сырую строку (login/имя/local-part email) → кандидат handle; '' если ничего не осталось. */
@@ -27,10 +30,19 @@ export function sanitizeHandleBase(raw: string): string {
 }
 
 export async function handleTaken(h: string): Promise<boolean> {
+  const norm = normalizeHandle(h)
   // admin-ники (ADMIN_HANDLES) НЕЛЬЗЯ занять сменой ника/регистрацией — иначе privesc
   // до админа через самоназначаемый handle (security-скан 2026-07-23, F9).
-  if (RESERVED_HANDLES.has(h) || isAdminHandle(h)) return true
-  const [row] = await db.select({ id: users.id }).from(users).where(eq(users.handle, h)).limit(1)
+  if (RESERVED_HANDLES.has(norm) || isAdminHandle(norm)) return true
+  // Сверка занятости БЕЗ учёта регистра: колонка — обычный text unique (в Postgres
+  // регистрозависимо), а isAdminHandle лоуэркейсит. В этом зазоре жил обход УЖЕ
+  // ЗАНЯТОГО админ-ника вариантом регистра: при живом mikey-semy проходил MIKEY-SEMY,
+  // и getAdmin() считал его админом (линза 02, F1).
+  const [row] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(sql`lower(${users.handle}) = ${norm}`)
+    .limit(1)
   return !!row
 }
 
