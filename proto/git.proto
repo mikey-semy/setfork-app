@@ -98,14 +98,15 @@ message ListContent {
 message CommitToBranchRequest {
   RepoRef repo = 1;
   string branch = 2;      // ветка предложения; 'main' запрещён
-  // УСТАРЕЛО: готовые байты list.json от клиента. Оставлено на время перехода —
-  // используется, только если content не задан. Удалить после перевода фронта.
-  bytes list_json = 3;
+  // 3 — бывшее `bytes list_json`: клиент присылал СОБРАННЫЙ канон, из-за чего
+  // правила формата жили в двух реализациях. Номер не переиспользовать.
+  reserved 3;
+  reserved "list_json";
   string message = 4;     // заголовок коммита ('' → значение по умолчанию)
   string expected_tip = 5; // sha, на который рассчитывает вызывающий ('' — не сверять)
   string author_name = 6;  // автор коммита ('' → SetFork)
   string author_email = 7; // '' → служебный адрес SetFork
-  ListContent content = 8; // канон структурой; приоритетнее list_json
+  ListContent content = 8; // канон собирает ЯДРО из этой структуры
 }
 
 message CommitToBranchResponse {
@@ -175,10 +176,10 @@ message MergeStateResponse {
 message MergeResolvedRequest {
   RepoRef repo = 1;
   string branch = 2;
-  // УСТАРЕЛО: готовые байты resolved list.json от клиента (см. ListContent).
-  // Используется, только если content не задан.
-  bytes list_json = 3;
-  ListContent content = 4; // разрешённый канон структурой; приоритетнее list_json
+  // 3 — бывшее `bytes list_json` (см. CommitToBranchRequest). Не переиспользовать.
+  reserved 3;
+  reserved "list_json";
+  ListContent content = 4; // разрешённый канон структурой; собирает ЯДРО
   // Способ слияния — семантика ровно как в MergeBranchRequest. Без этих полей
   // список, настроенный на squash, получал бы историю ветки только потому, что
   // при слиянии случился конфликт; фронт из-за этого просто ОТКАЗЫВАЛ в ручном
