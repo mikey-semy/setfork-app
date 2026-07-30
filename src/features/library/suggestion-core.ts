@@ -7,7 +7,7 @@ import { notify } from '@/features/notifications/notify'
 import { listStore } from './list-store'
 import { enqueueReindex } from './jobs'
 import { withPrDefaults } from './pr-settings'
-import { countApprovals, hasBlockingReview } from './review-actions'
+import { countApprovals, hasBlockingReview } from './review-queries'
 // eslint-disable-next-line boundaries/dependencies -- счётчик нерешённых обсуждений живёт в comments
 import { countUnresolvedThreads } from '@/features/comments/queries'
 import { blockingReportedChecks } from './suggestion-checks'
