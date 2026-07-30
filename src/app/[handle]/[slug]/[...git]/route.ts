@@ -11,7 +11,8 @@ import { recordAudit } from '@/shared/audit'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 
 // git smart-HTTP: `git clone/pull/push https://host/{owner}/{slug}.git`.
-// Работает из VSCode. Источник правды — персистентный bare-репо (features/git/store).
+// Работает из VSCode. Источник правды — персистентный bare-репо внутри ядра
+// (setfork-core/src/git/repo.rs); фронт сюда только проксирует с авторизацией.
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
