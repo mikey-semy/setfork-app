@@ -119,6 +119,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     if (az === 403) return writeDisabled()
     const raw = Buffer.from(await req.arrayBuffer())
     const body = maybeGunzip(raw, req.headers.get('content-encoding'))
+    // Состояние перечитываем ПОСЛЕ загрузки пакета, вплотную к записи. Большой push
+    // висит минутами, и владелец может заморозить/заархивировать список ровно в это
+    // окно: проверка, сделанная до чтения тела, к моменту записи уже устарела, а в
+    // Rust-ядре понятий frozen/archived нет — версия создалась бы (P2 авто-ревью #582).
+    const fresh = await getListMeta(handle, slug)
+    if (!fresh) return new Response('Not found', { status: 404 })
+    if (!canEditList(fresh)) return writeDisabled()
     const res = await gitCore.receivePack({ owner: handle, slug }, body, gitProtocol)
     if (!res) return new Response('Repository unavailable', { status: 500 })
     // Уведомление наблюдателей + аудит — delivery-эффекты, вне git-ядра.

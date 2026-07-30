@@ -80,7 +80,14 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   const { tpl, iss } = loaded
   // Комментарий — запись в тред списка: нельзя к issue приватного/скрытого/черновика
   // (иначе инъекция в приватную ветку + пинги владельцу + оракул по перебору номеров).
-  if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
+  // Коллаборатор проходит так же, как при СОЗДАНИИ задачи выше: иначе он открывал бы
+  // задачу в приватном списке, видел форму ответа и не мог отправить ни одного
+  // комментария — тред, доступный только на запись первой строки (P2 авто-ревью #582).
+  const isOwnerC = tpl.ownerId === session.userId
+  const canComment =
+    canViewList(tpl, { isOwner: isOwnerC }) ||
+    canViewList(tpl, { isOwner: isOwnerC, isCollaborator: await isCollaborator(tpl.id, session.userId) })
+  if (!canComment) redirect(`/${owner}/${slug}`)
 
   await collabStore.addIssueComment(iss.id, session.userId, body)
   await ensureWatch(tpl.id) // комментатор начинает следить
