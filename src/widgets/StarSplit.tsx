@@ -31,7 +31,11 @@ export function StarSplit({
   inFolders: string[]
   lang: string
 }) {
-  const [on, setOn] = useState(starred)
+  // Не копия пропа, а ПОПРАВКА к нему: null = «своего мнения нет, слушаем сервер».
+  // useState(starred) держал бы устаревшее значение после серверного обновления
+  // (react-doctor: no-derived-useState).
+  const [optimistic, setOptimistic] = useState<boolean | null>(null)
+  const on = optimistic ?? starred
   return (
     <span
       className={`inline-flex h-9 items-stretch overflow-hidden rounded-md border transition-colors ${
@@ -45,7 +49,7 @@ export function StarSplit({
         label={label}
         grouped
         bare
-        onStarredChange={setOn}
+        onStarredChange={setOptimistic}
       />
       {/* Разделитель половинок — своей линией, чтобы внешняя рамка осталась цельной. */}
       <span className={`w-px shrink-0 ${on ? 'bg-warn/40' : 'bg-border'}`} />

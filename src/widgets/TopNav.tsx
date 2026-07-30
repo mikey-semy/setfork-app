@@ -227,6 +227,7 @@ export function TopNav({
                   список handle/catalogs (замечание авто-ревью #589). */}
               {isListPage && (
               <ListSwitcher
+                key={crumb.handle}
                 ownerHandle={crumb.handle}
                 lang={lang}
                 current={{

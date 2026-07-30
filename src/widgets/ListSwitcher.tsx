@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ChevronDown, ListChecks, Lock } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
@@ -53,50 +53,37 @@ export function ListSwitcher({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
-  // Набор помечен автором: TopNav переживает клиентскую навигацию, и без этой привязки
-  // при переходе к списку ДРУГОГО автора панель показывала прежние результаты — а при
-  // неудачном запросе оставляла их навсегда (замечание авто-ревью #589).
-  const [loaded, setLoaded] = useState<{ owner: string; items: SwitcherList[] } | null>(null)
+  const [items, setItems] = useState<SwitcherList[]>([])
   const [failed, setFailed] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const label = t('switchList', lang)
   const activeKey = `${current.handle}/${current.slug}`
 
-  // Один запрос на открытие и на каждый запрос поиска (с задержкой ввода): поиск
-  // идёт по ВСЕМ спискам автора, а не по загруженной в шапку горстке.
-  // Сменился автор — прежние результаты и поисковый запрос недействительны.
-  useEffect(() => {
-    setQ('')
-    setLoaded(null)
-    setFailed(false)
-  }, [ownerHandle])
-
-  useEffect(() => {
-    if (!open) return
-    let alive = true
-    const id = setTimeout(
-      () => {
-        fetchLists(ownerHandle, q.trim())
-          .then((r) => {
-            if (!alive) return
-            setLoaded({ owner: ownerHandle, items: r })
-            setFailed(false)
-          })
-          .catch(() => {
-            // Молча пустой список = «у автора нет списков», это ложь. Показываем сбой.
-            if (!alive) return
-            setLoaded(null)
-            setFailed(true)
-          })
-      },
-      q.trim() ? 200 : 0,
-    )
-    return () => {
-      alive = false
-      clearTimeout(id)
+  // Грузим В ОТВЕТ НА СОБЫТИЕ (открытие панели, ввод в поиске), а не эффектом на
+  // изменение состояния: у эффекта тут нет внешней системы, с которой он
+  // синхронизируется, — есть действие пользователя. Так нет ни гонок «эффект против
+  // эффекта», ни двойного запроса на маунте (react-doctor: no-fetch-in-effect).
+  //
+  // Сброс при смене автора эффектом тоже не нужен: TopNav монтирует переключатель с
+  // key={handle}, поэтому у другого автора это уже другой компонент с чистым
+  // состоянием (react-doctor: no-adjust-state-on-prop-change).
+  const load = (query: string) => {
+    if (timer.current) clearTimeout(timer.current)
+    const run = () => {
+      fetchLists(ownerHandle, query.trim())
+        .then((r) => {
+          setItems(r)
+          setFailed(false)
+        })
+        .catch(() => {
+          // Молча пустой список = «у автора нет списков», это ложь. Показываем сбой.
+          setItems([])
+          setFailed(true)
+        })
     }
-  }, [open, ownerHandle, q])
-
-  const items = loaded?.owner === ownerHandle ? loaded.items : []
+    if (!query.trim()) run()
+    else timer.current = setTimeout(run, 200)
+  }
 
   // Текущий — первым, если сервер его не вернул (не влез в набор или ещё грузим).
   // При активном поиске не навязываем: там ожидаешь только совпадения.
@@ -104,7 +91,13 @@ export function ListSwitcher({
     q.trim() || items.some((l) => `${l.handle}/${l.slug}` === activeKey) ? items : [current, ...items]
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v)
+        if (v) load(q)
+      }}
+    >
       <Tooltip label={label}>
         <PopoverTrigger asChild>
           <button
@@ -125,7 +118,15 @@ export function ListSwitcher({
           // Поиск — когда списков больше горстки: на двух-трёх он лишний шум.
           search={
             items.length > 5 || q
-              ? { value: q, onChange: setQ, placeholder: t('findList', lang), clearLabel: t('clear', lang) }
+              ? {
+                  value: q,
+                  onChange: (v: string) => {
+                    setQ(v)
+                    load(v)
+                  },
+                  placeholder: t('findList', lang),
+                  clearLabel: t('clear', lang),
+                }
               : undefined
           }
         >
