@@ -823,7 +823,14 @@ export default async function ListPage({
                 </div>
               </div>
 
-              {lineage && <ListLineage lineage={lineage} exact={lineageExact} gnomeNames={lineageNames} lang={lang} />}
+              {/* Родословная — тоже только с lg: на узком экране это большой блок (исходный
+                  запрос, участники витка, отвергнутые варианты), и он ровно так же
+                  превращал карточку из «только контрибьюторы» в экран прокрутки. */}
+              {lineage && (
+                <div className="hidden lg:block">
+                  <ListLineage lineage={lineage} exact={lineageExact} gnomeNames={lineageNames} lang={lang} />
+                </div>
+              )}
 
               {contributors.length > 0 && (
                 <div className="mt-4 border-t border-border pt-3">
