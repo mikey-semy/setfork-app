@@ -5,7 +5,7 @@
 import { Fragment, type ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, Eye, FileText, UserRound, GitBranch, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, Users , SquareCheckBig } from 'lucide-react'
+import { ExternalLink, Eye, FileText, UserRound, GitBranch, GitCommitHorizontal, GitFork, GitPullRequest, History, Info, LayoutTemplate, Lock, Paperclip, PlayCircle, Rocket, Sparkles, Star, Tag, SquareCheckBig } from 'lucide-react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { startRun } from '@/features/runs/actions'
 import { openBranchPr, revertToVersion, useTemplate } from '@/features/library/actions'
@@ -780,13 +780,18 @@ export default async function ListPage({
                 </ul>
               </AsideCard>
             )}
+            {/* На УЗКОМ экране сайдбар уезжает под содержимое, и «О списке» повторяло то,
+                что уже прочитано наверху: описание и теги стоят под заголовком списка.
+                Дубль внизу — это лишний экран прокрутки ни за чем. Поэтому на мобиле от
+                карточки остаются только КОНТРИБЬЮТОРЫ, а описание, теги и сам заголовок
+                карточки показываются с lg, где сайдбар — отдельная колонка. */}
             <div className="rounded-lg border border-border bg-surface p-4">
-              <SectionLabel className="mb-2">
+              <SectionLabel className="mb-2 hidden lg:flex">
                 {t('about', lang)}
               </SectionLabel>
-              {tr(tpl.desc, lang) && <p className="text-[13.5px] leading-relaxed text-ink-2">{tr(tpl.desc, lang)}</p>}
+              {tr(tpl.desc, lang) && <p className="hidden text-[13.5px] leading-relaxed text-ink-2 lg:block">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-3 hidden flex-wrap gap-1.5 lg:flex">
                   {tpl.tags.map((tag) => (
                     <Link
                       key={tag}
@@ -798,7 +803,7 @@ export default async function ListPage({
                   ))}
                 </div>
               )}
-              <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3 text-[13px] text-ink-2">
+              <div className="mt-4 flex flex-col gap-2 text-[13px] text-ink-2 lg:border-t lg:border-border lg:pt-3">
                 {/* Тот же состав показателей, что в сводке на мобиле — колонкой. На узком
                     экране сайдбар уезжает ПОД содержимое, и показатели вышли бы дважды:
                     там показывает сводка наверху, здесь — только с lg. */}
@@ -816,23 +821,23 @@ export default async function ListPage({
                   visibility={tpl.visibility}
                 />
                 </div>
-                <span>
-                  {t('maintainedBy', lang)}{' '}
-                  <Link href={`/${tpl.owner.handle}`} className="text-ink-2 hover:text-accent">
-                    {tpl.owner.name ?? tpl.owner.handle}
-                  </Link>
-                </span>
-                {!isOwner && <ReportButton templateId={tpl.id} lang={lang} />}
               </div>
 
-              {lineage && <ListLineage lineage={lineage} exact={lineageExact} gnomeNames={lineageNames} lang={lang} />}
+              {/* Родословная — тоже только с lg: на узком экране это большой блок (исходный
+                  запрос, участники витка, отвергнутые варианты), и он ровно так же
+                  превращал карточку из «только контрибьюторы» в экран прокрутки. */}
+              {lineage && (
+                <div className="hidden lg:block">
+                  <ListLineage lineage={lineage} exact={lineageExact} gnomeNames={lineageNames} lang={lang} />
+                </div>
+              )}
 
               {contributors.length > 0 && (
                 <div className="mt-4 border-t border-border pt-3">
                   {/* Как у GitHub: счётчик бейджем в заголовке, ниже — строки «ник имя».
                       Сеткой аватаров было не разобрать, кто есть кто. */}
                   <SectionLabel className="mb-2 flex items-center gap-1.5">
-                    <Users size={12} /> {t('contributors', lang)}
+                    {t('contributors', lang)}
                     <span className="rounded-full bg-surface-2 px-1.5 text-[11px] font-semibold text-ink-2">{contributors.length}</span>
                   </SectionLabel>
                   <div className="flex flex-col gap-1">
@@ -856,6 +861,14 @@ export default async function ListPage({
                       </Link>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Жалоба — последней строкой карточки: на узком экране от неё остаются
+                  только контрибьюторы, и начинать блок кнопкой «пожаловаться» странно. */}
+              {!isOwner && (
+                <div className="mt-4 text-[13px] text-ink-2">
+                  <ReportButton templateId={tpl.id} lang={lang} />
                 </div>
               )}
             </div>
