@@ -182,10 +182,14 @@ export function ListsPanel({
                   )}
                   {/* Замок = приватный: видно и здесь, и в бредкрамбе шапки — один признак в двух местах. */}
                   {l.visibility === 'private' && <Lock size={12} className="shrink-0 text-muted" />}
-                  <span className="min-w-0 truncate">
-                    {showOwner && <span className="text-muted">{l.handle}/</span>}
-                    <span className="font-semibold text-ink">{tr(l.title, lang)}</span>
-                  </span>
+                  {/* НАЗВАНИЕ ПЕРВЫМ, ник — после и приглушённо. В рейке шириной ~200px
+                      префикс «ник/» съедал больше половины строки, и от названия
+                      оставалось «Приготовле…» — то есть список нельзя было узнать. Ник
+                      здесь вторичен (в «Топ списков» он у половины строк один и тот же),
+                      поэтому он уходит в хвост, сжимается первым и на узкой колонке
+                      скрывается совсем. */}
+                  <span className="min-w-0 flex-1 truncate font-semibold text-ink">{tr(l.title, lang)}</span>
+                  {showOwner && <span className="hidden min-w-0 shrink truncate text-[11.5px] font-normal text-muted sm:inline">{l.handle}</span>}
                   {active && <Check size={14} className="ml-auto shrink-0 text-accent" />}
                   {showVersion && l.version !== undefined && (
                     <span className="ml-auto shrink-0 font-mono text-[10.5px] text-muted">v{l.version}</span>
