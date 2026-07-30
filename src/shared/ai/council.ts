@@ -505,7 +505,10 @@ ${roster}`,
   // снипеты кормим модели как грунтинг. Раньше на Яндексе модель ВЫДУМЫВАЛА
   // «прецеденты» (латентный баг): без реального поиска веб-шаг теперь пропускаем.
   let webLore = ''
-  if (settings.councilWebSeek) {
+  // Разведчик — тоже вызов модели (и у OpenRouter ещё и флэт-фи за :online). Стадия
+  // необязательная, поэтому спрашиваем бюджет прямо здесь, а не полагаемся на проверку
+  // при входе в совет: между ними уже прошли gate и распорядитель (линза 03, №3).
+  if (settings.councilWebSeek && (await globalBudgetOk())) {
     if (isOpenRouter) {
       emit('seek', vl('seek-web', 'seek') ?? say('Searching the web for precedents…', 'Ищу прецеденты в интернете…'), 'seek-web', say('Web scout', 'Веб-разведчик'))
       const webSys = `You are a knowledgeable researcher with web access. Find 3-5 concise, REAL precedents/analogies for building a list on this topic: how it is typically done, common pitfalls, authoritative approaches. Short bullet list in ${langName}. Return ONLY the bullets.\n${sp.rule()}`
@@ -523,6 +526,14 @@ ${roster}`,
       // нет ключа поиска или пусто → веб-шаг молча пропущен (не выдумываем)
     }
   }
+
+  // Бюджет проверяем и ВНУТРИ витка, а не только на входе: совет — это ~6-7 вызовов
+  // моделей, и между стартом и фан-аутом черновиков денег может уже не быть (линза 03,
+  // №3). Фан-аут — самая дорогая стадия (N моделей разом), поэтому перед ней стоп:
+  // ничего не начато, тратить нечего, caller фолбэкнет на одиночную генерацию (она
+  // спросит бюджет сама). Стадии ПОСЛЕ оплаченных черновиков не отменяем — иначе
+  // деньги уже потрачены, а результата нет; там бюджет режет необязательное (см. ниже).
+  if (!(await globalBudgetOk())) return null
 
   // 3) Эксперты набрасывают НЕЗАВИСИМО ∥ (получая прецеденты) + гном-новатор (дивергенция, temp↑, БЕЗ прецедентов — чтобы расходился).
   const expertProv: NonNullable<CouncilProvenance['experts']> = []
@@ -589,13 +600,20 @@ ${roster}`,
   // по имени гильдии, а не по содержанию).
   const codes = [...new Set(experts.filter((e) => e.code).map((e) => e.code))].join('\n')
   const codeBlock = codes ? `\nApply these guild quality standards where relevant:\n${codes}` : ''
-  emit('critique', vl('critic', 'critique') ?? say('Reviewing the drafts critically…', 'Критически разбираю черновики…'), 'critic', say('Critic', 'Критик'))
-  const critique = await run(
-    fast,
-    `You are a devil's advocate reviewer. Given several anonymous draft lists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.
+  // Критик — стадия улучшающая, а не обязательная: если за время черновиков бюджет
+  // кончился, пропускаем её и идём к синтезу. Так виток заканчивается списком, а не
+  // сожжёнными деньгами без результата.
+  const critiqueAffordable = await globalBudgetOk()
+  if (critiqueAffordable)
+    emit('critique', vl('critic', 'critique') ?? say('Reviewing the drafts critically…', 'Критически разбираю черновики…'), 'critic', say('Critic', 'Критик'))
+  const critique = !critiqueAffordable
+    ? null
+    : await run(
+        fast,
+        `You are a devil's advocate reviewer. Given several anonymous draft lists (the last is a bold innovation) for one topic, critique them: what's missing, wrong or unsafe, duplicated, whose step is stronger, which bold idea is truly valuable. Be concrete. Write in ${langName}.
 FIRST line of your reply must be "VERDICT: …" — one short punchy in-character sentence (max 90 chars) capturing the KEY finding of THIS review; then a blank line and the full critique.${codeBlock}\n${sp.rule()}`,
-    `${topic}\n\nDRAFTS:\n${anon}`,
-  )
+        `${topic}\n\nDRAFTS:\n${anon}`,
+      )
   // Event-aware реакция (research: реплики grounded в ситуации): вместо слепой
   // «разбираю…» показываем РЕАЛЬНЫЙ вывод критика этого витка — ценой ноль
   // (вызов уже сделан). VERDICT-строку отделяем, дальше в синтез идёт полный текст.
@@ -606,6 +624,16 @@ FIRST line of your reply must be "VERDICT: …" — one short punchy in-characte
   const critiqueBody = vm ? critique!.text.replace(vm[0], '').trim() : (critique?.text ?? '')
 
   // 5) Старейшина-синтез → строгий JSON. Конвергенция, но СОХРАНИ лучшую новизну (не усредняй).
+  //
+  // ПЕРЕД синтезом бюджет спрашиваем ЗАНОВО. Синтез — самый дорогой вызов витка, и раньше
+  // он шёл безусловно: отказ бюджета глушил только критика, а старейшина стартовал всё
+  // равно — то есть жёсткий дневной кап пробивался ровно там, где мы его объявили
+  // (P1 авто-ревью #583). Бюджет мог кончиться и на черновиках, и на самом критике,
+  // поэтому проверка стоит здесь, а не выше.
+  //
+  // Возвращаем null: caller фолбэкнет на одиночную генерацию, а она тем же
+  // globalBudgetOk() и отказывает — деньги поверх капа не уходят ни на одном пути.
+  if (!(await globalBudgetOk())) return null
   emit('synth', vl('elder', 'synth') ?? say('Synthesizing the final list…', 'Свожу финальный список…'), 'elder', say('Elder', 'Старейшина'))
   const elder = await run(
     base,
