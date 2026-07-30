@@ -32,6 +32,9 @@ export interface SwitcherList {
 
 async function fetchLists(handle: string, q: string): Promise<SwitcherList[]> {
   const r = await fetch(`/api/lists/by-owner?h=${encodeURIComponent(handle)}&q=${encodeURIComponent(q)}`)
+  // fetch не отвергает промис на 4xx/5xx: без этой проверки тело ошибки разбиралось бы
+  // как успешный ответ и панель молча показывала бы пустой список.
+  if (!r.ok) throw new Error(`by-owner: HTTP ${r.status}`)
   const d: { items?: SwitcherList[] } = await r.json()
   return d.items ?? []
 }
@@ -50,20 +53,40 @@ export function ListSwitcher({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
-  const [items, setItems] = useState<SwitcherList[]>([])
+  // Набор помечен автором: TopNav переживает клиентскую навигацию, и без этой привязки
+  // при переходе к списку ДРУГОГО автора панель показывала прежние результаты — а при
+  // неудачном запросе оставляла их навсегда (замечание авто-ревью #589).
+  const [loaded, setLoaded] = useState<{ owner: string; items: SwitcherList[] } | null>(null)
+  const [failed, setFailed] = useState(false)
   const label = t('switchList', lang)
   const activeKey = `${current.handle}/${current.slug}`
 
   // Один запрос на открытие и на каждый запрос поиска (с задержкой ввода): поиск
   // идёт по ВСЕМ спискам автора, а не по загруженной в шапку горстке.
+  // Сменился автор — прежние результаты и поисковый запрос недействительны.
+  useEffect(() => {
+    setQ('')
+    setLoaded(null)
+    setFailed(false)
+  }, [ownerHandle])
+
   useEffect(() => {
     if (!open) return
     let alive = true
     const id = setTimeout(
       () => {
         fetchLists(ownerHandle, q.trim())
-          .then((r) => alive && setItems(r))
-          .catch(() => {})
+          .then((r) => {
+            if (!alive) return
+            setLoaded({ owner: ownerHandle, items: r })
+            setFailed(false)
+          })
+          .catch(() => {
+            // Молча пустой список = «у автора нет списков», это ложь. Показываем сбой.
+            if (!alive) return
+            setLoaded(null)
+            setFailed(true)
+          })
       },
       q.trim() ? 200 : 0,
     )
@@ -72,6 +95,8 @@ export function ListSwitcher({
       clearTimeout(id)
     }
   }, [open, ownerHandle, q])
+
+  const items = loaded?.owner === ownerHandle ? loaded.items : []
 
   // Текущий — первым, если сервер его не вернул (не влез в набор или ещё грузим).
   // При активном поиске не навязываем: там ожидаешь только совпадения.
@@ -124,7 +149,11 @@ export function ListSwitcher({
               }}
             />
           ))}
-          {shown.length === 0 && <div className="px-2 py-3 text-[12.5px] text-muted">{t('nothingFound', lang)}</div>}
+          {shown.length === 0 && (
+            <div className="px-2 py-3 text-[12.5px] text-muted">
+              {failed ? t('loadFailed', lang) : t('nothingFound', lang)}
+            </div>
+          )}
         </PickerPanel>
       </PopoverContent>
     </Popover>

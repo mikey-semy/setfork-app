@@ -6,6 +6,7 @@ import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { PinButton } from '@/features/library/PinButton'
 import { StarSplit } from './StarSplit'
 import { getFoldersForTemplate, getUserFolders } from '@/features/star-folders/queries'
@@ -190,13 +191,16 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             <span className="inline-flex h-9 items-stretch overflow-hidden rounded-md border border-border">
               {isOwner ? (
                 // Свой список форкнуть нельзя (как на GitHub свой репозиторий) — кнопка неактивна.
+                // Тултип свой (не браузерный title=) — как у остальных кнопок шапки.
+                <Tooltip label={t('cantForkOwn', lang)}>
                 <button
+                  type="button"
                   disabled
-                  title={t('cantForkOwn', lang)}
                   className="inline-flex h-full cursor-not-allowed items-center gap-2 px-3.5 text-[13px] font-semibold text-muted opacity-60 max-sm:w-[34px] max-sm:justify-center max-sm:px-0"
                 >
                   <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
                 </button>
+                </Tooltip>
               ) : session ? (
                 // Форк — отдельной страницей /fork (как GitHub), не модалкой.
                 <Link

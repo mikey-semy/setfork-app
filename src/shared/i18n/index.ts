@@ -316,6 +316,7 @@ const DICT = {
   newFolderName: { en: 'New folder…', ru: 'Новая папка…' },
   noFolders: { en: 'No folders yet.', ru: 'Папок пока нет.' },
   searchingLists: { en: 'Searching…', ru: 'Ищу…' },
+  loadFailed: { en: 'Could not load. Try again.', ru: 'Не удалось загрузить. Повторите.' },
   showMore: { en: 'Show more', ru: 'Показать ещё' },
   showLess: { en: 'Show less', ru: 'Свернуть' },
   allLabels: { en: 'All labels', ru: 'Все метки' },

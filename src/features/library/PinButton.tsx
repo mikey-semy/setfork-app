@@ -25,6 +25,7 @@ export function PinButton({
     // Свой Tooltip вместо браузерного title=: одна манера подсказок на всё приложение.
     <Tooltip label={opt ? unpinLabel : pinLabel}>
     <button
+      type="button"
       onClick={() =>
         start(async () => {
           setOpt(!opt)

@@ -222,6 +222,10 @@ export function TopNav({
               >
                 {crumbTitle ? tr(crumbTitle, lang) : crumb.slug}
               </Link>
+              {/* Только на самой странице списка: на /handle/catalogs/* второй сегмент —
+                  литерал «catalogs», и переключатель показывал бы фейковый «текущий»
+                  список handle/catalogs (замечание авто-ревью #589). */}
+              {isListPage && (
               <ListSwitcher
                 ownerHandle={crumb.handle}
                 lang={lang}
@@ -233,6 +237,7 @@ export function TopNav({
                   visibility: crumbPrivate ? 'private' : 'public',
                 }}
               />
+              )}
             </>
           ) : (
             <Link href={`/${crumb.handle}`} className="truncate font-semibold text-ink hover:text-accent">

@@ -74,6 +74,7 @@ export function WatchButton({
         <Tooltip label={watching ? labels.unwatch : labels.watch}>
         <DropdownMenuTrigger asChild>
           <button
+            type="button"
             aria-label={watching ? labels.unwatch : labels.watch}
             className={`inline-flex h-9 items-center gap-2 rounded-md border pl-3.5 text-[13px] font-semibold transition-colors max-sm:gap-1.5 max-sm:pl-3 ${
               watching ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink hover:border-border-strong'

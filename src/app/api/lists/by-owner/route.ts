@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
         visibility: l.visibility,
       })),
     },
-    { headers: { 'Cache-Control': 'private, max-age=15' } },
+    // no-store, а НЕ private+max-age: в ответе есть приватные списки владельца, и
+    // браузер переиспользовал бы его после логаута/смены аккаунта — чужая сессия
+    // увидела бы приватные названия и слаги (замечание авто-ревью #589).
+    { headers: { 'Cache-Control': 'no-store' } },
   )
 }

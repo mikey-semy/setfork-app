@@ -32,6 +32,7 @@ export function StarButton({
   return (
     <Tooltip label={label}>
     <button
+      type="button"
       onClick={() =>
         start(async () => {
           setOpt(!opt.starred)
