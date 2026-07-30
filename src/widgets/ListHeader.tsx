@@ -81,18 +81,19 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             <h1 className="min-w-0 truncate text-[19px] font-bold text-ink">{tr(meta.title, lang)}</h1>
             {/* Версию у заголовка НЕ показываем: она живёт в сайдбаре Releases (как у GitHub —
                 номер версии/релиза только в блоке Releases, а не рядом с именем). Убран дубль. */}
-            {/* Индикатор видимости: приватный или публичный (как Public/Private у GitHub). */}
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
-              {meta.visibility === 'private' ? (
-                <>
-                  <Lock size={11} /> {t('privateLabel', lang)}
-                </>
-              ) : (
-                <>
-                  <Globe size={11} /> {t('publicLabel', lang)}
-                </>
-              )}
-            </span>
+            {/* Видимость — ТОЛЬКО ИКОНКОЙ, подпись в тултипе: слово рядом с названием
+                занимало место, которое нужно самому названию, и повторяло то же, что
+                видно значком. Пока этот значок на экране, статус НЕ дублируется в
+                сводке показателей (см. ListStats) — как у GitHub, где бейдж стоит у
+                имени, а строка статистики его не повторяет. */}
+            <Tooltip label={meta.visibility === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}>
+              <span
+                className="grid size-6 shrink-0 place-items-center rounded-md border border-border bg-surface-2 text-ink-2"
+                aria-label={meta.visibility === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}
+              >
+                {meta.visibility === 'private' ? <Lock size={12} /> : <Globe size={12} />}
+              </span>
+            </Tooltip>
             {/* Ограниченные состояния — рядом с видимостью (архив строже заморозки). */}
             {meta.archivedAt != null ? (
               <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-warn/40 bg-warn/10 px-2 py-0.5 text-[11px] text-warn">

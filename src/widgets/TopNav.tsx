@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   ChevronDown,
+  Globe,
   History,
   ListChecks,
   Lock,
@@ -29,6 +30,7 @@ import { ListSwitcher } from './ListSwitcher'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { LangSwitch, ThemeModeSwitch } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import { useSidebar } from './sidebar-context'
 import {
   DropdownMenu,
@@ -81,24 +83,27 @@ export function TopNav({
   // фолбэк), приватные title гейтит сам роут. Обновляется и на client-навигации.
   // Оттуда же приватность — замок у названия (тот же признак, что в списке ниже).
   const [crumbTitle, setCrumbTitle] = useState<LocaleText | null>(null)
-  const [crumbPrivate, setCrumbPrivate] = useState(false)
+  // Видимость — ТРИ состояния: пока не ответил роут, она null и значка нет вовсе.
+  // Булев флаг врал бы: false означало сразу и «публичный», и «ещё не знаем», а значок
+  // глобуса на приватном списке — худшая из возможных подписей.
+  const [crumbVis, setCrumbVis] = useState<'public' | 'private' | null>(null)
   const crumbHandle = crumb?.handle
   const crumbSlug = crumb?.slug
   useEffect(() => {
     if (!crumbHandle || !crumbSlug) {
       setCrumbTitle(null)
-      setCrumbPrivate(false)
+      setCrumbVis(null)
       return
     }
     let alive = true
     setCrumbTitle(null)
-    setCrumbPrivate(false)
+    setCrumbVis(null)
     fetch(`/api/list-title?h=${encodeURIComponent(crumbHandle)}&s=${encodeURIComponent(crumbSlug)}`)
       .then((r) => r.json())
       .then((d: { title?: LocaleText | null; visibility?: 'public' | 'private' }) => {
         if (!alive) return
         setCrumbTitle(d.title ?? null)
-        setCrumbPrivate(d.visibility === 'private')
+        setCrumbVis(d.visibility === 'private' ? 'private' : d.visibility === 'public' ? 'public' : null)
       })
       .catch(() => {})
     return () => {
@@ -206,7 +211,19 @@ export function TopNav({
                 {crumb.handle}
               </Link>
               <span className="shrink-0 text-muted">/</span>
-              {crumbPrivate && <Lock size={13} className="shrink-0 text-muted" aria-label={t('privateLabel', lang)} />}
+              {/* Значок видимости у названия — как бейдж Public/Private у GitHub, но только
+                  иконкой: слово в шапке съедает место, которое нужно самому названию.
+                  Подпись отдаём тултипом (и aria-label для скринридера). */}
+              {crumbVis && (
+                <Tooltip label={crumbVis === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}>
+                  <span
+                    className="grid size-5 shrink-0 place-items-center text-muted"
+                    aria-label={crumbVis === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}
+                  >
+                    {crumbVis === 'private' ? <Lock size={13} /> : <Globe size={13} />}
+                  </span>
+                </Tooltip>
+              )}
               {/* Название кликабельно всегда: с под-вкладки уводит на корень списка, а
                   на самом корне Next по ссылке «в себя» не делает НИЧЕГО — там обновляем
                   данные руками и уводим наверх, чтобы клик не выглядел сломанным. */}
@@ -235,7 +252,10 @@ export function TopNav({
                   slug: crumb.slug,
                   title: crumbTitle ?? { en: crumb.slug, ru: crumb.slug },
                   avatarUrl: null,
-                  visibility: crumbPrivate ? 'private' : 'public',
+                  // Пока роут не ответил — видимость НЕ ЗНАЕМ, и врать «публичный»
+                  // нельзя: по этому пропу переключатель рисует значок. undefined =
+                  // значка нет, а настоящую видимость строка получит от by-owner.
+                  visibility: crumbVis ?? undefined,
                 }}
               />
               )}

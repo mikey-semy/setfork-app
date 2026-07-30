@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { ChevronDown, ListChecks, Lock } from 'lucide-react'
+import { ChevronDown, Globe, ListChecks, Lock } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -85,10 +85,21 @@ export function ListSwitcher({
     else timer.current = setTimeout(run, 200)
   }
 
-  // Текущий — первым, если сервер его не вернул (не влез в набор или ещё грузим).
-  // При активном поиске не навязываем: там ожидаешь только совпадения.
-  const shown =
-    q.trim() || items.some((l) => `${l.handle}/${l.slug}` === activeKey) ? items : [current, ...items]
+  // ОТКРЫТЫЙ СПИСОК — ВСЕГДА ПЕРВОЙ СТРОКОЙ (как «Switch repository» у GitHub).
+  // Раньше он вставлялся наверх только когда сервер его не вернул, а в обычном случае
+  // оставался там, куда его положила сортировка по свежести, — то есть галка оказывалась
+  // в середине и «где я сейчас» приходилось искать глазами.
+  //
+  // При активном поиске список не навязываем: там ожидаешь только совпадения. Но если он
+  // сам попал в совпадения — всё равно наверх, чтобы правило было одно.
+  //
+  // Наверх ставим строку ОТ СЕРВЕРА, если он её вернул, и только иначе — синтетическую
+  // из пропа: у той нет аватара, а видимость в ней неизвестна, пока не ответил роут
+  // названия. Подменять ею настоящую строку значит терять аватар и рисовать приватному
+  // списку глобус поверх пришедшего с сервера `private` (замечание авто-ревью).
+  const fetched = items.find((l) => `${l.handle}/${l.slug}` === activeKey)
+  const rest = items.filter((l) => `${l.handle}/${l.slug}` !== activeKey)
+  const shown = q.trim() && !fetched ? rest : [fetched ?? current, ...rest]
 
   return (
     <Popover
@@ -142,8 +153,21 @@ export function ListSwitcher({
                 )
               }
               label={tr(l.title, lang)}
-              // Замок = приватный: тот же признак, что в бредкрамбе шапки.
-              right={l.visibility === 'private' ? <Lock size={12} className="text-muted" /> : undefined}
+              // Видимость показываем У КАЖДОЙ строки, а не только у приватных: раньше
+              // отсутствие замка означало сразу и «публичный», и «мы не знаем» — по такой
+              // подписи нельзя понять, что список открыт всему свету. Подпись нативным
+              // title: строка сама кнопка, вкладывать в неё триггер тултипа нельзя.
+              right={
+                l.visibility ? (
+                  <span
+                    title={l.visibility === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}
+                    aria-label={l.visibility === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}
+                    className="shrink-0 text-muted"
+                  >
+                    {l.visibility === 'private' ? <Lock size={12} /> : <Globe size={12} />}
+                  </span>
+                ) : undefined
+              }
               onClick={() => {
                 setOpen(false)
                 router.push(`/${l.handle}/${l.slug}`)
