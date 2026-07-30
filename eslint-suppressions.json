@@ -351,7 +351,7 @@
   },
   "src/features/library/actions.ts": {
     "boundaries/dependencies": {
-      "count": 12
+      "count": 11
     },
     "no-restricted-syntax": {
       "count": 3

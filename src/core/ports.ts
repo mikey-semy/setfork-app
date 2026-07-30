@@ -146,28 +146,46 @@ export interface GitBranch {
   behind: number
 }
 
+/** Блок версии списка: шаг или презентационный блок. Одна форма на чтение
+ *  (снимок ветки) и на запись (содержимое, из которого ядро соберёт list.json) —
+ *  раньше она была объявлена дважды и могла разъехаться. */
+export interface ListBlock {
+  n: number
+  // Блочная модель: не-step блоки несут type/content (у step — undefined).
+  type?: string
+  content?: Record<string, unknown>
+  /** Стабильная идентичность блока из list.json (ADR-0013); null — её там нет. */
+  blockId?: string | null
+  title: string
+  desc: string
+  command: string
+  level: string
+  why: string
+  section: string
+  subtasks: string[]
+  refs: { label: string; url?: string }[]
+}
+
 export interface BranchSnapshot {
   tipSha: string
   title: string
   desc: string
   tags: string[]
   ordered: boolean
-  steps: {
-    n: number
-    // Блочная модель: не-step блоки несут type/content (у step — undefined).
-    type?: string
-    content?: Record<string, unknown>
-    /** Стабильная идентичность блока из list.json (ADR-0013); null — её там нет. */
-    blockId?: string | null
-    title: string
-    desc: string
-    command: string
-    level: string
-    why: string
-    section: string
-    subtasks: string[]
-    refs: { label: string; url?: string }[]
-  }[]
+  steps: ListBlock[]
+}
+
+/** Содержимое версии списка для ЗАПИСИ. Канонический `list.json` из него собирает
+ *  ЯДРО — единственный владелец формата. Клиент формат не сериализует: иначе
+ *  правила живут в двух реализациях и расходятся (см. HQ tracks/git-format.md). */
+export interface ListContent {
+  title: string
+  desc: string
+  tags: string[]
+  ordered: boolean
+  /** Номер версии, который попадёт в list.json. */
+  version: number
+  steps: ListBlock[]
 }
 
 export interface GitCore {
@@ -191,9 +209,9 @@ export interface GitCore {
   /** A4: вход конфликтного merge — base (merge-base), ours (main), theirs (ветка).
    *  null — ветки/merge-base/материализаций нет. */
   mergeState(repo: GitRepoRef, branch: string): Promise<MergeState | null>
-  /** A4: merge с ручным резолвом — финальный list.json (строка). Дерево =
-   *  main c заменённым list.json без steps/ (md-оверрайды сбрасываются). */
-  mergeResolved(repo: GitRepoRef, branch: string, listJson: string, opts?: MergeOptions): Promise<MergeResult>
+  /** A4: merge с ручным резолвом — разрешённое СОДЕРЖИМОЕ (канон соберёт ядро).
+   *  Дерево = main c заменённым list.json без steps/ (md-оверрайды сбрасываются). */
+  mergeResolved(repo: GitRepoRef, branch: string, content: ListContent, opts?: MergeOptions): Promise<MergeResult>
   /** Git-тег релиза на коммит версии (у версии уже есть тег vN). → sha коммита. */
   createTag(repo: GitRepoRef, name: string, version: number): Promise<string>
   /** A5: влить main в ветку (обратное слияние). main не двигается → версии нет.
@@ -204,14 +222,15 @@ export interface GitCore {
   /** Коммиты рефа, свежие первыми. `notIn` (обычно 'main') скрывает достижимое
    *  из базы — остаётся ровно вклад ветки. null — рефа нет (ветку удалили). */
   listCommits(repo: GitRepoRef, rev: string, opts?: { notIn?: string; limit?: number }): Promise<GitCommit[] | null>
-  /** Записать list.json в ВЕТКУ одним коммитом (правка предложения, «применить
-   *  предложенную правку»). main не двигается → версии нет.
+  /** Записать содержимое версии в ВЕТКУ одним коммитом (правка предложения,
+   *  «применить предложенную правку»). Канон собирает ядро; main не двигается →
+   *  версии нет.
    *  `expectedTip` — оптимистичная блокировка: не совпал → BranchOpError('stale').
    *  `changed:false` — содержимое совпало, коммита не было. */
   commitToBranch(
     repo: GitRepoRef,
     branch: string,
-    listJson: string,
+    content: ListContent,
     opts?: { message?: string; expectedTip?: string; author?: { name: string; email: string } },
   ): Promise<{ tipSha: string; changed: boolean }>
 }

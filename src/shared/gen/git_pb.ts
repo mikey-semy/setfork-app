@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file git.proto.
  */
 export const file_git: GenFile = /*@__PURE__*/
-  fileDesc("CglnaXQucHJvdG8SDnNldGZvcmsuZ2l0LnYxIiYKB1JlcG9SZWYSDQoFb3duZXIYASABKAkSDAoEc2x1ZxgCIAEoCSJOCg9JbmZvUmVmc1JlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSFAoMZ2l0X3Byb3RvY29sGAIgASgJIlgKC1Bvc3RSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBGJvZHkYAiABKAwSFAoMZ2l0X3Byb3RvY29sGAMgASgJIh0KDUJ5dGVzUmVzcG9uc2USDAoEZGF0YRgBIAEoDCI4ChNSZWNlaXZlUGFja1Jlc3BvbnNlEgwKBGRhdGEYASABKAwSEwoLbmV3X3ZlcnNpb24YAiABKAUiswEKFUNvbW1pdFRvQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIOCgZicmFuY2gYAiABKAkSEQoJbGlzdF9qc29uGAMgASgMEg8KB21lc3NhZ2UYBCABKAkSFAoMZXhwZWN0ZWRfdGlwGAUgASgJEhMKC2F1dGhvcl9uYW1lGAYgASgJEhQKDGF1dGhvcl9lbWFpbBgHIAEoCSI6ChZDb21taXRUb0JyYW5jaFJlc3BvbnNlEg8KB3RpcF9zaGEYASABKAkSDwoHY2hhbmdlZBgCIAEoCCJKChNVcGRhdGVCcmFuY2hSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBG5hbWUYAiABKAkiPQoUVXBkYXRlQnJhbmNoUmVzcG9uc2USDwoHdGlwX3NoYRgBIAEoCRIUCgxmYXN0X2ZvcndhcmQYAiABKAgiZwoSTGlzdENvbW1pdHNSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgsKA3JldhgCIAEoCRIOCgZub3RfaW4YAyABKAkSDQoFbGltaXQYBCABKAUicwoGQ29tbWl0EgsKA3NoYRgBIAEoCRIPCgdtZXNzYWdlGAIgASgJEhMKC2F1dGhvcl9uYW1lGAMgASgJEhQKDGF1dGhvcl9lbWFpbBgEIAEoCRIPCgdhdF91bml4GAUgASgDEg8KB3BhcmVudHMYBiABKAUiSQoPQ29tbWl0c1Jlc3BvbnNlEg0KBWZvdW5kGAEgASgIEicKB2NvbW1pdHMYAiADKAsyFi5zZXRmb3JrLmdpdC52MS5Db21taXQiWAoQQ3JlYXRlVGFnUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRuYW1lGAIgASgJEg8KB3ZlcnNpb24YAyABKAUiJwoDVGFnEgwKBG5hbWUYASABKAkSEgoKdGFyZ2V0X3NoYRgCIAEoCSIxCgxUYWdzUmVzcG9uc2USIQoEdGFncxgBIAMoCzITLnNldGZvcmsuZ2l0LnYxLlRhZyJKChFNZXJnZVN0YXRlUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIOCgZicmFuY2gYAiABKAki3wEKEk1lcmdlU3RhdGVSZXNwb25zZRINCgVmb3VuZBgBIAEoCBIWCg5tZXJnZV9iYXNlX3NoYRgCIAEoCRI0CgRiYXNlGAMgASgLMiYuc2V0Zm9yay5naXQudjEuQnJhbmNoU25hcHNob3RSZXNwb25zZRI0CgRvdXJzGAQgASgLMiYuc2V0Zm9yay5naXQudjEuQnJhbmNoU25hcHNob3RSZXNwb25zZRI2CgZ0aGVpcnMYBSABKAsyJi5zZXRmb3JrLmdpdC52MS5CcmFuY2hTbmFwc2hvdFJlc3BvbnNlImAKFE1lcmdlUmVzb2x2ZWRSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEg4KBmJyYW5jaBgCIAEoCRIRCglsaXN0X2pzb24YAyABKAwiaAoSTWVyZ2VCcmFuY2hSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBG5hbWUYAiABKAkSDAoEbW9kZRgDIAEoCRIPCgdtZXNzYWdlGAQgASgJIlEKE01lcmdlQnJhbmNoUmVzcG9uc2USDwoHdGlwX3NoYRgBIAEoCRITCgtuZXdfdmVyc2lvbhgCIAEoBRIUCgxmYXN0X2ZvcndhcmQYAyABKAgiWAoTQ3JlYXRlQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRuYW1lGAIgASgJEgwKBGZyb20YAyABKAkiSgoTRGVsZXRlQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRuYW1lGAIgASgJIiMKEEJyYW5jaE9wUmVzcG9uc2USDwoHdGlwX3NoYRgBIAEoCSJaCgZCcmFuY2gSDAoEbmFtZRgBIAEoCRIPCgd0aXBfc2hhGAIgASgJEhIKCmlzX2RlZmF1bHQYAyABKAgSDQoFYWhlYWQYBCABKAUSDgoGYmVoaW5kGAUgASgFIjwKEEJyYW5jaGVzUmVzcG9uc2USKAoIYnJhbmNoZXMYASADKAsyFi5zZXRmb3JrLmdpdC52MS5CcmFuY2giTgoVQnJhbmNoU25hcHNob3RSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEg4KBmJyYW5jaBgCIAEoCSLnAQoMU25hcHNob3RTdGVwEgkKAW4YASABKAUSDQoFdGl0bGUYAiABKAkSDAoEZGVzYxgDIAEoCRIPCgdjb21tYW5kGAQgASgJEg0KBWxldmVsGAUgASgJEgsKA3doeRgGIAEoCRIPCgdzZWN0aW9uGAcgASgJEhAKCHN1YnRhc2tzGAggAygJEikKBHJlZnMYCSADKAsyGy5zZXRmb3JrLmdpdC52MS5TbmFwc2hvdFJlZhIMCgR0eXBlGAogASgJEhQKDGNvbnRlbnRfanNvbhgLIAEoCRIQCghibG9ja19pZBgMIAEoCSIpCgtTbmFwc2hvdFJlZhINCgVsYWJlbBgBIAEoCRILCgN1cmwYAiABKAkioQEKFkJyYW5jaFNuYXBzaG90UmVzcG9uc2USDQoFZm91bmQYASABKAgSDwoHdGlwX3NoYRgCIAEoCRINCgV0aXRsZRgDIAEoCRIMCgRkZXNjGAQgASgJEgwKBHRhZ3MYBSADKAkSDwoHb3JkZXJlZBgGIAEoCBIrCgVzdGVwcxgHIAMoCzIcLnNldGZvcmsuZ2l0LnYxLlNuYXBzaG90U3RlcDKmCwoHR2l0Q29yZRJUChJJbmZvUmVmc1VwbG9hZFBhY2sSHy5zZXRmb3JrLmdpdC52MS5JbmZvUmVmc1JlcXVlc3QaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlElUKE0luZm9SZWZzUmVjZWl2ZVBhY2sSHy5zZXRmb3JrLmdpdC52MS5JbmZvUmVmc1JlcXVlc3QaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlEkgKClVwbG9hZFBhY2sSGy5zZXRmb3JrLmdpdC52MS5Qb3N0UmVxdWVzdBodLnNldGZvcmsuZ2l0LnYxLkJ5dGVzUmVzcG9uc2USTwoLUmVjZWl2ZVBhY2sSGy5zZXRmb3JrLmdpdC52MS5Qb3N0UmVxdWVzdBojLnNldGZvcmsuZ2l0LnYxLlJlY2VpdmVQYWNrUmVzcG9uc2USRgoMQ3JlYXRlQnVuZGxlEhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhodLnNldGZvcmsuZ2l0LnYxLkJ5dGVzUmVzcG9uc2USSQoMTGlzdEJyYW5jaGVzEhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhogLnNldGZvcmsuZ2l0LnYxLkJyYW5jaGVzUmVzcG9uc2USYgoRR2V0QnJhbmNoU25hcHNob3QSJS5zZXRmb3JrLmdpdC52MS5CcmFuY2hTbmFwc2hvdFJlcXVlc3QaJi5zZXRmb3JrLmdpdC52MS5CcmFuY2hTbmFwc2hvdFJlc3BvbnNlElUKDENyZWF0ZUJyYW5jaBIjLnNldGZvcmsuZ2l0LnYxLkNyZWF0ZUJyYW5jaFJlcXVlc3QaIC5zZXRmb3JrLmdpdC52MS5CcmFuY2hPcFJlc3BvbnNlElUKDERlbGV0ZUJyYW5jaBIjLnNldGZvcmsuZ2l0LnYxLkRlbGV0ZUJyYW5jaFJlcXVlc3QaIC5zZXRmb3JrLmdpdC52MS5CcmFuY2hPcFJlc3BvbnNlElYKC01lcmdlQnJhbmNoEiIuc2V0Zm9yay5naXQudjEuTWVyZ2VCcmFuY2hSZXF1ZXN0GiMuc2V0Zm9yay5naXQudjEuTWVyZ2VCcmFuY2hSZXNwb25zZRJWCg1HZXRNZXJnZVN0YXRlEiEuc2V0Zm9yay5naXQudjEuTWVyZ2VTdGF0ZVJlcXVlc3QaIi5zZXRmb3JrLmdpdC52MS5NZXJnZVN0YXRlUmVzcG9uc2USWgoNTWVyZ2VSZXNvbHZlZBIkLnNldGZvcmsuZ2l0LnYxLk1lcmdlUmVzb2x2ZWRSZXF1ZXN0GiMuc2V0Zm9yay5naXQudjEuTWVyZ2VCcmFuY2hSZXNwb25zZRJPCglDcmVhdGVUYWcSIC5zZXRmb3JrLmdpdC52MS5DcmVhdGVUYWdSZXF1ZXN0GiAuc2V0Zm9yay5naXQudjEuQnJhbmNoT3BSZXNwb25zZRJBCghMaXN0VGFncxIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYaHC5zZXRmb3JrLmdpdC52MS5UYWdzUmVzcG9uc2USWQoMVXBkYXRlQnJhbmNoEiMuc2V0Zm9yay5naXQudjEuVXBkYXRlQnJhbmNoUmVxdWVzdBokLnNldGZvcmsuZ2l0LnYxLlVwZGF0ZUJyYW5jaFJlc3BvbnNlElIKC0xpc3RDb21taXRzEiIuc2V0Zm9yay5naXQudjEuTGlzdENvbW1pdHNSZXF1ZXN0Gh8uc2V0Zm9yay5naXQudjEuQ29tbWl0c1Jlc3BvbnNlEl8KDkNvbW1pdFRvQnJhbmNoEiUuc2V0Zm9yay5naXQudjEuQ29tbWl0VG9CcmFuY2hSZXF1ZXN0GiYuc2V0Zm9yay5naXQudjEuQ29tbWl0VG9CcmFuY2hSZXNwb25zZWIGcHJvdG8z");
+  fileDesc("CglnaXQucHJvdG8SDnNldGZvcmsuZ2l0LnYxIiYKB1JlcG9SZWYSDQoFb3duZXIYASABKAkSDAoEc2x1ZxgCIAEoCSJOCg9JbmZvUmVmc1JlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSFAoMZ2l0X3Byb3RvY29sGAIgASgJIlgKC1Bvc3RSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBGJvZHkYAiABKAwSFAoMZ2l0X3Byb3RvY29sGAMgASgJIh0KDUJ5dGVzUmVzcG9uc2USDAoEZGF0YRgBIAEoDCI4ChNSZWNlaXZlUGFja1Jlc3BvbnNlEgwKBGRhdGEYASABKAwSEwoLbmV3X3ZlcnNpb24YAiABKAUihwEKC0xpc3RDb250ZW50Eg0KBXRpdGxlGAEgASgJEgwKBGRlc2MYAiABKAkSDAoEdGFncxgDIAMoCRIPCgdvcmRlcmVkGAQgASgIEg8KB3ZlcnNpb24YBSABKAUSKwoFc3RlcHMYBiADKAsyHC5zZXRmb3JrLmdpdC52MS5TbmFwc2hvdFN0ZXAi4QEKFUNvbW1pdFRvQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIOCgZicmFuY2gYAiABKAkSEQoJbGlzdF9qc29uGAMgASgMEg8KB21lc3NhZ2UYBCABKAkSFAoMZXhwZWN0ZWRfdGlwGAUgASgJEhMKC2F1dGhvcl9uYW1lGAYgASgJEhQKDGF1dGhvcl9lbWFpbBgHIAEoCRIsCgdjb250ZW50GAggASgLMhsuc2V0Zm9yay5naXQudjEuTGlzdENvbnRlbnQiOgoWQ29tbWl0VG9CcmFuY2hSZXNwb25zZRIPCgd0aXBfc2hhGAEgASgJEg8KB2NoYW5nZWQYAiABKAgiSgoTVXBkYXRlQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRuYW1lGAIgASgJIj0KFFVwZGF0ZUJyYW5jaFJlc3BvbnNlEg8KB3RpcF9zaGEYASABKAkSFAoMZmFzdF9mb3J3YXJkGAIgASgIImcKEkxpc3RDb21taXRzUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhILCgNyZXYYAiABKAkSDgoGbm90X2luGAMgASgJEg0KBWxpbWl0GAQgASgFInMKBkNvbW1pdBILCgNzaGEYASABKAkSDwoHbWVzc2FnZRgCIAEoCRITCgthdXRob3JfbmFtZRgDIAEoCRIUCgxhdXRob3JfZW1haWwYBCABKAkSDwoHYXRfdW5peBgFIAEoAxIPCgdwYXJlbnRzGAYgASgFIkkKD0NvbW1pdHNSZXNwb25zZRINCgVmb3VuZBgBIAEoCBInCgdjb21taXRzGAIgAygLMhYuc2V0Zm9yay5naXQudjEuQ29tbWl0IlgKEENyZWF0ZVRhZ1JlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSDAoEbmFtZRgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFIicKA1RhZxIMCgRuYW1lGAEgASgJEhIKCnRhcmdldF9zaGEYAiABKAkiMQoMVGFnc1Jlc3BvbnNlEiEKBHRhZ3MYASADKAsyEy5zZXRmb3JrLmdpdC52MS5UYWciSgoRTWVyZ2VTdGF0ZVJlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSDgoGYnJhbmNoGAIgASgJIt8BChJNZXJnZVN0YXRlUmVzcG9uc2USDQoFZm91bmQYASABKAgSFgoObWVyZ2VfYmFzZV9zaGEYAiABKAkSNAoEYmFzZRgDIAEoCzImLnNldGZvcmsuZ2l0LnYxLkJyYW5jaFNuYXBzaG90UmVzcG9uc2USNAoEb3VycxgEIAEoCzImLnNldGZvcmsuZ2l0LnYxLkJyYW5jaFNuYXBzaG90UmVzcG9uc2USNgoGdGhlaXJzGAUgASgLMiYuc2V0Zm9yay5naXQudjEuQnJhbmNoU25hcHNob3RSZXNwb25zZSKtAQoUTWVyZ2VSZXNvbHZlZFJlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSDgoGYnJhbmNoGAIgASgJEhEKCWxpc3RfanNvbhgDIAEoDBIsCgdjb250ZW50GAQgASgLMhsuc2V0Zm9yay5naXQudjEuTGlzdENvbnRlbnQSDAoEbW9kZRgFIAEoCRIPCgdtZXNzYWdlGAYgASgJImgKEk1lcmdlQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRuYW1lGAIgASgJEgwKBG1vZGUYAyABKAkSDwoHbWVzc2FnZRgEIAEoCSJRChNNZXJnZUJyYW5jaFJlc3BvbnNlEg8KB3RpcF9zaGEYASABKAkSEwoLbmV3X3ZlcnNpb24YAiABKAUSFAoMZmFzdF9mb3J3YXJkGAMgASgIIlgKE0NyZWF0ZUJyYW5jaFJlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSDAoEbmFtZRgCIAEoCRIMCgRmcm9tGAMgASgJIkoKE0RlbGV0ZUJyYW5jaFJlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSDAoEbmFtZRgCIAEoCSIjChBCcmFuY2hPcFJlc3BvbnNlEg8KB3RpcF9zaGEYASABKAkiWgoGQnJhbmNoEgwKBG5hbWUYASABKAkSDwoHdGlwX3NoYRgCIAEoCRISCgppc19kZWZhdWx0GAMgASgIEg0KBWFoZWFkGAQgASgFEg4KBmJlaGluZBgFIAEoBSI8ChBCcmFuY2hlc1Jlc3BvbnNlEigKCGJyYW5jaGVzGAEgAygLMhYuc2V0Zm9yay5naXQudjEuQnJhbmNoIk4KFUJyYW5jaFNuYXBzaG90UmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIOCgZicmFuY2gYAiABKAki5wEKDFNuYXBzaG90U3RlcBIJCgFuGAEgASgFEg0KBXRpdGxlGAIgASgJEgwKBGRlc2MYAyABKAkSDwoHY29tbWFuZBgEIAEoCRINCgVsZXZlbBgFIAEoCRILCgN3aHkYBiABKAkSDwoHc2VjdGlvbhgHIAEoCRIQCghzdWJ0YXNrcxgIIAMoCRIpCgRyZWZzGAkgAygLMhsuc2V0Zm9yay5naXQudjEuU25hcHNob3RSZWYSDAoEdHlwZRgKIAEoCRIUCgxjb250ZW50X2pzb24YCyABKAkSEAoIYmxvY2tfaWQYDCABKAkiKQoLU25hcHNob3RSZWYSDQoFbGFiZWwYASABKAkSCwoDdXJsGAIgASgJIqEBChZCcmFuY2hTbmFwc2hvdFJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEg8KB3RpcF9zaGEYAiABKAkSDQoFdGl0bGUYAyABKAkSDAoEZGVzYxgEIAEoCRIMCgR0YWdzGAUgAygJEg8KB29yZGVyZWQYBiABKAgSKwoFc3RlcHMYByADKAsyHC5zZXRmb3JrLmdpdC52MS5TbmFwc2hvdFN0ZXAypgsKB0dpdENvcmUSVAoSSW5mb1JlZnNVcGxvYWRQYWNrEh8uc2V0Zm9yay5naXQudjEuSW5mb1JlZnNSZXF1ZXN0Gh0uc2V0Zm9yay5naXQudjEuQnl0ZXNSZXNwb25zZRJVChNJbmZvUmVmc1JlY2VpdmVQYWNrEh8uc2V0Zm9yay5naXQudjEuSW5mb1JlZnNSZXF1ZXN0Gh0uc2V0Zm9yay5naXQudjEuQnl0ZXNSZXNwb25zZRJICgpVcGxvYWRQYWNrEhsuc2V0Zm9yay5naXQudjEuUG9zdFJlcXVlc3QaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlEk8KC1JlY2VpdmVQYWNrEhsuc2V0Zm9yay5naXQudjEuUG9zdFJlcXVlc3QaIy5zZXRmb3JrLmdpdC52MS5SZWNlaXZlUGFja1Jlc3BvbnNlEkYKDENyZWF0ZUJ1bmRsZRIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlEkkKDExpc3RCcmFuY2hlcxIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYaIC5zZXRmb3JrLmdpdC52MS5CcmFuY2hlc1Jlc3BvbnNlEmIKEUdldEJyYW5jaFNuYXBzaG90EiUuc2V0Zm9yay5naXQudjEuQnJhbmNoU25hcHNob3RSZXF1ZXN0GiYuc2V0Zm9yay5naXQudjEuQnJhbmNoU25hcHNob3RSZXNwb25zZRJVCgxDcmVhdGVCcmFuY2gSIy5zZXRmb3JrLmdpdC52MS5DcmVhdGVCcmFuY2hSZXF1ZXN0GiAuc2V0Zm9yay5naXQudjEuQnJhbmNoT3BSZXNwb25zZRJVCgxEZWxldGVCcmFuY2gSIy5zZXRmb3JrLmdpdC52MS5EZWxldGVCcmFuY2hSZXF1ZXN0GiAuc2V0Zm9yay5naXQudjEuQnJhbmNoT3BSZXNwb25zZRJWCgtNZXJnZUJyYW5jaBIiLnNldGZvcmsuZ2l0LnYxLk1lcmdlQnJhbmNoUmVxdWVzdBojLnNldGZvcmsuZ2l0LnYxLk1lcmdlQnJhbmNoUmVzcG9uc2USVgoNR2V0TWVyZ2VTdGF0ZRIhLnNldGZvcmsuZ2l0LnYxLk1lcmdlU3RhdGVSZXF1ZXN0GiIuc2V0Zm9yay5naXQudjEuTWVyZ2VTdGF0ZVJlc3BvbnNlEloKDU1lcmdlUmVzb2x2ZWQSJC5zZXRmb3JrLmdpdC52MS5NZXJnZVJlc29sdmVkUmVxdWVzdBojLnNldGZvcmsuZ2l0LnYxLk1lcmdlQnJhbmNoUmVzcG9uc2USTwoJQ3JlYXRlVGFnEiAuc2V0Zm9yay5naXQudjEuQ3JlYXRlVGFnUmVxdWVzdBogLnNldGZvcmsuZ2l0LnYxLkJyYW5jaE9wUmVzcG9uc2USQQoITGlzdFRhZ3MSFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmGhwuc2V0Zm9yay5naXQudjEuVGFnc1Jlc3BvbnNlElkKDFVwZGF0ZUJyYW5jaBIjLnNldGZvcmsuZ2l0LnYxLlVwZGF0ZUJyYW5jaFJlcXVlc3QaJC5zZXRmb3JrLmdpdC52MS5VcGRhdGVCcmFuY2hSZXNwb25zZRJSCgtMaXN0Q29tbWl0cxIiLnNldGZvcmsuZ2l0LnYxLkxpc3RDb21taXRzUmVxdWVzdBofLnNldGZvcmsuZ2l0LnYxLkNvbW1pdHNSZXNwb25zZRJfCg5Db21taXRUb0JyYW5jaBIlLnNldGZvcmsuZ2l0LnYxLkNvbW1pdFRvQnJhbmNoUmVxdWVzdBomLnNldGZvcmsuZ2l0LnYxLkNvbW1pdFRvQnJhbmNoUmVzcG9uc2ViBnByb3RvMw");
 
 /**
  * @generated from message setfork.git.v1.RepoRef
@@ -126,6 +126,52 @@ export const ReceivePackResponseSchema: GenMessage<ReceivePackResponse> = /*@__P
   messageDesc(file_git, 4);
 
 /**
+ * Содержимое версии списка СТРУКТУРОЙ — канонические байты list.json собирает
+ * ядро (единственный владелец формата). Клиент формат не сериализует: иначе
+ * правила формата живут в двух реализациях и расходятся.
+ *
+ * @generated from message setfork.git.v1.ListContent
+ */
+export type ListContent = Message<"setfork.git.v1.ListContent"> & {
+  /**
+   * @generated from field: string title = 1;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string desc = 2;
+   */
+  desc: string;
+
+  /**
+   * @generated from field: repeated string tags = 3;
+   */
+  tags: string[];
+
+  /**
+   * @generated from field: bool ordered = 4;
+   */
+  ordered: boolean;
+
+  /**
+   * @generated from field: int32 version = 5;
+   */
+  version: number;
+
+  /**
+   * @generated from field: repeated setfork.git.v1.SnapshotStep steps = 6;
+   */
+  steps: SnapshotStep[];
+};
+
+/**
+ * Describes the message setfork.git.v1.ListContent.
+ * Use `create(ListContentSchema)` to create a new message.
+ */
+export const ListContentSchema: GenMessage<ListContent> = /*@__PURE__*/
+  messageDesc(file_git, 5);
+
+/**
  * @generated from message setfork.git.v1.CommitToBranchRequest
  */
 export type CommitToBranchRequest = Message<"setfork.git.v1.CommitToBranchRequest"> & {
@@ -142,7 +188,8 @@ export type CommitToBranchRequest = Message<"setfork.git.v1.CommitToBranchReques
   branch: string;
 
   /**
-   * новый list.json целиком (канон)
+   * УСТАРЕЛО: готовые байты list.json от клиента. Оставлено на время перехода —
+   * используется, только если content не задан. Удалить после перевода фронта.
    *
    * @generated from field: bytes list_json = 3;
    */
@@ -175,6 +222,13 @@ export type CommitToBranchRequest = Message<"setfork.git.v1.CommitToBranchReques
    * @generated from field: string author_email = 7;
    */
   authorEmail: string;
+
+  /**
+   * канон структурой; приоритетнее list_json
+   *
+   * @generated from field: setfork.git.v1.ListContent content = 8;
+   */
+  content?: ListContent | undefined;
 };
 
 /**
@@ -182,7 +236,7 @@ export type CommitToBranchRequest = Message<"setfork.git.v1.CommitToBranchReques
  * Use `create(CommitToBranchRequestSchema)` to create a new message.
  */
 export const CommitToBranchRequestSchema: GenMessage<CommitToBranchRequest> = /*@__PURE__*/
-  messageDesc(file_git, 5);
+  messageDesc(file_git, 6);
 
 /**
  * @generated from message setfork.git.v1.CommitToBranchResponse
@@ -208,7 +262,7 @@ export type CommitToBranchResponse = Message<"setfork.git.v1.CommitToBranchRespo
  * Use `create(CommitToBranchResponseSchema)` to create a new message.
  */
 export const CommitToBranchResponseSchema: GenMessage<CommitToBranchResponse> = /*@__PURE__*/
-  messageDesc(file_git, 6);
+  messageDesc(file_git, 7);
 
 /**
  * @generated from message setfork.git.v1.UpdateBranchRequest
@@ -232,7 +286,7 @@ export type UpdateBranchRequest = Message<"setfork.git.v1.UpdateBranchRequest"> 
  * Use `create(UpdateBranchRequestSchema)` to create a new message.
  */
 export const UpdateBranchRequestSchema: GenMessage<UpdateBranchRequest> = /*@__PURE__*/
-  messageDesc(file_git, 7);
+  messageDesc(file_git, 8);
 
 /**
  * @generated from message setfork.git.v1.UpdateBranchResponse
@@ -258,7 +312,7 @@ export type UpdateBranchResponse = Message<"setfork.git.v1.UpdateBranchResponse"
  * Use `create(UpdateBranchResponseSchema)` to create a new message.
  */
 export const UpdateBranchResponseSchema: GenMessage<UpdateBranchResponse> = /*@__PURE__*/
-  messageDesc(file_git, 8);
+  messageDesc(file_git, 9);
 
 /**
  * @generated from message setfork.git.v1.ListCommitsRequest
@@ -296,7 +350,7 @@ export type ListCommitsRequest = Message<"setfork.git.v1.ListCommitsRequest"> & 
  * Use `create(ListCommitsRequestSchema)` to create a new message.
  */
 export const ListCommitsRequestSchema: GenMessage<ListCommitsRequest> = /*@__PURE__*/
-  messageDesc(file_git, 9);
+  messageDesc(file_git, 10);
 
 /**
  * @generated from message setfork.git.v1.Commit
@@ -344,7 +398,7 @@ export type Commit = Message<"setfork.git.v1.Commit"> & {
  * Use `create(CommitSchema)` to create a new message.
  */
 export const CommitSchema: GenMessage<Commit> = /*@__PURE__*/
-  messageDesc(file_git, 10);
+  messageDesc(file_git, 11);
 
 /**
  * @generated from message setfork.git.v1.CommitsResponse
@@ -370,7 +424,7 @@ export type CommitsResponse = Message<"setfork.git.v1.CommitsResponse"> & {
  * Use `create(CommitsResponseSchema)` to create a new message.
  */
 export const CommitsResponseSchema: GenMessage<CommitsResponse> = /*@__PURE__*/
-  messageDesc(file_git, 11);
+  messageDesc(file_git, 12);
 
 /**
  * @generated from message setfork.git.v1.CreateTagRequest
@@ -401,7 +455,7 @@ export type CreateTagRequest = Message<"setfork.git.v1.CreateTagRequest"> & {
  * Use `create(CreateTagRequestSchema)` to create a new message.
  */
 export const CreateTagRequestSchema: GenMessage<CreateTagRequest> = /*@__PURE__*/
-  messageDesc(file_git, 12);
+  messageDesc(file_git, 13);
 
 /**
  * @generated from message setfork.git.v1.Tag
@@ -423,7 +477,7 @@ export type Tag = Message<"setfork.git.v1.Tag"> & {
  * Use `create(TagSchema)` to create a new message.
  */
 export const TagSchema: GenMessage<Tag> = /*@__PURE__*/
-  messageDesc(file_git, 13);
+  messageDesc(file_git, 14);
 
 /**
  * @generated from message setfork.git.v1.TagsResponse
@@ -442,7 +496,7 @@ export type TagsResponse = Message<"setfork.git.v1.TagsResponse"> & {
  * Use `create(TagsResponseSchema)` to create a new message.
  */
 export const TagsResponseSchema: GenMessage<TagsResponse> = /*@__PURE__*/
-  messageDesc(file_git, 14);
+  messageDesc(file_git, 15);
 
 /**
  * @generated from message setfork.git.v1.MergeStateRequest
@@ -464,7 +518,7 @@ export type MergeStateRequest = Message<"setfork.git.v1.MergeStateRequest"> & {
  * Use `create(MergeStateRequestSchema)` to create a new message.
  */
 export const MergeStateRequestSchema: GenMessage<MergeStateRequest> = /*@__PURE__*/
-  messageDesc(file_git, 15);
+  messageDesc(file_git, 16);
 
 /**
  * @generated from message setfork.git.v1.MergeStateResponse
@@ -507,7 +561,7 @@ export type MergeStateResponse = Message<"setfork.git.v1.MergeStateResponse"> & 
  * Use `create(MergeStateResponseSchema)` to create a new message.
  */
 export const MergeStateResponseSchema: GenMessage<MergeStateResponse> = /*@__PURE__*/
-  messageDesc(file_git, 16);
+  messageDesc(file_git, 17);
 
 /**
  * @generated from message setfork.git.v1.MergeResolvedRequest
@@ -524,11 +578,38 @@ export type MergeResolvedRequest = Message<"setfork.git.v1.MergeResolvedRequest"
   branch: string;
 
   /**
-   * финальный resolved list.json
+   * УСТАРЕЛО: готовые байты resolved list.json от клиента (см. ListContent).
+   * Используется, только если content не задан.
    *
    * @generated from field: bytes list_json = 3;
    */
   listJson: Uint8Array;
+
+  /**
+   * разрешённый канон структурой; приоритетнее list_json
+   *
+   * @generated from field: setfork.git.v1.ListContent content = 4;
+   */
+  content?: ListContent | undefined;
+
+  /**
+   * Способ слияния — семантика ровно как в MergeBranchRequest. Без этих полей
+   * список, настроенный на squash, получал бы историю ветки только потому, что
+   * при слиянии случился конфликт; фронт из-за этого просто ОТКАЗЫВАЛ в ручном
+   * резолве на squash-списках, маскируя отказ под 'conflict'.
+   *
+   * '' и 'merge' — merge-коммит; 'squash' — один родитель
+   *
+   * @generated from field: string mode = 5;
+   */
+  mode: string;
+
+  /**
+   * заголовок squash-коммита ('' → 'Squashed branch <name>')
+   *
+   * @generated from field: string message = 6;
+   */
+  message: string;
 };
 
 /**
@@ -536,7 +617,7 @@ export type MergeResolvedRequest = Message<"setfork.git.v1.MergeResolvedRequest"
  * Use `create(MergeResolvedRequestSchema)` to create a new message.
  */
 export const MergeResolvedRequestSchema: GenMessage<MergeResolvedRequest> = /*@__PURE__*/
-  messageDesc(file_git, 17);
+  messageDesc(file_git, 18);
 
 /**
  * @generated from message setfork.git.v1.MergeBranchRequest
@@ -577,7 +658,7 @@ export type MergeBranchRequest = Message<"setfork.git.v1.MergeBranchRequest"> & 
  * Use `create(MergeBranchRequestSchema)` to create a new message.
  */
 export const MergeBranchRequestSchema: GenMessage<MergeBranchRequest> = /*@__PURE__*/
-  messageDesc(file_git, 18);
+  messageDesc(file_git, 19);
 
 /**
  * @generated from message setfork.git.v1.MergeBranchResponse
@@ -608,7 +689,7 @@ export type MergeBranchResponse = Message<"setfork.git.v1.MergeBranchResponse"> 
  * Use `create(MergeBranchResponseSchema)` to create a new message.
  */
 export const MergeBranchResponseSchema: GenMessage<MergeBranchResponse> = /*@__PURE__*/
-  messageDesc(file_git, 19);
+  messageDesc(file_git, 20);
 
 /**
  * @generated from message setfork.git.v1.CreateBranchRequest
@@ -639,7 +720,7 @@ export type CreateBranchRequest = Message<"setfork.git.v1.CreateBranchRequest"> 
  * Use `create(CreateBranchRequestSchema)` to create a new message.
  */
 export const CreateBranchRequestSchema: GenMessage<CreateBranchRequest> = /*@__PURE__*/
-  messageDesc(file_git, 20);
+  messageDesc(file_git, 21);
 
 /**
  * @generated from message setfork.git.v1.DeleteBranchRequest
@@ -661,7 +742,7 @@ export type DeleteBranchRequest = Message<"setfork.git.v1.DeleteBranchRequest"> 
  * Use `create(DeleteBranchRequestSchema)` to create a new message.
  */
 export const DeleteBranchRequestSchema: GenMessage<DeleteBranchRequest> = /*@__PURE__*/
-  messageDesc(file_git, 21);
+  messageDesc(file_git, 22);
 
 /**
  * @generated from message setfork.git.v1.BranchOpResponse
@@ -680,7 +761,7 @@ export type BranchOpResponse = Message<"setfork.git.v1.BranchOpResponse"> & {
  * Use `create(BranchOpResponseSchema)` to create a new message.
  */
 export const BranchOpResponseSchema: GenMessage<BranchOpResponse> = /*@__PURE__*/
-  messageDesc(file_git, 22);
+  messageDesc(file_git, 23);
 
 /**
  * @generated from message setfork.git.v1.Branch
@@ -725,7 +806,7 @@ export type Branch = Message<"setfork.git.v1.Branch"> & {
  * Use `create(BranchSchema)` to create a new message.
  */
 export const BranchSchema: GenMessage<Branch> = /*@__PURE__*/
-  messageDesc(file_git, 23);
+  messageDesc(file_git, 24);
 
 /**
  * @generated from message setfork.git.v1.BranchesResponse
@@ -744,7 +825,7 @@ export type BranchesResponse = Message<"setfork.git.v1.BranchesResponse"> & {
  * Use `create(BranchesResponseSchema)` to create a new message.
  */
 export const BranchesResponseSchema: GenMessage<BranchesResponse> = /*@__PURE__*/
-  messageDesc(file_git, 24);
+  messageDesc(file_git, 25);
 
 /**
  * @generated from message setfork.git.v1.BranchSnapshotRequest
@@ -768,7 +849,7 @@ export type BranchSnapshotRequest = Message<"setfork.git.v1.BranchSnapshotReques
  * Use `create(BranchSnapshotRequestSchema)` to create a new message.
  */
 export const BranchSnapshotRequestSchema: GenMessage<BranchSnapshotRequest> = /*@__PURE__*/
-  messageDesc(file_git, 25);
+  messageDesc(file_git, 26);
 
 /**
  * @generated from message setfork.git.v1.SnapshotStep
@@ -848,7 +929,7 @@ export type SnapshotStep = Message<"setfork.git.v1.SnapshotStep"> & {
  * Use `create(SnapshotStepSchema)` to create a new message.
  */
 export const SnapshotStepSchema: GenMessage<SnapshotStep> = /*@__PURE__*/
-  messageDesc(file_git, 26);
+  messageDesc(file_git, 27);
 
 /**
  * @generated from message setfork.git.v1.SnapshotRef
@@ -872,7 +953,7 @@ export type SnapshotRef = Message<"setfork.git.v1.SnapshotRef"> & {
  * Use `create(SnapshotRefSchema)` to create a new message.
  */
 export const SnapshotRefSchema: GenMessage<SnapshotRef> = /*@__PURE__*/
-  messageDesc(file_git, 27);
+  messageDesc(file_git, 28);
 
 /**
  * @generated from message setfork.git.v1.BranchSnapshotResponse
@@ -919,7 +1000,7 @@ export type BranchSnapshotResponse = Message<"setfork.git.v1.BranchSnapshotRespo
  * Use `create(BranchSnapshotResponseSchema)` to create a new message.
  */
 export const BranchSnapshotResponseSchema: GenMessage<BranchSnapshotResponse> = /*@__PURE__*/
-  messageDesc(file_git, 28);
+  messageDesc(file_git, 29);
 
 /**
  * @generated from service setfork.git.v1.GitCore
@@ -1091,10 +1172,10 @@ export const GitCore: GenService<{
    * Записать list.json в ВЕТКУ одним коммитом. Нужно «предложенным правкам»:
    * рецензент даёт готовый текст пункта, автор жмёт «Применить» — и правка
    * ложится в ветку предложения, а не требует локального клона.
-   *
+   * 
    * MergeResolved пишет в main, здесь main НЕ трогается: ветка — черновик,
    * версии рождаются только из main, поэтому проекции нет.
-   *
+   * 
    * expected_tip — оптимистичная блокировка: между чтением ветки и записью в неё
    * мог прийти чужой пуш, и без сверки мы бы молча его перезаписали.
    * Не совпало → failed_precondition('stale').

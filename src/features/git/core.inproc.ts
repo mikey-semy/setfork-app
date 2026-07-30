@@ -2,12 +2,13 @@ import 'server-only'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { and, eq } from 'drizzle-orm'
-import type { BranchSnapshot, GitBranch, GitCore } from '@/core'
+import type { BranchSnapshot, GitBranch, GitCore, ListContent } from '@/core'
 import { BranchOpError } from '@/core'
 import { db, templates, users } from '@/shared/db'
 import { gitStore } from './adapter'
 import { withCoauthors, type CommitAuthor } from './coauthors'
 import { GIT_LOG_FORMAT, parseGitLog } from './log-parse'
+import { toCanonJson } from './list-content'
 
 const exec = promisify(execFile)
 
@@ -271,13 +272,12 @@ export const gitCoreInproc: GitCore = {
     return { mergeBaseSha: baseSha, base, ours, theirs }
   },
 
-  async mergeResolved(repo, branch, listJson, opts) {
+  async mergeResolved(repo, branch, content, opts) {
     if (badBranch(branch) || branch === 'main') throw new BranchOpError('bad-name')
-    try {
-      JSON.parse(listJson)
-    } catch {
-      throw new BranchOpError('bad-name')
-    }
+    // Канон собирается ЗДЕСЬ, потому что inproc и есть TS-реализация формата
+    // (её снимает Ф0b; на remote-пути это делает ядро). Продуктовый код формат
+    // больше не сериализует — он присылает содержимое.
+    const listJson = toCanonJson(content)
     const bare = await gitStore.ensureRepo(repo)
     if (!bare) throw new BranchOpError('not-found')
     const listId = await resolveListId(repo.owner, repo.slug)
@@ -430,20 +430,15 @@ export const gitCoreInproc: GitCore = {
 
   // Записать list.json в ветку одним коммитом — зеркало git::write в Rust-ядре.
   // Отличие от mergeResolved: пишем в ВЕТКУ, родитель один, main не двигается.
-  async commitToBranch(repo, branch, listJson, opts) {
+  async commitToBranch(repo, branch, content, opts) {
     if (badBranch(branch) || branch === 'main') throw new BranchOpError('bad-name')
-    try {
-      const parsed: unknown = JSON.parse(listJson)
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object')
-    } catch {
-      throw new BranchOpError('bad-name')
-    }
+    const listJson = toCanonJson(content)
     const bare = await gitStore.ensureRepo(repo)
     if (!bare) throw new BranchOpError('not-found')
     const listId = await resolveListId(repo.owner, repo.slug)
     if (!listId) throw new BranchOpError('not-found')
     const ref = `refs/heads/${branch}`
-    const content = listJson.endsWith('\n') ? listJson : listJson + '\n'
+    const canon = listJson.endsWith('\n') ? listJson : listJson + '\n'
     // Тот же лок, что у merge/push: tip читаем ПОСЛЕ захвата, иначе конкурентный
     // пуш в ветку потерялся бы.
     return gitStore.withRepoLock(listId, async () => {
@@ -462,10 +457,10 @@ export const gitCoreInproc: GitCore = {
         (r) => r.stdout,
         () => null,
       )
-      if (current !== null && current === content) return { tipSha: tip, changed: false }
+      if (current !== null && current === canon) return { tipSha: tip, changed: false }
 
       const [hash, { stdout: lsTree }] = await Promise.all([
-        execStdin(['--git-dir', bare, 'hash-object', '-w', '--stdin'], content),
+        execStdin(['--git-dir', bare, 'hash-object', '-w', '--stdin'], canon),
         exec('git', ['--git-dir', bare, 'ls-tree', tip]),
       ])
       // steps/ убираем вслед за каноном — как в mergeResolved.
