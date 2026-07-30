@@ -265,17 +265,21 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   if (!tpl) return
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
 
+  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+
   const note = String(formData.get('note') ?? '').trim()
   const tags = parseTags(formData.get('tags'))
   const ordered = formData.get('ordered') !== 'unordered'
   const gated = formData.get('gated') === 'on'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
-  // Создание версии+шагов идёт через доменный порт ListStore (write-seam под Rust).
-  await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed), authorId: session.userId })
-  // tags/ordered/gated — атрибуты списка, не версии; обновляем отдельно.
+  // tags/ordered/gated — атрибуты списка, не версии. Обновляются ДО addVersion:
+  // ядро собирает канон list.json (title/desc/tags/ordered) из templates в момент
+  // коммита (Ф1, git-first), и мета после версии отстала бы в git на один коммит.
   await db.update(templates).set({ tags, ordered, gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   await registerTags(tags)
+  // Создание версии = git-коммит + проекция в ядре (доменный порт ListStore).
+  await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed), authorId: session.userId })
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
@@ -929,6 +933,10 @@ export async function translateList(templateId: string, targetLang: string): Pro
   if (!tpl) return { error: 'notfound' }
   // Перевод = правка контента: владелец или коллаборатор (как saveNewVersion).
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return { error: 'forbidden' }
+  // Архив/заморозка: раньше это ловил только фасадный бэкстоп addVersion, но мета
+  // теперь обновляется ДО версии — гейтим явно, чтобы замороженный список не
+  // получил переведённые title/desc без версии.
+  if (!canEditList(tpl)) return { error: 'forbidden' }
 
   const { allowed } = await checkRateLimit(`translate:${session.userId}`)
   if (!allowed) return { error: 'ratelimited' }
@@ -994,12 +1002,13 @@ export async function translateList(templateId: string, targetLang: string): Pro
   })
 
   const note = `translate → ${langEnName(targetLang)}`
-  await listStore.addVersion(tpl.id, { note, steps: toStepInput(proposed), authorId: session.userId })
-  // Также перевести title/desc самого списка (в templates, не в шагах).
+  // title/desc списка переводятся ДО addVersion: ядро читает мету из templates,
+  // когда собирает канон коммита (Ф1, git-first) — иначе git отстал бы на версию.
   await db
     .update(templates)
     .set({ title: add(tpl.title, translated.title), desc: add(tpl.desc, translated.desc), updatedAt: new Date() })
     .where(eq(templates.id, tpl.id))
+  await listStore.addVersion(tpl.id, { note, steps: toStepInput(proposed), authorId: session.userId })
   await notifyWatchersNewVersion(tpl.id, session.userId)
 
   const owner = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)

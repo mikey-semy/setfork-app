@@ -4,8 +4,10 @@ import type { Contributor, List, ListStore, LocaleText, Step, StepRef, Version }
 import { db, steps as stepsTable, templates, templateVersions, users } from '@/shared/db'
 import { getContributors as getContributorsQuery } from '@/features/library/queries'
 
-// Drizzle-адаптер порта ListStore (см. @/core/ports). Мапит строки БД в доменные
-// сущности. Пост-MVP реализуется на Rust (sqlx) за тем же портом.
+// Drizzle-адаптер READ-части порта ListStore (см. @/core/ports). Мапит строки БД
+// в доменные сущности. WRITE-части (addVersion/create) здесь больше НЕТ (Ф1 трека
+// git-format): версия рождается git-first в ядре, прямая запись версий в Postgres
+// с фронта была второй половиной двойного канона — см. list-store.remote.ts.
 
 type TplRow = typeof templates.$inferSelect
 type VerRow = typeof templateVersions.$inferSelect
@@ -65,7 +67,7 @@ function toStep(s: StepRow): Step {
   }
 }
 
-export const listStore: ListStore = {
+export const listStore: Omit<ListStore, 'addVersion' | 'create'> = {
   async getBySlug(owner, slug) {
     const [u] = await db.select({ id: users.id }).from(users).where(eq(users.handle, owner)).limit(1)
     if (!u) return null
@@ -95,86 +97,6 @@ export const listStore: ListStore = {
     if (!v) return null
     const rows = await db.select().from(stepsTable).where(eq(stepsTable.versionId, v.id)).orderBy(asc(stepsTable.n))
     return { version: toVersion(v), steps: rows.map(toStep) }
-  },
-
-  async create(input) {
-    const [row] = await db
-      .insert(templates)
-      .values({
-        ownerId: input.ownerId,
-        slug: input.slug,
-        title: input.title,
-        desc: input.desc,
-        tags: input.tags,
-        ordered: input.ordered,
-        visibility: input.visibility,
-        status: input.status,
-        origin: input.origin,
-        forkedFromId: input.forkedFromId ?? null,
-        currentVersion: 1,
-      })
-      .returning()
-    const [ver] = await db.insert(templateVersions).values({ templateId: row.id, version: 1, note: input.note, authorId: input.ownerId }).returning()
-    if (input.steps.length) {
-      await db.insert(stepsTable).values(
-        input.steps.map((s, i) => ({
-          versionId: ver.id,
-          n: i + 1,
-          blockId: s.blockId ?? null,
-          type: s.type ?? 'step',
-          content: s.content ?? {},
-          title: s.title,
-          desc: s.desc,
-          command: s.command,
-          hasImage: !!s.imageRef,
-          imageKey: s.imageRef ?? null,
-          level: s.level,
-          why: s.why,
-          needsHuman: s.needsHuman ?? false,
-          needsHumanAsk: s.needsHumanAsk ?? {},
-          section: s.section,
-          subtasks: s.subtasks,
-          refs: s.refs,
-        })),
-      )
-    }
-    return toList(row)
-  },
-
-  async addVersion(listId, input) {
-    const [tpl] = await db.select({ currentVersion: templates.currentVersion }).from(templates).where(eq(templates.id, listId)).limit(1)
-    if (!tpl) throw new Error('addVersion: list not found')
-    const newVersion = tpl.currentVersion + 1
-    const [ver] = await db
-      .insert(templateVersions)
-      .values({ templateId: listId, version: newVersion, note: input.note, authorId: input.authorId ?? null })
-      .returning()
-    if (input.steps.length) {
-      await db.insert(stepsTable).values(
-        input.steps.map((s, i) => ({
-          versionId: ver.id,
-          n: i + 1,
-          // Идентичность переносится из прошлой версии — новый снимок, тот же блок.
-          blockId: s.blockId ?? null,
-          type: s.type ?? 'step',
-          content: s.content ?? {},
-          title: s.title,
-          desc: s.desc,
-          command: s.command,
-          hasImage: !!s.imageRef,
-          imageKey: s.imageRef ?? null,
-          level: s.level,
-          why: s.why,
-          needsHuman: s.needsHuman ?? false,
-          needsHumanAsk: s.needsHumanAsk ?? {},
-          section: s.section,
-          subtasks: s.subtasks,
-          refs: s.refs,
-        })),
-      )
-    }
-    await db.update(templates).set({ currentVersion: newVersion, updatedAt: new Date() }).where(eq(templates.id, listId))
-    return toVersion(ver)
   },
 
   async getContributors(listId) {
