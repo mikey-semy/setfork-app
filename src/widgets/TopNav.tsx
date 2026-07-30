@@ -252,7 +252,10 @@ export function TopNav({
                   slug: crumb.slug,
                   title: crumbTitle ?? { en: crumb.slug, ru: crumb.slug },
                   avatarUrl: null,
-                  visibility: crumbVis ?? 'public',
+                  // Пока роут не ответил — видимость НЕ ЗНАЕМ, и врать «публичный»
+                  // нельзя: по этому пропу переключатель рисует значок. undefined =
+                  // значка нет, а настоящую видимость строка получит от by-owner.
+                  visibility: crumbVis ?? undefined,
                 }}
               />
               )}

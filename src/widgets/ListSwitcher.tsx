@@ -92,9 +92,14 @@ export function ListSwitcher({
   //
   // При активном поиске список не навязываем: там ожидаешь только совпадения. Но если он
   // сам попал в совпадения — всё равно наверх, чтобы правило было одно.
+  //
+  // Наверх ставим строку ОТ СЕРВЕРА, если он её вернул, и только иначе — синтетическую
+  // из пропа: у той нет аватара, а видимость в ней неизвестна, пока не ответил роут
+  // названия. Подменять ею настоящую строку значит терять аватар и рисовать приватному
+  // списку глобус поверх пришедшего с сервера `private` (замечание авто-ревью).
+  const fetched = items.find((l) => `${l.handle}/${l.slug}` === activeKey)
   const rest = items.filter((l) => `${l.handle}/${l.slug}` !== activeKey)
-  const currentMatched = rest.length !== items.length
-  const shown = q.trim() && !currentMatched ? rest : [current, ...rest]
+  const shown = q.trim() && !fetched ? rest : [fetched ?? current, ...rest]
 
   return (
     <Popover
