@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Ellipsis, History } from 'lucide-react'
 import { AvatarStack } from '@/shared/ui/AvatarStack'
@@ -53,6 +53,16 @@ export function CommitBar({
 }) {
   const [open, setOpen] = useState(false)
   const at = new Date(createdAt)
+
+  // ТОЧНОЕ ВРЕМЯ в подсказке проставляем ПОСЛЕ монтирования. toLocaleString зависит от
+  // часового пояса, а сервер и браузер живут в разных: на сервере вышла бы одна строка,
+  // в браузере другая — это расхождение гидратации, и React мог оставить серверное
+  // время, то есть показать чужой пояс как свой (замечание авто-ревью). До монтирования
+  // подсказки просто нет; относительное «16 часов назад» рядом от пояса не зависит.
+  const [exact, setExact] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    setExact(at.toLocaleString(lang))
+  }, [createdAt, lang])
 
   // Заголовок — первая строка, как в git: остальное считается телом сообщения.
   const [head, ...restLines] = message.split('\n')
@@ -107,7 +117,7 @@ export function CommitBar({
             {`v${version}`}
           </Link>
         </Tooltip>
-        <span className="hidden shrink-0 whitespace-nowrap text-muted sm:inline" title={at.toLocaleString(lang)}>
+        <span className="hidden shrink-0 whitespace-nowrap text-muted sm:inline" title={exact}>
           {timeAgo(at, lang)}
         </span>
         {/* Счётчик коммитов — как «96 Commits» у GitHub, ссылкой в историю. */}

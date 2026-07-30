@@ -579,16 +579,20 @@ export async function getSuggestion(templateId: string, idOrNumber: string) {
  * Порядок: сначала записавший версию, затем автор правки, затем соавторы; дубли убраны.
  */
 export async function getVersionAuthors(templateId: string, version: number) {
-  const [ver] = await db
-    .select({ authorId: templateVersions.authorId })
-    .from(templateVersions)
-    .where(and(eq(templateVersions.templateId, templateId), eq(templateVersions.version, version)))
-    .limit(1)
-  const [sug] = await db
-    .select({ authorId: suggestions.authorId, coauthorIds: suggestions.coauthorIds })
-    .from(suggestions)
-    .where(and(eq(suggestions.templateId, templateId), eq(suggestions.mergedVersion, version)))
-    .limit(1)
+  // Два независимых запроса — параллельно: последовательные await здесь удваивали
+  // ожидание ни за чем (react-doctor: server-sequential-independent-await).
+  const [[ver], [sug]] = await Promise.all([
+    db
+      .select({ authorId: templateVersions.authorId })
+      .from(templateVersions)
+      .where(and(eq(templateVersions.templateId, templateId), eq(templateVersions.version, version)))
+      .limit(1),
+    db
+      .select({ authorId: suggestions.authorId, coauthorIds: suggestions.coauthorIds })
+      .from(suggestions)
+      .where(and(eq(suggestions.templateId, templateId), eq(suggestions.mergedVersion, version)))
+      .limit(1),
+  ])
 
   const ids = [ver?.authorId, sug?.authorId, ...((sug?.coauthorIds as string[] | null) ?? [])].filter((v): v is string => !!v)
   const uniq = [...new Set(ids)]
