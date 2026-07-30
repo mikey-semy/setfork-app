@@ -288,6 +288,7 @@ export function TopNav({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
+                  type="button"
                   aria-label={t('create', lang)}
                   className={`inline-flex h-8 items-center gap-0.5 rounded-md border border-border px-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`}
                 >
@@ -314,7 +315,7 @@ export function TopNav({
             {/* avatar user menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button aria-label={user.handle} className={`shrink-0 rounded-full ${focusRing}`}>
+                <button type="button" aria-label={user.handle} className={`shrink-0 rounded-full ${focusRing}`}>
                   <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={30} />
                 </button>
               </DropdownMenuTrigger>
@@ -409,6 +410,7 @@ export function TopNav({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                type="button"
                 aria-label={t('signIn', lang)}
                 className={`grid size-[30px] shrink-0 place-items-center rounded-full border border-border text-ink-2 hover:text-ink ${focusRing}`}
               >
