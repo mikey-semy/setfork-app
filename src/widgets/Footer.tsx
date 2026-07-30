@@ -17,8 +17,9 @@ export async function Footer({ lang }: { lang: Lang }) {
 
   return (
     <footer className="relative mt-auto print:hidden">
-      <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-center gap-x-4 gap-y-2 px-6 py-8 text-[12px]">
-        <span className="text-muted">© {year} SetFork</span>
+      {/* Копирайт — отдельной строкой ПОД ссылками и по центру (как у GitHub): в общем
+          ряду он читался как ещё один пункт меню. */}
+      <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-center gap-x-4 gap-y-1 px-6 pt-6 text-[12px]">
         <Link href="/explore" className={link}>{t('explore', lang)}</Link>
         <a href={ABOUT_URL} className={link}>{t('aboutProject', lang)}</a>
         {/* «Исходный код» убран из футера (владелец): репо приватный, ссылка вела в доки,
@@ -33,6 +34,7 @@ export async function Footer({ lang }: { lang: Lang }) {
           </a>
         )}
       </div>
+      <div className="px-6 pb-4 pt-1.5 text-center text-[12px] text-muted">© {year} SetFork</div>
       {/* Версия — незаметно в углу (мелкий прозрачный моно), а не в ряду ссылок. */}
       <span
         title={t('appVersion', lang)}

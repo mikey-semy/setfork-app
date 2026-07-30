@@ -3,8 +3,8 @@
 import { useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { GitCommitHorizontal, Languages, MoreHorizontal, Pencil } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { Languages, MoreHorizontal, Pencil } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { LANG_META, t, type Lang } from '@/shared/i18n'
 import { toast } from '@/shared/ui/toast'
 import { translateList } from './actions'
@@ -20,7 +20,6 @@ export function ListActionsMenu({
   isOwner,
   templateId,
   lang,
-  versionsCount,
   canTranslate,
   targetLang,
 }: {
@@ -28,7 +27,6 @@ export function ListActionsMenu({
   isOwner: boolean
   templateId: string
   lang: Lang
-  versionsCount: number
   /** Показывать «Перевести» — только владельцу/коллаборатору и когда контент реально иноязычный. */
   canTranslate: boolean
   targetLang: Lang
@@ -73,13 +71,8 @@ export function ListActionsMenu({
             <Languages size={15} className="text-muted" /> {translateLabel}
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href={`${base}/versions`}>
-            <GitCommitHorizontal size={15} className="text-muted" /> {t('versionsTab', lang)}
-            <span className="ml-auto font-mono text-[12px] text-muted">{versionsCount}</span>
-          </Link>
-        </DropdownMenuItem>
+        {/* «Коммиты» отсюда ушли: они теперь иконкой с тултипом в строке автора
+            (как значок истории справа от коммита у GitHub) — там им и место. */}
       </DropdownMenuContent>
     </DropdownMenu>
   )

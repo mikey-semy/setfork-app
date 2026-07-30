@@ -302,6 +302,23 @@ const DICT = {
   },
   scrollPrev: { en: 'Scroll left', ru: 'Листать влево' },
   scrollNext: { en: 'Scroll right', ru: 'Листать вправо' },
+  // «…»-вкладка, куда уезжают не влезшие вкладки (как More у GitHub). Отдельно от
+  // `more` («больше» — подпись шкалы вкладов): это подпись кнопки, с заглавной.
+  moreTabs: { en: 'More', ru: 'Ещё' },
+  // Заголовки выпадающих «выбиралок» — одинаковая форма на всех (PickerPanel).
+  switchList: { en: 'Select list', ru: 'Выбрать список' },
+  switchBranch: { en: 'Select branch', ru: 'Выбрать ветку' },
+  switchFolder: { en: 'Select folder', ru: 'Выбрать папку' },
+  findBranch: { en: 'Find a branch…', ru: 'Найти ветку…' },
+  findFolder: { en: 'Find a folder…', ru: 'Найти папку…' },
+  branchDefault: { en: 'default', ru: 'основная' },
+  newBranchName: { en: 'New branch…', ru: 'Новая ветка…' },
+  newFolderName: { en: 'New folder…', ru: 'Новая папка…' },
+  noFolders: { en: 'No folders yet.', ru: 'Папок пока нет.' },
+  searchingLists: { en: 'Searching…', ru: 'Ищу…' },
+  loadFailed: { en: 'Could not load. Try again.', ru: 'Не удалось загрузить. Повторите.' },
+  showMore: { en: 'Show more', ru: 'Показать ещё' },
+  showLess: { en: 'Show less', ru: 'Свернуть' },
   allLabels: { en: 'All labels', ru: 'Все метки' },
   allMilestones: { en: 'All milestones', ru: 'Все вехи' },
   prCoauthors: { en: 'Co-authors', ru: 'Соавторы' },
@@ -819,7 +836,9 @@ const DICT = {
   goHome: { en: 'Go home', ru: 'На главную' },
   goExplore: { en: 'Browse lists', ru: 'К спискам' },
   somethingWrong: { en: 'Something went wrong', ru: 'Что-то пошло не так' },
-  somethingWrongText: { en: 'An unexpected error occurred. Try again.', ru: 'Произошла непредвиденная ошибка. Попробуйте ещё раз.' },
+  // Две фразы = две строки: «попробуйте ещё раз» — это действие, а не хвост описания.
+  somethingWrongText: { en: 'An unexpected error occurred.', ru: 'Произошла непредвиденная ошибка.' },
+  somethingWrongHint: { en: 'Try again.', ru: 'Попробуйте ещё раз.' },
   tryAgain: { en: 'Try again', ru: 'Повторить' },
   maintenanceTitle: { en: 'Down for maintenance', ru: 'Идут работы' },
   maintenanceText: {
@@ -1184,4 +1203,34 @@ export type TKey = keyof typeof DICT
 
 export function t(key: TKey, lang: Lang): string {
   return tr(DICT[key], lang)
+}
+
+// ── Склонения при числах ────────────────────────────────────────────────
+// «1 веток» — брак, который видно сразу. У русского три формы (1 ветка,
+// 2 ветки, 5 веток) и свои правила для 11–14; у английского две. Отдельный
+// словарь, а не строки в DICT: там одна форма на ключ, склонение туда не лезет.
+const PLURALS = {
+  stars: { ru: ['звезда', 'звезды', 'звёзд'], en: ['star', 'stars'] },
+  forks: { ru: ['форк', 'форка', 'форков'], en: ['fork', 'forks'] },
+  views: { ru: ['просмотр', 'просмотра', 'просмотров'], en: ['view', 'views'] },
+  watchers: { ru: ['наблюдатель', 'наблюдателя', 'наблюдателей'], en: ['watcher', 'watchers'] },
+  branches: { ru: ['ветка', 'ветки', 'веток'], en: ['branch', 'branches'] },
+  versions: { ru: ['версия', 'версии', 'версий'], en: ['version', 'versions'] },
+  runs: { ru: ['прогон', 'прогона', 'прогонов'], en: ['run', 'runs'] },
+  suggestions: { ru: ['предложение', 'предложения', 'предложений'], en: ['suggestion', 'suggestions'] },
+  contributors: { ru: ['участник', 'участника', 'участников'], en: ['contributor', 'contributors'] },
+} as const
+
+export type PluralKey = keyof typeof PLURALS
+
+/** Форма слова при числе: `plural(1, 'branches', 'ru')` → «ветка». */
+export function plural(n: number, key: PluralKey, lang: Lang): string {
+  const forms = PLURALS[key]
+  if (lang !== 'ru') return forms.en[n === 1 ? 0 : 1]
+  const abs = Math.abs(n) % 100
+  const last = abs % 10
+  if (abs > 10 && abs < 20) return forms.ru[2]
+  if (last === 1) return forms.ru[0]
+  if (last >= 2 && last <= 4) return forms.ru[1]
+  return forms.ru[2]
 }

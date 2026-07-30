@@ -1,9 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, ChevronDown, Plus } from 'lucide-react'
+import { ChevronDown, Plus } from 'lucide-react'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
+import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
+import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { t, type Lang } from '@/shared/i18n'
 import { createStarFolder, toggleListInFolder } from './actions'
 import type { StarFolder } from './queries'
 
@@ -14,18 +18,24 @@ export function StarFolderMenu({
   folders,
   inFolders,
   lang = 'en',
+  bare = false, // рамку рисует обёртка группы (StarSplit)
 }: {
   templateId: string
   folders: StarFolder[]
   inFolders: string[]
   lang?: string
+  bare?: boolean
 }) {
   const ru = lang === 'ru'
   const [open, setOpen] = useState(false)
   const [pending, start] = useTransition()
   const [newName, setNewName] = useState('')
+  const [q, setQ] = useState('')
   const [items, setItems] = useState(folders)
   const [inSet, setInSet] = useState(() => new Set(inFolders))
+
+  const term = q.trim().toLowerCase()
+  const shown = term ? items.filter((f) => f.name.toLowerCase().includes(term)) : items
 
   const toggle = (id: string) => {
     setInSet((prev) => {
@@ -57,49 +67,58 @@ export function StarFolderMenu({
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-label={ru ? 'В папку' : 'Add to folder'}
-          className="inline-flex h-full items-center rounded-r-md border border-l-0 border-border px-1.5 py-1.5 text-muted hover:bg-surface-2 hover:text-ink"
+          className={`inline-flex h-full items-center px-1.5 py-1.5 text-muted hover:bg-surface-2 hover:text-ink ${
+            bare ? '' : 'rounded-r-md border border-l-0 border-border'
+          }`}
         >
           <ChevronDown size={14} />
         </button>
       </Tooltip>
-      <OverlayPanel open={open} onClose={() => setOpen(false)} width={280} className="p-2" title={ru ? 'В папку' : 'Add to folder'}>
-              <div className="max-h-[240px] overflow-y-auto">
-                {items.map((f) => {
-                  const on = inSet.has(f.id)
-                  return (
-                    <button
-                      key={f.id}
-                      type="button"
-                      disabled={pending}
-                      onClick={() => toggle(f.id)}
-                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-[13px] text-ink hover:bg-surface-2 disabled:opacity-60"
-                    >
-                      <span className={`grid h-4 w-4 place-items-center rounded border ${on ? 'border-accent bg-accent text-primary-fg' : 'border-border'}`}>
-                        {on && <Check size={12} />}
-                      </span>
-                      <span className="truncate">{f.name}</span>
-                    </button>
-                  )
-                })}
-                {items.length === 0 && <div className="px-2 py-1.5 text-[12.5px] text-muted">{ru ? 'Папок пока нет.' : 'No folders yet.'}</div>}
-              </div>
-              <div className="mt-1 flex items-center gap-1.5 border-t border-border pt-2">
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && create()}
-                  placeholder={ru ? 'Новая папка' : 'New folder'}
-                  className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2 py-1.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
-                />
-                <button
-                  type="button"
-                  disabled={pending || !newName.trim()}
-                  onClick={create}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-[12.5px] font-semibold text-primary-fg disabled:opacity-50"
-                >
-                  <Plus size={13} /> {ru ? 'Создать' : 'Create'}
-                </button>
-              </div>
+      <OverlayPanel open={open} onClose={() => setOpen(false)} width={280} className="p-0">
+        {/* Та же оболочка, что у выбора списка и ветки: заголовок, поиск, строки. */}
+        <PickerPanel
+          title={t('switchFolder', lang as Lang)}
+          onClose={() => setOpen(false)}
+          closeLabel={t('close', lang as Lang)}
+          // Папок может стать много — тогда без поиска не найти; на паре штук он лишний.
+          search={
+            items.length > 5
+              ? { value: q, onChange: setQ, placeholder: t('findFolder', lang as Lang), clearLabel: t('clear', lang as Lang) }
+              : undefined
+          }
+          footer={
+            // Поле и кнопка одной высоты — ряд не «ступенькой» (правило владельца).
+            <div className="flex items-center gap-1.5">
+              <Input
+                size="sm"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && create()}
+                placeholder={t('newFolderName', lang as Lang)}
+                className="h-8 min-w-0 flex-1"
+              />
+              <Button size="sm" disabled={pending || !newName.trim()} onClick={create} className="h-8 shrink-0">
+                <Plus size={13} /> {t('create', lang as Lang)}
+              </Button>
+            </div>
+          }
+        >
+          {shown.map((f) => (
+            <PickerRow
+              key={f.id}
+              mark="box"
+              selected={inSet.has(f.id)}
+              label={f.name}
+              disabled={pending}
+              onClick={() => toggle(f.id)}
+            />
+          ))}
+          {shown.length === 0 && (
+            <div className="px-2 py-3 text-[12.5px] text-muted">
+              {items.length === 0 ? t('noFolders', lang as Lang) : t('nothingFound', lang as Lang)}
+            </div>
+          )}
+        </PickerPanel>
       </OverlayPanel>
     </div>
   )

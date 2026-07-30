@@ -2,13 +2,32 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
-import { ChevronDown, Menu, Plus, Search, Sparkles } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import {
+  ChevronDown,
+  History,
+  ListChecks,
+  Lock,
+  LogIn,
+  LogOut,
+  Menu,
+  MoreHorizontal,
+  PlayCircle,
+  Plus,
+  Search,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  UserPlus,
+  UserRound,
+} from 'lucide-react'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 import { QualifierSearch } from '@/features/library/QualifierSearch'
 import { MobileSearch } from './MobileSearch'
+import { ListSwitcher } from './ListSwitcher'
 import type { NotificationItem } from '@/features/notifications/queries'
-import { LangSwitch, ThemeModeSwitch, ThemeToggle } from '@/shared/ui/controls'
+import { LangSwitch, ThemeModeSwitch } from '@/shared/ui/controls'
 import { Avatar } from '@/shared/ui/Avatar'
 import { useSidebar } from './sidebar-context'
 import {
@@ -29,15 +48,6 @@ const RESERVED_TOP = new Set([
   'verify-email', 'forgot-password', 'reset-password', 'changelog',
 ])
 
-/** Списки пользователя для секции «Top lists» в боковом меню (минимум данных). */
-export interface TopListItem {
-  handle: string
-  slug: string
-  title: LocaleText
-  avatarUrl: string | null
-}
-
-
 export function TopNav({
   lang,
   user,
@@ -52,6 +62,7 @@ export function TopNav({
   notifications?: NotificationItem[]
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { toggle: toggleSidebar } = useSidebar() // ☰ = лого-символ списка + тумблер сайдбара
   // На странице поиска поле в шапке = полноценный квалификатор-поиск во всю ширину.
   const isSearch = pathname.startsWith('/search')
@@ -62,24 +73,32 @@ export function TopNav({
     if (segs.length === 0 || RESERVED_TOP.has(segs[0])) return null
     return { handle: segs[0], slug: segs[1] } // slug undefined на профиле
   })()
+  // Страница списка = /handle/slug/*: там шапка обслуживает список, а не создание нового.
+  const isListPage = crumb?.slug != null && crumb.slug !== 'catalogs'
 
   // Имя списка в бредкрамбе = человеческий title, а не slug. Крамб URL-derived (title
   // не знает) → до-достаём по смене пути; пока грузим — показываем slug (мгновенный
   // фолбэк), приватные title гейтит сам роут. Обновляется и на client-навигации.
+  // Оттуда же приватность — замок у названия (тот же признак, что в списке ниже).
   const [crumbTitle, setCrumbTitle] = useState<LocaleText | null>(null)
+  const [crumbPrivate, setCrumbPrivate] = useState(false)
   const crumbHandle = crumb?.handle
   const crumbSlug = crumb?.slug
   useEffect(() => {
     if (!crumbHandle || !crumbSlug) {
       setCrumbTitle(null)
+      setCrumbPrivate(false)
       return
     }
     let alive = true
     setCrumbTitle(null)
+    setCrumbPrivate(false)
     fetch(`/api/list-title?h=${encodeURIComponent(crumbHandle)}&s=${encodeURIComponent(crumbSlug)}`)
       .then((r) => r.json())
-      .then((d: { title?: LocaleText | null }) => {
-        if (alive) setCrumbTitle(d.title ?? null)
+      .then((d: { title?: LocaleText | null; visibility?: 'public' | 'private' }) => {
+        if (!alive) return
+        setCrumbTitle(d.title ?? null)
+        setCrumbPrivate(d.visibility === 'private')
       })
       .catch(() => {})
     return () => {
@@ -104,6 +123,9 @@ export function TopNav({
   // из-за этого «залипало» выделение); кольцо оставляем только для клавиатуры.
   const focusRing = 'outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong'
   const iconBtn = `grid h-8 w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`
+  // Иконки пунктов меню — приглушённые: ведёт текст, значок только помогает нащупать
+  // строку взглядом (как в меню аккаунта у GitHub).
+  const menuIcon = 'text-muted'
 
   // Контекстный заголовок страницы (в шапке — только он, навигация ушла в сайдбар).
   // На «/» дашборд только у залогиненного; гостю там hero — заголовок не нужен
@@ -156,22 +178,72 @@ export function TopNav({
           Слеша между лого и handle нет — только между handle и slug. */}
       {crumb && !isSearch && (
         <nav className="ml-2 flex min-w-0 items-center gap-1 text-[14px]" aria-label="breadcrumb">
-          {/* На мобиле для СПИСКА показываем только его имя (как GitHub) — owner-хэндл
-              прятали, иначе он схлопывался в «m…», а title всё равно не влезал. На sm+
-              owner виден (до 160px, потом троеточие), title забирает остаток. */}
-          <Link
-            href={`/${crumb.handle}`}
-            className={`text-ink hover:text-accent ${crumb.slug ? 'hidden max-w-[160px] shrink-0 truncate font-medium sm:block' : 'truncate font-semibold'}`}
-          >
-            {crumb.handle}
-          </Link>
-          {crumb.slug && (
+          {/* Автор списка: на широком экране — сам хэндл (до 160px, дальше троеточие);
+              на мобиле он не влезает и схлопывается в «…» — кнопку, за которой тот же
+              переход в профиль. Ширину забирает название, а автор остаётся достижим. */}
+          {crumb.slug ? (
             <>
-              <span className="hidden text-muted sm:inline">/</span>
-              <Link href={`/${crumb.handle}/${crumb.slug}`} className="truncate font-semibold text-ink hover:text-accent">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={crumb.handle}
+                    className={`grid size-7 shrink-0 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink sm:hidden ${focusRing}`}
+                  >
+                    <MoreHorizontal size={16} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/${crumb.handle}`}>{crumb.handle}</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Link
+                href={`/${crumb.handle}`}
+                className="hidden max-w-[160px] shrink-0 truncate font-medium text-ink hover:text-accent sm:block"
+              >
+                {crumb.handle}
+              </Link>
+              <span className="shrink-0 text-muted">/</span>
+              {crumbPrivate && <Lock size={13} className="shrink-0 text-muted" aria-label={t('privateLabel', lang)} />}
+              {/* Название кликабельно всегда: с под-вкладки уводит на корень списка, а
+                  на самом корне Next по ссылке «в себя» не делает НИЧЕГО — там обновляем
+                  данные руками и уводим наверх, чтобы клик не выглядел сломанным. */}
+              <Link
+                href={`/${crumb.handle}/${crumb.slug}`}
+                onClick={(e) => {
+                  if (pathname !== `/${crumb.handle}/${crumb.slug}`) return
+                  e.preventDefault()
+                  router.refresh()
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+                className="truncate font-semibold text-ink hover:text-accent"
+              >
                 {crumbTitle ? tr(crumbTitle, lang) : crumb.slug}
               </Link>
+              {/* Только на самой странице списка: на /handle/catalogs/* второй сегмент —
+                  литерал «catalogs», и переключатель показывал бы фейковый «текущий»
+                  список handle/catalogs (замечание авто-ревью #589). */}
+              {isListPage && (
+              <ListSwitcher
+                key={crumb.handle}
+                ownerHandle={crumb.handle}
+                lang={lang}
+                current={{
+                  handle: crumb.handle,
+                  slug: crumb.slug,
+                  title: crumbTitle ?? { en: crumb.slug, ru: crumb.slug },
+                  avatarUrl: null,
+                  visibility: crumbPrivate ? 'private' : 'public',
+                }}
+              />
+              )}
             </>
+          ) : (
+            <Link href={`/${crumb.handle}`} className="truncate font-semibold text-ink hover:text-accent">
+              {crumb.handle}
+            </Link>
           )}
         </nav>
       )}
@@ -180,7 +252,9 @@ export function TopNav({
           съедали ширину) и было бесполезным, да и дублировать функцию страницы незачем. */}
       {title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>}
 
-      <div className="ml-auto flex items-center gap-2">
+      {/* Правая группа не сжимается: место отдаёт бредкрамб (у него truncate), а
+          аватар и иконки держат свой размер — иначе аватар плющится в овал. */}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {/* Небольшой виджет-поиск с подсказками — на всех страницах, КРОМЕ страницы поиска */}
         {!isSearch && (
           <>
@@ -206,10 +280,15 @@ export function TopNav({
             {/* bell / уведомления (выпадашка + страница «Все») */}
             <NotificationsBell unread={unread} items={notifications} lang={lang} />
 
-            {/* «+» create menu (GitHub-стиль: иконка + chevron) */}
+            {/* «+» create menu (GitHub-стиль: иконка + chevron). На странице списка его
+                НЕТ: там шапка — про сам список, а «создать новый» уводит из него;
+                действия остаются в сайдбаре и на дашборде. Разделитель оставляем —
+                он отбивает аватар от остальной шапки. */}
+            {!isListPage && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
+                  type="button"
                   aria-label={t('create', lang)}
                   className={`inline-flex h-8 items-center gap-0.5 rounded-md border border-border px-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`}
                 >
@@ -229,13 +308,14 @@ export function TopNav({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            )}
 
             <span className="mx-0.5 h-5 w-px bg-border" />
 
             {/* avatar user menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button aria-label={user.handle} className={`rounded-full ${focusRing}`}>
+                <button type="button" aria-label={user.handle} className={`shrink-0 rounded-full ${focusRing}`}>
                   <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={30} />
                 </button>
               </DropdownMenuTrigger>
@@ -244,29 +324,57 @@ export function TopNav({
                   {t('signedInAs', lang)} <span className="font-semibold text-ink">{user.handle}</span>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {/* Создание — своим блоком сверху (как «New repository» у GitHub): на
+                    странице списка кнопки «+» в шапке нет, и без этих пунктов создать
+                    список оттуда было бы неоткуда. */}
                 <DropdownMenuItem asChild>
-                  <Link href={`/${user.handle}`}>{t('yourProfile', lang)}</Link>
+                  <Link href="/new">
+                    <Plus size={15} className={menuIcon} /> {t('newList', lang)}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/my-lists">{t('myLists', lang)}</Link>
+                  <Link href="/generate">
+                    <Sparkles size={15} className={menuIcon} /> {t('generateWithAi', lang)}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={`/${user.handle}`}>
+                    <UserRound size={15} className={menuIcon} /> {t('yourProfile', lang)}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/runs">{t('myRuns', lang)}</Link>
+                  <Link href="/my-lists">
+                    <ListChecks size={15} className={menuIcon} /> {t('myLists', lang)}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/generate/history">{t('draftHistory', lang)}</Link>
+                  <Link href="/runs">
+                    <PlayCircle size={15} className={menuIcon} /> {t('myRuns', lang)}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={`/${user.handle}?tab=starred`}>{t('starredTab', lang)}</Link>
+                  <Link href="/generate/history">
+                    <History size={15} className={menuIcon} /> {t('draftHistory', lang)}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings">{t('settings', lang)}</Link>
+                  <Link href={`/${user.handle}?tab=starred`}>
+                    <Star size={15} className={menuIcon} /> {t('starredTab', lang)}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <Settings size={15} className={menuIcon} /> {t('settings', lang)}
+                  </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/admin">{t('admin', lang)}</Link>
+                      <Link href="/admin">
+                        <ShieldCheck size={15} className={menuIcon} /> {t('admin', lang)}
+                      </Link>
                     </DropdownMenuItem>
                   </>
                 )}
@@ -290,19 +398,47 @@ export function TopNav({
                     })
                   }}
                 >
-                  {t('signOut', lang)}
+                  <LogOut size={15} /> {t('signOut', lang)}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
         ) : (
-          <>
-            <LangSwitch lang={lang} />
-            <ThemeToggle />
-            <Link href="/login" className="text-[13px] font-semibold text-ink">
-              {t('signIn', lang)}
-            </Link>
-          </>
+          /* Гость: то же меню, что у вошедшего, только вместо аватара — иконка человека.
+             Язык, тема и «Войти» больше не лежат тремя элементами в ряду: на мобиле они
+             съедали пол-шапки, и бредкрамбу не оставалось ширины. */
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={t('signIn', lang)}
+                className={`grid size-[30px] shrink-0 place-items-center rounded-full border border-border text-ink-2 hover:text-ink ${focusRing}`}
+              >
+                <UserRound size={17} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link href="/login">
+                  <LogIn size={15} className={menuIcon} /> {t('signIn', lang)}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/register">
+                  <UserPlus size={15} className={menuIcon} /> {t('createAccount', lang)}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
+                <span className="text-[13px] text-ink-2">{t('theme', lang)}</span>
+                <ThemeModeSwitch />
+              </div>
+              <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
+                <span className="text-[13px] text-ink-2">{t('language', lang)}</span>
+                <LangSwitch lang={lang} />
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 

@@ -1,14 +1,15 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState, useTransition } from 'react'
-import { Check, GitBranch, ChevronDown, Plus, Trash2, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { GitBranch, ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { GitBranch as Branch } from '@/core'
-import type { Lang } from '@/shared/i18n'
+import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
+import { t, type Lang } from '@/shared/i18n'
 import { createBranchAction, deleteBranchAction, type BranchActionResult } from './actions'
 
 const ERR: Record<string, { ru: string; en: string }> = {
@@ -47,10 +48,14 @@ export function BranchPicker({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
+  const router = useRouter()
   const [name, setName] = useState('')
+  const [q, setQ] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   if (branches.length === 0 && !canManage) return null
+  const term = q.trim().toLowerCase()
+  const shown = term ? branches.filter((b) => b.name.toLowerCase().includes(term)) : branches
 
   const fail = (r: BranchActionResult) => {
     if (!r.ok) setErr(ERR[r.code]?.[ru ? 'ru' : 'en'] ?? ERR.internal[ru ? 'ru' : 'en'])
@@ -89,72 +94,70 @@ export function BranchPicker({
         <>
           {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
           <div className="fixed inset-0 z-99" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-100 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] rounded-lg border border-border bg-surface p-1.5 shadow-card">
-              <div className="flex items-center justify-between px-2 py-1.5">
-                <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">
-                  {ru ? 'Ветки' : 'Branches'} <span className="font-mono">{branches.length}</span>
-                </span>
-                <Button variant="ghost" size="xs" onClick={() => setOpen(false)} className="p-0.5" aria-label={ru ? 'Закрыть' : 'Close'}>
-                  <X size={13} />
-                </Button>
-              </div>
-              <div className="max-h-[300px] overflow-y-auto">
-                {branches.map((b) => {
-                  const on = b.name === current
-                  return (
-                    <div key={b.name} className="group flex items-center rounded hover:bg-surface-2">
-                      <Link
-                        href={b.isDefault ? base : `${base}?ref=${encodeURIComponent(b.name)}`}
-                        onClick={() => setOpen(false)}
-                        className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-[13px] text-ink"
-                      >
-                        <span className="grid w-4 shrink-0 place-items-center">{on && <Check size={13} className="text-accent" />}</span>
-                        <span className="min-w-0 truncate">{b.name}</span>
-                        {b.isDefault ? (
-                          <Badge className="ml-auto px-1.5 text-[10.5px] font-normal">default</Badge>
-                        ) : (
-                          <span className="ml-auto font-mono text-[10.5px] text-muted">
-                            +{b.ahead}/-{b.behind}
-                          </span>
-                        )}
-                      </Link>
-                      {canManage && !b.isDefault && (
-                        <Tooltip label={ru ? 'Удалить ветку' : 'Delete branch'}>
-                          <Button
-                            variant="danger"
-                            size="xs"
-                            disabled={pending}
-                            onClick={() => remove(b.name)}
-                            className="mr-1 hidden shrink-0 p-1 group-hover:inline-flex"
-                          >
-                            <Trash2 size={12} />
-                          </Button>
-                        </Tooltip>
-                      )}
+          <div className="absolute left-0 top-full z-100 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+            <PickerPanel
+              title={t('switchBranch', lang)}
+              onClose={() => setOpen(false)}
+              closeLabel={t('close', lang)}
+              // Поиск — когда веток больше горстки: у списка из двух он лишний шум.
+              search={
+                branches.length > 5
+                  ? { value: q, onChange: setQ, placeholder: t('findBranch', lang), clearLabel: t('clear', lang) }
+                  : undefined
+              }
+              footer={
+                canManage ? (
+                  <>
+                    {/* Поле и кнопка одной высоты — иначе ряд «ступенькой» (правило владельца). */}
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        size="sm"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && create()}
+                        placeholder={t('newBranchName', lang)}
+                        className="h-8 min-w-0 flex-1"
+                      />
+                      <Button size="sm" disabled={pending || !name.trim()} onClick={create} className="h-8 shrink-0">
+                        <Plus size={12} /> {t('create', lang)}
+                      </Button>
                     </div>
-                  )
-                })}
-              </div>
-              {canManage && (
-                <div className="mt-1 border-t border-border px-1 pt-1.5">
-                  <div className="flex items-center gap-1">
-                    <Input
-                      size="xs"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && create()}
-                      placeholder={ru ? 'Новая ветка…' : 'New branch…'}
-                      className="min-w-0 flex-1"
-                    />
-                    <Button size="xs" disabled={pending || !name.trim()} onClick={create} className="shrink-0">
-                      <Plus size={12} /> {ru ? 'Создать' : 'Create'}
-                    </Button>
-                  </div>
-                  <p className="px-1 pt-1 text-[11px] text-muted">
-                    {err ?? (ru ? `от ${current}` : `from ${current}`)}
-                  </p>
-                </div>
-              )}
+                    <p className="px-0.5 pt-1 text-[11px] text-muted">{err ?? (ru ? `от ${current}` : `from ${current}`)}</p>
+                  </>
+                ) : null
+              }
+            >
+              {shown.map((b) => (
+                <PickerRow
+                  key={b.name}
+                  selected={b.name === current}
+                  label={b.name}
+                  onClick={() => {
+                    setOpen(false)
+                    router.push(b.isDefault ? base : `${base}?ref=${encodeURIComponent(b.name)}`)
+                  }}
+                  right={
+                    b.isDefault ? (
+                      <Badge className="px-1.5 text-[10.5px] font-normal">{t('branchDefault', lang)}</Badge>
+                    ) : (
+                      <span className="font-mono text-[10.5px] text-muted">
+                        +{b.ahead}/-{b.behind}
+                      </span>
+                    )
+                  }
+                  actions={
+                    canManage && !b.isDefault ? (
+                      <Tooltip label={ru ? 'Удалить ветку' : 'Delete branch'}>
+                        <Button variant="danger" size="xs" disabled={pending} onClick={() => remove(b.name)} className="p-1">
+                          <Trash2 size={12} />
+                        </Button>
+                      </Tooltip>
+                    ) : null
+                  }
+                />
+              ))}
+              {shown.length === 0 && <div className="px-2 py-3 text-[12.5px] text-muted">{t('nothingFound', lang)}</div>}
+            </PickerPanel>
           </div>
         </>
       )}

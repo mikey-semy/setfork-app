@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, ChevronDown, Code2, Copy, FileCode, FileDown, GitBranch, ListChecks, Printer, Sparkles, Terminal } from 'lucide-react'
+import { Check, ChevronDown, Code2, Copy, FileCode, FileDown, GitBranch, Printer, Sparkles, Terminal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 import { t, type Lang } from '@/shared/i18n'
@@ -60,8 +60,15 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {/* Фиксированная высота 36px (h-9) — ряд действий панели списка ровный. */}
-        <button type="button" className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3.5 text-[13px] font-semibold text-ink hover:border-border-strong">
-          <ListChecks size={15} /> {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
+        {/* Первичное действие списка — заливкой, как зелёная Code у GitHub, но своим
+            токеном темы (--ok-solid читается с белым текстом в обеих темах). Иконки нет:
+            текст короткий и однозначный, а рядом стоит синяя кнопка прогона — два
+            цветных значка в ряд спорили бы за внимание. */}
+        <button
+          type="button"
+          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-(--ok-solid) px-3.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[330px] p-0">

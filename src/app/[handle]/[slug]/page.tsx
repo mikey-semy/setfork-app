@@ -32,6 +32,8 @@ import { getRoster } from '@/shared/ai/roster'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews, getVersionSteps } from '@/features/library/queries'
+import { ListStats } from '@/features/library/ListStats'
+import { getWatchCount } from '@/features/watch/queries'
 import { getListLineage, isLineageExact } from '@/features/library/lineage'
 import { ListLineage } from '@/features/library/ListLineage'
 import { getPollResults } from '@/features/polls/queries'
@@ -211,7 +213,8 @@ export default async function ListPage({
   // Порядковый номер показываем только по шаг-блокам (презентационные вне нумерации).
   let stepSeq = 0
   const displayNum = steps.map((s) => (isStepBlock(s) ? ++stepSeq : 0))
-  const contributors = await getContributors(tpl.id, tpl.ownerId)
+  // Наблюдатели — для сводки показателей (ListStats): в самом tpl их нет.
+  const [contributors, watchers] = await Promise.all([getContributors(tpl.id, tpl.ownerId), getWatchCount(tpl.id)])
   // Родословная: как список появился (запрос, участники витка, прецеденты, разбор критика,
   // где не было опоры) и какие варианты не выбрали. Ничего не рисуется у списков, сделанных
   // руками — там объяснять нечего.
@@ -290,18 +293,20 @@ export default async function ListPage({
                   ))}
                 </div>
               )}
-              {/* Сводка (как строка stats у GitHub: stars · forks · watching · Branches).
-                  Приватность — только на мобиле: на sm+ она в титул-строке ListHeader. */}
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-2">
-                {tpl.visibility === 'private' && (
-                  <span className="inline-flex items-center gap-1.5 text-ink-2 sm:hidden"><Lock size={14} className="text-muted" /> {t('privateLabel', lang)}</span>
-                )}
-                {/* Звёзд, форков и просмотров здесь НЕТ: те же числа стоят кнопками прямо
-                    над этой строкой. Дважды одно и то же на одном экране — не акцент, а шум
-                    (замечание владельца 2026-07-29). Остаются ветки и версия: их кнопок нет,
-                    и это навигация, а не счётчики. */}
-                <Link href={`${base}/versions`} className="inline-flex items-center gap-1.5 hover:text-accent"><GitBranch size={14} className="text-muted" /> <b className="text-ink">{Math.max(1, branches.length)}</b> {t('branchesLabel', lang)}</Link>
-                <Link href={`${base}/versions`} className="inline-flex items-center gap-1.5 hover:text-accent"><Tag size={14} className="text-muted" /> v{currentVersion?.version ?? tpl.currentVersion}</Link>
+              {/* Сводка показателей — как строка под описанием репозитория у GitHub.
+                  Тот же компонент стоит в About-сайдбаре на десктопе. */}
+              <div className="mt-3">
+                <ListStats
+                  base={base}
+                  lang={lang}
+                  stars={tpl.starsCount}
+                  forks={tpl.forksCount}
+                  watchers={watchers}
+                  runs={tpl.runsCount}
+                  branches={Math.max(1, branches.length)}
+                  version={currentVersion?.version ?? tpl.currentVersion}
+                  visibility={tpl.visibility}
+                />
               </div>
             </div>
 
@@ -357,23 +362,15 @@ export default async function ListPage({
                 Всё лишнее для узкого экрана (note, счётчики, blame) — только sm+.
                 На sm+ прежний вид: инфо слева, действия справа. */}
             {currentVersion && (
-              <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] print:hidden sm:px-3.5">
-                <div className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[240px]">
+              <div className="mb-3 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] text-ink-2 print:hidden sm:px-3.5">
+                {/* ВЕРХ — управление: ветка слева, действия к правому краю. */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   {/* Пикер веток показываем ВСЕГДА, когда ветка есть (как GitHub «main ▾» —
                       даже одна ветка и на чужом списке; canManage лишь гейтит создание). */}
                   {branches.length > 0 && (
                     <BranchPicker base={base} owner={owner} slug={slug} branches={branches} current={refBranch ?? 'main'} lang={lang} canManage={canManageBranches} />
                   )}
-                  <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
-                  <Link href={`/${tpl.owner.handle}`} className="min-w-0 truncate font-semibold text-ink hover:text-accent">
-                    {tpl.owner.handle}
-                  </Link>
-                  {/* Версию тут НЕ показываем — она только в сайдбаре Releases (убран дубль v1×3). */}
-                  {latestNote && <span className="hidden min-w-0 flex-1 truncate text-ink-2 sm:inline">{latestNote}</span>}
-                  <span className="ml-auto shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
-                  {/* История коммитов и blame переехали в «...»-меню действий справа. */}
-                </div>
-                <div className="ml-auto flex shrink-0 items-center gap-2 max-sm:w-full max-sm:justify-end">
+                <div className="ml-auto flex shrink-0 items-center gap-2">
                   {tpl.isTemplate && viewer && (
                     <form action={useTemplate.bind(null, tpl.id)} className="inline-flex">
                       <Tooltip label={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}>
@@ -394,7 +391,6 @@ export default async function ListPage({
                     isOwner={isOwner}
                     templateId={tpl.id}
                     lang={lang}
-                    versionsCount={tpl.versions.length}
                     canTranslate={canManageBranches && !readOnlyView && titleIsForeign}
                     targetLang={lang}
                   />
@@ -411,6 +407,31 @@ export default async function ListPage({
                       </Tooltip>
                     </form>
                   )}
+                </div>
+                </div>
+
+                {/* НИЗ — кто и когда трогал список в последний раз (как строка последнего
+                    коммита у GitHub под панелью веток). */}
+                <div className="mt-2 flex min-w-0 items-center gap-2 border-t border-border pt-2">
+                  <Avatar handle={tpl.owner.handle} avatarUrl={tpl.owner.avatarUrl} size={20} />
+                  <Link href={`/${tpl.owner.handle}`} className="min-w-0 shrink truncate font-semibold text-ink hover:text-accent">
+                    {tpl.owner.handle}
+                  </Link>
+                  {/* Время — сразу за именем, а не у правого края: авторов может быть
+                      несколько, и время должно читаться как часть «кто и когда». */}
+                  <span className="shrink-0 whitespace-nowrap text-muted">{timeAgo(currentVersion.createdAt, lang)}</span>
+                  {latestNote && <span className="hidden min-w-0 flex-1 truncate text-ink-2 sm:inline">{latestNote}</span>}
+                  {/* История правок — иконкой у правого края (как значок истории у GitHub
+                      справа от последнего коммита); из «...»-меню пункт убран. */}
+                  <Tooltip label={t('versionsTab', lang)}>
+                    <Link
+                      href={`${base}/versions`}
+                      aria-label={t('versionsTab', lang)}
+                      className="ml-auto grid size-7 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
+                    >
+                      <History size={15} />
+                    </Link>
+                  </Tooltip>
                 </div>
               </div>
             )}
@@ -778,17 +799,23 @@ export default async function ListPage({
                 </div>
               )}
               <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3 text-[13px] text-ink-2">
-                <span className="inline-flex items-center gap-2">
-                  <Star size={14} /> <b className="text-ink">{fmt(tpl.starsCount)}</b> {t('starsLabel', lang)}
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <GitFork size={14} /> <b className="text-ink">{fmt(tpl.forksCount)}</b> {t('forksLabel', lang)}
-                </span>
-                <Link href={`${base}/releases`} className="inline-flex items-center gap-2 hover:text-accent">
-                  <Tag size={14} /> {t('releasesLabel', lang)}:{' '}
-                  <b className="text-ink">v{currentVersion?.version ?? tpl.currentVersion}</b>
-                  <span className="rounded-full bg-ok/15 px-1.5 py-0.5 text-[10px] font-semibold text-ok">{t('latest', lang)}</span>
-                </Link>
+                {/* Тот же состав показателей, что в сводке на мобиле — колонкой. На узком
+                    экране сайдбар уезжает ПОД содержимое, и показатели вышли бы дважды:
+                    там показывает сводка наверху, здесь — только с lg. */}
+                <div className="hidden lg:block">
+                <ListStats
+                  base={base}
+                  lang={lang}
+                  layout="column"
+                  stars={tpl.starsCount}
+                  forks={tpl.forksCount}
+                  watchers={watchers}
+                  runs={tpl.runsCount}
+                  branches={Math.max(1, branches.length)}
+                  version={currentVersion?.version ?? tpl.currentVersion}
+                  visibility={tpl.visibility}
+                />
+                </div>
                 <span>
                   {t('maintainedBy', lang)}{' '}
                   <Link href={`/${tpl.owner.handle}`} className="text-ink-2 hover:text-accent">
@@ -802,17 +829,32 @@ export default async function ListPage({
 
               {contributors.length > 0 && (
                 <div className="mt-4 border-t border-border pt-3">
+                  {/* Как у GitHub: счётчик бейджем в заголовке, ниже — строки «ник имя».
+                      Сеткой аватаров было не разобрать, кто есть кто. */}
                   <SectionLabel className="mb-2 flex items-center gap-1.5">
-                    <Users size={12} /> {t('contributors', lang)} <span className="text-ink-2">{contributors.length}</span>
+                    <Users size={12} /> {t('contributors', lang)}
+                    <span className="rounded-full bg-surface-2 px-1.5 text-[11px] font-semibold text-ink-2">{contributors.length}</span>
                   </SectionLabel>
-                  <div className="flex flex-wrap gap-1.5">
-                    {contributors.slice(0, 14).map((c) => (
-                      <Tooltip key={c.handle} label={c.handle}>
-                        <Link href={`/${c.handle}`} className="hover:opacity-80">
-                          <Avatar handle={c.handle} avatarUrl={c.avatarUrl} size={28} />
-                        </Link>
-                      </Tooltip>
+                  <div className="flex flex-col gap-1">
+                    {contributors.slice(0, 8).map((c) => (
+                      <Link
+                        key={c.handle}
+                        href={`/${c.handle}`}
+                        className="flex min-w-0 items-center gap-2 rounded-md py-0.5 text-[13px] hover:bg-surface-2"
+                      >
+                        <Avatar handle={c.handle} avatarUrl={c.avatarUrl} size={22} />
+                        <span className="min-w-0 truncate">
+                          <span className="font-semibold text-ink">{c.handle}</span>
+                          {c.name && <span className="ml-1.5 text-muted">{c.name}</span>}
+                        </span>
+                      </Link>
                     ))}
+                    {/* Их может быть много: остальные — в зачёте вкладов, а не простыней в сайдбаре. */}
+                    {contributors.length > 8 && (
+                      <Link href={`${base}/leaderboard`} className="mt-0.5 text-[12.5px] font-semibold text-accent hover:underline">
+                        {`+${contributors.length - 8}`}
+                      </Link>
+                    )}
                   </div>
                 </div>
               )}
