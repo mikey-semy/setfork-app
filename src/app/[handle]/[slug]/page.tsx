@@ -111,6 +111,12 @@ export default async function ListPage({
 
   // Любой альтернативный снимок (ветка или прошлая версия) — только чтение:
   // раскопки/трекинг ссылок/перевод привязаны к ТЕКУЩЕЙ версии.
+  //
+  // Голосование в опросе и ответ в квизе — тоже запись, и она шла МИМО этого флага:
+  // экшены разрешают bid по ТЕКУЩЕЙ версии, поэтому клик по старому варианту опроса
+  // писал живой голос, а ответ в старом квизе перезаписывал текущую попытку — старый
+  // ответ оценивался по новому содержанию (P1 из авто-ревью). В снимке эти действия
+  // выключены: смотреть прошлое можно, писать в него — нет.
   const readOnlyView = !!snapshot || !!histVer
 
 
@@ -123,6 +129,8 @@ export default async function ListPage({
     (s.command ?? '').toLowerCase().includes(find)
   const steps = find ? allSteps.filter(matches) : allSteps
   const viewer = await getSession()
+  // Писать можно только в текущую версию — см. readOnlyView выше.
+  const canInteract = !!viewer && !readOnlyView
   const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументами (i18n-lint)
   const isOwner = viewer?.userId === tpl.ownerId
   // Точка на кирке: у каких пунктов есть сохранённая dig-сессия зрителя (resilient — [] без таблицы).
@@ -576,7 +584,7 @@ export default async function ListPage({
                           bid={bid}
                           content={c}
                           result={pollResults[bid] ?? { counts: {}, voters: 0, myVotes: [] }}
-                          canVote={!!viewer}
+                          canVote={canInteract}
                           closed={(() => { const dm = pollDeadlineMs(c.deadline); return dm !== null && dm < nowMs })()}
                           lang={lang}
                         />
@@ -605,7 +613,7 @@ export default async function ListPage({
                           lang={lang}
                           templateId={tpl.id}
                           bid={bid}
-                          canSubmit={!!viewer}
+                          canSubmit={canInteract}
                           initial={quizStates[bid] ?? { selected: [], correct: false, attempts: 0, submitted: false }}
                         />
                       </div>
