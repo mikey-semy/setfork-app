@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://setfork.com/schema/list.v1.json",
+  "title": "SetFork list manifest (list.json)",
+  "description": "Канон содержимого списка SetFork: то, что лежит в корне git-репозитория списка и единственное, что читает проекция при push. Файл генерируется ядром; правьте его — README собирается из него.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "desc", "tags", "ordered", "version", "steps"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL этой схемы (конвенция редакторов: даёт автодополнение сразу после git clone)."
+    },
+    "title": { "type": "string", "description": "Название списка." },
+    "desc": { "type": "string", "description": "Описание списка ('' — нет)." },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Теги списка (нижний регистр)."
+    },
+    "ordered": {
+      "type": "boolean",
+      "description": "true — упорядоченный список (шаги по порядку), false — набор."
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["procedure", "inventory", "checklist", "criteria", "options", "recipe"],
+      "description": "Тип списка (ADR-0010). Отсутствует у списков, где тип не определён."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Номер этой версии списка (совпадает с тегом vN коммита)."
+    },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/block" },
+      "description": "Блоки списка в порядке отображения: шаги и презентационные блоки."
+    }
+  },
+  "definitions": {
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n", "title", "desc", "command", "level", "why", "section", "subtasks", "refs"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 1, "description": "Порядковый номер блока (1-based)." },
+        "blockId": {
+          "type": "string",
+          "description": "Стабильная идентичность блока сквозь версии (uuid). Отсутствует у старых строк — не выдумывайте свою: без неё дифф падает на сопоставление по заголовку, с чужой — привязки уедут не туда."
+        },
+        "type": {
+          "type": "string",
+          "description": "Тип презентационного блока (text, image, …). У шага отсутствует вовсе."
+        },
+        "content": {
+          "description": "Payload презентационного блока (структура зависит от type). У шага отсутствует."
+        },
+        "title": { "type": "string", "description": "Заголовок шага ('' у презентационных блоков)." },
+        "desc": { "type": "string", "description": "Описание шага ('' — нет)." },
+        "command": { "type": "string", "description": "Команда шага ('' — нет)." },
+        "level": {
+          "type": "string",
+          "enum": ["required", "recommended", "optional"],
+          "description": "Обязательность шага."
+        },
+        "why": { "type": "string", "description": "Зачем этот шаг ('' — нет)." },
+        "section": { "type": "string", "description": "Секция-группа шага ('' — без секции)." },
+        "subtasks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Подзадачи шага."
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label"],
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            }
+          },
+          "description": "Ссылки шага (label обязателен, url — нет)."
+        }
+      }
+    }
+  }
+}
