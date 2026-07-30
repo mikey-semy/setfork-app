@@ -41,19 +41,32 @@ function closure(lock) {
 const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'))
 const reach = closure(lock)
 
-// npm audit возвращает ненулевой код, когда что-то нашёл, — читаем вывод, а не статус.
+// npm audit возвращает ненулевой код, когда НАШЁЛ уязвимости, — поэтому читаем вывод, а
+// не статус. Но ненулевой код бывает и от операционного сбоя (403 реестра, нет сети): в
+// таком случае в stdout прилетает {message, statusCode} без vulnerabilities, и «пустой»
+// разбор молча означал бы «всё чисто» — гейт обходился бы сам собой (P2 из авто-ревью).
+// Поэтому отчёт проверяем на форму, а не доверяем факту наличия вывода.
 let raw = ''
 try {
   raw = execFileSync('npm', ['audit', '--json'], { encoding: 'utf8', shell: process.platform === 'win32' })
 } catch (e) {
   raw = e.stdout ?? ''
 }
-if (!raw) {
-  console.error('::error::npm audit не дал вывода — гейт инструментов миграции не отработал')
+
+let report
+try {
+  report = JSON.parse(raw)
+} catch {
+  report = null
+}
+const looksLikeReport = !!report && typeof report.vulnerabilities === 'object' && report.vulnerabilities !== null && !!report.metadata
+if (!looksLikeReport) {
+  const why = report?.error?.summary ?? report?.message ?? (raw ? `неожиданный вывод: ${raw.slice(0, 200)}` : 'пустой вывод')
+  console.error(`::error::npm audit не дал отчёта (${why}) — гейт инструментов миграции НЕ отработал`)
   process.exit(1)
 }
 
-const vulns = JSON.parse(raw).vulnerabilities ?? {}
+const vulns = report.vulnerabilities
 const bad = Object.values(vulns).filter((v) => ['high', 'critical'].includes(v.severity) && reach.has(v.name))
 
 if (!bad.length) {
