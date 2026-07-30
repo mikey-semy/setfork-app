@@ -117,7 +117,12 @@ export async function globalBudgetOk(now: number = Date.now()): Promise<boolean>
   // 2) Пол живого баланса OpenRouter. Best-effort: credits === null (сбой эндпоинта) НЕ блокирует —
   //    полагаемся на дневной кап, иначе флейк статуса провайдера остановил бы весь продукт.
   if (ok && AI_BALANCE_FLOOR_USD > 0) {
-    const credits = await getOpenRouterCredits()
+    // В ГОРЯЧЕЙ ЗОНЕ баланс берём ЖИВОЙ (fresh), а не из 60-секундного кеша credits.ts:
+    // решение здесь помечается «не кэшировать», но без fresh каждая «живая» проверка
+    // читала бы тот же устаревший остаток — и пока он не обновится, десятки
+    // одновременных вызовов пробили бы пол баланса, считая его достаточным
+    // (P1 авто-ревью #583). Вне горячей зоны кеш уместен: до пола далеко.
+    const credits = await getOpenRouterCredits(hot ? { fresh: true } : undefined)
     if (credits) {
       if (credits.remaining < AI_BALANCE_FLOOR_USD) {
         ok = false
