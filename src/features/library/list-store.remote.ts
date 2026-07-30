@@ -157,6 +157,15 @@ export const listWriteRemote = {
       note: input.note,
       authorId: input.authorId ?? '', // '' = null (parity с Postgres-адаптером/proto author_id)
       steps: input.steps.map(toPbStep),
+      // Патч меты (Ф2a-довесок): message-поля имеют presence — отсутствие = «не трогать».
+      meta: input.meta
+        ? {
+            title: input.meta.title ? toPbLoc(input.meta.title) : undefined,
+            desc: input.meta.desc ? toPbLoc(input.meta.desc) : undefined,
+            tags: input.meta.tags ? { v: input.meta.tags } : undefined,
+            ordered: input.meta.ordered,
+          }
+        : undefined,
     })
     return toVersion(res)
   },

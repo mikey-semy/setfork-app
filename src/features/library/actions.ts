@@ -273,13 +273,19 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   const gated = formData.get('gated') === 'on'
   const proposed = toProposedItems(parseEditorItems(formData.get('items')), lang)
 
-  // tags/ordered/gated — атрибуты списка, не версии. Обновляются ДО addVersion:
-  // ядро собирает канон list.json (title/desc/tags/ordered) из templates в момент
-  // коммита (Ф1, git-first), и мета после версии отстала бы в git на один коммит.
-  await db.update(templates).set({ tags, ordered, gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+  // gated — не канон (надстройка Postgres), обновляется отдельно; а tags/ordered
+  // едут ВНУТРИ addVersion (Ф2a-довесок): ядро применяет мету той же транзакцией,
+  // что и версию, и канон коммита сразу несёт свежие значения. Отдельный апдейт
+  // до RPC оставлял бы мету записанной без версии при сбое вызова.
+  await db.update(templates).set({ gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   await registerTags(tags)
   // Создание версии = git-коммит + проекция в ядре (доменный порт ListStore).
-  await listStore.addVersion(tpl.id, { note: note || 'edit', steps: toStepInput(proposed), authorId: session.userId })
+  await listStore.addVersion(tpl.id, {
+    note: note || 'edit',
+    steps: toStepInput(proposed),
+    authorId: session.userId,
+    meta: { tags, ordered },
+  })
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
@@ -1002,13 +1008,14 @@ export async function translateList(templateId: string, targetLang: string): Pro
   })
 
   const note = `translate → ${langEnName(targetLang)}`
-  // title/desc списка переводятся ДО addVersion: ядро читает мету из templates,
-  // когда собирает канон коммита (Ф1, git-first) — иначе git отстал бы на версию.
-  await db
-    .update(templates)
-    .set({ title: add(tpl.title, translated.title), desc: add(tpl.desc, translated.desc), updatedAt: new Date() })
-    .where(eq(templates.id, tpl.id))
-  await listStore.addVersion(tpl.id, { note, steps: toStepInput(proposed), authorId: session.userId })
+  // Переведённые title/desc едут ВНУТРИ addVersion (Ф2a-довесок): одна транзакция
+  // с версией, канон коммита сразу несёт свежую мету.
+  await listStore.addVersion(tpl.id, {
+    note,
+    steps: toStepInput(proposed),
+    authorId: session.userId,
+    meta: { title: add(tpl.title, translated.title), desc: add(tpl.desc, translated.desc) },
+  })
   await notifyWatchersNewVersion(tpl.id, session.userId)
 
   const owner = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
