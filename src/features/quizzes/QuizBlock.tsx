@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Check, ChevronDown, ChevronUp, GraduationCap, Loader2, RotateCcw, X } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { submitQuiz } from './actions'
 import type { QuizState } from './queries'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -10,28 +10,43 @@ import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort,
 
 /** Quiz-блок на странице списка (как на Stepik). Типы: choice (выбор), text
  *  (короткий ответ), number (число с допуском).
- *  - Авторизованный (canSubmit): оценка на СЕРВЕРЕ, попытка сохраняется; ответы
- *    не приходят в разметку, раскрываются только после отправки.
- *  - Аноним: клиентская самопроверка (ответы в content), без сохранения. */
+ *  - Авторизованный: оценка на СЕРВЕРЕ, попытка сохраняется; ответы не приходят в
+ *    разметку, раскрываются только после отправки.
+ *  - Аноним: клиентская самопроверка (ответы в content), без сохранения.
+ *
+ *  РЕЖИМ РАЗМЕТКИ И ПРАВО ОТВЕЧАТЬ — РАЗНЫЕ ВЕЩИ. Раньше оба выводились из одного
+ *  canSubmit, и на снимке прошлой версии авторизованный зритель проваливался в
+ *  анонимный режим: разметка приходила БЕЗ ответов (их вырезает stripQuizAnswers), а
+ *  клиентская проверка их как раз и ждёт — «нет ответа для проверки», пустые match и
+ *  sort (P2 из авто-ревью #584). Поэтому режим берётся из answersStripped (пришли ли
+ *  ответы), а canSubmit отвечает только за «можно ли отправлять». */
 export function QuizBlock({
   content,
   lang,
   templateId,
   bid,
   canSubmit,
+  answersStripped,
   initial,
 }: {
   content: QuizBlockContent
   lang: Lang
   templateId: string
   bid: string
+  /** Можно ли отправить ответ (на снимке прошлой версии — нельзя). */
   canSubmit: boolean
+  /** Пришла ли разметка БЕЗ ответов (stripQuizAnswers). По умолчанию — как раньше:
+   *  выводим из canSubmit, чтобы вызывающие без этого пропа вели себя по-старому. */
+  answersStripped?: boolean
   initial: QuizState
 }) {
   const ru = lang === 'ru'
   const kind = quizKind(content)
   const multi = content.multi === true
-  const clientMode = !canSubmit
+  // Клиентская самопроверка возможна ТОЛЬКО когда ответы реально пришли в разметку.
+  const clientMode = !(answersStripped ?? canSubmit)
+  // Только чтение: смотрим снимок прошлой версии/ветки — отвечать некуда.
+  const readOnly = !canSubmit && (answersStripped ?? false)
 
   const nBlanks = blankCount(content.template ?? '')
   // match: левые/правые части (у авторизованного — из stripped lefts/rights; у анонима — из pairs).
@@ -115,6 +130,10 @@ export function QuizBlock({
   }
 
   function check() {
+    // Снимок прошлой версии: отвечать нельзя НИ КНОПКОЙ, НИ ENTER'ом. Кнопку мы прячем,
+    // но поле ввода отправляло по Enter прямо сюда — и ответ уходил в submitQuiz, который
+    // оценивает по ТЕКУЩЕЙ версии и переписывает живую попытку (P1 из авто-ревью).
+    if (readOnly) return
     setErr(null)
     if (clientMode) {
       setOk(localGrade())
@@ -189,7 +208,7 @@ export function QuizBlock({
               <button
                 key={o.id}
                 type="button"
-                disabled={checked || pending}
+                disabled={checked || pending || readOnly}
                 onClick={() => toggle(o.id)}
                 className={`flex items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[13px] transition-colors ${
                   showRight ? 'border-ok bg-ok/10' : showWrong ? 'border-danger bg-danger/10' : sel ? 'border-accent' : 'border-border'
@@ -215,7 +234,7 @@ export function QuizBlock({
         <input
           type={kind === 'number' ? 'text' : 'text'}
           inputMode={kind === 'number' ? 'decimal' : 'text'}
-          disabled={checked || pending}
+          disabled={checked || pending || readOnly}
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           onKeyDown={(e) => {
@@ -233,7 +252,7 @@ export function QuizBlock({
 
       {kind === 'code' && (
         <textarea
-          disabled={checked || pending}
+          disabled={checked || pending || readOnly}
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           rows={4}
@@ -253,8 +272,8 @@ export function QuizBlock({
               <span className="min-w-0 flex-1 text-ink">{it2}</span>
               {!checked && (
                 <span className="flex shrink-0 flex-col">
-                  <button type="button" onClick={() => moveSort(i, -1)} disabled={i === 0} className="text-muted hover:text-ink disabled:opacity-20" aria-label="up"><ChevronUp size={14} /></button>
-                  <button type="button" onClick={() => moveSort(i, 1)} disabled={i === sortOrder.length - 1} className="text-muted hover:text-ink disabled:opacity-20" aria-label="down"><ChevronDown size={14} /></button>
+                  <button type="button" onClick={() => moveSort(i, -1)} disabled={i === 0 || readOnly} className="text-muted hover:text-ink disabled:opacity-20" aria-label="up"><ChevronUp size={14} /></button>
+                  <button type="button" onClick={() => moveSort(i, 1)} disabled={i === sortOrder.length - 1 || readOnly} className="text-muted hover:text-ink disabled:opacity-20" aria-label="down"><ChevronDown size={14} /></button>
                 </span>
               )}
             </div>
@@ -270,7 +289,7 @@ export function QuizBlock({
               {i < nBlanks && (
                 <input
                   type="text"
-                  disabled={checked || pending}
+                  disabled={checked || pending || readOnly}
                   value={blankInputs[i] ?? ''}
                   onChange={(e) => setBlankInputs((xs) => xs.map((v, xi) => (xi === i ? e.target.value : v)))}
                   aria-label={`${ru ? 'Пропуск' : 'Blank'} ${i + 1}`}
@@ -294,7 +313,7 @@ export function QuizBlock({
                 <span className="min-w-0 flex-1 truncate text-ink">{left}</span>
                 <span className="shrink-0 text-muted">→</span>
                 <div className="w-[45%] shrink-0">
-                  <Select value={matchPick[i] || undefined} onValueChange={(v) => setMatchPick((xs) => xs.map((m, xi) => (xi === i ? v : m)))} disabled={checked || pending}>
+                  <Select value={matchPick[i] || undefined} onValueChange={(v) => setMatchPick((xs) => xs.map((m, xi) => (xi === i ? v : m)))} disabled={checked || pending || readOnly}>
                     <SelectTrigger className={rowGood === true ? 'border-ok' : rowGood === false ? 'border-danger' : ''}>
                       <SelectValue placeholder={ru ? 'выбрать…' : 'pick…'} />
                     </SelectTrigger>
@@ -314,7 +333,10 @@ export function QuizBlock({
       )}
 
       <div className="mt-3 flex items-center gap-2">
-        {!checked ? (
+        {readOnly ? (
+          // Снимок прошлой версии: отвечать некуда — вместо кнопки честная подпись.
+          <span className="text-[12px] text-muted">{t('quizSnapshotReadOnly', lang)}</span>
+        ) : !checked ? (
           <button
             type="button"
             disabled={!hasInput || pending || (clientMode && !clientHasAnswer)}
