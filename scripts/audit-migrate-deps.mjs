@@ -61,6 +61,8 @@ try {
 }
 const looksLikeReport = !!report && typeof report.vulnerabilities === 'object' && report.vulnerabilities !== null && !!report.metadata
 if (!looksLikeReport) {
+  // Технический литерал для лога CI, не UI-текст: пользователю он не показывается.
+  // eslint-disable-next-line no-restricted-syntax -- строка уходит в вывод джобы, не в интерфейс
   const why = report?.error?.summary ?? report?.message ?? (raw ? `неожиданный вывод: ${raw.slice(0, 200)}` : 'пустой вывод')
   console.error(`::error::npm audit не дал отчёта (${why}) — гейт инструментов миграции НЕ отработал`)
   process.exit(1)
