@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, ChevronDown, Eye, EyeOff } from 'lucide-react'
+import { Check, ChevronDown, Eye } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
+import { Tooltip } from '@/shared/ui/Tooltip'
 import type { WatchEvents, WatchLevel, WatchState } from '@/core'
 import { setWatch } from './actions'
 
@@ -68,24 +69,31 @@ export function WatchButton({
   return (
     <>
       <DropdownMenu>
+        {/* Свой Tooltip, а не браузерный title=: он появляется мгновенно, читается в
+            нашей теме и не дублируется системной подсказкой. Правило на всё приложение. */}
+        <Tooltip label={watching ? labels.unwatch : labels.watch}>
         <DropdownMenuTrigger asChild>
           <button
             aria-label={watching ? labels.unwatch : labels.watch}
-            title={watching ? labels.unwatch : labels.watch}
             className={`inline-flex h-9 items-center gap-2 rounded-md border pl-3.5 text-[13px] font-semibold transition-colors max-sm:gap-1.5 max-sm:pl-3 ${
               watching ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink hover:border-border-strong'
             }`}
           >
-            {watching ? <EyeOff size={14} /> : <Eye size={14} />}
+            {/* Глаз НЕ перечёркиваем: подписка — это «смотрю», а не «запрещено».
+                Заливкой, как у звезды, его тоже не берём: залитый глаз превращается
+                в сплошное пятно и перестаёт читаться. Состояние даёт цвет кнопки. */}
+            <Eye size={14} strokeWidth={watching ? 2.5 : 2} />
             {/* Мобила: только глаз+счётчик (текст не влезал рядом с Pin — скилл mobile-ui). */}
             <span className="hidden sm:inline">{watching ? labels.unwatch : labels.watch}</span>
-            <span className="font-mono text-[12px] text-muted">{count_}</span>
+            {/* Ноль не показываем: пустой счётчик занимает место и ничего не сообщает. */}
+            {count_ > 0 && <span className="font-mono text-[12px] text-muted">{count_}</span>}
             {/* Каретка за разделителем — единый вид со сплитами Star/Fork. */}
             <span className="flex h-full items-center self-stretch border-l border-border pl-1.5 pr-2 max-sm:pr-1.5">
               <ChevronDown size={13} className="text-muted" />
             </span>
           </button>
         </DropdownMenuTrigger>
+        </Tooltip>
         <DropdownMenuContent align="end" className="w-[330px] p-0">
           <div className="border-b border-border px-3 py-2.5 text-[13px] font-semibold text-ink">{labels.title}</div>
           {rows.map((r) => (

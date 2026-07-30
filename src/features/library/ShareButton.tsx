@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { Check, Copy, Share2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 // Бренд-иконки (24×24, single-path, currentColor) — в lucide их нет.
 const P = (d: string) => (
@@ -148,11 +149,13 @@ export function ShareButton({
 } & ShareLabels) {
   return (
     <DropdownMenu>
+      <Tooltip label={label}>
       <DropdownMenuTrigger asChild>
         <button type="button" className={className} aria-label={label || 'Share'}>
           <Share2 size={15} /> {label && <span className="hidden sm:inline">{label}</span>}
         </button>
       </DropdownMenuTrigger>
+      </Tooltip>
       <DropdownMenuContent align="end" className="w-[240px] p-3">
         <ShareMenuItems path={path} title={title} ru={ru} label={label} copiedLabel={copiedLabel} copyLinkLabel={copyLinkLabel} shareViaLabel={shareViaLabel} qrHint={qrHint} />
       </DropdownMenuContent>

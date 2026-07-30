@@ -68,8 +68,9 @@ export default async function ExplorePage({
 
   return (
     <div className="w-full">
-      {/* Единый TabNav (как профиль/список): переезжающая полоска активной вкладки. */}
-      <TabNav maxWidthClass="max-w-[1080px]" scope="explore" center arrows={{ prev: t('scrollPrev', lang), next: t('scrollNext', lang) }}>
+      {/* Единый TabNav (как профиль/список): полоска активной вкладки и «…» для не
+          влезших вкладок. Ряд НЕ листается вбок — поведение одно на всех разделах. */}
+      <TabNav maxWidthClass="max-w-[1080px]" scope="explore" overflow={{ moreLabel: t('moreTabs', lang) }}>
         {TABS.map((tb) => (
           <TabItem key={tb.id} href={tabHref(tb.id)} on={tb.id === active} icon={TAB_ICON[tb.id]} label={t(tb.key, lang)} />
         ))}

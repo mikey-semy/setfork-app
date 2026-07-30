@@ -331,6 +331,33 @@ export async function getUserTemplates(userId: string, viewerId?: string): Promi
   return withAvatar(rows as FeedItem[])
 }
 
+/** Списки автора для переключателя в шапке: чей список открыт — того и набор.
+ *  Поиск идёт по ВСЕМ его спискам, а не по загруженной горстке недавних.
+ *  Пустой запрос = недавние. Приватные отдаются только владельцу (visibleFilter). */
+export async function searchTemplatesByOwnerHandle(
+  handle: string,
+  viewerId: string | undefined,
+  q: string,
+  limit = 20,
+): Promise<FeedItem[]> {
+  const term = q.trim()
+  const like = `%${term}%`
+  const rows = await db
+    .select(FEED_COLS)
+    .from(templates)
+    .innerJoin(users, eq(templates.ownerId, users.id))
+    .where(
+      and(
+        eq(users.handle, handle),
+        visibleFilter(viewerId),
+        term ? or(ilike(titleText, like), ilike(templates.slug, like))! : undefined,
+      ),
+    )
+    .orderBy(desc(templates.updatedAt))
+    .limit(limit)
+  return withAvatar(rows as FeedItem[])
+}
+
 /** Списки внутри каталога (repository). */
 export async function getListsInCatalog(repositoryId: string, viewerId?: string): Promise<FeedItem[]> {
   const rows = await db
@@ -590,6 +617,7 @@ export async function getSuggestionComments(suggestionId: string) {
 
 export interface Contributor {
   handle: string
+  name: string | null
   avatarUrl: string | null
   accepted: number // сколько правок принято (0 = только автор/предлагал)
 }
@@ -600,6 +628,7 @@ export async function getContributors(templateId: string, ownerId: string): Prom
     db
       .select({
         handle: users.handle,
+        name: users.name,
         avatarUrl: users.avatarUrl,
         authorId: suggestions.authorId,
         accepted: sql<number>`count(*) filter (where ${suggestions.status} = 'accepted')::int`,
@@ -607,14 +636,18 @@ export async function getContributors(templateId: string, ownerId: string): Prom
       .from(suggestions)
       .innerJoin(users, eq(suggestions.authorId, users.id))
       .where(eq(suggestions.templateId, templateId))
-      .groupBy(users.handle, users.avatarUrl, suggestions.authorId),
-    db.select({ handle: users.handle, avatarUrl: users.avatarUrl }).from(users).where(eq(users.id, ownerId)).limit(1),
+      .groupBy(users.handle, users.name, users.avatarUrl, suggestions.authorId),
+    db
+      .select({ handle: users.handle, name: users.name, avatarUrl: users.avatarUrl })
+      .from(users)
+      .where(eq(users.id, ownerId))
+      .limit(1),
   ])
   const list: Contributor[] = []
-  if (owner) list.push({ handle: owner.handle, avatarUrl: owner.avatarUrl, accepted: Infinity })
+  if (owner) list.push({ handle: owner.handle, name: owner.name, avatarUrl: owner.avatarUrl, accepted: Infinity })
   for (const r of rows) {
     if (r.authorId === ownerId) continue
-    list.push({ handle: r.handle, avatarUrl: r.avatarUrl, accepted: r.accepted })
+    list.push({ handle: r.handle, name: r.name, avatarUrl: r.avatarUrl, accepted: r.accepted })
   }
   list.sort((a, b) => b.accepted - a.accepted)
   return Promise.all(list.map(async (c) => ({ ...c, avatarUrl: await avatarSrc(c.avatarUrl, 48), accepted: Number.isFinite(c.accepted) ? c.accepted : 0 })))
