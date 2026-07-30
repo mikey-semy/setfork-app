@@ -89,9 +89,13 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
 }
 
 /** Смена ника (handle). Ник — часть публичных URL (/handle/…), поэтому смена ломает
- *  старые ссылки (предупреждаем в UI; таблицы редиректов пока нет). GitHub-аккаунтам
- *  запрещено: upsertGithubUser синхронизирует handle с gh.login на каждом входе и
- *  откатил бы смену. Сессия обновляется без ре-логина (refreshSessionCookie). */
+ *  старые ссылки (предупреждаем в UI; таблицы редиректов пока нет). Сессия обновляется
+ *  без ре-логина (refreshSessionCookie).
+ *
+ *  GitHub-аккаунтам раньше было запрещено — на том основании, что вход синхронизирует
+ *  handle с gh.login и откатит смену. Синхронизации больше нет (ник заводится один раз
+ *  через ту же воронку, что регистрация), а запрет остался бы издевательством: ник
+ *  назначен автоматически, возможно с суффиксом, и поменять его нельзя ничем. */
 export async function changeHandle(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const session = await requireSession()
   const next = normalizeHandle(String(formData.get('handle') ?? ''))
@@ -100,10 +104,6 @@ export async function changeHandle(_prev: ActionResult | null, formData: FormDat
   if (next === session.handle) return { error: 'Это ваш текущий ник.' }
   if (!isHandleShapeValid(next)) return { error: 'Ник: 3–30 символов, только a–z, 0–9 и дефис; некоторые слова зарезервированы.' }
 
-  const [me] = await db.select({ githubId: users.githubId }).from(users).where(eq(users.id, session.userId)).limit(1)
-  if (me?.githubId != null) {
-    return { error: 'Аккаунтам, привязанным к GitHub, смена ника недоступна — он синхронизируется с GitHub при входе.' }
-  }
   if (await handleTaken(next)) return { error: 'Этот ник уже занят.' }
 
   try {

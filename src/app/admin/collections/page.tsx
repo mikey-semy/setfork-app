@@ -18,10 +18,7 @@ export default async function AdminCollectionsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-6 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[18px] font-bold text-ink">{ru ? 'Подборки' : 'Collections'}</h1>
-        <Link href="/admin" className="text-[13px] text-ink-2 hover:text-ink">← {ru ? 'Админка' : 'Admin'}</Link>
-      </div>
+      <h1 className="text-[18px] font-bold text-ink">{ru ? 'Подборки' : 'Collections'}</h1>
       <p className="-mt-4 text-[13px] text-ink-2">
         {ru
           ? 'Курируемые витрины для Explore — списки и каталоги разных авторов в одной подборке.'

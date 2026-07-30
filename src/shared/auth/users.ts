@@ -4,28 +4,41 @@ import { db, users } from '@/shared/db'
 import { uniqueHandle } from './handle'
 import type { SessionUser } from './session'
 
+/**
+ * Вход через GitHub: находим по githubId или создаём.
+ *
+ * handle НИКОГДА не берётся из `gh.login` напрямую и при повторном входе НЕ
+ * синхронизируется. Логин на GitHub выбирает сам пользователь и переименовывается
+ * когда угодно — сырая запись в `handle` обходила бы разом форму ника,
+ * RESERVED_HANDLES, занятость и ADMIN_HANDLES, то есть давала privesc до админа
+ * свободным (а через регистр букв — и занятым) админ-ником. Ник заводим один раз
+ * через ту же воронку, что регистрация и Яндекс/VK (`uniqueHandle`).
+ */
 export async function upsertGithubUser(gh: {
   id: number
   login: string
   name: string | null
   avatar_url: string | null
 }): Promise<SessionUser> {
-  const existing = await db.select().from(users).where(eq(users.githubId, gh.id)).limit(1)
-  if (existing[0]) {
-    // Синхронизируем только handle; имя/аватар не перезатираем — их пользователь
-    // мог настроить в /settings (в т.ч. загрузить свой аватар).
-    const [u] = await db
-      .update(users)
-      .set({ handle: gh.login })
-      .where(eq(users.id, existing[0].id))
-      .returning()
-    return toSession(u)
+  const [existing] = await db.select().from(users).where(eq(users.githubId, gh.id)).limit(1)
+  if (existing) return toSession(existing)
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const handle = await uniqueHandle(attempt === 0 ? [gh.login, gh.name] : ['github-user'])
+    try {
+      const [u] = await db
+        .insert(users)
+        .values({ githubId: gh.id, handle, name: gh.name, avatarUrl: gh.avatar_url })
+        .returning()
+      return toSession(u)
+    } catch (e) {
+      // Гонка: параллельный вход тем же GitHub-аккаунтом или занятый handle.
+      const [raced] = await db.select().from(users).where(eq(users.githubId, gh.id)).limit(1)
+      if (raced) return toSession(raced)
+      if (attempt === 1) throw e
+    }
   }
-  const [u] = await db
-    .insert(users)
-    .values({ githubId: gh.id, handle: gh.login, name: gh.name, avatarUrl: gh.avatar_url })
-    .returning()
-  return toSession(u)
+  throw new Error('unreachable')
 }
 
 export type OauthProfile = {
