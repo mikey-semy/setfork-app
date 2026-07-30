@@ -31,7 +31,7 @@
 import 'dotenv/config'
 import { spawnSync } from 'node:child_process'
 import { Pool } from 'pg'
-import { plannedDrops } from './migrate-drops'
+import { plannedDrops, type Schema, type TableColumns } from './migrate-drops'
 
 // Unique-колонки существующих таблиц: [таблица, колонка, тип, констрейнт]
 const PREFLIGHT_UNIQUE: Array<[string, string, string, string]> = [
@@ -53,19 +53,26 @@ const TYPE_MARKERS: Array<{ table: string; column: string; udt: string }> = [
   { table: 'embeddings', column: 'embedding', udt: 'halfvec' }, // P4 #380
 ]
 
-/** Ожидаемая схема ИЗ КОДА: таблицы и колонки, как их описывает schema.ts. */
-function expectedSchema(): Map<string, Set<string>> {
-  const out = new Map<string, Set<string>>()
+/** Ожидаемая схема ИЗ КОДА: таблицы, колонки и их типы, как их описывает schema.ts. */
+function expectedSchema(): Schema {
+  const out: Schema = new Map()
   // drizzle-kit export печатает полный DDL по schema.ts, ни к чему не подключаясь.
   const res = spawnSync('npx', ['drizzle-kit', 'export'], { encoding: 'utf8', shell: true })
   if (res.status !== 0 || !res.stdout) throw new Error(`drizzle-kit export не отработал: ${res.stderr?.slice(0, 300)}`)
   for (const m of res.stdout.matchAll(/CREATE TABLE(?: IF NOT EXISTS)? "?(\w+)"?\s*\(([\s\S]*?)\n\);/g)) {
-    const cols = new Set<string>()
+    const cols: TableColumns = new Map()
     for (const line of m[2].split('\n')) {
       const t = line.trim()
       if (/^(CONSTRAINT|PRIMARY|UNIQUE|FOREIGN|CHECK)/i.test(t)) continue
-      const c = /^"(\w+)"\s+/.exec(t)
-      if (c) cols.add(c[1])
+      // Тип — всё после имени, но БЕЗ модификаторов и хвостовой запятой:
+      // «"created_at" timestamp with time zone DEFAULT now() NOT NULL,» → «timestamp with time zone».
+      // Запятую в самом типе («numeric(12, 6)») отрезать нельзя — на этом разбор и
+      // спотыкался, объявляя колонку отсутствующей в коде.
+      const c = /^"(\w+)"\s+(.+?)\s*,?$/.exec(t)
+      if (c) {
+        const type = c[2].replace(/\s+(DEFAULT|NOT NULL|REFERENCES|GENERATED|PRIMARY KEY|PRIMARY|UNIQUE|CHECK)[\s\S]*$/i, '').trim()
+        cols.set(c[1], type)
+      }
     }
     out.set(m[1], cols)
   }
@@ -73,15 +80,27 @@ function expectedSchema(): Map<string, Set<string>> {
   return out
 }
 
-/** Таблицы и колонки, которые СЕЙЧАС есть в БД. */
-async function dbSchema(pool: Pool): Promise<Map<string, Set<string>>> {
-  const { rows } = await pool.query<{ table_name: string; column_name: string }>(
-    `SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public'`,
+/**
+ * Таблицы, колонки и их типы, которые СЕЙЧАС есть в БД.
+ *
+ * Тип берём через format_type, а не udt_name: udt_name отдаёт только базовый тип
+ * («numeric»), без модификаторов, — и сужение numeric(12,6) → numeric(12,2) выглядело бы
+ * совпадением, хотя оно округляет уже записанные значения (P1 из авто-ревью #600).
+ * format_type даёт ровно то же, что стоит в DDL: numeric(12,6), character varying(64),
+ * halfvec(768).
+ */
+async function dbSchema(pool: Pool): Promise<Schema> {
+  const { rows } = await pool.query<{ table_name: string; column_name: string; udt_name: string }>(
+    `SELECT c.relname AS table_name, a.attname AS column_name, format_type(a.atttypid, a.atttypmod) AS udt_name
+       FROM pg_attribute a
+       JOIN pg_class c ON c.oid = a.attrelid
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND a.attnum > 0 AND NOT a.attisdropped`,
   )
-  const out = new Map<string, Set<string>>()
+  const out: Schema = new Map()
   for (const r of rows) {
-    if (!out.has(r.table_name)) out.set(r.table_name, new Set())
-    out.get(r.table_name)!.add(r.column_name)
+    if (!out.has(r.table_name)) out.set(r.table_name, new Map())
+    out.get(r.table_name)!.set(r.column_name, r.udt_name)
   }
   return out
 }
@@ -116,16 +135,18 @@ async function main() {
   }
 
   // ── барьер против удаления ──────────────────────────────────────────
-  const { tables: dropTables, columns: dropCols } = plannedDrops(expectedSchema(), await dbSchema(pool))
-  if (dropTables.length || dropCols.length) {
+  const { tables: dropTables, columns: dropCols, retypes } = plannedDrops(expectedSchema(), await dbSchema(pool))
+  if (dropTables.length || dropCols.length || retypes.length) {
     const what = [
       dropTables.length ? `таблицы: ${dropTables.join(', ')}` : '',
       dropCols.length ? `колонки: ${dropCols.slice(0, 40).join(', ')}` : '',
+      retypes.length ? `смена типа: ${retypes.slice(0, 20).map((r) => `${r.column} ${r.from}→${r.to}`).join(', ')}` : '',
     ].filter(Boolean).join('; ')
     if (process.env.ALLOW_DESTRUCTIVE_MIGRATION === '1') {
       console.warn(`[preflight] РАЗРУШАЮЩАЯ МИГРАЦИЯ РАЗРЕШЕНА явно (ALLOW_DESTRUCTIVE_MIGRATION=1) → ${what}`)
     } else {
-      console.error('[preflight] В БД есть то, чего нет в схеме кода — push --force это УДАЛИТ вместе с данными.')
+      console.error('[preflight] Схема кода расходится с БД так, что push --force потеряет данные:')
+      console.error('[preflight] лишнее в БД он УДАЛИТ, а смену типа сделает с пересозданием колонки.')
       console.error(`[preflight] ${what}`)
       console.error('[preflight] Миграция остановлена. Это либо забытая правка схемы, либо осознанное удаление;')
       console.error('[preflight] во втором случае запусти с ALLOW_DESTRUCTIVE_MIGRATION=1 (и сделай бэкап).')
@@ -150,7 +171,7 @@ async function main() {
       missingTables.push(table)
       continue
     }
-    for (const c of cols) if (!got.has(c)) missingCols.push(`${table}.${c}`)
+    for (const c of cols.keys()) if (!got.has(c)) missingCols.push(`${table}.${c}`)
   }
   if (missingTables.length || missingCols.length) {
     console.error('[verify] СХЕМА БД ОТСТАЛА ОТ КОДА — push не применился полностью.')
