@@ -95,6 +95,16 @@ services:
     build: { context: ., target: runner }
     container_name: setfork-frontend
     restart: always
+    # RU-ЕGRESS: OpenRouter отдаёт 403 на российский IP, поэтому его домен резолвится в
+    # свой сервер с TCP-passthrough (SNI сквозной, TLS не расшивается). Это ЗДЕСЬ, а не
+    # в серверном docker-compose.override.yml: тот файл в репозитории не лежит, compose
+    # с явным `-f` его не подхватывает, и работал он лишь потому, что контейнер долго не
+    # пересоздавали. Первый же нормальный деплой мост потерял — и админка показала
+    # «каталог моделей не загрузился (403)», будто дело в ключе.
+    #
+    # Адрес переопределяется переменной в .env сервера; не задан — берётся нынешний мост.
+    extra_hosts:
+      - 'openrouter.ai:${RU_EGRESS_IP:-45.152.22.222}'
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sethub}:${POSTGRES_PASSWORD}@setfork-db:5432/${POSTGRES_DB:-sethub}

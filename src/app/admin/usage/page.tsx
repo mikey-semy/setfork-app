@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
@@ -60,10 +59,6 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
-      <Link href="/admin" className="inline-flex w-fit items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink">
-        <ArrowLeft size={14} /> {tr({ en: 'Back to settings', ru: 'К настройкам' }, lang)}
-      </Link>
-
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="mb-1 text-[18px] font-bold text-ink">{tr({ en: 'Draft usage', ru: 'Расход на черновики' }, lang)}</h1>

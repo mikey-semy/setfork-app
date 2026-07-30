@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
@@ -41,9 +40,6 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
             )}
           </p>
         </div>
-        <Link href="/admin" className="shrink-0 text-[13px] text-ink-2 hover:text-ink">
-          ← {say('Admin', 'Админка')}
-        </Link>
       </div>
 
       {sp.fresh && (

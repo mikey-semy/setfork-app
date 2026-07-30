@@ -76,12 +76,12 @@
   },
   "src/app/admin/collections/page.tsx": {
     "no-restricted-syntax": {
-      "count": 8
+      "count": 7
     }
   },
   "src/app/admin/page.tsx": {
     "no-restricted-syntax": {
-      "count": 14
+      "count": 13
     }
   },
   "src/app/change-email/page.tsx": {
@@ -156,22 +156,22 @@
   },
   "src/features/admin/EmailSettingsForm.tsx": {
     "no-restricted-syntax": {
-      "count": 12
+      "count": 11
     }
   },
   "src/features/admin/MediaSettingsForm.tsx": {
     "no-restricted-syntax": {
-      "count": 9
+      "count": 8
     }
   },
   "src/features/admin/PushSettingsForm.tsx": {
     "no-restricted-syntax": {
-      "count": 10
+      "count": 9
     }
   },
   "src/features/admin/SearchSettingsForm.tsx": {
     "no-restricted-syntax": {
-      "count": 12
+      "count": 11
     }
   },
   "src/features/admin/achievement-actions.ts": {

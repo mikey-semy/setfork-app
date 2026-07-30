@@ -7,9 +7,13 @@ on:
     branches: [master]
 
 
+# На master прогон НЕ отменяем: деплой ждёт зелёный CI ИМЕННО этого коммита, а
+# отменённый прогон не даёт ответа «можно ли катить». Ровно поэтому прежний гейт и
+# сняли — при частых мержах master-CI не доживал до конца, и деплой вечно skipped.
+# На PR отмена остаётся: там новый пуш обесценивает предыдущий прогон.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 jobs:
   check:
     runs-on: [self-hosted, setfork]

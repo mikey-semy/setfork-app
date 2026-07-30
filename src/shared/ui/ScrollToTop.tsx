@@ -28,9 +28,15 @@ export function ScrollToTop({ label = 'Наверх' }: { label?: string }) {
     const el = document.querySelector<HTMLElement>('[data-sticky-input]')
     const ro = typeof ResizeObserver !== 'undefined' && el ? new ResizeObserver(measure) : null
     if (el && ro) ro.observe(el)
+    // Панель может ПОЯВИТЬСЯ позже (полоса сохранения выезжает, когда форму тронули).
+    // Без наблюдения за DOM кнопка «наверх» переехала бы только на следующем скролле —
+    // то есть ровно в тот момент, когда она уже налезла на «Сохранить».
+    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(measure) : null
+    mo?.observe(document.body, { childList: true, subtree: true })
     return () => {
       window.removeEventListener('scroll', onScroll)
       ro?.disconnect()
+      mo?.disconnect()
     }
   }, [])
 

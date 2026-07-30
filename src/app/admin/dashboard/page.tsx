@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
@@ -50,9 +49,6 @@ export default async function AdminDashboardPage() {
     <div className="flex w-full min-w-0 flex-col gap-6 px-5 py-6 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Link href="/admin" className="mb-2 inline-flex w-fit items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink">
-            <ArrowLeft size={14} /> {tr({ en: 'Back to settings', ru: 'К настройкам' }, lang)}
-          </Link>
           <h1 className="text-[18px] font-bold text-ink">{tr({ en: 'Dashboard', ru: 'Дашборд' }, lang)}</h1>
           <p className="text-[13px] text-ink-2">
             {tr({ en: 'Live monitoring — traffic, generations, spend, queue.', ru: 'Живой мониторинг — трафик, генерации, расход, очередь.' }, lang)}
