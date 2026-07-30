@@ -15,7 +15,6 @@
 - [ ] `src/features/generation/actions.ts` — 4 шт. → library×4
 - [ ] `src/features/generation/service.ts` — 1 шт. → library×1
 - [ ] `src/features/git/actions.ts` — 1 шт. → collab×1
-- [ ] `src/features/git/project.ts` — 1 шт. → library×1
 - [ ] `src/features/issues/MilestonePicker.tsx` — 1 шт. → milestones×1
 - [ ] `src/features/issues/actions.ts` — 5 шт. → collab×1, collab-store×1, notifications×1, watch×2
 - [ ] `src/features/issues/label-actions.ts` — 1 шт. → collab×1

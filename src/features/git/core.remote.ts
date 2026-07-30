@@ -6,10 +6,13 @@ import { BranchOpError } from '@/core'
 import { GitCore as GitCoreService, type RepoRef } from '@/shared/gen/git_pb'
 import { toWireContent } from './list-content'
 
-// Remote-реализация GitCore: Connect-ES → Rust git-core по gRPC (h2c, plaintext).
-// Включается из core.ts по SETFORK_CORE_URL; адрес — SETFORK_CORE_ADDR.
-// Семантика 1:1 с core.inproc.ts: сервис резолвит/лочит/проецирует репо ВНУТРИ,
-// а тут только маппинг форм порт ↔ proto-сообщения.
+// Единственная реализация GitCore: Connect-ES → Rust git-core по gRPC (h2c,
+// plaintext); адрес — SETFORK_CORE_ADDR. Ядро резолвит/лочит/проецирует репо
+// ВНУТРИ, здесь только маппинг форм порт ↔ proto-сообщения.
+//
+// NB: SETFORK_CORE_URL больше НЕ переключает git (развилки нет, см. core.ts), но
+// переменная жива — по ней доменные сторы (collab-store, curation, library)
+// решают, ходить ли в ядро за своей частью. Удалять её из compose нельзя.
 
 // Единый транспорт к ядру (h2c + Bearer-токен канала, см. shared/core-transport).
 const client = createClient(GitCoreService, coreTransport())
