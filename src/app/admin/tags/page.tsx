@@ -1,5 +1,4 @@
-import Link from 'next/link'
-import { ArrowLeft, Tag } from 'lucide-react'
+import { Tag } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -16,9 +15,6 @@ export default async function AdminTagsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[860px] px-6 py-8">
-      <Link href="/admin" className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
-        <ArrowLeft size={15} /> Admin
-      </Link>
       <h1 className="mb-1 flex items-center gap-2 text-[18px] font-bold text-ink">
         <Tag size={18} /> {t('tags', lang)}
       </h1>
