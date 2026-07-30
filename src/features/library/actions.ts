@@ -44,24 +44,22 @@ import { registerTags } from '@/features/tags/service'
 import { canEditList, canViewList } from '@/core'
 
 /**
- * Ленивый доступ к git-порту, его ошибкам и канонической сериализации.
+ * Ленивый доступ к git-порту и его ошибкам.
  *
  * Импорт динамический не ради красоты: серверные экшены этого файла в большинстве
  * своём git не трогают, а порт тянет за собой ядро. Один помощник вместо копии
  * этих импортов в каждом git-экшене (их уже пять).
  *
- * `listJson` идёт отсюда же намеренно: это ЕДИНСТВЕННОЕ место файла, знающее про
- * `features/git`. Каждый новый прямой импорт туда — ещё одно кросс-фичевое
- * нарушение границ, а их счётчик в baseline линтера ограничен: превысишь — и он
- * начинает сыпать по всему файлу разом.
+ * Держим ЕДИНСТВЕННОЙ точкой файла, знающей про `features/git`: каждый новый
+ * прямой импорт туда — ещё одно кросс-фичевое нарушение границ, а их счётчик в
+ * baseline линтера ограничен, превысишь — и он начинает сыпать по всему файлу разом.
+ *
+ * Канонической сериализации здесь больше нет: формат принадлежит ядру, наружу
+ * уходит СОДЕРЖИМОЕ версии (HQ tracks/git-format.md, Ф0a).
  */
 async function gitPort() {
-  const [core, ports, ser] = await Promise.all([
-    import('@/features/git/core'),
-    import('@/core'),
-    import('@/features/git/serialize'),
-  ])
-  return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError, listJson: ser.listJson }
+  const [core, ports] = await Promise.all([import('@/features/git/core'), import('@/core')])
+  return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError }
 }
 
 // ── Видимость списка (public/private) и удаление ─────────────────────
@@ -486,7 +484,7 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
     redirect(`${path}?e=unresolved`)
   }
 
-  const [{ gitCore, BranchOpError, listJson }, { threeWayMerge, applyChoices }] = await Promise.all([
+  const [{ gitCore, BranchOpError }, { threeWayMerge, applyChoices }] = await Promise.all([
     gitPort(),
     import('@/features/git/three-way'),
   ])
@@ -497,24 +495,23 @@ export async function resolveBranchPr(suggestionId: string, formData: FormData):
   const final = applyChoices(res, stepChoices, metaChoices)
   if (!final) redirect(`${path}?e=unresolved`) // выбраны не все конфликты (или state изменился)
 
-  // Каноничный формат list.json — ТОЙ ЖЕ функцией, что пишет версии в git:
-  // собранный руками JSON молча разошёлся бы с ней при первой правке формата.
-  const json = listJson({
+  // Отдаём СОДЕРЖИМОЕ — канонический list.json собирает ядро (владелец формата).
+  // Раньше здесь строился готовый файл, из-за чего правила формата приходилось
+  // знать и клиенту тоже (HQ tracks/git-format.md, Ф0a).
+  const content = {
     title: final.title,
     desc: final.desc,
     tags: final.tags,
     ordered: final.ordered,
     version: tpl.currentVersion + 1,
-    // blockId у трёхстороннего merge — nullable; сериализатор пишет поле только
-    // когда оно есть (иначе ломается golden-паритет с Rust), поэтому null убираем.
-    steps: final.steps.map(({ blockId, ...s }, i) => ({ ...s, n: i + 1, ...(blockId ? { blockId } : {}) })),
-  })
+    steps: final.steps.map((s, i) => ({ ...s, n: i + 1 })),
+  }
 
   try {
     // Способ слияния — тот же, что у обычного пути: список, настроенный на squash, не
     // должен получать историю ветки только потому, что случился конфликт.
     const head = sug.note.split(/\r?\n/)[0].trim().slice(0, 120)
-    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, json, {
+    await gitCore.mergeResolved({ owner, slug: tpl.slug }, sug.branchRef, content, {
       mode: prs.mergeMethod,
       message: sug.number ? `${head || sug.branchRef} (#${sug.number})` : head || sug.branchRef,
     })
@@ -624,10 +621,11 @@ async function writeSuggestionItems(
   if (sug.branchRef) {
     // Пункты ветки живут в git. Базу берём из снапшота: заголовок/теги/порядок
     // принадлежат ветке, а не БД, и перетирать их правкой пунктов нельзя.
-    const { gitCore, BranchOpError, listJson } = await gitPort()
+    const { gitCore, BranchOpError } = await gitPort()
     const snap = await gitCore.branchSnapshot({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
     if (!snap) return 'not-found'
-    const json = listJson({
+    // Содержимое версии, а не готовый файл: канон собирает ядро (владелец формата).
+    const content = {
       title: snap.title,
       desc: snap.desc,
       tags: snap.tags,
@@ -636,8 +634,6 @@ async function writeSuggestionItems(
       steps: proposed.map((it, i) => ({
         n: i + 1,
         ...(it.type && it.type !== 'step' ? { type: it.type, content: (it.content ?? {}) as Record<string, unknown> } : {}),
-        // blockId только когда он есть: строки без него дают байт-в-байт прежний
-        // list.json, и golden-паритет с Rust не ломается (см. serialize.ts).
         ...(it.blockId ? { blockId: String(it.blockId) } : {}),
         title: tr(it.title as LocaleText, lang),
         desc: tr(it.desc as LocaleText, lang),
@@ -648,11 +644,11 @@ async function writeSuggestionItems(
         subtasks: (it.subtasks ?? []).map((s) => tr(s as LocaleText, lang)),
         refs: (it.refs ?? []).map((r) => ({ label: tr(r.label as LocaleText, lang), ...(r.url ? { url: r.url } : {}) })),
       })),
-    })
+    }
     try {
       // expectedTip — снапшот, который правил человек: если ветку подвинули, пишем
       // не поверх чужого пуша, а честно отказываем.
-      await gitCore.commitToBranch({ owner, slug: tpl.slug }, sug.branchRef, json, {
+      await gitCore.commitToBranch({ owner, slug: tpl.slug }, sug.branchRef, content, {
         message,
         expectedTip: snap.tipSha,
         author: { name: session.handle, email: gitEmail(session.handle) },

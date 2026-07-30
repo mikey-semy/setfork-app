@@ -4,6 +4,7 @@ import { coreTransport } from '@/shared/core-transport'
 import type { GitCore, GitRepoRef } from '@/core'
 import { BranchOpError } from '@/core'
 import { GitCore as GitCoreService, type RepoRef } from '@/shared/gen/git_pb'
+import { toWireContent } from './list-content'
 
 // Remote-реализация GitCore: Connect-ES → Rust git-core по gRPC (h2c, plaintext).
 // Включается из core.ts по SETFORK_CORE_URL; адрес — SETFORK_CORE_ADDR.
@@ -125,15 +126,18 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
-  async mergeResolved(repo, branch, listJson, opts) {
+  async mergeResolved(repo, branch, content, opts) {
     try {
-      // ЯДРО пока не принимает способ слияния для резолвера: в proto MergeResolvedRequest
-      // полей mode/message нет (в MergeBranchRequest — есть). Пока их нет, squash на
-      // remote-пути невозможен, и молчать об этом нельзя: список, настроенный на squash,
-      // получил бы историю ветки. Отказываем явно — резолвер доступен на inproc-пути,
-      // а полноценно чинится парой (proto ядра + services/git_core.rs).
-      if (opts?.mode === 'squash') throw new BranchOpError('conflict')
-      const res = await client.mergeResolved({ repo: toRepoRef(repo), branch, listJson: new TextEncoder().encode(listJson) })
+      // Способ слияния ядро теперь принимает и для резолвера (core #58): раньше
+      // полей mode/message в MergeResolvedRequest не было, и здесь стоял явный
+      // отказ — список, настроенный на squash, не мог быть разрешён вручную.
+      const res = await client.mergeResolved({
+        repo: toRepoRef(repo),
+        branch,
+        content: toWireContent(content),
+        mode: opts?.mode ?? '',
+        message: opts?.message ?? '',
+      })
       return { tipSha: res.tipSha, newVersion: toNewVersion(res.newVersion), fastForward: res.fastForward }
     } catch (e) {
       throw toBranchOpError(e)
@@ -158,12 +162,12 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
-  async commitToBranch(repo, branch, listJson, opts) {
+  async commitToBranch(repo, branch, content, opts) {
     try {
       const res = await client.commitToBranch({
         repo: toRepoRef(repo),
         branch,
-        listJson: new TextEncoder().encode(listJson.endsWith('\n') ? listJson : listJson + '\n'),
+        content: toWireContent(content),
         message: opts?.message ?? '',
         expectedTip: opts?.expectedTip ?? '',
         authorName: opts?.author?.name ?? '',
