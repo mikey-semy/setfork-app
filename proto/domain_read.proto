@@ -193,11 +193,30 @@ message NewStep {
   LocaleText needs_human_ask = 14; // что спросить у человека; пусто = общий текст
 }
 
+// Обёртка для repeated (у списков нет presence в proto3): nil = «не трогать».
+message TagList {
+  repeated string v = 1;
+}
+
+// Мета списка, применяемая ТОЙ ЖЕ транзакцией, что и версия (Ф2a-довесок).
+// Раньше фронт обновлял мету отдельным запросом ДО addVersion — сбой RPC
+// оставлял мету записанной без версии и без коммита. Message-поля имеют
+// presence: отсутствие = «не трогать» (это патч, а не полный снимок).
+message ListMetaPatch {
+  LocaleText title = 1; // пустой/бессодержательный title игнорируется (название обязательно)
+  LocaleText desc = 2;
+  TagList tags = 3;
+  optional bool ordered = 4;
+}
+
 message AddVersionRequest {
   string list_id = 1;
   string note = 2;
   repeated NewStep steps = 3;
   string author_id = 4; // '' = null (автор версии)
+  // Патч меты (может отсутствовать): ядро применяет его до сборки канона,
+  // поэтому коммит версии сразу несёт свежие title/desc/tags/ordered.
+  ListMetaPatch meta = 5;
 }
 
 service ListWrite {

@@ -36,6 +36,16 @@ export interface NewVersionInput {
   note: string
   steps: NewStepInput[]
   authorId?: Id | null // кто создал версию (для «Коммитов»); опционально — gardener/фон могут не знать
+  /** Патч меты списка (Ф2a-довесок): применяется ядром В ТОЙ ЖЕ транзакции, что
+   *  и версия, ДО сборки канона — коммит сразу несёт свежие title/desc/tags/ordered.
+   *  Отсутствующее поле = «не трогать». НЕ обновляйте мету отдельным запросом до
+   *  addVersion: сбой RPC оставит мету записанной без версии. */
+  meta?: {
+    title?: LocaleText
+    desc?: LocaleText
+    tags?: string[]
+    ordered?: boolean
+  }
 }
 
 export interface CreateListInput {

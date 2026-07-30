@@ -60,12 +60,24 @@
         "title": { "type": "string", "description": "Заголовок шага ('' у презентационных блоков)." },
         "desc": { "type": "string", "description": "Описание шага ('' — нет)." },
         "command": { "type": "string", "description": "Команда шага ('' — нет)." },
+        "imageKey": {
+          "type": "string",
+          "description": "S3-ключ картинки шага (Ф2a-довесок). КЛЮЧ, а не URL: подписанные ссылки протухают при ротации ключей; кликабельную ссылку даёт README."
+        },
         "level": {
           "type": "string",
           "enum": ["required", "recommended", "optional"],
           "description": "Обязательность шага."
         },
         "why": { "type": "string", "description": "Зачем этот шаг ('' — нет)." },
+        "needsHuman": {
+          "type": "boolean",
+          "description": "«Здесь нужен человек»: пункт зависит от того, чего машина знать не может. Отсутствие поля = «не задано» (значение переносится из прошлой версии по blockId); явный false снимает пометку."
+        },
+        "needsHumanAsk": {
+          "type": "string",
+          "description": "Вопрос к пометке «нужен человек» (осмыслен только при needsHuman: true)."
+        },
         "section": { "type": "string", "description": "Секция-группа шага ('' — без секции)." },
         "subtasks": {
           "type": "array",

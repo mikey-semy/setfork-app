@@ -717,13 +717,13 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
     return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version }
   }
 
-  // Мета — ДО addVersion: ядро собирает канон list.json из templates в момент
-  // git-коммита версии (Ф1), обновлённые tags/ordered должны попасть в этот коммит.
-  await db
-    .update(templates)
-    .set({ tags, ordered: input.ordered ?? tpl.ordered, updatedAt: new Date() })
-    .where(eq(templates.id, tpl.id))
-  const ver = await listStore.addVersion(tpl.id, { note: input.note?.trim() || 'updated via API', steps: stepInput(proposed) })
+  // tags/ordered едут ВНУТРИ addVersion (Ф2a-довесок): ядро применяет мету той же
+  // транзакцией, что и версию, — канон коммита сразу несёт свежие значения.
+  const ver = await listStore.addVersion(tpl.id, {
+    note: input.note?.trim() || 'updated via API',
+    steps: stepInput(proposed),
+    meta: { tags, ordered: input.ordered ?? tpl.ordered },
+  })
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающий
   // контент, залитый через MCP, не минует модерацию, и здесь её дублировать не нужно.
   const { enqueueReindex } = await import('@/features/library/jobs')
