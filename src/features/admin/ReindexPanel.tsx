@@ -92,7 +92,9 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
   const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[13px] font-semibold disabled:opacity-60'
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    // Та же читаемая ширина, что у карточек-секций /admin (const card на странице):
+    // без кэпа панель растягивалась на весь экран и выбивалась из колонны секций.
+    <div className="w-full max-w-[860px] rounded-lg border border-border bg-surface p-4">
       <div className="mb-1 font-semibold text-ink">{say('Search index (embeddings)', 'Индексация поиска (эмбеддинги)')}</div>
       <p className="mb-3 text-[13px] text-ink-2">
         {say('Rebuild the vector index of lists. Runs in batches, at most once per 30 min.', 'Пересчёт векторного индекса списков. Идёт батчами, не чаще раза в 30 минут.')}
