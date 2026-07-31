@@ -35,6 +35,21 @@ describe('Field', () => {
     expect((screen.getByLabelText('Порог') as HTMLInputElement).value).toBe('5')
   })
 
+  it('hint и error связаны с контролом через aria-describedby, ошибка — role=alert', () => {
+    render(
+      <Field label="Поле" hint="как заполнять" error="не так заполнил">
+        <Input />
+      </Field>,
+    )
+    const input = screen.getByLabelText('Поле')
+    const ids = (input.getAttribute('aria-describedby') ?? '').split(' ')
+    expect(ids).toHaveLength(2)
+    const texts = ids.map((id) => document.getElementById(id)?.textContent)
+    expect(texts).toContain('как заполнять')
+    expect(texts).toContain('не так заполнил')
+    expect(screen.getByRole('alert').textContent).toBe('не так заполнил')
+  })
+
   it('hint и error рендерятся, пустые — нет', () => {
     const { container, rerender } = render(
       <Field label="Поле" hint="подсказка" error="ошибка">

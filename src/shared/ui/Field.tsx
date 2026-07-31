@@ -7,9 +7,14 @@ import { cn } from '@/shared/lib/cn'
 //
 // Связка подписи с контролом:
 //  - без htmlFor поле ОБОРАЧИВАЕТСЯ в <label> — клик по подписи фокусирует
-//    контрол без всякой возни с id (работает в серверных компонентах);
-//  - htmlFor — для случаев, когда внутри не один контрол (ряды, группы):
-//    рендерится <div> + <label htmlFor>.
+//    контрол без возни с id (работает в серверных компонентах);
+//  - htmlFor — для случаев, когда внутри не один контрол (ряды, группы).
+//
+// Доступность (два дожима Codex по #611/#618): hint/error живут ВНЕ label —
+// не попадают в accessible name; и связываются с контролом через
+// aria-describedby (useId доступен в серверных компонентах), а ошибка несёт
+// role="alert" — скринридер объявляет её появление. Инъекция describedby —
+// best-effort: только когда children — один элемент.
 
 export function Field({
   label,
@@ -26,14 +31,34 @@ export function Field({
   className?: string
   children: React.ReactNode
 }) {
+  const uid = React.useId()
+  const hasHint = hint != null && hint !== ''
+  const hasError = error != null && error !== ''
+  const hintId = hasHint ? `${uid}-hint` : undefined
+  const errId = hasError ? `${uid}-err` : undefined
+  const describedBy = [errId, hintId].filter(Boolean).join(' ') || undefined
+
+  let control = children
+  if (describedBy && React.isValidElement(children) && React.Children.count(children) === 1) {
+    const prev = (children.props as { 'aria-describedby'?: string })['aria-describedby']
+    control = React.cloneElement(children as React.ReactElement<{ 'aria-describedby'?: string }>, {
+      'aria-describedby': prev ? `${prev} ${describedBy}` : describedBy,
+    })
+  }
+
   const caption = <span className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{label}</span>
-  // Хвост — ВНЕ label (находка Codex по #611): внутри оборачивающего label
-  // hint и error попадали бы в accessible name контрола, и скринридер называл
-  // бы поле всей подсказкой, а появление ошибки МЕНЯЛО бы имя поля.
   const tail = (
     <>
-      {error != null && error !== '' && <span className="mt-1 block text-[12.5px] text-danger">{error}</span>}
-      {hint != null && hint !== '' && <span className="mt-1 block text-[12.5px] text-muted">{hint}</span>}
+      {hasError && (
+        <span id={errId} role="alert" className="mt-1 block text-[12.5px] text-danger">
+          {error}
+        </span>
+      )}
+      {hasHint && (
+        <span id={hintId} className="mt-1 block text-[12.5px] text-muted">
+          {hint}
+        </span>
+      )}
     </>
   )
   if (htmlFor) {
@@ -42,7 +67,7 @@ export function Field({
         <label htmlFor={htmlFor} className="cursor-pointer">
           {caption}
         </label>
-        {children}
+        {control}
         {tail}
       </div>
     )
@@ -51,7 +76,7 @@ export function Field({
     <div className={cn('block', className)}>
       <label className="block">
         {caption}
-        {children}
+        {control}
       </label>
       {tail}
     </div>
