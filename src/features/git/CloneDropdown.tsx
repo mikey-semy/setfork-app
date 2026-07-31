@@ -42,7 +42,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
         onFocus={(e) => e.currentTarget.select()}
         className={`min-w-0 flex-1 bg-transparent text-[12.5px] text-ink outline-hidden ${mono ? 'font-mono' : ''}`}
       />
-      <button onClick={() => copy(key, value)} aria-label={t('copyUrl', lang)} className="shrink-0 text-muted hover:text-ink">
+      <button type="button" onClick={() => copy(key, value)} aria-label={t('copyUrl', lang)} className="shrink-0 text-muted hover:text-ink">
         {copied === key ? <Check size={14} className="text-ok" /> : <Copy size={14} />}
       </button>
     </div>
@@ -145,7 +145,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
                     onFocus={(e) => e.currentTarget.select()}
                     className="min-w-0 flex-1 resize-none bg-transparent font-mono text-[11px] leading-snug text-ink outline-hidden"
                   />
-                  <button onClick={() => copy('embed', embedCode)} aria-label={t('copyUrl', lang)} className="shrink-0 text-muted hover:text-ink">
+                  <button type="button" onClick={() => copy('embed', embedCode)} aria-label={t('copyUrl', lang)} className="shrink-0 text-muted hover:text-ink">
                     {copied === 'embed' ? <Check size={14} className="text-ok" /> : <Copy size={14} />}
                   </button>
                 </div>

@@ -9,6 +9,7 @@ type Size = 'lg' | 'md' | 'sm' | 'xs'
 // xs..md — общая шкала контролов (control.ts): высота ряда совпадает с
 // Button/Input/Select. lg — герой-поиск главной, живёт выше шкалы.
 const SIZES: Record<Size, { box: string; text: string; icon: number; clear: number }> = {
+  // eslint-disable-next-line no-restricted-syntax -- lg = герой-поиск главной, сознательно вне лестницы ролей (см. коммент выше)
   lg: { box: 'h-[44px] px-3.5', text: `text-[15px] ${FIELD_TEXT_MOBILE}`, icon: 16, clear: 16 },
   md: { box: `${CONTROL_H.md} ${CONTROL_PX.md}`, text: `${CONTROL_TEXT.md} ${FIELD_TEXT_MOBILE}`, icon: ICON_SIZE.md, clear: ICON_SIZE.md },
   sm: { box: `${CONTROL_H.sm} ${CONTROL_PX.sm}`, text: `${CONTROL_TEXT.sm} ${FIELD_TEXT_MOBILE}`, icon: ICON_SIZE.sm, clear: ICON_SIZE.sm },

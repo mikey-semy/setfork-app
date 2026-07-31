@@ -66,7 +66,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                           </button>
                         </form>
                         <form action={deleteMilestone.bind(null, owner, slug, m.id)}>
-                          <button aria-label={t('delete', lang)} className="rounded-md border border-border px-2 py-1 text-muted hover:border-danger hover:text-danger">
+                          <button type="submit" aria-label={t('delete', lang)} className="rounded-md border border-border px-2 py-1 text-muted hover:border-danger hover:text-danger">
                             <Trash2 size={14} />
                           </button>
                         </form>

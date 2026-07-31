@@ -213,11 +213,11 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">
-        <button onClick={purge} disabled={purging || running} className={`${btn} border border-border text-ink hover:border-border-strong`}>
+        <button type="button" onClick={purge} disabled={purging || running} className={`${btn} border border-border text-ink hover:border-border-strong`}>
           {purging ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} />}
           {say('Purge', 'Почистить')}
         </button>
-        <button onClick={start} disabled={running || onCooldown || starting} className={`${btn} bg-primary text-primary-fg`}>
+        <button type="button" onClick={start} disabled={running || onCooldown || starting} className={`${btn} bg-primary text-primary-fg`}>
           {running || starting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
           {running
             ? say('Indexing…', 'Индексируем…')

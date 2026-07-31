@@ -50,7 +50,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
           </label>
         </div>
         <div className="flex justify-end">
-          <button className="rounded-md bg-primary px-5 py-2 text-[13px] font-semibold text-primary-fg">{ru ? 'Сохранить' : 'Save'}</button>
+          <button type="submit" className="rounded-md bg-primary px-5 py-2 text-[13px] font-semibold text-primary-fg">{ru ? 'Сохранить' : 'Save'}</button>
         </div>
       </form>
 
@@ -67,7 +67,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         <form action={setCollectionCover} className="flex items-center gap-2">
           <input type="hidden" name="id" value={c.id} />
           <input type="file" name="file" accept="image/*" required className="text-[13px] text-ink-2" />
-          <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong">
+          <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong">
             <ImagePlus size={14} /> {ru ? 'Загрузить' : 'Upload'}
           </button>
         </form>
@@ -91,7 +91,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
             </label>
           </div>
           <Input name="ref" required placeholder="owner/slug" className="min-w-0 flex-1 font-mono" />
-          <button className="rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">{ru ? 'Добавить' : 'Add'}</button>
+          <button type="submit" className="rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">{ru ? 'Добавить' : 'Add'}</button>
         </form>
 
         <div className="flex flex-col gap-1.5">
@@ -115,7 +115,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
 
       {/* Удаление */}
       <form action={deleteCollection.bind(null, c.id)} className="flex justify-end">
-        <button className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 px-3 py-1.5 text-[13px] font-semibold text-danger hover:bg-danger/10">
+        <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 px-3 py-1.5 text-[13px] font-semibold text-danger hover:bg-danger/10">
           <Trash2 size={14} /> {ru ? 'Удалить подборку' : 'Delete collection'}
         </button>
       </form>

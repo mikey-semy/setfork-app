@@ -19,6 +19,7 @@ export function LangSwitch({ lang }: { lang: Lang }) {
       {LOCALES.map((l) => (
         <button
           key={l}
+          type="button"
           onClick={() => set(l)}
           className={`cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase transition-colors ${
             lang === l ? 'bg-primary text-primary-fg' : 'text-ink-2'
@@ -38,6 +39,7 @@ export function ThemeToggle() {
   const isDark = mounted && resolvedTheme === 'dark'
   return (
     <button
+      type="button"
       aria-label="Toggle theme"
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       className="grid h-[30px] w-[30px] place-items-center rounded-full border border-border text-ink-2 hover:text-ink"
@@ -68,6 +70,7 @@ export function ThemeModeSwitch({ labels = false, lang }: { labels?: boolean; la
         {modes.map(({ value, label, icon: Icon }) => (
           <Tooltip key={value} label={label}>
             <button
+              type="button"
               aria-label={label}
               onClick={() => setTheme(value)}
               className={`grid h-[24px] w-[24px] place-items-center rounded-full transition-colors ${

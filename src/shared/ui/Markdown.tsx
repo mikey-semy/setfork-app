@@ -40,7 +40,7 @@ export function Markdown({ children, className, refBase, codeCards }: { children
           ol: (p) => <ol {...p} className="list-decimal pl-5" />,
           strong: (p) => <strong {...p} className="font-semibold text-ink" />,
           del: (p) => <del {...p} className="text-muted" />,
-          h1: (p) => <div {...p} className="text-[15px] font-semibold text-ink" />,
+          h1: (p) => <div {...p} className="text-[16px] font-semibold text-ink" />,
           h2: (p) => <div {...p} className="text-[14px] font-semibold text-ink" />,
           h3: (p) => <div {...p} className="font-semibold text-ink" />,
           blockquote: (p) => <blockquote {...p} className="border-l-2 border-border pl-3 text-muted" />,
