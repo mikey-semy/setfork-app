@@ -103,7 +103,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
                 <span className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[10.5px] uppercase text-muted">{it.kind}</span>
                 <span className={`min-w-0 flex-1 truncate font-mono text-[12.5px] ${it.ok ? 'text-ink' : 'text-danger line-through'}`}>{it.label}</span>
                 <form action={remove}>
-                  <button aria-label="remove" className="rounded-md p-1 text-muted hover:text-danger">
+                  <button type="submit" aria-label="remove" className="rounded-md p-1 text-muted hover:text-danger">
                     <X size={14} />
                   </button>
                 </form>

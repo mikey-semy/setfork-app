@@ -83,6 +83,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
     <>
       {canNative && (
         <button
+          type="button"
           onClick={nativeShare}
           className="mb-1 flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
         >
@@ -90,6 +91,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
         </button>
       )}
       <button
+        type="button"
         onClick={copy}
         className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
       >

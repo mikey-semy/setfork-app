@@ -47,6 +47,7 @@ export function CollaboratorsSection({
               <form action={removeCollaborator.bind(null, templateId, c.userId)} className="ml-auto">
                 <Tooltip label={t('removeLabel', lang)}>
                   <button
+                    type="submit"
                     className="inline-flex items-center gap-1 rounded-md p-1 text-muted hover:text-danger"
                     aria-label={t('removeLabel', lang)}
                   >

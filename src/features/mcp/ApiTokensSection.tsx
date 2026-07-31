@@ -157,7 +157,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
               </div>
               <form action={revokeApiToken.bind(null, tk.id)}>
                 <Tooltip label={ru ? 'Отозвать' : 'Revoke'}>
-                  <button className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted hover:text-danger">
+                  <button type="submit" className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted hover:text-danger">
                     <Trash2 size={15} />
                   </button>
                 </Tooltip>
