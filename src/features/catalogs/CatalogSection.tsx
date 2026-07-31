@@ -36,7 +36,7 @@ export function CatalogSection({
           onValueChange={(v) => start(() => setListCatalog(templateId, v === 'none' ? '' : v))}
           disabled={pending}
         >
-          <SelectTrigger className="mb-3 w-full max-w-[320px]">
+          <SelectTrigger className="mb-3 w-full max-w-[20rem]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -54,9 +54,9 @@ export function CatalogSection({
         <input
           name="name"
           placeholder={t('newCatalogPh', lang)}
-          className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong"
+          className="w-[15rem] rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden focus:border-border-strong"
         />
-        <button type="submit" className="rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
+        <button type="submit" className="rounded-md border border-border px-3.5 py-2 text-[0.8125rem] font-semibold text-ink hover:border-border-strong">
           {t('createCatalogBtn', lang)}
         </button>
       </form>

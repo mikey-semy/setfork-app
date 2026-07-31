@@ -107,14 +107,14 @@ export default async function SearchPage({
 
   return (
     <div className="flex w-full flex-1 items-stretch">
-      <aside className="hidden w-[260px] shrink-0 border-r border-border bg-surface-2 px-3 py-5 lg:block">
+      <aside className="hidden w-[16.25rem] shrink-0 border-r border-border bg-surface-2 px-3 py-5 lg:block">
         <ScopeSwitcher active={scope} counts={counts} q={sp.q} sort={sp.sort} lang={lang} basePath={BASE} />
         {/* List-специфичные фасеты — только для scope=lists */}
         {scope === 'lists' && <AdvancedFacets initialQ={sp.q ?? ''} tags={tags} lang={lang} basePath={BASE} />}
       </aside>
 
       <section className="min-w-0 flex-1 px-4 py-4 md:px-6">
-       <div className="mx-auto flex w-full max-w-[1120px] gap-6">
+       <div className="mx-auto flex w-full max-w-[70rem] gap-6">
         <div className="min-w-0 flex-1">
         {/* Поле поиска живёт НА СТРАНИЦЕ, а не в шапке: в шапке на мобильном оно
             сжималось до ~100px (рядом с лого, переключателем языка и «Войти») и было
@@ -129,7 +129,7 @@ export default async function SearchPage({
           <ScopeSwitcher active={scope} counts={counts} q={sp.q} sort={sp.sort} lang={lang} basePath={BASE} orientation="horizontal" />
           {scope === 'lists' && (
             <details className="group mt-2 rounded-md border border-border bg-surface-2 px-3 py-2">
-              <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[13px] font-semibold text-ink-2">
+              <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[0.8125rem] font-semibold text-ink-2">
                 <ChevronDown size={14} className="text-muted transition-transform group-open:rotate-180" />
                 {t('filters', lang)}
               </summary>
@@ -141,7 +141,7 @@ export default async function SearchPage({
         </div>
 
         <div className="mb-1 flex items-center justify-between border-b border-border pb-1.5">
-          <div className="flex gap-4 text-[13px] font-semibold">
+          <div className="flex gap-4 text-[0.8125rem] font-semibold">
             {scope === 'lists' &&
               SORTS.map((s) => (
                 <Link key={s.key} href={qs({ sort: s.key })} className={tabCls(sort === s.key)}>
@@ -161,7 +161,7 @@ export default async function SearchPage({
                 </Link>
               ))}
           </div>
-          <span className="text-[12.5px] text-muted">
+          <span className="text-[0.78125rem] text-muted">
             {scope === 'lists' && `${counts.lists} ${t('ofLists', lang)}`}
             {scope === 'people' && `${counts.people} ${t('ofPeople', lang)}`}
             {scope === 'issues' && `${counts.issues} ${t('ofIssues', lang)}`}
@@ -169,7 +169,7 @@ export default async function SearchPage({
         </div>
 
         {sp.tag && scope === 'lists' && (
-          <div className="mt-3 text-[13px] text-ink-2">
+          <div className="mt-3 text-[0.8125rem] text-ink-2">
             #{sp.tag}{' '}
             <Link href={qs({ tag: undefined })} className="text-accent hover:underline">
               ✕
@@ -177,10 +177,10 @@ export default async function SearchPage({
           </div>
         )}
         {sp.e === 'aifail' && (
-          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-danger">{t('aiFail', lang)}</div>
+          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[0.8125rem] text-danger">{t('aiFail', lang)}</div>
         )}
         {sp.e === 'ratelimited' && (
-          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-warn">{t('rateLimited', lang)}</div>
+          <div className="mt-3 rounded-md border border-border bg-surface px-3 py-2 text-[0.8125rem] text-warn">{t('rateLimited', lang)}</div>
         )}
 
         {/* ── Lists ── */}
@@ -189,7 +189,7 @@ export default async function SearchPage({
             {canGenerate && feed.length === 0 && (
               <form action={startGeneration} className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3">
                 <Sparkles size={16} className="text-accent" />
-                <span className="text-[13px] text-ink">
+                <span className="text-[0.8125rem] text-ink">
                   {t('cantFind', lang)} <span className="font-semibold">“{parsed.text}”</span>
                 </span>
                 <input type="hidden" name="q" value={parsed.text} />
@@ -238,23 +238,23 @@ export default async function SearchPage({
         </div>
 
         {/* Правый рейл — панели (не растягиваем результаты во всю ширину) */}
-        <aside className="hidden w-[300px] shrink-0 flex-col gap-4 pt-1 xl:flex">
+        <aside className="hidden w-[18.75rem] shrink-0 flex-col gap-4 pt-1 xl:flex">
           <div className="rounded-md border border-border bg-surface-2 p-3">
-            <div className="mb-1.5 text-[12.5px] font-semibold text-ink">{t('proTip', lang)}</div>
-            <p className="text-[12.5px] leading-relaxed text-muted">{t('proTipBody', lang)}</p>
-            <div className="mt-2 wrap-break-word font-mono text-[11px] text-ink-2">
+            <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink">{t('proTip', lang)}</div>
+            <p className="text-[0.78125rem] leading-relaxed text-muted">{t('proTipBody', lang)}</p>
+            <div className="mt-2 wrap-break-word font-mono text-[0.6875rem] text-ink-2">
               by:handle · tag:redis · is:verified · type:ordered · stars:&gt;100
             </div>
           </div>
           {tags.length > 0 && (
             <div className="rounded-md border border-border bg-surface-2 p-3">
-              <div className="mb-2 text-[12.5px] font-semibold text-ink">{t('popularTags', lang)}</div>
+              <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{t('popularTags', lang)}</div>
               <div className="flex flex-wrap gap-1.5">
                 {tags.slice(0, 12).map((tg) => (
                   <Link
                     key={tg.tag}
                     href={`/search?q=${encodeURIComponent(`tag:${tg.tag}`)}`}
-                    className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-ink-2 hover:text-ink"
+                    className="rounded-full border border-border bg-surface px-2 py-0.5 text-[0.6875rem] text-ink-2 hover:text-ink"
                   >
                     {tg.tag}
                   </Link>

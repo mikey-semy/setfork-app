@@ -28,8 +28,8 @@ export default async function ChangelogPage() {
   const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { year: 'numeric', month: 'long', day: 'numeric' })
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-4 py-8 sm:px-6 sm:py-10">
-      <Link href="/" className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
+    <div className="mx-auto w-full max-w-[45rem] px-4 py-8 sm:px-6 sm:py-10">
+      <Link href="/" className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {t('home', lang)}
       </Link>
       <FloatingBack href="/" label={t('home', lang)} />
@@ -39,13 +39,13 @@ export default async function ChangelogPage() {
       {entries.length === 0 ? (
         <EmptyState title={t('changelogNone', lang)} />
       ) : (
-        <div className="relative flex flex-col gap-7 pl-5 before:absolute before:bottom-2 before:left-[5px] before:top-2 before:w-px before:bg-border">
+        <div className="relative flex flex-col gap-7 pl-5 before:absolute before:bottom-2 before:left-[0.3125rem] before:top-2 before:w-px before:bg-border">
           {entries.map((e) => {
             const text = entryText(e, lang)
             return (
               <div key={`${e.at.toISOString()}${text}`} className="relative">
-                <span className="absolute left-[-19px] top-[6px] h-[9px] w-[9px] rounded-full border border-border-strong bg-surface-2" />
-                <div className="font-mono text-[11px] text-muted">{fmt.format(e.at)}</div>
+                <span className="absolute left-[-19px] top-[0.375rem] h-[0.5625rem] w-[0.5625rem] rounded-full border border-border-strong bg-surface-2" />
+                <div className="font-mono text-[0.6875rem] text-muted">{fmt.format(e.at)}</div>
                 {/* Запись ведёт в свой источник (PR или релиз) — иначе changelog
                     это список фраз, по которым не посмотреть, что изменилось. */}
                 {e.href ? (
@@ -53,12 +53,12 @@ export default async function ChangelogPage() {
                     href={e.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-0.5 block text-[14px] leading-relaxed text-ink hover:text-accent"
+                    className="mt-0.5 block text-[0.875rem] leading-relaxed text-ink hover:text-accent"
                   >
                     {text}
                   </a>
                 ) : (
-                  <div className="mt-0.5 text-[14px] leading-relaxed text-ink">{text}</div>
+                  <div className="mt-0.5 text-[0.875rem] leading-relaxed text-ink">{text}</div>
                 )}
               </div>
             )

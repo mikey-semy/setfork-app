@@ -34,20 +34,20 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
   return (
     <div>
       <div className="mb-4 flex items-center gap-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={say('Filter tags…', 'Фильтр тегов…')} className="max-w-[280px]" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={say('Filter tags…', 'Фильтр тегов…')} className="max-w-[17.5rem]" />
         <button
           type="button"
           onClick={() => run(() => refreshTagUsage())}
           disabled={pending}
-          className="ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-surface px-3 py-1.5 text-[13px] font-medium text-ink hover:border-border-strong disabled:opacity-50"
+          className="ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-surface px-3 py-1.5 text-[0.8125rem] font-medium text-ink hover:border-border-strong disabled:opacity-50"
         >
           {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {say('Refresh usage', 'Пересчитать usage')}
         </button>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-[13px]">
-          <thead className="bg-surface-2 text-[11px] uppercase tracking-wide text-muted">
+        <table className="w-full text-[0.8125rem]">
+          <thead className="bg-surface-2 text-[0.6875rem] uppercase tracking-wide text-muted">
             <tr>
               <th className="px-3 py-2 text-left font-semibold">{say('Tag', 'Тег')}</th>
               <th className="px-3 py-2 text-right font-semibold">usage</th>
@@ -69,7 +69,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                         value={val}
                         onChange={(e) => setVal(e.target.value)}
                         placeholder={edit.mode === 'rename' ? say('New slug', 'Новый slug') : say('Merge into…', 'Слить в…')}
-                        className="max-w-[200px]"
+                        className="max-w-[12.5rem]"
                       />
                       <button
                         type="button"
@@ -129,7 +129,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[12.5px] text-muted">
+      <p className="mt-2 text-[0.78125rem] text-muted">
         {filtered.length} / {tags.length}
       </p>
       {confirmDialog}

@@ -15,7 +15,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
   const [items, counts] = await Promise.all([getReportsList(filter), getReportsCounts()])
 
   return (
-    <div className="mx-auto w-full max-w-[860px] px-6 py-8">
+    <div className="mx-auto w-full max-w-[53.75rem] px-6 py-8">
       <PageHeader title={t('reports', lang)} subtitle={t('reportsAdminIntro', lang)} />
       <ReportsTable items={items} counts={counts} filter={filter} lang={lang} />
     </div>

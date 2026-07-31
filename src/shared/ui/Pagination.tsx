@@ -17,7 +17,7 @@ export function Pagination({
 }) {
   if (totalPages <= 1) return null
   const ru = lang === 'ru'
-  const btn = 'inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[13px]'
+  const btn = 'inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[0.8125rem]'
   const on = 'border-border text-ink hover:border-border-strong'
   const off = 'border-border/60 text-muted opacity-50 pointer-events-none'
 
@@ -32,7 +32,7 @@ export function Pagination({
           <ChevronLeft size={14} /> {ru ? 'Назад' : 'Previous'}
         </span>
       )}
-      <span className="font-mono text-[12.5px] text-muted">
+      <span className="font-mono text-[0.78125rem] text-muted">
         {page} / {totalPages}
       </span>
       {page < totalPages ? (

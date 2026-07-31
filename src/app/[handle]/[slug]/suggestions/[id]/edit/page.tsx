@@ -56,8 +56,8 @@ export default async function EditSuggestionPage({
   const initial = toEditorItems(items as never, lang, {})
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-4 py-6 sm:px-6 sm:py-8">
-      <Link href={path} className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
+    <div className="mx-auto w-full max-w-[45rem] px-4 py-6 sm:px-6 sm:py-8">
+      <Link href={path} className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} />
         {/* Длинный заголовок не должен разносить строку — усечение, а не перенос. */}
         <span className="min-w-0 truncate">

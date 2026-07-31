@@ -37,11 +37,11 @@ export default async function LoginPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-[380px] rounded-xl border border-border bg-surface p-8 text-center shadow-card">
-        <div className="font-logo mb-1 text-[38px] leading-none text-ink">
+      <div className="w-full max-w-[23.75rem] rounded-xl border border-border bg-surface p-8 text-center shadow-card">
+        <div className="font-logo mb-1 text-[2.375rem] leading-none text-ink">
           SF
         </div>
-        <div className="mb-6 text-[14px] text-ink-2">
+        <div className="mb-6 text-[0.875rem] text-ink-2">
           {t("loginRequired", lang)}
         </div>
 
@@ -53,7 +53,7 @@ export default async function LoginPage({
           </Alert>
         )}
         <LoginForm lang={lang} />
-        <div className="mt-4 text-[12.5px] text-ink-2">
+        <div className="mt-4 text-[0.78125rem] text-ink-2">
           {t("noAccount", lang)}{" "}
           <Link
             href="/register"
@@ -63,7 +63,7 @@ export default async function LoginPage({
           </Link>
         </div>
 
-        <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-muted">
+        <div className="my-5 flex items-center gap-3 text-[0.6875rem] uppercase tracking-wider text-muted">
           <span className="h-px flex-1 bg-border" /> {t("orSep", lang)}{" "}
           <span className="h-px flex-1 bg-border" />
         </div>
@@ -75,7 +75,7 @@ export default async function LoginPage({
         {oauth.yandex && (
           <Link
             href="/api/auth/yandex"
-            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[14px] font-semibold text-primary-fg"
+            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[0.875rem] font-semibold text-primary-fg"
           >
             <YandexMark /> {t("signInYandex", lang)}
           </Link>
@@ -84,7 +84,7 @@ export default async function LoginPage({
         {oauth.telegram && (
           <Link
             href="/api/auth/telegram"
-            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[14px] font-semibold text-primary-fg"
+            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[0.875rem] font-semibold text-primary-fg"
           >
             <TelegramMark /> {t("signInTelegram", lang)}
           </Link>
@@ -93,7 +93,7 @@ export default async function LoginPage({
         {oauth.vk && (
           <Link
             href="/api/auth/vk"
-            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[14px] font-semibold text-primary-fg"
+            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[0.875rem] font-semibold text-primary-fg"
           >
             <VkMark /> {t("signInVk", lang)}
           </Link>
@@ -102,7 +102,7 @@ export default async function LoginPage({
         {oauth.github && (
           <Link
             href="/api/auth/github"
-            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[14px] font-semibold text-primary-fg"
+            className="mb-3 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-[0.875rem] font-semibold text-primary-fg"
           >
             <GithubMark /> {t("signInGithub", lang)}
           </Link>
@@ -111,7 +111,7 @@ export default async function LoginPage({
         {demoSite ? (
           <a
             href={demoSite}
-            className={`flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-[14px] font-semibold ${
+            className={`flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-[0.875rem] font-semibold ${
               hasOauth
                 ? "border border-border text-ink"
                 : "bg-primary text-primary-fg"
@@ -125,7 +125,7 @@ export default async function LoginPage({
               <Button
                 type="submit"
                 variant={hasOauth ? "outline" : "primary"}
-                className={`w-full gap-2 px-4 py-3 text-[14px] ${hasOauth ? "bg-transparent" : ""}`}
+                className={`w-full gap-2 px-4 py-3 text-[0.875rem] ${hasOauth ? "bg-transparent" : ""}`}
               >
                 {t("signInDemo", lang)}
               </Button>
@@ -134,7 +134,7 @@ export default async function LoginPage({
         )}
 
         {sp.e && (
-          <div className="mt-4 text-[12.5px] text-danger">
+          <div className="mt-4 text-[0.78125rem] text-danger">
             {sp.e === "oauth_off" || sp.e === "no_github"
               ? lang === "ru"
                 ? "Этот способ входа не настроен — выберите другой."
@@ -149,7 +149,7 @@ export default async function LoginPage({
 
         <Link
           href="/"
-          className="mt-6 inline-block text-[12.5px] text-ink-2 hover:text-ink"
+          className="mt-6 inline-block text-[0.78125rem] text-ink-2 hover:text-ink"
         >
           ← SetFork
         </Link>

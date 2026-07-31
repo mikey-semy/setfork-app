@@ -58,7 +58,7 @@ export function PollBlock({
     <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-2.5 flex items-center gap-2">
         <BarChart3 size={15} className="shrink-0 text-accent" />
-        <span className="text-[14px] font-semibold text-ink">{content.question || (ru ? 'Опрос' : 'Poll')}</span>
+        <span className="text-[0.875rem] font-semibold text-ink">{content.question || (ru ? 'Опрос' : 'Poll')}</span>
       </div>
       <div className="flex flex-col gap-1.5">
         {content.options.map((o) => {
@@ -71,7 +71,7 @@ export function PollBlock({
               type="button"
               disabled={!votable}
               onClick={() => votable && start(() => votePoll(templateId, bid, o.id))}
-              className={`relative overflow-hidden rounded-md border px-3 py-2 text-left text-[13px] transition-colors ${
+              className={`relative overflow-hidden rounded-md border px-3 py-2 text-left text-[0.8125rem] transition-colors ${
                 mine ? 'border-accent' : 'border-border'
               } ${votable ? 'hover:border-border-strong' : 'cursor-default'}`}
             >
@@ -83,13 +83,13 @@ export function PollBlock({
                   {mine && <Check size={13} className="shrink-0 text-accent" />}
                   <span className="truncate">{o.text}</span>
                 </span>
-                {showResults && <span className="shrink-0 font-mono text-[12.5px] text-muted">{pct}% · {c}</span>}
+                {showResults && <span className="shrink-0 font-mono text-[0.78125rem] text-muted">{pct}% · {c}</span>}
               </span>
             </button>
           )
         })}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] text-muted">
         <span>
           {total} {ru ? 'голос.' : 'votes'}
         </span>
@@ -111,7 +111,7 @@ export function PollBlock({
       {histOpen && (
         <div className="mt-2.5 border-t border-border pt-2.5">
           {histPending || hist === null ? (
-            <p className="py-2 text-center text-[12.5px] text-muted">{ru ? 'Загрузка…' : 'Loading…'}</p>
+            <p className="py-2 text-center text-[0.78125rem] text-muted">{ru ? 'Загрузка…' : 'Loading…'}</p>
           ) : (
             <PollHistoryChart events={hist} options={content.options} lang={lang} />
           )}

@@ -61,7 +61,7 @@ export function ChangeNoteField({
           }}
           aria-invalid={invalid}
           placeholder={placeholder}
-          className={`w-full rounded-md border bg-surface-2 py-2.5 pl-3 pr-11 text-[14px] text-ink outline-hidden ${
+          className={`w-full rounded-md border bg-surface-2 py-2.5 pl-3 pr-11 text-[0.875rem] text-ink outline-hidden ${
             invalid ? 'border-danger focus:border-danger' : 'border-border focus:border-border-strong'
           }`}
         />
@@ -78,8 +78,8 @@ export function ChangeNoteField({
           </button>
         </Tooltip>
       </div>
-      {invalid && <p className="mt-1 text-[12.5px] text-danger">{ru ? 'Опишите, что изменили и почему.' : 'Describe what you changed and why.'}</p>}
-      {err && <p className="mt-1 text-[12.5px] text-danger">{err}</p>}
+      {invalid && <p className="mt-1 text-[0.78125rem] text-danger">{ru ? 'Опишите, что изменили и почему.' : 'Describe what you changed and why.'}</p>}
+      {err && <p className="mt-1 text-[0.78125rem] text-danger">{err}</p>}
     </div>
   )
 }

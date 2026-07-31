@@ -87,7 +87,7 @@ export function ActivityGraph({
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink-2">
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem] text-ink-2">
         <span>
           <b className="text-ink">{total}</b> {t('contributions', lang)}{' '}
           {year != null ? (lang === 'ru' ? `за ${year}` : `in ${year}`) : t('inLastYear', lang)}
@@ -107,7 +107,7 @@ export function ActivityGraph({
           {showRolling && (
             <Link
               href={base}
-              className={`rounded-md border px-2 py-0.5 text-[12.5px] ${year == null ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+              className={`rounded-md border px-2 py-0.5 text-[0.78125rem] ${year == null ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
             >
               {lang === 'ru' ? 'Последний год' : 'Last year'}
             </Link>
@@ -116,7 +116,7 @@ export function ActivityGraph({
             <Link
               key={y}
               href={`${base}?year=${y}`}
-              className={`rounded-md border px-2 py-0.5 font-mono text-[12.5px] ${year === y ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+              className={`rounded-md border px-2 py-0.5 font-mono text-[0.78125rem] ${year === y ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
             >
               {y}
             </Link>
@@ -128,13 +128,13 @@ export function ActivityGraph({
           она остаётся видимой слева, скроллятся только месяцы и квадратики. */}
       <div className="flex">
         {/* Дни недели слева (Mon/Wed/Fri), как у GitHub. Высота spacer'а ЖЁСТКО равна
-            высоте строки месяцев (h-[13px]), а каждая подпись центрируется в h-[11px]
+            высоте строки месяцев (h-[0.8125rem]), а каждая подпись центрируется в h-[0.6875rem]
             строке — той же, что и квадратик-ячейка, — иначе метки уезжают на пол-клетки. */}
-        <div className="flex w-[26px] shrink-0 flex-col gap-1 bg-surface">
-          <div className="h-[13px]" />
-          <div className="flex flex-col gap-[3px] text-[11px] text-muted">
+        <div className="flex w-[1.625rem] shrink-0 flex-col gap-1 bg-surface">
+          <div className="h-[0.8125rem]" />
+          <div className="flex flex-col gap-[0.1875rem] text-[0.6875rem] text-muted">
             {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-              <div key={d} className="flex h-[11px] items-center leading-none">
+              <div key={d} className="flex h-[0.6875rem] items-center leading-none">
                 {d === 1 ? (lang === 'ru' ? 'пн' : 'Mon') : d === 3 ? (lang === 'ru' ? 'ср' : 'Wed') : d === 5 ? (lang === 'ru' ? 'пт' : 'Fri') : ''}
               </div>
             ))}
@@ -147,26 +147,26 @@ export function ActivityGraph({
           <div className="relative inline-flex flex-col gap-1" style={{ direction: 'ltr' }}>
             {tip && (
               <div
-                className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-[11px] leading-snug text-ink shadow-card"
+                className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-[0.6875rem] leading-snug text-ink shadow-card"
                 style={{ left: tip.left, top: tip.top }}
               >
                 {tip.text}
               </div>
             )}
-            {/* Строка месяцев ровно h-[13px] (= spacer колонки дней), текст прижат вниз к клеткам. */}
-            <div className="flex h-[13px] items-end gap-[3px] text-[11px] leading-none text-muted">
+            {/* Строка месяцев ровно h-[0.8125rem] (= spacer колонки дней), текст прижат вниз к клеткам. */}
+            <div className="flex h-[0.8125rem] items-end gap-[0.1875rem] text-[0.6875rem] leading-none text-muted">
               {months.map((m, i) => (
-                <div key={i} className="w-[11px] whitespace-nowrap">
+                <div key={i} className="w-[0.6875rem] whitespace-nowrap">
                   {m ?? ''}
                 </div>
               ))}
             </div>
-            <div className="flex gap-[3px]">
+            <div className="flex gap-[0.1875rem]">
               {weeks.map((week, wi) => (
-                <div key={wi} className="flex flex-col gap-[3px]">
+                <div key={wi} className="flex flex-col gap-[0.1875rem]">
                   {week.map((cell, di) =>
                     cell.blank ? (
-                      <div key={di} className="h-[11px] w-[11px]" />
+                      <div key={di} className="h-[0.6875rem] w-[0.6875rem]" />
                     ) : (
                       <div
                         key={di}
@@ -179,7 +179,7 @@ export function ActivityGraph({
                           })
                         }}
                         onMouseLeave={() => setTip(null)}
-                        className={`h-[11px] w-[11px] rounded-[2px] ${LEVEL[level(cell.count)]}`}
+                        className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] ${LEVEL[level(cell.count)]}`}
                       />
                     ),
                   )}
@@ -190,10 +190,10 @@ export function ActivityGraph({
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-end gap-1 text-[11px] text-muted">
+      <div className="mt-2 flex items-center justify-end gap-1 text-[0.6875rem] text-muted">
         <span>{t('less', lang)}</span>
         {LEVEL.map((cls, i) => (
-          <span key={i} className={`h-[11px] w-[11px] rounded-[2px] ${cls}`} />
+          <span key={i} className={`h-[0.6875rem] w-[0.6875rem] rounded-[2px] ${cls}`} />
         ))}
         <span>{t('more', lang)}</span>
       </div>

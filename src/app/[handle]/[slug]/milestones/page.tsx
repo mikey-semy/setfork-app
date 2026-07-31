@@ -27,7 +27,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[900px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[56.25rem] px-4 py-6">
         <PageHeader
           icon={<MilestoneIcon size={18} />}
           title={t('milestonesTitle', lang)}
@@ -46,14 +46,14 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white ${m.closed ? 'bg-accent' : 'bg-ok'}`}>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.6875rem] font-semibold text-white ${m.closed ? 'bg-accent' : 'bg-ok'}`}>
                           {m.closed ? <CircleCheck size={12} /> : <CircleDot size={12} />}
                           {m.closed ? t('closedLabel', lang) : t('openLabel', lang)}
                         </span>
-                        <span className="text-[16px] font-semibold text-ink">{m.title}</span>
+                        <span className="text-[1rem] font-semibold text-ink">{m.title}</span>
                       </div>
                       {m.dueOn && (
-                        <div className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] text-muted">
+                        <div className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-muted">
                           <Calendar size={12} /> {t('milestoneDue', lang)} {fmt.format(new Date(m.dueOn))}
                         </div>
                       )}
@@ -61,7 +61,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                     {canManage && (
                       <div className="flex shrink-0 gap-1.5">
                         <form action={toggleMilestoneClosed.bind(null, owner, slug, m.id)}>
-                          <button type="submit" className="rounded-md border border-border px-2.5 py-1 text-[12.5px] font-semibold text-ink hover:border-border-strong">
+                          <button type="submit" className="rounded-md border border-border px-2.5 py-1 text-[0.78125rem] font-semibold text-ink hover:border-border-strong">
                             {m.closed ? t('reopen', lang) : t('close', lang)}
                           </button>
                         </form>
@@ -78,7 +78,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                     <div className="h-2 overflow-hidden rounded-full bg-surface-2">
                       <div className="h-full rounded-full bg-ok transition-all" style={{ width: `${pct}%` }} />
                     </div>
-                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[12.5px] text-muted">
+                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[0.78125rem] text-muted">
                       <span className="font-semibold text-ink-2">{pct}%</span>
                       <span className="inline-flex items-center gap-1">
                         <CircleDot size={12} /> {m.openCount} {t('openLabel', lang).toLowerCase()}

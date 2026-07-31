@@ -48,9 +48,9 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-1.5">
-        {labels.length === 0 && <span className="text-[12.5px] text-muted">{ru ? 'Кастомных меток пока нет.' : 'No custom labels yet.'}</span>}
+        {labels.length === 0 && <span className="text-[0.78125rem] text-muted">{ru ? 'Кастомных меток пока нет.' : 'No custom labels yet.'}</span>}
         {labels.map((l) => (
-          <span key={l.id} style={chipColors(l.color)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12.5px] font-medium">
+          <span key={l.id} style={chipColors(l.color)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.78125rem] font-medium">
             {l.name}
             <button type="button" onClick={() => remove(l.id)} disabled={pending} aria-label={ru ? 'удалить' : 'delete'} className="opacity-70 hover:opacity-100">
               <X size={12} />
@@ -78,13 +78,13 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
           maxLength={30}
           placeholder={ru ? 'имя метки' : 'label name'}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())}
-          className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink outline-hidden"
+          className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[0.8125rem] text-ink outline-hidden"
         />
         <Button variant="primary" onClick={add} disabled={pending || !name.trim()}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} {ru ? 'Добавить' : 'Add'}
         </Button>
       </div>
-      {err && <span className="text-[12.5px] text-danger">{err}</span>}
+      {err && <span className="text-[0.78125rem] text-danger">{err}</span>}
     </div>
   )
 }

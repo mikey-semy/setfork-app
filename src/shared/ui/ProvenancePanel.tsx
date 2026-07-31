@@ -46,13 +46,13 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-md py-0.5 text-[11px] text-muted hover:text-ink-2"
+        className="inline-flex items-center gap-1 rounded-md py-0.5 text-[0.6875rem] text-muted hover:text-ink-2"
       >
         <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
         <ScrollText size={11} /> {say('How the list was built', 'Как собран список')}
       </button>
       {open && (
-        <div className="mt-1.5 space-y-1.5 border-l-2 border-border pl-3 text-[11px] leading-relaxed">
+        <div className="mt-1.5 space-y-1.5 border-l-2 border-border pl-3 text-[0.6875rem] leading-relaxed">
           <p className="text-muted">
             {say('Transparency of the workshop: who took part and what they leaned on.', 'Прозрачность мастерской: кто участвовал и на что опирался.')}
           </p>
@@ -64,7 +64,7 @@ export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: 
                 {p.experts.map((e, i) => (
                   <span key={e.id}>
                     {i > 0 && ' · '}
-                    {nameOf(e.id)} <span className="text-[11px] opacity-70">({prettyModelName(e.model)})</span>
+                    {nameOf(e.id)} <span className="text-[0.6875rem] opacity-70">({prettyModelName(e.model)})</span>
                   </span>
                 ))}
               </span>

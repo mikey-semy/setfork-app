@@ -26,9 +26,9 @@ const builtinSrc = (who?: string) => `/gnomes/${who && AVATARS.has(who) ? who : 
 /** «Печатает…»: шаг идёт прямо сейчас. Спокойная пульсация в цвет текста — прыгающие точки выглядят дёшево. */
 function TypingDots() {
   return (
-    <span className="ml-2 inline-flex items-center gap-[3px] align-middle">
+    <span className="ml-2 inline-flex items-center gap-[0.1875rem] align-middle">
       {[0, 180, 360].map((delay) => (
-        <span key={delay} className="size-[3px] animate-pulse rounded-full bg-current opacity-50" style={{ animationDelay: `${delay}ms` }} />
+        <span key={delay} className="size-[0.1875rem] animate-pulse rounded-full bg-current opacity-50" style={{ animationDelay: `${delay}ms` }} />
       ))}
     </span>
   )
@@ -42,18 +42,18 @@ export function CouncilBubble({ who, name, badge, badgeTitle, typing, src, child
       <GnomeAvatar src={src || builtinSrc(who)} size={44} className="size-11 shrink-0" />
       <div className="min-w-0">
         {/* Пузырь с хвостиком к аватарке; имя ВНУТРИ первой строкой цветом — как в Telegram. */}
-        <div className="w-fit max-w-full rounded-2xl rounded-bl-md bg-(--surface-2) px-3.5 py-2 text-[13px] leading-[1.5] text-ink-2">
+        <div className="w-fit max-w-full rounded-2xl rounded-bl-md bg-(--surface-2) px-3.5 py-2 text-[0.8125rem] leading-[1.5] text-ink-2">
           {name ? (
-            <div className="mb-0.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-accent">
+            <div className="mb-0.5 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-accent">
               {name}
               {/* Репутация (HQ §6): доля советов, принятых людьми, — почему этому голосу можно верить. */}
               {badge ? (
                 badgeTitle ? (
                   <Tooltip label={badgeTitle}>
-                    <span className="rounded-full bg-(--accent-soft) px-1.5 py-px text-[11px] font-semibold text-accent">{badge}</span>
+                    <span className="rounded-full bg-(--accent-soft) px-1.5 py-px text-[0.6875rem] font-semibold text-accent">{badge}</span>
                   </Tooltip>
                 ) : (
-                  <span className="rounded-full bg-(--accent-soft) px-1.5 py-px text-[11px] font-semibold text-accent">{badge}</span>
+                  <span className="rounded-full bg-(--accent-soft) px-1.5 py-px text-[0.6875rem] font-semibold text-accent">{badge}</span>
                 )
               ) : null}
             </div>

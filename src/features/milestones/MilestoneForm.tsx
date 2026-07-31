@@ -5,7 +5,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { createMilestone } from './actions'
 
-const inputCls = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
+const inputCls = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden focus:border-border-strong'
 
 // Создание вехи: сворачиваемая форма с клиентской валидацией заголовка (без потери ввода).
 export function MilestoneForm({ owner, slug, lang }: { owner: string; slug: string; lang: Lang }) {
@@ -38,7 +38,7 @@ export function MilestoneForm({ owner, slug, lang }: { owner: string; slug: stri
       <input ref={titleRef} name="title" required onChange={() => error && setError(false)} className={`${inputCls} ${error ? 'border-danger' : ''}`} placeholder={t('milestoneTitlePh', lang)} maxLength={120} autoFocus />
       <textarea name="desc" rows={2} className={`${inputCls} resize-y`} placeholder={t('milestoneDescPh', lang)} maxLength={2000} />
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-[12.5px] text-ink-2">{t('milestoneDue', lang)}</label>
+        <label className="text-[0.78125rem] text-ink-2">{t('milestoneDue', lang)}</label>
         <input type="date" name="dueOn" className={`${inputCls} w-auto`} />
         <div className="ml-auto flex gap-2">
           <Button onClick={() => setOpen(false)}>{t('cancel', lang)}</Button>

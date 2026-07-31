@@ -66,7 +66,7 @@ export default async function IssuesPage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[900px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[56.25rem] px-4 py-6">
         {/* Поиск + New */}
         <div className="mb-3 flex items-center gap-2">
           <form action={base} method="get" className="flex-1">
@@ -76,7 +76,7 @@ export default async function IssuesPage({
             <SearchForm initial={q ?? ''} placeholder={t('searchIssuesPh', lang)} />
           </form>
           {session && (
-            <Link href={`${base}/new`} className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+            <Link href={`${base}/new`} className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[0.8125rem] font-semibold text-primary-fg">
               <Plus size={15} /> {t('newIssue', lang)}
             </Link>
           )}
@@ -84,7 +84,7 @@ export default async function IssuesPage({
 
         {/* Табы статуса + фильтры */}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2">
-          <div className="flex items-center gap-4 text-[13px] font-semibold">
+          <div className="flex items-center gap-4 text-[0.8125rem] font-semibold">
             <Link href={hrefWith({ status: undefined })} className={`inline-flex items-center gap-1.5 ${status === 'open' ? 'text-ink' : 'text-ink-2 hover:text-ink'}`}>
               <CircleDot size={15} /> {counts.open} {t('openLabel', lang)}
             </Link>
@@ -93,7 +93,7 @@ export default async function IssuesPage({
             </Link>
           </div>
           <div className="flex items-center gap-1">
-            <Link href={`/${owner}/${slug}/milestones`} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-ink-2 hover:bg-surface hover:text-ink">
+            <Link href={`/${owner}/${slug}/milestones`} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium text-ink-2 hover:bg-surface hover:text-ink">
               <MilestoneIcon size={14} /> {t('milestonesTitle', lang)}
             </Link>
             {labels.length > 0 && (
@@ -127,9 +127,9 @@ export default async function IssuesPage({
         {/* Управление кастомными метками — владельцу/коллаборатору (свёрнуто). */}
         {canManage && (
           <details className="mb-3 rounded-md border border-border bg-surface">
-            <summary className="flex cursor-pointer items-center gap-1.5 px-3 py-2 text-[13px] font-medium text-ink-2 hover:text-ink">
+            <summary className="flex cursor-pointer items-center gap-1.5 px-3 py-2 text-[0.8125rem] font-medium text-ink-2 hover:text-ink">
               <Tag size={14} /> {lang === 'ru' ? 'Кастомные метки' : 'Custom labels'}
-              <span className="font-mono text-[11px] text-muted">{custom.length}</span>
+              <span className="font-mono text-[0.6875rem] text-muted">{custom.length}</span>
             </summary>
             <div className="border-t border-border p-3">
               <LabelsManager templateId={meta.id} initial={custom} lang={lang} />
@@ -150,17 +150,17 @@ export default async function IssuesPage({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link href={`${base}/${it.number}`} className="text-[14px] font-semibold text-ink hover:text-accent">
+                    <Link href={`${base}/${it.number}`} className="text-[0.875rem] font-semibold text-ink hover:text-accent">
                       {it.title}
                     </Link>
                     <LabelChips labels={it.labels} lang={lang} custom={custom} />
                     {it.milestoneTitle && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2">
                         <MilestoneIcon size={11} className="text-accent" /> {it.milestoneTitle}
                       </span>
                     )}
                   </div>
-                  <div className="mt-0.5 text-[12.5px] text-muted">
+                  <div className="mt-0.5 text-[0.78125rem] text-muted">
                     #{it.number} · {t('openedThis', lang)} {it.authorHandle} · {fmt.format(new Date(it.createdAt))}
                   </div>
                 </div>
@@ -176,7 +176,7 @@ export default async function IssuesPage({
                   </div>
                 )}
                 {it.commentCount > 0 && (
-                  <span className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] text-muted">
+                  <span className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-muted">
                     <MessageSquare size={13} /> {it.commentCount}
                   </span>
                 )}

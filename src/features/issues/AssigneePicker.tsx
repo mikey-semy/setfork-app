@@ -58,7 +58,7 @@ export function AssigneePicker({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-[12.5px] font-semibold uppercase tracking-[0.04em] text-muted">{labels?.title ?? L('Исполнители', 'Assignees')}</span>
+        <span className="text-[0.78125rem] font-semibold uppercase tracking-[0.04em] text-muted">{labels?.title ?? L('Исполнители', 'Assignees')}</span>
         {canEdit && (
           <AnchoredMenu
             align="right"
@@ -68,7 +68,7 @@ export function AssigneePicker({
                 type="button"
                 onClick={toggleMenu}
                 aria-label={labels?.add ?? L('назначить', 'assign')}
-                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12.5px] text-muted hover:bg-surface-2 hover:text-ink"
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[0.78125rem] text-muted hover:bg-surface-2 hover:text-ink"
               >
                 <UserPlus size={14} />
               </button>
@@ -92,7 +92,7 @@ export function AssigneePicker({
                 }}
               >
                 {found.length === 0 ? (
-                  <div className="px-2 py-3 text-[12.5px] text-muted">{L('начните вводить handle', 'start typing a handle')}</div>
+                  <div className="px-2 py-3 text-[0.78125rem] text-muted">{L('начните вводить handle', 'start typing a handle')}</div>
                 ) : (
                   found.map((u) => (
                     <PickerRow
@@ -112,11 +112,11 @@ export function AssigneePicker({
       </div>
 
       {assignees.length === 0 ? (
-        <span className="text-[13px] text-muted">{labels?.empty ?? L('никого', 'no one')}</span>
+        <span className="text-[0.8125rem] text-muted">{labels?.empty ?? L('никого', 'no one')}</span>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {assignees.map((a) => (
-            <span key={a.handle} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 py-0.5 pl-0.5 pr-2 text-[12.5px]">
+            <span key={a.handle} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 py-0.5 pl-0.5 pr-2 text-[0.78125rem]">
               <Avatar handle={a.handle} avatarUrl={a.avatarUrl} size={20} />
               <span className="text-ink">{a.handle}</span>
               {canEdit && (

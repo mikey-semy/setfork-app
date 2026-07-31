@@ -275,15 +275,15 @@ export default async function ListPage({
       <div className="print:hidden">
       </div>
 
-      <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[73.75rem] px-4 py-6">
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Основное: содержимое-эталон */}
           <main className="min-w-0 flex-1">
             {/* Заголовок только для печати (в экране он в шапке) */}
             <div className="mb-4 hidden print:block">
-              <h1 className="text-[20px] font-bold text-ink">{tr(tpl.title, lang)}</h1>
-              {tr(tpl.desc, lang) && <p className="mt-1 text-[13px] text-ink-2">{tr(tpl.desc, lang)}</p>}
-              <p className="mt-1 font-mono text-[11px] text-muted">
+              <h1 className="text-[1.25rem] font-bold text-ink">{tr(tpl.title, lang)}</h1>
+              {tr(tpl.desc, lang) && <p className="mt-1 text-[0.8125rem] text-ink-2">{tr(tpl.desc, lang)}</p>}
+              <p className="mt-1 font-mono text-[0.6875rem] text-muted">
                 {owner}/{slug} · v{currentVersion?.version ?? tpl.currentVersion}
               </p>
             </div>
@@ -291,11 +291,11 @@ export default async function ListPage({
             {/* About на мобиле — НАВЕРХУ (как GitHub): описание, теги, статы со словами.
                 На десктопе всё это в About-сайдбаре справа. */}
             <div className="mb-4 lg:hidden print:hidden">
-              {tr(tpl.desc, lang) && <p className="text-[13px] leading-snug text-ink-2">{tr(tpl.desc, lang)}</p>}
+              {tr(tpl.desc, lang) && <p className="text-[0.8125rem] leading-snug text-ink-2">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {tpl.tags.map((tg) => (
-                    <Link key={tg} href={`/search?q=${encodeURIComponent(`tag:${tg}`)}`} className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[12.5px] text-accent">
+                    <Link key={tg} href={`/search?q=${encodeURIComponent(`tag:${tg}`)}`} className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[0.78125rem] text-accent">
                       {tg}
                     </Link>
                   ))}
@@ -321,10 +321,10 @@ export default async function ListPage({
             {tpl.status === 'draft' && isOwner && (
               <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-warn bg-surface px-4 py-3 print:hidden">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[13px] font-semibold text-warn">
+                  <div className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-warn">
                     <FileText size={15} /> {t('draftBadge', lang)}
                   </div>
-                  <p className="mt-0.5 text-[12.5px] text-ink-2">{t('draftHint', lang)}</p>
+                  <p className="mt-0.5 text-[0.78125rem] text-ink-2">{t('draftHint', lang)}</p>
                 </div>
                 <form action={publishList.bind(null, tpl.id)}>
                   <Button type="submit" variant="primary" size="md">
@@ -336,7 +336,7 @@ export default async function ListPage({
             {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
               <DismissibleHint
                 storageKey={`hint:ai-draft:${tpl.id}`}
-                className="mb-4 rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3 text-[13px] text-accent print:hidden"
+                className="mb-4 rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3 text-[0.8125rem] text-accent print:hidden"
               >
                 <Sparkles size={15} className="shrink-0" /> {t('aiVerifyHint', lang)}
               </DismissibleHint>
@@ -345,7 +345,7 @@ export default async function ListPage({
                 едет в ссылке через /api/go). ч. 16 ст. 18.1 требует назвать
                 рекламодателя — добавляем наименование+ИНН из правил. */}
             {showAdMarking && (
-              <div className="mb-2 inline-flex flex-wrap items-center gap-x-1.5 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-ink-2">
+              <div className="mb-2 inline-flex flex-wrap items-center gap-x-1.5 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] font-medium text-ink-2">
                 <span>{mon.adMarkingText}</span>
                 {adAdvertisers.length > 0 && (
                   <span className="font-normal text-muted">
@@ -359,7 +359,7 @@ export default async function ListPage({
             )}
             {/* FTC-дисклеймер: показывается ДО ссылок (требование к affiliate-раскрытию). */}
             {showDisclosure && (
-              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[12.5px] text-ink-2">
+              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[0.78125rem] text-ink-2">
                 <Info size={15} className="shrink-0 text-muted" /> {mon.disclosureText}
               </div>
             )}
@@ -375,7 +375,7 @@ export default async function ListPage({
                     как у GitHub, где «main ▾» и «Code» стоят НАД коробкой последнего
                     коммита, а не внутри неё. Рамка вокруг кнопок читалась как лишний
                     контейнер: она ничего не группировала, кроме самой себя. */}
-                <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-[12.5px] text-ink-2 print:hidden">
+                <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.78125rem] text-ink-2 print:hidden">
                   {/* Пикер веток показываем ВСЕГДА, когда ветка есть (как GitHub «main ▾» —
                       даже одна ветка и на чужом списке; canManage лишь гейтит создание). */}
                   {branches.length > 0 && (
@@ -387,7 +387,7 @@ export default async function ListPage({
                       <Tooltip label={lang === 'ru' ? 'Создать свой список из этого шаблона' : 'Start your own list from this template'}>
                         <button
                           type="submit"
-                          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-[13px] font-semibold text-ink hover:border-border-strong"
+                          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-[0.8125rem] font-semibold text-ink hover:border-border-strong"
                         >
                           <LayoutTemplate size={14} /> <span className="hidden md:inline">{lang === 'ru' ? 'Использовать шаблон' : 'Use this template'}</span>
                         </button>
@@ -445,7 +445,7 @@ export default async function ListPage({
                 плашка, а не ветковая: у коммита нет ahead/behind, и предлагать
                 «открыть pull request» с исторического снимка бессмысленно. */}
             {refCommit && snapshot && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[12.5px] text-ink print:hidden">
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <GitCommitHorizontal size={13} className="shrink-0 text-muted" />
                 <span className="min-w-0">
                   {t('viewingAtCommit', lang)} <b className="font-mono">{refCommit.slice(0, 7)}</b>
@@ -458,7 +458,7 @@ export default async function ListPage({
 
             {/* Просмотр «на ветке» (A1 read-only): черновик без версий. */}
             {refBranch && branchInfo && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-[12.5px] text-ink print:hidden">
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <GitCommitHorizontal size={13} className="shrink-0 text-warn" />
                 <span>
                   {lang === 'ru' ? 'Ветка' : 'Branch'} <b className="font-mono">{refBranch}</b> · +{branchInfo.ahead}/-{branchInfo.behind}{' '}
@@ -484,7 +484,7 @@ export default async function ListPage({
 
             {/* Просмотр прошлой версии (?v=N): снимок только для чтения + возврат. */}
             {histVer && histNum && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-[12.5px] text-ink print:hidden">
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <Tag size={13} className="shrink-0 text-accent" />
                 <span className="min-w-0 flex-1 truncate">
                   {say('Version', 'Версия')} <b>v{histNum}</b>
@@ -514,7 +514,7 @@ export default async function ListPage({
             )}
             {/* Результат поиска внутри списка (?find=). */}
             {find && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-(--accent)/50 bg-(--accent-soft) px-3 py-2 text-[12.5px] text-ink print:hidden">
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-(--accent)/50 bg-(--accent-soft) px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <Info size={13} className="shrink-0 text-accent" />
                 <span>
                   <b>{steps.length}</b> / {allSteps.length} {lang === 'ru' ? 'шагов по запросу' : 'steps match'}{' '}
@@ -536,7 +536,7 @@ export default async function ListPage({
                 const prevSection = si > 0 ? tr(steps[si - 1].section, lang) : ''
                 const showHeader = !!section && section !== prevSection
                 const header = showHeader ? (
-                  <h2 id={sectionAnchor(section)} className={`scroll-mt-24 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-2 ${si > 0 ? 'mt-3' : ''}`}>
+                  <h2 id={sectionAnchor(section)} className={`scroll-mt-24 text-[0.8125rem] font-semibold uppercase tracking-[0.06em] text-ink-2 ${si > 0 ? 'mt-3' : ''}`}>
                     {section}
                   </h2>
                 ) : null
@@ -547,7 +547,7 @@ export default async function ListPage({
                   if (si !== firstLockedIdx) return null
                   const prevLesson = lessons[gatedFromLesson - 1]
                   return (
-                    <div key={s.id} className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-surface-2 px-4 py-5 text-[13px] text-ink-2">
+                    <div key={s.id} className="flex items-center gap-3 rounded-lg border border-dashed border-border bg-surface-2 px-4 py-5 text-[0.8125rem] text-ink-2">
                       <Lock size={18} className="shrink-0 text-muted" />
                       <span>
                         {lang === 'ru' ? 'Дальше откроется, когда сдадите тесты урока' : 'Unlocks once you pass the tests of'}{' '}
@@ -565,7 +565,7 @@ export default async function ListPage({
                     const md = typeof s.content?.md === 'string' ? s.content.md : ''
                     el = md ? (
                       <div className="break-inside-avoid px-1 py-1">
-                        <Markdown className="text-[14px] leading-relaxed text-ink-2">{renderWikiLinks(md)}</Markdown>
+                        <Markdown className="text-[0.875rem] leading-relaxed text-ink-2">{renderWikiLinks(md)}</Markdown>
                       </div>
                     ) : null
                   } else if (s.type === 'image') {
@@ -574,8 +574,8 @@ export default async function ListPage({
                     const caption = typeof s.content?.caption === 'string' ? s.content.caption : ''
                     el = url ? (
                       <figure className="break-inside-avoid">
-                        <SmartImage src={url} alt={caption || t('screenshot', lang)} className="max-h-[520px] w-auto rounded-lg border border-border" />
-                        {caption && <figcaption className="mt-1.5 text-[12.5px] text-muted">{caption}</figcaption>}
+                        <SmartImage src={url} alt={caption || t('screenshot', lang)} className="max-h-[32.5rem] w-auto rounded-lg border border-border" />
+                        {caption && <figcaption className="mt-1.5 text-[0.78125rem] text-muted">{caption}</figcaption>}
                       </figure>
                     ) : null
                   } else if (s.type === 'video') {
@@ -586,7 +586,7 @@ export default async function ListPage({
                     const url = typeof s.content?.url === 'string' ? s.content.url : ''
                     const name = typeof s.content?.name === 'string' ? s.content.name : ''
                     el = url ? (
-                      <SafeLink href={url} className="inline-flex max-w-full items-center gap-2 break-inside-avoid rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-accent hover:border-border-strong">
+                      <SafeLink href={url} className="inline-flex max-w-full items-center gap-2 break-inside-avoid rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem] text-accent hover:border-border-strong">
                         <Paperclip size={15} className="shrink-0 text-muted" />
                         <span className="min-w-0 truncate">{name || url}</span>
                       </SafeLink>
@@ -677,15 +677,15 @@ export default async function ListPage({
                       </span>
                     )}
                     <div className="flex gap-3">
-                      <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? displayNum[si] : '•'}</span>
+                      <span className="mt-0.5 font-mono text-[0.8125rem] text-muted">{tpl.ordered ? displayNum[si] : '•'}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 pr-7">
-                          <span className="text-[14px] font-semibold text-ink">{tr(s.title, lang)}</span>
+                          <span className="text-[0.875rem] font-semibold text-ink">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
                         </div>
                         {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}
                         {tr(s.why, lang) && (
-                          <div className="mt-1.5 flex gap-1.5 text-[12.5px] text-ink-2">
+                          <div className="mt-1.5 flex gap-1.5 text-[0.78125rem] text-ink-2">
                             <Info size={13} className="mt-0.5 shrink-0 text-muted" />
                             <span>
                               <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> {tr(s.why, lang)}
@@ -697,7 +697,7 @@ export default async function ListPage({
                             приглашение: реальный опыт доступен человеку, не модели.
                             Приглашение ведёт в тот же поток правки, что и кнопка сверху. */}
                         {s.needsHuman && (
-                          <div className="mt-1.5 flex gap-1.5 rounded-md border border-dashed border-border bg-surface-2 px-2.5 py-2 text-[12.5px] text-ink-2">
+                          <div className="mt-1.5 flex gap-1.5 rounded-md border border-dashed border-border bg-surface-2 px-2.5 py-2 text-[0.78125rem] text-ink-2">
                             <UserRound size={13} className="mt-0.5 shrink-0 text-muted" />
                             <span className="min-w-0">
                               <span className="font-medium text-ink-2">{t('needsHumanLabel', lang)}:</span>{' '}
@@ -717,11 +717,11 @@ export default async function ListPage({
                           <SmartImage
                             src={stepImages[s.id]}
                             alt={t('screenshot', lang)}
-                            className="mt-3 max-h-[420px] w-auto rounded-lg border border-border"
+                            className="mt-3 max-h-[26.25rem] w-auto rounded-lg border border-border"
                           />
                         )}
                         {s.command && (
-                          <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12.5px] text-ink">
+                          <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[0.78125rem] text-ink">
                             <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
                             {/* Горизонтальный скролл + выделение: можно доскроллить до конца строки
                                 и выделить/скопировать её часть, а не только всю через кнопку. */}
@@ -734,12 +734,12 @@ export default async function ListPage({
                             {/* subtasks — критерии проверки шага (см. промпт генерации:
                                 «verification checks»), а не под-шаги: подписываем и рисуем
                                 чек-квадратами, иначе выглядят оторванным списком. */}
-                            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                            <div className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
                               {t('stepChecksLabel', lang)}
                             </div>
                             <ul className="flex flex-col gap-1.5">
                               {subs.map((label, i) => (
-                                <li key={i} className="flex gap-2 text-[13px] text-ink-2">
+                                <li key={i} className="flex gap-2 text-[0.8125rem] text-ink-2">
                                   <SquareCheckBig size={14} className="mt-0.5 shrink-0 text-muted" />
                                   {label}
                                 </li>
@@ -751,7 +751,7 @@ export default async function ListPage({
                           <div className="mt-3 flex flex-wrap gap-2">
                             {refs.map((r) => {
                               const cls =
-                                'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] text-accent'
+                                'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-accent'
                               return r.url ? (
                                 <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className={cls}>
                                   <ExternalLink size={11} /> {r.label}
@@ -781,7 +781,7 @@ export default async function ListPage({
                 <ul className="flex flex-col gap-1.5">
                   {backlinks.map((b) => (
                     <li key={`${b.handle}/${b.slug}`}>
-                      <Link href={`/${b.handle}/${b.slug}`} className="block truncate text-[13px] text-accent hover:underline">
+                      <Link href={`/${b.handle}/${b.slug}`} className="block truncate text-[0.8125rem] text-accent hover:underline">
                         {tr(b.title as LocaleText, lang) || `${b.handle}/${b.slug}`}
                       </Link>
                     </li>
@@ -803,14 +803,14 @@ export default async function ListPage({
               <SectionLabel className="hidden lg:flex">
                 {t('about', lang)}
               </SectionLabel>
-              {tr(tpl.desc, lang) && <p className="hidden text-[13px] leading-relaxed text-ink-2 lg:block">{tr(tpl.desc, lang)}</p>}
+              {tr(tpl.desc, lang) && <p className="hidden text-[0.8125rem] leading-relaxed text-ink-2 lg:block">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
                 <div className="hidden flex-wrap gap-1.5 lg:flex">
                   {tpl.tags.map((tag) => (
                     <Link
                       key={tag}
                       href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-                      className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[12.5px] font-medium text-accent hover:underline"
+                      className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[0.78125rem] font-medium text-accent hover:underline"
                     >
                       {tag}
                     </Link>
@@ -820,7 +820,7 @@ export default async function ListPage({
               {/* Тот же состав показателей, что в сводке на мобиле — колонкой. На узком
                   экране сайдбар уезжает ПОД содержимое, и показатели вышли бы дважды:
                   там показывает сводка наверху, здесь — только с lg. */}
-              <div className="hidden flex-col gap-2 border-t border-border pt-4 text-[13px] text-ink-2 lg:flex">
+              <div className="hidden flex-col gap-2 border-t border-border pt-4 text-[0.8125rem] text-ink-2 lg:flex">
                 <div>
                 <ListStats
                   base={base}
@@ -852,7 +852,7 @@ export default async function ListPage({
                       Сеткой аватаров было не разобрать, кто есть кто. */}
                   <SectionLabel className="mb-2 flex items-center gap-1.5">
                     {t('contributors', lang)}
-                    <span className="rounded-full bg-surface-2 px-1.5 text-[11px] font-semibold text-ink-2">{contributors.length}</span>
+                    <span className="rounded-full bg-surface-2 px-1.5 text-[0.6875rem] font-semibold text-ink-2">{contributors.length}</span>
                   </SectionLabel>
                   <div className="flex flex-col gap-1">
                     {contributors.slice(0, 8).map((c) => (
@@ -867,7 +867,7 @@ export default async function ListPage({
                     ))}
                     {/* Их может быть много: остальные — в зачёте вкладов, а не простыней в сайдбаре. */}
                     {contributors.length > 8 && (
-                      <Link href={`${base}/leaderboard`} className="mt-0.5 text-[12.5px] font-semibold text-accent hover:underline">
+                      <Link href={`${base}/leaderboard`} className="mt-0.5 text-[0.78125rem] font-semibold text-accent hover:underline">
                         {`+${contributors.length - 8}`}
                       </Link>
                     )}
@@ -878,7 +878,7 @@ export default async function ListPage({
               {/* Жалоба — последней строкой карточки: на узком экране от неё остаются
                   только контрибьюторы, и начинать блок кнопкой «пожаловаться» странно. */}
               {!isOwner && (
-                <div className="border-t border-border pt-4 text-[13px] text-ink-2">
+                <div className="border-t border-border pt-4 text-[0.8125rem] text-ink-2">
                   <ReportButton templateId={tpl.id} lang={lang} />
                 </div>
               )}

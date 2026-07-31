@@ -54,7 +54,7 @@ export function OverlayPanel({
       >
         {title !== undefined && (
           <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
-            <span className="text-[13px] font-semibold text-ink">{title}</span>
+            <span className="text-[0.8125rem] font-semibold text-ink">{title}</span>
             <button type="button" onClick={onClose} className="rounded-md p-1 text-muted hover:text-ink" aria-label="Close">
               <X size={14} />
             </button>

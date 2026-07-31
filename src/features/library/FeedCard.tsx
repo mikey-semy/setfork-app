@@ -36,7 +36,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             <Link href={base} className="mt-0.5 shrink-0 text-muted hover:text-accent" aria-label={tr(item.title, lang)}>
               <ListChecks size={16} />
             </Link>
-            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[16px] leading-tight">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[1rem] leading-tight">
               <Link href={`/${item.ownerHandle}`} className="font-medium text-ink-2 hover:text-accent">
                 {item.ownerHandle}
               </Link>
@@ -54,11 +54,11 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
                   ровно то, чего строка заголовка должна была избежать. Статусы
                   (черновик/приватный) остаются здесь: это не счётчик, а состояние. */}
               {item.status === 'draft' && (
-                <span className="rounded-md border border-warn px-1.5 py-0.5 text-[11px] font-medium text-warn">{t('draftBadge', lang)}</span>
+                <span className="rounded-md border border-warn px-1.5 py-0.5 text-[0.6875rem] font-medium text-warn">{t('draftBadge', lang)}</span>
               )}
               {item.visibility === 'private' && (
                 <Tooltip label="private">
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-ink-2">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[0.6875rem] text-ink-2">
                     <Lock size={10} />
                   </span>
                 </Tooltip>
@@ -69,7 +69,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
             <Tooltip label={t('star', lang)}>
               <button
                 type="submit"
-                className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[12.5px] font-medium transition-colors hover:border-border-strong ${
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[0.78125rem] font-medium transition-colors hover:border-border-strong ${
                   starred ? 'border-warn text-warn' : 'border-border text-ink-2'
                 }`}
               >
@@ -80,7 +80,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
         </div>
 
         {/* Описание. */}
-        {desc && <p className="mt-2 line-clamp-2 text-[13px] leading-snug text-ink-2">{desc}</p>}
+        {desc && <p className="mt-2 line-clamp-2 text-[0.8125rem] leading-snug text-ink-2">{desc}</p>}
 
         {/* Теги. */}
         {item.tags.length > 0 && (
@@ -92,9 +92,9 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
         )}
 
         {/* 4. Строка-инфо со счётчиками (аналог вкладок GitHub «со всей информацией»). */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-muted">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.78125rem] text-muted">
           {/* Версия первой: она отвечает на «что это за список», а не «как его оценили». */}
-          <span className="font-mono text-[11px]">v{item.version}</span>
+          <span className="font-mono text-[0.6875rem]">v{item.version}</span>
           {/* Звёзд здесь БОЛЬШЕ НЕТ: их счётчик уже стоит в кнопке справа вверху, и одно и то
               же число дважды на одной карточке — это не акцент, а шум. */}
           <span className="inline-flex items-center gap-1">
@@ -106,7 +106,7 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
         </div>
 
         {/* 5. Футер — дата последнего обновления. */}
-        <div className="mt-3 border-t border-border pt-2 text-[11px] text-muted">
+        <div className="mt-3 border-t border-border pt-2 text-[0.6875rem] text-muted">
           {t('updated', lang)} {updated}
         </div>
       </div>

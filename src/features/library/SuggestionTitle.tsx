@@ -54,13 +54,13 @@ export function SuggestionTitle({
           onChange={(e) => setDraft(e.target.value)}
           placeholder={labels.placeholder}
           maxLength={300}
-          className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[16px] text-ink outline-hidden focus-visible:border-border-strong"
+          className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[1rem] text-ink outline-hidden focus-visible:border-border-strong"
         />
         {/* Действия — вправо, одной высотой (стандарт кнопок). */}
-        <Button variant="ghost" className="h-[38px]" onClick={() => setEditing(false)} disabled={pending}>
+        <Button variant="ghost" className="h-[2.375rem]" onClick={() => setEditing(false)} disabled={pending}>
           {labels.cancel}
         </Button>
-        <Button variant="primary" className="h-[38px]" onClick={save} disabled={pending || !draft.trim()}>
+        <Button variant="primary" className="h-[2.375rem]" onClick={save} disabled={pending || !draft.trim()}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : labels.save}
         </Button>
       </div>
@@ -69,9 +69,9 @@ export function SuggestionTitle({
 
   return (
     <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
-      <h1 className="min-w-0 text-[20px] font-bold leading-tight text-ink [overflow-wrap:anywhere]">{note}</h1>
+      <h1 className="min-w-0 text-[1.25rem] font-bold leading-tight text-ink [overflow-wrap:anywhere]">{note}</h1>
       {number != null && (
-        <Link href={path} className="text-[20px] font-normal text-muted hover:text-accent">
+        <Link href={path} className="text-[1.25rem] font-normal text-muted hover:text-accent">
           #{number}
         </Link>
       )}

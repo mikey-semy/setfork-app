@@ -20,7 +20,7 @@ export default async function AdminCollectionsPage() {
   const list = await getAdminCollections()
 
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-6 py-8">
+    <div className="mx-auto flex w-full max-w-[45rem] flex-col gap-6 px-6 py-8">
       <PageHeader
         title={ru ? 'Подборки' : 'Collections'}
         subtitle={
@@ -36,7 +36,7 @@ export default async function AdminCollectionsPage() {
           required
           maxLength={120}
           placeholder={ru ? 'Название новой подборки' : 'New collection title'}
-          className="flex-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden"
+          className="flex-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden"
         />
         <Button type="submit" variant="primary" size="md">
           <Plus size={14} /> {ru ? 'Создать' : 'Create'}
@@ -48,9 +48,9 @@ export default async function AdminCollectionsPage() {
         {list.map((c) => (
           <Link key={c.id} href={`/admin/collections/${c.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">
             <FolderGit2 size={16} className="shrink-0 text-accent" />
-            <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-ink">{tr(c.title, lang)}</span>
-            <span className="shrink-0 font-mono text-[11px] text-muted">{c.itemCount} · {c.slug}</span>
-            <span className={`shrink-0 rounded-md px-1.5 text-[11px] ${c.published ? 'text-ok' : 'text-muted'}`}>
+            <span className="min-w-0 flex-1 truncate text-[0.875rem] font-medium text-ink">{tr(c.title, lang)}</span>
+            <span className="shrink-0 font-mono text-[0.6875rem] text-muted">{c.itemCount} · {c.slug}</span>
+            <span className={`shrink-0 rounded-md px-1.5 text-[0.6875rem] ${c.published ? 'text-ok' : 'text-muted'}`}>
               {c.published ? (ru ? 'опубл.' : 'live') : (ru ? 'черновик' : 'draft')}
             </span>
           </Link>

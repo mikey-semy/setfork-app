@@ -23,7 +23,7 @@ export default async function NewIssuePage({ params }: { params: Promise<{ handl
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[51.25rem] px-4 py-6">
         <PageHeader icon={<CircleDot size={18} className="text-ok" />} title={t('newIssue', lang)} />
         <NewIssueForm owner={owner} slug={slug} lang={lang} custom={custom} />
       </div>

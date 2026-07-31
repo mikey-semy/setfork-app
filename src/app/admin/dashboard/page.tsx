@@ -53,7 +53,7 @@ export default async function AdminDashboardPage() {
         title={tr({ en: 'Dashboard', ru: 'Дашборд' }, lang)}
         subtitle={tr({ en: 'Live monitoring — traffic, generations, spend, queue.', ru: 'Живой мониторинг — трафик, генерации, расход, очередь.' }, lang)}
         actions={
-          <Link href="/admin/usage" className="text-[13px] text-accent hover:underline">
+          <Link href="/admin/usage" className="text-[0.8125rem] text-accent hover:underline">
             {tr({ en: 'Detailed usage →', ru: 'Подробный расход →' }, lang)}
           </Link>
         }
@@ -64,15 +64,15 @@ export default async function AdminDashboardPage() {
 
       {/* Тренды за 14 дней */}
       <div className="flex flex-col gap-3">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-2">
+        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">
           {tr({ en: 'Trends · 14 days', ru: 'Тренды · 14 дней' }, lang)}
         </h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {charts.map((c) => (
             <div key={c.title} className="rounded-lg border border-border bg-surface p-4">
               <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-[12.5px] font-medium text-ink-2">{c.title}</span>
-                <span className="font-mono text-[13px] font-semibold text-ink">{c.total}</span>
+                <span className="text-[0.78125rem] font-medium text-ink-2">{c.title}</span>
+                <span className="font-mono text-[0.8125rem] font-semibold text-ink">{c.total}</span>
               </div>
               <TrendChart points={c.points} color={c.color} labels={xLabels} height={90} />
             </div>
@@ -82,7 +82,7 @@ export default async function AdminDashboardPage() {
 
       {/* Инбокс — очереди, требующие действия */}
       <div className="flex flex-col gap-3">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Inbox', ru: 'Требует внимания' }, lang)}</h2>
+        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Inbox', ru: 'Требует внимания' }, lang)}</h2>
         <div className="grid grid-cols-3 gap-3">
           {inbox.map((i) => (
             <StatTile key={i.href} href={i.href} label={i.label} value={num(i.value)} tone={i.value > 0 ? 'accent' : 'ink'} />

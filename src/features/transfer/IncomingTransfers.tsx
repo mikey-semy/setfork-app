@@ -26,7 +26,7 @@ export function IncomingTransfers({ items, lang }: { items: IncomingTransfer[]; 
             type="button"
             onClick={() => start(() => declineTransfer(it.id))}
             disabled={pending}
-            className="rounded-md border border-border px-3 py-2 text-[13px] font-medium text-ink-2 hover:text-ink disabled:opacity-60"
+            className="rounded-md border border-border px-3 py-2 text-[0.8125rem] font-medium text-ink-2 hover:text-ink disabled:opacity-60"
           >
             {t('transferDecline', lang)}
           </button>

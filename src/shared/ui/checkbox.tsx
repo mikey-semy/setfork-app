@@ -33,10 +33,10 @@ export function CheckboxRow({
     <label className={cn('flex cursor-pointer items-start gap-2.5 rounded-md px-1.5 py-1.5 hover:bg-surface-2', className)}>
       <Checkbox checked={checked} onChange={onChange} className="mt-0.5" />
       <span className="min-w-0">
-        <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+        <span className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-ink">
           {icon} {title}
         </span>
-        {sub && <span className="block text-[11px] leading-snug text-muted">{sub}</span>}
+        {sub && <span className="block text-[0.6875rem] leading-snug text-muted">{sub}</span>}
       </span>
     </label>
   )

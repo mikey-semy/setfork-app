@@ -30,7 +30,7 @@ export function LivingSection({ templateId, living, lang }: { templateId: string
           <div className="flex items-center gap-2 font-semibold text-ink">
             <Radio size={15} className="text-muted" /> {tr({ en: 'Living list', ru: 'Живой список' }, lang)}
           </div>
-          <p className="mt-1 text-[12.5px] leading-snug text-ink-2">
+          <p className="mt-1 text-[0.78125rem] leading-snug text-ink-2">
             {tr(
               {
                 en: 'A list on a topic that keeps going: new entries land on top, old ones move into the version history. It is judged by freshness rather than completeness, and never “polished till done”.',

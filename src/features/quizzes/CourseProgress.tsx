@@ -31,10 +31,10 @@ export function CourseProgress({
     <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
       <GraduationCap size={18} className={done ? 'shrink-0 text-ok' : 'shrink-0 text-accent'} />
       <div className="min-w-0 flex-1">
-        <div className="mb-1.5 flex items-center justify-between gap-2 text-[12.5px]">
+        <div className="mb-1.5 flex items-center justify-between gap-2 text-[0.78125rem]">
           <span className="font-medium text-ink">
             {done ? (ru ? 'Курс пройден' : 'Course complete') : ru ? 'Прогресс по тестам' : 'Quiz progress'}
-            {completed && <span className="ml-1.5 font-mono text-[11px] text-muted">v{completed.version}</span>}
+            {completed && <span className="ml-1.5 font-mono text-[0.6875rem] text-muted">v{completed.version}</span>}
           </span>
           {total > 0 && (
             <span className="font-mono text-muted">
@@ -46,12 +46,12 @@ export function CourseProgress({
           <div className={`h-full rounded-full ${done ? 'bg-ok' : 'bg-accent'}`} style={{ width: `${completed ? 100 : pct}%` }} aria-hidden />
         </div>
         {completed && total > 0 && passed < total && (
-          <p className="mt-1 text-[11px] text-muted">{t('courseTestsChanged', lang)}</p>
+          <p className="mt-1 text-[0.6875rem] text-muted">{t('courseTestsChanged', lang)}</p>
         )}
       </div>
       {leaderboardHref && (
         <Tooltip label={ru ? 'Лидерборд' : 'Leaderboard'}>
-          <Link href={leaderboardHref} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:border-border-strong hover:text-ink">
+          <Link href={leaderboardHref} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[0.78125rem] text-ink-2 hover:border-border-strong hover:text-ink">
             <Trophy size={14} />
           </Link>
         </Tooltip>
@@ -59,7 +59,7 @@ export function CourseProgress({
       {done && certificateHref && (
         <Link
           href={certificateHref}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ok/40 bg-ok/10 px-2.5 py-1.5 text-[12.5px] font-medium text-ok hover:bg-ok/15"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ok/40 bg-ok/10 px-2.5 py-1.5 text-[0.78125rem] font-medium text-ok hover:bg-ok/15"
         >
           <Award size={14} /> {ru ? 'Сертификат' : 'Certificate'}
         </Link>

@@ -48,9 +48,9 @@ export function SuggestionTimeline({ events, lang, labels }: { events: TimelineE
         const meta = META[e.kind]
         const Icon = meta.icon
         return (
-          <li key={i} className="relative flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-ink-2">
+          <li key={i} className="relative flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.78125rem] text-ink-2">
             {/* Узел на линии — как точки в истории коммитов. */}
-            <span aria-hidden className={`absolute -left-[21px] grid size-4 place-items-center rounded-full bg-surface ${meta.cls}`}>
+            <span aria-hidden className={`absolute -left-[1.3125rem] grid size-4 place-items-center rounded-full bg-surface ${meta.cls}`}>
               <Icon size={12} />
             </span>
             {e.actor && (

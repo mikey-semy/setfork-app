@@ -193,9 +193,9 @@ export function BubbleTextEditor({
         onScroll={refresh}
         onKeyDown={onKeyDown}
         onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null); setMoreOpen(false) } }, 150)}
-        className={`w-full text-[13px] leading-relaxed text-ink outline-hidden ${
+        className={`w-full text-[0.8125rem] leading-relaxed text-ink outline-hidden ${
           bare ? 'resize-none overflow-hidden bg-transparent' : 'rounded-md border border-border bg-surface-2 px-3 py-2 focus:border-border-strong'
-        } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[72px] resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? 'font-mono text-[12.5px]' : ''} ${textareaClassName ?? ''}`}
+        } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[4.5rem] resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? 'font-mono text-[0.78125rem]' : ''} ${textareaClassName ?? ''}`}
       />
       {trailing && <div className="absolute right-1.5 top-1.5">{trailing}</div>}
 
@@ -250,7 +250,7 @@ export function BubbleTextEditor({
             </Popover>
             {moreOpen && (
               // Сетка с переносом: меню тоже не должно быть шире экрана.
-              <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-[188px] flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
+              <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-[11.75rem] flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
                 {groups.slice(1).flat().map((tool, i) => (
                   <Tooltip key={i} label={tool.t}>
                     <button type="button" aria-label={tool.t} onClick={() => { tool.run(); setMoreOpen(false) }} className={tbtn}>
@@ -301,7 +301,7 @@ export function BubbleTextEditor({
               type="button"
               onMouseDown={(e) => { e.preventDefault(); pickMention(u) }}
               onMouseEnter={() => setMIdx(i)}
-              className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[13px] ${i === mIdx ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
+              className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[0.8125rem] ${i === mIdx ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="h-5 w-5 rounded-full" /> : <span className="h-5 w-5 rounded-full bg-surface-2" />}

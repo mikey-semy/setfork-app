@@ -40,14 +40,14 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
         readOnly
         value={value}
         onFocus={(e) => e.currentTarget.select()}
-        className={`min-w-0 flex-1 bg-transparent text-[12.5px] text-ink outline-hidden ${mono ? 'font-mono' : ''}`}
+        className={`min-w-0 flex-1 bg-transparent text-[0.78125rem] text-ink outline-hidden ${mono ? 'font-mono' : ''}`}
       />
       <button type="button" onClick={() => copy(key, value)} aria-label={t('copyUrl', lang)} className="shrink-0 text-muted hover:text-ink">
         {copied === key ? <Check size={14} className="text-ok" /> : <Copy size={14} />}
       </button>
     </div>
   )
-  const row = 'flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[12.5px] text-ink-2 hover:bg-surface-2 hover:text-ink'
+  const row = 'flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[0.78125rem] text-ink-2 hover:bg-surface-2 hover:text-ink'
 
   const ru = lang === 'ru'
   const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
@@ -66,12 +66,12 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
             цветных значка в ряд спорили бы за внимание. */}
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-(--ok-solid) px-3.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-(--ok-solid) px-3.5 text-[0.8125rem] font-semibold text-white transition-opacity hover:opacity-90"
         >
           {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[330px] p-0">
+      <DropdownMenuContent align="end" className="w-[20.625rem] p-0">
         {/* Сегментированные вкладки — держат меню компактным. */}
         <div className="flex border-b border-border p-1">
           {TABS.map((tt) => (
@@ -79,7 +79,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
               key={tt.key}
               type="button"
               onClick={() => setTab(tt.key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12.5px] font-semibold transition-colors ${
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[0.78125rem] font-semibold transition-colors ${
                 tab === tt.key ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'
               }`}
             >
@@ -93,7 +93,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
             <>
               {heading(<Terminal size={12} />, t('cloneGitHeading', lang))}
               {copyField('clone', cloneUrl)}
-              <p className="mt-1 text-[11px] text-ink-2">{t('cloneHttpsHint', lang)}</p>
+              <p className="mt-1 text-[0.6875rem] text-ink-2">{t('cloneHttpsHint', lang)}</p>
               <a href={`${base}/repo.bundle`} className={`${row} mt-1.5`}>
                 <GitBranch size={14} className="text-muted" /> {t('downloadBundle', lang)}
               </a>
@@ -106,7 +106,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
               {heading(<Terminal size={12} />, t('runHeading', lang))}
               {copyField('run', `curl -fsSL ${origin}${base}/raw | bash`)}
               <div className="mt-1.5">{copyField('run-ps', `irm "${origin}${base}/raw?lang=ps1" | iex`)}</div>
-              <p className="mt-1 text-[11px] text-ink-2">{t('runHint', lang)}</p>
+              <p className="mt-1 text-[0.6875rem] text-ink-2">{t('runHint', lang)}</p>
               <a href={`${base}/raw`} className={`${row} mt-1`}>
                 <FileCode size={14} className="text-muted" /> {t('viewRaw', lang)}
               </a>
@@ -130,8 +130,8 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
             <>
               {heading(<Sparkles size={12} />, t('mcpHeading', lang))}
               {copyField('mcp', mcpUrl)}
-              <p className="mt-1 text-[11px] text-ink-2">{t('mcpHint', lang)}</p>
-              <Link href="/settings#mcp" className="mt-1 inline-block text-[12.5px] text-accent hover:underline">
+              <p className="mt-1 text-[0.6875rem] text-ink-2">{t('mcpHint', lang)}</p>
+              <Link href="/settings#mcp" className="mt-1 inline-block text-[0.78125rem] text-accent hover:underline">
                 {t('getTokenLink', lang)}
               </Link>
 
@@ -143,13 +143,13 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
                     value={embedCode}
                     rows={3}
                     onFocus={(e) => e.currentTarget.select()}
-                    className="min-w-0 flex-1 resize-none bg-transparent font-mono text-[11px] leading-snug text-ink outline-hidden"
+                    className="min-w-0 flex-1 resize-none bg-transparent font-mono text-[0.6875rem] leading-snug text-ink outline-hidden"
                   />
                   <button type="button" onClick={() => copy('embed', embedCode)} aria-label={t('copyUrl', lang)} className="shrink-0 text-muted hover:text-ink">
                     {copied === 'embed' ? <Check size={14} className="text-ok" /> : <Copy size={14} />}
                   </button>
                 </div>
-                <p className="mt-1 text-[11px] text-ink-2">{t('embedHint', lang)}</p>
+                <p className="mt-1 text-[0.6875rem] text-ink-2">{t('embedHint', lang)}</p>
               </div>
             </>
           )}

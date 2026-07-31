@@ -111,7 +111,7 @@ export function StarFolderMenu({
             />
           ))}
           {shown.length === 0 && (
-            <div className="px-2 py-3 text-[12.5px] text-muted">
+            <div className="px-2 py-3 text-[0.78125rem] text-muted">
               {items.length === 0 ? t('noFolders', lang as Lang) : t('nothingFound', lang as Lang)}
             </div>
           )}

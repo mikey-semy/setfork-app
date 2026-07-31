@@ -33,7 +33,7 @@ export function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: Cmp
   return (
     <>
       <DiffStat counts={{ added, removed }} squares className="mb-3" />
-      <div className="overflow-x-auto rounded-lg border border-border font-mono text-[12.5px] leading-[1.55]">
+      <div className="overflow-x-auto rounded-lg border border-border font-mono text-[0.78125rem] leading-[1.55]">
         {rows.map((r) => {
           const clr = r.type === 'add' ? 'var(--ok)' : r.type === 'del' ? 'var(--danger)' : ''
           const rowStyle = clr ? { backgroundColor: `color-mix(in srgb, ${clr} 13%, transparent)` } : undefined
@@ -41,10 +41,10 @@ export function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: Cmp
           const signColor = r.type === 'add' ? 'text-ok' : r.type === 'del' ? 'text-danger' : 'text-transparent'
           return (
             <div key={`${r.oldNo ?? ''}:${r.newNo ?? ''}`} style={rowStyle} className="flex">
-              <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] text-muted">
+              <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[0.6875rem] text-muted">
                 {r.oldNo ?? ''}
               </span>
-              <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[11px] text-muted">
+              <span className="w-10 shrink-0 select-none border-r border-border px-1.5 text-right text-[0.6875rem] text-muted">
                 {r.newNo ?? ''}
               </span>
               <span className={`w-4 shrink-0 select-none text-center ${signColor}`}>{sign}</span>
@@ -134,11 +134,11 @@ export function ListDiff({
                 </span>
               )}
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`text-[14px] font-semibold text-ink ${e.status === 'removed' ? 'line-through opacity-70' : ''}`}>{blockLabel(e)}</span>
+                <span className={`text-[0.875rem] font-semibold text-ink ${e.status === 'removed' ? 'line-through opacity-70' : ''}`}>{blockLabel(e)}</span>
                 {!block && <StepLevelBadge level={e.level} lang={lang} />}
                 {st.key && st.color && (
                   <span
-                    className="rounded-md border px-1.5 py-0.5 text-[11px] font-medium"
+                    className="rounded-md border px-1.5 py-0.5 text-[0.6875rem] font-medium"
                     style={{ color: st.color, borderColor: mix(st.color, 55) }}
                   >
                     {t(st.key, lang)}
@@ -146,9 +146,9 @@ export function ListDiff({
                 )}
               </div>
               {e.status !== 'removed' && body && <Markdown className="mt-1">{body}</Markdown>}
-              {e.status === 'removed' && body && <div className="mt-1 whitespace-pre-wrap text-[13px] text-ink-2 line-through opacity-70">{body}</div>}
+              {e.status === 'removed' && body && <div className="mt-1 whitespace-pre-wrap text-[0.8125rem] text-ink-2 line-through opacity-70">{body}</div>}
               {e.status === 'changed' && e.before && (
-                <div className="mt-2 space-y-1 border-l-2 border-warn/40 pl-2.5 text-[12.5px] text-ink-2">
+                <div className="mt-2 space-y-1 border-l-2 border-warn/40 pl-2.5 text-[0.78125rem] text-ink-2">
                   {e.changes.includes('level') && (
                     <div>
                       level: <span className="line-through opacity-70">{e.before.level}</span> → <b>{e.level}</b>
@@ -174,12 +174,12 @@ export function ListDiff({
                 </div>
               )}
               {e.status !== 'removed' && e.command && !e.changes.includes('command') && (
-                <code className="mt-2 block rounded-md bg-surface-2 px-2 py-1 font-mono text-[12.5px] text-ink">{e.command}</code>
+                <code className="mt-2 block rounded-md bg-surface-2 px-2 py-1 font-mono text-[0.78125rem] text-ink">{e.command}</code>
               )}
               {e.status !== 'removed' && e.refs && e.refs.length > 0 && (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {e.refs.map((r, k) => {
-                    const cls = 'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px]'
+                    const cls = 'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem]'
                     // Ссылка без URL — не делаем «#»-якорь на верх страницы, показываем как текст.
                     return r.url ? (
                       <a key={k} href={safeHref(r.url) || undefined} target="_blank" rel="noreferrer" className={`${cls} text-accent hover:underline`}>

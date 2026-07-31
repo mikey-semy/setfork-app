@@ -79,7 +79,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               <Link
                 key={w.days}
                 href={`/admin/usage?w=${w.days}`}
-                className={`rounded px-2.5 py-1 text-[12.5px] font-medium ${
+                className={`rounded px-2.5 py-1 text-[0.78125rem] font-medium ${
                   w.days === days ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
                 }`}
               >
@@ -103,32 +103,32 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3">
             {credits && (
               <div>
-                <div className="text-[11px] uppercase tracking-wide text-muted">
+                <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
                   {tr({ en: 'OpenRouter balance', ru: 'Остаток OpenRouter' }, lang)}
                 </div>
-                <div className="mt-1 text-[20px] font-bold text-ink">{money(credits.remaining)}</div>
+                <div className="mt-1 text-[1.25rem] font-bold text-ink">{money(credits.remaining)}</div>
               </div>
             )}
             {avgPerGen != null && (
               <div>
-                <div className="text-[11px] uppercase tracking-wide text-muted">
+                <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
                   {tr({ en: 'Avg / generation', ru: 'Средняя за генерацию' }, lang)}
                 </div>
-                <div className="mt-1 text-[20px] font-bold text-ink">{money(avgPerGen)}</div>
+                <div className="mt-1 text-[1.25rem] font-bold text-ink">{money(avgPerGen)}</div>
               </div>
             )}
             {runwayGens != null && (
               <div>
-                <div className="text-[11px] uppercase tracking-wide text-muted">
+                <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
                   {tr({ en: 'Balance affords', ru: 'Остатка хватит на' }, lang)}
                 </div>
-                <div className="mt-1 text-[20px] font-bold text-(--accent)">
+                <div className="mt-1 text-[1.25rem] font-bold text-(--accent)">
                   ≈ {num(runwayGens)} {tr({ en: 'generations', ru: 'генераций' }, lang)}
                 </div>
               </div>
             )}
           </div>
-          {avgPerGen != null && <p className="mt-3 text-[12.5px] text-muted">{footnote}</p>}
+          {avgPerGen != null && <p className="mt-3 text-[0.78125rem] text-muted">{footnote}</p>}
         </div>
       )}
 
@@ -136,8 +136,8 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
       {health.length > 0 && (
         <div className="rounded-lg border border-border bg-surface">
           <div className="border-b border-border px-4 py-2.5">
-            <span className="text-[13px] font-semibold text-ink">{tr({ en: 'Model reliability', ru: 'Надёжность моделей' }, lang)}</span>
-            <span className="ml-2 text-[12.5px] text-muted">
+            <span className="text-[0.8125rem] font-semibold text-ink">{tr({ en: 'Model reliability', ru: 'Надёжность моделей' }, lang)}</span>
+            <span className="ml-2 text-[0.78125rem] text-muted">
               {tr(
                 {
                   en: 'quarantined models are auto-rotated out of the council pool (24h sliding window)',
@@ -166,17 +166,17 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               .sort((a, b) => a.okRate - b.okRate || b.calls - a.calls)
               .map((h) => (
                 <DataTableRow key={h.model}>
-                  <span className="truncate font-mono text-[12.5px] text-ink" title={h.model}>{prettyModelName(h.model)}</span>
-                  <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(h.calls)}</span>
-                  <span className={`text-right font-mono tabular-nums text-[13px] font-semibold ${h.okRate >= 0.95 ? 'text-ok' : h.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}>
+                  <span className="truncate font-mono text-[0.78125rem] text-ink" title={h.model}>{prettyModelName(h.model)}</span>
+                  <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(h.calls)}</span>
+                  <span className={`text-right font-mono tabular-nums text-[0.8125rem] font-semibold ${h.okRate >= 0.95 ? 'text-ok' : h.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}>
                     {(h.okRate * 100).toFixed(1)}%
                   </span>
-                  <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{h.p95Ms ? `${(h.p95Ms / 1000).toFixed(1)}s` : '—'}</span>
+                  <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{h.p95Ms ? `${(h.p95Ms / 1000).toFixed(1)}s` : '—'}</span>
                   <span className="text-right">
                     {quarantinedNow.has(h.model) ? (
                       <Badge variant="danger">{tr({ en: 'quarantine', ru: 'карантин' }, lang)}</Badge>
                     ) : (
-                      <span className="text-[11px] text-muted">{tr({ en: 'in rotation', ru: 'в ротации' }, lang)}</span>
+                      <span className="text-[0.6875rem] text-muted">{tr({ en: 'in rotation', ru: 'в ротации' }, lang)}</span>
                     )}
                   </span>
                 </DataTableRow>
@@ -206,11 +206,11 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               {r.handle ? (
                 <UserLine handle={r.handle} size="md" className="min-w-0" />
               ) : (
-                <span className="text-[13px] text-muted">{tr({ en: 'system / deleted', ru: 'система / удалён' }, lang)}</span>
+                <span className="text-[0.8125rem] text-muted">{tr({ en: 'system / deleted', ru: 'система / удалён' }, lang)}</span>
               )}
-              <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(r.calls)}</span>
-              <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(r.totalTokens)}</span>
-              <span className="text-right font-mono tabular-nums text-[13px] font-semibold text-ink">{money(r.costUsd)}</span>
+              <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(r.calls)}</span>
+              <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(r.totalTokens)}</span>
+              <span className="text-right font-mono tabular-nums text-[0.8125rem] font-semibold text-ink">{money(r.costUsd)}</span>
             </DataTableRow>
           ))
         )}

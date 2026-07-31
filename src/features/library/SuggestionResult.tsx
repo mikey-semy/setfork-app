@@ -32,7 +32,7 @@ function BlockPreview({ item, lang }: { item: ProposedItem; lang: Lang }) {
   const c = (item.content ?? {}) as Record<string, unknown>
   const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
   const head = (icon: React.ReactNode, text: string) => (
-    <div className="flex items-center gap-2 text-[13px] text-ink-2">
+    <div className="flex items-center gap-2 text-[0.8125rem] text-ink-2">
       <span className="text-muted">{icon}</span>
       <span className="min-w-0 [overflow-wrap:anywhere]">{text}</span>
     </div>
@@ -50,7 +50,7 @@ function BlockPreview({ item, lang }: { item: ProposedItem; lang: Lang }) {
       return (
         <div className="flex flex-col gap-1">
           {head(<ShoppingBag size={14} />, t('blockProduct', lang))}
-          <ul className="ml-6 list-disc text-[13px] text-ink">
+          <ul className="ml-6 list-disc text-[0.8125rem] text-ink">
             {items.slice(0, 8).map((p, k) => (
               <li key={k} className="[overflow-wrap:anywhere]">{str(p.name) || str(p.url)}</li>
             ))}
@@ -64,7 +64,7 @@ function BlockPreview({ item, lang }: { item: ProposedItem; lang: Lang }) {
       return (
         <div className="flex flex-col gap-1">
           {head(<ListChecks size={14} />, str(c.question) || (item.type === 'poll' ? t('blockPoll', lang) : t('blockQuiz', lang)))}
-          <ul className="ml-6 list-disc text-[13px] text-ink">
+          <ul className="ml-6 list-disc text-[0.8125rem] text-ink">
             {/* Верные ответы в предпросмотре НЕ помечаем: рецензент читает вопрос,
                 а не проходит тест. */}
             {opts.slice(0, 8).map((o, k) => (
@@ -97,15 +97,15 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
               <BlockPreview item={it} lang={lang} />
             ) : (
               <div className="flex gap-3">
-                <span className="mt-0.5 font-mono text-[13px] text-muted">{ordered && num ? num : '•'}</span>
+                <span className="mt-0.5 font-mono text-[0.8125rem] text-muted">{ordered && num ? num : '•'}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[14px] font-semibold text-ink">{tr(it.title, lang)}</span>
+                    <span className="text-[0.875rem] font-semibold text-ink">{tr(it.title, lang)}</span>
                     <StepLevelBadge level={it.level} lang={lang} />
                   </div>
                   {tr(it.desc, lang) && <Markdown className="mt-1">{tr(it.desc, lang)}</Markdown>}
                   {tr(it.why, lang) && (
-                    <div className="mt-1.5 flex gap-1.5 text-[12.5px] text-ink-2">
+                    <div className="mt-1.5 flex gap-1.5 text-[0.78125rem] text-ink-2">
                       <Info size={13} className="mt-0.5 shrink-0 text-muted" />
                       <span className="min-w-0">
                         <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> {tr(it.why, lang)}
@@ -113,7 +113,7 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
                     </div>
                   )}
                   {it.needsHuman && (
-                    <div className="mt-1.5 flex gap-1.5 rounded-md border border-dashed border-border bg-surface-2 px-2.5 py-2 text-[12.5px] text-ink-2">
+                    <div className="mt-1.5 flex gap-1.5 rounded-md border border-dashed border-border bg-surface-2 px-2.5 py-2 text-[0.78125rem] text-ink-2">
                       <UserRound size={13} className="mt-0.5 shrink-0 text-muted" />
                       <span className="min-w-0">
                         <span className="font-medium text-ink-2">{t('needsHumanLabel', lang)}:</span>{' '}
@@ -129,7 +129,7 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
                   {(it.subtasks ?? []).length > 0 && (
                     <ul className="mt-2 flex flex-col gap-1">
                       {(it.subtasks ?? []).map((s, si) => (
-                        <li key={si} className="flex gap-1.5 text-[12.5px] text-ink-2">
+                        <li key={si} className="flex gap-1.5 text-[0.78125rem] text-ink-2">
                           <span className="text-muted">–</span>
                           <span className="min-w-0">{tr(s, lang)}</span>
                         </li>
@@ -140,11 +140,11 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
                       {refs.map((r, ri) =>
                         r.url ? (
-                          <SafeLink key={ri} href={r.url} className="text-[12.5px] text-ink-2 underline decoration-dotted hover:text-ink">
+                          <SafeLink key={ri} href={r.url} className="text-[0.78125rem] text-ink-2 underline decoration-dotted hover:text-ink">
                             {r.label || r.url}
                           </SafeLink>
                         ) : (
-                          <span key={ri} className="text-[12.5px] text-muted">
+                          <span key={ri} className="text-[0.78125rem] text-muted">
                             {r.label}
                           </span>
                         ),

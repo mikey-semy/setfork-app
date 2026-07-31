@@ -86,7 +86,7 @@ export function SuggestionSelection({
     <SelCtx.Provider value={{ sel, toggle, label: labels.selected }}>
       {sel.length > 0 && (
         <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-accent/40 bg-(--accent-soft) px-3 py-2">
-          <span className="text-[13px] font-semibold text-ink">
+          <span className="text-[0.8125rem] font-semibold text-ink">
             {labels.selected}: {sel.length}
           </span>
           {/* Действия — вправо; на мобиле строка действий занимает всю ширину,
@@ -104,7 +104,7 @@ export function SuggestionSelection({
               items={milestones.map((m) => ({ key: m.id, text: m.title }))}
               onPick={(key) => run({ kind: 'milestone', milestoneId: key })}
             />
-            <Button variant="ghost" className="h-[38px]" disabled={pending} onClick={() => run({ kind: 'close' })}>
+            <Button variant="ghost" className="h-[2.375rem]" disabled={pending} onClick={() => run({ kind: 'close' })}>
               {pending ? <Loader2 size={14} className="animate-spin" /> : labels.close}
             </Button>
             <Tooltip label={labels.clear}>
@@ -122,7 +122,7 @@ export function SuggestionSelection({
       )}
 
       {ids.length > 0 && (
-        <label className="mb-2 inline-flex h-11 cursor-pointer items-center gap-2 px-1 text-[12.5px] text-ink-2">
+        <label className="mb-2 inline-flex h-11 cursor-pointer items-center gap-2 px-1 text-[0.78125rem] text-ink-2">
           <Checkbox
             checked={sel.length === ids.length}
             onChange={() => setSel((s) => (s.length === ids.length ? [] : ids))}
@@ -157,7 +157,7 @@ function BulkMenu({
           {label}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[180px]">
+      <DropdownMenuContent align="end" className="min-w-[11.25rem]">
         <DropdownMenuLabel>{label}</DropdownMenuLabel>
         {items.map((it) => (
           <DropdownMenuItem key={it.key} onClick={() => onPick(it.key)} className="cursor-pointer">

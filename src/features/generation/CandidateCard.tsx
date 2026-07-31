@@ -42,50 +42,50 @@ export function CandidateCard({
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-[14px] font-semibold text-ink">{cand.title}</div>
-          {cand.desc && <p className="mt-1 text-[12.5px] text-ink-2">{cand.desc}</p>}
+          <div className="text-[0.875rem] font-semibold text-ink">{cand.title}</div>
+          {cand.desc && <p className="mt-1 text-[0.78125rem] text-ink-2">{cand.desc}</p>}
         </div>
-        <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[11px] text-muted">
+        <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-[0.6875rem] text-muted">
           {cand.items.length} <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
         </span>
       </div>
       {cand.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {cand.tags.map((tg) => (
-            <span key={tg} className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
+            <span key={tg} className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2">
               {tg}
             </span>
           ))}
         </div>
       )}
       {!open && (
-        <div className="mt-2 text-[11px] text-muted">{say('Tap to see the full list', 'Нажми — покажу список целиком')}</div>
+        <div className="mt-2 text-[0.6875rem] text-muted">{say('Tap to see the full list', 'Нажми — покажу список целиком')}</div>
       )}
       {/* Секции (напр. рецепт: «Ингредиенты» / «Приготовление») — двойной список, а не всё в кучу.
           Группируем по item.section; нет секций → плоский список, как раньше. Нумерация внутри секции. */}
       <div className={open ? 'mt-3.5 space-y-4' : 'hidden'}>
         {groupBySection(cand.items).map((g, gi) => (
           <div key={gi}>
-            {g.section && <div className="mb-1.5 text-[11px] font-semibold tracking-wide text-muted uppercase">{g.section}</div>}
+            {g.section && <div className="mb-1.5 text-[0.6875rem] font-semibold tracking-wide text-muted uppercase">{g.section}</div>}
             <ol className="space-y-3">
               {g.items.map(({ it, n }) => (
                 <li key={n} className="border-l-2 border-border pl-3">
-                  <div className="text-[13px] font-medium text-ink">
+                  <div className="text-[0.8125rem] font-medium text-ink">
                     <span className="text-muted">{n}.</span> {it.title}
                   </div>
-                  {it.desc && <div className="mt-0.5 text-[12.5px] text-ink-2">{it.desc}</div>}
+                  {it.desc && <div className="mt-0.5 text-[0.78125rem] text-ink-2">{it.desc}</div>}
                   {it.command && (
                     // Бейдж языка в углу (detect-lang, как в редакторе); перенос вместо
                     // горизонтального скролла. CopyButton нельзя: карточка сама <button>.
-                    <code className="relative mt-1 block whitespace-pre-wrap rounded-md bg-surface-2 px-2 py-1 pr-14 font-mono text-[12.5px] text-ink [overflow-wrap:anywhere]">
+                    <code className="relative mt-1 block whitespace-pre-wrap rounded-md bg-surface-2 px-2 py-1 pr-14 font-mono text-[0.78125rem] text-ink [overflow-wrap:anywhere]">
                       {it.command}
-                      <span className="absolute right-1.5 top-1 font-mono text-[11px] uppercase tracking-wide text-muted">{LANG_LABEL[detectLang(it.command)]}</span>
+                      <span className="absolute right-1.5 top-1 font-mono text-[0.6875rem] uppercase tracking-wide text-muted">{LANG_LABEL[detectLang(it.command)]}</span>
                     </code>
                   )}
                   {it.subtasks.length > 0 && (
                     <ul className="mt-1 space-y-0.5">
                       {it.subtasks.map((s, j) => (
-                        <li key={j} className="text-[12.5px] text-muted">
+                        <li key={j} className="text-[0.78125rem] text-muted">
                           ○ {s}
                         </li>
                       ))}
@@ -101,7 +101,7 @@ export function CandidateCard({
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-accent hover:underline"
+                          className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-accent hover:underline"
                         >
                           <Link2 size={11} /> {r.label}
                         </a>

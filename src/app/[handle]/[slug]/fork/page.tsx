@@ -23,8 +23,8 @@ export default async function ForkPage({ params }: { params: Promise<{ handle: s
   if (session.userId === meta.ownerId) redirect(base) // свой список форкнуть нельзя (как GitHub)
 
   return (
-    <div className="mx-auto w-full max-w-[560px] px-4 py-8">
-      <Link href={base} className="mb-5 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
+    <div className="mx-auto w-full max-w-[35rem] px-4 py-8">
+      <Link href={base} className="mb-5 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {owner} / {tr(meta.title, lang)}
       </Link>
       <PageHeader

@@ -41,25 +41,25 @@ export function NotifyPrefsForm({
     <form action={updateNotifyPrefs} className="flex flex-col gap-4">
       {ROWS.map((r) => (
         <div key={r.key} className="flex items-center justify-between gap-4">
-          <span className="text-[14px] text-ink">{t(r.labelKey, lang)}</span>
+          <span className="text-[0.875rem] text-ink">{t(r.labelKey, lang)}</span>
           <Switch name={r.key} defaultChecked={isOn(r.key)} />
         </div>
       ))}
 
       {/* Доставка: дублирование включённых выше событий на почту */}
       <div className="border-t border-border pt-4">
-        <div className="mb-3 text-[12.5px] font-semibold uppercase tracking-wider text-muted">{t('deliverySection', lang)}</div>
+        <div className="mb-3 text-[0.78125rem] font-semibold uppercase tracking-wider text-muted">{t('deliverySection', lang)}</div>
         <div className="flex items-center justify-between gap-4">
           <div>
-            <span className="text-[14px] text-ink">{t('prefEmail', lang)}</span>
-            <p className="text-[12.5px] text-muted">{hasEmail ? t('prefEmailHint', lang) : t('prefEmailNoAddr', lang)}</p>
+            <span className="text-[0.875rem] text-ink">{t('prefEmail', lang)}</span>
+            <p className="text-[0.78125rem] text-muted">{hasEmail ? t('prefEmailHint', lang) : t('prefEmailNoAddr', lang)}</p>
           </div>
           <Switch name="email" defaultChecked={prefs.email === true} disabled={!hasEmail} />
         </div>
         <div className="mt-3 flex items-center justify-between gap-4">
           <div>
-            <span className="text-[14px] text-ink">{t('prefBrowser', lang)}</span>
-            <p className="text-[12.5px] text-muted">{t('prefBrowserHint', lang)}</p>
+            <span className="text-[0.875rem] text-ink">{t('prefBrowser', lang)}</span>
+            <p className="text-[0.78125rem] text-muted">{t('prefBrowserHint', lang)}</p>
           </div>
           <Switch
             name="browser"
@@ -75,12 +75,12 @@ export function NotifyPrefsForm({
         {/* Язык писем/пушей (интерфейс пока English-only). */}
         <div className="mt-3 flex items-center justify-between gap-4">
           <div>
-            <span className="text-[14px] text-ink">{t('prefLang', lang)}</span>
-            <p className="text-[12.5px] text-muted">{t('prefLangHint', lang)}</p>
+            <span className="text-[0.875rem] text-ink">{t('prefLang', lang)}</span>
+            <p className="text-[0.78125rem] text-muted">{t('prefLangHint', lang)}</p>
           </div>
           <input type="hidden" name="notifyLang" value={nl} />
           <Select value={nl} onValueChange={(v) => setNl(isLang(v) ? v : DEFAULT_LANG)}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[9.375rem]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

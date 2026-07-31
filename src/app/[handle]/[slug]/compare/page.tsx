@@ -49,7 +49,7 @@ export default async function ComparePage({
   const toggle = (key: 'code' | 'list', icon: ReactNode, labelKey: 'viewCode' | 'viewList') => (
     <Link
       href={`${base}?from=${fromN}&to=${toN}&view=${key}`}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12.5px] font-medium ${
+      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[0.78125rem] font-medium ${
         view === key ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
       }`}
     >
@@ -59,7 +59,7 @@ export default async function ComparePage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[860px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[53.75rem] px-4 py-6">
         <HistoryNav
           base={`/${owner}/${slug}`}
           active="compare"

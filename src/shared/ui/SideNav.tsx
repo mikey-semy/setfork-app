@@ -36,7 +36,7 @@ export interface SideNavGroup {
 
 function NavRow({ it }: { it: SideNavItem }) {
   const cls = cn(
-    'flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors',
+    'flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[0.8125rem] transition-colors',
     it.dimmed
       ? 'pointer-events-none opacity-30'
       : it.active
@@ -75,7 +75,7 @@ export function SideNav({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex min-h-[44px] w-full items-center justify-between gap-2 px-3 text-left text-[13px] font-semibold text-ink md:hidden"
+        className="flex min-h-[2.75rem] w-full items-center justify-between gap-2 px-3 text-left text-[0.8125rem] font-semibold text-ink md:hidden"
       >
         {mobileLabel}
         <ChevronDown size={16} className={cn('text-muted transition-transform', open && 'rotate-180')} />
@@ -96,7 +96,7 @@ export function SideNav({
             return (
               <div key={g.title ?? i} className="flex flex-col gap-0.5">
                 {g.title && (
-                  <div className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{g.title}</div>
+                  <div className="px-2.5 pb-1 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted">{g.title}</div>
                 )}
                 {g.items.map((it) => (
                   <NavRow key={it.key} it={it} />

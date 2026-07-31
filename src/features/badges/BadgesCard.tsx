@@ -21,8 +21,8 @@ export function BadgesCard({ owner, slug, origin, lang }: { owner: string; slug:
 
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-1 text-[13px] font-semibold text-ink">{ru ? 'Бейджи' : 'Badges'}</div>
-      <p className="mb-3 text-[12.5px] text-muted">
+      <div className="mb-1 text-[0.8125rem] font-semibold text-ink">{ru ? 'Бейджи' : 'Badges'}</div>
+      <p className="mb-3 text-[0.78125rem] text-muted">
         {ru ? 'Живой бейдж списка — вставь в README проекта, доки или блог.' : 'A live badge for this list — drop it in your project README, docs or blog.'}
       </p>
       <div className="flex flex-col gap-2">
@@ -33,7 +33,7 @@ export function BadgesCard({ owner, slug, origin, lang }: { owner: string; slug:
             <div key={kind} className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element -- внешний SVG-ассет по URL */}
               <img src={url} alt={kind} height={20} className="h-5 shrink-0" />
-              <code className="min-w-0 flex-1 truncate rounded-md bg-surface-2 px-2 py-1 font-mono text-[11px] text-ink-2">{md}</code>
+              <code className="min-w-0 flex-1 truncate rounded-md bg-surface-2 px-2 py-1 font-mono text-[0.6875rem] text-ink-2">{md}</code>
               <Button variant="ghost" size="xs" className="shrink-0 p-1" onClick={() => copy(kind, md)} aria-label={ru ? 'Скопировать' : 'Copy'}>
                 <Copy size={12} /> {copied === kind ? (ru ? 'ок' : 'ok') : ''}
               </Button>

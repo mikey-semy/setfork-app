@@ -9,7 +9,7 @@ import { cn } from '@/shared/lib/cn'
  */
 export function SectionLabel({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('text-[11px] font-semibold uppercase tracking-[0.07em] text-muted', className)}>
+    <div className={cn('text-[0.6875rem] font-semibold uppercase tracking-[0.07em] text-muted', className)}>
       {children}
     </div>
   )

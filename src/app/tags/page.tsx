@@ -15,7 +15,7 @@ export default async function TagsIndexPage() {
   const tags = await listTags({ limit: 300 })
 
   return (
-    <div className="mx-auto w-full max-w-[900px] px-4 py-8">
+    <div className="mx-auto w-full max-w-[56.25rem] px-4 py-8">
       <PageHeader
         icon={<Tag size={18} />}
         title={t('tags', lang)}
@@ -30,7 +30,7 @@ export default async function TagsIndexPage() {
               label={tg.label ?? undefined}
               count={tg.usageCount}
               curated={tg.curated}
-              className="px-3 py-1 text-[13px]"
+              className="px-3 py-1 text-[0.8125rem]"
             />
           ))}
         </div>

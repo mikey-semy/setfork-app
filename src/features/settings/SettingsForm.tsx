@@ -60,7 +60,7 @@ export function SettingsForm({
 
       {/* Форма аватара в профиле — круг (по умолчанию) или квадрат. */}
       <label className="flex items-center justify-between gap-3">
-        <span className="text-[13px] text-ink-2">{t('avatarSquareLabel', lang)}</span>
+        <span className="text-[0.8125rem] text-ink-2">{t('avatarSquareLabel', lang)}</span>
         <Switch name="avatarSquare" checked={square} onCheckedChange={setSquare} />
       </label>
 
@@ -75,7 +75,7 @@ export function SettingsForm({
           maxLength={280}
           rows={2}
           placeholder={t('bioPh', lang)}
-          className="min-h-[39px] max-h-[81px] resize-y overflow-y-auto"
+          className="min-h-[2.4375rem] max-h-[5.0625rem] resize-y overflow-y-auto"
         />
       </Field>
 
@@ -95,7 +95,7 @@ export function SettingsForm({
           {rows.map((row, i) => (
             <div key={row._k} className="flex items-center gap-2">
               <Select value={row.type} onValueChange={(v) => setRow(i, { type: v })}>
-                <SelectTrigger id={i === 0 ? 'profile-socials' : undefined} className="w-[160px] shrink-0">
+                <SelectTrigger id={i === 0 ? 'profile-socials' : undefined} className="w-[10rem] shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -119,7 +119,7 @@ export function SettingsForm({
                 variant="ghost"
                 onClick={() => removeRow(i)}
                 aria-label="remove"
-                className="h-[42px] w-[42px] shrink-0 border border-border p-0 text-muted hover:bg-transparent hover:text-ink"
+                className="h-[2.625rem] w-[2.625rem] shrink-0 border border-border p-0 text-muted hover:bg-transparent hover:text-ink"
               >
                 <X size={15} />
               </Button>
@@ -128,7 +128,7 @@ export function SettingsForm({
           <button
             type="button"
             onClick={addRow}
-            className="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-accent hover:underline"
+            className="inline-flex w-fit items-center gap-1.5 text-[0.8125rem] font-medium text-accent hover:underline"
           >
             <Plus size={14} /> {t('addSocial', lang)}
           </button>
@@ -138,16 +138,16 @@ export function SettingsForm({
       {/* Приватность профиля */}
       <div className="flex items-start justify-between gap-4 border-t border-border pt-4">
         <div className="min-w-0">
-          <div className="text-[13px] font-medium text-ink">{t('profilePrivateLabel', lang)}</div>
-          <p className="mt-0.5 max-w-[520px] text-[12.5px] text-ink-2">{t('profilePrivateHint', lang)}</p>
+          <div className="text-[0.8125rem] font-medium text-ink">{t('profilePrivateLabel', lang)}</div>
+          <p className="mt-0.5 max-w-[32.5rem] text-[0.78125rem] text-ink-2">{t('profilePrivateHint', lang)}</p>
         </div>
         <Switch name="profilePrivate" checked={priv} onCheckedChange={setPriv} />
       </div>
 
       <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-        {state?.ok && <span className="text-[13px] text-ok">{t('profileSaved', lang)}</span>}
-        {state?.error && <span className="text-[13px] text-danger">{state.error}</span>}
-        <Button type="submit" variant="primary" disabled={pending} className="h-10 px-5 text-[14px] disabled:opacity-60">
+        {state?.ok && <span className="text-[0.8125rem] text-ok">{t('profileSaved', lang)}</span>}
+        {state?.error && <span className="text-[0.8125rem] text-danger">{state.error}</span>}
+        <Button type="submit" variant="primary" disabled={pending} className="h-10 px-5 text-[0.875rem] disabled:opacity-60">
           {t('saveChanges', lang)}
         </Button>
       </div>

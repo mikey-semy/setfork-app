@@ -175,9 +175,9 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
         <Pickaxe size={14} className="shrink-0 text-accent" />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[12.5px] font-semibold text-ink">{ctx.stepTitle}</div>
+          <div className="truncate text-[0.78125rem] font-semibold text-ink">{ctx.stepTitle}</div>
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-ink-2">
+            <DropdownMenuTrigger className="inline-flex items-center gap-1 text-[0.6875rem] text-muted hover:text-ink-2">
               {gnome === 'auto' ? say('Auto by topic', 'Авто по теме') : `${current?.name ?? gnome}${current?.guild ? ` · ${current.guild}` : ''}`}
               <ChevronDown size={11} />
             </DropdownMenuTrigger>
@@ -186,7 +186,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
               {gnomes.map((g) => (
                 <DropdownMenuItem key={g.id} onSelect={() => setGnome(g.id)}>
                   {g.name}
-                  {g.guild && <span className="ml-1.5 text-[11px] text-muted">{g.guild}</span>}
+                  {g.guild && <span className="ml-1.5 text-[0.6875rem] text-muted">{g.guild}</span>}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -197,9 +197,9 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         </Button>
       </div>
 
-      <div ref={scrollRef} className="min-h-[120px] flex-1 space-y-3 overflow-y-auto px-3 py-3">
+      <div ref={scrollRef} className="min-h-[7.5rem] flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {messages.length === 0 && (
-          <p className="text-[12.5px] leading-relaxed text-muted">
+          <p className="text-[0.78125rem] leading-relaxed text-muted">
             {say('Ask anything about this step — reasons, pitfalls, alternatives. The master digs where you point.', 'Спрашивай что угодно про этот пункт — причины, подводные камни, альтернативы. Мастер копает туда, куда покажешь.')}
           </p>
         )}
@@ -208,13 +208,13 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         {messages.map((m, i) =>
           m.role === 'user' ? (
             <div key={i} className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3 py-1.5 text-[13px] leading-[1.5] text-primary-fg">{m.text}</div>
+              <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3 py-1.5 text-[0.8125rem] leading-[1.5] text-primary-fg">{m.text}</div>
             </div>
           ) : (
             <div key={i} ref={i === messages.length - 1 ? lastReplyRef : undefined} className="group flex items-start gap-2">
               <GnomeAvatar src={`/gnomes/${m.who ?? 'generalist'}.webp`} size={32} className="size-8 shrink-0" />
               <div className="min-w-0 rounded-2xl rounded-bl-md bg-(--surface-2) px-3 py-1.5">
-                <Markdown codeCards className="text-[13px] leading-[1.5] text-ink-2">{m.text}</Markdown>
+                <Markdown codeCards className="text-[0.8125rem] leading-[1.5] text-ink-2">{m.text}</Markdown>
                 {/* «Спасибо» гному (одушевление) + копировать — проявляются при наведении. */}
                 <div className="mt-1 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <ThankButton who={m.who ?? 'generalist'} thanked={thanked.has(i)} onThank={() => thank(i, m.who ?? 'generalist')} lang={lang} />
@@ -227,11 +227,11 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
           ),
         )}
         {pending && (
-          <div className="flex items-center gap-2 text-[12.5px] text-muted">
+          <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
             <Loader2 size={13} className="animate-spin" /> {say('digging…', 'копает…')}
           </div>
         )}
-        {err && <p className="text-[12.5px] text-warn">{err}</p>}
+        {err && <p className="text-[0.78125rem] text-warn">{err}</p>}
         {chipRow}
       </div>
 

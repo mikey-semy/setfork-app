@@ -136,6 +136,7 @@ export const users = pgTable('users', {
   totpLastStep: integer('totp_last_step'), // последний использованный TOTP-шаг (anti-replay): код с step ≤ этого отвергается
   uiAccent: text('ui_accent'), // Appearance: акцентный пресет ('' / null = синий), синхрон между устройствами
   uiFont: text('ui_font'), // Appearance: шрифт интерфейса ('' / null = Hanken Grotesk)
+  uiScale: text('ui_scale'), // Appearance: масштаб интерфейса ('90' / '' / '110'; '' / null = 100%) — работает поверх rem-размеров (Ф6)
   handle: text('handle').notNull().unique(),
   name: text('name'),
   avatarUrl: text('avatar_url'),

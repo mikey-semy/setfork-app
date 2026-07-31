@@ -19,11 +19,11 @@ export function CatalogRow({ c, lang }: { c: PublicCatalog; lang: Lang }) {
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[14px] font-semibold text-ink">{title}</span>
-          <span className="rounded-full border border-border px-1.5 py-0.5 text-[11px] text-ink-2">{ru ? 'Каталог' : 'Catalog'}</span>
+          <span className="text-[0.875rem] font-semibold text-ink">{title}</span>
+          <span className="rounded-full border border-border px-1.5 py-0.5 text-[0.6875rem] text-ink-2">{ru ? 'Каталог' : 'Catalog'}</span>
         </div>
-        {tr(c.desc, lang) && <div className="mt-1 truncate text-[12.5px] text-ink-2">{tr(c.desc, lang)}</div>}
-        <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[11px] text-muted">
+        {tr(c.desc, lang) && <div className="mt-1 truncate text-[0.78125rem] text-ink-2">{tr(c.desc, lang)}</div>}
+        <div className="mt-1.5 flex min-w-0 items-center gap-2 text-[0.6875rem] text-muted">
           <Avatar handle={c.ownerHandle} avatarUrl={c.ownerAvatarUrl} size={16} />
           <span className="min-w-0 truncate">{c.ownerHandle}</span>
           <span className="shrink-0 font-mono">· {c.listCount} {ru ? 'списков' : 'lists'}</span>

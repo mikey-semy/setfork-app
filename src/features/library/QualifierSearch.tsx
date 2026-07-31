@@ -83,7 +83,7 @@ export function QualifierSearch({
   hint?: React.ReactNode
   containerClassName?: string
 }) {
-  const textCls = size === 'sm' ? 'text-[13px]' : 'text-[14px]'
+  const textCls = size === 'sm' ? 'text-[0.8125rem]' : 'text-[0.875rem]'
   const router = useRouter()
   const [value, setValue] = useState(initial)
   const [sugs, setSugs] = useState<Suggestion[]>([])
@@ -275,13 +275,13 @@ export function QualifierSearch({
             return (
               <Fragment key={`${s.action}/${s.group}/${s.value}`}>
                 {header && (
-                  <div className="px-3 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">{s.group}</div>
+                  <div className="px-3 pb-1 pt-1.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted">{s.group}</div>
                 )}
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => apply(s)}
-                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] ${
+                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[0.8125rem] ${
                     i === active ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:bg-surface-2'
                   }`}
                 >
@@ -293,8 +293,8 @@ export function QualifierSearch({
                   ) : (
                     <>
                       <span className="truncate">{s.label}</span>
-                      {s.sub && <span className="ml-auto shrink-0 truncate pl-2 text-[11px] text-muted">{s.sub}</span>}
-                      {s.count != null && <span className="ml-auto shrink-0 font-mono text-[11px] text-muted">{s.count}</span>}
+                      {s.sub && <span className="ml-auto shrink-0 truncate pl-2 text-[0.6875rem] text-muted">{s.sub}</span>}
+                      {s.count != null && <span className="ml-auto shrink-0 font-mono text-[0.6875rem] text-muted">{s.count}</span>}
                     </>
                   )}
                 </button>

@@ -78,7 +78,7 @@ export function CoverSection({
             setOver(false)
             upload(e.dataTransfer.files?.[0])
           }}
-          className={`relative block h-[150px] w-full overflow-hidden rounded-lg border-2 ${over ? 'border-accent' : 'border-dashed border-border'}`}
+          className={`relative block h-[9.375rem] w-full overflow-hidden rounded-lg border-2 ${over ? 'border-accent' : 'border-dashed border-border'}`}
         >
           {cover ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -95,7 +95,7 @@ export function CoverSection({
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-[12.5px] text-ink-2">{ru ? 'Акцент:' : 'Accent:'}</span>
+          <span className="mr-1 text-[0.78125rem] text-ink-2">{ru ? 'Акцент:' : 'Accent:'}</span>
           {ACCENTS.map((a) => (
             <button
               key={a || 'default'}
@@ -105,17 +105,17 @@ export function CoverSection({
               style={a ? { backgroundColor: a } : undefined}
               className={`h-5 w-5 rounded-full border ${a ? '' : 'bg-surface-2'} ${accent === a ? 'ring-2 ring-offset-1 ring-(--accent)' : 'border-black/10'}`}
             >
-              {!a && <span className="text-[11px] text-muted">×</span>}
+              {!a && <span className="text-[0.6875rem] text-muted">×</span>}
             </button>
           ))}
         </div>
         {cover && (
-          <button type="button" onClick={clear} className="inline-flex items-center gap-1.5 text-[12.5px] text-muted hover:text-danger">
+          <button type="button" onClick={clear} className="inline-flex items-center gap-1.5 text-[0.78125rem] text-muted hover:text-danger">
             <Trash2 size={13} /> {ru ? 'Убрать обложку' : 'Remove cover'}
           </button>
         )}
       </div>
-      {err && <p className="mt-2 text-[12.5px] text-danger">{err}</p>}
+      {err && <p className="mt-2 text-[0.78125rem] text-danger">{err}</p>}
     </SettingsSection>
   )
 }

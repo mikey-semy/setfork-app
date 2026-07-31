@@ -15,8 +15,8 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
   if (state?.ok) {
     return (
       <div className="rounded-xl border border-border bg-surface p-6 text-center">
-        <div className="mb-1 text-[16px] font-bold text-ink">{t('fbThanks', lang)}</div>
-        <p className="text-[13px] text-ink-2">{t('fbThanksBody', lang)}</p>
+        <div className="mb-1 text-[1rem] font-bold text-ink">{t('fbThanks', lang)}</div>
+        <p className="text-[0.8125rem] text-ink-2">{t('fbThanksBody', lang)}</p>
       </div>
     )
   }
@@ -26,7 +26,7 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
       {/* Категория — общий shadcn-Select (Radix), а не самопальный <select> со своими
           стилями. name+defaultValue → Radix отдаёт значение форме скрытым нативным select. */}
       <div className="flex flex-col gap-1.5">
-        <span className="text-[12.5px] font-semibold text-ink-2">{t('fbCatLabel', lang)}</span>
+        <span className="text-[0.78125rem] font-semibold text-ink-2">{t('fbCatLabel', lang)}</span>
         <Select name="category" defaultValue="other">
           <SelectTrigger>
             <SelectValue />
@@ -47,7 +47,7 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
 
       <div>
         <Input name="email" type="email" autoComplete="email" placeholder={t('fbEmailPlaceholder', lang)} />
-        <p className="mt-1 text-[11px] text-muted">{t('fbEmailHint', lang)}</p>
+        <p className="mt-1 text-[0.6875rem] text-muted">{t('fbEmailHint', lang)}</p>
       </div>
 
       {/* Honeypot: люди поле не видят и не заполняют; непустое значение = бот. */}
@@ -57,7 +57,7 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
         tabIndex={-1}
         autoComplete="off"
         aria-hidden="true"
-        className="absolute -left-[9999px] h-0 w-0 opacity-0"
+        className="absolute -left-[624.9375rem] h-0 w-0 opacity-0"
       />
       {/* Откуда пришли — справочный контекст; реф-коллбэк вместо state (нет лишнего ререндера). */}
       <input
@@ -69,8 +69,8 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
         }}
       />
 
-      {state?.error && <div className="text-[12.5px] text-danger">{state.error}</div>}
-      <Button type="submit" variant="primary" disabled={pending} className="h-10 px-4 text-[14px] disabled:opacity-60">
+      {state?.error && <div className="text-[0.78125rem] text-danger">{state.error}</div>}
+      <Button type="submit" variant="primary" disabled={pending} className="h-10 px-4 text-[0.875rem] disabled:opacity-60">
         {t('fbSend', lang)}
       </Button>
     </form>

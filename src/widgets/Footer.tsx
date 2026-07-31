@@ -19,7 +19,7 @@ export async function Footer({ lang }: { lang: Lang }) {
     <footer className="relative mt-auto print:hidden">
       {/* Копирайт — отдельной строкой ПОД ссылками и по центру (как у GitHub): в общем
           ряду он читался как ещё один пункт меню. */}
-      <div className="mx-auto flex w-full max-w-[1080px] flex-wrap items-center justify-center gap-x-4 gap-y-1 px-6 pt-6 text-[12.5px]">
+      <div className="mx-auto flex w-full max-w-[67.5rem] flex-wrap items-center justify-center gap-x-4 gap-y-1 px-6 pt-6 text-[0.78125rem]">
         <Link href="/explore" className={link}>{t('explore', lang)}</Link>
         <a href={ABOUT_URL} className={link}>{t('aboutProject', lang)}</a>
         {/* «Исходный код» убран из футера (владелец): репо приватный, ссылка вела в доки,
@@ -34,11 +34,11 @@ export async function Footer({ lang }: { lang: Lang }) {
           </a>
         )}
       </div>
-      <div className="px-6 pb-4 pt-1.5 text-center text-[12.5px] text-muted">© {year} SetFork</div>
+      <div className="px-6 pb-4 pt-1.5 text-center text-[0.78125rem] text-muted">© {year} SetFork</div>
       {/* Версия — незаметно в углу (мелкий прозрачный моно), а не в ряду ссылок. */}
       <span
         title={t('appVersion', lang)}
-        className="pointer-events-none absolute bottom-1.5 right-2.5 font-mono text-[11px] text-muted opacity-50 select-none"
+        className="pointer-events-none absolute bottom-1.5 right-2.5 font-mono text-[0.6875rem] text-muted opacity-50 select-none"
       >
         v{APP_VERSION}
       </span>

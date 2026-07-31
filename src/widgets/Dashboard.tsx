@@ -56,7 +56,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
     <div className="grid w-full gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 xl:grid-cols-[260px_minmax(0,1fr)_260px] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
       {/* Слева: твои списки (переиспользуемая панель). top = высота шапки (57) + верхний
           паддинг сетки (py-6 = 24) → панель НЕ подпрыгивает к шапке при скролле. */}
-      <aside className="lg:sticky lg:top-[81px] lg:self-start">
+      <aside className="lg:sticky lg:top-[5.0625rem] lg:self-start">
         <ListsPanel
           lang={lang}
           title={t('yourLists', lang)}
@@ -72,16 +72,16 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
         {improve.length > 0 && (
           <div className="mb-4 rounded-lg border border-border bg-surface p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-2">
+              <span className="inline-flex items-center gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
                 <Sparkles size={14} className="text-accent" /> {lang === 'ru' ? 'Что улучшить' : 'What to improve'}
               </span>
-              <Link href="/improve" className="text-[12.5px] text-accent hover:underline">{lang === 'ru' ? 'все' : 'all'}</Link>
+              <Link href="/improve" className="text-[0.78125rem] text-accent hover:underline">{lang === 'ru' ? 'все' : 'all'}</Link>
             </div>
             <ul className="flex flex-col gap-1.5">
               {improve.map((it) => (
-                <li key={it.id} className="flex items-center justify-between gap-2 text-[13px]">
+                <li key={it.id} className="flex items-center justify-between gap-2 text-[0.8125rem]">
                   <Link href={`/${it.ownerHandle}/${it.slug}`} className="min-w-0 truncate text-accent hover:underline">{tr(it.title, lang)}</Link>
-                  <span className="shrink-0 font-mono text-[11px] text-muted">
+                  <span className="shrink-0 font-mono text-[0.6875rem] text-muted">
                     {it.openSuggestions > 0 && <span className="text-accent">⑂{it.openSuggestions} </span>}
                     {it.openIssues > 0 && <span className="text-warn">◍{it.openIssues}</span>}
                   </span>
@@ -95,7 +95,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
 
       {/* Справа: промо-слот + changelog */}
       {/* Промо и changelog — только там, где под них есть третья колонка (см. выше). */}
-      <aside className="hidden xl:sticky xl:top-[81px] xl:flex xl:flex-col xl:gap-4 xl:self-start">
+      <aside className="hidden xl:sticky xl:top-[5.0625rem] xl:flex xl:flex-col xl:gap-4 xl:self-start">
         <PromoCard lang={lang} />
         <ChangelogCard lang={lang} />
       </aside>

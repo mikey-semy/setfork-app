@@ -37,16 +37,16 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
       <OverlayPanel open={open} onClose={() => setOpen(false)} title={t('reportTitle', lang)} width={440}>
         {state?.ok ? (
           <div className="p-4 text-center">
-            <div className="mb-1 text-[16px] font-bold text-ink">{t('rpThanks', lang)}</div>
-            <p className="text-[13px] text-ink-2">{t('rpThanksBody', lang)}</p>
+            <div className="mb-1 text-[1rem] font-bold text-ink">{t('rpThanks', lang)}</div>
+            <p className="text-[0.8125rem] text-ink-2">{t('rpThanksBody', lang)}</p>
           </div>
         ) : (
           <form action={action} className="flex flex-col gap-3 p-4">
-            <p className="text-[12.5px] text-ink-2">{t('rpIntro', lang)}</p>
+            <p className="text-[0.78125rem] text-ink-2">{t('rpIntro', lang)}</p>
 
             <div className="flex flex-col gap-1.5">
               {REASONS.map((r) => (
-                <label key={r.value} className="inline-flex items-center gap-2 text-[13px] text-ink">
+                <label key={r.value} className="inline-flex items-center gap-2 text-[0.8125rem] text-ink">
                   <input
                     type="radio"
                     name="reason"
@@ -62,7 +62,7 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
             </div>
 
             {reason === 'copyright' && (
-              <p className="rounded-md bg-warn/10 px-3 py-2 text-[12.5px] leading-relaxed text-ink-2">
+              <p className="rounded-md bg-warn/10 px-3 py-2 text-[0.78125rem] leading-relaxed text-ink-2">
                 {t('rpCopyrightNote', lang)}{' '}
                 <a
                   href={legalUrl('copyright', lang)}
@@ -86,7 +86,7 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
 
             <div>
               <Input name="email" type="email" autoComplete="email" placeholder={t('fbEmailPlaceholder', lang)} />
-              <p className="mt-1 text-[11px] text-muted">{t('fbEmailHint', lang)}</p>
+              <p className="mt-1 text-[0.6875rem] text-muted">{t('fbEmailHint', lang)}</p>
             </div>
 
             {/* Honeypot: люди поле не видят; непустое значение = бот. */}
@@ -96,12 +96,12 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
               tabIndex={-1}
               autoComplete="off"
               aria-hidden="true"
-              className="absolute -left-[9999px] h-0 w-0 opacity-0"
+              className="absolute -left-[624.9375rem] h-0 w-0 opacity-0"
             />
             <input type="hidden" name="templateId" value={templateId} />
 
-            {state?.error && <div className="text-[12.5px] text-danger">{state.error}</div>}
-            <Button type="submit" variant="primary" disabled={pending} className="px-4 py-2 text-[13px] disabled:opacity-60">
+            {state?.error && <div className="text-[0.78125rem] text-danger">{state.error}</div>}
+            <Button type="submit" variant="primary" disabled={pending} className="px-4 py-2 text-[0.8125rem] disabled:opacity-60">
               {t('rpSend', lang)}
             </Button>
           </form>

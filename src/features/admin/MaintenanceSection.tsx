@@ -22,18 +22,18 @@ export function MaintenanceSection({ initialOn, envOverride, lang }: { initialOn
     <div className="flex flex-wrap items-center gap-4">
       <div className="flex items-center gap-2.5">
         <Wrench size={18} className={on || envOverride ? 'text-warn' : 'text-muted'} />
-        <span className={`text-[13px] font-semibold ${on || envOverride ? 'text-warn' : 'text-ink'}`}>
+        <span className={`text-[0.8125rem] font-semibold ${on || envOverride ? 'text-warn' : 'text-ink'}`}>
           {on || envOverride ? t('maintenanceStateOn', lang) : t('maintenanceStateOff', lang)}
         </span>
       </div>
       {envOverride ? (
-        <span className="text-[12.5px] text-muted">{t('maintenanceEnvNote', lang)}</span>
+        <span className="text-[0.78125rem] text-muted">{t('maintenanceEnvNote', lang)}</span>
       ) : (
         <button
           type="button"
           onClick={flip}
           disabled={pending}
-          className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-[13px] font-semibold disabled:opacity-50 ${
+          className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-[0.8125rem] font-semibold disabled:opacity-50 ${
             on ? 'bg-primary text-primary-fg' : 'bg-danger text-white hover:opacity-90'
           }`}
         >
@@ -41,7 +41,7 @@ export function MaintenanceSection({ initialOn, envOverride, lang }: { initialOn
           {on ? t('maintenanceDisable', lang) : t('maintenanceEnable', lang)}
         </button>
       )}
-      <p className="w-full text-[12.5px] text-ink-2">{t('maintenanceHint', lang)}</p>
+      <p className="w-full text-[0.78125rem] text-ink-2">{t('maintenanceHint', lang)}</p>
     </div>
   )
 }

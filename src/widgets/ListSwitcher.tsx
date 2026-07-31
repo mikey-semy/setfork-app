@@ -121,7 +121,7 @@ export function ListSwitcher({
         </PopoverTrigger>
       </Tooltip>
       {/* Ширину режем по экрану: на 360px поповер не должен вылезать за край. */}
-      <PopoverContent align="start" className="w-[300px] max-w-[calc(100vw-16px)] overflow-hidden p-0">
+      <PopoverContent align="start" className="w-[18.75rem] max-w-[calc(100vw-16px)] overflow-hidden p-0">
         <PickerPanel
           title={label}
           onClose={() => setOpen(false)}
@@ -175,7 +175,7 @@ export function ListSwitcher({
             />
           ))}
           {shown.length === 0 && (
-            <div className="px-2 py-3 text-[12.5px] text-muted">
+            <div className="px-2 py-3 text-[0.78125rem] text-muted">
               {failed ? t('loadFailed', lang) : t('nothingFound', lang)}
             </div>
           )}

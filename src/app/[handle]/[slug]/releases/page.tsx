@@ -36,7 +36,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[51.25rem] px-4 py-6">
         <HistoryNav
           base={base}
           active="releases"
@@ -56,7 +56,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
               {canManage && (
                 <Link
                   href={`${base}/releases/new`}
-                  className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[14px] font-semibold text-primary-fg hover:opacity-90"
+                  className="inline-flex h-[2.375rem] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.875rem] font-semibold text-primary-fg hover:opacity-90"
                 >
                   <Plus size={13} /> {ru ? 'Новый релиз' : 'New release'}
                 </Link>
@@ -74,7 +74,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
                 </Link>
               </div>
             )}
-            <div className="text-[12.5px]">
+            <div className="text-[0.78125rem]">
               <Link href={`${base}/versions`} className="text-ink-2 hover:text-accent">
                 {ru ? 'Все версии — во вкладке «Версии»' : 'All versions live under the Versions tab'}
               </Link>
@@ -85,13 +85,13 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
             {rels.map((r) => (
               <div key={r.id} className="rounded-lg border border-border bg-surface p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="px-2.5 font-mono text-[12.5px] text-ink">
+                  <Badge className="px-2.5 font-mono text-[0.78125rem] text-ink">
                     <Tag size={12} className="text-muted" /> {r.tag}
                   </Badge>
                   {r.id === latestId && <Badge variant="ok">{t('latest', lang)}</Badge>}
                   {r.prerelease && <Badge variant="warn">{t('preRelease', lang)}</Badge>}
                   <UserLine handle={r.authorHandle} avatarUrl={r.authorAvatarUrl} size="xs" />
-                  <span className="font-mono text-[11px] text-muted">{timeAgo(r.createdAt, lang)} · v{r.version}</span>
+                  <span className="font-mono text-[0.6875rem] text-muted">{timeAgo(r.createdAt, lang)} · v{r.version}</span>
                   {canManage && (
                     <form action={deleteRelease.bind(null, r.id)} className="ml-auto">
                       <SubmitButton variant="danger" size="xs" aria-label={ru ? 'Удалить релиз' : 'Delete release'}>
@@ -101,15 +101,15 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
                   )}
                 </div>
 
-                <div className="mt-2 text-[16px] font-semibold text-ink">{r.title || r.tag}</div>
+                <div className="mt-2 text-[1rem] font-semibold text-ink">{r.title || r.tag}</div>
                 {r.notes && (
                   <div className="mt-2 border-t border-border/60 pt-2">
                     <Markdown refBase={`${base}/issues`}>{r.notes}</Markdown>
                   </div>
                 )}
 
-                <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border/60 pt-2.5 text-[12.5px]">
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Assets</span>
+                <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border/60 pt-2.5 text-[0.78125rem]">
+                  <span className="text-[0.6875rem] font-semibold uppercase tracking-widest text-muted">Assets</span>
                   <a href={`${base}/export?format=md`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
                     <FileText size={13} /> markdown
                   </a>

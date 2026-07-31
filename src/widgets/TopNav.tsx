@@ -173,7 +173,7 @@ export function TopNav({
         >
           <Menu size={21} strokeWidth={2.75} />
         </button>
-        <Link href="/" className="font-logo text-[18px] leading-none text-ink" aria-label="SetFork">
+        <Link href="/" className="font-logo text-[1.125rem] leading-none text-ink" aria-label="SetFork">
           SF
         </Link>
       </div>
@@ -182,7 +182,7 @@ export function TopNav({
       {/* Бредкрамб (как GitHub owner/repo): чей профиль/список открыт. Прячем на поиске.
           Слеша между лого и handle нет — только между handle и slug. */}
       {crumb && !isSearch && (
-        <nav className="ml-2 flex min-w-0 items-center gap-1 text-[14px]" aria-label="breadcrumb">
+        <nav className="ml-2 flex min-w-0 items-center gap-1 text-[0.875rem]" aria-label="breadcrumb">
           {/* Автор списка: на широком экране — сам хэндл (до 160px, дальше троеточие);
               на мобиле он не влезает и схлопывается в «…» — кнопку, за которой тот же
               переход в профиль. Ширину забирает название, а автор остаётся достижим. */}
@@ -206,7 +206,7 @@ export function TopNav({
               </DropdownMenu>
               <Link
                 href={`/${crumb.handle}`}
-                className="hidden max-w-[160px] shrink-0 truncate font-medium text-ink hover:text-accent sm:block"
+                className="hidden max-w-[10rem] shrink-0 truncate font-medium text-ink hover:text-accent sm:block"
               >
                 {crumb.handle}
               </Link>
@@ -270,7 +270,7 @@ export function TopNav({
       {/* На самой странице поиска поля в шапке НЕТ: оно живёт в контенте страницы во всю
           ширину. В шапке на мобильном оно сжималось до ~100px (лого + язык + «Войти»
           съедали ширину) и было бесполезным, да и дублировать функцию страницы незачем. */}
-      {title && <span className="ml-1 truncate text-[16px] font-semibold text-ink">{title}</span>}
+      {title && <span className="ml-1 truncate text-[1rem] font-semibold text-ink">{title}</span>}
 
       {/* Правая группа не сжимается: место отдаёт бредкрамб (у него truncate), а
           аватар и иконки держат свой размер — иначе аватар плющится в овал. */}
@@ -283,9 +283,9 @@ export function TopNav({
                 lang={lang}
                 initial=""
                 size="sm"
-                containerClassName="w-[220px] xl:w-[300px]"
+                containerClassName="w-[13.75rem] xl:w-[18.75rem]"
                 hint={
-                  <kbd className="hidden rounded-md border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted lg:inline">/</kbd>
+                  <kbd className="hidden rounded-md border border-border px-1.5 text-[0.6875rem] font-medium leading-[1.125rem] text-muted lg:inline">/</kbd>
                 }
               />
             </div>
@@ -400,11 +400,11 @@ export function TopNav({
                 )}
                 <DropdownMenuSeparator />
                 <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
-                  <span className="text-[13px] text-ink-2">{t('theme', lang)}</span>
+                  <span className="text-[0.8125rem] text-ink-2">{t('theme', lang)}</span>
                   <ThemeModeSwitch />
                 </div>
                 <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
-                  <span className="text-[13px] text-ink-2">{t('language', lang)}</span>
+                  <span className="text-[0.8125rem] text-ink-2">{t('language', lang)}</span>
                   <LangSwitch lang={lang} />
                 </div>
                 <DropdownMenuSeparator />
@@ -432,7 +432,7 @@ export function TopNav({
               <button
                 type="button"
                 aria-label={t('signIn', lang)}
-                className={`grid size-[30px] shrink-0 place-items-center rounded-full border border-border text-ink-2 hover:text-ink ${focusRing}`}
+                className={`grid size-[1.875rem] shrink-0 place-items-center rounded-full border border-border text-ink-2 hover:text-ink ${focusRing}`}
               >
                 <UserRound size={17} />
               </button>
@@ -450,11 +450,11 @@ export function TopNav({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
-                <span className="text-[13px] text-ink-2">{t('theme', lang)}</span>
+                <span className="text-[0.8125rem] text-ink-2">{t('theme', lang)}</span>
                 <ThemeModeSwitch />
               </div>
               <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
-                <span className="text-[13px] text-ink-2">{t('language', lang)}</span>
+                <span className="text-[0.8125rem] text-ink-2">{t('language', lang)}</span>
                 <LangSwitch lang={lang} />
               </div>
             </DropdownMenuContent>

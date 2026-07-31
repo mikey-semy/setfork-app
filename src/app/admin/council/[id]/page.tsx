@@ -59,17 +59,17 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   const card = 'rounded-lg border border-border bg-surface p-4'
   const kpiCell = (icon: ReactNode, label: string, value: string, sub?: string) => (
     <div className={card}>
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+      <div className="flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
         {icon} {label}
       </div>
-      <div className="mt-1.5 text-[22px] font-bold text-ink">{value}</div>
-      {sub && <div className="mt-0.5 text-[12.5px] text-ink-2">{sub}</div>}
+      <div className="mt-1.5 text-[1.375rem] font-bold text-ink">{value}</div>
+      {sub && <div className="mt-0.5 text-[0.78125rem] text-ink-2">{sub}</div>}
     </div>
   )
 
   return (
     <div className="flex w-full min-w-0 flex-col px-5 py-6 md:px-8">
-      <Link href="/admin/council" className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
+      <Link href="/admin/council" className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {say('Council hall', 'Зал совета')}
       </Link>
 
@@ -78,30 +78,30 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
         {/* eslint-disable-next-line @next/next/no-img-element -- локальная статика/imgproxy, размеры фиксированы */}
         <img src={avatarUrl} alt="" width={64} height={64} className="size-16 rounded-full border border-border object-cover" />
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-[20px] font-bold text-ink">
+          <h1 className="flex items-center gap-2 text-[1.25rem] font-bold text-ink">
             {name}
             {!e.enabled && (
-              <span className="rounded-md border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted">{say('disabled', 'выключен')}</span>
+              <span className="rounded-md border border-border px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted">{say('disabled', 'выключен')}</span>
             )}
           </h1>
-          {(ru ? e.guildRu : e.guildEn) && <div className="mt-0.5 text-[13px] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
+          {(ru ? e.guildRu : e.guildEn) && <div className="mt-0.5 text-[0.8125rem] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
           {/* Аккаунт специалиста — то, что видят люди: списки, комментарии, авторство. */}
           {handle ? (
-            <Link href={`/${handle}`} className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] text-ink-2 hover:text-accent">
+            <Link href={`/${handle}`} className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-ink-2 hover:text-accent">
               <CircleUser size={12} /> @{handle}
             </Link>
           ) : (
-            <div className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] text-warn">
+            <div className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-warn">
               <CircleUser size={12} /> {say('no account yet — create it in the council hall', 'аккаунта пока нет — заводится в зале совета')}
             </div>
           )}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
-            <span className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[11px] text-ink-2" title={mood.style || say('not enough data yet', 'пока мало данных')}>
+            <span className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[0.6875rem] text-ink-2" title={mood.style || say('not enough data yet', 'пока мало данных')}>
               {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
             </span>
             {e.domains.map((d) => (
-              <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[11px] text-ink-2">
+              <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-ink-2">
                 {d}
               </span>
             ))}
@@ -142,39 +142,39 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
 
       <div className="mb-5 grid gap-3 lg:grid-cols-2">
         <div className={card}>
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">{say('Persona (working frame)', 'Персона (рабочий каркас)')}</div>
-          <p className="whitespace-pre-wrap text-[13px] leading-[1.55] text-ink-2">{e.persona}</p>
+          <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Persona (working frame)', 'Персона (рабочий каркас)')}</div>
+          <p className="whitespace-pre-wrap text-[0.8125rem] leading-[1.55] text-ink-2">{e.persona}</p>
           {e.code && (
             <>
-              <div className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
-              <p className="whitespace-pre-wrap font-mono text-[12.5px] leading-[1.55] text-ink-2">{e.code}</p>
+              <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
+              <p className="whitespace-pre-wrap font-mono text-[0.78125rem] leading-[1.55] text-ink-2">{e.code}</p>
             </>
           )}
           {e.memory && (
             <>
-              <div className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wide text-muted">{say('Craft memory (auto-distilled)', 'Память ремесла (автовыжимка)')}</div>
-              <p className="whitespace-pre-wrap text-[12.5px] leading-[1.55] text-ink-2">{e.memory}</p>
+              <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Craft memory (auto-distilled)', 'Память ремесла (автовыжимка)')}</div>
+              <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2">{e.memory}</p>
             </>
           )}
 
         </div>
         <div className={card}>
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">{say('Recent councils', 'Последние советы')}</div>
+          <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Recent councils', 'Последние советы')}</div>
           {kpi.recent.length === 0 ? (
-            <p className="text-[13px] text-muted">{say('Has not been summoned yet.', 'Ещё ни разу не созывался.')}</p>
+            <p className="text-[0.8125rem] text-muted">{say('Has not been summoned yet.', 'Ещё ни разу не созывался.')}</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {kpi.recent.map((r, i) => (
-                <li key={i} className="flex items-baseline gap-2 text-[13px]">
+                <li key={i} className="flex items-baseline gap-2 text-[0.8125rem]">
                   <span className={`shrink-0 ${r.accepted ? 'text-ok' : 'text-muted'}`}>{r.accepted ? '✓' : '·'}</span>
                   <span className="min-w-0 flex-1 truncate text-ink-2">{r.query}</span>
-                  <span className="shrink-0 whitespace-nowrap text-[11px] text-muted">{timeAgo(r.createdAt, lang)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-[0.6875rem] text-muted">{timeAgo(r.createdAt, lang)}</span>
                 </li>
               ))}
             </ul>
           )}
           {kpi.lastSeenAt && (
-            <div className="mt-2 text-[11px] text-muted">
+            <div className="mt-2 text-[0.6875rem] text-muted">
               {say('Last draft:', 'Последний черновик:')} {timeAgo(kpi.lastSeenAt, lang)}
             </div>
           )}
@@ -184,7 +184,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
       {/* НАСТРОЙКИ — здесь, а не в общем зале: у списка настройки на странице списка, у
           специалиста на его странице. Одна форма на одного, а не стена из двадцати. */}
       <div className="mt-5">
-        <div className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-ink-2">{say('Settings', 'Настройки')}</div>
+        <div className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{say('Settings', 'Настройки')}</div>
         <ExpertSettings e={{ ...e, uploadedUrl: e.avatarUploaded ? avatars[e.id] : undefined }} modelOptions={modelOptions} gallery={gallery} ru={ru} />
       </div>
     </div>

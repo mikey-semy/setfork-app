@@ -129,9 +129,9 @@ export function ModelSelect({
           type="button"
           id={id}
           onClick={() => setOpen((v) => !v)}
-          className="flex h-[42px] w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] outline-hidden focus:border-border-strong"
+          className="flex h-[2.625rem] w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] outline-hidden focus:border-border-strong"
         >
-          <span className={triggerLabel ? 'truncate text-[13px] text-ink' : 'text-muted'}>
+          <span className={triggerLabel ? 'truncate text-[0.8125rem] text-ink' : 'text-muted'}>
             {triggerLabel || placeholder}
           </span>
           <ChevronDown size={16} className="shrink-0 text-muted" />
@@ -150,7 +150,7 @@ export function ModelSelect({
                 }}
                 onKeyDown={onKeyDown}
                 placeholder="Поиск модели…"
-                className="w-full bg-transparent text-[13px] text-ink outline-hidden placeholder:text-muted"
+                className="w-full bg-transparent text-[0.8125rem] text-ink outline-hidden placeholder:text-muted"
               />
               {query && (
                 <button
@@ -181,24 +181,24 @@ export function ModelSelect({
                   onMouseEnter={() => setHighlight(i)}
                   onClick={() => pick(o.value)}
                 >
-                  <span className="truncate text-[12.5px]">{o.label ?? o.id}</span>
+                  <span className="truncate text-[0.78125rem]">{o.label ?? o.id}</span>
                   {o.family && (
-                    <span className="ml-1.5 shrink-0 rounded-full border border-border bg-surface-2 px-1.5 py-px text-[11px] text-muted">
+                    <span className="ml-1.5 shrink-0 rounded-full border border-border bg-surface-2 px-1.5 py-px text-[0.6875rem] text-muted">
                       {o.family}
                     </span>
                   )}
-                  {o.price && <span className={`ml-auto shrink-0 pl-4 tabular-nums text-[11px] ${o.priceClass ?? ''}`}>{o.price}</span>}
+                  {o.price && <span className={`ml-auto shrink-0 pl-4 tabular-nums text-[0.6875rem] ${o.priceClass ?? ''}`}>{o.price}</span>}
                 </Row>
               ))}
               {showCustom && (
                 <Row selected={values.includes(custom)} highlighted={false} onClick={() => pick(custom)}>
-                  <span className="truncate text-[12.5px]">
+                  <span className="truncate text-[0.78125rem]">
                     {customHint ?? 'Использовать'} <span className="font-mono text-ink-2">{custom}</span>
                   </span>
                 </Row>
               )}
               {filtered.length === 0 && !showCustom && (
-                <div className="px-3 py-4 text-center text-[12.5px] text-muted">Ничего не найдено</div>
+                <div className="px-3 py-4 text-center text-[0.78125rem] text-muted">Ничего не найдено</div>
               )}
             </div>
           </div>
@@ -209,8 +209,8 @@ export function ModelSelect({
       {multiple && values.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {values.map((v, i) => (
-            <span key={v} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 py-1 pl-1.5 pr-1 text-[11px] text-ink-2">
-              <span className="grid size-4 shrink-0 place-items-center rounded-md bg-surface text-[11px] tabular-nums text-muted">{i + 1}</span>
+            <span key={v} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 py-1 pl-1.5 pr-1 text-[0.6875rem] text-ink-2">
+              <span className="grid size-4 shrink-0 place-items-center rounded-md bg-surface text-[0.6875rem] tabular-nums text-muted">{i + 1}</span>
               <span>{labelOf(v)}</span>
               <button
                 type="button"
@@ -247,7 +247,7 @@ function Row({
       type="button"
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      className={`relative flex min-h-11 w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-left text-[13px] text-ink ${
+      className={`relative flex min-h-11 w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-left text-[0.8125rem] text-ink ${
         highlighted ? 'bg-(--accent-soft) text-accent' : ''
       }`}
     >

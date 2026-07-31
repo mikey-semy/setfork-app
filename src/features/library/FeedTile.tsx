@@ -22,9 +22,9 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
       <Link href={base} className="block">
         {item.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.coverImage} alt="" className="h-[96px] w-full object-cover" />
+          <img src={item.coverImage} alt="" className="h-[6rem] w-full object-cover" />
         ) : (
-          <AutoBanner seed={item.id} accent={item.accent} label={tr(item.title, lang)} height="h-[96px]" />
+          <AutoBanner seed={item.id} accent={item.accent} label={tr(item.title, lang)} height="h-[6rem]" />
         )}
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-3.5">
@@ -32,8 +32,8 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
           <UserLine handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size="xs" className="min-w-0" />
           {item.visibility === 'private' && <Lock size={11} className="shrink-0 text-muted" />}
         </div>
-        <Link href={base} className="truncate text-[16px] font-semibold text-ink group-hover:text-accent">{tr(item.title, lang)}</Link>
-        <p className="line-clamp-2 min-h-[34px] text-[12.5px] leading-snug text-ink-2">{tr(item.desc, lang)}</p>
+        <Link href={base} className="truncate text-[1rem] font-semibold text-ink group-hover:text-accent">{tr(item.title, lang)}</Link>
+        <p className="line-clamp-2 min-h-[2.125rem] text-[0.78125rem] leading-snug text-ink-2">{tr(item.desc, lang)}</p>
         {item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {item.tags.slice(0, 3).map((tag) => (
@@ -42,14 +42,14 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
           </div>
         )}
         <div className="mt-auto flex items-center justify-between border-t border-border pt-2.5">
-          <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+          <span className="inline-flex items-center gap-1 text-[0.6875rem] text-muted">
             <GitFork size={12} /> {fmt(item.forksCount)}
           </span>
           <form action={star}>
             <Tooltip label={t('star', lang)}>
               <button
                 type="submit"
-                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12.5px] font-medium transition-colors hover:border-border-strong ${
+                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[0.78125rem] font-medium transition-colors hover:border-border-strong ${
                   starred ? 'border-warn text-warn' : 'border-border text-ink-2'
                 }`}
               >

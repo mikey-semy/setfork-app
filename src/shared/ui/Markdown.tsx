@@ -25,7 +25,7 @@ function codeOf(children: ReactNode): { code: string; name?: string } | null {
 export function Markdown({ children, className, refBase, codeCards }: { children: string; className?: string; refBase?: string; codeCards?: boolean }) {
   if (!children?.trim()) return null
   return (
-    <div className={cn('text-[13px] leading-snug text-ink-2 [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
+    <div className={cn('text-[0.8125rem] leading-snug text-ink-2 [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
       <ReactMarkdown
         remarkPlugins={refBase ? [remarkGfm, remarkIssueRefs(refBase)] : [remarkGfm]}
         components={{
@@ -34,14 +34,14 @@ export function Markdown({ children, className, refBase, codeCards }: { children
           pre: (p) => {
             const c = codeCards ? codeOf(p.children) : null
             if (c) return <CodeCard code={c.code} name={c.name} />
-            return <pre {...p} className="overflow-x-auto rounded-md border border-border bg-surface-2 p-2.5 font-mono text-[12.5px] text-ink" />
+            return <pre {...p} className="overflow-x-auto rounded-md border border-border bg-surface-2 p-2.5 font-mono text-[0.78125rem] text-ink" />
           },
           ul: (p) => <ul {...p} className="list-disc pl-5" />,
           ol: (p) => <ol {...p} className="list-decimal pl-5" />,
           strong: (p) => <strong {...p} className="font-semibold text-ink" />,
           del: (p) => <del {...p} className="text-muted" />,
-          h1: (p) => <div {...p} className="text-[16px] font-semibold text-ink" />,
-          h2: (p) => <div {...p} className="text-[14px] font-semibold text-ink" />,
+          h1: (p) => <div {...p} className="text-[1rem] font-semibold text-ink" />,
+          h2: (p) => <div {...p} className="text-[0.875rem] font-semibold text-ink" />,
           h3: (p) => <div {...p} className="font-semibold text-ink" />,
           blockquote: (p) => <blockquote {...p} className="border-l-2 border-border pl-3 text-muted" />,
           input: (p) => <input {...p} disabled className="mr-1.5 align-middle accent-accent" />,
@@ -50,7 +50,7 @@ export function Markdown({ children, className, refBase, codeCards }: { children
           ),
           table: (p) => (
             <div className="overflow-x-auto">
-              <table {...p} className="w-full border-collapse text-[12.5px]" />
+              <table {...p} className="w-full border-collapse text-[0.78125rem]" />
             </div>
           ),
           th: (p) => <th {...p} className="border border-border px-2 py-1 text-left font-semibold text-ink" />,

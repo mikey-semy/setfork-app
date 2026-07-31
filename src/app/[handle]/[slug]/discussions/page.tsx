@@ -35,24 +35,24 @@ export default async function DiscussionsPage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[900px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[56.25rem] px-4 py-6">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1">
-            <Link href={base} className={`rounded-md px-2.5 py-1.5 text-[13px] font-medium ${!category ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}>
+            <Link href={base} className={`rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium ${!category ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}>
               {ru ? 'Все' : 'All'}
             </Link>
             {DISCUSSION_CATEGORIES.map((c) => (
               <Link
                 key={c.key}
                 href={`${base}?category=${c.key}`}
-                className={`rounded-md px-2.5 py-1.5 text-[13px] font-medium ${category === c.key ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}
+                className={`rounded-md px-2.5 py-1.5 text-[0.8125rem] font-medium ${category === c.key ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}
               >
                 {c.icon} {ru ? c.ru : c.en}
               </Link>
             ))}
           </div>
           {session && (
-            <Link href={`${base}/new`} className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+            <Link href={`${base}/new`} className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[0.8125rem] font-semibold text-primary-fg">
               <Plus size={15} /> {ru ? 'Новое обсуждение' : 'New discussion'}
             </Link>
           )}
@@ -65,18 +65,18 @@ export default async function DiscussionsPage({
             {list.map((d) => (
               <div key={d.id} className="flex items-start gap-3 px-4 py-3">
                 <Tooltip label={categoryLabel(d.category, lang)}>
-                  <span className="mt-0.5 text-[16px]">{categoryMeta(d.category).icon}</span>
+                  <span className="mt-0.5 text-[1rem]">{categoryMeta(d.category).icon}</span>
                 </Tooltip>
                 <div className="min-w-0 flex-1">
-                  <Link href={`${base}/${d.number}`} className="text-[14px] font-semibold text-ink hover:text-accent">
+                  <Link href={`${base}/${d.number}`} className="text-[0.875rem] font-semibold text-ink hover:text-accent">
                     {d.title}
                   </Link>
-                  <div className="mt-0.5 text-[12.5px] text-muted">
+                  <div className="mt-0.5 text-[0.78125rem] text-muted">
                     #{d.number} · {d.authorHandle} · {timeAgo(d.createdAt, lang)}
                   </div>
                 </div>
                 {d.commentCount > 0 && (
-                  <span className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] text-muted">
+                  <span className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-muted">
                     <MessageSquare size={13} /> {d.commentCount}
                   </span>
                 )}

@@ -23,8 +23,8 @@ export const TONE_DIVIDER: Record<SplitTone, string> = {
 export function splitSegment(opts: { interactive?: boolean; muted?: boolean; className?: string } = {}) {
   const { interactive = true, muted = false, className } = opts
   return cn(
-    'inline-flex h-full items-center gap-2 px-3 text-[13px] font-semibold transition-colors',
-    muted && 'px-2.5 font-mono text-[12.5px] font-normal text-muted',
+    'inline-flex h-full items-center gap-2 px-3 text-[0.8125rem] font-semibold transition-colors',
+    muted && 'px-2.5 font-mono text-[0.78125rem] font-normal text-muted',
     interactive && 'hover:bg-surface-2 hover:text-ink',
     className,
   )

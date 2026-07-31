@@ -72,20 +72,20 @@ export function MergedPanel({
     <div className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3.5 py-3 ${tone}`}>
       <span className={accepted ? 'text-accent' : 'text-muted'}>{accepted ? <GitMerge size={18} /> : <X size={18} />}</span>
       <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-semibold text-ink">{accepted ? labels.merged : labels.closed}</div>
-        {branch && !done && <div className="text-[12.5px] text-ink-2">{labels.branchSafeToDelete}</div>}
-        {done && <div className="text-[12.5px] text-muted">{labels.branchDeleted}</div>}
-        {failed && <div className="text-[12.5px] text-danger">{labels.deleteFailed}</div>}
-        {revertError && <div className="text-[12.5px] text-danger [overflow-wrap:anywhere]">{revertError}</div>}
+        <div className="text-[0.8125rem] font-semibold text-ink">{accepted ? labels.merged : labels.closed}</div>
+        {branch && !done && <div className="text-[0.78125rem] text-ink-2">{labels.branchSafeToDelete}</div>}
+        {done && <div className="text-[0.78125rem] text-muted">{labels.branchDeleted}</div>}
+        {failed && <div className="text-[0.78125rem] text-danger">{labels.deleteFailed}</div>}
+        {revertError && <div className="text-[0.78125rem] text-danger [overflow-wrap:anywhere]">{revertError}</div>}
       </div>
       {/* Действие — к правому краю (thumb-зона), единая высота ряда. */}
       {revertOf && (
-        <Button variant="outline" className="h-[38px]" disabled={pending} onClick={revert}>
+        <Button variant="outline" className="h-[2.375rem]" disabled={pending} onClick={revert}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : <Undo2 size={13} />} {labels.revert}
         </Button>
       )}
       {branch && !done && (
-        <Button variant="outline" className="h-[38px]" disabled={pending} onClick={remove}>
+        <Button variant="outline" className="h-[2.375rem]" disabled={pending} onClick={remove}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} {labels.deleteBranch}
         </Button>
       )}

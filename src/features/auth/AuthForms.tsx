@@ -9,7 +9,7 @@ import { loginWithPassword, registerWithPassword, type AuthResult } from './acti
 // Геометрия auth-форм крупнее стандартной md — доводка поверх примитивов.
 // ЯВНАЯ высота, а не py: у Button фиксированная высота из шкалы (control.ts),
 // и вертикальный паддинг её не раздвинет (находка Codex по #610).
-const btn = 'h-11 w-full px-4 text-[14px] disabled:opacity-60'
+const btn = 'h-11 w-full px-4 text-[0.875rem] disabled:opacity-60'
 
 export function LoginForm({ lang }: { lang: Lang }) {
   const [state, action, pending] = useActionState<AuthResult | null, FormData>(loginWithPassword, null)
@@ -17,11 +17,11 @@ export function LoginForm({ lang }: { lang: Lang }) {
     <form action={action} className="flex flex-col gap-3 text-left">
       <Input name="email" type="email" required autoComplete="email" placeholder={t('emailField', lang)} />
       <Input name="password" type="password" required autoComplete="current-password" placeholder={t('passwordField', lang)} />
-      {state?.error && <div className="text-[12.5px] text-danger">{state.error}</div>}
+      {state?.error && <div className="text-[0.78125rem] text-danger">{state.error}</div>}
       <Button type="submit" variant="primary" disabled={pending} className={btn}>
         {t('signIn', lang)}
       </Button>
-      <a href="/forgot-password" className="text-center text-[12.5px] text-ink-2 hover:text-ink">
+      <a href="/forgot-password" className="text-center text-[0.78125rem] text-ink-2 hover:text-ink">
         {lang === 'ru' ? 'Забыл пароль?' : 'Forgot password?'}
       </a>
     </form>
@@ -35,11 +35,11 @@ export function RegisterForm({ lang }: { lang: Lang }) {
       <Input name="email" type="email" required autoComplete="email" placeholder={t('emailField', lang)} />
       <div>
         <Input name="handle" required autoComplete="username" placeholder={t('handleField', lang)} className="font-mono" />
-        <p className="mt-1 text-[11px] text-muted">{t('handleHint', lang)}</p>
+        <p className="mt-1 text-[0.6875rem] text-muted">{t('handleHint', lang)}</p>
       </div>
       <Input name="name" placeholder={t('displayName', lang)} />
       <Input name="password" type="password" required minLength={8} autoComplete="new-password" placeholder={t('passwordField', lang)} />
-      {state?.error && <div className="text-[12.5px] text-danger">{state.error}</div>}
+      {state?.error && <div className="text-[0.78125rem] text-danger">{state.error}</div>}
       <Button type="submit" variant="primary" disabled={pending} className={btn}>
         {t('createAccount', lang)}
       </Button>

@@ -364,7 +364,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
       <div className="flex flex-wrap items-center gap-1 border-b border-border bg-surface-2 px-1.5 py-1">
         <div className="mr-1 flex overflow-hidden rounded-md border border-border">
           {(['write', 'preview'] as const).map((k) => (
-            <button key={k} type="button" onClick={() => setTab(k)} className={`px-2.5 py-1 text-[12.5px] font-semibold ${tab === k ? 'bg-surface text-ink' : 'bg-surface-2 text-muted hover:text-ink'}`}>
+            <button key={k} type="button" onClick={() => setTab(k)} className={`px-2.5 py-1 text-[0.78125rem] font-semibold ${tab === k ? 'bg-surface text-ink' : 'bg-surface-2 text-muted hover:text-ink'}`}>
               {k === 'write' ? L('Написать', 'Write') : L('Просмотр', 'Preview')}
             </button>
           ))}
@@ -447,7 +447,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
               uploadFiles(files)
             }
           }}
-          className="w-full resize-y bg-surface px-3 py-2.5 text-[14px] text-ink outline-hidden placeholder:text-muted"
+          className="w-full resize-y bg-surface px-3 py-2.5 text-[0.875rem] text-ink outline-hidden placeholder:text-muted"
         />
 
         {mention && users.length > 0 && (
@@ -461,7 +461,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
                   pickMention(u)
                 }}
                 onMouseEnter={() => setMIdx(i)}
-                className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[13px] ${i === mIdx ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
+                className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[0.8125rem] ${i === mIdx ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="h-5 w-5 rounded-full" /> : <span className="h-5 w-5 rounded-full bg-surface-2" />}
@@ -483,7 +483,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
                   pickIssueRef(h)
                 }}
                 onMouseEnter={() => setIIdx(i)}
-                className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[13px] ${i === iIdx ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
+                className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[0.8125rem] ${i === iIdx ? 'bg-surface-2 text-ink' : 'text-ink-2'}`}
               >
                 <span className={`font-mono ${h.status === 'closed' ? 'text-accent' : 'text-ok'}`}>#{h.number}</span>
                 <span className="min-w-0 flex-1 truncate">{h.title}</span>
@@ -493,12 +493,12 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
         )}
       </div>
       {tab === 'preview' && (
-        <div className="min-h-[80px] px-3 py-2.5">
-          {val.trim() ? <Markdown>{val}</Markdown> : <p className="text-[13px] italic text-muted">{L('Нечего показывать', 'Nothing to preview')}</p>}
+        <div className="min-h-[5rem] px-3 py-2.5">
+          {val.trim() ? <Markdown>{val}</Markdown> : <p className="text-[0.8125rem] italic text-muted">{L('Нечего показывать', 'Nothing to preview')}</p>}
         </div>
       )}
 
-      <div className="flex items-center gap-2 border-t border-border bg-surface-2 px-3 py-1.5 text-[11px] text-muted">
+      <div className="flex items-center gap-2 border-t border-border bg-surface-2 px-3 py-1.5 text-[0.6875rem] text-muted">
         <span>{L('Поддерживается Markdown', 'Markdown supported')}</span>
         <span className="text-border">·</span>
         <button type="button" onClick={() => fileInput.current?.click()} className="hover:text-ink">

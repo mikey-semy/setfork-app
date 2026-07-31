@@ -45,7 +45,7 @@ export function AiKeyAndSwitch({
   const checked = on && canEnable
 
   const inputCls =
-    'w-full rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-hidden focus:border-border-strong'
+    'w-full rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[0.8125rem] text-ink outline-hidden focus:border-border-strong'
 
   const KEY_FIELD: Record<AiProviderChoice, { label: string; placeholder: string; name: string }> = {
     openrouter: { label: say('OpenRouter API key', 'API-ключ OpenRouter'), placeholder: 'sk-or-v1-…', name: 'apiKey' },
@@ -78,8 +78,8 @@ export function AiKeyAndSwitch({
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[14px] font-medium text-ink">{say('Drafting enabled', 'Черновики включены')}</div>
-          <p className="text-[12.5px] text-muted">
+          <div className="text-[0.875rem] font-medium text-ink">{say('Drafting enabled', 'Черновики включены')}</div>
+          <p className="text-[0.78125rem] text-muted">
             {canEnable
               ? say('Lists can be drafted automatically.', 'Списки можно придумывать автоматически.')
               : say('Enter an API key below first.', 'Сначала укажите API-ключ ниже.')}
@@ -99,7 +99,7 @@ export function AiKeyAndSwitch({
             onProviderChange?.(next)
           }}
         >
-          <SelectTrigger className="text-[13px]">
+          <SelectTrigger className="text-[0.8125rem]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

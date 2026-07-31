@@ -108,8 +108,8 @@ function AvatarPicker({
         </button>
       </Tooltip>
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-2 w-[232px] rounded-md border border-border bg-surface p-1.5 shadow-card">
-          <div className="grid max-h-[136px] grid-cols-6 gap-1 overflow-y-auto">
+        <div className="absolute left-0 top-full z-20 mt-2 w-[14.5rem] rounded-md border border-border bg-surface p-1.5 shadow-card">
+          <div className="grid max-h-[8.5rem] grid-cols-6 gap-1 overflow-y-auto">
             {gallery.map((g) => (
               <button
                 key={g}
@@ -125,7 +125,7 @@ function AvatarPicker({
             ))}
           </div>
           <div className="mt-1.5 flex items-center gap-2 border-t border-border pt-1.5">
-            <label className="cursor-pointer rounded-md border border-border px-2 py-1 text-[11px] text-ink-2 hover:text-ink">
+            <label className="cursor-pointer rounded-md border border-border px-2 py-1 text-[0.6875rem] text-ink-2 hover:text-ink">
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif"
@@ -141,13 +141,13 @@ function AvatarPicker({
               <button
                 type="button"
                 onClick={() => void resetExpertAvatar(id)}
-                className="text-[11px] text-muted hover:text-ink"
+                className="text-[0.6875rem] text-muted hover:text-ink"
               >
                 {say('Reset', 'Вернуть встроенную')}
               </button>
             )}
           </div>
-          {err && <p className="mt-1 text-[11px] text-danger">{err}</p>}
+          {err && <p className="mt-1 text-[0.6875rem] text-danger">{err}</p>}
         </div>
       )}
     </div>
@@ -184,7 +184,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
       <div className="mb-3 flex items-center gap-2">
         <AvatarPicker id={e.id} value={e.avatarUploaded ? e.id : e.avatar || e.id} uploadedUrl={e.uploadedUrl} gallery={gallery} ru={ru} />
         <Tooltip label={say('id is fixed: avatar name and who in past chats', 'id не меняется: имя аватарки и who в прошлых беседах')}>
-          <code className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
+          <code className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[0.6875rem] text-muted">
             {e.id}
           </code>
         </Tooltip>
@@ -194,7 +194,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           </Link>
         </Tooltip>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-[11px] text-muted">{say('On', 'Вкл')}</span>
+          <span className="text-[0.6875rem] text-muted">{say('On', 'Вкл')}</span>
           <Switch name="enabled" checked={enabled} onCheckedChange={setEnabled} />
         </div>
       </div>
@@ -253,11 +253,11 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           </div>
 
           <Field label={say('Guild code — quality standards (goes into the master’s and the critic’s prompts)', 'Кодекс гильдии — стандарты качества (уходит в промпт мастера и критика)')}>
-            <Textarea name="code" defaultValue={e.code} rows={4} className="resize-y font-mono text-[12.5px] leading-[1.45]" />
+            <Textarea name="code" defaultValue={e.code} rows={4} className="resize-y font-mono text-[0.78125rem] leading-[1.45]" />
           </Field>
 
           <Field label={say('Query lens — aspects he searches the knowledge base by (ask_gnome, dig)', 'Линза запроса — аспекты, которыми он ищет по базе знаний (ask_gnome, раскопка)')}>
-            <Input name="lens" defaultValue={e.lens} className="font-mono text-[12.5px]" />
+            <Input name="lens" defaultValue={e.lens} className="font-mono text-[0.78125rem]" />
           </Field>
 
           <Field label={say('Instruction (persona)', 'Инструкция (персона)')}>
@@ -281,7 +281,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
             {/* Домены — те же теги по смыслу, поэтому тот же TagInput: чипы, автокомплит из реестра.
                 «Любая тема» отдельным тумблером, а не доменом «*»: normalize у TagInput вырезает
                 звёздочку, да и тумблер честнее магического символа. */}
-            <label className="mb-1.5 flex items-center gap-2 text-[12.5px] text-ink-2">
+            <label className="mb-1.5 flex items-center gap-2 text-[0.78125rem] text-ink-2">
               <Switch name="anyTopic" checked={anyTopic} onCheckedChange={setAnyTopic} />
               {say('Any topic (generalist)', 'Любая тема (универсал)')}
             </label>
@@ -293,7 +293,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           </Field>
 
           <div className="flex items-center justify-between gap-3 pt-0.5">
-            <label className="flex items-center gap-2 text-[12.5px] text-ink-2">
+            <label className="flex items-center gap-2 text-[0.78125rem] text-ink-2">
               <Switch name="online" checked={online} onCheckedChange={setOnline} />
               {say('Web access (:online) — pricier', 'Веб-доступ (:online) — дороже')}
             </label>

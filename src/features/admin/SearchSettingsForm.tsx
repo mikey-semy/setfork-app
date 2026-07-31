@@ -23,7 +23,7 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
       <input type="hidden" name="mode" value={mode} />
       <Field label={ru ? 'Режим' : 'Mode'}>
         <Select value={mode} onValueChange={(v) => setMode(v as SearchMode)}>
-          <SelectTrigger className="w-[280px]">
+          <SelectTrigger className="w-[17.5rem]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -31,7 +31,7 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
               <SelectItem key={o.value} value={o.value}>
                 <span className="flex flex-col">
                   <span>{o.label}</span>
-                  <span className="text-[11px] text-muted">{o.hint}</span>
+                  <span className="text-[0.6875rem] text-muted">{o.hint}</span>
                 </span>
               </SelectItem>
             ))}

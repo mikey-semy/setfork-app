@@ -62,9 +62,9 @@ export function ForkForm({
     <div className="flex flex-col gap-3.5">
       <div className="flex items-end gap-2">
         <Field label={labels.ownerLabel}>
-          <div className="rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[13px] text-ink-2">{viewerHandle}</div>
+          <div className="rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[0.8125rem] text-ink-2">{viewerHandle}</div>
         </Field>
-        <span className="pb-2 text-[14px] text-muted">/</span>
+        <span className="pb-2 text-[0.875rem] text-muted">/</span>
         <Field label={labels.nameLabel} className="min-w-0 flex-1">
           <input
             value={name}
@@ -74,13 +74,13 @@ export function ForkForm({
             }}
             spellCheck={false}
             autoCapitalize="off"
-            className="w-full rounded-md border border-border bg-surface px-2.5 py-2 font-mono text-[13px] text-ink outline-hidden focus:border-accent"
+            className="w-full rounded-md border border-border bg-surface px-2.5 py-2 font-mono text-[0.8125rem] text-ink outline-hidden focus:border-accent"
           />
         </Field>
       </div>
 
       {/* Индикатор доступности (как «EcoPlay is available ✓» на GitHub). */}
-      <div className="-mt-1.5 min-h-[16px] text-[12.5px]">
+      <div className="-mt-1.5 min-h-[1rem] text-[0.78125rem]">
         {checking ? (
           <span className="inline-flex items-center gap-1 text-muted">
             <Loader2 size={12} className="animate-spin" />
@@ -98,7 +98,7 @@ export function ForkForm({
         ) : null}
       </div>
 
-      <p className="-mt-2 text-[11px] leading-snug text-muted">{labels.nameHint}</p>
+      <p className="-mt-2 text-[0.6875rem] leading-snug text-muted">{labels.nameHint}</p>
 
       <Field label={labels.descLabel}>
         <textarea
@@ -107,21 +107,21 @@ export function ForkForm({
           rows={2}
           placeholder={labels.descPlaceholder}
           maxLength={350}
-          className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-2 text-[13px] text-ink outline-hidden focus:border-accent"
+          className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-2 text-[0.8125rem] text-ink outline-hidden focus:border-accent"
         />
       </Field>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
       <div className="flex items-center justify-end gap-2 border-t border-border pt-3.5">
-        <Link href={cancelHref} className="rounded-md border border-border px-3 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
+        <Link href={cancelHref} className="rounded-md border border-border px-3 py-2 text-[0.8125rem] font-semibold text-ink hover:border-border-strong">
           {labels.cancel}
         </Link>
         <button
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="inline-flex items-center gap-2 rounded-md border border-accent bg-accent px-3.5 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-md border border-accent bg-accent px-3.5 py-2 text-[0.8125rem] font-semibold text-white disabled:opacity-50"
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}
           <GitFork size={14} /> {labels.create}

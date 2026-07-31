@@ -403,7 +403,7 @@ export default async function SuggestionThreadPage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[1100px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[68.75rem] px-4 py-6">
         {/* Шапка PR: сообщение правки как заголовок + номер #N. Номер — адрес для
             людей: /suggestions/12 работает наравне с uuid (getSuggestion берёт оба). */}
         <SuggestionTitle
@@ -422,7 +422,7 @@ export default async function SuggestionThreadPage({
         <div className="mb-4 flex flex-wrap items-center gap-3">
           {/* Крупнее рядового чипа (это главный статус страницы), но той же
               тихой палитры. */}
-          <Badge variant={statusVariant} className="px-3 py-1 text-[12.5px]">
+          <Badge variant={statusVariant} className="px-3 py-1 text-[0.78125rem]">
             {sug.status === 'accepted' ? (
               <GitMerge size={14} />
             ) : sug.status === 'rejected' ? (
@@ -436,7 +436,7 @@ export default async function SuggestionThreadPage({
           </Badge>
           {/* Объём правки в шапке — тот же индикатор, что в диффе и в коммитах. */}
           <DiffStat counts={summary} squares />
-          <span className="text-[13px] text-ink-2">
+          <span className="text-[0.8125rem] text-ink-2">
             {t('proposedBy', lang)}{' '}
             <Link href={`/${sug.author.handle}`} className="font-semibold text-ink hover:text-accent">
               {sug.author.handle}
@@ -452,7 +452,7 @@ export default async function SuggestionThreadPage({
                     {coauthors.slice(0, 3).map((c) => (
                       <Avatar key={c.handle} handle={c.handle} avatarUrl={c.avatarUrl} size={18} />
                     ))}
-                    {coauthors.length > 3 && <span className="font-mono text-[11px] text-muted">+{coauthors.length - 3}</span>}
+                    {coauthors.length > 3 && <span className="font-mono text-[0.6875rem] text-muted">+{coauthors.length - 3}</span>}
                   </span>
                 </Tooltip>
               </>
@@ -460,10 +460,10 @@ export default async function SuggestionThreadPage({
             · {fmt.format(new Date(sug.createdAt))} ·{' '}
             {sug.branchRef ? (
               <>
-                <Link href={`/${owner}/${slug}?ref=${encodeURIComponent(sug.branchRef)}`} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[12.5px] text-ink hover:text-accent">
+                <Link href={`/${owner}/${slug}?ref=${encodeURIComponent(sug.branchRef)}`} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[0.78125rem] text-ink hover:text-accent">
                   <GitBranch size={11} /> {sug.branchRef}
                 </Link>{' '}
-                → <Tooltip label={t('defaultBranchHint', lang)}><span className="font-mono text-[12.5px]">main</span></Tooltip>
+                → <Tooltip label={t('defaultBranchHint', lang)}><span className="font-mono text-[0.78125rem]">main</span></Tooltip>
               </>
             ) : (
               <>{lang === 'ru' ? `на основе v${sug.baseVersion}` : `based on v${sug.baseVersion}`}</>
@@ -552,12 +552,12 @@ export default async function SuggestionThreadPage({
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Link
                 href={`${path}?tab=commits`}
-                className="inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-md border border-border px-3.5 text-[14px] font-semibold text-ink hover:border-border-strong"
+                className="inline-flex h-[2.375rem] shrink-0 items-center gap-1.5 rounded-md border border-border px-3.5 text-[0.875rem] font-semibold text-ink hover:border-border-strong"
               >
                 <ArrowLeft size={14} /> <span className="max-sm:hidden">{t('prAllCommits', lang)}</span>
               </Link>
-              <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{commitDiff.title}</span>
-              <span className="shrink-0 font-mono text-[12.5px] text-muted">{commitDiff.sha.slice(0, 7)}</span>
+              <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold text-ink">{commitDiff.title}</span>
+              <span className="shrink-0 font-mono text-[0.78125rem] text-muted">{commitDiff.sha.slice(0, 7)}</span>
               <div className="ml-auto max-sm:w-full max-sm:justify-end">
                 <DiffViewToggle
                   path={path}
@@ -581,7 +581,7 @@ export default async function SuggestionThreadPage({
         )}
 
         {tab === 'files' && (<>
-        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
+        <div className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.07em] text-muted">
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → предложение` : `v${sug.baseVersion} → suggestion`}
         </div>
         {/* Ряд действий над диффом: слева прогресс ревью, справа правка и
@@ -590,7 +590,7 @@ export default async function SuggestionThreadPage({
           {/* Прогресс — только своему ревьюеру и только когда есть что отмечать.
               На мобиле остаются цифры, слово прячется: оно предсказуемо. */}
           {viewedMarks && sug.status === 'open' && markable > 0 && (
-            <span className="mr-auto inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+            <span className="mr-auto inline-flex items-center gap-1.5 text-[0.78125rem] text-ink-2">
               <Eye size={14} className={viewedCount === markable ? 'text-ok' : 'text-muted'} />
               <span className="font-mono">
                 {viewedCount}/{markable}
@@ -601,7 +601,7 @@ export default async function SuggestionThreadPage({
           {canEditItems && (
             <Link
               href={`${path}/edit`}
-              className="inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-md border border-border px-3.5 text-[14px] font-semibold text-ink hover:border-border-strong"
+              className="inline-flex h-[2.375rem] shrink-0 items-center gap-1.5 rounded-md border border-border px-3.5 text-[0.875rem] font-semibold text-ink hover:border-border-strong"
             >
               <Pencil size={14} /> {t('prEdit', lang)}
             </Link>
@@ -675,7 +675,7 @@ export default async function SuggestionThreadPage({
             компании копились непринятыми: посмотреть результат было негде. */}
         {tab === 'result' && (
           <>
-            <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
+            <div className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.07em] text-muted">
               {t('resultTab', lang)} · {lang === 'ru' ? `станет v${meta.currentVersion + 1}` : `becomes v${meta.currentVersion + 1}`}
             </div>
             <SuggestionResult items={items} lang={lang} ordered={meta.ordered} />
@@ -689,7 +689,7 @@ export default async function SuggestionThreadPage({
             не шапка на всех вкладках: в «Проверках» и «Изменениях» она мешала. */}
         {sug.note && (
           <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface">
-            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px] text-ink-2">
+            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[0.78125rem] text-ink-2">
               <Avatar handle={sug.author.handle} avatarUrl={sug.author.avatarUrl} size={22} />
               <span className="font-semibold text-ink">{sug.author.handle}</span>
             </div>
@@ -715,9 +715,9 @@ export default async function SuggestionThreadPage({
             closed: t('tlClosed', lang),
           }}
         />
-        <h2 className="mt-6 mb-3 text-[14px] font-bold text-ink">{t('discussionHeading', lang)}</h2>
+        <h2 className="mt-6 mb-3 text-[0.875rem] font-bold text-ink">{t('discussionHeading', lang)}</h2>
         {comments.length === 0 ? (
-          <p className="mb-3 text-[13px] text-muted">{t('noCommentsYet', lang)}</p>
+          <p className="mb-3 text-[0.8125rem] text-muted">{t('noCommentsYet', lang)}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {comments.map((c) => (
@@ -778,7 +778,7 @@ export default async function SuggestionThreadPage({
             конфликте: как раз тогда обновление чаще всего и решает дело. */}
         {branchBehind && sug.status === 'open' && !branchMissing && (
           <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3.5 py-2.5">
-            <span className="text-[12.5px] text-ink-2">{t('prBranchBehind', lang)}</span>
+            <span className="text-[0.78125rem] text-ink-2">{t('prBranchBehind', lang)}</span>
             <form action={updateBranchFromMain.bind(null, sug.id)} className="ml-auto">
               <SubmitButton variant="outline">
                 <RefreshCw size={14} /> {t('prUpdateBranch', lang)}
@@ -862,7 +862,7 @@ export default async function SuggestionThreadPage({
             </form>
           </div>
         ) : (
-          <div className="mt-4 rounded-lg border border-border bg-surface px-4 py-3 text-[13px] text-ink-2">
+          <div className="mt-4 rounded-lg border border-border bg-surface px-4 py-3 text-[0.8125rem] text-ink-2">
             <Link href={`/login?next=${path}`} className="font-semibold text-accent hover:underline">
               {t('signInToComment', lang)}
             </Link>
@@ -874,11 +874,11 @@ export default async function SuggestionThreadPage({
           <PageAside>
             <AsideCard title={t('reviewTitle', lang)}>
               {reviews.length === 0 ? (
-                <p className="text-[12.5px] text-muted">{t('reviewNobodyYet', lang)}</p>
+                <p className="text-[0.78125rem] text-muted">{t('reviewNobodyYet', lang)}</p>
               ) : (
                 <ul className="flex flex-col gap-1.5">
                   {reviews.map((r) => (
-                    <li key={r.id} className="flex items-center gap-2 text-[12.5px]">
+                    <li key={r.id} className="flex items-center gap-2 text-[0.78125rem]">
                       <Avatar handle={r.reviewer.handle} avatarUrl={r.reviewer.avatarUrl} size={20} />
                       <span className="min-w-0 flex-1 truncate text-ink-2">{r.reviewer.name || r.reviewer.handle}</span>
                       <span className={r.verdict === 'approve' ? 'text-ok' : r.verdict === 'changes' ? 'text-danger' : 'text-muted'}>
@@ -980,7 +980,7 @@ export default async function SuggestionThreadPage({
                 {linkedIssues.length > 0 && (
                   <ul className="mb-1.5 flex flex-col gap-1.5">
                     {linkedIssues.map((iss) => (
-                      <li key={iss.number} className="flex items-start gap-1.5 text-[12.5px]">
+                      <li key={iss.number} className="flex items-start gap-1.5 text-[0.78125rem]">
                         <Link href={`/${owner}/${slug}/issues/${iss.number}`} className="font-mono text-muted hover:text-accent">
                           #{iss.number}
                         </Link>

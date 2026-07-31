@@ -41,7 +41,7 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
 
   if (!email) {
     return (
-      <p className="text-[13px] text-ink-2">
+      <p className="text-[0.8125rem] text-ink-2">
         {ru ? 'Почта не привязана (вход через GitHub).' : 'No email attached (GitHub sign-in).'}
       </p>
     )
@@ -50,7 +50,7 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-mono text-[13px] text-ink">{email}</span>
+        <span className="font-mono text-[0.8125rem] text-ink">{email}</span>
         {verified ? (
           <Badge variant="ok">
             <MailCheck size={11} /> {ru ? 'подтверждена' : 'verified'}
@@ -74,9 +74,9 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
           >
             <Send size={13} /> {ru ? 'Отправить письмо ещё раз' : 'Resend verification email'}
           </Button>
-          {sent === true && <span className="text-[12.5px] text-ok">{ru ? 'Отправлено' : 'Sent'}</span>}
+          {sent === true && <span className="text-[0.78125rem] text-ok">{ru ? 'Отправлено' : 'Sent'}</span>}
           {sent === false && (
-            <span className="text-[12.5px] text-warn">
+            <span className="text-[0.78125rem] text-warn">
               {ru ? 'Не удалось (SMTP не настроен?)' : 'Failed (SMTP not configured?)'}
             </span>
           )}
@@ -85,18 +85,18 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
 
       {/* Смена адреса: письмо-подтверждение уходит на НОВЫЙ адрес. */}
       {state?.ok ? (
-        <p className="text-[13px] text-ok">
+        <p className="text-[0.8125rem] text-ok">
           {ru
             ? 'Письмо для подтверждения отправлено на новый адрес. Старый остаётся активным, пока не перейдёшь по ссылке.'
             : 'A confirmation email was sent to the new address. The old one stays active until you follow the link.'}
         </p>
       ) : editing ? (
         <form action={formAction} className="flex flex-col gap-2 border-t border-border pt-3">
-          <label className="text-[12.5px] text-ink-2" htmlFor="new-email">
+          <label className="text-[0.78125rem] text-ink-2" htmlFor="new-email">
             {ru ? 'Новый адрес почты' : 'New email address'}
           </label>
           <div className="flex flex-wrap items-center gap-2">
-            <Input id="new-email" name="email" type="email" required placeholder="you@example.com" className="max-w-[280px]" />
+            <Input id="new-email" name="email" type="email" required placeholder="you@example.com" className="max-w-[17.5rem]" />
             <Button type="submit" disabled={changing}>
               {ru ? 'Отправить подтверждение' : 'Send confirmation'}
             </Button>
@@ -104,7 +104,7 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
               {ru ? 'Отмена' : 'Cancel'}
             </Button>
           </div>
-          {state && !state.ok && <span className="text-[12.5px] text-danger">{changeError(state.error, ru)}</span>}
+          {state && !state.ok && <span className="text-[0.78125rem] text-danger">{changeError(state.error, ru)}</span>}
         </form>
       ) : (
         <div>

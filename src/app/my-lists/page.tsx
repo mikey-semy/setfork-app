@@ -24,27 +24,27 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
   // Панель здоровья (HQ §11): «где болит прямо сейчас» — выше ленты.
 
   return (
-    <div className="mx-auto w-full max-w-[1100px] px-6 py-6">
+    <div className="mx-auto w-full max-w-[68.75rem] px-6 py-6">
           <PageHeader
             title={t('myLists', lang)}
             actions={
               <Link
                 href="/new"
-                className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[14px] font-semibold text-primary-fg hover:opacity-90"
+                className="inline-flex h-[2.375rem] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.875rem] font-semibold text-primary-fg hover:opacity-90"
               >
                 {t('newList', lang)}
               </Link>
             }
           />
           {!session ? (
-            <div className="py-16 text-center text-[13px] text-muted">
+            <div className="py-16 text-center text-[0.8125rem] text-muted">
               {t('loginRequired', lang)}{' '}
               <Link href="/login" className="font-semibold text-accent">
                 {t('signIn', lang)}
               </Link>
             </div>
           ) : !hadAny ? (
-            <div className="py-16 text-center text-[13px] text-muted">{t('emptyMyLists', lang)}</div>
+            <div className="py-16 text-center text-[0.8125rem] text-muted">{t('emptyMyLists', lang)}</div>
           ) : (
             <>
               {/* Щиток здоровья и конструктор сохранённых запросов отсюда УБРАНЫ (решение
@@ -54,7 +54,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
                   когда списков сотни, — тогда им место в отдельном разделе, а не здесь.
                   Код фич не удалён: вернуть их дешевле, чем написать заново. */}
               {items.length === 0 ? (
-                <div className="py-10 text-center text-[13px] text-muted">{say('Nothing matches this query', 'Под запрос ничего не попало')}</div>
+                <div className="py-10 text-center text-[0.8125rem] text-muted">{say('Nothing matches this query', 'Под запрос ничего не попало')}</div>
               ) : (
                 <FeedList items={items} lang={lang} viewerId={session.userId} />
               )}

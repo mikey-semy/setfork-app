@@ -18,11 +18,11 @@ export function IssueResults({ issues, lang }: { issues: IssueSearchRow[]; lang:
           <div className="min-w-0 flex-1">
             <Link
               href={`/${it.ownerHandle}/${it.slug}/issues/${it.number}`}
-              className="text-[14px] font-semibold text-ink hover:text-accent"
+              className="text-[0.875rem] font-semibold text-ink hover:text-accent"
             >
               {it.title}
             </Link>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px] text-muted">
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.78125rem] text-muted">
               <Link href={`/${it.ownerHandle}/${it.slug}`} className="hover:text-ink-2">
                 {it.ownerHandle}/{it.slug}
               </Link>

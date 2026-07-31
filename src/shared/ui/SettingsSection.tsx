@@ -26,9 +26,9 @@ export function SettingsSection({
   className?: string
 }) {
   return (
-    <section id={id} className={cn('w-full max-w-[860px] rounded-lg border border-border bg-surface p-5', className)}>
+    <section id={id} className={cn('w-full max-w-[53.75rem] rounded-lg border border-border bg-surface p-5', className)}>
       <div className={cn('font-semibold text-ink', hint ? 'mb-1' : 'mb-4')}>{title}</div>
-      {hint && <p className="mb-4 text-[13px] text-ink-2">{hint}</p>}
+      {hint && <p className="mb-4 text-[0.8125rem] text-ink-2">{hint}</p>}
       {children}
       {footer && <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">{footer}</div>}
     </section>

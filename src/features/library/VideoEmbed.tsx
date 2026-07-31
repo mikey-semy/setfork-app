@@ -21,13 +21,13 @@ export function VideoEmbed({ url, caption }: { url: string; caption?: string }) 
           />
         </div>
       ) : kind === 'file' ? (
-        <video src={src} controls className="max-h-[520px] w-full rounded-lg border border-border" />
+        <video src={src} controls className="max-h-[32.5rem] w-full rounded-lg border border-border" />
       ) : (
-        <a href={safeHref(src) || undefined} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[13px] text-accent hover:underline">
+        <a href={safeHref(src) || undefined} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[0.8125rem] text-accent hover:underline">
           🎬 {src}
         </a>
       )}
-      {caption && <figcaption className="mt-1.5 text-[12.5px] text-muted">{caption}</figcaption>}
+      {caption && <figcaption className="mt-1.5 text-[0.78125rem] text-muted">{caption}</figcaption>}
     </figure>
   )
 }

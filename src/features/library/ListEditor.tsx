@@ -293,7 +293,7 @@ export function ListEditor({
       <input type="hidden" name={name} value={JSON.stringify(items)} />
 
       {/* Тулбар: undo/redo + подсказка */}
-      <div className="flex items-center gap-2 text-[12.5px] text-muted">
+      <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
         <Tooltip label={ru ? 'Отменить (Ctrl+Z)' : 'Undo (Ctrl+Z)'}>
           <button
             type="button"
@@ -319,7 +319,7 @@ export function ListEditor({
 
       {aiRefine && (
         <div className="rounded-lg border border-(--accent) bg-(--accent-soft) p-3">
-          <div className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-accent">
+          <div className="mb-2 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-accent">
             <Sparkles size={14} /> {ru ? 'Улучшить' : 'Improve'}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -327,7 +327,7 @@ export function ListEditor({
                 генерации): тип выводится классификатором из заголовка бесплатно, без
                 LLM-вызова. Хардкод «про TLS» на рецепте выглядел нелепо (фидбек владельца). */}
             <Input
-              className="min-w-[240px] flex-1"
+              className="min-w-[15rem] flex-1"
               placeholder={refineHint(classifyListKind(aiRefine.title), ru)}
               value={instruction}
               disabled={refining}
@@ -344,12 +344,12 @@ export function ListEditor({
               {refining ? (ru ? 'Правлю…' : 'Refining…') : ru ? 'Применить' : 'Apply'}
             </Button>
           </div>
-          <p className="mt-1.5 text-[11px] text-ink-2">
+          <p className="mt-1.5 text-[0.6875rem] text-ink-2">
             {ru
               ? 'Пункты будут переписаны. Скриншоты и ссылки при этом сбрасываются.'
               : 'The items get rewritten. Screenshots and links are reset.'}
           </p>
-          {refineErr && <p className="mt-1 text-[12.5px] text-danger">{refineErr}</p>}
+          {refineErr && <p className="mt-1 text-[0.78125rem] text-danger">{refineErr}</p>}
         </div>
       )}
 
@@ -390,11 +390,11 @@ export function ListEditor({
               </span>
             </Tooltip>
             {it.type === 'step' ? (
-              <span className="font-mono text-[12.5px] text-muted">
+              <span className="font-mono text-[0.78125rem] text-muted">
                 {ordered ? `${ru ? 'Пункт' : 'Item'} ${items.slice(0, i).filter((x) => x.type === 'step').length + 1}` : '•'}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 font-mono text-[12.5px] text-muted">
+              <span className="inline-flex items-center gap-1 font-mono text-[0.78125rem] text-muted">
                 {(() => {
                   const Icon = BLOCK_ICON[it.type]
                   return <Icon size={13} />
@@ -441,7 +441,7 @@ export function ListEditor({
               singleLine
               bare
               className="flex-1"
-              textareaClassName="text-[12.5px] font-semibold placeholder:font-normal placeholder:text-muted"
+              textareaClassName="text-[0.78125rem] font-semibold placeholder:font-normal placeholder:text-muted"
               lang={ru ? 'ru' : 'en'}
               ariaLabel={ru ? `Урок/секция блока ${i + 1}` : `Block ${i + 1} lesson/section`}
               placeholder={ru ? 'Урок/секция (необязательно) — группирует блоки ниже' : 'Lesson/section (optional) — groups the blocks below'}
@@ -477,13 +477,13 @@ export function ListEditor({
 
             {/* Уровень + «зачем» */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-muted">{ru ? 'Уровень' : 'Level'}:</span>
+              <span className="text-[0.6875rem] text-muted">{ru ? 'Уровень' : 'Level'}:</span>
               {(['required', 'recommended', 'optional'] as const).map((lv) => (
                 <button
                   key={lv}
                   type="button"
                   onClick={() => patch(i, { level: lv })}
-                  className={`rounded px-2 py-0.5 text-[11px] ${
+                  className={`rounded px-2 py-0.5 text-[0.6875rem] ${
                     it.level === lv ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-ink-2 hover:text-ink'
                   }`}
                 >
@@ -509,7 +509,7 @@ export function ListEditor({
                 ответил», это единственный способ закрыть пометку. Тумблер — как в
                 настройках (Switch из shared/ui), поле вопроса появляется только при вкл. */}
             <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0 text-[11px] text-muted">{t('needsHumanLabel', lang)}</span>
+              <span className="min-w-0 text-[0.6875rem] text-muted">{t('needsHumanLabel', lang)}</span>
               <Switch
                 checked={it.needsHuman}
                 onCheckedChange={(on) => patch(i, { needsHuman: on, ...(on ? {} : { needsHumanAsk: '' }) })}
@@ -564,7 +564,7 @@ export function ListEditor({
                       value={r.label}
                       onChange={(v) => patch(i, { refs: it.refs.map((x, xi) => (xi === ri ? { ...x, label: v } : x)) })}
                       singleLine
-                      className="w-[200px] shrink-0"
+                      className="w-[12.5rem] shrink-0"
                       textareaClassName="leading-normal"
                       lang={ru ? 'ru' : 'en'}
                       ariaLabel={ru ? 'Название ссылки' : 'Link label'}
@@ -603,7 +603,7 @@ export function ListEditor({
             {it.imagePreview ? (
               <div className="relative w-fit">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={it.imagePreview} alt="" className="max-h-[160px] rounded-md border border-border" />
+                <img src={it.imagePreview} alt="" className="max-h-[10rem] rounded-md border border-border" />
                 <button
                   type="button"
                   onClick={() => patch(i, { imageKey: '', imagePreview: '' })}
@@ -617,7 +617,7 @@ export function ListEditor({
               <StepImageInput uploading={uploading === i} onFile={(f) => uploadFor(i, f)} ru={ru} />
             )}
 
-            <div className="flex flex-wrap gap-3 pt-1 text-[12.5px]">
+            <div className="flex flex-wrap gap-3 pt-1 text-[0.78125rem]">
               <button
                 type="button"
                 onClick={() => patch(i, { subtasks: [...it.subtasks, ''] })}
@@ -645,7 +645,7 @@ export function ListEditor({
               {it.imagePreview ? (
                 <div className="relative w-fit">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it.imagePreview} alt="" className="max-h-[320px] rounded-md border border-border" />
+                  <img src={it.imagePreview} alt="" className="max-h-[20rem] rounded-md border border-border" />
                   <button
                     type="button"
                     onClick={() => patch(i, { imageKey: '', imagePreview: '' })}
@@ -686,7 +686,7 @@ export function ListEditor({
               />
               {VIDEO_UPLOAD_ENABLED && (
                 <>
-                  <div className="flex items-center gap-2 text-[11px] text-muted">
+                  <div className="flex items-center gap-2 text-[0.6875rem] text-muted">
                     <span className="h-px flex-1 bg-border" />
                     {ru ? 'или' : 'or'}
                     <span className="h-px flex-1 bg-border" />
@@ -706,7 +706,7 @@ export function ListEditor({
                 (() => {
                   const kind = parseVideoEmbed(it.videoUrl).kind
                   return (
-                    <span className={`text-[11px] ${kind === 'link' ? 'text-warn' : 'text-muted'}`}>
+                    <span className={`text-[0.6875rem] ${kind === 'link' ? 'text-warn' : 'text-muted'}`}>
                       {kind === 'youtube' && '▶ YouTube'}
                       {kind === 'vimeo' && '▶ Vimeo'}
                       {kind === 'file' && (ru ? '▶ Видеофайл' : '▶ Video file')}
@@ -721,7 +721,7 @@ export function ListEditor({
           {it.type === 'file' && (
             <div className="flex flex-col gap-2">
               {it.fileUrl ? (
-                <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px]">
+                <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem]">
                   <Paperclip size={14} className="shrink-0 text-muted" />
                   <a href={it.fileUrl} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-accent hover:underline">
                     {it.fileName || it.fileUrl}
@@ -796,7 +796,7 @@ function ProductBlockBody({
       {products.map((p, pi) => (
         <div key={pi} className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2 sm:flex-row sm:items-center">
           <Input
-            className="sm:max-w-[180px]"
+            className="sm:max-w-[11.25rem]"
             aria-label={t('productNamePh', lang)}
             placeholder={t('productNamePh', lang)}
             value={p.name}
@@ -813,7 +813,7 @@ function ProductBlockBody({
             value={p.tier || '__none__'}
             onValueChange={(v) => patchRow(pi, { tier: (v === '__none__' ? '' : v) as EditorProduct['tier'] })}
           >
-            <SelectTrigger className="sm:max-w-[130px]" aria-label={t('productTierNone', lang)}>
+            <SelectTrigger className="sm:max-w-[8.125rem]" aria-label={t('productTierNone', lang)}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -841,7 +841,7 @@ function ProductBlockBody({
           </button>
         </div>
       ))}
-      <div className="text-[12.5px]">
+      <div className="text-[0.78125rem]">
         <button type="button" onClick={() => onProducts([...products, { name: '', url: '', tier: '', note: '' }])} className="text-accent hover:underline">
           + {t('productAdd', lang)}
         </button>
@@ -865,7 +865,7 @@ function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p:
       <div className="flex flex-col gap-1.5">
         {poll.options.map((o, oi) => (
           <div key={o.id} className="flex items-center gap-2">
-            <span className="w-4 text-right text-[11px] text-muted">{oi + 1}</span>
+            <span className="w-4 text-right text-[0.6875rem] text-muted">{oi + 1}</span>
             <BubbleTextEditor
               value={o.text}
               onChange={(v) => set({ options: poll.options.map((x, xi) => (xi === oi ? { ...x, text: v } : x)) })}
@@ -887,7 +887,7 @@ function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p:
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[12.5px]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[0.78125rem]">
         <button type="button" onClick={() => set({ options: [...poll.options, { id: newOptionId(), text: '' }] })} className="text-accent hover:underline">
           + {ru ? 'вариант' : 'option'}
         </button>
@@ -928,7 +928,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
       {/* Тип теста */}
-      <div className="flex items-center gap-1 self-start rounded-md border border-border bg-surface p-0.5 text-[12.5px]">
+      <div className="flex items-center gap-1 self-start rounded-md border border-border bg-surface p-0.5 text-[0.78125rem]">
         {QUIZ_KIND_OPTS.map((o) => (
           <button
             key={o.k}
@@ -989,7 +989,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[12.5px]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[0.78125rem]">
             <button
               type="button"
               onClick={() => set({ options: [...quiz.options, { id: newOptionId(), text: '', correct: false }] })}
@@ -1007,11 +1007,11 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
 
       {(quiz.kind === 'text' || quiz.kind === 'code') && (
         <>
-          {quiz.kind === 'code' && <span className="text-[11px] text-muted">{ru ? 'Ответ вводится моноширинно; сверяется с принимаемыми (регистр обычно важен).' : 'Answer is entered monospace; matched against accepted (case usually matters).'}</span>}
+          {quiz.kind === 'code' && <span className="text-[0.6875rem] text-muted">{ru ? 'Ответ вводится моноширинно; сверяется с принимаемыми (регистр обычно важен).' : 'Answer is entered monospace; matched against accepted (case usually matters).'}</span>}
           <div className="flex flex-col gap-1.5">
             {accept.map((a, ai) => (
               <div key={ai} className="flex items-center gap-2">
-                <span className="w-4 text-right text-[11px] text-muted">✓</span>
+                <span className="w-4 text-right text-[0.6875rem] text-muted">✓</span>
                 <BubbleTextEditor
                   value={a}
                   onChange={(v) => set({ accept: accept.map((x, xi) => (xi === ai ? v : x)) })}
@@ -1033,7 +1033,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[12.5px]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[0.78125rem]">
             <button type="button" onClick={() => set({ accept: [...accept, ''] })} className="text-accent hover:underline">
               + {ru ? 'вариант ответа' : 'accepted answer'}
             </button>
@@ -1042,12 +1042,12 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
               {ru ? 'Учитывать регистр' : 'Case-sensitive'}
             </label>
           </div>
-          <span className="text-[11px] text-muted">{ru ? 'Любой из принимаемых ответов засчитывается (пробелы/регистр нормализуются).' : 'Any accepted answer counts (whitespace/case normalized).'}</span>
+          <span className="text-[0.6875rem] text-muted">{ru ? 'Любой из принимаемых ответов засчитывается (пробелы/регистр нормализуются).' : 'Any accepted answer counts (whitespace/case normalized).'}</span>
         </>
       )}
 
       {quiz.kind === 'number' && (
-        <div className="flex flex-wrap items-end gap-3 text-[12.5px]">
+        <div className="flex flex-wrap items-end gap-3 text-[0.78125rem]">
           <label className="flex flex-col gap-1 text-ink-2">
             {ru ? 'Верный ответ' : 'Correct answer'}
             <Input
@@ -1076,7 +1076,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
       {quiz.kind === 'blank' && (
         <>
           <textarea
-            className="min-h-[52px] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[13px] leading-relaxed text-ink outline-hidden focus:border-border-strong"
+            className="min-h-[3.25rem] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[0.8125rem] leading-relaxed text-ink outline-hidden focus:border-border-strong"
             aria-label={ru ? 'Текст с пропусками' : 'Text with blanks'}
             placeholder={ru ? 'Текст с пропусками. Пишите ___ там, где пропуск.' : 'Text with blanks. Write ___ where a blank goes.'}
             value={quiz.template}
@@ -1084,12 +1084,12 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
           />
           {(() => {
             const n = blankCount(quiz.template)
-            if (n === 0) return <span className="text-[11px] text-muted">{ru ? 'Добавьте ___ в текст, чтобы задать пропуски.' : 'Add ___ to the text to create blanks.'}</span>
+            if (n === 0) return <span className="text-[0.6875rem] text-muted">{ru ? 'Добавьте ___ в текст, чтобы задать пропуски.' : 'Add ___ to the text to create blanks.'}</span>
             return (
               <div className="flex flex-col gap-1.5">
                 {Array.from({ length: n }, (_, bi) => (
                   <div key={bi} className="flex items-center gap-2">
-                    <span className="w-5 shrink-0 text-right font-mono text-[11px] text-muted">#{bi + 1}</span>
+                    <span className="w-5 shrink-0 text-right font-mono text-[0.6875rem] text-muted">#{bi + 1}</span>
                     <BubbleTextEditor
                       value={quiz.blanks[bi] ?? ''}
                       onChange={(v) => set({ blanks: Array.from({ length: n }, (_, i) => (i === bi ? v : quiz.blanks[i] ?? '')) })}
@@ -1104,7 +1104,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
               </div>
             )
           })()}
-          <label className="inline-flex cursor-pointer items-center gap-1.5 self-start text-[12.5px] text-ink-2">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 self-start text-[0.78125rem] text-ink-2">
             <Checkbox checked={quiz.caseSensitive} onChange={(e) => set({ caseSensitive: e.target.checked })} />
             {ru ? 'Учитывать регистр' : 'Case-sensitive'}
           </label>
@@ -1150,7 +1150,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
                 </div>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[12.5px]">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[0.78125rem]">
               <button type="button" onClick={() => setPairs([...pairs, { left: '', right: '' }])} className="text-accent hover:underline">
                 + {ru ? 'пара' : 'pair'}
               </button>
@@ -1159,7 +1159,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
                 {ru ? 'Учитывать регистр' : 'Case-sensitive'}
               </label>
             </div>
-            <span className="text-[11px] text-muted">{ru ? 'Правые части ученику показываются перемешанными.' : 'Right sides are shuffled for the learner.'}</span>
+            <span className="text-[0.6875rem] text-muted">{ru ? 'Правые части ученику показываются перемешанными.' : 'Right sides are shuffled for the learner.'}</span>
           </>
         )
       })()}
@@ -1179,7 +1179,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
             <div className="flex flex-col gap-1.5">
               {items.map((it2, ii) => (
                 <div key={ii} className="flex items-center gap-1.5">
-                  <span className="w-4 text-right font-mono text-[11px] text-muted">{ii + 1}</span>
+                  <span className="w-4 text-right font-mono text-[0.6875rem] text-muted">{ii + 1}</span>
                   <div className="flex flex-col">
                     <button type="button" onClick={() => move(ii, -1)} disabled={ii === 0} className="text-muted hover:text-ink disabled:opacity-20" aria-label="up"><ChevronUp size={13} /></button>
                     <button type="button" onClick={() => move(ii, 1)} disabled={ii === items.length - 1} className="text-muted hover:text-ink disabled:opacity-20" aria-label="down"><ChevronDown size={13} /></button>
@@ -1199,9 +1199,9 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-4 pt-0.5 text-[12.5px]">
+            <div className="flex items-center gap-4 pt-0.5 text-[0.78125rem]">
               <button type="button" onClick={() => setItems([...items, ''])} className="text-accent hover:underline">+ {ru ? 'элемент' : 'item'}</button>
-              <span className="text-[11px] text-muted">{ru ? 'Задайте ПРАВИЛЬНЫЙ порядок (сверху вниз). Ученику покажем перемешанными.' : 'Set the CORRECT order (top to bottom). Shuffled for the learner.'}</span>
+              <span className="text-[0.6875rem] text-muted">{ru ? 'Задайте ПРАВИЛЬНЫЙ порядок (сверху вниз). Ученику покажем перемешанными.' : 'Set the CORRECT order (top to bottom). Shuffled for the learner.'}</span>
             </div>
           </>
         )
@@ -1215,7 +1215,7 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
         ariaLabel={ru ? 'Пояснение (после проверки)' : 'Explanation (after check)'}
         placeholder={ru ? 'Пояснение — покажется после проверки (необязательно)' : 'Explanation — shown after checking (optional)'}
       />
-      <span className="text-[11px] text-muted">
+      <span className="text-[0.6875rem] text-muted">
         {ru ? 'Проверка — на странице списка.' : 'Checking happens on the list page.'}
       </span>
     </div>
@@ -1365,7 +1365,7 @@ function StepImageInput({ uploading, onFile, ru }: { uploading: boolean; onFile:
         const f = e.dataTransfer.files?.[0]
         if (f) onFile(f)
       }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
+      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[0.78125rem] transition-colors ${
         over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >
@@ -1405,7 +1405,7 @@ function VideoFileInput({ uploading, onFile, ru }: { uploading: boolean; onFile:
         const f = e.dataTransfer.files?.[0]
         if (f) onFile(f)
       }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
+      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[0.78125rem] transition-colors ${
         over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >
@@ -1448,7 +1448,7 @@ function FileDropInput({ uploading, onFile, ru }: { uploading: boolean; onFile: 
         const f = e.dataTransfer.files?.[0]
         if (f) onFile(f)
       }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[12.5px] transition-colors ${
+      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[0.78125rem] transition-colors ${
         over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >

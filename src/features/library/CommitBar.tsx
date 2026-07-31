@@ -78,7 +78,7 @@ export function CommitBar({
   const restNames = names.length > 2 ? labels.others.replace('{n}', String(names.length - 2)) : ''
 
   return (
-    <div className="mb-3 rounded-lg border border-border bg-surface text-[12.5px] text-ink-2 print:hidden">
+    <div className="mb-3 rounded-lg border border-border bg-surface text-[0.78125rem] text-ink-2 print:hidden">
       <div className="flex min-w-0 items-center gap-2 px-3 py-2 sm:px-3.5">
         {authors.length > 0 && <AvatarStack people={authors} size={20} />}
         {/* Имена — только с sm: на телефоне их место занимает заголовок сообщения. */}
@@ -112,7 +112,7 @@ export function CommitBar({
         <Tooltip label={labels.commitLink}>
           <Link
             href={`${versionsHref}#v${version}`}
-            className="shrink-0 rounded-md border border-border px-1.5 font-mono text-[11px] text-muted hover:border-border-strong hover:text-ink"
+            className="shrink-0 rounded-md border border-border px-1.5 font-mono text-[0.6875rem] text-muted hover:border-border-strong hover:text-ink"
           >
             {`v${version}`}
           </Link>
@@ -128,14 +128,14 @@ export function CommitBar({
             className="flex shrink-0 items-center gap-1 rounded-md px-1 py-0.5 text-muted hover:bg-surface-2 hover:text-ink"
           >
             <History size={15} />
-            <span className="hidden font-mono text-[12.5px] md:inline">{commitsCount}</span>
+            <span className="hidden font-mono text-[0.78125rem] md:inline">{commitsCount}</span>
           </Link>
         </Tooltip>
       </div>
 
       {open && hasBody && (
         <div className="border-t border-border px-3 py-2.5 sm:px-3.5">
-          <pre className="whitespace-pre-wrap break-words font-sans text-[12.5px] leading-relaxed text-ink-2">{body}</pre>
+          <pre className="whitespace-pre-wrap break-words font-sans text-[0.78125rem] leading-relaxed text-ink-2">{body}</pre>
         </div>
       )}
     </div>

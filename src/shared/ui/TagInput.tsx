@@ -71,9 +71,9 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
     <div ref={boxRef} className="relative">
       <input type="hidden" name={name} value={tags.join(' ')} />
       {/* min-h по шкале md (control.ts): в ряду с Input/Button не проседает; растёт при переносе тегов. */}
-      <div className="flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
+      <div className="flex min-h-[2.375rem] flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
         {tags.map((tag) => (
-          <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-[12.5px] font-medium text-ink">
+          <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-[0.78125rem] font-medium text-ink">
             {tag}
             <button
               type="button"
@@ -110,7 +110,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
               }
             }}
             placeholder={tags.length === 0 ? 'docker' : ''}
-            className="min-w-[90px] flex-1 bg-transparent px-1 py-0.5 text-[14px] max-sm:text-[16px] text-ink outline-hidden placeholder:text-muted"
+            className="min-w-[5.625rem] flex-1 bg-transparent px-1 py-0.5 text-[0.875rem] max-sm:text-[1rem] text-ink outline-hidden placeholder:text-muted"
           />
         )}
       </div>
@@ -126,7 +126,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
                 }}
                 onMouseEnter={() => setHi(i)}
                 className={cn(
-                  'flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px]',
+                  'flex w-full items-center justify-between px-3 py-1.5 text-left text-[0.8125rem]',
                   i === hi ? 'bg-surface-2 text-ink' : 'text-ink-2',
                 )}
               >
@@ -138,13 +138,13 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
                   )}
                   {s.slug}
                 </span>
-                <span className="font-mono text-[11px] text-muted">{s.usageCount}</span>
+                <span className="font-mono text-[0.6875rem] text-muted">{s.usageCount}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
-      <p className="mt-1 text-[11px] text-muted">{say(`Pick from suggestions or type your own. Up to ${max}.`, `Выбери из подсказок или впиши свой. До ${max}.`)}</p>
+      <p className="mt-1 text-[0.6875rem] text-muted">{say(`Pick from suggestions or type your own. Up to ${max}.`, `Выбери из подсказок или впиши свой. До ${max}.`)}</p>
     </div>
   )
 }

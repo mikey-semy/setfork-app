@@ -48,7 +48,7 @@ export function ListsToolbar({
           e.preventDefault()
           navigate({ q: query.trim() })
         }}
-        className="min-w-[180px] flex-1"
+        className="min-w-[11.25rem] flex-1"
       >
         <SearchField
           value={query}
@@ -64,7 +64,7 @@ export function ListsToolbar({
       </form>
 
       <Select value={type} onValueChange={(v) => navigate({ type: v === 'all' ? '' : v })}>
-        <SelectTrigger className="h-9 w-auto min-w-[104px] gap-1.5 text-[13px]">
+        <SelectTrigger className="h-9 w-auto min-w-[6.5rem] gap-1.5 text-[0.8125rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -76,7 +76,7 @@ export function ListsToolbar({
       </Select>
 
       <Select value={sort} onValueChange={(v) => navigate({ sort: v === 'recent' ? '' : v })}>
-        <SelectTrigger className="h-9 w-auto min-w-[104px] gap-1.5 text-[13px]">
+        <SelectTrigger className="h-9 w-auto min-w-[6.5rem] gap-1.5 text-[0.8125rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -89,7 +89,7 @@ export function ListsToolbar({
       {isOwner && (
         <Link
           href="/new"
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-semibold text-white hover:opacity-90"
+          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-[0.8125rem] font-semibold text-white hover:opacity-90"
         >
           <Plus size={15} /> {ru ? 'Создать' : 'New'}
         </Link>
