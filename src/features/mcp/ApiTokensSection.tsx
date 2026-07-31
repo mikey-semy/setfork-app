@@ -8,6 +8,11 @@ import type { Lang } from '@/shared/i18n'
 import type { TokenRow } from './queries'
 import { createApiToken, revokeApiToken } from './actions'
 
+// Чистая — на модульном уровне, а не в теле компонента (react-doctor:
+// пересборка на каждый рендер ломает мемоизацию детей).
+const pill = (active: boolean) =>
+  `rounded-md px-2.5 py-1 text-[12.5px] font-medium ${active ? 'bg-primary text-primary-fg' : 'border border-border text-ink-2 hover:text-ink'}`
+
 function Copyable({ text, label }: { text: string; label: string }) {
   const [done, setDone] = useState(false)
   return (
@@ -50,8 +55,6 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
     })
   }
 
-  const pill = (active: boolean) =>
-    `rounded-md px-2.5 py-1 text-[12.5px] font-medium ${active ? 'bg-primary text-primary-fg' : 'border border-border text-ink-2 hover:text-ink'}`
   const EXPIRY = [
     { d: 30, en: '30 days', ru: '30 дней' },
     { d: 90, en: '90 days', ru: '90 дней' },

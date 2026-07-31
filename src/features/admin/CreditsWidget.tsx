@@ -32,6 +32,7 @@ export function CreditsWidget({ ru }: { ru: boolean }) {
 
   const refresh = (
     <button
+      type="button"
       onClick={load}
       disabled={loading}
       className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[12.5px] text-ink-2 hover:border-border-strong disabled:opacity-60"

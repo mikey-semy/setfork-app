@@ -61,7 +61,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                     {canManage && (
                       <div className="flex shrink-0 gap-1.5">
                         <form action={toggleMilestoneClosed.bind(null, owner, slug, m.id)}>
-                          <button className="rounded-md border border-border px-2.5 py-1 text-[12.5px] font-semibold text-ink hover:border-border-strong">
+                          <button type="submit" className="rounded-md border border-border px-2.5 py-1 text-[12.5px] font-semibold text-ink hover:border-border-strong">
                             {m.closed ? t('reopen', lang) : t('close', lang)}
                           </button>
                         </form>

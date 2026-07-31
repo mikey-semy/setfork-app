@@ -48,6 +48,7 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
           <form action={star}>
             <Tooltip label={t('star', lang)}>
               <button
+                type="submit"
                 className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12.5px] font-medium transition-colors hover:border-border-strong ${
                   starred ? 'border-warn text-warn' : 'border-border text-ink-2'
                 }`}
