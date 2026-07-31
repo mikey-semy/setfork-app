@@ -39,11 +39,11 @@ export function ChecksList({ items, labels }: { items: CheckItem[]; labels: { bl
             <li key={it.key} className="flex items-start gap-2.5 px-3.5 py-2.5">
               <Icon size={15} className={`mt-0.5 shrink-0 ${meta.cls}`} />
               <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] text-ink">
+                <div className="text-[13px] text-ink">
                   {it.title}
                   {/* Чужая проверка подписана автором: своё приложение считает само,
                       а это прислали снаружи — и видно, кем. */}
-                  {it.reportedBy && <span className="ml-1.5 text-[12px] text-muted">@{it.reportedBy}</span>}
+                  {it.reportedBy && <span className="ml-1.5 text-[12.5px] text-muted">@{it.reportedBy}</span>}
                 </div>
                 {it.detail && <div className="text-[12.5px] text-ink-2 [overflow-wrap:anywhere]">{it.detail}</div>}
               </div>

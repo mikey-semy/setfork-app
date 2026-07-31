@@ -29,7 +29,7 @@ export function CollaboratorsSection({
         <input
           name="handle"
           placeholder={t('addCollaboratorPh', lang)}
-          className="w-[220px] rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
+          className="w-[220px] rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong"
         />
         <Button type="submit" variant="primary" size="md">
           {t('addCollaborator', lang)}

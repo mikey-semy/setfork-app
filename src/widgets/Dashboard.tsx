@@ -75,7 +75,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
               <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-2">
                 <Sparkles size={14} className="text-accent" /> {lang === 'ru' ? 'Что улучшить' : 'What to improve'}
               </span>
-              <Link href="/improve" className="text-[12px] text-accent hover:underline">{lang === 'ru' ? 'все' : 'all'}</Link>
+              <Link href="/improve" className="text-[12.5px] text-accent hover:underline">{lang === 'ru' ? 'все' : 'all'}</Link>
             </div>
             <ul className="flex flex-col gap-1.5">
               {improve.map((it) => (

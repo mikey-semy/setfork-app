@@ -31,7 +31,7 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
             <div className="flex items-center gap-2 font-medium text-ink">
               {s.device}
               {s.current ? (
-                <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[10.5px] font-semibold text-ok">
+                <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[11px] font-semibold text-ok">
                   {t('currentSession', lang)}
                 </span>
               ) : s.online ? (
@@ -39,10 +39,10 @@ export function SessionsList({ sessions, lang }: { sessions: UserSession[]; lang
                   <span className="h-2 w-2 rounded-full bg-ok" />
                 </Tooltip>
               ) : stale ? (
-                <span className="rounded-full bg-surface px-2 py-0.5 text-[10.5px] font-semibold text-muted">{t('staleLabel', lang)}</span>
+                <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-muted">{t('staleLabel', lang)}</span>
               ) : null}
             </div>
-            <div className="text-[12px] text-muted">
+            <div className="text-[12.5px] text-muted">
               {/* Гео как «Seen in …» у GitHub; IP оставляем для точности. */}
               {s.geo ? `${s.geo} · ${s.ip ?? '—'}` : (s.ip ?? '—')} · {t('lastSeen', lang)} {fmt.format(new Date(s.lastSeenAt))} · {t('signedInLabel', lang)} {day.format(new Date(s.createdAt))}
             </div>

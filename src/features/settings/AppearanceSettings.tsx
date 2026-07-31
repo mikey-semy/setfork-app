@@ -119,7 +119,7 @@ export function AppearanceSettings({ lang, initialAccent = '', initialFont = '' 
             </button>
           ))}
         </div>
-        <p className="mt-2 text-[12px] text-muted">
+        <p className="mt-2 text-[12.5px] text-muted">
           {ru
             ? 'Акцент и шрифт сохраняются в аккаунте и следуют за тобой между устройствами. Тема (светлая/тёмная) — в этом браузере.'
             : 'Accent and font are saved to your account and follow you across devices. Theme (light/dark) stays in this browser.'}

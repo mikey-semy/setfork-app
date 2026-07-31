@@ -199,7 +199,7 @@ export default async function SettingsPage() {
             ].map((x) => (
               <div key={x.k} className="rounded-md border border-border bg-surface-2 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-muted">{x.k}</div>
-                <div className="mt-1 text-[17px] font-bold text-ink">{x.v}</div>
+                <div className="mt-1 text-[16px] font-bold text-ink">{x.v}</div>
               </div>
             ))}
           </div>

@@ -105,7 +105,7 @@ export function CoverSection({
               style={a ? { backgroundColor: a } : undefined}
               className={`h-5 w-5 rounded-full border ${a ? '' : 'bg-surface-2'} ${accent === a ? 'ring-2 ring-offset-1 ring-(--accent)' : 'border-black/10'}`}
             >
-              {!a && <span className="text-[10px] text-muted">×</span>}
+              {!a && <span className="text-[11px] text-muted">×</span>}
             </button>
           ))}
         </div>

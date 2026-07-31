@@ -41,7 +41,7 @@ export default async function LoginPage({
         <div className="font-logo mb-1 text-[38px] leading-none text-ink">
           SF
         </div>
-        <div className="mb-6 text-[13.5px] text-ink-2">
+        <div className="mb-6 text-[14px] text-ink-2">
           {t("loginRequired", lang)}
         </div>
 
@@ -134,7 +134,7 @@ export default async function LoginPage({
         )}
 
         {sp.e && (
-          <div className="mt-4 text-[12px] text-danger">
+          <div className="mt-4 text-[12.5px] text-danger">
             {sp.e === "oauth_off" || sp.e === "no_github"
               ? lang === "ru"
                 ? "Этот способ входа не настроен — выберите другой."

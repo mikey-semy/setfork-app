@@ -21,7 +21,7 @@ export default async function TelegramLoginPage() {
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-[380px] rounded-xl border border-border bg-surface p-8 text-center shadow-card">
         <div className="font-logo mb-1 text-[38px] leading-none text-ink">SF</div>
-        <div className="mb-6 text-[13.5px] text-ink-2">{t('tgLoginIntro', lang)}</div>
+        <div className="mb-6 text-[14px] text-ink-2">{t('tgLoginIntro', lang)}</div>
 
         <a
           href={botLink}

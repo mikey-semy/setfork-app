@@ -54,7 +54,7 @@ export function CatalogSection({
         <input
           name="name"
           placeholder={t('newCatalogPh', lang)}
-          className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
+          className="w-[240px] rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong"
         />
         <button className="rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
           {t('createCatalogBtn', lang)}

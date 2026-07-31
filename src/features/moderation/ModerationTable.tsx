@@ -88,7 +88,7 @@ export function ModerationTable({
                   <span className="font-mono text-[11px] text-muted">★{it.starsCount}</span>
                 </div>
                 <div className="truncate text-[12.5px] text-ink-2">{tr(it.title, lang)}</div>
-                {it.moderationReason && <div className="text-[11.5px] text-warn">{it.moderationReason}</div>}
+                {it.moderationReason && <div className="text-[11px] text-warn">{it.moderationReason}</div>}
               </div>
 
               {/* Действия — компактные иконки с тултипами (фидбек владельца: кнопки-простыни

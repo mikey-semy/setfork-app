@@ -104,15 +104,15 @@ export default async function AuditPage() {
                       <span className="text-[13px] text-muted">{ru ? 'система' : 'system'}</span>
                     )}
                     {e.targetType && e.targetId ? (
-                      <span className="font-mono text-[11.5px] text-muted">
+                      <span className="font-mono text-[11px] text-muted">
                         {e.targetType}:{e.targetId.slice(0, 8)}
                       </span>
                     ) : null}
                   </div>
-                  {details ? <div className="mt-0.5 truncate font-mono text-[11.5px] text-ink-2">{details}</div> : null}
+                  {details ? <div className="mt-0.5 truncate font-mono text-[11px] text-ink-2">{details}</div> : null}
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-[12px] tabular-nums text-ink-2">{fmt(e.createdAt, ru)}</div>
+                  <div className="text-[12.5px] tabular-nums text-ink-2">{fmt(e.createdAt, ru)}</div>
                   {e.ip ? <div className="font-mono text-[11px] text-muted">{e.ip}</div> : null}
                 </div>
               </div>

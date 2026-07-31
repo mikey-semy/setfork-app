@@ -29,7 +29,7 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
         return (
           <span
             key={q.id}
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] ${
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12.5px] ${
               isActive ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
             }`}
           >

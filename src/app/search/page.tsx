@@ -141,7 +141,7 @@ export default async function SearchPage({
         </div>
 
         <div className="mb-1 flex items-center justify-between border-b border-border pb-1.5">
-          <div className="flex gap-4 text-[13.5px] font-semibold">
+          <div className="flex gap-4 text-[13px] font-semibold">
             {scope === 'lists' &&
               SORTS.map((s) => (
                 <Link key={s.key} href={qs({ sort: s.key })} className={tabCls(sort === s.key)}>
@@ -240,21 +240,21 @@ export default async function SearchPage({
         {/* Правый рейл — панели (не растягиваем результаты во всю ширину) */}
         <aside className="hidden w-[300px] shrink-0 flex-col gap-4 pt-1 xl:flex">
           <div className="rounded-md border border-border bg-surface-2 p-3">
-            <div className="mb-1.5 text-[12px] font-semibold text-ink">{t('proTip', lang)}</div>
-            <p className="text-[12px] leading-relaxed text-muted">{t('proTipBody', lang)}</p>
+            <div className="mb-1.5 text-[12.5px] font-semibold text-ink">{t('proTip', lang)}</div>
+            <p className="text-[12.5px] leading-relaxed text-muted">{t('proTipBody', lang)}</p>
             <div className="mt-2 wrap-break-word font-mono text-[11px] text-ink-2">
               by:handle · tag:redis · is:verified · type:ordered · stars:&gt;100
             </div>
           </div>
           {tags.length > 0 && (
             <div className="rounded-md border border-border bg-surface-2 p-3">
-              <div className="mb-2 text-[12px] font-semibold text-ink">{t('popularTags', lang)}</div>
+              <div className="mb-2 text-[12.5px] font-semibold text-ink">{t('popularTags', lang)}</div>
               <div className="flex flex-wrap gap-1.5">
                 {tags.slice(0, 12).map((tg) => (
                   <Link
                     key={tg.tag}
                     href={`/search?q=${encodeURIComponent(`tag:${tg.tag}`)}`}
-                    className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11.5px] text-ink-2 hover:text-ink"
+                    className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-ink-2 hover:text-ink"
                   >
                     {tg.tag}
                   </Link>

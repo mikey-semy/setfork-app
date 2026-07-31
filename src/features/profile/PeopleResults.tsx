@@ -21,7 +21,7 @@ export function PeopleResults({ people, lang }: { people: PersonRow[]; lang: Lan
                 <span className="truncate text-[13px] text-ink-2">@{p.handle}</span>
               </div>
               {p.bio && <p className="mt-0.5 line-clamp-2 text-[13px] text-ink-2">{p.bio}</p>}
-              <div className="mt-1.5 flex items-center gap-4 text-[12px] text-muted">
+              <div className="mt-1.5 flex items-center gap-4 text-[12.5px] text-muted">
                 <span className="inline-flex items-center gap-1">
                   <ListChecks size={13} /> {p.listsCount} {t('listsLabel', lang)}
                 </span>

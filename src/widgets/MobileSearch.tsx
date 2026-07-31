@@ -50,7 +50,7 @@ export function MobileSearch({
                     if (e.key === 'Escape') setOpen(false)
                   }}
                   placeholder={ru ? 'Поиск…' : 'Search…'}
-                  className="min-w-0 flex-1 bg-transparent py-1.5 text-[15px] text-ink outline-hidden placeholder:text-muted"
+                  className="min-w-0 flex-1 bg-transparent py-1.5 text-[16px] text-ink outline-hidden placeholder:text-muted"
                 />
                 <button type="button" aria-label="close" onClick={() => setOpen(false)} className="shrink-0 rounded-md p-1 text-muted hover:text-ink">
                   <X size={16} />
@@ -62,7 +62,7 @@ export function MobileSearch({
                     type="button"
                     disabled={!q.trim()}
                     onClick={() => go(`${inList}?find=${encodeURIComponent(q.trim())}`)}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13.5px] text-ink hover:bg-surface-2 disabled:opacity-45"
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-ink hover:bg-surface-2 disabled:opacity-45"
                   >
                     <ListChecks size={14} className="shrink-0 text-muted" />
                     <span className="min-w-0 truncate">
@@ -74,10 +74,10 @@ export function MobileSearch({
                   type="button"
                   disabled={!q.trim()}
                   onClick={() => go(`/search?q=${encodeURIComponent(q.trim())}`)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13.5px] text-ink hover:bg-surface-2 disabled:opacity-45"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] text-ink hover:bg-surface-2 disabled:opacity-45"
                 >
                   <Search size={14} className="shrink-0 text-muted" />
-                  {ru ? 'Искать везде' : 'Search everywhere'} <kbd className="ml-auto rounded-md border border-border px-1 text-[10.5px] text-muted">↵</kbd>
+                  {ru ? 'Искать везде' : 'Search everywhere'} <kbd className="ml-auto rounded-md border border-border px-1 text-[11px] text-muted">↵</kbd>
                 </button>
               </div>
             </div>

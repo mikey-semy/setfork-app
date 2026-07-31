@@ -107,7 +107,7 @@ export function ActivityGraph({
           {showRolling && (
             <Link
               href={base}
-              className={`rounded-md border px-2 py-0.5 text-[12px] ${year == null ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+              className={`rounded-md border px-2 py-0.5 text-[12.5px] ${year == null ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
             >
               {lang === 'ru' ? 'Последний год' : 'Last year'}
             </Link>
@@ -116,7 +116,7 @@ export function ActivityGraph({
             <Link
               key={y}
               href={`${base}?year=${y}`}
-              className={`rounded-md border px-2 py-0.5 font-mono text-[12px] ${year === y ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
+              className={`rounded-md border px-2 py-0.5 font-mono text-[12.5px] ${year === y ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'}`}
             >
               {y}
             </Link>
@@ -132,7 +132,7 @@ export function ActivityGraph({
             строке — той же, что и квадратик-ячейка, — иначе метки уезжают на пол-клетки. */}
         <div className="flex w-[26px] shrink-0 flex-col gap-1 bg-surface">
           <div className="h-[13px]" />
-          <div className="flex flex-col gap-[3px] text-[9px] text-muted">
+          <div className="flex flex-col gap-[3px] text-[11px] text-muted">
             {[0, 1, 2, 3, 4, 5, 6].map((d) => (
               <div key={d} className="flex h-[11px] items-center leading-none">
                 {d === 1 ? (lang === 'ru' ? 'пн' : 'Mon') : d === 3 ? (lang === 'ru' ? 'ср' : 'Wed') : d === 5 ? (lang === 'ru' ? 'пт' : 'Fri') : ''}
@@ -147,14 +147,14 @@ export function ActivityGraph({
           <div className="relative inline-flex flex-col gap-1" style={{ direction: 'ltr' }}>
             {tip && (
               <div
-                className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-[11.5px] leading-snug text-ink shadow-card"
+                className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-[11px] leading-snug text-ink shadow-card"
                 style={{ left: tip.left, top: tip.top }}
               >
                 {tip.text}
               </div>
             )}
             {/* Строка месяцев ровно h-[13px] (= spacer колонки дней), текст прижат вниз к клеткам. */}
-            <div className="flex h-[13px] items-end gap-[3px] text-[10px] leading-none text-muted">
+            <div className="flex h-[13px] items-end gap-[3px] text-[11px] leading-none text-muted">
               {months.map((m, i) => (
                 <div key={i} className="w-[11px] whitespace-nowrap">
                   {m ?? ''}
@@ -190,7 +190,7 @@ export function ActivityGraph({
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted">
+      <div className="mt-2 flex items-center justify-end gap-1 text-[11px] text-muted">
         <span>{t('less', lang)}</span>
         {LEVEL.map((cls, i) => (
           <span key={i} className={`h-[11px] w-[11px] rounded-[2px] ${cls}`} />

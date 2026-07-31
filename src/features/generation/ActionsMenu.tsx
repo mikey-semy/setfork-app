@@ -97,7 +97,7 @@ export function ActionsMenu({
             <Check size={14} className="shrink-0 text-accent" />
             <span className="min-w-0">
               {say('Use this one', 'Использовать этот')}
-              {selected && <span className="block truncate text-[11.5px] font-normal text-muted">{selected.title}</span>}
+              {selected && <span className="block truncate text-[11px] font-normal text-muted">{selected.title}</span>}
             </span>
           </button>
           <button
@@ -114,7 +114,7 @@ export function ActionsMenu({
           </button>
           {candidates.length > 1 && (
             <div className="border-t border-border">
-              <div className="px-3 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-wide text-muted">
+              <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
                 {say('Variants', 'Варианты')}
               </div>
               {candidates.map((c) => (

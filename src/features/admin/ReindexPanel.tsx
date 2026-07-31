@@ -106,17 +106,17 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
             {/* Мерность — крупным бейджем: в чём реально построен индекс */}
             <span className="inline-flex items-baseline gap-1 rounded-md bg-primary px-2.5 py-1.5 font-mono text-primary-fg">
               <span className="text-[18px] font-bold leading-none">{space.index.dim}</span>
-              <span className="text-[10px] uppercase opacity-80">{say('dim', 'мерн.')}</span>
+              <span className="text-[11px] uppercase opacity-80">{say('dim', 'мерн.')}</span>
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 text-[13px] font-medium text-ink">
                 {say('Index space:', 'Пространство индекса:')}
-                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11.5px] font-semibold">
+                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-semibold">
                   {space.index.provider === 'yandex' ? 'Yandex v2 🇷🇺' : 'OpenRouter'}
                 </span>
-                <span className="truncate font-mono text-[11.5px] text-ink-2" title={space.index.docModel}>{space.index.docLabel}</span>
+                <span className="truncate font-mono text-[11px] text-ink-2" title={space.index.docModel}>{space.index.docLabel}</span>
               </div>
-              <div className="mt-0.5 text-[12px] text-muted">
+              <div className="mt-0.5 text-[12.5px] text-muted">
                 {space.vectorized}/{space.rows} {say('rows vectorized', 'строк с векторами')}
                 {space.index.at ? ` · ${say('reindexed', 'реиндекс')} ${new Date(space.index.at).toLocaleString()}` : ''}
               </div>
@@ -128,7 +128,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
             </div>
           )}
           <div className="mt-2.5 flex items-center gap-2">
-            <label className="text-[12px] text-ink-2">{say('Target:', 'Цель:')}</label>
+            <label className="text-[12.5px] text-ink-2">{say('Target:', 'Цель:')}</label>
             <Select
               value={space.target.provider}
               disabled={switching || running}
@@ -154,7 +154,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
       )}
 
       <div className="mb-3">
-        <label className="mb-1 block text-[12px] text-ink-2">{say('Spread over, min', 'Разнести на, мин')}</label>
+        <label className="mb-1 block text-[12.5px] text-ink-2">{say('Spread over, min', 'Разнести на, мин')}</label>
         <input
           type="number"
           min={0}
@@ -169,7 +169,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
       {msg && <div className="mb-3 text-[12.5px] text-ink-2">{msg}</div>}
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-[12px] text-muted">
+        <div className="flex items-center justify-between text-[12.5px] text-muted">
           <span>
             {stalled
               ? say('Interrupted — run again', 'Прервано — запустите заново')

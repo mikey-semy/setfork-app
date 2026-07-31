@@ -64,7 +64,7 @@ export function ForkForm({
         <Field label={labels.ownerLabel}>
           <div className="rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[13px] text-ink-2">{viewerHandle}</div>
         </Field>
-        <span className="pb-2 text-[15px] text-muted">/</span>
+        <span className="pb-2 text-[14px] text-muted">/</span>
         <Field label={labels.nameLabel} className="min-w-0 flex-1">
           <input
             value={name}
@@ -80,7 +80,7 @@ export function ForkForm({
       </div>
 
       {/* Индикатор доступности (как «EcoPlay is available ✓» на GitHub). */}
-      <div className="-mt-1.5 min-h-[16px] text-[12px]">
+      <div className="-mt-1.5 min-h-[16px] text-[12.5px]">
         {checking ? (
           <span className="inline-flex items-center gap-1 text-muted">
             <Loader2 size={12} className="animate-spin" />
@@ -98,7 +98,7 @@ export function ForkForm({
         ) : null}
       </div>
 
-      <p className="-mt-2 text-[11.5px] leading-snug text-muted">{labels.nameHint}</p>
+      <p className="-mt-2 text-[11px] leading-snug text-muted">{labels.nameHint}</p>
 
       <Field label={labels.descLabel}>
         <textarea

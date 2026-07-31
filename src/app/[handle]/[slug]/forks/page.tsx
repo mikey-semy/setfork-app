@@ -72,11 +72,11 @@ export default async function ForksPage({ params }: { params: Promise<{ handle: 
       />
 
       {rows.length === 0 ? (
-        <p className="mt-8 text-[13.5px] text-muted">{say('No public forks yet — be the first to grow a branch.', 'Публичных форков пока нет — стань первой ветвью.')}</p>
+        <p className="mt-8 text-[13px] text-muted">{say('No public forks yet — be the first to grow a branch.', 'Публичных форков пока нет — стань первой ветвью.')}</p>
       ) : (
         <ul className="mt-5 flex flex-col gap-1.5">
           {rows.map((r) => (
-            <li key={r.id} style={{ paddingLeft: `${(r.level - 1) * 20}px` }} className="flex items-baseline gap-2 text-[13.5px]">
+            <li key={r.id} style={{ paddingLeft: `${(r.level - 1) * 20}px` }} className="flex items-baseline gap-2 text-[13px]">
               {/* Иерархия форка (не дубль иконки заголовка «Дерево форков»). */}
               <span className={`self-center ${fresh(r.updated_at) ? 'text-accent' : 'text-muted'}`} aria-hidden>
                 <CornerDownRight size={13} />
@@ -84,13 +84,13 @@ export default async function ForksPage({ params }: { params: Promise<{ handle: 
               <Link href={`/${r.handle}/${r.slug}`} className="min-w-0 truncate font-medium text-ink hover:text-accent">
                 {tr(r.title, lang) || `${r.handle}/${r.slug}`}
               </Link>
-              <span className="shrink-0 text-[11.5px] text-muted">{r.handle}</span>
+              <span className="shrink-0 text-[11px] text-muted">{r.handle}</span>
               {r.stars_count > 0 && (
-                <span className="inline-flex shrink-0 items-center gap-0.5 text-[11.5px] text-muted">
+                <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] text-muted">
                   <Star size={10} /> {r.stars_count}
                 </span>
               )}
-              <span className={`ml-auto shrink-0 text-[11.5px] ${fresh(r.updated_at) ? 'font-medium text-accent' : 'text-muted'}`}>
+              <span className={`ml-auto shrink-0 text-[11px] ${fresh(r.updated_at) ? 'font-medium text-accent' : 'text-muted'}`}>
                 {timeAgo(new Date(r.updated_at), lang)}
               </span>
             </li>

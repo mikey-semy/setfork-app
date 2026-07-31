@@ -21,8 +21,8 @@ export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[];
   return (
     <div className="mb-5 rounded-lg border border-border bg-surface p-3.5">
       <div className="mb-2 flex items-baseline gap-2">
-        <span className="text-[12px] font-semibold uppercase tracking-wide text-muted">{say('List health', 'Здоровье списков')}</span>
-        <span className="text-[11.5px] text-muted">
+        <span className="text-[12.5px] font-semibold uppercase tracking-wide text-muted">{say('List health', 'Здоровье списков')}</span>
+        <span className="text-[11px] text-muted">
           {attention.length === 0
             ? say('all calm', 'всё спокойно')
             : say(`${attention.length} need a look`, `требуют взгляда: ${attention.length}`)}
@@ -46,7 +46,7 @@ export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[];
               <Link href={href} className="min-w-0 flex-1 truncate font-medium text-ink hover:text-accent">
                 {title}
               </Link>
-              {notes.length > 0 && <span className="shrink-0 text-[11.5px] text-muted">{notes.join(' · ')}</span>}
+              {notes.length > 0 && <span className="shrink-0 text-[11px] text-muted">{notes.join(' · ')}</span>}
             </li>
           )
         })}

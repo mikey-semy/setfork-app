@@ -16,7 +16,7 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
     return (
       <div className="rounded-xl border border-border bg-surface p-6 text-center">
         <div className="mb-1 text-[16px] font-bold text-ink">{t('fbThanks', lang)}</div>
-        <p className="text-[13.5px] text-ink-2">{t('fbThanksBody', lang)}</p>
+        <p className="text-[13px] text-ink-2">{t('fbThanksBody', lang)}</p>
       </div>
     )
   }
@@ -47,7 +47,7 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
 
       <div>
         <Input name="email" type="email" autoComplete="email" placeholder={t('fbEmailPlaceholder', lang)} />
-        <p className="mt-1 text-[11.5px] text-muted">{t('fbEmailHint', lang)}</p>
+        <p className="mt-1 text-[11px] text-muted">{t('fbEmailHint', lang)}</p>
       </div>
 
       {/* Honeypot: люди поле не видят и не заполняют; непустое значение = бот. */}

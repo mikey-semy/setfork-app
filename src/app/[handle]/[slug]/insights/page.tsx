@@ -79,7 +79,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
               <div key={c.key} className={`${card} min-w-0`}>
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate text-[13px] font-semibold text-ink">{c.title}</span>
-                  <span className="shrink-0 whitespace-nowrap font-mono text-[11.5px] text-muted">
+                  <span className="shrink-0 whitespace-nowrap font-mono text-[11px] text-muted">
                     {c.points.reduce((s, v) => s + v, 0)} / {WEEKS}{ru ? ' нед' : 'w'}
                   </span>
                 </div>

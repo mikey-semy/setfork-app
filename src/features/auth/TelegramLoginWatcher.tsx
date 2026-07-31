@@ -109,7 +109,7 @@ export function TelegramLoginWatcher({ lang }: { lang: Lang }) {
           aria-label={t('tgLoginCodePrompt', lang)}
           className="h-12 text-center text-[20px] tracking-[0.4em]"
         />
-        {badCode && <div className="text-[12px] text-danger">{t('tgLoginBadCode', lang)}</div>}
+        {badCode && <div className="text-[12.5px] text-danger">{t('tgLoginBadCode', lang)}</div>}
         <Button type="submit" variant="primary" size="md" disabled={submitting || code.length < 6} className="h-11 w-full">
           {submitting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : t('tgLoginCodeSubmit', lang)}
         </Button>

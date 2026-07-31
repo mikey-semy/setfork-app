@@ -77,7 +77,7 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="text-[14px] font-medium text-ink">{ru ? 'TLS (implicit, порт 465)' : 'TLS (implicit, port 465)'}</div>
-            <p className="text-[12px] text-muted">{ru ? 'Выкл для 587/STARTTLS и для MailHog.' : 'Off for 587/STARTTLS and for MailHog.'}</p>
+            <p className="text-[12.5px] text-muted">{ru ? 'Выкл для 587/STARTTLS и для MailHog.' : 'Off for 587/STARTTLS and for MailHog.'}</p>
           </div>
           <Switch name="secure" defaultChecked={v.secure} />
         </div>

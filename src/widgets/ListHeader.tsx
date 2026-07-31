@@ -82,7 +82,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             <Link href={`/${meta.ownerHandle}`} className="shrink-0">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
-            <h1 className="min-w-0 truncate text-[19px] font-bold text-ink">{tr(meta.title, lang)}</h1>
+            <h1 className="min-w-0 truncate text-[18px] font-bold text-ink">{tr(meta.title, lang)}</h1>
             {/* Версию у заголовка НЕ показываем: она живёт в сайдбаре Releases (как у GitHub —
                 номер версии/релиза только в блоке Releases, а не рядом с именем). Убран дубль. */}
             {/* Видимость — ТОЛЬКО ИКОНКОЙ, подпись в тултипе: слово рядом с названием

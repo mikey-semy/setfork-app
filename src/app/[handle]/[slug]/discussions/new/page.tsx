@@ -38,7 +38,7 @@ export default async function NewDiscussionPage({
           <input type="hidden" name="slug" value={slug} />
 
           <div>
-            <div className="mb-1.5 text-[12px] font-semibold text-ink-2">{ru ? 'Категория' : 'Category'}</div>
+            <div className="mb-1.5 text-[12.5px] font-semibold text-ink-2">{ru ? 'Категория' : 'Category'}</div>
             <div className="flex flex-wrap gap-2">
               {DISCUSSION_CATEGORIES.map((c, i) => (
                 <label

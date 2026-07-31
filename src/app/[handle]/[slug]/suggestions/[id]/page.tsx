@@ -460,10 +460,10 @@ export default async function SuggestionThreadPage({
             · {fmt.format(new Date(sug.createdAt))} ·{' '}
             {sug.branchRef ? (
               <>
-                <Link href={`/${owner}/${slug}?ref=${encodeURIComponent(sug.branchRef)}`} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[12px] text-ink hover:text-accent">
+                <Link href={`/${owner}/${slug}?ref=${encodeURIComponent(sug.branchRef)}`} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[12.5px] text-ink hover:text-accent">
                   <GitBranch size={11} /> {sug.branchRef}
                 </Link>{' '}
-                → <Tooltip label={t('defaultBranchHint', lang)}><span className="font-mono text-[12px]">main</span></Tooltip>
+                → <Tooltip label={t('defaultBranchHint', lang)}><span className="font-mono text-[12.5px]">main</span></Tooltip>
               </>
             ) : (
               <>{lang === 'ru' ? `на основе v${sug.baseVersion}` : `based on v${sug.baseVersion}`}</>
@@ -556,8 +556,8 @@ export default async function SuggestionThreadPage({
               >
                 <ArrowLeft size={14} /> <span className="max-sm:hidden">{t('prAllCommits', lang)}</span>
               </Link>
-              <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-ink">{commitDiff.title}</span>
-              <span className="shrink-0 font-mono text-[12px] text-muted">{commitDiff.sha.slice(0, 7)}</span>
+              <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{commitDiff.title}</span>
+              <span className="shrink-0 font-mono text-[12.5px] text-muted">{commitDiff.sha.slice(0, 7)}</span>
               <div className="ml-auto max-sm:w-full max-sm:justify-end">
                 <DiffViewToggle
                   path={path}
@@ -581,7 +581,7 @@ export default async function SuggestionThreadPage({
         )}
 
         {tab === 'files' && (<>
-        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
+        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
           {t('proposedChanges', lang)} · {lang === 'ru' ? `v${sug.baseVersion} → предложение` : `v${sug.baseVersion} → suggestion`}
         </div>
         {/* Ряд действий над диффом: слева прогресс ревью, справа правка и
@@ -675,7 +675,7 @@ export default async function SuggestionThreadPage({
             компании копились непринятыми: посмотреть результат было негде. */}
         {tab === 'result' && (
           <>
-            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-muted">
+            <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
               {t('resultTab', lang)} · {lang === 'ru' ? `станет v${meta.currentVersion + 1}` : `becomes v${meta.currentVersion + 1}`}
             </div>
             <SuggestionResult items={items} lang={lang} ordered={meta.ordered} />
@@ -862,7 +862,7 @@ export default async function SuggestionThreadPage({
             </form>
           </div>
         ) : (
-          <div className="mt-4 rounded-lg border border-border bg-surface px-4 py-3 text-[13.5px] text-ink-2">
+          <div className="mt-4 rounded-lg border border-border bg-surface px-4 py-3 text-[13px] text-ink-2">
             <Link href={`/login?next=${path}`} className="font-semibold text-accent hover:underline">
               {t('signInToComment', lang)}
             </Link>

@@ -9,11 +9,11 @@ import { t, tr, type Lang, type TKey } from '@/shared/i18n'
 import type { NotificationItem } from './queries'
 import { markNotificationsRead } from './actions'
 import { NOTIF_VERB } from './verbs'
+import { timeAgo } from '@/shared/ui/timeAgo'
 
 
 export function NotificationsBell({ unread, items, lang }: { unread: number; items: NotificationItem[]; lang: Lang }) {
   const [count, setCount] = useState(unread)
-  const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' })
 
   const onOpenChange = (open: boolean) => {
     if (open && count > 0) {
@@ -31,7 +31,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
         >
           <Bell size={17} />
           {count > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 grid h-[15px] min-w-[15px] place-items-center rounded-full bg-danger px-1 text-[9px] font-bold text-white">
+            <span className="absolute -right-0.5 -top-0.5 grid h-[15px] min-w-[15px] place-items-center rounded-full bg-danger px-1 text-[11px] font-bold text-white">
               {count > 9 ? '9+' : count}
             </span>
           )}
@@ -65,7 +65,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
                     <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(NOTIF_VERB[n.type], lang)}
                     {!isFollow && <> <span className="text-ink">{n.title ? tr(n.title, lang) : t('aList', lang)}</span></>}
                   </div>
-                  <span className="shrink-0 font-mono text-[10.5px] text-muted">{fmt.format(new Date(n.createdAt))}</span>
+                  <span className="shrink-0 font-mono text-[11px] text-muted">{timeAgo(n.createdAt, lang)}</span>
                 </Link>
               )
             })}

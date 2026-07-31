@@ -37,14 +37,14 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
             }
           />
           {!session ? (
-            <div className="py-16 text-center text-[13.5px] text-muted">
+            <div className="py-16 text-center text-[13px] text-muted">
               {t('loginRequired', lang)}{' '}
               <Link href="/login" className="font-semibold text-accent">
                 {t('signIn', lang)}
               </Link>
             </div>
           ) : !hadAny ? (
-            <div className="py-16 text-center text-[13.5px] text-muted">{t('emptyMyLists', lang)}</div>
+            <div className="py-16 text-center text-[13px] text-muted">{t('emptyMyLists', lang)}</div>
           ) : (
             <>
               {/* Щиток здоровья и конструктор сохранённых запросов отсюда УБРАНЫ (решение
@@ -54,7 +54,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
                   когда списков сотни, — тогда им место в отдельном разделе, а не здесь.
                   Код фич не удалён: вернуть их дешевле, чем написать заново. */}
               {items.length === 0 ? (
-                <div className="py-10 text-center text-[13.5px] text-muted">{say('Nothing matches this query', 'Под запрос ничего не попало')}</div>
+                <div className="py-10 text-center text-[13px] text-muted">{say('Nothing matches this query', 'Под запрос ничего не попало')}</div>
               ) : (
                 <FeedList items={items} lang={lang} viewerId={session.userId} />
               )}

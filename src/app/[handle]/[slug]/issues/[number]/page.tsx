@@ -153,7 +153,7 @@ export default async function IssueThreadPage({
             </form>
           </div>
         ) : (
-          <div className="mt-5 rounded-lg border border-border bg-surface px-4 py-3 text-[13.5px] text-ink-2">
+          <div className="mt-5 rounded-lg border border-border bg-surface px-4 py-3 text-[13px] text-ink-2">
             <Link href={`/login?next=/${owner}/${slug}/issues/${issue.number}`} className="font-semibold text-accent hover:underline">
               {t('signInToComment', lang)}
             </Link>

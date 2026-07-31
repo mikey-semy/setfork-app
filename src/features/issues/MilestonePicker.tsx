@@ -38,13 +38,13 @@ export function MilestonePicker({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.04em] text-muted">{L('Веха', 'Milestone')}</span>
+        <span className="text-[12.5px] font-semibold uppercase tracking-[0.04em] text-muted">{L('Веха', 'Milestone')}</span>
         {canEdit && (
           <AnchoredMenu
             align="right"
             width={240}
             button={(toggle) => (
-              <button type="button" onClick={toggle} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-ink">
+              <button type="button" onClick={toggle} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12.5px] text-muted hover:bg-surface-2 hover:text-ink">
                 <ChevronDown size={14} />
               </button>
             )}

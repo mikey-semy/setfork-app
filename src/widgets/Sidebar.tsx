@@ -42,7 +42,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] font-medium',
+              'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium',
               active ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:bg-surface-2 hover:text-ink',
             )}
           >

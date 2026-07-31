@@ -53,7 +53,7 @@ export function SuggestionTabs({
       >
         <span className={on ? 'text-ink' : 'text-muted'}>{icon}</span>
         {label}
-        {count > 0 && <span className="rounded-full bg-surface px-1.5 text-[11.5px] text-ink-2">{count}</span>}
+        {count > 0 && <span className="rounded-full bg-surface px-1.5 text-[11px] text-ink-2">{count}</span>}
       </Link>
     )
   }

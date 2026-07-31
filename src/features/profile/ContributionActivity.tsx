@@ -26,7 +26,7 @@ export function ContributionActivity({
 
   return (
     <section className="mt-6">
-      <div className="mb-3 text-[15px] font-semibold text-ink">{ru ? 'Активность' : 'Contribution activity'}</div>
+      <div className="mb-3 text-[16px] font-semibold text-ink">{ru ? 'Активность' : 'Contribution activity'}</div>
       <div className="mb-4 flex items-center justify-between border-b border-border pb-1">
         <span className="text-[12.5px] font-semibold uppercase tracking-wide text-muted">{month}</span>
         {nav && (nav.prev || nav.next) && (
@@ -55,7 +55,7 @@ export function ContributionActivity({
         <div className="flex flex-col gap-5">
           {versionsTotal > 0 && (
             <Item icon={<GitCommitHorizontal size={15} />}>
-              <div className="text-[13.5px] font-medium text-ink">
+              <div className="text-[13px] font-medium text-ink">
                 {ru ? 'Опубликовано' : 'Created'} <b>{versionsTotal}</b> {ru ? 'версий в' : versionsTotal === 1 ? 'version in' : 'versions in'}{' '}
                 <b>{versions.length}</b> {ru ? 'списках' : versions.length === 1 ? 'list' : 'lists'}
               </div>
@@ -65,7 +65,7 @@ export function ContributionActivity({
                     <Link href={`/${handle}/${v.slug}`} className="truncate text-accent hover:underline">
                       {tr(v.title, lang)}
                     </Link>
-                    <span className="shrink-0 font-mono text-[11.5px] text-muted">
+                    <span className="shrink-0 font-mono text-[11px] text-muted">
                       {v.count} {ru ? 'версий' : v.count === 1 ? 'version' : 'versions'}
                     </span>
                   </li>
@@ -76,7 +76,7 @@ export function ContributionActivity({
 
           {listsCreated.length > 0 && (
             <Item icon={<Rocket size={15} />}>
-              <div className="text-[13.5px] font-medium text-ink">
+              <div className="text-[13px] font-medium text-ink">
                 {ru ? 'Создано' : 'Created'} <b>{listsCreated.length}</b> {ru ? 'списков' : listsCreated.length === 1 ? 'list' : 'lists'}
               </div>
               <ul className="mt-2 flex flex-col gap-1">
@@ -93,7 +93,7 @@ export function ContributionActivity({
 
           {issuesOpened > 0 && (
             <Item icon={<CircleDot size={15} />}>
-              <div className="text-[13.5px] font-medium text-ink">
+              <div className="text-[13px] font-medium text-ink">
                 {ru ? 'Открыто' : 'Opened'} <b>{issuesOpened}</b> {ru ? 'issue в' : issuesOpened === 1 ? 'issue in' : 'issues in'} <b>{issuesLists}</b>{' '}
                 {ru ? 'списках' : issuesLists === 1 ? 'list' : 'lists'}
               </div>
@@ -102,7 +102,7 @@ export function ContributionActivity({
 
           {suggestionsCreated > 0 && (
             <Item icon={<GitPullRequest size={15} />}>
-              <div className="text-[13.5px] font-medium text-ink">
+              <div className="text-[13px] font-medium text-ink">
                 {ru ? 'Предложено' : 'Proposed'} <b>{suggestionsCreated}</b>{' '}
                 {ru ? 'правок (suggestions)' : suggestionsCreated === 1 ? 'suggestion' : 'suggestions'}
               </div>

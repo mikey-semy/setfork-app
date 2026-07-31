@@ -179,7 +179,7 @@ export function AiProviderModels({
         />
       </Field>
 
-      <p className="text-[12px] text-muted">
+      <p className="text-[12.5px] text-muted">
         {pricesKnown
           ? say(
               `Prices are per 1M tokens (prompt/completion), in ${sign}. Green = cheap, yellow = mid, red = expensive.`,

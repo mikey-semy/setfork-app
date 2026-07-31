@@ -64,7 +64,7 @@ export function DigPanel({
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-md py-0.5 text-[11.5px] text-muted hover:text-ink-2"
+            className="inline-flex items-center gap-1 rounded-md py-0.5 text-[11px] text-muted hover:text-ink-2"
           >
             <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
             {say(`Mine: ${layers.length}`, `Шахта: ${layers.length}`)}
@@ -75,19 +75,19 @@ export function DigPanel({
             type="button"
             onClick={dig}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[11.5px] text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[11px] text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50"
           >
             {pending ? <Loader2 size={12} className="animate-spin" /> : <Pickaxe size={12} />}
             {layers.length === 0 ? say('Dig deeper', 'Копнуть глубже') : say(`Dig lower (${layers.length}/${MAX_LEVEL})`, `Копаем ниже (${layers.length}/${MAX_LEVEL})`)}
           </button>
         )}
-        {err && <span className="text-[11.5px] text-warn">{err}</span>}
+        {err && <span className="text-[11px] text-warn">{err}</span>}
       </div>
       {open && layers.length > 0 && (
         <div className="mt-2 space-y-2 border-l-2 border-border pl-3">
           {layers.map((l) => (
             <div key={l.level}>
-              <div className="mb-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-muted">
+              <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
                 {say(`Layer ${l.level}`, `Слой ${l.level}`)} · {levelTitle(l.level)}
               </div>
               <Markdown className="text-[12.5px] leading-relaxed text-ink-2">{l.content}</Markdown>

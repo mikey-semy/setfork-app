@@ -153,9 +153,9 @@ function LimitedField({
 
   return (
     <label className={cn('flex flex-col gap-1', className)}>
-      <span className="flex items-center justify-between text-[12px] font-semibold text-ink-2">
+      <span className="flex items-center justify-between text-[12.5px] font-semibold text-ink-2">
         {field.label}
-        <span className={cn('font-mono text-[10.5px]', left < 0 ? 'text-danger' : 'text-muted')}>{left}</span>
+        <span className={cn('font-mono text-[11px]', left < 0 ? 'text-danger' : 'text-muted')}>{left}</span>
       </span>
       {field.area ? (
         <div className="relative">
@@ -224,13 +224,13 @@ function HeroImage({ initial, onRef, say }: { initial?: string; onRef: (ref: str
             {busy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} className="text-ink-2" />}
             {drag ? say('Drop to upload', 'Отпусти, чтобы загрузить') : say('Drag an image or click', 'Перетащи картинку или кликни')}
           </div>
-          <p className="mt-1 text-[12px] text-muted">{say('PNG/JPG/WebP. Replaces the hero illustration.', 'PNG/JPG/WebP. Заменит иллюстрацию hero.')}</p>
+          <p className="mt-1 text-[12.5px] text-muted">{say('PNG/JPG/WebP. Replaces the hero illustration.', 'PNG/JPG/WebP. Заменит иллюстрацию hero.')}</p>
           {preview && (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setPreview(null); onRef('') }} className="mt-1 inline-flex items-center gap-1 text-[12px] text-ink-2 hover:text-danger">
+            <button type="button" onClick={(e) => { e.stopPropagation(); setPreview(null); onRef('') }} className="mt-1 inline-flex items-center gap-1 text-[12.5px] text-ink-2 hover:text-danger">
               <X size={12} /> {say('Reset to default', 'Сбросить на дефолт')}
             </button>
           )}
-          {err && <p className="mt-1 text-[12px] text-danger">{err}</p>}
+          {err && <p className="mt-1 text-[12.5px] text-danger">{err}</p>}
         </div>
       </div>
       <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f) }} className="hidden" />

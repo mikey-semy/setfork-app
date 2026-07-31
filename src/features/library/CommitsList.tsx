@@ -70,23 +70,23 @@ export function CommitsList({
                   {diffBase ? (
                     <Link
                       href={`${diffBase}${diffBase.includes('?') ? '&' : '?'}commit=${c.sha}`}
-                      className="min-w-0 flex-1 text-[13.5px] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]"
+                      className="min-w-0 flex-1 text-[13px] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]"
                       title={rest || labels.diff}
                     >
                       {title || '—'}
                     </Link>
                   ) : (
-                    <span className="min-w-0 flex-1 text-[13.5px] font-semibold text-ink [overflow-wrap:anywhere]" title={rest || undefined}>
+                    <span className="min-w-0 flex-1 text-[13px] font-semibold text-ink [overflow-wrap:anywhere]" title={rest || undefined}>
                       {title || '—'}
                     </span>
                   )}
                   {c.parents > 1 && (
-                    <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-1.5 py-0.5 text-[10.5px] font-semibold text-accent">
+                    <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-1.5 py-0.5 text-[11px] font-semibold text-accent">
                       <GitMerge size={11} /> {labels.merge}
                     </span>
                   )}
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
                   <span className="font-medium text-ink-2">{user?.name || user?.handle || c.authorName || c.authorEmail}</span>
                   <span>·</span>
                   <span title={c.at.toLocaleString(lang)}>{timeAgo(c.at, lang)}</span>
@@ -96,7 +96,7 @@ export function CommitsList({
                   и копируют) и вход в СНИМОК списка на этом коммите. Иконка с
                   тултипом, а не подпись: на мобиле текст сюда не влезает, а
                   тач-цель добирается padding'ом до полной. */}
-              <span className="flex shrink-0 items-center gap-1.5 font-mono text-[12px] text-ink-2">
+              <span className="flex shrink-0 items-center gap-1.5 font-mono text-[12.5px] text-ink-2">
                 {c.sha.slice(0, 7)}
                 <CopyButton text={c.sha} />
                 {snapshotBase && (

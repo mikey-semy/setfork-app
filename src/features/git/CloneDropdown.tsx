@@ -40,7 +40,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
         readOnly
         value={value}
         onFocus={(e) => e.currentTarget.select()}
-        className={`min-w-0 flex-1 bg-transparent text-[12px] text-ink outline-hidden ${mono ? 'font-mono' : ''}`}
+        className={`min-w-0 flex-1 bg-transparent text-[12.5px] text-ink outline-hidden ${mono ? 'font-mono' : ''}`}
       />
       <button onClick={() => copy(key, value)} aria-label={t('copyUrl', lang)} className="shrink-0 text-muted hover:text-ink">
         {copied === key ? <Check size={14} className="text-ok" /> : <Copy size={14} />}
@@ -79,7 +79,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
               key={tt.key}
               type="button"
               onClick={() => setTab(tt.key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12px] font-semibold transition-colors ${
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[12.5px] font-semibold transition-colors ${
                 tab === tt.key ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'
               }`}
             >
@@ -131,7 +131,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
               {heading(<Sparkles size={12} />, t('mcpHeading', lang))}
               {copyField('mcp', mcpUrl)}
               <p className="mt-1 text-[11px] text-ink-2">{t('mcpHint', lang)}</p>
-              <Link href="/settings#mcp" className="mt-1 inline-block text-[12px] text-accent hover:underline">
+              <Link href="/settings#mcp" className="mt-1 inline-block text-[12.5px] text-accent hover:underline">
                 {t('getTokenLink', lang)}
               </Link>
 

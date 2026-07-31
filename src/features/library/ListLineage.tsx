@@ -21,11 +21,11 @@ export function ListLineage({ lineage, exact, gnomeNames, lang }: { lineage: Lin
       <SectionLabel className="mb-2 flex items-center gap-1.5">
         <Sparkles size={12} /> {say('How this list came to be', 'Как появился этот список')}
       </SectionLabel>
-      <p className="text-[12px] text-muted [overflow-wrap:anywhere]">
+      <p className="text-[12.5px] text-muted [overflow-wrap:anywhere]">
         {say('Request', 'Запрос')}: “{lineage.query}”
       </p>
       {!exact && (
-        <p className="mt-1 text-[11.5px] text-muted">
+        <p className="mt-1 text-[11px] text-muted">
           {say(
             'The exact variant was not recorded back then — the details below may describe a sibling variant.',
             'Какой именно вариант приняли, тогда не записывалось — детали ниже могут относиться к соседнему варианту.',
@@ -35,10 +35,10 @@ export function ListLineage({ lineage, exact, gnomeNames, lang }: { lineage: Lin
       <ProvenancePanel provenance={lineage.provenance} gnomeNames={gnomeNames} lang={lang} />
       {lineage.rejected.length > 0 && (
         <div className="mt-2">
-          <span className="text-[11.5px] font-semibold text-ink-2">{say('Not chosen', 'Не выбрали')}:</span>
+          <span className="text-[11px] font-semibold text-ink-2">{say('Not chosen', 'Не выбрали')}:</span>
           <ul className="mt-1 flex flex-col gap-1">
             {lineage.rejected.map((r) => (
-              <li key={r.idx} className="min-w-0 text-[12px] text-muted [overflow-wrap:anywhere]">
+              <li key={r.idx} className="min-w-0 text-[12.5px] text-muted [overflow-wrap:anywhere]">
                 {r.title || say('(untitled variant)', '(вариант без названия)')}
               </li>
             ))}

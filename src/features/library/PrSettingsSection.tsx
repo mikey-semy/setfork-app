@@ -118,7 +118,7 @@ function BoolRow({
       <div className="flex min-w-0 items-start gap-2.5">
         <span className="mt-0.5">{icon}</span>
         <div className="min-w-0">
-          <div className="text-[13.5px] font-medium text-ink">{label}</div>
+          <div className="text-[13px] font-medium text-ink">{label}</div>
           <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{hint}</p>
         </div>
       </div>
@@ -140,7 +140,7 @@ function WhoRow({ templateId, initial, lang }: { templateId: string; initial: 'a
   return (
     <div className={row}>
       <div className="min-w-0">
-        <div className="text-[13.5px] font-medium text-ink">{t('prSetWho', lang)}</div>
+        <div className="text-[13px] font-medium text-ink">{t('prSetWho', lang)}</div>
         <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{t('prSetWhoHint', lang)}</p>
       </div>
       <Select
@@ -174,7 +174,7 @@ function MethodRow({ templateId, initial, lang }: { templateId: string; initial:
           <GitMerge size={16} className="text-muted" />
         </span>
         <div className="min-w-0">
-          <div className="text-[13.5px] font-medium text-ink">{t('prSetMethod', lang)}</div>
+          <div className="text-[13px] font-medium text-ink">{t('prSetMethod', lang)}</div>
           <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{t('prSetMethodHint', lang)}</p>
         </div>
       </div>
@@ -205,7 +205,7 @@ function ApprovalsRow({ templateId, initial, lang }: { templateId: string; initi
   return (
     <div className={row}>
       <div className="min-w-0">
-        <div className="text-[13.5px] font-medium text-ink">{t('prSetApprovals', lang)}</div>
+        <div className="text-[13px] font-medium text-ink">{t('prSetApprovals', lang)}</div>
         <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{t('prSetApprovalsHint', lang)}</p>
       </div>
       <Select

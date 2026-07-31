@@ -49,7 +49,7 @@ export default async function GuildsPage() {
               <div className="flex items-center gap-3">
                 <GnomeAvatar src={avatars[e.id] || `/gnomes/${e.avatar || e.id}.webp`} size={56} className="size-14 shrink-0" />
                 <div className="min-w-0">
-                  <div className="text-[15px] font-semibold text-ink">{ru ? e.nameRu : e.nameEn}</div>
+                  <div className="text-[16px] font-semibold text-ink">{ru ? e.nameRu : e.nameEn}</div>
                   {(ru ? e.guildRu : e.guildEn) && <div className="text-[12.5px] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
                   {/* Ранг — цеховой титул (RPG-прогрессия на глазах). Иконка-медаль с
                       подмастерья; ученик — приглушённый текст без иконки. */}
@@ -59,15 +59,15 @@ export default async function GuildsPage() {
                   </span>
                 </div>
                 {share !== null && (
-                  <span className="ml-auto shrink-0 self-start rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11.5px] font-semibold text-accent" title={say('Share of councils whose list was accepted', 'Доля советов, чей список приняли')}>
+                  <span className="ml-auto shrink-0 self-start rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11px] font-semibold text-accent" title={say('Share of councils whose list was accepted', 'Доля советов, чей список приняли')}>
                     ✓ {share}%
                   </span>
                 )}
               </div>
               {e.code && (
                 <div className="mt-3">
-                  <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
-                  <p className="whitespace-pre-wrap text-[12px] leading-[1.55] text-ink-2">{e.code}</p>
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
+                  <p className="whitespace-pre-wrap text-[12.5px] leading-[1.55] text-ink-2">{e.code}</p>
                 </div>
               )}
               {e.domains.length > 0 && !e.domains.includes('*') && (
@@ -79,9 +79,9 @@ export default async function GuildsPage() {
                   ))}
                 </div>
               )}
-              {e.domains.includes('*') && <div className="mt-3 text-[11.5px] text-muted">{say('Any topic', 'Любая тема')}</div>}
+              {e.domains.includes('*') && <div className="mt-3 text-[11px] text-muted">{say('Any topic', 'Любая тема')}</div>}
               {r && r.gens > 0 && (
-                <div className="mt-3 text-[11.5px] text-muted">
+                <div className="mt-3 text-[11px] text-muted">
                   {say(`Councils joined: ${r.gens}`, `Участие в советах: ${r.gens}`)}
                 </div>
               )}

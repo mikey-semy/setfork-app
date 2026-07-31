@@ -19,7 +19,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
             <XCircle size={22} className="text-danger" />
           </div>
           <div className="text-[16px] font-bold text-ink">{ru ? 'Ссылка недействительна' : 'Link is invalid'}</div>
-          <p className="mt-1 text-[13.5px] text-ink-2">
+          <p className="mt-1 text-[13px] text-ink-2">
             {ru ? 'Ссылка истекла или уже использована.' : 'The link has expired or was already used.'}
           </p>
           <Link href="/forgot-password" className="mt-4 inline-block text-[13px] font-semibold text-accent hover:underline">

@@ -84,7 +84,7 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { mes
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-md py-0.5 text-[11.5px] text-muted hover:text-ink-2"
+        className="inline-flex items-center gap-1 rounded-md py-0.5 text-[11px] text-muted hover:text-ink-2"
       >
         <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
         {say(`Council: ${messages.length} lines`, `Ход совета: ${messages.length}`)}
@@ -222,7 +222,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             type="button"
             onClick={() => k !== listKind && start(() => setGenerationKind(generationId, k))}
             disabled={working}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] transition-colors disabled:opacity-40 ${
+            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[12.5px] transition-colors disabled:opacity-40 ${
               k === listKind ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
             }`}
           >
@@ -238,7 +238,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
             type="button"
             onClick={() => lv !== detailNow && start(() => setGenerationDetail(generationId, lv))}
             disabled={working}
-            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] transition-colors disabled:opacity-40 ${
+            className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[12.5px] transition-colors disabled:opacity-40 ${
               lv === detailNow ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
             }`}
           >
@@ -264,7 +264,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               {said.map((m) => (
                 <div key={m.id} className="flex animate-fadein justify-end">
                   {/* Кап 640px: на широком контейнере пузырь на 85% превращался в строку во весь экран. */}
-                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[13.5px] leading-[1.5] text-primary-fg sm:max-w-[640px]">
+                  <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[13px] leading-[1.5] text-primary-fg sm:max-w-[640px]">
                     {m.kind === 'again' ? say('Another variant', 'Ещё вариант') : m.text}
                   </div>
                 </div>
@@ -280,7 +280,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 <div id={`cand-${cand.id}`} className="animate-fadein">
                   {/* «Что поменялось ключевое» — берём у самого кандидата: реплики может не быть
                       (старые генерации), а вариант обязан быть виден всегда. */}
-                  {cand.summary && <div className="mb-1 pl-1 text-[11.5px] text-muted">{cand.summary}</div>}
+                  {cand.summary && <div className="mb-1 pl-1 text-[11px] text-muted">{cand.summary}</div>}
                   <CandidateCard cand={cand} selected={cand.id === selId} onSelect={() => setSelId(cand.id)} lang={lang} />
                   {/* Родословная (HQ §6): под карточкой, а не внутри — карточка сама <button>,
                       вложенные интерактивы в неё класть нельзя. */}
@@ -322,7 +322,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                             key={o}
                             type="button"
                             onClick={() => setAnswers((a) => ({ ...a, [i]: o }))}
-                            className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
+                            className={`rounded-full border px-3 py-1 text-[12.5px] transition-colors ${
                               (answers[i] ?? '') === o ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
                             }`}
                           >

@@ -252,7 +252,7 @@ export default async function ProfilePage({
             </Link>
           </div>
 
-          <div className="mt-3 font-mono text-[12px] text-muted">
+          <div className="mt-3 font-mono text-[12.5px] text-muted">
             {t('joined', lang)}{' '}
             {new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'short' }).format(
               new Date(user.createdAt),
@@ -332,15 +332,15 @@ export default async function ProfilePage({
                           href={`/${it.handle}/${it.slug}`}
                           className="flex min-w-0 items-center gap-2 px-3 py-3 hover:bg-surface-2"
                         >
-                          <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink">
+                          <span className="min-w-0 flex-1 truncate text-[13px] text-ink">
                             {tr(it.title as Parameters<typeof tr>[0], lang) || it.slug}
                           </span>
-                          <span className="hidden shrink-0 text-[11.5px] text-muted sm:inline">{it.handle}</span>
+                          <span className="hidden shrink-0 text-[11px] text-muted sm:inline">{it.handle}</span>
                         </Link>
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2 text-[11.5px] text-muted">
+                  <p className="mt-2 text-[11px] text-muted">
                     {tr(
                       {
                         en: 'Responsibility zone by domain — the lists are their authors’, not this account’s.',
@@ -368,7 +368,7 @@ export default async function ProfilePage({
                           href={`/${it.ownerHandle}/${it.slug}`}
                           className="group rounded-lg border border-border bg-surface px-3.5 py-3 hover:border-border-strong"
                         >
-                          <div className="truncate text-[13.5px] font-semibold text-accent group-hover:underline">{tr(it.title, lang)}</div>
+                          <div className="truncate text-[14px] font-semibold text-accent group-hover:underline">{tr(it.title, lang)}</div>
                           {desc && <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-ink-2">{desc}</p>}
                           <div className="mt-2 flex items-center gap-3 font-mono text-[11px] text-muted">
                             <span>★ {it.starsCount}</span>
@@ -389,7 +389,7 @@ export default async function ProfilePage({
                   <div className="grid gap-3 sm:grid-cols-2">
                     {completions.map((c) => (
                       <div key={c.templateId} className="rounded-lg border border-border bg-surface px-3.5 py-3">
-                        <Link href={`/${c.ownerHandle}/${c.slug}`} className="block truncate text-[13.5px] font-semibold text-accent hover:underline">
+                        <Link href={`/${c.ownerHandle}/${c.slug}`} className="block truncate text-[14px] font-semibold text-accent hover:underline">
                           {tr(c.title, lang)}
                         </Link>
                         <div className="mt-1.5 flex items-center justify-between gap-2 font-mono text-[11px] text-muted">
@@ -444,7 +444,7 @@ export default async function ProfilePage({
                       <FolderGit2 size={15} className="text-muted" />
                       <span className="truncate font-semibold text-accent group-hover:underline">{tr(c.title, lang) || c.name}</span>
                     </div>
-                    <div className="mt-1 font-mono text-[11.5px] text-muted">
+                    <div className="mt-1 font-mono text-[11px] text-muted">
                       {c.listCount} {t('lists', lang).toLowerCase()}
                     </div>
                   </Link>
@@ -457,10 +457,10 @@ export default async function ProfilePage({
               {tab === 'starred' && starFolders.length > 0 && (
                 <div className="mb-6">
                   <div className="mb-2 flex items-center justify-between">
-                    <div className="text-[15px] font-semibold text-ink">
-                      {t('foldersLabel', lang)} <span className="font-mono text-[12px] text-muted">{starFolders.length}</span>
+                    <div className="text-[16px] font-semibold text-ink">
+                      {t('foldersLabel', lang)} <span className="font-mono text-[12.5px] text-muted">{starFolders.length}</span>
                     </div>
-                    <div className="flex gap-1 text-[12px]">
+                    <div className="flex gap-1 text-[12.5px]">
                       {(['name', 'count'] as const).map((s) => (
                         <Link
                           key={s}
@@ -482,7 +482,7 @@ export default async function ProfilePage({
                           className={`rounded-lg border px-4 py-3 ${on ? 'border-accent bg-accent/10' : 'border-border bg-surface hover:border-border-strong'}`}
                         >
                           <div className="truncate text-[14px] font-semibold text-ink">{f.name}</div>
-                          <div className="mt-1 font-mono text-[11.5px] text-muted">
+                          <div className="mt-1 font-mono text-[11px] text-muted">
                             {f.count} {t('lists', lang).toLowerCase()}
                           </div>
                         </Link>
@@ -501,7 +501,7 @@ export default async function ProfilePage({
                     placeholder={t('searchStarsPh', lang)}
                     className="min-w-[180px] flex-1 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
                   />
-                  <div className="flex gap-1 text-[12px]">
+                  <div className="flex gap-1 text-[12.5px]">
                     {(['recent', 'name', 'stars'] as const).map((s) => (
                       <Link
                         key={s}

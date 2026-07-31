@@ -125,7 +125,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
               </form>
             ))}
           </div>
-          <p className="mt-2 text-[11.5px] text-ink-2">
+          <p className="mt-2 text-[11px] text-ink-2">
             {say('The new master is created DISABLED — review the profile, tweak it and switch him on.', 'Новый мастер рождается ВЫКЛЮЧЕННЫМ — прочитай профиль, поправь и включи сам.')}
           </p>
         </div>
@@ -139,7 +139,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
             <div className="text-[12.5px] font-semibold text-ink">
               {say('Accounts are missing', 'Не у всех есть аккаунт')}
             </div>
-            <p className="mt-0.5 text-[11.5px] text-ink-2">
+            <p className="mt-0.5 text-[11px] text-ink-2">
               {say(
                 `${noAccounts} of ${roster.length} have no user-level account — without it their edits are nobody’s and cannot be attributed.`,
                 `${noAccounts} из ${roster.length} без аккаунта уровня пользователя — без него их правки ничьи и их некому приписать.`,

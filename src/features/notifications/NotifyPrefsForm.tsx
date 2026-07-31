@@ -48,18 +48,18 @@ export function NotifyPrefsForm({
 
       {/* Доставка: дублирование включённых выше событий на почту */}
       <div className="border-t border-border pt-4">
-        <div className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-muted">{t('deliverySection', lang)}</div>
+        <div className="mb-3 text-[12.5px] font-semibold uppercase tracking-wider text-muted">{t('deliverySection', lang)}</div>
         <div className="flex items-center justify-between gap-4">
           <div>
             <span className="text-[14px] text-ink">{t('prefEmail', lang)}</span>
-            <p className="text-[12px] text-muted">{hasEmail ? t('prefEmailHint', lang) : t('prefEmailNoAddr', lang)}</p>
+            <p className="text-[12.5px] text-muted">{hasEmail ? t('prefEmailHint', lang) : t('prefEmailNoAddr', lang)}</p>
           </div>
           <Switch name="email" defaultChecked={prefs.email === true} disabled={!hasEmail} />
         </div>
         <div className="mt-3 flex items-center justify-between gap-4">
           <div>
             <span className="text-[14px] text-ink">{t('prefBrowser', lang)}</span>
-            <p className="text-[12px] text-muted">{t('prefBrowserHint', lang)}</p>
+            <p className="text-[12.5px] text-muted">{t('prefBrowserHint', lang)}</p>
           </div>
           <Switch
             name="browser"
@@ -76,7 +76,7 @@ export function NotifyPrefsForm({
         <div className="mt-3 flex items-center justify-between gap-4">
           <div>
             <span className="text-[14px] text-ink">{t('prefLang', lang)}</span>
-            <p className="text-[12px] text-muted">{t('prefLangHint', lang)}</p>
+            <p className="text-[12.5px] text-muted">{t('prefLangHint', lang)}</p>
           </div>
           <input type="hidden" name="notifyLang" value={nl} />
           <Select value={nl} onValueChange={(v) => setNl(isLang(v) ? v : DEFAULT_LANG)}>

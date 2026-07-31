@@ -114,7 +114,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
               className="flex flex-col items-center gap-1 rounded-md px-1 py-2 text-muted hover:bg-surface-2 hover:text-ink"
             >
               {ICON[n.name]}
-              <span className="text-[10.5px] leading-none">{n.name}</span>
+              <span className="text-[11px] leading-none">{n.name}</span>
             </a>
           ))}
         </div>

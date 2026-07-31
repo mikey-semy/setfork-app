@@ -43,8 +43,8 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
                 {showSec && <div className="bg-surface-2 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">{sec}</div>}
                 <div className="flex items-center gap-3 px-4 py-2.5">
                   <span className="w-6 shrink-0 text-right font-mono text-[11px] text-muted">{s.n}</span>
-                  <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink">{tr(s.title, lang)}</span>
-                  {s.note && <span className="hidden min-w-0 max-w-[220px] truncate text-[12px] text-muted sm:block">{s.note}</span>}
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-ink">{tr(s.title, lang)}</span>
+                  {s.note && <span className="hidden min-w-0 max-w-[220px] truncate text-[12.5px] text-muted sm:block">{s.note}</span>}
                   <Tooltip label={t('versionHistory', lang)}>
                     <Link
                       href={`${base}/versions`}
@@ -55,7 +55,7 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
                       v{s.lastVersion}
                     </Link>
                   </Tooltip>
-                  <span className="w-[92px] shrink-0 text-right text-[11.5px] text-muted">{timeAgo(s.lastAt, lang)}</span>
+                  <span className="w-[92px] shrink-0 text-right text-[11px] text-muted">{timeAgo(s.lastAt, lang)}</span>
                 </div>
               </div>
             )

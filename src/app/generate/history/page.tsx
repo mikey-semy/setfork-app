@@ -52,8 +52,8 @@ export default async function GenerationHistoryPage() {
               >
                 <StatusIcon status={g.status} accepted={!!g.chosenTemplateId} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13.5px] text-ink">{g.query}</span>
-                  <span className="mt-0.5 block text-[11.5px] text-muted">
+                  <span className="block truncate text-[13px] text-ink">{g.query}</span>
+                  <span className="mt-0.5 block text-[11px] text-muted">
                     {statusLabel(g.status, !!g.chosenTemplateId, lang)} · {timeAgo(g.createdAt, lang)}
                   </span>
                 </span>

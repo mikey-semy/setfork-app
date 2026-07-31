@@ -128,7 +128,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               </div>
             )}
           </div>
-          {avgPerGen != null && <p className="mt-3 text-[12px] text-muted">{footnote}</p>}
+          {avgPerGen != null && <p className="mt-3 text-[12.5px] text-muted">{footnote}</p>}
         </div>
       )}
 
@@ -137,7 +137,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
         <div className="rounded-lg border border-border bg-surface">
           <div className="border-b border-border px-4 py-2.5">
             <span className="text-[13px] font-semibold text-ink">{tr({ en: 'Model reliability', ru: 'Надёжность моделей' }, lang)}</span>
-            <span className="ml-2 text-[12px] text-muted">
+            <span className="ml-2 text-[12.5px] text-muted">
               {tr(
                 {
                   en: 'quarantined models are auto-rotated out of the council pool (24h sliding window)',
@@ -206,7 +206,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               {r.handle ? (
                 <UserLine handle={r.handle} size="md" className="min-w-0" />
               ) : (
-                <span className="text-[13.5px] text-muted">{tr({ en: 'system / deleted', ru: 'система / удалён' }, lang)}</span>
+                <span className="text-[13px] text-muted">{tr({ en: 'system / deleted', ru: 'система / удалён' }, lang)}</span>
               )}
               <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(r.calls)}</span>
               <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(r.totalTokens)}</span>

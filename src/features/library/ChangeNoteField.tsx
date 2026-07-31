@@ -78,8 +78,8 @@ export function ChangeNoteField({
           </button>
         </Tooltip>
       </div>
-      {invalid && <p className="mt-1 text-[12px] text-danger">{ru ? 'Опишите, что изменили и почему.' : 'Describe what you changed and why.'}</p>}
-      {err && <p className="mt-1 text-[12px] text-danger">{err}</p>}
+      {invalid && <p className="mt-1 text-[12.5px] text-danger">{ru ? 'Опишите, что изменили и почему.' : 'Describe what you changed and why.'}</p>}
+      {err && <p className="mt-1 text-[12.5px] text-danger">{err}</p>}
     </div>
   )
 }

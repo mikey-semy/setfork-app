@@ -44,7 +44,7 @@ export function PinsPicker({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-[12px] text-ink-2 hover:text-accent"
+        className="inline-flex items-center gap-1 text-[12.5px] text-ink-2 hover:text-accent"
       >
         <Pencil size={11} /> {ru ? 'Настроить' : 'Customize your pins'}
       </button>

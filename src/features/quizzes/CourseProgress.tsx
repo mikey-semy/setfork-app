@@ -46,7 +46,7 @@ export function CourseProgress({
           <div className={`h-full rounded-full ${done ? 'bg-ok' : 'bg-accent'}`} style={{ width: `${completed ? 100 : pct}%` }} aria-hidden />
         </div>
         {completed && total > 0 && passed < total && (
-          <p className="mt-1 text-[11.5px] text-muted">{t('courseTestsChanged', lang)}</p>
+          <p className="mt-1 text-[11px] text-muted">{t('courseTestsChanged', lang)}</p>
         )}
       </div>
       {leaderboardHref && (

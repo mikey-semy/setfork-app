@@ -72,7 +72,7 @@ export function MergedPanel({
     <div className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3.5 py-3 ${tone}`}>
       <span className={accepted ? 'text-accent' : 'text-muted'}>{accepted ? <GitMerge size={18} /> : <X size={18} />}</span>
       <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] font-semibold text-ink">{accepted ? labels.merged : labels.closed}</div>
+        <div className="text-[13px] font-semibold text-ink">{accepted ? labels.merged : labels.closed}</div>
         {branch && !done && <div className="text-[12.5px] text-ink-2">{labels.branchSafeToDelete}</div>}
         {done && <div className="text-[12.5px] text-muted">{labels.branchDeleted}</div>}
         {failed && <div className="text-[12.5px] text-danger">{labels.deleteFailed}</div>}

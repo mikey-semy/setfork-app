@@ -88,7 +88,7 @@ export function ReviewPanel({
               <div key={r.id} className="flex gap-2">
                 <Avatar handle={r.reviewer.handle} avatarUrl={r.reviewer.avatarUrl} size={20} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline gap-x-2 text-[12px]">
+                  <div className="flex flex-wrap items-baseline gap-x-2 text-[12.5px]">
                     <span className="font-semibold text-ink">{r.reviewer.name || r.reviewer.handle}</span>
                     {/* Снятый вердикт показываем приглушённо и зачёркнуто: он был,
                         но принятие больше не держит — обе половины важны. */}
@@ -101,7 +101,7 @@ export function ReviewPanel({
                     <div className={`whitespace-pre-wrap text-[13px] [overflow-wrap:anywhere] ${r.dismissed ? 'text-muted' : 'text-ink-2'}`}>{r.body}</div>
                   )}
                   {r.dismissed && (
-                    <div className="mt-0.5 text-[12px] text-muted [overflow-wrap:anywhere]">
+                    <div className="mt-0.5 text-[12.5px] text-muted [overflow-wrap:anywhere]">
                       {labels.dismissedBy}
                       {r.dismissed.by ? ` @${r.dismissed.by}` : ''}: {r.dismissed.reason}
                     </div>
@@ -122,7 +122,7 @@ export function ReviewPanel({
         canReview && (
           <div className="border-t border-border pt-2.5">
             {myVerdict && (
-              <div className="mb-2 flex flex-wrap items-center gap-2 text-[12px] text-ink-2">
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-[12.5px] text-ink-2">
                 <span>
                   {labels.yourReview}: <b className={VERDICT_META[myVerdict].cls}>{labels[VERDICT_META[myVerdict].key]}</b>
                 </span>

@@ -101,7 +101,7 @@ export function LinkIssuePicker({
         </div>
       )}
 
-      <p className="text-[11.5px] text-muted">{labels.hint}</p>
+      <p className="text-[11px] text-muted">{labels.hint}</p>
     </div>
   )
 }

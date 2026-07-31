@@ -140,7 +140,7 @@ export default async function SuggestionsPage({
       {/* Вкладки состояния + фильтры. Фильтры уезжают в дропдауны, поэтому ряд
           не расползается на узком экране. */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2">
-        <div className="flex items-center gap-4 text-[13.5px] font-semibold">
+        <div className="flex items-center gap-4 text-[13px] font-semibold">
           <Link href={hrefWith({ status: undefined })} className={`inline-flex items-center gap-1.5 ${status === 'open' ? 'text-ink' : 'text-ink-2 hover:text-ink'}`}>
             <GitPullRequest size={15} /> {counts.open} <span className="max-sm:hidden">{t('openLabel', lang)}</span>
           </Link>
@@ -215,7 +215,7 @@ export default async function SuggestionsPage({
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <Link
                     href={`${base}/${s.number ?? s.id}`}
-                    className="min-w-0 text-[14.5px] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]"
+                    className="min-w-0 text-[14px] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]"
                   >
                     {s.note || t('noCommitMessage', lang)}
                   </Link>
@@ -229,7 +229,7 @@ export default async function SuggestionsPage({
                 {/* Вторая строка — метаданные. Номер, автор, дата, объём. У ветки
                     вместо числа пунктов показываем саму ветку: пункты там лежат в
                     git, и «0 пунктов» было прямым враньём. */}
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
                   <span className="font-mono">#{s.number ?? '—'}</span>
                   <span>
                     {t('proposedBy', lang)} <span className="text-ink-2">{s.author.handle}</span>
@@ -261,7 +261,7 @@ export default async function SuggestionsPage({
                 {s.commentCount > 0 && (
                   <Link
                     href={`${base}/${s.number ?? s.id}`}
-                    className="inline-flex items-center gap-1 font-mono text-[12px] text-muted hover:text-ink"
+                    className="inline-flex items-center gap-1 font-mono text-[12.5px] text-muted hover:text-ink"
                   >
                     <MessageSquare size={13} /> {s.commentCount}
                   </Link>

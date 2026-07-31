@@ -138,8 +138,8 @@ export function SettingsForm({
       {/* Приватность профиля */}
       <div className="flex items-start justify-between gap-4 border-t border-border pt-4">
         <div className="min-w-0">
-          <div className="text-[13.5px] font-medium text-ink">{t('profilePrivateLabel', lang)}</div>
-          <p className="mt-0.5 max-w-[520px] text-[12px] text-ink-2">{t('profilePrivateHint', lang)}</p>
+          <div className="text-[13px] font-medium text-ink">{t('profilePrivateLabel', lang)}</div>
+          <p className="mt-0.5 max-w-[520px] text-[12.5px] text-ink-2">{t('profilePrivateHint', lang)}</p>
         </div>
         <Switch name="profilePrivate" checked={priv} onCheckedChange={setPriv} />
       </div>

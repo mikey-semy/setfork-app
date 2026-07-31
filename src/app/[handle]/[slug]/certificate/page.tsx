@@ -56,21 +56,21 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
               <p className="mt-1 text-[26px] font-bold tracking-tight text-ink">{learner}</p>
               <p className="mt-4 text-[13px] text-muted">{ru ? 'успешно прошёл курс' : 'has successfully completed'}</p>
               <p className="mt-1 text-[20px] font-semibold text-ink">{title}</p>
-              <div className="mt-8 flex items-center justify-center gap-8 text-[12px] text-ink-2">
+              <div className="mt-8 flex items-center justify-center gap-8 text-[12.5px] text-ink-2">
                 <div className="flex flex-col">
-                  <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">{ru ? 'Дата' : 'Date'}</span>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">{ru ? 'Дата' : 'Date'}</span>
                   <span className="mt-0.5 font-medium text-ink">{completion.completedAt.toLocaleDateString(ru ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">{ru ? 'Версия' : 'Version'}</span>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">{ru ? 'Версия' : 'Version'}</span>
                   <span className="mt-0.5 font-medium text-ink">v{completion.version}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-muted">{ru ? 'Автор курса' : 'Issued by'}</span>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">{ru ? 'Автор курса' : 'Issued by'}</span>
                   <span className="mt-0.5 font-medium text-ink">{issuer}</span>
                 </div>
               </div>
-              <div className="mt-8 font-mono text-[10.5px] uppercase tracking-[0.18em] text-muted">SetFork · setfork.com/{owner}/{slug}</div>
+              <div className="mt-8 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">SetFork · setfork.com/{owner}/{slug}</div>
             </div>
             <div className="flex items-center gap-3 print:hidden">
               <CertificatePrintButton label={ru ? 'Печать / PDF' : 'Print / PDF'} />
