@@ -9,8 +9,8 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { ForkForm } from '@/features/library/ForkForm'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Fork · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('fork', lang)} · ${handle}/${slug}` }
 }
 
 // «Create a new fork» отдельной СТРАНИЦЕЙ (как GitHub), не модалкой (фидбек владельца).

@@ -19,8 +19,8 @@ import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { PageHeader } from '@/shared/ui/PageHeader'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Edit · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('edit', lang)} · ${handle}/${slug}` }
 }
 
 export default async function EditPage({

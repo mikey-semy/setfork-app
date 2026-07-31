@@ -13,8 +13,8 @@ import { MilestoneForm } from '@/features/milestones/MilestoneForm'
 import { deleteMilestone, toggleMilestoneClosed } from '@/features/milestones/actions'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Milestones · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('milestonesTitle', lang)} · ${handle}/${slug}` }
 }
 
 export default async function MilestonesPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {

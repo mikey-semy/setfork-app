@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db, templates, users } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { getGeneration } from '@/features/generation/queries'
 import { getMessages } from '@/shared/ai/generation-messages'
 import { rosterAvatars, rosterNames } from '@/shared/ai/roster'
@@ -10,7 +11,10 @@ import { getClarify } from '@/shared/ai/council-clarify'
 import { GenerationChat } from '@/features/generation/GenerationChat'
 import { gnomeReputation, REP_MIN_GENS } from '@/features/generation/reputation'
 
-export const metadata = { title: 'Draft' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('draftBadge', lang) }
+}
 
 export default async function GenerationPage({
   params,

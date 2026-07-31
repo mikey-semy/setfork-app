@@ -1,11 +1,15 @@
 import { redirect } from 'next/navigation'
 import { ShieldCheck } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { hasPendingLogin } from '@/features/auth/twofa'
 import { TwoFaLoginForm } from '@/features/auth/TwoFaLoginForm'
 
 /** Шаг 2FA после пароля: pending-кука (5 мин) уже стоит, сессии ещё нет. */
-export const metadata = { title: 'Two-factor authentication' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('twoFactorTitle', lang) }
+}
 
 export default async function TwoFaLoginPage() {
   const lang = await getLang()

@@ -5,7 +5,10 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { getFeedbackCounts, getFeedbackList, type FeedbackFilter } from '@/features/feedback/queries'
 import { FeedbackTable } from '@/features/feedback/FeedbackTable'
 
-export const metadata = { title: 'Feedback' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('feedback', lang) }
+}
 
 export default async function AdminFeedbackPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   await requireAdmin()

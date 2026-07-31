@@ -36,8 +36,8 @@ import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { resolveChip } from '@/shared/lib/labels'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Suggestions · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('suggestions', lang)} · ${handle}/${slug}` }
 }
 
 /**

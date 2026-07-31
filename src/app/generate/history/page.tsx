@@ -3,13 +3,16 @@ import { redirect } from 'next/navigation'
 import { CircleAlert, Loader2, MessageCircleQuestion, Sparkles } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { type Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { getRecentGenerations, type GenerationStatus } from '@/features/generation/queries'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { timeAgo } from '@/shared/ui/timeAgo'
 
-export const metadata = { title: 'Draft history' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('draftHistory', lang) }
+}
 
 // История генераций: запрос getRecentGenerations уже был (и индекс под него), но экрана
 // не существовало — попасть в прошлую генерацию можно было только по прямой ссылке.

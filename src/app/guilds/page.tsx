@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Award } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { getRoster, rosterAvatars } from '@/shared/ai/roster'
 import { gnomeRank, gnomeReputation, REP_MIN_GENS } from '@/features/generation/reputation'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
@@ -19,7 +20,10 @@ const RANK_CLS = [
  * по каким кодексам и насколько их предложениям доверяют. Часть мира продукта —
  * репутация через прозрачность, не через обещания.
  */
-export const metadata: Metadata = { title: 'Guilds' }
+export async function generateMetadata(): Promise<Metadata> {
+  const lang = await getLang()
+  return { title: t('guildsTitle', lang) }
+}
 export const revalidate = 300 // витрина меняется медленно (ростер+репутация)
 
 export default async function GuildsPage() {

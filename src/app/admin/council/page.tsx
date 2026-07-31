@@ -1,5 +1,6 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { getAiSettings, getApiKey } from '@/shared/settings/ai'
 import { fetchModels, type ModelOption } from '@/shared/ai/models'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
@@ -12,7 +13,10 @@ import { Button } from '@/shared/ui/button'
 import { Sparkles, UserPlus } from 'lucide-react'
 import type { Option } from '@/features/admin/ModelSelect'
 
-export const metadata = { title: 'Council' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('councilHall', lang) }
+}
 
 // Те же цены, что и в общей админке. Дублировать формулу не хочется, но и тащить её в shared ради
 // двух страниц рано — вынесем, когда появится третий потребитель.

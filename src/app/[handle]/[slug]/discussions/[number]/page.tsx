@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
@@ -14,8 +15,8 @@ import { addDiscussionComment } from '@/features/discussions/actions'
 import { categoryLabel, categoryMeta } from '@/features/discussions/constants'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
-  const { handle, slug, number } = await params
-  return { title: `Discussion #${number} · ${handle}/${slug}` }
+  const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('discussionHeading', lang)} #${number} · ${handle}/${slug}` }
 }
 
 export default async function DiscussionThreadPage({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {

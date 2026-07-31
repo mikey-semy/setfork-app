@@ -13,7 +13,10 @@ import { ListEditor } from '@/features/library/ListEditor'
 import { ListTypeToggle } from '@/features/library/ListTypeToggle'
 import { listQuota } from '@/shared/quota'
 
-export const metadata = { title: 'New list' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('newList', lang) }
+}
 
 export default async function NewListPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])

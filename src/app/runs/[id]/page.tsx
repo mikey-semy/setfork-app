@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { tr, type LocaleText } from '@/shared/i18n'
+import { t, tr, type LocaleText } from '@/shared/i18n'
 import { getRun } from '@/features/runs/queries'
 import { RunView, type RunStepVM } from '@/features/runs/RunView'
 import { productItems } from '@/features/library/blocks'
@@ -11,7 +11,10 @@ import { getAiSettings } from '@/shared/settings/ai'
 import { getRoster } from '@/shared/ai/roster'
 import { digStepsWithSession } from '@/features/dig/queries'
 
-export const metadata = { title: 'Run' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('run', lang) }
+}
 
 export default async function RunPage({ params }: { params: Promise<{ id: string }> }) {
   const [{ id }, session, lang, mon, ai] = await Promise.all([params, getSession(), getLang(), getMonetizationSettings(), getAiSettings()])

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { Badge } from '@/shared/ui/badge'
 import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -27,7 +27,10 @@ function num(n: number): string {
   return new Intl.NumberFormat('en').format(n)
 }
 
-export const metadata = { title: 'Usage' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('aiUsageTitle', lang) }
+}
 
 export default async function AdminUsagePage({ searchParams }: { searchParams: Promise<{ w?: string }> }) {
   await requireAdmin()

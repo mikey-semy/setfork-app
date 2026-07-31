@@ -7,7 +7,10 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { TelegramLoginWatcher } from '@/features/auth/TelegramLoginWatcher'
 
-export const metadata = { title: 'Telegram sign-in' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('signInTelegram', lang) }
+}
 
 /** Шаг Telegram-входа: t.me-ссылка на бота + поллинг подтверждения. */
 export default async function TelegramLoginPage() {

@@ -3,14 +3,14 @@ import { notFound } from 'next/navigation'
 import { Award } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { CertificatePrintButton } from '@/features/quizzes/CertificatePrintButton'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Certificate · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('courseCertificate', lang)} · ${handle}/${slug}` }
 }
 
 export default async function CertificatePage({ params }: { params: Promise<{ handle: string; slug: string }> }) {

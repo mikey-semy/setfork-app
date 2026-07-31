@@ -22,8 +22,8 @@ import { withPrDefaults } from '@/features/library/pr-settings'
 import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Settings · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('settings', lang)} · ${handle}/${slug}` }
 }
 
 export default async function ListSettingsPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {

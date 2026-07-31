@@ -11,7 +11,10 @@ import { MarkRead } from '@/features/notifications/MarkRead'
 import { NOTIF_VERB } from '@/features/notifications/verbs'
 
 
-export const metadata = { title: 'Notifications' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('notifications', lang) }
+}
 
 export default async function NotificationsPage() {
   const session = await requireSession()

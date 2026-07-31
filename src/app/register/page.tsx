@@ -6,7 +6,10 @@ import { t } from '@/shared/i18n'
 import { legalUrl } from '@/shared/docs'
 import { RegisterForm } from '@/features/auth/AuthForms'
 
-export const metadata = { title: 'Create account' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('createAccount', lang) }
+}
 
 export default async function RegisterPage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])

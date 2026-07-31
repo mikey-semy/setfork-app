@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Bell, Eye, GitFork, MousePointerClick, PlayCircle, Star, Tag, Users } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { Badge } from '@/shared/ui/badge'
 import { UserLine } from '@/shared/ui/UserLine'
 import { TrendChart } from '@/shared/ui/TrendChart'
@@ -12,8 +13,8 @@ import { getInsightTotals, getWeeklySeries, WEEKS } from '@/features/insights/qu
 import { BadgesCard } from '@/features/badges/BadgesCard'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Insights · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('insightsTab', lang)} · ${handle}/${slug}` }
 }
 
 const card = 'rounded-lg border border-border bg-surface p-4'

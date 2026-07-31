@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { MessageSquare, Plus } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { timeAgo } from '@/shared/ui/timeAgo'
@@ -12,8 +13,8 @@ import { getDiscussions } from '@/features/discussions/queries'
 import { DISCUSSION_CATEGORIES, categoryLabel, categoryMeta } from '@/features/discussions/constants'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Discussions · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('featDiscussions', lang)} · ${handle}/${slug}` }
 }
 
 export default async function DiscussionsPage({

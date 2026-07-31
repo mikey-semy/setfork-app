@@ -65,8 +65,8 @@ import type { ProposedItem } from '@/shared/db'
 import { isAdminHandle } from '@/shared/auth/admin'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; id: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Suggestion · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('suggestionHeading', lang)} · ${handle}/${slug}` }
 }
 
 export default async function SuggestionThreadPage({

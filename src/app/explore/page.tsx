@@ -40,7 +40,10 @@ const RANGE_LABEL: Record<TrendRange, { en: string; ru: string }> = {
   all: { en: 'All time', ru: 'Всё время' },
 }
 
-export const metadata = { title: 'Explore' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('explore', lang) }
+}
 
 export default async function ExplorePage({
   searchParams,

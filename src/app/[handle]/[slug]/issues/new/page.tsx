@@ -9,8 +9,8 @@ import { NewIssueForm } from '@/features/issues/NewIssueForm'
 import { getListLabels } from '@/features/issues/queries'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `New issue · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('newIssue', lang)} · ${handle}/${slug}` }
 }
 
 export default async function NewIssuePage({ params }: { params: Promise<{ handle: string; slug: string }> }) {

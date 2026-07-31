@@ -1,10 +1,14 @@
 import Link from 'next/link'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { consumeVerifyToken } from '@/features/auth/email-flows'
 
 /** Обработка ссылки из письма-подтверждения. */
-export const metadata = { title: 'Verify email' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('verifyEmailTitle', lang) }
+}
 
 export default async function VerifyEmailPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const [{ token }, lang] = await Promise.all([searchParams, getLang()])

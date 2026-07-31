@@ -3,7 +3,10 @@ import { t } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedbackForm } from '@/features/feedback/FeedbackForm'
 
-export const metadata = { title: 'Feedback' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('feedback', lang) }
+}
 
 export default async function FeedbackPage() {
   const lang = await getLang()

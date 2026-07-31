@@ -1,12 +1,16 @@
 import { Megaphone } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { imageUrl } from '@/shared/media'
 import { getLandingContent } from '@/shared/settings/landing'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { LandingEditor } from '@/features/admin/LandingEditor'
 
-export const metadata = { title: 'Landing' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('adminLanding', lang) }
+}
 
 // Редактор маркетинг-лендинга (setfork-about): тексты (лимиты + AI-подсказки),
 // плитки-статы, картинка hero (DnD). Лендинг подхватывает через ISR /api/landing.

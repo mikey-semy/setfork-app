@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { getDashboardSeries, getLiveMetrics } from '@/features/admin/dashboard-queries'
 import { DashboardLive } from '@/features/admin/DashboardLive'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -11,7 +11,10 @@ import { getModerationCounts } from '@/features/moderation/queries'
 import { getReportsCounts } from '@/features/reports/queries'
 import { getFeedbackCounts } from '@/features/feedback/queries'
 
-export const metadata = { title: 'Dashboard' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('dashboard', lang) }
+}
 export const dynamic = 'force-dynamic' // всегда свежие числа, без ISR-кэша
 
 function num(n: number): string {

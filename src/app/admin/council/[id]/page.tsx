@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, BookOpen, CheckCircle2, CircleUser, Gauge, Users } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { prettyModelName } from '@/shared/ai/models'
 import { gnomeKpi } from '@/features/admin/gnome-stats'
@@ -21,7 +22,10 @@ import { ExpertSettings } from '@/features/admin/ExpertSettings'
  * «Через их аккаунты»: у специалиста есть аккаунт уровня пользователя (ADR-0004), поэтому
  * отсюда ведёт ссылка на его публичный профиль — то, что видят люди.
  */
-export const metadata = { title: 'Expert' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('expertTitle', lang) }
+}
 
 export default async function GnomePage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin()

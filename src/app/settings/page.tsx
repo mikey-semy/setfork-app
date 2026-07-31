@@ -26,7 +26,10 @@ import { NotifyPrefsForm } from '@/features/notifications/NotifyPrefsForm'
 import { getUserSessions } from '@/features/sessions/queries'
 import { SessionsList } from '@/features/sessions/SessionsList'
 
-export const metadata = { title: 'Settings' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('settings', lang) }
+}
 
 export default async function SettingsPage() {
   const session = await requireSession()

@@ -59,7 +59,10 @@ async function builtinAvatars(): Promise<string[]> {
   }
 }
 
-export const metadata = { title: 'Admin' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('adminTitle', lang) }
+}
 
 export default async function AdminPage() {
   await requireAdmin()
