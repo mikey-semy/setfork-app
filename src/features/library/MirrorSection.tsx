@@ -75,39 +75,32 @@ export function MirrorSection({
           </div>
         )}
 
-        {/* Правый нижний угол — вторичные действия иконками с тултипом и aria;
-            главное «Сохранить» живёт в sticky-полосе FormSaveBar ниже. */}
-        {configured && (
-          <div className="flex items-center justify-end gap-2">
+        <FormSaveBar ru={lang === 'ru'} />
+      </form>
+
+      {/* Вторичные действия — ОТДЕЛЬНЫМИ формами, не formAction той же формы
+          (P1 Codex по #612): «Синхронизировать» отправлял главную форму, и
+          FormSaveBar считал отправку сохранением — гасил полосу, хотя правки
+          URL/токена никуда не ушли (mirrorNow поля игнорирует). */}
+      {configured && (
+        <div className="mt-4 flex items-center justify-end gap-2">
+          <form action={disable}>
             <Tooltip label={t('mirrorDisable', lang)}>
-              <Button
-                type="submit"
-                formAction={disable}
-                formNoValidate
-                size="sm"
-                variant="ghost"
-                aria-label={t('mirrorDisable', lang)}
-              >
+              <Button type="submit" size="sm" variant="ghost" aria-label={t('mirrorDisable', lang)}>
                 <Unplug size={15} />
               </Button>
             </Tooltip>
+          </form>
+          <form action={sync}>
             <Tooltip label={t('mirrorSyncNow', lang)}>
-              <Button
-                type="submit"
-                formAction={sync}
-                formNoValidate
-                size="sm"
-                variant="ghost"
-                aria-label={t('mirrorSyncNow', lang)}
-              >
+              <Button type="submit" size="sm" variant="ghost" aria-label={t('mirrorSyncNow', lang)}>
                 <RefreshCw size={15} />
                 <span className="hidden md:inline">{t('mirrorSyncNow', lang)}</span>
               </Button>
             </Tooltip>
-          </div>
-        )}
-        <FormSaveBar ru={lang === 'ru'} />
-      </form>
+          </form>
+        </div>
+      )}
     </SettingsSection>
   )
 }

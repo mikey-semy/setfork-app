@@ -37,8 +37,11 @@ export function UserLine({
       <Link href={`/${handle}`} className="shrink-0">
         <Avatar handle={handle} avatarUrl={avatarUrl} size={s.avatar} />
       </Link>
-      <Link href={`/${handle}`} className="min-w-0 truncate font-medium text-ink hover:text-accent">
-        {name ?? `@${handle}`}
+      {/* Имя не прячет уникальный handle (Codex по #615), и truncate режет
+          ТОЛЬКО имя — handle вне сжимаемой зоны (дожим Codex по #618). */}
+      <Link href={`/${handle}`} className="flex min-w-0 items-baseline gap-1.5 font-medium text-ink hover:text-accent">
+        <span className="min-w-0 truncate">{name ?? `@${handle}`}</span>
+        {name && <span className="shrink-0 font-normal text-muted">@{handle}</span>}
       </Link>
       {at && <span className="shrink-0 text-muted">· {at}</span>}
     </span>

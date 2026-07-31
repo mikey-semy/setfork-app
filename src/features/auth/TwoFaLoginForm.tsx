@@ -26,7 +26,7 @@ export function TwoFaLoginForm({ lang }: { lang: Lang }) {
         autoFocus
         className="text-center font-mono text-[16px] tracking-widest"
       />
-      <Button type="submit" variant="primary" size="md" disabled={pending} className="w-full py-2.5">
+      <Button type="submit" variant="primary" size="md" disabled={pending} className="h-10 w-full">
         {ru ? 'Войти' : 'Verify'}
       </Button>
       <Link href="/login" className="text-center text-[12.5px] text-ink-2 hover:text-ink">

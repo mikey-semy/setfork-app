@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/ui-guard.mjs",
+            "timeout": 15,
+            "statusMessage": "UI-guard: проверка на самопальный UI"
+          }
+        ]
+      }
+    ]
+  }
+}

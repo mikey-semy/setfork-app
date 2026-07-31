@@ -147,7 +147,7 @@ export function SettingsForm({
       <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
         {state?.ok && <span className="text-[13px] text-ok">{t('profileSaved', lang)}</span>}
         {state?.error && <span className="text-[13px] text-danger">{state.error}</span>}
-        <Button type="submit" variant="primary" disabled={pending} className="px-5 py-2.5 text-[14px] disabled:opacity-60">
+        <Button type="submit" variant="primary" disabled={pending} className="h-10 px-5 text-[14px] disabled:opacity-60">
           {t('saveChanges', lang)}
         </Button>
       </div>
