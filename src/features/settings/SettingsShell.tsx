@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { EmptyState } from '@/shared/ui/EmptyState'
-import { SearchField } from '@/shared/ui/SearchField'
+import { SideNav } from '@/shared/ui/SideNav'
 import { t, type Lang } from '@/shared/i18n'
 
 export interface SettingsSection {
@@ -57,30 +57,24 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
     <div className="mx-auto flex w-full max-w-[920px] flex-col gap-8 px-6 py-8 md:flex-row">
       {/* top = высота шапки (57) + верхний паддинг (py-8 = 32) → без «прыжка» к шапке при скролле. */}
       <aside className="shrink-0 md:sticky md:top-[89px] md:h-fit md:w-[220px]">
-        <SearchField
-          value={q}
-          onValueChange={setQ}
-          placeholder={t('settingsSearchPh', lang)}
-          className="mb-3"
-          clearLabel={t('clear', lang)}
+        <SideNav
+          mobileLabel={t('settings', lang)}
+          search={{ value: q, onChange: setQ, placeholder: t('settingsSearchPh', lang), clearLabel: t('clear', lang) }}
+          groups={[
+            {
+              items: sections.map((s) => ({
+                key: s.id,
+                href: `#${s.id}`,
+                label: s.title,
+                icon: s.icon,
+                active: active === s.id,
+                dimmed: !visible.some((v) => v.id === s.id),
+                danger: s.danger,
+                onClick: () => setActive(s.id),
+              })),
+            },
+          ]}
         />
-        <nav className="flex flex-col gap-0.5">
-          {sections.map((s) => {
-            const shown = visible.some((v) => v.id === s.id)
-            return (
-              <a
-                key={s.id}
-                href={`#${s.id}`}
-                onClick={() => setActive(s.id)}
-                className={`flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
-                  !shown ? 'pointer-events-none opacity-30' : active === s.id ? 'bg-surface-2 font-semibold text-ink' : 'text-ink-2 hover:text-ink'
-                } ${s.danger ? 'text-danger' : ''}`}
-              >
-                {s.icon} {s.title}
-              </a>
-            )
-          })}
-        </nav>
       </aside>
 
       <div className="min-w-0 flex-1 space-y-6">

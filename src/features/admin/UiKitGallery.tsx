@@ -18,6 +18,7 @@ import { Checkbox } from '@/shared/ui/checkbox'
 import { Input } from '@/shared/ui/input'
 import { SearchField } from '@/shared/ui/SearchField'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { SideNav } from '@/shared/ui/SideNav'
 import { Switch } from '@/shared/ui/switch'
 import { TagInput } from '@/shared/ui/TagInput'
 import { Textarea } from '@/shared/ui/textarea'
@@ -269,6 +270,31 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           </ActionRow>
         </DangerZone>
         {confirmDialog}
+      </Section>
+
+      <Section
+        title={say('Side navigation', 'Боковое меню')}
+        hint={say(
+          'One SideNav for settings, admin and list settings — docs-style: groups, accent active item, mobile collapse.',
+          'Один SideNav для настроек, админки и настроек списка — стиль docs: группы, активный пункт акцентом, свёртка на мобиле.',
+        )}
+      >
+        <div className="max-w-[260px]">
+          <SideNav
+            mobileLabel={say('Sections', 'Разделы')}
+            groups={[
+              {
+                title: say('Group', 'Группа'),
+                items: [
+                  { key: 'a', href: '#', label: say('Active item', 'Активный пункт'), icon: <Tag size={14} />, active: true },
+                  { key: 'b', href: '#', label: say('Regular item', 'Обычный пункт'), icon: <Inbox size={14} /> },
+                  { key: 'c', href: '#', label: say('Dimmed (no match)', 'Приглушён (мимо поиска)'), icon: <Pencil size={14} />, dimmed: true },
+                  { key: 'd', href: '#', label: say('Danger', 'Опасный'), icon: <Trash2 size={14} />, danger: true },
+                ],
+              },
+            ]}
+          />
+        </div>
       </Section>
 
       <Section
