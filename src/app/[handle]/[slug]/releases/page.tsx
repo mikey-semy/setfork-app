@@ -8,6 +8,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Badge } from '@/shared/ui/badge'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -61,21 +62,20 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
         </div>
 
         {rels.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
-            {t('noReleases', lang)}
+          <EmptyState hint={t('noReleases', lang)}>
             {canManage && (
-              <div className="mt-2">
+              <div>
                 <Link href={`${base}/releases/new`} className="text-accent hover:underline">
                   {ru ? 'Опубликовать первый релиз из версии' : 'Publish the first release from a version'}
                 </Link>
               </div>
             )}
-            <div className="mt-2 text-[12.5px]">
+            <div className="text-[12.5px]">
               <Link href={`${base}/versions`} className="text-ink-2 hover:text-accent">
                 {ru ? 'Все версии — во вкладке «Версии»' : 'All versions live under the Versions tab'}
               </Link>
             </div>
-          </div>
+          </EmptyState>
         ) : (
           <div className="flex flex-col gap-3">
             {rels.map((r) => (
@@ -85,11 +85,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
                     <Tag size={12} className="text-muted" /> {r.tag}
                   </Badge>
                   {r.id === latestId && <Badge variant="ok">{t('latest', lang)}</Badge>}
-                  {r.prerelease && (
-                    <span className="rounded-full border border-warn/40 bg-warn/10 px-2 py-0.5 text-[11px] font-semibold text-warn">
-                      {t('preRelease', lang)}
-                    </span>
-                  )}
+                  {r.prerelease && <Badge variant="warn">{t('preRelease', lang)}</Badge>}
                   <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-2">
                     <Avatar handle={r.authorHandle} avatarUrl={r.authorAvatarUrl} size={16} />
                     <Link href={`/${r.authorHandle}`} className="hover:text-accent">{r.authorHandle}</Link>

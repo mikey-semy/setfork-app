@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { DEFAULT_LANG, isLang, LANG_META, LOCALES, t, type Lang } from '@/shared/i18n'
 import type { NotifyPrefs } from '@/shared/db/schema'
 import { updateNotifyPrefs } from './actions'
@@ -93,11 +94,7 @@ export function NotifyPrefsForm({
         </div>
       </div>
 
-      <div className="flex justify-end border-t border-border pt-4">
-        <button className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
-          {t('saveChanges', lang)}
-        </button>
-      </div>
+      <FormSaveBar ru={lang === 'ru'} />
     </form>
   )
 }

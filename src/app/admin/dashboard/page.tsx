@@ -4,6 +4,7 @@ import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { getDashboardSeries, getLiveMetrics } from '@/features/admin/dashboard-queries'
 import { DashboardLive } from '@/features/admin/DashboardLive'
+import { StatTile } from '@/shared/ui/StatTile'
 import { TrendChart } from '@/shared/ui/TrendChart'
 import { getModerationCounts } from '@/features/moderation/queries'
 import { getReportsCounts } from '@/features/reports/queries'
@@ -85,14 +86,7 @@ export default async function AdminDashboardPage() {
         <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Inbox', ru: 'Требует внимания' }, lang)}</h2>
         <div className="grid grid-cols-3 gap-3">
           {inbox.map((i) => (
-            <Link
-              key={i.href}
-              href={i.href}
-              className="rounded-lg border border-border bg-surface p-4 hover:border-border-strong"
-            >
-              <div className="text-[11px] uppercase tracking-wide text-muted">{i.label}</div>
-              <div className={`mt-1 text-[22px] font-bold tabular-nums ${i.value > 0 ? 'text-(--accent)' : 'text-ink'}`}>{num(i.value)}</div>
-            </Link>
+            <StatTile key={i.href} href={i.href} label={i.label} value={num(i.value)} tone={i.value > 0 ? 'accent' : 'ink'} />
           ))}
         </div>
       </div>

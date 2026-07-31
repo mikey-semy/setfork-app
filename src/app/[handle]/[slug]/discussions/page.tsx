@@ -4,6 +4,7 @@ import { MessageSquare, Plus } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { Avatar } from '@/shared/ui/Avatar'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -58,9 +59,7 @@ export default async function DiscussionsPage({
         </div>
 
         {list.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
-            {ru ? 'Обсуждений пока нет.' : 'No discussions yet.'}
-          </div>
+          <EmptyState hint={ru ? 'Обсуждений пока нет.' : 'No discussions yet.'} />
         ) : (
           <div className="divide-y divide-border rounded-lg border border-border bg-surface">
             {list.map((d) => (

@@ -6,6 +6,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getIssueAssigneesFor, getIssueCounts, getIssueLabelsInUse, getIssues, getListLabels, type IssueFilter, type IssueSort } from '@/features/issues/queries'
@@ -137,9 +138,7 @@ export default async function IssuesPage({
         )}
 
         {list.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
-            {filtered ? t('noIssuesMatch', lang) : status === 'open' ? t('noOpenIssues', lang) : t('noClosedIssues', lang)}
-          </div>
+          <EmptyState hint={filtered ? t('noIssuesMatch', lang) : status === 'open' ? t('noOpenIssues', lang) : t('noClosedIssues', lang)} />
         ) : (
           <div className="divide-y divide-border rounded-lg border border-border bg-surface">
             {list.map((it) => (

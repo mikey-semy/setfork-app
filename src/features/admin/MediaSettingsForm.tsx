@@ -5,7 +5,7 @@ import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
 import { setMediaSettings } from './actions'
-import { FormSaveBar } from '@/features/settings/FormSaveBar'
+import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 
 export interface MediaFormValues {
   s3Endpoint: string

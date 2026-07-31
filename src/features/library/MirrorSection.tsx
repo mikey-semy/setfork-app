@@ -1,10 +1,10 @@
 import { AlertCircle, CheckCircle2, RefreshCw, Unplug } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
-import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Field } from '@/shared/ui/Field'
+import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { disableMirror, mirrorNow, saveMirror } from './mirror-actions'
 
 const card = 'rounded-lg border border-border bg-surface p-5'
@@ -79,42 +79,38 @@ export function MirrorSection({
           </div>
         )}
 
-        {/* Правый нижний угол — эталон секций: один ряд, одна высота, текст
-            только на md+; вторичные действия — иконки с тултипом и aria. */}
-        <div className="flex items-center justify-end gap-2">
-          {configured && (
-            <>
-              <Tooltip label={t('mirrorDisable', lang)}>
-                <Button
-                  type="submit"
-                  formAction={disable}
-                  formNoValidate
-                  size="sm"
-                  variant="ghost"
-                  aria-label={t('mirrorDisable', lang)}
-                >
-                  <Unplug size={15} />
-                </Button>
-              </Tooltip>
-              <Tooltip label={t('mirrorSyncNow', lang)}>
-                <Button
-                  type="submit"
-                  formAction={sync}
-                  formNoValidate
-                  size="sm"
-                  variant="ghost"
-                  aria-label={t('mirrorSyncNow', lang)}
-                >
-                  <RefreshCw size={15} />
-                  <span className="hidden md:inline">{t('mirrorSyncNow', lang)}</span>
-                </Button>
-              </Tooltip>
-            </>
-          )}
-          <SubmitButton>
-            {t('saveChanges', lang)}
-          </SubmitButton>
-        </div>
+        {/* Правый нижний угол — вторичные действия иконками с тултипом и aria;
+            главное «Сохранить» живёт в sticky-полосе FormSaveBar ниже. */}
+        {configured && (
+          <div className="flex items-center justify-end gap-2">
+            <Tooltip label={t('mirrorDisable', lang)}>
+              <Button
+                type="submit"
+                formAction={disable}
+                formNoValidate
+                size="sm"
+                variant="ghost"
+                aria-label={t('mirrorDisable', lang)}
+              >
+                <Unplug size={15} />
+              </Button>
+            </Tooltip>
+            <Tooltip label={t('mirrorSyncNow', lang)}>
+              <Button
+                type="submit"
+                formAction={sync}
+                formNoValidate
+                size="sm"
+                variant="ghost"
+                aria-label={t('mirrorSyncNow', lang)}
+              >
+                <RefreshCw size={15} />
+                <span className="hidden md:inline">{t('mirrorSyncNow', lang)}</span>
+              </Button>
+            </Tooltip>
+          </div>
+        )}
+        <FormSaveBar ru={lang === 'ru'} />
       </form>
     </section>
   )

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { t, type Lang } from '@/shared/i18n'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { Markdown } from '@/shared/ui/Markdown'
 import { safeHref } from '@/shared/lib/safe-url'
 import { DiffStat } from '@/shared/ui/DiffStat'
@@ -28,8 +29,7 @@ export type DiffView = 'code' | 'list'
 
 export function CodeDiff({ fromSteps, toSteps, ordered, lang }: { fromSteps: CmpStep[]; toSteps: CmpStep[]; ordered: boolean; lang: Lang }) {
   const { rows, added, removed } = lineDiff(serializeSteps(fromSteps, ordered), serializeSteps(toSteps, ordered))
-  if (added + removed === 0)
-    return <div className="rounded-lg border border-dashed border-border py-12 text-center text-[13.5px] text-muted">{t('diffNothing', lang)}</div>
+  if (added + removed === 0) return <EmptyState hint={t('diffNothing', lang)} />
   return (
     <>
       <DiffStat counts={{ added, removed }} squares className="mb-3" />
@@ -100,7 +100,7 @@ export function ListDiff({
 }) {
   const { entries, summary } = diffSteps(fromSteps, toSteps)
   if (summary.added + summary.removed + summary.changed + summary.moved === 0)
-    return <div className="rounded-lg border border-dashed border-border py-12 text-center text-[13.5px] text-muted">{t('diffNothing', lang)}</div>
+    return <EmptyState hint={t('diffNothing', lang)} />
   return (
     <>
       <DiffStat counts={summary} squares className="mb-3" />

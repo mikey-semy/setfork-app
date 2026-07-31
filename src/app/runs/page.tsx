@@ -83,7 +83,7 @@ function RunCard({ r, lang, muted }: { r: UserRunRow; lang: Lang; muted?: boolea
       >
         {r.status === 'active' ? t('runResume', lang) : t('runOpen', lang)}
       </Link>
-      <DeleteRunButton runId={r.id} confirmText={t('runDeleteConfirm', lang)} label={t('runDelete', lang)} />
+      <DeleteRunButton runId={r.id} confirmText={t('runDeleteConfirm', lang)} label={t('runDelete', lang)} lang={lang} />
     </div>
   )
 }

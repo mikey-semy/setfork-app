@@ -3,6 +3,7 @@ import { Calendar, CircleCheck, CircleDot, Milestone as MilestoneIcon, Trash2 } 
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { Markdown } from '@/shared/ui/Markdown'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
@@ -34,7 +35,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
         </div>
 
         {list.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">{t('noMilestones', lang)}</div>
+          <EmptyState hint={t('noMilestones', lang)} />
         ) : (
           <div className="flex flex-col gap-3">
             {list.map((m) => {

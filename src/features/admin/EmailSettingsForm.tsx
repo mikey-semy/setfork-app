@@ -7,7 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { t } from '@/shared/i18n'
 import { setEmailSettings, sendTestEmail } from './actions'
-import { FormSaveBar } from '@/features/settings/FormSaveBar'
+import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 
 export interface EmailFormValues {
   host: string

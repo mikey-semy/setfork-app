@@ -10,6 +10,7 @@ import { agentProfile } from '@/shared/ai/gnome-account'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { getPinnedTemplates, getUserTemplates } from '@/features/library/queries'
 import { getContributions, getMonthActivity, getOwnListsLight, getProfileCounts, getReceivedStats, getStarredTemplates, getUserByHandle, getUserCompletions } from '@/features/profile/queries'
@@ -534,9 +535,5 @@ export default async function ProfilePage({
 }
 
 function Empty({ text }: { text: string }) {
-  return (
-    <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
-      {text}
-    </div>
-  )
+  return <EmptyState hint={text} />
 }

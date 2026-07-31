@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { getAuditLog, type AuditEntry } from '@/features/admin/audit-queries'
 import type { AuditAction } from '@/shared/audit'
 
@@ -76,9 +77,7 @@ export default async function AuditPage() {
       </p>
 
       {entries.length === 0 ? (
-        <div className="rounded-lg border border-border bg-surface p-8 text-center text-[13px] text-muted">
-          {ru ? 'Пока пусто.' : 'Nothing yet.'}
-        </div>
+        <EmptyState variant="plain" hint={ru ? 'Пока пусто.' : 'Nothing yet.'} />
       ) : (
         <div className="overflow-hidden rounded-lg border border-border bg-surface">
           {entries.map((e, i) => {

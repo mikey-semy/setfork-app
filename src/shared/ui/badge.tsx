@@ -6,14 +6,19 @@ import { cn } from '@/shared/lib/cn'
 //   ok      — позитивный статус (Latest, accepted)
 //   accent  — акцентный (open-статус, AI-метки)
 //   soft    — тихая подложка surface-2 (счётчики, вторичные метки)
+//   danger  — блокирующий статус (flagged, rejected, takedown)
+//   warn    — требующий внимания (pending, deprecated, pre-release)
 
-export type BadgeVariant = 'outline' | 'ok' | 'accent' | 'soft'
+export type BadgeVariant = 'outline' | 'ok' | 'accent' | 'soft' | 'danger' | 'warn'
 
 const VARIANTS: Record<BadgeVariant, string> = {
   outline: 'border border-border text-muted',
   ok: 'bg-ok/15 text-ok',
   accent: 'bg-(--accent-soft) text-accent',
   soft: 'bg-surface-2 text-ink-2',
+  // Рецепт «рамка /40 + фон /10» — самый читаемый из трёх бытовавших инлайн-версий.
+  danger: 'border border-danger/40 bg-danger/10 text-danger',
+  warn: 'border border-warn/40 bg-warn/10 text-warn',
 }
 
 export function Badge({

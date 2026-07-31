@@ -5,6 +5,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { FeedCard } from '@/features/library/FeedCard'
 import { TagChip } from '@/shared/ui/TagChip'
@@ -198,5 +199,5 @@ function Widget({ title, icon, children }: { title: string; icon: React.ReactNod
 }
 
 function Empty({ text }: { text: string }) {
-  return <div className="rounded-lg border border-border bg-surface p-8 text-center text-[13px] text-muted">{text}</div>
+  return <EmptyState variant="plain" hint={text} />
 }

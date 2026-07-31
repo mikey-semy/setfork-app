@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { tr, type Lang } from '@/shared/i18n'
-import { StatCard } from './StatCard'
+import { StatTile } from '@/shared/ui/StatTile'
 import type { LiveMetrics } from './dashboard-types'
 
 const POLL_MS = 15_000
@@ -72,17 +72,17 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
+        <StatTile
           label={tr({ en: 'Online now', ru: 'Онлайн сейчас' }, lang)}
           value={online == null ? '—' : num(online)}
-          sub={onlineSub}
+          hint={onlineSub}
           tone="accent"
         />
-        <StatCard
+        <StatTile
           label={tr({ en: 'Spent today', ru: 'Расход сегодня' }, lang)}
           value={money(m.spendToday)}
           tone={capTone}
-          sub={
+          hint={
             <span className="flex flex-col gap-1">
               <span>
                 {m.dailyCap > 0
@@ -100,20 +100,20 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
             </span>
           }
         />
-        <StatCard
+        <StatTile
           label={tr({ en: 'OpenRouter balance', ru: 'Остаток OpenRouter' }, lang)}
           value={m.balance == null ? '—' : money(m.balance)}
-          sub={
+          hint={
             m.runwayGens != null
               ? tr({ en: `≈ ${num(m.runwayGens)} generations`, ru: `≈ ${num(m.runwayGens)} генераций` }, lang)
               : undefined
           }
         />
-        <StatCard
+        <StatTile
           label={tr({ en: 'Generation queue', ru: 'Очередь генераций' }, lang)}
           value={num(queueDepth)}
           tone={m.queue.failed > 0 ? 'warn' : 'ink'}
-          sub={tr(
+          hint={tr(
             { en: `in progress ${m.queue.processing}, failed ${m.queue.failed}`, ru: `в работе ${m.queue.processing}, упало ${m.queue.failed}` },
             lang,
           )}
@@ -122,18 +122,18 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
 
       <h2 className="mt-2 text-[13px] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Today', ru: 'Сегодня' }, lang)}</h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
+        <StatTile
           label={tr({ en: 'Generations', ru: 'Генераций' }, lang)}
           value={num(m.today.generations)}
-          sub={m.today.generationsFailed > 0 ? tr({ en: `failed ${m.today.generationsFailed}`, ru: `упало ${m.today.generationsFailed}` }, lang) : undefined}
+          hint={m.today.generationsFailed > 0 ? tr({ en: `failed ${m.today.generationsFailed}`, ru: `упало ${m.today.generationsFailed}` }, lang) : undefined}
         />
-        <StatCard label={tr({ en: 'New users', ru: 'Новых юзеров' }, lang)} value={num(m.today.signups)} />
-        <StatCard
+        <StatTile label={tr({ en: 'New users', ru: 'Новых юзеров' }, lang)} value={num(m.today.signups)} />
+        <StatTile
           label={tr({ en: 'New lists', ru: 'Новых списков' }, lang)}
           value={num(m.today.newLists)}
-          sub={tr({ en: `published ${m.today.published}`, ru: `опубл. ${m.today.published}` }, lang)}
+          hint={tr({ en: `published ${m.today.published}`, ru: `опубл. ${m.today.published}` }, lang)}
         />
-        <StatCard label={tr({ en: 'Forks', ru: 'Форков' }, lang)} value={num(m.today.forks)} />
+        <StatTile label={tr({ en: 'Forks', ru: 'Форков' }, lang)} value={num(m.today.forks)} />
       </div>
     </div>
   )

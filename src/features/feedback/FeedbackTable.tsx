@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useTransition } from 'react'
 import { t, type Lang } from '@/shared/i18n'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { setFeedbackStatus } from './actions'
 import type { FeedbackFilter, FeedbackItem } from './queries'
 
@@ -104,9 +105,7 @@ export function FeedbackTable({
         ))}
       </div>
       {items.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-6 text-center text-[13px] text-muted">
-          {t('fbEmpty', lang)}
-        </p>
+        <EmptyState variant="plain" hint={t('fbEmpty', lang)} />
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((item) => (

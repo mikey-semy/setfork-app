@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useTransition } from 'react'
 import { t, tr, type Lang } from '@/shared/i18n'
+import { Badge } from '@/shared/ui/badge'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { setReportStatus } from './actions'
 import type { ReportFilter, ReportItem } from './queries'
 
@@ -44,9 +46,7 @@ function Row({ item, lang }: { item: ReportItem; lang: Lang }) {
     <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-[12.5px] text-ink-2">
         <StatusBadge status={item.status} lang={lang} />
-        <span className="rounded-full bg-danger/10 px-2 py-0.5 text-[11.5px] font-semibold text-danger">
-          {t(REASON_LABEL[item.reason], lang)}
-        </span>
+        <Badge variant="danger">{t(REASON_LABEL[item.reason], lang)}</Badge>
         {listPath ? (
           <Link href={listPath} className="font-semibold text-ink hover:underline">
             {tr(item.listTitle, lang) || item.listSlug}
@@ -119,9 +119,7 @@ export function ReportsTable({
         ))}
       </div>
       {items.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-6 text-center text-[13px] text-muted">
-          {t('fbEmpty', lang)}
-        </p>
+        <EmptyState variant="plain" hint={t('fbEmpty', lang)} />
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((item) => (

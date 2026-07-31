@@ -6,7 +6,7 @@ import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import type { SearchMode, SearchSettings } from '@/shared/settings/search'
 import { setSearchSettings } from './actions'
-import { FormSaveBar } from '@/features/settings/FormSaveBar'
+import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 
 export function SearchSettingsForm({ current, ru }: { current: SearchSettings; ru: boolean }) {
   const [mode, setMode] = useState<SearchMode>(current.mode)

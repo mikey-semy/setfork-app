@@ -3,6 +3,9 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Badge } from '@/shared/ui/badge'
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { StatTile } from '@/shared/ui/StatTile'
 import { getUsageByUser, getUsageTotals } from '@/shared/ai/usage'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { isQuarantined, modelHealth, QUARANTINE_WINDOW_MS } from '@/shared/ai/health'
@@ -89,18 +92,9 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
       {/* Итог по сервису */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg border border-border bg-surface p-4">
-          <div className="text-[11px] uppercase tracking-wide text-muted">{tr({ en: 'Calls', ru: 'Вызовов' }, lang)}</div>
-          <div className="mt-1 text-[20px] font-bold text-ink">{num(totals.calls)}</div>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-4">
-          <div className="text-[11px] uppercase tracking-wide text-muted">{tr({ en: 'Tokens', ru: 'Токенов' }, lang)}</div>
-          <div className="mt-1 text-[20px] font-bold text-ink">{num(totals.totalTokens)}</div>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-4">
-          <div className="text-[11px] uppercase tracking-wide text-muted">{tr({ en: 'Cost', ru: 'Стоимость' }, lang)}</div>
-          <div className="mt-1 text-[20px] font-bold text-(--accent)">{money(totals.costUsd)}</div>
-        </div>
+        <StatTile label={tr({ en: 'Calls', ru: 'Вызовов' }, lang)} value={num(totals.calls)} />
+        <StatTile label={tr({ en: 'Tokens', ru: 'Токенов' }, lang)} value={num(totals.totalTokens)} />
+        <StatTile label={tr({ en: 'Cost', ru: 'Стоимость' }, lang)} value={money(totals.costUsd)} tone="accent" />
       </div>
 
       {/* Осязаемость: остаток OpenRouter → на сколько генераций хватит (по средней за период) */}
@@ -172,9 +166,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
                 <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{h.p95Ms ? `${(h.p95Ms / 1000).toFixed(1)}s` : '—'}</span>
                 <span className="text-right">
                   {quarantinedNow.has(h.model) ? (
-                    <span className="rounded-full border border-danger/40 bg-danger/10 px-2 py-0.5 text-[11px] font-semibold text-danger">
-                      {tr({ en: 'quarantine', ru: 'карантин' }, lang)}
-                    </span>
+                    <Badge variant="danger">{tr({ en: 'quarantine', ru: 'карантин' }, lang)}</Badge>
                   ) : (
                     <span className="text-[11px] text-muted">{tr({ en: 'in rotation', ru: 'в ротации' }, lang)}</span>
                   )}
@@ -193,7 +185,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           <span className="text-right">{tr({ en: 'Cost', ru: 'Стоимость' }, lang)}</span>
         </div>
         {rows.length === 0 ? (
-          <div className="px-4 py-10 text-center text-[13px] text-muted">{tr({ en: 'No usage yet.', ru: 'Пока нет расхода.' }, lang)}</div>
+          <EmptyState variant="inline" hint={tr({ en: 'No usage yet.', ru: 'Пока нет расхода.' }, lang)} />
         ) : (
           rows.map((r) => (
             <div

@@ -166,7 +166,7 @@
   },
   "src/features/admin/PushSettingsForm.tsx": {
     "no-restricted-syntax": {
-      "count": 9
+      "count": 8
     }
   },
   "src/features/admin/SearchSettingsForm.tsx": {
