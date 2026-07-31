@@ -335,6 +335,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 )
               })}
               <button
+                type="button"
                 onClick={() =>
                   start(() =>
                     answerClarify(

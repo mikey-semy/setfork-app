@@ -97,6 +97,7 @@ export function ModerationTable({
                 {it.moderation !== 'active' && (
                   <Tooltip label={t('approveAction', lang)}>
                     <button
+                      type="button"
                       onClick={() => start(() => void setModeration(it.id, 'active'))}
                       disabled={pending}
                       aria-label={t('approveAction', lang)}
@@ -108,6 +109,7 @@ export function ModerationTable({
                 )}
                 <Tooltip label={it.verified ? t('unverifyAction', lang) : t('verifyAction', lang)}>
                   <button
+                    type="button"
                     onClick={() => start(() => void setVerified(it.id, !it.verified))}
                     disabled={pending}
                     aria-label={it.verified ? t('unverifyAction', lang) : t('verifyAction', lang)}
@@ -120,6 +122,7 @@ export function ModerationTable({
                 </Tooltip>
                 <Tooltip label={t('aiCheck', lang)}>
                   <button
+                    type="button"
                     onClick={() => runAi(it.id)}
                     disabled={pending}
                     aria-label={t('aiCheck', lang)}
@@ -130,6 +133,7 @@ export function ModerationTable({
                 </Tooltip>
                 <Tooltip label={hidden ? t('unhideAction', lang) : t('hideAction', lang)}>
                   <button
+                    type="button"
                     onClick={() => start(() => void setModeration(it.id, hidden ? 'active' : 'hidden'))}
                     disabled={pending}
                     aria-label={hidden ? t('unhideAction', lang) : t('hideAction', lang)}

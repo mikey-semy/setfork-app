@@ -142,6 +142,7 @@ export function WatchButton({
           })}
           <div className="mt-2 flex justify-end">
             <button
+              type="button"
               onClick={() => {
                 apply('custom', events)
                 setCustomOpen(false)

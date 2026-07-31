@@ -19,6 +19,9 @@ import { startGeneration } from './actions'
  * во flex, а перелёт в низ — плавным transform без магических величин.
  */
 
+// eslint-disable-next-line no-restricted-syntax -- герой-ввод главной: 15px — прямая пара к SearchField lg, сознательно вне лестницы ролей
+const HERO_INPUT = 'max-h-40 min-h-[44px] w-full resize-none bg-transparent px-1.5 py-2 text-[15px] leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70 max-sm:text-[16px]'
+
 export function GenerateForm({
   lang,
   aiOn,
@@ -142,7 +145,7 @@ export function GenerateForm({
               }
             }}
             placeholder={placeholder}
-            className="max-h-40 min-h-[44px] w-full resize-none bg-transparent px-1.5 py-2 text-[15px] leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70 max-sm:text-[16px]"
+            className={HERO_INPUT}
           />
           <button
             type="submit"

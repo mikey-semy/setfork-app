@@ -9,6 +9,7 @@ export function CopyButton({ text }: { text: string }) {
   return (
     <Tooltip label={done ? 'Copied' : 'Copy'}>
       <button
+        type="button"
         onClick={() => {
           try {
             navigator.clipboard?.writeText(text)

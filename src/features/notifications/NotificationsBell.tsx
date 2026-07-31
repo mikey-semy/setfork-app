@@ -26,6 +26,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
     <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <button
+          type="button"
           aria-label={t('notifications', lang)}
           className="relative grid h-[30px] w-[30px] place-items-center rounded-md text-ink-2 outline-hidden hover:text-ink"
         >

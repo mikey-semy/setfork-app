@@ -118,6 +118,7 @@ export function ForkForm({
           {labels.cancel}
         </Link>
         <button
+          type="button"
           onClick={submit}
           disabled={!canSubmit}
           className="inline-flex items-center gap-2 rounded-md border border-accent bg-accent px-3.5 py-2 text-[13px] font-semibold text-white disabled:opacity-50"

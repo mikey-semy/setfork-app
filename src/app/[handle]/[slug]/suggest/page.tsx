@@ -65,7 +65,7 @@ export default async function SuggestPage({
 
         <ListEditor name="items" initialItems={initial} lang={lang} />
 
-        <button className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
+        <button type="submit" className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
           {t('sendSuggestion', lang)}
         </button>
       </form>

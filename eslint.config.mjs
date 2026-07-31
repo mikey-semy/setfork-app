@@ -50,6 +50,24 @@ export default [
           selector: "JSXOpeningElement[name.name='select']",
           message: 'Браузерный <select> запрещён — используй Select из @/shared/ui/select (shadcn/Radix, name для форм поддерживается).',
         },
+        // Узда Ф7 (трек ui-system): <button> без явного type в форме сабмитит её
+        // случайно (дефолт submit). Доктор ловит это только на диффах PR — линт
+        // ловит всегда. Существующие заморожены в baseline; НОВЫЕ — ошибка.
+        {
+          selector: "JSXOpeningElement[name.name='button']:not(:has(JSXAttribute[name.name='type']))",
+          message: 'У <button> обязателен явный type: "button" (обычная кнопка) или "submit" (отправка формы). Лучше — Button/SubmitButton из @/shared/ui.',
+        },
+        // Узда Ф7: кегли — только лестница ролей (11/12.5/13/14/16/18, control.ts
+        // TEXT) и герои ≥20px. Полупиксельный зоопарк (Ф5) не должен вернуться.
+        // Легитимное исключение (герой-пара к SearchField lg) — точечный disable.
+        {
+          selector: 'Literal[value=/text-\\u005B(?!(11|12\\.5|13|14|16|18|[2-9]\\d)px\\u005D)\\d+(\\.\\d+)?px\\u005D/]',
+          message: 'Кегль вне лестницы ролей (11/12.5/13/14/16/18 + герои ≥20) — возьми роль из shared/ui/control.ts (TEXT) или ближайшую ступень.',
+        },
+        {
+          selector: 'TemplateElement[value.cooked=/text-\\u005B(?!(11|12\\.5|13|14|16|18|[2-9]\\d)px\\u005D)\\d+(\\.\\d+)?px\\u005D/]',
+          message: 'Кегль вне лестницы ролей (11/12.5/13/14/16/18 + герои ≥20) — возьми роль из shared/ui/control.ts (TEXT) или ближайшую ступень.',
+        },
       ],
     },
   },

@@ -412,7 +412,7 @@ export default async function ListPage({
                   {viewer && !readOnlyView && (
                     <form action={startRun.bind(null, tpl.id)} className="inline-flex">
                       <Tooltip label={t('runStart', lang)}>
-                        <button aria-label={t('runStart', lang)} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-fg hover:opacity-90">
+                        <button type="submit" aria-label={t('runStart', lang)} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-fg hover:opacity-90">
                           <PlayCircle size={16} />
                         </button>
                       </Tooltip>

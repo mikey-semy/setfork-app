@@ -90,7 +90,7 @@ export default async function EditPage({
           aiRefine={{ title: tr(tpl.title, lang), desc: tr(tpl.desc, lang), tags: tpl.tags }}
         />
 
-        <button className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
+        <button type="submit" className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
           {t('saveVersion', lang)}
         </button>
       </form>
