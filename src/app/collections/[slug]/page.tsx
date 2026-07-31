@@ -11,11 +11,12 @@ import { FeedList } from '@/features/library/FeedList'
 import { getCollectionDetail } from '@/features/collections/queries'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
+  const [{ slug }, lang] = await Promise.all([params, getLang()])
   const c = await getCollectionDetail(slug)
   if (!c) return {}
-  const title = tr(c.title, 'en') || tr(c.title, 'ru') || slug
-  return { title, description: tr(c.desc, 'en') || undefined, openGraph: c.coverUrl ? { images: [c.coverUrl] } : undefined }
+  // Заголовок/описание подборки — LocaleText: показываем на языке пользователя (fallback внутри tr).
+  const title = tr(c.title, lang) || slug
+  return { title, description: tr(c.desc, lang) || undefined, openGraph: c.coverUrl ? { images: [c.coverUrl] } : undefined }
 }
 
 export default async function CollectionPage({ params }: { params: Promise<{ slug: string }> }) {

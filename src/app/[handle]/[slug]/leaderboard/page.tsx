@@ -2,15 +2,15 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Trophy } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getCourseLeaderboard } from '@/features/quizzes/queries'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Leaderboard · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('leaderboardTitle', lang)} · ${handle}/${slug}` }
 }
 
 export default async function LeaderboardPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {

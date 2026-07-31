@@ -19,8 +19,8 @@ import { HistoryNav } from '@/widgets/HistoryNav'
 import { deleteRelease } from '@/features/releases/actions'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Releases · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('releasesLabel', lang)} · ${handle}/${slug}` }
 }
 
 export default async function ReleasesPage({ params }: { params: Promise<{ handle: string; slug: string }> }) {

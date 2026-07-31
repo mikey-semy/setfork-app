@@ -9,7 +9,10 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
 import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
 
-export const metadata = { title: 'Runs' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('runs', lang) }
+}
 
 export default async function MyRunsPage() {
   const session = await requireSession()

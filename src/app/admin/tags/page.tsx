@@ -6,7 +6,10 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { listTags } from '@/features/tags/queries'
 import { AdminTagsTable } from '@/features/tags/AdminTagsTable'
 
-export const metadata = { title: 'Tags' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('tags', lang) }
+}
 
 export default async function AdminTagsPage() {
   await requireAdmin()

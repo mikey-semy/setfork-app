@@ -26,6 +26,13 @@ const CHIPS_SHOWN = 4 // сколько показываем за раз
 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
 
+// Главная — полный title (absolute): template «%s · SetFork» дал бы «SetFork — … · SetFork».
+// Слоган — из словаря, на языке пользователя; en повторяет корневой default в layout.
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: { absolute: `SetFork — ${t('homeTagline', lang)}` } }
+}
+
 export default async function HomePage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
   if (session) return <Dashboard lang={lang} userId={session.userId} />

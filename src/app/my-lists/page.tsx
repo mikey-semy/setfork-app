@@ -7,7 +7,10 @@ import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { applySavedQuery, listSavedQueries } from '@/features/library/saved-queries'
 
-export const metadata = { title: 'My lists' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('myLists', lang) }
+}
 
 export default async function MyListsPage({ searchParams }: { searchParams: Promise<{ sq?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])

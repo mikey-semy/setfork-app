@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { ExternalLink, ImagePlus, Trash2, X } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
 import { getCollectionAdmin } from '@/features/collections/queries'
 import { addCollectionItem, deleteCollection, removeCollectionItem, setCollectionCover, updateCollection } from '@/features/admin/collection-actions'
@@ -14,7 +14,10 @@ import { SettingsSection } from '@/shared/ui/SettingsSection'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Collection' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('adminCollection', lang) }
+}
 
 export default async function EditCollectionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ e?: string }> }) {
   await requireAdmin()

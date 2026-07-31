@@ -5,7 +5,10 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { getReportsCounts, getReportsList, type ReportFilter } from '@/features/reports/queries'
 import { ReportsTable } from '@/features/reports/ReportsTable'
 
-export const metadata = { title: 'Reports' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('reports', lang) }
+}
 
 export default async function AdminReportsPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   await requireAdmin()

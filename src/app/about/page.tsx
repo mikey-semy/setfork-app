@@ -2,7 +2,10 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
 
-export const metadata = { title: 'About' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('aboutProject', lang) }
+}
 
 export default async function AboutPage() {
   const lang = await getLang()

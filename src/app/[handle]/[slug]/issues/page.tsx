@@ -19,8 +19,8 @@ import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { Tag } from 'lucide-react'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Issues · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('issuesTab', lang)} · ${handle}/${slug}` }
 }
 
 export default async function IssuesPage({

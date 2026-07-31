@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Check, Pause, Play, TrendingUp, X } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { tr, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { getCompanyDay, getDevelopmentMetrics, UNAVAILABLE, type NaReason } from '@/features/admin/development-queries'
 import { currentAgenda } from '@/features/partners/service'
 import { agendaLabel, type AgendaKind } from '@/shared/agents/agenda'
@@ -25,7 +25,10 @@ import { resetLoopCircuit, toggleLoopDryRun, toggleLoopPause } from '@/features/
  * Где источника нет — честное «—» с причиной (ADR-0005), а не ноль и не оценка.
  */
 
-export const metadata = { title: 'Development' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('adminDevelopment', lang) }
+}
 export const dynamic = 'force-dynamic' // накопленные числа, без ISR-кэша
 
 const num = (n: number) => new Intl.NumberFormat('en').format(n)

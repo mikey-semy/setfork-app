@@ -30,8 +30,8 @@ const ERR: Record<string, { ru: string; en: string }> = {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `New release · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('newRelease', lang)} · ${handle}/${slug}` }
 }
 
 export default async function NewReleasePage({

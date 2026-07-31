@@ -14,8 +14,8 @@ import { commitCutoff } from '@/features/library/commit-filter'
 import { gitCore } from '@/features/git/core'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Commits · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('versionsTab', lang)} · ${handle}/${slug}` }
 }
 
 // «Коммиты» списка (как история коммитов GitHub): версии сгруппированы по дате,

@@ -17,8 +17,8 @@ import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
 
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `Compare · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('compareTitle', lang)} · ${handle}/${slug}` }
 }
 
 export default async function ComparePage({

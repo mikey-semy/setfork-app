@@ -34,7 +34,10 @@ const ISSUE_STATES: { key: IssueStateFilter; tkey: 'stateOpen' | 'stateClosed' }
   { key: 'closed', tkey: 'stateClosed' },
 ]
 
-export const metadata = { title: 'Search' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('searchTitle', lang) }
+}
 
 export default async function SearchPage({
   searchParams,

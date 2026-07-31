@@ -1216,6 +1216,28 @@ const DICT = {
   hiddenNotice: { en: 'Hidden by moderation — not shown publicly.', ru: 'Скрыт модерацией — не виден публично.' },
   pendingNotice: { en: 'Under review — visible only to you until automatic checks pass.', ru: 'На проверке — виден только вам, пока не пройдут автоматические проверки.' },
   flaggedNotice: { en: 'Flagged by moderation — removed from public view. You can request a review below.', ru: 'Помечен модерацией — снят с публичного показа. Можно запросить пересмотр.' },
+  // ── Титулы вкладок браузера (generateMetadata; суффикс «· SetFork» даёт template в layout) ──
+  homeTagline: { en: 'versioned, runnable lists', ru: 'версионируемые запускаемые списки' },
+  adminAudit: { en: 'Audit log', ru: 'Журнал аудита' },
+  adminCollections: { en: 'Collections', ru: 'Подборки' },
+  adminCollection: { en: 'Collection', ru: 'Подборка' },
+  adminFeeds: { en: 'Feeds', ru: 'Потоки' },
+  adminLanding: { en: 'Landing', ru: 'Лендинг' },
+  adminDevelopment: { en: 'Development', ru: 'Развитие' },
+  expertTitle: { en: 'Expert', ru: 'Специалист' },
+  guildsTitle: { en: 'Guilds', ru: 'Гильдии' },
+  improveTitle: { en: 'What to improve', ru: 'Что улучшить' },
+  forksTitle: { en: 'Forks', ru: 'Форки' },
+  leaderboardTitle: { en: 'Leaderboard', ru: 'Лидерборд' },
+  issueWord: { en: 'Issue', ru: 'Задача' },
+  newDiscussion: { en: 'New discussion', ru: 'Новое обсуждение' },
+  newRelease: { en: 'New release', ru: 'Новый релиз' },
+  editSuggestion: { en: 'Edit suggestion', ru: 'Правка предложения' },
+  resetPasswordTitle: { en: 'Reset password', ru: 'Сброс пароля' },
+  newPasswordTitle: { en: 'Set a new password', ru: 'Новый пароль' },
+  changeEmailTitle: { en: 'Change email', ru: 'Смена почты' },
+  verifyEmailTitle: { en: 'Verify email', ru: 'Подтверждение почты' },
+  twoFactorTitle: { en: 'Two-factor authentication', ru: 'Подтверждение входа' },
 } satisfies Dict
 
 export type TKey = keyof typeof DICT

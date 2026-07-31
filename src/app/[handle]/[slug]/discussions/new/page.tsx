@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { MessagesSquare } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -11,8 +12,8 @@ import { createDiscussion } from '@/features/discussions/actions'
 import { DISCUSSION_CATEGORIES } from '@/features/discussions/constants'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
-  const { handle, slug } = await params
-  return { title: `New discussion · ${handle}/${slug}` }
+  const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('newDiscussion', lang)} · ${handle}/${slug}` }
 }
 
 export default async function NewDiscussionPage({

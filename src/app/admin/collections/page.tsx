@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { FolderGit2, Plus } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
@@ -11,7 +11,10 @@ import { createCollection } from '@/features/admin/collection-actions'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Collections' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('adminCollections', lang) }
+}
 
 export default async function AdminCollectionsPage() {
   await requireAdmin()

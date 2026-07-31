@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getAuditLog, type AuditEntry } from '@/features/admin/audit-queries'
@@ -60,7 +61,10 @@ function metaText(e: AuditEntry): string {
     .join(' · ')
 }
 
-export const metadata = { title: 'Audit log' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('adminAudit', lang) }
+}
 
 export default async function AuditPage() {
   await requireAdmin()

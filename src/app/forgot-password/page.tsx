@@ -1,8 +1,12 @@
 import { KeyRound } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { ForgotPasswordForm } from '@/features/auth/PasswordResetForms'
 
-export const metadata = { title: 'Reset password' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('resetPasswordTitle', lang) }
+}
 
 export default async function ForgotPasswordPage() {
   const lang = await getLang()

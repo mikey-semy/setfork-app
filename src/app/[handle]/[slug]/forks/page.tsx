@@ -4,7 +4,7 @@ import { ArrowLeft, CornerDownRight, GitFork, Star } from 'lucide-react'
 import { sql } from 'drizzle-orm'
 import { db } from '@/shared/db'
 import { getLang } from '@/shared/i18n/server'
-import { tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -15,7 +15,10 @@ import { requireViewableMeta } from '@/features/library/guard'
  * отступами — практичное дерево вместо «линий ради линий». Свежесть правок
  * подсвечена: форк, правленный за последние 7 дней, — активная ветвь.
  */
-export const metadata = { title: 'Forks' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('forksTitle', lang) }
+}
 
 interface ForkRow {
   id: string

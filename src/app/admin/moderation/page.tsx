@@ -5,7 +5,10 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { getModerationCounts, getModerationList, type ModFilter } from '@/features/moderation/queries'
 import { ModerationTable } from '@/features/moderation/ModerationTable'
 
-export const metadata = { title: 'Moderation' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('moderation', lang) }
+}
 
 export default async function ModerationPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   await requireAdmin()

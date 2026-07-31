@@ -20,8 +20,8 @@ import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
-  const { handle, slug, number } = await params
-  return { title: `Issue #${number} · ${handle}/${slug}` }
+  const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('issueWord', lang)} #${number} · ${handle}/${slug}` }
 }
 
 export default async function IssueThreadPage({

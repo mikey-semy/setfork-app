@@ -1,7 +1,7 @@
 import { ExternalLink } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Alert } from '@/shared/ui/Alert'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -22,7 +22,10 @@ import { feedSourceRows, recentFeedItems } from '@/features/admin/feed-queries'
  */
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Feeds' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('adminFeeds', lang) }
+}
 
 export default async function AdminFeedsPage({ searchParams }: { searchParams: Promise<{ err?: string; fresh?: string }> }) {
   await requireAdmin()

@@ -1,10 +1,14 @@
 import Link from 'next/link'
 import { KeyRound, XCircle } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
+import { t } from '@/shared/i18n'
 import { checkResetToken } from '@/features/auth/email-flows'
 import { ResetPasswordForm } from '@/features/auth/PasswordResetForms'
 
-export const metadata = { title: 'Set a new password' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('newPasswordTitle', lang) }
+}
 
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const [{ token }, lang] = await Promise.all([searchParams, getLang()])

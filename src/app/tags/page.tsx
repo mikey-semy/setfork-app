@@ -6,7 +6,10 @@ import { TagChip } from '@/shared/ui/TagChip'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 
-export const metadata = { title: 'Tags' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('tags', lang) }
+}
 
 // Индекс тегов: все теги реестра чипами (курируемые/популярные выше) → /tags/[slug].
 export default async function TagsIndexPage() {

@@ -3,11 +3,14 @@ import { redirect } from 'next/navigation'
 import { CircleDot, GitPullRequest, Sparkles, Star } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { tr } from '@/shared/i18n'
+import { t, tr } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getImprovementFeed } from '@/features/improve/queries'
 
-export const metadata = { title: 'Improve' }
+export async function generateMetadata() {
+  const lang = await getLang()
+  return { title: t('improveTitle', lang) }
+}
 
 export default async function ImprovePage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])

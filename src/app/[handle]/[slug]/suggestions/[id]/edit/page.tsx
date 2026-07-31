@@ -19,8 +19,8 @@ import { gitCore } from '@/features/git/core'
 import type { ProposedItem } from '@/shared/db'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; id: string }> }) {
-  const { handle, slug, id } = await params
-  return { title: `Edit suggestion #${id} · ${handle}/${slug}` }
+  const [{ handle, slug, id }, lang] = await Promise.all([params, getLang()])
+  return { title: `${t('editSuggestion', lang)} #${id} · ${handle}/${slug}` }
 }
 
 /**

@@ -9,7 +9,10 @@ import { Alert } from "@/shared/ui/Alert";
 import { LoginForm } from "@/features/auth/AuthForms";
 import { PasskeyLoginButton } from "@/features/auth/PasskeyLoginButton";
 
-export const metadata = { title: "Sign in" };
+export async function generateMetadata() {
+  const lang = await getLang();
+  return { title: t("signIn", lang) };
+}
 
 export default async function LoginPage({
   searchParams,
