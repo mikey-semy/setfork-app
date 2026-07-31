@@ -120,13 +120,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     if (az === 403) return writeDisabled()
     const raw = Buffer.from(await req.arrayBuffer())
     const body = maybeGunzip(raw, req.headers.get('content-encoding'))
-    // Состояние перечитываем ПОСЛЕ загрузки пакета, вплотную к записи. Большой push
-    // висит минутами, и владелец может заморозить/заархивировать список ровно в это
-    // окно: проверка, сделанная до чтения тела, к моменту записи уже устарела, а в
-    // Rust-ядре понятий frozen/archived нет — версия создалась бы (P2 авто-ревью #582).
-    const fresh = await getListMeta(handle, slug)
-    if (!fresh) return new Response('Not found', { status: 404 })
-    if (!canEditList(fresh)) return writeDisabled()
+    // Второго перечитывания состояния здесь БОЛЬШЕ НЕТ. Оно стояло тут потому, что
+    // большой push висит минутами и владелец может заморозить список ровно в это
+    // окно, а ядро о заморозке не знало. С Ф1 (ADR-0015) знает: ядро само спрашивает
+    // /api/internal/write-allowed вплотную к записи и под репо-локом — то есть
+    // проверка стала не только не устаревшей, но и не обходимой другими путями.
+    // Ранняя проверка выше (authorizeWrite → canEditList) остаётся: она даёт быстрый
+    // отказ ДО чтения тела, чтобы не тянуть мегабайты ради заведомого 403.
     const res = await gitCore.receivePack({ owner: handle, slug }, body, gitProtocol)
     if (!res) return new Response('Repository unavailable', { status: 500 })
     // Уведомление наблюдателей + аудит — delivery-эффекты, вне git-ядра.
