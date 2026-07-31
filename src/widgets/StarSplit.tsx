@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { SplitButton, splitSegment } from '@/shared/ui/SplitButton'
 import { StarButton } from '@/features/library/StarButton'
 import { StarFolderMenu } from '@/features/star-folders/StarFolderMenu'
 import type { StarFolder } from '@/features/star-folders/queries'
@@ -36,24 +37,14 @@ export function StarSplit({
   // (react-doctor: no-derived-useState).
   const [optimistic, setOptimistic] = useState<boolean | null>(null)
   const on = optimistic ?? starred
+  // Счётчик живёт в обёртке (общая анатомия), поэтому оптимистичный сдвиг считаем здесь:
+  // пока сервер не ответил, число должно двигаться вместе со звездой.
+  const shown = Math.max(0, count + (optimistic === null || optimistic === starred ? 0 : optimistic ? 1 : -1))
   return (
-    <span
-      className={`inline-flex h-9 items-stretch overflow-hidden rounded-md border transition-colors ${
-        on ? 'border-warn' : 'border-border hover:border-border-strong'
-      }`}
-    >
-      <StarButton
-        templateId={templateId}
-        starred={starred}
-        count={count}
-        label={label}
-        grouped
-        bare
-        onStarredChange={setOptimistic}
-      />
-      {/* Разделитель половинок — своей линией, чтобы внешняя рамка осталась цельной. */}
-      <span className={`w-px shrink-0 ${on ? 'bg-warn/40' : 'bg-border'}`} />
-      <StarFolderMenu templateId={templateId} folders={folders} inFolders={inFolders} lang={lang} bare />
-    </span>
+    <SplitButton tone={on ? 'warn' : 'neutral'}>
+      <StarButton templateId={templateId} starred={starred} label={label} onStarredChange={setOptimistic} />
+      {shown > 0 ? <span className={splitSegment({ interactive: false, muted: true })}>{shown}</span> : null}
+      <StarFolderMenu templateId={templateId} folders={folders} inFolders={inFolders} lang={lang} />
+    </SplitButton>
   )
 }

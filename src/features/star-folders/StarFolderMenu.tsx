@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { ChevronDown, Plus } from 'lucide-react'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
+import { splitSegment } from '@/shared/ui/SplitButton'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -18,13 +19,11 @@ export function StarFolderMenu({
   folders,
   inFolders,
   lang = 'en',
-  bare = false, // рамку рисует обёртка группы (StarSplit)
 }: {
   templateId: string
   folders: StarFolder[]
   inFolders: string[]
   lang?: string
-  bare?: boolean
 }) {
   const ru = lang === 'ru'
   const [open, setOpen] = useState(false)
@@ -67,12 +66,8 @@ export function StarFolderMenu({
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-label={ru ? 'В папку' : 'Add to folder'}
-          className={`inline-flex h-full items-center px-1.5 py-1.5 text-muted hover:bg-surface-2 hover:text-ink ${
-            bare ? '' : 'rounded-r-md border border-l-0 border-border'
-          }`}
+          className={splitSegment({ className: 'px-2 text-muted' })}
         >
-          {/* 13 — общий размер каретки у сплитов (Следить/Звезда): раньше здесь было 14,
-              и рядом кнопки выглядели разнокалиберными. */}
           <ChevronDown size={13} />
         </button>
       </Tooltip>
