@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
+import { Field } from '@/shared/ui/Field'
 import type { SearchMode, SearchSettings } from '@/shared/settings/search'
 import { setSearchSettings } from './actions'
 import { FormSaveBar } from '@/features/settings/FormSaveBar'
-
-const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export function SearchSettingsForm({ current, ru }: { current: SearchSettings; ru: boolean }) {
   const [mode, setMode] = useState<SearchMode>(current.mode)
@@ -22,8 +21,7 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
   return (
     <form action={setSearchSettings} className="flex flex-col gap-5">
       <input type="hidden" name="mode" value={mode} />
-      <div>
-        <label className={lbl}>{ru ? 'Режим' : 'Mode'}</label>
+      <Field label={ru ? 'Режим' : 'Mode'}>
         <Select value={mode} onValueChange={(v) => setMode(v as SearchMode)}>
           <SelectTrigger className="w-[280px]">
             <SelectValue />
@@ -39,11 +37,13 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={lbl}>{ru ? 'Порог схожести (0–1)' : 'Similarity threshold (0–1)'}</label>
+        <Field
+          label={ru ? 'Порог схожести (0–1)' : 'Similarity threshold (0–1)'}
+          hint={ru ? 'Ниже порога результаты отбрасываются. 0 — без фильтра.' : 'Results below the score are dropped. 0 = no filter.'}
+        >
           <Input
             type="number"
             name="minScore"
@@ -53,12 +53,11 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
             defaultValue={current.minScore}
             disabled={!vector}
           />
-          <p className="mt-1 text-[12px] text-muted">
-            {ru ? 'Ниже порога результаты отбрасываются. 0 — без фильтра.' : 'Results below the score are dropped. 0 = no filter.'}
-          </p>
-        </div>
-        <div>
-          <label className={lbl}>{ru ? 'Лимит результатов' : 'Result limit'}</label>
+        </Field>
+        <Field
+          label={ru ? 'Лимит результатов' : 'Result limit'}
+          hint={ru ? 'Сколько семантических совпадений брать (top-K).' : 'How many semantic matches to take (top-K).'}
+        >
           <Input
             type="number"
             name="limit"
@@ -68,10 +67,7 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
             defaultValue={current.limit}
             disabled={!vector}
           />
-          <p className="mt-1 text-[12px] text-muted">
-            {ru ? 'Сколько семантических совпадений брать (top-K).' : 'How many semantic matches to take (top-K).'}
-          </p>
-        </div>
+        </Field>
       </div>
 
       <FormSaveBar ru={ru} />

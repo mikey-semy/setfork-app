@@ -9,6 +9,7 @@ import { Badge, type BadgeVariant } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { Alert } from '@/shared/ui/Alert'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { getSuggestion, getSuggestionComments, getVersionSteps } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -512,16 +513,16 @@ export default async function SuggestionThreadPage({
           />
         )}
         {mergeErr && (
-          <div className="mb-3 rounded-md border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">
+          <Alert variant="danger" className="mb-3">
             {lang === 'ru' ? mergeErr.ru : mergeErr.en}
-          </div>
+          </Alert>
         )}
         {branchMissing && (
-          <div className="mb-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[13px] text-warn">
+          <Alert variant="warn" className="mb-3">
             {lang === 'ru'
               ? `Ветка «${sug.branchRef}» удалена — предложение неактуально, можно только отклонить.`
               : `Branch “${sug.branchRef}” was deleted — this PR is stale and can only be closed.`}
-          </div>
+          </Alert>
         )}
 
         {tab === 'commits' && commits && !commitDiff && (
@@ -757,11 +758,11 @@ export default async function SuggestionThreadPage({
             разговор. Предупреждение про устаревшую базу и резолвер конфликтов
             стоят рядом с кнопкой, а не на вкладке изменений. */}
         {isOwner && !sug.branchRef && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
-          <div className="mt-3 rounded-md border border-warn/40 bg-warn/10 px-3.5 py-2.5 text-[12.5px] text-warn">
+          <Alert variant="warn" className="mt-3">
             {lang === 'ru'
               ? `Предложение основано на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
               : `This suggestion is based on v${sug.baseVersion}, but the list is now at v${meta.currentVersion}. Accepting will overwrite the newer changes (v${sug.baseVersion + 1}–v${meta.currentVersion}).`}
-          </div>
+          </Alert>
         )}
 
         {/* Черновик: слияния нет, вместо него — отметка готовности (автор или мейнтейнер). */}
@@ -787,9 +788,9 @@ export default async function SuggestionThreadPage({
         )}
 
         {blockReasons.length > 0 && sug.status === 'open' && !isDraft && (
-          <div className="mt-3 rounded-md border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[12.5px] text-danger">
+          <Alert variant="danger" className="mt-3">
             {t('prMergeBlocked', lang)}: {blockReasons.join('; ')}
-          </div>
+          </Alert>
         )}
 
         {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open' && !isDraft) && (

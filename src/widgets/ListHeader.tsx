@@ -7,6 +7,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Alert } from '@/shared/ui/Alert'
 import { PinButton } from '@/features/library/PinButton'
 import { StarSplit } from './StarSplit'
 import { SplitButton } from '@/shared/ui/SplitButton'
@@ -221,13 +222,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
         </div>
 
         {meta.moderation !== 'active' && (isOwner || isAdmin) && (
-          <div
-            className={`mt-3 rounded-md border px-3 py-2 text-[12.5px] ${
-              meta.moderation === 'hidden'
-                ? 'border-danger/40 bg-danger/10 text-danger'
-                : 'border-warn/40 bg-warn/10 text-warn'
-            }`}
-          >
+          <Alert variant={meta.moderation === 'hidden' ? 'danger' : 'warn'} className="mt-3">
             {meta.moderation === 'hidden'
               ? t('hiddenNotice', lang)
               : meta.moderation === 'pending'
@@ -255,18 +250,18 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                 )}
               </span>
             )}
-          </div>
+          </Alert>
         )}
 
         {/* Баннер ограниченного состояния — виден всем (не только владельцу). */}
         {meta.archivedAt != null ? (
-          <div className="mt-3 flex items-center gap-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-[12.5px] text-warn">
-            <Archive size={14} className="shrink-0" /> {t('bannerArchived', lang)}
-          </div>
+          <Alert variant="warn" className="mt-3">
+            {t('bannerArchived', lang)}
+          </Alert>
         ) : meta.frozenAt != null ? (
-          <div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[12.5px] text-ink-2">
-            <Snowflake size={14} className="shrink-0" /> {t('bannerFrozen', lang)}
-          </div>
+          <Alert variant="info" className="mt-3">
+            {t('bannerFrozen', lang)}
+          </Alert>
         ) : null}
       </div>
     </div>

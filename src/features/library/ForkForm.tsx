@@ -3,6 +3,8 @@
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Check, GitFork, Loader2 } from 'lucide-react'
+import { Field } from '@/shared/ui/Field'
+import { Alert } from '@/shared/ui/Alert'
 import { forkNameStatus, forkTemplate } from './actions'
 
 export interface ForkLabels {
@@ -59,13 +61,11 @@ export function ForkForm({
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex items-end gap-2">
-        <div>
-          <label className="mb-1 block text-[12px] font-medium text-ink-2">{labels.ownerLabel}</label>
+        <Field label={labels.ownerLabel}>
           <div className="rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[13px] text-ink-2">{viewerHandle}</div>
-        </div>
+        </Field>
         <span className="pb-2 text-[15px] text-muted">/</span>
-        <div className="min-w-0 flex-1">
-          <label className="mb-1 block text-[12px] font-medium text-ink-2">{labels.nameLabel}</label>
+        <Field label={labels.nameLabel} className="min-w-0 flex-1">
           <input
             value={name}
             onChange={(e) => {
@@ -76,7 +76,7 @@ export function ForkForm({
             autoCapitalize="off"
             className="w-full rounded-md border border-border bg-surface px-2.5 py-2 font-mono text-[13px] text-ink outline-hidden focus:border-accent"
           />
-        </div>
+        </Field>
       </div>
 
       {/* Индикатор доступности (как «EcoPlay is available ✓» на GitHub). */}
@@ -100,8 +100,7 @@ export function ForkForm({
 
       <p className="-mt-2 text-[11.5px] leading-snug text-muted">{labels.nameHint}</p>
 
-      <div>
-        <label className="mb-1 block text-[12px] font-medium text-ink-2">{labels.descLabel}</label>
+      <Field label={labels.descLabel}>
         <textarea
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
@@ -110,9 +109,9 @@ export function ForkForm({
           maxLength={350}
           className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-2 text-[13px] text-ink outline-hidden focus:border-accent"
         />
-      </div>
+      </Field>
 
-      {error && <div className="rounded-md border border-danger/40 bg-danger/10 px-2.5 py-2 text-[12.5px] text-danger">{error}</div>}
+      {error && <Alert variant="danger">{error}</Alert>}
 
       <div className="flex items-center justify-end gap-2 border-t border-border pt-3.5">
         <Link href={cancelHref} className="rounded-md border border-border px-3 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">

@@ -5,11 +5,10 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
+import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
 import type { AffiliateRule } from '@/core'
 import { setMonetizationSettings } from './actions'
-
-const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface MonetizationFormValues {
   viewTracking: boolean
@@ -74,13 +73,18 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         <Switch name="affiliateEnabled" defaultChecked={v.affiliateEnabled} onCheckedChange={setAffiliateOn} />
       </div>
 
-      <div className={affiliateOn ? '' : 'pointer-events-none opacity-50'}>
-        <div className={lbl}>{t('monRulesLabel', lang)}</div>
+      <Field
+        label={t('monRulesLabel', lang)}
+        hint={t('monRulesHint', lang)}
+        htmlFor="mon-rule-domain"
+        className={affiliateOn ? '' : 'pointer-events-none opacity-50'}
+      >
         <div className="flex flex-col gap-3">
-          {rules.map((r) => (
+          {rules.map((r, i) => (
             <div key={r.rowId} className="flex flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <Input
+                  id={i === 0 ? 'mon-rule-domain' : undefined}
                   value={r.match}
                   onChange={(e) => patch(r.rowId, { match: e.target.value })}
                   placeholder="amazon.com"
@@ -151,35 +155,23 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         >
           <Plus size={13} /> {t('monRuleAdd', lang)}
         </button>
-        <p className="mt-1.5 text-[12px] text-muted">{t('monRulesHint', lang)}</p>
-      </div>
+      </Field>
 
       <ToggleRow name="disclosureEnabled" title={t('monDisclosureTitle', lang)} hint={t('monDisclosureHint', lang)} defaultChecked={v.disclosureEnabled} />
-      <div>
-        <label htmlFor="mon-disclosure-text" className={lbl}>
-          {t('monDisclosureText', lang)}
-        </label>
-        <Textarea id="mon-disclosure-text" name="disclosureText" defaultValue={v.disclosureText} rows={2} />
-      </div>
+      <Field label={t('monDisclosureText', lang)}>
+        <Textarea name="disclosureText" defaultValue={v.disclosureText} rows={2} />
+      </Field>
 
       <div className="border-t border-border pt-4 text-[12.5px] font-semibold text-ink">{t('monAdMarkingTitle', lang)}</div>
       <ToggleRow name="adMarkingEnabled" title={t('monAdMarkingApply', lang)} hint={t('monAdMarkingHint', lang)} defaultChecked={v.adMarkingEnabled} />
-      <div>
-        <label htmlFor="mon-ad-marking-text" className={lbl}>
-          {t('monAdMarkingText', lang)}
-        </label>
-        <Input id="mon-ad-marking-text" name="adMarkingText" defaultValue={v.adMarkingText} placeholder="Реклама" />
-        <p className="mt-1 text-[12px] text-muted">{t('monAdMarkingTextHint', lang)}</p>
-      </div>
+      <Field label={t('monAdMarkingText', lang)} hint={t('monAdMarkingTextHint', lang)}>
+        <Input name="adMarkingText" defaultValue={v.adMarkingText} placeholder="Реклама" />
+      </Field>
 
       <div className="border-t border-border pt-4 text-[12.5px] font-semibold text-ink">{t('monSupportTitle', lang)}</div>
-      <div>
-        <label htmlFor="mon-donate-url" className={lbl}>
-          {t('monDonateLabel', lang)}
-        </label>
-        <Input id="mon-donate-url" name="donateUrl" defaultValue={v.donateUrl} placeholder="https://…" className="font-mono" />
-        <p className="mt-1 text-[12px] text-muted">{t('monDonateHint', lang)}</p>
-      </div>
+      <Field label={t('monDonateLabel', lang)} hint={t('monDonateHint', lang)}>
+        <Input name="donateUrl" defaultValue={v.donateUrl} placeholder="https://…" className="font-mono" />
+      </Field>
 
       <div className="flex justify-end border-t border-border pt-4">
         <button type="submit" className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">

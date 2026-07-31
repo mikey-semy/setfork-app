@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
+import { Field } from '@/shared/ui/Field'
+import { Alert } from '@/shared/ui/Alert'
 import { AiKeyAndSwitch, type AiProviderChoice } from './AiKeyAndSwitch'
 import { ModelSelect, type Option } from './ModelSelect'
 import { CreditsWidget } from './CreditsWidget'
@@ -89,7 +91,6 @@ export function AiProviderModels({
     })
   }
 
-  const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
   const sign = CUR_SIGN[currency]
   const customHint = say('Use', 'Использовать')
   // Каталога нет вообще — единственный способ задать модель это ввести id руками, и об
@@ -117,25 +118,26 @@ export function AiProviderModels({
 
       {/* Причина всегда названа: молчаливый пустой список — это и есть «фичу откатили». */}
       {!pending && error && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2.5 text-[12.5px] text-warn">
-          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-            {error === 'no-key'
-              ? labels.noKey
-              : say(
-                  `The model catalog failed to load (${error}) — prices and the list are unavailable, the id can be typed by hand.`,
-                  `Каталог моделей не загрузился (${error}) — цены и список недоступны, id можно ввести вручную.`,
-                )}
-          </span>
-          {/* max-sm:ml-auto — при переносе строки кнопка прижимается вправо, а не повисает по центру. */}
-          <Button size="sm" onClick={() => reload(prov)} className="min-h-11 shrink-0 max-sm:ml-auto">
-            <RefreshCw size={13} /> {say('Retry', 'Повторить')}
-          </Button>
-        </div>
+        <Alert variant="warn">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+              {error === 'no-key'
+                ? labels.noKey
+                : say(
+                    `The model catalog failed to load (${error}) — prices and the list are unavailable, the id can be typed by hand.`,
+                    `Каталог моделей не загрузился (${error}) — цены и список недоступны, id можно ввести вручную.`,
+                  )}
+            </span>
+            {/* max-sm:ml-auto — при переносе строки кнопка прижимается вправо, а не повисает по центру. */}
+            <Button size="sm" onClick={() => reload(prov)} className="min-h-11 shrink-0 max-sm:ml-auto">
+              <RefreshCw size={13} /> {say('Retry', 'Повторить')}
+            </Button>
+          </div>
+        </Alert>
       )}
 
-      <div>
-        {/* htmlFor/id — из фикса доступности (#571): подпись связана с кнопкой-триггером. */}
-        <label className={lbl} htmlFor="chatModel">{labels.chat}</label>
+      {/* htmlFor/id — из фикса доступности (#571): подпись связана с кнопкой-триггером. */}
+      <Field label={labels.chat} htmlFor="chatModel">
         {/* key по значению — при смене каталога селект пересоздаётся со свежим значением:
             иначе внутри остаётся выбранная модель ЧУЖОГО провайдера. */}
         <ModelSelect
@@ -148,10 +150,9 @@ export function AiProviderModels({
           allowCustom
           customHint={customHint}
         />
-      </div>
+      </Field>
 
-      <div>
-        <label className={lbl} htmlFor="fallbackModel">{labels.fallback}</label>
+      <Field label={labels.fallback} htmlFor="fallbackModel">
         <ModelSelect
           key={`fb-${values.fallbackModel}`}
           id="fallbackModel"
@@ -163,10 +164,9 @@ export function AiProviderModels({
           allowCustom
           customHint={customHint}
         />
-      </div>
+      </Field>
 
-      <div>
-        <label className={lbl} htmlFor="embeddingModel">{labels.embedding}</label>
+      <Field label={labels.embedding} htmlFor="embeddingModel">
         <ModelSelect
           key={`emb-${prov}`}
           id="embeddingModel"
@@ -177,7 +177,7 @@ export function AiProviderModels({
           allowCustom
           customHint={customHint}
         />
-      </div>
+      </Field>
 
       <p className="text-[12px] text-muted">
         {pricesKnown
@@ -198,12 +198,24 @@ export function AiProviderModels({
             {prov === 'openrouter' ? say('OpenRouter cost control', 'Контроль расходов OpenRouter') : say('Yandex cost control', 'Контроль расходов Яндекса')}
           </div>
           {prov === 'openrouter' && <CreditsWidget ru={ru} />}
-          <div>
-            <label className={lbl}>
-              {prov === 'openrouter'
+          <Field
+            label={
+              prov === 'openrouter'
                 ? say(`Auto-fallback threshold (balance, ${sign})`, `Порог авто-fallback (остаток, ${sign})`)
-                : say(`Auto-fallback threshold (${sign} per day)`, `Порог авто-fallback (расход, ${sign}/день)`)}
-            </label>
+                : say(`Auto-fallback threshold (${sign} per day)`, `Порог авто-fallback (расход, ${sign}/день)`)
+            }
+            hint={
+              prov === 'openrouter'
+                ? say(
+                    'When the balance drops below this, generation switches to the fallback model. 0 = off.',
+                    'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.',
+                  )
+                : say(
+                    'Balance is not exposed by the API, so the threshold is DAILY spend (our journal, hardcoded prices): above it generation switches to the fallback model. 0 = off.',
+                    'Баланс в API Яндекс не отдаёт, поэтому порог — ДНЕВНОЙ расход (наш журнал, хардкод-прайс): выше него генерация переключается на запасную модель. 0 — выключено.',
+                  )
+            }
+          >
             <Input
               key={`threshold-${prov}`}
               type="number"
@@ -212,18 +224,7 @@ export function AiProviderModels({
               min="0"
               defaultValue={values.cheapModeThreshold}
             />
-            <p className="mt-1.5 text-[12px] text-muted">
-              {prov === 'openrouter'
-                ? say(
-                    'When the balance drops below this, generation switches to the fallback model. 0 = off.',
-                    'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.',
-                  )
-                : say(
-                    'Balance is not exposed by the API, so the threshold is DAILY spend (our journal, hardcoded prices): above it generation switches to the fallback model. 0 = off.',
-                    'Баланс в API Яндекс не отдаёт, поэтому порог — ДНЕВНОЙ расход (наш журнал, хардкод-прайс): выше него генерация переключается на запасную модель. 0 — выключено.',
-                  )}
-            </p>
-          </div>
+          </Field>
         </div>
       )}
     </>

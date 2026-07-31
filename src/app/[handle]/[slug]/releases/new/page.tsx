@@ -5,6 +5,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
+import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { getVersions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -62,9 +63,9 @@ export default async function NewReleasePage({
         </p>
 
         {err && (
-          <div className="mb-4 rounded-md border border-danger/40 bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">
+          <Alert variant="danger" className="mb-4">
             {ru ? err.ru : err.en}
-          </div>
+          </Alert>
         )}
 
         <form action={createRelease.bind(null, meta.id)} className="flex flex-col gap-4">

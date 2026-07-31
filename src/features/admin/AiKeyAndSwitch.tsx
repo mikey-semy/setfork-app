@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Field } from '@/shared/ui/Field'
 
 export type AiProviderChoice = 'openrouter' | 'selectel' | 'yandex' | 'gigachat'
 
@@ -43,7 +44,6 @@ export function AiKeyAndSwitch({
   const canEnable = hasKey[prov] || keyInput.trim().length > 0
   const checked = on && canEnable
 
-  const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
   const inputCls =
     'w-full rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[13px] text-ink outline-hidden focus:border-border-strong'
 
@@ -88,8 +88,7 @@ export function AiKeyAndSwitch({
         <Switch name="enabled" checked={checked} onCheckedChange={setOn} disabled={!canEnable} />
       </div>
 
-      <div>
-        <label className={lbl}>{say('Provider', 'Провайдер')}</label>
+      <Field label={say('Provider', 'Провайдер')} hint={PROVIDER_NOTE[prov]}>
         <Select
           name="provider"
           value={prov}
@@ -110,14 +109,22 @@ export function AiKeyAndSwitch({
             <SelectItem value="gigachat">{say('GigaChat / Sber (RU)', 'GigaChat / Сбер (РФ)')}</SelectItem>
           </SelectContent>
         </Select>
-        <p className="mt-1.5 text-[12px] text-muted">{PROVIDER_NOTE[prov]}</p>
-      </div>
+      </Field>
 
-      <div>
-        <label className={lbl}>{field.label}</label>
+      {/* htmlFor: рядом с полем кнопка «показать» — оборачивание в label ловило бы её клики. */}
+      <Field
+        label={field.label}
+        htmlFor="ai-api-key"
+        hint={
+          hasKey[prov]
+            ? say('Key saved (shown masked). Leave blank to keep it.', 'Ключ сохранён (показан замаскированным). Оставьте поле пустым, чтобы не менять.')
+            : say('Stored in the DB (or set via an env variable).', 'Ключ хранится в БД (или задаётся env-переменной).')
+        }
+      >
         <div className="relative">
           <input
             key={prov} // смена провайдера сбрасывает поле, а не тащит чужой ключ
+            id="ai-api-key"
             name={field.name}
             type={reveal ? 'text' : 'password'}
             value={keyInput}
@@ -136,47 +143,45 @@ export function AiKeyAndSwitch({
             {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
         </div>
-        <p className="mt-1.5 text-[12px] text-muted">
-          {hasKey[prov]
-            ? say('Key saved (shown masked). Leave blank to keep it.', 'Ключ сохранён (показан замаскированным). Оставьте поле пустым, чтобы не менять.')
-            : say('Stored in the DB (or set via an env variable).', 'Ключ хранится в БД (или задаётся env-переменной).')}
-        </p>
-      </div>
+      </Field>
 
       {prov === 'yandex' && (
         <div>
-          <label className={lbl}>{say('Yandex Cloud folder_id', 'Каталог (folder_id) Yandex Cloud')}</label>
-          <input
-            name="yandexFolder"
-            defaultValue={yandexFolder}
-            placeholder="b1g…"
-            autoComplete="off"
-            spellCheck={false}
-            className={inputCls}
-          />
-          <p className="mt-1.5 text-[12px] text-muted">
-            {say(
+          <Field
+            label={say('Yandex Cloud folder_id', 'Каталог (folder_id) Yandex Cloud')}
+            hint={say(
               'From the console URL: aistudio.yandex.ru/platform/folders/<folder_id>.',
               'Из URL консоли: aistudio.yandex.ru/platform/folders/<folder_id>.',
             )}
-          </p>
+          >
+            <input
+              name="yandexFolder"
+              defaultValue={yandexFolder}
+              placeholder="b1g…"
+              autoComplete="off"
+              spellCheck={false}
+              className={inputCls}
+            />
+          </Field>
           {/* Веб-гора: ОТДЕЛЬНЫЙ ключ Yandex Search API (не чат-ключ). Пусто →
               веб-разведчик совета молча пропускается, а не выдумывает прецеденты. */}
-          <label className={`${lbl} mt-4`}>{say('Yandex Search API key (web scout, optional)', 'Ключ Yandex Search API (веб-разведчик, опционально)')}</label>
-          <input
-            name="yandexSearchKey"
-            defaultValue=""
-            placeholder={searchKeyMasked || 'AQVN…'}
-            autoComplete="off"
-            spellCheck={false}
-            className={inputCls}
-          />
-          <p className="mt-1.5 text-[12px] text-muted">
-            {say(
+          <Field
+            className="mt-4"
+            label={say('Yandex Search API key (web scout, optional)', 'Ключ Yandex Search API (веб-разведчик, опционально)')}
+            hint={say(
               'Separate paid service — activate Search API in Yandex Cloud. Empty = council relies on our corpus only (no made-up web precedents). Leave blank to keep current.',
               'Отдельный платный сервис — активируй Search API в Yandex Cloud. Пусто = совет опирается только на наш корпус (без выдуманных веб-прецедентов). Оставь пустым, чтобы не менять.',
             )}
-          </p>
+          >
+            <input
+              name="yandexSearchKey"
+              defaultValue=""
+              placeholder={searchKeyMasked || 'AQVN…'}
+              autoComplete="off"
+              spellCheck={false}
+              className={inputCls}
+            />
+          </Field>
         </div>
       )}
     </div>

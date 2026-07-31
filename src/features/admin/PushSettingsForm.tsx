@@ -3,10 +3,9 @@
 import { useState } from 'react'
 import { KeyRound, Loader2 } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
+import { Field } from '@/shared/ui/Field'
 import { generateVapidKeys, setPushSubject } from './actions'
 import { FormSaveBar } from '@/features/settings/FormSaveBar'
-
-const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface PushFormValues {
   publicKey: string
@@ -45,10 +44,9 @@ export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) 
           : 'Your own VAPID keys (no third-party service). Generate a pair — the private key stays in the DB, the public one is given to the browser on subscribe. Empty = taken from env.'}
       </div>
 
-      <div>
-        <label className={lbl}>{ru ? 'Публичный ключ' : 'Public key'}</label>
+      <Field label={ru ? 'Публичный ключ' : 'Public key'}>
         <Input readOnly value={pub} placeholder={ru ? 'не задан' : 'not set'} className="font-mono text-[12px]" />
-      </div>
+      </Field>
 
       <div className="flex items-center gap-2">
         <button
@@ -64,10 +62,9 @@ export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) 
       </div>
 
       <form action={setPushSubject} className="flex flex-col gap-2 border-t border-border pt-4">
-        <div>
-          <label className={lbl}>{ru ? 'Subject (mailto: или URL сайта)' : 'Subject (mailto: or site URL)'}</label>
+        <Field label={ru ? 'Subject (mailto: или URL сайта)' : 'Subject (mailto: or site URL)'}>
           <Input name="subject" defaultValue={v.subject} placeholder="mailto:admin@setfork.com" className="font-mono" />
-        </div>
+        </Field>
         <FormSaveBar ru={ru} />
       </form>
     </div>

@@ -1,7 +1,8 @@
-import { Plus, Power, RefreshCw, Rss, Trash2, TriangleAlert } from 'lucide-react'
+import { Plus, Power, RefreshCw, Rss, Trash2 } from 'lucide-react'
 import { tr, type Lang } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { TagChip } from '@/shared/ui/TagChip'
+import { Alert } from '@/shared/ui/Alert'
 import { addFeedSource, pullFeedNow, removeFeedSource, setFeedSourceEnabled } from '@/features/admin/feed-actions'
 import type { FeedSourceRow } from '@/features/admin/feed-queries'
 
@@ -29,11 +30,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      {err && ERRS[err] && (
-        <div className="flex items-center gap-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-[12.5px] text-warn">
-          <TriangleAlert size={14} className="shrink-0" /> {ERRS[err]}
-        </div>
-      )}
+      {err && ERRS[err] && <Alert variant="warn">{ERRS[err]}</Alert>}
 
       {/* ДОБАВИТЬ. Тема — обязательное поле рядом с адресом: подписка без темы бесполезна,
           материал из неё никому не достанется. */}

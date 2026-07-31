@@ -4,10 +4,10 @@ import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Field } from '@/shared/ui/Field'
 import { disableMirror, mirrorNow, saveMirror } from './mirror-actions'
 
 const card = 'rounded-lg border border-border bg-surface p-5'
-const label = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 /** Настройки списка → Зеркало (Ф3): push-копия на GitHub/GitLab.
  *  Пушит ядро после каждой версии; здесь URL + токен (шифруется, повторно не
@@ -38,12 +38,8 @@ export function MirrorSection({
       <p className="mb-4 text-[13px] text-ink-2">{t('mirrorIntro', lang)}</p>
 
       <form action={save} className="flex flex-col gap-4">
-        <div>
-          <label className={label} htmlFor="mir-url">
-            {t('mirrorUrlLabel', lang)}
-          </label>
+        <Field label={t('mirrorUrlLabel', lang)}>
           <Input
-            id="mir-url"
             name="url"
             type="url"
             required
@@ -51,21 +47,16 @@ export function MirrorSection({
             defaultValue={url ?? ''}
             placeholder="https://github.com/user/my-list"
           />
-        </div>
-        <div>
-          <label className={label} htmlFor="mir-token">
-            {t('mirrorTokenLabel', lang)}
-          </label>
+        </Field>
+        <Field label={t('mirrorTokenLabel', lang)} hint={t('mirrorTokenHint', lang)}>
           <Input
-            id="mir-token"
             name="token"
             type="password"
             autoComplete="off"
             required={!hasToken}
             placeholder={hasToken ? t('mirrorTokenSaved', lang) : 'ghp_…'}
           />
-          <p className="mt-1 text-[12.5px] text-ink-3">{t('mirrorTokenHint', lang)}</p>
-        </div>
+        </Field>
 
         {/* Статус последнего пуша: иконка + время; текст ошибки — полностью,
             это главный канал диагностики (никакой молчаливой деградации). */}

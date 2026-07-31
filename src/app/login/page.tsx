@@ -5,6 +5,7 @@ import { getLang } from "@/shared/i18n/server";
 import { t } from "@/shared/i18n";
 import { redirect } from "next/navigation";
 import { Button } from "@/shared/ui/button";
+import { Alert } from "@/shared/ui/Alert";
 import { LoginForm } from "@/features/auth/AuthForms";
 import { PasskeyLoginButton } from "@/features/auth/PasskeyLoginButton";
 
@@ -45,11 +46,11 @@ export default async function LoginPage({
         </div>
 
         {sp.reset === "1" && (
-          <div className="mb-4 rounded-md border border-ok/40 bg-ok/10 px-3 py-2 text-left text-[13px] text-ink">
+          <Alert variant="ok" className="mb-4 text-left">
             {lang === "ru"
               ? "Пароль изменён — войди с новым."
               : "Password changed — sign in with the new one."}
-          </div>
+          </Alert>
         )}
         <LoginForm lang={lang} />
         <div className="mt-4 text-[12.5px] text-ink-2">

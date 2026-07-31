@@ -37,8 +37,8 @@ import { AdminShell } from '@/features/admin/AdminShell'
 import { adminNavGroups, adminSettingsGroup } from '@/features/admin/nav-groups'
 import { FormSaveBar } from '@/features/settings/FormSaveBar'
 import { Input } from '@/shared/ui/input'
-
-const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
+import { Field } from '@/shared/ui/Field'
+import { Alert } from '@/shared/ui/Alert'
 
 // OpenRouter возвращает отрицательную цену (-1/токен) у авто-роутеров — она «плавающая».
 // Общая с серверным экшеном смены провайдера (model-options): две копии этой логики
@@ -199,12 +199,12 @@ export default async function AdminPage() {
           <div className="mb-4 font-semibold text-ink">{T.ai}</div>
 
           {!hasKey && (
-            <div className="mb-5 rounded-md border border-warn/40 bg-warn/10 px-3 py-2.5 text-[13px] text-warn">
+            <Alert variant="warn" className="mb-5">
               {say(
                 'The active provider is not configured (no key) — generation and model lists are unavailable (id can be typed manually).',
                 'Активный провайдер не сконфигурирован (нет ключа) — генерация и списки моделей недоступны (id можно ввести вручную).',
               )}
-            </div>
+            </Alert>
           )}
 
           <form action={setAiSettings} className="flex flex-col gap-5">
@@ -240,29 +240,26 @@ export default async function AdminPage() {
             />
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={lbl}>Temperature</label>
+              <Field label="Temperature">
                 <Input type="number" name="temperature" step="any" min="0" max="2" defaultValue={settings.temperature} />
-              </div>
-              <div>
-                <label className={lbl}>Max tokens</label>
+              </Field>
+              <Field label="Max tokens">
                 <Input type="number" name="maxTokens" step="1" min="64" max="8000" defaultValue={settings.maxTokens} />
-              </div>
+              </Field>
             </div>
 
-            <div>
-              <label className={lbl}>{tr({ en: 'Free plan: generations / month', ru: 'Free-тариф: генераций в месяц' }, lang)}</label>
+            <Field
+              label={tr({ en: 'Free plan: generations / month', ru: 'Free-тариф: генераций в месяц' }, lang)}
+              hint={tr(
+                {
+                  en: 'Generation limit for free users. 0 = monetization off (no limit). Pro / admin are always unlimited; the council is Pro-only.',
+                  ru: 'Лимит генераций для бесплатных. 0 = монетизация выключена (без лимита). Pro/админ — без лимита; «совет» — только Pro.',
+                },
+                lang,
+              )}
+            >
               <Input type="number" name="freeMonthlyGens" step="1" min="0" defaultValue={settings.freeMonthlyGens} />
-              <p className="mt-1.5 text-[12px] text-muted">
-                {tr(
-                  {
-                    en: 'Generation limit for free users. 0 = monetization off (no limit). Pro / admin are always unlimited; the council is Pro-only.',
-                    ru: 'Лимит генераций для бесплатных. 0 = монетизация выключена (без лимита). Pro/админ — без лимита; «совет» — только Pro.',
-                  },
-                  lang,
-                )}
-              </p>
-            </div>
+            </Field>
 
             {/* Подпись про валюту цен и блок контроля расходов переехали в AiProviderModels:
                 здесь они рендерились по СОХРАНЁННОМУ провайдеру и врали при переключении. */}

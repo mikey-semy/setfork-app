@@ -4,11 +4,10 @@ import { useState } from 'react'
 import { Loader2, Send } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Input } from '@/shared/ui/input'
+import { Field } from '@/shared/ui/Field'
 import { t } from '@/shared/i18n'
 import { setEmailSettings, sendTestEmail } from './actions'
 import { FormSaveBar } from '@/features/settings/FormSaveBar'
-
-const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface EmailFormValues {
   host: string
@@ -49,28 +48,22 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
 
       <form action={setEmailSettings} className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className={lbl}>Host</label>
+          <Field label="Host">
             <Input name="host" defaultValue={v.host} placeholder="smtp.example.com" className="font-mono" />
-          </div>
-          <div>
-            <label className={lbl}>Port</label>
+          </Field>
+          <Field label="Port">
             <Input name="port" type="number" defaultValue={v.port || ''} placeholder="587" className="font-mono" />
-          </div>
-          <div>
-            <label className={lbl}>{ru ? 'Пользователь' : 'Username'}</label>
+          </Field>
+          <Field label={ru ? 'Пользователь' : 'Username'}>
             <Input name="user" defaultValue={v.user} autoComplete="off" placeholder={ru ? 'опц.' : 'optional'} className="font-mono" />
-          </div>
-          <div>
-            <label className={lbl}>{ru ? 'Пароль' : 'Password'}</label>
+          </Field>
+          <Field label={ru ? 'Пароль' : 'Password'}>
             <Input name="pass" type="password" placeholder={v.passMask || secretPh} autoComplete="off" className="font-mono" />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>From</label>
+          </Field>
+          <Field label="From" className="sm:col-span-2">
             <Input name="from" defaultValue={v.from} placeholder="SetFork <no-reply@setfork.com>" className="font-mono" />
-          </div>
-          <div className="sm:col-span-2">
-            <label className={lbl}>{t('notifyToLabel', ru ? 'ru' : 'en')}</label>
+          </Field>
+          <Field label={t('notifyToLabel', ru ? 'ru' : 'en')} hint={t('notifyToHint', ru ? 'ru' : 'en')} className="sm:col-span-2">
             <Input
               name="notifyTo"
               defaultValue={v.notifyTo}
@@ -78,8 +71,7 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
               placeholder="admin@example.com, second@example.com"
               className="font-mono"
             />
-            <p className="mt-1 text-[12px] text-muted">{t('notifyToHint', ru ? 'ru' : 'en')}</p>
-          </div>
+          </Field>
         </div>
 
         <div className="flex items-center justify-between gap-4">

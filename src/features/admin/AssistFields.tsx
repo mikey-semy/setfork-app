@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Field } from '@/shared/ui/Field'
 
 // Поля «Помощи на шаге» внутри формы AI-настроек (submit через setAiSettings).
 // Тумблер — controlled Switch с name (submit 'on'/выкл), как в CouncilFields.
-const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface AssistValues {
   enabled: boolean
@@ -35,8 +35,7 @@ export function AssistFields({ v, ru }: { v: AssistValues; ru: boolean }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={lbl}>{say('Audience', 'Аудитория')}</label>
+        <Field label={say('Audience', 'Аудитория')}>
           <Select name="assistAudience" defaultValue={v.audience}>
             <SelectTrigger>
               <SelectValue />
@@ -46,7 +45,7 @@ export function AssistFields({ v, ru }: { v: AssistValues; ru: boolean }) {
               <SelectItem value="all">{say('Everyone', 'Всем')}</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </Field>
       </div>
     </div>
   )

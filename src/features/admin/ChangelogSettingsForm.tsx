@@ -5,11 +5,10 @@ import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Switch } from '@/shared/ui/switch'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
 import type { ChangelogSettings, ChangelogSource } from '@/shared/settings/changelog'
 import { setChangelogSettings } from './actions'
-
-const lbl = 'mb-1.5 block text-[12.5px] font-medium text-ink-2'
 
 /**
  * Настройки публичного changelog: откуда брать и как часто.
@@ -38,37 +37,26 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
         <Switch checked={enabled} onCheckedChange={setEnabled} />
       </div>
 
-      <div>
-        <label className={lbl} htmlFor="cl-repo">
-          {t('changelogRepo', lang)}
-        </label>
+      <Field label={t('changelogRepo', lang)}>
         {/* Плейсхолдер — ПРИМЕР значения, а не инструкция. */}
-        <Input id="cl-repo" name="repo" defaultValue={current.repo} placeholder="mikey-semy/setfork-frontend" className="w-[320px] max-w-full" />
-      </div>
+        <Input name="repo" defaultValue={current.repo} placeholder="mikey-semy/setfork-frontend" className="w-[320px] max-w-full" />
+      </Field>
 
-      <div>
-        <label className={lbl} htmlFor="cl-token">
-          {t('changelogToken', lang)}
-        </label>
+      <Field label={t('changelogToken', lang)} hint={t('changelogTokenHint', lang)}>
         {/* Приватный репозиторий анонимно недоступен. Значение не показываем —
             только факт «задан»; пустое поле оставляет прежний токен. */}
         <Input
-          id="cl-token"
           name="token"
           type="password"
           autoComplete="off"
           placeholder={current.hasToken ? '••••••••' : 'github_pat_…'}
           className="w-[320px] max-w-full font-mono"
         />
-        <p className="mt-1 text-[11.5px] text-muted">{t('changelogTokenHint', lang)}</p>
-      </div>
+      </Field>
 
-      <div>
-        <label className={lbl} htmlFor="cl-source">
-          {t('changelogWhat', lang)}
-        </label>
+      <Field label={t('changelogWhat', lang)}>
         <Select value={source} onValueChange={(v) => setSource(v as ChangelogSource)}>
-          <SelectTrigger id="cl-source" className="w-[320px] max-w-full">
+          <SelectTrigger className="w-[320px] max-w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -86,14 +74,11 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
             </SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </Field>
 
-      <div>
-        <label className={lbl} htmlFor="cl-hours">
-          {t('changelogEvery', lang)}
-        </label>
-        <Input id="cl-hours" name="everyHours" type="number" min={1} max={168} defaultValue={current.everyHours} className="w-[120px]" />
-      </div>
+      <Field label={t('changelogEvery', lang)}>
+        <Input name="everyHours" type="number" min={1} max={168} defaultValue={current.everyHours} className="w-[120px]" />
+      </Field>
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
