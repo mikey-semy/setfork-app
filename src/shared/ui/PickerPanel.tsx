@@ -21,11 +21,13 @@ export function PickerPanel({
   footer,
   closeLabel,
 }: {
-  title: string
+  /** Обычно строка; ReactNode — когда в шапке нужен счётчик выбранного (пины: «3/6»). */
+  title: ReactNode
   /** Крестик в шапке; без обработчика крестика нет. */
   onClose?: () => void
-  /** Поле поиска в шапке. Не передан — поиска нет (например, когда выбирать не из чего). */
-  search?: { value: string; onChange: (v: string) => void; placeholder: string; clearLabel: string }
+  /** Поле поиска в шапке. Не передан — поиска нет (например, когда выбирать не из чего).
+   *  autoFocus — для панелей, открывающихся ради поиска (люди по handle). */
+  search?: { value: string; onChange: (v: string) => void; placeholder: string; clearLabel: string; autoFocus?: boolean }
   children: ReactNode
   /** Нижняя секция за разделителем — создание новой ветки/папки. */
   footer?: ReactNode
@@ -53,6 +55,7 @@ export function PickerPanel({
             onValueChange={search.onChange}
             placeholder={search.placeholder}
             clearLabel={search.clearLabel}
+            autoFocus={search.autoFocus}
             size="sm"
           />
         </div>
@@ -108,7 +111,8 @@ export function PickerRow({
       {right}
     </>
   )
-  const cls = `flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-ink hover:bg-surface-2 disabled:opacity-60 ${
+  // pointer-coarse:min-h-11 — на таче строка добирает тач-цель 44px, на десктопе список остаётся плотным.
+  const cls = `flex w-full items-center gap-2 rounded-md px-2 py-1.5 pointer-coarse:min-h-11 text-[13px] text-ink hover:bg-surface-2 disabled:opacity-60 ${
     selected ? 'bg-surface-2' : ''
   }`
 
