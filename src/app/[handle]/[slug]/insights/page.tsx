@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Bell, Eye, GitFork, MousePointerClick, PlayCircle, Star, Tag, Users } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
-import { Avatar } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/badge'
+import { UserLine } from '@/shared/ui/UserLine'
 import { TrendChart } from '@/shared/ui/TrendChart'
 import { getContributors } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -119,9 +119,8 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
               </div>
               <div className="flex flex-col gap-1">
                 {contributors.map((c) => (
-                  <Link key={c.handle} href={`/${c.handle}`} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-surface-2">
-                    <Avatar handle={c.handle} avatarUrl={c.avatarUrl} size={22} />
-                    <span className="min-w-0 truncate text-[13px] font-semibold text-ink">{c.handle}</span>
+                  <div key={c.handle} className="flex items-center gap-2 rounded-md px-1.5 py-1">
+                    <UserLine handle={c.handle} avatarUrl={c.avatarUrl} size="md" className="min-w-0" />
                     {c.accepted === Infinity ? (
                       <Badge className="ml-auto">{ru ? 'владелец' : 'owner'}</Badge>
                     ) : (
@@ -129,7 +128,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
                         {c.accepted} {ru ? 'принято' : 'accepted'}
                       </span>
                     )}
-                  </Link>
+                  </div>
                 ))}
               </div>
             </div>

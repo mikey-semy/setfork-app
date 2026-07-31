@@ -2,12 +2,12 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { UserLine } from '@/shared/ui/UserLine'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getDiscussion, getDiscussionComments } from '@/features/discussions/queries'
 import { addDiscussionComment } from '@/features/discussions/actions'
@@ -51,9 +51,7 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
         {/* Первый пост */}
         <div className={`${card} mb-4 p-4`}>
           <div className="mb-2 flex items-center gap-2">
-            <Avatar handle={disc.authorHandle} avatarUrl={disc.authorAvatarUrl} size={24} />
-            <span className="text-[13px] font-semibold text-ink">{disc.authorHandle}</span>
-            <span className="text-[12px] text-muted">{timeAgo(disc.createdAt, lang)}</span>
+            <UserLine handle={disc.authorHandle} avatarUrl={disc.authorAvatarUrl} size="sm" at={timeAgo(disc.createdAt, lang)} />
           </div>
           {disc.body ? <Markdown>{disc.body}</Markdown> : <p className="text-[13px] text-muted">{ru ? '(без описания)' : '(no description)'}</p>}
         </div>
@@ -64,9 +62,7 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
             {comments.map((c) => (
               <div key={c.id} className={`${card} p-4`}>
                 <div className="mb-2 flex items-center gap-2">
-                  <Avatar handle={c.authorHandle} avatarUrl={c.authorAvatarUrl} size={22} />
-                  <span className="text-[13px] font-semibold text-ink">{c.authorHandle}</span>
-                  <span className="text-[12px] text-muted">{timeAgo(c.createdAt, lang)}</span>
+                  <UserLine handle={c.authorHandle} avatarUrl={c.authorAvatarUrl} size="sm" at={timeAgo(c.createdAt, lang)} />
                 </div>
                 <Markdown>{c.body}</Markdown>
               </div>

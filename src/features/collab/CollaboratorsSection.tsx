@@ -1,8 +1,9 @@
 import { Users, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
-import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { UserLine } from '@/shared/ui/UserLine'
 import { addCollaborator, removeCollaborator } from './actions'
 import type { CollaboratorRow } from './queries'
 
@@ -17,11 +18,13 @@ export function CollaboratorsSection({
   lang: Lang
 }) {
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
-      <div className="mb-3 flex items-center gap-1.5 font-semibold text-ink">
-        <Users size={16} className="text-ink-2" /> {t('collaboratorsHeading', lang)}
-      </div>
-
+    <SettingsSection
+      title={
+        <span className="flex items-center gap-1.5">
+          <Users size={16} className="text-ink-2" /> {t('collaboratorsHeading', lang)}
+        </span>
+      }
+    >
       <form action={addCollaborator.bind(null, templateId)} className="mb-3 flex flex-wrap items-center gap-2">
         <input
           name="handle"
@@ -39,8 +42,7 @@ export function CollaboratorsSection({
         <div className="flex flex-col gap-1.5">
           {collaborators.map((c) => (
             <div key={c.userId} className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2">
-              <Avatar handle={c.handle} avatarUrl={c.avatarUrl} size={24} />
-              <span className="text-[13.5px] font-medium text-ink">{c.handle}</span>
+              <UserLine handle={c.handle} avatarUrl={c.avatarUrl} size="md" className="min-w-0" />
               <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">{c.role}</span>
               <form action={removeCollaborator.bind(null, templateId, c.userId)} className="ml-auto">
                 <Tooltip label={t('removeLabel', lang)}>
@@ -56,6 +58,6 @@ export function CollaboratorsSection({
           ))}
         </div>
       )}
-    </section>
+    </SettingsSection>
   )
 }

@@ -3,12 +3,12 @@
 import { useRef, useState, useTransition } from 'react'
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import { removeListCover, setListAccent, setListCover } from './cover-actions'
 
 const ACCENTS = ['', '#2159d6', '#7c3aed', '#15803d', '#c2570c', '#be123c', '#0f766e', '#b45309']
-const card = 'rounded-lg border border-border bg-surface p-5'
 
 /** Настройки списка → Обложка: drag-drop картинки + акцент авто-баннера. */
 export function CoverSection({
@@ -63,9 +63,7 @@ export function CoverSection({
   }
 
   return (
-    <section className={card}>
-      <div className="mb-4 font-semibold text-ink">{ru ? 'Обложка' : 'Cover'}</div>
-
+    <SettingsSection title={ru ? 'Обложка' : 'Cover'}>
       <Tooltip label={ru ? 'Перетащи или выбери картинку' : 'Drag or pick an image'}>
         <button
           type="button"
@@ -118,6 +116,6 @@ export function CoverSection({
         )}
       </div>
       {err && <p className="mt-2 text-[12.5px] text-danger">{err}</p>}
-    </section>
+    </SettingsSection>
   )
 }

@@ -3,10 +3,9 @@
 import { useState, useTransition, type ReactNode } from 'react'
 import { CircleDot, MessagesSquare } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { t, type Lang } from '@/shared/i18n'
 import { setListFeatures } from './actions'
-
-const card = 'rounded-lg border border-border bg-surface p-5'
 
 /** Настройки списка → «Разделы» (Features): владелец включает/выключает Issues и
  *  Discussions. Suggestions не отключается — это ядро fork-модели. Выключенный
@@ -23,8 +22,7 @@ export function FeaturesSection({
   lang: Lang
 }) {
   return (
-    <section className={card}>
-      <div className="mb-4 font-semibold text-ink">{t('featuresTitle', lang)}</div>
+    <SettingsSection title={t('featuresTitle', lang)}>
       <div className="flex flex-col divide-y divide-border">
         <FeatureRow
           templateId={templateId}
@@ -43,7 +41,7 @@ export function FeaturesSection({
           hint={t('featDiscussionsHint', lang)}
         />
       </div>
-    </section>
+    </SettingsSection>
   )
 }
 

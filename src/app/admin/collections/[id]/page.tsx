@@ -10,10 +10,9 @@ import { addCollectionItem, deleteCollection, removeCollectionItem, setCollectio
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 
 export const dynamic = 'force-dynamic'
-
-const card = 'rounded-lg border border-border bg-surface p-5'
 
 export const metadata = { title: 'Collection' }
 
@@ -34,7 +33,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
       </div>
 
       {/* Метаданные */}
-      <form action={updateCollection} className={`${card} flex flex-col gap-4`}>
+      <form action={updateCollection} className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5">
         <input type="hidden" name="id" value={c.id} />
         <Field label={ru ? 'Название' : 'Title'}>
           <Input name="title" required defaultValue={tr(c.title, lang)} maxLength={120} />
@@ -56,8 +55,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
       </form>
 
       {/* Обложка */}
-      <section className={card}>
-        <div className="mb-3 font-semibold text-ink">{ru ? 'Обложка' : 'Cover'}</div>
+      <SettingsSection title={ru ? 'Обложка' : 'Cover'}>
         <div className="mb-3 h-[130px] w-full overflow-hidden rounded-lg border border-border">
           {c.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -73,14 +71,13 @@ export default async function EditCollectionPage({ params, searchParams }: { par
             <ImagePlus size={14} /> {ru ? 'Загрузить' : 'Upload'}
           </button>
         </form>
-      </section>
+      </SettingsSection>
 
       {/* Элементы */}
-      <section className={card}>
-        <div className="mb-1 font-semibold text-ink">{ru ? 'Элементы' : 'Items'}</div>
-        <p className="mb-3 text-[13px] text-ink-2">
-          {ru ? 'Добавляй списки (owner/slug) и каталоги (owner/имя-каталога) любых авторов.' : 'Add lists (owner/slug) and catalogs (owner/catalog-name) from any author.'}
-        </p>
+      <SettingsSection
+        title={ru ? 'Элементы' : 'Items'}
+        hint={ru ? 'Добавляй списки (owner/slug) и каталоги (owner/имя-каталога) любых авторов.' : 'Add lists (owner/slug) and catalogs (owner/catalog-name) from any author.'}
+      >
         {e === 'notfound' && <Alert variant="warn" className="mb-3">{ru ? 'Не найдено по этой ссылке.' : 'Nothing found for that reference.'}</Alert>}
 
         <form action={addCollectionItem} className="mb-3 flex flex-wrap items-center gap-2">
@@ -114,7 +111,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
             )
           })}
         </div>
-      </section>
+      </SettingsSection>
 
       {/* Удаление */}
       <form action={deleteCollection.bind(null, c.id)} className="flex justify-end">

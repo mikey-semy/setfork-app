@@ -32,7 +32,8 @@ import { AchievementsAdmin } from '@/features/admin/AchievementsAdmin'
 import { MaintenanceSection } from '@/features/admin/MaintenanceSection'
 import { MonetizationSettingsForm } from '@/features/admin/MonetizationSettingsForm'
 import { getAchievementDisplay } from '@/features/profile/achievement-config'
-import type { SettingsSection } from '@/features/settings/SettingsShell'
+import type { SettingsSection as ShellSection } from '@/features/settings/SettingsShell'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { AdminShell } from '@/features/admin/AdminShell'
 import { adminNavGroups, adminSettingsGroup } from '@/features/admin/nav-groups'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
@@ -131,11 +132,6 @@ export default async function AdminPage() {
   // Валюта — из каталога, а не 'USD' константой: эмбеддинги у RU-провайдеров считаются в ₽.
   const embOpts = ensure(buildOpts(models.embedding, true, lang, models.currency, models.pricesKnown), settings.embeddingModel)
 
-  // Карточка настроек держит ЧИТАЕМУЮ ширину, даже когда страница во всю ширину экрана:
-  // поле ввода на два метра удобнее не становится, а глаз по такой строке не ходит.
-  // Всю ширину забирают таблицы и сетки — они от неё действительно выигрывают.
-  const card = 'w-full max-w-[860px] rounded-lg border border-border bg-surface p-5'
-
   // Заголовки секций: ровно один двуязычный литерал на строку (i18n-правило),
   // используется и в липком меню, и в карточке.
   const T = {
@@ -150,17 +146,16 @@ export default async function AdminPage() {
 
   // Секции — через SettingsShell (как в настройках пользователя): липкое меню
   // слева со scrollspy-подсветкой активного пункта + поиск по секциям.
-  const sections: SettingsSection[] = [
+  const sections: ShellSection[] = [
     {
       id: 'maintenance',
       title: t('adminMaintenance', lang),
       icon: <Wrench size={14} />,
       keywords: ['maintenance', 'ремонт', 'обслуживание', '503'],
       content: (
-        <section className={card}>
-          <div className="mb-3 font-semibold text-ink">{t('adminMaintenance', lang)}</div>
+        <SettingsSection title={t('adminMaintenance', lang)}>
           <MaintenanceSection initialOn={maintOn} envOverride={maintenanceEnvOverride()} lang={lang} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -169,11 +164,14 @@ export default async function AdminPage() {
       icon: <Users size={14} />,
       keywords: ['online', 'онлайн', 'presence'],
       content: (
-        <section className={card}>
-          <div className="mb-3 flex items-center gap-2 font-semibold text-ink">
-            <span className="h-2 w-2 rounded-full bg-ok" />
-            {T.online} <span className="font-mono text-[12px] text-muted">{online.length}</span>
-          </div>
+        <SettingsSection
+          title={
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-ok" />
+              {T.online} <span className="font-mono text-[12px] text-muted">{online.length}</span>
+            </span>
+          }
+        >
           {online.length === 0 ? (
             <p className="text-[13px] text-muted">{ru ? 'Никого онлайн.' : 'No one online.'}</p>
           ) : (
@@ -186,7 +184,7 @@ export default async function AdminPage() {
               ))}
             </div>
           )}
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -195,9 +193,19 @@ export default async function AdminPage() {
       icon: <Bot size={14} />,
       keywords: ['ai', 'openrouter', 'model', 'модель', 'генерация', 'температура', 'токены'],
       content: (
-        <section className={card}>
-          <div className="mb-4 font-semibold text-ink">{T.ai}</div>
-
+        <SettingsSection
+          title={T.ai}
+          footer={
+            /* Ростер уехал на свою страницу: экспертов много, у каждого инструкция в несколько строк —
+               в узкой колонке настроек они не помещались. Здесь только вход. */
+            <Link
+              href="/admin/council"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[13px] text-ink-2 hover:text-ink"
+            >
+              <Bot size={14} /> {say('Council hall — experts, instructions, avatars', 'Зал совета — эксперты, инструкции, аватарки')}
+            </Link>
+          }
+        >
           {!hasKey && (
             <Alert variant="warn" className="mb-5">
               {say(
@@ -289,18 +297,7 @@ export default async function AdminPage() {
 
             <FormSaveBar ru={ru} />
           </form>
-
-          {/* Ростер уехал на свою страницу: экспертов много, у каждого инструкция в несколько строк —
-              в узкой колонке настроек они не помещались. Здесь только вход. */}
-          <div className="mt-6 border-t border-border pt-5">
-            <Link
-              href="/admin/council"
-              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[13px] text-ink-2 hover:text-ink"
-            >
-              <Bot size={14} /> {say('Council hall — experts, instructions, avatars', 'Зал совета — эксперты, инструкции, аватарки')}
-            </Link>
-          </div>
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -309,15 +306,16 @@ export default async function AdminPage() {
       icon: <Database size={14} />,
       keywords: ['s3', 'imgproxy', 'cdn', 'хранилище', 'картинки', 'storage'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{T.media}</div>
-          <p className="mb-4 text-[13px] text-ink-2">
-            {ru
+        <SettingsSection
+          title={T.media}
+          hint={
+            ru
               ? 'S3-совместимое хранилище, imgproxy и CDN. Значения перекрывают .env; пустое поле — берётся из .env.'
-              : 'S3-compatible storage, imgproxy and CDN. Values override .env; an empty field falls back to .env.'}
-          </p>
+              : 'S3-compatible storage, imgproxy and CDN. Values override .env; an empty field falls back to .env.'
+          }
+        >
           <MediaSettingsForm ru={ru} v={mediaValues} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -326,15 +324,16 @@ export default async function AdminPage() {
       icon: <Mail size={14} />,
       keywords: ['smtp', 'email', 'почта', 'mail'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{T.email}</div>
-          <p className="mb-4 text-[13px] text-ink-2">
-            {ru
+        <SettingsSection
+          title={T.email}
+          hint={
+            ru
               ? 'Свой SMTP для уведомлений на почту. Значения перекрывают .env; пустое поле — берётся из .env.'
-              : 'Your own SMTP for email notifications. Values override .env; an empty field falls back to .env.'}
-          </p>
+              : 'Your own SMTP for email notifications. Values override .env; an empty field falls back to .env.'
+          }
+        >
           <EmailSettingsForm ru={ru} v={emailValues} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -343,15 +342,16 @@ export default async function AdminPage() {
       icon: <Bell size={14} />,
       keywords: ['push', 'vapid', 'web push', 'уведомления'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{T.push}</div>
-          <p className="mb-4 text-[13px] text-ink-2">
-            {ru
+        <SettingsSection
+          title={T.push}
+          hint={
+            ru
               ? 'Фоновые браузерные уведомления через service worker. Свои VAPID-ключи — без сторонних сервисов.'
-              : 'Background browser notifications via a service worker. Your own VAPID keys — no third-party service.'}
-          </p>
+              : 'Background browser notifications via a service worker. Your own VAPID keys — no third-party service.'
+          }
+        >
           <PushSettingsForm ru={ru} v={pushValues} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -360,15 +360,16 @@ export default async function AdminPage() {
       icon: <Search size={14} />,
       keywords: ['search', 'поиск', 'semantic', 'вектор', 'rag'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{T.search}</div>
-          <p className="mb-4 text-[13px] text-ink-2">
-            {ru
+        <SettingsSection
+          title={T.search}
+          hint={
+            ru
               ? 'Режим строки поиска. Семантика и гибрид используют векторный индекс (нужен ключ и индексация); при недоступности — откат на ключевые слова.'
-              : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'}
-          </p>
+              : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'
+          }
+        >
           <SearchSettingsForm current={search} ru={ru} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -377,11 +378,9 @@ export default async function AdminPage() {
       icon: <ScrollText size={14} />,
       keywords: ['changelog', 'релизы', 'github', 'история', 'обновления'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">Changelog</div>
-          <p className="mb-4 text-[13px] text-ink-2">{t('changelogAdminHint', lang)}</p>
+        <SettingsSection title="Changelog" hint={t('changelogAdminHint', lang)}>
           <ChangelogSettingsForm current={changelogSettings} lang={lang} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -390,11 +389,9 @@ export default async function AdminPage() {
       icon: <Coins size={14} />,
       keywords: ['monetization', 'монетизация', 'affiliate', 'партнёрка', 'donate', 'донат', 'клики', 'просмотры', 'ftc'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{t('adminMonetization', lang)}</div>
-          <p className="mb-4 text-[13px] text-ink-2">{t('adminMonetizationIntro', lang)}</p>
+        <SettingsSection title={t('adminMonetization', lang)} hint={t('adminMonetizationIntro', lang)}>
           <MonetizationSettingsForm lang={lang} v={monetization} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -403,15 +400,16 @@ export default async function AdminPage() {
       icon: <Award size={14} />,
       keywords: ['achievements', 'достижения', 'бейджи', 'badges'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{T.ach}</div>
-          <p className="mb-4 text-[13px] text-ink-2">
-            {ru
+        <SettingsSection
+          title={T.ach}
+          hint={
+            ru
               ? 'Включай/выключай достижения и задавай свою картинку вместо иконки (перетаскиванием). Действует на всех профилях.'
-              : 'Enable/disable achievements and set a custom image instead of the icon (drag-and-drop). Applies to all profiles.'}
-          </p>
+              : 'Enable/disable achievements and set a custom image instead of the icon (drag-and-drop). Applies to all profiles.'
+          }
+        >
           <AchievementsAdmin initial={achDisplay} ru={ru} />
-        </section>
+        </SettingsSection>
       ),
     },
     {

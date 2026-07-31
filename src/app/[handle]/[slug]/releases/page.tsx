@@ -4,7 +4,6 @@ import { Download, Eye, FileText, GitCompare, Plus, Rss, Tag, Trash2 } from 'luc
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { Avatar } from '@/shared/ui/Avatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Badge } from '@/shared/ui/badge'
@@ -12,6 +11,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { UserLine } from '@/shared/ui/UserLine'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
 import { getReleases } from '@/features/releases/queries'
@@ -90,10 +90,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
                   </Badge>
                   {r.id === latestId && <Badge variant="ok">{t('latest', lang)}</Badge>}
                   {r.prerelease && <Badge variant="warn">{t('preRelease', lang)}</Badge>}
-                  <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-2">
-                    <Avatar handle={r.authorHandle} avatarUrl={r.authorAvatarUrl} size={16} />
-                    <Link href={`/${r.authorHandle}`} className="hover:text-accent">{r.authorHandle}</Link>
-                  </span>
+                  <UserLine handle={r.authorHandle} avatarUrl={r.authorAvatarUrl} size="xs" />
                   <span className="font-mono text-[11.5px] text-muted">{timeAgo(r.createdAt, lang)} · v{r.version}</span>
                   {canManage && (
                     <form action={deleteRelease.bind(null, r.id)} className="ml-auto">

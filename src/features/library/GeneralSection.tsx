@@ -4,10 +4,9 @@ import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { Field } from '@/shared/ui/Field'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { ListTypeToggle } from './ListTypeToggle'
 import { updateListMeta } from './actions'
-
-const card = 'rounded-lg border border-border bg-surface p-5'
 
 /** Настройки списка → Основное: название / описание / теги / порядок.
  *  Видимость переехала в Опасную зону (как «Change visibility» на GitHub).
@@ -30,9 +29,7 @@ export function GeneralSection({
   const save = updateListMeta.bind(null, templateId)
 
   return (
-    <section className={card}>
-      <div className="mb-4 font-semibold text-ink">{t('generalTitle', lang)}</div>
-
+    <SettingsSection title={t('generalTitle', lang)}>
       <form action={save} className="flex flex-col gap-4">
         <Field label={t('listTitle', lang)}>
           <Input name="title" defaultValue={tr(title, lang)} required maxLength={140} />
@@ -52,6 +49,6 @@ export function GeneralSection({
 
         <FormSaveBar ru={lang === 'ru'} />
       </form>
-    </section>
+    </SettingsSection>
   )
 }

@@ -4,11 +4,11 @@ import { useState, useTransition } from 'react'
 import { GitMerge, MessagesSquare, Pencil, Trash2, CircleCheck, ShieldCheck } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { t, type Lang } from '@/shared/i18n'
 import { setPrAllowFrom, setPrMergeMethod, setPrNumber, setPrSetting } from './actions'
 import type { PrBoolKey } from './pr-settings'
 
-const card = 'rounded-lg border border-border bg-surface p-5'
 const row = 'flex items-start justify-between gap-4 py-3.5 first:pt-0 last:pb-0'
 
 /**
@@ -38,8 +38,7 @@ export function PrSettingsSection({
   lang: Lang
 }) {
   return (
-    <section className={card}>
-      <div className="mb-4 font-semibold text-ink">{t('prSettingsTitle', lang)}</div>
+    <SettingsSection title={t('prSettingsTitle', lang)}>
       <div className="flex flex-col divide-y divide-border">
         <WhoRow templateId={templateId} initial={settings.allowFrom} lang={lang} />
         <ApprovalsRow templateId={templateId} initial={settings.requiredApprovals} lang={lang} />
@@ -93,7 +92,7 @@ export function PrSettingsSection({
           hint={t('prSetAutoDeleteHint', lang)}
         />
       </div>
-    </section>
+    </SettingsSection>
   )
 }
 

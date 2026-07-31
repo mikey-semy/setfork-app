@@ -7,6 +7,7 @@ import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { getUserUsage } from '@/shared/ai/usage'
 import { aiQuota, listQuota } from '@/shared/quota'
 import { getApiTokens } from '@/features/mcp/queries'
@@ -20,12 +21,10 @@ import { AppearanceSettings } from '@/features/settings/AppearanceSettings'
 import { DangerZone } from '@/features/settings/DangerZone'
 import { IncomingTransfers } from '@/features/transfer/IncomingTransfers'
 import { getIncomingTransfers } from '@/features/transfer/queries'
-import { SettingsShell, type SettingsSection } from '@/features/settings/SettingsShell'
+import { SettingsShell, type SettingsSection as ShellSection } from '@/features/settings/SettingsShell'
 import { NotifyPrefsForm } from '@/features/notifications/NotifyPrefsForm'
 import { getUserSessions } from '@/features/sessions/queries'
 import { SessionsList } from '@/features/sessions/SessionsList'
-
-const card = 'rounded-lg border border-border bg-surface p-5'
 
 export const metadata = { title: 'Settings' }
 
@@ -51,7 +50,7 @@ export default async function SettingsPage() {
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
   const mcpUrl = `${proto}://${host}/api/mcp`
 
-  const sections: SettingsSection[] = [
+  const sections: ShellSection[] = [
     // Секция появляется только при наличии входящих передач списков.
     ...(incomingTransfers.length > 0
       ? [{
@@ -60,7 +59,7 @@ export default async function SettingsPage() {
           icon: <UserRoundPlus size={15} />,
           keywords: ['transfer', 'ownership', 'incoming', 'передача', 'владение', 'входящие'],
           content: <IncomingTransfers items={incomingTransfers} lang={lang} />,
-        } satisfies SettingsSection]
+        } satisfies ShellSection]
       : []),
     {
       id: 'profile',
@@ -68,8 +67,7 @@ export default async function SettingsPage() {
       icon: <User size={15} />,
       keywords: ['profile', 'name', 'bio', 'avatar', 'location', 'website', 'social', 'профиль', 'имя', 'аватар', 'био', 'соцсети', 'сайт'],
       content: (
-        <section className={card}>
-          <div className="mb-4 font-semibold text-ink">{t('publicProfile', lang)}</div>
+        <SettingsSection title={t('publicProfile', lang)}>
           <SettingsForm
             lang={lang}
             handle={user.handle}
@@ -82,7 +80,7 @@ export default async function SettingsPage() {
             profilePrivate={user.profilePrivate}
             avatarShape={user.avatarShape}
           />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -91,13 +89,12 @@ export default async function SettingsPage() {
       icon: <Palette size={15} />,
       keywords: ['appearance', 'theme', 'dark', 'light', 'system', 'font', 'accent', 'color', 'тема', 'тёмная', 'светлая', 'шрифт', 'цвет', 'акцент'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{lang === 'ru' ? 'Внешний вид' : 'Appearance'}</div>
-          <p className="mb-4 text-[13px] text-ink-2">
-            {lang === 'ru' ? 'Тема, акцентный цвет и шрифт интерфейса.' : 'Theme, accent color and interface font.'}
-          </p>
+        <SettingsSection
+          title={lang === 'ru' ? 'Внешний вид' : 'Appearance'}
+          hint={lang === 'ru' ? 'Тема, акцентный цвет и шрифт интерфейса.' : 'Theme, accent color and interface font.'}
+        >
           <AppearanceSettings lang={lang} initialAccent={user.uiAccent ?? ''} initialFont={user.uiFont ?? ''} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -106,11 +103,9 @@ export default async function SettingsPage() {
       icon: <Bell size={15} />,
       keywords: ['notifications', 'stars', 'forks', 'suggestions', 'email', 'уведомления', 'звёзды', 'форки', 'правки'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{t('notifPrefsTitle', lang)}</div>
-          <p className="mb-4 text-[13px] text-ink-2">{t('notifPrefsIntro', lang)}</p>
+        <SettingsSection title={t('notifPrefsTitle', lang)} hint={t('notifPrefsIntro', lang)}>
           <NotifyPrefsForm prefs={user.notifyPrefs} lang={lang} hasEmail={!!user.email} notifyLang={user.lang} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -119,11 +114,9 @@ export default async function SettingsPage() {
       icon: <Monitor size={15} />,
       keywords: ['sessions', 'devices', 'sign out', 'security', 'revoke', 'сессии', 'устройства', 'выйти', 'безопасность'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{t('sessionsTitle', lang)}</div>
-          <p className="mb-4 text-[13px] text-ink-2">{t('sessionsIntro', lang)}</p>
+        <SettingsSection title={t('sessionsTitle', lang)} hint={t('sessionsIntro', lang)}>
           <SessionsList sessions={userSessions} lang={lang} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -132,15 +125,16 @@ export default async function SettingsPage() {
       icon: <Mail size={15} />,
       keywords: ['email', 'verification', 'verify', 'почта', 'подтверждение', 'верификация'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">Email</div>
-          <p className="mb-4 text-[13px] text-ink-2">
-            {lang === 'ru'
+        <SettingsSection
+          title="Email"
+          hint={
+            lang === 'ru'
               ? 'Подтверждённая почта нужна для сброса пароля и уведомлений.'
-              : 'A verified email is used for password reset and notifications.'}
-          </p>
+              : 'A verified email is used for password reset and notifications.'
+          }
+        >
           <EmailSection email={user.email} verified={!!user.emailVerifiedAt} lang={lang} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -149,15 +143,16 @@ export default async function SettingsPage() {
       icon: <ShieldCheck size={15} />,
       keywords: ['2fa', 'totp', 'two-factor', 'authenticator', 'recovery', 'security', 'двухфакторная', 'код', 'аутентификатор', 'безопасность'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{lang === 'ru' ? 'Двухфакторная аутентификация' : 'Two-factor authentication'}</div>
-          <p className="mb-4 text-[13px] text-ink-2">
-            {lang === 'ru'
+        <SettingsSection
+          title={lang === 'ru' ? 'Двухфакторная аутентификация' : 'Two-factor authentication'}
+          hint={
+            lang === 'ru'
               ? 'Второй фактор при входе по паролю: код из приложения-аутентификатора (TOTP). Вход через GitHub защищает сам GitHub.'
-              : 'A second factor for password sign-in: a code from your authenticator app (TOTP). GitHub sign-in is protected by GitHub itself.'}
-          </p>
+              : 'A second factor for password sign-in: a code from your authenticator app (TOTP). GitHub sign-in is protected by GitHub itself.'
+          }
+        >
           <TwoFactorSection enabled={user.totpEnabled} lang={lang} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -166,15 +161,16 @@ export default async function SettingsPage() {
       icon: <Fingerprint size={15} />,
       keywords: ['passkey', 'passkeys', 'webauthn', 'fido', 'touch id', 'face id', 'biometric', 'passwordless', 'passkey', 'ключ', 'беспарольный', 'биометрия', 'безопасность'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">Passkeys</div>
-          <p className="mb-4 text-[13px] text-ink-2">
-            {lang === 'ru'
+        <SettingsSection
+          title="Passkeys"
+          hint={
+            lang === 'ru'
               ? 'Беспарольный вход по passkey (Touch/Face ID, ключ безопасности). Работает рядом с паролем и 2FA.'
-              : 'Passwordless sign-in with a passkey (Touch/Face ID, a security key). Works alongside your password and 2FA.'}
-          </p>
+              : 'Passwordless sign-in with a passkey (Touch/Face ID, a security key). Works alongside your password and 2FA.'
+          }
+        >
           <PasskeysSection initial={userPasskeys} lang={lang} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -183,11 +179,9 @@ export default async function SettingsPage() {
       icon: <KeyRound size={15} />,
       keywords: ['api', 'mcp', 'token', 'agent', 'integration', 'bearer', 'токен', 'агент', 'интеграция', 'ключ'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{t('mcpTitle', lang)}</div>
-          <p className="mb-4 text-[13px] text-ink-2">{t('mcpIntro', lang)}</p>
+        <SettingsSection title={t('mcpTitle', lang)} hint={t('mcpIntro', lang)}>
           <ApiTokensSection tokens={tokens} lang={lang} mcpUrl={mcpUrl} />
-        </section>
+        </SettingsSection>
       ),
     },
     {
@@ -196,9 +190,7 @@ export default async function SettingsPage() {
       icon: <BarChart3 size={15} />,
       keywords: ['ai', 'usage', 'tokens', 'cost', 'spend', 'расход', 'токены', 'стоимость', 'ии', 'генерация'],
       content: (
-        <section className={card}>
-          <div className="mb-1 font-semibold text-ink">{t('aiUsageTitle', lang)}</div>
-          <p className="mb-4 text-[13px] text-ink-2">{t('aiUsageIntro', lang)}</p>
+        <SettingsSection title={t('aiUsageTitle', lang)} hint={t('aiUsageIntro', lang)}>
           <div className="grid grid-cols-3 gap-3">
             {[
               { k: t('aiUsageCalls', lang), v: new Intl.NumberFormat('en').format(usage.calls) },
@@ -224,7 +216,7 @@ export default async function SettingsPage() {
               </span>
             </div>
           </div>
-        </section>
+        </SettingsSection>
       ),
     },
     {
