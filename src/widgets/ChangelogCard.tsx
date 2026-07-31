@@ -34,7 +34,7 @@ export async function ChangelogCard({ lang, limit = 4 }: { lang: Lang; limit?: n
           return (
             <div key={`${e.at.toISOString()}${text}`} className="relative">
               <span className="absolute left-[-12.5px] top-[5px] h-[7px] w-[7px] rounded-full border border-border bg-surface-2" />
-              <div className="text-[10.5px] text-muted">{fmt.format(e.at)}</div>
+              <div className="text-[11px] text-muted">{fmt.format(e.at)}</div>
               {e.href ? (
                 <a
                   href={e.href}
@@ -51,7 +51,7 @@ export async function ChangelogCard({ lang, limit = 4 }: { lang: Lang; limit?: n
           )
         })}
       </div>
-      <Link href="/changelog" className="mt-2.5 block text-[12px] text-accent hover:underline">
+      <Link href="/changelog" className="mt-2.5 block text-[12.5px] text-accent hover:underline">
         {t('changelogAll', lang)}
       </Link>
     </div>

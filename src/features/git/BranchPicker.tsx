@@ -138,9 +138,9 @@ export function BranchPicker({
                   }}
                   right={
                     b.isDefault ? (
-                      <Badge className="px-1.5 text-[10.5px] font-normal">{t('branchDefault', lang)}</Badge>
+                      <Badge className="px-1.5 text-[11px] font-normal">{t('branchDefault', lang)}</Badge>
                     ) : (
-                      <span className="font-mono text-[10.5px] text-muted">
+                      <span className="font-mono text-[11px] text-muted">
                         +{b.ahead}/-{b.behind}
                       </span>
                     )

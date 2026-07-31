@@ -34,7 +34,7 @@ export function LockToggle({
         {locked ? labels.unlock : labels.lock}
       </Button>
       {/* Подсказка только в запертом состоянии: в обычном она была бы шумом. */}
-      {locked && <p className="text-[11.5px] text-muted">{labels.hint}</p>}
+      {locked && <p className="text-[11px] text-muted">{labels.hint}</p>}
     </div>
   )
 }

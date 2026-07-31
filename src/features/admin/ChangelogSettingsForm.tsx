@@ -29,7 +29,7 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[13.5px] font-medium text-ink">{t('changelogShow', lang)}</div>
+          <div className="text-[13px] font-medium text-ink">{t('changelogShow', lang)}</div>
           <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">
             {t('changelogShowHint', lang)}
           </p>
@@ -63,13 +63,13 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
             <SelectItem value="merged">
               <span className="flex flex-col">
                 <span>{t('changelogMerged', lang)}</span>
-                <span className="text-[11.5px] text-muted">{t('changelogMergedHint', lang)}</span>
+                <span className="text-[11px] text-muted">{t('changelogMergedHint', lang)}</span>
               </span>
             </SelectItem>
             <SelectItem value="releases">
               <span className="flex flex-col">
                 <span>{t('changelogReleases', lang)}</span>
-                <span className="text-[11.5px] text-muted">{t('changelogReleasesHint', lang)}</span>
+                <span className="text-[11px] text-muted">{t('changelogReleasesHint', lang)}</span>
               </span>
             </SelectItem>
           </SelectContent>
@@ -82,7 +82,7 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[13.5px] font-medium text-ink">{t('changelogTranslate', lang)}</div>
+          <div className="text-[13px] font-medium text-ink">{t('changelogTranslate', lang)}</div>
           <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">
             {t('changelogTranslateHint', lang)}
           </p>

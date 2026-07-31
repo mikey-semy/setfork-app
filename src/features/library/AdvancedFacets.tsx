@@ -100,7 +100,7 @@ export function AdvancedFacets({
           className="mb-1 flex w-full items-center gap-2 rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted outline-hidden hover:text-ink-2 focus-visible:ring-2 focus-visible:ring-border-strong"
         >
           {t('tags', lang)}
-          {parsed.tags.length > 0 && <span className="rounded-full bg-surface px-1.5 text-[10px] normal-case text-ink-2">{parsed.tags.length}</span>}
+          {parsed.tags.length > 0 && <span className="rounded-full bg-surface px-1.5 text-[11px] normal-case text-ink-2">{parsed.tags.length}</span>}
           <ChevronDown size={13} className={`ml-auto transition-transform ${tagsOpen ? 'rotate-180' : ''}`} />
         </button>
         {tagsOpen && (
@@ -110,7 +110,7 @@ export function AdvancedFacets({
             </div>
             <div className="flex max-h-[280px] flex-col gap-0.5 overflow-y-auto pr-0.5">
               {shownTags.length === 0 ? (
-                <div className="px-2 py-1 text-[12px] text-muted">{t('noTagsFound', lang)}</div>
+                <div className="px-2 py-1 text-[12.5px] text-muted">{t('noTagsFound', lang)}</div>
               ) : (
                 shownTags.map((tg) => {
                   const on = parsed.tags.includes(tg.tag)

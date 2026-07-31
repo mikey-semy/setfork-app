@@ -35,7 +35,7 @@ export function RegisterForm({ lang }: { lang: Lang }) {
       <Input name="email" type="email" required autoComplete="email" placeholder={t('emailField', lang)} />
       <div>
         <Input name="handle" required autoComplete="username" placeholder={t('handleField', lang)} className="font-mono" />
-        <p className="mt-1 text-[11.5px] text-muted">{t('handleHint', lang)}</p>
+        <p className="mt-1 text-[11px] text-muted">{t('handleHint', lang)}</p>
       </div>
       <Input name="name" placeholder={t('displayName', lang)} />
       <Input name="password" type="password" required minLength={8} autoComplete="new-password" placeholder={t('passwordField', lang)} />

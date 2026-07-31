@@ -22,7 +22,7 @@ export function MaintenanceSection({ initialOn, envOverride, lang }: { initialOn
     <div className="flex flex-wrap items-center gap-4">
       <div className="flex items-center gap-2.5">
         <Wrench size={18} className={on || envOverride ? 'text-warn' : 'text-muted'} />
-        <span className={`text-[13.5px] font-semibold ${on || envOverride ? 'text-warn' : 'text-ink'}`}>
+        <span className={`text-[13px] font-semibold ${on || envOverride ? 'text-warn' : 'text-ink'}`}>
           {on || envOverride ? t('maintenanceStateOn', lang) : t('maintenanceStateOff', lang)}
         </span>
       </div>

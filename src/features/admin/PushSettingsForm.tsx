@@ -57,7 +57,7 @@ export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) 
       </div>
 
       <Field label={ru ? 'Публичный ключ' : 'Public key'}>
-        <Input readOnly value={pub} placeholder={ru ? 'не задан' : 'not set'} className="font-mono text-[12px]" />
+        <Input readOnly value={pub} placeholder={ru ? 'не задан' : 'not set'} className="font-mono text-[12.5px]" />
       </Field>
 
       <div className="flex items-center gap-2">

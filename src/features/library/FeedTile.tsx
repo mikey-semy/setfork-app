@@ -32,7 +32,7 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
           <UserLine handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size="xs" className="min-w-0" />
           {item.visibility === 'private' && <Lock size={11} className="shrink-0 text-muted" />}
         </div>
-        <Link href={base} className="truncate text-[15px] font-semibold text-ink group-hover:text-accent">{tr(item.title, lang)}</Link>
+        <Link href={base} className="truncate text-[16px] font-semibold text-ink group-hover:text-accent">{tr(item.title, lang)}</Link>
         <p className="line-clamp-2 min-h-[34px] text-[12.5px] leading-snug text-ink-2">{tr(item.desc, lang)}</p>
         {item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -42,13 +42,13 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
           </div>
         )}
         <div className="mt-auto flex items-center justify-between border-t border-border pt-2.5">
-          <span className="inline-flex items-center gap-1 text-[11.5px] text-muted">
+          <span className="inline-flex items-center gap-1 text-[11px] text-muted">
             <GitFork size={12} /> {fmt(item.forksCount)}
           </span>
           <form action={star}>
             <Tooltip label={t('star', lang)}>
               <button
-                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors hover:border-border-strong ${
+                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12.5px] font-medium transition-colors hover:border-border-strong ${
                   starred ? 'border-warn text-warn' : 'border-border text-ink-2'
                 }`}
               >

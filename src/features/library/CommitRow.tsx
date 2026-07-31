@@ -99,10 +99,10 @@ export function CommitRow({
           <span className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink">{msg}</span>
             <span className="shrink-0 rounded-md border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">v{version}</span>
-            {isCurrent && <span className="shrink-0 rounded-full bg-ok/15 px-1.5 py-0.5 text-[10px] font-semibold text-ok">{labels.current}</span>}
+            {isCurrent && <span className="shrink-0 rounded-full bg-ok/15 px-1.5 py-0.5 text-[11px] font-semibold text-ok">{labels.current}</span>}
           </span>
           {/* Строка 2 — кто и когда. */}
-          <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted">
+          <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
             {author ? (
               <span className="inline-flex items-center gap-1.5">
                 <Avatar handle={author.handle} avatarUrl={author.avatarUrl} size={18} />
@@ -140,7 +140,7 @@ export function CommitRow({
                 {version > 1 && (
                   <Link
                     href={`${base}/compare?from=${version - 1}&to=${version}`}
-                    className="inline-flex items-center gap-1 py-1 text-[12px] text-accent hover:underline"
+                    className="inline-flex items-center gap-1 py-1 text-[12.5px] text-accent hover:underline"
                   >
                     <GitCompare size={12} /> {labels.fullCompare}
                   </Link>
@@ -148,7 +148,7 @@ export function CommitRow({
                 {/* Просмотр самой версии целиком — не только «что изменилось». */}
                 <Link
                   href={isCurrent ? base : `${base}?v=${version}`}
-                  className="inline-flex items-center gap-1 py-1 text-[12px] text-accent hover:underline"
+                  className="inline-flex items-center gap-1 py-1 text-[12.5px] text-accent hover:underline"
                 >
                   <Eye size={12} /> {labels.viewVersion}
                 </Link>

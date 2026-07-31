@@ -140,7 +140,7 @@ export default async function AdminDevelopmentPage() {
         {/* ПОЧЕМУ не прошло планку — «не прошло» без причины это та же vanity-метрика. */}
         {today.holdReasons.length > 0 && (
           <div className="rounded-lg border border-border bg-surface p-3">
-            <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
               {tr({ en: 'Why lists did not pass the bar', ru: 'Почему списки не прошли планку' }, lang)}
             </div>
             <ul className="flex flex-col gap-1.5">
@@ -274,7 +274,7 @@ export default async function AdminDevelopmentPage() {
           <StatTile label={tr({ en: 'Margin', ru: 'Маржа' }, lang)} na={naText(UNAVAILABLE.margin, lang)} />
         </div>
         {m.money.runwayGens != null && (
-          <p className="text-[12px] text-muted">
+          <p className="text-[12.5px] text-muted">
             {tr(
               { en: `Balance affords ≈${num(m.money.runwayGens)} more generations at the 30-day average.`, ru: `Остатка хватит ≈на ${num(m.money.runwayGens)} генераций по средней за 30 дней.` },
               lang,
@@ -306,7 +306,7 @@ export default async function AdminDevelopmentPage() {
             )}
           />
         </div>
-        <p className="text-[12px] text-muted">
+        <p className="text-[12.5px] text-muted">
           {tr(
             {
               en: 'The council costs several model calls per list; single generation costs one. If its acceptance is not higher, the extra cost buys nothing — that is a measurement, not an opinion.',
@@ -346,7 +346,7 @@ export default async function AdminDevelopmentPage() {
               <DataTableRow key={a.id}>
                 <span className="min-w-0 truncate text-[13px] text-ink">{agendaLabel(a.kind as AgendaKind, a.domain, lang === 'ru')}</span>
                 {/* Числа как есть: «списков 1 при пороге 5» проверяемо, «усилить направление» — нет. */}
-                <span className="min-w-0 truncate font-mono text-[11.5px] text-ink-2">
+                <span className="min-w-0 truncate font-mono text-[11px] text-ink-2">
                   {Object.entries(a.why).map(([k, v]) => `${k}=${v}`).join(' · ')}
                 </span>
                 <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{a.score.toFixed(2)}</span>
@@ -369,7 +369,7 @@ export default async function AdminDevelopmentPage() {
                       </form>
                     </>
                   ) : (
-                    <span className={`text-[12px] ${a.status === 'approved' ? 'text-ok' : 'text-muted'}`} title={a.ownerExpertId ?? ''}>
+                    <span className={`text-[12.5px] ${a.status === 'approved' ? 'text-ok' : 'text-muted'}`} title={a.ownerExpertId ?? ''}>
                       {a.status === 'approved' ? tr({ en: 'approved', ru: 'одобрено' }, lang) : tr({ en: 'dismissed', ru: 'отклонено' }, lang)}
                     </span>
                   )}
@@ -378,7 +378,7 @@ export default async function AdminDevelopmentPage() {
             ))}
           </DataTable>
         )}
-        <p className="text-[12px] text-muted">
+        <p className="text-[12.5px] text-muted">
           {tr(
             {
               en: 'Approved topics are what production picks first. Dismissed ones are never proposed again.',
@@ -426,7 +426,7 @@ export default async function AdminDevelopmentPage() {
               </DataTableRow>
             ))}
           </DataTable>
-          <p className="text-[12px] text-muted">
+          <p className="text-[12.5px] text-muted">
             {tr(
               {
                 en: 'A feed is worth its cost when people read it, follow its sources and edit it by hand — not when it grows. Freshness over 7 days means the gate holds it back.',
@@ -474,7 +474,7 @@ export default async function AdminDevelopmentPage() {
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
             <div className="border-b border-border px-4 py-2.5">
               <span className="text-[13px] font-semibold text-ink">{tr({ en: 'Council participation', ru: 'Участие в совете' }, lang)}</span>
-              <span className="ml-2 text-[12px] text-muted">
+              <span className="ml-2 text-[12.5px] text-muted">
                 {tr(
                   {
                     en: 'acceptance counts for every drafter — participation, not a win rate',
@@ -498,13 +498,13 @@ export default async function AdminDevelopmentPage() {
                 className="grid min-w-[520px] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-3 hover:bg-surface-2"
               >
                 <span className="truncate text-[13px] font-medium text-ink">{lang === 'ru' ? g.nameRu : g.nameEn}</span>
-                <span className="text-right text-[12px] text-muted">{lang === 'ru' ? g.rankRu : g.rankEn}</span>
+                <span className="text-right text-[12.5px] text-muted">{lang === 'ru' ? g.rankRu : g.rankEn}</span>
                 <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(g.gens)}</span>
                 <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(g.accepted)}</span>
                 <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{g.trusted ? pct(g.score) : '—'}</span>
               </Link>
             ))}
-            <div className="px-4 py-2.5 text-[11.5px] text-muted">
+            <div className="px-4 py-2.5 text-[11px] text-muted">
               {tr(
                 { en: '«—» = too few councils to trust the number.', ru: '«—» = советов слишком мало, чтобы верить цифре.' },
                 lang,
@@ -518,7 +518,7 @@ export default async function AdminDevelopmentPage() {
           <div className="min-w-0 rounded-lg border border-border bg-surface">
             <div className="border-b border-border px-4 py-2.5">
               <span className="text-[13px] font-semibold text-ink">{tr({ en: 'Uncovered topics', ru: 'Непокрытые темы' }, lang)}</span>
-              <span className="ml-2 text-[12px] text-muted">
+              <span className="ml-2 text-[12.5px] text-muted">
                 {tr(
                   { en: 'the generalist covered these with no specialist for them', ru: 'их тянул универсал без профильного специалиста' },
                   lang,
@@ -530,7 +530,7 @@ export default async function AdminDevelopmentPage() {
                 <TagChip key={s.tag} slug={s.tag} count={s.n} />
               ))}
             </div>
-            <div className="px-4 pb-3 text-[11.5px] text-muted">
+            <div className="px-4 pb-3 text-[11px] text-muted">
               {tr(
                 {
                   en: 'Raw signal from draft tags — not a normalized taxonomy. Hiring lives in the council hall.',
@@ -562,7 +562,7 @@ export default async function AdminDevelopmentPage() {
           {loops.map((l) => (
             <DataTableRow key={l.type} className="py-3">
               <span className="truncate font-mono text-[12.5px] text-ink">{l.type}</span>
-              <span className={`text-right text-[12px] ${l.circuitTripped ? 'text-danger' : l.paused ? 'text-warn' : 'text-ok'}`}>
+              <span className={`text-right text-[12.5px] ${l.circuitTripped ? 'text-danger' : l.paused ? 'text-warn' : 'text-ok'}`}>
                 {l.circuitTripped
                   ? tr({ en: 'breaker tripped', ru: 'предохранитель' }, lang)
                   : l.paused
@@ -596,7 +596,7 @@ export default async function AdminDevelopmentPage() {
               </div>
             </DataTableRow>
           ))}
-          <div className="px-4 py-2.5 text-[11.5px] text-muted">
+          <div className="px-4 py-2.5 text-[11px] text-muted">
             {tr(
               {
                 en: 'Pause stops the queue from handing out this loop’s jobs — atomically, on every instance, without a restart. The breaker is tripped by code and cleared by a human.',
@@ -608,7 +608,7 @@ export default async function AdminDevelopmentPage() {
         </DataTable>
       </section>
 
-      <p className="text-[12px] text-muted">
+      <p className="text-[12.5px] text-muted">
         {tr(
           {
             en: 'Metrics are read-only aggregates and never call a model. «—» means the source does not exist yet, not zero. The loop switches above do write.',

@@ -70,7 +70,7 @@ export function Feed({
   return (
     <section className="min-w-0">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[15px] font-semibold text-ink">{ru ? 'Лента' : 'Feed'}</h2>
+        <h2 className="text-[16px] font-semibold text-ink">{ru ? 'Лента' : 'Feed'}</h2>
         <FeedFilter lang={lang} onChange={setPrefs} />
       </div>
       {emptyHint && (
@@ -97,7 +97,7 @@ export function Feed({
                   <Avatar handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size={34} />
                 </Link>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px]">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
                     <Icon size={13} className="shrink-0 text-muted" />
                     <Link href={`/${e.actorHandle}`} className="text-ink-2 hover:text-accent">
                       {e.actorHandle}
@@ -140,12 +140,12 @@ export function Feed({
                 className="group flex items-center gap-2 rounded-md px-2 py-2 hover:bg-surface-2"
               >
                 <span className="min-w-0">
-                  <span className="block truncate text-[13.5px] font-semibold text-ink group-hover:text-accent">
+                  <span className="block truncate text-[13px] font-semibold text-ink group-hover:text-accent">
                     {tr(r.title, lang)}
                   </span>
-                  <span className="block truncate text-[12px] text-muted">{r.ownerHandle}</span>
+                  <span className="block truncate text-[12.5px] text-muted">{r.ownerHandle}</span>
                 </span>
-                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-mono text-[11.5px] text-muted">
+                <span className="ml-auto inline-flex shrink-0 items-center gap-1 font-mono text-[11px] text-muted">
                   <Star size={11} /> {r.starsCount}
                 </span>
               </Link>
@@ -182,10 +182,10 @@ function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean })
       {/* Тело: версия + заголовок + changelog */}
       <div className="px-4 py-3.5">
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-(--accent)/40 bg-(--accent-soft) px-2 py-0.5 font-mono text-[12px] font-semibold text-accent">
+          <span className="rounded-md border border-(--accent)/40 bg-(--accent-soft) px-2 py-0.5 font-mono text-[12.5px] font-semibold text-accent">
             v{e.version}
           </span>
-          <Link href={base} className="min-w-0 truncate text-[15px] font-semibold text-ink hover:text-accent">
+          <Link href={base} className="min-w-0 truncate text-[16px] font-semibold text-ink hover:text-accent">
             {tr(e.title, lang) || `${e.ownerHandle}/${e.slug}`}
           </Link>
         </div>
@@ -197,7 +197,7 @@ function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean })
         ) : (
           <p className="text-[12.5px] italic text-muted">{ru ? 'Без заметок к версии' : 'No release notes'}</p>
         )}
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px]">
           <Link href={`${base}/versions`} className="font-medium text-accent hover:underline">
             {ru ? 'Изменения' : 'Changes'} →
           </Link>

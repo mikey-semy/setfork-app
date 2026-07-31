@@ -128,7 +128,7 @@ export function CommitBar({
             className="flex shrink-0 items-center gap-1 rounded-md px-1 py-0.5 text-muted hover:bg-surface-2 hover:text-ink"
           >
             <History size={15} />
-            <span className="hidden font-mono text-[12px] md:inline">{commitsCount}</span>
+            <span className="hidden font-mono text-[12.5px] md:inline">{commitsCount}</span>
           </Link>
         </Tooltip>
       </div>

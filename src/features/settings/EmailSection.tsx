@@ -41,7 +41,7 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
 
   if (!email) {
     return (
-      <p className="text-[13.5px] text-ink-2">
+      <p className="text-[13px] text-ink-2">
         {ru ? 'Почта не привязана (вход через GitHub).' : 'No email attached (GitHub sign-in).'}
       </p>
     )
@@ -50,7 +50,7 @@ export function EmailSection({ email, verified, lang }: { email: string | null; 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-mono text-[13.5px] text-ink">{email}</span>
+        <span className="font-mono text-[13px] text-ink">{email}</span>
         {verified ? (
           <Badge variant="ok">
             <MailCheck size={11} /> {ru ? 'подтверждена' : 'verified'}

@@ -282,7 +282,7 @@ export default async function ListPage({
             {/* Заголовок только для печати (в экране он в шапке) */}
             <div className="mb-4 hidden print:block">
               <h1 className="text-[20px] font-bold text-ink">{tr(tpl.title, lang)}</h1>
-              {tr(tpl.desc, lang) && <p className="mt-1 text-[13.5px] text-ink-2">{tr(tpl.desc, lang)}</p>}
+              {tr(tpl.desc, lang) && <p className="mt-1 text-[13px] text-ink-2">{tr(tpl.desc, lang)}</p>}
               <p className="mt-1 font-mono text-[11px] text-muted">
                 {owner}/{slug} · v{currentVersion?.version ?? tpl.currentVersion}
               </p>
@@ -291,11 +291,11 @@ export default async function ListPage({
             {/* About на мобиле — НАВЕРХУ (как GitHub): описание, теги, статы со словами.
                 На десктопе всё это в About-сайдбаре справа. */}
             <div className="mb-4 lg:hidden print:hidden">
-              {tr(tpl.desc, lang) && <p className="text-[13.5px] leading-snug text-ink-2">{tr(tpl.desc, lang)}</p>}
+              {tr(tpl.desc, lang) && <p className="text-[13px] leading-snug text-ink-2">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {tpl.tags.map((tg) => (
-                    <Link key={tg} href={`/search?q=${encodeURIComponent(`tag:${tg}`)}`} className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[12px] text-accent">
+                    <Link key={tg} href={`/search?q=${encodeURIComponent(`tag:${tg}`)}`} className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[12.5px] text-accent">
                       {tg}
                     </Link>
                   ))}
@@ -321,7 +321,7 @@ export default async function ListPage({
             {tpl.status === 'draft' && isOwner && (
               <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-warn bg-surface px-4 py-3 print:hidden">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[13.5px] font-semibold text-warn">
+                  <div className="flex items-center gap-1.5 text-[13px] font-semibold text-warn">
                     <FileText size={15} /> {t('draftBadge', lang)}
                   </div>
                   <p className="mt-0.5 text-[12.5px] text-ink-2">{t('draftHint', lang)}</p>
@@ -680,7 +680,7 @@ export default async function ListPage({
                       <span className="mt-0.5 font-mono text-[13px] text-muted">{tpl.ordered ? displayNum[si] : '•'}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 pr-7">
-                          <span className="text-[14.5px] font-semibold text-ink">{tr(s.title, lang)}</span>
+                          <span className="text-[14px] font-semibold text-ink">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
                         </div>
                         {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}
@@ -721,7 +721,7 @@ export default async function ListPage({
                           />
                         )}
                         {s.command && (
-                          <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12px] text-ink">
+                          <div className="mt-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12.5px] text-ink">
                             <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
                             {/* Горизонтальный скролл + выделение: можно доскроллить до конца строки
                                 и выделить/скопировать её часть, а не только всю через кнопку. */}
@@ -751,7 +751,7 @@ export default async function ListPage({
                           <div className="mt-3 flex flex-wrap gap-2">
                             {refs.map((r) => {
                               const cls =
-                                'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent'
+                                'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] text-accent'
                               return r.url ? (
                                 <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className={cls}>
                                   <ExternalLink size={11} /> {r.label}
@@ -803,14 +803,14 @@ export default async function ListPage({
               <SectionLabel className="hidden lg:flex">
                 {t('about', lang)}
               </SectionLabel>
-              {tr(tpl.desc, lang) && <p className="hidden text-[13.5px] leading-relaxed text-ink-2 lg:block">{tr(tpl.desc, lang)}</p>}
+              {tr(tpl.desc, lang) && <p className="hidden text-[13px] leading-relaxed text-ink-2 lg:block">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
                 <div className="hidden flex-wrap gap-1.5 lg:flex">
                   {tpl.tags.map((tag) => (
                     <Link
                       key={tag}
                       href={`/search?q=${encodeURIComponent(`tag:${tag}`)}`}
-                      className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[12px] font-medium text-accent hover:underline"
+                      className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[12.5px] font-medium text-accent hover:underline"
                     >
                       {tag}
                     </Link>

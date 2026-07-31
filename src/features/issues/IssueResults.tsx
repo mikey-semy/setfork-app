@@ -22,7 +22,7 @@ export function IssueResults({ issues, lang }: { issues: IssueSearchRow[]; lang:
             >
               {it.title}
             </Link>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-muted">
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px] text-muted">
               <Link href={`/${it.ownerHandle}/${it.slug}`} className="hover:text-ink-2">
                 {it.ownerHandle}/{it.slug}
               </Link>

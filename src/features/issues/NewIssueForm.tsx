@@ -50,7 +50,7 @@ export function NewIssueForm({ owner, slug, lang, custom = [] }: { owner: string
       <MarkdownEditor name="body" rows={8} placeholder={t('issueBodyPh', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} />
 
       <div>
-        <div className="mb-1.5 text-[12px] font-semibold text-ink-2">{t('labelsLabel', lang)}</div>
+        <div className="mb-1.5 text-[12.5px] font-semibold text-ink-2">{t('labelsLabel', lang)}</div>
         <LabelPicker lang={lang} custom={custom} />
       </div>
 

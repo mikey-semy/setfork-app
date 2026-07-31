@@ -10,7 +10,7 @@ const PALETTE = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2
  *  линии на вариант. Резкий скачок одной линии = «вброс». Чистый SVG, без либ. */
 export function PollHistoryChart({ events, options, lang }: { events: PollHistoryEvent[]; options: { id: string; text: string }[]; lang: Lang }) {
   const ru = lang === 'ru'
-  if (!events.length) return <p className="py-2 text-center text-[12px] text-muted">{ru ? 'Пока нет голосов' : 'No votes yet'}</p>
+  if (!events.length) return <p className="py-2 text-center text-[12.5px] text-muted">{ru ? 'Пока нет голосов' : 'No votes yet'}</p>
 
   const ids = options.map((o) => o.id)
   const sorted = [...events].sort((a, b) => a.t - b.t)
@@ -66,12 +66,12 @@ export function PollHistoryChart({ events, options, lang }: { events: PollHistor
             <path key={id} d={toPath(series[id])} fill="none" stroke={PALETTE[i % PALETTE.length]} strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
           ))}
         </svg>
-        <div className="mt-1 flex justify-between text-[10px] text-muted">
+        <div className="mt-1 flex justify-between text-[11px] text-muted">
           <span>{fmt(t0)}</span>
           <span>{fmt(t1)}</span>
         </div>
       </div>
-      <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11.5px]">
+      <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
         {options.map((o, i) => (
           <li key={o.id} className="inline-flex items-center gap-1.5 text-ink-2">
             <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: PALETTE[i % PALETTE.length] }} />

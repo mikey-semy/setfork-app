@@ -50,7 +50,7 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
       <div className="flex flex-wrap gap-1.5">
         {labels.length === 0 && <span className="text-[12.5px] text-muted">{ru ? 'Кастомных меток пока нет.' : 'No custom labels yet.'}</span>}
         {labels.map((l) => (
-          <span key={l.id} style={chipColors(l.color)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium">
+          <span key={l.id} style={chipColors(l.color)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12.5px] font-medium">
             {l.name}
             <button type="button" onClick={() => remove(l.id)} disabled={pending} aria-label={ru ? 'удалить' : 'delete'} className="opacity-70 hover:opacity-100">
               <X size={12} />

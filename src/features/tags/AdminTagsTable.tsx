@@ -129,7 +129,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[12px] text-muted">
+      <p className="mt-2 text-[12.5px] text-muted">
         {filtered.length} / {tags.length}
       </p>
       {confirmDialog}

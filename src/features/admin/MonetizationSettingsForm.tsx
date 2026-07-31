@@ -33,7 +33,7 @@ function ToggleRow({ name, title, hint, defaultChecked }: { name: string; title:
     <div className="flex items-center justify-between gap-4">
       <div>
         <div className="text-[14px] font-medium text-ink">{title}</div>
-        <p className="text-[12px] text-muted">{hint}</p>
+        <p className="text-[12.5px] text-muted">{hint}</p>
       </div>
       <Switch name={name} defaultChecked={defaultChecked} />
     </div>
@@ -66,7 +66,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="text-[14px] font-medium text-ink">{t('monAffiliateApply', lang)}</div>
-          <p className="text-[12px] text-muted">{t('monAffiliateApplyHint', lang)}</p>
+          <p className="text-[12.5px] text-muted">{t('monAffiliateApplyHint', lang)}</p>
         </div>
         {/* Uncontrolled (defaultChecked): у контролируемого Radix-Switch скрытый
             checkbox рассинхронизируется после RSC-refresh и молча теряет 'on'

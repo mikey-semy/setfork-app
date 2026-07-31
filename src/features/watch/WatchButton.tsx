@@ -110,7 +110,7 @@ export function WatchButton({
               <span className="mt-0.5 w-4 shrink-0">{level === r.key && <Check size={14} className="text-accent" />}</span>
               <span className="min-w-0">
                 <span className="block text-[13px] font-medium text-ink">{r.title}</span>
-                <span className="block text-[12px] leading-snug text-muted">{r.desc}</span>
+                <span className="block text-[12.5px] leading-snug text-muted">{r.desc}</span>
               </span>
             </DropdownMenuItem>
           ))}
@@ -118,7 +118,7 @@ export function WatchButton({
             <span className="mt-0.5 w-4 shrink-0">{level === 'custom' && <Check size={14} className="text-accent" />}</span>
             <span className="min-w-0">
               <span className="block text-[13px] font-medium text-ink">{labels.custom}</span>
-              <span className="block text-[12px] leading-snug text-muted">{labels.customDesc}</span>
+              <span className="block text-[12.5px] leading-snug text-muted">{labels.customDesc}</span>
             </span>
           </DropdownMenuItem>
         </DropdownMenuContent>

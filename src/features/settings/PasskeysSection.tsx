@@ -51,7 +51,7 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
   return (
     <div className="flex flex-col gap-3">
       {list.length === 0 ? (
-        <p className="text-[13.5px] text-ink-2">
+        <p className="text-[13px] text-ink-2">
           {ru ? 'Passkey — вход по Touch/Face ID или аппаратному ключу, без пароля.' : 'A passkey lets you sign in with Touch/Face ID or a hardware key — no password.'}
         </p>
       ) : (
@@ -60,7 +60,7 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
             <div key={p.id} className="flex items-center gap-3 rounded-md border border-border bg-surface-2 px-3 py-2.5">
               <Fingerprint size={18} className="shrink-0 text-accent" />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13.5px] font-medium text-ink">{p.name}</div>
+                <div className="truncate text-[13px] font-medium text-ink">{p.name}</div>
                 <div className="font-mono text-[11px] text-muted">
                   {ru ? 'добавлен' : 'added'} {fmt(p.createdAt)}
                   {p.lastUsedAt ? ` · ${ru ? 'вход' : 'used'} ${fmt(p.lastUsedAt)}` : ''}

@@ -40,7 +40,7 @@ function Section({ label, rows, lang, muted }: { label: string; rows: UserRunRow
   if (rows.length === 0) return null
   return (
     <section>
-      <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted">
+      <div className="mb-2 text-[12.5px] font-semibold uppercase tracking-wider text-muted">
         {label} · {rows.length}
       </div>
       <div className="flex flex-col gap-2">
@@ -61,10 +61,10 @@ function RunCard({ r, lang, muted }: { r: UserRunRow; lang: Lang; muted?: boolea
       <Link href={`/runs/${r.id}`} className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-[14px] font-semibold text-ink">{tr(r.title, lang)}</span>
-          <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">v{r.version}</span>
-          {r.status === 'failed' && <span className="rounded-md border border-danger/40 px-1.5 py-0.5 text-[10.5px] font-medium text-danger">{t('runFailed', lang)}</span>}
+          <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] text-ink-2">v{r.version}</span>
+          {r.status === 'failed' && <span className="rounded-md border border-danger/40 px-1.5 py-0.5 text-[11px] font-medium text-danger">{t('runFailed', lang)}</span>}
         </div>
-        <div className="mt-0.5 truncate text-[12px] text-muted">
+        <div className="mt-0.5 truncate text-[12.5px] text-muted">
           {r.handle}/{r.slug} · {timeAgo(r.updatedAt, lang)}
         </div>
         <div className="mt-2 flex items-center gap-2">

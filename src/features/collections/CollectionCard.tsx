@@ -19,9 +19,9 @@ export function CollectionCard({ c, lang }: { c: CC; lang: Lang }) {
         <AutoBanner seed={c.id} accent={c.accent} label={title} height="h-[130px]" />
       )}
       <div className="p-3.5">
-        <div className="truncate text-[15px] font-semibold text-ink group-hover:text-accent">{title}</div>
+        <div className="truncate text-[16px] font-semibold text-ink group-hover:text-accent">{title}</div>
         {tr(c.desc, lang) && <p className="mt-1 line-clamp-2 text-[12.5px] text-ink-2">{tr(c.desc, lang)}</p>}
-        <div className="mt-2 font-mono text-[11.5px] text-muted">{c.itemCount} {ru ? 'элем.' : 'items'}</div>
+        <div className="mt-2 font-mono text-[11px] text-muted">{c.itemCount} {ru ? 'элем.' : 'items'}</div>
       </div>
     </Link>
   )

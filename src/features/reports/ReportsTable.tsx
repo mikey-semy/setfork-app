@@ -32,14 +32,14 @@ function StatusBadge({ status, lang }: { status: ReportItem['status']; lang: Lan
         : status === 'reviewed'
           ? 'bg-warn/10 text-ink-2'
           : 'bg-surface-2 text-muted'
-  return <span className={`rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${cls}`}>{t(STATUS_LABEL[status], lang)}</span>
+  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{t(STATUS_LABEL[status], lang)}</span>
 }
 
 function Row({ item, lang }: { item: ReportItem; lang: Lang }) {
   const [pending, start] = useTransition()
   const setStatus = (status: ReportItem['status']) => start(async () => setReportStatus(item.id, status))
   const btn =
-    'rounded-md border border-border bg-surface px-2.5 py-1 text-[12px] font-semibold text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50'
+    'rounded-md border border-border bg-surface px-2.5 py-1 text-[12.5px] font-semibold text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50'
   const listPath = item.ownerHandle ? `/${item.ownerHandle}/${item.listSlug}` : null
 
   return (
@@ -56,7 +56,7 @@ function Row({ item, lang }: { item: ReportItem; lang: Lang }) {
         )}
         <span className="ml-auto text-muted">{new Date(item.createdAt).toLocaleString()}</span>
       </div>
-      <div className="mb-2 flex flex-wrap items-center gap-2 text-[12px] text-muted">
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
         {item.reporterHandle ? (
           <Link href={`/${item.reporterHandle}`} className="hover:text-ink-2">
             {item.reporterHandle}
@@ -66,7 +66,7 @@ function Row({ item, lang }: { item: ReportItem; lang: Lang }) {
         )}
         {item.email && <span>{item.email}</span>}
       </div>
-      <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink">{item.body}</p>
+      <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-ink">{item.body}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {(['reviewed', 'actioned', 'dismissed'] as const)
           .filter((s) => s !== item.status)

@@ -67,7 +67,7 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
                 <ExternalLink size={11} className="shrink-0 text-muted" />
               </a>
               <span className="hidden shrink-0 font-mono text-[11px] text-muted sm:inline">{timeAgo(it.publishedAt ?? it.createdAt, lang)}</span>
-              <span className={`shrink-0 text-[11.5px] ${it.usedAt ? 'text-ok' : 'text-muted'}`}>
+              <span className={`shrink-0 text-[11px] ${it.usedAt ? 'text-ok' : 'text-muted'}`}>
                 {it.usedAt ? say('in work', 'в работе') : say('fresh', 'свежий')}
               </span>
             </div>

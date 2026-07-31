@@ -42,7 +42,7 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
     <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
       <div>
         <div className="text-[13px] font-medium text-ink">{say('Expert council (multi-model)', 'Совет экспертов (мультимодельно)')}</div>
-        <p className="mt-0.5 text-[12px] text-muted">
+        <p className="mt-0.5 text-[12.5px] text-muted">
           {say(
             'Steward → experts + innovator → devil’s advocate → elder. ~6-7× cost and ~50s latency — keep the audience limited.',
             'Распорядитель → эксперты + новатор → адвокат дьявола → старейшина. ~6-7× цена и ~50с — держи аудиторию узкой.',
@@ -51,7 +51,7 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <div className="text-[13.5px] text-ink">{say('Enable council', 'Включить совет')}</div>
+        <div className="text-[13px] text-ink">{say('Enable council', 'Включить совет')}</div>
         <Switch name="councilEnabled" checked={enabled} onCheckedChange={setEnabled} />
       </div>
 
@@ -103,16 +103,16 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
 
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[13.5px] text-ink">{say('Elder web search (advanced)', 'Веб-поиск старейшины (advanced)')}</div>
-          <p className="text-[12px] text-muted">{say('Also search the web for precedents (:online). Pricier & slower.', 'Искать прецеденты ещё и в интернете (:online). Дороже и медленнее.')}</p>
+          <div className="text-[13px] text-ink">{say('Elder web search (advanced)', 'Веб-поиск старейшины (advanced)')}</div>
+          <p className="text-[12.5px] text-muted">{say('Also search the web for precedents (:online). Pricier & slower.', 'Искать прецеденты ещё и в интернете (:online). Дороже и медленнее.')}</p>
         </div>
         <Switch name="councilWebSeek" checked={webSeek} onCheckedChange={setWebSeek} />
       </div>
 
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[13.5px] text-ink">{say('Clarifying questions', 'Уточняющие вопросы')}</div>
-          <p className="text-[12px] text-muted">{say('Ask before generating when the request is too vague.', 'Спрашивать перед генерацией, если запрос слишком расплывчатый.')}</p>
+          <div className="text-[13px] text-ink">{say('Clarifying questions', 'Уточняющие вопросы')}</div>
+          <p className="text-[12.5px] text-muted">{say('Ask before generating when the request is too vague.', 'Спрашивать перед генерацией, если запрос слишком расплывчатый.')}</p>
         </div>
         <Switch name="councilClarify" checked={clarify} onCheckedChange={setClarify} />
       </div>

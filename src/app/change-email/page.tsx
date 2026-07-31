@@ -39,7 +39,7 @@ export default async function ChangeEmailPage({ searchParams }: { searchParams: 
       <div className="w-full max-w-[420px] rounded-lg border border-border bg-surface p-6 text-center">
         <div className="mb-2 flex justify-center">{M.icon}</div>
         <div className="text-[16px] font-bold text-ink">{M.title}</div>
-        <p className="mt-1 text-[13.5px] text-ink-2">{M.sub}</p>
+        <p className="mt-1 text-[13px] text-ink-2">{M.sub}</p>
         <Link href="/settings" className="mt-4 inline-block text-[13px] font-semibold text-accent hover:underline">
           {ru ? '← в настройки' : '← back to settings'}
         </Link>

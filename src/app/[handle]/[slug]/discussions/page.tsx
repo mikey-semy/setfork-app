@@ -68,15 +68,15 @@ export default async function DiscussionsPage({
                   <span className="mt-0.5 text-[16px]">{categoryMeta(d.category).icon}</span>
                 </Tooltip>
                 <div className="min-w-0 flex-1">
-                  <Link href={`${base}/${d.number}`} className="text-[14.5px] font-semibold text-ink hover:text-accent">
+                  <Link href={`${base}/${d.number}`} className="text-[14px] font-semibold text-ink hover:text-accent">
                     {d.title}
                   </Link>
-                  <div className="mt-0.5 text-[12px] text-muted">
+                  <div className="mt-0.5 text-[12.5px] text-muted">
                     #{d.number} · {d.authorHandle} · {timeAgo(d.createdAt, lang)}
                   </div>
                 </div>
                 {d.commentCount > 0 && (
-                  <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] text-muted">
+                  <span className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] text-muted">
                     <MessageSquare size={13} /> {d.commentCount}
                   </span>
                 )}

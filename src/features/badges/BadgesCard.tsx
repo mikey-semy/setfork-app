@@ -22,7 +22,7 @@ export function BadgesCard({ owner, slug, origin, lang }: { owner: string; slug:
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-1 text-[13px] font-semibold text-ink">{ru ? 'Бейджи' : 'Badges'}</div>
-      <p className="mb-3 text-[12px] text-muted">
+      <p className="mb-3 text-[12.5px] text-muted">
         {ru ? 'Живой бейдж списка — вставь в README проекта, доки или блог.' : 'A live badge for this list — drop it in your project README, docs or blog.'}
       </p>
       <div className="flex flex-col gap-2">

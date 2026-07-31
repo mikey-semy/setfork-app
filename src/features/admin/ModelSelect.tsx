@@ -183,11 +183,11 @@ export function ModelSelect({
                 >
                   <span className="truncate text-[12.5px]">{o.label ?? o.id}</span>
                   {o.family && (
-                    <span className="ml-1.5 shrink-0 rounded-full border border-border bg-surface-2 px-1.5 py-px text-[10px] text-muted">
+                    <span className="ml-1.5 shrink-0 rounded-full border border-border bg-surface-2 px-1.5 py-px text-[11px] text-muted">
                       {o.family}
                     </span>
                   )}
-                  {o.price && <span className={`ml-auto shrink-0 pl-4 tabular-nums text-[11.5px] ${o.priceClass ?? ''}`}>{o.price}</span>}
+                  {o.price && <span className={`ml-auto shrink-0 pl-4 tabular-nums text-[11px] ${o.priceClass ?? ''}`}>{o.price}</span>}
                 </Row>
               ))}
               {showCustom && (
@@ -209,8 +209,8 @@ export function ModelSelect({
       {multiple && values.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {values.map((v, i) => (
-            <span key={v} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 py-1 pl-1.5 pr-1 text-[11.5px] text-ink-2">
-              <span className="grid size-4 shrink-0 place-items-center rounded-md bg-surface text-[10px] tabular-nums text-muted">{i + 1}</span>
+            <span key={v} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 py-1 pl-1.5 pr-1 text-[11px] text-ink-2">
+              <span className="grid size-4 shrink-0 place-items-center rounded-md bg-surface text-[11px] tabular-nums text-muted">{i + 1}</span>
               <span>{labelOf(v)}</span>
               <button
                 type="button"
@@ -247,7 +247,7 @@ function Row({
       type="button"
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      className={`relative flex min-h-11 w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-left text-[13.5px] text-ink ${
+      className={`relative flex min-h-11 w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-left text-[13px] text-ink ${
         highlighted ? 'bg-(--accent-soft) text-accent' : ''
       }`}
     >

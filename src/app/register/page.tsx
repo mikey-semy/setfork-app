@@ -20,7 +20,7 @@ export default async function RegisterPage() {
 
         <RegisterForm lang={lang} />
 
-        <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
+        <p className="mt-3 text-[11px] leading-relaxed text-muted">
           {t('agreeToTermsPrefix', lang)}{' '}
           <a href={legalUrl('terms', lang)} className="text-accent hover:underline">
             {t('termsOfService', lang)}

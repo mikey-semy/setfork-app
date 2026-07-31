@@ -168,7 +168,7 @@ export default async function AdminPage() {
           title={
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-ok" />
-              {T.online} <span className="font-mono text-[12px] text-muted">{online.length}</span>
+              {T.online} <span className="font-mono text-[12.5px] text-muted">{online.length}</span>
             </span>
           }
         >

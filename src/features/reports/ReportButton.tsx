@@ -37,7 +37,7 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
       <OverlayPanel open={open} onClose={() => setOpen(false)} title={t('reportTitle', lang)} width={440}>
         {state?.ok ? (
           <div className="p-4 text-center">
-            <div className="mb-1 text-[15px] font-bold text-ink">{t('rpThanks', lang)}</div>
+            <div className="mb-1 text-[16px] font-bold text-ink">{t('rpThanks', lang)}</div>
             <p className="text-[13px] text-ink-2">{t('rpThanksBody', lang)}</p>
           </div>
         ) : (
@@ -62,7 +62,7 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
             </div>
 
             {reason === 'copyright' && (
-              <p className="rounded-md bg-warn/10 px-3 py-2 text-[12px] leading-relaxed text-ink-2">
+              <p className="rounded-md bg-warn/10 px-3 py-2 text-[12.5px] leading-relaxed text-ink-2">
                 {t('rpCopyrightNote', lang)}{' '}
                 <a
                   href={legalUrl('copyright', lang)}
@@ -86,7 +86,7 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
 
             <div>
               <Input name="email" type="email" autoComplete="email" placeholder={t('fbEmailPlaceholder', lang)} />
-              <p className="mt-1 text-[11.5px] text-muted">{t('fbEmailHint', lang)}</p>
+              <p className="mt-1 text-[11px] text-muted">{t('fbEmailHint', lang)}</p>
             </div>
 
             {/* Honeypot: люди поле не видят; непустое значение = бот. */}

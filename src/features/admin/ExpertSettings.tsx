@@ -125,7 +125,7 @@ function AvatarPicker({
             ))}
           </div>
           <div className="mt-1.5 flex items-center gap-2 border-t border-border pt-1.5">
-            <label className="cursor-pointer rounded-md border border-border px-2 py-1 text-[11.5px] text-ink-2 hover:text-ink">
+            <label className="cursor-pointer rounded-md border border-border px-2 py-1 text-[11px] text-ink-2 hover:text-ink">
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif"
@@ -141,7 +141,7 @@ function AvatarPicker({
               <button
                 type="button"
                 onClick={() => void resetExpertAvatar(id)}
-                className="text-[11.5px] text-muted hover:text-ink"
+                className="text-[11px] text-muted hover:text-ink"
               >
                 {say('Reset', 'Вернуть встроенную')}
               </button>
@@ -194,7 +194,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           </Link>
         </Tooltip>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-[11.5px] text-muted">{say('On', 'Вкл')}</span>
+          <span className="text-[11px] text-muted">{say('On', 'Вкл')}</span>
           <Switch name="enabled" checked={enabled} onCheckedChange={setEnabled} />
         </div>
       </div>
@@ -281,7 +281,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
             {/* Домены — те же теги по смыслу, поэтому тот же TagInput: чипы, автокомплит из реестра.
                 «Любая тема» отдельным тумблером, а не доменом «*»: normalize у TagInput вырезает
                 звёздочку, да и тумблер честнее магического символа. */}
-            <label className="mb-1.5 flex items-center gap-2 text-[12px] text-ink-2">
+            <label className="mb-1.5 flex items-center gap-2 text-[12.5px] text-ink-2">
               <Switch name="anyTopic" checked={anyTopic} onCheckedChange={setAnyTopic} />
               {say('Any topic (generalist)', 'Любая тема (универсал)')}
             </label>
@@ -293,7 +293,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           </Field>
 
           <div className="flex items-center justify-between gap-3 pt-0.5">
-            <label className="flex items-center gap-2 text-[12px] text-ink-2">
+            <label className="flex items-center gap-2 text-[12.5px] text-ink-2">
               <Switch name="online" checked={online} onCheckedChange={setOnline} />
               {say('Web access (:online) — pricier', 'Веб-доступ (:online) — дороже')}
             </label>

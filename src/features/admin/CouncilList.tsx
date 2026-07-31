@@ -66,10 +66,10 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
                 <Avatar handle={r.handle ?? r.id} avatarUrl={r.avatarUrl} size={28} />
                 <div className="min-w-0">
                   {/* Вся строка ведёт к настройкам этого специалиста — как список к своим. */}
-                  <Link href={`/admin/council/${r.id}`} className="block truncate text-[13.5px] font-medium text-ink hover:text-accent">
+                  <Link href={`/admin/council/${r.id}`} className="block truncate text-[13px] font-medium text-ink hover:text-accent">
                     {r.name}
                   </Link>
-                  <div className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted">
+                  <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted">
                     {r.handle ? (
                       <Link href={`/${r.handle}`} className="truncate hover:text-ink-2">
                         @{r.handle}
@@ -99,7 +99,7 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
       {canAssign && (
         <div className="rounded-lg border border-border bg-surface p-3.5">
           <div className="mb-1 text-[12.5px] font-semibold text-ink">{tr({ en: 'Assign a list', ru: 'Поручить список' }, lang)}</div>
-          <p className="mb-2.5 text-[11.5px] text-ink-2">
+          <p className="mb-2.5 text-[11px] text-ink-2">
             {tr(
               {
                 en: 'The specialist picks what his area is missing and writes it. The result is a DRAFT authored by him — you publish it.',

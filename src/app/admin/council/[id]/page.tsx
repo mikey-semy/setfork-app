@@ -59,11 +59,11 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   const card = 'rounded-lg border border-border bg-surface p-4'
   const kpiCell = (icon: ReactNode, label: string, value: string, sub?: string) => (
     <div className={card}>
-      <div className="flex items-center gap-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
         {icon} {label}
       </div>
       <div className="mt-1.5 text-[22px] font-bold text-ink">{value}</div>
-      {sub && <div className="mt-0.5 text-[12px] text-ink-2">{sub}</div>}
+      {sub && <div className="mt-0.5 text-[12.5px] text-ink-2">{sub}</div>}
     </div>
   )
 
@@ -97,11 +97,11 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           )}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
-            <span className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[11.5px] text-ink-2" title={mood.style || say('not enough data yet', 'пока мало данных')}>
+            <span className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[11px] text-ink-2" title={mood.style || say('not enough data yet', 'пока мало данных')}>
               {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
             </span>
             {e.domains.map((d) => (
-              <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[11.5px] text-ink-2">
+              <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[11px] text-ink-2">
                 {d}
               </span>
             ))}
@@ -142,24 +142,24 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
 
       <div className="mb-5 grid gap-3 lg:grid-cols-2">
         <div className={card}>
-          <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{say('Persona (working frame)', 'Персона (рабочий каркас)')}</div>
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">{say('Persona (working frame)', 'Персона (рабочий каркас)')}</div>
           <p className="whitespace-pre-wrap text-[13px] leading-[1.55] text-ink-2">{e.persona}</p>
           {e.code && (
             <>
-              <div className="mb-2 mt-4 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
-              <p className="whitespace-pre-wrap font-mono text-[12px] leading-[1.55] text-ink-2">{e.code}</p>
+              <div className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
+              <p className="whitespace-pre-wrap font-mono text-[12.5px] leading-[1.55] text-ink-2">{e.code}</p>
             </>
           )}
           {e.memory && (
             <>
-              <div className="mb-2 mt-4 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{say('Craft memory (auto-distilled)', 'Память ремесла (автовыжимка)')}</div>
+              <div className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wide text-muted">{say('Craft memory (auto-distilled)', 'Память ремесла (автовыжимка)')}</div>
               <p className="whitespace-pre-wrap text-[12.5px] leading-[1.55] text-ink-2">{e.memory}</p>
             </>
           )}
 
         </div>
         <div className={card}>
-          <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-muted">{say('Recent councils', 'Последние советы')}</div>
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">{say('Recent councils', 'Последние советы')}</div>
           {kpi.recent.length === 0 ? (
             <p className="text-[13px] text-muted">{say('Has not been summoned yet.', 'Ещё ни разу не созывался.')}</p>
           ) : (
@@ -168,13 +168,13 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
                 <li key={i} className="flex items-baseline gap-2 text-[13px]">
                   <span className={`shrink-0 ${r.accepted ? 'text-ok' : 'text-muted'}`}>{r.accepted ? '✓' : '·'}</span>
                   <span className="min-w-0 flex-1 truncate text-ink-2">{r.query}</span>
-                  <span className="shrink-0 whitespace-nowrap text-[11.5px] text-muted">{timeAgo(r.createdAt, lang)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-[11px] text-muted">{timeAgo(r.createdAt, lang)}</span>
                 </li>
               ))}
             </ul>
           )}
           {kpi.lastSeenAt && (
-            <div className="mt-2 text-[11.5px] text-muted">
+            <div className="mt-2 text-[11px] text-muted">
               {say('Last draft:', 'Последний черновик:')} {timeAgo(kpi.lastSeenAt, lang)}
             </div>
           )}

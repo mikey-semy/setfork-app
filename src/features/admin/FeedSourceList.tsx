@@ -37,7 +37,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           материал из неё никому не достанется. */}
       <form action={addFeedSource} className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3.5 sm:flex-row sm:items-end">
         <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-[11.5px] uppercase tracking-wide text-muted">{say('Feed address', 'Адрес потока')}</span>
+          <span className="text-[11px] uppercase tracking-wide text-muted">{say('Feed address', 'Адрес потока')}</span>
           <input
             name="url"
             required
@@ -47,7 +47,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           />
         </label>
         <label className="flex min-w-0 flex-col gap-1 sm:w-[200px]">
-          <span className="text-[11.5px] uppercase tracking-wide text-muted">{say('Topic', 'Тема')}</span>
+          <span className="text-[11px] uppercase tracking-wide text-muted">{say('Topic', 'Тема')}</span>
           <input
             name="tags"
             required
@@ -56,7 +56,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           />
         </label>
         <label className="flex flex-col gap-1 sm:w-[96px]">
-          <span className="text-[11.5px] uppercase tracking-wide text-muted">{say('Hours', 'Часы')}</span>
+          <span className="text-[11px] uppercase tracking-wide text-muted">{say('Hours', 'Часы')}</span>
           <input
             name="everyHours"
             type="number"
@@ -99,7 +99,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
                   {r.title || r.url.replace(/^https?:\/\//, '')}
                 </a>
               </div>
-              {r.lastError && <div className="mt-0.5 truncate text-[11.5px] text-warn" title={r.lastError}>{r.lastError}</div>}
+              {r.lastError && <div className="mt-0.5 truncate text-[11px] text-warn" title={r.lastError}>{r.lastError}</div>}
             </div>
             <div className="flex min-w-0 flex-wrap gap-1">
               {r.tags.map((t) => (
@@ -111,7 +111,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
               {r.items} / <span className={r.fresh ? 'text-ok' : ''}>{r.fresh}</span>
             </span>
             <div className="flex items-center justify-end gap-0.5">
-              <span className="mr-1 hidden text-[11.5px] text-muted sm:inline">{r.lastPulledAt ? timeAgo(r.lastPulledAt, lang) : '—'}</span>
+              <span className="mr-1 hidden text-[11px] text-muted sm:inline">{r.lastPulledAt ? timeAgo(r.lastPulledAt, lang) : '—'}</span>
               {/* Служебные действия — иконками в правом углу строки: на мобиле три подписи не
                   влезут, а иконка с подсказкой понятна и в 360px. */}
               <form action={pullFeedNow}>

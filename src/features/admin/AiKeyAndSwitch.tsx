@@ -79,7 +79,7 @@ export function AiKeyAndSwitch({
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="text-[14px] font-medium text-ink">{say('Drafting enabled', 'Черновики включены')}</div>
-          <p className="text-[12px] text-muted">
+          <p className="text-[12.5px] text-muted">
             {canEnable
               ? say('Lists can be drafted automatically.', 'Списки можно придумывать автоматически.')
               : say('Enter an API key below first.', 'Сначала укажите API-ключ ниже.')}

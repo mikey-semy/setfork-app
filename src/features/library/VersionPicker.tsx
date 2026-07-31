@@ -45,7 +45,7 @@ export function VersionPicker({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[12px] text-muted">{fromLabel}</span>
+      <span className="text-[12.5px] text-muted">{fromLabel}</span>
       {picker(from, (v) => go(v, to))}
       <Tooltip label={swapLabel}>
         <button
@@ -57,7 +57,7 @@ export function VersionPicker({
           <ArrowLeftRight size={14} />
         </button>
       </Tooltip>
-      <span className="text-[12px] text-muted">{toLabel}</span>
+      <span className="text-[12.5px] text-muted">{toLabel}</span>
       {picker(to, (v) => go(from, v))}
     </div>
   )

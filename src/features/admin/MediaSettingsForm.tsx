@@ -35,7 +35,7 @@ export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="text-[14px] font-medium text-ink">{ru ? 'Отдавать через imgproxy' : 'Serve via imgproxy'}</div>
-          <p className="text-[12px] text-muted">
+          <p className="text-[12.5px] text-muted">
             {ru ? 'Выкл — картинки берутся напрямую (без трансформаций).' : 'Off — images are used directly (no transforms).'}
           </p>
         </div>

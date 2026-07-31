@@ -137,7 +137,7 @@ export function RunView({
       <div className="sticky top-[64px] z-10 mb-5 rounded-lg border border-border bg-surface/95 p-4 backdrop-blur-sm">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="truncate text-[15px] font-semibold text-ink">{title}</div>
+            <div className="truncate text-[16px] font-semibold text-ink">{title}</div>
             <div className="text-[12.5px] text-ink-2">
               {status === 'done' ? (
                 t('runDone', lang)
@@ -302,8 +302,8 @@ export function RunView({
                   {s.done ? <SquareCheckBig size={20} /> : <Square size={20} />}
                 </button>
                 <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-2 pt-1">
-                  {ordered && <span className="font-mono text-[12px] text-muted">{stepNo}</span>}
-                  <span className={`text-[14.5px] font-semibold ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
+                  {ordered && <span className="font-mono text-[12.5px] text-muted">{stepNo}</span>}
+                  <span className={`text-[14px] font-semibold ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
                   <StepLevelBadge level={s.level} lang={lang} />
                 </div>
               </div>
@@ -321,7 +321,7 @@ export function RunView({
                 )}
 
                 {s.command && (
-                  <div className="flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12px] text-ink">
+                  <div className="flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12.5px] text-ink">
                     <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
                     <span className="no-scrollbar min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{s.command}</span>
                     <CopyButton text={s.command} />
@@ -348,11 +348,11 @@ export function RunView({
                   <div className="flex flex-wrap gap-2">
                     {s.refs.map((r) =>
                       r.url ? (
-                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-accent">
+                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] text-accent">
                           {r.label}
                         </SafeLink>
                       ) : (
-                        <span key={`${r.label}:`} className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11.5px] text-ink-2">
+                        <span key={`${r.label}:`} className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] text-ink-2">
                           {r.label}
                         </span>
                       ),
@@ -402,12 +402,12 @@ export function RunView({
                       <button
                         type="button"
                         onClick={() => start(() => reportBlockedStep(runId, s.id))}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-ink hover:border-border-strong"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[12.5px] font-medium text-ink hover:border-border-strong"
                       >
                         <Flag size={12} /> {t('runReport', lang)}
                       </button>
                       {!closed && (
-                        <button type="button" onClick={() => unblock(i)} className="rounded-md px-2.5 py-1.5 text-[12px] text-ink-2 hover:text-ink">
+                        <button type="button" onClick={() => unblock(i)} className="rounded-md px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:text-ink">
                           {t('runUnblock', lang)}
                         </button>
                       )}

@@ -102,7 +102,7 @@ export default async function ExplorePage({
                     <span className="text-muted">{l.ownerHandle}/</span>
                     {tr(l.title, lang)}
                   </span>
-                  <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-muted">
+                  <span className="inline-flex shrink-0 items-center gap-1 text-[12.5px] text-muted">
                     <Star size={12} /> {l.starsCount}
                   </span>
                 </Link>
@@ -114,7 +114,7 @@ export default async function ExplorePage({
                   <Avatar handle={p.handle} avatarUrl={p.avatarUrl} size={26} />
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-medium text-ink">{p.name ?? p.handle}</span>
-                    <span className="block truncate text-[12px] text-muted">@{p.handle}</span>
+                    <span className="block truncate text-[12.5px] text-muted">@{p.handle}</span>
                   </span>
                 </Link>
               ))}

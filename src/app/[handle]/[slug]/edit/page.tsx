@@ -76,8 +76,8 @@ export default async function EditPage({
         <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
           <input type="checkbox" name="gated" defaultChecked={tpl.gated} className="mt-0.5" />
           <span>
-            <span className="block text-[13.5px] font-medium text-ink">{lang === 'ru' ? 'Последовательный курс' : 'Sequential course'}</span>
-            <span className="block text-[12px] text-ink-2">{lang === 'ru' ? 'Следующий урок откроется только после сдачи тестов предыдущего' : 'The next lesson unlocks only after passing the previous lesson’s tests'}</span>
+            <span className="block text-[13px] font-medium text-ink">{lang === 'ru' ? 'Последовательный курс' : 'Sequential course'}</span>
+            <span className="block text-[12.5px] text-ink-2">{lang === 'ru' ? 'Следующий урок откроется только после сдачи тестов предыдущего' : 'The next lesson unlocks only after passing the previous lesson’s tests'}</span>
           </span>
         </label>
 

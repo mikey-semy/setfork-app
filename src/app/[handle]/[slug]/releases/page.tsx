@@ -85,13 +85,13 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
             {rels.map((r) => (
               <div key={r.id} className="rounded-lg border border-border bg-surface p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="px-2.5 font-mono text-[12px] text-ink">
+                  <Badge className="px-2.5 font-mono text-[12.5px] text-ink">
                     <Tag size={12} className="text-muted" /> {r.tag}
                   </Badge>
                   {r.id === latestId && <Badge variant="ok">{t('latest', lang)}</Badge>}
                   {r.prerelease && <Badge variant="warn">{t('preRelease', lang)}</Badge>}
                   <UserLine handle={r.authorHandle} avatarUrl={r.authorAvatarUrl} size="xs" />
-                  <span className="font-mono text-[11.5px] text-muted">{timeAgo(r.createdAt, lang)} · v{r.version}</span>
+                  <span className="font-mono text-[11px] text-muted">{timeAgo(r.createdAt, lang)} · v{r.version}</span>
                   {canManage && (
                     <form action={deleteRelease.bind(null, r.id)} className="ml-auto">
                       <SubmitButton variant="danger" size="xs" aria-label={ru ? 'Удалить релиз' : 'Delete release'}>
@@ -109,7 +109,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
                 )}
 
                 <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border/60 pt-2.5 text-[12.5px]">
-                  <span className="text-[10.5px] font-semibold uppercase tracking-widest text-muted">Assets</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-widest text-muted">Assets</span>
                   <a href={`${base}/export?format=md`} className="inline-flex items-center gap-1.5 text-ink-2 hover:text-accent">
                     <FileText size={13} /> markdown
                   </a>

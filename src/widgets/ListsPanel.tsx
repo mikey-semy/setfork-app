@@ -118,7 +118,7 @@ export function ListsPanel({
     headerStyle === 'mono' ? (
       <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">{title}</span>
     ) : (
-      <span className="text-[12px] font-semibold text-muted">{title}</span>
+      <span className="text-[12.5px] font-semibold text-muted">{title}</span>
     )
 
   return (
@@ -189,10 +189,10 @@ export function ListsPanel({
                       поэтому он уходит в хвост, сжимается первым и на узкой колонке
                       скрывается совсем. */}
                   <span className="min-w-0 flex-1 truncate font-semibold text-ink">{tr(l.title, lang)}</span>
-                  {showOwner && <span className="hidden min-w-0 shrink truncate text-[11.5px] font-normal text-muted sm:inline">{l.handle}</span>}
+                  {showOwner && <span className="hidden min-w-0 shrink truncate text-[11px] font-normal text-muted sm:inline">{l.handle}</span>}
                   {active && <Check size={14} className="ml-auto shrink-0 text-accent" />}
                   {showVersion && l.version !== undefined && (
-                    <span className="ml-auto shrink-0 font-mono text-[10.5px] text-muted">v{l.version}</span>
+                    <span className="ml-auto shrink-0 font-mono text-[11px] text-muted">v{l.version}</span>
                   )}
                 </Link>
                 )

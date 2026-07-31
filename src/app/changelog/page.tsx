@@ -45,7 +45,7 @@ export default async function ChangelogPage() {
             return (
               <div key={`${e.at.toISOString()}${text}`} className="relative">
                 <span className="absolute left-[-19px] top-[6px] h-[9px] w-[9px] rounded-full border border-border-strong bg-surface-2" />
-                <div className="font-mono text-[11.5px] text-muted">{fmt.format(e.at)}</div>
+                <div className="font-mono text-[11px] text-muted">{fmt.format(e.at)}</div>
                 {/* Запись ведёт в свой источник (PR или релиз) — иначе changelog
                     это список фраз, по которым не посмотреть, что изменилось. */}
                 {e.href ? (
@@ -53,12 +53,12 @@ export default async function ChangelogPage() {
                     href={e.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-0.5 block text-[14.5px] leading-relaxed text-ink hover:text-accent"
+                    className="mt-0.5 block text-[14px] leading-relaxed text-ink hover:text-accent"
                   >
                     {text}
                   </a>
                 ) : (
-                  <div className="mt-0.5 text-[14.5px] leading-relaxed text-ink">{text}</div>
+                  <div className="mt-0.5 text-[14px] leading-relaxed text-ink">{text}</div>
                 )}
               </div>
             )

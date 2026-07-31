@@ -83,7 +83,7 @@ export function QualifierSearch({
   hint?: React.ReactNode
   containerClassName?: string
 }) {
-  const textCls = size === 'sm' ? 'text-[13px]' : 'text-[13.5px]'
+  const textCls = size === 'sm' ? 'text-[13px]' : 'text-[14px]'
   const router = useRouter()
   const [value, setValue] = useState(initial)
   const [sugs, setSugs] = useState<Suggestion[]>([])
@@ -293,7 +293,7 @@ export function QualifierSearch({
                   ) : (
                     <>
                       <span className="truncate">{s.label}</span>
-                      {s.sub && <span className="ml-auto shrink-0 truncate pl-2 text-[11.5px] text-muted">{s.sub}</span>}
+                      {s.sub && <span className="ml-auto shrink-0 truncate pl-2 text-[11px] text-muted">{s.sub}</span>}
                       {s.count != null && <span className="ml-auto shrink-0 font-mono text-[11px] text-muted">{s.count}</span>}
                     </>
                   )}

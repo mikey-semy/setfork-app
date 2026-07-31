@@ -227,11 +227,11 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
           ),
         )}
         {pending && (
-          <div className="flex items-center gap-2 text-[12px] text-muted">
+          <div className="flex items-center gap-2 text-[12.5px] text-muted">
             <Loader2 size={13} className="animate-spin" /> {say('digging…', 'копает…')}
           </div>
         )}
-        {err && <p className="text-[12px] text-warn">{err}</p>}
+        {err && <p className="text-[12.5px] text-warn">{err}</p>}
         {chipRow}
       </div>
 

@@ -175,12 +175,12 @@ export function DiffComments({
           {open && (
             <div className="rounded-md border border-border bg-surface p-2.5">
               {quote && (
-                <div className="mb-2 border-l-2 border-accent/50 pl-2 text-[12px] text-ink-2">
+                <div className="mb-2 border-l-2 border-accent/50 pl-2 text-[12.5px] text-ink-2">
                   <span className="text-muted">{labels.onSelection}: </span>
                   <span className="[overflow-wrap:anywhere]">«{quote}»</span>
                 </div>
               )}
-              {!quote && !replyTo && <div className="mb-2 text-[12px] text-muted">{labels.onBlock}</div>}
+              {!quote && !replyTo && <div className="mb-2 text-[12.5px] text-muted">{labels.onBlock}</div>}
               {/* Общий редактор: тулбар, Write/Preview, @mention, вложения. */}
               <MarkdownEditor
                 name="body"
@@ -204,7 +204,7 @@ export function DiffComments({
                 </button>
               ) : (
                 <div className="mt-2 rounded-md border border-accent/40 bg-(--accent-soft) p-2">
-                  <div className="mb-1.5 flex items-center gap-1.5 text-[12px] text-ink-2">
+                  <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] text-ink-2">
                     <Replace size={13} className="shrink-0 text-accent" />
                     <span className="min-w-0 truncate">{labels.suggestHint}</span>
                     <Tooltip label={labels.cancel}>
@@ -277,12 +277,12 @@ function ThreadCard({
       {/* Честное состояние якоря: перепривязан — с уверенностью; потерян — цитата
           из вмороженного снимка, зачёркнутая, но тред НА МЕСТЕ. */}
       {quote && (
-        <div className={`mb-1.5 border-l-2 pl-2 text-[12px] ${orphaned ? 'border-muted text-muted line-through' : 'border-accent/50 text-ink-2'}`}>
+        <div className={`mb-1.5 border-l-2 pl-2 text-[12.5px] ${orphaned ? 'border-muted text-muted line-through' : 'border-accent/50 text-ink-2'}`}>
           <span className="[overflow-wrap:anywhere]">«{quote}»</span>
         </div>
       )}
       {(orphaned || state.state === 'reanchored' || state.outdated) && (
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-muted">
+        <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
           {/* «Устарел» — отдельно от привязки: якорь может отлично находиться, а
               пункт вокруг него переписан, и спор ниже уже про другое. */}
           {state.outdated && (
@@ -297,13 +297,13 @@ function ThreadCard({
           <div key={c.id} className="flex gap-2">
             <Avatar handle={c.author.handle} avatarUrl={c.author.avatarUrl} size={20} />
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline gap-x-2 text-[12px]">
+              <div className="flex flex-wrap items-baseline gap-x-2 text-[12.5px]">
                 <span className="font-semibold text-ink">{c.author.name || c.author.handle}</span>
                 <span className="text-muted">{timeAgo(c.createdAt, lang)}</span>
                 {/* Свой неотправленный черновик: видно только автору — говорим об этом
                     прямо, иначе он решит, что замечание уже прочитали. */}
                 {c.pending && (
-                  <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[10.5px] font-semibold text-warn">{labels.pendingBadge}</span>
+                  <span className="rounded-full bg-warn/15 px-1.5 py-0.5 text-[11px] font-semibold text-warn">{labels.pendingBadge}</span>
                 )}
               </div>
               <Markdown className="text-[13px]">{c.body}</Markdown>
@@ -312,7 +312,7 @@ function ThreadCard({
                   ровно то, что видно. */}
               {c.suggestedText !== null && (
                 <div className="mt-1.5 overflow-hidden rounded-md border border-accent/40">
-                  <div className="flex items-center gap-1.5 border-b border-accent/30 bg-(--accent-soft) px-2 py-1 text-[11.5px] text-ink-2">
+                  <div className="flex items-center gap-1.5 border-b border-accent/30 bg-(--accent-soft) px-2 py-1 text-[11px] text-ink-2">
                     <Replace size={12} className="shrink-0 text-accent" />
                     <span className="min-w-0 truncate">{labels.suggestLabel}</span>
                     {c.appliedAt ? (
@@ -323,7 +323,7 @@ function ThreadCard({
                       canApply && (
                         <Button
                           variant="ghost"
-                          className="ml-auto h-9 shrink-0 px-2 text-[12px]"
+                          className="ml-auto h-9 shrink-0 px-2 text-[12.5px]"
                           disabled={pending}
                           onClick={() => startTransition(async () => void (await applySuggestedEdit(c.id)))}
                         >
@@ -393,7 +393,7 @@ function ResolvedRow({
 }) {
   const [pending, startTransition] = useTransition()
   return (
-    <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted">
+    <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
       <Check size={13} className="text-ok" />
       <span>
         {labels.resolved}: {resolved.length}

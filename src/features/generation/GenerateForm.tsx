@@ -142,7 +142,7 @@ export function GenerateForm({
               }
             }}
             placeholder={placeholder}
-            className="max-h-40 min-h-[44px] w-full resize-none bg-transparent px-1.5 py-2 text-[15px] leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70"
+            className="max-h-40 min-h-[44px] w-full resize-none bg-transparent px-1.5 py-2 text-[15px] leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70 max-sm:text-[16px]"
           />
           <button
             type="submit"
@@ -157,7 +157,7 @@ export function GenerateForm({
         {/* Тип списка — ДО генерации: «Авто» угадывает по запросу, явный выбор экономит
             целую генерацию при промахе. На узком экране пилюли переносятся, не прячутся. */}
         {!launching && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[12px]">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[12.5px]">
             <button
               type="button"
               onClick={() => setKind('')}
@@ -187,7 +187,7 @@ export function GenerateForm({
         {/* Объём списка. Уровень уезжает в колонку generations.detail, поэтому переживает
             «ещё вариант» — и его же можно переключить потом прямо в чате. */}
         {!launching && (
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[12px]">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[12.5px]">
             {DETAIL_LEVELS.map((lv) => (
               <button
                 key={lv}
@@ -207,7 +207,7 @@ export function GenerateForm({
         {/* Прошлые черновики: за историей логичнее всего идти отсюда же. */}
         {!launching && (
           <div className="mt-3 text-center">
-            <Link href="/generate/history" className="text-[12px] text-muted hover:text-ink">
+            <Link href="/generate/history" className="text-[12.5px] text-muted hover:text-ink">
               {say('Draft history', 'История генераций')}
             </Link>
           </div>

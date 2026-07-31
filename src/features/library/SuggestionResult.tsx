@@ -100,7 +100,7 @@ export function SuggestionResult({ items, lang, ordered = true }: { items: Propo
                 <span className="mt-0.5 font-mono text-[13px] text-muted">{ordered && num ? num : '•'}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[14.5px] font-semibold text-ink">{tr(it.title, lang)}</span>
+                    <span className="text-[14px] font-semibold text-ink">{tr(it.title, lang)}</span>
                     <StepLevelBadge level={it.level} lang={lang} />
                   </div>
                   {tr(it.desc, lang) && <Markdown className="mt-1">{tr(it.desc, lang)}</Markdown>}

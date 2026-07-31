@@ -40,8 +40,8 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
 
       {c.lists.length > 0 && (
         <section className="mt-6">
-          <h2 className="mb-3 text-[15px] font-semibold text-ink">
-            {ru ? 'Списки' : 'Lists'} <span className="font-mono text-[12px] text-muted">{c.lists.length}</span>
+          <h2 className="mb-3 text-[16px] font-semibold text-ink">
+            {ru ? 'Списки' : 'Lists'} <span className="font-mono text-[12.5px] text-muted">{c.lists.length}</span>
           </h2>
           <FeedList items={c.lists} lang={lang} viewerId={session?.userId} className="flex flex-col gap-3" />
         </section>
@@ -49,8 +49,8 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
 
       {c.catalogs.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-3 text-[15px] font-semibold text-ink">
-            {ru ? 'Каталоги' : 'Catalogs'} <span className="font-mono text-[12px] text-muted">{c.catalogs.length}</span>
+          <h2 className="mb-3 text-[16px] font-semibold text-ink">
+            {ru ? 'Каталоги' : 'Catalogs'} <span className="font-mono text-[12.5px] text-muted">{c.catalogs.length}</span>
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {c.catalogs.map((cat) => (
@@ -64,7 +64,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
                   <span className="truncate font-semibold text-accent group-hover:underline">{tr(cat.title, lang) || cat.name}</span>
                 </div>
                 {tr(cat.desc, lang) && <p className="mt-1 line-clamp-2 text-[12.5px] text-ink-2">{tr(cat.desc, lang)}</p>}
-                <div className="mt-2 flex items-center gap-2 text-[11.5px] text-muted">
+                <div className="mt-2 flex items-center gap-2 text-[11px] text-muted">
                   <Avatar handle={cat.ownerHandle} avatarUrl={cat.ownerAvatarUrl} size={16} />
                   <span>{cat.ownerHandle}</span>
                   <span className="font-mono">· {cat.listCount} {ru ? 'списков' : 'lists'}</span>
@@ -76,7 +76,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
       )}
 
       {c.lists.length === 0 && c.catalogs.length === 0 && (
-        <p className="mt-8 rounded-lg border border-dashed border-border py-12 text-center text-[13.5px] text-muted">
+        <p className="mt-8 rounded-lg border border-dashed border-border py-12 text-center text-[13px] text-muted">
           {ru ? 'Подборка пока пуста.' : 'This collection is empty for now.'}
         </p>
       )}

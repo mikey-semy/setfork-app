@@ -196,7 +196,7 @@ export function QuizBlock({
     <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-2.5 flex items-center gap-2">
         <GraduationCap size={15} className="shrink-0 text-accent" />
-        <span className="text-[14.5px] font-semibold text-ink">{content.question || (ru ? 'Тест' : 'Quiz')}</span>
+        <span className="text-[14px] font-semibold text-ink">{content.question || (ru ? 'Тест' : 'Quiz')}</span>
       </div>
 
       {kind === 'choice' && (
@@ -336,7 +336,7 @@ export function QuizBlock({
       <div className="mt-3 flex items-center gap-2">
         {readOnly ? (
           // Снимок прошлой версии: отвечать некуда — вместо кнопки честная подпись.
-          <span className="text-[12px] text-muted">{t('quizSnapshotReadOnly', lang)}</span>
+          <span className="text-[12.5px] text-muted">{t('quizSnapshotReadOnly', lang)}</span>
         ) : !checked ? (
           <Button variant="primary" disabled={!hasInput || pending || (clientMode && !clientHasAnswer)} onClick={check}>
             {pending && <Loader2 size={13} className="animate-spin" />}
@@ -348,14 +348,14 @@ export function QuizBlock({
               {ok ? <Check size={15} /> : <X size={15} />}
               {ok ? (ru ? 'Верно' : 'Correct') : ru ? 'Неверно' : 'Incorrect'}
             </span>
-            {!clientMode && attempts > 1 && <span className="text-[11.5px] text-muted">{ru ? `попытка ${attempts}` : `attempt ${attempts}`}</span>}
-            <button type="button" onClick={reset} className="ml-auto inline-flex items-center gap-1 text-[12px] text-muted hover:text-ink">
+            {!clientMode && attempts > 1 && <span className="text-[11px] text-muted">{ru ? `попытка ${attempts}` : `attempt ${attempts}`}</span>}
+            <button type="button" onClick={reset} className="ml-auto inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-ink">
               <RotateCcw size={13} /> {ru ? 'Заново' : 'Retry'}
             </button>
           </>
         )}
         {!checked && (multi || (clientMode && !clientHasAnswer)) && (
-          <span className="text-[11.5px] text-muted">
+          <span className="text-[11px] text-muted">
             {clientMode && !clientHasAnswer ? (ru ? 'нет ответа для проверки' : 'no answer set') : ru ? 'выберите все верные' : 'select all correct'}
           </span>
         )}
@@ -363,13 +363,13 @@ export function QuizBlock({
 
       {/* Верный ответ (text/number) — когда ответ неверный. */}
       {checked && !ok && kind !== 'choice' && revealText && (
-        <p className="mt-2 text-[12px] text-ink-2">
+        <p className="mt-2 text-[12.5px] text-ink-2">
           {ru ? 'Верный ответ: ' : 'Correct answer: '}
           <span className="font-medium text-ink">{revealText}</span>
         </p>
       )}
 
-      {err && <p className="mt-2 text-[12px] text-danger">{err}</p>}
+      {err && <p className="mt-2 text-[12.5px] text-danger">{err}</p>}
 
       {checked && content.explain && (
         <p className="mt-2.5 rounded-md border border-border bg-surface-2 px-3 py-2 text-[12.5px] leading-relaxed text-ink-2">{content.explain}</p>

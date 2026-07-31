@@ -173,7 +173,7 @@ export function TopNav({
         >
           <Menu size={21} strokeWidth={2.75} />
         </button>
-        <Link href="/" className="font-logo text-[19px] leading-none text-ink" aria-label="SetFork">
+        <Link href="/" className="font-logo text-[18px] leading-none text-ink" aria-label="SetFork">
           SF
         </Link>
       </div>
@@ -270,7 +270,7 @@ export function TopNav({
       {/* На самой странице поиска поля в шапке НЕТ: оно живёт в контенте страницы во всю
           ширину. В шапке на мобильном оно сжималось до ~100px (лого + язык + «Войти»
           съедали ширину) и было бесполезным, да и дублировать функцию страницы незачем. */}
-      {title && <span className="ml-1 truncate text-[15px] font-semibold text-ink">{title}</span>}
+      {title && <span className="ml-1 truncate text-[16px] font-semibold text-ink">{title}</span>}
 
       {/* Правая группа не сжимается: место отдаёт бредкрамб (у него truncate), а
           аватар и иконки держат свой размер — иначе аватар плющится в овал. */}
