@@ -224,6 +224,9 @@ export interface GitCore {
   mergeResolved(repo: GitRepoRef, branch: string, content: ListContent, opts?: MergeOptions): Promise<MergeResult>
   /** Git-тег релиза на коммит версии (у версии уже есть тег vN). → sha коммита. */
   createTag(repo: GitRepoRef, name: string, version: number): Promise<string>
+  /** Ф3: пуш зеркала сейчас. Исход в теле (текст ошибки — владельцу в статус),
+   *  не исключением: ошибка сети форджи — легитимный ответ. */
+  mirrorPush(repo: GitRepoRef): Promise<{ ok: boolean; error: string }>
   /** A5: влить main в ветку (обратное слияние). main не двигается → версии нет.
    *  Бросает BranchOpError('conflict'|'nothing-to-merge'|'not-found'). */
   updateBranch(repo: GitRepoRef, name: string): Promise<{ tipSha: string; fastForward: boolean }>

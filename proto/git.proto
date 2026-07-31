@@ -61,6 +61,11 @@ service GitCore {
   // ListTags — интроспекция (сверка releases-БД ↔ git-теги при инцидентах,
   // grpcurl через reflection); UI-потребителя нет и не планируется (HQ ADR-0012).
   rpc ListTags(RepoRef) returns (TagsResponse);
+  // Ф3: пуш зеркала СЕЙЧАС (кнопка «Синхронизировать» и после сохранения
+  // настроек). Исход — в теле (ok/error), НЕ gRPC-ошибкой: текст ошибки —
+  // легитимный ответ для показа владельцу. Фоновые пуши после записи main
+  // ядро делает само, этот RPC для ручного толчка.
+  rpc MirrorPush(RepoRef) returns (MirrorPushResponse);
   // A5: обновить ветку из main (ОБРАТНОЕ слияние). Нужно, когда main ушёл вперёд:
   // без этого единственный выход из расхождения — ручной резолвер конфликтов,
   // хотя обычно достаточно влить main в ветку. main не двигается → проекции нет.
@@ -270,4 +275,10 @@ message BranchSnapshotResponse {
   repeated string tags = 5;
   bool ordered = 6;
   repeated SnapshotStep steps = 7;
+}
+
+// Ф3: исход пуша зеркала.
+message MirrorPushResponse {
+  bool ok = 1;
+  string error = 2; // '' при ok; текст без кредов
 }

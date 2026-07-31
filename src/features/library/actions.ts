@@ -62,6 +62,13 @@ async function gitPort() {
   return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError }
 }
 
+/** Ф3: пуш зеркала через ядро. Живёт здесь, а не в mirror-actions: порт
+ *  features/git разрешён только из этого файла (baseline границ линтера). */
+export async function pushListMirror(owner: string, slug: string): Promise<{ ok: boolean; error: string }> {
+  const { gitCore } = await gitPort()
+  return gitCore.mirrorPush({ owner, slug }).catch(() => ({ ok: false, error: 'core unavailable' }))
+}
+
 // ── Видимость списка (public/private) и удаление ─────────────────────
 export async function setListVisibility(templateId: string, visibility: 'public' | 'private'): Promise<void> {
   const session = await requireSession()

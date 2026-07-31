@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { FolderGit2, GitPullRequest, Image as ImageIcon, Info, LayoutTemplate, Radio, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
+import { FolderGit2, GitFork, GitPullRequest, Image as ImageIcon, Info, LayoutTemplate, Radio, SlidersHorizontal, TriangleAlert, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
@@ -8,6 +8,7 @@ import { getListCover, getListMeta } from '@/features/library/queries'
 import { getCollaborators } from '@/features/collab/queries'
 import { getPendingTransfer } from '@/features/transfer/queries'
 import { CollaboratorsSection } from '@/features/collab/CollaboratorsSection'
+import { MirrorSection } from '@/features/library/MirrorSection'
 import { getOwnerCatalogs } from '@/features/catalogs/queries'
 import { CatalogSection } from '@/features/catalogs/CatalogSection'
 import { ListSettingsDanger } from '@/features/library/ListSettingsDanger'
@@ -69,6 +70,22 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
       icon: <FolderGit2 size={15} />,
       keywords: ['catalog', 'repository', 'group', 'каталог', 'репозиторий', 'группа'],
       content: <CatalogSection templateId={meta.id} currentId={meta.repositoryId} catalogs={catalogs} lang={lang} />,
+    },
+    {
+      id: 'mirror',
+      title: t('mirrorTitle', lang),
+      icon: <GitFork size={15} />,
+      keywords: ['mirror', 'github', 'gitlab', 'push', 'backup', 'зеркало', 'бэкап'],
+      content: (
+        <MirrorSection
+          templateId={meta.id}
+          url={meta.mirrorUrl}
+          hasToken={!!meta.mirrorHasToken}
+          syncedAt={meta.mirrorSyncedAt}
+          error={meta.mirrorError}
+          lang={lang}
+        />
+      ),
     },
     {
       id: 'collaborators',
