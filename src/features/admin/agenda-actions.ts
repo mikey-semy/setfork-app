@@ -18,7 +18,7 @@ export async function decideAgendaItem(formData: FormData): Promise<void> {
   const id = String(formData.get('id') ?? '')
   const raw = String(formData.get('decision') ?? '')
   const status = raw === 'approved' || raw === 'dismissed' ? raw : null
-  if (!id || !status) redirect('/admin/development')
+  if (!id || !status) redirect('/admin/company')
   // ОДОБРИЛИ — значит у работы появляется ХОЗЯИН: один специалист, отвечающий за пункт от
   // начала до конца («имя, а не отдел»). Берём профильного мастера по теме пункта — того же,
   // кто и будет её вести; нет профильного (общефирменный пункт вроде спроса без ответа) —
@@ -39,6 +39,6 @@ export async function decideAgendaItem(formData: FormData): Promise<void> {
     .update(agendaItems)
     .set({ status, ownerExpertId, decidedBy: admin.userId, decidedAt: new Date(), updatedAt: new Date() })
     .where(eq(agendaItems.id, id))
-  revalidatePath('/admin/development')
-  redirect('/admin/development#agenda')
+  revalidatePath('/admin/company')
+  redirect('/admin/company#agenda')
 }

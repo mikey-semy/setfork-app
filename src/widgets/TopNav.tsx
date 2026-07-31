@@ -155,11 +155,13 @@ export function TopNav({
                 ? t('newList', lang)
                 : pathname.startsWith('/notifications')
                   ? t('notifications', lang)
-                  : pathname.startsWith('/admin/council')
+                  : pathname.startsWith('/admin/company/staff')
                     ? t('councilHall', lang)
-                    : pathname.startsWith('/admin')
-                      ? t('admin', lang)
-                      : ''
+                    : pathname.startsWith('/admin/company')
+                      ? t('adminCompany', lang)
+                      : pathname.startsWith('/admin')
+                        ? t('admin', lang)
+                        : ''
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5 print:hidden">

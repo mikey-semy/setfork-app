@@ -66,7 +66,7 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
                 <Avatar handle={r.handle ?? r.id} avatarUrl={r.avatarUrl} size={28} />
                 <div className="min-w-0">
                   {/* Вся строка ведёт к настройкам этого специалиста — как список к своим. */}
-                  <Link href={`/admin/council/${r.id}`} className="block truncate text-[13.5px] font-medium text-ink hover:text-accent">
+                  <Link href={`/admin/company/staff/${r.id}`} className="block truncate text-[13.5px] font-medium text-ink hover:text-accent">
                     {r.name}
                   </Link>
                   <div className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-muted">

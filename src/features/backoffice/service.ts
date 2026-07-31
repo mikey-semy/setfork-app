@@ -138,7 +138,7 @@ export async function runFinanceSweep(): Promise<FinanceResult> {
     })
     if (!claimed) continue // ключ уже занят: эту тревогу сегодня уже отправляли
     out.alerts++
-    const delivery = await tellOwner(`SetFork: ${a.subject}`, `<p>${a.text}</p><p><a href="https://setfork.ru/admin/development">Дашборд развития</a></p>`)
+    const delivery = await tellOwner(`SetFork: ${a.subject}`, `<p>${a.text}</p><p><a href="https://setfork.ru/admin/company">Дашборд развития</a></p>`)
     out.sent += delivery.sent
     // Не дошло — записываем ОТДЕЛЬНОЙ строкой без ключа: заявка уже занята, но факт «тревога
     // не доставлена» обязан быть виден, иначе журнал врал бы бодрым 'ok'.
@@ -214,7 +214,7 @@ export async function runChronicleSweep(): Promise<ChronicleResult> {
 
   const html = `<p>День компании, ${date}:</p><ul>${rows.map(([k, n]) => `<li>${k}: ${n}</li>`).join('')}</ul>` +
     (day.holdReasons.length ? `<p>Почему не пропустила планка: ${day.holdReasons.map((r) => `${r.reason} (${r.times})`).join('; ')}</p>` : '') +
-    `<p><a href="https://setfork.ru/admin/development">Дашборд развития</a></p>`
+    `<p><a href="https://setfork.ru/admin/company">Дашборд развития</a></p>`
   // Ключ на дату — ДО отправки: две задачи на один день (рестарт, второй инстанс) иначе
   // прислали бы сводку дважды.
   const claimed = await recordAgentAction({

@@ -16,14 +16,12 @@ import Link from 'next/link'
 import { Megaphone } from 'lucide-react'
 import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, LayoutDashboard, Mail, MessageSquare, RefreshCw, Rss, ScrollText, Search, Shield, Tag, TrendingUp, Users, Wrench } from 'lucide-react'
 import { fetchModels, EMBEDDING_DIM, type ModelOption } from '@/shared/ai/models'
-import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { buildOpts, withSavedOption } from '@/features/admin/model-options'
 import { AiProviderModels } from '@/features/admin/AiProviderModels'
 import { AssistFields } from '@/features/admin/AssistFields'
-import { CouncilFields } from '@/features/admin/CouncilFields'
 import { MediaSettingsForm } from '@/features/admin/MediaSettingsForm'
 import { EmailSettingsForm } from '@/features/admin/EmailSettingsForm'
 import { PushSettingsForm } from '@/features/admin/PushSettingsForm'
@@ -46,18 +44,6 @@ import { Alert } from '@/shared/ui/Alert'
 // и разъехались — экшен свою потерял, и селект после переключения оставался пустым.
 const ensure = withSavedOption
 
-/** Встроенные персонажи для галереи — читаем каталог, а не держим список руками:
- *  дорисовали картинку в public/gnomes — она появилась в выборе сама. */
-async function builtinAvatars(): Promise<string[]> {
-  const { readdir } = await import('node:fs/promises')
-  const { join } = await import('node:path')
-  try {
-    const files = await readdir(join(process.cwd(), 'public', 'gnomes'))
-    return files.filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -5)).sort()
-  } catch {
-    return []
-  }
-}
 
 export const metadata = { title: 'Admin' }
 
@@ -124,10 +110,6 @@ export default async function AdminPage() {
   const models = await fetchModels() // сам вернёт пустой каталог, если провайдер не сконфигурирован
 
   const chatOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.chatModel)
-  // Ростер и галерея встроенных персонажей — читаем на сервере: клиенту не нужен доступ к БД и fs.
-  const [rosterRows, gallery, uploaded] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars()])
-  // Загруженная картинка идёт готовым URL (imgproxy/диск) — клиент не должен знать про S3-ключи.
-  const roster = rosterRows.map((e) => ({ ...e, uploadedUrl: e.avatarUploaded ? uploaded[e.id] : undefined }))
   const fallbackOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.fallbackModel)
   // Валюта — из каталога, а не 'USD' константой: эмбеддинги у RU-провайдеров считаются в ₽.
   const embOpts = ensure(buildOpts(models.embedding, true, lang, models.currency, models.pricesKnown), settings.embeddingModel)
@@ -196,13 +178,13 @@ export default async function AdminPage() {
         <SettingsSection
           title={T.ai}
           footer={
-            /* Ростер уехал на свою страницу: экспертов много, у каждого инструкция в несколько строк —
-               в узкой колонке настроек они не помещались. Здесь только вход. */
+            /* Компания уехала в свой раздел целиком — и состав, и её рубильники (совет,
+               самогенерация, планка). Здесь остаётся указатель: сюда за ними приходили годами. */
             <Link
-              href="/admin/council"
+              href="/admin/company/settings"
               className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[13px] text-ink-2 hover:text-ink"
             >
-              <Bot size={14} /> {say('Council hall — experts, instructions, avatars', 'Зал совета — эксперты, инструкции, аватарки')}
+              <Bot size={14} /> {say('Company — council, self-generation, bar', 'Компания — совет, самогенерация, планка')}
             </Link>
           }
         >
@@ -272,26 +254,9 @@ export default async function AdminPage() {
             {/* Подпись про валюту цен и блок контроля расходов переехали в AiProviderModels:
                 здесь они рендерились по СОХРАНЁННОМУ провайдеру и врали при переключении. */}
 
-            <CouncilFields
-              modelOptions={chatOpts}
-              v={{
-                enabled: settings.councilEnabled,
-                audience: settings.councilAudience,
-                maxGnomes: settings.councilMaxGnomes,
-                models: settings.councilModels.join(', '),
-                webSeek: settings.councilWebSeek,
-                clarify: settings.councilClarify,
-                maxPerMonth: settings.councilMaxPerMonth,
-                selfGenMode: settings.selfGenMode,
-                selfGenPerDay: settings.selfGenPerDay,
-                selfGenPerSweep: settings.selfGenPerSweep,
-                readinessMode: settings.readinessMode,
-                readinessMinSteps: settings.readinessMinSteps,
-                readinessMinGrade: settings.readinessMinGrade,
-                readinessPerDay: settings.readinessPerDay,
-              }}
-              ru={ru}
-            />
+            {/* Настройки компании (совет, самогенерация, планка готовности) уехали на
+                /admin/company/settings и сохраняются своим экшеном — см. setCompanySettings.
+                Держать их в этой форме значило переписывать одно решение другим. */}
 
             <AssistFields v={{ enabled: settings.assistEnabled, audience: settings.assistAudience }} ru={ru} />
 

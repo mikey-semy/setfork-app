@@ -1,4 +1,4 @@
-import { BarChart3, Flag, FolderGit2, LayoutDashboard, Megaphone, MessageSquare, Palette, Rss, ScrollText, Shield, Tag, TrendingUp } from 'lucide-react'
+import { BarChart3, Flag, FolderGit2, LayoutDashboard, Megaphone, MessageSquare, Palette, Rss, ScrollText, Shield, SlidersHorizontal, Tag, TrendingUp, Users } from 'lucide-react'
 import { t, tr, type Lang } from '@/shared/i18n'
 import type { AdminNavGroup } from './AdminNav'
 
@@ -13,10 +13,23 @@ export function adminNavGroups(lang: Lang): AdminNavGroup[] {
       title: say('Overview', 'Обзор'),
       links: [
         { href: '/admin/dashboard', label: tr({ en: 'Dashboard', ru: 'Дашборд' }, lang), icon: <LayoutDashboard size={14} /> },
-        { href: '/admin/development', label: tr({ en: 'Development', ru: 'Развитие' }, lang), icon: <TrendingUp size={14} /> },
         { href: '/admin/usage', label: say('Draft usage', 'Расход на черновики'), icon: <BarChart3 size={14} /> },
         { href: '/admin/audit', label: say('Audit', 'Аудит'), icon: <ScrollText size={14} /> },
         { href: '/admin/ui-kit', label: 'UI Kit', icon: <Palette size={14} /> },
+      ],
+    },
+    // КОМПАНИЯ — свой раздел, а не пункт среди админских настроек: у неё свой штат, свои
+    // петли и свои рубильники, и настраивают её отдельно от инстанса (решение владельца
+    // 2026-07-31). Раньше «Развитие» лежало в «Обзоре», состав — вообще без пункта в меню,
+    // а рубильники автономии прятались внутри секции «Генерация и модели».
+    {
+      title: say('Company', 'Компания'),
+      links: [
+        { href: '/admin/company', label: say('Overview', 'Обзор'), icon: <TrendingUp size={14} /> },
+        // «Зал совета», а не «Состав»: тем же именем страница подписана в шапке (TopNav →
+        // councilHall). Два имени у одного экрана — это уже вопрос «а это то же самое?».
+        { href: '/admin/company/staff', label: t('councilHall', lang), icon: <Users size={14} /> },
+        { href: '/admin/company/settings', label: say('Company settings', 'Настройки компании'), icon: <SlidersHorizontal size={14} /> },
       ],
     },
     {

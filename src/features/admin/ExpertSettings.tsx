@@ -189,7 +189,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           </code>
         </Tooltip>
         <Tooltip label={say('Personal page: KPI and knowledge base', 'Личная страница: KPI и база знаний')}>
-          <Link href={`/admin/council/${e.id}`} aria-label={say('Personal page', 'Личная страница')} className="grid h-6 w-6 place-items-center rounded text-muted hover:text-ink">
+          <Link href={`/admin/company/staff/${e.id}`} aria-label={say('Personal page', 'Личная страница')} className="grid h-6 w-6 place-items-center rounded text-muted hover:text-ink">
             <BarChart3 size={13} />
           </Link>
         </Tooltip>

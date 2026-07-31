@@ -43,48 +43,25 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   const yandexSearchKey = String(formData.get('yandexSearchKey') ?? '').trim()
   const gigachatKey = String(formData.get('gigachatKey') ?? '').trim()
 
-  // «Совет гномов» — мультимодельная генерация за флагами (см. shared/ai/council.ts).
-  const councilMaxGnomes = Math.min(8, Math.max(1, Math.round(Number(formData.get('councilMaxGnomes')) || 3)))
-  const councilMaxPerMonth = Math.max(0, Math.round(Number(formData.get('councilMaxPerMonth')) || 0))
   const freeMonthlyGens = Math.max(0, Math.round(Number(formData.get('freeMonthlyGens')) || 0))
-  const councilModels = String(formData.get('councilModels') ?? '').split(',').map((s) => s.trim()).filter(Boolean).join(',')
 
   // Модели/порог пишутся в НЕЙМСПЕЙС провайдера из формы (селекты рендерились под
   // него): переключение провайдера не затирает настройки соседей. Легаси-ключи
   // (ai.chat_model, …) больше не пишем — они остаются read-фолбэком openrouter.
   const nsProv = provider || (await getAiProviderRaw()).provider
+  // ⚠️ Настройки КОМПАНИИ (совет, самогенерация, планка готовности) здесь НЕ пишутся — они
+  // уехали на /admin/company/settings и сохраняются `setCompanySettings`. Их поля нет в этой
+  // форме, а `saveSettings` пишет ровно то, что ему дали: оставь их тут — и первое же
+  // сохранение настроек ИИ схлопнуло бы режимы в дефолты, то есть ВЫКЛЮЧИЛО автономию.
   const settings: Record<string, string> = {
     [nsKey(nsProv, 'chat_model')]: chatModel, // пусто = дефолт провайдера при чтении
     [nsKey(nsProv, 'fallback_model')]: fallbackModel,
-    [nsKey(nsProv, 'council_models')]: councilModels,
     'ai.embedding_model': embeddingModel || defaultEmbeddingModel(),
     'ai.temperature': String(temperature),
     'ai.max_tokens': String(maxTokens),
-    'ai.council_enabled': formData.get('councilEnabled') === 'on' ? 'true' : 'false',
-    'ai.council_audience': formData.get('councilAudience') === 'all' ? 'all' : 'admin',
-    'ai.council_max_gnomes': String(councilMaxGnomes),
-    'ai.council_web_seek': formData.get('councilWebSeek') === 'on' ? 'true' : 'false',
-    'ai.council_clarify': formData.get('councilClarify') === 'on' ? 'true' : 'false',
-    'ai.council_max_per_month': String(councilMaxPerMonth),
     // «Помощь на шаге» (AI-подсказка застрявшему в прогоне) — свой флаг+аудитория.
     'ai.assist_enabled': formData.get('assistEnabled') === 'on' ? 'true' : 'false',
     'ai.assist_audience': formData.get('assistAudience') === 'all' ? 'all' : 'admin',
-    // Самогенерация. Неизвестное значение → 'off': опечатка не должна ВКЛЮЧАТЬ трату.
-    'ai.selfgen_mode': (['off', 'manual', 'auto'] as const).includes(formData.get('selfGenMode') as 'off' | 'manual' | 'auto')
-      ? String(formData.get('selfGenMode'))
-      : 'off',
-    'ai.selfgen_per_day': String(Math.max(0, Math.min(200, Number(formData.get('selfGenPerDay')) || 0))),
-    'ai.selfgen_per_sweep': String(Math.max(1, Math.min(20, Number(formData.get('selfGenPerSweep')) || 1))),
-    // Неизвестное значение → 'off': опечатка не должна включать автопубликацию.
-    'ai.readiness_mode': (['off', 'shadow', 'on'] as const).includes(formData.get('readinessMode') as 'off' | 'shadow' | 'on')
-      ? String(formData.get('readinessMode'))
-      : 'off',
-    'ai.readiness_min_steps': String(Math.max(1, Math.min(50, Number(formData.get('readinessMinSteps')) || 5))),
-    // Неизвестное значение → 'solid': опечатка не должна ослаблять планку.
-    'ai.readiness_min_grade': (['start', 'solid', 'full'] as const).includes(formData.get('readinessMinGrade') as 'start' | 'solid' | 'full')
-      ? String(formData.get('readinessMinGrade'))
-      : 'solid',
-    'ai.readiness_per_day': String(Math.max(0, Math.min(50, Number(formData.get('readinessPerDay')) || 0))),
     'ai.free_monthly_gens': String(freeMonthlyGens),
   }
   if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)
@@ -487,8 +464,64 @@ export async function createGnomeAccounts(): Promise<void> {
   const { ensureGnomeUsers } = await import('@/shared/ai/gnome-account')
   const { getRoster } = await import('@/shared/ai/roster')
   await ensureGnomeUsers(await getRoster())
-  revalidatePath('/admin/council')
-  redirect('/admin/council')
+  revalidatePath('/admin/company/staff')
+  redirect('/admin/company/staff')
+}
+
+/**
+ * Настройки КОМПАНИИ: совет, самогенерация, планка готовности.
+ *
+ * Отдельный экшен, а не часть `setAiSettings`, потому что это разные решения: провайдер и
+ * модель — про инструмент, режим самогенерации и планка — про то, как компания работает
+ * без человека. Пока обе половины жили в одной форме, сохранение любой переписывало обе.
+ *
+ * Пишет ТОЛЬКО свои ключи. Клампы и правило «неизвестное значение → безопасная сторона»
+ * сохранены дословно: опечатка не должна ни включать трату (`selfgen` → `off`), ни
+ * ослаблять планку автопубликации (`grade` → `solid`).
+ */
+export async function setCompanySettings(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const councilMaxGnomes = Math.min(8, Math.max(1, Math.round(Number(formData.get('councilMaxGnomes')) || 3)))
+  const councilMaxPerMonth = Math.max(0, Math.round(Number(formData.get('councilMaxPerMonth')) || 0))
+  const councilModels = String(formData.get('councilModels') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(',')
+  // Модели совета лежат в неймспейсе АКТИВНОГО провайдера — как и остальные модельные
+  // настройки: смена провайдера не должна тащить за собой чужие id.
+  const { provider } = await getAiProviderRaw()
+
+  await saveSettings({
+    [nsKey(provider, 'council_models')]: councilModels,
+    'ai.council_enabled': formData.get('councilEnabled') === 'on' ? 'true' : 'false',
+    'ai.council_audience': formData.get('councilAudience') === 'all' ? 'all' : 'admin',
+    'ai.council_max_gnomes': String(councilMaxGnomes),
+    'ai.council_web_seek': formData.get('councilWebSeek') === 'on' ? 'true' : 'false',
+    'ai.council_clarify': formData.get('councilClarify') === 'on' ? 'true' : 'false',
+    'ai.council_max_per_month': String(councilMaxPerMonth),
+    // Самогенерация. Неизвестное значение → 'off': опечатка не должна ВКЛЮЧАТЬ трату.
+    'ai.selfgen_mode': (['off', 'manual', 'auto'] as const).includes(formData.get('selfGenMode') as 'off' | 'manual' | 'auto')
+      ? String(formData.get('selfGenMode'))
+      : 'off',
+    'ai.selfgen_per_day': String(Math.max(0, Math.min(200, Number(formData.get('selfGenPerDay')) || 0))),
+    'ai.selfgen_per_sweep': String(Math.max(1, Math.min(20, Number(formData.get('selfGenPerSweep')) || 1))),
+    // Неизвестное значение → 'off': опечатка не должна включать автопубликацию.
+    'ai.readiness_mode': (['off', 'shadow', 'on'] as const).includes(formData.get('readinessMode') as 'off' | 'shadow' | 'on')
+      ? String(formData.get('readinessMode'))
+      : 'off',
+    'ai.readiness_min_steps': String(Math.max(1, Math.min(50, Number(formData.get('readinessMinSteps')) || 5))),
+    // Неизвестное значение → 'solid': опечатка не должна ослаблять планку.
+    'ai.readiness_min_grade': (['start', 'solid', 'full'] as const).includes(formData.get('readinessMinGrade') as 'start' | 'solid' | 'full')
+      ? String(formData.get('readinessMinGrade'))
+      : 'solid',
+    'ai.readiness_per_day': String(Math.max(0, Math.min(50, Number(formData.get('readinessPerDay')) || 0))),
+  })
+
+  revalidatePath('/admin/company/settings')
+  // Состав читает те же настройки: баннер «совет выключен» и кнопка «поручить список»
+  // зависят от councilEnabled и selfGenMode.
+  revalidatePath('/admin/company/staff')
 }
 
 /**
@@ -500,11 +533,11 @@ export async function selfGenerateNow(formData: FormData): Promise<void> {
   await requireAdmin()
   const expertId = String(formData.get('expertId') ?? '').trim()
   const topic = String(formData.get('topic') ?? '').trim() || undefined
-  if (!expertId) redirect('/admin/council')
+  if (!expertId) redirect('/admin/company/staff')
   const { selfGenerateOne } = await import('@/features/library/selfgen')
   const res = await selfGenerateOne(expertId, topic)
-  revalidatePath('/admin/council')
-  redirect(res.ref ? `/${res.ref}` : `/admin/council?selfgen=${res.error ?? 'failed'}`)
+  revalidatePath('/admin/company/staff')
+  redirect(res.ref ? `/${res.ref}` : `/admin/company/staff?selfgen=${res.error ?? 'failed'}`)
 }
 
 /**
@@ -515,43 +548,43 @@ export async function toggleLoopPause(formData: FormData): Promise<void> {
   const admin = await requireAdmin()
   const type = String(formData.get('type') ?? '').trim()
   const paused = formData.get('paused') === 'true'
-  if (!type) redirect('/admin/development')
+  if (!type) redirect('/admin/company')
   const { pauseLoop, resumeLoop } = await import('@/shared/agents/policy')
   if (paused) await resumeLoop(type)
   else await pauseLoop(type, admin.userId, String(formData.get('reason') ?? '').trim())
-  revalidatePath('/admin/development')
-  redirect('/admin/development')
+  revalidatePath('/admin/company')
+  redirect('/admin/company')
 }
 
 /** Сухой прогон: петля решает и пишет журнал, но не действует. */
 export async function toggleLoopDryRun(formData: FormData): Promise<void> {
   await requireAdmin()
   const type = String(formData.get('type') ?? '').trim()
-  if (!type) redirect('/admin/development')
+  if (!type) redirect('/admin/company')
   const { setLoopDryRun } = await import('@/shared/agents/policy')
   await setLoopDryRun(type, formData.get('dryRun') !== 'true')
-  revalidatePath('/admin/development')
-  redirect('/admin/development')
+  revalidatePath('/admin/company')
+  redirect('/admin/company')
 }
 
 /** Снять автоматический предохранитель — только человеком, разобравшись в причине. */
 export async function resetLoopCircuit(formData: FormData): Promise<void> {
   await requireAdmin()
   const type = String(formData.get('type') ?? '').trim()
-  if (!type) redirect('/admin/development')
+  if (!type) redirect('/admin/company')
   const { resetCircuit } = await import('@/shared/agents/policy')
   await resetCircuit(type)
-  revalidatePath('/admin/development')
-  redirect('/admin/development')
+  revalidatePath('/admin/company')
+  redirect('/admin/company')
 }
 
 export async function hireGnome(formData: FormData): Promise<void> {
   const admin = await requireAdmin()
   const tag = String(formData.get('tag') ?? '').trim().toLowerCase().slice(0, 40)
-  if (!tag) redirect('/admin/council')
+  if (!tag) redirect('/admin/company/staff')
   const { draftHire, insertHired } = await import('./hire')
   const draft = await draftHire(tag, admin.userId)
   const id = draft ? await insertHired(draft) : null
-  revalidatePath('/admin/council')
-  redirect(id ? `/admin/council/${id}` : '/admin/council?hire=failed')
+  revalidatePath('/admin/company/staff')
+  redirect(id ? `/admin/company/staff/${id}` : '/admin/company/staff?hire=failed')
 }
