@@ -76,7 +76,7 @@ export default async function EditSuggestionPage({
         {/* Primary — внизу справа (зона большого пальца); на мобиле кнопка во всю
             ширину строки действий, чтобы не жаться к краю. */}
         <div className="mt-6 flex justify-end">
-          <SubmitButton className="inline-flex h-[38px] items-center justify-center rounded-md bg-primary px-5 text-[13px] font-semibold text-primary-fg max-sm:w-full">
+          <SubmitButton className="max-sm:w-full">
             {t('saveChanges', lang)}
           </SubmitButton>
         </div>

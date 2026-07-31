@@ -779,7 +779,7 @@ export default async function SuggestionThreadPage({
           <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3.5 py-2.5">
             <span className="text-[12.5px] text-ink-2">{t('prBranchBehind', lang)}</span>
             <form action={updateBranchFromMain.bind(null, sug.id)} className="ml-auto">
-              <SubmitButton className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border px-3.5 text-[13px] font-semibold text-ink hover:border-border-strong">
+              <SubmitButton variant="outline">
                 <RefreshCw size={14} /> {t('prUpdateBranch', lang)}
               </SubmitButton>
             </form>
@@ -800,7 +800,7 @@ export default async function SuggestionThreadPage({
               !branchMissing &&
               !hasConflicts && (
                 <form action={mergeBranchPr.bind(null, sug.id)}>
-                  <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+                  <SubmitButton>
                     <GitMerge size={14} />
                     {/* На мобиле одно слово, на широком — полное действие: способ
                         слияния меняет результат, и знать о нём надо ДО нажатия. */}
@@ -813,13 +813,13 @@ export default async function SuggestionThreadPage({
               )
             ) : (
               <form action={acceptSuggestion.bind(null, sug.id)}>
-                <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+                <SubmitButton>
                   <Check size={14} /> {t('accept', lang)}
                 </SubmitButton>
               </form>
             )}
             <form action={rejectSuggestion.bind(null, sug.id)}>
-              <SubmitButton className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
+              <SubmitButton variant="outline">
                 <X size={14} /> {t('reject', lang)}
               </SubmitButton>
             </form>
@@ -854,7 +854,7 @@ export default async function SuggestionThreadPage({
               <input type="hidden" name="suggestionId" value={sug.id} />
               <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={sugPeople} />
               <div className="flex justify-end">
-                <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+                <SubmitButton>
                   {t('commentBtn', lang)}
                 </SubmitButton>
               </div>

@@ -70,7 +70,8 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
   return (
     <div ref={boxRef} className="relative">
       <input type="hidden" name={name} value={tags.join(' ')} />
-      <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
+      {/* min-h по шкале md (control.ts): в ряду с Input/Button не проседает; растёт при переносе тегов. */}
+      <div className="flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
         {tags.map((tag) => (
           <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-[12px] font-medium text-ink">
             {tag}
@@ -109,7 +110,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
               }
             }}
             placeholder={tags.length === 0 ? 'docker' : ''}
-            className="min-w-[90px] flex-1 bg-transparent px-1 py-0.5 text-[13.5px] text-ink outline-hidden placeholder:text-muted"
+            className="min-w-[90px] flex-1 bg-transparent px-1 py-0.5 text-[14px] max-sm:text-[16px] text-ink outline-hidden placeholder:text-muted"
           />
         )}
       </div>

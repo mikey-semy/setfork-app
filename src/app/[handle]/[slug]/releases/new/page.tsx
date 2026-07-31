@@ -105,7 +105,7 @@ export default async function NewReleasePage({
             <span className="text-muted">— {t('preReleaseHint', lang)}</span>
           </label>
           <div className="flex items-center gap-3">
-            <SubmitButton className="rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+            <SubmitButton>
               {ru ? 'Опубликовать релиз' : 'Publish release'}
             </SubmitButton>
             <Link href={`/${owner}/${slug}/releases`} className="text-[13px] text-ink-2 hover:text-ink">

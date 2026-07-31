@@ -11,6 +11,8 @@ import Link from 'next/link'
 import { BarChart3, Check, Loader2 } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Input } from '@/shared/ui/input'
+import { Textarea } from '@/shared/ui/textarea'
 import { TagInput } from '@/shared/ui/TagInput'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -27,7 +29,6 @@ import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } fr
  * значит перетирать чужие правки целиком.
  */
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong'
 const lbl = 'mb-1 block text-[11.5px] font-semibold text-ink-2'
 
 export interface ExpertRow {
@@ -202,11 +203,11 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={lbl}>{say('Name (RU)', 'Имя (RU)')}</label>
-              <input name="nameRu" defaultValue={e.nameRu} className={field} />
+              <Input name="nameRu" defaultValue={e.nameRu} />
             </div>
             <div>
               <label className={lbl}>{say('Name (EN)', 'Имя (EN)')}</label>
-              <input name="nameEn" defaultValue={e.nameEn} className={field} />
+              <Input name="nameEn" defaultValue={e.nameEn} />
             </div>
           </div>
 
@@ -215,18 +216,18 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={lbl}>{say('Profession (RU)', 'Профессия (RU)')}</label>
-              <input name="professionRu" defaultValue={e.professionRu} className={field} placeholder={say('Chef', 'Повар')} />
+              <Input name="professionRu" defaultValue={e.professionRu} placeholder={say('Chef', 'Повар')} />
             </div>
             <div>
               <label className={lbl}>{say('Profession (EN)', 'Профессия (EN)')}</label>
-              <input name="professionEn" defaultValue={e.professionEn} className={field} placeholder="Chef" />
+              <Input name="professionEn" defaultValue={e.professionEn} placeholder="Chef" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={lbl}>{say('Tier', 'Тир мастерства')}</label>
-              <input name="tier" defaultValue={e.tier} className={field} placeholder={say('senior', 'сеньор')} />
+              <Input name="tier" defaultValue={e.tier} placeholder={say('senior', 'сеньор')} />
             </div>
             <div>
               <label className={lbl}>{say('Career', 'Карьера')}</label>
@@ -251,37 +252,37 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={lbl}>{say('Guild (RU)', 'Гильдия (RU)')}</label>
-              <input name="guildRu" defaultValue={e.guildRu} className={field} />
+              <Input name="guildRu" defaultValue={e.guildRu} />
             </div>
             <div>
               <label className={lbl}>{say('Guild (EN)', 'Гильдия (EN)')}</label>
-              <input name="guildEn" defaultValue={e.guildEn} className={field} />
+              <Input name="guildEn" defaultValue={e.guildEn} />
             </div>
           </div>
 
           <div>
             <label className={lbl}>{say('Guild code — quality standards (goes into the master’s and the critic’s prompts)', 'Кодекс гильдии — стандарты качества (уходит в промпт мастера и критика)')}</label>
-            <textarea name="code" defaultValue={e.code} rows={4} className={`${field} resize-y font-mono text-[12.5px] leading-[1.45]`} />
+            <Textarea name="code" defaultValue={e.code} rows={4} className="resize-y font-mono text-[12.5px] leading-[1.45]" />
           </div>
 
           <div>
             <label className={lbl}>{say('Query lens — aspects he searches the knowledge base by (ask_gnome, dig)', 'Линза запроса — аспекты, которыми он ищет по базе знаний (ask_gnome, раскопка)')}</label>
-            <input name="lens" defaultValue={e.lens} className={`${field} font-mono text-[12.5px]`} />
+            <Input name="lens" defaultValue={e.lens} className="font-mono text-[12.5px]" />
           </div>
 
           <div>
             <label className={lbl}>{say('Instruction (persona)', 'Инструкция (персона)')}</label>
-            <textarea name="persona" defaultValue={e.persona} rows={7} className={`${field} resize-y leading-[1.45]`} />
+            <Textarea name="persona" defaultValue={e.persona} rows={7} className="resize-y leading-[1.45]" />
           </div>
 
           {/* «Мечты» — что мешает работать; это сигнал в фиче-бэклог, а не служебная заметка. */}
           <div>
             <label className={lbl}>{say('What’s missing (goes to the feature backlog)', 'Чего не хватает (уходит в фиче-бэклог)')}</label>
-            <textarea
+            <Textarea
               name="dreams"
               defaultValue={e.dreams}
               rows={2}
-              className={`${field} resize-y leading-[1.45]`}
+              className="resize-y leading-[1.45]"
               placeholder={say('A step-timer for recipes', 'Таймер шага для рецептов')}
             />
           </div>

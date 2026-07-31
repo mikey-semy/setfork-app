@@ -55,7 +55,7 @@ export function NewIssueForm({ owner, slug, lang, custom = [] }: { owner: string
       </div>
 
       <div className="flex justify-end">
-        <SubmitButton className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13.5px] font-semibold text-primary-fg">
+        <SubmitButton>
           {t('submitNewIssue', lang)}
         </SubmitButton>
       </div>

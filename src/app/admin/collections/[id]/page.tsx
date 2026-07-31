@@ -7,10 +7,10 @@ import { tr } from '@/shared/i18n'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
 import { getCollectionAdmin } from '@/features/collections/queries'
 import { addCollectionItem, deleteCollection, removeCollectionItem, setCollectionCover, updateCollection } from '@/features/admin/collection-actions'
+import { Input } from '@/shared/ui/input'
 
 export const dynamic = 'force-dynamic'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 const card = 'rounded-lg border border-border bg-surface p-5'
 
@@ -37,15 +37,15 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         <input type="hidden" name="id" value={c.id} />
         <div>
           <label className={lbl}>{ru ? 'Название' : 'Title'}</label>
-          <input name="title" required defaultValue={tr(c.title, lang)} maxLength={120} className={field} />
+          <Input name="title" required defaultValue={tr(c.title, lang)} maxLength={120} />
         </div>
         <div>
           <label className={lbl}>{ru ? 'Описание' : 'Description'}</label>
-          <input name="desc" defaultValue={tr(c.desc, lang)} maxLength={400} className={field} />
+          <Input name="desc" defaultValue={tr(c.desc, lang)} maxLength={400} />
         </div>
         <div className="flex items-center gap-4">
           <label className={lbl + ' mb-0'}>{ru ? 'Акцент (hex)' : 'Accent (hex)'}</label>
-          <input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className={`${field} max-w-[140px] font-mono`} />
+          <Input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className="max-w-[140px] font-mono" />
           <label className="ml-auto inline-flex items-center gap-2 text-[13px] text-ink">
             <input type="checkbox" name="published" defaultChecked={c.published} /> {ru ? 'Опубликовано' : 'Published'}
           </label>
@@ -93,7 +93,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
               <input type="radio" name="kind" value="catalog" className="sr-only" /> {ru ? 'Каталог' : 'Catalog'}
             </label>
           </div>
-          <input name="ref" required placeholder="owner/slug" className={`${field} min-w-0 flex-1 font-mono`} />
+          <Input name="ref" required placeholder="owner/slug" className="min-w-0 flex-1 font-mono" />
           <button className="rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">{ru ? 'Добавить' : 'Add'}</button>
         </form>
 

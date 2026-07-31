@@ -1,0 +1,197 @@
+'use client'
+
+import { useState } from 'react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import type { Lang } from '@/shared/i18n'
+import { Badge, type BadgeVariant } from '@/shared/ui/badge'
+import { Button, type ButtonVariant } from '@/shared/ui/button'
+import { Checkbox } from '@/shared/ui/checkbox'
+import { Input } from '@/shared/ui/input'
+import { SearchField } from '@/shared/ui/SearchField'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Switch } from '@/shared/ui/switch'
+import { TagInput } from '@/shared/ui/TagInput'
+import { Textarea } from '@/shared/ui/textarea'
+import { toast } from '@/shared/ui/toast'
+import { Tooltip } from '@/shared/ui/Tooltip'
+import { CONTROL_H, CONTROL_TEXT, type ControlSize } from '@/shared/ui/control'
+
+// Эталон интерфейса: все примитивы shared/ui во всех размерах и состояниях.
+// Смысл страницы — РАЗНОБОЙ ВИДЕН ГЛАЗАМИ: контролы одного размера стоят в одном
+// ряду, и любое расхождение по высоте/кеглю бросается в глаза до того, как
+// расползётся по страницам. Новый примитив/размер/вариант — сначала сюда.
+
+const SIZES: ControlSize[] = ['md', 'sm', 'xs']
+const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'outline', 'ghost', 'danger', 'dangerSolid']
+const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft']
+
+type Say = (en: string, ru: string) => string
+
+function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-surface p-5">
+      <h2 className="mb-1 text-[14px] font-bold text-ink">{title}</h2>
+      {hint && <p className="mb-4 text-[12.5px] text-ink-3">{hint}</p>}
+      <div className="flex flex-col gap-4">{children}</div>
+    </section>
+  )
+}
+
+function SizeTag({ children }: { children: React.ReactNode }) {
+  return <div className="w-14 shrink-0 font-mono text-[11px] text-muted">{children}</div>
+}
+
+/** Главная проверка: контролы одного size в одном ряду — одна высота, один кегль. */
+function RowCheck({ size, say }: { size: ControlSize; say: Say }) {
+  const [q, setQ] = useState('')
+  return (
+    <div className="flex items-center gap-2">
+      <SizeTag>{size}</SizeTag>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <Button size={size} variant="primary">
+          {say('Save', 'Сохранить')}
+        </Button>
+        <Button size={size}>{say('Cancel', 'Отмена')}</Button>
+        <Input size={size} placeholder="input" className="w-36 flex-none" />
+        <Select>
+          <SelectTrigger size={size} className="w-36 flex-none">
+            <SelectValue placeholder="select" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="a">Option A</SelectItem>
+            <SelectItem value="b">Option B</SelectItem>
+          </SelectContent>
+        </Select>
+        <SearchField size={size} value={q} onValueChange={setQ} placeholder="search" className="w-36 flex-none" ariaLabel="search" />
+      </div>
+    </div>
+  )
+}
+
+export function UiKitGallery({ lang }: { lang: Lang }) {
+  const say: Say = (en, ru) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+  const [checked, setChecked] = useState(true)
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Section
+        title={say('Control scale', 'Шкала контролов')}
+        hint={say(
+          'One source — shared/ui/control.ts: same-size controls in a row must match in height and font. md = 38px (settings-row standard), sm = 32px, xs = 28px. Fields are 16px on mobile — otherwise iOS zooms.',
+          'Один источник — shared/ui/control.ts: контролы одного размера в одном ряду обязаны совпадать по высоте и кеглю. md = 38px (стандарт рядов настроек), sm = 32px, xs = 28px. Поля на мобиле — 16px, иначе iOS зумит.',
+        )}
+      >
+        {SIZES.map((s) => (
+          <RowCheck key={s} size={s} say={say} />
+        ))}
+        <div className="flex flex-wrap gap-4 border-t border-border pt-3">
+          {SIZES.map((s) => (
+            <div key={s} className="flex items-center gap-2 font-mono text-[11px] text-muted">
+              <span>{s}</span>
+              <span>{CONTROL_H[s]}</span>
+              <span>{CONTROL_TEXT[s]}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        title={say('Buttons', 'Кнопки')}
+        hint={say(
+          'Variants × sizes; button text is 1–2 short words, icon + aria-label on mobile.',
+          'Варианты × размеры; текст в кнопке — 1–2 коротких слова, на мобиле иконка + aria-label.',
+        )}
+      >
+        {SIZES.map((size) => (
+          <div key={size} className="flex items-center gap-2">
+            <SizeTag>{size}</SizeTag>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              {BUTTON_VARIANTS.map((v) => (
+                <Button key={v} size={size} variant={v}>
+                  {v}
+                </Button>
+              ))}
+              <Button size={size} disabled>
+                disabled
+              </Button>
+              <Tooltip label={say('Icon + aria-label', 'Иконка + aria-label')}>
+                <Button size={size} aria-label={say('Add', 'Добавить')}>
+                  <Plus size={size === 'xs' ? 13 : 15} />
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+        ))}
+      </Section>
+
+      <Section
+        title={say('Fields', 'Поля ввода')}
+        hint={say(
+          'No hand-rolled field classes in features — these primitives only.',
+          'Никаких самопальных классов рамок в фичах — только эти примитивы.',
+        )}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input placeholder={say('Default (md)', 'Обычное (md)')} />
+          <Input placeholder="font-mono" className="font-mono" />
+          <Input size="sm" placeholder="sm" />
+          <Input disabled placeholder="disabled" />
+        </div>
+        <Textarea rows={2} placeholder="Textarea (box)" />
+        <TagInput lang={lang} initial={['docker', 'linux']} name="uikit-tags" />
+      </Section>
+
+      <Section title={say('Choice controls', 'Выбор и переключатели')}>
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink">
+            <Checkbox defaultChecked className="size-4" /> Checkbox
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink">
+            <Switch checked={checked} onCheckedChange={setChecked} /> Switch
+          </label>
+        </div>
+      </Section>
+
+      <Section title={say('Badges & hints', 'Бейджи и подсказки')}>
+        <div className="flex flex-wrap items-center gap-2">
+          {BADGE_VARIANTS.map((v) => (
+            <Badge key={v} variant={v}>
+              {v}
+            </Badge>
+          ))}
+          <Tooltip label={say('Tooltip (not title=)', 'Тултип (не title=)')}>
+            <Badge variant="soft">tooltip →</Badge>
+          </Tooltip>
+          <Button size="xs" variant="ghost" onClick={() => toast(say('Toast: short and useful', 'Тост: коротко и по делу'))}>
+            toast
+          </Button>
+        </div>
+      </Section>
+
+      <Section
+        title={say('Settings row (etalon)', 'Ряд настроек (эталон)')}
+        hint={say(
+          'Bottom-right of a section: one row, one height; secondary actions are icons with tooltips, text on md+ only.',
+          'Правый нижний угол секции: один ряд, одна высота; вторичные действия — иконки с тултипом, текст только на md+.',
+        )}
+      >
+        <div className="flex items-center justify-end gap-2 rounded-md border border-dashed border-border p-3">
+          <Tooltip label={say('Delete', 'Удалить')}>
+            <Button size="sm" variant="danger" aria-label={say('Delete', 'Удалить')}>
+              <Trash2 size={15} />
+            </Button>
+          </Tooltip>
+          <Tooltip label={say('Rename', 'Переименовать')}>
+            <Button size="sm" variant="ghost" aria-label={say('Rename', 'Переименовать')}>
+              <Pencil size={15} />
+              <span className="hidden md:inline">{say('Rename', 'Переименовать')}</span>
+            </Button>
+          </Tooltip>
+          <Button size="sm" variant="primary">
+            {say('Save', 'Сохранить')}
+          </Button>
+        </div>
+      </Section>
+    </div>
+  )
+}

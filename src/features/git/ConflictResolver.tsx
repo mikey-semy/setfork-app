@@ -138,9 +138,7 @@ export function ConflictResolver({
         </span>
         <input type="hidden" name="stepChoices" value={JSON.stringify(stepChoices)} />
         <input type="hidden" name="metaChoices" value={JSON.stringify(metaChoices)} />
-        <SubmitButton
-          className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-[13px] font-semibold ${ready ? 'bg-primary text-primary-fg' : 'pointer-events-none bg-surface-2 text-muted'}`}
-        >
+        <SubmitButton className={ready ? undefined : 'pointer-events-none bg-surface-2 text-muted'}>
           <GitMerge size={14} /> {ru ? 'Разрешить и влить' : 'Resolve and merge'}
         </SubmitButton>
       </div>

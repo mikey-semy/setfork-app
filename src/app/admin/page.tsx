@@ -36,8 +36,8 @@ import type { SettingsSection } from '@/features/settings/SettingsShell'
 import { AdminShell } from '@/features/admin/AdminShell'
 import { adminNavGroups, adminSettingsGroup } from '@/features/admin/nav-groups'
 import { FormSaveBar } from '@/features/settings/FormSaveBar'
+import { Input } from '@/shared/ui/input'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 // OpenRouter возвращает отрицательную цену (-1/токен) у авто-роутеров — она «плавающая».
@@ -242,17 +242,17 @@ export default async function AdminPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={lbl}>Temperature</label>
-                <input type="number" name="temperature" step="any" min="0" max="2" defaultValue={settings.temperature} className={field} />
+                <Input type="number" name="temperature" step="any" min="0" max="2" defaultValue={settings.temperature} />
               </div>
               <div>
                 <label className={lbl}>Max tokens</label>
-                <input type="number" name="maxTokens" step="1" min="64" max="8000" defaultValue={settings.maxTokens} className={field} />
+                <Input type="number" name="maxTokens" step="1" min="64" max="8000" defaultValue={settings.maxTokens} />
               </div>
             </div>
 
             <div>
               <label className={lbl}>{tr({ en: 'Free plan: generations / month', ru: 'Free-тариф: генераций в месяц' }, lang)}</label>
-              <input type="number" name="freeMonthlyGens" step="1" min="0" defaultValue={settings.freeMonthlyGens} className={field} />
+              <Input type="number" name="freeMonthlyGens" step="1" min="0" defaultValue={settings.freeMonthlyGens} />
               <p className="mt-1.5 text-[12px] text-muted">
                 {tr(
                   {

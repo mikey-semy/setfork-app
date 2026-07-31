@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
 import { AiKeyAndSwitch, type AiProviderChoice } from './AiKeyAndSwitch'
 import { ModelSelect, type Option } from './ModelSelect'
 import { CreditsWidget } from './CreditsWidget'
@@ -88,7 +89,6 @@ export function AiProviderModels({
     })
   }
 
-  const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden'
   const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
   const sign = CUR_SIGN[currency]
   const customHint = say('Use', 'Использовать')
@@ -204,14 +204,13 @@ export function AiProviderModels({
                 ? say(`Auto-fallback threshold (balance, ${sign})`, `Порог авто-fallback (остаток, ${sign})`)
                 : say(`Auto-fallback threshold (${sign} per day)`, `Порог авто-fallback (расход, ${sign}/день)`)}
             </label>
-            <input
+            <Input
               key={`threshold-${prov}`}
               type="number"
               name="cheapModeThreshold"
               step="any"
               min="0"
               defaultValue={values.cheapModeThreshold}
-              className={field}
             />
             <p className="mt-1.5 text-[12px] text-muted">
               {prov === 'openrouter'

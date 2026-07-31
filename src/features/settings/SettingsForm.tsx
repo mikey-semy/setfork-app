@@ -13,8 +13,6 @@ import { AvatarDropzone } from './AvatarDropzone'
 import { SOCIAL_TYPES, SocialIcon } from './socials'
 import { updateProfile, type ActionResult } from './actions'
 
-// Поля настроек чуть крупнее стандартного md (px-3, text-14) — доводка поверх примитивов.
-const field = 'px-3 py-2 text-[14px]'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 // Строка соцсети редактируется (type/url меняются) и удаляется из середины списка,
@@ -69,7 +67,7 @@ export function SettingsForm({
 
       <div>
         <label className={lbl}>{t('displayName', lang)}</label>
-        <Input name="name" defaultValue={name} maxLength={80} className={field} />
+        <Input name="name" defaultValue={name} maxLength={80} />
       </div>
 
       <div>
@@ -80,18 +78,18 @@ export function SettingsForm({
           maxLength={280}
           rows={2}
           placeholder={t('bioPh', lang)}
-          className={`${field} min-h-[39px] max-h-[81px] resize-y overflow-y-auto`}
+          className="min-h-[39px] max-h-[81px] resize-y overflow-y-auto"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className={lbl}>{t('location', lang)}</label>
-          <Input name="location" defaultValue={location} maxLength={80} placeholder={t('locationPh', lang)} className={field} />
+          <Input name="location" defaultValue={location} maxLength={80} placeholder={t('locationPh', lang)} />
         </div>
         <div>
           <label className={lbl}>{t('website', lang)}</label>
-          <Input name="website" defaultValue={website} maxLength={200} placeholder="example.com" className={field} />
+          <Input name="website" defaultValue={website} maxLength={200} placeholder="example.com" />
         </div>
       </div>
 
@@ -121,7 +119,6 @@ export function SettingsForm({
                 value={row.url}
                 onChange={(e) => setRow(i, { url: e.target.value })}
                 placeholder="https://…"
-                className={field}
               />
               <Button
                 type="button"

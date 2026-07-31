@@ -4,17 +4,29 @@ import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_BOX, FIELD_TEXT_MOBILE, type ControlSize } from './control'
 
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
 const SelectValue = SelectPrimitive.Value
 
 // React 19: ref — обычный проп (ComponentProps его включает), forwardRef не нужен.
-function SelectTrigger({ className, children, ...props }: React.ComponentProps<typeof SelectPrimitive.Trigger>) {
+// Размеры — из общей шкалы control.ts (высота ряда = Input/Button того же size).
+function SelectTrigger({
+  size = 'md',
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Trigger> & { size?: ControlSize }) {
   return (
     <SelectPrimitive.Trigger
       className={cn(
-      'flex h-[42px] w-full items-center justify-between rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong data-placeholder:text-muted',
+      'flex w-full items-center justify-between data-placeholder:text-muted',
+      FIELD_BOX,
+      CONTROL_H[size],
+      CONTROL_PX[size],
+      CONTROL_TEXT[size],
+      FIELD_TEXT_MOBILE,
       className,
     )}
       {...props}

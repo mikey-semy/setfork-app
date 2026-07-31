@@ -2,12 +2,11 @@ import { AlertCircle, CheckCircle2, RefreshCw, Unplug } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { disableMirror, mirrorNow, saveMirror } from './mirror-actions'
 
 const card = 'rounded-lg border border-border bg-surface p-5'
-const field =
-  'w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none focus:border-border-strong'
 const label = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 /** Настройки списка → Зеркало (Ф3): push-копия на GitHub/GitLab.
@@ -43,7 +42,7 @@ export function MirrorSection({
           <label className={label} htmlFor="mir-url">
             {t('mirrorUrlLabel', lang)}
           </label>
-          <input
+          <Input
             id="mir-url"
             name="url"
             type="url"
@@ -51,21 +50,19 @@ export function MirrorSection({
             pattern="https://.+/.+"
             defaultValue={url ?? ''}
             placeholder="https://github.com/user/my-list"
-            className={field}
           />
         </div>
         <div>
           <label className={label} htmlFor="mir-token">
             {t('mirrorTokenLabel', lang)}
           </label>
-          <input
+          <Input
             id="mir-token"
             name="token"
             type="password"
             autoComplete="off"
             required={!hasToken}
             placeholder={hasToken ? t('mirrorTokenSaved', lang) : 'ghp_…'}
-            className={field}
           />
           <p className="mt-1 text-[12.5px] text-ink-3">{t('mirrorTokenHint', lang)}</p>
         </div>
@@ -123,7 +120,7 @@ export function MirrorSection({
               </Tooltip>
             </>
           )}
-          <SubmitButton className="rounded-md bg-primary px-4 py-2 text-[14px] font-semibold text-primary-fg">
+          <SubmitButton>
             {t('saveChanges', lang)}
           </SubmitButton>
         </div>
