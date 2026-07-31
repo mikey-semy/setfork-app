@@ -8,10 +8,11 @@ import { AutoBanner } from '@/shared/ui/AutoBanner'
 import { getCollectionAdmin } from '@/features/collections/queries'
 import { addCollectionItem, deleteCollection, removeCollectionItem, setCollectionCover, updateCollection } from '@/features/admin/collection-actions'
 import { Input } from '@/shared/ui/input'
+import { Field } from '@/shared/ui/Field'
+import { Alert } from '@/shared/ui/Alert'
 
 export const dynamic = 'force-dynamic'
 
-const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 const card = 'rounded-lg border border-border bg-surface p-5'
 
 export const metadata = { title: 'Collection' }
@@ -35,16 +36,15 @@ export default async function EditCollectionPage({ params, searchParams }: { par
       {/* Метаданные */}
       <form action={updateCollection} className={`${card} flex flex-col gap-4`}>
         <input type="hidden" name="id" value={c.id} />
-        <div>
-          <label className={lbl}>{ru ? 'Название' : 'Title'}</label>
+        <Field label={ru ? 'Название' : 'Title'}>
           <Input name="title" required defaultValue={tr(c.title, lang)} maxLength={120} />
-        </div>
-        <div>
-          <label className={lbl}>{ru ? 'Описание' : 'Description'}</label>
+        </Field>
+        <Field label={ru ? 'Описание' : 'Description'}>
           <Input name="desc" defaultValue={tr(c.desc, lang)} maxLength={400} />
-        </div>
+        </Field>
+        {/* Горизонтальный ряд (подпись слева от поля) — Field сюда не ложится, класс подписи инлайном. */}
         <div className="flex items-center gap-4">
-          <label className={lbl + ' mb-0'}>{ru ? 'Акцент (hex)' : 'Accent (hex)'}</label>
+          <label className="text-[12.5px] font-semibold text-ink-2">{ru ? 'Акцент (hex)' : 'Accent (hex)'}</label>
           <Input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className="max-w-[140px] font-mono" />
           <label className="ml-auto inline-flex items-center gap-2 text-[13px] text-ink">
             <input type="checkbox" name="published" defaultChecked={c.published} /> {ru ? 'Опубликовано' : 'Published'}
@@ -81,7 +81,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         <p className="mb-3 text-[13px] text-ink-2">
           {ru ? 'Добавляй списки (owner/slug) и каталоги (owner/имя-каталога) любых авторов.' : 'Add lists (owner/slug) and catalogs (owner/catalog-name) from any author.'}
         </p>
-        {e === 'notfound' && <div className="mb-3 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-[12.5px] text-warn">{ru ? 'Не найдено по этой ссылке.' : 'Nothing found for that reference.'}</div>}
+        {e === 'notfound' && <Alert variant="warn" className="mb-3">{ru ? 'Не найдено по этой ссылке.' : 'Nothing found for that reference.'}</Alert>}
 
         <form action={addCollectionItem} className="mb-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="collectionId" value={c.id} />

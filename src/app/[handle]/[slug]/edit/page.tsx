@@ -12,6 +12,7 @@ import { saveNewVersion } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { ListTypeToggle } from '@/features/library/ListTypeToggle'
 import { TagInput } from '@/shared/ui/TagInput'
+import { Field } from '@/shared/ui/Field'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
@@ -57,15 +58,15 @@ export default async function EditPage({
 
         <ChangeNoteField templateId={tpl.id} lang={lang} placeholder={t('changeNote', lang)} />
 
-        <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('tags', lang)}</label>
-        <div className="mb-6">
+        {/* htmlFor: внутри TagInput чипы с кнопками удаления — оборачивание в label ловило бы их клики. */}
+        <Field label={t('tags', lang)} htmlFor="edit-tags" className="mb-6">
           <TagInput initial={tpl.tags} lang={lang} />
-        </div>
+        </Field>
 
-        <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('listKind', lang)}</label>
-        <div className="mb-6">
+        {/* htmlFor: тумблер типа — группа кнопок, не одиночный контрол. */}
+        <Field label={t('listKind', lang)} htmlFor="edit-kind" className="mb-6">
           <ListTypeToggle ordered={tpl.ordered} lang={lang} />
-        </div>
+        </Field>
 
         <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
           <input type="checkbox" name="gated" defaultChecked={tpl.gated} className="mt-0.5" />

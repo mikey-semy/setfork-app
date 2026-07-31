@@ -2,10 +2,10 @@
 
 import { Switch } from '@/shared/ui/switch'
 import { Input } from '@/shared/ui/input'
+import { Field } from '@/shared/ui/Field'
+import { Alert } from '@/shared/ui/Alert'
 import { setMediaSettings } from './actions'
 import { FormSaveBar } from '@/features/settings/FormSaveBar'
-
-const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface MediaFormValues {
   s3Endpoint: string
@@ -26,11 +26,11 @@ export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }
   const secretPh = ru ? '•••• (задан) — оставьте пустым, чтобы не менять' : '•••• (set) — leave blank to keep'
   return (
     <form action={setMediaSettings} className="flex flex-col gap-5">
-      <div className="rounded-md border border-warn/40 bg-warn/10 px-3 py-2.5 text-[12.5px] text-warn">
+      <Alert variant="warn">
         {ru
           ? 'Значения S3/ключей подписи должны совпадать с окружением контейнера imgproxy. Пустое поле = берётся из .env. После смены кредов или ключей перезапустите контейнер imgproxy.'
           : 'S3 / signing-key values must match the imgproxy container environment. Empty field = taken from .env. After changing credentials or keys, restart the imgproxy container.'}
-      </div>
+      </Alert>
 
       <div className="flex items-center justify-between gap-4">
         <div>
@@ -44,52 +44,42 @@ export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }
 
       <div className="text-[12.5px] font-semibold text-ink">{ru ? 'S3-хранилище' : 'S3 storage'}</div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className={lbl}>Endpoint</label>
+        <Field label="Endpoint">
           <Input name="s3Endpoint" defaultValue={v.s3Endpoint} placeholder="https://s3.ru-3.storage.selcloud.ru" className="font-mono" />
-        </div>
-        <div>
-          <label className={lbl}>Region</label>
+        </Field>
+        <Field label="Region">
           <Input name="s3Region" defaultValue={v.s3Region} placeholder="ru-3" className="font-mono" />
-        </div>
-        <div>
-          <label className={lbl}>Bucket</label>
+        </Field>
+        <Field label="Bucket">
           <Input name="s3Bucket" defaultValue={v.s3Bucket} placeholder="setfork" className="font-mono" />
-        </div>
-        <div>
-          <label className={lbl}>{ru ? 'Префикс пути' : 'Path prefix'}</label>
+        </Field>
+        <Field label={ru ? 'Префикс пути' : 'Path prefix'}>
           <Input name="s3Prefix" defaultValue={v.s3Prefix} placeholder="prod" className="font-mono" />
-        </div>
-        <div>
-          <label className={lbl}>Access key</label>
+        </Field>
+        <Field label="Access key">
           <Input name="s3AccessKey" defaultValue={v.s3AccessKey} autoComplete="off" className="font-mono" />
-        </div>
-        <div>
-          <label className={lbl}>Secret key</label>
+        </Field>
+        <Field label="Secret key">
           <Input name="s3SecretKey" type="password" placeholder={v.s3SecretMask || secretPh} autoComplete="off" className="font-mono" />
-        </div>
+        </Field>
       </div>
 
       <div className="text-[12.5px] font-semibold text-ink">imgproxy</div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <label className={lbl}>{ru ? 'Публичный URL (браузер)' : 'Public URL (browser)'}</label>
+        <Field label={ru ? 'Публичный URL (браузер)' : 'Public URL (browser)'} className="sm:col-span-2">
           <Input name="imgproxyUrl" defaultValue={v.imgproxyUrl} placeholder="https://img.example.com" className="font-mono" />
-        </div>
-        <div>
-          <label className={lbl}>Key (hex)</label>
+        </Field>
+        <Field label="Key (hex)">
           <Input name="imgproxyKey" type="password" placeholder={v.imgproxyKeyMask || secretPh} autoComplete="off" className="font-mono" />
-        </div>
-        <div>
-          <label className={lbl}>Salt (hex)</label>
+        </Field>
+        <Field label="Salt (hex)">
           <Input name="imgproxySalt" type="password" placeholder={v.imgproxySaltMask || secretPh} autoComplete="off" className="font-mono" />
-        </div>
+        </Field>
       </div>
 
-      <div>
-        <label className={lbl}>{ru ? 'CDN URL (перед imgproxy, опц.)' : 'CDN URL (in front of imgproxy, opt.)'}</label>
+      <Field label={ru ? 'CDN URL (перед imgproxy, опц.)' : 'CDN URL (in front of imgproxy, opt.)'}>
         <Input name="cdnUrl" defaultValue={v.cdnUrl} placeholder="https://cdn.example.com" className="font-mono" />
-      </div>
+      </Field>
 
       <FormSaveBar ru={ru} />
     </form>

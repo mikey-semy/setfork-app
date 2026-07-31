@@ -3,6 +3,7 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { Alert } from '@/shared/ui/Alert'
 import { FeedSourceList } from '@/features/admin/FeedSourceList'
 import { feedSourceRows, recentFeedItems } from '@/features/admin/feed-queries'
 
@@ -43,9 +44,9 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
       </div>
 
       {sp.fresh && (
-        <div className="rounded-md border border-ok/40 bg-ok/10 px-3 py-2 text-[12.5px] text-ok">
+        <Alert variant="ok">
           {say('New items:', 'Новых материалов:')} {sp.fresh}
-        </div>
+        </Alert>
       )}
 
       <FeedSourceList rows={rows} lang={lang} err={sp.err} />

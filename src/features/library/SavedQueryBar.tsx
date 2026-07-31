@@ -7,6 +7,7 @@ import type { Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { TagInput } from '@/shared/ui/TagInput'
+import { Field } from '@/shared/ui/Field'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { createSavedQuery, deleteSavedQuery } from './saved-queries-actions'
@@ -53,16 +54,14 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[280px]">
           <form action={createSavedQuery} className="space-y-2.5">
-            <div>
-              <label className="mb-1 block text-[11.5px] font-semibold text-ink-2">{say('Name', 'Название')}</label>
+            <Field label={say('Name', 'Название')}>
               <Input name="name" required maxLength={60} placeholder={say('Books I started', 'Книги, которые начал')} />
-            </div>
-            <div>
-              <label className="mb-1 block text-[11.5px] font-semibold text-ink-2">{say('Tags (any of)', 'Теги (любой из)')}</label>
+            </Field>
+            {/* htmlFor: внутри TagInput чипы с кнопками удаления — оборачивание в label ловило бы их клики. */}
+            <Field label={say('Tags (any of)', 'Теги (любой из)')} htmlFor="sq-tags">
               <TagInput initial={[]} lang={lang} />
-            </div>
-            <div>
-              <label className="mb-1 block text-[11.5px] font-semibold text-ink-2">{say('My run', 'Мой прогон')}</label>
+            </Field>
+            <Field label={say('My run', 'Мой прогон')}>
               <Select name="runState" defaultValue="any">
                 <SelectTrigger>
                   <SelectValue />
@@ -73,7 +72,7 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
                   <SelectItem value="done">{say('Completed', 'Завершён')}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
             <Button type="submit" size="sm" className="w-full">
               {say('Save query', 'Сохранить запрос')}
             </Button>

@@ -3,11 +3,11 @@ import { TagInput } from '@/shared/ui/TagInput'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
+import { Field } from '@/shared/ui/Field'
 import { ListTypeToggle } from './ListTypeToggle'
 import { updateListMeta } from './actions'
 
 const card = 'rounded-lg border border-border bg-surface p-5'
-const label = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 /** Настройки списка → Основное: название / описание / теги / порядок.
  *  Видимость переехала в Опасную зону (как «Change visibility» на GitHub).
@@ -34,23 +34,21 @@ export function GeneralSection({
       <div className="mb-4 font-semibold text-ink">{t('generalTitle', lang)}</div>
 
       <form action={save} className="flex flex-col gap-4">
-        <div>
-          <label className={label} htmlFor="ls-title">{t('listTitle', lang)}</label>
-          <Input id="ls-title" name="title" defaultValue={tr(title, lang)} required maxLength={140} />
-        </div>
-        <div>
-          <label className={label} htmlFor="ls-desc">{t('listDesc', lang)}</label>
-          <Textarea id="ls-desc" name="desc" defaultValue={tr(desc, lang)} rows={3} maxLength={500} className="resize-y" />
-        </div>
-        <div>
-          <label className={label}>{t('tags', lang)}</label>
+        <Field label={t('listTitle', lang)}>
+          <Input name="title" defaultValue={tr(title, lang)} required maxLength={140} />
+        </Field>
+        <Field label={t('listDesc', lang)}>
+          <Textarea name="desc" defaultValue={tr(desc, lang)} rows={3} maxLength={500} className="resize-y" />
+        </Field>
+        {/* htmlFor: внутри TagInput чипы с кнопками удаления — оборачивание в label ловило бы их клики. */}
+        <Field label={t('tags', lang)} htmlFor="ls-tags">
           <TagInput initial={tags} lang={lang} />
-        </div>
+        </Field>
 
-        <div>
-          <span className={label}>{t('listKind', lang)}</span>
+        {/* htmlFor: тумблер типа — группа кнопок, не одиночный контрол. */}
+        <Field label={t('listKind', lang)} htmlFor="ls-kind">
           <ListTypeToggle ordered={ordered} lang={lang} />
-        </div>
+        </Field>
 
         <div>
           <SubmitButton>

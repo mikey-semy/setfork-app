@@ -16,6 +16,7 @@ import { Textarea } from '@/shared/ui/textarea'
 import { TagInput } from '@/shared/ui/TagInput'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Field } from '@/shared/ui/Field'
 import { ModelSelect, NONE, type Option } from './ModelSelect'
 import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } from './actions'
 
@@ -28,8 +29,6 @@ import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } fr
  * флагом. По той же причине форма у каждого эксперта своя: сохранять весь ростер одним куском
  * значит перетирать чужие правки целиком.
  */
-
-const lbl = 'mb-1 block text-[11.5px] font-semibold text-ink-2'
 
 export interface ExpertRow {
   id: string
@@ -201,36 +200,30 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
 
       <div className="space-y-2.5">
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className={lbl}>{say('Name (RU)', 'Имя (RU)')}</label>
+            <Field label={say('Name (RU)', 'Имя (RU)')}>
               <Input name="nameRu" defaultValue={e.nameRu} />
-            </div>
-            <div>
-              <label className={lbl}>{say('Name (EN)', 'Имя (EN)')}</label>
+            </Field>
+            <Field label={say('Name (EN)', 'Имя (EN)')}>
               <Input name="nameEn" defaultValue={e.nameEn} />
-            </div>
+            </Field>
           </div>
 
           {/* Профессия ОТДЕЛЬНО от имени: имя своё (мифологическое), профессия буквальная
               и показывается в профиле аккаунта как должность. */}
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className={lbl}>{say('Profession (RU)', 'Профессия (RU)')}</label>
+            <Field label={say('Profession (RU)', 'Профессия (RU)')}>
               <Input name="professionRu" defaultValue={e.professionRu} placeholder={say('Chef', 'Повар')} />
-            </div>
-            <div>
-              <label className={lbl}>{say('Profession (EN)', 'Профессия (EN)')}</label>
+            </Field>
+            <Field label={say('Profession (EN)', 'Профессия (EN)')}>
               <Input name="professionEn" defaultValue={e.professionEn} placeholder="Chef" />
-            </div>
+            </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className={lbl}>{say('Tier', 'Тир мастерства')}</label>
+            <Field label={say('Tier', 'Тир мастерства')}>
               <Input name="tier" defaultValue={e.tier} placeholder={say('senior', 'сеньор')} />
-            </div>
-            <div>
-              <label className={lbl}>{say('Career', 'Карьера')}</label>
+            </Field>
+            <Field label={say('Career', 'Карьера')}>
               {/* Стадии ставит и петля (по бездействию: в строю → под риском → спит), и человек
                   здесь же. «Под риском» — рабочая стадия: такой специалист идёт ПЕРВЫМ в очереди
                   на работу, чтобы вернуться в строй. Спящих совет не созывает, но петля будит
@@ -246,38 +239,32 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
                   <SelectItem value="archived">{say('archived', 'в архиве')}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className={lbl}>{say('Guild (RU)', 'Гильдия (RU)')}</label>
+            <Field label={say('Guild (RU)', 'Гильдия (RU)')}>
               <Input name="guildRu" defaultValue={e.guildRu} />
-            </div>
-            <div>
-              <label className={lbl}>{say('Guild (EN)', 'Гильдия (EN)')}</label>
+            </Field>
+            <Field label={say('Guild (EN)', 'Гильдия (EN)')}>
               <Input name="guildEn" defaultValue={e.guildEn} />
-            </div>
+            </Field>
           </div>
 
-          <div>
-            <label className={lbl}>{say('Guild code — quality standards (goes into the master’s and the critic’s prompts)', 'Кодекс гильдии — стандарты качества (уходит в промпт мастера и критика)')}</label>
+          <Field label={say('Guild code — quality standards (goes into the master’s and the critic’s prompts)', 'Кодекс гильдии — стандарты качества (уходит в промпт мастера и критика)')}>
             <Textarea name="code" defaultValue={e.code} rows={4} className="resize-y font-mono text-[12.5px] leading-[1.45]" />
-          </div>
+          </Field>
 
-          <div>
-            <label className={lbl}>{say('Query lens — aspects he searches the knowledge base by (ask_gnome, dig)', 'Линза запроса — аспекты, которыми он ищет по базе знаний (ask_gnome, раскопка)')}</label>
+          <Field label={say('Query lens — aspects he searches the knowledge base by (ask_gnome, dig)', 'Линза запроса — аспекты, которыми он ищет по базе знаний (ask_gnome, раскопка)')}>
             <Input name="lens" defaultValue={e.lens} className="font-mono text-[12.5px]" />
-          </div>
+          </Field>
 
-          <div>
-            <label className={lbl}>{say('Instruction (persona)', 'Инструкция (персона)')}</label>
+          <Field label={say('Instruction (persona)', 'Инструкция (персона)')}>
             <Textarea name="persona" defaultValue={e.persona} rows={7} className="resize-y leading-[1.45]" />
-          </div>
+          </Field>
 
           {/* «Мечты» — что мешает работать; это сигнал в фиче-бэклог, а не служебная заметка. */}
-          <div>
-            <label className={lbl}>{say('What’s missing (goes to the feature backlog)', 'Чего не хватает (уходит в фиче-бэклог)')}</label>
+          <Field label={say('What’s missing (goes to the feature backlog)', 'Чего не хватает (уходит в фиче-бэклог)')}>
             <Textarea
               name="dreams"
               defaultValue={e.dreams}
@@ -285,10 +272,11 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
               className="resize-y leading-[1.45]"
               placeholder={say('A step-timer for recipes', 'Таймер шага для рецептов')}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className={lbl}>{say('Domains — what this expert is summoned for', 'Домены — на что зовут этого эксперта')}</label>
+          {/* htmlFor (а не оборачивание в label): внутри уже есть label тумблера — вложенные
+              label невалидны, а связывать подпись группы с одним из контролов нечестно. */}
+          <Field label={say('Domains — what this expert is summoned for', 'Домены — на что зовут этого эксперта')} htmlFor={`domains-${e.id}`}>
             {/* Домены — те же теги по смыслу, поэтому тот же TagInput: чипы, автокомплит из реестра.
                 «Любая тема» отдельным тумблером, а не доменом «*»: normalize у TagInput вырезает
                 звёздочку, да и тумблер честнее магического символа. */}
@@ -297,12 +285,11 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
               {say('Any topic (generalist)', 'Любая тема (универсал)')}
             </label>
             {anyTopic ? null : <TagInput name="domains" initial={e.domains.filter((d) => d !== '*')} lang={ru ? 'ru' : 'en'} max={12} />}
-          </div>
+          </Field>
 
-          <div>
-            <label className={lbl}>{say('Model (empty = from council pool)', 'Модель (пусто = из пула совета)')}</label>
-            <ModelSelect name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" allowCustom customHint={say('Use', 'Использовать')} />
-          </div>
+          <Field label={say('Model (empty = from council pool)', 'Модель (пусто = из пула совета)')} htmlFor={`model-${e.id}`}>
+            <ModelSelect id={`model-${e.id}`} name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" allowCustom customHint={say('Use', 'Использовать')} />
+          </Field>
 
           <div className="flex items-center justify-between gap-3 pt-0.5">
             <label className="flex items-center gap-2 text-[12px] text-ink-2">

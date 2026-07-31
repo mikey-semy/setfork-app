@@ -9,11 +9,10 @@ import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Switch } from '@/shared/ui/switch'
+import { Field } from '@/shared/ui/Field'
 import { AvatarDropzone } from './AvatarDropzone'
 import { SOCIAL_TYPES, SocialIcon } from './socials'
 import { updateProfile, type ActionResult } from './actions'
-
-const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 // Строка соцсети редактируется (type/url меняются) и удаляется из середины списка,
 // поэтому ни индекс, ни содержимое не годятся как key — генерируем id при создании строки.
@@ -65,13 +64,11 @@ export function SettingsForm({
         <Switch name="avatarSquare" checked={square} onCheckedChange={setSquare} />
       </label>
 
-      <div>
-        <label className={lbl}>{t('displayName', lang)}</label>
+      <Field label={t('displayName', lang)}>
         <Input name="name" defaultValue={name} maxLength={80} />
-      </div>
+      </Field>
 
-      <div>
-        <label className={lbl}>{t('bio', lang)}</label>
+      <Field label={t('bio', lang)}>
         <Textarea
           name="bio"
           defaultValue={bio}
@@ -80,28 +77,25 @@ export function SettingsForm({
           placeholder={t('bioPh', lang)}
           className="min-h-[39px] max-h-[81px] resize-y overflow-y-auto"
         />
-      </div>
+      </Field>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className={lbl}>{t('location', lang)}</label>
+        <Field label={t('location', lang)}>
           <Input name="location" defaultValue={location} maxLength={80} placeholder={t('locationPh', lang)} />
-        </div>
-        <div>
-          <label className={lbl}>{t('website', lang)}</label>
+        </Field>
+        <Field label={t('website', lang)}>
           <Input name="website" defaultValue={website} maxLength={200} placeholder="example.com" />
-        </div>
+        </Field>
       </div>
 
-      {/* Socials */}
-      <div>
-        <label className={lbl}>{t('socials', lang)}</label>
+      {/* Socials: htmlFor — внутри строки с кнопками, оборачивание в label ловило бы их клики. */}
+      <Field label={t('socials', lang)} htmlFor="profile-socials">
         <input type="hidden" name="socials" value={JSON.stringify(rows.flatMap((r) => (r.url.trim() ? [{ type: r.type, url: r.url }] : [])))} />
         <div className="flex flex-col gap-2">
           {rows.map((row, i) => (
             <div key={row._k} className="flex items-center gap-2">
               <Select value={row.type} onValueChange={(v) => setRow(i, { type: v })}>
-                <SelectTrigger className="w-[160px] shrink-0">
+                <SelectTrigger id={i === 0 ? 'profile-socials' : undefined} className="w-[160px] shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -139,7 +133,7 @@ export function SettingsForm({
             <Plus size={14} /> {t('addSocial', lang)}
           </button>
         </div>
-      </div>
+      </Field>
 
       {/* Приватность профиля */}
       <div className="flex items-start justify-between gap-4 border-t border-border pt-4">

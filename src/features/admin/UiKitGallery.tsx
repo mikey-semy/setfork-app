@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { Alert, type AlertVariant } from '@/shared/ui/Alert'
 import { Badge, type BadgeVariant } from '@/shared/ui/badge'
+import { Field } from '@/shared/ui/Field'
 import { Button, type ButtonVariant } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { Input } from '@/shared/ui/input'
@@ -24,6 +26,7 @@ import { CONTROL_H, CONTROL_TEXT, type ControlSize } from '@/shared/ui/control'
 const SIZES: ControlSize[] = ['md', 'sm', 'xs']
 const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'outline', 'ghost', 'danger', 'dangerSolid']
 const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft']
+const ALERT_VARIANTS: AlertVariant[] = ['danger', 'warn', 'ok', 'info']
 
 type Say = (en: string, ru: string) => string
 
@@ -139,6 +142,31 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         </div>
         <Textarea rows={2} placeholder="Textarea (box)" />
         <TagInput lang={lang} initial={['docker', 'linux']} name="uikit-tags" />
+      </Section>
+
+      <Section
+        title={say('Field — form row anatomy', 'Field — анатомия строки формы')}
+        hint={say(
+          'Label + control + hint + error in one primitive; no local label constants in features.',
+          'Подпись + контрол + подсказка + ошибка одним примитивом; никаких локальных label-констант в фичах.',
+        )}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={say('With hint', 'С подсказкой')} hint={say('Explains the value by example', 'Объясняет значение примером')}>
+            <Input placeholder="value" />
+          </Field>
+          <Field label={say('With error', 'С ошибкой')} error={say('Explains what to fix', 'Объясняет, что исправить')}>
+            <Input placeholder="value" aria-invalid />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title={say('Alerts', 'Баннеры состояния')} hint={say('Form errors (?e=), warnings, success — not hand-rolled borders.', 'Ошибки форм (?e=), предупреждения, успех — не рукописные рамки.')}>
+        {ALERT_VARIANTS.map((v) => (
+          <Alert key={v} variant={v}>
+            {v} — {say('message text, wraps safely on narrow screens', 'текст сообщения, безопасно переносится на узких экранах')}
+          </Alert>
+        ))}
       </Section>
 
       <Section title={say('Choice controls', 'Выбор и переключатели')}>

@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { Alert } from '@/shared/ui/Alert'
 import { ACHIEVEMENT_KEYS, type AchievementKey } from '@/features/profile/achievements'
 import { ACH_META } from '@/features/profile/achievement-meta'
 import type { AchDisplayMap } from '@/features/profile/achievement-config'
@@ -44,7 +45,7 @@ export function AchievementsAdmin({ initial, ru }: { initial: AchDisplayMap; ru:
 
   return (
     <div className="flex flex-col gap-2">
-      {err && <div className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-[12.5px] text-danger">{err}</div>}
+      {err && <Alert variant="danger">{err}</Alert>}
       {ACHIEVEMENT_KEYS.map((key) => (
         <AchRow key={key} k={key} d={map[key]} ru={ru} pending={pending} onToggle={toggle} onUpload={upload} onClear={clearImage} />
       ))}

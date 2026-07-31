@@ -5,6 +5,7 @@ import { Copy, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
+import { Alert } from '@/shared/ui/Alert'
 import type { Lang } from '@/shared/i18n'
 import { beginTotpEnroll, confirmTotpEnroll, disableTotp, regenerateRecoveryCodes, type EnrollStart } from '@/features/auth/twofa'
 
@@ -109,7 +110,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
         )}
       </div>
 
-      {err && <div className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-[13px] text-danger">{err}</div>}
+      {err && <Alert variant="danger">{err}</Alert>}
 
       {/* Одноразовый показ recovery-кодов */}
       {recovery && (

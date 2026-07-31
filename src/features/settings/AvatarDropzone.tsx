@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Crop, ImageUp, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { AvatarCropper } from '@/shared/ui/AvatarCropper'
+import { Field } from '@/shared/ui/Field'
 import { t, type Lang } from '@/shared/i18n'
 
 const ACCEPT = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
@@ -97,8 +98,9 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
   }
 
   return (
-    <div>
-      <label className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{t('avatar', lang)}</label>
+    // htmlFor на скрытый файловый input: клик по подписи открывает выбор файла,
+    // а оборачивание в label ловило бы клики кнопок внутри дропзоны.
+    <Field label={t('avatar', lang)} htmlFor="avatar-file">
       <div
         role="button"
         tabIndex={0}
@@ -177,6 +179,7 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
       <input type="hidden" name="avatarRemove" value={removed ? '1' : ''} />
       <input
         ref={inputRef}
+        id="avatar-file"
         type="file"
         name="avatar"
         accept="image/png,image/jpeg,image/webp,image/gif"
@@ -200,6 +203,6 @@ export function AvatarDropzone({ handle, avatarUrl, lang, square = false }: { ha
           failed: t('cropFailed', lang),
         }}
       />
-    </div>
+    </Field>
   )
 }
