@@ -110,7 +110,7 @@ export function SearchField({
           aria-label={clearLabel}
           onMouseDown={(e) => e.preventDefault()}
           onClick={clear}
-          className="grid shrink-0 place-items-center rounded text-muted outline-hidden hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong"
+          className="grid shrink-0 place-items-center rounded-md text-muted outline-hidden hover:text-ink focus-visible:ring-2 focus-visible:ring-border-strong"
         >
           <X size={s.clear} />
         </button>

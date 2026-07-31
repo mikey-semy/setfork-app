@@ -48,7 +48,7 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
                   <Tooltip label={t('versionHistory', lang)}>
                     <Link
                       href={`${base}/versions`}
-                      className={`shrink-0 rounded border px-1.5 font-mono text-[11px] ${
+                      className={`shrink-0 rounded-md border px-1.5 font-mono text-[11px] ${
                         fresh ? 'border-(--accent)/50 bg-(--accent-soft) text-accent' : 'border-border bg-surface-2 text-ink-2'
                       }`}
                     >

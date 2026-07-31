@@ -282,7 +282,7 @@ export function DigChatOpen({ detail, label, hasSession }: { detail: DigChatOpen
         type="button"
         aria-label={label}
         onClick={() => window.dispatchEvent(new CustomEvent(DIG_CHAT_EVENT, { detail }))}
-        className="relative grid size-7 shrink-0 place-items-center rounded text-muted transition-colors hover:text-accent"
+        className="relative grid size-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:text-accent"
       >
         <Pickaxe size={14} />
         {hasSession && <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-accent" aria-hidden />}

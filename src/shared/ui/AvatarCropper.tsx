@@ -146,7 +146,7 @@ export function AvatarCropper({
           <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-white/60" />
         </div>
 
-        <label className="flex items-center gap-2 text-[12px] text-muted">
+        <label className="flex items-center gap-2 text-[12.5px] text-muted">
           <ZoomIn size={15} className="shrink-0" />
           <input
             type="range"

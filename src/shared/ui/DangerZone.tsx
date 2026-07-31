@@ -9,7 +9,7 @@ import { cn } from '@/shared/lib/cn'
 export function DangerZone({ title, children, className }: { title: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={cn('overflow-hidden rounded-lg border border-danger/40', className)}>
-      <div className="border-b border-danger/40 bg-danger/5 px-5 py-2.5 text-[13.5px] font-semibold text-danger">{title}</div>
+      <div className="border-b border-danger/40 bg-danger/5 px-5 py-2.5 text-[13px] font-semibold text-danger">{title}</div>
       <div className="divide-y divide-border px-5">{children}</div>
     </section>
   )

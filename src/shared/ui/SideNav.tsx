@@ -96,7 +96,7 @@ export function SideNav({
             return (
               <div key={g.title ?? i} className="flex flex-col gap-0.5">
                 {g.title && (
-                  <div className="px-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">{g.title}</div>
+                  <div className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{g.title}</div>
                 )}
                 {g.items.map((it) => (
                   <NavRow key={it.key} it={it} />

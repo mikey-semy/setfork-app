@@ -47,7 +47,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
       </button>
     </div>
   )
-  const row = 'flex items-center gap-2 rounded px-1.5 py-1.5 text-[12.5px] text-ink-2 hover:bg-surface-2 hover:text-ink'
+  const row = 'flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[12.5px] text-ink-2 hover:bg-surface-2 hover:text-ink'
 
   const ru = lang === 'ru'
   const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [

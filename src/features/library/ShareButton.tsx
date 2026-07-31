@@ -84,14 +84,14 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
       {canNative && (
         <button
           onClick={nativeShare}
-          className="mb-1 flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+          className="mb-1 flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
         >
           <Share2 size={15} /> {label}
         </button>
       )}
       <button
         onClick={copy}
-        className="flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
       >
         {copied ? <Check size={15} className="text-ok" /> : <Copy size={15} />}
         {copied ? (copiedLabel ?? copyLinkLabel) : copyLinkLabel}
@@ -121,7 +121,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
       {qr && (
         <div className="mt-2 flex flex-col items-center border-t border-border pt-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qr} alt="QR" width={160} height={160} className="rounded bg-white p-1" />
+          <img src={qr} alt="QR" width={160} height={160} className="rounded-md bg-white p-1" />
           <span className="mt-1.5 text-[11px] text-muted">{qrHint}</span>
         </div>
       )}

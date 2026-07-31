@@ -7,7 +7,7 @@ export function StepLevelBadge({ level, lang }: { level: StepLevel; lang: Lang }
   const recommended = level === 'recommended'
   return (
     <span
-      className={`rounded border px-1.5 py-0.5 text-[10.5px] font-medium ${
+      className={`rounded border px-1.5 py-0.5 text-[11px] font-medium ${
         recommended ? 'border-warn text-warn' : 'border-border text-muted'
       }`}
     >

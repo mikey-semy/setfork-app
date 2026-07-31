@@ -101,7 +101,7 @@ export function CommitBar({
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-label={open ? labels.collapse : labels.expand}
-            className={`grid size-6 shrink-0 place-items-center rounded border border-border text-muted transition-colors hover:border-border-strong hover:text-ink ${
+            className={`grid size-6 shrink-0 place-items-center rounded-md border border-border text-muted transition-colors hover:border-border-strong hover:text-ink ${
               open ? 'bg-surface-2 text-ink' : ''
             }`}
           >
@@ -112,7 +112,7 @@ export function CommitBar({
         <Tooltip label={labels.commitLink}>
           <Link
             href={`${versionsHref}#v${version}`}
-            className="shrink-0 rounded border border-border px-1.5 font-mono text-[11px] text-muted hover:border-border-strong hover:text-ink"
+            className="shrink-0 rounded-md border border-border px-1.5 font-mono text-[11px] text-muted hover:border-border-strong hover:text-ink"
           >
             {`v${version}`}
           </Link>

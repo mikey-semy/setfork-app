@@ -11,7 +11,7 @@ import { Tooltip } from './Tooltip'
 import { Popover, PopoverAnchor, PopoverContent } from './popover'
 
 const EmojiPicker = dynamic(() => import('@emoji-mart/react'), { ssr: false })
-const tbtn = 'grid h-7 w-7 place-items-center rounded text-muted hover:bg-surface-2 hover:text-ink'
+const tbtn = 'grid h-7 w-7 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink'
 type MentionUser = { handle: string; avatarUrl: string | null }
 
 // Редактор текста со ВСПЛЫВАЮЩЕЙ (bubble) панелью: появляется, пока работаешь с
@@ -193,9 +193,9 @@ export function BubbleTextEditor({
         onScroll={refresh}
         onKeyDown={onKeyDown}
         onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null); setMoreOpen(false) } }, 150)}
-        className={`w-full text-[13.5px] leading-relaxed text-ink outline-hidden ${
+        className={`w-full text-[13px] leading-relaxed text-ink outline-hidden ${
           bare ? 'resize-none overflow-hidden bg-transparent' : 'rounded-md border border-border bg-surface-2 px-3 py-2 focus:border-border-strong'
-        } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[72px] resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? 'font-mono text-[12px]' : ''} ${textareaClassName ?? ''}`}
+        } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[72px] resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? 'font-mono text-[12.5px]' : ''} ${textareaClassName ?? ''}`}
       />
       {trailing && <div className="absolute right-1.5 top-1.5">{trailing}</div>}
 

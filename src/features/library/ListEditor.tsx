@@ -70,7 +70,7 @@ function LinkTitleButton({ url, onLabel, ru }: { url: string; onLabel: (v: strin
         onClick={gen}
         disabled={busy || !ok}
         aria-label={ru ? 'Название из ссылки' : 'Get title from link'}
-        className="grid h-6 w-6 place-items-center rounded text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-2"
+        className="grid h-6 w-6 place-items-center rounded-md text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-2"
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
       </button>
@@ -384,7 +384,7 @@ export function ListEditor({
                   setDragI(null)
                   setOverI(null)
                 }}
-                className="cursor-grab rounded p-0.5 text-muted hover:text-ink active:cursor-grabbing"
+                className="cursor-grab rounded-md p-0.5 text-muted hover:text-ink active:cursor-grabbing"
               >
                 <GripVertical size={15} />
               </span>
@@ -404,27 +404,27 @@ export function ListEditor({
             )}
             <div className="ml-auto flex items-center gap-1">
               <Tooltip label={ru ? 'В начало' : 'Move to top'}>
-                <button type="button" onClick={() => moveToEdge(i, 'top')} disabled={i === 0} className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
+                <button type="button" onClick={() => moveToEdge(i, 'top')} disabled={i === 0} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
                   <ChevronsUp size={15} />
                 </button>
               </Tooltip>
               <Tooltip label={ru ? 'Выше' : 'Move up'}>
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
                   <ChevronUp size={15} />
                 </button>
               </Tooltip>
               <Tooltip label={ru ? 'Ниже' : 'Move down'}>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
+                <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
                   <ChevronDown size={15} />
                 </button>
               </Tooltip>
               <Tooltip label={ru ? 'В конец' : 'Move to bottom'}>
-                <button type="button" onClick={() => moveToEdge(i, 'bottom')} disabled={i === items.length - 1} className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
+                <button type="button" onClick={() => moveToEdge(i, 'bottom')} disabled={i === items.length - 1} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
                   <ChevronsDown size={15} />
                 </button>
               </Tooltip>
               <Tooltip label={ru ? 'Удалить' : 'Remove'}>
-                <button type="button" onClick={() => removeItem(i)} className="rounded p-1 text-muted hover:text-danger">
+                <button type="button" onClick={() => removeItem(i)} className="rounded-md p-1 text-muted hover:text-danger">
                   <Trash2 size={15} />
                 </button>
               </Tooltip>
@@ -834,7 +834,7 @@ function ProductBlockBody({
           <button
             type="button"
             onClick={() => onProducts(products.filter((_, xi) => xi !== pi))}
-            className="grid h-7 w-7 shrink-0 place-items-center self-end rounded text-muted hover:text-danger sm:self-auto"
+            className="grid h-7 w-7 shrink-0 place-items-center self-end rounded-md text-muted hover:text-danger sm:self-auto"
             aria-label={t('productRemove', lang)}
           >
             <Trash2 size={13} />

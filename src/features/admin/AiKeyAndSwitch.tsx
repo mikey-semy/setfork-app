@@ -138,7 +138,7 @@ export function AiKeyAndSwitch({
             type="button"
             aria-label={reveal ? 'hide' : 'show'}
             onClick={() => setReveal((v) => !v)}
-            className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-muted hover:text-ink"
+            className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-muted hover:text-ink"
           >
             {reveal ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>

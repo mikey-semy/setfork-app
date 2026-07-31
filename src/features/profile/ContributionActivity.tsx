@@ -20,7 +20,7 @@ export function ContributionActivity({
 }) {
   const ru = lang === 'ru'
   const month = new Intl.DateTimeFormat(ru ? 'ru' : 'en', { month: 'long', year: 'numeric' }).format(monthStart)
-  const navBtn = 'grid h-6 w-6 place-items-center rounded border border-border text-muted hover:text-ink'
+  const navBtn = 'grid h-6 w-6 place-items-center rounded-md border border-border text-muted hover:text-ink'
   const { versions, versionsTotal, listsCreated, issuesOpened, issuesLists, suggestionsCreated } = activity
   const empty = versionsTotal === 0 && listsCreated.length === 0 && issuesOpened === 0 && suggestionsCreated === 0
 

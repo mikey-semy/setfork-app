@@ -68,7 +68,7 @@ export default function CodeEditorInner({
       {/* Правый верхний угол: язык + копировать (фидбек владельца). */}
       {value.trim() !== '' && (
         <span className="absolute right-2 top-1.5 z-10 inline-flex items-center gap-1.5">
-          <span className="pointer-events-none rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted">
+          <span className="pointer-events-none rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-muted">
             {LANG_LABEL[id]}
           </span>
           <CopyButton text={value} />

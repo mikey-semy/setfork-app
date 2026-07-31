@@ -20,7 +20,7 @@ function Copyable({ text, label }: { text: string; label: string }) {
           setTimeout(() => setDone(false), 1500)
         } catch {}
       }}
-      className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-[12px] text-ink-2 hover:text-ink"
+      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[12px] text-ink-2 hover:text-ink"
     >
       {done ? <Check size={12} className="text-ok" /> : <Copy size={12} />} {label}
     </button>
@@ -68,7 +68,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
       <div className="rounded-md border border-border bg-surface-2 p-3">
         <div className="mb-1 text-[12.5px] font-medium text-ink">{ru ? 'MCP-эндпоинт' : 'MCP endpoint'}</div>
         <div className="flex flex-wrap items-center gap-2">
-          <code className="rounded bg-surface px-2 py-1 font-mono text-[12px] text-accent">{mcpUrl}</code>
+          <code className="rounded-md bg-surface px-2 py-1 font-mono text-[12px] text-accent">{mcpUrl}</code>
           <Copyable text={mcpUrl} label={ru ? 'Копировать' : 'Copy'} />
         </div>
         <p className="mt-1.5 text-[11.5px] text-ink-2">
@@ -85,7 +85,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
             <TriangleAlert size={14} /> {ru ? 'Скопируй сейчас — больше не покажем' : 'Copy it now — shown only once'}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="max-w-full overflow-x-auto rounded bg-surface-2 px-2 py-1 font-mono text-[12px] text-ink">{created}</code>
+            <code className="max-w-full overflow-x-auto rounded-md bg-surface-2 px-2 py-1 font-mono text-[12px] text-ink">{created}</code>
             <Copyable text={created} label={ru ? 'Копировать токен' : 'Copy token'} />
           </div>
         </div>
@@ -157,7 +157,7 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
               </div>
               <form action={revokeApiToken.bind(null, tk.id)}>
                 <Tooltip label={ru ? 'Отозвать' : 'Revoke'}>
-                  <button className="inline-flex items-center gap-1 rounded p-1.5 text-muted hover:text-danger">
+                  <button className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted hover:text-danger">
                     <Trash2 size={15} />
                   </button>
                 </Tooltip>

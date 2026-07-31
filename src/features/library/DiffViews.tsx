@@ -138,7 +138,7 @@ export function ListDiff({
                 {!block && <StepLevelBadge level={e.level} lang={lang} />}
                 {st.key && st.color && (
                   <span
-                    className="rounded border px-1.5 py-0.5 text-[10.5px] font-medium"
+                    className="rounded-md border px-1.5 py-0.5 text-[10.5px] font-medium"
                     style={{ color: st.color, borderColor: mix(st.color, 55) }}
                   >
                     {t(st.key, lang)}
@@ -174,12 +174,12 @@ export function ListDiff({
                 </div>
               )}
               {e.status !== 'removed' && e.command && !e.changes.includes('command') && (
-                <code className="mt-2 block rounded bg-surface-2 px-2 py-1 font-mono text-[12px] text-ink">{e.command}</code>
+                <code className="mt-2 block rounded-md bg-surface-2 px-2 py-1 font-mono text-[12px] text-ink">{e.command}</code>
               )}
               {e.status !== 'removed' && e.refs && e.refs.length > 0 && (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {e.refs.map((r, k) => {
-                    const cls = 'inline-flex items-center gap-1 rounded border border-border bg-surface-2 px-2 py-0.5 text-[11.5px]'
+                    const cls = 'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11.5px]'
                     // Ссылка без URL — не делаем «#»-якорь на верх страницы, показываем как текст.
                     return r.url ? (
                       <a key={k} href={safeHref(r.url) || undefined} target="_blank" rel="noreferrer" className={`${cls} text-accent hover:underline`}>

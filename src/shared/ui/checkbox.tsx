@@ -36,7 +36,7 @@ export function CheckboxRow({
         <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
           {icon} {title}
         </span>
-        {sub && <span className="block text-[11.5px] leading-snug text-muted">{sub}</span>}
+        {sub && <span className="block text-[11px] leading-snug text-muted">{sub}</span>}
       </span>
     </label>
   )
