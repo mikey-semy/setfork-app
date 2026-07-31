@@ -281,7 +281,7 @@ export function RunView({
                           setReasonDraft('')
                         }}
                         aria-label={t('runCantComplete', lang)}
-                        className="grid size-8 place-items-center rounded text-muted transition-colors hover:text-danger"
+                        className="grid size-8 place-items-center rounded-md text-muted transition-colors hover:text-danger"
                       >
                         <Ban size={16} />
                       </button>
@@ -370,7 +370,7 @@ export function RunView({
                       rows={2}
                       aria-label={t('runReasonPh', lang)}
                       placeholder={t('runReasonPh', lang)}
-                      className="w-full resize-none rounded border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
+                      className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
                     />
                     <div className="mt-2 flex items-center gap-2">
                       <button type="button" onClick={() => confirmBlock(i)} className="inline-flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-[12.5px] font-semibold text-white">

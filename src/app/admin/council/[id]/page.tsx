@@ -81,7 +81,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           <h1 className="flex items-center gap-2 text-[20px] font-bold text-ink">
             {name}
             {!e.enabled && (
-              <span className="rounded border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted">{say('disabled', 'выключен')}</span>
+              <span className="rounded-md border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted">{say('disabled', 'выключен')}</span>
             )}
           </h1>
           {(ru ? e.guildRu : e.guildEn) && <div className="mt-0.5 text-[13px] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}

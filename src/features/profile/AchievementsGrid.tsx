@@ -44,7 +44,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={a.imageUrl} alt="" className="h-full w-full object-cover" />
               {a.tier > 1 && (
-                <span className="absolute bottom-0.5 right-0.5 rounded bg-black/65 px-1 font-mono text-[10px] font-semibold leading-tight text-white">
+                <span className="absolute bottom-0.5 right-0.5 rounded-md bg-black/65 px-1 font-mono text-[10px] font-semibold leading-tight text-white">
                   ×{a.tier}
                 </span>
               )}
@@ -83,7 +83,7 @@ export function AchievementsGrid({ items, lang }: { items: AchTileData[]; lang: 
               <div className="flex items-center gap-2">
                 <h3 className="text-[16px] font-semibold text-ink">{open.label}</h3>
                 {open.tier > 1 && (
-                  <span className="rounded bg-warn/15 px-1.5 py-0.5 font-mono text-[12px] font-semibold text-warn">×{open.tier}</span>
+                  <span className="rounded-md bg-warn/15 px-1.5 py-0.5 font-mono text-[12px] font-semibold text-warn">×{open.tier}</span>
                 )}
               </div>
               <p className="mt-1 text-[13px] text-ink-2">{open.desc}</p>

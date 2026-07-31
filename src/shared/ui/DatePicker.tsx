@@ -74,17 +74,17 @@ function Calendar({ selected, onPick, ru }: { selected: Date | null; onPick: (d:
   return (
     <div className="w-[248px] p-2.5">
       <div className="mb-2 flex items-center justify-between">
-        <button type="button" onClick={() => shift(-1)} className="rounded p-1 text-muted hover:text-ink" aria-label="prev">
+        <button type="button" onClick={() => shift(-1)} className="rounded-md p-1 text-muted hover:text-ink" aria-label="prev">
           <ChevronLeft size={16} />
         </button>
         <span className="text-[13px] font-semibold text-ink">{MONTHS[ru ? 'ru' : 'en'][m]} {y}</span>
-        <button type="button" onClick={() => shift(1)} className="rounded p-1 text-muted hover:text-ink" aria-label="next">
+        <button type="button" onClick={() => shift(1)} className="rounded-md p-1 text-muted hover:text-ink" aria-label="next">
           <ChevronRight size={16} />
         </button>
       </div>
       <div className="grid grid-cols-7 gap-0.5 text-center">
         {WD[ru ? 'ru' : 'en'].map((w) => (
-          <span key={w} className="py-1 text-[10.5px] font-medium text-muted">{w}</span>
+          <span key={w} className="py-1 text-[11px] font-medium text-muted">{w}</span>
         ))}
         {cells.map((d, i) =>
           d == null ? (

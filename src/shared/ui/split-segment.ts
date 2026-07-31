@@ -24,7 +24,7 @@ export function splitSegment(opts: { interactive?: boolean; muted?: boolean; cla
   const { interactive = true, muted = false, className } = opts
   return cn(
     'inline-flex h-full items-center gap-2 px-3 text-[13px] font-semibold transition-colors',
-    muted && 'px-2.5 font-mono text-[12px] font-normal text-muted',
+    muted && 'px-2.5 font-mono text-[12.5px] font-normal text-muted',
     interactive && 'hover:bg-surface-2 hover:text-ink',
     className,
   )

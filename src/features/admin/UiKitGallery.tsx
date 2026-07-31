@@ -24,7 +24,7 @@ import { TagInput } from '@/shared/ui/TagInput'
 import { Textarea } from '@/shared/ui/textarea'
 import { toast } from '@/shared/ui/toast'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { CONTROL_H, CONTROL_TEXT, type ControlSize } from '@/shared/ui/control'
+import { CONTROL_H, CONTROL_TEXT, ICON_SIZE, LAYER, TEXT, type ControlSize } from '@/shared/ui/control'
 
 // Эталон интерфейса: все примитивы shared/ui во всех размерах и состояниях.
 // Смысл страницы — РАЗНОБОЙ ВИДЕН ГЛАЗАМИ: контролы одного размера стоят в одном
@@ -42,7 +42,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   return (
     <section className="rounded-lg border border-border bg-surface p-5">
       <h2 className="mb-1 text-[14px] font-bold text-ink">{title}</h2>
-      {hint && <p className="mb-4 text-[12.5px] text-ink-3">{hint}</p>}
+      {hint && <p className="mb-4 text-[12.5px] text-muted">{hint}</p>}
       <div className="flex flex-col gap-4">{children}</div>
     </section>
   )
@@ -129,7 +129,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
               </Button>
               <Tooltip label={say('Icon + aria-label', 'Иконка + aria-label')}>
                 <Button size={size} aria-label={say('Add', 'Добавить')}>
-                  <Plus size={size === 'xs' ? 13 : 15} />
+                  <Plus size={ICON_SIZE[size]} />
                 </Button>
               </Tooltip>
             </div>
@@ -270,6 +270,31 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           </ActionRow>
         </DangerZone>
         {confirmDialog}
+      </Section>
+
+      <Section
+        title={say('Typography', 'Типографика')}
+        hint={say(
+          'Seven roles instead of 20 ad-hoc sizes (control.ts TEXT); heroes (20/22/24) stay outside the ladder. Layers: sticky 20 / dropdown 30 / overlay 40 / modal 50 / tooltip+toast 60.',
+          'Семь ролей вместо 20 случайных кеглей (TEXT в control.ts); герои (20/22/24) вне лестницы. Слои: sticky 20 / dropdown 30 / overlay 40 / modal 50 / tooltip+toast 60.',
+        )}
+      >
+        <div className="flex flex-col gap-2">
+          {(Object.entries(TEXT) as [keyof typeof TEXT, string][]).map(([role, cls]) => (
+            <div key={role} className="flex items-baseline gap-3">
+              <span className="w-20 shrink-0 font-mono text-[11px] text-muted">{role}</span>
+              <span className={cls}>{say('Sample text of this role', 'Пример текста этой роли')}</span>
+              <span className="font-mono text-[11px] text-muted">{cls}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-3 border-t border-border pt-3 font-mono text-[11px] text-muted">
+          {Object.entries(LAYER).map(([name, z]) => (
+            <span key={name}>
+              {name}={z}
+            </span>
+          ))}
+        </div>
       </Section>
 
       <Section

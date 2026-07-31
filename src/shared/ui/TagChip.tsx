@@ -26,7 +26,7 @@ export function TagChip({
     >
       {curated && <span aria-hidden>✓</span>}
       {label || slug}
-      {count != null && <span className="font-mono text-[10px] opacity-70">{count}</span>}
+      {count != null && <span className="font-mono text-[11px] opacity-70">{count}</span>}
     </Link>
   )
 }

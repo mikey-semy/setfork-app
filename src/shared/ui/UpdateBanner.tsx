@@ -65,7 +65,7 @@ export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
             v{APP_VERSION} · {nextBuild.slice(0, 7)}
           </span>
         </div>
-        <p className="mt-0.5 text-[12px] leading-snug text-ink-2">
+        <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">
           {say('Reload the page so everything keeps working.', 'Перезагрузите страницу, чтобы всё работало правильно.')}
         </p>
       </div>

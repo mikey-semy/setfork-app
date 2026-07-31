@@ -30,11 +30,11 @@ export function Markdown({ children, className, refBase, codeCards }: { children
         remarkPlugins={refBase ? [remarkGfm, remarkIssueRefs(refBase)] : [remarkGfm]}
         components={{
           a: (p) => <a {...p} target="_blank" rel="noreferrer" className="text-accent hover:underline" />,
-          code: (p) => <code {...p} className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[0.9em] text-ink [overflow-wrap:anywhere]" />,
+          code: (p) => <code {...p} className="rounded-md bg-surface-2 px-1 py-0.5 font-mono text-[0.9em] text-ink [overflow-wrap:anywhere]" />,
           pre: (p) => {
             const c = codeCards ? codeOf(p.children) : null
             if (c) return <CodeCard code={c.code} name={c.name} />
-            return <pre {...p} className="overflow-x-auto rounded-md border border-border bg-surface-2 p-2.5 font-mono text-[12px] text-ink" />
+            return <pre {...p} className="overflow-x-auto rounded-md border border-border bg-surface-2 p-2.5 font-mono text-[12.5px] text-ink" />
           },
           ul: (p) => <ul {...p} className="list-disc pl-5" />,
           ol: (p) => <ol {...p} className="list-decimal pl-5" />,

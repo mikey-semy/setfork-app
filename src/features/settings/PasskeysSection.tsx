@@ -66,7 +66,7 @@ export function PasskeysSection({ initial, lang }: { initial: Row[]; lang: Lang 
                   {p.lastUsedAt ? ` · ${ru ? 'вход' : 'used'} ${fmt(p.lastUsedAt)}` : ''}
                 </div>
               </div>
-              <button type="button" onClick={() => remove(p.id)} aria-label={ru ? 'удалить' : 'remove'} className="shrink-0 rounded p-1 text-muted hover:bg-surface hover:text-danger">
+              <button type="button" onClick={() => remove(p.id)} aria-label={ru ? 'удалить' : 'remove'} className="shrink-0 rounded-md p-1 text-muted hover:bg-surface hover:text-danger">
                 <Trash2 size={15} />
               </button>
             </div>

@@ -72,7 +72,7 @@ export function ChangeNoteField({
             onClick={generate}
             disabled={busy}
             aria-label={ru ? 'Сгенерировать из изменений' : 'Generate commit message from changes'}
-            className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2"
+            className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2"
           >
             {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
           </button>

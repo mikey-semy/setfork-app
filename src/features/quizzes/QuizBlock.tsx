@@ -294,7 +294,7 @@ export function QuizBlock({
                   value={blankInputs[i] ?? ''}
                   onChange={(e) => setBlankInputs((xs) => xs.map((v, xi) => (xi === i ? e.target.value : v)))}
                   aria-label={`${ru ? 'Пропуск' : 'Blank'} ${i + 1}`}
-                  className={`mx-1 inline-block w-28 rounded border px-2 py-0.5 text-[13px] text-ink outline-hidden ${
+                  className={`mx-1 inline-block w-28 rounded-md border px-2 py-0.5 text-[13px] text-ink outline-hidden ${
                     checked ? (ok ? 'border-ok bg-ok/10' : 'border-danger bg-danger/10') : 'border-border-strong bg-surface-2 focus:border-accent'
                   }`}
                 />

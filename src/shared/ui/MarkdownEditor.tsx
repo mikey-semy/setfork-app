@@ -27,7 +27,7 @@ type Props = {
 
 type MentionUser = { handle: string; avatarUrl: string | null }
 type IssueHit = { number: number; title: string; status: string }
-const btn = 'inline-flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-surface hover:text-ink'
+const btn = 'inline-flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-ink'
 
 // Богатый markdown-редактор: тулбар (группы+разделители), Write/Preview, эмодзи, @mention,
 // картинки+вложения, Tab-отступ, undo/redo + горячие клавиши. Управляемая <textarea name>.
@@ -362,7 +362,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
   return (
     <div className={`overflow-hidden rounded-md border border-border bg-surface ${className ?? ''}`}>
       <div className="flex flex-wrap items-center gap-1 border-b border-border bg-surface-2 px-1.5 py-1">
-        <div className="mr-1 flex overflow-hidden rounded border border-border">
+        <div className="mr-1 flex overflow-hidden rounded-md border border-border">
           {(['write', 'preview'] as const).map((k) => (
             <button key={k} type="button" onClick={() => setTab(k)} className={`px-2.5 py-1 text-[12.5px] font-semibold ${tab === k ? 'bg-surface text-ink' : 'bg-surface-2 text-muted hover:text-ink'}`}>
               {k === 'write' ? L('Написать', 'Write') : L('Просмотр', 'Preview')}
@@ -498,7 +498,7 @@ export function MarkdownEditor({ name, defaultValue = '', placeholder, rows = 6,
         </div>
       )}
 
-      <div className="flex items-center gap-2 border-t border-border bg-surface-2 px-3 py-1.5 text-[11.5px] text-muted">
+      <div className="flex items-center gap-2 border-t border-border bg-surface-2 px-3 py-1.5 text-[11px] text-muted">
         <span>{L('Поддерживается Markdown', 'Markdown supported')}</span>
         <span className="text-border">·</span>
         <button type="button" onClick={() => fileInput.current?.click()} className="hover:text-ink">

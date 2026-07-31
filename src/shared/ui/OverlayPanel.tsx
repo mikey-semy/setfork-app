@@ -44,7 +44,7 @@ export function OverlayPanel({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-100 flex justify-center bg-black/30 p-4 ${align === 'center' ? 'items-center' : 'items-start pt-20'}`}
+      className={`fixed inset-0 z-50 flex justify-center bg-black/30 p-4 ${align === 'center' ? 'items-center' : 'items-start pt-20'}`}
       onClick={onClose}
     >
       <div
@@ -54,8 +54,8 @@ export function OverlayPanel({
       >
         {title !== undefined && (
           <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
-            <span className="text-[13.5px] font-semibold text-ink">{title}</span>
-            <button type="button" onClick={onClose} className="rounded p-1 text-muted hover:text-ink" aria-label="Close">
+            <span className="text-[13px] font-semibold text-ink">{title}</span>
+            <button type="button" onClick={onClose} className="rounded-md p-1 text-muted hover:text-ink" aria-label="Close">
               <X size={14} />
             </button>
           </div>

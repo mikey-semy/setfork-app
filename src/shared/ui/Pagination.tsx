@@ -32,7 +32,7 @@ export function Pagination({
           <ChevronLeft size={14} /> {ru ? 'Назад' : 'Previous'}
         </span>
       )}
-      <span className="font-mono text-[12px] text-muted">
+      <span className="font-mono text-[12.5px] text-muted">
         {page} / {totalPages}
       </span>
       {page < totalPages ? (

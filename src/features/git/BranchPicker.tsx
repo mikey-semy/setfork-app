@@ -93,8 +93,8 @@ export function BranchPicker({
       {open && (
         <>
           {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
-          <div className="fixed inset-0 z-99" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-100 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             <PickerPanel
               title={t('switchBranch', lang)}
               onClose={() => setOpen(false)}

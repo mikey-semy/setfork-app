@@ -19,7 +19,7 @@ function StepCard({ s, deleted, ru }: { s: TwStep | null; deleted: string; ru: b
       <div className="truncate text-[13px] font-semibold text-ink">{s.title}</div>
       {s.desc && <div className="mt-0.5 line-clamp-3 whitespace-pre-wrap text-[12.5px] text-ink-2">{s.desc}</div>}
       {s.command && (
-        <code className="mt-1 block truncate rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[12px] text-ink-2">{s.command}</code>
+        <code className="mt-1 block truncate rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[12px] text-ink-2">{s.command}</code>
       )}
       {s.why && <div className="mt-0.5 truncate text-[12px] text-muted">{ru ? 'зачем: ' : 'why: '}{s.why}</div>}
     </div>

@@ -98,7 +98,7 @@ export function CommitRow({
           {/* Строка 1 — сообщение + версия-тег. */}
           <span className="flex items-center gap-2">
             <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink">{msg}</span>
-            <span className="shrink-0 rounded border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">v{version}</span>
+            <span className="shrink-0 rounded-md border border-(--accent)/50 bg-(--accent-soft) px-1.5 font-mono text-[11px] text-accent">v{version}</span>
             {isCurrent && <span className="shrink-0 rounded-full bg-ok/15 px-1.5 py-0.5 text-[10px] font-semibold text-ok">{labels.current}</span>}
           </span>
           {/* Строка 2 — кто и когда. */}

@@ -144,7 +144,7 @@ function LimitedField({
         type="button"
         onClick={suggest}
         disabled={busy}
-        className="grid size-6 place-items-center rounded text-accent hover:bg-(--accent-soft) disabled:opacity-50"
+        className="grid size-6 place-items-center rounded-md text-accent hover:bg-(--accent-soft) disabled:opacity-50"
       >
         {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
       </button>

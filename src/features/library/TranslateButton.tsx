@@ -40,7 +40,7 @@ export function TranslateButton({ templateId, targetLang, lang, iconOnly }: { te
         disabled={pending}
         aria-label={label}
         className={iconOnly
-          ? "grid h-7 w-7 shrink-0 place-items-center rounded text-muted hover:text-ink disabled:opacity-60"
+          ? "grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted hover:text-ink disabled:opacity-60"
           : "grid size-[30px] shrink-0 place-items-center rounded-md border border-border text-ink hover:border-border-strong disabled:opacity-60"}
       >
         {pending ? <Loader2 size={15} className="animate-spin" /> : <Languages size={15} />}

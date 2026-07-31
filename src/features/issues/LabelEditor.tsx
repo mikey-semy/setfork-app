@@ -70,7 +70,7 @@ export function LabelEditor({
                       type="button"
                       disabled={pending}
                       onClick={() => toggle(l.key)}
-                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2 disabled:opacity-60"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2 disabled:opacity-60"
                     >
                       <span className={`h-3 w-3 shrink-0 rounded-full border ${l.cls}`} />
                       <span className="flex-1 truncate">{labelText(l.key, lang)}</span>
@@ -87,7 +87,7 @@ export function LabelEditor({
                       type="button"
                       disabled={pending}
                       onClick={() => toggle(key)}
-                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2 disabled:opacity-60"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2 disabled:opacity-60"
                     >
                       <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: c.color }} />
                       <span className="flex-1 truncate">{c.name}</span>

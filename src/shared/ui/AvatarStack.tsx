@@ -36,7 +36,7 @@ export function AvatarStack({
       ))}
       {rest > 0 && (
         <span
-          className="-ml-1.5 grid place-items-center rounded-full bg-surface-2 font-mono text-[10px] font-semibold text-ink-2 ring-2 ring-surface"
+          className="-ml-1.5 grid place-items-center rounded-full bg-surface-2 font-mono text-[11px] font-semibold text-ink-2 ring-2 ring-surface"
           style={{ width: size, height: size }}
         >
           {`+${rest}`}

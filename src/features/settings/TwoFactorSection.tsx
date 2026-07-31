@@ -152,7 +152,7 @@ export function TwoFactorSection({ enabled, lang }: { enabled: boolean; lang: La
                 ? 'Отсканируй QR в приложении-аутентификаторе (1Password, Google Authenticator, Aegis…) или введи секрет вручную:'
                 : 'Scan the QR with your authenticator app (1Password, Google Authenticator, Aegis…) or enter the secret manually:'}
             </p>
-            <code className="mt-1.5 block break-all rounded bg-surface px-2 py-1 font-mono text-[12px] text-ink">{enroll.secret}</code>
+            <code className="mt-1.5 block break-all rounded-md bg-surface px-2 py-1 font-mono text-[12px] text-ink">{enroll.secret}</code>
             <div className="mt-3">{codeInput(confirm, ru ? 'Код из приложения' : 'Code from the app')}</div>
           </div>
         </div>

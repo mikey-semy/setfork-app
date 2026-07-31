@@ -95,7 +95,7 @@ export function PickerRow({
     <>
       {mark === 'box' ? (
         <span
-          className={`grid size-4 shrink-0 place-items-center rounded border ${
+          className={`grid size-4 shrink-0 place-items-center rounded-md border ${
             selected ? 'border-accent bg-accent text-primary-fg' : 'border-border'
           }`}
         >

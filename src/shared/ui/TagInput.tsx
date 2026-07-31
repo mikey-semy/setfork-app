@@ -73,7 +73,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
       {/* min-h по шкале md (control.ts): в ряду с Input/Button не проседает; растёт при переносе тегов. */}
       <div className="flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
         {tags.map((tag) => (
-          <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-[12px] font-medium text-ink">
+          <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-[12.5px] font-medium text-ink">
             {tag}
             <button
               type="button"
@@ -144,7 +144,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
           ))}
         </ul>
       )}
-      <p className="mt-1 text-[11.5px] text-muted">{say(`Pick from suggestions or type your own. Up to ${max}.`, `Выбери из подсказок или впиши свой. До ${max}.`)}</p>
+      <p className="mt-1 text-[11px] text-muted">{say(`Pick from suggestions or type your own. Up to ${max}.`, `Выбери из подсказок или впиши свой. До ${max}.`)}</p>
     </div>
   )
 }

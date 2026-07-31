@@ -54,11 +54,11 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
                   ровно то, чего строка заголовка должна была избежать. Статусы
                   (черновик/приватный) остаются здесь: это не счётчик, а состояние. */}
               {item.status === 'draft' && (
-                <span className="rounded border border-warn px-1.5 py-0.5 text-[10.5px] font-medium text-warn">{t('draftBadge', lang)}</span>
+                <span className="rounded-md border border-warn px-1.5 py-0.5 text-[10.5px] font-medium text-warn">{t('draftBadge', lang)}</span>
               )}
               {item.visibility === 'private' && (
                 <Tooltip label="private">
-                  <span className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10.5px] text-ink-2">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10.5px] text-ink-2">
                     <Lock size={10} />
                   </span>
                 </Tooltip>

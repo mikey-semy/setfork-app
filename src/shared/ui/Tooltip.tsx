@@ -37,7 +37,7 @@ export function Tooltip({
           side={side}
           sideOffset={6}
           collisionPadding={8}
-          className="z-200 max-w-[240px] rounded-md border border-border bg-surface px-2 py-1 text-[11.5px] leading-snug text-ink shadow-card"
+          className="z-60 max-w-[240px] rounded-md border border-border bg-surface px-2 py-1 text-[11px] leading-snug text-ink shadow-card"
         >
           {label}
           <TooltipPrimitive.Arrow className="fill-(--surface)" width={10} height={5} />

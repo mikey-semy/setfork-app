@@ -57,7 +57,7 @@ export function TrendChart({
         <circle cx={x(points.length - 1)} cy={y(points[points.length - 1] ?? 0)} r="3.5" fill={stroke} />
       </svg>
       {labels && (
-        <div className="mt-1 flex justify-between font-mono text-[10.5px] text-muted">
+        <div className="mt-1 flex justify-between font-mono text-[11px] text-muted">
           <span>{labels[0]}</span>
           <span>{labels[1]}</span>
         </div>

@@ -39,7 +39,7 @@ export function PromoCard({ lang }: { lang: Lang }) {
   if (hidden) return null
   return (
     <div className="relative overflow-hidden rounded-lg border border-border bg-linear-to-br from-(--accent-soft) to-surface p-3.5">
-      <button type="button" onClick={dismiss} className="absolute right-2 top-2 rounded p-1 text-muted hover:text-ink" aria-label="Dismiss">
+      <button type="button" onClick={dismiss} className="absolute right-2 top-2 rounded-md p-1 text-muted hover:text-ink" aria-label="Dismiss">
         <X size={13} />
       </button>
       <span className="inline-block rounded-full bg-accent px-2 py-0.5 text-[10.5px] font-semibold text-white">{c.badge}</span>

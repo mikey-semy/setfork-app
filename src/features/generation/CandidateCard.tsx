@@ -77,7 +77,7 @@ export function CandidateCard({
                   {it.command && (
                     // Бейдж языка в углу (detect-lang, как в редакторе); перенос вместо
                     // горизонтального скролла. CopyButton нельзя: карточка сама <button>.
-                    <code className="relative mt-1 block whitespace-pre-wrap rounded bg-surface-2 px-2 py-1 pr-14 font-mono text-[12px] text-ink [overflow-wrap:anywhere]">
+                    <code className="relative mt-1 block whitespace-pre-wrap rounded-md bg-surface-2 px-2 py-1 pr-14 font-mono text-[12px] text-ink [overflow-wrap:anywhere]">
                       {it.command}
                       <span className="absolute right-1.5 top-1 font-mono text-[9.5px] uppercase tracking-wide text-muted">{LANG_LABEL[detectLang(it.command)]}</span>
                     </code>
@@ -101,7 +101,7 @@ export function CandidateCard({
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 rounded border border-border bg-surface-2 px-2 py-0.5 text-[11.5px] text-accent hover:underline"
+                          className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11.5px] text-accent hover:underline"
                         >
                           <Link2 size={11} /> {r.label}
                         </a>

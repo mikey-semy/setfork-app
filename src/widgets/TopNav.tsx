@@ -285,7 +285,7 @@ export function TopNav({
                 size="sm"
                 containerClassName="w-[220px] xl:w-[300px]"
                 hint={
-                  <kbd className="hidden rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted lg:inline">/</kbd>
+                  <kbd className="hidden rounded-md border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted lg:inline">/</kbd>
                 }
               />
             </div>

@@ -67,7 +67,7 @@ export function MirrorSection({
               <div className="text-ink-2">
                 {error ? t('mirrorFailed', lang) : syncedAt ? t('mirrorOk', lang) : t('mirrorNever', lang)}
                 {syncedAt && (
-                  <span className="text-ink-3"> · {syncedAt.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-GB')}</span>
+                  <span className="text-muted"> · {syncedAt.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-GB')}</span>
                 )}
               </div>
               {error && <div className="mt-0.5 break-words text-danger">{error}</div>}

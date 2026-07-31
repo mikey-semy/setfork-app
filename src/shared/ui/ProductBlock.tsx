@@ -39,7 +39,7 @@ export function ProductBlock({ title, items, lang }: { title?: string; items: Pr
         {items.map((p, i) => (
           <li key={p.idx ?? `i${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
             {p.tier && (
-              <span className={`shrink-0 rounded border px-1.5 py-px text-[10.5px] font-medium uppercase tracking-wide ${TIER_CLS[p.tier]}`}>
+              <span className={`shrink-0 rounded-md border px-1.5 py-px text-[11px] font-medium uppercase tracking-wide ${TIER_CLS[p.tier]}`}>
                 {tierLabel(p.tier, lang)}
               </span>
             )}

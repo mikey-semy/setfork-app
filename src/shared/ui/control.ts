@@ -33,6 +33,48 @@ export const CONTROL_PX: Record<ControlSize, string> = {
  *  клавиатурой ввода. */
 export const FIELD_TEXT_MOBILE = 'max-sm:text-[16px]'
 
+// ── Лестница типографики (Ф5a трека ui-system) ──────────────────────────
+// До неё в коде жило 20 разных кеглей с полупиксельными шагами (13 ×406,
+// 12.5 ×313, 12 ×254, 11 ×134, 11.5 ×130, 13.5 ×108…). Ролей — семь; всё
+// новое пишется ролью, свип старого — Ф5b, после него text-[..px] вне
+// shared/ui запрещает линт (Ф7). Герои (20/22/24) в лестницу не входят.
+export const TEXT = {
+  /** Мелкие подписи: бейджи, моно-меты, uppercase-заголовки групп. */
+  caption: 'text-[11px]',
+  /** Вторичный текст: подписи полей, хинты, меты. */
+  bodySm: 'text-[12.5px]',
+  /** Основной текст интерфейса. */
+  body: 'text-[13px]',
+  /** Крупный текст: поля ввода md, важные абзацы. */
+  bodyLg: 'text-[14px]',
+  /** Заголовок раздела/секции. */
+  title: 'text-[16px]',
+  /** Заголовок страницы (PageHeader). */
+  page: 'text-[18px]',
+  /** Число-показатель (StatTile). */
+  stat: 'text-[22px]',
+} as const
+
+/** Размер lucide-иконки при размере контрола: единый вместо 12 разных чисел. */
+export const ICON_SIZE: Record<ControlSize, number> = {
+  xs: 13,
+  sm: 14,
+  md: 15,
+}
+
+// ── Слои (z-index) ───────────────────────────────────────────────────────
+// Вместо случайных z-99/z-100/z-200: навигация/липкие панели ниже дропдаунов,
+// дропдауны ниже модалок, тосты поверх всего.
+export const LAYER = {
+  sticky: 'z-20',
+  dropdown: 'z-30',
+  overlay: 'z-40',
+  modal: 'z-50',
+  /** Тултипы и тосты — поверх всего, включая модалки. */
+  tooltip: 'z-60',
+  toast: 'z-60',
+} as const
+
 /** Рамочное поле ввода — общая часть Input/Textarea/SelectTrigger. */
 export const FIELD_BOX =
   'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus:border-border-strong disabled:opacity-50'

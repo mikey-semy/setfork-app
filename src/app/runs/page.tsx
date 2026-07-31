@@ -61,8 +61,8 @@ function RunCard({ r, lang, muted }: { r: UserRunRow; lang: Lang; muted?: boolea
       <Link href={`/runs/${r.id}`} className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-[14px] font-semibold text-ink">{tr(r.title, lang)}</span>
-          <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">v{r.version}</span>
-          {r.status === 'failed' && <span className="rounded border border-danger/40 px-1.5 py-0.5 text-[10.5px] font-medium text-danger">{t('runFailed', lang)}</span>}
+          <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2">v{r.version}</span>
+          {r.status === 'failed' && <span className="rounded-md border border-danger/40 px-1.5 py-0.5 text-[10.5px] font-medium text-danger">{t('runFailed', lang)}</span>}
         </div>
         <div className="mt-0.5 truncate text-[12px] text-muted">
           {r.handle}/{r.slug} · {timeAgo(r.updatedAt, lang)}

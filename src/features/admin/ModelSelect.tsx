@@ -160,7 +160,7 @@ export function ModelSelect({
                     setQuery('')
                     inputRef.current?.focus()
                   }}
-                  className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted hover:text-ink"
+                  className="grid h-5 w-5 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
                 >
                   <X size={14} />
                 </button>
@@ -210,13 +210,13 @@ export function ModelSelect({
         <div className="mt-2 flex flex-wrap gap-1.5">
           {values.map((v, i) => (
             <span key={v} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 py-1 pl-1.5 pr-1 text-[11.5px] text-ink-2">
-              <span className="grid size-4 shrink-0 place-items-center rounded bg-surface text-[10px] tabular-nums text-muted">{i + 1}</span>
+              <span className="grid size-4 shrink-0 place-items-center rounded-md bg-surface text-[10px] tabular-nums text-muted">{i + 1}</span>
               <span>{labelOf(v)}</span>
               <button
                 type="button"
                 aria-label={`Убрать ${labelOf(v)}`}
                 onClick={() => pick(v)}
-                className="grid size-4 shrink-0 place-items-center rounded text-muted hover:text-ink"
+                className="grid size-4 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
               >
                 <X size={12} />
               </button>

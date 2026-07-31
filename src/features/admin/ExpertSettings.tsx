@@ -184,12 +184,12 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
       <div className="mb-3 flex items-center gap-2">
         <AvatarPicker id={e.id} value={e.avatarUploaded ? e.id : e.avatar || e.id} uploadedUrl={e.uploadedUrl} gallery={gallery} ru={ru} />
         <Tooltip label={say('id is fixed: avatar name and who in past chats', 'id не меняется: имя аватарки и who в прошлых беседах')}>
-          <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
+          <code className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted">
             {e.id}
           </code>
         </Tooltip>
         <Tooltip label={say('Personal page: KPI and knowledge base', 'Личная страница: KPI и база знаний')}>
-          <Link href={`/admin/council/${e.id}`} aria-label={say('Personal page', 'Личная страница')} className="grid h-6 w-6 place-items-center rounded text-muted hover:text-ink">
+          <Link href={`/admin/council/${e.id}`} aria-label={say('Personal page', 'Личная страница')} className="grid h-6 w-6 place-items-center rounded-md text-muted hover:text-ink">
             <BarChart3 size={13} />
           </Link>
         </Tooltip>

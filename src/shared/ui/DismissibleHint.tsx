@@ -37,7 +37,7 @@ export function DismissibleHint({ storageKey, className, children }: { storageKe
         type="button"
         onClick={dismiss}
         aria-label="Закрыть"
-        className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded opacity-60 transition-opacity hover:opacity-100"
+        className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md opacity-60 transition-opacity hover:opacity-100"
       >
         <X size={15} />
       </button>
