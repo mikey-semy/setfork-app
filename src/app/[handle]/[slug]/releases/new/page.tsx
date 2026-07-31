@@ -17,6 +17,14 @@ const ERR: Record<string, { ru: string; en: string }> = {
   badtag: { ru: 'Тег: буквы/цифры и .-_ (до 40 символов).', en: 'Tag: letters/digits and .-_ (max 40 chars).' },
   badversion: { ru: 'Такой версии нет.', en: 'No such version.' },
   tagtaken: { ru: 'Тег уже занят другим релизом.', en: 'This tag is already used by another release.' },
+  vreserved: {
+    ru: 'Имена вида v12 заняты автоматическими версиями — выберите другое, например v1.0 или stable.',
+    en: 'Names like v12 are reserved for automatic versions — pick another, e.g. v1.0 or stable.',
+  },
+  tagfail: {
+    ru: 'Не удалось создать git-тег — релиз не опубликован. Попробуйте ещё раз.',
+    en: 'Could not create the git tag — the release was not published. Please try again.',
+  },
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -71,7 +79,8 @@ export default async function NewReleasePage({
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-[12.5px] font-semibold text-ink">{ru ? 'Тег' : 'Tag'}</span>
-              <Input name="tag" placeholder={`v${meta.currentVersion}`} maxLength={40} className="font-mono" />
+              {/* Без дефолта v<N>: это имена автотегов версий (#590), релизу нужен свой. */}
+              <Input name="tag" required placeholder={`v${meta.currentVersion}.0`} maxLength={40} className="font-mono" />
             </label>
           </div>
           <label className="flex flex-col gap-1.5">
