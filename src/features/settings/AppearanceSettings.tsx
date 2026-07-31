@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 import { ThemeModeSwitch } from '@/shared/ui/controls'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { saveAppearance } from './appearance-actions'
 
 // Настройки внешнего вида (по образцу aep-fullstack):
@@ -84,21 +84,23 @@ export function AppearanceSettings({
     }
   }, [initialAccent, initialFont, initialScale])
 
-  // Меняем локально (мгновенно, no-flash) и синхронизируем в аккаунт (fire-and-forget).
+  // Меняем локально (мгновенно, no-flash) и синхронизируем в аккаунт
+  // (fire-and-forget) — ТОЛЬКО изменившееся поле: локальная копия остальных
+  // может отставать от аккаунта и не должна его затирать (Codex #623).
   function pickAccent(v: string) {
     setAccent(v)
     applyAttr('data-accent', 'sf-accent', v)
-    void saveAppearance(v, font, scale)
+    void saveAppearance({ accent: v })
   }
   function pickFont(v: string) {
     setFont(v)
     applyAttr('data-font', 'sf-font', v)
-    void saveAppearance(accent, v, scale)
+    void saveAppearance({ font: v })
   }
   function pickScale(v: string) {
     setScale(v)
     applyAttr('data-scale', 'sf-scale', v)
-    void saveAppearance(accent, font, v)
+    void saveAppearance({ scale: v })
   }
 
   if (!mounted) return <div className="h-[15rem]" /> // резерв места до гидрации
@@ -129,7 +131,7 @@ export function AppearanceSettings({
       </div>
 
       <div>
-        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{ru ? 'Масштаб интерфейса' : 'UI scale'}</div>
+        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{t('uiScale', lang)}</div>
         <div className="grid grid-cols-3 gap-2">
           {SCALES.map((s) => (
             <button key={s.value} type="button" onClick={() => pickScale(s.value)} className={pickCls(scale === s.value)}>

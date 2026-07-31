@@ -802,6 +802,7 @@ const DICT = {
   noProfileLists: { en: 'No lists yet.', ru: 'Пока нет списков.' },
   // ── Settings / профиль ──
   settings: { en: 'Settings', ru: 'Настройки' },
+  uiScale: { en: 'UI scale', ru: 'Масштаб интерфейса' },
   publicProfile: { en: 'Public profile', ru: 'Публичный профиль' },
   profileIntro: { en: 'This info shows on your public profile.', ru: 'Эти данные видны в публичном профиле.' },
   displayName: { en: 'Name', ru: 'Имя' },
