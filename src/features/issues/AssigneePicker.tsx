@@ -1,9 +1,9 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { Check, UserPlus, X } from 'lucide-react'
+import { UserPlus, X } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
-import { SearchField } from '@/shared/ui/SearchField'
 import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
+import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { toggleIssueAssignee } from './actions'
 
 
@@ -74,42 +74,38 @@ export function AssigneePicker({
               </button>
             )}
           >
-            {() => (
-              <>
-                  <SearchField
-                    variant="bare"
-                    size="sm"
-                    autoFocus
-                    value={query}
-                    onValueChange={(v) => {
-                      setQuery(v)
-                      void search(v)
-                    }}
-                    onClear={() => setFound([])}
-                    placeholder={L('поиск по handle…', 'search by handle…')}
-                    clearLabel={L('очистить', 'clear')}
-                    className="border-b border-border bg-surface-2 px-3 py-2"
-                  />
-                  <div className="max-h-56 overflow-y-auto">
-                    {found.length === 0 ? (
-                      <div className="px-3 py-2 text-[12.5px] text-muted">{L('начните вводить handle', 'start typing a handle')}</div>
-                    ) : (
-                      found.map((u) => (
-                        <button
-                          key={u.handle}
-                          type="button"
-                          disabled={pending}
-                          onClick={() => toggle(u.handle)}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2"
-                        >
-                          <Avatar handle={u.handle} avatarUrl={u.avatarUrl} size={20} />
-                          <span className="flex-1 truncate">{u.handle}</span>
-                          {has.has(u.handle) && <Check size={14} className="text-accent" />}
-                        </button>
-                      ))
-                    )}
-                  </div>
-              </>
+            {(close) => (
+              <PickerPanel
+                title={labels?.title ?? L('Исполнители', 'Assignees')}
+                onClose={close}
+                closeLabel={L('закрыть', 'close')}
+                search={{
+                  value: query,
+                  onChange: (v) => {
+                    // Пустой ввод (в т.ч. крестик ×) сразу чистит результаты — как раньше onClear.
+                    setQuery(v)
+                    void search(v)
+                  },
+                  placeholder: L('поиск по handle…', 'search by handle…'),
+                  clearLabel: L('очистить', 'clear'),
+                  autoFocus: true,
+                }}
+              >
+                {found.length === 0 ? (
+                  <div className="px-2 py-3 text-[12.5px] text-muted">{L('начните вводить handle', 'start typing a handle')}</div>
+                ) : (
+                  found.map((u) => (
+                    <PickerRow
+                      key={u.handle}
+                      disabled={pending}
+                      selected={has.has(u.handle)}
+                      onClick={() => toggle(u.handle)}
+                      icon={<Avatar handle={u.handle} avatarUrl={u.avatarUrl} size={20} />}
+                      label={u.handle}
+                    />
+                  ))
+                )}
+              </PickerPanel>
             )}
           </AnchoredMenu>
         )}

@@ -1,7 +1,8 @@
 'use client'
 import { useTransition } from 'react'
-import { Check, ChevronDown, Milestone as MilestoneIcon, X } from 'lucide-react'
+import { ChevronDown, Milestone as MilestoneIcon, X } from 'lucide-react'
 import { AnchoredMenu } from '@/shared/ui/AnchoredMenu'
+import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { setIssueMilestone } from '@/features/milestones/actions'
 
 type Opt = { id: string; title: string; closed: boolean }
@@ -42,7 +43,6 @@ export function MilestonePicker({
           <AnchoredMenu
             align="right"
             width={240}
-            className="max-h-60 overflow-y-auto"
             button={(toggle) => (
               <button type="button" onClick={toggle} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] text-muted hover:bg-surface-2 hover:text-ink">
                 <ChevronDown size={14} />
@@ -50,19 +50,24 @@ export function MilestonePicker({
             )}
           >
             {(close) => (
-              <>
-                <button type="button" disabled={pending} onClick={() => { set(''); close() }} className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2">
-                  <span className="text-muted">{L('без вехи', 'no milestone')}</span>
-                  {!current && <Check size={14} className="text-accent" />}
-                </button>
-                {options.length === 0 && <div className="px-3 py-2 text-[12.5px] text-muted">{L('вех нет', 'no milestones')}</div>}
+              <PickerPanel title={L('Веха', 'Milestone')} onClose={close} closeLabel={L('закрыть', 'close')}>
+                <PickerRow
+                  disabled={pending}
+                  selected={!current}
+                  onClick={() => { set(''); close() }}
+                  label={<span className="text-muted">{L('без вехи', 'no milestone')}</span>}
+                />
+                {options.length === 0 && <div className="px-2 py-3 text-[12.5px] text-muted">{L('вех нет', 'no milestones')}</div>}
                 {options.map((m) => (
-                  <button key={m.id} type="button" disabled={pending} onClick={() => { set(m.id); close() }} className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[13px] text-ink-2 hover:bg-surface-2">
-                    <span className={`truncate ${m.closed ? 'text-muted line-through' : 'text-ink'}`}>{m.title}</span>
-                    {current?.id === m.id && <Check size={14} className="shrink-0 text-accent" />}
-                  </button>
+                  <PickerRow
+                    key={m.id}
+                    disabled={pending}
+                    selected={current?.id === m.id}
+                    onClick={() => { set(m.id); close() }}
+                    label={<span className={m.closed ? 'text-muted line-through' : 'text-ink'}>{m.title}</span>}
+                  />
                 ))}
-              </>
+              </PickerPanel>
             )}
           </AnchoredMenu>
         )}

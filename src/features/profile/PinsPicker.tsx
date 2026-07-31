@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, Pencil } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
+import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
+import { Button } from '@/shared/ui/button'
 import { updatePins } from '@/features/library/actions'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 
 const MAX_PINS = 6
 
@@ -46,52 +48,46 @@ export function PinsPicker({
       >
         <Pencil size={11} /> {ru ? 'Настроить' : 'Customize your pins'}
       </button>
-      <OverlayPanel
-        open={open}
-        onClose={() => setOpen(false)}
-        className="flex max-h-[70vh] flex-col"
-        title={
-          <span>
-            {ru ? 'Закреплённые списки' : 'Pinned lists'}{' '}
-            <span className="font-mono text-[11px] text-muted">
-              {sel.size}/{MAX_PINS}
+      {/* Шапка одна — у PickerPanel (title со счётчиком); OverlayPanel остаётся
+          без title, иначе получилось бы два заголовка. */}
+      <OverlayPanel open={open} onClose={() => setOpen(false)} className="overflow-hidden">
+        <PickerPanel
+          title={
+            <span>
+              {ru ? 'Закреплённые списки' : 'Pinned lists'}{' '}
+              <span className="font-mono text-[11px] text-muted">
+                {sel.size}/{MAX_PINS}
+              </span>
             </span>
-          </span>
-        }
-      >
-        <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
-                {lists.map((l) => {
-                  const on = sel.has(l.id)
-                  const full = !on && sel.size >= MAX_PINS
-                  return (
-                    <button
-                      key={l.id}
-                      type="button"
-                      disabled={pending || full}
-                      onClick={() => toggle(l.id)}
-                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-[13px] text-ink hover:bg-surface-2 disabled:opacity-45"
-                    >
-                      <span className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${on ? 'border-accent bg-accent text-primary-fg' : 'border-border'}`}>
-                        {on && <Check size={12} />}
-                      </span>
-                      <span className="truncate">{l.slug}</span>
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="flex justify-end gap-2 border-t border-border px-3.5 py-2.5">
-                <button type="button" onClick={() => setOpen(false)} className="rounded-md px-3 py-1.5 text-[13px] text-ink-2 hover:text-ink">
-                  {ru ? 'Отмена' : 'Cancel'}
-                </button>
-                <button
-                  type="button"
-                  onClick={save}
-                  disabled={pending}
-                  className="rounded-md bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-primary-fg disabled:opacity-60"
-                >
-                  {ru ? 'Сохранить' : 'Save pins'}
-                </button>
-        </div>
+          }
+          onClose={() => setOpen(false)}
+          closeLabel={t('close', lang)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setOpen(false)}>
+                {ru ? 'Отмена' : 'Cancel'}
+              </Button>
+              <Button variant="primary" onClick={save} disabled={pending}>
+                {ru ? 'Сохранить' : 'Save pins'}
+              </Button>
+            </div>
+          }
+        >
+          {lists.map((l) => {
+            const on = sel.has(l.id)
+            const full = !on && sel.size >= MAX_PINS
+            return (
+              <PickerRow
+                key={l.id}
+                mark="box"
+                selected={on}
+                disabled={pending || full}
+                onClick={() => toggle(l.id)}
+                label={l.slug}
+              />
+            )
+          })}
+        </PickerPanel>
       </OverlayPanel>
     </>
   )

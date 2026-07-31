@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, Loader2, Plus, X } from 'lucide-react'
+import { Loader2, Plus, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
-import { Input } from '@/shared/ui/input'
+import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { toggleClosingRef } from './suggestion-meta-actions'
 
@@ -30,7 +30,7 @@ export function LinkIssuePicker({
   /** Уже привязанные номера (разобранные из текста). */
   linked: number[]
   canEdit: boolean
-  labels: { add: string; empty: string; filter: string; remove: string; hint: string }
+  labels: { add: string; empty: string; filter: string; remove: string; hint: string; clear: string }
 }) {
   const [q, setQ] = useState('')
   const [pending, start] = useTransition()
@@ -55,26 +55,27 @@ export function LinkIssuePicker({
               {pending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {labels.add}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[260px] p-2">
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={labels.filter} className="mb-2 h-[38px] text-[13px]" />
-            <div className="max-h-[240px] overflow-y-auto">
+          <PopoverContent align="start" className="w-[260px] overflow-hidden p-0">
+            {/* Заголовок = тексту кнопки-триггера; крестика нет намеренно: Popover
+                (Radix) сам закрывается по Esc/клику мимо, а первым фокусируемым
+                элементом остаётся поле поиска — как было с Input. */}
+            <PickerPanel
+              title={labels.add}
+              search={{ value: q, onChange: setQ, placeholder: labels.filter, clearLabel: labels.clear }}
+            >
               {shown.length === 0 ? (
-                <p className="px-1 py-2 text-[12.5px] text-muted">{labels.empty}</p>
+                <p className="px-2 py-3 text-[12.5px] text-muted">{labels.empty}</p>
               ) : (
                 shown.slice(0, 30).map((i) => (
-                  <button
+                  <PickerRow
                     key={i.number}
-                    type="button"
                     onClick={() => toggle(i.number)}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[12.5px] text-ink-2 hover:bg-surface-2 hover:text-ink"
-                  >
-                    <span className="shrink-0 font-mono text-muted">#{i.number}</span>
-                    <span className="min-w-0 flex-1 truncate">{i.title}</span>
-                    <Check size={13} className="shrink-0 opacity-0" />
-                  </button>
+                    icon={<span className="shrink-0 font-mono text-muted">#{i.number}</span>}
+                    label={i.title}
+                  />
                 ))
               )}
-            </div>
+            </PickerPanel>
           </PopoverContent>
         </Popover>
       )}

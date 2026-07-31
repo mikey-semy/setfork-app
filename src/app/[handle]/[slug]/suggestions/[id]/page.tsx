@@ -1000,6 +1000,7 @@ export default async function SuggestionThreadPage({
                     filter: t('prLinkIssueFilter', lang),
                     remove: t('prLinkIssueRemove', lang),
                     hint: t('prLinkedIssuesHint', lang),
+                    clear: t('clear', lang),
                   }}
                 />
               </AsideCard>
