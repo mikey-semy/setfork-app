@@ -5,6 +5,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { ForkForm } from '@/features/library/ForkForm'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -26,15 +27,18 @@ export default async function ForkPage({ params }: { params: Promise<{ handle: s
       <Link href={base} className="mb-5 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {owner} / {tr(meta.title, lang)}
       </Link>
-      <h1 className="flex items-center gap-2 text-[19px] font-bold text-ink">
-        <GitFork size={18} className="text-muted" /> {t('forkDialogTitle', lang)}
-      </h1>
-      <p className="mb-5 mt-1.5 text-[13px] leading-relaxed text-ink-2">
-        {t('forkIntro', lang)}{' '}
-        <Link href={`${base}/forks`} className="text-accent hover:underline">
-          {t('forkExisting', lang)}
-        </Link>
-      </p>
+      <PageHeader
+        icon={<GitFork size={18} className="text-muted" />}
+        title={t('forkDialogTitle', lang)}
+        subtitle={
+          <>
+            {t('forkIntro', lang)}{' '}
+            <Link href={`${base}/forks`} className="text-accent hover:underline">
+              {t('forkExisting', lang)}
+            </Link>
+          </>
+        }
+      />
       <div className="rounded-lg border border-border bg-surface p-5">
         <ForkForm
           templateId={meta.id}

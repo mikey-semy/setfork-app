@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { GitCommitHorizontal, GitCompare, Tag } from 'lucide-react'
+import { CONTROL_H } from '@/shared/ui/control'
 
 // Под-навигация раздела истории: Коммиты / Релизы / Сравнение — три страницы
 // одного раздела (как Repository → Commits/Tags/Compare в GitLab). Главный таб-бар
@@ -29,7 +30,7 @@ export function HistoryNav({
     <Link
       href={href}
       aria-current={on ? 'page' : undefined}
-      className={`inline-flex h-[38px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[12.5px] font-medium ${
+      className={`inline-flex ${CONTROL_H.md} shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[12.5px] font-medium ${
         on ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'
       }`}
     >

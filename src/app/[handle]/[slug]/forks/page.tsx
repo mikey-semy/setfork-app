@@ -6,6 +6,7 @@ import { db } from '@/shared/db'
 import { getLang } from '@/shared/i18n/server'
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
 
 /**
@@ -64,12 +65,11 @@ export default async function ForksPage({ params }: { params: Promise<{ handle: 
       <Link href={`/${owner}/${slug}`} className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {owner} / {tr(meta.title, lang)}
       </Link>
-      <h1 className="flex items-center gap-2 text-[18px] font-bold text-ink">
-        <GitFork size={17} /> {say('Fork tree', 'Дерево форков')}
-      </h1>
-      <p className="mt-1 text-[13px] text-ink-2">
-        {say('Who grew what from this list; branches edited this week glow.', 'Кто и что вырастил из этого списка; ветви с правками за неделю подсвечены.')}
-      </p>
+      <PageHeader
+        icon={<GitFork size={17} />}
+        title={say('Fork tree', 'Дерево форков')}
+        subtitle={say('Who grew what from this list; branches edited this week glow.', 'Кто и что вырастил из этого списка; ветви с правками за неделю подсвечены.')}
+      />
 
       {rows.length === 0 ? (
         <p className="mt-8 text-[13.5px] text-muted">{say('No public forks yet — be the first to grow a branch.', 'Публичных форков пока нет — стань первой ветвью.')}</p>

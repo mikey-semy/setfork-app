@@ -5,6 +5,7 @@ import { tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Alert } from '@/shared/ui/Alert'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedSourceList } from '@/features/admin/FeedSourceList'
 import { feedSourceRows, recentFeedItems } from '@/features/admin/feed-queries'
 
@@ -32,17 +33,13 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-[18px] font-bold text-ink">{say('Feeds', 'Потоки')}</h1>
-          <p className="mt-0.5 text-[13px] text-ink-2">
-            {say(
-              'Sources the company draws events from. A specialist turns an event into a practical list — he never retells it.',
-              'Источники, из которых компания узнаёт о событиях. Специалист превращает событие в практический список, а не пересказывает его.',
-            )}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={say('Feeds', 'Потоки')}
+        subtitle={say(
+          'Sources the company draws events from. A specialist turns an event into a practical list — he never retells it.',
+          'Источники, из которых компания узнаёт о событиях. Специалист превращает событие в практический список, а не пересказывает его.',
+        )}
+      />
 
       {sp.fresh && (
         <Alert variant="ok">

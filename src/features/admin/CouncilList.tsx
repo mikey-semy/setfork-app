@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { CircleUser, Sparkles } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Button } from '@/shared/ui/button'
 import { tr, type Lang } from '@/shared/i18n'
 import { selfGenerateNow } from '@/features/admin/actions'
 
@@ -114,12 +115,9 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
               .map((r) => (
                 <form key={r.id} action={selfGenerateNow}>
                   <input type="hidden" name="expertId" value={r.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12.5px] text-ink hover:border-border-strong"
-                  >
+                  <Button type="submit" size="md">
                     <Sparkles size={13} className="text-muted" /> {r.name}
-                  </button>
+                  </Button>
                 </form>
               ))}
           </div>

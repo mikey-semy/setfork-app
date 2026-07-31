@@ -12,10 +12,16 @@ export default async function NotFound() {
       <h1 className="text-[20px] font-bold text-ink">{t('pageNotFound', lang)}</h1>
       <p className="text-[14px] text-ink-2">{t('pageNotFoundText', lang)}</p>
       <div className="mt-2 flex gap-3">
-        <Link href="/" className="rounded-md border border-border px-4 py-2 text-[13px] font-semibold text-ink hover:border-border-strong">
+        <Link
+          href="/"
+          className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border px-3.5 text-[14px] font-semibold text-ink hover:border-border-strong"
+        >
           {t('goHome', lang)}
         </Link>
-        <Link href="/explore" className="rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+        <Link
+          href="/explore"
+          className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[14px] font-semibold text-primary-fg hover:opacity-90"
+        >
           {t('goExplore', lang)}
         </Link>
       </div>

@@ -3,7 +3,9 @@ import { FolderGit2, Plus } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
+import { Button } from '@/shared/ui/button'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { getAdminCollections } from '@/features/collections/queries'
 import { createCollection } from '@/features/admin/collection-actions'
 
@@ -19,12 +21,14 @@ export default async function AdminCollectionsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-6 py-8">
-      <h1 className="text-[18px] font-bold text-ink">{ru ? 'Подборки' : 'Collections'}</h1>
-      <p className="-mt-4 text-[13px] text-ink-2">
-        {ru
-          ? 'Курируемые витрины для Explore — списки и каталоги разных авторов в одной подборке.'
-          : 'Curated Explore showcases — lists and catalogs from different authors in one collection.'}
-      </p>
+      <PageHeader
+        title={ru ? 'Подборки' : 'Collections'}
+        subtitle={
+          ru
+            ? 'Курируемые витрины для Explore — списки и каталоги разных авторов в одной подборке.'
+            : 'Curated Explore showcases — lists and catalogs from different authors in one collection.'
+        }
+      />
 
       <form action={createCollection} className="flex gap-2">
         <input
@@ -34,9 +38,9 @@ export default async function AdminCollectionsPage() {
           placeholder={ru ? 'Название новой подборки' : 'New collection title'}
           className="flex-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden"
         />
-        <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+        <Button type="submit" variant="primary" size="md">
           <Plus size={14} /> {ru ? 'Создать' : 'Create'}
-        </button>
+        </Button>
       </form>
 
       <div className="divide-y divide-border rounded-lg border border-border bg-surface">

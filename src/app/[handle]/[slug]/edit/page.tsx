@@ -16,6 +16,7 @@ import { Field } from '@/shared/ui/Field'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
+import { PageHeader } from '@/shared/ui/PageHeader'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -52,9 +53,13 @@ export default async function EditPage({
       <FloatingBack href={`/${owner}/${slug}`} label={tr(tpl.title, lang) || `${tpl.owner.handle}/${tpl.slug}`} />
 
       <form action={action}>
-        <h1 className="mb-5 text-[18px] font-bold text-ink">
-          {t('edit', lang)} · v{tpl.currentVersion} → v{tpl.currentVersion + 1}
-        </h1>
+        <PageHeader
+          title={
+            <>
+              {t('edit', lang)} · v{tpl.currentVersion} → v{tpl.currentVersion + 1}
+            </>
+          }
+        />
 
         <ChangeNoteField templateId={tpl.id} lang={lang} placeholder={t('changeNote', lang)} />
 

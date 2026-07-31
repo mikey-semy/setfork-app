@@ -5,6 +5,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { getListsInCatalog } from '@/features/library/queries'
 import { getCatalog } from '@/features/catalogs/queries'
@@ -28,15 +29,18 @@ export default async function CatalogPage({ params }: { params: Promise<{ handle
         </Link>{' '}
         / {t('catalogsTab', lang).toLowerCase()}
       </div>
-      <h1 className="flex items-center gap-2 text-[22px] font-bold text-ink">
-        <FolderGit2 size={20} className="text-ink-2" /> {tr(cat.title, lang) || cat.name}
-      </h1>
-      {tr(cat.desc, lang) && <p className="mt-1 text-[14px] text-ink-2">{tr(cat.desc, lang)}</p>}
-      <div className="mt-1 font-mono text-[12px] text-muted">
-        {lists.length} {t('lists', lang).toLowerCase()}
-      </div>
+      <PageHeader
+        icon={<FolderGit2 size={18} />}
+        title={tr(cat.title, lang) || cat.name}
+        subtitle={
+          <>
+            {lists.length} {t('lists', lang).toLowerCase()}
+            {tr(cat.desc, lang) ? ` · ${tr(cat.desc, lang)}` : ''}
+          </>
+        }
+      />
 
-      <div className="mt-5">
+      <div>
         {lists.length === 0 ? (
           <EmptyState hint={t('catalogEmpty', lang)} />
         ) : (

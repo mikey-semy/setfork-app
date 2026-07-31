@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Check, Copy, KeyRound, Loader2, Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { Button } from '@/shared/ui/button'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import type { TokenRow } from './queries'
@@ -104,14 +105,9 @@ export function ApiTokensSection({ tokens, lang, mcpUrl }: { tokens: TokenRow[];
           placeholder="Claude Desktop"
           className="min-w-[220px] flex-1 rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
         />
-        <button
-          type="button"
-          onClick={create}
-          disabled={pending || !name.trim()}
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg disabled:opacity-50"
-        >
+        <Button variant="primary" size="md" onClick={create} disabled={pending || !name.trim()}>
           {pending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {ru ? 'Создать токен' : 'Create token'}
-        </button>
+        </Button>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px]">
         <div className="flex items-center gap-1.5">

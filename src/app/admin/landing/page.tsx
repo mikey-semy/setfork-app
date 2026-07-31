@@ -3,6 +3,7 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { imageUrl } from '@/shared/media'
 import { getLandingContent } from '@/shared/settings/landing'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { LandingEditor } from '@/features/admin/LandingEditor'
 
 export const metadata = { title: 'Landing' }
@@ -18,12 +19,11 @@ export default async function AdminLandingPage() {
 
   return (
     <div className="mx-auto w-full max-w-[860px] px-6 py-8">
-      <h1 className="mb-1 flex items-center gap-2 text-[18px] font-bold text-ink">
-        <Megaphone size={18} /> {say('Landing', 'Лендинг')}
-      </h1>
-      <p className="mb-5 text-[13px] text-ink-2">
-        {say('Editable copy, stats and hero image of the marketing landing. Live via /api/landing (ISR).', 'Тексты, статы и картинка hero маркетинг-лендинга. Публикуется по /api/landing (ISR).')}
-      </p>
+      <PageHeader
+        icon={<Megaphone size={18} />}
+        title={say('Landing', 'Лендинг')}
+        subtitle={say('Editable copy, stats and hero image of the marketing landing. Live via /api/landing (ISR).', 'Тексты, статы и картинка hero маркетинг-лендинга. Публикуется по /api/landing (ISR).')}
+      />
       <LandingEditor initial={content} heroPreview={heroPreview} lang={lang} />
     </div>
   )

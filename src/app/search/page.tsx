@@ -4,6 +4,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { hasAiEnvConfig } from '@/shared/settings/ai'
+import { Button } from '@/shared/ui/button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { AdvancedFacets } from '@/features/library/AdvancedFacets'
@@ -192,9 +193,9 @@ export default async function SearchPage({
                   {t('cantFind', lang)} <span className="font-semibold">“{parsed.text}”</span>
                 </span>
                 <input type="hidden" name="q" value={parsed.text} />
-                <button className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[12.5px] font-semibold text-primary-fg">
+                <Button type="submit" variant="primary" size="md" className="ml-auto">
                   <Sparkles size={13} /> {t('generateWithAi', lang)}
-                </button>
+                </Button>
               </form>
             )}
             {feed.length === 0 ? (

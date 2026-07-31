@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CONTROL_H } from '@/shared/ui/control'
 import { ScrollRow } from '@/shared/ui/ScrollRow'
 import { MessagesSquare, FileDiff, CircleCheck, GitCommitHorizontal, Eye } from 'lucide-react'
 
@@ -46,7 +47,7 @@ export function SuggestionTabs({
       <Link
         href={tab === 'conversation' ? path : `${path}?tab=${tab}`}
         aria-current={on ? 'page' : undefined}
-        className={`inline-flex h-[38px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[12.5px] font-medium ${
+        className={`inline-flex ${CONTROL_H.md} shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[12.5px] font-medium ${
           on ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'
         }`}
       >

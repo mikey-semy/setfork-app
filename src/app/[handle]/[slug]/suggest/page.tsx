@@ -12,6 +12,7 @@ import { ListEditor } from '@/features/library/ListEditor'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
+import { PageHeader } from '@/shared/ui/PageHeader'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -49,12 +50,14 @@ export default async function SuggestPage({
       <FloatingBack href={`/${owner}/${slug}`} label={tr(tpl.title, lang) || `${tpl.owner.handle}/${tpl.slug}`} />
 
       <form action={action}>
-        <h1 className="mb-1 text-[18px] font-bold text-ink">{t('suggestEdit', lang)}</h1>
-        <p className="mb-5 text-[13px] text-ink-2">
-          {lang === 'ru'
-            ? 'Правь пункты. Автор списка примет правку новой версией или отклонит.'
-            : 'Edit the items. The maintainer will accept it as a new version or reject it.'}
-        </p>
+        <PageHeader
+          title={t('suggestEdit', lang)}
+          subtitle={
+            lang === 'ru'
+              ? 'Правь пункты. Автор списка примет правку новой версией или отклонит.'
+              : 'Edit the items. The maintainer will accept it as a new version or reject it.'
+          }
+        />
 
         <div className="mb-6">
           <ChangeNoteField templateId={tpl.id} lang={lang} placeholder={t('changeNote', lang)} />

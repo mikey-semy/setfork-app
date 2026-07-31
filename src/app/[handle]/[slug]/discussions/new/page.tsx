@@ -4,6 +4,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { Input } from '@/shared/ui/input'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { requireViewableMeta } from '@/features/library/guard'
 import { createDiscussion } from '@/features/discussions/actions'
@@ -31,9 +32,7 @@ export default async function NewDiscussionPage({
   return (
     <>
       <div className="mx-auto w-full max-w-[820px] px-4 py-6">
-        <h1 className="mb-4 flex items-center gap-2 text-[17px] font-bold text-ink">
-          <MessagesSquare size={18} className="text-accent" /> {ru ? 'Новое обсуждение' : 'New discussion'}
-        </h1>
+        <PageHeader icon={<MessagesSquare size={18} />} title={ru ? 'Новое обсуждение' : 'New discussion'} />
         <form action={createDiscussion} className="flex flex-col gap-3">
           <input type="hidden" name="owner" value={owner} />
           <input type="hidden" name="slug" value={slug} />

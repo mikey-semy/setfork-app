@@ -327,9 +327,9 @@ export default async function ListPage({
                   <p className="mt-0.5 text-[12.5px] text-ink-2">{t('draftHint', lang)}</p>
                 </div>
                 <form action={publishList.bind(null, tpl.id)}>
-                  <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+                  <Button type="submit" variant="primary" size="md">
                     <Rocket size={14} /> {t('publish', lang)}
-                  </button>
+                  </Button>
                 </form>
               </div>
             )}
@@ -497,7 +497,7 @@ export default async function ListPage({
                 <span className="flex items-center gap-2 max-sm:w-full max-sm:justify-end">
                   {canManageBranches && (
                     <form action={revertToVersion.bind(null, tpl.id, histNum)}>
-                      <Button type="submit" variant="primary" className="h-[38px]">
+                      <Button type="submit" variant="primary">
                         <History size={13} />
                         <span className="max-sm:hidden">{say('Restore this version', 'Вернуть эту версию')}</span>
                         <span className="sm:hidden">{say('Restore', 'Вернуть')}</span>
@@ -505,7 +505,7 @@ export default async function ListPage({
                     </form>
                   )}
                   <Link href={base}>
-                    <Button variant="outline" className="h-[38px]">
+                    <Button variant="outline">
                       {say(`To v${curNum}`, `К v${curNum}`)}
                     </Button>
                   </Link>

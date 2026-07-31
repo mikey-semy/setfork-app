@@ -5,6 +5,7 @@ import { getLang, } from '@/shared/i18n/server'
 import { t, tr, type TKey } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { getNotifications, type NotificationItem } from '@/features/notifications/queries'
 import { MarkRead } from '@/features/notifications/MarkRead'
 import { NOTIF_VERB } from '@/features/notifications/verbs'
@@ -20,7 +21,7 @@ export default async function NotificationsPage() {
   return (
     <div className="mx-auto w-full max-w-[720px] px-6 py-8">
       <MarkRead />
-      <h1 className="mb-5 text-[18px] font-bold text-ink">{t('notifications', lang)}</h1>
+      <PageHeader title={t('notifications', lang)} />
 
       {items.length === 0 ? (
         <EmptyState icon={<Bell size={34} strokeWidth={1.5} />} title={t('noNotifications', lang)} />

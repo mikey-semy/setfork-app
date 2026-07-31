@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { Loader2, Send } from 'lucide-react'
+import { Button } from '@/shared/ui/button'
 
 /**
  * Панель незавершённого ревью: сколько замечаний накопил рецензент и кнопка
@@ -27,15 +28,10 @@ export function PendingReviewBar({
       <span className="text-[12.5px] font-semibold text-warn">
         {labels.pending}: {count}
       </span>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => start(() => void action())}
-        className="ml-auto inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[13px] font-semibold text-primary-fg disabled:opacity-60"
-      >
+      <Button variant="primary" size="md" disabled={busy} onClick={() => start(() => void action())} className="ml-auto">
         {busy ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
         {labels.submit}
-      </button>
+      </Button>
     </div>
   )
 }

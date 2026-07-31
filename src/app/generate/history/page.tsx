@@ -6,6 +6,7 @@ import { getLang } from '@/shared/i18n/server'
 import { type Lang } from '@/shared/i18n'
 import { getRecentGenerations, type GenerationStatus } from '@/features/generation/queries'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { timeAgo } from '@/shared/ui/timeAgo'
 
 export const metadata = { title: 'Draft history' }
@@ -22,15 +23,17 @@ export default async function GenerationHistoryPage() {
 
   return (
     <div className="mx-auto w-full max-w-[760px] px-4 py-6 sm:px-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="text-[18px] font-bold text-ink">{say('Draft history', 'История генераций')}</h1>
-        <Link
-          href="/generate"
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[13px] font-semibold text-primary-fg hover:opacity-90"
-        >
-          <Sparkles size={14} /> {say('New draft', 'Новый черновик')}
-        </Link>
-      </div>
+      <PageHeader
+        title={say('Draft history', 'История генераций')}
+        actions={
+          <Link
+            href="/generate"
+            className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[14px] font-semibold text-primary-fg hover:opacity-90"
+          >
+            <Sparkles size={14} /> {say('New draft', 'Новый черновик')}
+          </Link>
+        }
+      />
 
       {items.length === 0 ? (
         <EmptyState

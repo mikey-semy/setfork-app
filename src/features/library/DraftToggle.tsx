@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react'
 import { Check, FilePen } from 'lucide-react'
+import { Button } from '@/shared/ui/button'
 
 /**
  * Черновик ↔ готово к ревью.
@@ -23,17 +24,15 @@ export function DraftToggle({
     <div className="mt-3 flex flex-col gap-2">
       {draft && <p className="text-[12.5px] text-warn">{labels.hint}</p>}
       <div>
-        <button
-          type="button"
+        <Button
+          size="md"
+          variant={draft ? 'primary' : 'outline'}
           disabled={pending}
           onClick={() => start(() => void action(!draft))}
-          className={`inline-flex h-[38px] items-center gap-1.5 rounded-md px-3.5 text-[13px] font-semibold disabled:opacity-60 ${
-            draft ? 'bg-primary text-primary-fg' : 'border border-border text-ink hover:border-border-strong'
-          }`}
         >
           {draft ? <Check size={14} /> : <FilePen size={14} />}
           {draft ? labels.ready : labels.back}
-        </button>
+        </Button>
       </div>
     </div>
   )

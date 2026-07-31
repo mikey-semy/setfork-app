@@ -1,6 +1,7 @@
 import { Users, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Button } from '@/shared/ui/button'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { addCollaborator, removeCollaborator } from './actions'
 import type { CollaboratorRow } from './queries'
@@ -27,9 +28,9 @@ export function CollaboratorsSection({
           placeholder={t('addCollaboratorPh', lang)}
           className="w-[220px] rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong"
         />
-        <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg">
+        <Button type="submit" variant="primary" size="md">
           {t('addCollaborator', lang)}
-        </button>
+        </Button>
       </form>
 
       {collaborators.length === 0 ? (

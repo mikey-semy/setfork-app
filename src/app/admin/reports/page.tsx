@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { getReportsCounts, getReportsList, type ReportFilter } from '@/features/reports/queries'
 import { ReportsTable } from '@/features/reports/ReportsTable'
 
@@ -15,8 +16,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
 
   return (
     <div className="mx-auto w-full max-w-[860px] px-6 py-8">
-      <h1 className="mb-1 text-[18px] font-bold text-ink">{t('reports', lang)}</h1>
-      <p className="mb-5 text-[13px] text-ink-2">{t('reportsAdminIntro', lang)}</p>
+      <PageHeader title={t('reports', lang)} subtitle={t('reportsAdminIntro', lang)} />
       <ReportsTable items={items} counts={counts} filter={filter} lang={lang} />
     </div>
   )

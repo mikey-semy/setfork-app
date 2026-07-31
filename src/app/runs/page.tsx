@@ -5,6 +5,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
 import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
 
@@ -20,9 +21,7 @@ export default async function MyRunsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[720px] px-6 py-8">
-      <h1 className="mb-5 flex items-center gap-2 text-[18px] font-bold text-ink">
-        <PlayCircle size={18} className="text-accent" /> {t('myRuns', lang)}
-      </h1>
+      <PageHeader icon={<PlayCircle size={18} />} title={t('myRuns', lang)} />
 
       {runs.length === 0 ? (
         <EmptyState icon={<ListChecks size={34} strokeWidth={1.5} />} title={t('noRunsYet', lang)} />

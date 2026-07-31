@@ -6,6 +6,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getSuggestion } from '@/features/library/queries'
@@ -66,10 +67,10 @@ export default async function EditSuggestionPage({
       <FloatingBack href={path} label={sug.note || tr(meta.title, lang) || slug} />
 
       <form action={updateSuggestionItems.bind(null, sug.id)}>
-        <h1 className="mb-1 text-[18px] font-bold text-ink">{t('prEditItems', lang)}</h1>
-        <p className="mb-5 text-[13px] text-ink-2">
-          {sug.branchRef ? t('prEditItemsHintBranch', lang) : t('prEditItemsHint', lang)}
-        </p>
+        <PageHeader
+          title={t('prEditItems', lang)}
+          subtitle={sug.branchRef ? t('prEditItemsHintBranch', lang) : t('prEditItemsHint', lang)}
+        />
 
         <ListEditor name="items" initialItems={initial} lang={lang} />
 

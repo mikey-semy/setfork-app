@@ -3,6 +3,7 @@ import { AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, Log
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { getAuditLog, type AuditEntry } from '@/features/admin/audit-queries'
 import type { AuditAction } from '@/shared/audit'
 
@@ -69,12 +70,14 @@ export default async function AuditPage() {
 
   return (
     <div className="mx-auto w-full max-w-[960px] px-6 py-8">
-      <h1 className="mb-1 text-[18px] font-bold text-ink">{ru ? 'Журнал аудита' : 'Audit log'}</h1>
-      <p className="mb-5 text-[13px] text-ink-2">
-        {ru
-          ? 'Чувствительные действия: токены, удаление и модерация списков, push, сессии. Последние 200 записей.'
-          : 'Sensitive actions: tokens, list deletion & moderation, pushes, sessions. Last 200 entries.'}
-      </p>
+      <PageHeader
+        title={ru ? 'Журнал аудита' : 'Audit log'}
+        subtitle={
+          ru
+            ? 'Чувствительные действия: токены, удаление и модерация списков, push, сессии. Последние 200 записей.'
+            : 'Sensitive actions: tokens, list deletion & moderation, pushes, sessions. Last 200 entries.'
+        }
+      />
 
       {entries.length === 0 ? (
         <EmptyState variant="plain" hint={ru ? 'Пока пусто.' : 'Nothing yet.'} />

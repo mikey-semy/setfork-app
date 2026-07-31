@@ -7,6 +7,7 @@ import { getTag } from '@/features/tags/queries'
 import { FeedList } from '@/features/library/FeedList'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Badge } from '@/shared/ui/badge'
+import { PageHeader } from '@/shared/ui/PageHeader'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -23,21 +24,21 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
 
   return (
     <div className="mx-auto w-full max-w-[900px] px-4 py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-(--accent-soft) text-accent">
-          <Tag size={20} />
-        </span>
-        <div className="min-w-0">
-          <h1 className="flex flex-wrap items-center gap-2 text-[22px] font-bold text-ink">
-            {tag?.label || slug}
-            {tag?.curated && <Badge variant="accent">{say('Curated', 'Курируемый')}</Badge>}
-          </h1>
-          <p className="text-[13px] text-muted">
+      <PageHeader
+        icon={
+          <span className="grid size-10 place-items-center rounded-lg bg-(--accent-soft)">
+            <Tag size={20} />
+          </span>
+        }
+        title={tag?.label || slug}
+        meta={tag?.curated && <Badge variant="accent">{say('Curated', 'Курируемый')}</Badge>}
+        subtitle={
+          <>
             {items.length} {say(items.length === 1 ? 'list' : 'lists', 'списков')}
             {tag?.description ? ` · ${tag.description}` : ''}
-          </p>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {items.length ? (
         <FeedList items={items} lang={lang} viewerId={session?.userId} />
