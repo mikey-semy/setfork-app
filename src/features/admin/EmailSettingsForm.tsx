@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { Loader2, Send } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { Input } from '@/shared/ui/input'
 import { t } from '@/shared/i18n'
 import { setEmailSettings, sendTestEmail } from './actions'
 import { FormSaveBar } from '@/features/settings/FormSaveBar'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface EmailFormValues {
@@ -51,32 +51,32 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={lbl}>Host</label>
-            <input name="host" defaultValue={v.host} placeholder="smtp.example.com" className={`${field} font-mono`} />
+            <Input name="host" defaultValue={v.host} placeholder="smtp.example.com" className="font-mono" />
           </div>
           <div>
             <label className={lbl}>Port</label>
-            <input name="port" type="number" defaultValue={v.port || ''} placeholder="587" className={`${field} font-mono`} />
+            <Input name="port" type="number" defaultValue={v.port || ''} placeholder="587" className="font-mono" />
           </div>
           <div>
             <label className={lbl}>{ru ? 'Пользователь' : 'Username'}</label>
-            <input name="user" defaultValue={v.user} autoComplete="off" placeholder={ru ? 'опц.' : 'optional'} className={`${field} font-mono`} />
+            <Input name="user" defaultValue={v.user} autoComplete="off" placeholder={ru ? 'опц.' : 'optional'} className="font-mono" />
           </div>
           <div>
             <label className={lbl}>{ru ? 'Пароль' : 'Password'}</label>
-            <input name="pass" type="password" placeholder={v.passMask || secretPh} autoComplete="off" className={`${field} font-mono`} />
+            <Input name="pass" type="password" placeholder={v.passMask || secretPh} autoComplete="off" className="font-mono" />
           </div>
           <div className="sm:col-span-2">
             <label className={lbl}>From</label>
-            <input name="from" defaultValue={v.from} placeholder="SetFork <no-reply@setfork.com>" className={`${field} font-mono`} />
+            <Input name="from" defaultValue={v.from} placeholder="SetFork <no-reply@setfork.com>" className="font-mono" />
           </div>
           <div className="sm:col-span-2">
             <label className={lbl}>{t('notifyToLabel', ru ? 'ru' : 'en')}</label>
-            <input
+            <Input
               name="notifyTo"
               defaultValue={v.notifyTo}
               autoComplete="off"
               placeholder="admin@example.com, second@example.com"
-              className={`${field} font-mono`}
+              className="font-mono"
             />
             <p className="mt-1 text-[12px] text-muted">{t('notifyToHint', ru ? 'ru' : 'en')}</p>
           </div>
@@ -95,11 +95,11 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
 
       {/* Тест-отправка использует СОХРАНЁННЫЕ настройки — сначала сохрани. */}
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-        <input
+        <Input
           value={testTo}
           onChange={(e) => setTestTo(e.target.value)}
           placeholder={ru ? 'адрес для теста (пусто — на ваш email)' : 'test recipient (blank = your email)'}
-          className={`${field} max-w-[280px] flex-1`}
+          className="max-w-[280px] flex-1"
         />
         <button
           type="button"

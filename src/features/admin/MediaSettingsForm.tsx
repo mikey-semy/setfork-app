@@ -1,10 +1,10 @@
 'use client'
 
 import { Switch } from '@/shared/ui/switch'
+import { Input } from '@/shared/ui/input'
 import { setMediaSettings } from './actions'
 import { FormSaveBar } from '@/features/settings/FormSaveBar'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface MediaFormValues {
@@ -46,27 +46,27 @@ export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className={lbl}>Endpoint</label>
-          <input name="s3Endpoint" defaultValue={v.s3Endpoint} placeholder="https://s3.ru-3.storage.selcloud.ru" className={`${field} font-mono`} />
+          <Input name="s3Endpoint" defaultValue={v.s3Endpoint} placeholder="https://s3.ru-3.storage.selcloud.ru" className="font-mono" />
         </div>
         <div>
           <label className={lbl}>Region</label>
-          <input name="s3Region" defaultValue={v.s3Region} placeholder="ru-3" className={`${field} font-mono`} />
+          <Input name="s3Region" defaultValue={v.s3Region} placeholder="ru-3" className="font-mono" />
         </div>
         <div>
           <label className={lbl}>Bucket</label>
-          <input name="s3Bucket" defaultValue={v.s3Bucket} placeholder="setfork" className={`${field} font-mono`} />
+          <Input name="s3Bucket" defaultValue={v.s3Bucket} placeholder="setfork" className="font-mono" />
         </div>
         <div>
           <label className={lbl}>{ru ? 'Префикс пути' : 'Path prefix'}</label>
-          <input name="s3Prefix" defaultValue={v.s3Prefix} placeholder="prod" className={`${field} font-mono`} />
+          <Input name="s3Prefix" defaultValue={v.s3Prefix} placeholder="prod" className="font-mono" />
         </div>
         <div>
           <label className={lbl}>Access key</label>
-          <input name="s3AccessKey" defaultValue={v.s3AccessKey} autoComplete="off" className={`${field} font-mono`} />
+          <Input name="s3AccessKey" defaultValue={v.s3AccessKey} autoComplete="off" className="font-mono" />
         </div>
         <div>
           <label className={lbl}>Secret key</label>
-          <input name="s3SecretKey" type="password" placeholder={v.s3SecretMask || secretPh} autoComplete="off" className={`${field} font-mono`} />
+          <Input name="s3SecretKey" type="password" placeholder={v.s3SecretMask || secretPh} autoComplete="off" className="font-mono" />
         </div>
       </div>
 
@@ -74,21 +74,21 @@ export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className={lbl}>{ru ? 'Публичный URL (браузер)' : 'Public URL (browser)'}</label>
-          <input name="imgproxyUrl" defaultValue={v.imgproxyUrl} placeholder="https://img.example.com" className={`${field} font-mono`} />
+          <Input name="imgproxyUrl" defaultValue={v.imgproxyUrl} placeholder="https://img.example.com" className="font-mono" />
         </div>
         <div>
           <label className={lbl}>Key (hex)</label>
-          <input name="imgproxyKey" type="password" placeholder={v.imgproxyKeyMask || secretPh} autoComplete="off" className={`${field} font-mono`} />
+          <Input name="imgproxyKey" type="password" placeholder={v.imgproxyKeyMask || secretPh} autoComplete="off" className="font-mono" />
         </div>
         <div>
           <label className={lbl}>Salt (hex)</label>
-          <input name="imgproxySalt" type="password" placeholder={v.imgproxySaltMask || secretPh} autoComplete="off" className={`${field} font-mono`} />
+          <Input name="imgproxySalt" type="password" placeholder={v.imgproxySaltMask || secretPh} autoComplete="off" className="font-mono" />
         </div>
       </div>
 
       <div>
         <label className={lbl}>{ru ? 'CDN URL (перед imgproxy, опц.)' : 'CDN URL (in front of imgproxy, opt.)'}</label>
-        <input name="cdnUrl" defaultValue={v.cdnUrl} placeholder="https://cdn.example.com" className={`${field} font-mono`} />
+        <Input name="cdnUrl" defaultValue={v.cdnUrl} placeholder="https://cdn.example.com" className="font-mono" />
       </div>
 
       <FormSaveBar ru={ru} />

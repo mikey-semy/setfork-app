@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Input } from '@/shared/ui/input'
 import { ModelSelect, type Option } from './ModelSelect'
 
 // Поля «Совета гномов» внутри формы AI-настроек (submit через setAiSettings).
 // Тумблеры — controlled Switch с name (submit 'on'/выкл), как в AiKeyAndSwitch.
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface CouncilValues {
@@ -70,7 +70,7 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
         </div>
         <div>
           <label className={lbl} htmlFor="councilMaxGnomes">{say('Max experts', 'Макс экспертов')}</label>
-          <input type="number" name="councilMaxGnomes" id="councilMaxGnomes" min="1" max="8" step="1" defaultValue={v.maxGnomes} className={field} />
+          <Input type="number" name="councilMaxGnomes" id="councilMaxGnomes" min="1" max="8" step="1" defaultValue={v.maxGnomes} />
         </div>
       </div>
 
@@ -97,7 +97,7 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
 
       <div>
         <label className={lbl} htmlFor="councilMaxPerMonth">{say('Free councils per user / month (0 = unlimited)', 'Бесплатных советов на пользователя в месяц (0 = безлимит)')}</label>
-        <input type="number" name="councilMaxPerMonth" id="councilMaxPerMonth" min="0" step="1" defaultValue={v.maxPerMonth} className={field} />
+        <Input type="number" name="councilMaxPerMonth" id="councilMaxPerMonth" min="0" step="1" defaultValue={v.maxPerMonth} />
         <p className="mt-1.5 text-[12px] text-muted">
           {say('When audience is Everyone: after N council uses a user falls back to single generation. Admins unlimited.', 'Когда аудитория «Всем»: после N советов пользователь откатывается на одиночную генерацию. Админы — без лимита.')}
         </p>
@@ -146,11 +146,11 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
             <label className={lbl} htmlFor="selfGenPerDay">{say('Drafts per day (0 = no cap)', 'Черновиков в сутки (0 = без капа)')}</label>
-            <input type="number" name="selfGenPerDay" id="selfGenPerDay" min="0" max="200" step="1" defaultValue={v.selfGenPerDay} className={field} />
+            <Input type="number" name="selfGenPerDay" id="selfGenPerDay" min="0" max="200" step="1" defaultValue={v.selfGenPerDay} />
           </div>
           <div>
             <label className={lbl} htmlFor="selfGenPerSweep">{say('Drafts per sweep', 'Черновиков за проход')}</label>
-            <input type="number" name="selfGenPerSweep" id="selfGenPerSweep" min="1" max="20" step="1" defaultValue={v.selfGenPerSweep} className={field} />
+            <Input type="number" name="selfGenPerSweep" id="selfGenPerSweep" min="1" max="20" step="1" defaultValue={v.selfGenPerSweep} />
           </div>
         </div>
       </div>
@@ -178,7 +178,7 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
             <label className={lbl} htmlFor="readinessMinSteps">{say('Minimum steps to publish', 'Минимум шагов для публикации')}</label>
-            <input type="number" name="readinessMinSteps" id="readinessMinSteps" min="1" max="50" step="1" defaultValue={v.readinessMinSteps} className={field} />
+            <Input type="number" name="readinessMinSteps" id="readinessMinSteps" min="1" max="50" step="1" defaultValue={v.readinessMinSteps} />
           </div>
           <div>
             {/* Класс полноты — осмысленная планка вместо одного числа: он учитывает описания,
@@ -199,7 +199,7 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
         <div className="mt-3">
           {/* КАНАРЕЙКА: ошибка в планке не должна за ночь залить каталог. */}
           <label className={lbl} htmlFor="readinessPerDay">{say('Autonomous publications per day', 'Автопубликаций в сутки')}</label>
-          <input type="number" name="readinessPerDay" id="readinessPerDay" min="0" max="50" step="1" defaultValue={v.readinessPerDay} className={field} />
+          <Input type="number" name="readinessPerDay" id="readinessPerDay" min="0" max="50" step="1" defaultValue={v.readinessPerDay} />
           <p className="mt-1.5 text-[12px] text-muted">
             {say(
               'A safety quota: beyond it lists stay drafts even if they pass the bar. 0 = never publish автоматически.',

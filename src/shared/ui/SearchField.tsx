@@ -2,14 +2,17 @@
 
 import { useRef } from 'react'
 import { Search, X } from 'lucide-react'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_TEXT_MOBILE } from './control'
 
 type Size = 'lg' | 'md' | 'sm' | 'xs'
 
+// xs..md — общая шкала контролов (control.ts): высота ряда совпадает с
+// Button/Input/Select. lg — герой-поиск главной, живёт выше шкалы.
 const SIZES: Record<Size, { box: string; text: string; icon: number; clear: number }> = {
-  lg: { box: 'px-3.5 py-2.5', text: 'text-[15px]', icon: 16, clear: 16 },
-  md: { box: 'px-3 py-2', text: 'text-[13.5px]', icon: 15, clear: 15 },
-  sm: { box: 'px-2.5 py-[5px]', text: 'text-[13px]', icon: 14, clear: 14 },
-  xs: { box: 'px-2 py-1', text: 'text-[12.5px]', icon: 12, clear: 13 },
+  lg: { box: 'h-[44px] px-3.5', text: `text-[15px] ${FIELD_TEXT_MOBILE}`, icon: 16, clear: 16 },
+  md: { box: `${CONTROL_H.md} ${CONTROL_PX.md}`, text: `${CONTROL_TEXT.md} ${FIELD_TEXT_MOBILE}`, icon: 15, clear: 15 },
+  sm: { box: `${CONTROL_H.sm} ${CONTROL_PX.sm}`, text: `${CONTROL_TEXT.sm} ${FIELD_TEXT_MOBILE}`, icon: 14, clear: 14 },
+  xs: { box: `${CONTROL_H.xs} ${CONTROL_PX.xs}`, text: `${CONTROL_TEXT.xs} ${FIELD_TEXT_MOBILE}`, icon: 12, clear: 13 },
 }
 
 export interface SearchFieldProps {

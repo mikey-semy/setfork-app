@@ -107,7 +107,7 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
 
       {/* Primary — справа внизу, единая высота с остальными формами админки. */}
       <div className="flex justify-end">
-        <SubmitButton className="inline-flex h-[38px] items-center rounded-md bg-primary px-4 text-[13px] font-semibold text-primary-fg">
+        <SubmitButton>
           {t('saveChanges', lang)}
         </SubmitButton>
       </div>

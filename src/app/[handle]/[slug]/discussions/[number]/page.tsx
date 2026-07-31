@@ -82,7 +82,7 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
             <input type="hidden" name="number" value={number} />
             <MarkdownEditor name="body" rows={5} placeholder={ru ? 'Ответить…' : 'Write a reply…'} maxLength={20000} lang={lang} refScope={{ owner, slug }} />
             <div className="mt-2 flex justify-end">
-              <SubmitButton className="rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+              <SubmitButton>
                 {ru ? 'Ответить' : 'Comment'}
               </SubmitButton>
             </div>

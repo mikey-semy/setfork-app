@@ -1,11 +1,12 @@
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { TagInput } from '@/shared/ui/TagInput'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { Input } from '@/shared/ui/input'
+import { Textarea } from '@/shared/ui/textarea'
 import { ListTypeToggle } from './ListTypeToggle'
 import { updateListMeta } from './actions'
 
 const card = 'rounded-lg border border-border bg-surface p-5'
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-ink outline-none focus:border-border-strong'
 const label = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 /** Настройки списка → Основное: название / описание / теги / порядок.
@@ -35,11 +36,11 @@ export function GeneralSection({
       <form action={save} className="flex flex-col gap-4">
         <div>
           <label className={label} htmlFor="ls-title">{t('listTitle', lang)}</label>
-          <input id="ls-title" name="title" defaultValue={tr(title, lang)} required maxLength={140} className={field} />
+          <Input id="ls-title" name="title" defaultValue={tr(title, lang)} required maxLength={140} />
         </div>
         <div>
           <label className={label} htmlFor="ls-desc">{t('listDesc', lang)}</label>
-          <textarea id="ls-desc" name="desc" defaultValue={tr(desc, lang)} rows={3} maxLength={500} className={`${field} resize-y`} />
+          <Textarea id="ls-desc" name="desc" defaultValue={tr(desc, lang)} rows={3} maxLength={500} className="resize-y" />
         </div>
         <div>
           <label className={label}>{t('tags', lang)}</label>
@@ -52,7 +53,7 @@ export function GeneralSection({
         </div>
 
         <div>
-          <SubmitButton className="rounded-md bg-primary px-4 py-2 text-[14px] font-semibold text-primary-fg">
+          <SubmitButton>
             {t('saveChanges', lang)}
           </SubmitButton>
         </div>

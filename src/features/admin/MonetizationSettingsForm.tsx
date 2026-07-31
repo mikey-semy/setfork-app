@@ -3,11 +3,12 @@
 import { useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
+import { Input } from '@/shared/ui/input'
+import { Textarea } from '@/shared/ui/textarea'
 import { t, type Lang } from '@/shared/i18n'
 import type { AffiliateRule } from '@/core'
 import { setMonetizationSettings } from './actions'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export interface MonetizationFormValues {
@@ -79,34 +80,34 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
           {rules.map((r) => (
             <div key={r.rowId} className="flex flex-col gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <input
+                <Input
                   value={r.match}
                   onChange={(e) => patch(r.rowId, { match: e.target.value })}
                   placeholder="amazon.com"
-                  className={`${field} min-w-[140px] flex-1 font-mono`}
+                  className="min-w-[140px] flex-1 font-mono"
                   aria-label={t('monRuleDomain', lang)}
                 />
-                <input
+                <Input
                   value={r.param}
                   onChange={(e) => patch(r.rowId, { param: e.target.value })}
                   placeholder="tag"
-                  className={`${field} max-w-[120px] font-mono`}
+                  className="max-w-[120px] font-mono"
                   aria-label={t('monRuleParam', lang)}
                 />
-                <input
+                <Input
                   value={r.value}
                   onChange={(e) => patch(r.rowId, { value: e.target.value })}
                   placeholder="setfork-20"
-                  className={`${field} max-w-[160px] font-mono`}
+                  className="max-w-[160px] font-mono"
                   aria-label={t('monRuleValue', lang)}
                 />
                 {/* erid (РФ-маркировка) — опционально; задан → ссылки этого домена
                     помечаются рекламой и несут токен в /api/go. */}
-                <input
+                <Input
                   value={r.erid ?? ''}
                   onChange={(e) => patch(r.rowId, { erid: e.target.value })}
                   placeholder="erid"
-                  className={`${field} max-w-[150px] font-mono`}
+                  className="max-w-[150px] font-mono"
                   aria-label={t('monRuleErid', lang)}
                 />
                 <button
@@ -123,19 +124,19 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
               {r.erid?.trim() && (
                 <div className="flex flex-wrap items-center gap-2 pl-3">
                   <span className="text-[11px] text-muted">↳</span>
-                  <input
+                  <Input
                     value={r.advertiser ?? ''}
                     onChange={(e) => patch(r.rowId, { advertiser: e.target.value })}
                     placeholder={t('monRuleAdvertiser', lang)}
-                    className={`${field} min-w-[180px] flex-1`}
+                    className="min-w-[180px] flex-1"
                     aria-label={t('monRuleAdvertiser', lang)}
                   />
-                  <input
+                  <Input
                     value={r.advertiserInn ?? ''}
                     onChange={(e) => patch(r.rowId, { advertiserInn: e.target.value })}
                     placeholder={t('monRuleInn', lang)}
                     inputMode="numeric"
-                    className={`${field} max-w-[160px] font-mono`}
+                    className="max-w-[160px] font-mono"
                     aria-label={t('monRuleInn', lang)}
                   />
                 </div>
@@ -158,7 +159,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         <label htmlFor="mon-disclosure-text" className={lbl}>
           {t('monDisclosureText', lang)}
         </label>
-        <textarea id="mon-disclosure-text" name="disclosureText" defaultValue={v.disclosureText} rows={2} className={field} />
+        <Textarea id="mon-disclosure-text" name="disclosureText" defaultValue={v.disclosureText} rows={2} />
       </div>
 
       <div className="border-t border-border pt-4 text-[12.5px] font-semibold text-ink">{t('monAdMarkingTitle', lang)}</div>
@@ -167,7 +168,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         <label htmlFor="mon-ad-marking-text" className={lbl}>
           {t('monAdMarkingText', lang)}
         </label>
-        <input id="mon-ad-marking-text" name="adMarkingText" defaultValue={v.adMarkingText} placeholder="Реклама" className={field} />
+        <Input id="mon-ad-marking-text" name="adMarkingText" defaultValue={v.adMarkingText} placeholder="Реклама" />
         <p className="mt-1 text-[12px] text-muted">{t('monAdMarkingTextHint', lang)}</p>
       </div>
 
@@ -176,7 +177,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         <label htmlFor="mon-donate-url" className={lbl}>
           {t('monDonateLabel', lang)}
         </label>
-        <input id="mon-donate-url" name="donateUrl" defaultValue={v.donateUrl} placeholder="https://…" className={`${field} font-mono`} />
+        <Input id="mon-donate-url" name="donateUrl" defaultValue={v.donateUrl} placeholder="https://…" className="font-mono" />
         <p className="mt-1 text-[12px] text-muted">{t('monDonateHint', lang)}</p>
       </div>
 

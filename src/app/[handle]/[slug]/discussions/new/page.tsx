@@ -64,7 +64,7 @@ export default async function NewDiscussionPage({
           <MarkdownEditor name="body" rows={8} placeholder={ru ? 'О чём хотите поговорить?' : 'What do you want to discuss?'} maxLength={20000} lang={lang} refScope={{ owner, slug }} />
 
           <div className="flex justify-end">
-            <SubmitButton className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
+            <SubmitButton>
               {ru ? 'Создать' : 'Start discussion'}
             </SubmitButton>
           </div>

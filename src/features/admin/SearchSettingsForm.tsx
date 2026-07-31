@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Input } from '@/shared/ui/input'
 import type { SearchMode, SearchSettings } from '@/shared/settings/search'
 import { setSearchSettings } from './actions'
 import { FormSaveBar } from '@/features/settings/FormSaveBar'
 
-const field = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden focus:border-border-strong'
 const lbl = 'mb-1.5 block text-[12.5px] font-semibold text-ink-2'
 
 export function SearchSettingsForm({ current, ru }: { current: SearchSettings; ru: boolean }) {
@@ -44,7 +44,7 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={lbl}>{ru ? 'Порог схожести (0–1)' : 'Similarity threshold (0–1)'}</label>
-          <input
+          <Input
             type="number"
             name="minScore"
             step="any"
@@ -52,7 +52,6 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
             max="1"
             defaultValue={current.minScore}
             disabled={!vector}
-            className={`${field} disabled:opacity-50`}
           />
           <p className="mt-1 text-[12px] text-muted">
             {ru ? 'Ниже порога результаты отбрасываются. 0 — без фильтра.' : 'Results below the score are dropped. 0 = no filter.'}
@@ -60,7 +59,7 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
         </div>
         <div>
           <label className={lbl}>{ru ? 'Лимит результатов' : 'Result limit'}</label>
-          <input
+          <Input
             type="number"
             name="limit"
             step="1"
@@ -68,7 +67,6 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
             max="100"
             defaultValue={current.limit}
             disabled={!vector}
-            className={`${field} disabled:opacity-50`}
           />
           <p className="mt-1 text-[12px] text-muted">
             {ru ? 'Сколько семантических совпадений брать (top-K).' : 'How many semantic matches to take (top-K).'}

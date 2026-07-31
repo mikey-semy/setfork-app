@@ -97,7 +97,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
                   <span className="font-mono text-[11.5px] text-muted">{timeAgo(r.createdAt, lang)} · v{r.version}</span>
                   {canManage && (
                     <form action={deleteRelease.bind(null, r.id)} className="ml-auto">
-                      <SubmitButton className="rounded p-1 text-muted hover:bg-danger/10 hover:text-danger" aria-label={ru ? 'Удалить релиз' : 'Delete release'}>
+                      <SubmitButton variant="danger" size="xs" aria-label={ru ? 'Удалить релиз' : 'Delete release'}>
                         <Trash2 size={13} />
                       </SubmitButton>
                     </form>

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Checkbox } from '@/shared/ui/checkbox'
+import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { DatePicker } from '@/shared/ui/DatePicker'
@@ -75,9 +76,6 @@ function LinkTitleButton({ url, onLabel, ru }: { url: string; onLabel: (v: strin
     </Tooltip>
   )
 }
-
-const input =
-  'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong'
 
 export function ListEditor({
   name = 'items',
@@ -327,8 +325,8 @@ export function ListEditor({
             {/* Плейсхолдер — готовая фраза ПО ТИПУ списка (тот же refineHint, что в чате
                 генерации): тип выводится классификатором из заголовка бесплатно, без
                 LLM-вызова. Хардкод «про TLS» на рецепте выглядел нелепо (фидбек владельца). */}
-            <input
-              className={`${input} min-w-[240px] flex-1`}
+            <Input
+              className="min-w-[240px] flex-1"
               placeholder={refineHint(classifyListKind(aiRefine.title), ru)}
               value={instruction}
               disabled={refining}
@@ -583,8 +581,8 @@ export function ListEditor({
                         />
                       }
                     />
-                    <input
-                      className={`${input} font-mono leading-normal`}
+                    <Input
+                      className="font-mono leading-normal"
                       aria-label={ru ? 'URL ссылки' : 'Link URL'}
                       placeholder="https://…"
                       value={r.url}
@@ -684,8 +682,7 @@ export function ListEditor({
           {/* Video-блок: ссылка (YouTube/Vimeo/mp4) + подпись; хинт распознанного типа. */}
           {it.type === 'video' && (
             <div className="flex flex-col gap-2">
-              <input
-                className={input}
+              <Input
                 aria-label={ru ? 'Ссылка на видео' : 'Video URL'}
                 placeholder={ru ? 'Ссылка: YouTube / Vimeo / .mp4' : 'URL: YouTube / Vimeo / .mp4'}
                 value={it.videoUrl}
@@ -794,8 +791,7 @@ function ProductBlockBody({
     tr === 'budget' ? t('productTierBudget', lang) : tr === 'mid' ? t('productTierMid', lang) : t('productTierPremium', lang)
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
-      <input
-        className={input}
+      <Input
         aria-label={t('productCaptionPh', lang)}
         placeholder={t('productCaptionPh', lang)}
         value={caption}
@@ -803,15 +799,15 @@ function ProductBlockBody({
       />
       {products.map((p, pi) => (
         <div key={pi} className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2 sm:flex-row sm:items-center">
-          <input
-            className={`${input} sm:max-w-[180px]`}
+          <Input
+            className="sm:max-w-[180px]"
             aria-label={t('productNamePh', lang)}
             placeholder={t('productNamePh', lang)}
             value={p.name}
             onChange={(e) => patchRow(pi, { name: e.target.value })}
           />
-          <input
-            className={`${input} font-mono`}
+          <Input
+            className="font-mono"
             aria-label="URL"
             placeholder="https://…"
             value={p.url}
@@ -833,8 +829,7 @@ function ProductBlockBody({
               ))}
             </SelectContent>
           </Select>
-          <input
-            className={input}
+          <Input
             aria-label={t('productNotePh', lang)}
             placeholder={t('productNotePh', lang)}
             value={p.note}
@@ -1059,8 +1054,8 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
         <div className="flex flex-wrap items-end gap-3 text-[12px]">
           <label className="flex flex-col gap-1 text-ink-2">
             {ru ? 'Верный ответ' : 'Correct answer'}
-            <input
-              className={`${input} w-32`}
+            <Input
+              className="w-32"
               inputMode="decimal"
               aria-label={ru ? 'Числовой ответ' : 'Numeric answer'}
               placeholder="42"
@@ -1070,8 +1065,8 @@ function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q:
           </label>
           <label className="flex flex-col gap-1 text-ink-2">
             {ru ? 'Допуск ±' : 'Tolerance ±'}
-            <input
-              className={`${input} w-24`}
+            <Input
+              className="w-24"
               inputMode="decimal"
               aria-label={ru ? 'Допуск' : 'Tolerance'}
               placeholder="0"
