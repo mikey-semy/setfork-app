@@ -156,6 +156,11 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
+  async mirrorPush(repo) {
+    const res = await client.mirrorPush(toRepoRef(repo))
+    return { ok: res.ok, error: res.error }
+  },
+
   async updateBranch(repo, name) {
     try {
       const res = await client.updateBranch({ repo: toRepoRef(repo), name })

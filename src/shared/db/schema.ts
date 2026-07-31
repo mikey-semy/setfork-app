@@ -304,6 +304,14 @@ export const templates = pgTable(
     // Тип списка (ADR-0010): переносится из generations при принятии кандидата,
     // лениво доклассифицируется садовником. null = ещё не определён (≈procedure).
     listKind: text('list_kind'),
+    /** Ф3: push-зеркало в GitHub/GitLab. SetFork — источник истины, форджа —
+     *  витрина/бэкап. Токен шифрован (AES-GCM, общий SETFORK_MIRROR_SECRET с
+     *  ядром — пушит оно). Статус последнего пуша: ошибка видна владельцу,
+     *  молчаливой деградации нет. */
+    mirrorUrl: text('mirror_url'),
+    mirrorToken: text('mirror_token'),
+    mirrorSyncedAt: timestamp('mirror_synced_at', { withTimezone: true }),
+    mirrorError: text('mirror_error'),
     /**
      * ЖИВОЙ СПИСОК (лента): не «готов навсегда», а с ритмом обновления.
      *
