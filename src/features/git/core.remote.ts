@@ -251,19 +251,57 @@ function toSnapshot(res: {
   }
 }
 
-// gRPC-статусы ядра → машиночитаемые коды порта (см. proto: комментарий у CreateBranch).
-// failed_precondition различаем по message: merge шлёт 'conflict'/'nothing-to-merge',
-// delete — 'main is protected'.
+/**
+ * Причина отказа ядра (трейлер `sf-reason`) → код порта.
+ *
+ * Раньше причину угадывали по ТЕКСТУ: `rawMessage.includes('conflict')`. Это
+ * ломалось от любой правки сообщения и уже подвело — отказы, добавленные в ядре
+ * позже (лишний путь в дереве, переполненный репозиторий, заморожен, в архиве),
+ * не совпадали ни с одной подстрокой, и человек видел общую ошибку вместо
+ * причины. AIP-193 про это прямо: клиент обязан смотреть на машиночитаемый
+ * `reason`, потому что тексты содержат переменные куски.
+ *
+ * Ключи — контракт провода с ядром (`src/reason.rs`), значения — словарь порта.
+ * Список сверяется скриптом ядра `check-proto-sync.sh`: причина, добавленная в
+ * ядре и забытая здесь, роняет его локальный CI.
+ */
+const REASON_TO_CODE: Record<string, BranchOpError['code']> = {
+  BAD_NAME: 'bad-name',
+  EXISTS: 'exists',
+  NOT_FOUND: 'not-found',
+  PROTECTED: 'protected',
+  CONFLICT: 'conflict',
+  NOTHING_TO_MERGE: 'nothing-to-merge',
+  STALE: 'stale',
+  // Ядро отказало по формату дерева или размеру репозитория. Для порта это тот
+  // же класс «правка не принята» — отдельного кода не заводим, пока UI не готов
+  // показывать их по-разному.
+  FOREIGN_PATH: 'protected',
+  MISSING_LIST_JSON: 'protected',
+  REPO_TOO_LARGE: 'protected',
+  // Вердикт приложения: список заморожен или в архиве (ADR-0015).
+  FROZEN: 'protected',
+  ARCHIVED: 'protected',
+  // Спросить приложение не удалось — писать нельзя, но это не вина правки.
+  GATE_UNAVAILABLE: 'internal',
+  RESERVED_TAG_NAME: 'bad-name',
+}
+
+// gRPC-статусы ядра → машиночитаемые коды порта.
 function toBranchOpError(e: unknown): BranchOpError {
   if (!(e instanceof ConnectError)) return new BranchOpError('internal')
+
+  // Причина из трейлера — основной путь. Connect-ES кладёт трейлеры gRPC в
+  // metadata ошибки, поэтому это ровно то, что прислало ядро.
+  const reason = e.metadata.get('sf-reason')
+  if (reason && REASON_TO_CODE[reason]) return new BranchOpError(REASON_TO_CODE[reason])
+
+  // Причины нет — значит ядро старее этой сборки (фронт выкатывается первым).
+  // Раскладываем по gRPC-коду; подстроки НЕ разбираем: угадывание по тексту и
+  // было проблемой. УБРАТЬ, когда ядро с sf-reason уедет на прод.
   if (e.code === Code.InvalidArgument) return new BranchOpError('bad-name')
   if (e.code === Code.AlreadyExists) return new BranchOpError('exists')
   if (e.code === Code.NotFound) return new BranchOpError('not-found')
-  if (e.code === Code.FailedPrecondition) {
-    if (e.rawMessage.includes('conflict')) return new BranchOpError('conflict')
-    if (e.rawMessage.includes('nothing-to-merge')) return new BranchOpError('nothing-to-merge')
-    if (e.rawMessage.includes('stale')) return new BranchOpError('stale')
-    return new BranchOpError('protected')
-  }
+  if (e.code === Code.FailedPrecondition) return new BranchOpError('protected')
   return new BranchOpError('internal')
 }
