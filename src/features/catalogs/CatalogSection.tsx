@@ -3,6 +3,7 @@
 import { useTransition } from 'react'
 import { FolderGit2 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { createCatalogAndAssign, setListCatalog } from './actions'
 import type { CatalogRow } from './queries'
@@ -22,11 +23,13 @@ export function CatalogSection({
   const [pending, start] = useTransition()
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-5">
-      <div className="mb-3 flex items-center gap-1.5 font-semibold text-ink">
-        <FolderGit2 size={16} className="text-ink-2" /> {t('catalogHeading', lang)}
-      </div>
-
+    <SettingsSection
+      title={
+        <span className="flex items-center gap-1.5">
+          <FolderGit2 size={16} className="text-ink-2" /> {t('catalogHeading', lang)}
+        </span>
+      }
+    >
       {catalogs.length > 0 && (
         <Select
           value={currentId ?? 'none'}
@@ -57,6 +60,6 @@ export function CatalogSection({
           {t('createCatalogBtn', lang)}
         </button>
       </form>
-    </section>
+    </SettingsSection>
   )
 }

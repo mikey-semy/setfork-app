@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { GitFork, Lock, Star } from 'lucide-react'
-import { Avatar } from '@/shared/ui/Avatar'
 import { TagChip } from '@/shared/ui/TagChip'
+import { UserLine } from '@/shared/ui/UserLine'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, tr, type Lang } from '@/shared/i18n'
@@ -29,8 +29,7 @@ export function FeedTile({ item, lang, starred = false }: { item: FeedItem; lang
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-3.5">
         <div className="flex min-w-0 items-center gap-2">
-          <Avatar handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size={20} />
-          <Link href={`/${item.ownerHandle}`} className="min-w-0 truncate text-[12.5px] text-muted hover:text-accent">{item.ownerHandle}</Link>
+          <UserLine handle={item.ownerHandle} avatarUrl={item.ownerAvatarUrl} size="xs" className="min-w-0" />
           {item.visibility === 'private' && <Lock size={11} className="shrink-0 text-muted" />}
         </div>
         <Link href={base} className="truncate text-[15px] font-semibold text-ink group-hover:text-accent">{tr(item.title, lang)}</Link>

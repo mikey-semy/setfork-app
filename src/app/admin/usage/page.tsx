@@ -2,11 +2,12 @@ import Link from 'next/link'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
-import { Avatar } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/badge'
+import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatTile } from '@/shared/ui/StatTile'
+import { UserLine } from '@/shared/ui/UserLine'
 import { getUsageByUser, getUsageTotals } from '@/shared/ai/usage'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { isQuarantined, modelHealth, QUARANTINE_WINDOW_MS } from '@/shared/ai/health'
@@ -133,7 +134,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
       {/* Щиток надёжности: success-rate и p95 по моделям; карантин = авторотация совета */}
       {health.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="rounded-lg border border-border bg-surface">
           <div className="border-b border-border px-4 py-2.5">
             <span className="text-[13px] font-semibold text-ink">{tr({ en: 'Model reliability', ru: 'Надёжность моделей' }, lang)}</span>
             <span className="ml-2 text-[12px] text-muted">
@@ -146,70 +147,74 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               )}
             </span>
           </div>
-          <div className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
-            <span>{tr({ en: 'Model', ru: 'Модель' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'Success', ru: 'Успех' }, lang)}</span>
-            <span className="text-right">p95</span>
-            <span className="text-right">{tr({ en: 'Status', ru: 'Статус' }, lang)}</span>
-          </div>
-          {[...health]
-            .sort((a, b) => a.okRate - b.okRate || b.calls - a.calls)
-            .map((h) => (
-              <div key={h.model} className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0">
-                <span className="truncate font-mono text-[12.5px] text-ink" title={h.model}>{prettyModelName(h.model)}</span>
-                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(h.calls)}</span>
-                <span className={`text-right font-mono tabular-nums text-[13px] font-semibold ${h.okRate >= 0.95 ? 'text-ok' : h.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}>
-                  {(h.okRate * 100).toFixed(1)}%
-                </span>
-                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{h.p95Ms ? `${(h.p95Ms / 1000).toFixed(1)}s` : '—'}</span>
-                <span className="text-right">
-                  {quarantinedNow.has(h.model) ? (
-                    <Badge variant="danger">{tr({ en: 'quarantine', ru: 'карантин' }, lang)}</Badge>
-                  ) : (
-                    <span className="text-[11px] text-muted">{tr({ en: 'in rotation', ru: 'в ротации' }, lang)}</span>
-                  )}
-                </span>
-              </div>
-            ))}
+          {/* Титульная полоса остаётся снаружи скролла: DataTable внутри без своей рамки. */}
+          <DataTable
+            template="minmax(0,1fr) 96px 104px 88px 128px"
+            minWidth={560}
+            className="rounded-none border-0"
+            header={
+              <>
+                <span>{tr({ en: 'Model', ru: 'Модель' }, lang)}</span>
+                <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
+                <span className="text-right">{tr({ en: 'Success', ru: 'Успех' }, lang)}</span>
+                <span className="text-right">p95</span>
+                <span className="text-right">{tr({ en: 'Status', ru: 'Статус' }, lang)}</span>
+              </>
+            }
+          >
+            {[...health]
+              .sort((a, b) => a.okRate - b.okRate || b.calls - a.calls)
+              .map((h) => (
+                <DataTableRow key={h.model}>
+                  <span className="truncate font-mono text-[12.5px] text-ink" title={h.model}>{prettyModelName(h.model)}</span>
+                  <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(h.calls)}</span>
+                  <span className={`text-right font-mono tabular-nums text-[13px] font-semibold ${h.okRate >= 0.95 ? 'text-ok' : h.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}>
+                    {(h.okRate * 100).toFixed(1)}%
+                  </span>
+                  <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{h.p95Ms ? `${(h.p95Ms / 1000).toFixed(1)}s` : '—'}</span>
+                  <span className="text-right">
+                    {quarantinedNow.has(h.model) ? (
+                      <Badge variant="danger">{tr({ en: 'quarantine', ru: 'карантин' }, lang)}</Badge>
+                    ) : (
+                      <span className="text-[11px] text-muted">{tr({ en: 'in rotation', ru: 'в ротации' }, lang)}</span>
+                    )}
+                  </span>
+                </DataTableRow>
+              ))}
+          </DataTable>
         </div>
       )}
 
       {/* По пользователям */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <div className="grid min-w-[440px] grid-cols-[minmax(0,1fr)_112px_112px_112px] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
-          <span>{tr({ en: 'User', ru: 'Пользователь' }, lang)}</span>
-          <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
-          <span className="text-right">{tr({ en: 'Tokens', ru: 'Токены' }, lang)}</span>
-          <span className="text-right">{tr({ en: 'Cost', ru: 'Стоимость' }, lang)}</span>
-        </div>
+      <DataTable
+        template="minmax(0,1fr) 112px 112px 112px"
+        minWidth={440}
+        header={
+          <>
+            <span>{tr({ en: 'User', ru: 'Пользователь' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'Tokens', ru: 'Токены' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'Cost', ru: 'Стоимость' }, lang)}</span>
+          </>
+        }
+      >
         {rows.length === 0 ? (
           <EmptyState variant="inline" hint={tr({ en: 'No usage yet.', ru: 'Пока нет расхода.' }, lang)} />
         ) : (
           rows.map((r) => (
-            <div
-              key={r.userId ?? 'system'}
-              className="grid min-w-[440px] grid-cols-[minmax(0,1fr)_112px_112px_112px] items-center gap-4 border-b border-border px-4 py-2.5 last:border-0"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                {r.handle ? (
-                  <>
-                    <Avatar handle={r.handle} avatarUrl={null} size={22} />
-                    <Link href={`/${r.handle}`} className="truncate text-[13.5px] text-ink hover:text-accent">
-                      {r.handle}
-                    </Link>
-                  </>
-                ) : (
-                  <span className="text-[13.5px] text-muted">{tr({ en: 'system / deleted', ru: 'система / удалён' }, lang)}</span>
-                )}
-              </span>
+            <DataTableRow key={r.userId ?? 'system'}>
+              {r.handle ? (
+                <UserLine handle={r.handle} size="md" className="min-w-0" />
+              ) : (
+                <span className="text-[13.5px] text-muted">{tr({ en: 'system / deleted', ru: 'система / удалён' }, lang)}</span>
+              )}
               <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(r.calls)}</span>
               <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(r.totalTokens)}</span>
               <span className="text-right font-mono tabular-nums text-[13px] font-semibold text-ink">{money(r.costUsd)}</span>
-            </div>
+            </DataTableRow>
           ))
         )}
-      </div>
+      </DataTable>
     </div>
   )
 }

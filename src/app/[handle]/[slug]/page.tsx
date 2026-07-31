@@ -18,7 +18,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { detectTextLang } from '@/shared/i18n/detect-text-lang'
-import { Avatar } from '@/shared/ui/Avatar'
+import { UserLine } from '@/shared/ui/UserLine'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 import { AsideCard, PageAside } from '@/shared/ui/PageAside'
@@ -856,17 +856,14 @@ export default async function ListPage({
                   </SectionLabel>
                   <div className="flex flex-col gap-1">
                     {contributors.slice(0, 8).map((c) => (
-                      <Link
+                      <UserLine
                         key={c.handle}
-                        href={`/${c.handle}`}
-                        className="flex min-w-0 items-center gap-2 rounded-md py-0.5 text-[13px] hover:bg-surface-2"
-                      >
-                        <Avatar handle={c.handle} avatarUrl={c.avatarUrl} size={22} />
-                        <span className="min-w-0 truncate">
-                          <span className="font-semibold text-ink">{c.handle}</span>
-                          {c.name && <span className="ml-1.5 text-muted">{c.name}</span>}
-                        </span>
-                      </Link>
+                        handle={c.handle}
+                        name={c.name ?? undefined}
+                        avatarUrl={c.avatarUrl}
+                        size="md"
+                        className="min-w-0 py-0.5"
+                      />
                     ))}
                     {/* Их может быть много: остальные — в зачёте вкладов, а не простыней в сайдбаре. */}
                     {contributors.length > 8 && (

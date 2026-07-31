@@ -6,8 +6,11 @@ import type { Lang } from '@/shared/i18n'
 import { Alert, type AlertVariant } from '@/shared/ui/Alert'
 import { Badge, type BadgeVariant } from '@/shared/ui/badge'
 import { ActionRow, DangerZone } from '@/shared/ui/DangerZone'
+import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Field } from '@/shared/ui/Field'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
+import { UserLine } from '@/shared/ui/UserLine'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { useConfirm } from '@/shared/ui/use-confirm'
 import { Button, type ButtonVariant } from '@/shared/ui/button'
@@ -266,6 +269,55 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           </ActionRow>
         </DangerZone>
         {confirmDialog}
+      </Section>
+
+      <Section
+        title={say('Composites', 'Конструкции')}
+        hint={say(
+          'SettingsSection, DataTable and UserLine — assembled once, reused everywhere.',
+          'SettingsSection, DataTable и UserLine — собраны один раз, переиспользуются везде.',
+        )}
+      >
+        <SettingsSection
+          title={say('Settings section', 'Секция настроек')}
+          hint={say('Card + title + hint; save via FormSaveBar, footer is for secondary rows', 'Карточка + заголовок + пояснение; сохранение — FormSaveBar, футер — для вторичных рядов')}
+          footer={
+            <Button size="sm" variant="ghost">
+              {say('Secondary', 'Вторичное')}
+            </Button>
+          }
+        >
+          <Field label={say('A field inside', 'Поле внутри')}>
+            <Input placeholder="value" />
+          </Field>
+        </SettingsSection>
+        <DataTable
+          template="minmax(0,1fr) 96px 88px"
+          minWidth={420}
+          header={
+            <>
+              <span>{say('Person', 'Человек')}</span>
+              <span>{say('Role', 'Роль')}</span>
+              <span className="text-right">{say('Score', 'Счёт')}</span>
+            </>
+          }
+        >
+          <DataTableRow>
+            <UserLine handle="demo" size="md" name="Demo User" />
+            <Badge variant="soft">admin</Badge>
+            <span className="text-right font-mono text-[12.5px]">42</span>
+          </DataTableRow>
+          <DataTableRow muted>
+            <UserLine handle="sleepy" size="md" at={say('3 d ago', '3 дн назад')} />
+            <Badge variant="outline">guest</Badge>
+            <span className="text-right font-mono text-[12.5px]">0</span>
+          </DataTableRow>
+        </DataTable>
+        <div className="flex flex-wrap items-center gap-4">
+          <UserLine handle="demo" size="xs" at="xs" />
+          <UserLine handle="demo" size="sm" at="sm" />
+          <UserLine handle="demo" size="md" at="md" />
+        </div>
       </Section>
 
       <Section

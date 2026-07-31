@@ -6,6 +6,7 @@ import { BadgeCheck, Check, EyeOff, Eye, Loader2, Sparkles } from 'lucide-react'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { Badge } from '@/shared/ui/badge'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { ModFilter, ModItem } from './queries'
 import { aiModerate, setModeration, setVerified } from './actions'
@@ -51,18 +52,21 @@ export function ModerationTable({
 
   return (
     <div>
-      {/* На мобильном табы скроллятся, не ломая строк (фидбек владельца). */}
-      <div className="no-scrollbar mb-4 flex gap-4 overflow-x-auto border-b border-border text-[13.5px] font-semibold">
-        {tabs.map((tb) => (
-          <Link
-            key={tb.key}
-            href={tb.key === 'all' ? '/admin/moderation' : `/admin/moderation?filter=${tb.key}`}
-            className={`shrink-0 whitespace-nowrap pb-2.5 ${filter === tb.key ? 'border-b-2 border-ink text-ink' : 'text-ink-2 hover:text-ink'}`}
-          >
-            {tb.label}
-            {tb.n != null && tb.n > 0 && <span className="ml-1.5 rounded-full bg-surface-2 px-1.5 text-[11px] text-ink-2">{tb.n}</span>}
-          </Link>
-        ))}
+      {/* Единый TabNav (как Explore/профиль): полоска активной вкладки, не влезшие
+          фильтры уезжают в «…»-меню — счётчики сохраняются. -mx-4 компенсирует
+          внутренний паддинг ряда, чтобы вкладки стояли по левому краю контента. */}
+      <div className="-mx-4 mb-4">
+        <TabNav scope="moderation" overflow={{ moreLabel: t('moreTabs', lang) }}>
+          {tabs.map((tb) => (
+            <TabItem
+              key={tb.key}
+              href={tb.key === 'all' ? '/admin/moderation' : `/admin/moderation?filter=${tb.key}`}
+              on={filter === tb.key}
+              label={tb.label}
+              count={tb.n}
+            />
+          ))}
+        </TabNav>
       </div>
 
       <div className="flex flex-col gap-2">

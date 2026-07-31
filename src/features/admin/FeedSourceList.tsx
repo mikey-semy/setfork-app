@@ -1,6 +1,7 @@
 import { Plus, Power, RefreshCw, Rss, Trash2 } from 'lucide-react'
 import { tr, type Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
+import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { TagChip } from '@/shared/ui/TagChip'
 import { Alert } from '@/shared/ui/Alert'
@@ -17,8 +18,6 @@ import type { FeedSourceRow } from '@/features/admin/feed-queries'
  * Основное действие над источником — выключить (он остаётся с историей). Удаление уносит и
  * собранные материалы, поэтому стоит последним и подписано.
  */
-
-const COLS = 'grid-cols-[minmax(0,1fr)_160px_92px_116px_104px]'
 
 export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lang: Lang; err?: string }) {
   const say = (en: string, ru: string) => tr({ en, ru }, lang)
@@ -72,14 +71,19 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
         </Button>
       </form>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <div className={`grid min-w-[760px] ${COLS} gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted`}>
-          <span>{say('Feed', 'Поток')}</span>
-          <span>{say('Topic', 'Тема')}</span>
-          <span className="text-right">{say('Every', 'Раз в')}</span>
-          <span className="text-right">{say('Items / fresh', 'Всего / свежих')}</span>
-          <span className="text-right">{say('Pulled', 'Собран')}</span>
-        </div>
+      <DataTable
+        template="minmax(0,1fr) 160px 92px 116px 104px"
+        minWidth={760}
+        header={
+          <>
+            <span>{say('Feed', 'Поток')}</span>
+            <span>{say('Topic', 'Тема')}</span>
+            <span className="text-right">{say('Every', 'Раз в')}</span>
+            <span className="text-right">{say('Items / fresh', 'Всего / свежих')}</span>
+            <span className="text-right">{say('Pulled', 'Собран')}</span>
+          </>
+        }
+      >
         {rows.length === 0 && (
           <EmptyState
             variant="inline"
@@ -87,7 +91,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           />
         )}
         {rows.map((r) => (
-          <div key={r.id} className={`grid min-w-[760px] ${COLS} items-center gap-4 border-b border-border px-4 py-2.5 last:border-0 ${r.enabled ? '' : 'opacity-60'}`}>
+          <DataTableRow key={r.id} muted={!r.enabled}>
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
                 <Rss size={13} className={`shrink-0 ${r.lastError ? 'text-warn' : 'text-accent'}`} />
@@ -140,9 +144,9 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
                 </button>
               </form>
             </div>
-          </div>
+          </DataTableRow>
         ))}
-      </div>
+      </DataTable>
     </div>
   )
 }

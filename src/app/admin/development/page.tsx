@@ -9,6 +9,7 @@ import { agendaLabel, type AgendaKind } from '@/shared/agents/agenda'
 import { decideAgendaItem } from '@/features/admin/agenda-actions'
 import { getDomainScorecards } from '@/features/admin/scorecard-queries'
 import { Button } from '@/shared/ui/button'
+import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatTile } from '@/shared/ui/StatTile'
 import { TagChip } from '@/shared/ui/TagChip'
@@ -42,11 +43,12 @@ function naText(reason: NaReason, lang: Lang): string {
 
 const h2 = 'text-[13px] font-semibold uppercase tracking-wide text-ink-2'
 
-// Столбцы лент фиксированной ширины: `auto` подгоняется под содержимое КАЖДОЙ строки, и шапка
-// со строками разъезжаются «волной» (за это уже досталось на щитке моделей).
-const FEED_COLS = 'grid-cols-[minmax(0,1fr)_92px_84px_104px_88px_112px]'
+// Столбцы лент фиксированной ширины (шаблоны — в DataTable): `auto` подгоняется под
+// содержимое КАЖДОЙ строки, и шапка со строками разъезжаются «волной» (за это уже
+// досталось на щитке моделей).
+const FEED_TEMPLATE = 'minmax(0,1fr) 92px 84px 104px 88px 112px'
 
-const AGENDA_COLS = 'grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_96px_128px]'
+const AGENDA_TEMPLATE = 'minmax(0,1.2fr) minmax(0,1fr) 96px 128px'
 
 export default async function AdminDevelopmentPage() {
   await requireAdmin()
@@ -328,15 +330,20 @@ export default async function AdminDevelopmentPage() {
             )}
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <div className={`grid min-w-[720px] ${AGENDA_COLS} gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted`}>
-              <span>{tr({ en: 'What to grow', ru: 'Что растим' }, lang)}</span>
-              <span>{tr({ en: 'Why (numbers)', ru: 'Почему (числа)' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'Priority', ru: 'Приоритет' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'Decision', ru: 'Решение' }, lang)}</span>
-            </div>
+          <DataTable
+            template={AGENDA_TEMPLATE}
+            minWidth={720}
+            header={
+              <>
+                <span>{tr({ en: 'What to grow', ru: 'Что растим' }, lang)}</span>
+                <span>{tr({ en: 'Why (numbers)', ru: 'Почему (числа)' }, lang)}</span>
+                <span className="text-right">{tr({ en: 'Priority', ru: 'Приоритет' }, lang)}</span>
+                <span className="text-right">{tr({ en: 'Decision', ru: 'Решение' }, lang)}</span>
+              </>
+            }
+          >
             {agenda.map((a) => (
-              <div key={a.id} className={`grid min-w-[720px] ${AGENDA_COLS} items-center gap-4 border-b border-border px-4 py-2.5 last:border-0`}>
+              <DataTableRow key={a.id}>
                 <span className="min-w-0 truncate text-[13px] text-ink">{agendaLabel(a.kind as AgendaKind, a.domain, lang === 'ru')}</span>
                 {/* Числа как есть: «списков 1 при пороге 5» проверяемо, «усилить направление» — нет. */}
                 <span className="min-w-0 truncate font-mono text-[11.5px] text-ink-2">
@@ -367,9 +374,9 @@ export default async function AdminDevelopmentPage() {
                     </span>
                   )}
                 </div>
-              </div>
+              </DataTableRow>
             ))}
-          </div>
+          </DataTable>
         )}
         <p className="text-[12px] text-muted">
           {tr(
@@ -388,17 +395,22 @@ export default async function AdminDevelopmentPage() {
       {m.feeds.length > 0 && (
         <section className="flex min-w-0 flex-col gap-3">
           <h2 className={h2}>{tr({ en: 'Living lists', ru: 'Живые списки' }, lang)}</h2>
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <div className={`grid min-w-[720px] ${FEED_COLS} gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted`}>
-              <span>{tr({ en: 'Feed', ru: 'Лента' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'Fresh', ru: 'Свежесть' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'Grown', ru: 'Роста' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'Views', ru: 'Просмотров' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'Source clicks', ru: 'Кликов' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'Human edits', ru: 'Правок людей' }, lang)}</span>
-            </div>
+          <DataTable
+            template={FEED_TEMPLATE}
+            minWidth={720}
+            header={
+              <>
+                <span>{tr({ en: 'Feed', ru: 'Лента' }, lang)}</span>
+                <span className="text-right">{tr({ en: 'Fresh', ru: 'Свежесть' }, lang)}</span>
+                <span className="text-right">{tr({ en: 'Grown', ru: 'Роста' }, lang)}</span>
+                <span className="text-right">{tr({ en: 'Views', ru: 'Просмотров' }, lang)}</span>
+                <span className="text-right">{tr({ en: 'Source clicks', ru: 'Кликов' }, lang)}</span>
+                <span className="text-right">{tr({ en: 'Human edits', ru: 'Правок людей' }, lang)}</span>
+              </>
+            }
+          >
             {m.feeds.map((f) => (
-              <div key={f.id} className={`grid min-w-[720px] ${FEED_COLS} items-center gap-4 border-b border-border px-4 py-2.5 last:border-0`}>
+              <DataTableRow key={f.id}>
                 <Link href={`/${f.handle}/${f.slug}`} className="min-w-0 truncate text-[13px] text-ink hover:text-accent" title={f.title}>
                   {f.title}
                 </Link>
@@ -411,9 +423,9 @@ export default async function AdminDevelopmentPage() {
                 {/* Правки людей выделены: это единственная цифра здесь, которую нельзя получить,
                     потратив свои же деньги. */}
                 <span className={`text-right font-mono tabular-nums text-[12.5px] ${f.humanEdits > 0 ? 'text-ok' : 'text-muted'}`}>{num(f.humanEdits)}</span>
-              </div>
+              </DataTableRow>
             ))}
-          </div>
+          </DataTable>
           <p className="text-[12px] text-muted">
             {tr(
               {
@@ -535,15 +547,20 @@ export default async function AdminDevelopmentPage() {
           это мостик, место, откуда останавливают работу, увидев неладное. */}
       <section className="flex min-w-0 flex-col gap-3">
         <h2 className={h2}>{tr({ en: 'Autonomous loops', ru: 'Автономные петли' }, lang)}</h2>
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-          <div className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_112px_112px_112px] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
-            <span>{tr({ en: 'Loop', ru: 'Петля' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'State', ru: 'Состояние' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'Dry run', ru: 'Сухой прогон' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'Switch', ru: 'Рубильник' }, lang)}</span>
-          </div>
+        <DataTable
+          template="minmax(0,1fr) 112px 112px 112px"
+          minWidth={560}
+          header={
+            <>
+              <span>{tr({ en: 'Loop', ru: 'Петля' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'State', ru: 'Состояние' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'Dry run', ru: 'Сухой прогон' }, lang)}</span>
+              <span className="text-right">{tr({ en: 'Switch', ru: 'Рубильник' }, lang)}</span>
+            </>
+          }
+        >
           {loops.map((l) => (
-            <div key={l.type} className="grid min-w-[560px] grid-cols-[minmax(0,1fr)_112px_112px_112px] items-center gap-4 border-b border-border px-4 py-3 last:border-0">
+            <DataTableRow key={l.type} className="py-3">
               <span className="truncate font-mono text-[12.5px] text-ink">{l.type}</span>
               <span className={`text-right text-[12px] ${l.circuitTripped ? 'text-danger' : l.paused ? 'text-warn' : 'text-ok'}`}>
                 {l.circuitTripped
@@ -577,7 +594,7 @@ export default async function AdminDevelopmentPage() {
                   </Button>
                 </form>
               </div>
-            </div>
+            </DataTableRow>
           ))}
           <div className="px-4 py-2.5 text-[11.5px] text-muted">
             {tr(
@@ -588,7 +605,7 @@ export default async function AdminDevelopmentPage() {
               lang,
             )}
           </div>
-        </div>
+        </DataTable>
       </section>
 
       <p className="text-[12px] text-muted">

@@ -1,7 +1,6 @@
-import Link from 'next/link'
 import { Check, GitMerge, GitPullRequest, GitPullRequestClosed, MessageSquare, X } from 'lucide-react'
-import { Avatar } from '@/shared/ui/Avatar'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { UserLine } from '@/shared/ui/UserLine'
 import type { Lang } from '@/shared/i18n'
 
 export type TimelineKind = 'opened' | 'review-approve' | 'review-changes' | 'review-comment' | 'resolved' | 'merged' | 'closed'
@@ -55,12 +54,7 @@ export function SuggestionTimeline({ events, lang, labels }: { events: TimelineE
               <Icon size={12} />
             </span>
             {e.actor && (
-              <>
-                <Avatar handle={e.actor.handle} avatarUrl={e.actor.avatarUrl} size={18} />
-                <Link href={`/${e.actor.handle}`} className="font-semibold text-ink hover:text-accent">
-                  {e.actor.name || e.actor.handle}
-                </Link>
-              </>
+              <UserLine handle={e.actor.handle} name={e.actor.name || undefined} avatarUrl={e.actor.avatarUrl} size="xs" />
             )}
             <span>{labels[meta.key]}</span>
             <span className="text-muted">{timeAgo(e.at, lang)}</span>

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { GitFork, ListChecks, MessageSquare, PencilLine, Star, Tag, UserPlus } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { UserLine } from '@/shared/ui/UserLine'
 import { Markdown } from '@/shared/ui/Markdown'
 import { tr, type Lang } from '@/shared/i18n'
 import type { FeedEvent } from './queries'
@@ -173,12 +174,7 @@ function ReleaseCard({ e, lang, ru }: { e: FeedEvent; lang: Lang; ru: boolean })
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
       {/* Шапка: кто выпустил + когда */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-[13px]">
-        <Link href={`/${e.actorHandle}`} className="shrink-0">
-          <Avatar handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size={22} />
-        </Link>
-        <Link href={`/${e.actorHandle}`} className="font-medium text-ink-2 hover:text-accent">
-          {e.actorHandle}
-        </Link>
+        <UserLine handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size="sm" />
         <span className="text-ink-2">{ru ? 'выпустил' : 'released'}</span>
         <Tag size={13} className="shrink-0 text-muted" />
         <span className="ml-auto shrink-0 font-mono text-[11px] text-muted">{date}</span>

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { CircleUser, Sparkles } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
+import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
 import { tr, type Lang } from '@/shared/i18n'
 import { selfGenerateNow } from '@/features/admin/actions'
 
@@ -32,8 +33,6 @@ export interface CouncilRow {
   accepted: number
 }
 
-const COLS = 'grid-cols-[minmax(0,1fr)_132px_120px_104px_88px]'
-
 /** Подпись стадии карьеры. Слово «гном» в интерфейсе не появляется — только «специалист». */
 function stageLabel(s: CouncilRow['lifecycle'], lang: Lang): { text: string; cls: string } {
   if (s === 'active') return { text: tr({ en: 'in service', ru: 'в строю' }, lang), cls: 'text-ok' }
@@ -45,24 +44,24 @@ function stageLabel(s: CouncilRow['lifecycle'], lang: Lang): { text: string; cls
 export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lang: Lang; canAssign: boolean }) {
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      {/* Шапка и строки — ОДИН шаблон колонок; скроллится контейнер, страница никогда. */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <div className={`grid min-w-[720px] ${COLS} gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted`}>
-          <span>{tr({ en: 'Specialist', ru: 'Специалист' }, lang)}</span>
-          <span>{tr({ en: 'Craft', ru: 'Ремесло' }, lang)}</span>
-          <span>{tr({ en: 'Stage', ru: 'Стадия' }, lang)}</span>
-          <span className="text-right">{tr({ en: 'Councils', ru: 'Советов' }, lang)}</span>
-          <span className="text-right">{tr({ en: 'Accepted', ru: 'Принято' }, lang)}</span>
-        </div>
+      {/* Шапка и строки — ОДИН шаблон колонок (DataTable); скроллится контейнер, страница никогда. */}
+      <DataTable
+        template="minmax(0,1fr) 132px 120px 104px 88px"
+        minWidth={720}
+        header={
+          <>
+            <span>{tr({ en: 'Specialist', ru: 'Специалист' }, lang)}</span>
+            <span>{tr({ en: 'Craft', ru: 'Ремесло' }, lang)}</span>
+            <span>{tr({ en: 'Stage', ru: 'Стадия' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'Councils', ru: 'Советов' }, lang)}</span>
+            <span className="text-right">{tr({ en: 'Accepted', ru: 'Принято' }, lang)}</span>
+          </>
+        }
+      >
         {rows.map((r) => {
           const stage = stageLabel(r.lifecycle, lang)
           return (
-            <div
-              key={r.id}
-              className={`grid min-w-[720px] ${COLS} items-center gap-4 border-b border-border px-4 py-2.5 last:border-0 hover:bg-surface-2 ${
-                r.enabled ? '' : 'opacity-60'
-              }`}
-            >
+            <DataTableRow key={r.id} muted={!r.enabled}>
               <div className="flex min-w-0 items-center gap-2.5">
                 <Avatar handle={r.handle ?? r.id} avatarUrl={r.avatarUrl} size={28} />
                 <div className="min-w-0">
@@ -90,10 +89,10 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
               <span className={`text-[12.5px] ${stage.cls}`}>{stage.text}</span>
               <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{r.gens}</span>
               <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{r.accepted}</span>
-            </div>
+            </DataTableRow>
           )
         })}
-      </div>
+      </DataTable>
 
       {/* Поручить список — действие над СОСТАВОМ, поэтому здесь, а не в настройках каждого.
           Кнопки только когда самогенерация включена: иначе обещали бы запрещённое настройками. */}

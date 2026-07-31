@@ -5,9 +5,8 @@ import { Input } from '@/shared/ui/input'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Field } from '@/shared/ui/Field'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
+import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { disableMirror, mirrorNow, saveMirror } from './mirror-actions'
-
-const card = 'rounded-lg border border-border bg-surface p-5'
 
 /** Настройки списка → Зеркало (Ф3): push-копия на GitHub/GitLab.
  *  Пушит ядро после каждой версии; здесь URL + токен (шифруется, повторно не
@@ -33,10 +32,7 @@ export function MirrorSection({
   const configured = !!url
 
   return (
-    <section className={card}>
-      <div className="mb-1 font-semibold text-ink">{t('mirrorTitle', lang)}</div>
-      <p className="mb-4 text-[13px] text-ink-2">{t('mirrorIntro', lang)}</p>
-
+    <SettingsSection title={t('mirrorTitle', lang)} hint={t('mirrorIntro', lang)}>
       <form action={save} className="flex flex-col gap-4">
         <Field label={t('mirrorUrlLabel', lang)}>
           <Input
@@ -112,6 +108,6 @@ export function MirrorSection({
         )}
         <FormSaveBar ru={lang === 'ru'} />
       </form>
-    </section>
+    </SettingsSection>
   )
 }

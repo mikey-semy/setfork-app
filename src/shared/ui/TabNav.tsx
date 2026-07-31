@@ -297,7 +297,8 @@ function MoreTab({
 export interface TabItemProps {
   href: string
   on: boolean
-  icon: React.ReactNode
+  /** Иконка вкладки (только на широком экране); фильтры-вкладки живут и без неё. */
+  icon?: React.ReactNode
   label: string
   count?: number
 }
@@ -314,7 +315,7 @@ export function TabItem({ href, on, icon, label, count }: TabItemProps) {
       {/* Иконка — только на широком экране. На мобиле она съедает ширину, из-за
           которой в ряд не влезает лишняя вкладка, а смысла не добавляет: подписи
           короткие и однозначные (так же у GitHub на узком экране). */}
-      <span className={`hidden sm:inline ${on ? 'text-ink' : 'text-muted'}`}>{icon}</span>
+      {icon != null && <span className={`hidden sm:inline ${on ? 'text-ink' : 'text-muted'}`}>{icon}</span>}
       {label}
       {count != null && count > 0 && (
         <span className="rounded-full bg-surface-2 px-1.5 text-[11.5px] text-ink-2">{count}</span>
