@@ -37,6 +37,7 @@ export interface ButtonProps extends React.ComponentProps<'button'> {
 export function Button({ variant = 'outline', size = 'sm', className, type = 'button', ...props }: ButtonProps) {
   return (
     <button
+      // eslint-disable-next-line react/button-has-type -- примитив безопасен по построению: дефолт 'button' задан в сигнатуре, submit — только явным пропом
       type={type}
       className={cn(
         'inline-flex items-center justify-center rounded-md font-semibold outline-hidden transition-colors focus-visible:ring-1 focus-visible:ring-border-strong disabled:pointer-events-none disabled:opacity-50',
