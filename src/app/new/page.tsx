@@ -8,6 +8,7 @@ import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { ListTypeToggle } from '@/features/library/ListTypeToggle'
@@ -27,6 +28,7 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
+      <FloatingBack href={'/my-lists'} label={t('myLists', lang)} />
       <form action={createTemplate}>
         <PageHeader title={t('newList', lang)} />
 

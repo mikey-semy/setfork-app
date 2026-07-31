@@ -4,6 +4,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { requireViewableMeta } from '@/features/library/guard'
 import { NewIssueForm } from '@/features/issues/NewIssueForm'
 import { getListLabels } from '@/features/issues/queries'
@@ -24,6 +25,7 @@ export default async function NewIssuePage({ params }: { params: Promise<{ handl
   return (
     <>
       <div className="mx-auto w-full max-w-[51.25rem] px-4 py-6">
+      <FloatingBack href={`/${owner}/${slug}/issues`} label={t('issuesTab', lang)} />
         <PageHeader icon={<CircleDot size={18} className="text-ok" />} title={t('newIssue', lang)} />
         <NewIssueForm owner={owner} slug={slug} lang={lang} custom={custom} />
       </div>

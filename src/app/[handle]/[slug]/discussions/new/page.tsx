@@ -7,6 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { requireViewableMeta } from '@/features/library/guard'
 import { createDiscussion } from '@/features/discussions/actions'
 import { DISCUSSION_CATEGORIES } from '@/features/discussions/constants'
@@ -33,6 +34,7 @@ export default async function NewDiscussionPage({
   return (
     <>
       <div className="mx-auto w-full max-w-[51.25rem] px-4 py-6">
+      <FloatingBack href={`/${owner}/${slug}/discussions`} label={t('featDiscussions', lang)} />
         <PageHeader icon={<MessagesSquare size={18} />} title={ru ? 'Новое обсуждение' : 'New discussion'} />
         <form action={createDiscussion} className="flex flex-col gap-3">
           <input type="hidden" name="owner" value={owner} />
