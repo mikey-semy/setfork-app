@@ -6,8 +6,10 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { loginWithPassword, registerWithPassword, type AuthResult } from './actions'
 
-// Геометрия auth-форм крупнее стандартной md (py-2.5 / py-3, text-14) — доводка поверх примитивов.
-const btn = 'w-full px-4 py-3 text-[14px] disabled:opacity-60'
+// Геометрия auth-форм крупнее стандартной md — доводка поверх примитивов.
+// ЯВНАЯ высота, а не py: у Button фиксированная высота из шкалы (control.ts),
+// и вертикальный паддинг её не раздвинет (находка Codex по #610).
+const btn = 'h-11 w-full px-4 text-[14px] disabled:opacity-60'
 
 export function LoginForm({ lang }: { lang: Lang }) {
   const [state, action, pending] = useActionState<AuthResult | null, FormData>(loginWithPassword, null)

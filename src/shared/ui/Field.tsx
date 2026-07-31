@@ -27,6 +27,9 @@ export function Field({
   children: React.ReactNode
 }) {
   const caption = <span className="mb-1.5 block text-[12.5px] font-semibold text-ink-2">{label}</span>
+  // Хвост — ВНЕ label (находка Codex по #611): внутри оборачивающего label
+  // hint и error попадали бы в accessible name контрола, и скринридер называл
+  // бы поле всей подсказкой, а появление ошибки МЕНЯЛО бы имя поля.
   const tail = (
     <>
       {error != null && error !== '' && <span className="mt-1 block text-[12.5px] text-danger">{error}</span>}
@@ -45,10 +48,12 @@ export function Field({
     )
   }
   return (
-    <label className={cn('block', className)}>
-      {caption}
-      {children}
+    <div className={cn('block', className)}>
+      <label className="block">
+        {caption}
+        {children}
+      </label>
       {tail}
-    </label>
+    </div>
   )
 }

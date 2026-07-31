@@ -39,6 +39,9 @@ export function UserLine({
       </Link>
       <Link href={`/${handle}`} className="min-w-0 truncate font-medium text-ink hover:text-accent">
         {name ?? `@${handle}`}
+        {/* Имя не прячет уникальный handle (находка Codex по #615): одинаковые
+            отображаемые имена иначе неразличимы. */}
+        {name && <span className="ml-1.5 font-normal text-muted">@{handle}</span>}
       </Link>
       {at && <span className="shrink-0 text-muted">· {at}</span>}
     </span>

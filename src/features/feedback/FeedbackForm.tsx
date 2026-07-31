@@ -70,7 +70,7 @@ export function FeedbackForm({ lang }: { lang: Lang }) {
       />
 
       {state?.error && <div className="text-[12.5px] text-danger">{state.error}</div>}
-      <Button type="submit" variant="primary" disabled={pending} className="px-4 py-2.5 text-[14px] disabled:opacity-60">
+      <Button type="submit" variant="primary" disabled={pending} className="h-10 px-4 text-[14px] disabled:opacity-60">
         {t('fbSend', lang)}
       </Button>
     </form>
