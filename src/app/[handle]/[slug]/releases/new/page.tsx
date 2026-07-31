@@ -8,6 +8,7 @@ import { Input } from '@/shared/ui/input'
 import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { getVersions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
@@ -54,6 +55,7 @@ export default async function NewReleasePage({
   return (
     <>
       <div className="mx-auto w-full max-w-[42.5rem] px-4 py-6">
+      <FloatingBack href={`/${owner}/${slug}/releases`} label={t('releasesLabel', lang)} />
         <PageHeader
           icon={<Tag size={16} />}
           title={ru ? 'Новый релиз' : 'New release'}
