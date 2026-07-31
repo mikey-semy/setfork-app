@@ -9,6 +9,8 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { PinButton } from '@/features/library/PinButton'
 import { StarSplit } from './StarSplit'
+import { SplitButton } from '@/shared/ui/SplitButton'
+import { splitSegment } from '@/shared/ui/split-segment'
 import { getFoldersForTemplate, getUserFolders } from '@/features/star-folders/queries'
 import { ShareButton } from '@/features/library/ShareButton'
 import { WatchButton } from '@/features/watch/WatchButton'
@@ -144,19 +146,13 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             {/* Гостю «Следить» тоже видно — ведёт на вход (как звезда и форк). Иначе
                 ряд кнопок у гостя и у вошедшего разный, и кажется, что кнопка пропала. */}
             {!session && (
-              <Link
-                href="/login"
-                className={`inline-flex h-9 items-center gap-2 rounded-md border border-border pl-3.5 text-[13px] font-semibold text-ink hover:border-border-strong max-sm:w-9 max-sm:justify-center max-sm:px-0 ${
-                  watchCount > 0 ? '' : 'pr-3.5'
-                }`}
-              >
-                <Eye size={14} /> <span className="hidden sm:inline">{t('watch', lang)}</span>
-                {watchCount > 0 && (
-                  <span className="flex h-full items-center self-stretch border-l border-border px-2.5 font-mono text-[12px] text-muted">
-                    {watchCount}
-                  </span>
-                )}
-              </Link>
+              // Гостю тот же сплит, что вошедшему: анатомия ряда не должна зависеть от входа.
+              <SplitButton>
+                <Link href="/login" className={splitSegment({ className: 'text-ink' })}>
+                  <Eye size={14} /> <span className="hidden sm:inline">{t('watch', lang)}</span>
+                </Link>
+                {watchCount > 0 ? <span className={splitSegment({ interactive: false, muted: true })}>{watchCount}</span> : null}
+              </SplitButton>
             )}
             {session ? (
               // Split-кнопка как у GitHub: [★ Отметить N | ▾-папки] одной группой,
@@ -173,63 +169,37 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             ) : (
               // Гостю — та же кнопка, но ведёт на вход. Счётчик так же за разделителем
               // и так же скрыт при нуле: вид кнопки не должен зависеть от того, вошёл ты или нет.
-              <Link
-                href="/login"
-                className={`inline-flex h-9 items-center gap-2 rounded-md border border-border pl-3.5 text-[13px] font-semibold text-ink hover:border-border-strong ${
-                  meta.starsCount > 0 ? '' : 'pr-3.5 max-sm:w-9 max-sm:justify-center max-sm:px-0'
-                }`}
-              >
-                <Star size={14} /> <span className="hidden sm:inline">{t('star', lang)}</span>
-                {meta.starsCount > 0 && (
-                  <span className="flex h-full items-center self-stretch border-l border-border px-2.5 font-mono text-[12px] text-muted">
-                    {meta.starsCount}
-                  </span>
-                )}
-              </Link>
+              <SplitButton>
+                <Link href="/login" className={splitSegment({ className: 'text-ink' })}>
+                  <Star size={14} /> <span className="hidden sm:inline">{t('star', lang)}</span>
+                </Link>
+                {meta.starsCount > 0 ? <span className={splitSegment({ interactive: false, muted: true })}>{meta.starsCount}</span> : null}
+              </SplitButton>
             )}
             {/* Fork как split на GitHub: кнопка (диалог для чужого / неактивна для своего /
                 логин для гостя) + счётчик-ссылка в дерево форков (HQ §11, #395). */}
-            <span className="inline-flex h-9 items-stretch overflow-hidden rounded-md border border-border">
+            <SplitButton>
               {isOwner ? (
                 // Свой список форкнуть нельзя (как на GitHub свой репозиторий) — кнопка неактивна.
-                // Тултип свой (не браузерный title=) — как у остальных кнопок шапки.
                 <Tooltip label={t('cantForkOwn', lang)}>
-                <button
-                  type="button"
-                  disabled
-                  className="inline-flex h-full cursor-not-allowed items-center gap-2 px-3.5 text-[13px] font-semibold text-muted opacity-60 max-sm:w-[34px] max-sm:justify-center max-sm:px-0"
-                >
-                  <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
-                </button>
+                  <button type="button" disabled className={splitSegment({ interactive: false, className: 'cursor-not-allowed text-muted opacity-60' })}>
+                    <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
+                  </button>
                 </Tooltip>
-              ) : session ? (
-                // Форк — отдельной страницей /fork (как GitHub), не модалкой.
-                <Link
-                  href={`${base}/fork`}
-                  className="inline-flex h-full items-center gap-2 px-3.5 text-[13px] font-semibold text-ink hover:bg-surface-2 max-sm:w-[34px] max-sm:justify-center max-sm:px-0"
-                >
-                  <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
-                </Link>
               ) : (
-                <Link
-                  href="/login"
-                  className="inline-flex h-full items-center gap-2 px-3.5 text-[13px] font-semibold text-ink hover:bg-surface-2 max-sm:w-[34px] max-sm:justify-center max-sm:px-0"
-                >
+                // Форк — отдельной страницей /fork (как GitHub), не модалкой. Гостя ведём на вход.
+                <Link href={session ? `${base}/fork` : '/login'} className={splitSegment({ className: 'text-ink' })}>
                   <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
                 </Link>
               )}
               {/* Счётчик — ссылка в дерево форков (HQ §11): кто что вырастил из списка.
                   Нуля нет: не из чего дерево, и место в ряду не занимаем. */}
-              {meta.forksCount > 0 && (
-                <Link
-                  href={`${base}/forks`}
-                  aria-label={t('fork', lang)}
-                  className="inline-flex h-full items-center border-l border-border px-2.5 font-mono text-[12px] text-muted hover:bg-surface-2 hover:text-ink"
-                >
+              {meta.forksCount > 0 ? (
+                <Link href={`${base}/forks`} aria-label={t('fork', lang)} className={splitSegment({ muted: true })}>
                   {meta.forksCount}
                 </Link>
-              )}
-            </span>
+              ) : null}
+            </SplitButton>
             {/* Share — кнопкой ВЕЗДЕ: на мобиле иконкой (текст прячет сама кнопка).
                 В «...» на мобиле остаётся только Pin, поэтому у чужого списка «...»
                 там вообще не рисуется. */}

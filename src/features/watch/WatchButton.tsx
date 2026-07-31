@@ -5,6 +5,8 @@ import { Check, ChevronDown, Eye } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { SplitButton } from '@/shared/ui/SplitButton'
+import { splitSegment } from '@/shared/ui/split-segment'
 import type { WatchEvents, WatchLevel, WatchState } from '@/core'
 import { setWatch } from './actions'
 
@@ -71,34 +73,36 @@ export function WatchButton({
       <DropdownMenu>
         {/* Свой Tooltip, а не браузерный title=: он появляется мгновенно, читается в
             нашей теме и не дублируется системной подсказкой. Правило на всё приложение. */}
-        <Tooltip label={watching ? labels.unwatch : labels.watch}>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label={watching ? labels.unwatch : labels.watch}
-            className={`inline-flex h-9 items-center gap-2 rounded-md border pl-3.5 text-[13px] font-semibold transition-colors max-sm:gap-1.5 max-sm:pl-3 ${
-              watching ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink hover:border-border-strong'
-            }`}
-          >
-            {/* Глаз НЕ перечёркиваем: подписка — это «смотрю», а не «запрещено».
-                Заливкой, как у звезды, его тоже не берём: залитый глаз превращается
-                в сплошное пятно и перестаёт читаться. Состояние даёт цвет кнопки. */}
-            <Eye size={14} strokeWidth={watching ? 2.5 : 2} />
-            {/* Мобила: только глаз+счётчик (текст не влезал рядом с Pin — скилл mobile-ui). */}
-            <span className="hidden sm:inline">{watching ? labels.unwatch : labels.watch}</span>
-            {/* Ноль не показываем: пустой счётчик занимает место и ничего не сообщает. */}
-            {count_ > 0 && <span className="font-mono text-[12px] text-muted">{count_}</span>}
-            {/* Каретка за разделителем — единый вид со сплитами Star/Fork: размер 13,
-                цвет каретки всегда приглушённый, а РАЗДЕЛИТЕЛЬ следует за состоянием
-                кнопки. Раньше он оставался серым внутри подсвеченной кнопки, и рядом со
-                звездой (там разделитель перекрашивается) это читалось как две разные
-                кнопки: у одной каретку «разукрасили», у другой нет. */}
-            <span className={`flex h-full items-center self-stretch border-l pl-1.5 pr-2 max-sm:pr-1.5 ${watching ? 'border-accent/40' : 'border-border'}`}>
-              <ChevronDown size={13} className="text-muted" />
-            </span>
-          </button>
-        </DropdownMenuTrigger>
-        </Tooltip>
+        <SplitButton tone={watching ? 'accent' : 'neutral'}>
+          {/* Действие: вся левая часть открывает меню уровней — как «Watch ▾» у GitHub. */}
+          <Tooltip label={watching ? labels.unwatch : labels.watch}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={watching ? labels.unwatch : labels.watch}
+                className={splitSegment({ className: watching ? 'bg-(--accent-soft) text-accent' : 'text-ink' })}
+              >
+                {/* Глаз НЕ перечёркиваем: подписка — это «смотрю», а не «запрещено».
+                    Заливкой, как у звезды, его тоже не берём: залитый глаз превращается
+                    в сплошное пятно и перестаёт читаться. Состояние даёт цвет кнопки. */}
+                <Eye size={14} strokeWidth={watching ? 2.5 : 2} />
+                {/* Мобила: только глаз (текст не влезал рядом с Pin — скилл mobile-ui). */}
+                <span className="hidden sm:inline">{watching ? labels.unwatch : labels.watch}</span>
+              </button>
+            </DropdownMenuTrigger>
+          </Tooltip>
+          {/* Счётчик — отдельным сегментом, как у звезды и форка. Ноль не показываем:
+              пустой счётчик занимает место и ничего не сообщает. */}
+          {count_ > 0 ? (
+            <span className={splitSegment({ interactive: false, muted: true })}>{count_}</span>
+          ) : null}
+          {/* Каретка — свой сегмент с той же подложкой по наведению, что у звезды. */}
+          <DropdownMenuTrigger asChild>
+            <button type="button" aria-label={labels.title} className={splitSegment({ className: 'px-2 text-muted' })}>
+              <ChevronDown size={13} />
+            </button>
+          </DropdownMenuTrigger>
+        </SplitButton>
         <DropdownMenuContent align="end" className="w-[330px] p-0">
           <div className="border-b border-border px-3 py-2.5 text-[13px] font-semibold text-ink">{labels.title}</div>
           {rows.map((r) => (
