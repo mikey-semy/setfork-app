@@ -8,6 +8,8 @@ import { currentAgenda } from '@/features/partners/service'
 import { agendaLabel, type AgendaKind } from '@/shared/agents/agenda'
 import { decideAgendaItem } from '@/features/admin/agenda-actions'
 import { getDomainScorecards } from '@/features/admin/scorecard-queries'
+import { Button } from '@/shared/ui/button'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatTile } from '@/shared/ui/StatTile'
 import { TagChip } from '@/shared/ui/TagChip'
 import { AUTONOMOUS_LOOPS, allLoopPolicies } from '@/shared/agents/policy'
@@ -62,25 +64,22 @@ export default async function AdminDevelopmentPage() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-6 px-5 py-6 md:px-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-[18px] font-bold text-ink">
-            <TrendingUp size={17} /> {tr({ en: 'Development', ru: 'Развитие' }, lang)}
-          </h1>
-          <p className="text-[13px] text-ink-2">
-            {tr(
-              {
-                en: 'Where we are heading: library, quality, spend, corpus, staff. Accumulated — not live monitoring.',
-                ru: 'Куда движемся: библиотека, качество, расход, корпус, штат. Накопленное — не живой мониторинг.',
-              },
-              lang,
-            )}
-          </p>
-        </div>
-        <Link href="/admin/dashboard" className="-mr-2 inline-flex items-center px-2 py-2.5 text-[13px] text-accent hover:underline">
-          {tr({ en: 'Live monitoring →', ru: 'Живой мониторинг →' }, lang)}
-        </Link>
-      </div>
+      <PageHeader
+        icon={<TrendingUp size={17} />}
+        title={tr({ en: 'Development', ru: 'Развитие' }, lang)}
+        subtitle={tr(
+          {
+            en: 'Where we are heading: library, quality, spend, corpus, staff. Accumulated — not live monitoring.',
+            ru: 'Куда движемся: библиотека, качество, расход, корпус, штат. Накопленное — не живой мониторинг.',
+          },
+          lang,
+        )}
+        actions={
+          <Link href="/admin/dashboard" className="-mr-2 inline-flex items-center px-2 py-2.5 text-[13px] text-accent hover:underline">
+            {tr({ en: 'Live monitoring →', ru: 'Живой мониторинг →' }, lang)}
+          </Link>
+        }
+      />
 
       {/* ХОЛОСТОЙ ХОД: петля работает, деньги идут, а библиотека не меняется. «Улучшать
           нечего» — законный режим (он ведёт к расхождению форком), поэтому это не тревога
@@ -556,29 +555,26 @@ export default async function AdminDevelopmentPage() {
               <form action={toggleLoopDryRun} className="text-right">
                 <input type="hidden" name="type" value={l.type} />
                 <input type="hidden" name="dryRun" value={String(l.dryRun)} />
-                <button type="submit" className="inline-flex h-[38px] items-center rounded-md border border-border px-3 text-[12px] text-ink-2 hover:text-ink">
+                <Button type="submit" size="md">
                   {l.dryRun ? tr({ en: 'on', ru: 'вкл' }, lang) : tr({ en: 'off', ru: 'выкл' }, lang)}
-                </button>
+                </Button>
               </form>
               <div className="flex justify-end gap-2">
                 {l.circuitTripped && (
                   <form action={resetLoopCircuit}>
                     <input type="hidden" name="type" value={l.type} />
-                    <button type="submit" className="inline-flex h-[38px] items-center rounded-md border border-danger/40 px-3 text-[12px] text-danger">
+                    <Button type="submit" variant="danger" size="md">
                       {tr({ en: 'Reset', ru: 'Сбросить' }, lang)}
-                    </button>
+                    </Button>
                   </form>
                 )}
                 <form action={toggleLoopPause}>
                   <input type="hidden" name="type" value={l.type} />
                   <input type="hidden" name="paused" value={String(l.paused)} />
-                  <button
-                    type="submit"
-                    className="inline-flex h-[38px] items-center gap-1.5 rounded-md border border-border px-3 text-[12px] text-ink hover:border-border-strong"
-                  >
+                  <Button type="submit" size="md">
                     {l.paused ? <Play size={13} /> : <Pause size={13} />}
                     {l.paused ? tr({ en: 'Resume', ru: 'Пустить' }, lang) : tr({ en: 'Pause', ru: 'Стоп' }, lang)}
-                  </button>
+                  </Button>
                 </form>
               </div>
             </div>

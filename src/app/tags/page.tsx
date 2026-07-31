@@ -4,6 +4,7 @@ import { t } from '@/shared/i18n'
 import { listTags } from '@/features/tags/queries'
 import { TagChip } from '@/shared/ui/TagChip'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 
 export const metadata = { title: 'Tags' }
 
@@ -15,10 +16,11 @@ export default async function TagsIndexPage() {
 
   return (
     <div className="mx-auto w-full max-w-[900px] px-4 py-8">
-      <h1 className="mb-1 flex items-center gap-2 text-[22px] font-bold text-ink">
-        <Tag size={20} className="text-accent" /> {t('tags', lang)}
-      </h1>
-      <p className="mb-6 text-[13px] text-muted">{say('Browse lists by tag — curated first.', 'Списки по тегам — курируемые сверху.')}</p>
+      <PageHeader
+        icon={<Tag size={18} />}
+        title={t('tags', lang)}
+        subtitle={say('Browse lists by tag — curated first.', 'Списки по тегам — курируемые сверху.')}
+      />
       {tags.length ? (
         <div className="flex flex-wrap gap-2">
           {tags.map((tg) => (

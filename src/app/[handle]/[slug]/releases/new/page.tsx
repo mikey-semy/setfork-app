@@ -7,6 +7,7 @@ import { t } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
 import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { getVersions } from '@/features/library/queries'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
@@ -53,14 +54,15 @@ export default async function NewReleasePage({
   return (
     <>
       <div className="mx-auto w-full max-w-[680px] px-4 py-6">
-        <h1 className="mb-1 flex items-center gap-2 text-[16px] font-bold text-ink">
-          <Tag size={16} className="text-accent" /> {ru ? 'Новый релиз' : 'New release'}
-        </h1>
-        <p className="mb-5 text-[13px] text-ink-2">
-          {ru
-            ? 'Версии создаются автоматически при каждой правке; релиз — осознанная публикация одной из них с тегом и описанием.'
-            : 'Versions are created automatically on every edit; a release is a deliberate publication of one of them with a tag and notes.'}
-        </p>
+        <PageHeader
+          icon={<Tag size={16} />}
+          title={ru ? 'Новый релиз' : 'New release'}
+          subtitle={
+            ru
+              ? 'Версии создаются автоматически при каждой правке; релиз — осознанная публикация одной из них с тегом и описанием.'
+              : 'Versions are created automatically on every edit; a release is a deliberate publication of one of them with a tag and notes.'
+          }
+        />
 
         {err && (
           <Alert variant="danger" className="mb-4">

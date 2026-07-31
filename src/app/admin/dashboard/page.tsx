@@ -4,6 +4,7 @@ import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { getDashboardSeries, getLiveMetrics } from '@/features/admin/dashboard-queries'
 import { DashboardLive } from '@/features/admin/DashboardLive'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatTile } from '@/shared/ui/StatTile'
 import { TrendChart } from '@/shared/ui/TrendChart'
 import { getModerationCounts } from '@/features/moderation/queries'
@@ -48,17 +49,15 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-6 px-5 py-6 md:px-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-[18px] font-bold text-ink">{tr({ en: 'Dashboard', ru: 'Дашборд' }, lang)}</h1>
-          <p className="text-[13px] text-ink-2">
-            {tr({ en: 'Live monitoring — traffic, generations, spend, queue.', ru: 'Живой мониторинг — трафик, генерации, расход, очередь.' }, lang)}
-          </p>
-        </div>
-        <Link href="/admin/usage" className="text-[13px] text-accent hover:underline">
-          {tr({ en: 'Detailed usage →', ru: 'Подробный расход →' }, lang)}
-        </Link>
-      </div>
+      <PageHeader
+        title={tr({ en: 'Dashboard', ru: 'Дашборд' }, lang)}
+        subtitle={tr({ en: 'Live monitoring — traffic, generations, spend, queue.', ru: 'Живой мониторинг — трафик, генерации, расход, очередь.' }, lang)}
+        actions={
+          <Link href="/admin/usage" className="text-[13px] text-accent hover:underline">
+            {tr({ en: 'Detailed usage →', ru: 'Подробный расход →' }, lang)}
+          </Link>
+        }
+      />
 
       {/* Живые плитки «Сейчас» + «Сегодня» (клиентский поллинг) */}
       <DashboardLive initial={initial} lang={lang} />

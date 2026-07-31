@@ -9,6 +9,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { BarChart3, Check, Loader2 } from 'lucide-react'
+import { Button } from '@/shared/ui/button'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
@@ -296,14 +297,10 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
               <Switch name="online" checked={online} onCheckedChange={setOnline} />
               {say('Web access (:online) — pricier', 'Веб-доступ (:online) — дороже')}
             </label>
-            <button
-              type="submit"
-              disabled={pending}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-fg disabled:opacity-50"
-            >
+            <Button type="submit" variant="primary" disabled={pending}>
               {pending ? <Loader2 size={13} className="animate-spin" /> : saved ? <Check size={13} /> : null}
               {saved ? say('Saved', 'Сохранено') : say('Save', 'Сохранить')}
-            </button>
+            </Button>
           </div>
         </div>
     </form>

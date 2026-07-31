@@ -5,6 +5,7 @@ import { Code2, List } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t, type Lang } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { VersionPicker } from '@/features/library/VersionPicker'
 import { getVersions, getVersionSteps } from '@/features/library/queries'
@@ -65,13 +66,16 @@ export default async function ComparePage({
           canCompare
           labels={{ commits: t('versionsTab', lang), releases: t('releasesLabel', lang), compare: t('compareTitle', lang) }}
         />
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-[16px] font-bold text-ink">{t('compareTitle', lang)}</h1>
-          <div className="flex items-center gap-1 rounded-md border border-border bg-surface-2 p-0.5">
-            {toggle('code', <Code2 size={14} />, 'viewCode')}
-            {toggle('list', <List size={14} />, 'viewList')}
-          </div>
-        </div>
+        <PageHeader
+          size="section"
+          title={t('compareTitle', lang)}
+          actions={
+            <div className="flex items-center gap-1 rounded-md border border-border bg-surface-2 p-0.5">
+              {toggle('code', <Code2 size={14} />, 'viewCode')}
+              {toggle('list', <List size={14} />, 'viewList')}
+            </div>
+          }
+        />
 
         <div className="mb-4">
           <VersionPicker

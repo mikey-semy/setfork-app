@@ -152,11 +152,10 @@ function BulkMenu({
   if (items.length === 0) return null
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        disabled={disabled}
-        className="inline-flex h-[38px] items-center gap-1 rounded-md border border-border px-3 text-[13px] font-medium text-ink outline-hidden hover:border-border-strong disabled:opacity-50"
-      >
-        {label}
+      <DropdownMenuTrigger asChild>
+        <Button size="md" disabled={disabled}>
+          {label}
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[180px]">
         <DropdownMenuLabel>{label}</DropdownMenuLabel>

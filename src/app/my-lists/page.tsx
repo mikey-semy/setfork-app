@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { applySavedQuery, listSavedQueries } from '@/features/library/saved-queries'
@@ -24,12 +25,17 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-6 py-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-[15px] font-semibold text-ink">{t('myLists', lang)}</h1>
-            <Link href="/new" className="rounded-md bg-primary px-3 py-2 text-[13px] font-semibold text-primary-fg">
-              {t('newList', lang)}
-            </Link>
-          </div>
+          <PageHeader
+            title={t('myLists', lang)}
+            actions={
+              <Link
+                href="/new"
+                className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[14px] font-semibold text-primary-fg hover:opacity-90"
+              >
+                {t('newList', lang)}
+              </Link>
+            }
+          />
           {!session ? (
             <div className="py-16 text-center text-[13.5px] text-muted">
               {t('loginRequired', lang)}{' '}

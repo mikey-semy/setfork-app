@@ -4,6 +4,7 @@ import { CircleDot, GitPullRequest, Sparkles, Star } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { getImprovementFeed } from '@/features/improve/queries'
 
 export const metadata = { title: 'Improve' }
@@ -16,14 +17,15 @@ export default async function ImprovePage() {
 
   return (
     <div className="mx-auto w-full max-w-[760px] px-4 py-6">
-      <h1 className="mb-1 flex items-center gap-2 text-[17px] font-bold text-ink">
-        <Sparkles size={18} className="text-accent" /> {ru ? 'Что улучшить' : 'What to improve'}
-      </h1>
-      <p className="mb-5 text-[13px] text-ink-2">
-        {ru
-          ? 'Списки, которыми вы пользуетесь и которым нужна доводка — открытые вопросы и предложенные правки. Помогите довести их до безупречности.'
-          : 'Lists you use that need polish — open issues and pending edits. Help bring them to perfection.'}
-      </p>
+      <PageHeader
+        icon={<Sparkles size={18} />}
+        title={ru ? 'Что улучшить' : 'What to improve'}
+        subtitle={
+          ru
+            ? 'Списки, которыми вы пользуетесь и которым нужна доводка — открытые вопросы и предложенные правки. Помогите довести их до безупречности.'
+            : 'Lists you use that need polish — open issues and pending edits. Help bring them to perfection.'
+        }
+      />
 
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-14 text-center text-[13.5px] text-muted">

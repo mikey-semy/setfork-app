@@ -6,6 +6,7 @@ import { requireSession } from '@/shared/auth/session'
 import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { getUserUsage } from '@/shared/ai/usage'
 import { aiQuota, listQuota } from '@/shared/quota'
 import { getApiTokens } from '@/features/mcp/queries'
@@ -239,8 +240,7 @@ export default async function SettingsPage() {
   return (
     <div>
       <div className="mx-auto w-full max-w-[920px] px-6 pt-8">
-        <h1 className="mb-1 text-[18px] font-bold text-ink">{t('settings', lang)}</h1>
-        <p className="text-[13px] text-ink-2">{t('profileIntro', lang)}</p>
+        <PageHeader title={t('settings', lang)} subtitle={t('profileIntro', lang)} />
       </div>
       <SettingsShell sections={sections} lang={lang} />
     </div>

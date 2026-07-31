@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { getFeedbackCounts, getFeedbackList, type FeedbackFilter } from '@/features/feedback/queries'
 import { FeedbackTable } from '@/features/feedback/FeedbackTable'
 
@@ -14,8 +15,7 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
 
   return (
     <div className="mx-auto w-full max-w-[860px] px-6 py-8">
-      <h1 className="mb-1 text-[18px] font-bold text-ink">{t('feedback', lang)}</h1>
-      <p className="mb-5 text-[13px] text-ink-2">{t('feedbackAdminIntro', lang)}</p>
+      <PageHeader title={t('feedback', lang)} subtitle={t('feedbackAdminIntro', lang)} />
       <FeedbackTable items={items} counts={counts} filter={filter} lang={lang} />
     </div>
   )

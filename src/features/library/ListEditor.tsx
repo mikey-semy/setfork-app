@@ -27,6 +27,7 @@ import {
   X,
 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { Button } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -338,15 +339,10 @@ export function ListEditor({
                 }
               }}
             />
-            <button
-              type="button"
-              onClick={() => void runRefine()}
-              disabled={refining || !instruction.trim()}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-fg disabled:opacity-50"
-            >
+            <Button variant="primary" size="md" onClick={() => void runRefine()} disabled={refining || !instruction.trim()}>
               {refining ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
               {refining ? (ru ? 'Правлю…' : 'Refining…') : ru ? 'Применить' : 'Apply'}
-            </button>
+            </Button>
           </div>
           <p className="mt-1.5 text-[11.5px] text-ink-2">
             {ru

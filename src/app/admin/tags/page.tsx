@@ -2,6 +2,7 @@ import { Tag } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { listTags } from '@/features/tags/queries'
 import { AdminTagsTable } from '@/features/tags/AdminTagsTable'
 
@@ -15,10 +16,11 @@ export default async function AdminTagsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[860px] px-6 py-8">
-      <h1 className="mb-1 flex items-center gap-2 text-[18px] font-bold text-ink">
-        <Tag size={18} /> {t('tags', lang)}
-      </h1>
-      <p className="mb-5 text-[13px] text-ink-2">{say('Tag registry: curate, rename, merge, delete, recompute usage.', 'Реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.')}</p>
+      <PageHeader
+        icon={<Tag size={18} />}
+        title={t('tags', lang)}
+        subtitle={say('Tag registry: curate, rename, merge, delete, recompute usage.', 'Реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.')}
+      />
       <AdminTagsTable tags={tags} lang={lang} />
     </div>
   )

@@ -5,6 +5,7 @@ import { tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/badge'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatTile } from '@/shared/ui/StatTile'
 import { getUsageByUser, getUsageTotals } from '@/shared/ai/usage'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
@@ -62,33 +63,31 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="mb-1 text-[18px] font-bold text-ink">{tr({ en: 'Draft usage', ru: 'Расход на черновики' }, lang)}</h1>
-          <p className="text-[13px] text-ink-2">
-            {tr(
-              {
-                en: 'Who consumed what — tokens and money (actual OpenRouter cost).',
-                ru: 'Кто и на сколько сгенерировал — токены и деньги (фактическая стоимость OpenRouter).',
-              },
-              lang,
-            )}
-          </p>
-        </div>
-        <div className="flex gap-1 rounded-md border border-border bg-surface-2 p-0.5">
-          {WINDOWS.map((w) => (
-            <Link
-              key={w.days}
-              href={`/admin/usage?w=${w.days}`}
-              className={`rounded px-2.5 py-1 text-[12.5px] font-medium ${
-                w.days === days ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
-              }`}
-            >
-              {tr({ en: w.en, ru: w.ru }, lang)}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title={tr({ en: 'Draft usage', ru: 'Расход на черновики' }, lang)}
+        subtitle={tr(
+          {
+            en: 'Who consumed what — tokens and money (actual OpenRouter cost).',
+            ru: 'Кто и на сколько сгенерировал — токены и деньги (фактическая стоимость OpenRouter).',
+          },
+          lang,
+        )}
+        actions={
+          <div className="flex gap-1 rounded-md border border-border bg-surface-2 p-0.5">
+            {WINDOWS.map((w) => (
+              <Link
+                key={w.days}
+                href={`/admin/usage?w=${w.days}`}
+                className={`rounded px-2.5 py-1 text-[12.5px] font-medium ${
+                  w.days === days ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
+                }`}
+              >
+                {tr({ en: w.en, ru: w.ru }, lang)}
+              </Link>
+            ))}
+          </div>
+        }
+      />
 
       {/* Итог по сервису */}
       <div className="grid grid-cols-3 gap-3">

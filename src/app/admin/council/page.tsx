@@ -8,6 +8,7 @@ import { gnomeReputation } from '@/shared/ai/gnome-reputation'
 import { hireSignals } from '@/features/admin/hire'
 import { builtinAvatars } from '@/features/admin/avatar-gallery'
 import { createGnomeAccounts, hireGnome, selfGenerateNow } from '@/features/admin/actions'
+import { Button } from '@/shared/ui/button'
 import { Sparkles, UserPlus } from 'lucide-react'
 import type { Option } from '@/features/admin/ModelSelect'
 
@@ -146,12 +147,9 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
             </p>
           </div>
           <form action={createGnomeAccounts}>
-            <button
-              type="submit"
-              className="inline-flex h-[38px] items-center gap-2 rounded-md bg-primary px-4 text-[13px] font-semibold text-primary-fg"
-            >
+            <Button type="submit" variant="primary" size="md">
               <UserPlus size={14} /> {say('Create accounts', 'Завести аккаунты')}
-            </button>
+            </Button>
           </form>
         </div>
       )}

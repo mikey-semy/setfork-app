@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Loader2, Plus, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { Button } from '@/shared/ui/button'
 import { chipColors, type CustomLabel } from '@/shared/lib/labels'
 import { createLabel, deleteLabel } from './label-actions'
 
@@ -79,14 +80,9 @@ export function LabelsManager({ templateId, initial, lang }: { templateId: strin
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())}
           className="min-w-0 flex-1 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-[13px] text-ink outline-hidden"
         />
-        <button
-          type="button"
-          onClick={add}
-          disabled={pending || !name.trim()}
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[13px] font-semibold text-primary-fg disabled:opacity-60"
-        >
+        <Button variant="primary" onClick={add} disabled={pending || !name.trim()}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} {ru ? 'Добавить' : 'Add'}
-        </button>
+        </Button>
       </div>
       {err && <span className="text-[12.5px] text-danger">{err}</span>}
     </div>

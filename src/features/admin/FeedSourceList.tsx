@@ -1,5 +1,6 @@
 import { Plus, Power, RefreshCw, Rss, Trash2 } from 'lucide-react'
 import { tr, type Lang } from '@/shared/i18n'
+import { Button } from '@/shared/ui/button'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { TagChip } from '@/shared/ui/TagChip'
 import { Alert } from '@/shared/ui/Alert'
@@ -66,9 +67,9 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             className="h-[38px] w-full rounded-md border border-border bg-surface-2 px-2.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
-        <button className="inline-flex h-[38px] shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-4 text-[13px] font-semibold text-primary-fg">
+        <Button type="submit" variant="primary" size="md" className="shrink-0">
           <Plus size={14} /> {say('Add', 'Добавить')}
-        </button>
+        </Button>
       </form>
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">

@@ -5,6 +5,7 @@ import { Check, ChevronDown, ChevronUp, GraduationCap, Loader2, RotateCcw, X } f
 import { t, type Lang } from '@/shared/i18n'
 import { submitQuiz } from './actions'
 import type { QuizState } from './queries'
+import { Button } from '@/shared/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { blankCount, blankParts, gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, matchRights, shuffleSort, quizKind, type QuizBlockContent } from '@/core'
 
@@ -337,15 +338,10 @@ export function QuizBlock({
           // Снимок прошлой версии: отвечать некуда — вместо кнопки честная подпись.
           <span className="text-[12px] text-muted">{t('quizSnapshotReadOnly', lang)}</span>
         ) : !checked ? (
-          <button
-            type="button"
-            disabled={!hasInput || pending || (clientMode && !clientHasAnswer)}
-            onClick={check}
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12.5px] font-medium text-primary-fg transition-opacity hover:opacity-90 disabled:opacity-40"
-          >
+          <Button variant="primary" disabled={!hasInput || pending || (clientMode && !clientHasAnswer)} onClick={check}>
             {pending && <Loader2 size={13} className="animate-spin" />}
             {ru ? 'Проверить' : 'Check'}
-          </button>
+          </Button>
         ) : (
           <>
             <span className={`inline-flex items-center gap-1.5 text-[13px] font-medium ${ok ? 'text-ok' : 'text-danger'}`}>

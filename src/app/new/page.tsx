@@ -7,6 +7,7 @@ import { TagInput } from '@/shared/ui/TagInput'
 import { Field } from '@/shared/ui/Field'
 import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { ListTypeToggle } from '@/features/library/ListTypeToggle'
@@ -24,7 +25,7 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
   return (
     <div className="mx-auto w-full max-w-[720px] px-6 py-8">
       <form action={createTemplate}>
-        <h1 className="mb-6 text-[18px] font-bold text-ink">{t('newList', lang)}</h1>
+        <PageHeader title={t('newList', lang)} />
 
         {quotaHit && q && (
           <Alert variant="warn" className="mb-5">

@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { RotateCw, TriangleAlert } from 'lucide-react'
 import { DEFAULT_LANG, isLang, t, type Lang } from '@/shared/i18n'
+import { Button } from '@/shared/ui/button'
 import { captureError } from '@/shared/observability'
 
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -33,12 +34,9 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
         <br />
         {t('somethingWrongHint', lang)}
       </p>
-      <button
-        onClick={reset}
-        className="mt-2 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg"
-      >
+      <Button variant="primary" size="md" onClick={reset} className="mt-2">
         <RotateCw size={14} /> {t('tryAgain', lang)}
-      </button>
+      </Button>
     </div>
   )
 }

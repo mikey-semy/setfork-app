@@ -9,6 +9,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Badge } from '@/shared/ui/badge'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -42,24 +43,27 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
           canCompare={meta.currentVersion > 1}
           labels={{ commits: t('versionsTab', lang), releases: t('releasesLabel', lang), compare: t('compareTitle', lang) }}
         />
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-[16px] font-bold text-ink">{t('releasesLabel', lang)}</h1>
-          <div className="flex items-center gap-2">
-            <Tooltip label="Atom feed">
-              <a href={`${base}/releases.atom`} className="rounded-md border border-border p-1.5 text-muted hover:text-ink">
-                <Rss size={14} />
-              </a>
-            </Tooltip>
-            {canManage && (
-              <Link
-                href={`${base}/releases/new`}
-                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[12.5px] font-semibold text-primary-fg"
-              >
-                <Plus size={13} /> {ru ? 'Новый релиз' : 'New release'}
-              </Link>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          size="section"
+          title={t('releasesLabel', lang)}
+          actions={
+            <>
+              <Tooltip label="Atom feed">
+                <a href={`${base}/releases.atom`} className="rounded-md border border-border p-1.5 text-muted hover:text-ink">
+                  <Rss size={14} />
+                </a>
+              </Tooltip>
+              {canManage && (
+                <Link
+                  href={`${base}/releases/new`}
+                  className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[14px] font-semibold text-primary-fg hover:opacity-90"
+                >
+                  <Plus size={13} /> {ru ? 'Новый релиз' : 'New release'}
+                </Link>
+              )}
+            </>
+          }
+        />
 
         {rels.length === 0 ? (
           <EmptyState hint={t('noReleases', lang)}>

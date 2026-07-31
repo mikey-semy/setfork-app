@@ -4,6 +4,7 @@ import { CircleDot, CircleCheck } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { Button } from '@/shared/ui/button'
 import { Markdown } from '@/shared/ui/Markdown'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { requireViewableMeta } from '@/features/library/guard'
@@ -140,18 +141,14 @@ export default async function IssueThreadPage({
               <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={issuePeople} />
               <div className="flex flex-wrap items-center justify-end gap-2">
                 {canToggle && (
-                  <button
-                    type="submit"
-                    form="issue-status-form"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-semibold text-ink hover:border-border-strong"
-                  >
+                  <Button type="submit" form="issue-status-form" size="md">
                     {closed ? <CircleDot size={14} className="text-ok" /> : <CircleCheck size={14} className="text-accent" />}
                     {closed ? t('reopenIssue', lang) : t('closeIssue', lang)}
-                  </button>
+                  </Button>
                 )}
-                <button className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">
+                <Button type="submit" variant="primary" size="md">
                   {t('commentBtn', lang)}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

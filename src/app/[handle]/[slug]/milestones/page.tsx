@@ -5,6 +5,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Markdown } from '@/shared/ui/Markdown'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
 import { isCollaborator } from '@/features/collab/queries'
 import { getMilestones } from '@/features/milestones/queries'
@@ -27,12 +28,11 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
   return (
     <>
       <div className="mx-auto w-full max-w-[900px] px-4 py-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="flex items-center gap-2 text-[17px] font-bold text-ink">
-            <MilestoneIcon size={18} className="text-accent" /> {t('milestonesTitle', lang)}
-          </h1>
-          {canManage && <MilestoneForm owner={owner} slug={slug} lang={lang} />}
-        </div>
+        <PageHeader
+          icon={<MilestoneIcon size={18} />}
+          title={t('milestonesTitle', lang)}
+          actions={canManage && <MilestoneForm owner={owner} slug={slug} lang={lang} />}
+        />
 
         {list.length === 0 ? (
           <EmptyState hint={t('noMilestones', lang)} />

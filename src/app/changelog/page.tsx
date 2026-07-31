@@ -7,6 +7,7 @@ import { getChangelogSettings } from '@/shared/settings/changelog'
 import { t } from '@/shared/i18n'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { entryText, getChangelog } from '@/features/changelog/service'
 
 export const metadata: Metadata = { title: 'Changelog' }
@@ -33,8 +34,7 @@ export default async function ChangelogPage() {
       </Link>
       <FloatingBack href="/" label={t('home', lang)} />
 
-      <h1 className="mb-1 text-[22px] font-bold text-ink">Changelog</h1>
-      <p className="mb-8 text-[13.5px] text-ink-2">{t('changelogSub', lang)}</p>
+      <PageHeader title="Changelog" subtitle={t('changelogSub', lang)} />
 
       {entries.length === 0 ? (
         <EmptyState title={t('changelogNone', lang)} />

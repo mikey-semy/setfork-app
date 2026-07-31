@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Inbox, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Inbox, Pencil, Plus, Tag, Trash2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Alert, type AlertVariant } from '@/shared/ui/Alert'
 import { Badge, type BadgeVariant } from '@/shared/ui/badge'
 import { ActionRow, DangerZone } from '@/shared/ui/DangerZone'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Field } from '@/shared/ui/Field'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { useConfirm } from '@/shared/ui/use-confirm'
 import { Button, type ButtonVariant } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
@@ -198,6 +199,29 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           <Button size="xs" variant="ghost" onClick={() => toast(say('Toast: short and useful', 'Тост: коротко и по делу'))}>
             toast
           </Button>
+        </div>
+      </Section>
+
+      <Section
+        title={say('Page header', 'Шапка страницы')}
+        hint={say(
+          'One primitive instead of 27 hand-rolled h1 variants: page 18px / section 16px, truncate, actions wrap below on mobile.',
+          'Один примитив вместо 27 рукописных вариантов h1: page 18px / section 16px, truncate, действия на мобиле переносятся вниз.',
+        )}
+      >
+        <div className="rounded-md border border-dashed border-border p-3">
+          <PageHeader
+            title={say('Very long page title that truncates instead of breaking corners', 'Очень длинный заголовок страницы, который обрезается, а не ломает углы')}
+            subtitle={say('Subtitle explains the page in one line', 'Подзаголовок объясняет страницу одной строкой')}
+            icon={<Tag size={16} />}
+            meta={<Badge variant="soft">42</Badge>}
+            actions={
+              <Button size="sm" variant="primary">
+                {say('Action', 'Действие')}
+              </Button>
+            }
+            className="mb-0"
+          />
         </div>
       </Section>
 

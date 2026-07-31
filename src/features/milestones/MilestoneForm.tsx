@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
+import { Button } from '@/shared/ui/button'
 import { createMilestone } from './actions'
 
 const inputCls = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-[13.5px] text-ink outline-hidden focus:border-border-strong'
@@ -14,13 +15,9 @@ export function MilestoneForm({ owner, slug, lang }: { owner: string; slug: stri
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-primary-fg"
-      >
+      <Button variant="primary" size="md" onClick={() => setOpen(true)}>
         <Plus size={15} /> {t('newMilestone', lang)}
-      </button>
+      </Button>
     )
   }
 
@@ -44,10 +41,10 @@ export function MilestoneForm({ owner, slug, lang }: { owner: string; slug: stri
         <label className="text-[12.5px] text-ink-2">{t('milestoneDue', lang)}</label>
         <input type="date" name="dueOn" className={`${inputCls} w-auto`} />
         <div className="ml-auto flex gap-2">
-          <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-border px-3 py-1.5 text-[13px] text-ink hover:border-border-strong">
-            {t('cancel', lang)}
-          </button>
-          <button className="rounded-md bg-primary px-4 py-1.5 text-[13px] font-semibold text-primary-fg">{t('create', lang)}</button>
+          <Button onClick={() => setOpen(false)}>{t('cancel', lang)}</Button>
+          <Button type="submit" variant="primary">
+            {t('create', lang)}
+          </Button>
         </div>
       </div>
     </form>

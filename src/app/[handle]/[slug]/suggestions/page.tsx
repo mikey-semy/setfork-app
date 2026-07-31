@@ -129,7 +129,7 @@ export default async function SuggestionsPage({
         {session && (
           <Link
             href={`/${owner}/${slug}/suggest`}
-            className="inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[13px] font-semibold text-primary-fg"
+            className="inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[14px] font-semibold text-primary-fg hover:opacity-90"
           >
             {/* На мобиле — только значок: длинным подписям в кнопках там не место. */}
             <Plus size={15} /> <span className="max-sm:hidden">{t('suggestEdit', lang)}</span>

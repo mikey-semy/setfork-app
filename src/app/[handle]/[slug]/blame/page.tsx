@@ -5,6 +5,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getListBlame } from '@/features/library/blame'
 
@@ -29,10 +30,7 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
   return (
     <>
       <div className="mx-auto w-full max-w-[900px] px-4 py-6">
-        <h1 className="mb-1 flex items-center gap-2 text-[17px] font-bold text-ink">
-          <History size={18} className="text-muted" /> {t('blameTitle', lang)}
-        </h1>
-        <p className="mb-4 text-[13px] text-ink-2">{t('blameHint', lang)}</p>
+        <PageHeader icon={<History size={18} className="text-muted" />} title={t('blameTitle', lang)} subtitle={t('blameHint', lang)} />
 
         <div className="divide-y divide-border rounded-lg border border-border bg-surface">
           {blame.steps.map((s) => {

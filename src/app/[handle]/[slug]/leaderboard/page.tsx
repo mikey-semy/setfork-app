@@ -4,6 +4,7 @@ import { Trophy } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getCourseLeaderboard } from '@/features/quizzes/queries'
 
@@ -24,10 +25,11 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ ha
   return (
     <>
       <div className="mx-auto w-full max-w-[720px] px-4 py-6">
-        <h1 className="mb-1 flex items-center gap-2 text-[16px] font-bold text-ink">
-          <Trophy size={18} className="text-accent" /> {ru ? 'Лидерборд курса' : 'Course leaderboard'}
-        </h1>
-        <p className="mb-5 text-[13px] text-ink-2">{tr(meta.title, lang)}</p>
+        <PageHeader
+          icon={<Trophy size={18} />}
+          title={ru ? 'Лидерборд курса' : 'Course leaderboard'}
+          subtitle={tr(meta.title, lang)}
+        />
 
         {rows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-14 text-center text-[13.5px] text-muted">
