@@ -7,9 +7,8 @@ import { db, releases, templates, templateVersions, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isCollaborator } from '@/features/collab/queries'
 import { buildReleaseChangelog } from './changelog'
+import { TAG_RE, isReservedTag } from './tag-name'
 import type { Lang } from '@/shared/i18n'
-
-const TAG_RE = /^[A-Za-z0-9._-]{1,40}$/
 
 async function handleOf(userId: string): Promise<string> {
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId)).limit(1)
@@ -26,12 +25,15 @@ export async function createRelease(templateId: string, formData: FormData): Pro
   const owner = await handleOf(tpl.ownerId)
   const base = `/${owner}/${tpl.slug}/releases`
   const version = Number(formData.get('version') ?? tpl.currentVersion)
-  const tag = String(formData.get('tag') ?? '').trim() || `v${version}`
+  // Без дефолта `v<версия>`: такие имена зарезервированы за автотегами версий
+  // (#590), пустой тег честно упадёт в badtag, а не в молчаливый отказ ядра.
+  const tag = String(formData.get('tag') ?? '').trim()
   const title = String(formData.get('title') ?? '').trim().slice(0, 200)
   const notes = String(formData.get('notes') ?? '').trim().slice(0, 50000)
   const prerelease = formData.get('prerelease') === 'on'
 
   if (!TAG_RE.test(tag)) redirect(`${base}/new?e=badtag`)
+  if (isReservedTag(tag)) redirect(`${base}/new?e=vreserved`)
   // Версия должна существовать.
   const [v] = await db
     .select({ id: templateVersions.id })
@@ -47,11 +49,17 @@ export async function createRelease(templateId: string, formData: FormData): Pro
     .limit(1)
   if (dup) redirect(`${base}/new?e=tagtaken`)
 
-  await db.insert(releases).values({ templateId: tpl.id, version, tag, title, notes, prerelease, authorId: session.userId })
-  // Git-тег релиза на коммит версии (best-effort): чтобы clone привозил и
-  // человекочитаемый тег, а не только авто-vN. Ошибку git не роняем на релиз.
+  // Git-тег релиза — ДО вставки в базу: раньше сбой ядра глотался, и релиз
+  // существовал без тега в git, а пользователь ничего не узнавал (#590).
+  // Теперь либо есть и тег, и релиз, либо ни того ни другого — и видно почему.
   const { gitCore } = await import('@/features/git/core')
-  await gitCore.createTag({ owner, slug: tpl.slug }, tag, version).catch(() => {})
+  try {
+    await gitCore.createTag({ owner, slug: tpl.slug }, tag, version)
+  } catch (err) {
+    console.error(`[releases] git tag "${tag}" (v${version}) failed for ${owner}/${tpl.slug}:`, err)
+    redirect(`${base}/new?e=tagfail`)
+  }
+  await db.insert(releases).values({ templateId: tpl.id, version, tag, title, notes, prerelease, authorId: session.userId })
   revalidatePath(base)
   redirect(base)
 }
