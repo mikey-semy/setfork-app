@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { ChevronDown, Plus } from 'lucide-react'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
-import { splitSegment } from '@/shared/ui/SplitButton'
+import { splitSegment } from '@/shared/ui/split-segment'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'

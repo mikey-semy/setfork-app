@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { SplitButton, splitSegment } from '@/shared/ui/SplitButton'
+import { SplitButton } from '@/shared/ui/SplitButton'
+import { splitSegment } from '@/shared/ui/split-segment'
 
 /**
  * АНАТОМИЯ СПЛИТ-КНОПКИ ОДНА НА ВСЕ КНОПКИ РЯДА.
