@@ -4,6 +4,7 @@ import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { Alert } from '@/shared/ui/Alert'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedSourceList } from '@/features/admin/FeedSourceList'
 import { feedSourceRows, recentFeedItems } from '@/features/admin/feed-queries'
 
@@ -55,9 +56,7 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
       <div className="min-w-0">
         <div className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-ink-2">{say('Latest material', 'Последние материалы')}</div>
         <div className="divide-y divide-border rounded-lg border border-border bg-surface">
-          {items.length === 0 && (
-            <div className="px-4 py-8 text-center text-[13px] text-muted">{say('Nothing collected yet.', 'Пока ничего не собрано.')}</div>
-          )}
+          {items.length === 0 && <EmptyState variant="inline" hint={say('Nothing collected yet.', 'Пока ничего не собрано.')} />}
           {items.map((it) => (
             <div key={it.id} className="flex min-w-0 items-center gap-3 px-4 py-2.5">
               <a

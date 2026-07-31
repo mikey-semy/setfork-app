@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from 'react'
 import { Archive, Globe, Lock, Snowflake, Trash2, UserRoundPlus } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { ActionRow, DangerZone } from '@/shared/ui/DangerZone'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { t, type Lang } from '@/shared/i18n'
 import { cancelTransfer, initiateTransfer, type TransferResult } from '@/features/transfer/actions'
@@ -42,96 +43,70 @@ export function ListSettingsDanger({
   // fingerprint'а открывало бы отмывку повторной заливкой). Показываем причину.
   const lockedByModeration = moderation === 'flagged' || moderation === 'hidden'
 
-  const row = 'flex flex-wrap items-center justify-between gap-3 py-4'
-
   return (
     <>
       {/* Pin убран из настроек — теперь кнопкой над списком (шапка, #389). */}
 
       {/* Опасная зона: обведённая красным рамка со строками-действиями. */}
-      <section className="overflow-hidden rounded-lg border border-danger/40">
-        <div className="border-b border-danger/40 bg-danger/5 px-5 py-2.5 font-semibold text-danger">{t('dangerZone', lang)}</div>
-        <div className="divide-y divide-border px-5">
-          {/* Видимость */}
-          <div className={row}>
-            <div className="min-w-0">
-              <div className="text-[14px] font-medium text-ink">{t('changeVisibility', lang)}</div>
-              <p className="mt-0.5 text-[12.5px] text-ink-2">
-                {t('visibilityCurrent', lang)} {t(isPublic ? 'publicLabel' : 'privateLabel', lang).toLowerCase()}.
-              </p>
-            </div>
-            <Button variant="danger" size="md" onClick={() => setDialog('visibility')} className="border border-danger/40">
-              {isPublic ? <Lock size={14} /> : <Globe size={14} />} {t(isPublic ? 'makePrivate' : 'makePublic', lang)}
+      <DangerZone title={t('dangerZone', lang)}>
+        {/* Видимость */}
+        <ActionRow
+          title={t('changeVisibility', lang)}
+          sub={`${t('visibilityCurrent', lang)} ${t(isPublic ? 'publicLabel' : 'privateLabel', lang).toLowerCase()}.`}
+        >
+          <Button variant="danger" size="md" onClick={() => setDialog('visibility')} className="border border-danger/40">
+            {isPublic ? <Lock size={14} /> : <Globe size={14} />} {t(isPublic ? 'makePrivate' : 'makePublic', lang)}
+          </Button>
+        </ActionRow>
+
+        {/* Заморозка правок (защита) */}
+        <ActionRow title={t(frozen ? 'unfreezeList' : 'freezeList', lang)} sub={t(frozen ? 'frozenOn' : 'freezeHint', lang)}>
+          <Button variant="danger" size="md" onClick={() => setDialog('freeze')} className="border border-danger/40">
+            <Snowflake size={14} /> {t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+          </Button>
+        </ActionRow>
+
+        {/* Архив (read-only) */}
+        <ActionRow title={t(archived ? 'unarchiveList' : 'archiveList', lang)} sub={t(archived ? 'archivedOn' : 'archiveHint', lang)}>
+          <Button variant="danger" size="md" onClick={() => setDialog('archive')} className="border border-danger/40">
+            <Archive size={14} /> {t(archived ? 'unarchiveList' : 'archiveList', lang)}
+          </Button>
+        </ActionRow>
+
+        {/* Передача владения */}
+        <ActionRow
+          title={t('transferOwnership', lang)}
+          sub={pendingTransfer ? `${t('transferPendingTo', lang)} @${pendingTransfer.toHandle}` : t('transferHint', lang)}
+        >
+          {pendingTransfer ? (
+            <Button
+              variant="danger"
+              size="md"
+              onClick={() => start(() => cancelTransfer(pendingTransfer.id))}
+              disabled={pending}
+              className="border border-danger/40"
+            >
+              {t('transferCancel', lang)}
             </Button>
-          </div>
-
-          {/* Заморозка правок (защита) */}
-          <div className={row}>
-            <div className="min-w-0">
-              <div className="text-[14px] font-medium text-ink">{t(frozen ? 'unfreezeList' : 'freezeList', lang)}</div>
-              <p className="mt-0.5 text-[12.5px] text-ink-2">
-                {t(frozen ? 'frozenOn' : 'freezeHint', lang)}
-              </p>
-            </div>
-            <Button variant="danger" size="md" onClick={() => setDialog('freeze')} className="border border-danger/40">
-              <Snowflake size={14} /> {t(frozen ? 'unfreezeList' : 'freezeList', lang)}
+          ) : (
+            <Button variant="danger" size="md" onClick={() => setDialog('transfer')} className="border border-danger/40">
+              <UserRoundPlus size={14} /> {t('transferOwnership', lang)}
             </Button>
-          </div>
+          )}
+        </ActionRow>
 
-          {/* Архив (read-only) */}
-          <div className={row}>
-            <div className="min-w-0">
-              <div className="text-[14px] font-medium text-ink">{t(archived ? 'unarchiveList' : 'archiveList', lang)}</div>
-              <p className="mt-0.5 text-[12.5px] text-ink-2">
-                {t(archived ? 'archivedOn' : 'archiveHint', lang)}
-              </p>
-            </div>
-            <Button variant="danger" size="md" onClick={() => setDialog('archive')} className="border border-danger/40">
-              <Archive size={14} /> {t(archived ? 'unarchiveList' : 'archiveList', lang)}
+        {/* Удаление */}
+        <ActionRow
+          title={t('deleteList', lang)}
+          sub={lockedByModeration ? t('deleteLockedModeration', lang) : t('deleteListHint', lang)}
+        >
+          {!lockedByModeration && (
+            <Button variant="danger" size="md" onClick={() => setDialog('delete')} className="border border-danger/40">
+              <Trash2 size={14} /> {t('deleteList', lang)}
             </Button>
-          </div>
-
-          {/* Передача владения */}
-          <div className={row}>
-            <div className="min-w-0">
-              <div className="text-[14px] font-medium text-ink">{t('transferOwnership', lang)}</div>
-              <p className="mt-0.5 text-[12.5px] text-ink-2">
-                {pendingTransfer ? `${t('transferPendingTo', lang)} @${pendingTransfer.toHandle}` : t('transferHint', lang)}
-              </p>
-            </div>
-            {pendingTransfer ? (
-              <Button
-                variant="danger"
-                size="md"
-                onClick={() => start(() => cancelTransfer(pendingTransfer.id))}
-                disabled={pending}
-                className="border border-danger/40"
-              >
-                {t('transferCancel', lang)}
-              </Button>
-            ) : (
-              <Button variant="danger" size="md" onClick={() => setDialog('transfer')} className="border border-danger/40">
-                <UserRoundPlus size={14} /> {t('transferOwnership', lang)}
-              </Button>
-            )}
-          </div>
-
-          {/* Удаление */}
-          <div className={row}>
-            <div className="min-w-0">
-              <div className="text-[14px] font-medium text-ink">{t('deleteList', lang)}</div>
-              <p className="mt-0.5 text-[12.5px] text-ink-2">
-                {lockedByModeration ? t('deleteLockedModeration', lang) : t('deleteListHint', lang)}
-              </p>
-            </div>
-            {!lockedByModeration && (
-              <Button variant="danger" size="md" onClick={() => setDialog('delete')} className="border border-danger/40">
-                <Trash2 size={14} /> {t('deleteList', lang)}
-              </Button>
-            )}
-          </div>
-        </div>
-      </section>
+          )}
+        </ActionRow>
+      </DangerZone>
 
       {/* Модалка передачи — ввод ника получателя (реальная смена — при принятии им). */}
       <OverlayPanel

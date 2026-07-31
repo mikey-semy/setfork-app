@@ -6,6 +6,7 @@ import { Switch } from '@/shared/ui/switch'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { Field } from '@/shared/ui/Field'
+import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { t, type Lang } from '@/shared/i18n'
 import type { AffiliateRule } from '@/core'
 import { setMonetizationSettings } from './actions'
@@ -173,11 +174,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         <Input name="donateUrl" defaultValue={v.donateUrl} placeholder="https://…" className="font-mono" />
       </Field>
 
-      <div className="flex justify-end border-t border-border pt-4">
-        <button type="submit" className="rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
-          {t('monSave', lang)}
-        </button>
-      </div>
+      <FormSaveBar ru={lang === 'ru'} />
     </form>
   )
 }

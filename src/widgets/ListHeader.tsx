@@ -6,6 +6,7 @@ import { isAdminHandle } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { Alert } from '@/shared/ui/Alert'
 import { PinButton } from '@/features/library/PinButton'
@@ -99,9 +100,9 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             </Tooltip>
             {/* Ограниченные состояния — рядом с видимостью (архив строже заморозки). */}
             {meta.archivedAt != null ? (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-warn/40 bg-warn/10 px-2 py-0.5 text-[11px] text-warn">
+              <Badge variant="warn" className="shrink-0">
                 <Archive size={11} /> {t('badgeArchived', lang)}
-              </span>
+              </Badge>
             ) : meta.frozenAt != null ? (
               <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
                 <Snowflake size={11} /> {t('badgeFrozen', lang)}

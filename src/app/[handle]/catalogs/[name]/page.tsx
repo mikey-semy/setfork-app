@@ -4,6 +4,7 @@ import { FolderGit2 } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { getListsInCatalog } from '@/features/library/queries'
 import { getCatalog } from '@/features/catalogs/queries'
@@ -37,9 +38,7 @@ export default async function CatalogPage({ params }: { params: Promise<{ handle
 
       <div className="mt-5">
         {lists.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
-            {t('catalogEmpty', lang)}
-          </div>
+          <EmptyState hint={t('catalogEmpty', lang)} />
         ) : (
           <FeedList items={lists} lang={lang} viewerId={viewer?.userId} />
         )}

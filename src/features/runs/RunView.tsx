@@ -8,6 +8,7 @@ import { t } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { useConfirm } from '@/shared/ui/use-confirm'
 import { Markdown } from '@/shared/ui/Markdown'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { SafeLink } from '@/shared/ui/SafeLink'
@@ -76,6 +77,7 @@ export function RunView({
 }) {
   const [steps, setSteps] = useState(initial)
   const [, start] = useTransition()
+  const { confirm, confirmDialog } = useConfirm()
   const [blockingId, setBlockingId] = useState<string | null>(null)
   const [reasonDraft, setReasonDraft] = useState('')
   // Точку на кирке зажигаем СРАЗУ при сохранении сессии (событие dig-saved), а не
@@ -171,8 +173,14 @@ export function RunView({
                 <Tooltip label={t('runFailAction', lang)}>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (confirm(t('runFailConfirm', lang))) start(() => failRun(runId))
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: t('runFailAction', lang),
+                        intro: t('runFailConfirm', lang),
+                        confirmLabel: t('runFailAction', lang),
+                        cancelLabel: t('cancel', lang),
+                      })
+                      if (ok) start(() => failRun(runId))
                     }}
                     aria-label={t('runFailAction', lang)}
                     className="grid size-9 place-items-center rounded-md border border-danger/40 text-danger hover:bg-danger/10"
@@ -186,8 +194,14 @@ export function RunView({
             <Tooltip label={t('runDelete', lang)}>
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm(t('runDeleteConfirm', lang))) start(() => deleteRun(runId))
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: t('runDelete', lang),
+                    intro: t('runDeleteConfirm', lang),
+                    confirmLabel: t('runDelete', lang),
+                    cancelLabel: t('cancel', lang),
+                  })
+                  if (ok) start(() => deleteRun(runId))
                 }}
                 aria-label={t('runDelete', lang)}
                 className="grid size-9 place-items-center rounded-md text-muted hover:text-danger"
@@ -405,6 +419,7 @@ export function RunView({
           )
         })}
       </div>
+      {confirmDialog}
     </div>
   )
 }

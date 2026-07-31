@@ -6,7 +6,8 @@ import { Check, GitMerge, Loader2, Pencil, RefreshCw, Star, Trash2, X } from 'lu
 import { Input } from '@/shared/ui/input'
 import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import type { Lang } from '@/shared/i18n'
+import { useConfirm } from '@/shared/ui/use-confirm'
+import { t, type Lang } from '@/shared/i18n'
 import type { TagRow } from './queries'
 import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from './actions'
 
@@ -15,6 +16,7 @@ import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from 
 export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   const router = useRouter()
+  const { confirm, confirmDialog } = useConfirm()
   const [pending, start] = useTransition()
   const [q, setQ] = useState('')
   const [edit, setEdit] = useState<{ slug: string; mode: 'rename' | 'merge' } | null>(null)
@@ -105,8 +107,17 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                     <IconBtn
                       title={say('Delete', 'Удалить')}
                       danger
-                      onClick={() => {
-                        if (confirm(say(`Delete tag "${tg.slug}"? It is removed from all lists.`, `Удалить тег «${tg.slug}»? Он исчезнет из всех списков.`))) run(() => deleteTag(tg.slug))
+                      onClick={async () => {
+                        // Необратимая массовая операция — type-to-confirm по slug'у тега.
+                        const ok = await confirm({
+                          title: say(`Delete tag "${tg.slug}"?`, `Удалить тег «${tg.slug}»?`),
+                          intro: say('It is removed from all lists.', 'Он исчезнет из всех списков.'),
+                          confirmLabel: say('Delete', 'Удалить'),
+                          cancelLabel: t('cancel', lang),
+                          confirmPhrase: tg.slug,
+                          confirmHint: t('dangerConfirmHint', lang),
+                        })
+                        if (ok) run(() => deleteTag(tg.slug))
                       }}
                     >
                       <Trash2 size={14} />
@@ -121,6 +132,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
       <p className="mt-2 text-[12px] text-muted">
         {filtered.length} / {tags.length}
       </p>
+      {confirmDialog}
     </div>
   )
 }

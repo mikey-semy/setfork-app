@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Switch } from '@/shared/ui/switch'
-import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Field } from '@/shared/ui/Field'
+import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { t, type Lang } from '@/shared/i18n'
 import type { ChangelogSettings, ChangelogSource } from '@/shared/settings/changelog'
 import { setChangelogSettings } from './actions'
@@ -90,12 +90,7 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
         <Switch checked={translate} onCheckedChange={setTranslate} />
       </div>
 
-      {/* Primary — справа внизу, единая высота с остальными формами админки. */}
-      <div className="flex justify-end">
-        <SubmitButton>
-          {t('saveChanges', lang)}
-        </SubmitButton>
-      </div>
+      <FormSaveBar ru={lang === 'ru'} />
     </form>
   )
 }

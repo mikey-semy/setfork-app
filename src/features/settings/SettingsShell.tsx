@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { SearchField } from '@/shared/ui/SearchField'
 import { t, type Lang } from '@/shared/i18n'
 
@@ -84,9 +85,7 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
 
       <div className="min-w-0 flex-1 space-y-6">
         {visible.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
-            {t('noSettingsFound', lang)}
-          </div>
+          <EmptyState hint={t('noSettingsFound', lang)} />
         ) : (
           visible.map((s) => (
             <div key={s.id} id={s.id} className="scroll-mt-[76px]">

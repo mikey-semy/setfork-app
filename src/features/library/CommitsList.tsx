@@ -3,6 +3,7 @@ import type { GitCommit } from '@/core'
 import Link from 'next/link'
 import { Avatar } from '@/shared/ui/Avatar'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
@@ -41,7 +42,7 @@ export function CommitsList({
   /** База ссылки на СНИМОК списка (`?ref=sha`) — «открыть как обычный список». */
   snapshotBase?: string
 }) {
-  if (commits.length === 0) return <div className="rounded-lg border border-border bg-surface px-4 py-6 text-center text-[13px] text-muted">{labels.empty}</div>
+  if (commits.length === 0) return <EmptyState variant="plain" hint={labels.empty} />
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">

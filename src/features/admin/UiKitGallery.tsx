@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Inbox, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Alert, type AlertVariant } from '@/shared/ui/Alert'
 import { Badge, type BadgeVariant } from '@/shared/ui/badge'
+import { ActionRow, DangerZone } from '@/shared/ui/DangerZone'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { Field } from '@/shared/ui/Field'
+import { useConfirm } from '@/shared/ui/use-confirm'
 import { Button, type ButtonVariant } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { Input } from '@/shared/ui/input'
@@ -25,7 +28,7 @@ import { CONTROL_H, CONTROL_TEXT, type ControlSize } from '@/shared/ui/control'
 
 const SIZES: ControlSize[] = ['md', 'sm', 'xs']
 const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'outline', 'ghost', 'danger', 'dangerSolid']
-const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft']
+const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft', 'danger', 'warn']
 const ALERT_VARIANTS: AlertVariant[] = ['danger', 'warn', 'ok', 'info']
 
 type Say = (en: string, ru: string) => string
@@ -74,6 +77,8 @@ function RowCheck({ size, say }: { size: ControlSize; say: Say }) {
 export function UiKitGallery({ lang }: { lang: Lang }) {
   const say: Say = (en, ru) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [checked, setChecked] = useState(true)
+  const { confirm, confirmDialog } = useConfirm()
+  const [confirmed, setConfirmed] = useState<string | null>(null)
 
   return (
     <div className="flex flex-col gap-4">
@@ -194,6 +199,49 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
             toast
           </Button>
         </div>
+      </Section>
+
+      <Section
+        title={say('Empty states', 'Пустые состояния')}
+        hint={say(
+          'bordered — page/list without content; plain — reports/feeds; inline — a row inside a table.',
+          'bordered — страница/список без содержимого; plain — отчёты/ленты; inline — строка внутри таблицы.',
+        )}
+      >
+        <EmptyState
+          icon={<Inbox size={22} />}
+          title={say('Nothing here yet', 'Здесь пока пусто')}
+          hint={say('Bordered: with icon, title and CTA', 'Bordered: с иконкой, заголовком и действием')}
+          action={{ href: '/admin/ui-kit', label: say('Create', 'Создать') }}
+        />
+        <EmptyState variant="plain" hint={say('Plain: hint only — title is optional', 'Plain: только hint — title опционален')} />
+        <EmptyState variant="inline" hint={say('Inline: a row inside a container', 'Inline: строка внутри контейнера')} />
+      </Section>
+
+      <Section title={say('Danger zone', 'Опасная зона')}>
+        <DangerZone title={say('Danger zone', 'Опасная зона')}>
+          <ActionRow
+            title={say('Delete something', 'Удалить что-нибудь')}
+            sub={say('Irreversible; shows useConfirm() instead of native confirm', 'Необратимо; показывает useConfirm() вместо нативного confirm')}
+          >
+            <Button
+              size="sm"
+              variant="dangerSolid"
+              onClick={async () => {
+                const ok = await confirm({
+                  title: say('Delete something?', 'Удалить что-нибудь?'),
+                  intro: say('This is only a UI Kit demo — nothing is deleted.', 'Это демо UI Kit — ничего не удаляется.'),
+                  confirmLabel: say('Delete', 'Удалить'),
+                })
+                setConfirmed(ok ? say('confirmed', 'подтверждено') : say('cancelled', 'отменено'))
+              }}
+            >
+              {say('Delete', 'Удалить')}
+            </Button>
+            {confirmed && <span className="text-[12.5px] text-muted">{confirmed}</span>}
+          </ActionRow>
+        </DangerZone>
+        {confirmDialog}
       </Section>
 
       <Section

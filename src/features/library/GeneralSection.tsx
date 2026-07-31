@@ -1,9 +1,9 @@
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { TagInput } from '@/shared/ui/TagInput'
-import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { Field } from '@/shared/ui/Field'
+import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { ListTypeToggle } from './ListTypeToggle'
 import { updateListMeta } from './actions'
 
@@ -50,11 +50,7 @@ export function GeneralSection({
           <ListTypeToggle ordered={ordered} lang={lang} />
         </Field>
 
-        <div>
-          <SubmitButton>
-            {t('saveChanges', lang)}
-          </SubmitButton>
-        </div>
+        <FormSaveBar ru={lang === 'ru'} />
       </form>
     </section>
   )

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Check, MessageSquare, GitPullRequestClosed, Loader2, X, ShieldOff } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Textarea } from '@/shared/ui/textarea'
@@ -75,11 +76,7 @@ export function ReviewPanel({
     <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="text-[13px] font-semibold text-ink">{labels.title}</span>
-        {blocking && (
-          <span className="rounded-full border border-danger/40 bg-danger/10 px-2 py-0.5 text-[11px] font-semibold text-danger">
-            {labels.blocked}
-          </span>
-        )}
+        {blocking && <Badge variant="danger">{labels.blocked}</Badge>}
       </div>
 
       {reviews.length > 0 && (

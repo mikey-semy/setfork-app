@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react'
 import { AtSign, Trash2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { ActionRow, DangerZone as DangerZoneShell } from '@/shared/ui/DangerZone'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { t, type Lang } from '@/shared/i18n'
 import { changeHandle, deleteAccount, type ActionResult } from './actions'
@@ -14,33 +15,29 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
   const [dialog, setDialog] = useState<null | 'delete' | 'handle'>(null)
 
   return (
-    <section className="overflow-hidden rounded-lg border border-danger/40">
-      <div className="border-b border-danger/40 bg-danger/5 px-5 py-2.5 font-semibold text-danger">{t('dangerZone', lang)}</div>
-      <div className="divide-y divide-border px-5">
+    <>
+      <DangerZoneShell title={t('dangerZone', lang)}>
         {/* Смена ника */}
-        <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-          <div className="min-w-0">
-            <div className="text-[14px] font-medium text-ink">{t('changeHandle', lang)}</div>
-            <p className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] text-ink-2">
+        <ActionRow
+          title={t('changeHandle', lang)}
+          sub={
+            <span className="inline-flex items-center gap-1.5">
               <AtSign size={12} /> {handle}
-            </p>
-          </div>
+            </span>
+          }
+        >
           <Button variant="danger" size="md" onClick={() => setDialog('handle')} className="border border-danger/40">
             {t('changeHandle', lang)}
           </Button>
-        </div>
+        </ActionRow>
 
         {/* Удаление аккаунта */}
-        <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-          <div className="min-w-0">
-            <div className="text-[14px] font-medium text-ink">{t('deleteAccount', lang)}</div>
-            <p className="mt-0.5 max-w-[560px] text-[12.5px] text-ink-2">{t('deleteAccountHint', lang)}</p>
-          </div>
+        <ActionRow title={t('deleteAccount', lang)} sub={t('deleteAccountHint', lang)}>
           <Button variant="danger" size="md" onClick={() => setDialog('delete')} className="gap-2 border border-danger/40">
             <Trash2 size={14} /> {t('deleteAccount', lang)}
           </Button>
-        </div>
-      </div>
+        </ActionRow>
+      </DangerZoneShell>
 
       {/* Модалка смены ника: ввод НОВОГО значения + предупреждение о ломке ссылок. */}
       <OverlayPanel
@@ -95,6 +92,6 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
         error={delState?.error}
         formAction={delAction}
       />
-    </section>
+    </>
   )
 }

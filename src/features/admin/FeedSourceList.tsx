@@ -3,6 +3,7 @@ import { tr, type Lang } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { TagChip } from '@/shared/ui/TagChip'
 import { Alert } from '@/shared/ui/Alert'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { addFeedSource, pullFeedNow, removeFeedSource, setFeedSourceEnabled } from '@/features/admin/feed-actions'
 import type { FeedSourceRow } from '@/features/admin/feed-queries'
 
@@ -79,9 +80,10 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           <span className="text-right">{say('Pulled', 'Собран')}</span>
         </div>
         {rows.length === 0 && (
-          <div className="px-4 py-10 text-center text-[13px] text-muted">
-            {say('No subscriptions yet — a list can only stay alive while something arrives.', 'Подписок пока нет — список живёт, только пока в него что-то приходит.')}
-          </div>
+          <EmptyState
+            variant="inline"
+            hint={say('No subscriptions yet — a list can only stay alive while something arrives.', 'Подписок пока нет — список живёт, только пока в него что-то приходит.')}
+          />
         )}
         {rows.map((r) => (
           <div key={r.id} className={`grid min-w-[760px] ${COLS} items-center gap-4 border-b border-border px-4 py-2.5 last:border-0 ${r.enabled ? '' : 'opacity-60'}`}>

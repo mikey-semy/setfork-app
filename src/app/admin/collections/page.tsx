@@ -3,6 +3,7 @@ import { FolderGit2, Plus } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { tr } from '@/shared/i18n'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { getAdminCollections } from '@/features/collections/queries'
 import { createCollection } from '@/features/admin/collection-actions'
 
@@ -39,7 +40,7 @@ export default async function AdminCollectionsPage() {
       </form>
 
       <div className="divide-y divide-border rounded-lg border border-border bg-surface">
-        {list.length === 0 && <div className="px-4 py-10 text-center text-[13.5px] text-muted">{ru ? 'Подборок пока нет.' : 'No collections yet.'}</div>}
+        {list.length === 0 && <EmptyState variant="inline" hint={ru ? 'Подборок пока нет.' : 'No collections yet.'} />}
         {list.map((c) => (
           <Link key={c.id} href={`/admin/collections/${c.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2">
             <FolderGit2 size={16} className="shrink-0 text-accent" />

@@ -4,18 +4,17 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { BadgeCheck, Check, EyeOff, Eye, Loader2, Sparkles } from 'lucide-react'
 import { t, tr, type Lang } from '@/shared/i18n'
+import { Badge } from '@/shared/ui/badge'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { ModFilter, ModItem } from './queries'
 import { aiModerate, setModeration, setVerified } from './actions'
 
 function StatusBadge({ s, lang }: { s: ModItem['moderation']; lang: Lang }) {
-  if (s === 'hidden')
-    return <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[11px] font-semibold text-danger">{t('hiddenLabel', lang)}</span>
-  if (s === 'flagged')
-    return <span className="rounded-full bg-warn/15 px-2 py-0.5 text-[11px] font-semibold text-warn">{t('flaggedLabel', lang)}</span>
-  if (s === 'pending')
-    return <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">{t('pendingLabel', lang)}</span>
-  return <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">{t('statusActive', lang)}</span>
+  if (s === 'hidden') return <Badge variant="danger">{t('hiddenLabel', lang)}</Badge>
+  if (s === 'flagged') return <Badge variant="warn">{t('flaggedLabel', lang)}</Badge>
+  if (s === 'pending') return <Badge variant="accent">{t('pendingLabel', lang)}</Badge>
+  return <Badge variant="soft">{t('statusActive', lang)}</Badge>
 }
 
 export function ModerationTable({
@@ -67,7 +66,7 @@ export function ModerationTable({
       </div>
 
       <div className="flex flex-col gap-2">
-        {items.length === 0 && <div className="py-10 text-center text-[13px] text-muted">{t('nothingFound', lang)}</div>}
+        {items.length === 0 && <EmptyState variant="inline" hint={t('nothingFound', lang)} />}
         {items.map((it) => {
           const hidden = it.moderation === 'hidden'
           return (
@@ -79,12 +78,8 @@ export function ModerationTable({
                   </Link>
                   {it.verified && <BadgeCheck size={15} className="text-ok" />}
                   <StatusBadge s={it.moderation} lang={lang} />
-                  {it.appealedAt && (
-                    <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">{t('appealedLabel', lang)}</span>
-                  )}
-                  {it.moderationSeverity >= 3 && (
-                    <span className="rounded-full bg-danger/15 px-2 py-0.5 text-[11px] font-semibold text-danger">{t('severeLabel', lang)}</span>
-                  )}
+                  {it.appealedAt && <Badge variant="accent">{t('appealedLabel', lang)}</Badge>}
+                  {it.moderationSeverity >= 3 && <Badge variant="danger">{t('severeLabel', lang)}</Badge>}
                   {it.visibility === 'private' && <span className="text-[11px] text-muted">private</span>}
                   <span className="font-mono text-[11px] text-muted">★{it.starsCount}</span>
                 </div>

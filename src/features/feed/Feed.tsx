@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { GitFork, ListChecks, MessageSquare, PencilLine, Star, Tag, UserPlus } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { Markdown } from '@/shared/ui/Markdown'
 import { tr, type Lang } from '@/shared/i18n'
 import type { FeedEvent } from './queries'
@@ -82,9 +83,7 @@ export function Feed({
         </p>
       )}
       {shown.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border py-16 text-center text-[13.5px] text-muted">
-          {ru ? 'Пока пусто' : 'Nothing here yet'}
-        </div>
+        <EmptyState hint={ru ? 'Пока пусто' : 'Nothing here yet'} />
       ) : (
         <div className="flex flex-col gap-2.5">
           {shown.map((e) => {

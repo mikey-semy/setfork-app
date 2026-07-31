@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { KeyRound, Loader2 } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
+import { useConfirm } from '@/shared/ui/use-confirm'
 import { generateVapidKeys, setPushSubject } from './actions'
-import { FormSaveBar } from '@/features/settings/FormSaveBar'
+import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 
 export interface PushFormValues {
   publicKey: string
@@ -14,13 +15,24 @@ export interface PushFormValues {
 }
 
 export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) {
+  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [pub, setPub] = useState(v.publicKey)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const { confirm, confirmDialog } = useConfirm()
 
   async function gen() {
     if (busy) return
-    if (pub && !confirm(ru ? 'Перегенерировать ключи? Старые подписки перестанут работать.' : 'Regenerate keys? Existing subscriptions will stop working.')) return
+    if (
+      pub &&
+      !(await confirm({
+        title: say('Regenerate keys?', 'Перегенерировать ключи?'),
+        intro: say('Existing subscriptions will stop working.', 'Старые подписки перестанут работать.'),
+        confirmLabel: say('Regenerate keys', 'Перегенерировать ключи'),
+        cancelLabel: say('Cancel', 'Отмена'),
+      }))
+    )
+      return
     setBusy(true)
     setMsg(null)
     try {
@@ -67,6 +79,7 @@ export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) 
         </Field>
         <FormSaveBar ru={ru} />
       </form>
+      {confirmDialog}
     </div>
   )
 }

@@ -27,14 +27,22 @@ export function StatTile({
   value?: ReactNode
   /** Причина отсутствия источника. Задана → вместо числа «—» и эта подпись. */
   na?: string
-  /** Пояснение под числом (единицы, база сравнения). */
-  hint?: string
+  /** Пояснение под числом (единицы, база сравнения, мини-прогресс). */
+  hint?: ReactNode
   href?: string
-  tone?: 'ink' | 'accent' | 'warn' | 'ok'
+  tone?: 'ink' | 'accent' | 'warn' | 'ok' | 'danger'
   className?: string
 }) {
   const toneClass =
-    tone === 'accent' ? 'text-(--accent)' : tone === 'warn' ? 'text-warn' : tone === 'ok' ? 'text-ok' : 'text-ink'
+    tone === 'accent'
+      ? 'text-(--accent)'
+      : tone === 'warn'
+        ? 'text-warn'
+        : tone === 'ok'
+          ? 'text-ok'
+          : tone === 'danger'
+            ? 'text-danger'
+            : 'text-ink'
   const body = (
     <>
       <SectionLabel>{label}</SectionLabel>
