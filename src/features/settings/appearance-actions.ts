@@ -9,10 +9,11 @@ import { requireSession } from '@/shared/auth/session'
 // next-themes (localStorage). Значения валидируем по белым спискам.
 const ACCENT_VALUES = new Set(['', 'violet', 'green', 'orange', 'rose', 'teal'])
 const FONT_VALUES = new Set(['', 'inter', 'manrope', 'system'])
+const SCALE_VALUES = new Set(['', '90', '110']) // '' = 100%; проценты корневого font-size (все размеры в rem, Ф6)
 
-export async function saveAppearance(accent: string, font: string): Promise<{ ok: boolean }> {
+export async function saveAppearance(accent: string, font: string, scale = ''): Promise<{ ok: boolean }> {
   const session = await requireSession()
-  if (!ACCENT_VALUES.has(accent) || !FONT_VALUES.has(font)) return { ok: false }
-  await db.update(users).set({ uiAccent: accent, uiFont: font }).where(eq(users.id, session.userId))
+  if (!ACCENT_VALUES.has(accent) || !FONT_VALUES.has(font) || !SCALE_VALUES.has(scale)) return { ok: false }
+  await db.update(users).set({ uiAccent: accent, uiFont: font, uiScale: scale }).where(eq(users.id, session.userId))
   return { ok: true }
 }

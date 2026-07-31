@@ -67,8 +67,8 @@ function FeatureRow({
       <div className="flex min-w-0 items-start gap-2.5">
         <span className="mt-0.5">{icon}</span>
         <div className="min-w-0">
-          <div className="text-[13px] font-medium text-ink">{label}</div>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{hint}</p>
+          <div className="text-[0.8125rem] font-medium text-ink">{label}</div>
+          <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">{hint}</p>
         </div>
       </div>
       <Switch

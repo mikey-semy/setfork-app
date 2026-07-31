@@ -24,10 +24,10 @@ export default async function EditCollectionPage({ params, searchParams }: { par
   if (!c) notFound()
 
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-6 py-8">
+    <div className="mx-auto flex w-full max-w-[45rem] flex-col gap-6 px-6 py-8">
       <div className="flex items-center justify-between">
-        <Link href="/admin/collections" className="text-[13px] text-ink-2 hover:text-ink">← {ru ? 'Все подборки' : 'All collections'}</Link>
-        <Link href={`/collections/${c.slug}`} className="inline-flex items-center gap-1.5 text-[13px] text-accent hover:underline">
+        <Link href="/admin/collections" className="text-[0.8125rem] text-ink-2 hover:text-ink">← {ru ? 'Все подборки' : 'All collections'}</Link>
+        <Link href={`/collections/${c.slug}`} className="inline-flex items-center gap-1.5 text-[0.8125rem] text-accent hover:underline">
           {ru ? 'Открыть' : 'View'} <ExternalLink size={13} />
         </Link>
       </div>
@@ -43,20 +43,20 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         </Field>
         {/* Горизонтальный ряд (подпись слева от поля) — Field сюда не ложится, класс подписи инлайном. */}
         <div className="flex items-center gap-4">
-          <label className="text-[12.5px] font-semibold text-ink-2">{ru ? 'Акцент (hex)' : 'Accent (hex)'}</label>
-          <Input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className="max-w-[140px] font-mono" />
-          <label className="ml-auto inline-flex items-center gap-2 text-[13px] text-ink">
+          <label className="text-[0.78125rem] font-semibold text-ink-2">{ru ? 'Акцент (hex)' : 'Accent (hex)'}</label>
+          <Input name="accent" defaultValue={c.accent ?? ''} placeholder="#2159d6" className="max-w-[8.75rem] font-mono" />
+          <label className="ml-auto inline-flex items-center gap-2 text-[0.8125rem] text-ink">
             <input type="checkbox" name="published" defaultChecked={c.published} /> {ru ? 'Опубликовано' : 'Published'}
           </label>
         </div>
         <div className="flex justify-end">
-          <button type="submit" className="rounded-md bg-primary px-5 py-2 text-[13px] font-semibold text-primary-fg">{ru ? 'Сохранить' : 'Save'}</button>
+          <button type="submit" className="rounded-md bg-primary px-5 py-2 text-[0.8125rem] font-semibold text-primary-fg">{ru ? 'Сохранить' : 'Save'}</button>
         </div>
       </form>
 
       {/* Обложка */}
       <SettingsSection title={ru ? 'Обложка' : 'Cover'}>
-        <div className="mb-3 h-[130px] w-full overflow-hidden rounded-lg border border-border">
+        <div className="mb-3 h-[8.125rem] w-full overflow-hidden rounded-lg border border-border">
           {c.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={c.coverUrl} alt="" className="h-full w-full object-cover" />
@@ -66,8 +66,8 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         </div>
         <form action={setCollectionCover} className="flex items-center gap-2">
           <input type="hidden" name="id" value={c.id} />
-          <input type="file" name="file" accept="image/*" required className="text-[13px] text-ink-2" />
-          <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[13px] font-semibold text-ink hover:border-border-strong">
+          <input type="file" name="file" accept="image/*" required className="text-[0.8125rem] text-ink-2" />
+          <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[0.8125rem] font-semibold text-ink hover:border-border-strong">
             <ImagePlus size={14} /> {ru ? 'Загрузить' : 'Upload'}
           </button>
         </form>
@@ -83,25 +83,25 @@ export default async function EditCollectionPage({ params, searchParams }: { par
         <form action={addCollectionItem} className="mb-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="collectionId" value={c.id} />
           <div className="inline-flex overflow-hidden rounded-md border border-border">
-            <label className="cursor-pointer px-3 py-2 text-[13px] text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
+            <label className="cursor-pointer px-3 py-2 text-[0.8125rem] text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
               <input type="radio" name="kind" value="list" defaultChecked className="sr-only" /> {ru ? 'Список' : 'List'}
             </label>
-            <label className="cursor-pointer border-l border-border px-3 py-2 text-[13px] text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
+            <label className="cursor-pointer border-l border-border px-3 py-2 text-[0.8125rem] text-ink-2 has-checked:bg-surface-2 has-checked:font-semibold has-checked:text-ink">
               <input type="radio" name="kind" value="catalog" className="sr-only" /> {ru ? 'Каталог' : 'Catalog'}
             </label>
           </div>
           <Input name="ref" required placeholder="owner/slug" className="min-w-0 flex-1 font-mono" />
-          <button type="submit" className="rounded-md bg-primary px-4 py-2 text-[13px] font-semibold text-primary-fg">{ru ? 'Добавить' : 'Add'}</button>
+          <button type="submit" className="rounded-md bg-primary px-4 py-2 text-[0.8125rem] font-semibold text-primary-fg">{ru ? 'Добавить' : 'Add'}</button>
         </form>
 
         <div className="flex flex-col gap-1.5">
-          {c.items.length === 0 && <div className="text-[13px] text-muted">{ru ? 'Пусто.' : 'Empty.'}</div>}
+          {c.items.length === 0 && <div className="text-[0.8125rem] text-muted">{ru ? 'Пусто.' : 'Empty.'}</div>}
           {c.items.map((it) => {
             const remove = removeCollectionItem.bind(null, it.itemId, c.id)
             return (
               <div key={it.itemId} className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2">
-                <span className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[11px] uppercase text-muted">{it.kind}</span>
-                <span className={`min-w-0 flex-1 truncate font-mono text-[12.5px] ${it.ok ? 'text-ink' : 'text-danger line-through'}`}>{it.label}</span>
+                <span className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[0.6875rem] uppercase text-muted">{it.kind}</span>
+                <span className={`min-w-0 flex-1 truncate font-mono text-[0.78125rem] ${it.ok ? 'text-ink' : 'text-danger line-through'}`}>{it.label}</span>
                 <form action={remove}>
                   <button type="submit" aria-label="remove" className="rounded-md p-1 text-muted hover:text-danger">
                     <X size={14} />
@@ -115,7 +115,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
 
       {/* Удаление */}
       <form action={deleteCollection.bind(null, c.id)} className="flex justify-end">
-        <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 px-3 py-1.5 text-[13px] font-semibold text-danger hover:bg-danger/10">
+        <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-danger/40 px-3 py-1.5 text-[0.8125rem] font-semibold text-danger hover:bg-danger/10">
           <Trash2 size={14} /> {ru ? 'Удалить подборку' : 'Delete collection'}
         </button>
       </form>

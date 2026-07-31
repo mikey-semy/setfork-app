@@ -19,7 +19,7 @@ export function FollowButton({ targetUserId, following, lang }: { targetUserId: 
       type="button"
       onClick={onClick}
       disabled={pending}
-      className={`inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-[13px] font-semibold disabled:opacity-70 ${
+      className={`inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-[0.8125rem] font-semibold disabled:opacity-70 ${
         isFollowing ? 'border border-border text-ink hover:border-danger hover:text-danger' : 'bg-primary text-primary-fg'
       }`}
     >

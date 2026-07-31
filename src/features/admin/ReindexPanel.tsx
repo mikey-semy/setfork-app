@@ -89,14 +89,14 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
     setMsg('error' in res ? res.error : say(`Removed orphaned: ${res.removed}`, `Удалено осиротевших: ${res.removed}`))
   }
 
-  const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[13px] font-semibold disabled:opacity-60'
+  const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[0.8125rem] font-semibold disabled:opacity-60'
 
   return (
     // Та же читаемая ширина, что у карточек-секций /admin (const card на странице):
     // без кэпа панель растягивалась на весь экран и выбивалась из колонны секций.
-    <div className="w-full max-w-[860px] rounded-lg border border-border bg-surface p-4">
+    <div className="w-full max-w-[53.75rem] rounded-lg border border-border bg-surface p-4">
       <div className="mb-1 font-semibold text-ink">{say('Search index (embeddings)', 'Индексация поиска (эмбеддинги)')}</div>
-      <p className="mb-3 text-[13px] text-ink-2">
+      <p className="mb-3 text-[0.8125rem] text-ink-2">
         {say('Rebuild the vector index of lists. Runs in batches, at most once per 30 min.', 'Пересчёт векторного индекса списков. Идёт батчами, не чаще раза в 30 минут.')}
       </p>
 
@@ -105,30 +105,30 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
           <div className="flex flex-wrap items-center gap-3">
             {/* Мерность — крупным бейджем: в чём реально построен индекс */}
             <span className="inline-flex items-baseline gap-1 rounded-md bg-primary px-2.5 py-1.5 font-mono text-primary-fg">
-              <span className="text-[18px] font-bold leading-none">{space.index.dim}</span>
-              <span className="text-[11px] uppercase opacity-80">{say('dim', 'мерн.')}</span>
+              <span className="text-[1.125rem] font-bold leading-none">{space.index.dim}</span>
+              <span className="text-[0.6875rem] uppercase opacity-80">{say('dim', 'мерн.')}</span>
             </span>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-2 text-[13px] font-medium text-ink">
+              <div className="flex flex-wrap items-center gap-x-2 text-[0.8125rem] font-medium text-ink">
                 {say('Index space:', 'Пространство индекса:')}
-                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-semibold">
+                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[0.6875rem] font-semibold">
                   {space.index.provider === 'yandex' ? 'Yandex v2 🇷🇺' : 'OpenRouter'}
                 </span>
-                <span className="truncate font-mono text-[11px] text-ink-2" title={space.index.docModel}>{space.index.docLabel}</span>
+                <span className="truncate font-mono text-[0.6875rem] text-ink-2" title={space.index.docModel}>{space.index.docLabel}</span>
               </div>
-              <div className="mt-0.5 text-[12.5px] text-muted">
+              <div className="mt-0.5 text-[0.78125rem] text-muted">
                 {space.vectorized}/{space.rows} {say('rows vectorized', 'строк с векторами')}
                 {space.index.at ? ` · ${say('reindexed', 'реиндекс')} ${new Date(space.index.at).toLocaleString()}` : ''}
               </div>
             </div>
           </div>
           {!space.inSync && (
-            <div className="mt-2 text-[12.5px] font-medium text-warn">
+            <div className="mt-2 text-[0.78125rem] font-medium text-warn">
               {say(`Target changed: ${space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter'} (${space.target.dim}-dim) — run a reindex to rebuild. Old vectors will be wiped.`, `Цель изменена: ${space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter'} (${space.target.dim}-мерное) — запусти реиндекс, чтобы перестроить индекс. Старые векторы будут стёрты.`)}
             </div>
           )}
           <div className="mt-2.5 flex items-center gap-2">
-            <label className="text-[12.5px] text-ink-2">{say('Target:', 'Цель:')}</label>
+            <label className="text-[0.78125rem] text-ink-2">{say('Target:', 'Цель:')}</label>
             <Select
               value={space.target.provider}
               disabled={switching || running}
@@ -140,7 +140,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
                 setSwitching(false)
               }}
             >
-              <SelectTrigger className="h-auto w-auto min-w-[190px] px-2 py-1 text-[12.5px]">
+              <SelectTrigger className="h-auto w-auto min-w-[11.875rem] px-2 py-1 text-[0.78125rem]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -154,7 +154,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
       )}
 
       <div className="mb-3">
-        <label className="mb-1 block text-[12.5px] text-ink-2">{say('Spread over, min', 'Разнести на, мин')}</label>
+        <label className="mb-1 block text-[0.78125rem] text-ink-2">{say('Spread over, min', 'Разнести на, мин')}</label>
         <input
           type="number"
           min={0}
@@ -162,14 +162,14 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
           value={spread}
           disabled={running}
           onChange={(e) => setSpread(Math.max(0, Math.min(120, Number(e.target.value) || 0)))}
-          className="w-24 rounded-md border border-border bg-surface-2 px-3 py-2 text-[14px] text-ink outline-hidden"
+          className="w-24 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.875rem] text-ink outline-hidden"
         />
       </div>
 
-      {msg && <div className="mb-3 text-[12.5px] text-ink-2">{msg}</div>}
+      {msg && <div className="mb-3 text-[0.78125rem] text-ink-2">{msg}</div>}
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-[12.5px] text-muted">
+        <div className="flex items-center justify-between text-[0.78125rem] text-muted">
           <span>
             {stalled
               ? say('Interrupted — run again', 'Прервано — запустите заново')

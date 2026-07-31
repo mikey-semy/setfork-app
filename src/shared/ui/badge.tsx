@@ -28,7 +28,7 @@ export function Badge({
 }: React.HTMLAttributes<HTMLSpanElement> & { variant?: BadgeVariant }) {
   return (
     <span
-      className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold', VARIANTS[variant], className)}
+      className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold', VARIANTS[variant], className)}
       {...props}
     />
   )

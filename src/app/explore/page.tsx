@@ -71,12 +71,12 @@ export default async function ExplorePage({
     <div className="w-full">
       {/* Единый TabNav (как профиль/список): полоска активной вкладки и «…» для не
           влезших вкладок. Ряд НЕ листается вбок — поведение одно на всех разделах. */}
-      <TabNav maxWidthClass="max-w-[1080px]" scope="explore" overflow={{ moreLabel: t('moreTabs', lang) }}>
+      <TabNav maxWidthClass="max-w-[67.5rem]" scope="explore" overflow={{ moreLabel: t('moreTabs', lang) }}>
         {TABS.map((tb) => (
           <TabItem key={tb.id} href={tabHref(tb.id)} on={tb.id === active} icon={TAB_ICON[tb.id]} label={t(tb.key, lang)} />
         ))}
       </TabNav>
-      <div className="mx-auto w-full max-w-[1080px] px-6 py-6">
+      <div className="mx-auto w-full max-w-[67.5rem] px-6 py-6">
 
       {/* ── Explore: лента + сайдбар виджетов ── */}
       {active === 'explore' && (
@@ -94,15 +94,15 @@ export default async function ExplorePage({
               ))}
             </div>
           </div>
-          <aside className="w-full shrink-0 space-y-6 lg:w-[300px]">
+          <aside className="w-full shrink-0 space-y-6 lg:w-[18.75rem]">
             <Widget title={t('trending', lang)} icon={<Star size={14} className="text-accent" />}>
               {feed.slice(0, 5).map((l) => (
                 <Link key={l.id} href={`/${l.ownerHandle}/${l.slug}`} className="flex items-center justify-between gap-2 py-1.5 hover:text-accent">
-                  <span className="truncate text-[13px] text-ink-2 hover:text-accent">
+                  <span className="truncate text-[0.8125rem] text-ink-2 hover:text-accent">
                     <span className="text-muted">{l.ownerHandle}/</span>
                     {tr(l.title, lang)}
                   </span>
-                  <span className="inline-flex shrink-0 items-center gap-1 text-[12.5px] text-muted">
+                  <span className="inline-flex shrink-0 items-center gap-1 text-[0.78125rem] text-muted">
                     <Star size={12} /> {l.starsCount}
                   </span>
                 </Link>
@@ -113,8 +113,8 @@ export default async function ExplorePage({
                 <Link key={p.handle} href={`/${p.handle}`} className="flex items-center gap-2 py-1.5">
                   <Avatar handle={p.handle} avatarUrl={p.avatarUrl} size={26} />
                   <span className="min-w-0">
-                    <span className="block truncate text-[13px] font-medium text-ink">{p.name ?? p.handle}</span>
-                    <span className="block truncate text-[12.5px] text-muted">@{p.handle}</span>
+                    <span className="block truncate text-[0.8125rem] font-medium text-ink">{p.name ?? p.handle}</span>
+                    <span className="block truncate text-[0.78125rem] text-muted">@{p.handle}</span>
                   </span>
                 </Link>
               ))}
@@ -127,7 +127,7 @@ export default async function ExplorePage({
       {active === 'topics' && (
         <div className="flex flex-wrap gap-2">
           {tags.map((tg) => (
-            <TagChip key={tg.tag} slug={tg.tag} count={tg.count} className="px-3 py-1 text-[13px]" />
+            <TagChip key={tg.tag} slug={tg.tag} count={tg.count} className="px-3 py-1 text-[0.8125rem]" />
           ))}
         </div>
       )}
@@ -136,7 +136,7 @@ export default async function ExplorePage({
       {active === 'trending' && (
         <>
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-md border border-border p-0.5 text-[13px]">
+            <div className="inline-flex rounded-md border border-border p-0.5 text-[0.8125rem]">
               <Link href={`/explore?tab=trending&view=lists&range=${trendRange}`} className={`rounded px-3 py-1 font-medium ${trendView === 'lists' ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}>
                 {t('scopeLists', lang)}
               </Link>
@@ -145,7 +145,7 @@ export default async function ExplorePage({
               </Link>
             </div>
             {trendView === 'lists' && (
-              <div className="inline-flex flex-wrap gap-1 text-[12.5px]">
+              <div className="inline-flex flex-wrap gap-1 text-[0.78125rem]">
                 {RANGES.map((r) => (
                   <Link
                     key={r}
@@ -189,7 +189,7 @@ export default async function ExplorePage({
 function Widget({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-ink">
+      <div className="mb-1.5 flex items-center gap-2 text-[0.8125rem] font-semibold text-ink">
         {icon} {title}
       </div>
       {/* Разделители строк — приглушённые, не ярче границ карточки. */}

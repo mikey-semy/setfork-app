@@ -93,7 +93,7 @@ export default async function SettingsPage() {
           title={lang === 'ru' ? 'Внешний вид' : 'Appearance'}
           hint={lang === 'ru' ? 'Тема, акцентный цвет и шрифт интерфейса.' : 'Theme, accent color and interface font.'}
         >
-          <AppearanceSettings lang={lang} initialAccent={user.uiAccent ?? ''} initialFont={user.uiFont ?? ''} />
+          <AppearanceSettings lang={lang} initialAccent={user.uiAccent ?? ''} initialFont={user.uiFont ?? ''} initialScale={user.uiScale ?? ''} />
         </SettingsSection>
       ),
     },
@@ -198,13 +198,13 @@ export default async function SettingsPage() {
               { k: t('aiUsageCost', lang), v: '$' + usage.costUsd.toFixed(usage.costUsd < 1 ? 4 : 2) },
             ].map((x) => (
               <div key={x.k} className="rounded-md border border-border bg-surface-2 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted">{x.k}</div>
-                <div className="mt-1 text-[16px] font-bold text-ink">{x.v}</div>
+                <div className="text-[0.6875rem] uppercase tracking-wide text-muted">{x.k}</div>
+                <div className="mt-1 text-[1rem] font-bold text-ink">{x.v}</div>
               </div>
             ))}
           </div>
           {/* Квоты (мягкие лимиты; админ — без лимитов). */}
-          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 text-[13px]">
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 text-[0.8125rem]">
             <div className="flex items-center justify-between">
               <span className="text-ink-2">{lang === 'ru' ? 'Списков' : 'Lists'}</span>
               <span className="font-mono text-ink">{lists.unlimited ? '∞' : `${lists.used} / ${lists.limit}`}</span>
@@ -231,7 +231,7 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <div className="mx-auto w-full max-w-[920px] px-6 pt-8">
+      <div className="mx-auto w-full max-w-[57.5rem] px-6 pt-8">
         <PageHeader title={t('settings', lang)} subtitle={t('profileIntro', lang)} />
       </div>
       <SettingsShell sections={sections} lang={lang} />

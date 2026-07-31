@@ -41,7 +41,7 @@ export function DiffViewToggle({
     <Link
       href={href(v)}
       aria-current={v === view ? 'page' : undefined}
-      className={`inline-flex ${CONTROL_H.md} items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-medium ${
+      className={`inline-flex ${CONTROL_H.md} items-center gap-1.5 rounded-md px-2.5 text-[0.78125rem] font-medium ${
         v === view ? 'bg-primary text-primary-fg' : 'text-ink-2 hover:text-ink'
       }`}
     >

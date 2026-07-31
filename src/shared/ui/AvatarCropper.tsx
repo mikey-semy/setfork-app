@@ -146,7 +146,7 @@ export function AvatarCropper({
           <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-white/60" />
         </div>
 
-        <label className="flex items-center gap-2 text-[12.5px] text-muted">
+        <label className="flex items-center gap-2 text-[0.78125rem] text-muted">
           <ZoomIn size={15} className="shrink-0" />
           <input
             type="range"
@@ -160,10 +160,10 @@ export function AvatarCropper({
           />
         </label>
 
-        {err && <p className="text-[12.5px] text-danger">{err}</p>}
+        {err && <p className="text-[0.78125rem] text-danger">{err}</p>}
 
         <div className="flex items-center justify-end gap-2">
-          <button type="button" onClick={onCancel} className="rounded-md px-3 py-2 text-[13px] text-ink-2 hover:text-ink">
+          <button type="button" onClick={onCancel} className="rounded-md px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink">
             {labels.cancel}
           </button>
           <Button variant="primary" size="md" onClick={apply}>

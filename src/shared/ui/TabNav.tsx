@@ -106,7 +106,7 @@ export function TabNav(props: TabNavProps) {
 
 function ScrollTabNav({
   children,
-  maxWidthClass = 'max-w-[1180px]',
+  maxWidthClass = 'max-w-[73.75rem]',
   scope = 'default',
   center = false,
   arrows,
@@ -126,7 +126,7 @@ function ScrollTabNav({
       <ScrollRow
         scrollerRef={ref}
         label={arrows}
-        className={`mx-auto flex w-full gap-1 px-4 text-[14px] ${center ? 'justify-center-safe' : ''} ${maxWidthClass}`}
+        className={`mx-auto flex w-full gap-1 px-4 text-[0.875rem] ${center ? 'justify-center-safe' : ''} ${maxWidthClass}`}
       >
         {children}
         <Underline bar={bar} />
@@ -152,7 +152,7 @@ const moreTabClass =
 
 function OverflowTabNav({
   children,
-  maxWidthClass = 'max-w-[1180px]',
+  maxWidthClass = 'max-w-[73.75rem]',
   scope = 'default',
   center = false,
   moreLabel,
@@ -228,7 +228,7 @@ function OverflowTabNav({
       <div className={`relative mx-auto w-full px-4 ${maxWidthClass}`}>
         <div
           ref={ref}
-          className={`relative flex w-full gap-1 overflow-hidden text-[14px] ${center ? 'justify-center' : ''}`}
+          className={`relative flex w-full gap-1 overflow-hidden text-[0.875rem] ${center ? 'justify-center' : ''}`}
         >
           {items.slice(0, fit)}
           {hiddenItems.length > 0 && <MoreTab items={hiddenItems} label={moreLabel} active={moreActive} />}
@@ -243,7 +243,7 @@ function OverflowTabNav({
           aria-hidden
           className="pointer-events-none invisible absolute inset-x-4 top-0 h-full overflow-hidden"
         >
-          <div ref={ghostRef} className="flex w-max gap-1 text-[14px]">
+          <div ref={ghostRef} className="flex w-max gap-1 text-[0.875rem]">
             {items}
             <span className={moreTabClass}>
               <MoreHorizontal size={18} />
@@ -284,7 +284,7 @@ function MoreTab({
             <Link href={it.props.href}>
               <span className={`flex-1 ${it.props.on ? 'font-semibold text-ink' : ''}`}>{it.props.label}</span>
               {it.props.count != null && it.props.count > 0 && (
-                <span className="rounded-full bg-surface-2 px-1.5 text-[11px] text-ink-2">{it.props.count}</span>
+                <span className="rounded-full bg-surface-2 px-1.5 text-[0.6875rem] text-ink-2">{it.props.count}</span>
               )}
             </Link>
           </DropdownMenuItem>
@@ -318,7 +318,7 @@ export function TabItem({ href, on, icon, label, count }: TabItemProps) {
       {icon != null && <span className={`hidden sm:inline ${on ? 'text-ink' : 'text-muted'}`}>{icon}</span>}
       {label}
       {count != null && count > 0 && (
-        <span className="rounded-full bg-surface-2 px-1.5 text-[11px] text-ink-2">{count}</span>
+        <span className="rounded-full bg-surface-2 px-1.5 text-[0.6875rem] text-ink-2">{count}</span>
       )}
     </Link>
   )

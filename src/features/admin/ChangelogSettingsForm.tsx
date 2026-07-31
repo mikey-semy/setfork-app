@@ -29,8 +29,8 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[13px] font-medium text-ink">{t('changelogShow', lang)}</div>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">
+          <div className="text-[0.8125rem] font-medium text-ink">{t('changelogShow', lang)}</div>
+          <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">
             {t('changelogShowHint', lang)}
           </p>
         </div>
@@ -39,7 +39,7 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
 
       <Field label={t('changelogRepo', lang)}>
         {/* Плейсхолдер — ПРИМЕР значения, а не инструкция. */}
-        <Input name="repo" defaultValue={current.repo} placeholder="mikey-semy/setfork-frontend" className="w-[320px] max-w-full" />
+        <Input name="repo" defaultValue={current.repo} placeholder="mikey-semy/setfork-frontend" className="w-[20rem] max-w-full" />
       </Field>
 
       <Field label={t('changelogToken', lang)} hint={t('changelogTokenHint', lang)}>
@@ -50,26 +50,26 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
           type="password"
           autoComplete="off"
           placeholder={current.hasToken ? '••••••••' : 'github_pat_…'}
-          className="w-[320px] max-w-full font-mono"
+          className="w-[20rem] max-w-full font-mono"
         />
       </Field>
 
       <Field label={t('changelogWhat', lang)}>
         <Select value={source} onValueChange={(v) => setSource(v as ChangelogSource)}>
-          <SelectTrigger className="w-[320px] max-w-full">
+          <SelectTrigger className="w-[20rem] max-w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="merged">
               <span className="flex flex-col">
                 <span>{t('changelogMerged', lang)}</span>
-                <span className="text-[11px] text-muted">{t('changelogMergedHint', lang)}</span>
+                <span className="text-[0.6875rem] text-muted">{t('changelogMergedHint', lang)}</span>
               </span>
             </SelectItem>
             <SelectItem value="releases">
               <span className="flex flex-col">
                 <span>{t('changelogReleases', lang)}</span>
-                <span className="text-[11px] text-muted">{t('changelogReleasesHint', lang)}</span>
+                <span className="text-[0.6875rem] text-muted">{t('changelogReleasesHint', lang)}</span>
               </span>
             </SelectItem>
           </SelectContent>
@@ -77,13 +77,13 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
       </Field>
 
       <Field label={t('changelogEvery', lang)}>
-        <Input name="everyHours" type="number" min={1} max={168} defaultValue={current.everyHours} className="w-[120px]" />
+        <Input name="everyHours" type="number" min={1} max={168} defaultValue={current.everyHours} className="w-[7.5rem]" />
       </Field>
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[13px] font-medium text-ink">{t('changelogTranslate', lang)}</div>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">
+          <div className="text-[0.8125rem] font-medium text-ink">{t('changelogTranslate', lang)}</div>
+          <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">
             {t('changelogTranslateHint', lang)}
           </p>
         </div>

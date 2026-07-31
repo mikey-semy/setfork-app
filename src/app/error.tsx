@@ -26,10 +26,10 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
   }, [error])
 
   return (
-    <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
+    <div className="mx-auto flex w-full max-w-[35rem] flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
       <TriangleAlert size={44} strokeWidth={1.5} className="text-danger" />
-      <h1 className="text-[20px] font-bold text-ink">{t('somethingWrong', lang)}</h1>
-      <p className="text-[14px] text-ink-2">
+      <h1 className="text-[1.25rem] font-bold text-ink">{t('somethingWrong', lang)}</h1>
+      <p className="text-[0.875rem] text-ink-2">
         {t('somethingWrongText', lang)}
         <br />
         {t('somethingWrongHint', lang)}

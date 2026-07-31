@@ -44,7 +44,7 @@ export function ScopeSwitcher({
   if (orientation === 'horizontal') {
     // Мобильный ряд-пилюли (сайдбар скрыт на узких экранах).
     const pill = (on: boolean) =>
-      `inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] ${
+      `inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[0.8125rem] ${
         on ? 'border-border-strong bg-surface font-semibold text-ink' : 'border-border text-ink-2 hover:text-ink'
       }`
     return (
@@ -53,7 +53,7 @@ export function ScopeSwitcher({
           <Link key={it.scope} href={href(it.scope)} className={pill(active === it.scope)}>
             <it.icon size={13} className="shrink-0 text-muted" />
             {it.label}
-            <span className="font-mono text-[11px] text-muted">{it.count}</span>
+            <span className="font-mono text-[0.6875rem] text-muted">{it.count}</span>
           </Link>
         ))}
       </div>
@@ -61,7 +61,7 @@ export function ScopeSwitcher({
   }
 
   const row = (on: boolean) =>
-    `flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] ${
+    `flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.8125rem] ${
       on ? 'bg-surface font-semibold text-ink' : 'text-ink-2 hover:bg-surface hover:text-ink'
     }`
 
@@ -71,7 +71,7 @@ export function ScopeSwitcher({
         <Link key={it.scope} href={href(it.scope)} className={row(active === it.scope)}>
           <it.icon size={14} className="shrink-0 text-muted" />
           {it.label}
-          <span className="ml-auto rounded-full bg-surface px-1.5 font-mono text-[11px] text-muted">{it.count}</span>
+          <span className="ml-auto rounded-full bg-surface px-1.5 font-mono text-[0.6875rem] text-muted">{it.count}</span>
         </Link>
       ))}
     </div>

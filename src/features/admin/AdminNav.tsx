@@ -102,7 +102,7 @@ export function AdminNav({
     .filter((g) => g.items.length > 0)
 
   return (
-    <aside className="shrink-0 md:sticky md:top-[73px] md:h-[calc(100vh-89px)] md:w-[232px] md:overflow-y-auto md:pb-6">
+    <aside className="shrink-0 md:sticky md:top-[4.5625rem] md:h-[calc(100vh-89px)] md:w-[14.5rem] md:overflow-y-auto md:pb-6">
       <SideNav
         mobileLabel={t('adminNavLabel', lang)}
         search={{ value: q, onChange: onQ, placeholder: t('settingsSearchPh', lang), clearLabel: t('clear', lang) }}

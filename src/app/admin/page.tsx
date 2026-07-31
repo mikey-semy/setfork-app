@@ -168,18 +168,18 @@ export default async function AdminPage() {
           title={
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-ok" />
-              {T.online} <span className="font-mono text-[12.5px] text-muted">{online.length}</span>
+              {T.online} <span className="font-mono text-[0.78125rem] text-muted">{online.length}</span>
             </span>
           }
         >
           {online.length === 0 ? (
-            <p className="text-[13px] text-muted">{ru ? 'Никого онлайн.' : 'No one online.'}</p>
+            <p className="text-[0.8125rem] text-muted">{ru ? 'Никого онлайн.' : 'No one online.'}</p>
           ) : (
             <div className="flex flex-wrap gap-3">
               {online.map((u) => (
                 <Link key={u.userId} href={`/${u.handle}`} className="flex items-center gap-2 rounded-full border border-border bg-surface-2 py-1 pl-1 pr-3 hover:border-border-strong">
                   <Avatar handle={u.handle} avatarUrl={u.avatarUrl} size={24} />
-                  <span className="text-[13px] text-ink">{u.handle}</span>
+                  <span className="text-[0.8125rem] text-ink">{u.handle}</span>
                 </Link>
               ))}
             </div>
@@ -200,7 +200,7 @@ export default async function AdminPage() {
                в узкой колонке настроек они не помещались. Здесь только вход. */
             <Link
               href="/admin/council"
-              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[13px] text-ink-2 hover:text-ink"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink"
             >
               <Bot size={14} /> {say('Council hall — experts, instructions, avatars', 'Зал совета — эксперты, инструкции, аватарки')}
             </Link>

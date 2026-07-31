@@ -20,7 +20,7 @@ import { startGeneration } from './actions'
  */
 
 // eslint-disable-next-line no-restricted-syntax -- герой-ввод главной: 15px — прямая пара к SearchField lg, сознательно вне лестницы ролей
-const HERO_INPUT = 'max-h-40 min-h-[44px] w-full resize-none bg-transparent px-1.5 py-2 text-[15px] leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70 max-sm:text-[16px]'
+const HERO_INPUT = 'max-h-40 min-h-[2.75rem] w-full resize-none bg-transparent px-1.5 py-2 text-[0.9375rem] leading-relaxed text-ink outline-hidden placeholder:text-muted disabled:opacity-70 max-sm:text-[1rem]'
 
 export function GenerateForm({
   lang,
@@ -105,7 +105,7 @@ export function GenerateForm({
       {/* Уведомления (нет ключа / ошибки) и лоадер — absolute сверху: не влияют на центровку поля. */}
       {notice && !launching && (
         <div className="pointer-events-none absolute inset-x-4 top-4 z-10 sm:inset-x-6">
-          <div className={cn('mx-auto max-w-[600px] rounded-md border bg-surface px-3 py-2.5 text-[13px]', noticeTone[notice.tone])}>
+          <div className={cn('mx-auto max-w-[37.5rem] rounded-md border bg-surface px-3 py-2.5 text-[0.8125rem]', noticeTone[notice.tone])}>
             {notice.text}
           </div>
         </div>
@@ -113,9 +113,9 @@ export function GenerateForm({
       {launching && (
         <div className="animate-fadein absolute inset-x-4 top-4 z-10 sm:inset-x-6">
           {/* Спокойный статус вместо мем-заставки: показываем сам запрос и что идёт работа. */}
-          <div className="mx-auto flex max-w-[600px] items-center gap-2.5 rounded-lg border border-border bg-surface px-4 py-3">
+          <div className="mx-auto flex max-w-[37.5rem] items-center gap-2.5 rounded-lg border border-border bg-surface px-4 py-3">
             <Loader2 size={15} className="shrink-0 animate-spin text-accent" />
-            <span className="min-w-0 truncate text-[13px] text-ink-2">
+            <span className="min-w-0 truncate text-[0.8125rem] text-ink-2">
               {say('Building your list', 'Собираем список')}: <span className="text-ink">{q.trim()}</span>
             </span>
           </div>
@@ -123,13 +123,13 @@ export function GenerateForm({
       )}
 
       {/* Поле — перелетающий элемент (boxRef). По центру в покое, внизу после старта. */}
-      <div ref={boxRef} className="mx-auto w-full max-w-[600px] will-change-transform">
+      <div ref={boxRef} className="mx-auto w-full max-w-[37.5rem] will-change-transform">
         <form
           onSubmit={(e) => {
             e.preventDefault()
             launch(q)
           }}
-          className="flex items-end gap-2 rounded-[18px] border border-border bg-surface px-3 py-2.5 shadow-[0_18px_50px_-24px_rgba(0,0,0,.34)] transition-colors focus-within:border-border-strong"
+          className="flex items-end gap-2 rounded-[1.125rem] border border-border bg-surface px-3 py-2.5 shadow-[0_18px_50px_-24px_rgba(0,0,0,.34)] transition-colors focus-within:border-border-strong"
         >
           <textarea
             name="q"
@@ -151,7 +151,7 @@ export function GenerateForm({
             type="submit"
             disabled={!q.trim() || !aiOn || launching}
             aria-label={t('generateWithAi', lang)}
-            className="grid size-[40px] shrink-0 place-items-center rounded-full bg-primary text-primary-fg transition-opacity disabled:opacity-40"
+            className="grid size-[2.5rem] shrink-0 place-items-center rounded-full bg-primary text-primary-fg transition-opacity disabled:opacity-40"
           >
             {launching ? <Loader2 size={17} className="animate-spin" /> : <ArrowUp size={18} />}
           </button>
@@ -160,12 +160,12 @@ export function GenerateForm({
         {/* Тип списка — ДО генерации: «Авто» угадывает по запросу, явный выбор экономит
             целую генерацию при промахе. На узком экране пилюли переносятся, не прячутся. */}
         {!launching && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[12.5px]">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[0.78125rem]">
             <button
               type="button"
               onClick={() => setKind('')}
               className={cn(
-                'rounded-full border px-2.5 py-[3px] transition-colors',
+                'rounded-full border px-2.5 py-[0.1875rem] transition-colors',
                 kind === '' ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
               )}
             >
@@ -177,7 +177,7 @@ export function GenerateForm({
                 type="button"
                 onClick={() => setKind(k)}
                 className={cn(
-                  'rounded-full border px-2.5 py-[3px] transition-colors',
+                  'rounded-full border px-2.5 py-[0.1875rem] transition-colors',
                   kind === k ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
                 )}
               >
@@ -190,14 +190,14 @@ export function GenerateForm({
         {/* Объём списка. Уровень уезжает в колонку generations.detail, поэтому переживает
             «ещё вариант» — и его же можно переключить потом прямо в чате. */}
         {!launching && (
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[12.5px]">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-[0.78125rem]">
             {DETAIL_LEVELS.map((lv) => (
               <button
                 key={lv}
                 type="button"
                 onClick={() => setDetail(lv)}
                 className={cn(
-                  'rounded-full border px-2.5 py-[3px] transition-colors',
+                  'rounded-full border px-2.5 py-[0.1875rem] transition-colors',
                   detail === lv ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
                 )}
               >
@@ -210,7 +210,7 @@ export function GenerateForm({
         {/* Прошлые черновики: за историей логичнее всего идти отсюда же. */}
         {!launching && (
           <div className="mt-3 text-center">
-            <Link href="/generate/history" className="text-[12.5px] text-muted hover:text-ink">
+            <Link href="/generate/history" className="text-[0.78125rem] text-muted hover:text-ink">
               {say('Draft history', 'История генераций')}
             </Link>
           </div>
@@ -226,7 +226,7 @@ export function GenerateForm({
                 type="button"
                 onClick={() => launch(s)}
                 disabled={!aiOn}
-                className="rounded-full border border-border bg-surface-2 px-3.5 py-[7px] text-[13px] text-ink-2 transition-colors hover:text-ink disabled:opacity-50"
+                className="rounded-full border border-border bg-surface-2 px-3.5 py-[0.4375rem] text-[0.8125rem] text-ink-2 transition-colors hover:text-ink disabled:opacity-50"
               >
                 {s}
               </button>

@@ -21,8 +21,8 @@ export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[];
   return (
     <div className="mb-5 rounded-lg border border-border bg-surface p-3.5">
       <div className="mb-2 flex items-baseline gap-2">
-        <span className="text-[12.5px] font-semibold uppercase tracking-wide text-muted">{say('List health', 'Здоровье списков')}</span>
-        <span className="text-[11px] text-muted">
+        <span className="text-[0.78125rem] font-semibold uppercase tracking-wide text-muted">{say('List health', 'Здоровье списков')}</span>
+        <span className="text-[0.6875rem] text-muted">
           {attention.length === 0
             ? say('all calm', 'всё спокойно')
             : say(`${attention.length} need a look`, `требуют взгляда: ${attention.length}`)}
@@ -41,12 +41,12 @@ export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[];
           const base = `/${ownerHandle}/${it.slug}`
           const href = it.status === 'red' ? (it.openSuggestions ? `${base}/suggestions` : `${base}/issues`) : base
           return (
-            <li key={it.id} className="flex items-baseline gap-2 text-[13px]">
+            <li key={it.id} className="flex items-baseline gap-2 text-[0.8125rem]">
               <span className={`mt-0.5 size-2 shrink-0 self-center rounded-full ${DOT[it.status]}`} aria-hidden />
               <Link href={href} className="min-w-0 flex-1 truncate font-medium text-ink hover:text-accent">
                 {title}
               </Link>
-              {notes.length > 0 && <span className="shrink-0 text-[11px] text-muted">{notes.join(' · ')}</span>}
+              {notes.length > 0 && <span className="shrink-0 text-[0.6875rem] text-muted">{notes.join(' · ')}</span>}
             </li>
           )
         })}

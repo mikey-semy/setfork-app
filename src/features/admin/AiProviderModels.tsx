@@ -111,7 +111,7 @@ export function AiProviderModels({
       />
 
       {pending && (
-        <p className="flex items-center gap-1.5 text-[12.5px] text-muted">
+        <p className="flex items-center gap-1.5 text-[0.78125rem] text-muted">
           <Loader2 size={13} className="animate-spin" /> {labels.loading}
         </p>
       )}
@@ -179,7 +179,7 @@ export function AiProviderModels({
         />
       </Field>
 
-      <p className="text-[12.5px] text-muted">
+      <p className="text-[0.78125rem] text-muted">
         {pricesKnown
           ? say(
               `Prices are per 1M tokens (prompt/completion), in ${sign}. Green = cheap, yellow = mid, red = expensive.`,
@@ -194,7 +194,7 @@ export function AiProviderModels({
       {/* Порог живёт у провайдера, поэтому и подпись, и валюта — от ВЫБРАННОГО, а не сохранённого. */}
       {(prov === 'openrouter' || prov === 'yandex') && (
         <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
-          <div className="text-[13px] font-medium text-ink">
+          <div className="text-[0.8125rem] font-medium text-ink">
             {prov === 'openrouter' ? say('OpenRouter cost control', 'Контроль расходов OpenRouter') : say('Yandex cost control', 'Контроль расходов Яндекса')}
           </div>
           {prov === 'openrouter' && <CreditsWidget ru={ru} />}

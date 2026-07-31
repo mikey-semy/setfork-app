@@ -31,7 +31,7 @@ export function DataTable({
       className={cn('overflow-x-auto rounded-lg border border-border bg-surface', className)}
       style={{ '--dt-cols': template, '--dt-minw': `${minWidth}px` } as CSSProperties}
     >
-      <div className="grid gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted [grid-template-columns:var(--dt-cols)] [min-width:var(--dt-minw)]">
+      <div className="grid gap-4 border-b border-border px-4 py-2.5 text-[0.6875rem] uppercase tracking-wide text-muted [grid-template-columns:var(--dt-cols)] [min-width:var(--dt-minw)]">
         {header}
       </div>
       {children}

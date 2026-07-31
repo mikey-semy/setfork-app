@@ -41,7 +41,7 @@ export function DiffStat({
   const rest = Math.max(0, SQUARES - greens - reds - yellows)
 
   return (
-    <span className={cn('inline-flex items-center gap-2 font-mono text-[12.5px]', className)}>
+    <span className={cn('inline-flex items-center gap-2 font-mono text-[0.78125rem]', className)}>
       {added > 0 && <span className="text-ok">+{added}</span>}
       {removed > 0 && <span className="text-danger">−{removed}</span>}
       {changed > 0 && <span className="text-warn">~{changed}</span>}
@@ -50,16 +50,16 @@ export function DiffStat({
         // aria-hidden: числа рядом уже сказали всё, полоска — только визуальная опора.
         <span aria-hidden className="inline-flex items-center gap-[2px]">
           {Array.from({ length: greens }, (_, i) => (
-            <span key={`a${i}`} className="size-[8px] rounded-[1px] bg-ok" />
+            <span key={`a${i}`} className="size-[0.5rem] rounded-[1px] bg-ok" />
           ))}
           {Array.from({ length: reds }, (_, i) => (
-            <span key={`r${i}`} className="size-[8px] rounded-[1px] bg-danger" />
+            <span key={`r${i}`} className="size-[0.5rem] rounded-[1px] bg-danger" />
           ))}
           {Array.from({ length: yellows }, (_, i) => (
-            <span key={`c${i}`} className="size-[8px] rounded-[1px] bg-warn" />
+            <span key={`c${i}`} className="size-[0.5rem] rounded-[1px] bg-warn" />
           ))}
           {Array.from({ length: rest }, (_, i) => (
-            <span key={`e${i}`} className="size-[8px] rounded-[1px] bg-border" />
+            <span key={`e${i}`} className="size-[0.5rem] rounded-[1px] bg-border" />
           ))}
         </span>
       )}

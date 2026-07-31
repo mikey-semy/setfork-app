@@ -37,33 +37,33 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
           материал из неё никому не достанется. */}
       <form action={addFeedSource} className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3.5 sm:flex-row sm:items-end">
         <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-muted">{say('Feed address', 'Адрес потока')}</span>
+          <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{say('Feed address', 'Адрес потока')}</span>
           <input
             name="url"
             required
             inputMode="url"
             placeholder="https://example.com/feed.xml"
-            className="h-[38px] w-full rounded-md border border-border bg-surface-2 px-2.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
+            className="h-[2.375rem] w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
-        <label className="flex min-w-0 flex-col gap-1 sm:w-[200px]">
-          <span className="text-[11px] uppercase tracking-wide text-muted">{say('Topic', 'Тема')}</span>
+        <label className="flex min-w-0 flex-col gap-1 sm:w-[12.5rem]">
+          <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{say('Topic', 'Тема')}</span>
           <input
             name="tags"
             required
             placeholder="devops, ci"
-            className="h-[38px] w-full rounded-md border border-border bg-surface-2 px-2.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
+            className="h-[2.375rem] w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
-        <label className="flex flex-col gap-1 sm:w-[96px]">
-          <span className="text-[11px] uppercase tracking-wide text-muted">{say('Hours', 'Часы')}</span>
+        <label className="flex flex-col gap-1 sm:w-[6rem]">
+          <span className="text-[0.6875rem] uppercase tracking-wide text-muted">{say('Hours', 'Часы')}</span>
           <input
             name="everyHours"
             type="number"
             min={1}
             max={168}
             defaultValue={6}
-            className="h-[38px] w-full rounded-md border border-border bg-surface-2 px-2.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
+            className="h-[2.375rem] w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
         <Button type="submit" variant="primary" size="md" className="shrink-0">
@@ -95,23 +95,23 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
                 <Rss size={13} className={`shrink-0 ${r.lastError ? 'text-warn' : 'text-accent'}`} />
-                <a href={r.url} target="_blank" rel="noopener noreferrer nofollow" className="min-w-0 truncate text-[13px] text-ink hover:text-accent" title={r.url}>
+                <a href={r.url} target="_blank" rel="noopener noreferrer nofollow" className="min-w-0 truncate text-[0.8125rem] text-ink hover:text-accent" title={r.url}>
                   {r.title || r.url.replace(/^https?:\/\//, '')}
                 </a>
               </div>
-              {r.lastError && <div className="mt-0.5 truncate text-[11px] text-warn" title={r.lastError}>{r.lastError}</div>}
+              {r.lastError && <div className="mt-0.5 truncate text-[0.6875rem] text-warn" title={r.lastError}>{r.lastError}</div>}
             </div>
             <div className="flex min-w-0 flex-wrap gap-1">
               {r.tags.map((t) => (
                 <TagChip key={t} slug={t} />
               ))}
             </div>
-            <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{r.everyHours} {say('h', 'ч')}</span>
-            <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">
+            <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">{r.everyHours} {say('h', 'ч')}</span>
+            <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">
               {r.items} / <span className={r.fresh ? 'text-ok' : ''}>{r.fresh}</span>
             </span>
             <div className="flex items-center justify-end gap-0.5">
-              <span className="mr-1 hidden text-[11px] text-muted sm:inline">{r.lastPulledAt ? timeAgo(r.lastPulledAt, lang) : '—'}</span>
+              <span className="mr-1 hidden text-[0.6875rem] text-muted sm:inline">{r.lastPulledAt ? timeAgo(r.lastPulledAt, lang) : '—'}</span>
               {/* Служебные действия — иконками в правом углу строки: на мобиле три подписи не
                   влезут, а иконка с подсказкой понятна и в 360px. */}
               <form action={pullFeedNow}>

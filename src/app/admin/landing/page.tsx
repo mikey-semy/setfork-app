@@ -18,7 +18,7 @@ export default async function AdminLandingPage() {
   const heroPreview = content.heroImage ? ((await imageUrl(content.heroImage, 'rs:fit:640:0')) ?? undefined) : undefined
 
   return (
-    <div className="mx-auto w-full max-w-[860px] px-6 py-8">
+    <div className="mx-auto w-full max-w-[53.75rem] px-6 py-8">
       <PageHeader
         icon={<Megaphone size={18} />}
         title={say('Landing', 'Лендинг')}

@@ -22,8 +22,8 @@ export default async function CatalogPage({ params }: { params: Promise<{ handle
   const lists = await getListsInCatalog(cat.id, viewer?.userId)
 
   return (
-    <div className="mx-auto w-full max-w-[1000px] px-6 py-8">
-      <div className="mb-1 text-[13px] text-ink-2">
+    <div className="mx-auto w-full max-w-[62.5rem] px-6 py-8">
+      <div className="mb-1 text-[0.8125rem] text-ink-2">
         <Link href={`/${handle}`} className="hover:text-accent">
           {handle}
         </Link>{' '}

@@ -42,10 +42,10 @@ export default async function EditPage({
   const action = saveNewVersion.bind(null, tpl.id)
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-6 py-8">
+    <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
       <Link
         href={`/${owner}/${slug}`}
-        className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink"
+        className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink"
       >
         <ArrowLeft size={15} /> {tpl.owner.handle} / {tr(tpl.title, lang) || tpl.slug}
       </Link>
@@ -76,12 +76,12 @@ export default async function EditPage({
         <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
           <input type="checkbox" name="gated" defaultChecked={tpl.gated} className="mt-0.5" />
           <span>
-            <span className="block text-[13px] font-medium text-ink">{lang === 'ru' ? 'Последовательный курс' : 'Sequential course'}</span>
-            <span className="block text-[12.5px] text-ink-2">{lang === 'ru' ? 'Следующий урок откроется только после сдачи тестов предыдущего' : 'The next lesson unlocks only after passing the previous lesson’s tests'}</span>
+            <span className="block text-[0.8125rem] font-medium text-ink">{lang === 'ru' ? 'Последовательный курс' : 'Sequential course'}</span>
+            <span className="block text-[0.78125rem] text-ink-2">{lang === 'ru' ? 'Следующий урок откроется только после сдачи тестов предыдущего' : 'The next lesson unlocks only after passing the previous lesson’s tests'}</span>
           </span>
         </label>
 
-        <label className="mb-2 block text-[12.5px] font-semibold text-ink-2">{lang === 'ru' ? 'Пункты' : 'Items'}</label>
+        <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{lang === 'ru' ? 'Пункты' : 'Items'}</label>
         <ListEditor
           name="items"
           initialItems={initial}
@@ -90,7 +90,7 @@ export default async function EditPage({
           aiRefine={{ title: tr(tpl.title, lang), desc: tr(tpl.desc, lang), tags: tpl.tags }}
         />
 
-        <button type="submit" className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
+        <button type="submit" className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[0.875rem] font-semibold text-primary-fg">
           {t('saveVersion', lang)}
         </button>
       </form>

@@ -120,18 +120,18 @@ export function ListSettingsDanger({
         }
       >
         <form action={trAction} className="flex flex-col gap-4 p-4">
-          <p className="text-[13px] leading-relaxed text-ink-2">{t('transferWarn', lang)}</p>
-          <label className="flex flex-col gap-1.5 text-[12.5px] font-semibold text-ink-2">
+          <p className="text-[0.8125rem] leading-relaxed text-ink-2">{t('transferWarn', lang)}</p>
+          <label className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
             {t('transferRecipientField', lang)}
             <div className="mt-0.5 flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 focus-within:border-danger">
               <span className="text-muted">@</span>
-              <input name="toHandle" autoComplete="off" spellCheck={false} className="w-full bg-transparent py-2 font-mono text-[13px] text-ink outline-hidden" />
+              <input name="toHandle" autoComplete="off" spellCheck={false} className="w-full bg-transparent py-2 font-mono text-[0.8125rem] text-ink outline-hidden" />
             </div>
           </label>
-          {trState?.error && <div className="text-[13px] text-danger">{trState.error}</div>}
-          {trState?.ok && <div className="text-[13px] text-ok">✓</div>}
+          {trState?.error && <div className="text-[0.8125rem] text-danger">{trState.error}</div>}
+          {trState?.ok && <div className="text-[0.8125rem] text-ok">✓</div>}
           <div className="flex items-center justify-end gap-2">
-            <button type="button" onClick={() => setDialog(null)} className="rounded-md px-3 py-2 text-[13px] text-ink-2 hover:text-ink">
+            <button type="button" onClick={() => setDialog(null)} className="rounded-md px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink">
               {t('cancel', lang)}
             </button>
             <Button type="submit" variant="dangerSolid" size="md" disabled={trPending}>

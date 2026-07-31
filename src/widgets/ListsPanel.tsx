@@ -116,9 +116,9 @@ export function ListsPanel({
 
   const header =
     headerStyle === 'mono' ? (
-      <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">{title}</span>
+      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.07em] text-muted">{title}</span>
     ) : (
-      <span className="text-[12.5px] font-semibold text-muted">{title}</span>
+      <span className="text-[0.78125rem] font-semibold text-muted">{title}</span>
     )
 
   return (
@@ -140,7 +140,7 @@ export function ListsPanel({
           header
         )}
         {showNew && (
-          <Link href="/new" className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-accent hover:underline">
+          <Link href="/new" className="inline-flex shrink-0 items-center gap-1 text-[0.78125rem] font-semibold text-accent hover:underline">
             <Plus size={13} /> {ru ? 'Создать' : 'New'}
           </Link>
         )}
@@ -155,10 +155,10 @@ export function ListsPanel({
           )}
           {items.length === 0 ? (
             emptyText ? (
-              <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-[12.5px] text-muted">{emptyText}</div>
+              <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-[0.78125rem] text-muted">{emptyText}</div>
             ) : null
           ) : shown.length === 0 ? (
-            <div className="px-2 py-3 text-[12.5px] text-muted">
+            <div className="px-2 py-3 text-[0.78125rem] text-muted">
               {t(searching ? 'searchingLists' : 'nothingFound', lang)}
             </div>
           ) : (
@@ -171,7 +171,7 @@ export function ListsPanel({
                   href={`/${l.handle}/${l.slug}`}
                   onClick={onNavigate}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] hover:bg-surface-2 hover:text-ink ${
+                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.8125rem] hover:bg-surface-2 hover:text-ink ${
                     active ? 'bg-surface-2 text-ink' : 'text-ink-2'
                   }`}
                 >
@@ -189,10 +189,10 @@ export function ListsPanel({
                       поэтому он уходит в хвост, сжимается первым и на узкой колонке
                       скрывается совсем. */}
                   <span className="min-w-0 flex-1 truncate font-semibold text-ink">{tr(l.title, lang)}</span>
-                  {showOwner && <span className="hidden min-w-0 shrink truncate text-[11px] font-normal text-muted sm:inline">{l.handle}</span>}
+                  {showOwner && <span className="hidden min-w-0 shrink truncate text-[0.6875rem] font-normal text-muted sm:inline">{l.handle}</span>}
                   {active && <Check size={14} className="ml-auto shrink-0 text-accent" />}
                   {showVersion && l.version !== undefined && (
-                    <span className="ml-auto shrink-0 font-mono text-[11px] text-muted">v{l.version}</span>
+                    <span className="ml-auto shrink-0 font-mono text-[0.6875rem] text-muted">v{l.version}</span>
                   )}
                 </Link>
                 )

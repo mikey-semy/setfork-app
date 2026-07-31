@@ -52,12 +52,12 @@ export function ReleaseNotesGen({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[12.5px] font-semibold text-ink">{labels.notes}</span>
+        <span className="text-[0.78125rem] font-semibold text-ink">{labels.notes}</span>
         <button
           type="button"
           onClick={generate}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[12.5px] font-medium text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[0.78125rem] font-medium text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50"
         >
           {busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} className="text-accent" />}
           {labels.generate}
@@ -73,7 +73,7 @@ export function ReleaseNotesGen({
         lang={lang}
         refScope={{ owner, slug }}
       />
-      {hint && <p className="text-[12.5px] text-muted">{hint}</p>}
+      {hint && <p className="text-[0.78125rem] text-muted">{hint}</p>}
     </div>
   )
 }

@@ -41,7 +41,7 @@ function naText(reason: NaReason, lang: Lang): string {
   return tr({ en: 'no source: domains are not a taxonomy yet', ru: 'нет источника: домены пока не таксономия' }, lang)
 }
 
-const h2 = 'text-[13px] font-semibold uppercase tracking-wide text-ink-2'
+const h2 = 'text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2'
 
 // Столбцы лент фиксированной ширины (шаблоны — в DataTable): `auto` подгоняется под
 // содержимое КАЖДОЙ строки, и шапка со строками разъезжаются «волной» (за это уже
@@ -77,7 +77,7 @@ export default async function AdminDevelopmentPage() {
           lang,
         )}
         actions={
-          <Link href="/admin/dashboard" className="-mr-2 inline-flex items-center px-2 py-2.5 text-[13px] text-accent hover:underline">
+          <Link href="/admin/dashboard" className="-mr-2 inline-flex items-center px-2 py-2.5 text-[0.8125rem] text-accent hover:underline">
             {tr({ en: 'Live monitoring →', ru: 'Живой мониторинг →' }, lang)}
           </Link>
         }
@@ -93,7 +93,7 @@ export default async function AdminDevelopmentPage() {
             {Object.entries(stalls)
               .filter(([, r]) => r.stalled)
               .map(([loop, r]) => (
-                <li key={loop} className="min-w-0 text-[12.5px] text-ink-2">
+                <li key={loop} className="min-w-0 text-[0.78125rem] text-ink-2">
                   <span className="font-mono text-ink-2">{loop}</span>{' '}
                   <span className="text-muted">
                     {tr(
@@ -129,7 +129,7 @@ export default async function AdminDevelopmentPage() {
         </div>
 
         {today.dryRun > 0 && (
-          <p className="text-[12.5px] text-muted">
+          <p className="text-[0.78125rem] text-muted">
             {tr(
               { en: `${today.dryRun} decisions made in dry run — logged, not acted on.`, ru: `${today.dryRun} решений принято в сухом прогоне — записаны, но не выполнены.` },
               lang,
@@ -140,12 +140,12 @@ export default async function AdminDevelopmentPage() {
         {/* ПОЧЕМУ не прошло планку — «не прошло» без причины это та же vanity-метрика. */}
         {today.holdReasons.length > 0 && (
           <div className="rounded-lg border border-border bg-surface p-3">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
               {tr({ en: 'Why lists did not pass the bar', ru: 'Почему списки не прошли планку' }, lang)}
             </div>
             <ul className="flex flex-col gap-1.5">
               {today.holdReasons.map((r) => (
-                <li key={r.reason} className="flex min-w-0 items-start justify-between gap-3 text-[12.5px] text-ink-2">
+                <li key={r.reason} className="flex min-w-0 items-start justify-between gap-3 text-[0.78125rem] text-ink-2">
                   <span className="min-w-0 [overflow-wrap:anywhere]">{r.reason}</span>
                   <span className="shrink-0 font-mono text-muted">×{r.times}</span>
                 </li>
@@ -156,12 +156,12 @@ export default async function AdminDevelopmentPage() {
 
         {/* Лента событий дня. Пусто — так и пишем: «сегодня компания ничего не делала». */}
         {today.events.length === 0 ? (
-          <p className="text-[12.5px] text-muted">
+          <p className="text-[0.78125rem] text-muted">
             {tr({ en: 'Nothing today — the loops are off, paused or had no work.', ru: 'Сегодня ничего — петли выключены, на паузе или работы не было.' }, lang)}
           </p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full min-w-[420px] text-[12.5px]">
+            <table className="w-full min-w-[26.25rem] text-[0.78125rem]">
               <tbody>
                 {today.events.map((e, i) => (
                   <tr key={i} className="border-b border-border last:border-0">
@@ -183,7 +183,7 @@ export default async function AdminDevelopmentPage() {
           уволим. Две оси обязательны (одна обманывает), доверие в домен не переносится. */}
       <section className="flex min-w-0 flex-col gap-3">
         <h2 className={h2}>{tr({ en: 'Scorecard by craft (shadow)', ru: 'Скоркарт по ремеслу (теневой)' }, lang)}</h2>
-        <p className="text-[12.5px] text-muted">
+        <p className="text-[0.78125rem] text-muted">
           {tr(
             {
               en: 'Two axes are required: acceptance and facet delivery. A craft with no direct attempts gets no score at all — not a zero, not an average. Nothing here triggers hiring or firing.',
@@ -193,10 +193,10 @@ export default async function AdminDevelopmentPage() {
           )}
         </p>
         {cards.length === 0 ? (
-          <p className="text-[12.5px] text-muted">{tr({ en: 'No data yet.', ru: 'Данных пока нет.' }, lang)}</p>
+          <p className="text-[0.78125rem] text-muted">{tr({ en: 'No data yet.', ru: 'Данных пока нет.' }, lang)}</p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-            <table className="w-full min-w-[520px] text-[12.5px]">
+            <table className="w-full min-w-[32.5rem] text-[0.78125rem]">
               <thead>
                 <tr className="border-b border-border text-left text-muted">
                   <th className="px-3 py-2 font-medium">{tr({ en: 'Specialist', ru: 'Специалист' }, lang)}</th>
@@ -274,7 +274,7 @@ export default async function AdminDevelopmentPage() {
           <StatTile label={tr({ en: 'Margin', ru: 'Маржа' }, lang)} na={naText(UNAVAILABLE.margin, lang)} />
         </div>
         {m.money.runwayGens != null && (
-          <p className="text-[12.5px] text-muted">
+          <p className="text-[0.78125rem] text-muted">
             {tr(
               { en: `Balance affords ≈${num(m.money.runwayGens)} more generations at the 30-day average.`, ru: `Остатка хватит ≈на ${num(m.money.runwayGens)} генераций по средней за 30 дней.` },
               lang,
@@ -306,7 +306,7 @@ export default async function AdminDevelopmentPage() {
             )}
           />
         </div>
-        <p className="text-[12.5px] text-muted">
+        <p className="text-[0.78125rem] text-muted">
           {tr(
             {
               en: 'The council costs several model calls per list; single generation costs one. If its acceptance is not higher, the extra cost buys nothing — that is a measurement, not an opinion.',
@@ -323,7 +323,7 @@ export default async function AdminDevelopmentPage() {
       <section id="agenda" className="flex min-w-0 flex-col gap-3">
         <h2 className={h2}>{tr({ en: 'Development agenda', ru: 'Повестка развития' }, lang)}</h2>
         {agenda.length === 0 ? (
-          <p className="text-[12.5px] text-muted">
+          <p className="text-[0.78125rem] text-muted">
             {tr(
               { en: 'Nothing proposed yet — the partners loop runs weekly.', ru: 'Пока нечего предложить — петля партнёров работает раз в неделю.' },
               lang,
@@ -344,12 +344,12 @@ export default async function AdminDevelopmentPage() {
           >
             {agenda.map((a) => (
               <DataTableRow key={a.id}>
-                <span className="min-w-0 truncate text-[13px] text-ink">{agendaLabel(a.kind as AgendaKind, a.domain, lang === 'ru')}</span>
+                <span className="min-w-0 truncate text-[0.8125rem] text-ink">{agendaLabel(a.kind as AgendaKind, a.domain, lang === 'ru')}</span>
                 {/* Числа как есть: «списков 1 при пороге 5» проверяемо, «усилить направление» — нет. */}
-                <span className="min-w-0 truncate font-mono text-[11px] text-ink-2">
+                <span className="min-w-0 truncate font-mono text-[0.6875rem] text-ink-2">
                   {Object.entries(a.why).map(([k, v]) => `${k}=${v}`).join(' · ')}
                 </span>
-                <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{a.score.toFixed(2)}</span>
+                <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">{a.score.toFixed(2)}</span>
                 <div className="flex items-center justify-end gap-0.5">
                   {a.status === 'proposed' ? (
                     <>
@@ -369,7 +369,7 @@ export default async function AdminDevelopmentPage() {
                       </form>
                     </>
                   ) : (
-                    <span className={`text-[12.5px] ${a.status === 'approved' ? 'text-ok' : 'text-muted'}`} title={a.ownerExpertId ?? ''}>
+                    <span className={`text-[0.78125rem] ${a.status === 'approved' ? 'text-ok' : 'text-muted'}`} title={a.ownerExpertId ?? ''}>
                       {a.status === 'approved' ? tr({ en: 'approved', ru: 'одобрено' }, lang) : tr({ en: 'dismissed', ru: 'отклонено' }, lang)}
                     </span>
                   )}
@@ -378,7 +378,7 @@ export default async function AdminDevelopmentPage() {
             ))}
           </DataTable>
         )}
-        <p className="text-[12.5px] text-muted">
+        <p className="text-[0.78125rem] text-muted">
           {tr(
             {
               en: 'Approved topics are what production picks first. Dismissed ones are never proposed again.',
@@ -411,22 +411,22 @@ export default async function AdminDevelopmentPage() {
           >
             {m.feeds.map((f) => (
               <DataTableRow key={f.id}>
-                <Link href={`/${f.handle}/${f.slug}`} className="min-w-0 truncate text-[13px] text-ink hover:text-accent" title={f.title}>
+                <Link href={`/${f.handle}/${f.slug}`} className="min-w-0 truncate text-[0.8125rem] text-ink hover:text-accent" title={f.title}>
                   {f.title}
                 </Link>
-                <span className={`text-right font-mono tabular-nums text-[12.5px] ${f.freshestAgeDays == null ? 'text-muted' : f.freshestAgeDays > 7 ? 'text-warn' : 'text-ok'}`}>
+                <span className={`text-right font-mono tabular-nums text-[0.78125rem] ${f.freshestAgeDays == null ? 'text-muted' : f.freshestAgeDays > 7 ? 'text-warn' : 'text-ok'}`}>
                   {f.freshestAgeDays == null ? '—' : tr({ en: `${f.freshestAgeDays}d`, ru: `${f.freshestAgeDays} дн.` }, lang)}
                 </span>
-                <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{num(f.grown)}</span>
-                <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{num(f.views)}</span>
-                <span className="text-right font-mono tabular-nums text-[12.5px] text-ink-2">{num(f.clicks)}</span>
+                <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">{num(f.grown)}</span>
+                <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">{num(f.views)}</span>
+                <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">{num(f.clicks)}</span>
                 {/* Правки людей выделены: это единственная цифра здесь, которую нельзя получить,
                     потратив свои же деньги. */}
-                <span className={`text-right font-mono tabular-nums text-[12.5px] ${f.humanEdits > 0 ? 'text-ok' : 'text-muted'}`}>{num(f.humanEdits)}</span>
+                <span className={`text-right font-mono tabular-nums text-[0.78125rem] ${f.humanEdits > 0 ? 'text-ok' : 'text-muted'}`}>{num(f.humanEdits)}</span>
               </DataTableRow>
             ))}
           </DataTable>
-          <p className="text-[12.5px] text-muted">
+          <p className="text-[0.78125rem] text-muted">
             {tr(
               {
                 en: 'A feed is worth its cost when people read it, follow its sources and edit it by hand — not when it grows. Freshness over 7 days means the gate holds it back.',
@@ -473,8 +473,8 @@ export default async function AdminDevelopmentPage() {
         {m.gnomes.length > 0 && (
           <div className="overflow-x-auto rounded-lg border border-border bg-surface">
             <div className="border-b border-border px-4 py-2.5">
-              <span className="text-[13px] font-semibold text-ink">{tr({ en: 'Council participation', ru: 'Участие в совете' }, lang)}</span>
-              <span className="ml-2 text-[12.5px] text-muted">
+              <span className="text-[0.8125rem] font-semibold text-ink">{tr({ en: 'Council participation', ru: 'Участие в совете' }, lang)}</span>
+              <span className="ml-2 text-[0.78125rem] text-muted">
                 {tr(
                   {
                     en: 'acceptance counts for every drafter — participation, not a win rate',
@@ -484,7 +484,7 @@ export default async function AdminDevelopmentPage() {
                 )}
               </span>
             </div>
-            <div className="grid min-w-[520px] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-[11px] uppercase tracking-wide text-muted">
+            <div className="grid min-w-[32.5rem] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] gap-4 border-b border-border px-4 py-2.5 text-[0.6875rem] uppercase tracking-wide text-muted">
               <span>{tr({ en: 'Specialist', ru: 'Специалист' }, lang)}</span>
               <span className="text-right">{tr({ en: 'Rank', ru: 'Ранг' }, lang)}</span>
               <span className="text-right">{tr({ en: 'Councils', ru: 'Советов' }, lang)}</span>
@@ -495,16 +495,16 @@ export default async function AdminDevelopmentPage() {
               <Link
                 key={g.id}
                 href={`/admin/council/${g.id}`}
-                className="grid min-w-[520px] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-3 hover:bg-surface-2"
+                className="grid min-w-[32.5rem] grid-cols-[minmax(0,1fr)_96px_104px_88px_128px] items-center gap-4 border-b border-border px-4 py-3 hover:bg-surface-2"
               >
-                <span className="truncate text-[13px] font-medium text-ink">{lang === 'ru' ? g.nameRu : g.nameEn}</span>
-                <span className="text-right text-[12.5px] text-muted">{lang === 'ru' ? g.rankRu : g.rankEn}</span>
-                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(g.gens)}</span>
-                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{num(g.accepted)}</span>
-                <span className="text-right font-mono tabular-nums text-[13px] text-ink-2">{g.trusted ? pct(g.score) : '—'}</span>
+                <span className="truncate text-[0.8125rem] font-medium text-ink">{lang === 'ru' ? g.nameRu : g.nameEn}</span>
+                <span className="text-right text-[0.78125rem] text-muted">{lang === 'ru' ? g.rankRu : g.rankEn}</span>
+                <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(g.gens)}</span>
+                <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(g.accepted)}</span>
+                <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{g.trusted ? pct(g.score) : '—'}</span>
               </Link>
             ))}
-            <div className="px-4 py-2.5 text-[11px] text-muted">
+            <div className="px-4 py-2.5 text-[0.6875rem] text-muted">
               {tr(
                 { en: '«—» = too few councils to trust the number.', ru: '«—» = советов слишком мало, чтобы верить цифре.' },
                 lang,
@@ -517,8 +517,8 @@ export default async function AdminDevelopmentPage() {
         {m.topics.length > 0 && (
           <div className="min-w-0 rounded-lg border border-border bg-surface">
             <div className="border-b border-border px-4 py-2.5">
-              <span className="text-[13px] font-semibold text-ink">{tr({ en: 'Uncovered topics', ru: 'Непокрытые темы' }, lang)}</span>
-              <span className="ml-2 text-[12.5px] text-muted">
+              <span className="text-[0.8125rem] font-semibold text-ink">{tr({ en: 'Uncovered topics', ru: 'Непокрытые темы' }, lang)}</span>
+              <span className="ml-2 text-[0.78125rem] text-muted">
                 {tr(
                   { en: 'the generalist covered these with no specialist for them', ru: 'их тянул универсал без профильного специалиста' },
                   lang,
@@ -530,7 +530,7 @@ export default async function AdminDevelopmentPage() {
                 <TagChip key={s.tag} slug={s.tag} count={s.n} />
               ))}
             </div>
-            <div className="px-4 pb-3 text-[11px] text-muted">
+            <div className="px-4 pb-3 text-[0.6875rem] text-muted">
               {tr(
                 {
                   en: 'Raw signal from draft tags — not a normalized taxonomy. Hiring lives in the council hall.',
@@ -561,8 +561,8 @@ export default async function AdminDevelopmentPage() {
         >
           {loops.map((l) => (
             <DataTableRow key={l.type} className="py-3">
-              <span className="truncate font-mono text-[12.5px] text-ink">{l.type}</span>
-              <span className={`text-right text-[12.5px] ${l.circuitTripped ? 'text-danger' : l.paused ? 'text-warn' : 'text-ok'}`}>
+              <span className="truncate font-mono text-[0.78125rem] text-ink">{l.type}</span>
+              <span className={`text-right text-[0.78125rem] ${l.circuitTripped ? 'text-danger' : l.paused ? 'text-warn' : 'text-ok'}`}>
                 {l.circuitTripped
                   ? tr({ en: 'breaker tripped', ru: 'предохранитель' }, lang)
                   : l.paused
@@ -596,7 +596,7 @@ export default async function AdminDevelopmentPage() {
               </div>
             </DataTableRow>
           ))}
-          <div className="px-4 py-2.5 text-[11px] text-muted">
+          <div className="px-4 py-2.5 text-[0.6875rem] text-muted">
             {tr(
               {
                 en: 'Pause stops the queue from handing out this loop’s jobs — atomically, on every instance, without a restart. The breaker is tripped by code and cleared by a human.',
@@ -608,7 +608,7 @@ export default async function AdminDevelopmentPage() {
         </DataTable>
       </section>
 
-      <p className="text-[12.5px] text-muted">
+      <p className="text-[0.78125rem] text-muted">
         {tr(
           {
             en: 'Metrics are read-only aggregates and never call a model. «—» means the source does not exist yet, not zero. The loop switches above do write.',

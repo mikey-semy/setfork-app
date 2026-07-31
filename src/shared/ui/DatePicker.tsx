@@ -41,7 +41,7 @@ export function DatePicker({
           <button
             type="button"
             onClick={toggle}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12.5px] transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[0.78125rem] transition-colors ${
               open ? 'border-border-strong' : 'border-border'
             } ${label ? 'text-ink' : 'text-muted'} hover:border-border-strong`}
           >
@@ -72,19 +72,19 @@ function Calendar({ selected, onPick, ru }: { selected: Date | null; onPick: (d:
   const shift = (delta: number) => setView(new Date(y, m + delta, 1))
 
   return (
-    <div className="w-[248px] p-2.5">
+    <div className="w-[15.5rem] p-2.5">
       <div className="mb-2 flex items-center justify-between">
         <button type="button" onClick={() => shift(-1)} className="rounded-md p-1 text-muted hover:text-ink" aria-label="prev">
           <ChevronLeft size={16} />
         </button>
-        <span className="text-[13px] font-semibold text-ink">{MONTHS[ru ? 'ru' : 'en'][m]} {y}</span>
+        <span className="text-[0.8125rem] font-semibold text-ink">{MONTHS[ru ? 'ru' : 'en'][m]} {y}</span>
         <button type="button" onClick={() => shift(1)} className="rounded-md p-1 text-muted hover:text-ink" aria-label="next">
           <ChevronRight size={16} />
         </button>
       </div>
       <div className="grid grid-cols-7 gap-0.5 text-center">
         {WD[ru ? 'ru' : 'en'].map((w) => (
-          <span key={w} className="py-1 text-[11px] font-medium text-muted">{w}</span>
+          <span key={w} className="py-1 text-[0.6875rem] font-medium text-muted">{w}</span>
         ))}
         {cells.map((d, i) =>
           d == null ? (
@@ -94,7 +94,7 @@ function Calendar({ selected, onPick, ru }: { selected: Date | null; onPick: (d:
               key={d}
               type="button"
               onClick={() => onPick(new Date(y, m, d))}
-              className={`aspect-square rounded-md text-[12.5px] ${
+              className={`aspect-square rounded-md text-[0.78125rem] ${
                 isSel(d) ? 'bg-primary font-semibold text-primary-fg' : 'text-ink hover:bg-surface-2'
               }`}
             >

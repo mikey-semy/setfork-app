@@ -67,7 +67,7 @@ export function AdminShell({ groups, sections, lang }: { groups: AdminNavGroup[]
           <EmptyState hint={t('noSettingsFound', lang)} />
         ) : (
           visible.map((s) => (
-            <div key={s.id} id={s.id} className="scroll-mt-[76px]">
+            <div key={s.id} id={s.id} className="scroll-mt-[4.75rem]">
               {s.content}
             </div>
           ))

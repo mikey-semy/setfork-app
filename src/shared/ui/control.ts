@@ -11,13 +11,13 @@ export type ControlSize = 'xs' | 'sm' | 'md'
 export const CONTROL_H: Record<ControlSize, string> = {
   xs: 'h-7',
   sm: 'h-8',
-  md: 'h-[38px]',
+  md: 'h-[2.375rem]',
 }
 
 export const CONTROL_TEXT: Record<ControlSize, string> = {
-  xs: 'text-[12.5px]',
-  sm: 'text-[13px]',
-  md: 'text-[14px]',
+  xs: 'text-[0.78125rem]',
+  sm: 'text-[0.8125rem]',
+  md: 'text-[0.875rem]',
 }
 
 /** Горизонтальные отступы полей ввода; у Button свои (шире на md — текст в
@@ -31,7 +31,7 @@ export const CONTROL_PX: Record<ControlSize, string> = {
 /** Текст ПОЛЕЙ ВВОДА на мобиле — 16px: меньший кегль заставляет iOS зумить
  *  страницу при фокусе (линза 07, п.1). Кнопок не касается — их не фокусируют
  *  клавиатурой ввода. */
-export const FIELD_TEXT_MOBILE = 'max-sm:text-[16px]'
+export const FIELD_TEXT_MOBILE = 'max-sm:text-[1rem]'
 
 // ── Лестница типографики (Ф5a трека ui-system) ──────────────────────────
 // До неё в коде жило 20 разных кеглей с полупиксельными шагами (13 ×406,
@@ -40,19 +40,19 @@ export const FIELD_TEXT_MOBILE = 'max-sm:text-[16px]'
 // shared/ui запрещает линт (Ф7). Герои (20/22/24) в лестницу не входят.
 export const TEXT = {
   /** Мелкие подписи: бейджи, моно-меты, uppercase-заголовки групп. */
-  caption: 'text-[11px]',
+  caption: 'text-[0.6875rem]',
   /** Вторичный текст: подписи полей, хинты, меты. */
-  bodySm: 'text-[12.5px]',
+  bodySm: 'text-[0.78125rem]',
   /** Основной текст интерфейса. */
-  body: 'text-[13px]',
+  body: 'text-[0.8125rem]',
   /** Крупный текст: поля ввода md, важные абзацы. */
-  bodyLg: 'text-[14px]',
+  bodyLg: 'text-[0.875rem]',
   /** Заголовок раздела/секции. */
-  title: 'text-[16px]',
+  title: 'text-[1rem]',
   /** Заголовок страницы (PageHeader). */
-  page: 'text-[18px]',
+  page: 'text-[1.125rem]',
   /** Число-показатель (StatTile). */
-  stat: 'text-[22px]',
+  stat: 'text-[1.375rem]',
 } as const
 
 /** Размер lucide-иконки при размере контрола: единый вместо 12 разных чисел. */

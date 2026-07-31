@@ -49,7 +49,7 @@ export function AchievementsAdmin({ initial, ru }: { initial: AchDisplayMap; ru:
       {ACHIEVEMENT_KEYS.map((key) => (
         <AchRow key={key} k={key} d={map[key]} ru={ru} pending={pending} onToggle={toggle} onUpload={upload} onClear={clearImage} />
       ))}
-      <p className="mt-1 text-[12.5px] text-muted">
+      <p className="mt-1 text-[0.78125rem] text-muted">
         {ru
           ? 'Перетащи картинку на плитку или кликни по ней. Выключенное достижение не показывается ни на одном профиле.'
           : 'Drag an image onto a tile or click it. A disabled achievement is hidden on all profiles.'}
@@ -115,8 +115,8 @@ function AchRow({
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => onUpload(k, e.target.files?.[0])} />
 
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13px] font-medium text-ink">{ru ? meta.ru : meta.en}</div>
-        <div className="font-mono text-[11px] text-muted">{k}</div>
+        <div className="truncate text-[0.8125rem] font-medium text-ink">{ru ? meta.ru : meta.en}</div>
+        <div className="font-mono text-[0.6875rem] text-muted">{k}</div>
       </div>
 
       {d.imageUrl && (

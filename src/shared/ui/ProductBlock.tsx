@@ -32,14 +32,14 @@ export function ProductBlock({ title, items, lang }: { title?: string; items: Pr
   if (items.length === 0) return null
   return (
     <div className="break-inside-avoid rounded-lg border border-border bg-surface p-4">
-      <div className="mb-2.5 flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+      <div className="mb-2.5 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-ink">
         <ShoppingCart size={14} className="shrink-0 text-muted" /> {title?.trim() || t('productBlockTitle', lang)}
       </div>
       <ul className="flex flex-col gap-2">
         {items.map((p, i) => (
-          <li key={p.idx ?? `i${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
+          <li key={p.idx ?? `i${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem]">
             {p.tier && (
-              <span className={`shrink-0 rounded-md border px-1.5 py-px text-[11px] font-medium uppercase tracking-wide ${TIER_CLS[p.tier]}`}>
+              <span className={`shrink-0 rounded-md border px-1.5 py-px text-[0.6875rem] font-medium uppercase tracking-wide ${TIER_CLS[p.tier]}`}>
                 {tierLabel(p.tier, lang)}
               </span>
             )}
@@ -50,7 +50,7 @@ export function ProductBlock({ title, items, lang }: { title?: string; items: Pr
             >
               <span className="truncate">{p.name}</span> <ExternalLink size={11} className="shrink-0" />
             </SafeLink>
-            {p.note && <span className="min-w-0 text-[12.5px] text-muted">— {p.note}</span>}
+            {p.note && <span className="min-w-0 text-[0.78125rem] text-muted">— {p.note}</span>}
           </li>
         ))}
       </ul>

@@ -85,7 +85,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
         <button
           type="button"
           onClick={nativeShare}
-          className="mb-1 flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+          className="mb-1 flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[0.8125rem] text-ink-2 hover:bg-surface-2 hover:text-ink"
         >
           <Share2 size={15} /> {label}
         </button>
@@ -93,7 +93,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
       <button
         type="button"
         onClick={copy}
-        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"
+        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-[0.8125rem] text-ink-2 hover:bg-surface-2 hover:text-ink"
       >
         {copied ? <Check size={15} className="text-ok" /> : <Copy size={15} />}
         {copied ? (copiedLabel ?? copyLinkLabel) : copyLinkLabel}
@@ -101,7 +101,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
 
       <div className="mt-2 border-t border-border pt-2">
         {shareViaLabel && (
-          <div className="mb-1.5 px-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">{shareViaLabel}</div>
+          <div className="mb-1.5 px-1.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-muted">{shareViaLabel}</div>
         )}
         <div className="grid grid-cols-3 gap-1">
           {nets.map((n) => (
@@ -114,7 +114,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
               className="flex flex-col items-center gap-1 rounded-md px-1 py-2 text-muted hover:bg-surface-2 hover:text-ink"
             >
               {ICON[n.name]}
-              <span className="text-[11px] leading-none">{n.name}</span>
+              <span className="text-[0.6875rem] leading-none">{n.name}</span>
             </a>
           ))}
         </div>
@@ -124,7 +124,7 @@ export function ShareMenuItems({ path, title = '', ru = false, label, copiedLabe
         <div className="mt-2 flex flex-col items-center border-t border-border pt-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qr} alt="QR" width={160} height={160} className="rounded-md bg-white p-1" />
-          <span className="mt-1.5 text-[11px] text-muted">{qrHint}</span>
+          <span className="mt-1.5 text-[0.6875rem] text-muted">{qrHint}</span>
         </div>
       )}
     </>
@@ -158,7 +158,7 @@ export function ShareButton({
         </button>
       </DropdownMenuTrigger>
       </Tooltip>
-      <DropdownMenuContent align="end" className="w-[240px] p-3">
+      <DropdownMenuContent align="end" className="w-[15rem] p-3">
         <ShareMenuItems path={path} title={title} ru={ru} label={label} copiedLabel={copiedLabel} copyLinkLabel={copyLinkLabel} shareViaLabel={shareViaLabel} qrHint={qrHint} />
       </DropdownMenuContent>
     </DropdownMenu>

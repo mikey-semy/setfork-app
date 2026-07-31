@@ -118,8 +118,8 @@ function BoolRow({
       <div className="flex min-w-0 items-start gap-2.5">
         <span className="mt-0.5">{icon}</span>
         <div className="min-w-0">
-          <div className="text-[13px] font-medium text-ink">{label}</div>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{hint}</p>
+          <div className="text-[0.8125rem] font-medium text-ink">{label}</div>
+          <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">{hint}</p>
         </div>
       </div>
       <Switch
@@ -140,8 +140,8 @@ function WhoRow({ templateId, initial, lang }: { templateId: string; initial: 'a
   return (
     <div className={row}>
       <div className="min-w-0">
-        <div className="text-[13px] font-medium text-ink">{t('prSetWho', lang)}</div>
-        <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{t('prSetWhoHint', lang)}</p>
+        <div className="text-[0.8125rem] font-medium text-ink">{t('prSetWho', lang)}</div>
+        <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">{t('prSetWhoHint', lang)}</p>
       </div>
       <Select
         value={val}
@@ -151,7 +151,7 @@ function WhoRow({ templateId, initial, lang }: { templateId: string; initial: 'a
           start(() => void setPrAllowFrom(templateId, next))
         }}
       >
-        <SelectTrigger className="h-[38px] w-auto shrink-0 text-[13px]">
+        <SelectTrigger className="h-[2.375rem] w-auto shrink-0 text-[0.8125rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -174,8 +174,8 @@ function MethodRow({ templateId, initial, lang }: { templateId: string; initial:
           <GitMerge size={16} className="text-muted" />
         </span>
         <div className="min-w-0">
-          <div className="text-[13px] font-medium text-ink">{t('prSetMethod', lang)}</div>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{t('prSetMethodHint', lang)}</p>
+          <div className="text-[0.8125rem] font-medium text-ink">{t('prSetMethod', lang)}</div>
+          <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">{t('prSetMethodHint', lang)}</p>
         </div>
       </div>
       <Select
@@ -186,7 +186,7 @@ function MethodRow({ templateId, initial, lang }: { templateId: string; initial:
           start(() => void setPrMergeMethod(templateId, next))
         }}
       >
-        <SelectTrigger className="h-[38px] w-auto shrink-0 text-[13px]">
+        <SelectTrigger className="h-[2.375rem] w-auto shrink-0 text-[0.8125rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -205,8 +205,8 @@ function ApprovalsRow({ templateId, initial, lang }: { templateId: string; initi
   return (
     <div className={row}>
       <div className="min-w-0">
-        <div className="text-[13px] font-medium text-ink">{t('prSetApprovals', lang)}</div>
-        <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{t('prSetApprovalsHint', lang)}</p>
+        <div className="text-[0.8125rem] font-medium text-ink">{t('prSetApprovals', lang)}</div>
+        <p className="mt-0.5 text-[0.78125rem] leading-snug text-ink-2">{t('prSetApprovalsHint', lang)}</p>
       </div>
       <Select
         value={String(val)}
@@ -216,7 +216,7 @@ function ApprovalsRow({ templateId, initial, lang }: { templateId: string; initi
           start(() => void setPrNumber(templateId, 'requiredApprovals', n))
         }}
       >
-        <SelectTrigger className="h-[38px] w-auto shrink-0 text-[13px]">
+        <SelectTrigger className="h-[2.375rem] w-auto shrink-0 text-[0.8125rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

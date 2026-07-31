@@ -86,7 +86,7 @@ export function BranchPicker({
       <Tooltip label={ru ? 'Ветки' : 'Branches'}>
         <Button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="h-9">
           <GitBranch size={13} className="text-muted" />
-          <span className="max-w-[140px] truncate">{current}</span>
+          <span className="max-w-[8.75rem] truncate">{current}</span>
           <ChevronDown size={12} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
         </Button>
       </Tooltip>
@@ -94,7 +94,7 @@ export function BranchPicker({
         <>
           {/* Прозрачный слой: клик мимо закрывает (как GitHub, без затемнения). */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+          <div className="absolute left-0 top-full z-50 mt-1.5 w-[18.75rem] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             <PickerPanel
               title={t('switchBranch', lang)}
               onClose={() => setOpen(false)}
@@ -122,7 +122,7 @@ export function BranchPicker({
                         <Plus size={12} /> {t('create', lang)}
                       </Button>
                     </div>
-                    <p className="px-0.5 pt-1 text-[11px] text-muted">{err ?? (ru ? `от ${current}` : `from ${current}`)}</p>
+                    <p className="px-0.5 pt-1 text-[0.6875rem] text-muted">{err ?? (ru ? `от ${current}` : `from ${current}`)}</p>
                   </>
                 ) : null
               }
@@ -138,9 +138,9 @@ export function BranchPicker({
                   }}
                   right={
                     b.isDefault ? (
-                      <Badge className="px-1.5 text-[11px] font-normal">{t('branchDefault', lang)}</Badge>
+                      <Badge className="px-1.5 text-[0.6875rem] font-normal">{t('branchDefault', lang)}</Badge>
                     ) : (
-                      <span className="font-mono text-[11px] text-muted">
+                      <span className="font-mono text-[0.6875rem] text-muted">
                         +{b.ahead}/-{b.behind}
                       </span>
                     )
@@ -156,7 +156,7 @@ export function BranchPicker({
                   }
                 />
               ))}
-              {shown.length === 0 && <div className="px-2 py-3 text-[12.5px] text-muted">{t('nothingFound', lang)}</div>}
+              {shown.length === 0 && <div className="px-2 py-3 text-[0.78125rem] text-muted">{t('nothingFound', lang)}</div>}
             </PickerPanel>
           </div>
         </>

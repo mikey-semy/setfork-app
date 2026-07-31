@@ -38,7 +38,7 @@ export function Reactions({
             type="button"
             disabled={!canReact || pending}
             onClick={() => react(r.emoji)}
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[12.5px] transition-colors disabled:opacity-60 ${
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.78125rem] transition-colors disabled:opacity-60 ${
               r.mine ? 'border-accent bg-accent/10 text-ink' : 'border-border bg-surface-2 text-ink-2 hover:border-border-strong'
             }`}
           >

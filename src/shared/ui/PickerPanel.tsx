@@ -36,7 +36,7 @@ export function PickerPanel({
   return (
     <div className="flex max-h-[min(420px,70vh)] flex-col">
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">{title}</span>
+        <span className="min-w-0 truncate text-[0.78125rem] font-semibold text-ink">{title}</span>
         {onClose && (
           <button
             type="button"
@@ -112,7 +112,7 @@ export function PickerRow({
     </>
   )
   // pointer-coarse:min-h-11 — на таче строка добирает тач-цель 44px, на десктопе список остаётся плотным.
-  const cls = `flex w-full items-center gap-2 rounded-md px-2 py-1.5 pointer-coarse:min-h-11 text-[13px] text-ink hover:bg-surface-2 disabled:opacity-60 ${
+  const cls = `flex w-full items-center gap-2 rounded-md px-2 py-1.5 pointer-coarse:min-h-11 text-[0.8125rem] text-ink hover:bg-surface-2 disabled:opacity-60 ${
     selected ? 'bg-surface-2' : ''
   }`
 

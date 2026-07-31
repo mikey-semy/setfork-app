@@ -78,13 +78,13 @@ export function ActionsMenu({
       </Tooltip>
 
       {open && candidates.length === 0 && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[260px] rounded-md border border-border bg-surface px-3 py-2.5 text-[12.5px] leading-relaxed text-muted shadow-card">
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[16.25rem] rounded-md border border-border bg-surface px-3 py-2.5 text-[0.78125rem] leading-relaxed text-muted shadow-card">
           {say('Variant actions will appear here once the council forges the first list.', 'Здесь появятся действия с вариантами, когда совет выкует первый список.')}
         </div>
       )}
 
       {open && candidates.length > 0 && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[300px] overflow-hidden rounded-md border border-border bg-surface shadow-card">
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[18.75rem] overflow-hidden rounded-md border border-border bg-surface shadow-card">
           <button
             type="button"
             disabled={!canAccept}
@@ -92,12 +92,12 @@ export function ActionsMenu({
               setOpen(false)
               onAccept()
             }}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] font-semibold text-ink hover:bg-surface-2 disabled:opacity-40"
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[0.8125rem] font-semibold text-ink hover:bg-surface-2 disabled:opacity-40"
           >
             <Check size={14} className="shrink-0 text-accent" />
             <span className="min-w-0">
               {say('Use this one', 'Использовать этот')}
-              {selected && <span className="block truncate text-[11px] font-normal text-muted">{selected.title}</span>}
+              {selected && <span className="block truncate text-[0.6875rem] font-normal text-muted">{selected.title}</span>}
             </span>
           </button>
           <button
@@ -107,14 +107,14 @@ export function ActionsMenu({
               setOpen(false)
               onRegen()
             }}
-            className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink disabled:opacity-40"
+            className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-[0.8125rem] text-ink-2 hover:bg-surface-2 hover:text-ink disabled:opacity-40"
           >
             <RotateCw size={14} className="shrink-0" />
-            {say('Another variant', 'Ещё вариант')} <span className="ml-auto text-[11px] tabular-nums text-muted">{candidates.length}/6</span>
+            {say('Another variant', 'Ещё вариант')} <span className="ml-auto text-[0.6875rem] tabular-nums text-muted">{candidates.length}/6</span>
           </button>
           {candidates.length > 1 && (
             <div className="border-t border-border">
-              <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <div className="px-3 pb-1 pt-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
                 {say('Variants', 'Варианты')}
               </div>
               {candidates.map((c) => (
@@ -124,10 +124,10 @@ export function ActionsMenu({
                   onClick={() => jump(c)}
                   className={`flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-surface-2 ${c.id === selId ? 'bg-surface-2' : ''}`}
                 >
-                  <span className="mt-px shrink-0 text-[11px] tabular-nums text-muted">{c.idx}</span>
+                  <span className="mt-px shrink-0 text-[0.6875rem] tabular-nums text-muted">{c.idx}</span>
                   <span className="min-w-0">
-                    <span className="block truncate text-[12.5px] text-ink">{c.title}</span>
-                    {c.summary && <span className="mt-0.5 block truncate text-[11px] text-muted">{c.summary}</span>}
+                    <span className="block truncate text-[0.78125rem] text-ink">{c.title}</span>
+                    {c.summary && <span className="mt-0.5 block truncate text-[0.6875rem] text-muted">{c.summary}</span>}
                   </span>
                 </button>
               ))}

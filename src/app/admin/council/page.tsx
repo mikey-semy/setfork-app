@@ -92,7 +92,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
   return (
     <div className="flex w-full min-w-0 flex-col gap-4 px-5 py-6 md:px-8">
       {settings.councilEnabled ? null : (
-        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[12.5px] text-warn">
+        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
           {say(
             'The council is off — these experts are not summoned. Turn it on in Admin → Generation & models.',
             'Совет выключен — этих экспертов никто не зовёт. Включается в Админке → Генерация и модели.',
@@ -100,7 +100,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
         </p>
       )}
       {sp.hire === 'failed' && (
-        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[12.5px] text-warn">
+        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
           {say('Hiring failed — the model did not return a valid profile. Try again.', 'Найм не удался — модель не вернула валидный профиль. Попробуй ещё раз.')}
         </p>
       )}
@@ -108,7 +108,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
           гнома ВЫКЛЮЧЕННЫМ (LLM-черновик по признанному профстандарту) — включаешь после ревью. */}
       {signals.length > 0 && (
         <div className="mb-4 rounded-lg border border-(--accent)/40 bg-(--accent-soft) p-3.5">
-          <div className="mb-2 text-[12.5px] font-semibold text-accent">
+          <div className="mb-2 text-[0.78125rem] font-semibold text-accent">
             {say('Hiring signal: the generalist keeps covering these topics', 'Сигнал найма: универсал раз за разом отдувается по этим темам')}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -117,15 +117,15 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
                 <input type="hidden" name="tag" value={s.tag} />
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[12.5px] text-ink hover:border-border-strong"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[0.78125rem] text-ink hover:border-border-strong"
                 >
                   {say(`Hire a master for “${s.tag}”`, `Нанять мастера под «${s.tag}»`)}
-                  <span className="font-mono text-[11px] text-muted">×{s.n}</span>
+                  <span className="font-mono text-[0.6875rem] text-muted">×{s.n}</span>
                 </button>
               </form>
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-ink-2">
+          <p className="mt-2 text-[0.6875rem] text-ink-2">
             {say('The new master is created DISABLED — review the profile, tweak it and switch him on.', 'Новый мастер рождается ВЫКЛЮЧЕННЫМ — прочитай профиль, поправь и включи сам.')}
           </p>
         </div>
@@ -136,10 +136,10 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
       {noAccounts > 0 && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3.5">
           <div className="min-w-0">
-            <div className="text-[12.5px] font-semibold text-ink">
+            <div className="text-[0.78125rem] font-semibold text-ink">
               {say('Accounts are missing', 'Не у всех есть аккаунт')}
             </div>
-            <p className="mt-0.5 text-[11px] text-ink-2">
+            <p className="mt-0.5 text-[0.6875rem] text-ink-2">
               {say(
                 `${noAccounts} of ${roster.length} have no user-level account — without it their edits are nobody’s and cannot be attributed.`,
                 `${noAccounts} из ${roster.length} без аккаунта уровня пользователя — без него их правки ничьи и их некому приписать.`,
@@ -154,7 +154,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
         </div>
       )}
       {sp.selfgen && (
-        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[12.5px] text-warn">
+        <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
           {say(`Self-generation did not produce a draft: ${sp.selfgen}`, `Самогенерация не дала черновик: ${sp.selfgen}`)}
         </p>
       )}

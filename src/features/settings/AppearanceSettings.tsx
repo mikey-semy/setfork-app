@@ -29,7 +29,15 @@ const FONTS = [
   { value: 'system', label: 'System', css: 'system-ui, sans-serif' },
 ]
 
-function applyAttr(attr: 'data-accent' | 'data-font', key: string, value: string) {
+// Масштаб (Ф6): все размеры в rem, корневой font-size масштабирует всё
+// пропорционально; '' = 100%. Значения — как в SCALE_VALUES экшена.
+const SCALES = [
+  { value: '90', labelEn: 'Compact · 90%', labelRu: 'Компактный · 90%' },
+  { value: '', labelEn: 'Default · 100%', labelRu: 'Стандартный · 100%' },
+  { value: '110', labelEn: 'Large · 110%', labelRu: 'Крупный · 110%' },
+]
+
+function applyAttr(attr: 'data-accent' | 'data-font' | 'data-scale', key: string, value: string) {
   const el = document.documentElement
   if (value) el.setAttribute(attr, value)
   else el.removeAttribute(attr)
@@ -42,15 +50,26 @@ function applyAttr(attr: 'data-accent' | 'data-font', key: string, value: string
 }
 
 const pickCls = (on: boolean) =>
-  `flex items-center gap-2 rounded-md border px-3 py-2 text-[13px] text-ink transition-colors ${
+  `flex items-center gap-2 rounded-md border px-3 py-2 text-[0.8125rem] text-ink transition-colors ${
     on ? 'border-accent bg-(--accent-soft)' : 'border-border hover:border-border-strong'
   }`
 
-export function AppearanceSettings({ lang, initialAccent = '', initialFont = '' }: { lang: Lang; initialAccent?: string; initialFont?: string }) {
+export function AppearanceSettings({
+  lang,
+  initialAccent = '',
+  initialFont = '',
+  initialScale = '',
+}: {
+  lang: Lang
+  initialAccent?: string
+  initialFont?: string
+  initialScale?: string
+}) {
   const ru = lang === 'ru'
   const [mounted, setMounted] = useState(false)
   const [accent, setAccent] = useState(initialAccent)
   const [font, setFont] = useState(initialFont)
+  const [scale, setScale] = useState(initialScale)
 
   useEffect(() => {
     setMounted(true)
@@ -59,34 +78,40 @@ export function AppearanceSettings({ lang, initialAccent = '', initialFont = '' 
       // при пустом localStorage берём значение из аккаунта (новое устройство).
       setAccent(localStorage.getItem('sf-accent') ?? initialAccent)
       setFont(localStorage.getItem('sf-font') ?? initialFont)
+      setScale(localStorage.getItem('sf-scale') ?? initialScale)
     } catch {
       // ignore
     }
-  }, [initialAccent, initialFont])
+  }, [initialAccent, initialFont, initialScale])
 
   // Меняем локально (мгновенно, no-flash) и синхронизируем в аккаунт (fire-and-forget).
   function pickAccent(v: string) {
     setAccent(v)
     applyAttr('data-accent', 'sf-accent', v)
-    void saveAppearance(v, font)
+    void saveAppearance(v, font, scale)
   }
   function pickFont(v: string) {
     setFont(v)
     applyAttr('data-font', 'sf-font', v)
-    void saveAppearance(accent, v)
+    void saveAppearance(accent, v, scale)
+  }
+  function pickScale(v: string) {
+    setScale(v)
+    applyAttr('data-scale', 'sf-scale', v)
+    void saveAppearance(accent, font, v)
   }
 
-  if (!mounted) return <div className="h-[240px]" /> // резерв места до гидрации
+  if (!mounted) return <div className="h-[15rem]" /> // резерв места до гидрации
 
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <div className="mb-2 text-[12.5px] font-semibold text-ink">{ru ? 'Тема' : 'Theme'}</div>
+        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{ru ? 'Тема' : 'Theme'}</div>
         <ThemeModeSwitch labels lang={lang} />
       </div>
 
       <div>
-        <div className="mb-2 text-[12.5px] font-semibold text-ink">{ru ? 'Акцентный цвет' : 'Accent color'}</div>
+        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{ru ? 'Акцентный цвет' : 'Accent color'}</div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {ACCENTS.map((a) => (
             <button
@@ -104,7 +129,19 @@ export function AppearanceSettings({ lang, initialAccent = '', initialFont = '' 
       </div>
 
       <div>
-        <div className="mb-2 text-[12.5px] font-semibold text-ink">{ru ? 'Шрифт' : 'Font'}</div>
+        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{ru ? 'Масштаб интерфейса' : 'UI scale'}</div>
+        <div className="grid grid-cols-3 gap-2">
+          {SCALES.map((s) => (
+            <button key={s.value} type="button" onClick={() => pickScale(s.value)} className={pickCls(scale === s.value)}>
+              <span className="min-w-0 truncate">{ru ? s.labelRu : s.labelEn}</span>
+              {scale === s.value && <Check size={13} className="ml-auto shrink-0 text-accent" />}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-2 text-[0.78125rem] font-semibold text-ink">{ru ? 'Шрифт' : 'Font'}</div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {FONTS.map((f) => (
             <button
@@ -119,7 +156,7 @@ export function AppearanceSettings({ lang, initialAccent = '', initialFont = '' 
             </button>
           ))}
         </div>
-        <p className="mt-2 text-[12.5px] text-muted">
+        <p className="mt-2 text-[0.78125rem] text-muted">
           {ru
             ? 'Акцент и шрифт сохраняются в аккаунте и следуют за тобой между устройствами. Тема (светлая/тёмная) — в этом браузере.'
             : 'Accent and font are saved to your account and follow you across devices. Theme (light/dark) stays in this browser.'}

@@ -62,22 +62,22 @@ export default async function IssueThreadPage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[51.25rem] px-4 py-6">
         <div className="mb-1 flex flex-wrap items-start gap-x-2 gap-y-1">
-          <h1 className="text-[22px] font-bold leading-tight text-ink">
+          <h1 className="text-[1.375rem] font-bold leading-tight text-ink">
             {issue.title} <span className="font-normal text-muted">#{issue.number}</span>
           </h1>
         </div>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-semibold text-white ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.78125rem] font-semibold text-white ${
               closed ? 'bg-accent' : 'bg-(--ok-solid)'
             }`}
           >
             {closed ? <CircleCheck size={14} /> : <CircleDot size={14} />}
             {closed ? t('issueClosedBadge', lang) : t('issueOpenBadge', lang)}
           </span>
-          <span className="text-[13px] text-ink-2">
+          <span className="text-[0.8125rem] text-ink-2">
             <span className="font-semibold text-ink">{issue.authorHandle}</span> {t('openedThis', lang)} ·{' '}
             {comments.length} {t('commentBtn', lang).toLowerCase()}
           </span>
@@ -153,7 +153,7 @@ export default async function IssueThreadPage({
             </form>
           </div>
         ) : (
-          <div className="mt-5 rounded-lg border border-border bg-surface px-4 py-3 text-[13px] text-ink-2">
+          <div className="mt-5 rounded-lg border border-border bg-surface px-4 py-3 text-[0.8125rem] text-ink-2">
             <Link href={`/login?next=/${owner}/${slug}/issues/${issue.number}`} className="font-semibold text-accent hover:underline">
               {t('signInToComment', lang)}
             </Link>

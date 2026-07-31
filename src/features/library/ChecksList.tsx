@@ -20,7 +20,7 @@ export function ChecksList({ items, labels }: { items: CheckItem[]; labels: { bl
   const failed = items.filter((i) => i.status === 'fail').length
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[12.5px]">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[0.78125rem]">
         {failed > 0 ? (
           <span className="inline-flex items-center gap-1.5 font-semibold text-danger">
             <X size={13} /> {labels.blocking}: {failed}
@@ -39,13 +39,13 @@ export function ChecksList({ items, labels }: { items: CheckItem[]; labels: { bl
             <li key={it.key} className="flex items-start gap-2.5 px-3.5 py-2.5">
               <Icon size={15} className={`mt-0.5 shrink-0 ${meta.cls}`} />
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] text-ink">
+                <div className="text-[0.8125rem] text-ink">
                   {it.title}
                   {/* Чужая проверка подписана автором: своё приложение считает само,
                       а это прислали снаружи — и видно, кем. */}
-                  {it.reportedBy && <span className="ml-1.5 text-[12.5px] text-muted">@{it.reportedBy}</span>}
+                  {it.reportedBy && <span className="ml-1.5 text-[0.78125rem] text-muted">@{it.reportedBy}</span>}
                 </div>
-                {it.detail && <div className="text-[12.5px] text-ink-2 [overflow-wrap:anywhere]">{it.detail}</div>}
+                {it.detail && <div className="text-[0.78125rem] text-ink-2 [overflow-wrap:anywhere]">{it.detail}</div>}
               </div>
               {it.url && (
                 <a

@@ -19,7 +19,7 @@ export function ListTypeToggle({ ordered, lang }: { ordered: boolean; lang: Lang
         <Tooltip key={value} label={`${label} — ${hint}`}>
           <label
             aria-label={label}
-            className="grid size-9 cursor-pointer place-items-center rounded-[5px] text-ink-2 transition-colors hover:text-ink has-[:checked]:bg-accent has-[:checked]:text-white"
+            className="grid size-9 cursor-pointer place-items-center rounded-[0.3125rem] text-ink-2 transition-colors hover:text-ink has-[:checked]:bg-accent has-[:checked]:text-white"
           >
             <input type="radio" name="ordered" value={value} defaultChecked={on} className="sr-only" />
             <Icon size={16} />

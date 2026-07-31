@@ -70,7 +70,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
         flags={{ issues: meta.issuesEnabled, discussions: meta.discussionsEnabled, owner: isOwner }}
       />
 
-      <div className="mx-auto w-full max-w-[1180px] px-4 pt-4">
+      <div className="mx-auto w-full max-w-[73.75rem] px-4 pt-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           {/* Название скрыто на узких экранах — оно уже в бредкрамбе шапки. На
               под-вкладках (Задачи/Предложения/…) скрыто и на широких: там оно
@@ -82,7 +82,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             <Link href={`/${meta.ownerHandle}`} className="shrink-0">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
-            <h1 className="min-w-0 truncate text-[18px] font-bold text-ink">{tr(meta.title, lang)}</h1>
+            <h1 className="min-w-0 truncate text-[1.125rem] font-bold text-ink">{tr(meta.title, lang)}</h1>
             {/* Версию у заголовка НЕ показываем: она живёт в сайдбаре Releases (как у GitHub —
                 номер версии/релиза только в блоке Releases, а не рядом с именем). Убран дубль. */}
             {/* Видимость — ТОЛЬКО ИКОНКОЙ, подпись в тултипе: слово рядом с названием
@@ -104,7 +104,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                 <Archive size={11} /> {t('badgeArchived', lang)}
               </Badge>
             ) : meta.frozenAt != null ? (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-ink-2">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2">
                 <Snowflake size={11} /> {t('badgeFrozen', lang)}
               </span>
             ) : null}
@@ -214,7 +214,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               copyLinkLabel={t('copyLink', lang)}
               shareViaLabel={t('shareVia', lang)}
               qrHint={t('qrHint', lang)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-[13px] font-semibold text-ink hover:border-border-strong sm:w-auto sm:gap-2 sm:px-3.5"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-[0.8125rem] font-semibold text-ink hover:border-border-strong sm:w-auto sm:gap-2 sm:px-3.5"
             />
             {/* Use (клон) и Edit/Suggest переехали в область списка (version-bar) — как
                 зелёная Code и карандаш у GitHub живут в контенте, не в шапке. */}

@@ -50,14 +50,14 @@ export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[12.5px] text-ink-2">
+      <div className="rounded-md border border-border bg-surface-2 px-3 py-2.5 text-[0.78125rem] text-ink-2">
         {ru
           ? 'Свои VAPID-ключи (без сторонних сервисов). Сгенерируйте пару — приватный хранится в БД, публичный отдаётся браузеру при подписке. Пусто = берётся из env (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY).'
           : 'Your own VAPID keys (no third-party service). Generate a pair — the private key stays in the DB, the public one is given to the browser on subscribe. Empty = taken from env.'}
       </div>
 
       <Field label={ru ? 'Публичный ключ' : 'Public key'}>
-        <Input readOnly value={pub} placeholder={ru ? 'не задан' : 'not set'} className="font-mono text-[12.5px]" />
+        <Input readOnly value={pub} placeholder={ru ? 'не задан' : 'not set'} className="font-mono text-[0.78125rem]" />
       </Field>
 
       <div className="flex items-center gap-2">
@@ -65,12 +65,12 @@ export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) 
           type="button"
           onClick={gen}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[13px] font-medium text-ink hover:border-border-strong disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-[0.8125rem] font-medium text-ink hover:border-border-strong disabled:opacity-50"
         >
           {busy ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}
           {pub ? (ru ? 'Перегенерировать ключи' : 'Regenerate keys') : ru ? 'Сгенерировать ключи' : 'Generate keys'}
         </button>
-        {msg && <span className="text-[12.5px] text-ink-2">{msg}</span>}
+        {msg && <span className="text-[0.78125rem] text-ink-2">{msg}</span>}
       </div>
 
       <form action={setPushSubject} className="flex flex-col gap-2 border-t border-border pt-4">

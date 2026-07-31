@@ -7,9 +7,9 @@ export const metadata = { title: 'About' }
 export default async function AboutPage() {
   const lang = await getLang()
   return (
-    <div className="mx-auto w-full max-w-[680px] px-6 py-12">
+    <div className="mx-auto w-full max-w-[42.5rem] px-6 py-12">
       <PageHeader title={t('aboutProject', lang)} />
-      <p className="text-[14px] leading-relaxed text-ink-2">{t('aboutBody', lang)}</p>
+      <p className="text-[0.875rem] leading-relaxed text-ink-2">{t('aboutBody', lang)}</p>
     </div>
   )
 }

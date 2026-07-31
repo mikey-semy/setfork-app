@@ -41,15 +41,15 @@ type Say = (en: string, ru: string) => string
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-border bg-surface p-5">
-      <h2 className="mb-1 text-[14px] font-bold text-ink">{title}</h2>
-      {hint && <p className="mb-4 text-[12.5px] text-muted">{hint}</p>}
+      <h2 className="mb-1 text-[0.875rem] font-bold text-ink">{title}</h2>
+      {hint && <p className="mb-4 text-[0.78125rem] text-muted">{hint}</p>}
       <div className="flex flex-col gap-4">{children}</div>
     </section>
   )
 }
 
 function SizeTag({ children }: { children: React.ReactNode }) {
-  return <div className="w-14 shrink-0 font-mono text-[11px] text-muted">{children}</div>
+  return <div className="w-14 shrink-0 font-mono text-[0.6875rem] text-muted">{children}</div>
 }
 
 /** Главная проверка: контролы одного size в одном ряду — одна высота, один кегль. */
@@ -99,7 +99,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         ))}
         <div className="flex flex-wrap gap-4 border-t border-border pt-3">
           {SIZES.map((s) => (
-            <div key={s} className="flex items-center gap-2 font-mono text-[11px] text-muted">
+            <div key={s} className="flex items-center gap-2 font-mono text-[0.6875rem] text-muted">
               <span>{s}</span>
               <span>{CONTROL_H[s]}</span>
               <span>{CONTROL_TEXT[s]}</span>
@@ -181,10 +181,10 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section title={say('Choice controls', 'Выбор и переключатели')}>
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink">
+          <label className="flex cursor-pointer items-center gap-2 text-[0.8125rem] text-ink">
             <Checkbox defaultChecked className="size-4" /> Checkbox
           </label>
-          <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink">
+          <label className="flex cursor-pointer items-center gap-2 text-[0.8125rem] text-ink">
             <Switch checked={checked} onCheckedChange={setChecked} /> Switch
           </label>
         </div>
@@ -266,7 +266,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
             >
               {say('Delete', 'Удалить')}
             </Button>
-            {confirmed && <span className="text-[12.5px] text-muted">{confirmed}</span>}
+            {confirmed && <span className="text-[0.78125rem] text-muted">{confirmed}</span>}
           </ActionRow>
         </DangerZone>
         {confirmDialog}
@@ -282,13 +282,13 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         <div className="flex flex-col gap-2">
           {(Object.entries(TEXT) as [keyof typeof TEXT, string][]).map(([role, cls]) => (
             <div key={role} className="flex items-baseline gap-3">
-              <span className="w-20 shrink-0 font-mono text-[11px] text-muted">{role}</span>
+              <span className="w-20 shrink-0 font-mono text-[0.6875rem] text-muted">{role}</span>
               <span className={cls}>{say('Sample text of this role', 'Пример текста этой роли')}</span>
-              <span className="font-mono text-[11px] text-muted">{cls}</span>
+              <span className="font-mono text-[0.6875rem] text-muted">{cls}</span>
             </div>
           ))}
         </div>
-        <div className="flex flex-wrap gap-3 border-t border-border pt-3 font-mono text-[11px] text-muted">
+        <div className="flex flex-wrap gap-3 border-t border-border pt-3 font-mono text-[0.6875rem] text-muted">
           {Object.entries(LAYER).map(([name, z]) => (
             <span key={name}>
               {name}={z}
@@ -304,7 +304,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           'Один SideNav для настроек, админки и настроек списка — стиль docs: группы, активный пункт акцентом, свёртка на мобиле.',
         )}
       >
-        <div className="max-w-[260px]">
+        <div className="max-w-[16.25rem]">
           <SideNav
             mobileLabel={say('Sections', 'Разделы')}
             groups={[
@@ -356,12 +356,12 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           <DataTableRow>
             <UserLine handle="demo" size="md" name="Demo User" />
             <Badge variant="soft">admin</Badge>
-            <span className="text-right font-mono text-[12.5px]">42</span>
+            <span className="text-right font-mono text-[0.78125rem]">42</span>
           </DataTableRow>
           <DataTableRow muted>
             <UserLine handle="sleepy" size="md" at={say('3 d ago', '3 дн назад')} />
             <Badge variant="outline">guest</Badge>
-            <span className="text-right font-mono text-[12.5px]">0</span>
+            <span className="text-right font-mono text-[0.78125rem]">0</span>
           </DataTableRow>
         </DataTable>
         <div className="flex flex-wrap items-center gap-4">

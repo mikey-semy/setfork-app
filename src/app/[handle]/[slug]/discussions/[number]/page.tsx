@@ -34,16 +34,16 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
   const card = 'rounded-lg border border-border bg-surface'
   return (
     <>
-      <div className="mx-auto w-full max-w-[820px] px-4 py-6">
+      <div className="mx-auto w-full max-w-[51.25rem] px-4 py-6">
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <Tooltip label={categoryLabel(disc.category, lang)}>
-            <span className="text-[16px]">{categoryMeta(disc.category).icon}</span>
+            <span className="text-[1rem]">{categoryMeta(disc.category).icon}</span>
           </Tooltip>
-          <h1 className="text-[22px] font-bold leading-tight text-ink">
+          <h1 className="text-[1.375rem] font-bold leading-tight text-ink">
             {disc.title} <span className="font-normal text-muted">#{disc.number}</span>
           </h1>
         </div>
-        <div className="mb-4 text-[13px] text-ink-2">
+        <div className="mb-4 text-[0.8125rem] text-ink-2">
           <span className="font-semibold text-ink">{disc.authorHandle}</span> · {timeAgo(disc.createdAt, lang)} ·{' '}
           <Link href={`${base}?category=${disc.category}`} className="hover:text-accent">{categoryLabel(disc.category, lang)}</Link>
         </div>
@@ -53,7 +53,7 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
           <div className="mb-2 flex items-center gap-2">
             <UserLine handle={disc.authorHandle} avatarUrl={disc.authorAvatarUrl} size="sm" at={timeAgo(disc.createdAt, lang)} />
           </div>
-          {disc.body ? <Markdown>{disc.body}</Markdown> : <p className="text-[13px] text-muted">{ru ? '(без описания)' : '(no description)'}</p>}
+          {disc.body ? <Markdown>{disc.body}</Markdown> : <p className="text-[0.8125rem] text-muted">{ru ? '(без описания)' : '(no description)'}</p>}
         </div>
 
         {/* Ответы */}
@@ -84,7 +84,7 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
             </div>
           </form>
         ) : (
-          <p className="text-[13px] text-muted">
+          <p className="text-[0.8125rem] text-muted">
             <Link href="/login" className="text-accent hover:underline">{ru ? 'Войдите' : 'Sign in'}</Link> {ru ? ', чтобы ответить.' : 'to reply.'}
           </p>
         )}

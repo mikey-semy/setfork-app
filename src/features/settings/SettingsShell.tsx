@@ -54,9 +54,9 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
   }, [visible])
 
   return (
-    <div className="mx-auto flex w-full max-w-[920px] flex-col gap-8 px-6 py-8 md:flex-row">
+    <div className="mx-auto flex w-full max-w-[57.5rem] flex-col gap-8 px-6 py-8 md:flex-row">
       {/* top = высота шапки (57) + верхний паддинг (py-8 = 32) → без «прыжка» к шапке при скролле. */}
-      <aside className="shrink-0 md:sticky md:top-[89px] md:h-fit md:w-[220px]">
+      <aside className="shrink-0 md:sticky md:top-[5.5625rem] md:h-fit md:w-[13.75rem]">
         <SideNav
           mobileLabel={t('settings', lang)}
           search={{ value: q, onChange: setQ, placeholder: t('settingsSearchPh', lang), clearLabel: t('clear', lang) }}
@@ -82,7 +82,7 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
           <EmptyState hint={t('noSettingsFound', lang)} />
         ) : (
           visible.map((s) => (
-            <div key={s.id} id={s.id} className="scroll-mt-[76px]">
+            <div key={s.id} id={s.id} className="scroll-mt-[4.75rem]">
               {s.content}
             </div>
           ))

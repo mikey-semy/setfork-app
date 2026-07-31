@@ -19,7 +19,7 @@ export function HeroSearch({ placeholder, clearLabel }: { placeholder: string; c
         e.preventDefault()
         go()
       }}
-      className="flex w-full max-w-[600px] items-center gap-3 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-[0_12px_36px_-14px_rgba(0,0,0,.22)]"
+      className="flex w-full max-w-[37.5rem] items-center gap-3 rounded-[0.875rem] border border-border bg-surface px-4 py-3.5 shadow-[0_12px_36px_-14px_rgba(0,0,0,.22)]"
     >
       <SearchField
         variant="bare"
@@ -31,7 +31,7 @@ export function HeroSearch({ placeholder, clearLabel }: { placeholder: string; c
         clearLabel={clearLabel}
         autoFocus
       />
-      <button type="submit" className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-md bg-primary text-primary-fg" aria-label="Search">
+      <button type="submit" className="grid h-[2.125rem] w-[2.125rem] shrink-0 place-items-center rounded-md bg-primary text-primary-fg" aria-label="Search">
         <ArrowRight size={16} />
       </button>
     </form>

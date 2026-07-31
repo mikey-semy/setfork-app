@@ -29,7 +29,7 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
         return (
           <span
             key={q.id}
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12.5px] ${
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[0.78125rem] ${
               isActive ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink'
             }`}
           >
@@ -52,7 +52,7 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
             <Plus size={13} /> {say('Query', 'Запрос')}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[280px]">
+        <PopoverContent align="start" className="w-[17.5rem]">
           <form action={createSavedQuery} className="space-y-2.5">
             <Field label={say('Name', 'Название')}>
               <Input name="name" required maxLength={60} placeholder={say('Books I started', 'Книги, которые начал')} />

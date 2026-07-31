@@ -11,7 +11,7 @@ export function LabelChips({ labels, lang, custom = [] }: { labels: string[]; la
           <span
             key={k}
             style={c.style}
-            className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${c.cls ?? (c.style ? '' : 'border-border text-ink-2')}`}
+            className={`rounded-full border px-2 py-0.5 text-[0.6875rem] font-medium ${c.cls ?? (c.style ? '' : 'border-border text-ink-2')}`}
           >
             {c.text}
           </span>

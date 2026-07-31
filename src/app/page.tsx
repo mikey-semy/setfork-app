@@ -40,17 +40,17 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="flex w-full max-w-[640px] flex-col items-center gap-6 text-center">
-        <div className="font-logo text-[44px] leading-none tracking-tight text-ink sm:text-[64px]">SetFork</div>
+      <div className="flex w-full max-w-[40rem] flex-col items-center gap-6 text-center">
+        <div className="font-logo text-[2.75rem] leading-none tracking-tight text-ink sm:text-[4rem]">SetFork</div>
 
         <HeroSearch placeholder={placeholder} clearLabel={t('clear', lang)} />
 
-        <div className="flex max-w-[640px] flex-wrap justify-center gap-2.5">
+        <div className="flex max-w-[40rem] flex-wrap justify-center gap-2.5">
           {chips.map((c) => (
             <Link
               key={c}
               href={`/search?q=${encodeURIComponent(c)}`}
-              className="rounded-full border border-border bg-surface-2 px-3.5 py-[7px] text-[13px] text-ink-2 hover:text-ink"
+              className="rounded-full border border-border bg-surface-2 px-3.5 py-[0.4375rem] text-[0.8125rem] text-ink-2 hover:text-ink"
             >
               {c}
             </Link>

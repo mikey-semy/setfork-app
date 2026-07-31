@@ -23,7 +23,7 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
   const q = quotaHit ? await listQuota(session.userId, session.handle) : null
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-6 py-8">
+    <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
       <form action={createTemplate}>
         <PageHeader title={t('newList', lang)} />
 
@@ -40,7 +40,7 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
             name="title"
             required
             placeholder={ru ? 'Деплой на VPS' : 'Deploy to a VPS'}
-            className="px-3 py-2.5 text-[14px]"
+            className="px-3 py-2.5 text-[0.875rem]"
           />
         </Field>
 
@@ -48,7 +48,7 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
           <Input
             name="desc"
             placeholder={ru ? 'Коротко, о чём список' : 'One line about the list'}
-            className="px-3 py-2.5 text-[14px]"
+            className="px-3 py-2.5 text-[0.875rem]"
           />
         </Field>
 
@@ -68,15 +68,15 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
           <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
             <input type="radio" name="visibility" value="public" defaultChecked className="mt-0.5" />
             <span>
-              <span className="block text-[13px] font-medium text-ink">{t('publicLabel', lang)}</span>
-              <span className="block text-[12.5px] text-ink-2">{t('publicHint', lang)}</span>
+              <span className="block text-[0.8125rem] font-medium text-ink">{t('publicLabel', lang)}</span>
+              <span className="block text-[0.78125rem] text-ink-2">{t('publicHint', lang)}</span>
             </span>
           </label>
           <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
             <input type="radio" name="visibility" value="private" className="mt-0.5" />
             <span>
-              <span className="block text-[13px] font-medium text-ink">{t('privateLabel', lang)}</span>
-              <span className="block text-[12.5px] text-ink-2">{t('privateHint', lang)}</span>
+              <span className="block text-[0.8125rem] font-medium text-ink">{t('privateLabel', lang)}</span>
+              <span className="block text-[0.78125rem] text-ink-2">{t('privateHint', lang)}</span>
             </span>
           </label>
           </div>
@@ -85,12 +85,12 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
         <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
           <input type="checkbox" name="gated" className="mt-0.5" />
           <span>
-            <span className="block text-[13px] font-medium text-ink">{ru ? 'Последовательный курс' : 'Sequential course'}</span>
-            <span className="block text-[12.5px] text-ink-2">{ru ? 'Следующий урок откроется только после сдачи тестов предыдущего' : 'The next lesson unlocks only after passing the previous lesson’s tests'}</span>
+            <span className="block text-[0.8125rem] font-medium text-ink">{ru ? 'Последовательный курс' : 'Sequential course'}</span>
+            <span className="block text-[0.78125rem] text-ink-2">{ru ? 'Следующий урок откроется только после сдачи тестов предыдущего' : 'The next lesson unlocks only after passing the previous lesson’s tests'}</span>
           </span>
         </label>
 
-        <label className="mb-2 block text-[12.5px] font-semibold text-ink-2">{ru ? 'Пункты' : 'Items'}</label>
+        <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{ru ? 'Пункты' : 'Items'}</label>
         <ListEditor name="items" initialItems={[]} lang={lang} aiRefine={{ title: '', desc: '', tags: [] }} />
 
         <SubmitButton className="mt-6">

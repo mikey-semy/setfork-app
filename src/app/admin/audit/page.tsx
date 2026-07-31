@@ -69,7 +69,7 @@ export default async function AuditPage() {
   const entries = await getAuditLog(200)
 
   return (
-    <div className="mx-auto w-full max-w-[960px] px-6 py-8">
+    <div className="mx-auto w-full max-w-[60rem] px-6 py-8">
       <PageHeader
         title={ru ? 'Журнал аудита' : 'Audit log'}
         subtitle={
@@ -95,25 +95,25 @@ export default async function AuditPage() {
                 <Icon size={16} className={`mt-0.5 shrink-0 ${m.cls}`} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <span className="text-[13px] font-semibold text-ink">{ru ? m.ru : m.en}</span>
+                    <span className="text-[0.8125rem] font-semibold text-ink">{ru ? m.ru : m.en}</span>
                     {e.actorHandle ? (
-                      <Link href={`/${e.actorHandle}`} className="text-[13px] text-primary hover:underline">
+                      <Link href={`/${e.actorHandle}`} className="text-[0.8125rem] text-primary hover:underline">
                         {e.actorHandle}
                       </Link>
                     ) : (
-                      <span className="text-[13px] text-muted">{ru ? 'система' : 'system'}</span>
+                      <span className="text-[0.8125rem] text-muted">{ru ? 'система' : 'system'}</span>
                     )}
                     {e.targetType && e.targetId ? (
-                      <span className="font-mono text-[11px] text-muted">
+                      <span className="font-mono text-[0.6875rem] text-muted">
                         {e.targetType}:{e.targetId.slice(0, 8)}
                       </span>
                     ) : null}
                   </div>
-                  {details ? <div className="mt-0.5 truncate font-mono text-[11px] text-ink-2">{details}</div> : null}
+                  {details ? <div className="mt-0.5 truncate font-mono text-[0.6875rem] text-ink-2">{details}</div> : null}
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-[12.5px] tabular-nums text-ink-2">{fmt(e.createdAt, ru)}</div>
-                  {e.ip ? <div className="font-mono text-[11px] text-muted">{e.ip}</div> : null}
+                  <div className="text-[0.78125rem] tabular-nums text-ink-2">{fmt(e.createdAt, ru)}</div>
+                  {e.ip ? <div className="font-mono text-[0.6875rem] text-muted">{e.ip}</div> : null}
                 </div>
               </div>
             )

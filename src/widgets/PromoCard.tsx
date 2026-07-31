@@ -42,14 +42,14 @@ export function PromoCard({ lang }: { lang: Lang }) {
       <button type="button" onClick={dismiss} className="absolute right-2 top-2 rounded-md p-1 text-muted hover:text-ink" aria-label="Dismiss">
         <X size={13} />
       </button>
-      <span className="inline-block rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">{c.badge}</span>
+      <span className="inline-block rounded-full bg-accent px-2 py-0.5 text-[0.6875rem] font-semibold text-white">{c.badge}</span>
       <div className="mt-2 flex items-start gap-2">
         <Terminal size={16} className="mt-0.5 shrink-0 text-accent" />
-        <div className="text-[14px] font-semibold leading-snug text-ink">{c.title}</div>
+        <div className="text-[0.875rem] font-semibold leading-snug text-ink">{c.title}</div>
       </div>
       <Link
         href={PROMO.href}
-        className="mt-3 block rounded-md border border-border bg-surface py-1.5 text-center text-[12.5px] font-semibold text-ink hover:border-border-strong"
+        className="mt-3 block rounded-md border border-border bg-surface py-1.5 text-center text-[0.78125rem] font-semibold text-ink hover:border-border-strong"
       >
         {c.cta}
       </Link>

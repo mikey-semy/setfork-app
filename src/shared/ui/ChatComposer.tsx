@@ -74,7 +74,7 @@ export function ChatComposer({
           }}
           rows={1}
           placeholder={placeholder}
-          className="max-h-32 min-h-8 flex-1 resize-none bg-transparent px-2 py-[7.5px] text-[13px] leading-[1.55] text-ink outline-hidden placeholder:text-muted"
+          className="max-h-32 min-h-8 flex-1 resize-none bg-transparent px-2 py-[0.46875rem] text-[0.8125rem] leading-[1.55] text-ink outline-hidden placeholder:text-muted"
         />
         <Tooltip label={sendTooltip ?? sendAriaLabel}>
           <button

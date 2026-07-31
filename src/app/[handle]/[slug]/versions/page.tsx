@@ -66,7 +66,7 @@ export default async function CommitsPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[900px] px-4 py-6">
+    <div className="mx-auto w-full max-w-[56.25rem] px-4 py-6">
       <HistoryNav
         base={base}
         active="commits"
@@ -75,7 +75,7 @@ export default async function CommitsPage({
       />
       {/* Шапка: ветка + счётчики слева, фильтры автор/дата справа (как GitHub Commits). */}
       <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.8125rem]">
           {/* Оставляем ИМЯ РЕФА main (его же пользователь набирает в git push
               origin main), а по-русски поясняем тултипом — UI не расходится с git. */}
           <Tooltip label={t('defaultBranchHint', lang)}>
@@ -112,7 +112,7 @@ export default async function CommitsPage({
       </div>
 
       {groups.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-[13px] text-muted">
+        <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-[0.8125rem] text-muted">
           {t('noCommitsMatch', lang)}
           <div className="mt-3">
             <Link href={versionsBase} className="text-accent hover:underline">
@@ -124,7 +124,7 @@ export default async function CommitsPage({
         groups.map((g) => (
           <Fragment key={g.day}>
             {/* Заголовок-дата группы. */}
-            <div className="mb-2 mt-4 flex items-center gap-2 text-[12.5px] font-medium text-ink-2 first:mt-0">
+            <div className="mb-2 mt-4 flex items-center gap-2 text-[0.78125rem] font-medium text-ink-2 first:mt-0">
               <GitCommitHorizontal size={15} className="text-muted" /> {t('versionsTab', lang)} · {g.day}
             </div>
             {/* Ветвь-линия слева с узлами-точками; каждая строка — аккордеон (тап → дифф). */}

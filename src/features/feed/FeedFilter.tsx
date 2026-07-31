@@ -53,8 +53,8 @@ export function FeedFilter({ lang, onChange }: { lang: Lang; onChange: (p: FeedP
       </Button>
       <OverlayPanel open={open} onClose={() => setOpen(false)} align="top" title={ru ? 'Фильтр' : 'Filter'} className="flex max-h-[70vh] flex-col">
               <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-2.5">
-                <div className="text-[12.5px] font-semibold text-ink">{ru ? 'События' : 'Events'}</div>
-                <p className="mb-2 text-[11px] text-muted">
+                <div className="text-[0.78125rem] font-semibold text-ink">{ru ? 'События' : 'Events'}</div>
+                <p className="mb-2 text-[0.6875rem] text-muted">
                   {ru ? 'Что показывать в ленте' : 'Activity you want to see on your feed'}
                 </p>
                 <div className="flex flex-col gap-1">

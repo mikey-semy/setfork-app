@@ -104,7 +104,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         getUserTemplates(user.userId, user.userId),
         getUserAppearance(user.userId),
       ])
-    : [0, [], false, [], { accent: '', font: '' }]
+    : [0, [], false, [], { accent: '', font: '', scale: '' }]
   // «Top lists» в боковом меню: недавние списки пользователя (по updatedAt), минимум
   // полей. Замок у приватных — тот же признак, что в шапке и в переключателе.
   const topLists = ownLists.slice(0, 10).map((l) => ({
@@ -124,6 +124,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       // браузере localStorage-скрипт ниже перекроет, если выбор там уже есть.
       data-accent={appearance.accent || undefined}
       data-font={appearance.font || undefined}
+      data-scale={appearance.scale || undefined}
       suppressHydrationWarning
     >
       <body>
@@ -133,7 +134,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var d=document.documentElement,a=localStorage.getItem('sf-accent'),f=localStorage.getItem('sf-font');if(a)d.setAttribute('data-accent',a);else if(a==='')d.removeAttribute('data-accent');if(f)d.setAttribute('data-font',f);else if(f==='')d.removeAttribute('data-font')}catch(e){}",
+              "try{var d=document.documentElement,a=localStorage.getItem('sf-accent'),f=localStorage.getItem('sf-font'),s=localStorage.getItem('sf-scale');if(a)d.setAttribute('data-accent',a);else if(a==='')d.removeAttribute('data-accent');if(f)d.setAttribute('data-font',f);else if(f==='')d.removeAttribute('data-font');if(s)d.setAttribute('data-scale',s);else if(s==='')d.removeAttribute('data-scale')}catch(e){}",
           }}
         />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>

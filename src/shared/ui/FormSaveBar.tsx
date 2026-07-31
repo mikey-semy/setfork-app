@@ -113,16 +113,16 @@ export function FormSaveBar({ ru }: { ru: boolean }) {
           data-sticky-input
           className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
         >
-          <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-2.5 md:px-8">
+          <div className="mx-auto flex max-w-[87.5rem] items-center justify-between gap-3 px-4 py-2.5 md:px-8">
             {/* На телефоне текста нет: там важнее две крупные кнопки, а не пояснение. */}
-            <span className="hidden min-w-0 truncate text-[13px] text-ink-2 sm:inline">
+            <span className="hidden min-w-0 truncate text-[0.8125rem] text-ink-2 sm:inline">
               {say('Unsaved changes', 'Есть несохранённые изменения')}
             </span>
             <div className="flex flex-1 items-center justify-end gap-2 sm:flex-none">
-              <Button type="button" variant="outline" size="md" onClick={discard} disabled={pending} className="h-11 max-sm:flex-1 sm:h-[38px]">
+              <Button type="button" variant="outline" size="md" onClick={discard} disabled={pending} className="h-11 max-sm:flex-1 sm:h-[2.375rem]">
                 {say('Discard', 'Отменить')}
               </Button>
-              <Button type="submit" variant="primary" size="md" disabled={pending} className="h-11 max-sm:flex-1 sm:h-[38px]">
+              <Button type="submit" variant="primary" size="md" disabled={pending} className="h-11 max-sm:flex-1 sm:h-[2.375rem]">
                 {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                 {say('Save', 'Сохранить')}
               </Button>

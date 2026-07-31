@@ -26,7 +26,7 @@ export function LockToggle({
     <div className="flex flex-col gap-1.5">
       <Button
         variant="ghost"
-        className="h-[38px] w-full justify-start px-2 text-[12.5px]"
+        className="h-[2.375rem] w-full justify-start px-2 text-[0.78125rem]"
         disabled={pending}
         onClick={() => start(async () => void (await setSuggestionLocked(suggestionId, !locked)))}
       >
@@ -34,7 +34,7 @@ export function LockToggle({
         {locked ? labels.unlock : labels.lock}
       </Button>
       {/* Подсказка только в запертом состоянии: в обычном она была бы шумом. */}
-      {locked && <p className="text-[11px] text-muted">{labels.hint}</p>}
+      {locked && <p className="text-[0.6875rem] text-muted">{labels.hint}</p>}
     </div>
   )
 }

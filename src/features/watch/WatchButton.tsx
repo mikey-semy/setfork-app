@@ -103,22 +103,22 @@ export function WatchButton({
             </button>
           </DropdownMenuTrigger>
         </SplitButton>
-        <DropdownMenuContent align="end" className="w-[330px] p-0">
-          <div className="border-b border-border px-3 py-2.5 text-[13px] font-semibold text-ink">{labels.title}</div>
+        <DropdownMenuContent align="end" className="w-[20.625rem] p-0">
+          <div className="border-b border-border px-3 py-2.5 text-[0.8125rem] font-semibold text-ink">{labels.title}</div>
           {rows.map((r) => (
             <DropdownMenuItem key={r.key} onSelect={() => apply(r.key)} className="flex items-start gap-2 px-3 py-2.5">
               <span className="mt-0.5 w-4 shrink-0">{level === r.key && <Check size={14} className="text-accent" />}</span>
               <span className="min-w-0">
-                <span className="block text-[13px] font-medium text-ink">{r.title}</span>
-                <span className="block text-[12.5px] leading-snug text-muted">{r.desc}</span>
+                <span className="block text-[0.8125rem] font-medium text-ink">{r.title}</span>
+                <span className="block text-[0.78125rem] leading-snug text-muted">{r.desc}</span>
               </span>
             </DropdownMenuItem>
           ))}
           <DropdownMenuItem onSelect={() => setCustomOpen(true)} className="flex items-start gap-2 border-t border-border px-3 py-2.5">
             <span className="mt-0.5 w-4 shrink-0">{level === 'custom' && <Check size={14} className="text-accent" />}</span>
             <span className="min-w-0">
-              <span className="block text-[13px] font-medium text-ink">{labels.custom}</span>
-              <span className="block text-[12.5px] leading-snug text-muted">{labels.customDesc}</span>
+              <span className="block text-[0.8125rem] font-medium text-ink">{labels.custom}</span>
+              <span className="block text-[0.78125rem] leading-snug text-muted">{labels.customDesc}</span>
             </span>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -136,7 +136,7 @@ export function WatchButton({
                   onChange={(e) => setEvents((prev) => ({ ...prev, [k]: e.target.checked }))}
                   className="size-4 accent-(--accent)"
                 />
-                <span className="text-[13px] text-ink">{label}</span>
+                <span className="text-[0.8125rem] text-ink">{label}</span>
               </label>
             )
           })}
@@ -148,7 +148,7 @@ export function WatchButton({
                 setCustomOpen(false)
               }}
               disabled={pending}
-              className="rounded-md border border-accent bg-accent px-3.5 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
+              className="rounded-md border border-accent bg-accent px-3.5 py-2 text-[0.8125rem] font-semibold text-white disabled:opacity-50"
             >
               {labels.apply}
             </button>

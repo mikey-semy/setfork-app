@@ -19,7 +19,7 @@ export default async function NotificationsPage() {
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' })
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-6 py-8">
+    <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
       <MarkRead />
       <PageHeader title={t('notifications', lang)} />
 
@@ -46,7 +46,7 @@ export default async function NotificationsPage() {
                 }`}
               >
                 <Avatar handle={n.actorHandle ?? '?'} avatarUrl={n.actorAvatarUrl} size={30} />
-                <div className="min-w-0 flex-1 text-[13px] text-ink-2">
+                <div className="min-w-0 flex-1 text-[0.8125rem] text-ink-2">
                   <span className="font-semibold text-ink">{n.actorHandle ?? '—'}</span> {t(NOTIF_VERB[n.type], lang)}
                   {isFollow ? null : href ? (
                     <>
@@ -59,7 +59,7 @@ export default async function NotificationsPage() {
                     <> <span className="text-ink">{listTitle}</span></>
                   )}
                 </div>
-                <span className="shrink-0 font-mono text-[11px] text-muted">{fmt.format(new Date(n.createdAt))}</span>
+                <span className="shrink-0 font-mono text-[0.6875rem] text-muted">{fmt.format(new Date(n.createdAt))}</span>
               </div>
             )
           })}

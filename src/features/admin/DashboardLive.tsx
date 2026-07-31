@@ -64,8 +64,8 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Now', ru: 'Сейчас' }, lang)}</h2>
-        <span className="flex items-center gap-1.5 text-[11px] text-muted">
+        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Now', ru: 'Сейчас' }, lang)}</h2>
+        <span className="flex items-center gap-1.5 text-[0.6875rem] text-muted">
           <span className={`inline-block h-1.5 w-1.5 rounded-full ${stale ? 'bg-warn' : 'bg-ok'}`} />
           {stale ? tr({ en: 'reconnecting…', ru: 'переподключение…' }, lang) : tr({ en: 'live', ru: 'вживую' }, lang)}
         </span>
@@ -120,7 +120,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
         />
       </div>
 
-      <h2 className="mt-2 text-[13px] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Today', ru: 'Сегодня' }, lang)}</h2>
+      <h2 className="mt-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Today', ru: 'Сегодня' }, lang)}</h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           label={tr({ en: 'Generations', ru: 'Генераций' }, lang)}

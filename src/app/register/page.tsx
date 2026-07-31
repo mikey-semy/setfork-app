@@ -14,13 +14,13 @@ export default async function RegisterPage() {
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-[380px] rounded-xl border border-border bg-surface p-8 text-center shadow-card">
-        <div className="font-logo mb-1 text-[38px] leading-none text-ink">SF</div>
-        <div className="mb-6 text-[14px] font-semibold text-ink">{t('registerTitle', lang)}</div>
+      <div className="w-full max-w-[23.75rem] rounded-xl border border-border bg-surface p-8 text-center shadow-card">
+        <div className="font-logo mb-1 text-[2.375rem] leading-none text-ink">SF</div>
+        <div className="mb-6 text-[0.875rem] font-semibold text-ink">{t('registerTitle', lang)}</div>
 
         <RegisterForm lang={lang} />
 
-        <p className="mt-3 text-[11px] leading-relaxed text-muted">
+        <p className="mt-3 text-[0.6875rem] leading-relaxed text-muted">
           {t('agreeToTermsPrefix', lang)}{' '}
           <a href={legalUrl('terms', lang)} className="text-accent hover:underline">
             {t('termsOfService', lang)}
@@ -31,14 +31,14 @@ export default async function RegisterPage() {
           </a>.
         </p>
 
-        <div className="mt-4 text-[12.5px] text-ink-2">
+        <div className="mt-4 text-[0.78125rem] text-ink-2">
           {t('haveAccount', lang)}{' '}
           <Link href="/login" className="font-semibold text-accent hover:underline">
             {t('signIn', lang)}
           </Link>
         </div>
 
-        <Link href="/" className="mt-6 inline-block text-[12.5px] text-ink-2 hover:text-ink">
+        <Link href="/" className="mt-6 inline-block text-[0.78125rem] text-ink-2 hover:text-ink">
           ← SetFork
         </Link>
       </div>

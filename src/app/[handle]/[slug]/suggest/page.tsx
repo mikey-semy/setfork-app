@@ -39,10 +39,10 @@ export default async function SuggestPage({
   const action = submitSuggestion.bind(null, tpl.id)
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-6 py-8">
+    <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
       <Link
         href={`/${owner}/${slug}`}
-        className="mb-4 inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink"
+        className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink"
       >
         <ArrowLeft size={15} /> {tpl.owner.handle} / {tr(tpl.title, lang) || tpl.slug}
       </Link>
@@ -65,7 +65,7 @@ export default async function SuggestPage({
 
         <ListEditor name="items" initialItems={initial} lang={lang} />
 
-        <button type="submit" className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[14px] font-semibold text-primary-fg">
+        <button type="submit" className="mt-6 rounded-md bg-primary px-5 py-2.5 text-[0.875rem] font-semibold text-primary-fg">
           {t('sendSuggestion', lang)}
         </button>
       </form>

@@ -39,7 +39,7 @@ export function PageHeader({
           <h1
             className={cn(
               'min-w-0 truncate font-bold text-ink',
-              size === 'page' ? 'text-[18px]' : 'text-[16px]',
+              size === 'page' ? 'text-[1.125rem]' : 'text-[1rem]',
             )}
           >
             {title}
@@ -50,7 +50,7 @@ export function PageHeader({
           <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:justify-end">{actions}</div>
         )}
       </div>
-      {subtitle && <p className="mt-1 text-[13px] text-ink-2">{subtitle}</p>}
+      {subtitle && <p className="mt-1 text-[0.8125rem] text-ink-2">{subtitle}</p>}
     </header>
   )
 }

@@ -128,17 +128,17 @@ export function RunView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-6">
-      <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-ink-2 hover:text-ink">
+    <div className="mx-auto w-full max-w-[47.5rem] px-4 py-8 sm:px-6">
+      <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={14} /> {backHref.replace(/^\//, '')}
       </Link>
 
       {/* Прогресс. Кнопки одной высоты (h-9): «Завершить» текстом, остальное — иконки. */}
-      <div className="sticky top-[64px] z-10 mb-5 rounded-lg border border-border bg-surface/95 p-4 backdrop-blur-sm">
+      <div className="sticky top-[4rem] z-10 mb-5 rounded-lg border border-border bg-surface/95 p-4 backdrop-blur-sm">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="truncate text-[16px] font-semibold text-ink">{title}</div>
-            <div className="text-[12.5px] text-ink-2">
+            <div className="truncate text-[1rem] font-semibold text-ink">{title}</div>
+            <div className="text-[0.78125rem] text-ink-2">
               {status === 'done' ? (
                 t('runDone', lang)
               ) : status === 'failed' ? (
@@ -156,7 +156,7 @@ export function RunView({
               <button
                 type="button"
                 onClick={() => start(() => reopenRun(runId))}
-                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12.5px] text-ink hover:border-border-strong"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[0.78125rem] text-ink hover:border-border-strong"
               >
                 <RotateCcw size={14} /> {t('runReopen', lang)}
               </button>
@@ -165,7 +165,7 @@ export function RunView({
                 <button
                   type="button"
                   onClick={() => start(() => finishRun(runId))}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[13px] font-semibold text-primary-fg"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.8125rem] font-semibold text-primary-fg"
                 >
                   <CircleCheckBig size={15} /> {t('runFinish', lang)}
                 </button>
@@ -223,10 +223,10 @@ export function RunView({
       {certificateHref && ((total > 0 && done === total && blockedCount === 0) || courseCompleted) && (
         <div className="mb-5 flex items-center gap-3 rounded-lg border border-ok/40 bg-ok/10 px-4 py-3">
           <GraduationCap size={18} className="shrink-0 text-ok" />
-          <span className="min-w-0 flex-1 text-[13px] font-medium text-ink">
+          <span className="min-w-0 flex-1 text-[0.8125rem] font-medium text-ink">
             {total > 0 && done === total && blockedCount === 0 ? t('courseAllStepsDone', lang) : t('courseCompletedEarlier', lang)}
           </span>
-          <Link href={certificateHref} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ok/40 bg-surface px-2.5 py-1.5 text-[12.5px] font-medium text-ok hover:bg-ok/15">
+          <Link href={certificateHref} className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ok/40 bg-surface px-2.5 py-1.5 text-[0.78125rem] font-medium text-ok hover:bg-ok/15">
             <Award size={14} /> {t('courseCertificate', lang)}
           </Link>
         </div>
@@ -247,7 +247,7 @@ export function RunView({
                       <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.title }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />
                     </div>
                   )}
-                  <Markdown className={`text-[14px] leading-relaxed text-ink-2${digEnabled ? ' pr-10' : ''}`}>{s.text}</Markdown>
+                  <Markdown className={`text-[0.875rem] leading-relaxed text-ink-2${digEnabled ? ' pr-10' : ''}`}>{s.text}</Markdown>
                 </div>
               ) : null
             }
@@ -255,7 +255,7 @@ export function RunView({
               return s.products.length ? <ProductBlock key={s.id} title={s.productTitle} items={s.products} lang={lang} /> : null
             }
             return s.caption ? (
-              <div key={s.id} className="px-1 text-[13px] italic text-muted">🖼 {s.caption}</div>
+              <div key={s.id} className="px-1 text-[0.8125rem] italic text-muted">🖼 {s.caption}</div>
             ) : null
           }
           // Порядковый номер шага (только по шаг-блокам).
@@ -302,8 +302,8 @@ export function RunView({
                   {s.done ? <SquareCheckBig size={20} /> : <Square size={20} />}
                 </button>
                 <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-2 pt-1">
-                  {ordered && <span className="font-mono text-[12.5px] text-muted">{stepNo}</span>}
-                  <span className={`text-[14px] font-semibold ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
+                  {ordered && <span className="font-mono text-[0.78125rem] text-muted">{stepNo}</span>}
+                  <span className={`text-[0.875rem] font-semibold ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
                   <StepLevelBadge level={s.level} lang={lang} />
                 </div>
               </div>
@@ -312,7 +312,7 @@ export function RunView({
               <div className="mt-2 flex flex-col gap-3">
                 {s.desc && <Markdown>{s.desc}</Markdown>}
                 {s.why && (
-                  <div className="flex gap-1.5 text-[12.5px] text-ink-2">
+                  <div className="flex gap-1.5 text-[0.78125rem] text-ink-2">
                     <Info size={13} className="mt-0.5 shrink-0 text-muted" />
                     <span>
                       <span className="font-medium">{t('whyLabel', lang)}:</span> {s.why}
@@ -321,7 +321,7 @@ export function RunView({
                 )}
 
                 {s.command && (
-                  <div className="flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[12.5px] text-ink">
+                  <div className="flex items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 font-mono text-[0.78125rem] text-ink">
                     <span className="shrink-0" style={{ color: 'var(--accent)' }}>$</span>
                     <span className="no-scrollbar min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{s.command}</span>
                     <CopyButton text={s.command} />
@@ -334,7 +334,7 @@ export function RunView({
                       const checked = s.subtasksDone.includes(idx)
                       return (
                         <li key={idx}>
-                          <button type="button" onClick={() => toggleSub(i, idx)} className="flex items-start gap-2 text-left text-[13px] text-ink-2">
+                          <button type="button" onClick={() => toggleSub(i, idx)} className="flex items-start gap-2 text-left text-[0.8125rem] text-ink-2">
                             <span className={`mt-0.5 shrink-0 ${checked ? 'text-ok' : 'text-muted'}`}>{checked ? <Check size={14} /> : <Square size={14} />}</span>
                             <span className={checked ? 'line-through opacity-70' : ''}>{sub}</span>
                           </button>
@@ -348,11 +348,11 @@ export function RunView({
                   <div className="flex flex-wrap gap-2">
                     {s.refs.map((r) =>
                       r.url ? (
-                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] text-accent">
+                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-accent">
                           {r.label}
                         </SafeLink>
                       ) : (
-                        <span key={`${r.label}:`} className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[11px] text-ink-2">
+                        <span key={`${r.label}:`} className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-ink-2">
                           {r.label}
                         </span>
                       ),
@@ -370,10 +370,10 @@ export function RunView({
                       rows={2}
                       aria-label={t('runReasonPh', lang)}
                       placeholder={t('runReasonPh', lang)}
-                      className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-hidden focus:border-border-strong"
+                      className="w-full resize-none rounded-md border border-border bg-surface px-2.5 py-1.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
                     />
                     <div className="mt-2 flex items-center gap-2">
-                      <button type="button" onClick={() => confirmBlock(i)} className="inline-flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-[12.5px] font-semibold text-white">
+                      <button type="button" onClick={() => confirmBlock(i)} className="inline-flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-[0.78125rem] font-semibold text-white">
                         <Ban size={13} /> {t('runBlockAction', lang)}
                       </button>
                       <button
@@ -382,7 +382,7 @@ export function RunView({
                           setBlockingId(null)
                           setReasonDraft('')
                         }}
-                        className="rounded-md px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:text-ink"
+                        className="rounded-md px-2.5 py-1.5 text-[0.78125rem] text-ink-2 hover:text-ink"
                       >
                         {t('cancel', lang)}
                       </button>
@@ -392,7 +392,7 @@ export function RunView({
 
                 {/* Состояние «застрял»: причина + сообщить/снять (помощь теперь через «кирку» в углу). */}
                 {s.blocked && blockingId !== s.id && (
-                  <div className="rounded-md border border-danger/40 bg-danger/5 p-2.5 text-[12.5px]">
+                  <div className="rounded-md border border-danger/40 bg-danger/5 p-2.5 text-[0.78125rem]">
                     <div className="flex items-center gap-1.5 font-semibold text-danger">
                       <Ban size={13} /> {t('runBlockedLabel', lang)}
                       {s.reason ? ':' : ''}
@@ -402,12 +402,12 @@ export function RunView({
                       <button
                         type="button"
                         onClick={() => start(() => reportBlockedStep(runId, s.id))}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[12.5px] font-medium text-ink hover:border-border-strong"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-[0.78125rem] font-medium text-ink hover:border-border-strong"
                       >
                         <Flag size={12} /> {t('runReport', lang)}
                       </button>
                       {!closed && (
-                        <button type="button" onClick={() => unblock(i)} className="rounded-md px-2.5 py-1.5 text-[12.5px] text-ink-2 hover:text-ink">
+                        <button type="button" onClick={() => unblock(i)} className="rounded-md px-2.5 py-1.5 text-[0.78125rem] text-ink-2 hover:text-ink">
                           {t('runUnblock', lang)}
                         </button>
                       )}

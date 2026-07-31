@@ -75,7 +75,7 @@ export function ReviewPanel({
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="text-[13px] font-semibold text-ink">{labels.title}</span>
+        <span className="text-[0.8125rem] font-semibold text-ink">{labels.title}</span>
         {blocking && <Badge variant="danger">{labels.blocked}</Badge>}
       </div>
 
@@ -88,7 +88,7 @@ export function ReviewPanel({
               <div key={r.id} className="flex gap-2">
                 <Avatar handle={r.reviewer.handle} avatarUrl={r.reviewer.avatarUrl} size={20} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline gap-x-2 text-[12.5px]">
+                  <div className="flex flex-wrap items-baseline gap-x-2 text-[0.78125rem]">
                     <span className="font-semibold text-ink">{r.reviewer.name || r.reviewer.handle}</span>
                     {/* Снятый вердикт показываем приглушённо и зачёркнуто: он был,
                         но принятие больше не держит — обе половины важны. */}
@@ -98,10 +98,10 @@ export function ReviewPanel({
                     <span className="text-muted">{timeAgo(r.createdAt, lang)}</span>
                   </div>
                   {r.body && (
-                    <div className={`whitespace-pre-wrap text-[13px] [overflow-wrap:anywhere] ${r.dismissed ? 'text-muted' : 'text-ink-2'}`}>{r.body}</div>
+                    <div className={`whitespace-pre-wrap text-[0.8125rem] [overflow-wrap:anywhere] ${r.dismissed ? 'text-muted' : 'text-ink-2'}`}>{r.body}</div>
                   )}
                   {r.dismissed && (
-                    <div className="mt-0.5 text-[12.5px] text-muted [overflow-wrap:anywhere]">
+                    <div className="mt-0.5 text-[0.78125rem] text-muted [overflow-wrap:anywhere]">
                       {labels.dismissedBy}
                       {r.dismissed.by ? ` @${r.dismissed.by}` : ''}: {r.dismissed.reason}
                     </div>
@@ -117,18 +117,18 @@ export function ReviewPanel({
       )}
 
       {isAuthor ? (
-        <div className="text-[12.5px] text-muted">{labels.ownAuthor}</div>
+        <div className="text-[0.78125rem] text-muted">{labels.ownAuthor}</div>
       ) : (
         canReview && (
           <div className="border-t border-border pt-2.5">
             {myVerdict && (
-              <div className="mb-2 flex flex-wrap items-center gap-2 text-[12.5px] text-ink-2">
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.78125rem] text-ink-2">
                 <span>
                   {labels.yourReview}: <b className={VERDICT_META[myVerdict].cls}>{labels[VERDICT_META[myVerdict].key]}</b>
                 </span>
                 <Button
                   variant="ghost"
-                  className="h-[38px]"
+                  className="h-[2.375rem]"
                   disabled={pending}
                   onClick={() => startTransition(async () => void (await withdrawSuggestionReview(suggestionId)))}
                 >
@@ -141,18 +141,18 @@ export function ReviewPanel({
               onChange={(e) => setDraft(e.target.value)}
               placeholder={labels.placeholder}
               rows={3}
-              className="w-full resize-y rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[13px] text-ink outline-hidden focus-visible:border-border-strong"
+              className="w-full resize-y rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[0.8125rem] text-ink outline-hidden focus-visible:border-border-strong"
             />
             {/* Ряд вердиктов: одна высота, к правому краю (thumb-зона). На мобиле
                 подписи короткие — иконка + одно-два слова. */}
             <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
-              <Button variant="ghost" className="h-[38px]" disabled={pending} onClick={() => send('comment')}>
+              <Button variant="ghost" className="h-[2.375rem]" disabled={pending} onClick={() => send('comment')}>
                 <MessageSquare size={13} /> {labels.commentOnly}
               </Button>
-              <Button variant="outline" className="h-[38px] text-danger" disabled={pending} onClick={() => send('changes')}>
+              <Button variant="outline" className="h-[2.375rem] text-danger" disabled={pending} onClick={() => send('changes')}>
                 <GitPullRequestClosed size={13} /> {labels.requestChanges}
               </Button>
-              <Button variant="primary" className="h-[38px]" disabled={pending} onClick={() => send('approve')}>
+              <Button variant="primary" className="h-[2.375rem]" disabled={pending} onClick={() => send('approve')}>
                 {pending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} {labels.approve}
               </Button>
             </div>
@@ -195,18 +195,18 @@ function DismissButton({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-3">
-        <div className="mb-2 text-[12.5px] font-medium text-ink">{labels.dismiss}</div>
+        <div className="mb-2 text-[0.78125rem] font-medium text-ink">{labels.dismiss}</div>
         <Textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder={labels.dismissReason}
           rows={3}
-          className="text-[13px]"
+          className="text-[0.8125rem]"
         />
         <div className="mt-2 flex justify-end">
           <Button
             variant="primary"
-            className="h-[38px]"
+            className="h-[2.375rem]"
             disabled={pending || !reason.trim()}
             onClick={() =>
               startTransition(async () => {

@@ -15,7 +15,7 @@ export function AppToaster() {
       position="bottom-center"
       richColors
       closeButton
-      toastOptions={{ className: 'text-[13px]' }}
+      toastOptions={{ className: 'text-[0.8125rem]' }}
     />
   )
 }
