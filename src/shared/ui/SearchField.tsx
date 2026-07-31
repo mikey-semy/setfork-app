@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { Search, X } from 'lucide-react'
-import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_TEXT_MOBILE } from './control'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_TEXT_MOBILE, ICON_SIZE } from './control'
 
 type Size = 'lg' | 'md' | 'sm' | 'xs'
 
@@ -10,9 +10,9 @@ type Size = 'lg' | 'md' | 'sm' | 'xs'
 // Button/Input/Select. lg — герой-поиск главной, живёт выше шкалы.
 const SIZES: Record<Size, { box: string; text: string; icon: number; clear: number }> = {
   lg: { box: 'h-[44px] px-3.5', text: `text-[15px] ${FIELD_TEXT_MOBILE}`, icon: 16, clear: 16 },
-  md: { box: `${CONTROL_H.md} ${CONTROL_PX.md}`, text: `${CONTROL_TEXT.md} ${FIELD_TEXT_MOBILE}`, icon: 15, clear: 15 },
-  sm: { box: `${CONTROL_H.sm} ${CONTROL_PX.sm}`, text: `${CONTROL_TEXT.sm} ${FIELD_TEXT_MOBILE}`, icon: 14, clear: 14 },
-  xs: { box: `${CONTROL_H.xs} ${CONTROL_PX.xs}`, text: `${CONTROL_TEXT.xs} ${FIELD_TEXT_MOBILE}`, icon: 12, clear: 13 },
+  md: { box: `${CONTROL_H.md} ${CONTROL_PX.md}`, text: `${CONTROL_TEXT.md} ${FIELD_TEXT_MOBILE}`, icon: ICON_SIZE.md, clear: ICON_SIZE.md },
+  sm: { box: `${CONTROL_H.sm} ${CONTROL_PX.sm}`, text: `${CONTROL_TEXT.sm} ${FIELD_TEXT_MOBILE}`, icon: ICON_SIZE.sm, clear: ICON_SIZE.sm },
+  xs: { box: `${CONTROL_H.xs} ${CONTROL_PX.xs}`, text: `${CONTROL_TEXT.xs} ${FIELD_TEXT_MOBILE}`, icon: ICON_SIZE.xs, clear: ICON_SIZE.xs },
 }
 
 export interface SearchFieldProps {

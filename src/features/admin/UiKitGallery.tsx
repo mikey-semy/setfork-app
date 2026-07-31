@@ -24,7 +24,7 @@ import { TagInput } from '@/shared/ui/TagInput'
 import { Textarea } from '@/shared/ui/textarea'
 import { toast } from '@/shared/ui/toast'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { CONTROL_H, CONTROL_TEXT, LAYER, TEXT, type ControlSize } from '@/shared/ui/control'
+import { CONTROL_H, CONTROL_TEXT, ICON_SIZE, LAYER, TEXT, type ControlSize } from '@/shared/ui/control'
 
 // Эталон интерфейса: все примитивы shared/ui во всех размерах и состояниях.
 // Смысл страницы — РАЗНОБОЙ ВИДЕН ГЛАЗАМИ: контролы одного размера стоят в одном
@@ -129,7 +129,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
               </Button>
               <Tooltip label={say('Icon + aria-label', 'Иконка + aria-label')}>
                 <Button size={size} aria-label={say('Add', 'Добавить')}>
-                  <Plus size={size === 'xs' ? 13 : 15} />
+                  <Plus size={ICON_SIZE[size]} />
                 </Button>
               </Tooltip>
             </div>

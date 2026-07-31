@@ -4,7 +4,7 @@ import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/shared/lib/cn'
-import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_BOX, FIELD_TEXT_MOBILE, type ControlSize } from './control'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_BOX, FIELD_TEXT_MOBILE, ICON_SIZE, type ControlSize } from './control'
 
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
@@ -33,7 +33,7 @@ function SelectTrigger({
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDown size={16} className="text-muted" />
+        <ChevronDown size={ICON_SIZE[size]} className="text-muted" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
