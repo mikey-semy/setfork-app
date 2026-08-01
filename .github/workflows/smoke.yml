@@ -31,6 +31,10 @@ jobs:
       POLYGON_URL: http://localhost:3000
       SIM_PROXY: 'off' # прокси нужен только для демо-стенда; локалхост — напрямую
       # SETFORK_CORE_URL НЕ задаём → фронт использует inproc-git (системный git)
+      # Ф7b (ui-system): c9-сценарий sim смотрит /admin/ui-kit под этим админом.
+      # Скриншот-сравнение включается SIM_SCREENS=1 после бутстрапа эталонов
+      # (runbook ui-kit-screens в HQ); дым-часть c9 работает всегда.
+      ADMIN_HANDLES: e2e-admin
     steps:
       # `services:` тут не годятся: раннер сам в контейнере (sibling-демон), их
       # порты публикуются на ХОСТЕ, а localhost внутри раннера — это он сам.
@@ -114,6 +118,17 @@ jobs:
         with:
           name: playwright-report
           path: _sim/playwright-report
+          if-no-files-found: ignore
+
+      # Эталоны/актуальные снимки UI Kit (c9): при бутстрапе (--update-snapshots)
+      # отсюда забираются базовые снимки для коммита в sim; при расхождении —
+      # диффы для глаз.
+      - name: Upload UI Kit snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uikit-snapshots
+          path: _sim/scenarios/*-snapshots
           if-no-files-found: ignore
 
       - name: cleanup (контейнер и сеть)
