@@ -19,6 +19,12 @@ message PostRequest {
   RepoRef repo = 1;
   bytes body = 2;
   string git_protocol = 3;
+  // И2: язык человека для текстов, которые он прочитает ПРЯМО из вывода
+  // `git push` — их печатает pre-receive, и переводить их некому: между ядром
+  // и клиентом никого нет. Определяет фронт (профиль пользователя, иначе
+  // Accept-Language), ядро лишь передаёт значение процессу receive-pack
+  // переменной окружения, а хук её читает. '' → английский.
+  string lang = 4;
 }
 
 message BytesResponse {

@@ -54,11 +54,12 @@ export const gitCoreRemote: GitCore = {
     return res.data
   },
 
-  async receivePack(repo, body, gitProtocol) {
+  async receivePack(repo, body, gitProtocol, lang) {
     const res = await client.receivePack({
       repo: toRepoRef(repo),
       body,
       gitProtocol: gitProtocol ?? '',
+      lang: lang ?? '',
     })
     return { data: res.data, newVersion: toNewVersion(res.newVersion) }
   },
