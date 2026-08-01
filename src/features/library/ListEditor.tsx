@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { toast } from '@/shared/ui/toast'
 import {
   BarChart3,
   Check,
@@ -212,7 +213,7 @@ export function ListEditor({
     fd.append('file', file)
     const res = await uploadStepImage(fd)
     setUploading(null)
-    if ('error' in res) alert(res.error)
+    if ('error' in res) toast.error(res.error)
     else patch(i, { imageKey: res.key, imagePreview: res.url })
   }
   const [videoUploading, setVideoUploading] = useState<number | null>(null)
@@ -222,7 +223,7 @@ export function ListEditor({
     fd.append('file', file)
     const res = await uploadStepVideo(fd)
     setVideoUploading(null)
-    if ('error' in res) alert(res.error)
+    if ('error' in res) toast.error(res.error)
     else patch(i, { videoUrl: res.url })
   }
   const [fileUploading, setFileUploading] = useState<number | null>(null)
@@ -232,7 +233,7 @@ export function ListEditor({
     fd.append('file', file)
     const res = await uploadStepFile(fd)
     setFileUploading(null)
-    if ('error' in res) alert(res.error)
+    if ('error' in res) toast.error(res.error)
     else patch(i, { fileUrl: res.url, fileName: res.name })
   }
   // Вставка блока на позицию index (0..len). index === len → в конец.
