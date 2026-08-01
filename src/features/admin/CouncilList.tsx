@@ -1,8 +1,12 @@
+'use client'
+
 import Link from 'next/link'
 import { CircleUser, Sparkles } from 'lucide-react'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Button } from '@/shared/ui/button'
-import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
+import { DataTableV2 } from '@/shared/ui/data-table/DataTableV2'
+import { nodeColumn, numberColumn } from '@/shared/ui/data-table/column-builders'
+import { cn } from '@/shared/lib/cn'
 import { tr, type Lang } from '@/shared/i18n'
 import { selfGenerateNow } from '@/features/admin/actions'
 
@@ -14,9 +18,10 @@ import { selfGenerateNow } from '@/features/admin/actions'
  * Настройки списка живут на странице списка; у специалиста ровно та же логика — свой адрес,
  * свои настройки, а здесь СОСТАВ: кто есть, в каком он состоянии и куда нажать.
  *
- * Столбцы фиксированной ширины: `auto` подгоняется под содержимое КАЖДОЙ строки, и шапка со
- * строками разъезжаются «волной» (проверено на щитке моделей). Числа моноширинными цифрами —
- * иначе строки плавают по ширине разряда.
+ * Таблица — DataTableV2 (Ф11, пилот): настоящая <table> с сортировкой по числам,
+ * на мобиле строки становятся карточками (первая колонка — заголовок карточки).
+ * Приглушение выключенного специалиста живёт ВНУТРИ ячеек: строки рендерит v2,
+ * класс на строку повесить больше нельзя.
  */
 export interface CouncilRow {
   id: string
@@ -44,28 +49,18 @@ function stageLabel(s: CouncilRow['lifecycle'], lang: Lang): { text: string; cls
 export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lang: Lang; canAssign: boolean }) {
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      {/* Шапка и строки — ОДИН шаблон колонок (DataTable); скроллится контейнер, страница никогда. */}
-      <DataTable
-        template="minmax(0,1fr) 132px 120px 104px 88px"
-        minWidth={720}
-        header={
-          <>
-            <span>{tr({ en: 'Specialist', ru: 'Специалист' }, lang)}</span>
-            <span>{tr({ en: 'Craft', ru: 'Ремесло' }, lang)}</span>
-            <span>{tr({ en: 'Stage', ru: 'Стадия' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'Councils', ru: 'Советов' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'Accepted', ru: 'Принято' }, lang)}</span>
-          </>
-        }
-      >
-        {rows.map((r) => {
-          const stage = stageLabel(r.lifecycle, lang)
-          return (
-            <DataTableRow key={r.id} muted={!r.enabled}>
-              <div className="flex min-w-0 items-center gap-2.5">
+      <DataTableV2<CouncilRow>
+        cardOnMobile
+        rowKey={(r) => r.id}
+        columns={[
+          nodeColumn<CouncilRow>({
+            id: 'specialist',
+            header: tr({ en: 'Specialist', ru: 'Специалист' }, lang),
+            render: (r) => (
+              <div className={cn('flex min-w-0 items-center gap-2.5', !r.enabled && 'opacity-60')}>
                 <Avatar handle={r.handle ?? r.id} avatarUrl={r.avatarUrl} size={28} />
                 <div className="min-w-0">
-                  {/* Вся строка ведёт к настройкам этого специалиста — как список к своим. */}
+                  {/* Имя ведёт к настройкам этого специалиста — как список к своим. */}
                   <Link href={`/admin/council/${r.id}`} className="block truncate text-[0.8125rem] font-medium text-ink hover:text-accent">
                     {r.name}
                   </Link>
@@ -83,16 +78,32 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
                   </div>
                 </div>
               </div>
-              <span className="min-w-0 truncate text-[0.78125rem] text-ink-2" title={r.domains.join(', ')}>
+            ),
+          }),
+          nodeColumn<CouncilRow>({
+            id: 'craft',
+            header: tr({ en: 'Craft', ru: 'Ремесло' }, lang),
+            size: 132,
+            render: (r) => (
+              <span className={cn('block min-w-0 truncate text-[0.78125rem] text-ink-2', !r.enabled && 'opacity-60')} title={r.domains.join(', ')}>
                 {r.profession || r.guild}
               </span>
-              <span className={`text-[0.78125rem] ${stage.cls}`}>{stage.text}</span>
-              <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{r.gens}</span>
-              <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{r.accepted}</span>
-            </DataTableRow>
-          )
-        })}
-      </DataTable>
+            ),
+          }),
+          nodeColumn<CouncilRow>({
+            id: 'stage',
+            header: tr({ en: 'Stage', ru: 'Стадия' }, lang),
+            size: 120,
+            render: (r) => {
+              const stage = stageLabel(r.lifecycle, lang)
+              return <span className={cn('text-[0.78125rem]', stage.cls, !r.enabled && 'opacity-60')}>{stage.text}</span>
+            },
+          }),
+          numberColumn<CouncilRow>({ id: 'gens', header: tr({ en: 'Councils', ru: 'Советов' }, lang), size: 104, value: (r) => r.gens }),
+          numberColumn<CouncilRow>({ id: 'accepted', header: tr({ en: 'Accepted', ru: 'Принято' }, lang), size: 88, value: (r) => r.accepted }),
+        ]}
+        data={rows}
+      />
 
       {/* Поручить список — действие над СОСТАВОМ, поэтому здесь, а не в настройках каждого.
           Кнопки только когда самогенерация включена: иначе обещали бы запрещённое настройками. */}
