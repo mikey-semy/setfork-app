@@ -16,6 +16,9 @@ export type AuditAction =
   | 'list.transfer-init'
   | 'list.transfer-accept'
   | 'git.push'
+  // Ф4: предложение предъявлено из терминала магическим рефом refs/for/main.
+  // Отдельно от 'git.push': тот про версию в main, а это про правку к нему.
+  | 'git.suggest'
   | 'session.revoke'
   | 'session.revoke_others'
   | '2fa.enable'

@@ -35,7 +35,7 @@ import { listStore } from './list-store'
 import { closingRefs } from './closing-refs'
 import { withPrDefaults, PR_BOOL_KEYS, type PrBoolKey } from './pr-settings'
 import { canEditSuggestionItems } from './suggestion-perms'
-import { applySuggestion, checksGate, currentRevision, mergeSuggestion } from './suggestion-core'
+import { applySuggestion, checksGate, currentRevision, ensureBranchSuggestion, mergeSuggestion } from './suggestion-core'
 import { closeLinkedIssues, notifyWatchersNewVersion } from './suggestion-side-effects'
 import { suggestionBlocks } from './suggestion-blocks'
 import { applyFieldValue } from './suggestion-apply'
@@ -376,29 +376,17 @@ export async function openBranchPr(templateId: string, branch: string): Promise<
   // Ветка должна существовать и содержать list.json (иначе PR не из чего собрать).
   const snap = await gitCore.branchSnapshot({ owner, slug: tpl.slug }, branch).catch(() => null)
   if (!snap) redirect(`/${owner}/${tpl.slug}`)
-  // Один открытый PR на ветку: повторное «Open PR» ведёт на существующий.
-  const dup = await db.query.suggestions.findFirst({
-    where: (s) => and(eq(s.templateId, tpl.id), eq(s.branchRef, branch), eq(s.status, 'open')),
+  // Создание/поиск — общей частью с магическим пушем refs/for/main (Ф4):
+  // нумерация, подписка и уведомление обязаны совпадать у обоих путей.
+  // Повторное «Открыть предложение» ведёт на существующее.
+  const { id } = await ensureBranchSuggestion({
+    templateId: tpl.id,
+    ownerId: tpl.ownerId,
+    currentVersion: tpl.currentVersion,
+    authorId: session.userId,
+    branch,
   })
-  if (dup) redirect(`/${owner}/${tpl.slug}/suggestions/${dup.id}`)
-
-  const [created] = await db
-    .insert(suggestions)
-    .values({
-      templateId: tpl.id,
-      authorId: session.userId,
-      note: `Merge branch '${branch}'`,
-      baseVersion: tpl.currentVersion,
-      items: [], // источник правды — tip ветки, материализуется при просмотре
-      branchRef: branch,
-      number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${tpl.id})`,
-    })
-    .returning({ id: suggestions.id })
-  await ensureWatch(tpl.id)
-  if (tpl.ownerId !== session.userId) {
-    await notify({ recipientId: tpl.ownerId, actorId: session.userId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })
-  }
-  redirect(`/${owner}/${tpl.slug}/suggestions/${created.id}`)
+  redirect(`/${owner}/${tpl.slug}/suggestions/${id}`)
 }
 
 /**
