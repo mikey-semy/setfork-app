@@ -1,6 +1,7 @@
 import 'server-only'
 import { eq, inArray } from 'drizzle-orm'
 import { db, linkChecks, suggestionReportedChecks, users } from '@/shared/db'
+import { t } from '@/shared/i18n'
 import { extractUrls, normalizeUrl, productItems, walkStrings } from '@/core'
 
 // Проверки ПРАВКИ — наш аналог вкладки Checks. Наполнена тем, что у нас реально
@@ -136,15 +137,15 @@ export async function suggestionChecks(input: {
   moderation: string
   lang: 'ru' | 'en'
 }): Promise<CheckItem[]> {
-  const ru = input.lang === 'ru'
-  const say = (r: string, e: string) => (ru ? r : e)
+  // Все тексты — из словаря; числа подставляются в {n}/{a}/{b} плейсхолдеры.
+  const tt = (k: Parameters<typeof t>[0]) => t(k, input.lang)
   const out: CheckItem[] = []
 
   // 1. Правка вообще что-то меняет?
   out.push(
     input.changedCount > 0
-      ? { key: 'has-changes', status: 'ok', title: say('Предложение содержит изменения', 'Suggestion has changes'), detail: say(`затронуто пунктов: ${input.changedCount}`, `items touched: ${input.changedCount}`) }
-      : { key: 'has-changes', status: 'fail', title: say('Изменений нет', 'No changes'), detail: say('принимать нечего', 'nothing to accept') },
+      ? { key: 'has-changes', status: 'ok', title: tt('suggestion.hasChanges'), detail: tt('suggestion.itemsTouched').replace('{n}', String(input.changedCount)) }
+      : { key: 'has-changes', status: 'fail', title: tt('suggestion.noChanges'), detail: tt('suggestion.nothingToAccept') },
   )
 
   // 2. Черновик — блокирующий по определению: правка ещё не предъявлена.
@@ -152,18 +153,18 @@ export async function suggestionChecks(input: {
     out.push({
       key: 'draft',
       status: 'fail',
-      title: say('Пока черновик', 'Still a draft'),
-      detail: say('слить нельзя, пока не отмечена готовность', 'cannot merge until marked ready'),
+      title: tt('suggestion.stillDraft'),
+      detail: tt('suggestion.cannotMergeUntilReady'),
     })
   }
 
   // 3. Слияние: конфликты и пропавшая ветка — блокирующие.
   if (input.branchMissing) {
-    out.push({ key: 'branch', status: 'fail', title: say('Ветка удалена', 'Branch deleted'), detail: say('предложение неактуально, можно только отклонить', 'the suggestion is stale and can only be closed') })
+    out.push({ key: 'branch', status: 'fail', title: tt('suggestion.branchDeleted'), detail: tt('suggestion.staleOnlyClose') })
   } else if (input.hasConflicts) {
-    out.push({ key: 'merge', status: 'fail', title: say('Конфликты слияния', 'Merge conflicts'), detail: say('нужно разрешить перед принятием', 'must be resolved before accepting') })
+    out.push({ key: 'merge', status: 'fail', title: tt('suggestion.mergeConflicts'), detail: tt('suggestion.resolveBeforeAccepting') })
   } else {
-    out.push({ key: 'merge', status: 'ok', title: say('Слияние без конфликтов', 'Merges cleanly') })
+    out.push({ key: 'merge', status: 'ok', title: tt('suggestion.mergesCleanly') })
   }
 
   // 4. База правки. Не ошибка, но принятие перезапишет более новое.
@@ -171,18 +172,18 @@ export async function suggestionChecks(input: {
     out.push({
       key: 'base',
       status: 'warn',
-      title: say('База устарела', 'Base is outdated'),
-      detail: say(`предложение на v${input.baseVersion}, список уже на v${input.currentVersion}`, `based on v${input.baseVersion}, list is at v${input.currentVersion}`),
+      title: tt('suggestion.baseOutdated'),
+      detail: tt('suggestion.basedOnVsCurrent').replace('{a}', String(input.baseVersion)).replace('{b}', String(input.currentVersion)),
     })
   } else {
-    out.push({ key: 'base', status: 'ok', title: say('База актуальна', 'Base is current') })
+    out.push({ key: 'base', status: 'ok', title: tt('suggestion.baseCurrent') })
   }
 
   // 5. Ревью, запросившее правки, блокирует принятие — то же определение, что у гейта.
   out.push(
     input.blockingReview
-      ? { key: 'review', status: 'fail', title: say('Запрошены правки', 'Changes requested'), detail: say('принятие заблокировано до смены вердикта', 'accepting is blocked until the verdict changes') }
-      : { key: 'review', status: 'ok', title: say('Блокирующих ревью нет', 'No blocking reviews') },
+      ? { key: 'review', status: 'fail', title: tt('suggestion.changesRequested'), detail: tt('suggestion.acceptBlockedVerdict') }
+      : { key: 'review', status: 'ok', title: tt('suggestion.noBlockingReviews') },
   )
 
   // 6. Нерешённые обсуждения на пунктах. Блокируют, только если так настроен
@@ -192,12 +193,12 @@ export async function suggestionChecks(input: {
       ? {
           key: 'threads',
           status: input.blockOnUnresolved ? 'fail' : 'warn',
-          title: say(`Нерешённых обсуждений: ${input.unresolvedThreads}`, `Unresolved conversations: ${input.unresolvedThreads}`),
+          title: tt('suggestion.unresolvedConversations').replace('{n}', String(input.unresolvedThreads)),
           detail: input.blockOnUnresolved
-            ? say('закройте их или отметьте решёнными', 'close them or mark them resolved')
-            : say('слияние не блокируют — так настроен список', 'they do not block merging — per list settings'),
+            ? tt('suggestion.closeOrResolve')
+            : tt('suggestion.notBlockingPerSettings'),
         }
-      : { key: 'threads', status: 'ok', title: say('Все обсуждения решены', 'All conversations resolved') },
+      : { key: 'threads', status: 'ok', title: tt('suggestion.allConversationsResolved') },
   )
 
   // 6б. Требуемые одобрения — тот же гейт, что у экшена слияния.
@@ -206,22 +207,22 @@ export async function suggestionChecks(input: {
     out.push({
       key: 'approvals',
       status: enough ? 'ok' : 'fail',
-      title: say(`Одобрений: ${input.approvals} из ${input.requiredApprovals}`, `Approvals: ${input.approvals} of ${input.requiredApprovals}`),
-      detail: enough ? undefined : say('нужны одобрения рецензентов', 'reviewer approvals are required'),
+      title: tt('suggestion.approvalsOf').replace('{a}', String(input.approvals)).replace('{b}', String(input.requiredApprovals)),
+      detail: enough ? undefined : tt('suggestion.approvalsRequired'),
     })
   }
 
   // 7. Модерация списка: во flagged/hidden принимать правку бессмысленно.
   if (input.moderation === 'flagged' || input.moderation === 'hidden') {
-    out.push({ key: 'moderation', status: 'fail', title: say('Список снят модерацией', 'List is taken down'), detail: input.moderation })
+    out.push({ key: 'moderation', status: 'fail', title: tt('suggestion.listTakenDown'), detail: input.moderation })
   } else if (input.moderation === 'pending') {
-    out.push({ key: 'moderation', status: 'warn', title: say('Список на проверке', 'List is under review') })
+    out.push({ key: 'moderation', status: 'warn', title: tt('suggestion.listUnderReview') })
   }
 
   // 8. Ссылки в предложенных пунктах — по уже собранным вердиктам linkcheck.
   const urls = proposedUrls(input.items)
   if (urls.length === 0) {
-    out.push({ key: 'links', status: 'neutral', title: say('Ссылок в предложении нет', 'No links in this suggestion') })
+    out.push({ key: 'links', status: 'neutral', title: tt('suggestion.noLinks') })
   } else {
     const rows = await db
       .select({ urlNorm: linkChecks.urlNorm, verdict: linkChecks.verdict })
@@ -231,12 +232,12 @@ export async function suggestionChecks(input: {
     const unchecked = urls.length - rows.filter((r) => r.verdict).length
     out.push(
       bad.length > 0
-        ? { key: 'links', status: 'fail', title: say(`Битых ссылок: ${bad.length}`, `Broken links: ${bad.length}`), detail: bad.slice(0, 3).map((b) => b.urlNorm).join(', ') }
+        ? { key: 'links', status: 'fail', title: tt('suggestion.brokenLinks').replace('{n}', String(bad.length)), detail: bad.slice(0, 3).map((b) => b.urlNorm).join(', ') }
         : {
             key: 'links',
             status: unchecked > 0 ? 'warn' : 'ok',
-            title: say(`Ссылок проверено: ${urls.length - unchecked} из ${urls.length}`, `Links checked: ${urls.length - unchecked} of ${urls.length}`),
-            detail: unchecked > 0 ? say('остальные ещё в очереди проверки', 'the rest are queued for checking') : undefined,
+            title: tt('suggestion.linksChecked').replace('{a}', String(urls.length - unchecked)).replace('{b}', String(urls.length)),
+            detail: unchecked > 0 ? tt('suggestion.restQueued') : undefined,
           },
     )
   }

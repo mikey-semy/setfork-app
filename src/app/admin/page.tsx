@@ -226,7 +226,7 @@ export default async function AdminPage() {
               maskedKeys={maskedKeys}
               yandexFolder={aiProv.yandexFolder}
               searchKeyMasked={maskKey(aiProv.yandexSearchKey)}
-              ru={ru}
+              lang={lang}
               initial={{
                 chat: chatOpts,
                 embedding: embOpts,
@@ -293,10 +293,10 @@ export default async function AdminPage() {
                 readinessMinGrade: settings.readinessMinGrade,
                 readinessPerDay: settings.readinessPerDay,
               }}
-              ru={ru}
+              lang={lang}
             />
 
-            <AssistFields v={{ enabled: settings.assistEnabled, audience: settings.assistAudience }} ru={ru} />
+            <AssistFields v={{ enabled: settings.assistEnabled, audience: settings.assistAudience }} lang={lang} />
 
             <FormSaveBar lang={lang} />
           </form>
@@ -411,7 +411,7 @@ export default async function AdminPage() {
               : 'Enable/disable achievements and set a custom image instead of the icon (drag-and-drop). Applies to all profiles.'
           }
         >
-          <AchievementsAdmin initial={achDisplay} ru={ru} />
+          <AchievementsAdmin initial={achDisplay} lang={lang} />
         </SettingsSection>
       ),
     },
