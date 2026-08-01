@@ -1,8 +1,10 @@
+import { readdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import type { Metadata } from 'next'
 import { Award } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { getRoster, rosterAvatars } from '@/shared/ai/roster'
+import { getRoster, rosterAvatars, SEED } from '@/shared/ai/roster'
 import { gnomeRank, gnomeReputation, REP_MIN_GENS } from '@/features/generation/reputation'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 
@@ -30,7 +32,19 @@ export default async function GuildsPage() {
   const lang = await getLang()
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументами (i18n-lint)
-  const [roster, avatars, rep] = await Promise.all([getRoster(), rosterAvatars(), gnomeReputation()])
+  const [roster, avatars, rep, gnomeFiles] = await Promise.all([
+    getRoster(),
+    rosterAvatars(),
+    gnomeReputation(),
+    readdir(join(process.cwd(), 'public', 'gnomes')).catch(() => [] as string[]),
+  ])
+  // Портрет резолвится НА СЕРВЕРЕ по реальным файлам: у специализаций своего
+  // портрета нет (на проде avatar насижен = id), браузер ловил 404 на каждый
+  // (линза 07). Нет файла → замысел из констант ростера → пусто (заглушка
+  // GnomeAvatar без сетевой попытки).
+  const files = new Set(gnomeFiles)
+  const builtIn = (key: string | undefined) => (key && files.has(`${key}.webp`) ? `/gnomes/${key}.webp` : undefined)
+  const seedAvatar = new Map(SEED.map((s) => [s.id, s.avatar]))
 
   return (
     <div className="mx-auto w-full max-w-[65rem] px-4 py-8 sm:px-6">
@@ -51,7 +65,7 @@ export default async function GuildsPage() {
           return (
             <div key={e.id} className="rounded-lg border border-border bg-surface p-4">
               <div className="flex items-center gap-3">
-                <GnomeAvatar src={avatars[e.id] || `/gnomes/${e.avatar || e.id}.webp`} size={56} className="size-14 shrink-0" />
+                <GnomeAvatar src={avatars[e.id] || builtIn(e.avatar || e.id) || builtIn(seedAvatar.get(e.id))} size={56} className="size-14 shrink-0" />
                 <div className="min-w-0">
                   <div className="text-[1rem] font-semibold text-ink">{ru ? e.nameRu : e.nameEn}</div>
                   {(ru ? e.guildRu : e.guildEn) && <div className="text-[0.78125rem] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
@@ -71,7 +85,8 @@ export default async function GuildsPage() {
               {e.code && (
                 <div className="mt-3">
                   <div className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
-                  <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2">{e.code}</p>
+                  {/* Людям — на их языке; агентам в промпты всегда едет EN `code` (вердикт владельца, линза 07). */}
+                  <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2">{ru ? e.codeRu || e.code : e.code}</p>
                 </div>
               )}
               {e.domains.length > 0 && !e.domains.includes('*') && (

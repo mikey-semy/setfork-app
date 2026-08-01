@@ -151,7 +151,8 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           {e.code && (
             <>
               <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
-              <p className="whitespace-pre-wrap font-mono text-[0.78125rem] leading-[1.55] text-ink-2">{e.code}</p>
+              {/* Людям — на их языке; агентам всегда едет EN `code`. */}
+              <p className="whitespace-pre-wrap font-mono text-[0.78125rem] leading-[1.55] text-ink-2">{(ru ? e.codeRu : '') || e.code}</p>
             </>
           )}
           {e.memory && (
