@@ -1,7 +1,7 @@
 import 'server-only'
-import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
 import { db, jobs, templates, users } from '@/shared/db'
-import { enqueueJob } from '@/shared/jobs/queue'
+import type { Job } from '@/shared/jobs/queue'
 import { captureError, log } from '@/shared/observability'
 import { envNumber } from '@/shared/env'
 import { MIRROR_BACKOFF_MS, MIRROR_MAX_BACKOFF_MS, mirrorRetryDueAt } from './mirror-policy'
@@ -40,6 +40,9 @@ import { pushListMirror } from './actions'
 const SWEEP_MS = envNumber('SETFORK_MIRROR_SWEEP_MIN', 5) * 60_000
 /** Потолок зеркал за один проход: очередь чинит, а не устраивает шторм. */
 const BATCH = envNumber('SETFORK_MIRROR_SWEEP_BATCH', 50)
+/** Сколько раз на старте пробуем завести цепочку и с какой паузой. */
+const ENSURE_ATTEMPTS = envNumber('SETFORK_MIRROR_ENSURE_ATTEMPTS', 5)
+const ENSURE_RETRY_MS = envNumber('SETFORK_MIRROR_ENSURE_RETRY_SEC', 30) * 1000
 
 /** Кандидат на повтор: столько, сколько нужно для решения «пора или нет». */
 export type MirrorCandidate = { attempts: number; syncedAt: Date | null }
@@ -56,7 +59,7 @@ export type MirrorCandidate = { attempts: number; syncedAt: Date | null }
  * времени ГОТОВНОСТИ (а не по времени последней попытки) снимают это целиком.
  *
  * Числа берутся из `mirror-policy` — арифметика записана дважды, но значения
- * живут в одном месте. Тестом это связано в `mirror-retry.itest.ts`: там
+ * живут в одном месте. Тестом это связано в `mirror-sweep.itest.ts`: там
  * настоящая Postgres и проверка, что запрос выбирает ровно тех, кого называет
  * `mirrorRetryDueAt`.
  */
@@ -118,11 +121,9 @@ export async function sweepFailedMirrors(): Promise<void> {
 }
 
 /**
- * Задача очереди. Самоподдерживающаяся: в конце ставит следующий проход —
- * так же, как changelog. Перепланируем ВСЕГДА, даже после падения: иначе одна
- * сетевая ошибка выключила бы починку зеркал до следующего рестарта.
+ * Задача очереди. Самоподдерживающаяся: в конце ставит следующий проход.
  */
-export async function runMirrorJob(): Promise<void> {
+export async function runMirrorJob(_payload: unknown, job?: Job): Promise<void> {
   try {
     await sweepFailedMirrors()
   } catch (e) {
@@ -133,13 +134,12 @@ export async function runMirrorJob(): Promise<void> {
   // А вот постановка ПРЕЕМНИКА — вне try, и её ошибку глотать нельзя. Это
   // единственное звено, которым держится вся цепочка: проглоти её, и задача
   // завершится «успешно», не оставив после себя ничего, — повторы зеркал молча
-  // прекратятся до следующего рестарта процесса (авто-ревью fe#645). Пусть
-  // падает: долговечная очередь повторит задачу с backoff и поставит преемника.
-  await scheduleNextMirrorSweep()
-}
-
-export async function scheduleNextMirrorSweep(): Promise<void> {
-  await enqueueJob('mirror', {}, { delayMs: SWEEP_MS })
+  // прекратятся до следующего рестарта процесса. Пусть падает: долговечная
+  // очередь повторит задачу с backoff и поставит преемника.
+  //
+  // `exceptJobId` — это МЫ САМИ: на момент вызова наша задача ещё `processing`,
+  // и без исключения себя из проверки мы бы решили, что преемник уже есть.
+  await ensureMirrorSweepScheduled({ delayMs: SWEEP_MS, exceptJobId: job?.id })
 }
 
 /**
@@ -151,36 +151,89 @@ export async function scheduleNextMirrorSweep(): Promise<void> {
 const SWEEP_LOCK_KEY = 0x5f_00_01
 
 /**
- * Завести подметальщик на старте, если он ещё не заведён.
+ * Обеспечить, что подметальщик заведён — ровно один. ЕДИНСТВЕННЫЙ способ
+ * поставить задачу `mirror`: и на старте процесса, и как преемник в конце
+ * прохода.
  *
- * Проверка на дубль обязательна: задача самоподдерживающаяся, и без неё каждый
- * рестарт добавлял бы ещё одну вечную цепочку — через месяц перезапусков зеркала
- * подметались бы десятками параллельных проходов.
+ * Почему обе точки постановки — одна функция. Цепочка держится на том, что
+ * задача перед завершением ставит следующую, и пока это была голая вставка,
+ * дубли получались двумя разными способами:
  *
- * ⚠️ Проверка «нет ли уже» и вставка обязаны быть АТОМАРНЫ, иначе дубли всё
- * равно появляются (авто-ревью fe#645): при выкатке два инстанса стартуют
- * одновременно, оба видят «пусто» и оба заводят цепочку. Держим advisory-локу на
- * время транзакции — второй инстанс просто не получает её и уходит, зная, что
- * первый уже занялся.
+ *   * НА СТАРТЕ: при выкатке два инстанса поднимаются одновременно, оба видят
+ *     «пусто» и оба заводят цепочку. Дальше они живут вечно и параллельно;
+ *   * У ПРЕЕМНИКА: воркер умер (или `completeJob` не прошёл) уже ПОСЛЕ вставки —
+ *     жнец возвращает задачу в `pending`, она исполняется снова и ставит ещё
+ *     одного преемника. Каждый такой случай навсегда удваивает частоту проходов
+ *     (авто-ревью fe#645, второй заход).
  *
- * Считаем и `processing`, а не только `pending`: рестарт во время прохода —
+ * Лечится одинаково: проверка «нет ли уже» и вставка идут АТОМАРНО, под
+ * advisory-локой на время транзакции. Кто локу не получил — уходит, зная, что
+ * этим уже занимаются.
+ *
+ * Учитываем и `processing`, а не только `pending`: рестарт во время прохода —
  * обычное дело при деплое, и без этого он тоже плодил бы вторую цепочку.
+ *
+ * @param exceptJobId — не считать за преемника ЭТУ задачу. Нужен вызову из
+ * самого прохода: на тот момент он ещё `processing` и иначе принял бы себя за
+ * уже поставленного преемника, оборвав цепочку.
+ *
+ * Ошибки НЕ глотает: у обоих вызывающих есть чем на них ответить.
  */
-export async function ensureMirrorSweepScheduled(): Promise<void> {
-  try {
-    await db.transaction(async (tx) => {
-      const res = await tx.execute(sql`select pg_try_advisory_xact_lock(${SWEEP_LOCK_KEY}) as locked`)
-      const locked = (res as { rows?: { locked?: boolean }[] }).rows?.[0]?.locked
-      if (!locked) return // кто-то другой уже заводит — второй экземпляр не нужен
-      const [dup] = await tx
-        .select({ id: jobs.id })
-        .from(jobs)
-        .where(and(eq(jobs.type, 'mirror'), inArray(jobs.status, ['pending', 'processing'])))
-        .limit(1)
-      if (dup) return
-      await tx.insert(jobs).values({ type: 'mirror', payload: {}, runAt: new Date() })
+export async function ensureMirrorSweepScheduled(
+  opts: { delayMs?: number; exceptJobId?: string } = {},
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const res = await tx.execute(sql`select pg_try_advisory_xact_lock(${SWEEP_LOCK_KEY}) as locked`)
+    const locked = (res as { rows?: { locked?: boolean }[] }).rows?.[0]?.locked
+    if (!locked) return // кто-то другой уже заводит — второй экземпляр не нужен
+    const [dup] = await tx
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(
+        and(
+          eq(jobs.type, 'mirror'),
+          inArray(jobs.status, ['pending', 'processing']),
+          ...(opts.exceptJobId ? [ne(jobs.id, opts.exceptJobId)] : []),
+        ),
+      )
+      .limit(1)
+    if (dup) return
+    await tx.insert(jobs).values({
+      type: 'mirror',
+      payload: {},
+      runAt: new Date(Date.now() + (opts.delayMs ?? 0)),
     })
-  } catch (e) {
-    captureError(e, { where: 'mirror.ensure' })
+  })
+}
+
+/**
+ * Старт процесса: завести цепочку, если её нет.
+ *
+ * С повторами, потому что это единственная точка, откуда цепочка рождается: если
+ * база моргнула ровно в эту секунду и мы просто запишем ошибку в лог, повторов
+ * зеркал не будет ДО СЛЕДУЮЩЕГО РЕСТАРТА процесса — то есть, возможно, неделями
+ * (авто-ревью fe#645). Пробрасывать ошибку выше бессмысленно: там её тоже некому
+ * обработать, кроме лога.
+ *
+ * Попытки редкие и конечные: база, не поднявшаяся за эти минуты, — уже не
+ * моргание, и тогда неработающие зеркала не самая большая беда, но в логе об
+ * этом сказано прямо.
+ */
+export async function startMirrorSweepChain(): Promise<void> {
+  for (let attempt = 1; attempt <= ENSURE_ATTEMPTS; attempt++) {
+    try {
+      await ensureMirrorSweepScheduled()
+      return
+    } catch (e) {
+      captureError(e, { where: 'mirror.ensure', attempt })
+      if (attempt === ENSURE_ATTEMPTS) {
+        log.error('mirror.ensure.gaveup', {
+          attempts: attempt,
+          note: 'повторы зеркал не заведены — цепочка появится только при следующем старте',
+        })
+        return
+      }
+      await new Promise((r) => setTimeout(r, ENSURE_RETRY_MS))
+    }
   }
 }

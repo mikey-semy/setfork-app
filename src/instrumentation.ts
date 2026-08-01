@@ -80,7 +80,7 @@ export async function register() {
 
   // Ф2: подметальщик упавших зеркал. Не петля агента (там политика, журнал и
   // предохранитель) — обычная инфраструктурная задача, поэтому здесь руками.
-  void mirror.ensureMirrorSweepScheduled().catch((e) => captureError(e, { where: 'mirror.ensure' }))
+  void mirror.startMirrorSweepChain()
 
   // САМОЗАПУСК ПЕТЕЛЬ — из того же реестра, что и обработчики: два рукописных списка
   // неизбежно разъезжаются, и один раз уже разъехались (feedpull зарегистрирован, но не

@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -25,8 +25,10 @@ vi.mock('@/features/library/actions', () => ({
   },
 }))
 
-const { db, users, templates } = await import('@/shared/db')
-const { sweepFailedMirrors } = await import('@/features/library/mirror-jobs')
+const { db, users, templates, jobs } = await import('@/shared/db')
+const { sweepFailedMirrors, ensureMirrorSweepScheduled, runMirrorJob } = await import(
+  '@/features/library/mirror-jobs'
+)
 const { mirrorRetryDueAt } = await import('@/features/library/mirror-policy')
 
 const MIN = 60_000
@@ -48,9 +50,72 @@ async function failingMirror(slug: string, attempts: number, minutesAgo: number)
 
 beforeEach(async () => {
   pushed.length = 0
-  await db.execute(sql`truncate table ${users}, ${templates} restart identity cascade`)
+  await db.execute(sql`truncate table ${users}, ${templates}, ${jobs} restart identity cascade`)
   const [u] = await db.insert(users).values({ handle: 'mirror-owner' }).returning({ id: users.id })
   ownerId = u.id
+})
+
+const mirrorJobs = async () => await db.select().from(jobs).where(eq(jobs.type, 'mirror'))
+
+/**
+ * Цепочка держится на том, что задача перед завершением ставит следующую. Пока
+ * это была голая вставка, дубли получались двумя способами — и каждый НАВСЕГДА
+ * удваивал частоту проходов, а значит и частоту пушей в чужую форджу.
+ */
+describe('цепочка подметальщика — ровно одна', () => {
+  it('повторный старт не заводит вторую цепочку', async () => {
+    await ensureMirrorSweepScheduled()
+    await ensureMirrorSweepScheduled()
+    expect(await mirrorJobs()).toHaveLength(1)
+  })
+
+  it('второй инстанс не получает локу, пока первый держит', async () => {
+    // Случай выкатки: два процесса поднимаются вместе и оба видят «пусто».
+    // Просто дёрнуть ensure дважды одновременно НЕДОСТАТОЧНО — транзакции
+    // короткие и на практике не пересекаются, тест был бы зелёным и без локи
+    // (проверено). Поэтому держим локу заведомо дольше и смотрим, что второй
+    // получает отказ, а не «пусто, заводи ещё одну цепочку».
+    const key = 0x5f_00_01
+    let secondGotLock: boolean | undefined
+    await db.transaction(async (holder) => {
+      await holder.execute(sql`select pg_advisory_xact_lock(${key})`)
+      await db.transaction(async (other) => {
+        const r = await other.execute(sql`select pg_try_advisory_xact_lock(${key}) as locked`)
+        secondGotLock = (r as { rows?: { locked?: boolean }[] }).rows?.[0]?.locked
+      })
+    })
+    expect(secondGotLock).toBe(false)
+  })
+
+  it('уже идущий проход считается за цепочку (не только pending)', async () => {
+    await db.insert(jobs).values({ type: 'mirror', payload: {}, status: 'processing', runAt: new Date() })
+    await ensureMirrorSweepScheduled()
+    expect(await mirrorJobs()).toHaveLength(1)
+  })
+
+  it('проход ставит преемника, не считая преемником себя', async () => {
+    const [self] = await db
+      .insert(jobs)
+      .values({ type: 'mirror', payload: {}, status: 'processing', runAt: new Date() })
+      .returning({ id: jobs.id })
+    await runMirrorJob({}, { id: self.id, type: 'mirror', payload: {}, attempts: 1, maxAttempts: 5 })
+    const rows = await mirrorJobs()
+    expect(rows).toHaveLength(2) // сам проход + преемник
+    expect(rows.some((r) => r.id !== self.id && r.status === 'pending')).toBe(true)
+  })
+
+  it('повторное исполнение той же задачи не плодит преемников', async () => {
+    // Воркер умер после вставки преемника, жнец вернул задачу в pending, она
+    // исполняется снова — второй преемник появиться не должен.
+    const [self] = await db
+      .insert(jobs)
+      .values({ type: 'mirror', payload: {}, status: 'processing', runAt: new Date() })
+      .returning({ id: jobs.id })
+    const job = { id: self.id, type: 'mirror' as const, payload: {}, attempts: 1, maxAttempts: 5 }
+    await runMirrorJob({}, job)
+    await runMirrorJob({}, job)
+    expect(await mirrorJobs()).toHaveLength(2)
+  })
 })
 
 describe('отбор зеркал на повтор', () => {
