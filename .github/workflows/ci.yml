@@ -103,9 +103,11 @@ jobs:
           # персистентным томом раннера (setfork-ci-runner/docker-compose.yml), а
           # установка идёт --prefer-offline.
       - run: npm ci --prefer-offline --no-audit --no-fund
-      # Расширение vector нужно схеме (embeddings). Ставим через pg (уже в deps), без psql на раннере.
-      - run: node -e "const{Client}=require('pg');(async()=>{const c=new Client(process.env.DATABASE_URL);await c.connect();await c.query('CREATE EXTENSION IF NOT EXISTS vector');await c.end()})().catch(e=>{console.error(e);process.exit(1)})"
+      # Бутстрап вне схемы: расширения до push, канон поиска (0028) после —
+      # тот же путь, что db:init у людей (линза 07: push сам этого не делает).
+      - run: npx tsx scripts/db-bootstrap.ts pre
       - run: npx drizzle-kit push --force
+      - run: npx tsx scripts/db-bootstrap.ts post
       # Ядро — sibling-контейнер ПОСЛЕ применения схемы (на старте оно ходит в БД).
       # С Ф1 (git-first) запись версий идёт ТОЛЬКО через ядро — без него все
       # итесты путей записи падают ECONNREFUSED. Пакет GHCR приватный, но образ
@@ -177,8 +179,11 @@ jobs:
           # персистентным томом раннера (setfork-ci-runner/docker-compose.yml), а
           # установка идёт --prefer-offline.
       - run: npm ci --prefer-offline --no-audit --no-fund
-      - run: node -e "const{Client}=require('pg');(async()=>{const c=new Client(process.env.DATABASE_URL);await c.connect();await c.query('CREATE EXTENSION IF NOT EXISTS vector');await c.end()})().catch(e=>{console.error(e);process.exit(1)})"
+      # Бутстрап вне схемы: расширения до push, канон поиска (0028) после —
+      # тот же путь, что db:init у людей (линза 07: push сам этого не делает).
+      - run: npx tsx scripts/db-bootstrap.ts pre
       - run: npx drizzle-kit push --force
+      - run: npx tsx scripts/db-bootstrap.ts post
       # Ядро для интеграционной части покрытия — та же причина и приём, что в job integration.
       - name: setfork-core (sibling из GHCR — git-first запись версий, Ф1)
         run: |
