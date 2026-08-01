@@ -90,4 +90,17 @@ describe('брошенная генерация', () => {
     expect(await status()).toBe('pending') // иначе экран объявит провал живой задаче и покажет «Ещё раз»
     expect(await errors()).toHaveLength(0)
   })
+
+  it('старый виток С вариантом хоронится при живом новом → и «успех» ставить нельзя', async () => {
+    // Комбинация двух предыдущих (второй заход авто-ревью): задача idx=1 умерла уже с
+    // кандидатом, человек запустил idx=2 — и ветка «вариант доставлен» гасила бы спиннер
+    // ЖИВОГО витка, чтобы через секунду зажечь его снова.
+    await db.insert(generationCandidates).values({ generationId: genId, idx: 1, title: 'Сайты', items: [] })
+    await db.insert(generationMessages).values({ generationId: genId, attempt: 2, kind: 'again', text: '' })
+
+    await abandonGeneration(genId, 1)
+
+    expect(await status()).toBe('pending')
+    expect(await errors()).toHaveLength(0)
+  })
 })
