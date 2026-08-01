@@ -26,8 +26,15 @@ import { envNumber } from '@/shared/env'
  * тратя ни памяти, ни сетевого плеча до ядра.
  */
 
-/** Потолок тела git-запроса, байты (SETFORK_GIT_MAX_BODY_MB, деф. 32 МБ). */
-export const gitBodyMaxBytes = (): number => envNumber('SETFORK_GIT_MAX_BODY_MB', 32) * 1024 * 1024
+/**
+ * Потолок тела git-запроса, байты (SETFORK_GIT_MAX_BODY_MB, деф. 32 МБ).
+ *
+ * Округляем вниз: настройка в мегабайтах, а байты дробными не бывают. `32.5`
+ * даёт 34078720, а не 34078719.99 — и дальше это число уезжает в `maxOutputLength`
+ * zlib, чьи требования к типу разнятся от версии к версии (на Node 22 дробное
+ * принимается и работает, но полагаться на это незачем).
+ */
+export const gitBodyMaxBytes = (): number => Math.floor(envNumber('SETFORK_GIT_MAX_BODY_MB', 32) * 1024 * 1024)
 
 /** Тело больше потолка: роут отвечает на неё 413, а не 500. */
 export class GitBodyTooLarge extends Error {

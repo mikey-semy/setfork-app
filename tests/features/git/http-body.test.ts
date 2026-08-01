@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { gzipSync } from 'node:zlib'
-import { GitBodyTooLarge, maybeGunzip, readGitBody } from '@/features/git/http-body'
+import { GitBodyTooLarge, gitBodyMaxBytes, maybeGunzip, readGitBody } from '@/features/git/http-body'
 
 const MB = 1024 * 1024
 
@@ -60,5 +60,16 @@ describe('тело git-запроса не может съесть память'
   it('несжатое тело не трогаем', () => {
     const payload = Buffer.from('plain')
     expect(maybeGunzip(payload, null, 1 * MB)).toBe(payload)
+  })
+
+  it('дробная настройка в мегабайтах даёт целое число байт', () => {
+    // Байты дробными не бывают, а это число уезжает в maxOutputLength zlib, чьи
+    // требования к типу разнятся от версии к версии.
+    process.env.SETFORK_GIT_MAX_BODY_MB = '1.1'
+    try {
+      expect(Number.isInteger(gitBodyMaxBytes())).toBe(true)
+    } finally {
+      delete process.env.SETFORK_GIT_MAX_BODY_MB
+    }
   })
 })
