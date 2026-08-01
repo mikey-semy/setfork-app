@@ -69,22 +69,28 @@ describe('цепочка подметальщика — ровно одна', ()
     expect(await mirrorJobs()).toHaveLength(1)
   })
 
-  it('второй инстанс не получает локу, пока первый держит', async () => {
-    // Случай выкатки: два процесса поднимаются вместе и оба видят «пусто».
-    // Просто дёрнуть ensure дважды одновременно НЕДОСТАТОЧНО — транзакции
-    // короткие и на практике не пересекаются, тест был бы зелёным и без локи
-    // (проверено). Поэтому держим локу заведомо дольше и смотрим, что второй
-    // получает отказ, а не «пусто, заводи ещё одну цепочку».
+  it('занятая лока заставляет ЖДАТЬ, а не уходить ни с чем', async () => {
+    // Случай выкатки. Просто дёрнуть ensure дважды одновременно НЕДОСТАТОЧНО:
+    // транзакции короткие и на практике не пересекаются — такой тест зелен и без
+    // всякой локи (проверено). Поэтому держим локу заведомо дольше.
+    //
+    // Проверяем именно ОЖИДАНИЕ: прежняя версия при занятой локе просто
+    // возвращалась, считая, что задачу поставит держащий. А он мог не поставить,
+    // увидев наш проход в processing, — и цепочка обрывалась.
     const key = 0x5f_00_01
-    let secondGotLock: boolean | undefined
+    let finished = false
+    let waiting: Promise<void> | undefined
     await db.transaction(async (holder) => {
       await holder.execute(sql`select pg_advisory_xact_lock(${key})`)
-      await db.transaction(async (other) => {
-        const r = await other.execute(sql`select pg_try_advisory_xact_lock(${key}) as locked`)
-        secondGotLock = (r as { rows?: { locked?: boolean }[] }).rows?.[0]?.locked
+      waiting = ensureMirrorSweepScheduled().then(() => {
+        finished = true
       })
+      await new Promise((r) => setTimeout(r, 400))
+      expect(finished).toBe(false) // ждёт локу, а не сдался
+      expect(await mirrorJobs()).toHaveLength(0)
     })
-    expect(secondGotLock).toBe(false)
+    await waiting
+    expect(await mirrorJobs()).toHaveLength(1) // дождался и поставил
   })
 
   it('уже идущий проход считается за цепочку (не только pending)', async () => {

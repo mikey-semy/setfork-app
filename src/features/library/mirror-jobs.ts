@@ -183,9 +183,15 @@ export async function ensureMirrorSweepScheduled(
   opts: { delayMs?: number; exceptJobId?: string } = {},
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    const res = await tx.execute(sql`select pg_try_advisory_xact_lock(${SWEEP_LOCK_KEY}) as locked`)
-    const locked = (res as { rows?: { locked?: boolean }[] }).rows?.[0]?.locked
-    if (!locked) return // кто-то другой уже заводит — второй экземпляр не нужен
+    // ЖДЁМ локу, а не пробуем взять. Разница не косметическая (авто-ревью
+    // fe#645, третий заход): «не досталась — уходим» молча предполагало, что
+    // держащий локу поставит задачу за нас. А он мог решить обратное, УВИДЕВ
+    // НАС: при выкатке старт другого инстанса берёт локу, видит наш проход в
+    // processing, заключает «цепочка есть» и не вставляет ничего. Мы бы ушли
+    // следом — и преемника не поставил бы никто.
+    //
+    // Ждать дёшево: под локой идут один select и одна вставка.
+    await tx.execute(sql`select pg_advisory_xact_lock(${SWEEP_LOCK_KEY})`)
     const [dup] = await tx
       .select({ id: jobs.id })
       .from(jobs)
