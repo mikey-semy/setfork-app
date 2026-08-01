@@ -1656,6 +1656,7 @@ export const en = {
   'admin.dryRunDecisions': '{n} decisions made in dry run — logged, not acted on.',
   'admin.aOfB': '{a} of {b}',
   'admin.inProgressFailed': 'in progress {a}, failed {b}',
+  'admin.balanceAffordsGens': 'Balance affords ≈{n} more generations at the 30-day average.',
 } as const
 
 export type DictKey = keyof typeof en

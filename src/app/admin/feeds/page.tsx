@@ -29,9 +29,8 @@ export async function generateMetadata() {
 
 export default async function AdminFeedsPage({ searchParams }: { searchParams: Promise<{ err?: string; fresh?: string }> }) {
   await requireAdmin()
-  const lang = await getLang()
-  const sp = await searchParams
-  const [rows, items] = await Promise.all([feedSourceRows(), recentFeedItems()])
+  // Независимые запросы — параллельно (react-doctor).
+  const [lang, sp, [rows, items]] = await Promise.all([getLang(), searchParams, Promise.all([feedSourceRows(), recentFeedItems()])])
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">

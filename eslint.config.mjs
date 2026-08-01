@@ -52,7 +52,9 @@ export default [
             'Локальный say(en, ru) запрещён (трек i18n-extraction, Ф3): добавь ключ в shared/i18n/dict/en.ts + ru.ts и используй t(key, lang). Плейсхолдеры — {n}/{a}/{b} + .replace().',
         },
         {
-          selector: "CallExpression[callee.name='tr'] > ObjectExpression:matches([properties.0.value.type='Literal'], [properties.0.value.type='TemplateLiteral'])",
+          // Property-селектор, а не properties.0: литерал ловится в ЛЮБОЙ позиции
+          // объекта — tr({ en: value, ru: 'литерал' }) тоже запрещён (Codex #650).
+          selector: "CallExpression[callee.name='tr'] > ObjectExpression > Property:matches([value.type='Literal'], [value.type='TemplateLiteral'])",
           message:
             'tr({ en: …, ru: … }) с инлайновыми литералами запрещён (трек i18n-extraction, Ф3): строка должна жить в словаре dict/. tr() — только для LocaleText-КОНТЕНТА из данных.',
         },

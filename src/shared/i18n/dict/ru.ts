@@ -1651,4 +1651,5 @@ export const ru: Record<DictKey, string> = {
   'admin.dryRunDecisions': '{n} решений принято в сухом прогоне — записаны, но не выполнены.',
   'admin.aOfB': '{a} из {b}',
   'admin.inProgressFailed': 'в работе {a}, упало {b}',
+  'admin.balanceAffordsGens': 'Остатка хватит ≈на {n} генераций по средней за 30 дней.',
 }

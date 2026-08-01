@@ -249,7 +249,7 @@ export default async function AdminDevelopmentPage() {
         </div>
         {m.money.runwayGens != null && (
           <p className="text-[0.78125rem] text-muted">
-            {t('admin.balanceAffords', lang).replace('{n}', num(m.money.runwayGens))}
+            {t('admin.balanceAffordsGens', lang).replace('{n}', num(m.money.runwayGens))}
           </p>
         )}
       </section>
