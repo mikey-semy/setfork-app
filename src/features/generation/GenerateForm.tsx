@@ -52,7 +52,7 @@ export function GenerateForm({
   // Живой заголовок КАК ЕСТЬ, без приписки «Например:» — плейсхолдер и так читается как
   // пример, а приписка только удлиняла строку и заставляла её переноситься в textarea.
   const example = suggestions[0]
-  const placeholder = example ?? say('Describe what you need to do…', 'Опиши, что нужно сделать…')
+  const placeholder = example ?? t('generation.describeWhatYouNeed2', lang)
 
   // FLIP: после перехода в launching поле уже внизу — инвертируем его к прежнему верху и пускаем
   // плавный перелёт в 0. Замер обоих top по одному элементу (boxRef) — вертикаль без магии.
@@ -86,7 +86,7 @@ export function GenerateForm({
   const errText: Record<string, string> = {
     aifail: t('aiFail', lang),
     ratelimited: t('rateLimited', lang),
-    ai_quota: say('Monthly draft limit reached. Try again next month.', 'Исчерпан месячный лимит на черновики. Попробуй в следующем месяце.'),
+    ai_quota: t('generation.monthlyDraftLimitReached', lang),
     // Free-лимит (#308): не ошибка, а апселл Pro — свой акцентный тон.
     free_limit: say(
       'You have reached the free monthly generation limit. Pro removes the limit and unlocks the council (multi-model quality).',
@@ -94,7 +94,7 @@ export function GenerateForm({
     ),
   }
   const notice: { text: string; tone: 'warn' | 'danger' | 'upsell' } | null = !aiOn
-    ? { text: say('Drafting is not configured (no key).', 'Черновики не настроены (нет ключа).'), tone: 'warn' }
+    ? { text: t('generation.draftingNotConfiguredNo', lang), tone: 'warn' }
     : errorKind && errText[errorKind]
       ? { text: errText[errorKind], tone: errorKind === 'aifail' ? 'danger' : errorKind === 'free_limit' ? 'upsell' : 'warn' }
       : null
@@ -116,7 +116,7 @@ export function GenerateForm({
           <div className="mx-auto flex max-w-[37.5rem] items-center gap-2.5 rounded-lg border border-border bg-surface px-4 py-3">
             <Loader2 size={15} className="shrink-0 animate-spin text-accent" />
             <span className="min-w-0 truncate text-[0.8125rem] text-ink-2">
-              {say('Building your list', 'Собираем список')}: <span className="text-ink">{q.trim()}</span>
+              {t('generation.buildingYourList', lang)}: <span className="text-ink">{q.trim()}</span>
             </span>
           </div>
         </div>
@@ -169,7 +169,7 @@ export function GenerateForm({
                 kind === '' ? 'border-(--accent) bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:text-ink',
               )}
             >
-              {say('Auto', 'Авто')}
+              {t('generation.auto', lang)}
             </button>
             {LIST_KINDS.map((k) => (
               <button
@@ -211,7 +211,7 @@ export function GenerateForm({
         {!launching && (
           <div className="mt-3 text-center">
             <Link href="/generate/history" className="text-[0.78125rem] text-muted hover:text-ink">
-              {say('Draft history', 'История генераций')}
+              {t('generation.draftHistory', lang)}
             </Link>
           </div>
         )}

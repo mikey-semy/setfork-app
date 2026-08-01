@@ -11,6 +11,7 @@ import { ModelSelect, type Option } from './ModelSelect'
 import { CreditsWidget } from './CreditsWidget'
 import { loadProviderCatalog } from './model-catalog-action'
 import { CUR_SIGN, type Currency } from './model-options'
+import { t, type Lang } from '@/shared/i18n'
 
 /**
  * ПРОВАЙДЕР, ЕГО МОДЕЛИ И ЕГО ДЕНЬГИ — одним блоком, потому что это одна связка.
@@ -36,7 +37,7 @@ export function AiProviderModels({
   yandexFolder,
   searchKeyMasked,
   enabled,
-  ru,
+  lang,
   initial,
   labels,
 }: {
@@ -46,7 +47,7 @@ export function AiProviderModels({
   yandexFolder: string
   searchKeyMasked: string
   enabled: boolean
-  ru: boolean
+  lang: Lang
   initial: {
     chat: Option[]
     embedding: Option[]
@@ -61,7 +62,7 @@ export function AiProviderModels({
   }
   labels: { chat: string; fallback: string; embedding: string; pick: string; loading: string; noKey: string }
 }) {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
   const [prov, setProv] = useState<AiProviderChoice>(provider)
   const [chat, setChat] = useState<Option[]>(initial.chat)
@@ -81,7 +82,7 @@ export function AiProviderModels({
     startTransition(async () => {
       // Опции приходят готовыми: цены и валюта у провайдеров разные, и форматировать их на
       // клиенте значило бы держать вторую копию правил.
-      const cat = await loadProviderCatalog(next, ru ? 'ru' : 'en')
+      const cat = await loadProviderCatalog(next, lang)
       setChat(cat.chat)
       setEmbedding(cat.embedding)
       setValues({ chatModel: cat.saved.chatModel, fallbackModel: cat.saved.fallbackModel, cheapModeThreshold: cat.saved.cheapModeThreshold })
@@ -92,7 +93,7 @@ export function AiProviderModels({
   }
 
   const sign = CUR_SIGN[currency]
-  const customHint = say('Use', 'Использовать')
+  const customHint = t('admin.use2', lang)
   // Каталога нет вообще — единственный способ задать модель это ввести id руками, и об
   // этом надо сказать прямо в поле поиска, а не подменять виджет.
   const emptyCatalog = chat.length === 0
@@ -106,7 +107,7 @@ export function AiProviderModels({
         maskedKeys={maskedKeys}
         yandexFolder={yandexFolder}
         searchKeyMasked={searchKeyMasked}
-        ru={ru}
+        lang={lang}
         onProviderChange={reload}
       />
 
@@ -130,7 +131,7 @@ export function AiProviderModels({
             </span>
             {/* max-sm:ml-auto — при переносе строки кнопка прижимается вправо, а не повисает по центру. */}
             <Button size="sm" onClick={() => reload(prov)} className="min-h-11 shrink-0 max-sm:ml-auto">
-              <RefreshCw size={13} /> {say('Retry', 'Повторить')}
+              <RefreshCw size={13} /> {t('admin.retry', lang)}
             </Button>
           </div>
         </Alert>
@@ -146,7 +147,7 @@ export function AiProviderModels({
           name="chatModel"
           defaultValue={values.chatModel}
           options={chat}
-          placeholder={emptyCatalog ? say('Type the model id', 'Введите id модели') : labels.pick}
+          placeholder={emptyCatalog ? t('admin.typeModelId', lang) : labels.pick}
           allowCustom
           customHint={customHint}
         />
@@ -173,7 +174,7 @@ export function AiProviderModels({
           name="embeddingModel"
           defaultValue={initial.embeddingModel}
           options={embedding}
-          placeholder={embedding.length === 0 ? say('Type the model id', 'Введите id модели') : labels.pick}
+          placeholder={embedding.length === 0 ? t('admin.typeModelId', lang) : labels.pick}
           allowCustom
           customHint={customHint}
         />
@@ -195,9 +196,9 @@ export function AiProviderModels({
       {(prov === 'openrouter' || prov === 'yandex') && (
         <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
           <div className="text-[0.8125rem] font-medium text-ink">
-            {prov === 'openrouter' ? say('OpenRouter cost control', 'Контроль расходов OpenRouter') : say('Yandex cost control', 'Контроль расходов Яндекса')}
+            {prov === 'openrouter' ? t('admin.openRouterCostControl', lang) : t('admin.yandexCostControl', lang)}
           </div>
-          {prov === 'openrouter' && <CreditsWidget ru={ru} />}
+          {prov === 'openrouter' && <CreditsWidget lang={lang} />}
           <Field
             label={
               prov === 'openrouter'

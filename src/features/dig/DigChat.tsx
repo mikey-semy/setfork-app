@@ -41,7 +41,6 @@ export interface GnomeOption {
 }
 
 export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lang }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   const [ctx, setCtx] = useState<DigChatOpenDetail | null>(null)
   const [gnome, setGnome] = useState('auto')
   const [messages, setMessages] = useState<DigChatMsg[]>([])
@@ -89,12 +88,12 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   if (!ctx) return null
 
   const errText: Record<string, string> = {
-    ai_off: say('Drafting is not configured.', 'ИИ не настроен.'),
-    budget: say('AI budget is exhausted for today.', 'Дневной бюджет ИИ исчерпан.'),
-    quota: say('Your monthly AI quota is used up.', 'Твоя месячная ИИ-квота исчерпана.'),
-    ratelimited: say('Too fast — wait a minute.', 'Слишком часто — подожди минуту.'),
-    aifail: say('The master got stuck — try again.', 'Мастер замешкался — попробуй ещё раз.'),
-    'not found': say('Step not found.', 'Шаг не найден.'),
+    ai_off: t('dig.draftingNotConfigured', lang),
+    budget: t('dig.aIBudgetExhaustedToday', lang),
+    quota: t('dig.yourMonthlyAiQuota', lang),
+    ratelimited: t('dig.tooFastWaitMinute', lang),
+    aifail: t('dig.theMasterGotStuck', lang),
+    'not found': t('dig.stepNotFound', lang),
   }
 
   const send = (preset?: string) => {
@@ -135,9 +134,9 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   const transcriptOf = (i: number): string => {
     const m = messages[i]
     if (!m) return ''
-    const who = gnomes.find((g) => g.id === m.who)?.name ?? m.who ?? say('expert', 'эксперт')
+    const who = gnomes.find((g) => g.id === m.who)?.name ?? m.who ?? t('dig.expert', lang)
     const asked = [...messages.slice(0, i)].reverse().find((x) => x.role === 'user')
-    const q = asked ? `**${say('You', 'Вы')}:** ${asked.text}
+    const q = asked ? `**${t('dig.you', lang)}:** ${asked.text}
 
 ` : ''
     return `${q}**${who}:** ${m.text}`
@@ -145,19 +144,19 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   // Готовые вопросы на старте: копать можно вообще без клавиатуры — дальше
   // ведут фоллоу-апы самого гнома (кнопки после каждого ответа).
   const starterQuestions = [
-    say('Why exactly this way?', 'Почему именно так?'),
-    say('What are the pitfalls?', 'Какие подводные камни?'),
-    say('Is there an alternative?', 'Какая есть альтернатива?'),
-    say('Explain it simpler', 'Объясни проще'),
+    t('dig.whyExactlyWay', lang),
+    t('dig.whatPitfalls', lang),
+    t('dig.isThereAlternative', lang),
+    t('dig.explainSimpler', lang),
   ]
   // Гном ВСЕГДА ведёт вглубь (договорённость с владельцем): если модель не выдала
   // свои NEXT-вопросы (длинный ответ съел бюджет / модель забыла) — не оставляем
   // гостя без направлений, показываем универсальные «копающие» кнопки.
   const deeperFallback = [
-    say('Dig deeper', 'Копни глубже'),
-    say('What could go wrong?', 'А что может пойти не так?'),
-    say('Give an example', 'Приведи пример'),
-    say('Any alternatives?', 'Какие есть альтернативы?'),
+    t('dig.digDeeper', lang),
+    t('dig.whatCouldGoWrong', lang),
+    t('dig.giveExample', lang),
+    t('dig.anyAlternatives', lang),
   ]
   const chips = messages.length === 0 ? starterQuestions : followups.length ? followups : deeperFallback
   const chipRow = chips.length > 0 && !pending && (
@@ -178,11 +177,11 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
           <div className="truncate text-[0.78125rem] font-semibold text-ink">{ctx.stepTitle}</div>
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center gap-1 text-[0.6875rem] text-muted hover:text-ink-2">
-              {gnome === 'auto' ? say('Auto by topic', 'Авто по теме') : `${current?.name ?? gnome}${current?.guild ? ` · ${current.guild}` : ''}`}
+              {gnome === 'auto' ? t('dig.autoByTopic', lang) : `${current?.name ?? gnome}${current?.guild ? ` · ${current.guild}` : ''}`}
               <ChevronDown size={11} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onSelect={() => setGnome('auto')}>{say('Auto by topic', 'Авто по теме')}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setGnome('auto')}>{t('dig.autoByTopic', lang)}</DropdownMenuItem>
               {gnomes.map((g) => (
                 <DropdownMenuItem key={g.id} onSelect={() => setGnome(g.id)}>
                   {g.name}
@@ -192,7 +191,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Button variant="ghost" size="xs" aria-label={say('Close', 'Закрыть')} onClick={() => setCtx(null)}>
+        <Button variant="ghost" size="xs" aria-label={t('dig.close', lang)} onClick={() => setCtx(null)}>
           <X size={15} />
         </Button>
       </div>
@@ -200,7 +199,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
       <div ref={scrollRef} className="min-h-[7.5rem] flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {messages.length === 0 && (
           <p className="text-[0.78125rem] leading-relaxed text-muted">
-            {say('Ask anything about this step — reasons, pitfalls, alternatives. The master digs where you point.', 'Спрашивай что угодно про этот пункт — причины, подводные камни, альтернативы. Мастер копает туда, куда покажешь.')}
+            {t('dig.askAnythingAboutStep', lang)}
           </p>
         )}
         {/* Фрагмент переписки для копирования: предшествующий вопрос + ответ с
@@ -228,7 +227,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
         )}
         {pending && (
           <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
-            <Loader2 size={13} className="animate-spin" /> {say('digging…', 'копает…')}
+            <Loader2 size={13} className="animate-spin" /> {t('dig.digging', lang)}
           </div>
         )}
         {err && <p className="text-[0.78125rem] text-warn">{err}</p>}
@@ -242,11 +241,11 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
           value={text}
           onChange={setText}
           onSend={() => send()}
-          placeholder={say('Why exactly this way?', 'Почему именно так?')}
+          placeholder={t('dig.whyExactlyWay', lang)}
           sendDisabled={!text.trim() || pending}
           pending={pending}
-          sendAriaLabel={say('Send (Enter)', 'Отправить (Enter)')}
-          sendTooltip={say('Enter — send · Shift+Enter — new line · Esc — close', 'Enter — отправить · Shift+Enter — перенос · Esc — закрыть')}
+          sendAriaLabel={t('dig.sendEnter', lang)}
+          sendTooltip={t('dig.enterSendShiftEnter', lang)}
           onEscape={() => setCtx(null)}
         />
       </div>
@@ -259,10 +258,10 @@ function ThankButton({ who, thanked, onThank, lang }: { who: string; thanked: bo
   const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   void who
   return (
-    <Tooltip label={thanked ? say('Thanked', 'Спасибо сказано') : say('Say thanks', 'Сказать спасибо')}>
+    <Tooltip label={thanked ? t('dig.thanked', lang) : t('dig.sayThanks', lang)}>
       <button
         type="button"
-        aria-label={say('Say thanks', 'Сказать спасибо')}
+        aria-label={t('dig.sayThanks', lang)}
         onClick={onThank}
         disabled={thanked}
         className={thanked ? 'text-accent' : 'text-muted transition-colors hover:text-accent'}

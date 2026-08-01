@@ -5,7 +5,7 @@ import { Loader2, Send } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
-import { t } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { setEmailSettings, sendTestEmail } from './actions'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 
@@ -19,7 +19,8 @@ export interface EmailFormValues {
   notifyTo: string // адрес(а) для админ-уведомлений (фидбек/жалобы), через запятую
 }
 
-export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }) {
+export function EmailSettingsForm({ lang, v }: { lang: Lang; v: EmailFormValues }) {
+  const ru = lang === 'ru'
   const [testTo, setTestTo] = useState('')
   const [testing, setTesting] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; error?: string } | null>(null)
@@ -82,7 +83,7 @@ export function EmailSettingsForm({ ru, v }: { ru: boolean; v: EmailFormValues }
           <Switch name="secure" defaultChecked={v.secure} />
         </div>
 
-        <FormSaveBar ru={ru} />
+        <FormSaveBar lang={lang} />
       </form>
 
       {/* Тест-отправка использует СОХРАНЁННЫЕ настройки — сначала сохрани. */}

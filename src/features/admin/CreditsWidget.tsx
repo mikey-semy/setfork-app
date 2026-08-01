@@ -1,5 +1,6 @@
 'use client'
 
+import { type Lang } from '@/shared/i18n'
 import { useEffect, useState } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { Alert } from '@/shared/ui/Alert'
@@ -8,7 +9,8 @@ import { fetchOpenRouterCredits } from './actions'
 type Credits = { total: number; used: number; remaining: number }
 
 /** Баланс OpenRouter: полоска расхода + кнопка «Обновить» (порт из aep). */
-export function CreditsWidget({ ru }: { ru: boolean }) {
+export function CreditsWidget({ lang }: { lang: Lang }) {
+  const ru = lang === 'ru'
   const [c, setC] = useState<Credits | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)

@@ -26,6 +26,7 @@ import { Textarea } from '@/shared/ui/textarea'
 import { toast } from '@/shared/ui/toast'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CONTROL_H, CONTROL_TEXT, ICON_SIZE, LAYER, TEXT, type ControlSize } from '@/shared/ui/control'
+import { t } from '@/shared/i18n'
 
 // Эталон интерфейса: все примитивы shared/ui во всех размерах и состояниях.
 // Смысл страницы — РАЗНОБОЙ ВИДЕН ГЛАЗАМИ: контролы одного размера стоят в одном
@@ -55,7 +56,7 @@ function SizeTag({ children }: { children: React.ReactNode }) {
 }
 
 /** Живое демо классов появления: перезапуск перемонтированием по ключу. */
-function MotionDemo({ say }: { say: Say }) {
+function MotionDemo({ lang }: { lang: Lang }) {
   const [run, setRun] = useState(0)
   const box = 'rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem] text-ink'
   return (
@@ -67,7 +68,7 @@ function MotionDemo({ say }: { say: Say }) {
       </div>
       <div>
         <Button size="sm" variant="ghost" onClick={() => setRun((v) => v + 1)}>
-          {say('Replay', 'Повторить')}
+          {t('admin.replay', lang)}
         </Button>
       </div>
     </div>
@@ -76,16 +77,16 @@ function MotionDemo({ say }: { say: Say }) {
 const cn2 = (a: string, b: string) => `${a} ${b}`
 
 /** Главная проверка: контролы одного size в одном ряду — одна высота, один кегль. */
-function RowCheck({ size, say }: { size: ControlSize; say: Say }) {
+function RowCheck({ size, lang }: { size: ControlSize; lang: Lang }) {
   const [q, setQ] = useState('')
   return (
     <div className="flex items-center gap-2">
       <SizeTag>{size}</SizeTag>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
         <Button size={size} variant="primary">
-          {say('Save', 'Сохранить')}
+          {t('common.save', lang)}
         </Button>
-        <Button size={size}>{say('Cancel', 'Отмена')}</Button>
+        <Button size={size}>{t('admin.cancel', lang)}</Button>
         <Input size={size} placeholder="input" className="w-36 flex-none" />
         <Select>
           <SelectTrigger size={size} className="w-36 flex-none">
@@ -111,14 +112,14 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
   return (
     <div className="flex flex-col gap-4">
       <Section
-        title={say('Control scale', 'Шкала контролов')}
+        title={t('admin.controlScale', lang)}
         hint={say(
           'One source — shared/ui/control.ts: same-size controls in a row must match in height and font. md = 38px (settings-row standard), sm = 32px, xs = 28px. Fields are 16px on mobile — otherwise iOS zooms.',
           'Один источник — shared/ui/control.ts: контролы одного размера в одном ряду обязаны совпадать по высоте и кеглю. md = 38px (стандарт рядов настроек), sm = 32px, xs = 28px. Поля на мобиле — 16px, иначе iOS зумит.',
         )}
       >
         {SIZES.map((s) => (
-          <RowCheck key={s} size={s} say={say} />
+          <RowCheck key={s} size={s} lang={lang} />
         ))}
         <div className="flex flex-wrap gap-4 border-t border-border pt-3">
           {SIZES.map((s) => (
@@ -132,7 +133,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       </Section>
 
       <Section
-        title={say('Buttons', 'Кнопки')}
+        title={t('admin.buttons', lang)}
         hint={say(
           'Variants × sizes; button text is 1–2 short words, icon + aria-label on mobile.',
           'Варианты × размеры; текст в кнопке — 1–2 коротких слова, на мобиле иконка + aria-label.',
@@ -150,8 +151,8 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
               <Button size={size} disabled>
                 disabled
               </Button>
-              <Tooltip label={say('Icon + aria-label', 'Иконка + aria-label')}>
-                <Button size={size} aria-label={say('Add', 'Добавить')}>
+              <Tooltip label={t('admin.iconAriaLabel', lang)}>
+                <Button size={size} aria-label={t('admin.add', lang)}>
                   <Plus size={ICON_SIZE[size]} />
                 </Button>
               </Tooltip>
@@ -161,14 +162,14 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       </Section>
 
       <Section
-        title={say('Fields', 'Поля ввода')}
+        title={t('admin.fields', lang)}
         hint={say(
           'No hand-rolled field classes in features — these primitives only.',
           'Никаких самопальных классов рамок в фичах — только эти примитивы.',
         )}
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input placeholder={say('Default (md)', 'Обычное (md)')} />
+          <Input placeholder={t('admin.defaultMd', lang)} />
           <Input placeholder="font-mono" className="font-mono" />
           <Input size="sm" placeholder="sm" />
           <Input disabled placeholder="disabled" />
@@ -178,31 +179,31 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       </Section>
 
       <Section
-        title={say('Field — form row anatomy', 'Field — анатомия строки формы')}
+        title={t('admin.fieldFormRowAnatomy', lang)}
         hint={say(
           'Label + control + hint + error in one primitive; no local label constants in features.',
           'Подпись + контрол + подсказка + ошибка одним примитивом; никаких локальных label-констант в фичах.',
         )}
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={say('With hint', 'С подсказкой')} hint={say('Explains the value by example', 'Объясняет значение примером')}>
+          <Field label={t('admin.withHint', lang)} hint={t('admin.explainsValueByExample', lang)}>
             <Input placeholder="value" />
           </Field>
-          <Field label={say('With error', 'С ошибкой')} error={say('Explains what to fix', 'Объясняет, что исправить')}>
+          <Field label={t('admin.withError', lang)} error={t('admin.explainsWhatFix', lang)}>
             <Input placeholder="value" aria-invalid />
           </Field>
         </div>
       </Section>
 
-      <Section title={say('Alerts', 'Баннеры состояния')} hint={say('Form errors (?e=), warnings, success — not hand-rolled borders.', 'Ошибки форм (?e=), предупреждения, успех — не рукописные рамки.')}>
+      <Section title={t('admin.alerts', lang)} hint={t('admin.formErrorsEWarnings', lang)}>
         {ALERT_VARIANTS.map((v) => (
           <Alert key={v} variant={v}>
-            {v} — {say('message text, wraps safely on narrow screens', 'текст сообщения, безопасно переносится на узких экранах')}
+            {v} — {t('admin.messageTextWrapsSafely', lang)}
           </Alert>
         ))}
       </Section>
 
-      <Section title={say('Choice controls', 'Выбор и переключатели')}>
+      <Section title={t('admin.choiceControls', lang)}>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex cursor-pointer items-center gap-2 text-[0.8125rem] text-ink">
             <Checkbox defaultChecked className="size-4" /> Checkbox
@@ -213,24 +214,24 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         </div>
       </Section>
 
-      <Section title={say('Badges & hints', 'Бейджи и подсказки')}>
+      <Section title={t('admin.badgesHints', lang)}>
         <div className="flex flex-wrap items-center gap-2">
           {BADGE_VARIANTS.map((v) => (
             <Badge key={v} variant={v}>
               {v}
             </Badge>
           ))}
-          <Tooltip label={say('Tooltip (not title=)', 'Тултип (не title=)')}>
+          <Tooltip label={t('admin.tooltipNotTitle', lang)}>
             <Badge variant="soft">tooltip →</Badge>
           </Tooltip>
-          <Button size="xs" variant="ghost" onClick={() => toast(say('Toast: short and useful', 'Тост: коротко и по делу'))}>
+          <Button size="xs" variant="ghost" onClick={() => toast(t('admin.toastShortUseful', lang))}>
             toast
           </Button>
         </div>
       </Section>
 
       <Section
-        title={say('Page header', 'Шапка страницы')}
+        title={t('admin.pageHeader', lang)}
         hint={say(
           'One primitive instead of 27 hand-rolled h1 variants: page 18px / section 16px, truncate, actions wrap below on mobile.',
           'Один примитив вместо 27 рукописных вариантов h1: page 18px / section 16px, truncate, действия на мобиле переносятся вниз.',
@@ -238,13 +239,13 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       >
         <div className="rounded-md border border-dashed border-border p-3">
           <PageHeader
-            title={say('Very long page title that truncates instead of breaking corners', 'Очень длинный заголовок страницы, который обрезается, а не ломает углы')}
-            subtitle={say('Subtitle explains the page in one line', 'Подзаголовок объясняет страницу одной строкой')}
+            title={t('admin.veryLongPageTitle', lang)}
+            subtitle={t('admin.subtitleExplainsPageOne', lang)}
             icon={<Tag size={16} />}
             meta={<Badge variant="soft">42</Badge>}
             actions={
               <Button size="sm" variant="primary">
-                {say('Action', 'Действие')}
+                {t('admin.action', lang)}
               </Button>
             }
             className="mb-0"
@@ -253,7 +254,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       </Section>
 
       <Section
-        title={say('Empty states', 'Пустые состояния')}
+        title={t('admin.emptyStates', lang)}
         hint={say(
           'bordered — page/list without content; plain — reports/feeds; inline — a row inside a table.',
           'bordered — страница/список без содержимого; plain — отчёты/ленты; inline — строка внутри таблицы.',
@@ -261,33 +262,33 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       >
         <EmptyState
           icon={<Inbox size={22} />}
-          title={say('Nothing here yet', 'Здесь пока пусто')}
-          hint={say('Bordered: with icon, title and CTA', 'Bordered: с иконкой, заголовком и действием')}
-          action={{ href: '/admin/ui-kit', label: say('Create', 'Создать') }}
+          title={t('admin.nothingHereYet', lang)}
+          hint={t('admin.borderedIconTitleCta', lang)}
+          action={{ href: '/admin/ui-kit', label: t('admin.create', lang) }}
         />
-        <EmptyState variant="plain" hint={say('Plain: hint only — title is optional', 'Plain: только hint — title опционален')} />
-        <EmptyState variant="inline" hint={say('Inline: a row inside a container', 'Inline: строка внутри контейнера')} />
+        <EmptyState variant="plain" hint={t('admin.plainHintOnlyTitle', lang)} />
+        <EmptyState variant="inline" hint={t('admin.inlineRowInsideContainer', lang)} />
       </Section>
 
-      <Section title={say('Danger zone', 'Опасная зона')}>
-        <DangerZone title={say('Danger zone', 'Опасная зона')}>
+      <Section title={t('admin.dangerZone', lang)}>
+        <DangerZone title={t('admin.dangerZone', lang)}>
           <ActionRow
-            title={say('Delete something', 'Удалить что-нибудь')}
-            sub={say('Irreversible; shows useConfirm() instead of native confirm', 'Необратимо; показывает useConfirm() вместо нативного confirm')}
+            title={t('admin.deleteSomething', lang)}
+            sub={t('admin.irreversibleShowsUseconfirmInstead', lang)}
           >
             <Button
               size="sm"
               variant="dangerSolid"
               onClick={async () => {
                 const ok = await confirm({
-                  title: say('Delete something?', 'Удалить что-нибудь?'),
-                  intro: say('This is only a UI Kit demo — nothing is deleted.', 'Это демо UI Kit — ничего не удаляется.'),
-                  confirmLabel: say('Delete', 'Удалить'),
+                  title: t('admin.deleteSomething2', lang),
+                  intro: t('admin.thisOnlyUiKit', lang),
+                  confirmLabel: t('common.delete', lang),
                 })
-                setConfirmed(ok ? say('confirmed', 'подтверждено') : say('cancelled', 'отменено'))
+                setConfirmed(ok ? t('admin.confirmed', lang) : t('admin.cancelled', lang))
               }}
             >
-              {say('Delete', 'Удалить')}
+              {t('common.delete', lang)}
             </Button>
             {confirmed && <span className="text-[0.78125rem] text-muted">{confirmed}</span>}
           </ActionRow>
@@ -296,7 +297,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       </Section>
 
       <Section
-        title={say('Data table v2', 'Таблица данных v2')}
+        title={t('admin.dataTableV2', lang)}
         hint={say(
           'TanStack + real <table>: click-to-sort with aria-sort, skeletons, empty state inside; below md rows become cards (cardOnMobile). v1 div-grid stays as a bridge for simple read-only lists.',
           'TanStack + настоящая <table>: сортировка кликом с aria-sort, скелетоны, пустое состояние внутри; ниже md строки становятся карточками (cardOnMobile). v1 див-грид остаётся мостом для простых списков.',
@@ -305,15 +306,15 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
         <DataTableV2<DemoRow>
           cardOnMobile
           rowKey={(r) => r.name}
-          empty={{ hint: say('No rows', 'Строк нет') }}
+          empty={{ hint: t('admin.noRows', lang) }}
           columns={[
             nodeColumn<DemoRow>({
               id: 'person',
-              header: say('Person', 'Человек'),
+              header: t('admin.person', lang),
               render: (r) => <UserLine handle="demo" name={r.name} size="sm" />,
             }),
-            textColumn<DemoRow>({ id: 'role', header: say('Role', 'Роль'), value: (r) => r.role }),
-            numberColumn<DemoRow>({ id: 'score', header: say('Score', 'Счёт'), value: (r) => r.score }),
+            textColumn<DemoRow>({ id: 'role', header: t('admin.role', lang), value: (r) => r.role }),
+            numberColumn<DemoRow>({ id: 'score', header: t('admin.score', lang), value: (r) => r.score }),
           ]}
           data={[
             { name: 'Demo User', role: 'admin', score: 42 },
@@ -324,17 +325,17 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       </Section>
 
       <Section
-        title={say('Motion', 'Моушен')}
+        title={t('admin.motion', lang)}
         hint={say(
           'Tokens: fast 120 / base 180 / slow 280ms, one ease-out. Three entrance classes: sf-overlay-in (backdrops), sf-pop-in (popovers/dropdowns/panels), sf-rise-in (bottom bars). prefers-reduced-motion kills all animation globally.',
           'Токены: fast 120 / base 180 / slow 280мс, один ease-out. Три класса появления: sf-overlay-in (бекдропы), sf-pop-in (поповеры/дропдауны/панели), sf-rise-in (нижние бары). prefers-reduced-motion гасит всё глобально.',
         )}
       >
-        <MotionDemo say={say} />
+        <MotionDemo lang={lang} />
       </Section>
 
       <Section
-        title={say('Typography', 'Типографика')}
+        title={t('admin.typography', lang)}
         hint={say(
           'Seven roles instead of 20 ad-hoc sizes (control.ts TEXT); heroes (20/22/24) stay outside the ladder. Layers: sticky 20 / dropdown 30 / overlay 40 / modal 50 / tooltip+toast 60.',
           'Семь ролей вместо 20 случайных кеглей (TEXT в control.ts); герои (20/22/24) вне лестницы. Слои: sticky 20 / dropdown 30 / overlay 40 / modal 50 / tooltip+toast 60.',
@@ -344,7 +345,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           {(Object.entries(TEXT) as [keyof typeof TEXT, string][]).map(([role, cls]) => (
             <div key={role} className="flex items-baseline gap-3">
               <span className="w-20 shrink-0 font-mono text-[0.6875rem] text-muted">{role}</span>
-              <span className={cls}>{say('Sample text of this role', 'Пример текста этой роли')}</span>
+              <span className={cls}>{t('admin.sampleTextRole', lang)}</span>
               <span className="font-mono text-[0.6875rem] text-muted">{cls}</span>
             </div>
           ))}
@@ -359,7 +360,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       </Section>
 
       <Section
-        title={say('Side navigation', 'Боковое меню')}
+        title={t('admin.sideNavigation', lang)}
         hint={say(
           'One SideNav for settings, admin and list settings — docs-style: groups, accent active item, mobile collapse.',
           'Один SideNav для настроек, админки и настроек списка — стиль docs: группы, активный пункт акцентом, свёртка на мобиле.',
@@ -367,15 +368,15 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       >
         <div className="max-w-[16.25rem]">
           <SideNav
-            mobileLabel={say('Sections', 'Разделы')}
+            mobileLabel={t('admin.sections', lang)}
             groups={[
               {
-                title: say('Group', 'Группа'),
+                title: t('admin.group', lang),
                 items: [
-                  { key: 'a', href: '#', label: say('Active item', 'Активный пункт'), icon: <Tag size={14} />, active: true },
-                  { key: 'b', href: '#', label: say('Regular item', 'Обычный пункт'), icon: <Inbox size={14} /> },
-                  { key: 'c', href: '#', label: say('Dimmed (no match)', 'Приглушён (мимо поиска)'), icon: <Pencil size={14} />, dimmed: true },
-                  { key: 'd', href: '#', label: say('Danger', 'Опасный'), icon: <Trash2 size={14} />, danger: true },
+                  { key: 'a', href: '#', label: t('admin.activeItem', lang), icon: <Tag size={14} />, active: true },
+                  { key: 'b', href: '#', label: t('admin.regularItem', lang), icon: <Inbox size={14} /> },
+                  { key: 'c', href: '#', label: t('admin.dimmedNoMatch', lang), icon: <Pencil size={14} />, dimmed: true },
+                  { key: 'd', href: '#', label: t('admin.danger', lang), icon: <Trash2 size={14} />, danger: true },
                 ],
               },
             ]}
@@ -384,22 +385,22 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       </Section>
 
       <Section
-        title={say('Composites', 'Конструкции')}
+        title={t('admin.composites', lang)}
         hint={say(
           'SettingsSection and UserLine — assembled once, reused everywhere. Data tables — DataTableV2 above (v1 bridge retired).',
           'SettingsSection и UserLine — собраны один раз, переиспользуются везде. Таблицы данных — DataTableV2 выше (v1-мост выведен).',
         )}
       >
         <SettingsSection
-          title={say('Settings section', 'Секция настроек')}
-          hint={say('Card + title + hint; save via FormSaveBar, footer is for secondary rows', 'Карточка + заголовок + пояснение; сохранение — FormSaveBar, футер — для вторичных рядов')}
+          title={t('admin.settingsSection', lang)}
+          hint={t('admin.cardTitleHintSave', lang)}
           footer={
             <Button size="sm" variant="ghost">
-              {say('Secondary', 'Вторичное')}
+              {t('admin.secondary', lang)}
             </Button>
           }
         >
-          <Field label={say('A field inside', 'Поле внутри')}>
+          <Field label={t('admin.aFieldInside', lang)}>
             <Input placeholder="value" />
           </Field>
         </SettingsSection>
@@ -411,26 +412,26 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       </Section>
 
       <Section
-        title={say('Settings row (etalon)', 'Ряд настроек (эталон)')}
+        title={t('admin.settingsRowEtalon', lang)}
         hint={say(
           'Bottom-right of a section: one row, one height; secondary actions are icons with tooltips, text on md+ only.',
           'Правый нижний угол секции: один ряд, одна высота; вторичные действия — иконки с тултипом, текст только на md+.',
         )}
       >
         <div className="flex items-center justify-end gap-2 rounded-md border border-dashed border-border p-3">
-          <Tooltip label={say('Delete', 'Удалить')}>
-            <Button size="sm" variant="danger" aria-label={say('Delete', 'Удалить')}>
+          <Tooltip label={t('common.delete', lang)}>
+            <Button size="sm" variant="danger" aria-label={t('common.delete', lang)}>
               <Trash2 size={15} />
             </Button>
           </Tooltip>
-          <Tooltip label={say('Rename', 'Переименовать')}>
-            <Button size="sm" variant="ghost" aria-label={say('Rename', 'Переименовать')}>
+          <Tooltip label={t('common.rename', lang)}>
+            <Button size="sm" variant="ghost" aria-label={t('common.rename', lang)}>
               <Pencil size={15} />
-              <span className="hidden md:inline">{say('Rename', 'Переименовать')}</span>
+              <span className="hidden md:inline">{t('common.rename', lang)}</span>
             </Button>
           </Tooltip>
           <Button size="sm" variant="primary">
-            {say('Save', 'Сохранить')}
+            {t('common.save', lang)}
           </Button>
         </div>
       </Section>

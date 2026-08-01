@@ -205,7 +205,7 @@ export default async function AdminPage() {
               href="/admin/council"
               className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink"
             >
-              <Bot size={14} /> {say('Council hall — experts, instructions, avatars', 'Зал совета — эксперты, инструкции, аватарки')}
+              <Bot size={14} /> {t('admin.councilHallExpertsInstructions', lang)}
             </Link>
           }
         >
@@ -226,7 +226,7 @@ export default async function AdminPage() {
               maskedKeys={maskedKeys}
               yandexFolder={aiProv.yandexFolder}
               searchKeyMasked={maskKey(aiProv.yandexSearchKey)}
-              ru={ru}
+              lang={lang}
               initial={{
                 chat: chatOpts,
                 embedding: embOpts,
@@ -239,14 +239,14 @@ export default async function AdminPage() {
                 error: models.error,
               }}
               labels={{
-                chat: say('Chat model', 'Модель генерации'),
-                fallback: say('Fallback model (cheap mode)', 'Запасная модель (для дешёвого режима)'),
+                chat: t('admin.chatModel', lang),
+                fallback: t('admin.fallbackModelCheapMode', lang),
                 // Размерность подставляется из EMBEDDING_DIM: она задана схемой БД (pgvector),
                 // и подпись не должна расходиться со схемой из-за числа, набранного в тексте.
                 embedding: say(`Embedding model (RAG, ${EMBEDDING_DIM}-dim)`, `Модель эмбеддингов (RAG, ${EMBEDDING_DIM}-мерная)`),
-                pick: say('Pick a model', 'Выбери модель'),
-                loading: say('Loading this provider’s models…', 'Загружаю модели этого провайдера…'),
-                noKey: say('No key for this provider — the catalog is unavailable, type the model id manually.', 'У этого провайдера нет ключа — каталог недоступен, id модели вводится вручную.'),
+                pick: t('admin.pickModel', lang),
+                loading: t('admin.loadingProviderSModels', lang),
+                noKey: t('admin.noKeyProviderCatalog', lang),
               }}
             />
 
@@ -260,7 +260,7 @@ export default async function AdminPage() {
             </div>
 
             <Field
-              label={tr({ en: 'Free plan: generations / month', ru: 'Free-тариф: генераций в месяц' }, lang)}
+              label={t('admin.freePlanGenerationsMonth', lang)}
               hint={tr(
                 {
                   en: 'Generation limit for free users. 0 = monetization off (no limit). Pro / admin are always unlimited; the council is Pro-only.',
@@ -293,12 +293,12 @@ export default async function AdminPage() {
                 readinessMinGrade: settings.readinessMinGrade,
                 readinessPerDay: settings.readinessPerDay,
               }}
-              ru={ru}
+              lang={lang}
             />
 
-            <AssistFields v={{ enabled: settings.assistEnabled, audience: settings.assistAudience }} ru={ru} />
+            <AssistFields v={{ enabled: settings.assistEnabled, audience: settings.assistAudience }} lang={lang} />
 
-            <FormSaveBar ru={ru} />
+            <FormSaveBar lang={lang} />
           </form>
         </SettingsSection>
       ),
@@ -317,7 +317,7 @@ export default async function AdminPage() {
               : 'S3-compatible storage, imgproxy and CDN. Values override .env; an empty field falls back to .env.'
           }
         >
-          <MediaSettingsForm ru={ru} v={mediaValues} />
+          <MediaSettingsForm lang={lang} v={mediaValues} />
         </SettingsSection>
       ),
     },
@@ -335,7 +335,7 @@ export default async function AdminPage() {
               : 'Your own SMTP for email notifications. Values override .env; an empty field falls back to .env.'
           }
         >
-          <EmailSettingsForm ru={ru} v={emailValues} />
+          <EmailSettingsForm lang={lang} v={emailValues} />
         </SettingsSection>
       ),
     },
@@ -353,7 +353,7 @@ export default async function AdminPage() {
               : 'Background browser notifications via a service worker. Your own VAPID keys — no third-party service.'
           }
         >
-          <PushSettingsForm ru={ru} v={pushValues} />
+          <PushSettingsForm lang={lang} v={pushValues} />
         </SettingsSection>
       ),
     },
@@ -371,7 +371,7 @@ export default async function AdminPage() {
               : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'
           }
         >
-          <SearchSettingsForm current={search} ru={ru} />
+          <SearchSettingsForm current={search} lang={lang} />
         </SettingsSection>
       ),
     },
@@ -411,7 +411,7 @@ export default async function AdminPage() {
               : 'Enable/disable achievements and set a custom image instead of the icon (drag-and-drop). Applies to all profiles.'
           }
         >
-          <AchievementsAdmin initial={achDisplay} ru={ru} />
+          <AchievementsAdmin initial={achDisplay} lang={lang} />
         </SettingsSection>
       ),
     },
@@ -420,7 +420,7 @@ export default async function AdminPage() {
       title: t('adminReindexTitle', lang),
       icon: <RefreshCw size={14} />,
       keywords: ['reindex', 'индексация', 'embeddings', 'эмбеддинги'],
-      content: <ReindexPanel ru={ru} />,
+      content: <ReindexPanel lang={lang} />,
     },
   ]
 

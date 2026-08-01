@@ -1,5 +1,6 @@
 'use client'
 
+import { type Lang } from '@/shared/i18n'
 import { Switch } from '@/shared/ui/switch'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
@@ -22,7 +23,8 @@ export interface MediaFormValues {
   imgproxySaltMask: string
 }
 
-export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }) {
+export function MediaSettingsForm({ lang, v }: { lang: Lang; v: MediaFormValues }) {
+  const ru = lang === 'ru'
   const secretPh = ru ? '•••• (задан) — оставьте пустым, чтобы не менять' : '•••• (set) — leave blank to keep'
   return (
     <form action={setMediaSettings} className="flex flex-col gap-5">
@@ -81,7 +83,7 @@ export function MediaSettingsForm({ ru, v }: { ru: boolean; v: MediaFormValues }
         <Input name="cdnUrl" defaultValue={v.cdnUrl} placeholder="https://cdn.example.com" className="font-mono" />
       </Field>
 
-      <FormSaveBar ru={ru} />
+      <FormSaveBar lang={lang} />
     </form>
   )
 }

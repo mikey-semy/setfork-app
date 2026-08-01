@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Field } from '@/shared/ui/Field'
+import { t, type Lang } from '@/shared/i18n'
 
 export type AiProviderChoice = 'openrouter' | 'selectel' | 'yandex' | 'gigachat'
 
@@ -18,7 +19,7 @@ export function AiKeyAndSwitch({
   maskedKeys,
   yandexFolder,
   searchKeyMasked,
-  ru,
+  lang,
   onProviderChange,
 }: {
   enabled: boolean
@@ -31,11 +32,11 @@ export function AiKeyAndSwitch({
   yandexFolder: string
   /** Маска ключа Yandex Search API (веб-гора); пусто = не задан. */
   searchKeyMasked: string
-  ru: boolean
+  lang: Lang
   /** Смена провайдера — родитель подтягивает каталог моделей ВЫБРАННОГО провайдера. */
   onProviderChange?: (provider: AiProviderChoice) => void
 }) {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [prov, setProv] = useState<AiProviderChoice>(provider)
   const [keyInput, setKeyInput] = useState('')
   const [reveal, setReveal] = useState(false)
@@ -48,10 +49,10 @@ export function AiKeyAndSwitch({
     'w-full rounded-md border border-border bg-surface-2 px-3 py-2 font-mono text-[0.8125rem] text-ink outline-hidden focus:border-border-strong'
 
   const KEY_FIELD: Record<AiProviderChoice, { label: string; placeholder: string; name: string }> = {
-    openrouter: { label: say('OpenRouter API key', 'API-ключ OpenRouter'), placeholder: 'sk-or-v1-…', name: 'apiKey' },
-    selectel: { label: say('Selectel AI router API key', 'API-ключ Selectel (ИИ-роутер)'), placeholder: 'sk-sl-v1-…', name: 'selectelKey' },
-    yandex: { label: say('Yandex AI Studio API key', 'API-ключ Yandex AI Studio'), placeholder: 'AQVN…', name: 'yandexKey' },
-    gigachat: { label: say('GigaChat authorization key (Basic)', 'Ключ авторизации GigaChat (Basic)'), placeholder: 'base64(ClientID:Secret)', name: 'gigachatKey' },
+    openrouter: { label: t('admin.openRouterApiKey', lang), placeholder: 'sk-or-v1-…', name: 'apiKey' },
+    selectel: { label: t('admin.selectelAiRouterApi', lang), placeholder: 'sk-sl-v1-…', name: 'selectelKey' },
+    yandex: { label: t('admin.yandexAiStudioApi', lang), placeholder: 'AQVN…', name: 'yandexKey' },
+    gigachat: { label: t('admin.gigaChatAuthorizationKeyBasic', lang), placeholder: 'base64(ClientID:Secret)', name: 'gigachatKey' },
   }
   const field = KEY_FIELD[prov]
 
@@ -78,17 +79,17 @@ export function AiKeyAndSwitch({
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[0.875rem] font-medium text-ink">{say('Drafting enabled', 'Черновики включены')}</div>
+          <div className="text-[0.875rem] font-medium text-ink">{t('admin.draftingEnabled', lang)}</div>
           <p className="text-[0.78125rem] text-muted">
             {canEnable
-              ? say('Lists can be drafted automatically.', 'Списки можно придумывать автоматически.')
-              : say('Enter an API key below first.', 'Сначала укажите API-ключ ниже.')}
+              ? t('admin.listsCanBeDrafted', lang)
+              : t('admin.enterApiKeyBelow', lang)}
           </p>
         </div>
         <Switch name="enabled" checked={checked} onCheckedChange={setOn} disabled={!canEnable} />
       </div>
 
-      <Field label={say('Provider', 'Провайдер')} hint={PROVIDER_NOTE[prov]}>
+      <Field label={t('admin.provider', lang)} hint={PROVIDER_NOTE[prov]}>
         <Select
           name="provider"
           value={prov}
@@ -104,9 +105,9 @@ export function AiKeyAndSwitch({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="openrouter">OpenRouter</SelectItem>
-            <SelectItem value="selectel">{say('Selectel AI router (RU)', 'Selectel ИИ-роутер (РФ)')}</SelectItem>
+            <SelectItem value="selectel">{t('admin.selectelAiRouterRu', lang)}</SelectItem>
             <SelectItem value="yandex">YandexGPT / AI Studio (РФ)</SelectItem>
-            <SelectItem value="gigachat">{say('GigaChat / Sber (RU)', 'GigaChat / Сбер (РФ)')}</SelectItem>
+            <SelectItem value="gigachat">{t('admin.gigaChatSberRu', lang)}</SelectItem>
           </SelectContent>
         </Select>
       </Field>
@@ -117,8 +118,8 @@ export function AiKeyAndSwitch({
         htmlFor="ai-api-key"
         hint={
           hasKey[prov]
-            ? say('Key saved (shown masked). Leave blank to keep it.', 'Ключ сохранён (показан замаскированным). Оставьте поле пустым, чтобы не менять.')
-            : say('Stored in the DB (or set via an env variable).', 'Ключ хранится в БД (или задаётся env-переменной).')
+            ? t('admin.keySavedShownMasked', lang)
+            : t('admin.storedDbSetVia', lang)
         }
       >
         <div className="relative">
@@ -148,7 +149,7 @@ export function AiKeyAndSwitch({
       {prov === 'yandex' && (
         <div>
           <Field
-            label={say('Yandex Cloud folder_id', 'Каталог (folder_id) Yandex Cloud')}
+            label={t('admin.yandexCloudFolderId', lang)}
             hint={say(
               'From the console URL: aistudio.yandex.ru/platform/folders/<folder_id>.',
               'Из URL консоли: aistudio.yandex.ru/platform/folders/<folder_id>.',
@@ -167,7 +168,7 @@ export function AiKeyAndSwitch({
               веб-разведчик совета молча пропускается, а не выдумывает прецеденты. */}
           <Field
             className="mt-4"
-            label={say('Yandex Search API key (web scout, optional)', 'Ключ Yandex Search API (веб-разведчик, опционально)')}
+            label={t('admin.yandexSearchApiKey', lang)}
             hint={say(
               'Separate paid service — activate Search API in Yandex Cloud. Empty = council relies on our corpus only (no made-up web precedents). Leave blank to keep current.',
               'Отдельный платный сервис — активируй Search API в Yandex Cloud. Пусто = совет опирается только на наш корпус (без выдуманных веб-прецедентов). Оставь пустым, чтобы не менять.',

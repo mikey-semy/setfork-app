@@ -31,7 +31,7 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
           </span>
         }
         title={tag?.label || slug}
-        meta={tag?.curated && <Badge variant="accent">{say('Curated', 'Курируемый')}</Badge>}
+        meta={tag?.curated && <Badge variant="accent">{t('common.curated', lang)}</Badge>}
         subtitle={
           <>
             {items.length} {say(items.length === 1 ? 'list' : 'lists', 'списков')}
@@ -45,8 +45,8 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
       ) : (
         <EmptyState
           icon={<Tag size={28} />}
-          title={say('No lists with this tag yet', 'Пока нет списков с этим тегом')}
-          hint={say('Check back later — or create one.', 'Загляни позже — или создай свой.')}
+          title={t('tags.noListsTagYet', lang)}
+          hint={t('tags.checkBackLaterCreate', lang)}
           action={{ href: '/new', label: t('newList', lang) }}
         />
       )}

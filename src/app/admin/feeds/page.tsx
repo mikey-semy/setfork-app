@@ -37,7 +37,7 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
       <PageHeader
-        title={say('Feeds', 'Потоки')}
+        title={t('admin.feeds', lang)}
         subtitle={say(
           'Sources the company draws events from. A specialist turns an event into a practical list — he never retells it.',
           'Источники, из которых компания узнаёт о событиях. Специалист превращает событие в практический список, а не пересказывает его.',
@@ -46,7 +46,7 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
 
       {sp.fresh && (
         <Alert variant="ok">
-          {say('New items:', 'Новых материалов:')} {sp.fresh}
+          {t('admin.newItems', lang)} {sp.fresh}
         </Alert>
       )}
 
@@ -54,9 +54,9 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
 
       {/* ЧТО ПРИШЛО. Доказательство, что поток живой; заодно видно, что уже пошло в работу. */}
       <div className="min-w-0">
-        <div className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{say('Latest material', 'Последние материалы')}</div>
+        <div className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.latestMaterial', lang)}</div>
         <div className="divide-y divide-border rounded-lg border border-border bg-surface">
-          {items.length === 0 && <EmptyState variant="inline" hint={say('Nothing collected yet.', 'Пока ничего не собрано.')} />}
+          {items.length === 0 && <EmptyState variant="inline" hint={t('admin.nothingCollectedYet', lang)} />}
           {items.map((it) => (
             <div key={it.id} className="flex min-w-0 items-center gap-3 px-4 py-2.5">
               <a
@@ -71,7 +71,7 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
               </a>
               <span className="hidden shrink-0 font-mono text-[0.6875rem] text-muted sm:inline">{timeAgo(it.publishedAt ?? it.createdAt, lang)}</span>
               <span className={`shrink-0 text-[0.6875rem] ${it.usedAt ? 'text-ok' : 'text-muted'}`}>
-                {it.usedAt ? say('in work', 'в работе') : say('fresh', 'свежий')}
+                {it.usedAt ? t('admin.inWork', lang) : t('admin.fresh', lang)}
               </span>
             </div>
           ))}

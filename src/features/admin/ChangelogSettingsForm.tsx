@@ -90,7 +90,7 @@ export function ChangelogSettingsForm({ current, lang }: { current: ChangelogSet
         <Switch checked={translate} onCheckedChange={setTranslate} />
       </div>
 
-      <FormSaveBar ru={lang === 'ru'} />
+      <FormSaveBar lang={lang} />
     </form>
   )
 }

@@ -77,7 +77,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   return (
     <div className="flex w-full min-w-0 flex-col px-5 py-6 md:px-8">
       <Link href="/admin/council" className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
-        <ArrowLeft size={15} /> {say('Council hall', 'Зал совета')}
+        <ArrowLeft size={15} /> {t('admin.councilHall', lang)}
       </Link>
 
       <div className="mb-5 flex items-center gap-4">
@@ -87,7 +87,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           <h1 className="flex items-center gap-2 text-[1.25rem] font-bold text-ink">
             {name}
             {!e.enabled && (
-              <span className="rounded-md border border-border px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted">{say('disabled', 'выключен')}</span>
+              <span className="rounded-md border border-border px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted">{t('admin.disabled', lang)}</span>
             )}
           </h1>
           {(ru ? e.guildRu : e.guildEn) && <div className="mt-0.5 text-[0.8125rem] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
@@ -98,12 +98,12 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
             </Link>
           ) : (
             <div className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-warn">
-              <CircleUser size={12} /> {say('no account yet — create it in the council hall', 'аккаунта пока нет — заводится в зале совета')}
+              <CircleUser size={12} /> {t('admin.noAccountYetCreate', lang)}
             </div>
           )}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
-            <Tooltip label={mood.style || say('not enough data yet', 'пока мало данных')}>
+            <Tooltip label={mood.style || t('admin.notEnoughDataYet', lang)}>
               <span tabIndex={0} className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[0.6875rem] text-ink-2">
                 {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
               </span>
@@ -120,57 +120,57 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpiCell(
           <Users size={13} />,
-          say('Council rounds', 'Витки совета'),
+          t('admin.councilRounds', lang),
           String(kpi.rounds30d),
           say(`30 days · ${kpi.roundsTotal} total`, `за 30 дней · всего ${kpi.roundsTotal}`),
         )}
         {kpiCell(
           <CheckCircle2 size={13} />,
-          say('Lists accepted', 'Принятые списки'),
+          t('admin.listsAccepted', lang),
           acceptShare === null ? '—' : `${kpi.accepted} (${acceptShare}%)`,
           say(`of ${kpi.gens} generations with him`, `из ${kpi.gens} генераций с его участием`),
         )}
         {kpiCell(
           <BookOpen size={13} />,
-          say('Knowledge base', 'База знаний'),
+          t('admin.knowledgeBase', lang),
           String(kpi.knowledge),
-          say('public lists in his domains', 'публичных списков его доменов'),
+          t('admin.publicListsHisDomains', lang),
         )}
         {kpiCell(
           <Gauge size={13} />,
-          say('Personal model', 'Личная модель'),
+          t('admin.personalModel', lang),
           kpi.model ? `${Math.round(kpi.model.okRate * 100)}%` : '—',
           e.model
             ? kpi.model
               ? say(`${prettyModelName(e.model)} · ${kpi.model.calls} calls 7d · ~${(kpi.model.avgMs / 1000).toFixed(1)}s`, `${prettyModelName(e.model)} · ${kpi.model.calls} вызовов за 7д · ~${(kpi.model.avgMs / 1000).toFixed(1)}с`)
               : say(`${prettyModelName(e.model)} — no calls in 7d`, `${prettyModelName(e.model)} — вызовов за 7д нет`)
-            : say('uses the council pool', 'работает из пула совета'),
+            : t('admin.usesCouncilPool', lang),
         )}
       </div>
 
       <div className="mb-5 grid gap-3 lg:grid-cols-2">
         <div className={card}>
-          <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Persona (working frame)', 'Персона (рабочий каркас)')}</div>
+          <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('admin.personaWorkingFrame', lang)}</div>
           <p className="whitespace-pre-wrap text-[0.8125rem] leading-[1.55] text-ink-2">{e.persona}</p>
           {e.code && (
             <>
-              <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
+              <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('common.guildCode', lang)}</div>
               {/* Людям — на их языке; агентам всегда едет EN `code`. */}
               <p className="whitespace-pre-wrap font-mono text-[0.78125rem] leading-[1.55] text-ink-2">{(ru ? e.codeRu : '') || e.code}</p>
             </>
           )}
           {e.memory && (
             <>
-              <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Craft memory (auto-distilled)', 'Память ремесла (автовыжимка)')}</div>
+              <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('admin.craftMemoryAutoDistilled', lang)}</div>
               <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2">{e.memory}</p>
             </>
           )}
 
         </div>
         <div className={card}>
-          <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Recent councils', 'Последние советы')}</div>
+          <div className="mb-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('admin.recentCouncils', lang)}</div>
           {kpi.recent.length === 0 ? (
-            <p className="text-[0.8125rem] text-muted">{say('Has not been summoned yet.', 'Ещё ни разу не созывался.')}</p>
+            <p className="text-[0.8125rem] text-muted">{t('admin.hasNotBeenSummoned', lang)}</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {kpi.recent.map((r, i) => (
@@ -184,7 +184,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           )}
           {kpi.lastSeenAt && (
             <div className="mt-2 text-[0.6875rem] text-muted">
-              {say('Last draft:', 'Последний черновик:')} {timeAgo(kpi.lastSeenAt, lang)}
+              {t('admin.lastDraft', lang)} {timeAgo(kpi.lastSeenAt, lang)}
             </div>
           )}
         </div>
@@ -193,8 +193,8 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
       {/* НАСТРОЙКИ — здесь, а не в общем зале: у списка настройки на странице списка, у
           специалиста на его странице. Одна форма на одного, а не стена из двадцати. */}
       <div className="mt-5">
-        <div className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{say('Settings', 'Настройки')}</div>
-        <ExpertSettings e={{ ...e, uploadedUrl: e.avatarUploaded ? avatars[e.id] : undefined }} modelOptions={modelOptions} gallery={gallery} ru={ru} />
+        <div className="mb-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.settings', lang)}</div>
+        <ExpertSettings e={{ ...e, uploadedUrl: e.avatarUploaded ? avatars[e.id] : undefined }} modelOptions={modelOptions} gallery={gallery} lang={lang} />
       </div>
     </div>
   )
