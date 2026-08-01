@@ -26,7 +26,7 @@ export function LockToggle({
     <div className="flex flex-col gap-1.5">
       <Button
         variant="ghost"
-        className="h-[2.375rem] w-full justify-start px-2 text-[0.78125rem]"
+        className="h-7 w-full justify-start px-2 text-[0.78125rem]"
         disabled={pending}
         onClick={() => start(async () => void (await setSuggestionLocked(suggestionId, !locked)))}
       >

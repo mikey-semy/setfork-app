@@ -51,7 +51,7 @@ export function LinkIssuePicker({
           <PopoverTrigger asChild>
             {/* Служебное действие — компактной кнопкой, тач-цель по высоте 38px
                 как у остальных кнопок панели. */}
-            <Button variant="ghost" className="h-[2.375rem] w-full justify-start px-2 text-[0.78125rem]" disabled={pending}>
+            <Button variant="ghost" className="h-7 w-full justify-start px-2 text-[0.78125rem]" disabled={pending}>
               {pending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {labels.add}
             </Button>
           </PopoverTrigger>

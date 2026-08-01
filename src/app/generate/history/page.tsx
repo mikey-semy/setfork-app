@@ -30,7 +30,7 @@ export default async function GenerationHistoryPage() {
         actions={
           <Link
             href="/generate"
-            className="inline-flex h-[2.375rem] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.875rem] font-semibold text-primary-fg hover:opacity-90"
+            className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
           >
             <Sparkles size={14} /> {t('generation.newDraft', lang)}
           </Link>

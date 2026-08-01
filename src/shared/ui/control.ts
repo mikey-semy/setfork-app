@@ -6,26 +6,28 @@
 export type ControlSize = 'xs' | 'sm' | 'md'
 
 /** Высота: xs — плотные тулбары/поповеры, sm — панели/фильтры, md — формы.
- *  md = 38px — это записанный стандарт рядов настроек (память
- *  feedback-button-uniform-height-overflow), не круглое число из головы. */
+ *  Шкала = Primer (GitHub): 28/24/20px. До 01.08.2026 md был 38px (стандарт
+ *  рядов настроек того времени); владелец, глядя на /admin/ui-kit, выбрал
+ *  компактную плотность («переходим на xs») — вся лестница сдвинута к
+ *  Primer small, сайт плотностью как GitHub. */
 export const CONTROL_H: Record<ControlSize, string> = {
-  xs: 'h-7',
-  sm: 'h-8',
-  md: 'h-[2.375rem]',
+  xs: 'h-5',
+  sm: 'h-6',
+  md: 'h-7',
 }
 
 export const CONTROL_TEXT: Record<ControlSize, string> = {
-  xs: 'text-[0.78125rem]',
-  sm: 'text-[0.8125rem]',
-  md: 'text-[0.875rem]',
+  xs: 'text-[0.6875rem]',
+  sm: 'text-[0.75rem]',
+  md: 'text-[0.78125rem]',
 }
 
 /** Горизонтальные отступы полей ввода; у Button свои (шире на md — текст в
  *  кнопке дышит), заданы в button.tsx поверх этой же высоты. */
 export const CONTROL_PX: Record<ControlSize, string> = {
-  xs: 'px-2',
-  sm: 'px-2.5',
-  md: 'px-3',
+  xs: 'px-1.5',
+  sm: 'px-2',
+  md: 'px-2',
 }
 
 /** Текст ПОЛЕЙ ВВОДА на мобиле — 16px: меньший кегль заставляет iOS зумить
@@ -57,9 +59,9 @@ export const TEXT = {
 
 /** Размер lucide-иконки при размере контрола: единый вместо 12 разных чисел. */
 export const ICON_SIZE: Record<ControlSize, number> = {
-  xs: 13,
-  sm: 14,
-  md: 15,
+  xs: 11,
+  sm: 12,
+  md: 13,
 }
 
 // ── Слои (z-index) ───────────────────────────────────────────────────────

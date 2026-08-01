@@ -14,13 +14,13 @@ export default async function NotFound() {
       <div className="mt-2 flex gap-3">
         <Link
           href="/"
-          className="inline-flex h-[2.375rem] items-center gap-1.5 rounded-md border border-border px-3.5 text-[0.875rem] font-semibold text-ink hover:border-border-strong"
+          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-3 text-[0.78125rem] font-semibold text-ink hover:border-border-strong"
         >
           {t('goHome', lang)}
         </Link>
         <Link
           href="/explore"
-          className="inline-flex h-[2.375rem] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.875rem] font-semibold text-primary-fg hover:opacity-90"
+          className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
         >
           {t('goExplore', lang)}
         </Link>
