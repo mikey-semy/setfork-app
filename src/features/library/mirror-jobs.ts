@@ -1,10 +1,10 @@
 import 'server-only'
-import { and, asc, eq, isNotNull } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { db, jobs, templates, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { captureError, log } from '@/shared/observability'
 import { envNumber } from '@/shared/env'
-import { mirrorRetryDueAt } from './mirror-policy'
+import { MIRROR_BACKOFF_MS, MIRROR_MAX_BACKOFF_MS, mirrorRetryDueAt } from './mirror-policy'
 import { pushListMirror } from './actions'
 
 /**
@@ -45,13 +45,41 @@ const BATCH = envNumber('SETFORK_MIRROR_SWEEP_BATCH', 50)
 export type MirrorCandidate = { attempts: number; syncedAt: Date | null }
 
 /**
- * Кого из кандидатов пора трогать. Отдельной функцией, потому что это и есть
- * решение — а решение обязано проверяться тестом без базы и без сети.
+ * Кого из кандидатов пора трогать — та же лестница пауз, что в `mirror-policy`,
+ * но на языке SQL.
  *
- * Паузу считаем здесь, а не условием в SQL: формула та же, что показывает
- * владельцу время следующей попытки, и жить она обязана в ОДНОМ месте. Второй
- * экземпляр в SQL неизбежно разъехался бы, и настройки начали бы обещать одно
- * время, а подметальщик приходить в другое.
+ * ⚠️ Отбор обязан быть В ЗАПРОСЕ, а не после него. Сначала было наоборот —
+ * «взять пачку и отфильтровать в JS», — и авто-ревью нашло, чем это кончается:
+ * пачку забивают недозревшие. Полсотни зеркал, упавших давно и ждущих суточной
+ * паузы, вытесняют одно, которое упало двадцать минут назад и уже готово; проход
+ * возвращается, не починив ничего, и так каждый раз. Отбор в SQL + сортировка по
+ * времени ГОТОВНОСТИ (а не по времени последней попытки) снимают это целиком.
+ *
+ * Числа берутся из `mirror-policy` — арифметика записана дважды, но значения
+ * живут в одном месте. Тестом это связано в `mirror-retry.itest.ts`: там
+ * настоящая Postgres и проверка, что запрос выбирает ровно тех, кого называет
+ * `mirrorRetryDueAt`.
+ */
+const dueAtSql = sql<Date>`${templates.mirrorSyncedAt} + least(
+  make_interval(secs => ${MIRROR_BACKOFF_MS / 1000} * power(2, greatest(${templates.mirrorAttempts} - 1, 0))),
+  make_interval(secs => ${MIRROR_MAX_BACKOFF_MS / 1000})
+)`
+
+/**
+ * «Пора»: пауза вышла либо пуша не было ни разу.
+ *
+ * ⚠️ Скобки обязательны и не для красоты. `and(...)` склеивает условия через
+ * `AND`, а он связывает крепче `OR` — без скобок весь отбор превращался в
+ * «(есть url И есть ошибка И пуша не было) ИЛИ пауза вышла», то есть под второе
+ * плечо попадало ЛЮБОЕ зеркало, включая исправное. Интеграционный тест
+ * («исправное зеркало не трогаем») поймал это сразу.
+ */
+const dueSql = sql`(${templates.mirrorSyncedAt} is null or ${dueAtSql} <= now())`
+
+/**
+ * Тот же вопрос без базы — для интерфейса и тестов. Оставлен потому, что
+ * настройки называют владельцу время следующей попытки, и оно обязано совпадать
+ * с тем, когда подметальщик реально придёт.
  */
 export function dueMirrors<T extends MirrorCandidate>(candidates: T[], now: number): T[] {
   return candidates.filter((r) => mirrorRetryDueAt(r.attempts, r.syncedAt).getTime() <= now)
@@ -63,7 +91,7 @@ export function dueMirrors<T extends MirrorCandidate>(candidates: T[], now: numb
  * только повод повторить.
  */
 export async function sweepFailedMirrors(): Promise<void> {
-  const candidates = await db
+  const due = await db
     .select({
       id: templates.id,
       slug: templates.slug,
@@ -73,17 +101,14 @@ export async function sweepFailedMirrors(): Promise<void> {
     })
     .from(templates)
     .innerJoin(users, eq(users.id, templates.ownerId))
-    .where(and(isNotNull(templates.mirrorUrl), isNotNull(templates.mirrorError)))
-    // Кто дольше всех ждёт — первым; за потолок пачки уезжают самые свежие, они
-    // и так не дозрели до повтора. Порядок важен именно потому, что повторы не
-    // кончаются: без него давние зеркала на потолке паузы могли бы вытесняться
-    // свежими и не получать своей суточной попытки.
-    .orderBy(asc(templates.mirrorSyncedAt))
+    .where(and(isNotNull(templates.mirrorUrl), isNotNull(templates.mirrorError), dueSql))
+    // Кто дольше ЖДЁТ СВОЕЙ ОЧЕРЕДИ — первым, то есть по времени готовности, а
+    // не по времени последней попытки.
+    .orderBy(asc(dueAtSql))
     .limit(BATCH)
 
-  const due = dueMirrors(candidates, Date.now())
   if (!due.length) return
-  log.info('mirror.sweep', { due: due.length, candidates: candidates.length })
+  log.info('mirror.sweep', { due: due.length })
   for (const r of due) {
     // Последовательно, а не Promise.all: это фон, спешить некуда, а пачка
     // одновременных пушей — ровно та нагрузка, от которой ядро схлопывает свои.
@@ -101,33 +126,60 @@ export async function runMirrorJob(): Promise<void> {
   try {
     await sweepFailedMirrors()
   } catch (e) {
-    // Подметальщик — не бизнес-процесс: его сбой не должен уходить в ретраи
-    // очереди с backoff, следующий проход и так по расписанию.
+    // Сбой самого прохода — не повод ронять задачу в ретраи очереди: следующий
+    // проход и так по расписанию, а зеркало ничего не потеряло.
     captureError(e, { where: 'mirror.sweep' })
-  } finally {
-    await scheduleNextMirrorSweep()
   }
+  // А вот постановка ПРЕЕМНИКА — вне try, и её ошибку глотать нельзя. Это
+  // единственное звено, которым держится вся цепочка: проглоти её, и задача
+  // завершится «успешно», не оставив после себя ничего, — повторы зеркал молча
+  // прекратятся до следующего рестарта процесса (авто-ревью fe#645). Пусть
+  // падает: долговечная очередь повторит задачу с backoff и поставит преемника.
+  await scheduleNextMirrorSweep()
 }
 
 export async function scheduleNextMirrorSweep(): Promise<void> {
-  await enqueueJob('mirror', {}, { delayMs: SWEEP_MS }).catch(() => {})
+  await enqueueJob('mirror', {}, { delayMs: SWEEP_MS })
 }
 
 /**
- * Завести подметальщик на старте, если он ещё не заведён. Проверка на дубль
- * обязательна: задача самоподдерживающаяся, и без неё каждый рестарт добавлял бы
- * ещё один вечный проход — через месяц перезапусков зеркала подметались бы
- * десятками параллельных задач (тот же приём, что у changelog).
+ * Ключ advisory-локи «единственный подметальщик зеркал». Значение произвольное,
+ * но ПОСТОЯННОЕ и уникальное в проекте: advisory-локи Postgres различаются
+ * только числом, и совпадение с чужим ключом означало бы, что два несвязанных
+ * места ждут друг друга без всякой причины. Заводя новую локу, бери следующее.
+ */
+const SWEEP_LOCK_KEY = 0x5f_00_01
+
+/**
+ * Завести подметальщик на старте, если он ещё не заведён.
+ *
+ * Проверка на дубль обязательна: задача самоподдерживающаяся, и без неё каждый
+ * рестарт добавлял бы ещё одну вечную цепочку — через месяц перезапусков зеркала
+ * подметались бы десятками параллельных проходов.
+ *
+ * ⚠️ Проверка «нет ли уже» и вставка обязаны быть АТОМАРНЫ, иначе дубли всё
+ * равно появляются (авто-ревью fe#645): при выкатке два инстанса стартуют
+ * одновременно, оба видят «пусто» и оба заводят цепочку. Держим advisory-локу на
+ * время транзакции — второй инстанс просто не получает её и уходит, зная, что
+ * первый уже занялся.
+ *
+ * Считаем и `processing`, а не только `pending`: рестарт во время прохода —
+ * обычное дело при деплое, и без этого он тоже плодил бы вторую цепочку.
  */
 export async function ensureMirrorSweepScheduled(): Promise<void> {
   try {
-    const [dup] = await db
-      .select({ id: jobs.id })
-      .from(jobs)
-      .where(and(eq(jobs.type, 'mirror'), eq(jobs.status, 'pending')))
-      .limit(1)
-    if (dup) return
-    await enqueueJob('mirror', {})
+    await db.transaction(async (tx) => {
+      const res = await tx.execute(sql`select pg_try_advisory_xact_lock(${SWEEP_LOCK_KEY}) as locked`)
+      const locked = (res as { rows?: { locked?: boolean }[] }).rows?.[0]?.locked
+      if (!locked) return // кто-то другой уже заводит — второй экземпляр не нужен
+      const [dup] = await tx
+        .select({ id: jobs.id })
+        .from(jobs)
+        .where(and(eq(jobs.type, 'mirror'), inArray(jobs.status, ['pending', 'processing'])))
+        .limit(1)
+      if (dup) return
+      await tx.insert(jobs).values({ type: 'mirror', payload: {}, runAt: new Date() })
+    })
   } catch (e) {
     captureError(e, { where: 'mirror.ensure' })
   }

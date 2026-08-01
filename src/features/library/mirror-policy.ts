@@ -40,10 +40,10 @@ import { envNumber } from '@/shared/env'
 export const MIRROR_HELP_AFTER_ATTEMPTS = envNumber('SETFORK_MIRROR_HELP_AFTER', 8)
 
 /** База паузы между повторами. */
-const BACKOFF_MS = envNumber('SETFORK_MIRROR_BACKOFF_MIN', 10) * 60_000
+export const MIRROR_BACKOFF_MS = envNumber('SETFORK_MIRROR_BACKOFF_MIN', 10) * 60_000
 
 /** Потолок паузы: дальше редить смысла нет, зеркало обязано догнать истину. */
-const MAX_BACKOFF_MS = 24 * 3600_000
+export const MIRROR_MAX_BACKOFF_MS = 24 * 3600_000
 
 /**
  * Пауза после `attempts` неудач подряд — экспонента с потолком в сутки.
@@ -51,7 +51,7 @@ const MAX_BACKOFF_MS = 24 * 3600_000
  * через часы, а не пять раз подряд через десять минут.
  */
 export function mirrorRetryDelayMs(attempts: number): number {
-  return Math.min(BACKOFF_MS * 2 ** Math.max(0, attempts - 1), MAX_BACKOFF_MS)
+  return Math.min(MIRROR_BACKOFF_MS * 2 ** Math.max(0, attempts - 1), MIRROR_MAX_BACKOFF_MS)
 }
 
 /**
