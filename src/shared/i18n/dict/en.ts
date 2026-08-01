@@ -1544,6 +1544,7 @@ export const en = {
   'suggestion.brokenLinks': 'Broken links: {n}',
   'suggestion.linksChecked': 'Links checked: {a} of {b}',
   'suggestion.restQueued': 'the rest are queued for checking',
+  'generation.jobInterrupted': 'The job was interrupted (service restart)',
 } as const
 
 export type DictKey = keyof typeof en

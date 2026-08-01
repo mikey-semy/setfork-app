@@ -1542,4 +1542,5 @@ export const ru: Record<DictKey, string> = {
   'suggestion.brokenLinks': 'Битых ссылок: {n}',
   'suggestion.linksChecked': 'Ссылок проверено: {a} из {b}',
   'suggestion.restQueued': 'остальные ещё в очереди проверки',
+  'generation.jobInterrupted': 'Задача оборвалась — сервис перезапустился',
 }

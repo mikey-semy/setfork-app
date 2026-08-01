@@ -34,6 +34,8 @@ function reasonLabel(code: AiFailCode, lang: Lang): string {
       return t('generation.theModelCallFailed', lang)
     case 'internal':
       return t('generation.weFailedOurSide', lang)
+    case 'lost':
+      return t('generation.jobInterrupted', lang)
   }
 }
 
