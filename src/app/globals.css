@@ -274,6 +274,41 @@ textarea::placeholder {
   opacity: 0.55;
 }
 
+/* ── Моушен-система (Ф8 трека ui-system) ─────────────────────────────────
+      Токены длительностей/изингов — ЕДИНСТВЕННЫЙ источник; свои ms в фичах
+      не пишем. Три класса появления:
+        .sf-overlay-in — бекдропы (fade);
+        .sf-pop-in     — поповеры/дропдауны/панели (fade + подъём + лёгкий scale);
+        .sf-rise-in    — нижние панели/бары (fade + подъём).
+      prefers-reduced-motion гасит ВСЁ глобально (блок ниже). ── */
+:root {
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+}
+@keyframes sf-fade {
+  from { opacity: 0; }
+}
+@keyframes sf-pop {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+@keyframes sf-rise {
+  from { opacity: 0; transform: translateY(8px); }
+}
+.sf-overlay-in { animation: sf-fade var(--dur-base) var(--ease-out); }
+.sf-pop-in { animation: sf-pop var(--dur-base) var(--ease-out); }
+.sf-rise-in { animation: sf-rise var(--dur-base) var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Клетка сетки индексации «лопается» при заполнении. */
 @keyframes cell-pop {
   0% {
@@ -287,7 +322,7 @@ textarea::placeholder {
   }
 }
 .animate-cell-pop {
-  animation: cell-pop 260ms ease-out;
+  animation: cell-pop var(--dur-slow) var(--ease-out);
 }
 
 /* Плавное появление сменяемой фразы в лоадере генерации. */
@@ -302,7 +337,7 @@ textarea::placeholder {
   }
 }
 .animate-fadein {
-  animation: fadein 500ms ease-out;
+  animation: fadein 500ms var(--ease-out); /* лоадер генерации: намеренно медленнее базовых токенов */
 }
 
 /* Логотип SetFork — шрифт с прямыми углами (см. layout, --font-logo). */
@@ -311,18 +346,9 @@ textarea::placeholder {
   letter-spacing: 0.02em;
 }
 
-/* Плавное появление бокового меню: затемнение фона + выезд панели слева. */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-.animate-fade-in {
-  animation: fade-in 160ms ease-out;
-}
+/* Плавное появление бокового меню: затемнение фона (общий .sf-overlay-in) +
+   выезд панели слева. Дубль fade-in удалён — бекдроп берёт sf-fade;
+   reduced-motion — глобальным блоком моушен-системы выше. */
 @keyframes slide-in-left {
   from {
     transform: translateX(-100%);
@@ -332,13 +358,7 @@ textarea::placeholder {
   }
 }
 .animate-slide-in-left {
-  animation: slide-in-left 220ms cubic-bezier(0.2, 0, 0, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in,
-  .animate-slide-in-left {
-    animation: none;
-  }
+  animation: slide-in-left var(--dur-slow) var(--ease-out);
 }
 
 /* Emoji-mart: подгоняем фон/текст/инпут под наши токены (иначе фон отличается),

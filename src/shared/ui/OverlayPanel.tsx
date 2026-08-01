@@ -44,13 +44,13 @@ export function OverlayPanel({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex justify-center bg-black/30 p-4 ${align === 'center' ? 'items-center' : 'items-start pt-20'}`}
+      className={`sf-overlay-in fixed inset-0 z-50 flex justify-center bg-black/30 p-4 ${align === 'center' ? 'items-center' : 'items-start pt-20'}`}
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={width ? { width } : undefined}
-        className={`max-w-full rounded-lg border border-border bg-surface shadow-card ${className}`}
+        className={`sf-pop-in max-w-full rounded-lg border border-border bg-surface shadow-card ${className}`}
       >
         {title !== undefined && (
           <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
