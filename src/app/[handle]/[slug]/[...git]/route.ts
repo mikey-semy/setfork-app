@@ -195,29 +195,44 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     // ядра поля magic в ответе нет вовсе. Без этого первый же push после
     // выкатки фронта падал бы с TypeError уже ПОСЛЕ приёма пака — то есть
     // человек видел бы ошибку на успешном пуше. Убрать, когда ядро с Ф4 на проде.
-    for (const m of res.magic ?? []) {
-      try {
-        const s = await ensureBranchSuggestion({
-          templateId: meta.id,
-          ownerId: meta.ownerId,
-          currentVersion: meta.currentVersion,
-          authorId: az,
-          branch: m.branch,
-        })
-        await recordAudit('git.suggest', {
-          actorId: az,
-          targetType: 'suggestion',
-          targetId: s.id,
-          meta: { slug, branch: m.branch, tip: m.tipSha, revision: s.created ? 'first' : 'new' },
-        })
-      } catch (e) {
-        // Пуш УЖЕ принят: git-объекты на месте, ветка автора создана. Уронить
-        // здесь ответ значило бы показать человеку ошибку при успешном пуше и
-        // подтолкнуть его пушить снова. Громко в лог — и живём: предложение
-        // можно открыть кнопкой из этой же ветки.
-        captureError(e, { where: 'git.magic-push', slug, branch: m.branch })
-      }
-    }
+    await Promise.all(
+      (res.magic ?? []).map(async (m) => {
+        try {
+          // Ветка обязана материализоваться в список — ровно как на пути кнопки
+          // «Открыть предложение». Хук требует наличия list.json, но не его
+          // разбираемости: битый JSON проходит `cat-file -e`. Предложение,
+          // которое не рендерится, хуже отсутствующего (авто-ревью fe#636).
+          const snap = await gitCore.branchSnapshot({ owner: handle, slug }, m.branch).catch(() => null)
+          if (!snap) {
+            captureError(new Error('magic push: branch does not materialize as a list'), {
+              where: 'git.magic-push',
+              slug,
+              branch: m.branch,
+            })
+            return
+          }
+          const sug = await ensureBranchSuggestion({
+            templateId: meta.id,
+            ownerId: meta.ownerId,
+            currentVersion: meta.currentVersion,
+            authorId: az,
+            branch: m.branch,
+          })
+          await recordAudit('git.suggest', {
+            actorId: az,
+            targetType: 'suggestion',
+            targetId: sug.id,
+            meta: { slug, branch: m.branch, tip: m.tipSha, revision: sug.created ? 'first' : 'new' },
+          })
+        } catch (e) {
+          // Пуш УЖЕ принят: git-объекты на месте, ветка автора создана. Уронить
+          // здесь ответ значило бы показать человеку ошибку при успешном пуше и
+          // подтолкнуть его пушить снова. Громко в лог — и живём: предложение
+          // можно открыть кнопкой из этой же ветки.
+          captureError(e, { where: 'git.magic-push', slug, branch: m.branch })
+        }
+      }),
+    )
     // Уведомление наблюдателей + аудит — delivery-эффекты, вне git-ядра.
     if (res.newVersion != null) {
       const watchers = await getWatcherIds(meta.id, 'versions')
