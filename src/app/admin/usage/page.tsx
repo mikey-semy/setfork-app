@@ -54,26 +54,14 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
   // Опциональный «токенов на генерацию»-хвост сноски: гейтим ЧИСЛОМ (без кириллицы в ветках тернарника,
   // иначе no-restricted-syntax), кириллица — только внутри tr().
   const tokN = avgTokensPerGen ? num(avgTokensPerGen) : ''
-  const tokPart = tokN ? tr({ en: `, ~${tokN} tokens each`, ru: `, ~${tokN} токенов на генерацию` }, lang) : ''
-  const footnote = tr(
-    {
-      en: `Rough estimate from this window's average. Generations in window: ${num(totals.generations)}${tokPart}. Cost varies per query.`,
-      ru: `Оценка по средней за выбранный период. Генераций за период: ${num(totals.generations)}${tokPart}. На разных запросах цена гуляет — цифра грубая.`,
-    },
-    lang,
-  )
+  const tokPart = tokN ? t('admin.tokensEach', lang).replace('{n}', tokN) : ''
+  const footnote = t('admin.usageFootnote', lang).replace('{n}', num(totals.generations)).replace('{t}', tokPart)
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
       <PageHeader
         title={t('admin.draftUsage', lang)}
-        subtitle={tr(
-          {
-            en: 'Who consumed what — tokens and money (actual OpenRouter cost).',
-            ru: 'Кто и на сколько сгенерировал — токены и деньги (фактическая стоимость OpenRouter).',
-          },
-          lang,
-        )}
+        subtitle={t('admin.whoConsumedWhatTokens', lang)}
         actions={
           <div className="flex gap-1 rounded-md border border-border bg-surface-2 p-0.5">
             {WINDOWS.map((w) => (
@@ -139,13 +127,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
           <div className="border-b border-border px-4 py-2.5">
             <span className="text-[0.8125rem] font-semibold text-ink">{t('admin.modelReliability', lang)}</span>
             <span className="ml-2 text-[0.78125rem] text-muted">
-              {tr(
-                {
-                  en: 'quarantined models are auto-rotated out of the council pool (24h sliding window)',
-                  ru: 'модели в карантине автоматически выпадают из пула совета (скользящие сутки)',
-                },
-                lang,
-              )}
+              {t('admin.quarantinedModelsAutoRotated', lang)}
             </span>
           </div>
           {/* Титульная полоса остаётся снаружи скролла: таблица внутри без своей рамки. */}

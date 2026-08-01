@@ -54,7 +54,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
 
   const online = m.umamiConfigured ? m.onlineAll : m.onlineAuth
   const onlineSub = m.umamiConfigured
-    ? tr({ en: `logged-in: ${num(m.onlineAuth)}`, ru: `вошедших: ${num(m.onlineAuth)}` }, lang)
+    ? t('admin.loggedInN', lang).replace('{n}', num(m.onlineAuth))
     : t('admin.loggedOnlyUmamiNot', lang)
 
   const capPct = m.dailyCap > 0 ? Math.min(100, (m.spendToday / m.dailyCap) * 100) : 0
@@ -86,7 +86,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
             <span className="flex flex-col gap-1">
               <span>
                 {m.dailyCap > 0
-                  ? tr({ en: `of $${m.dailyCap} cap`, ru: `из $${m.dailyCap} капа` }, lang)
+                  ? t('admin.ofCapN', lang).replace('{v}', String(m.dailyCap))
                   : t('admin.dailyCapOff', lang)}
               </span>
               {m.dailyCap > 0 && (
@@ -105,7 +105,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
           value={m.balance == null ? '—' : money(m.balance)}
           hint={
             m.runwayGens != null
-              ? tr({ en: `≈ ${num(m.runwayGens)} generations`, ru: `≈ ${num(m.runwayGens)} генераций` }, lang)
+              ? t('admin.approxGens', lang).replace('{n}', num(m.runwayGens))
               : undefined
           }
         />
@@ -113,10 +113,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
           label={t('admin.generationQueue', lang)}
           value={num(queueDepth)}
           tone={m.queue.failed > 0 ? 'warn' : 'ink'}
-          hint={tr(
-            { en: `in progress ${m.queue.processing}, failed ${m.queue.failed}`, ru: `в работе ${m.queue.processing}, упало ${m.queue.failed}` },
-            lang,
-          )}
+          hint={t('admin.inProgressFailed', lang).replace('{a}', String(m.queue.processing)).replace('{b}', String(m.queue.failed))}
         />
       </div>
 
@@ -125,13 +122,13 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
         <StatTile
           label={t('admin.generations2', lang)}
           value={num(m.today.generations)}
-          hint={m.today.generationsFailed > 0 ? tr({ en: `failed ${m.today.generationsFailed}`, ru: `упало ${m.today.generationsFailed}` }, lang) : undefined}
+          hint={m.today.generationsFailed > 0 ? t('admin.failedN', lang).replace('{n}', String(m.today.generationsFailed)) : undefined}
         />
         <StatTile label={t('admin.newUsers', lang)} value={num(m.today.signups)} />
         <StatTile
           label={t('admin.newLists', lang)}
           value={num(m.today.newLists)}
-          hint={tr({ en: `published ${m.today.published}`, ru: `опубл. ${m.today.published}` }, lang)}
+          hint={t('admin.publishedN', lang).replace('{n}', String(m.today.published))}
         />
         <StatTile label={t('admin.forks', lang)} value={num(m.today.forks)} />
       </div>

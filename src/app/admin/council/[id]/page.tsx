@@ -33,7 +33,6 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   await requireAdmin()
   const [{ id }, lang] = await Promise.all([params, getLang()])
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
   const [roster, avatars] = await Promise.all([getRosterAll(), rosterAvatars()])
   const e = roster.find((x) => x.id === id)
@@ -122,13 +121,13 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           <Users size={13} />,
           t('admin.councilRounds', lang),
           String(kpi.rounds30d),
-          say(`30 days · ${kpi.roundsTotal} total`, `за 30 дней · всего ${kpi.roundsTotal}`),
+          t('admin.days30Total', lang).replace('{n}', String(kpi.roundsTotal)),
         )}
         {kpiCell(
           <CheckCircle2 size={13} />,
           t('admin.listsAccepted', lang),
           acceptShare === null ? '—' : `${kpi.accepted} (${acceptShare}%)`,
-          say(`of ${kpi.gens} generations with him`, `из ${kpi.gens} генераций с его участием`),
+          t('admin.ofGensWithHim', lang).replace('{n}', String(kpi.gens)),
         )}
         {kpiCell(
           <BookOpen size={13} />,
@@ -142,8 +141,8 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           kpi.model ? `${Math.round(kpi.model.okRate * 100)}%` : '—',
           e.model
             ? kpi.model
-              ? say(`${prettyModelName(e.model)} · ${kpi.model.calls} calls 7d · ~${(kpi.model.avgMs / 1000).toFixed(1)}s`, `${prettyModelName(e.model)} · ${kpi.model.calls} вызовов за 7д · ~${(kpi.model.avgMs / 1000).toFixed(1)}с`)
-              : say(`${prettyModelName(e.model)} — no calls in 7d`, `${prettyModelName(e.model)} — вызовов за 7д нет`)
+              ? t('admin.modelCalls7d', lang).replace('{m}', prettyModelName(e.model)).replace('{n}', String(kpi.model.calls)).replace('{s}', (kpi.model.avgMs / 1000).toFixed(1))
+              : t('admin.modelNoCalls7d', lang).replace('{m}', prettyModelName(e.model))
             : t('admin.usesCouncilPool', lang),
         )}
       </div>

@@ -156,7 +156,6 @@ function AvatarPicker({
 
 function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOptions: Option[]; gallery: string[]; lang: Lang }) {
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [pending, start] = useTransition()
   const [enabled, setEnabled] = useState(e.enabled)
   const [anyTopic, setAnyTopic] = useState(e.domains.includes('*'))

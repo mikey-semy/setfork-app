@@ -31,17 +31,13 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
   await requireAdmin()
   const lang = await getLang()
   const sp = await searchParams
-  const say = (en: string, ru: string) => tr({ en, ru }, lang)
   const [rows, items] = await Promise.all([feedSourceRows(), recentFeedItems()])
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
       <PageHeader
         title={t('admin.feeds', lang)}
-        subtitle={say(
-          'Sources the company draws events from. A specialist turns an event into a practical list — he never retells it.',
-          'Источники, из которых компания узнаёт о событиях. Специалист превращает событие в практический список, а не пересказывает его.',
-        )}
+        subtitle={t('admin.sourcesCompanyDrawsEvents', lang)}
       />
 
       {sp.fresh && (

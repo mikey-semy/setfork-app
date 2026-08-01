@@ -62,7 +62,6 @@ export function AiProviderModels({
   }
   labels: { chat: string; fallback: string; embedding: string; pick: string; loading: string; noKey: string }
 }) {
-  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
   const [prov, setProv] = useState<AiProviderChoice>(provider)
   const [chat, setChat] = useState<Option[]>(initial.chat)
@@ -124,10 +123,7 @@ export function AiProviderModels({
             <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
               {error === 'no-key'
                 ? labels.noKey
-                : say(
-                    `The model catalog failed to load (${error}) — prices and the list are unavailable, the id can be typed by hand.`,
-                    `Каталог моделей не загрузился (${error}) — цены и список недоступны, id можно ввести вручную.`,
-                  )}
+                : t('admin.catalogFailed', lang).replace('{e}', error)}
             </span>
             {/* max-sm:ml-auto — при переносе строки кнопка прижимается вправо, а не повисает по центру. */}
             <Button size="sm" onClick={() => reload(prov)} className="min-h-11 shrink-0 max-sm:ml-auto">
@@ -182,14 +178,8 @@ export function AiProviderModels({
 
       <p className="text-[0.78125rem] text-muted">
         {pricesKnown
-          ? say(
-              `Prices are per 1M tokens (prompt/completion), in ${sign}. Green = cheap, yellow = mid, red = expensive.`,
-              `Цены в списках — за 1М токенов (prompt/completion), в ${sign}. Зелёные дешевле, жёлтые средние, красные дорогие.`,
-            )
-          : say(
-              'This provider does not expose prices via API — check the provider console.',
-              'Провайдер не отдаёт цены по API — смотри тарифы в консоли провайдера.',
-            )}
+          ? t('admin.pricesPer1m', lang).replace('{s}', sign)
+          : t('admin.thisProviderDoesNot', lang)}
       </p>
 
       {/* Порог живёт у провайдера, поэтому и подпись, и валюта — от ВЫБРАННОГО, а не сохранённого. */}
@@ -202,19 +192,13 @@ export function AiProviderModels({
           <Field
             label={
               prov === 'openrouter'
-                ? say(`Auto-fallback threshold (balance, ${sign})`, `Порог авто-fallback (остаток, ${sign})`)
-                : say(`Auto-fallback threshold (${sign} per day)`, `Порог авто-fallback (расход, ${sign}/день)`)
+                ? t('admin.fallbackThresholdBalance', lang).replace('{s}', sign)
+                : t('admin.fallbackThresholdDaily', lang).replace('{s}', sign)
             }
             hint={
               prov === 'openrouter'
-                ? say(
-                    'When the balance drops below this, generation switches to the fallback model. 0 = off.',
-                    'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.',
-                  )
-                : say(
-                    'Balance is not exposed by the API, so the threshold is DAILY spend (our journal, hardcoded prices): above it generation switches to the fallback model. 0 = off.',
-                    'Баланс в API Яндекс не отдаёт, поэтому порог — ДНЕВНОЙ расход (наш журнал, хардкод-прайс): выше него генерация переключается на запасную модель. 0 — выключено.',
-                  )
+                ? t('admin.whenBalanceDropsBelow', lang)
+                : t('admin.balanceNotExposedBy', lang)
             }
           >
             <Input

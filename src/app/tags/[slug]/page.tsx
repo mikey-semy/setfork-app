@@ -1,7 +1,7 @@
 import { Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { plural, t } from '@/shared/i18n'
 import { getFeed } from '@/features/library/queries'
 import { getTag } from '@/features/tags/queries'
 import { FeedList } from '@/features/library/FeedList'
@@ -19,7 +19,6 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
   const { slug: raw } = await params
   const slug = decodeURIComponent(raw).toLowerCase()
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   const [tag, items] = await Promise.all([getTag(slug), getFeed({ tag: slug, sort: 'trending' }, session?.userId, lang)])
 
   return (
@@ -34,7 +33,7 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
         meta={tag?.curated && <Badge variant="accent">{t('common.curated', lang)}</Badge>}
         subtitle={
           <>
-            {items.length} {say(items.length === 1 ? 'list' : 'lists', 'списков')}
+            {items.length} {plural(items.length, 'lists', lang)}
             {tag?.description ? ` · ${tag.description}` : ''}
           </>
         }

@@ -30,7 +30,6 @@ export const revalidate = 300 // витрина меняется медленн�
 export default async function GuildsPage() {
   const lang = await getLang()
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументами (i18n-lint)
   // Портреты резолвит rosterAvatars по реальным файлам public/gnomes: нет
   // файла → замысел из констант → пусто (заглушка GnomeAvatar без 404).
   const [roster, avatars, rep] = await Promise.all([getRoster(), rosterAvatars(), gnomeReputation()])
@@ -39,10 +38,7 @@ export default async function GuildsPage() {
     <div className="mx-auto w-full max-w-[65rem] px-4 py-8 sm:px-6">
       <h1 className="text-[1.375rem] font-bold text-ink">{t('guilds.theWorkshopGuilds', lang)}</h1>
       <p className="mt-1.5 max-w-[40rem] text-[0.875rem] leading-relaxed text-ink-2">
-        {say(
-          'Every SetFork list is forged by a council of masters. Each master carries his guild — its code of quality and its reputation, earned list by list.',
-          'Каждый список SetFork куёт совет мастеров. За каждым — его гильдия: кодекс качества и репутация, заработанная список за списком.',
-        )}
+        {t('guilds.everySetforkListForged', lang)}
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -96,7 +92,7 @@ export default async function GuildsPage() {
               {e.domains.includes('*') && <div className="mt-3 text-[0.6875rem] text-muted">{t('guilds.anyTopic', lang)}</div>}
               {r && r.gens > 0 && (
                 <div className="mt-3 text-[0.6875rem] text-muted">
-                  {say(`Councils joined: ${r.gens}`, `Участие в советах: ${r.gens}`)}
+                  {t('guilds.councilsJoined', lang).replace('{n}', String(r.gens))}
                 </div>
               )}
             </div>

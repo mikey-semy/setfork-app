@@ -341,13 +341,7 @@ export default async function ProfilePage({
                     ))}
                   </ul>
                   <p className="mt-2 text-[0.6875rem] text-muted">
-                    {tr(
-                      {
-                        en: 'Responsibility zone by domain — the lists are their authors’, not this account’s.',
-                        ru: 'Зона ответственности по доменам — списки принадлежат своим авторам, не этому аккаунту.',
-                      },
-                      lang,
-                    )}
+                    {t('list.responsibilityZoneByDomain', lang)}
                   </p>
                 </div>
               )}

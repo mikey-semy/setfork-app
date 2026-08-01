@@ -77,7 +77,6 @@ function StatusIcon({ status, accepted }: { status: GenerationStatus; accepted: 
 }
 
 function statusLabel(status: GenerationStatus, accepted: boolean, lang: Lang): string {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   if (accepted) return t('generation.listCreated', lang)
   if (status === 'pending') return t('generation.inProgress', lang)
   if (status === 'failed') return t('generation.failed', lang)

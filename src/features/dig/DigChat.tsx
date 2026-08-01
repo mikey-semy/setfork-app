@@ -255,7 +255,6 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
 
 /** «Спасибо» гному за реплику (одушевление): сердечко, после клика — заполненное. */
 function ThankButton({ who, thanked, onThank, lang }: { who: string; thanked: boolean; onThank: () => void; lang: Lang }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   void who
   return (
     <Tooltip label={thanked ? t('dig.thanked', lang) : t('dig.sayThanks', lang)}>

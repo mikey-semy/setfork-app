@@ -50,7 +50,6 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
   await requireAdmin()
   const [lang, settings, apiKey, sp] = await Promise.all([getLang(), getAiSettings(), getApiKey(), searchParams])
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
   const models = apiKey ? await fetchModels() : null
   const modelOptions: Option[] = [...(models?.chat ?? [])]
@@ -97,10 +96,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
     <div className="flex w-full min-w-0 flex-col gap-4 px-5 py-6 md:px-8">
       {settings.councilEnabled ? null : (
         <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
-          {say(
-            'The council is off — these experts are not summoned. Turn it on in Admin → Generation & models.',
-            'Совет выключен — этих экспертов никто не зовёт. Включается в Админке → Генерация и модели.',
-          )}
+          {t('admin.theCouncilOffThese', lang)}
         </p>
       )}
       {sp.hire === 'failed' && (
@@ -123,7 +119,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
                   type="submit"
                   className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[0.78125rem] text-ink hover:border-border-strong"
                 >
-                  {say(`Hire a master for “${s.tag}”`, `Нанять мастера под «${s.tag}»`)}
+                  {t('admin.hireMasterFor', lang).replace('{tag}', s.tag)}
                   <span className="font-mono text-[0.6875rem] text-muted">×{s.n}</span>
                 </button>
               </form>
@@ -144,10 +140,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
               {t('admin.accountsMissing', lang)}
             </div>
             <p className="mt-0.5 text-[0.6875rem] text-ink-2">
-              {say(
-                `${noAccounts} of ${roster.length} have no user-level account — without it their edits are nobody’s and cannot be attributed.`,
-                `${noAccounts} из ${roster.length} без аккаунта уровня пользователя — без него их правки ничьи и их некому приписать.`,
-              )}
+              {t('admin.noAccountsAttribution', lang).replace('{a}', String(noAccounts)).replace('{b}', String(roster.length))}
             </p>
           </div>
           <form action={createGnomeAccounts}>
@@ -159,7 +152,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
       )}
       {sp.selfgen && (
         <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
-          {say(`Self-generation did not produce a draft: ${sp.selfgen}`, `Самогенерация не дала черновик: ${sp.selfgen}`)}
+          {t('admin.selfgenNoDraft', lang).replace('{e}', sp.selfgen)}
         </p>
       )}
       <CouncilList rows={listRows} lang={lang} canAssign={settings.selfGenMode !== 'off'} />

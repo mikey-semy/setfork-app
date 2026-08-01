@@ -35,7 +35,6 @@ export function GenerateForm({
   suggestions: string[]
   errorKind?: string
 }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [q, setQ] = useState(defaultQuery)
   const [detail, setDetail] = useState<DetailLevel>(DEFAULT_DETAIL)
   // Тип списка ДО первой генерации: авто-угадывание промахивалось, и нужный тип
@@ -88,10 +87,7 @@ export function GenerateForm({
     ratelimited: t('rateLimited', lang),
     ai_quota: t('generation.monthlyDraftLimitReached', lang),
     // Free-лимит (#308): не ошибка, а апселл Pro — свой акцентный тон.
-    free_limit: say(
-      'You have reached the free monthly generation limit. Pro removes the limit and unlocks the council (multi-model quality).',
-      'Достигнут месячный лимит бесплатных генераций. Pro снимает лимит и открывает «совет» — мультимодельное качество.',
-    ),
+    free_limit: t('generation.youHaveReachedFree', lang),
   }
   const notice: { text: string; tone: 'warn' | 'danger' | 'upsell' } | null = !aiOn
     ? { text: t('generation.draftingNotConfiguredNo', lang), tone: 'warn' }

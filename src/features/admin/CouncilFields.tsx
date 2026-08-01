@@ -34,7 +34,6 @@ export interface CouncilValues {
 }
 
 export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lang: Lang; modelOptions: Option[] }) {
-  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [enabled, setEnabled] = useState(v.enabled)
   const [webSeek, setWebSeek] = useState(v.webSeek)
   const [clarify, setClarify] = useState(v.clarify)
@@ -44,10 +43,7 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
       <div>
         <div className="text-[0.8125rem] font-medium text-ink">{t('admin.expertCouncilMultiModel', lang)}</div>
         <p className="mt-0.5 text-[0.78125rem] text-muted">
-          {say(
-            'Steward → experts + innovator → devil’s advocate → elder. ~6-7× cost and ~50s latency — keep the audience limited.',
-            'Распорядитель → эксперты + новатор → адвокат дьявола → старейшина. ~6-7× цена и ~50с — держи аудиторию узкой.',
-          )}
+          {t('admin.stewardExpertsInnovatorDevil', lang)}
         </p>
       </div>
 
@@ -76,10 +72,7 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
       <Field
         label={t('admin.councilModelsEmptyDefault', lang)}
         htmlFor="councilModels"
-        hint={say(
-          'Order matters: the 1st model runs the intermediate steps (planner, critic) — pick a fast one; the rest go to experts in turn. Different vendors = more diverse opinions.',
-          'Порядок важен: 1-я модель ведёт промежуточные шаги (планировщик, критик) — ставь быструю; остальные раздаются экспертам по кругу. Разные вендоры = разные мнения.',
-        )}
+        hint={t('admin.orderMatters1stModel', lang)}
       >
         {/* allowCustom — каталог провайдера может не приехать (сеть/ключ), и без ручного
             ввода совет тогда невозможно настроить вообще. */}
@@ -124,10 +117,7 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
       <div className="border-t border-border pt-4">
         <Field
           label={t('admin.selfGenerationSpecialistsWrite', lang)}
-          hint={say(
-            'The result is always a DRAFT — a machine-written list is never published without a human. Auto mode also respects the daily AI spend ceiling.',
-            'Результат всегда ЧЕРНОВИК — машинный список не публикуется без человека. Авто-режим вдобавок уважает дневной потолок расхода ИИ.',
-          )}
+          hint={t('admin.theResultAlwaysDraft', lang)}
         >
           <Select name="selfGenMode" defaultValue={v.selfGenMode}>
             <SelectTrigger>
@@ -158,10 +148,7 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
       <div className="border-t border-border pt-4">
         <Field
           label={t('admin.readinessBarPublishWithout', lang)}
-          hint={say(
-            'Three independent checks — can it be followed, are specifics invented, is it a usable starting point. The quorum is counted in code and fails closed: a check that says “unsure” or does not answer keeps the list a draft. Costs 3 calls per list checked; “Off” spends nothing.',
-            'Три независимые проверки — можно ли выполнить, не выдуманы ли детали, годится ли как основа. Кворум считает код и по умолчанию НЕ пропускает: «не уверен» или отсутствие ответа оставляют список черновиком. Стоит 3 вызова на проверенный список; «Выключено» не тратит ничего.',
-          )}
+          hint={t('admin.threeIndependentChecksCan', lang)}
         >
           <Select name="readinessMode" defaultValue={v.readinessMode}>
             <SelectTrigger>
@@ -197,10 +184,7 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
         <Field
           className="mt-3"
           label={t('admin.autonomousPublicationsPerDay', lang)}
-          hint={say(
-            'A safety quota: beyond it lists stay drafts even if they pass the bar. 0 = never publish автоматически.',
-            'Предохранитель: сверх квоты списки остаются черновиками, даже если планку прошли. 0 = не публиковать автоматически.',
-          )}
+          hint={t('admin.aSafetyQuotaBeyond', lang)}
         >
           <Input type="number" name="readinessPerDay" min="0" max="50" step="1" defaultValue={v.readinessPerDay} />
         </Field>

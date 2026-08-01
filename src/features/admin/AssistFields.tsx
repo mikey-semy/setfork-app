@@ -15,7 +15,6 @@ export interface AssistValues {
 }
 
 export function AssistFields({ v, lang }: { v: AssistValues; lang: Lang }) {
-  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [enabled, setEnabled] = useState(v.enabled)
 
   return (
@@ -23,10 +22,7 @@ export function AssistFields({ v, lang }: { v: AssistValues; lang: Lang }) {
       <div>
         <div className="text-[0.8125rem] font-medium text-ink">{t('admin.stepAssistHelpWhen', lang)}</div>
         <p className="mt-0.5 text-[0.78125rem] text-muted">
-          {say(
-            'A “Help me” button on run steps: one fast model call with step context + community pass/stuck counters. Short answer, hard timeout.',
-            'Кнопка «Помоги» на шагах прогона: один быстрый вызов модели с контекстом шага + счётчиками «прошли/застряли». Короткий ответ, жёсткий таймаут.',
-          )}
+          {t('admin.aHelpMeButton', lang)}
         </p>
       </div>
 

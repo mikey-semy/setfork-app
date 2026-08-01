@@ -38,7 +38,6 @@ const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'outline', 'ghost', 'danger
 const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft', 'danger', 'warn']
 const ALERT_VARIANTS: AlertVariant[] = ['danger', 'warn', 'ok', 'info']
 
-type Say = (en: string, ru: string) => string
 type DemoRow = { name: string; role: string; score: number }
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
@@ -104,7 +103,6 @@ function RowCheck({ size, lang }: { size: ControlSize; lang: Lang }) {
 }
 
 export function UiKitGallery({ lang }: { lang: Lang }) {
-  const say: Say = (en, ru) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [checked, setChecked] = useState(true)
   const { confirm, confirmDialog } = useConfirm()
   const [confirmed, setConfirmed] = useState<string | null>(null)
@@ -113,10 +111,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
     <div className="flex flex-col gap-4">
       <Section
         title={t('admin.controlScale', lang)}
-        hint={say(
-          'One source — shared/ui/control.ts: same-size controls in a row must match in height and font. md = 38px (settings-row standard), sm = 32px, xs = 28px. Fields are 16px on mobile — otherwise iOS zooms.',
-          'Один источник — shared/ui/control.ts: контролы одного размера в одном ряду обязаны совпадать по высоте и кеглю. md = 38px (стандарт рядов настроек), sm = 32px, xs = 28px. Поля на мобиле — 16px, иначе iOS зумит.',
-        )}
+        hint={t('admin.oneSourceSharedUi', lang)}
       >
         {SIZES.map((s) => (
           <RowCheck key={s} size={s} lang={lang} />
@@ -134,10 +129,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.buttons', lang)}
-        hint={say(
-          'Variants × sizes; button text is 1–2 short words, icon + aria-label on mobile.',
-          'Варианты × размеры; текст в кнопке — 1–2 коротких слова, на мобиле иконка + aria-label.',
-        )}
+        hint={t('admin.variantsSizesButtonText', lang)}
       >
         {SIZES.map((size) => (
           <div key={size} className="flex items-center gap-2">
@@ -163,10 +155,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.fields', lang)}
-        hint={say(
-          'No hand-rolled field classes in features — these primitives only.',
-          'Никаких самопальных классов рамок в фичах — только эти примитивы.',
-        )}
+        hint={t('admin.noHandRolledField', lang)}
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <Input placeholder={t('admin.defaultMd', lang)} />
@@ -180,10 +169,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.fieldFormRowAnatomy', lang)}
-        hint={say(
-          'Label + control + hint + error in one primitive; no local label constants in features.',
-          'Подпись + контрол + подсказка + ошибка одним примитивом; никаких локальных label-констант в фичах.',
-        )}
+        hint={t('admin.labelControlHintError', lang)}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('admin.withHint', lang)} hint={t('admin.explainsValueByExample', lang)}>
@@ -232,10 +218,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.pageHeader', lang)}
-        hint={say(
-          'One primitive instead of 27 hand-rolled h1 variants: page 18px / section 16px, truncate, actions wrap below on mobile.',
-          'Один примитив вместо 27 рукописных вариантов h1: page 18px / section 16px, truncate, действия на мобиле переносятся вниз.',
-        )}
+        hint={t('admin.onePrimitiveInstead27', lang)}
       >
         <div className="rounded-md border border-dashed border-border p-3">
           <PageHeader
@@ -255,10 +238,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.emptyStates', lang)}
-        hint={say(
-          'bordered — page/list without content; plain — reports/feeds; inline — a row inside a table.',
-          'bordered — страница/список без содержимого; plain — отчёты/ленты; inline — строка внутри таблицы.',
-        )}
+        hint={t('admin.borderedPageListWithout', lang)}
       >
         <EmptyState
           icon={<Inbox size={22} />}
@@ -298,10 +278,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.dataTableV2', lang)}
-        hint={say(
-          'TanStack + real <table>: click-to-sort with aria-sort, skeletons, empty state inside; below md rows become cards (cardOnMobile). v1 div-grid stays as a bridge for simple read-only lists.',
-          'TanStack + настоящая <table>: сортировка кликом с aria-sort, скелетоны, пустое состояние внутри; ниже md строки становятся карточками (cardOnMobile). v1 див-грид остаётся мостом для простых списков.',
-        )}
+        hint={t('admin.tanStackRealTableClick', lang)}
       >
         <DataTableV2<DemoRow>
           cardOnMobile
@@ -326,20 +303,14 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.motion', lang)}
-        hint={say(
-          'Tokens: fast 120 / base 180 / slow 280ms, one ease-out. Three entrance classes: sf-overlay-in (backdrops), sf-pop-in (popovers/dropdowns/panels), sf-rise-in (bottom bars). prefers-reduced-motion kills all animation globally.',
-          'Токены: fast 120 / base 180 / slow 280мс, один ease-out. Три класса появления: sf-overlay-in (бекдропы), sf-pop-in (поповеры/дропдауны/панели), sf-rise-in (нижние бары). prefers-reduced-motion гасит всё глобально.',
-        )}
+        hint={t('admin.tokensFast120Base', lang)}
       >
         <MotionDemo lang={lang} />
       </Section>
 
       <Section
         title={t('admin.typography', lang)}
-        hint={say(
-          'Seven roles instead of 20 ad-hoc sizes (control.ts TEXT); heroes (20/22/24) stay outside the ladder. Layers: sticky 20 / dropdown 30 / overlay 40 / modal 50 / tooltip+toast 60.',
-          'Семь ролей вместо 20 случайных кеглей (TEXT в control.ts); герои (20/22/24) вне лестницы. Слои: sticky 20 / dropdown 30 / overlay 40 / modal 50 / tooltip+toast 60.',
-        )}
+        hint={t('admin.sevenRolesInstead20', lang)}
       >
         <div className="flex flex-col gap-2">
           {(Object.entries(TEXT) as [keyof typeof TEXT, string][]).map(([role, cls]) => (
@@ -361,10 +332,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.sideNavigation', lang)}
-        hint={say(
-          'One SideNav for settings, admin and list settings — docs-style: groups, accent active item, mobile collapse.',
-          'Один SideNav для настроек, админки и настроек списка — стиль docs: группы, активный пункт акцентом, свёртка на мобиле.',
-        )}
+        hint={t('admin.oneSidenavSettingsAdmin', lang)}
       >
         <div className="max-w-[16.25rem]">
           <SideNav
@@ -386,10 +354,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.composites', lang)}
-        hint={say(
-          'SettingsSection and UserLine — assembled once, reused everywhere. Data tables — DataTableV2 above (v1 bridge retired).',
-          'SettingsSection и UserLine — собраны один раз, переиспользуются везде. Таблицы данных — DataTableV2 выше (v1-мост выведен).',
-        )}
+        hint={t('admin.settingsSectionUserlineAssembledOnce', lang)}
       >
         <SettingsSection
           title={t('admin.settingsSection', lang)}
@@ -413,10 +378,7 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
 
       <Section
         title={t('admin.settingsRowEtalon', lang)}
-        hint={say(
-          'Bottom-right of a section: one row, one height; secondary actions are icons with tooltips, text on md+ only.',
-          'Правый нижний угол секции: один ряд, одна высота; вторичные действия — иконки с тултипом, текст только на md+.',
-        )}
+        hint={t('admin.bottomRightSectionOne', lang)}
       >
         <div className="flex items-center justify-end gap-2 rounded-md border border-dashed border-border p-3">
           <Tooltip label={t('common.delete', lang)}>

@@ -114,13 +114,7 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
         <div className="rounded-lg border border-border bg-surface p-3.5">
           <div className="mb-1 text-[0.78125rem] font-semibold text-ink">{t('admin.assignList', lang)}</div>
           <p className="mb-2.5 text-[0.6875rem] text-ink-2">
-            {tr(
-              {
-                en: 'The specialist picks what his area is missing and writes it. The result is a DRAFT authored by him — you publish it.',
-                ru: 'Специалист сам выберет, чего не хватает в его области, и напишет. Результат — ЧЕРНОВИК от его имени, публикуешь вы.',
-              },
-              lang,
-            )}
+            {t('admin.theSpecialistPicksWhat', lang)}
           </p>
           <div className="flex flex-wrap gap-2">
             {rows
