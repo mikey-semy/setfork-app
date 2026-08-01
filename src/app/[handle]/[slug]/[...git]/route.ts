@@ -1,3 +1,5 @@
+import { eq } from 'drizzle-orm'
+import { db, users } from '@/shared/db'
 // eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
 import { canEditList } from '@/core'
@@ -64,6 +66,44 @@ async function authorizeWrite(req: Request, meta: Meta): Promise<string | 401 | 
 const writeDisabled = () =>
   new Response('List is archived or frozen: writes are disabled', { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
 
+/**
+ * Язык отказов, которые человек прочитает прямо в выводе `git push` (И2).
+ *
+ * Их печатает `pre-receive` внутри ядра, и переводить их некому — между ядром и
+ * git-клиентом никого нет. Поэтому язык определяем ЗДЕСЬ и передаём ядру, а оно
+ * лишь выставляет его процессу receive-pack переменной окружения.
+ *
+ * Порядок: осознанный выбор в профиле → локаль git-клиента → английский.
+ *
+ * ⚠️ «Осознанный выбор» приходится ПРИБЛИЖАТЬ. `users.lang` объявлен NOT NULL
+ * DEFAULT 'en', то есть у каждого пользователя он непустой, и отличить «выбрал
+ * английский» от «никогда не открывал настройки» на уровне данных нельзя. Если
+ * читать профиль как есть, заголовок не сработает НИКОГДА: русскоязычный
+ * пользователь, не менявший настройки уведомлений, получал бы английские отказы
+ * при русском терминале (находка авто-ревью fe#632).
+ *
+ * Поэтому значение по умолчанию трактуем как «выбора не было» и спрашиваем
+ * клиента. Цена приближения одна: тот, кто ОСОЗНАННО выбрал английский, но
+ * пушит из русской локали, получит русский текст — то есть язык своего же
+ * терминала. Это мягче, чем игнорировать локаль у всех остальных.
+ *
+ * Чинится по-настоящему отдельным признаком «язык выбран явно» (nullable-колонка
+ * или флаг) — записано в трек core-i18n как открытый вопрос.
+ *
+ * Английский по умолчанию — решение владельца: git-инструментарий англоязычен, и
+ * незнакомый язык в выводе `git push` читается как поломка, а не как забота.
+ */
+async function pushLang(userId: string, req: Request): Promise<string> {
+  const [u] = await db.select({ lang: users.lang }).from(users).where(eq(users.id, userId)).limit(1)
+  // Не 'en' — значит язык меняли руками: это и есть осознанный выбор.
+  if (u?.lang && u.lang !== 'en') return u.lang
+  // Первый тег заголовка: `ru, *;q=0.9` → `ru`. Качества не взвешиваем — языка
+  // два, и предпочтительный по спецификации и так стоит первым.
+  const header = req.headers.get('accept-language') ?? ''
+  const first = header.split(',')[0]?.trim().split(';')[0]?.trim().toLowerCase() ?? ''
+  return first.startsWith('ru') ? 'ru' : 'en'
+}
+
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
   const rl = await rateLimit(`git:${clientIp(req)}`, 240, 60_000)
   if (!rl.ok) return tooMany(rl)
@@ -127,7 +167,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     // проверка стала не только не устаревшей, но и не обходимой другими путями.
     // Ранняя проверка выше (authorizeWrite → canEditList) остаётся: она даёт быстрый
     // отказ ДО чтения тела, чтобы не тянуть мегабайты ради заведомого 403.
-    const res = await gitCore.receivePack({ owner: handle, slug }, body, gitProtocol)
+    const res = await gitCore.receivePack({ owner: handle, slug }, body, gitProtocol, await pushLang(az, req))
     if (!res) return new Response('Repository unavailable', { status: 500 })
     // Уведомление наблюдателей + аудит — delivery-эффекты, вне git-ядра.
     if (res.newVersion != null) {

@@ -203,7 +203,9 @@ export interface GitCore {
   infoRefsReceivePack(repo: GitRepoRef, gitProtocol?: string): Promise<Uint8Array | null>
   uploadPack(repo: GitRepoRef, body: Uint8Array, gitProtocol?: string): Promise<Uint8Array | null>
   /** receive-pack + проекция в версию (атомарно под локом). newVersion — созданная версия. */
-  receivePack(repo: GitRepoRef, body: Uint8Array, gitProtocol?: string): Promise<{ data: Uint8Array; newVersion: number | null } | null>
+  /** Приём пуша. `lang` — язык ЧЕЛОВЕКА для отказов pre-receive: их он читает
+   *  прямо в выводе `git push`, переводить некому (И2). '' → английский. */
+  receivePack(repo: GitRepoRef, body: Uint8Array, gitProtocol?: string, lang?: string): Promise<{ data: Uint8Array; newVersion: number | null } | null>
   bundle(repo: GitRepoRef): Promise<Uint8Array | null>
   /** Ветки (A1 read-only): main первым; прочие — черновики без проекции. */
   listBranches(repo: GitRepoRef): Promise<GitBranch[]>
