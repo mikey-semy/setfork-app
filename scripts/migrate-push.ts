@@ -32,6 +32,7 @@ import 'dotenv/config'
 import { spawnSync } from 'node:child_process'
 import { Pool } from 'pg'
 import { plannedDrops, type Schema, type TableColumns } from './migrate-drops'
+import { bootstrapPost, bootstrapPre } from './db-bootstrap'
 
 // Unique-колонки существующих таблиц: [таблица, колонка, тип, констрейнт]
 const PREFLIGHT_UNIQUE: Array<[string, string, string, string]> = [
@@ -108,6 +109,11 @@ async function dbSchema(pool: Pool): Promise<Schema> {
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
+  // Бутстрап вне схемы (линза 07): расширения — ДО push (vector нужен самой
+  // схеме), канон поиска (0028) — ПОСЛЕ. Здесь, а не отдельной командой:
+  // прод-контейнер и все существующие пути миграции идут через этот скрипт.
+  await bootstrapPre(pool)
+
   for (const [table, column, type, constraint] of PREFLIGHT_UNIQUE) {
     await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${type}`)
     // ADD CONSTRAINT не умеет IF NOT EXISTS. Повтор даёт 42710 (duplicate_object)
@@ -159,6 +165,9 @@ async function main() {
     console.error(`[migrate] drizzle-kit push вернул ${push.status}`)
     process.exit(1)
   }
+
+  await bootstrapPost(pool)
+  console.log('[migrate] канон поиска (0028: порог word_similarity + GIN-индексы) применён')
 
   // ПОЛНАЯ сверка: что описано в коде — то обязано быть в БД.
   const expected = expectedSchema()
