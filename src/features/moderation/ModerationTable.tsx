@@ -8,6 +8,7 @@ import { Badge } from '@/shared/ui/badge'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { TabItem, TabNav } from '@/shared/ui/TabNav'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { toast } from '@/shared/ui/toast'
 import type { ModFilter, ModItem } from './queries'
 import { aiModerate, setModeration, setVerified } from './actions'
 
@@ -45,8 +46,8 @@ export function ModerationTable({
     start(async () => {
       const res = await aiModerate(id)
       setBusy(null)
-      if ('error' in res) alert(res.error)
-      else if (res.flagged) alert(`⚠ ${res.reason}`)
+      if ('error' in res) toast.error(res.error)
+      else if (res.flagged) toast.warning(res.reason)
     })
   }
 

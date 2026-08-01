@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { ChevronDown, Heart, Loader2, Pickaxe, X } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { ChatComposer } from '@/shared/ui/ChatComposer'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
@@ -220,7 +220,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
                   <ThankButton who={m.who ?? 'generalist'} thanked={thanked.has(i)} onThank={() => thank(i, m.who ?? 'generalist')} lang={lang} />
                   {/* Копируем КАК ИЗ ЧАТА: с вопросом и подписью отвечавшего —
                       иначе вставленный кусок теряет, кто это сказал и на что. */}
-                  <CopyButton text={transcriptOf(i)} />
+                  <CopyButton text={transcriptOf(i)} label={t('copy', lang)} copiedLabel={t('copied', lang)} />
                 </div>
               </div>
             </div>

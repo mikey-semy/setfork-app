@@ -40,7 +40,7 @@ export function Button({ variant = 'outline', size = 'sm', className, type = 'bu
       // eslint-disable-next-line react/button-has-type -- примитив безопасен по построению: дефолт 'button' задан в сигнатуре, submit — только явным пропом
       type={type}
       className={cn(
-        'inline-flex items-center justify-center rounded-md font-semibold outline-hidden transition-colors focus-visible:ring-1 focus-visible:ring-border-strong disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex items-center justify-center rounded-md font-semibold outline-hidden transition-colors focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50',
         VARIANTS[variant],
         CONTROL_H[size],
         CONTROL_TEXT[size],

@@ -6,6 +6,7 @@ import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { retryPlan } from './retry'
+import type { AiFailure } from './failure'
 import { sanitizeCommand } from './sanitize-command'
 import { lawBlock } from './list-laws'
 import { classifyListKind, shapeFor, type ListKind } from './list-kind'
@@ -63,6 +64,12 @@ export interface GenerateOptions {
   feature?: AiFeature
   refType?: string
   refId?: string
+  /**
+   * Куда сообщить, ПОЧЕМУ списка не будет. Возврат null сам по себе ничего не объясняет:
+   * причина оставалась в логах воркера, а человек в чате видел глухое «не получилось».
+   * Зовётся перед каждым «сдаюсь»; последний вызов и есть причина витка.
+   */
+  onFail?: (f: AiFailure) => void
 }
 
 /**
@@ -146,10 +153,19 @@ async function runListModel(
   opts: GenerateOptions,
 ): Promise<GeneratedList | null> {
   const client = await getAiChatClient()
-  if (!client) return null
+  if (!client) {
+    opts.onFail?.({ code: 'no_client' })
+    return null
+  }
   const settings = await getAiSettings()
-  if (!settings.enabled) return null
-  if (!(await globalBudgetOk())) return null // глобальный дневной кап расхода исчерпан
+  if (!settings.enabled) {
+    opts.onFail?.({ code: 'ai_off' })
+    return null
+  }
+  if (!(await globalBudgetOk())) {
+    opts.onFail?.({ code: 'budget' }) // глобальный дневной кап расхода исчерпан
+    return null
+  }
 
   // :online-суффикс, models-фолбэк и middle-out — механики OpenRouter; на других
   // провайдерах зовём голую модель (веб-поиска и авто-фолбэка там нет).
@@ -165,9 +181,12 @@ async function runListModel(
    * рядом. Теперь порядок такой же, как у LiteLLM: транзиентный отказ — повтор той же модели,
    * отказ самой модели (снята, не влезли в контекст) — переход к следующей, отказ по ключу или
    * деньгам — остановка, потому что другая модель не поможет.
+   *
+   * Причина наверх (opts.onFail) сообщается ОДИН раз и только окончательная: промежуточные
+   * попытки — наша кухня, пользователю важно, чем всё кончилось.
    */
   const candidates = [base, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i)
-  let lastError: unknown = null
+  let lastFailure: AiFailure | null = null
 
   for (const candidate of candidates) {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -202,9 +221,14 @@ async function runListModel(
           durationMs: Date.now() - startedAt,
           provider: client.cfg.provider,
         })
-        return parsed
+        if (parsed) return parsed
+        // Ответ пришёл, но списком не оказался. Голова ответа — в причину: по ней видно, что
+        // именно пришло (пустой текст, извинение модели, обрезанный JSON). Пробуем следующего
+        // кандидата: другая модель на том же промпте часто отвечает разбираемо.
+        lastFailure = { code: 'invalid', model: online(candidate), detail: result.text.slice(0, 400) }
+        break
       } catch (e) {
-        lastError = e
+        const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
         await recordUsage({
           userId: opts.userId,
           feature,
@@ -220,14 +244,18 @@ async function runListModel(
           provider: client.cfg.provider,
         })
         const plan = retryPlan(e)
+        lastFailure = { code: outcomeOf(e) === 'timeout' ? 'timeout' : 'error', model: online(candidate), detail: msg }
         console.warn(`[generate] ${candidate} упала (${plan}):`, e instanceof Error ? e.message : e)
-        if (plan === 'stop') return null
+        if (plan === 'stop') {
+          opts.onFail?.(lastFailure)
+          return null
+        }
         if (plan === 'other') break // к следующему кандидату
         // 'same' — второй заход той же моделью, дальше уходим к следующей
       }
     }
   }
-  if (lastError) console.warn('[generate] все кандидаты исчерпаны')
+  if (lastFailure) opts.onFail?.(lastFailure)
   return null
 }
 

@@ -92,7 +92,7 @@
   --border-strong: #dcdbd5;
   --ink: #1c1c1a;
   --ink-2: #6b6b66;
-  --muted: #a3a39c;
+  --muted: #6f6f68; /* ≥4.5:1 на bg и surface (WCAG AA, линза 07) */
   --accent: #2159d6; /* ссылки owner/name */
   --accent-soft: #eef3ff;
   --primary: #1c1c1a; /* тёмная основная кнопка */
@@ -122,7 +122,7 @@
   --border-strong: #2a3644;
   --ink: #e8edf5;
   --ink-2: #8a97ab;
-  --muted: #66748a;
+  --muted: #7c8aa0; /* ≥4.5:1 на тёмных bg/surface (WCAG AA, линза 07) */
   --accent: #7dc0ff;
   --accent-soft: #0e2233;
   --primary: #4c9fff;

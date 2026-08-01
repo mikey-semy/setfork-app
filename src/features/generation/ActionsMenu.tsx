@@ -5,6 +5,7 @@ import { Check, Plus, RotateCw } from 'lucide-react'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
+import { MAX_VARIANTS } from './limits'
 
 /**
  * Меню действий у поля ввода (фидбек владельца): «Использовать этот» и «Ещё
@@ -51,7 +52,7 @@ export function ActionsMenu({
 
   const selected = candidates.find((c) => c.id === selId)
   const canAccept = !!selId && !working
-  const canRegen = !working && candidates.length < 6
+  const canRegen = !working && candidates.length < MAX_VARIANTS
 
   const jump = (c: GenerationCandidate) => {
     onPick(c.id)
@@ -110,7 +111,10 @@ export function ActionsMenu({
             className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-[0.8125rem] text-ink-2 hover:bg-surface-2 hover:text-ink disabled:opacity-40"
           >
             <RotateCw size={14} className="shrink-0" />
-            {say('Another variant', 'Ещё вариант')} <span className="ml-auto text-[0.6875rem] tabular-nums text-muted">{candidates.length}/6</span>
+            {say('Another variant', 'Ещё вариант')}{' '}
+            <span className="ml-auto text-[0.6875rem] tabular-nums text-muted">
+              {candidates.length}/{MAX_VARIANTS}
+            </span>
           </button>
           {candidates.length > 1 && (
             <div className="border-t border-border">

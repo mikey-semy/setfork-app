@@ -8,6 +8,7 @@ import { DiffStat } from '@/shared/ui/DiffStat'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import type { Lang } from '@/shared/i18n'
 import { getCommitDiff, type CommitDiff } from './commit-diff'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 const STATUS = {
   added: { sign: '+', cls: 'text-ok' },
@@ -112,7 +113,9 @@ export function CommitRow({
               <span>{labels.authorNotRecorded}</span>
             )}
             <span>·</span>
-            <span title={createdAt.toLocaleString(lang)}>{timeAgo(createdAt, lang)}</span>
+            <Tooltip label={createdAt.toLocaleString(lang)}>
+              <span>{timeAgo(createdAt, lang)}</span>
+            </Tooltip>
           </span>
         </span>
       </button>

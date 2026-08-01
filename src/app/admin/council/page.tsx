@@ -9,7 +9,7 @@ import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { CouncilList, type CouncilRow } from '@/features/admin/CouncilList'
 import { gnomeReputation } from '@/shared/ai/gnome-reputation'
 import { hireSignals } from '@/features/admin/hire'
-import { builtinAvatars } from '@/features/admin/avatar-gallery'
+import { builtinAvatars } from '@/shared/ai/avatar-gallery'
 import { createGnomeAccounts, hireGnome, selfGenerateNow } from '@/features/admin/actions'
 import { Button } from '@/shared/ui/button'
 import { Sparkles, UserPlus } from 'lucide-react'
@@ -66,7 +66,8 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
     lifecycle: e.lifecycle,
     enabled: e.enabled,
     handle: (e.userId && handles[e.userId]) || null,
-    avatarUrl: e.avatarUploaded ? (uploaded[e.id] ?? '') : `/gnomes/${e.avatar || e.id}.webp`,
+    // Карта уже отрезолвлена по реальным файлам (rosterAvatars) — прямой путь давал 404 у специализаций.
+    avatarUrl: uploaded[e.id] ?? '',
     domains: e.domains,
     gens: reps[e.id]?.gens ?? 0,
     accepted: reps[e.id]?.accepted ?? 0,

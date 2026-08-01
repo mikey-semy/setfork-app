@@ -646,12 +646,28 @@ export const jobs = pgTable(
     maxAttempts: integer('max_attempts').notNull().default(5),
     runAt: timestamp('run_at', { withTimezone: true }).notNull().defaultNow(),
     lastError: text('last_error'),
+    // Похороны состоялись: фича узнала о смерти задачи и закрыла своё видимое «в процессе».
+    // Признак ПЕРСИСТЕНТНЫЙ намеренно — иначе потеря финализации необратима: моргнула база
+    // или процесс убили между пометкой 'failed' и вызовом финализатора, а reaper выбирает
+    // только 'processing' и мёртвую задачу больше никому не предложит (находка авто-ревью
+    // по #637). Пусто у типов без финализатора — их никто и не выбирает.
+    finalizedAt: timestamp('finalized_at', { withTimezone: true }),
+    // Сколько раз пробовали похоронить. Без предела стабильно падающий финализатор
+    // (сущность удалена, БД не отвечает) перезывался бы КАЖДУЮ минуту вечно. Так же
+    // устроено у зрелых очередей: Oban Lifeline при исчерпанных попытках метит задачу
+    // 'discarded', а не возвращает в очередь; River rescuer либо перезапускает, либо
+    // отбрасывает по максимуму попыток. Достигли потолка — сдаёмся с записью в Sentry.
+    finalizeAttempts: integer('finalize_attempts').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     // Индекс под выборку готовых к запуску pending-задач.
     ready: index('jobs_ready_idx').on(t.status, t.runAt),
+    // Под добор незакрытых похорон: узкий частичный индекс вместо скана всей таблицы задач.
+    unfinalized: index('jobs_unfinalized_idx')
+      .on(t.type, t.updatedAt)
+      .where(sql`status = 'failed' AND finalized_at IS NULL`),
   }),
 )
 
@@ -822,7 +838,20 @@ export const suggestions = pgTable('suggestions', {
   // Откат — это НОВОЕ предложение, отменяющее старое (как Revert у GitHub), а не
   // тихая правка истории. Связь видна с обеих сторон: «отменяет #7» / «отменено в #9».
   revertOfId: uuid('revert_of_id'),
-}, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status), uniqueIndex('suggestions_tpl_number').on(t.templateId, t.number)])
+}, (t) => [
+  index('suggestions_tpl_idx').on(t.templateId, t.status),
+  uniqueIndex('suggestions_tpl_number').on(t.templateId, t.number),
+  // Одно ОТКРЫТОЕ предложение на ветку — правилом БД, а не проверкой в коде.
+  // Проверка «нет ли уже такого» и вставка — два шага, между ними влезает
+  // параллельный запрос, и на одну ветку появляются два открытых предложения с
+  // разными номерами. Ф4 добавила второй вход (магический пуш), и полагаться на
+  // удачу стало нельзя. Частичный индекс: закрытые не мешают открыть новое
+  // предложение на ту же ветку, а branch_ref is not null не трогает правки из
+  // пунктов (авто-ревью fe#636).
+  uniqueIndex('suggestions_open_branch')
+    .on(t.templateId, t.branchRef)
+    .where(sql`status = 'open' and branch_ref is not null`),
+])
 
 // ── Ревью правки (вердикт рецензента, как review в PR) ───────────────
 // Вердикты по модели GitHub/Gitea, но без их ловушек: у Gitea «request changes»

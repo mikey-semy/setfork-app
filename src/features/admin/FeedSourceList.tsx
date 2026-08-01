@@ -11,6 +11,7 @@ import { TagChip } from '@/shared/ui/TagChip'
 import { Alert } from '@/shared/ui/Alert'
 import { addFeedSource, pullFeedNow, removeFeedSource, setFeedSourceEnabled } from '@/features/admin/feed-actions'
 import type { FeedSourceRow } from '@/features/admin/feed-queries'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 /**
  * ПОДПИСКИ НА ПОТОК — состав ровными столбцами, как состав специалистов.
@@ -101,7 +102,11 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
                     {r.title || r.url.replace(/^https?:\/\//, '')}
                   </a>
                 </div>
-                {r.lastError && <div className="mt-0.5 truncate text-[0.6875rem] text-warn" title={r.lastError}>{r.lastError}</div>}
+                {r.lastError && (
+                  <Tooltip label={r.lastError}>
+                    <div className="mt-0.5 truncate text-[0.6875rem] text-warn">{r.lastError}</div>
+                  </Tooltip>
+                )}
               </div>
             ),
           }),

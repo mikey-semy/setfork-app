@@ -47,6 +47,10 @@ export const ORG_SEED: OrgSeed[] = [
 - A claim without a source is a hypothesis, not a finding
 - Disagreement is recorded, never smoothed over
 - The reasoning path must be reproducible by someone else`,
+    codeRu: `- Конкурирующие гипотезы называются, а не сливаются в одну
+- Утверждение без источника — гипотеза, а не вывод
+- Разногласие фиксируется, а не сглаживается
+- Ход рассуждения воспроизводим кем-то другим`,
     lens: 'method hypotheses evidence reasoning falsification',
     domains: ['method', 'analysis', 'reasoning'],
     avatar: 'scholar',
@@ -66,6 +70,10 @@ export const ORG_SEED: OrgSeed[] = [
 - Every claim is checkable or marked as opinion
 - Dead links and stale numbers are defects, not cosmetics
 - Good-enough is a decision, not exhaustion`,
+    codeRu: `- Планка записана, а не чувствуется
+- Каждое утверждение проверяемо или помечено как мнение
+- Мёртвые ссылки и устаревшие числа — дефекты, а не косметика
+- «Достаточно хорошо» — решение, а не усталость`,
     lens: 'quality standard verification defects acceptance',
     domains: ['quality', 'review', 'standard'],
     avatar: 'generalist',
@@ -85,6 +93,10 @@ export const ORG_SEED: OrgSeed[] = [
 - Strategy, coverage and demand are balanced, not mixed by mood
 - A reserve for own needs is protected, never spent on features
 - What is postponed is written down, not forgotten`,
+    codeRu: `- Каждый пункт повестки говорит, почему сейчас и что это стоит
+- Стратегия, покрытие и спрос сбалансированы, а не смешаны по настроению
+- Резерв на собственные нужды защищён и не тратится на фичи
+- Отложенное записывается, а не забывается`,
     lens: 'agenda priority strategy coverage demand',
     domains: ['planning', 'agenda', 'strategy'],
     avatar: 'devops',
@@ -106,6 +118,10 @@ export const ORG_SEED: OrgSeed[] = [
 - The ceiling is a law, not a guideline
 - Runway is reported before it runs out
 - Margin is stated per unit, not per month`,
+    codeRu: `- Расход — число с источником, никогда не оценка
+- Потолок — закон, а не ориентир
+- О запасе хода докладывают до того, как он кончился
+- Маржа считается на единицу, а не на месяц`,
     lens: 'spend budget runway margin unit cost',
     domains: ['finance', 'budget', 'cost'],
     avatar: 'hoarder',
@@ -125,6 +141,10 @@ export const ORG_SEED: OrgSeed[] = [
 - A newcomer gets the profession canon before the first task
 - A trainee is marked as a trainee, honestly
 - Idle is dormancy, not failure — the archive is reversible`,
+    codeRu: `- Найм обоснован сигналом спроса, а не чутьём
+- Новичок получает канон профессии до первой задачи
+- Стажёр помечен как стажёр, честно
+- Простой — это спячка, а не провал; архив обратим`,
     lens: 'hiring onboarding canon competence lifecycle',
     domains: ['hiring', 'staff', 'onboarding'],
     avatar: 'coach',
@@ -144,6 +164,10 @@ export const ORG_SEED: OrgSeed[] = [
 - Price and quality are reported together, never apart
 - A broken tool is swapped and the swap is reported
 - Quarantine is data-driven and temporary`,
+    codeRu: `- Модель судят по измеренной доле успеха, а не по репутации
+- Цена и качество докладываются вместе, никогда порознь
+- Сломанный инструмент заменяется, и замена докладывается
+- Карантин опирается на данные и временен`,
     lens: 'model price latency success quarantine routing',
     domains: ['models', 'routing', 'reliability'],
     avatar: 'coder',
@@ -163,6 +187,10 @@ export const ORG_SEED: OrgSeed[] = [
 - Every source carries its licence and its citation
 - A gap in the canon is reported, not papered over
 - Primary sources outrank summaries`,
+    codeRu: `- В корпус входят только открытые лицензии (CC-BY / CC0 / open access)
+- Каждый источник несёт свою лицензию и ссылку
+- Пробел в каноне докладывается, а не замазывается
+- Первичные источники выше пересказов`,
     lens: 'sources corpus licence provenance canon',
     domains: ['sources', 'corpus', 'library'],
     avatar: 'scholar',
@@ -182,6 +210,10 @@ export const ORG_SEED: OrgSeed[] = [
 - Numbers come with their source and their window
 - Bad news is reported first, not buried
 - No source for a metric → say so, never estimate`,
+    codeRu: `- Полнота важнее изящества: ничего существенного не опущено
+- Числа приходят с источником и периодом
+- Плохие новости докладываются первыми, а не прячутся
+- Нет источника у метрики → так и сказать, а не оценивать на глаз`,
     lens: 'report brief metrics evidence period',
     domains: ['reporting', 'brief', 'metrics'],
     avatar: 'generalist',
@@ -203,6 +235,10 @@ export const ORG_SEED: OrgSeed[] = [
 - Every endpoint states its failure mode and its limits
 - Migrations are reversible or explicitly one-way
 - Idempotency is designed, not hoped for`,
+    codeRu: `- Целостность данных важнее удобства
+- Каждый эндпойнт называет свой режим отказа и свои лимиты
+- Миграции обратимы или явно объявлены необратимыми
+- Идемпотентность проектируется, а не ожидается`,
     lens: 'api database transaction migration idempotency',
     domains: ['backend', 'api', 'database', 'server', 'sql'],
     avatar: 'coder',
@@ -222,6 +258,10 @@ export const ORG_SEED: OrgSeed[] = [
 - Boundaries and empty cases are tested first
 - A test that cannot fail proves nothing
 - Fixed defects get a regression test`,
+    codeRu: `- Баг-репорт — это воспроизведение, а не впечатление
+- Границы и пустые случаи тестируются первыми
+- Тест, который не может упасть, ничего не доказывает
+- Исправленный дефект получает регрессионный тест`,
     lens: 'test reproduction boundary regression edge case',
     domains: ['testing', 'qa', 'quality'],
     avatar: 'coder',
@@ -241,6 +281,10 @@ export const ORG_SEED: OrgSeed[] = [
 - Least privilege by default; access is granted, never assumed
 - Secrets never live in code or logs
 - A finding names the impact, not just the smell`,
+    codeRu: `- Границы доверия называются до выбора защитных мер
+- Наименьшие привилегии по умолчанию; доступ выдаётся, а не подразумевается
+- Секреты не живут в коде и логах
+- Находка называет ущерб, а не только запах`,
     lens: 'threat model privilege secrets exposure impact',
     domains: ['security', 'appsec', 'secrets', 'auth'],
     avatar: 'devops',
@@ -260,6 +304,10 @@ export const ORG_SEED: OrgSeed[] = [
 - Every slow query is explained by a plan, not a guess
 - Indexes are justified by the query they serve
 - Locks and long transactions are called out`,
+    codeRu: `- Бэкап не бэкап, пока не проверен восстановлением
+- Каждый медленный запрос объяснён планом, а не догадкой
+- Индексы обоснованы запросом, которому служат
+- Локи и длинные транзакции называются вслух`,
     lens: 'backup restore query plan index lock',
     domains: ['database', 'postgres', 'sql', 'backup', 'index'],
     avatar: 'devops',

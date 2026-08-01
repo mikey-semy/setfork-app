@@ -12,6 +12,8 @@ import { gnomeKpi } from '@/features/admin/gnome-stats'
 import { gnomeMood, gnomeThanksCounts } from '@/shared/ai/gnome-reputation'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { ExpertSettings } from '@/features/admin/ExpertSettings'
+import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 /**
  * СТРАНИЦА СПЕЦИАЛИСТА (админу): его развитие И его настройки — в одном месте.
@@ -56,11 +58,12 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   // Чем думает ЭТОТ специалист: его модель, наш опыт с ней и кто ещё на ней сидит.
   const myMeta = e.model ? meta.get(baseModelId(e.model)) : undefined
   const alsoOnModel = (myMeta?.holders ?? []).filter((h) => h.gnomeId !== e.id)
-  const { builtinAvatars } = await import('@/features/admin/avatar-gallery')
+  const { builtinAvatars } = await import('@/shared/ai/avatar-gallery')
   const gallery = await builtinAvatars()
 
   const name = ru ? e.nameRu : e.nameEn
-  const avatarUrl = e.avatarUploaded ? avatars[e.id] : `/gnomes/${e.avatar || e.id}.webp`
+  // Карта уже отрезолвлена по реальным файлам (rosterAvatars); пусто → заглушка GnomeAvatar.
+  const avatarUrl = avatars[e.id]
   const acceptShare = kpi.gens ? Math.round((kpi.accepted / kpi.gens) * 100) : null
   // Настроение (RPG-развитие): демеанор из послужного списка — в стиль общения.
   const thanksN = (await gnomeThanksCounts())[e.id] ?? 0
@@ -85,9 +88,8 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
       </Link>
 
       <div className="mb-5 flex items-center gap-4">
-        {/* Аватар из ростера: загруженный URL или встроенный webp. */}
-        {/* eslint-disable-next-line @next/next/no-img-element -- локальная статика/imgproxy, размеры фиксированы */}
-        <img src={avatarUrl} alt="" width={64} height={64} className="size-16 rounded-full border border-border object-cover" />
+        {/* Аватар из ростера: загруженный URL или встроенный webp; пусто → заглушка без 404. */}
+        <GnomeAvatar src={avatarUrl} size={64} className="size-16 rounded-full border border-border object-cover" />
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-[1.25rem] font-bold text-ink">
             {name}
@@ -108,9 +110,11 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           )}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
-            <span className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[0.6875rem] text-ink-2" title={mood.style || say('not enough data yet', 'пока мало данных')}>
-              {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
-            </span>
+            <Tooltip label={mood.style || say('not enough data yet', 'пока мало данных')}>
+              <span tabIndex={0} className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[0.6875rem] text-ink-2">
+                {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
+              </span>
+            </Tooltip>
             {e.domains.map((d) => (
               <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-ink-2">
                 {d}
@@ -158,7 +162,8 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           {e.code && (
             <>
               <div className="mb-2 mt-4 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
-              <p className="whitespace-pre-wrap font-mono text-[0.78125rem] leading-[1.55] text-ink-2">{e.code}</p>
+              {/* Людям — на их языке; агентам всегда едет EN `code`. */}
+              <p className="whitespace-pre-wrap font-mono text-[0.78125rem] leading-[1.55] text-ink-2">{(ru ? e.codeRu : '') || e.code}</p>
             </>
           )}
           {e.memory && (

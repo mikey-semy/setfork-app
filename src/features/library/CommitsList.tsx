@@ -6,7 +6,7 @@ import { CopyButton } from '@/shared/ui/CopyButton'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 
 /** Наш пользователь, опознанный по e-mail подписи коммита (может не найтись). */
 export interface CommitAuthor {
@@ -76,9 +76,9 @@ export function CommitsList({
                       {title || '—'}
                     </Link>
                   ) : (
-                    <span className="min-w-0 flex-1 text-[0.8125rem] font-semibold text-ink [overflow-wrap:anywhere]" title={rest || undefined}>
-                      {title || '—'}
-                    </span>
+                    <Tooltip label={rest || ''}>
+                      <span className="min-w-0 flex-1 text-[0.8125rem] font-semibold text-ink [overflow-wrap:anywhere]">{title || '—'}</span>
+                    </Tooltip>
                   )}
                   {c.parents > 1 && (
                     <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-accent">
@@ -89,7 +89,9 @@ export function CommitsList({
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.78125rem] text-muted">
                   <span className="font-medium text-ink-2">{user?.name || user?.handle || c.authorName || c.authorEmail}</span>
                   <span>·</span>
-                  <span title={c.at.toLocaleString(lang)}>{timeAgo(c.at, lang)}</span>
+                  <Tooltip label={c.at.toLocaleString(lang)}>
+                    <span>{timeAgo(c.at, lang)}</span>
+                  </Tooltip>
                 </div>
               </div>
               {/* Правый край строки: sha (им коммит называют в терминале, отсюда
@@ -98,7 +100,7 @@ export function CommitsList({
                   тач-цель добирается padding'ом до полной. */}
               <span className="flex shrink-0 items-center gap-1.5 font-mono text-[0.78125rem] text-ink-2">
                 {c.sha.slice(0, 7)}
-                <CopyButton text={c.sha} />
+                <CopyButton text={c.sha} label={t('copy', lang)} copiedLabel={t('copied', lang)} />
                 {snapshotBase && (
                   <Tooltip label={labels.openAt}>
                     <Link

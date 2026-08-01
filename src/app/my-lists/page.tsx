@@ -1,8 +1,10 @@
 import Link from 'next/link'
+import { FolderGit2 } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { applySavedQuery, listSavedQueries } from '@/features/library/saved-queries'
@@ -47,7 +49,13 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
               </Link>
             </div>
           ) : !hadAny ? (
-            <div className="py-16 text-center text-[0.8125rem] text-muted">{t('emptyMyLists', lang)}</div>
+            // Первый шаг новичка подсказывает само состояние, а не кнопка в углу
+            // (линза 07): общий EmptyState с CTA вместо серой строки.
+            <EmptyState
+              icon={<FolderGit2 size={28} />}
+              hint={t('emptyMyLists', lang)}
+              action={{ href: '/new', label: t('newList', lang) }}
+            />
           ) : (
             <>
               {/* Щиток здоровья и конструктор сохранённых запросов отсюда УБРАНЫ (решение

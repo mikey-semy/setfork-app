@@ -4,12 +4,18 @@ import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { Tooltip } from './Tooltip'
 
-export function CopyButton({ text }: { text: string }) {
+/**
+ * Кнопка-иконка «скопировать»: aria-label обязателен по смыслу (иконка без
+ * текста — Lighthouse button-name, линза 07); подписи прокидывает вызывающий
+ * на языке страницы, дефолты — EN.
+ */
+export function CopyButton({ text, label = 'Copy', copiedLabel = 'Copied' }: { text: string; label?: string; copiedLabel?: string }) {
   const [done, setDone] = useState(false)
   return (
-    <Tooltip label={done ? 'Copied' : 'Copy'}>
+    <Tooltip label={done ? copiedLabel : label}>
       <button
         type="button"
+        aria-label={done ? copiedLabel : label}
         onClick={() => {
           try {
             navigator.clipboard?.writeText(text)

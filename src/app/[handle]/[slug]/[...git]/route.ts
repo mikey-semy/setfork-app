@@ -3,6 +3,8 @@ import { db, users } from '@/shared/db'
 // eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
 import { canEditList } from '@/core'
+import { ensureBranchSuggestion } from '@/features/library/suggestion-core'
+import { captureError } from '@/shared/observability'
 import { isCollaborator } from '@/features/collab/queries'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { gitCore } from '@/features/git/core'
@@ -93,10 +95,19 @@ const writeDisabled = () =>
  * Английский по умолчанию — решение владельца: git-инструментарий англоязычен, и
  * незнакомый язык в выводе `git push` читается как поломка, а не как забота.
  */
-async function pushLang(userId: string, req: Request): Promise<string> {
-  const [u] = await db.select({ lang: users.lang }).from(users).where(eq(users.id, userId)).limit(1)
+async function pusher(userId: string, req: Request): Promise<{ lang: string; handle: string }> {
+  const [u] = await db
+    .select({ lang: users.lang, handle: users.handle })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+  return { lang: pickLang(u?.lang, req), handle: u?.handle ?? '' }
+}
+
+/** Язык из профиля и заголовка (см. док выше у `pusher`). */
+function pickLang(profile: string | undefined, req: Request): string {
   // Не 'en' — значит язык меняли руками: это и есть осознанный выбор.
-  if (u?.lang && u.lang !== 'en') return u.lang
+  if (profile && profile !== 'en') return profile
   // Первый тег заголовка: `ru, *;q=0.9` → `ru`. Качества не взвешиваем — языка
   // два, и предпочтительный по спецификации и так стоит первым.
   const header = req.headers.get('accept-language') ?? ''
@@ -167,8 +178,61 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     // проверка стала не только не устаревшей, но и не обходимой другими путями.
     // Ранняя проверка выше (authorizeWrite → canEditList) остаётся: она даёт быстрый
     // отказ ДО чтения тела, чтобы не тянуть мегабайты ради заведомого 403.
-    const res = await gitCore.receivePack({ owner: handle, slug }, body, gitProtocol, await pushLang(az, req))
+    const who = await pusher(az, req)
+    const res = await gitCore.receivePack(
+      { owner: handle, slug },
+      body,
+      { gitProtocol, lang: who.lang, actorHandle: who.handle },
+    )
     if (!res) return new Response('Repository unavailable', { status: 500 })
+    // Ф4: магический пуш `refs/for/main` — ядро положило коммиты в ветку автора,
+    // предложение делаем здесь. Ядро о нумерации, уведомлениях и аудите не знает
+    // и знать не должно (ADR-0015 провёл ту же границу для предусловий записи).
+    //
+    // Идемпотентно по ветке: повторный пуш двигает ту же ветку и обновляет ТО ЖЕ
+    // предложение — новая ревизия, а не второе предложение.
+    // `?? []` — не перестраховка: фронт выкатывается РАНЬШЕ ядра, и у старого
+    // ядра поля magic в ответе нет вовсе. Без этого первый же push после
+    // выкатки фронта падал бы с TypeError уже ПОСЛЕ приёма пака — то есть
+    // человек видел бы ошибку на успешном пуше. Убрать, когда ядро с Ф4 на проде.
+    await Promise.all(
+      (res.magic ?? []).map(async (m) => {
+        try {
+          // Ветка обязана материализоваться в список — ровно как на пути кнопки
+          // «Открыть предложение». Хук требует наличия list.json, но не его
+          // разбираемости: битый JSON проходит `cat-file -e`. Предложение,
+          // которое не рендерится, хуже отсутствующего (авто-ревью fe#636).
+          const snap = await gitCore.branchSnapshot({ owner: handle, slug }, m.branch).catch(() => null)
+          if (!snap) {
+            captureError(new Error('magic push: branch does not materialize as a list'), {
+              where: 'git.magic-push',
+              slug,
+              branch: m.branch,
+            })
+            return
+          }
+          const sug = await ensureBranchSuggestion({
+            templateId: meta.id,
+            ownerId: meta.ownerId,
+            currentVersion: meta.currentVersion,
+            authorId: az,
+            branch: m.branch,
+          })
+          await recordAudit('git.suggest', {
+            actorId: az,
+            targetType: 'suggestion',
+            targetId: sug.id,
+            meta: { slug, branch: m.branch, tip: m.tipSha, revision: sug.created ? 'first' : 'new' },
+          })
+        } catch (e) {
+          // Пуш УЖЕ принят: git-объекты на месте, ветка автора создана. Уронить
+          // здесь ответ значило бы показать человеку ошибку при успешном пуше и
+          // подтолкнуть его пушить снова. Громко в лог — и живём: предложение
+          // можно открыть кнопкой из этой же ветки.
+          captureError(e, { where: 'git.magic-push', slug, branch: m.branch })
+        }
+      }),
+    )
     // Уведомление наблюдателей + аудит — delivery-эффекты, вне git-ядра.
     if (res.newVersion != null) {
       const watchers = await getWatcherIds(meta.id, 'versions')

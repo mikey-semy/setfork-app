@@ -43,12 +43,9 @@ import {
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { SessionUser } from '@/shared/auth/session'
 
-// Роуты, чей первый сегмент — НЕ handle пользователя (для бредкрамба в шапке).
-const RESERVED_TOP = new Set([
-  'explore', 'search', 'settings', 'new', 'generate', 'login', 'register', 'admin', 'runs',
-  'notifications', 'api', 'about', 'terms', 'privacy', 'my-lists', 'catalogs',
-  'verify-email', 'forgot-password', 'reset-password', 'changelog',
-])
+// Роуты, чей первый сегмент — НЕ handle пользователя (для бредкрамба в шапке):
+// общий список под тестом-синхроном с src/app (разъезд давал «SF guilds»).
+import { RESERVED_TOP } from '@/shared/nav/reserved-top'
 
 export function TopNav({
   lang,
@@ -155,11 +152,17 @@ export function TopNav({
                 ? t('newList', lang)
                 : pathname.startsWith('/notifications')
                   ? t('notifications', lang)
-                  : pathname.startsWith('/admin/council')
-                    ? t('councilHall', lang)
-                    : pathname.startsWith('/admin')
-                      ? t('admin', lang)
-                      : ''
+                  : pathname.startsWith('/guilds')
+                    ? t('guildsTitle', lang)
+                    : pathname.startsWith('/tags')
+                      ? t('tags', lang)
+                      : pathname.startsWith('/feedback')
+                        ? t('feedback', lang)
+                        : pathname.startsWith('/admin/council')
+                          ? t('councilHall', lang)
+                          : pathname.startsWith('/admin')
+                            ? t('admin', lang)
+                            : ''
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5 print:hidden">
@@ -173,7 +176,8 @@ export function TopNav({
         >
           <Menu size={21} strokeWidth={2.75} />
         </button>
-        <Link href="/" className="font-logo text-[1.125rem] leading-none text-ink" aria-label="SetFork">
+        {/* Имя начинается с видимого «SF» (WCAG 2.5.3 label-in-name): голый "SetFork" его не содержал. */}
+        <Link href="/" className="font-logo text-[1.125rem] leading-none text-ink" aria-label="SF — SetFork">
           SF
         </Link>
       </div>
@@ -216,7 +220,9 @@ export function TopNav({
                   Подпись отдаём тултипом (и aria-label для скринридера). */}
               {crumbVis && (
                 <Tooltip label={crumbVis === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}>
+                  {/* span без роли не может нести aria-label (aria-prohibited-attr) — иконке нужна role="img". */}
                   <span
+                    role="img"
                     className="grid size-5 shrink-0 place-items-center text-muted"
                     aria-label={crumbVis === 'private' ? t('privateLabel', lang) : t('publicLabel', lang)}
                   >
