@@ -5,6 +5,7 @@ import { t } from '@/shared/i18n'
 import { getRoster, rosterAvatars } from '@/shared/ai/roster'
 import { gnomeRank, gnomeReputation, REP_MIN_GENS } from '@/features/generation/reputation'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 // Стиль бейджа ранга по tier: выше — заметнее. Ученик (0) — приглушённо (стартовый
 // ранг, не «пусто»); Старший мастер (3) — самый выразительный. Только токены темы.
@@ -58,16 +59,22 @@ export default async function GuildsPage() {
                   <div className="text-[1rem] font-semibold text-ink">{ru ? e.nameRu : e.nameEn}</div>
                   {(ru ? e.guildRu : e.guildEn) && <div className="text-[0.78125rem] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
                   {/* Ранг — цеховой титул (RPG-прогрессия на глазах). Иконка-медаль с
-                      подмастерья; ученик — приглушённый текст без иконки. */}
-                  <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${RANK_CLS[rank.tier]}`} title={say('Craft rank — earned by lists people built from this master', 'Цеховой ранг — заработан списками, что люди собрали из черновиков мастера')}>
-                    {rank.tier >= 1 && <Award size={11} />}
-                    {ru ? rank.labelRu : rank.labelEn}
-                  </span>
+                      подмастерья; ученик — приглушённый текст без иконки.
+                      tabIndex: Radix Tooltip открывается по focus — тап на touch
+                      фокусирует бейдж и показывает подсказку (Codex #643). */}
+                  <Tooltip label={say('Craft rank — earned by lists people built from this master', 'Цеховой ранг — заработан списками, что люди собрали из черновиков мастера')}>
+                    <span tabIndex={0} className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${RANK_CLS[rank.tier]}`}>
+                      {rank.tier >= 1 && <Award size={11} />}
+                      {ru ? rank.labelRu : rank.labelEn}
+                    </span>
+                  </Tooltip>
                 </div>
                 {share !== null && (
-                  <span className="ml-auto shrink-0 self-start rounded-full bg-(--accent-soft) px-2 py-0.5 text-[0.6875rem] font-semibold text-accent" title={say('Share of councils whose list was accepted', 'Доля советов, чей список приняли')}>
-                    ✓ {share}%
-                  </span>
+                  <Tooltip label={say('Share of councils whose list was accepted', 'Доля советов, чей список приняли')}>
+                    <span tabIndex={0} className="ml-auto shrink-0 self-start rounded-full bg-(--accent-soft) px-2 py-0.5 text-[0.6875rem] font-semibold text-accent">
+                      ✓ {share}%
+                    </span>
+                  </Tooltip>
                 )}
               </div>
               {e.code && (

@@ -9,6 +9,7 @@ import { nodeColumn, numberColumn } from '@/shared/ui/data-table/column-builders
 import { cn } from '@/shared/lib/cn'
 import { tr, type Lang } from '@/shared/i18n'
 import { selfGenerateNow } from '@/features/admin/actions'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 /**
  * СПИСОК СПЕЦИАЛИСТОВ — ровными столбцами, а настройки у каждого на своей странице.
@@ -85,9 +86,11 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
             header: tr({ en: 'Craft', ru: 'Ремесло' }, lang),
             size: 132,
             render: (r) => (
-              <span className={cn('block min-w-0 truncate text-[0.78125rem] text-ink-2', !r.enabled && 'opacity-60')} title={r.domains.join(', ')}>
-                {r.profession || r.guild}
-              </span>
+              <Tooltip label={r.domains.join(', ')}>
+                <span className={cn('block min-w-0 truncate text-[0.78125rem] text-ink-2', !r.enabled && 'opacity-60')}>
+                  {r.profession || r.guild}
+                </span>
+              </Tooltip>
             ),
           }),
           nodeColumn<CouncilRow>({

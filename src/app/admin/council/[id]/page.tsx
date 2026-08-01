@@ -12,6 +12,7 @@ import { gnomeMood, gnomeThanksCounts } from '@/shared/ai/gnome-reputation'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { ExpertSettings } from '@/features/admin/ExpertSettings'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 /**
  * СТРАНИЦА СПЕЦИАЛИСТА (админу): его развитие И его настройки — в одном месте.
@@ -102,9 +103,11 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           )}
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
-            <span className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[0.6875rem] text-ink-2" title={mood.style || say('not enough data yet', 'пока мало данных')}>
-              {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
-            </span>
+            <Tooltip label={mood.style || say('not enough data yet', 'пока мало данных')}>
+              <span tabIndex={0} className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[0.6875rem] text-ink-2">
+                {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
+              </span>
+            </Tooltip>
             {e.domains.map((d) => (
               <span key={d} className="rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-ink-2">
                 {d}

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Eraser, Loader2, Sparkles } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, startReindex } from './actions'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
 type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
@@ -114,7 +115,9 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
                 <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[0.6875rem] font-semibold">
                   {space.index.provider === 'yandex' ? 'Yandex v2 🇷🇺' : 'OpenRouter'}
                 </span>
-                <span className="truncate font-mono text-[0.6875rem] text-ink-2" title={space.index.docModel}>{space.index.docLabel}</span>
+                <Tooltip label={space.index.docModel}>
+                  <span className="truncate font-mono text-[0.6875rem] text-ink-2">{space.index.docLabel}</span>
+                </Tooltip>
               </div>
               <div className="mt-0.5 text-[0.78125rem] text-muted">
                 {space.vectorized}/{space.rows} {say('rows vectorized', 'строк с векторами')}
