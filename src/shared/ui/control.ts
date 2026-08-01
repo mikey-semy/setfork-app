@@ -79,6 +79,8 @@ export const LAYER = {
 
 /** Рамочное поле ввода — общая часть Input/Textarea/SelectTrigger.
  * Фокус обязан быть ВИДИМ (WCAG 2.4.7): текстовые поля браузер считает
- * focus-visible и при клике, так что кольцо показывается всегда. */
+ * focus-visible и при клике, так что кольцо показывается всегда.
+ * На touch/узких экранах поле не ниже 32px: globals.css форсит там 16px
+ * кегль (анти-зум iOS), в компактные 28px он влезает впритык (Codex #651). */
 export const FIELD_BOX =
-  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50'
+  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 max-sm:min-h-8 pointer-coarse:min-h-8'
