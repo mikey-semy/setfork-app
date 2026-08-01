@@ -150,7 +150,7 @@ export async function claimUnfinalizedJobs(types: string[], limit = 25): Promise
     WHERE id IN (
       SELECT id FROM jobs
       WHERE status = 'failed' AND finalized_at IS NULL
-        AND type = ANY(${sql.raw(`ARRAY[${types.map((t) => `'${t.replace(/'/g, "''")}'`).join(',')}]::text[]`)})
+        AND type = any(${sql.param(types)}::text[])
         AND finalize_attempts < ${FINALIZE_MAX_ATTEMPTS}
       ORDER BY updated_at DESC
       FOR UPDATE SKIP LOCKED
