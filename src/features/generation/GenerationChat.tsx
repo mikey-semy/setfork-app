@@ -10,6 +10,8 @@ import type { GenerationStatus } from './queries'
 import { LIST_KINDS, kindLabel, refineHint } from '@/shared/ai/list-kind'
 import { DETAIL_LEVELS, detailLabel, toDetail } from '@/shared/ai/detail-level'
 import { CouncilBubble } from './CouncilBubble'
+import { MAX_VARIANTS } from './limits'
+import { FailureNote } from './FailureNote'
 import { CandidateCard } from './CandidateCard'
 import { ActionsMenu } from './ActionsMenu'
 import { ProvenancePanel } from './ProvenancePanel'
@@ -201,7 +203,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
   const attempts = [...new Set([...messages.map((m) => m.attempt), ...candidates.map((c) => c.idx)])].sort((a, b) => a - b)
   const errText: Record<string, string> = {
     ratelimited: say('Too many requests — please wait a bit.', 'Слишком часто — подожди немного.'),
-    variantcap: say('You’ve hit the 6-variant limit.', 'Достигнут предел в 6 вариантов.'),
+    variantcap: say(`You’ve hit the ${MAX_VARIANTS}-variant limit.`, `Достигнут предел в ${MAX_VARIANTS} вариантов.`),
     ai_quota: say('Monthly draft limit reached.', 'Исчерпан месячный лимит на черновики.'),
     list_quota: say('List limit reached — delete some to save this draft.', 'Достигнут лимит списков — удали ненужные.'),
     aifail: say('Could not come up with another variant.', 'Не удалось придумать ещё вариант.'),
@@ -257,7 +259,10 @@ export function GenerationChat({ generationId, lang, candidates, status, message
           const mine = messages.filter((m) => m.attempt === n)
           const said = mine.filter((m) => m.kind === 'user' || m.kind === 'again')
           const trail = mine.filter((m) => COUNCIL_KINDS.has(m.kind))
-          const failed = mine.some((m) => m.kind === 'error')
+          // Последняя, а не первая: задача ретраится (maxAttempts: 2), и причина второго
+          // падения свежее — показывать надо её.
+          const failMsg = mine.filter((m) => m.kind === 'error').at(-1)
+          const failed = !!failMsg
           const cand = byAttempt(n)
           return (
             <li key={n} className="flex flex-col gap-3">
@@ -271,10 +276,14 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               ))}
               {/* Ход совета — второстепенное: свёрнут, когда виток уже отработал. Пока идёт — раскрыт. */}
               {trail.length > 0 && <CouncilTrail messages={trail} lang={lang} defaultOpen={!cand && !failed} avatars={avatars} repBadges={repBadges} />}
-              {failed && (
-                <CouncilBubble who="council" name={say('Council', 'Совет')}>
-                  <span className="text-warn">{say('Could not finish this one — try again.', 'Не получилось — попробуй ещё раз.')}</span>
-                </CouncilBubble>
+              {failMsg && (
+                <div>
+                  <CouncilBubble who="council" name={say('Council', 'Совет')}>
+                    <span className="text-warn">{say('Could not finish this one — try again.', 'Не получилось — попробуй ещё раз.')}</span>
+                  </CouncilBubble>
+                  {/* Причина — свёрнутой: человеку она не нужна, но открыть и переслать нам он может. */}
+                  <FailureNote raw={failMsg.text} generationId={generationId} attempt={n} at={failMsg.createdAt} lang={lang} />
+                </div>
               )}
               {cand && (
                 <div id={`cand-${cand.id}`} className="animate-fadein">
@@ -359,23 +368,29 @@ export function GenerationChat({ generationId, lang, candidates, status, message
           «+» (действия с вариантами) слева, отправка справа; над полем — чипы дальнейших
           действий, появляются сами вместе с готовым вариантом. */}
       <div data-sticky-input className="sticky bottom-0 -mx-4 mt-4 border-t border-border bg-canvas/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-        {!working && last && (
+        {/* Ряд действий нужен и когда варианта НЕТ: сорвалось — «ещё раз» единственный
+            выход, а раньше при провале ряд не рисовался вовсе и на экране не оставалось
+            ни одной кнопки (фидбек владельца со скрина). */}
+        {!working && (last || status === 'failed') && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              disabled={!selId}
-              onClick={() => selId && start(() => acceptCandidate(generationId, selId))}
-              className="inline-flex items-center gap-1.5 rounded-full border border-(--accent)/60 bg-(--accent-soft) px-3 py-1.5 text-[0.78125rem] font-medium text-accent hover:opacity-90 disabled:opacity-40"
-            >
-              <Check size={13} /> {say('Use this one', 'Использовать этот')}
-            </button>
-            {candidates.length < 6 && (
+            {last && (
+              <button
+                type="button"
+                disabled={!selId}
+                onClick={() => selId && start(() => acceptCandidate(generationId, selId))}
+                className="inline-flex items-center gap-1.5 rounded-full border border-(--accent)/60 bg-(--accent-soft) px-3 py-1.5 text-[0.78125rem] font-medium text-accent hover:opacity-90 disabled:opacity-40"
+              >
+                <Check size={13} /> {say('Use this one', 'Использовать этот')}
+              </button>
+            )}
+            {candidates.length < MAX_VARIANTS && (
               <button
                 type="button"
                 onClick={() => start(() => regenerateCandidate(generationId))}
                 className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[0.78125rem] text-ink-2 hover:border-border-strong hover:text-ink"
               >
-                <RotateCw size={13} /> {say('Another variant', 'Ещё вариант')}
+                {/* Сравнивать нечего — значит это не «ещё вариант», а повтор того же запроса. */}
+                <RotateCw size={13} /> {last ? say('Another variant', 'Ещё вариант') : say('Try again', 'Ещё раз')}
               </button>
             )}
             {(last?.hint || '').trim() && (
