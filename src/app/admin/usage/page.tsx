@@ -2,12 +2,10 @@ import Link from 'next/link'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
-import { Badge } from '@/shared/ui/badge'
-import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
-import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatTile } from '@/shared/ui/StatTile'
-import { UserLine } from '@/shared/ui/UserLine'
+import { UsageByUserTable } from '@/features/admin/UsageByUserTable'
+import { UsageModelsTable } from '@/features/admin/UsageModelsTable'
 import { getUsageByUser, getUsageTotals } from '@/shared/ai/usage'
 import { getOpenRouterCredits } from '@/shared/ai/credits'
 import { isQuarantined, modelHealth, QUARANTINE_WINDOW_MS } from '@/shared/ai/health'
@@ -150,74 +148,28 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
               )}
             </span>
           </div>
-          {/* Титульная полоса остаётся снаружи скролла: DataTable внутри без своей рамки. */}
-          <DataTable
-            template="minmax(0,1fr) 96px 104px 88px 128px"
-            minWidth={560}
-            className="rounded-none border-0"
-            header={
-              <>
-                <span>{tr({ en: 'Model', ru: 'Модель' }, lang)}</span>
-                <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
-                <span className="text-right">{tr({ en: 'Success', ru: 'Успех' }, lang)}</span>
-                <span className="text-right">p95</span>
-                <span className="text-right">{tr({ en: 'Status', ru: 'Статус' }, lang)}</span>
-              </>
-            }
-          >
-            {[...health]
+          {/* Титульная полоса остаётся снаружи скролла: таблица внутри без своей рамки. */}
+          <UsageModelsTable
+            lang={lang}
+            rows={[...health]
               .sort((a, b) => a.okRate - b.okRate || b.calls - a.calls)
-              .map((h) => (
-                <DataTableRow key={h.model}>
-                  <span className="truncate font-mono text-[0.78125rem] text-ink" title={h.model}>{prettyModelName(h.model)}</span>
-                  <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(h.calls)}</span>
-                  <span className={`text-right font-mono tabular-nums text-[0.8125rem] font-semibold ${h.okRate >= 0.95 ? 'text-ok' : h.okRate >= 0.9 ? 'text-warn' : 'text-danger'}`}>
-                    {(h.okRate * 100).toFixed(1)}%
-                  </span>
-                  <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{h.p95Ms ? `${(h.p95Ms / 1000).toFixed(1)}s` : '—'}</span>
-                  <span className="text-right">
-                    {quarantinedNow.has(h.model) ? (
-                      <Badge variant="danger">{tr({ en: 'quarantine', ru: 'карантин' }, lang)}</Badge>
-                    ) : (
-                      <span className="text-[0.6875rem] text-muted">{tr({ en: 'in rotation', ru: 'в ротации' }, lang)}</span>
-                    )}
-                  </span>
-                </DataTableRow>
-              ))}
-          </DataTable>
+              .map((h) => ({
+                model: h.model,
+                name: prettyModelName(h.model),
+                calls: h.calls,
+                okRate: h.okRate,
+                p95Ms: h.p95Ms ? h.p95Ms : null,
+                quarantined: quarantinedNow.has(h.model),
+              }))}
+          />
         </div>
       )}
 
       {/* По пользователям */}
-      <DataTable
-        template="minmax(0,1fr) 112px 112px 112px"
-        minWidth={440}
-        header={
-          <>
-            <span>{tr({ en: 'User', ru: 'Пользователь' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'Calls', ru: 'Вызовы' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'Tokens', ru: 'Токены' }, lang)}</span>
-            <span className="text-right">{tr({ en: 'Cost', ru: 'Стоимость' }, lang)}</span>
-          </>
-        }
-      >
-        {rows.length === 0 ? (
-          <EmptyState variant="inline" hint={tr({ en: 'No usage yet.', ru: 'Пока нет расхода.' }, lang)} />
-        ) : (
-          rows.map((r) => (
-            <DataTableRow key={r.userId ?? 'system'}>
-              {r.handle ? (
-                <UserLine handle={r.handle} size="md" className="min-w-0" />
-              ) : (
-                <span className="text-[0.8125rem] text-muted">{tr({ en: 'system / deleted', ru: 'система / удалён' }, lang)}</span>
-              )}
-              <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(r.calls)}</span>
-              <span className="text-right font-mono tabular-nums text-[0.8125rem] text-ink-2">{num(r.totalTokens)}</span>
-              <span className="text-right font-mono tabular-nums text-[0.8125rem] font-semibold text-ink">{money(r.costUsd)}</span>
-            </DataTableRow>
-          ))
-        )}
-      </DataTable>
+      <UsageByUserTable
+        lang={lang}
+        rows={rows.map((r) => ({ userId: r.userId, handle: r.handle, calls: r.calls, totalTokens: r.totalTokens, costUsd: r.costUsd }))}
+      />
     </div>
   )
 }

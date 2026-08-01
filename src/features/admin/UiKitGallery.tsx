@@ -6,7 +6,6 @@ import type { Lang } from '@/shared/i18n'
 import { Alert, type AlertVariant } from '@/shared/ui/Alert'
 import { Badge, type BadgeVariant } from '@/shared/ui/badge'
 import { ActionRow, DangerZone } from '@/shared/ui/DangerZone'
-import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
 import { DataTableV2 } from '@/shared/ui/data-table/DataTableV2'
 import { nodeColumn, numberColumn, textColumn } from '@/shared/ui/data-table/column-builders'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -387,8 +386,8 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
       <Section
         title={say('Composites', 'Конструкции')}
         hint={say(
-          'SettingsSection, DataTable and UserLine — assembled once, reused everywhere.',
-          'SettingsSection, DataTable и UserLine — собраны один раз, переиспользуются везде.',
+          'SettingsSection and UserLine — assembled once, reused everywhere. Data tables — DataTableV2 above (v1 bridge retired).',
+          'SettingsSection и UserLine — собраны один раз, переиспользуются везде. Таблицы данных — DataTableV2 выше (v1-мост выведен).',
         )}
       >
         <SettingsSection
@@ -404,28 +403,6 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
             <Input placeholder="value" />
           </Field>
         </SettingsSection>
-        <DataTable
-          template="minmax(0,1fr) 96px 88px"
-          minWidth={420}
-          header={
-            <>
-              <span>{say('Person', 'Человек')}</span>
-              <span>{say('Role', 'Роль')}</span>
-              <span className="text-right">{say('Score', 'Счёт')}</span>
-            </>
-          }
-        >
-          <DataTableRow>
-            <UserLine handle="demo" size="md" name="Demo User" />
-            <Badge variant="soft">admin</Badge>
-            <span className="text-right font-mono text-[0.78125rem]">42</span>
-          </DataTableRow>
-          <DataTableRow muted>
-            <UserLine handle="sleepy" size="md" at={say('3 d ago', '3 дн назад')} />
-            <Badge variant="outline">guest</Badge>
-            <span className="text-right font-mono text-[0.78125rem]">0</span>
-          </DataTableRow>
-        </DataTable>
         <div className="flex flex-wrap items-center gap-4">
           <UserLine handle="demo" size="xs" at="xs" />
           <UserLine handle="demo" size="sm" at="sm" />
