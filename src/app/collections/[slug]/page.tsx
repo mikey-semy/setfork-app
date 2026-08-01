@@ -9,6 +9,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { AutoBanner } from '@/shared/ui/AutoBanner'
 import { FeedList } from '@/features/library/FeedList'
 import { getCollectionDetail } from '@/features/collections/queries'
+import { EmptyState } from '@/shared/ui/EmptyState'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const [{ slug }, lang] = await Promise.all([params, getLang()])
@@ -77,9 +78,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
       )}
 
       {c.lists.length === 0 && c.catalogs.length === 0 && (
-        <p className="mt-8 rounded-lg border border-dashed border-border py-12 text-center text-[0.8125rem] text-muted">
-          {ru ? 'Подборка пока пуста.' : 'This collection is empty for now.'}
-        </p>
+        <EmptyState className="mt-8" hint={ru ? 'Подборка пока пуста.' : 'This collection is empty for now.'} />
       )}
     </div>
   )
