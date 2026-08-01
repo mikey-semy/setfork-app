@@ -2,6 +2,7 @@ import { getLang } from '@/shared/i18n/server'
 import { isLang, type Lang } from '@/shared/i18n'
 import { requireViewableDetail, requireViewableDetailFor } from '@/features/library/guard'
 import { toExportList } from '@/features/library/export'
+import { isPubliclyVisible } from '@/core'
 import { dataEtag, toDataEnvelope } from '@/features/library/data-envelope'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
@@ -54,10 +55,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
 
   const updatedAt = detail.tpl.updatedAt ?? new Date(0)
   const etag = dataEtag(detail.currentVersion?.version ?? detail.tpl.currentVersion, updatedAt, lang)
-  // Приватное не кешируем в общих кешах: `private` обязателен, иначе прокси раздаст чужое.
-  const isPublic = detail.tpl.visibility === 'public' && detail.tpl.status !== 'draft'
-  const cache = isPublic ? 'public, max-age=60, stale-while-revalidate=600' : 'private, no-store'
-  const headers: Record<string, string> = { ETag: etag, 'Cache-Control': cache }
+  /**
+   * Общий кеш — ТОЛЬКО для того, что вправе увидеть аноним. Предикат берём единый
+   * (isPubliclyVisible), а не пишем свой: собственная проверка `visibility === 'public' &&
+   * status !== 'draft'` пропускала МОДЕРАЦИЮ. Список под флагом виден владельцу и админу,
+   * ответ уходил бы с `Cache-Control: public`, и общий прокси раздал бы скрытое модерацией
+   * содержимое анониму, ни разу не спросив наш guard (находка авто-ревью, P1).
+   */
+  const isPublic = isPubliclyVisible(detail.tpl)
+  /**
+   * Язык. Без явного `?lang=` представление выбирается по куке и Accept-Language — то есть
+   * под одним и тем же адресом лежат два разных тела. Класть такое в ОБЩИЙ кеш нельзя: первый
+   * русский ответ достанется следующему англоязычному (P2 того же ревью). Поэтому в общий кеш
+   * пускаем только явно запрошенный язык, а договорный отдаём приватно и с Vary.
+   */
+  const explicitLang = isLang(asked)
+  const shared = isPublic && explicitLang
+  const cache = shared ? 'public, max-age=60, stale-while-revalidate=600' : 'private, no-store'
+  const headers: Record<string, string> = { ETag: etag, 'Cache-Control': cache, Vary: 'Accept-Language, Cookie, Authorization' }
   // CORS только для публичных: браузерному коду это нужно, а приватное отдаём лишь по токену.
   if (isPublic) headers['Access-Control-Allow-Origin'] = '*'
 

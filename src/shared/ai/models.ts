@@ -143,20 +143,24 @@ export async function fetchModels(): Promise<ModelsResult> {
  * Каталог УКАЗАННОГО провайдера — для админки: там провайдера выбирают до сохранения.
  * Без этого выбор в селекте ничего не менял в списке моделей (баг 2026-07-27).
  */
-export async function fetchModelsFor(provider: AiProviderId): Promise<ModelsResult> {
+export async function fetchModelsFor(provider: AiProviderId, opts?: { maxAgeMs?: number }): Promise<ModelsResult> {
   const { getProviderConfigFor } = await import('@/shared/settings/ai')
   const cfg = await getProviderConfigFor(provider)
   // Ключа нет — каталог пуст, но провайдера возвращаем ВЫБРАННОГО: интерфейс должен
   // сказать «у этого провайдера нет ключа», а не молча показать чужой список.
   if (!cfg) return { ...EMPTY, provider, error: 'no-key' }
-  return fetchModelsForConfig(cfg)
+  return fetchModelsForConfig(cfg, opts?.maxAgeMs)
 }
 
-async function fetchModelsForConfig(cfg: Awaited<ReturnType<typeof getAiProviderConfig>>): Promise<ModelsResult> {
+async function fetchModelsForConfig(cfg: Awaited<ReturnType<typeof getAiProviderConfig>>, maxAgeMs?: number): Promise<ModelsResult> {
   if (!cfg) return EMPTY
   const cacheKey = `${cfg.provider} ${cfg.baseUrl}`
   const hit = catalogCache.get(cacheKey)
-  if (hit && Date.now() - hit.at < hit.ttl) return hit.result
+  // maxAgeMs — для тех, кому нужен СВЕЖИЙ ответ: проверка доступности провайдера не вправе
+  // опираться на успех десятиминутной давности, иначе после падения основного мы ещё десять
+  // минут уверенно шлём туда генерацию вместо запасного (находка авто-ревью, P2).
+  const fresh = maxAgeMs == null ? hit && Date.now() - hit.at < hit.ttl : hit && Date.now() - hit.at < Math.min(hit.ttl, maxAgeMs)
+  if (hit && fresh) return hit.result
   const result = await loadCatalog(cfg)
   const ok = !result.error && result.chat.length > 0
   catalogCache.set(cacheKey, { at: Date.now(), ttl: ok ? CATALOG_TTL_MS : CATALOG_FAIL_TTL_MS, result })

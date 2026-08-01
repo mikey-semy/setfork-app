@@ -53,12 +53,14 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   // раньше был третий, обеднённый вариант списка — без цен и без опыта, то есть выбор вслепую.
   const { buildOpts } = await import('@/features/admin/model-options')
   const { modelMeta } = await import('@/features/admin/model-enrich')
-  const meta = await modelMeta(models?.currency ?? 'USD', ru)
+  const [meta, { builtinAvatars }] = await Promise.all([
+    modelMeta(models?.currency ?? 'USD', ru),
+    import('@/shared/ai/avatar-gallery'),
+  ])
   const modelOptions = models ? buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, meta) : []
   // Чем думает ЭТОТ специалист: его модель, наш опыт с ней и кто ещё на ней сидит.
   const myMeta = e.model ? meta.get(baseModelId(e.model)) : undefined
   const alsoOnModel = (myMeta?.holders ?? []).filter((h) => h.gnomeId !== e.id)
-  const { builtinAvatars } = await import('@/shared/ai/avatar-gallery')
   const gallery = await builtinAvatars()
 
   const name = ru ? e.nameRu : e.nameEn

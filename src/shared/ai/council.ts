@@ -205,9 +205,13 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   // Ручной пул тоже сверяем с каталогом: у одиночной модели такая сверка есть (liveModel), а
   // здесь снятая с обслуживания модель обнаруживалась только после нескольких отказов подряд.
   // Каталог пуст (сеть/ключ) — не трогаем выбор владельца.
-  const listed = settings.councilModels.filter((m) => !catalog.length || catalog.some((c) => c.id === m))
+  // Множество вместо перебора: каталог до 336 моделей, и `some`/`includes` в цикле сканируют
+  // его целиком на каждую строку пула.
+  const catalogIds = new Set(catalog.map((c) => c.id))
+  const listed = settings.councilModels.filter((m) => !catalogIds.size || catalogIds.has(m))
   if (settings.councilModels.length && listed.length !== settings.councilModels.length) {
-    const gone = settings.councilModels.filter((m) => !listed.includes(m))
+    const kept = new Set(listed)
+    const gone = settings.councilModels.filter((m) => !kept.has(m))
     console.warn(`[council] моделей нет в каталоге ${client.cfg.provider}, исключены из пула: ${gone.join(', ')}`)
   }
   const rawPool = listed.length ? listed : defaultPool

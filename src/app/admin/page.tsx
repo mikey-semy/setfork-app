@@ -128,9 +128,10 @@ export default async function AdminPage() {
   // Запасной провайдер (пусто = выключен) — читается тем же модулем, что решает подмену.
   const { getFallbackProviderId } = await import('@/shared/ai/provider-failover')
   const fallbackProvider = await getFallbackProviderId()
-  const models = await fetchModels() // сам вернёт пустой каталог, если провайдер не сконфигурирован
-  // Наш опыт и занятость: без них список — 336 одинаковых строк, по которым нечем выбирать.
-  const meta = await modelMeta(models.currency, ru)
+  // Каталог и наш опыт независимы — тянем разом, иначе страница ждёт их по очереди.
+  // (Валюта нужна мете только для форматирования; у активного провайдера она известна заранее.)
+  const [models, metaRaw] = await Promise.all([fetchModels(), modelMeta(aiProv.provider === 'openrouter' ? 'USD' : 'RUB', ru)])
+  const meta = metaRaw
 
   const chatOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, meta), settings.chatModel)
   // Ростер и галерея встроенных персонажей — читаем на сервере: клиенту не нужен доступ к БД и fs.

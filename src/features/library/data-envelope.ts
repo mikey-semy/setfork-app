@@ -69,11 +69,11 @@ export function toDataEnvelope(list: ExportList, lang: Lang, url: string, update
     updatedAt: updatedAt.toISOString(),
     ordered: list.ordered,
     lang,
-    steps: list.steps
-      // Блоки (текст, картинка, опрос) — оформление страницы, а не данные: в конверт идут
-      // только шаги. Иначе потребителю пришлось бы фильтровать наши типы у себя.
-      .filter((s) => !s.type || s.type === 'step')
-      .map((s) => ({
+    // Один проход: блоки (текст, картинка, опрос) — оформление страницы, а не данные, в
+    // конверт идут только шаги. Иначе потребителю пришлось бы фильтровать наши типы у себя.
+    steps: list.steps.reduce<ListDataStep[]>((acc, s) => {
+      if (s.type && s.type !== 'step') return acc
+      acc.push({
         n: s.n,
         title: tr(s.title, lang),
         desc: tr(s.desc, lang),
@@ -81,10 +81,13 @@ export function toDataEnvelope(list: ExportList, lang: Lang, url: string, update
         level: s.level ?? '',
         why: tr(s.why, lang),
         subtasks: (s.subtasks ?? []).map((t) => tr(t, lang)),
-        refs: (s.refs ?? [])
-          .filter((r): r is { label: typeof r.label; url: string } => Boolean(r.url))
-          .map((r) => ({ label: tr(r.label, lang), url: r.url })),
-      })),
+        refs: (s.refs ?? []).reduce<{ label: string; url: string }[]>((rs, r) => {
+          if (r.url) rs.push({ label: tr(r.label, lang), url: r.url })
+          return rs
+        }, []),
+      })
+      return acc
+    }, []),
   }
 }
 

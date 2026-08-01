@@ -3,7 +3,7 @@ import { generateText } from 'ai'
 import { getAiSettings } from '@/shared/settings/ai'
 import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
-import { pickChatModel } from './credits'
+import { pickChatModels } from './credits'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
 import { retryPlan } from './retry'
 import type { AiFailure } from './failure'
@@ -171,9 +171,11 @@ async function runListModel(
   // провайдерах зовём голую модель (веб-поиска и авто-фолбэка там нет).
   const isOpenRouter = client.cfg.provider === 'openrouter'
   const web = (opts.web ?? false) && isOpenRouter
-  const base = await pickChatModel(settings)
+  // Пара «основная + запасная» из ОДНОГО провайдера: при уходе на запасного настройки
+  // основного больше не годятся, и запасная модель из его неймспейса была бы чужим id.
+  const { base, fallback } = await pickChatModels(settings)
   const online = (m: string) => (web && m ? `${m}:online` : m)
-  const models = [base, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i).map(online)
+  const models = [base, fallback].filter((v, i, a) => v && a.indexOf(v) === i).map(online)
 
   /**
    * КАНДИДАТЫ, а не одна модель. Раньше упавший вызов просто возвращал null: реакция на отказ
@@ -185,7 +187,7 @@ async function runListModel(
    * Причина наверх (opts.onFail) сообщается ОДИН раз и только окончательная: промежуточные
    * попытки — наша кухня, пользователю важно, чем всё кончилось.
    */
-  const candidates = [base, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i)
+  const candidates = [base, fallback].filter((v, i, a) => v && a.indexOf(v) === i)
   let lastFailure: AiFailure | null = null
 
   for (const candidate of candidates) {
@@ -305,7 +307,7 @@ export async function generateChangeNote(
   if (!settings.enabled) return null
   if (!(await globalBudgetOk())) return null // глобальный дневной кап расхода исчерпан
 
-  const model = await pickChatModel(settings)
+  const { base: model } = await pickChatModels(settings)
   const langName = langEnName(lang)
   const compact = (xs: NoteItem[]) =>
     xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n').slice(0, MAX_PROMPT_CHARS)

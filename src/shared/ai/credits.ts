@@ -77,6 +77,18 @@ async function dailySpendRub(threshold: number): Promise<number> {
  * гео-блок) — выбор владельца остаётся как есть: отсутствие сведений не повод его подменять.
  */
 export async function pickChatModel(settings: AiSettings): Promise<string> {
+  return (await pickChatModels(settings)).base
+}
+
+/**
+ * Основная и запасная модель ОДНОГО провайдера — того, на котором пойдёт генерация.
+ *
+ * Возвращаем пару, а не одну модель, потому что запасная нужна вызывающему для списка
+ * кандидатов, и брать её из `settings` нельзя: настройки собраны для НАСТРОЕННОГО провайдера,
+ * а генерация могла уйти на запасного. Тогда `settings.fallbackModel` — чужой id, и «запасная
+ * модель» гарантированно отвечает отказом (находка авто-ревью, P2).
+ */
+export async function pickChatModels(settings: AiSettings): Promise<{ provider: string; base: string; fallback: string }> {
   const cfg = await generationProviderConfig()
   const provider = cfg?.provider ?? 'openrouter'
   // Настройки моделей лежат в неймспейсе ПРОВАЙДЕРА. При уходе на запасного взять модель из
@@ -88,7 +100,10 @@ export async function pickChatModel(settings: AiSettings): Promise<string> {
   if (live !== wanted) {
     console.warn(`[ai] модель ${wanted} отсутствует в каталоге ${provider} — беру живую ${live}`)
   }
-  return healthy(live, effective.fallbackModel, chat, await quarantinedModels())
+  const bad = await quarantinedModels()
+  // Запасная тоже сверяется с каталогом: мёртвый id в роли «запасной» — это не запас.
+  const fallback = effective.fallbackModel && chat.some((m) => m.id === effective.fallbackModel) ? effective.fallbackModel : ''
+  return { provider, base: healthy(live, fallback, chat, bad), fallback }
 }
 
 /**
