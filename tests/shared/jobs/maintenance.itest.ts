@@ -74,6 +74,17 @@ describe('reaper: пульс против таймаута', () => {
     expect(row.hb).toBeNull()
   })
 
+  it('запоздавший удар пульса не воскрешает отпущенную задачу', async () => {
+    // clearInterval отменяет будущие удары, но не отзывает уже улетевший UPDATE: он может
+    // приземлиться после возврата задачи в очередь и оживить чужой пульс на новой попытке.
+    const [j] = await add({ status: 'pending', heartbeatAt: null })
+
+    await touchJob(j.id)
+
+    const [row] = await db.select({ hb: jobs.heartbeatAt }).from(jobs).where(eq(jobs.id, j.id))
+    expect(row.hb).toBeNull()
+  })
+
   it('failJob тоже гасит пульс при возврате в очередь', async () => {
     const [j] = await add({ heartbeatAt: sql`now()` as never })
 

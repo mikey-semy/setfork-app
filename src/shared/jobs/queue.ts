@@ -1,5 +1,5 @@
 import 'server-only'
-import { eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { db, jobs, type JobType } from '@/shared/db'
 import { backoffMs } from './backoff'
 
@@ -77,9 +77,18 @@ export async function completeJob(id: string): Promise<void> {
  *
  * `updated_at` НЕ трогаем намеренно: он про изменение самой задачи, и по нему считают возраст
  * в других местах. Пульс — отдельное поле, иначе живая долгая задача выглядела бы вечно юной.
+ *
+ * УСЛОВИЕ `status = 'processing'` — не украшение, а гонка. `clearInterval` отменяет будущие
+ * удары, но НЕ отзывает уже улетевший UPDATE: он мог задержаться и приземлиться после того,
+ * как задачу вернули в очередь, воскресив чужой пульс на новой попытке (находка авто-ревью
+ * по #648). Postgres в READ COMMITTED перепроверяет предикат после ожидания блокировки,
+ * поэтому такой запоздавший удар просто не находит строку и тихо ничего не делает.
  */
 export async function touchJob(id: string): Promise<void> {
-  await db.update(jobs).set({ heartbeatAt: new Date() }).where(eq(jobs.id, id))
+  await db
+    .update(jobs)
+    .set({ heartbeatAt: new Date() })
+    .where(and(eq(jobs.id, id), eq(jobs.status, 'processing')))
 }
 
 /**
