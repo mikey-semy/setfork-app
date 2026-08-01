@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimateRubModelCostUsd, priceRub1M, rubPerUsdOf, type PriceBook } from '@/shared/ai/price-book'
+import { estimateRubModelCostUsd, parsePriceStep, priceBookFromList, priceRub1M, rubPerUsdOf, type PriceBook } from '@/shared/ai/price-book'
 import seed from '@/shared/ai/price-book.seed.json'
 
 /**
@@ -84,5 +84,59 @@ describe('семя прайс-книги', () => {
     expect(priceRub1M(book, 'yandex', 'emb://b1g/text-embeddings-v2-doc/latest')).toEqual([10.1, 0])
     expect(priceRub1M(book, 'gigachat', 'GigaChat-2')).toEqual([65, 65])
     expect(priceRub1M(book, 'gigachat', 'GigaChat-2-Max')).toEqual([650, 650])
+  })
+})
+
+/**
+ * ПРАЙС ИЗ НАШЕГО ЖЕ СПИСКА. Строка списка читается и человеком, и кодом: заголовок — то, с
+ * чем сравниваем, описание — «провайдер · режим · вход / выход». Значения НЕ выводятся из
+ * секции и не угадываются по красивому названию: человеческое «GigaChat Pro» сопоставляется
+ * с куском id «-Pro», и одно из другого не выводится.
+ */
+describe('parsePriceStep: строка списка → строка прайса', () => {
+  it('разбирает машинную часть описания', () => {
+    expect(parsePriceStep('yandexgpt-5.1', 'yandex · exact · 800 / 800')).toEqual({
+      provider: 'yandex', match: 'yandexgpt-5.1', mode: 'exact', in: 800, out: 800,
+    })
+    expect(parsePriceStep('-Pro', 'gigachat · contains · 500 / 500')).toEqual({
+      provider: 'gigachat', match: '-Pro', mode: 'contains', in: 500, out: 500,
+    })
+    expect(parsePriceStep('emb://', 'yandex · contains · 10.1 / 0')?.in).toBe(10.1)
+  })
+
+  it('мусор не превращается в цену — null, а не догадка', () => {
+    expect(parsePriceStep('модель', '800 ₽ вход · 800 ₽ выход')).toBeNull() // старый прозаический вид
+    expect(parsePriceStep('модель', 'openai · exact · 1 / 1')).toBeNull() // чужой провайдер
+    expect(parsePriceStep('модель', 'yandex · regex · 1 / 1')).toBeNull() // неизвестный режим
+    expect(parsePriceStep('', 'yandex · exact · 1 / 1')).toBeNull() // не с чем сравнивать
+    expect(parsePriceStep('м', 'yandex · exact · дорого / 1')).toBeNull() // цена не число
+    expect(parsePriceStep('м', 'yandex · exact · -5 / 1')).toBeNull() // отрицательная цена
+  })
+})
+
+describe('priceBookFromList: конверт списка → книга', () => {
+  const base: PriceBook = { unit: 'RUB_PER_1M_TOKENS', rubPerUsd: 90, source: '', updatedAt: '', entries: [] }
+
+  it('порядок строк сохраняется — он и есть приоритет', () => {
+    const env = {
+      version: 2,
+      updatedAt: '2026-08-01T10:00:00.000Z',
+      steps: [
+        { title: 'вступление', desc: '' },
+        { title: '-Pro', desc: 'gigachat · contains · 500 / 500' },
+        { title: 'GigaChat-2', desc: 'gigachat · exact · 65 / 65' },
+      ],
+    }
+    const book = priceBookFromList(env, base)!
+    expect(book.entries.map((e) => e.match)).toEqual(['-Pro', 'GigaChat-2'])
+    expect(book.updatedAt).toBe('2026-08-01T10:00:00.000Z')
+    // Тариф семейства выигрывает у общего имени — ровно потому, что стоит выше.
+    expect(priceRub1M(book, 'gigachat', 'GigaChat-2-Pro')).toEqual([500, 500])
+    expect(priceRub1M(book, 'gigachat', 'GigaChat-2')).toEqual([65, 65])
+  })
+
+  it('ни одной разобранной строки → null: пустая книга сняла бы денежные лимиты', () => {
+    expect(priceBookFromList({ steps: [{ title: 'привет', desc: 'просто текст' }] }, base)).toBeNull()
+    expect(priceBookFromList({}, base)).toBeNull()
   })
 })

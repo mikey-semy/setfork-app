@@ -44,9 +44,74 @@ export interface PriceBook {
 }
 
 export const PRICE_BOOK_SETTING = 'ai.price_book'
+/** Ссылка на СПИСОК SetFork, из которого берётся прайс: `handle/slug`. Пусто = запись стенда. */
+export const PRICE_BOOK_SOURCE_SETTING = 'ai.price_book_source'
+
+/**
+ * СТРОКА ПРАЙСА В СПИСКЕ: заголовок шага — то, с чем сравниваем, описание — машинная часть
+ * `провайдер · режим · вход / выход`. Формат выбран так, чтобы одна и та же строка читалась
+ * и человеком, и кодом: значения не выводятся ни из секции, ни из красивого названия —
+ * иначе пришлось бы угадывать (у GigaChat человеческое «GigaChat Pro» сопоставляется с
+ * куском id «-Pro», и вывести одно из другого нельзя).
+ *
+ * Строка, которая не разобралась, ПРОПУСКАЕТСЯ с предупреждением: выдуманная цена хуже
+ * отсутствующей, потому что на этих числах стоят денежные лимиты.
+ */
+export function parsePriceStep(title: string, desc: string): PriceEntry | null {
+  const parts = (desc || '').split('·').map((x) => x.trim())
+  if (parts.length < 3) return null
+  const [provider, mode, prices] = parts
+  if (provider !== 'yandex' && provider !== 'gigachat') return null
+  if (mode !== 'exact' && mode !== 'contains') return null
+  const [inRaw, outRaw] = prices.split('/').map((x) => Number(x.trim().replace(',', '.')))
+  const match = (title || '').trim()
+  if (!match || !Number.isFinite(inRaw) || !Number.isFinite(outRaw) || inRaw < 0 || outRaw < 0) return null
+  return { provider, match, mode, in: inRaw, out: outRaw }
+}
+
+/** Конверт data.json → прайс-книга. Порядок строк СОХРАНЯЕТСЯ: он и есть приоритет. */
+export function priceBookFromList(
+  envelope: { steps?: { title?: string; desc?: string }[]; version?: number; updatedAt?: string },
+  base: PriceBook,
+): PriceBook | null {
+  const entries: PriceEntry[] = []
+  for (const s of envelope.steps ?? []) {
+    const e = parsePriceStep(s.title ?? '', s.desc ?? '')
+    if (e) entries.push(e)
+    else if ((s.desc ?? '').includes('·')) console.warn(`[price-book] строка «${s.title}» не разобрана — пропущена`)
+  }
+  if (!entries.length) return null
+  return { ...base, entries, source: `список v${envelope.version ?? '?'}`, updatedAt: envelope.updatedAt ?? base.updatedAt }
+}
 
 let cache: { at: number; book: PriceBook } | null = null
 const CACHE_TTL_MS = 60_000
+
+/**
+ * Прайс ИЗ НАШЕГО ЖЕ СПИСКА — тем самым транспортом, которым его получит любой чужой
+ * потребитель (`/{handle}/{slug}/data.json`). Это не украшение: пока мы читаем свой продукт
+ * тем же способом, что и посторонние, транспорт не может тихо сломаться незамеченным.
+ *
+ * Недоступен (не задан, не задеплоен, сеть, приватный) → null, и выше берётся запись стенда,
+ * а за ней семя. Денежные лимиты не имеют права зависеть от доступности одной страницы.
+ */
+async function priceBookFromSource(ref: string | undefined, base: PriceBook): Promise<PriceBook | null> {
+  const path = (ref ?? '').trim().replace(/^\/+|\/+$/g, '')
+  if (!path || !/^[^/]+\/[^/]+$/.test(path)) return null
+  const origin = (process.env.APP_URL || process.env.SETFORK_APP_URL || '').replace(/\/$/, '')
+  if (!origin) return null
+  try {
+    const res = await fetch(`${origin}/${path}/data.json`, { signal: AbortSignal.timeout(8_000), cache: 'no-store' })
+    if (!res.ok) {
+      console.warn(`[price-book] список ${path} не отдал данные: HTTP ${res.status}`)
+      return null
+    }
+    return priceBookFromList(await res.json(), base)
+  } catch (e) {
+    console.warn(`[price-book] список ${path} недоступен:`, e instanceof Error ? e.message : e)
+    return null
+  }
+}
 
 export function clearPriceBookCache(): void {
   cache = null
@@ -74,7 +139,17 @@ export async function getPriceBook(): Promise<PriceBook> {
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.book
   let stored: PriceBook | null = null
   try {
-    stored = parseBook((await getSettings([PRICE_BOOK_SETTING]))[PRICE_BOOK_SETTING])
+    const m = await getSettings([PRICE_BOOK_SETTING, PRICE_BOOK_SOURCE_SETTING])
+    stored = parseBook(m[PRICE_BOOK_SETTING])
+    // Источник-СПИСОК важнее записи: это и есть свой продукт в работе — прайс ведут как
+    // список, код читает его тем же транспортом, что и любой чужой потребитель.
+    // env как запасной путь: источник можно включить на стенде до появления поля в админке.
+    const sourceRef = m[PRICE_BOOK_SOURCE_SETTING] || process.env.SETFORK_PRICE_BOOK_SOURCE
+    const fromList = await priceBookFromSource(sourceRef, stored ?? (seed as PriceBook))
+    if (fromList) {
+      cache = { at: Date.now(), book: fromList }
+      return fromList
+    }
     if (!stored) {
       // Записываем семя, чтобы дальше правились ДАННЫЕ, а не файл в репозитории.
       await saveSettings({ [PRICE_BOOK_SETTING]: JSON.stringify(seed) })
