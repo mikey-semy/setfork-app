@@ -116,7 +116,7 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
       {/* Mobile: тот же сайдбар оверлеем (бургер в топ-баре) */}
       {mobileOpen && (
         <>
-          <div className="animate-fade-in fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />
+          <div className="sf-overlay-in fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />
           <aside className="animate-slide-in-left fixed left-0 top-0 z-50 flex h-full w-[17.5rem] max-w-[85vw] flex-col border-r border-border bg-surface p-3 shadow-xl lg:hidden">
             <div className="mb-3 flex items-center justify-between px-1">
               <span className="font-logo text-[1.125rem] leading-none text-ink">SF</span>

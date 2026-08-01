@@ -15,7 +15,7 @@ function DropdownMenuContent({ className, sideOffset = 6, ...props }: React.Comp
     <DropdownMenuPrimitive.Content
       sideOffset={sideOffset}
       className={cn(
-        'z-50 min-w-[13.75rem] overflow-hidden rounded-lg border border-border bg-surface p-1 text-ink shadow-card',
+        'sf-pop-in z-50 min-w-[13.75rem] overflow-hidden rounded-lg border border-border bg-surface p-1 text-ink shadow-card',
         className,
       )}
       {...props}

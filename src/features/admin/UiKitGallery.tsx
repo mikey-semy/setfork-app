@@ -52,6 +52,27 @@ function SizeTag({ children }: { children: React.ReactNode }) {
   return <div className="w-14 shrink-0 font-mono text-[0.6875rem] text-muted">{children}</div>
 }
 
+/** Живое демо классов появления: перезапуск перемонтированием по ключу. */
+function MotionDemo({ say }: { say: Say }) {
+  const [run, setRun] = useState(0)
+  const box = 'rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.8125rem] text-ink'
+  return (
+    <div className="flex flex-col gap-3">
+      <div key={run} className="grid gap-3 sm:grid-cols-3">
+        <div className={cn2('sf-overlay-in', box)}>sf-overlay-in</div>
+        <div className={cn2('sf-pop-in', box)}>sf-pop-in</div>
+        <div className={cn2('sf-rise-in', box)}>sf-rise-in</div>
+      </div>
+      <div>
+        <Button size="sm" variant="ghost" onClick={() => setRun((v) => v + 1)}>
+          {say('Replay', 'Повторить')}
+        </Button>
+      </div>
+    </div>
+  )
+}
+const cn2 = (a: string, b: string) => `${a} ${b}`
+
 /** Главная проверка: контролы одного size в одном ряду — одна высота, один кегль. */
 function RowCheck({ size, say }: { size: ControlSize; say: Say }) {
   const [q, setQ] = useState('')
@@ -270,6 +291,16 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           </ActionRow>
         </DangerZone>
         {confirmDialog}
+      </Section>
+
+      <Section
+        title={say('Motion', 'Моушен')}
+        hint={say(
+          'Tokens: fast 120 / base 180 / slow 280ms, one ease-out. Three entrance classes: sf-overlay-in (backdrops), sf-pop-in (popovers/dropdowns/panels), sf-rise-in (bottom bars). prefers-reduced-motion kills all animation globally.',
+          'Токены: fast 120 / base 180 / slow 280мс, один ease-out. Три класса появления: sf-overlay-in (бекдропы), sf-pop-in (поповеры/дропдауны/панели), sf-rise-in (нижние бары). prefers-reduced-motion гасит всё глобально.',
+        )}
+      >
+        <MotionDemo say={say} />
       </Section>
 
       <Section

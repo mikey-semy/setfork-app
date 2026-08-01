@@ -41,7 +41,7 @@ export function AnchoredMenu({
           <div className="fixed inset-0 z-10" onClick={close} />
           <div
             style={{ width }}
-            className={`absolute z-20 mt-1 max-w-[calc(100vw-24px)] overflow-hidden rounded-md border border-border bg-surface shadow-lg ${align === 'right' ? 'right-0' : 'left-0'} ${className}`}
+            className={`sf-pop-in absolute z-20 mt-1 max-w-[calc(100vw-24px)] overflow-hidden rounded-md border border-border bg-surface shadow-lg ${align === 'right' ? 'right-0' : 'left-0'} ${className}`}
           >
             {children(close)}
           </div>
