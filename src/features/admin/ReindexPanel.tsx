@@ -133,7 +133,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
             </div>
           )}
           <div className="mt-2.5 flex items-center gap-2">
-            <label className="text-[0.78125rem] text-ink-2">{t('admin.target', lang)}</label>
+            <label htmlFor="reindex-target" className="text-[0.78125rem] text-ink-2">{t('admin.target', lang)}</label>
             <Select
               value={space.target.provider}
               disabled={switching || running}
@@ -145,7 +145,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
                 setSwitching(false)
               }}
             >
-              <SelectTrigger className="h-auto w-auto min-w-[11.875rem] px-2 py-1 text-[0.78125rem]">
+              <SelectTrigger id="reindex-target" className="h-auto w-auto min-w-[11.875rem] px-2 py-1 text-[0.78125rem]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -159,8 +159,9 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
       )}
 
       <div className="mb-3">
-        <label className="mb-1 block text-[0.78125rem] text-ink-2">{t('admin.spreadOverMin', lang)}</label>
+        <label htmlFor="reindex-spread" className="mb-1 block text-[0.78125rem] text-ink-2">{t('admin.spreadOverMin', lang)}</label>
         <input
+          id="reindex-spread"
           type="number"
           min={0}
           max={120}

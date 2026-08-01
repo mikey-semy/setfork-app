@@ -15,7 +15,8 @@ export async function generateMetadata() {
 }
 
 export default async function MyListsPage({ searchParams }: { searchParams: Promise<{ sq?: string }> }) {
-  const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])  let items = session ? await getUserTemplates(session.userId, session.userId) : []
+  const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
+  let items = session ? await getUserTemplates(session.userId, session.userId) : []
   const hadAny = items.length > 0
   // Сохранённые запросы (HQ §11): чипы-фильтры; ?sq=<id> применяется на сервере.
   const queries = session ? await listSavedQueries(session.userId) : []

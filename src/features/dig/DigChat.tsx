@@ -40,7 +40,8 @@ export interface GnomeOption {
   guild: string
 }
 
-export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lang }) {  const [ctx, setCtx] = useState<DigChatOpenDetail | null>(null)
+export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lang }) {
+  const [ctx, setCtx] = useState<DigChatOpenDetail | null>(null)
   const [gnome, setGnome] = useState('auto')
   const [messages, setMessages] = useState<DigChatMsg[]>([])
   const [followups, setFollowups] = useState<string[]>([])

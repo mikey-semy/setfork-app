@@ -19,7 +19,8 @@ import { t } from '@/shared/i18n'
  * фильтр ленты (?sq=id), крестик — удалить, «+" — Popover-форма (shadcn:
  * Input/TagInput/Select — по правилу проекта, без браузерных контролов).
  */
-export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]; active?: string; lang: Lang }) {  const [pending, start] = useTransition()
+export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]; active?: string; lang: Lang }) {
+  const [pending, start] = useTransition()
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-1.5">

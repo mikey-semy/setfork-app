@@ -13,7 +13,8 @@ import { translateList } from './actions'
 // в тултипе; ошибку показываем тостом, а не инлайн-красным. Тон нейтральный.
 export function TranslateButton({ templateId, targetLang, lang, iconOnly }: { templateId: string; targetLang: Lang; lang: Lang; iconOnly?: boolean }) {
   const router = useRouter()
-  const [pending, start] = useTransition()  const label = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
+  const [pending, start] = useTransition()
+  const label = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
 
   // Конкретная причина в тост (а не только «не удалось»): что именно случилось.
   const reason = (code: string): string => {

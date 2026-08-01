@@ -20,7 +20,8 @@ export async function generateMetadata() {
 // если черновик уже принят.
 export default async function GenerationHistoryPage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
-  if (!session) redirect('/login')  const items = await getRecentGenerations(session.userId, 50)
+  if (!session) redirect('/login')
+  const items = await getRecentGenerations(session.userId, 50)
 
   return (
     <div className="mx-auto w-full max-w-[47.5rem] px-4 py-6 sm:px-6">

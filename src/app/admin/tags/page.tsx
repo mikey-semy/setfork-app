@@ -13,7 +13,8 @@ export async function generateMetadata() {
 
 export default async function AdminTagsPage() {
   await requireAdmin()
-  const lang = await getLang()  const tags = await listTags({ limit: 2000 })
+  // Независимые запросы — параллельно (react-doctor).
+  const [lang, tags] = await Promise.all([getLang(), listTags({ limit: 2000 })])
 
   return (
     <div className="mx-auto w-full max-w-[53.75rem] px-6 py-8">

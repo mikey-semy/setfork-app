@@ -26,7 +26,8 @@ import { Tooltip } from '@/shared/ui/Tooltip'
  * собранные материалы, поэтому стоит последним и подписано.
  */
 
-export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lang: Lang; err?: string }) {  const ERRS: Record<string, string> = {
+export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lang: Lang; err?: string }) {
+  const ERRS: Record<string, string> = {
     'no-tags': t('admin.topicRequiredNobodyGuesses', lang),
     'bad-url': t('admin.feedAddressMustBe', lang),
     exists: t('admin.thisFeedAlreadySubscribed', lang),

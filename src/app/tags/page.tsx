@@ -13,7 +13,8 @@ export async function generateMetadata() {
 
 // Индекс тегов: все теги реестра чипами (курируемые/популярные выше) → /tags/[slug].
 export default async function TagsIndexPage() {
-  const lang = await getLang()  const tags = await listTags({ limit: 300 })
+  // Независимые запросы — параллельно (react-doctor).
+  const [lang, tags] = await Promise.all([getLang(), listTags({ limit: 300 })])
 
   return (
     <div className="mx-auto w-full max-w-[56.25rem] px-4 py-8">

@@ -80,7 +80,8 @@ function AvatarPicker({
 }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')  const src = uploadedUrl || `/gnomes/${value}.webp`
+  const [err, setErr] = useState('')
+  const src = uploadedUrl || `/gnomes/${value}.webp`
 
   const upload = async (file: File) => {
     setBusy(true)

@@ -27,7 +27,8 @@ interface Prov {
   models?: Record<string, string>
 }
 
-export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: Record<string, unknown>; gnomeNames?: Record<string, string>; lang: Lang }) {  const [open, setOpen] = useState(false)
+export function ProvenancePanel({ provenance, gnomeNames, lang }: { provenance: Record<string, unknown>; gnomeNames?: Record<string, string>; lang: Lang }) {
+  const [open, setOpen] = useState(false)
   const p = provenance as Prov
   const hasAny = Boolean(p.experts?.length || p.precedents?.length || p.craftRules?.length || p.noBasis?.length || p.critique || p.depth)
   if (!hasAny) return null

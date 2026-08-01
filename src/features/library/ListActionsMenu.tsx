@@ -39,7 +39,8 @@ export function ListActionsMenu({
   targetLang: Lang
 }) {
   const router = useRouter()
-  const [pending, start] = useTransition()  const translateLabel = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
+  const [pending, start] = useTransition()
+  const translateLabel = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
 
   const doTranslate = () =>
     start(async () => {

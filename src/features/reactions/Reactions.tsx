@@ -22,7 +22,8 @@ export function Reactions({
   path: string
   lang?: Lang
 }) {
-  const [pending, start] = useTransition()  const react = (emoji: string) => {
+  const [pending, start] = useTransition()
+  const react = (emoji: string) => {
     if (emoji) start(() => void toggleReaction({ targetType, targetId, emoji, path }))
   }
   const shown = reactions.filter((r) => r.count > 0)

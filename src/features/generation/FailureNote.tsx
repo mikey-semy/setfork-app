@@ -18,7 +18,8 @@ import { t } from '@/shared/i18n'
  */
 
 /** Подпись кода человеку. Код в БД машинный — фразу рисует UI, она не протухает при смене языка. */
-function reasonLabel(code: AiFailCode, lang: Lang): string {  switch (code) {
+function reasonLabel(code: AiFailCode, lang: Lang): string {
+  switch (code) {
     case 'no_client':
       return t('generation.aIProviderNotConfigured', lang)
     case 'ai_off':

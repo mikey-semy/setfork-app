@@ -6,7 +6,8 @@ import type { AdminNavGroup } from './AdminNav'
  * Разделы админки — ОДИН список на всё: и для меню на /admin, и для меню на вложенных
  * страницах (layout). Держать два списка значит однажды добавить пункт в один из них.
  */
-export function adminNavGroups(lang: Lang): AdminNavGroup[] {  return [
+export function adminNavGroups(lang: Lang): AdminNavGroup[] {
+  return [
     {
       title: t('admin.overview', lang),
       links: [

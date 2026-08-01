@@ -44,7 +44,8 @@ function snapshot(form: HTMLFormElement): string {
   return parts.join('&')
 }
 
-export function FormSaveBar({ lang }: { lang: Lang }) {  const anchor = useRef<HTMLDivElement>(null)
+export function FormSaveBar({ lang }: { lang: Lang }) {
+  const anchor = useRef<HTMLDivElement>(null)
   const [dirty, setDirty] = useState(false)
   const { pending } = useFormStatus()
   const saved = useRef('')

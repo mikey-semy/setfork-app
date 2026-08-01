@@ -30,7 +30,8 @@ const FIELDS: Field[] = [
   { key: 'footerNote', label: 'Футер — слоган', max: 40 },
 ]
 
-export function LandingEditor({ initial, heroPreview, lang }: { initial: LandingContent; heroPreview?: string; lang: Lang }) {  const router = useRouter()
+export function LandingEditor({ initial, heroPreview, lang }: { initial: LandingContent; heroPreview?: string; lang: Lang }) {
+  const router = useRouter()
   const [c, setC] = useState<LandingContent>(initial)
   const [tab, setTab] = useState<'ru' | 'en'>('ru')
   const [pending, start] = useTransition()

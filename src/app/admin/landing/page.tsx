@@ -16,7 +16,8 @@ export async function generateMetadata() {
 // плитки-статы, картинка hero (DnD). Лендинг подхватывает через ISR /api/landing.
 export default async function AdminLandingPage() {
   await requireAdmin()
-  const lang = await getLang()  const content = await getLandingContent()
+  // Независимые запросы — параллельно (react-doctor).
+  const [lang, content] = await Promise.all([getLang(), getLandingContent()])
   const heroPreview = content.heroImage ? ((await imageUrl(content.heroImage, 'rs:fit:640:0')) ?? undefined) : undefined
 
   return (

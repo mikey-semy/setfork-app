@@ -16,7 +16,8 @@ type NavItem = { href: string; label: string; icon: typeof Home }
 
 export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolean; topLists: ListsPanelItem[] }) {
   const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useSidebar()
-  const pathname = usePathname()  const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
+  const pathname = usePathname()
+  const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
 
   const items: NavItem[] = [
     { href: '/', label: t('home', lang), icon: Home },

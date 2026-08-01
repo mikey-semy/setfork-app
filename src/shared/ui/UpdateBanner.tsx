@@ -16,7 +16,8 @@ import { t } from '@/shared/i18n'
  */
 const CHECK_MS = 5 * 60_000
 
-export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {  // nextBuild — build-id серверной сборки, отличный от нашего: показываем короткий
+export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
+  // nextBuild — build-id серверной сборки, отличный от нашего: показываем короткий
   // хвост как «что именно изменилось» (semver 0.1.0 между деплоями не двигается).
   const [nextBuild, setNextBuild] = useState<string | null>(null)
 

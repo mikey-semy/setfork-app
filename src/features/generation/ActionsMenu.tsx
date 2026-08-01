@@ -30,7 +30,8 @@ export function ActionsMenu({
   onPick: (id: string) => void
   onAccept: () => void
   onRegen: () => void
-}) {  const [open, setOpen] = useState(false)
+}) {
+  const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

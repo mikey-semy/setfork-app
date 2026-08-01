@@ -25,7 +25,8 @@ export function CandidateCard({
   selected: boolean
   onSelect: () => void
   lang: Lang
-}) {  const [open, setOpen] = useState(false)
+}) {
+  const [open, setOpen] = useState(false)
   return (
     <button
       type="button"
