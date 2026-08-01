@@ -40,14 +40,27 @@ export async function requireViewableMeta(owner: string, slug: string) {
 
 /** Полный detail (tpl + версии + шаги), если зритель вправе его видеть; иначе null. */
 export async function requireViewableDetail(owner: string, slug: string) {
+  const viewer = await getSession()
+  return viewableDetailFor(owner, slug, viewer?.userId, viewer?.handle)
+}
+
+/**
+ * То же, но зритель задан ЯВНО — для транспортов без куки (API-токен на /data.json).
+ * Хендл нужен только для админ-проверки; у токена его нет, и админом он не считается:
+ * машинному ключу не место в обходе видимости.
+ */
+export async function requireViewableDetailFor(owner: string, slug: string, viewerId: string) {
+  return viewableDetailFor(owner, slug, viewerId, undefined)
+}
+
+async function viewableDetailFor(owner: string, slug: string, viewerId?: string, viewerHandle?: string | null) {
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) return null
-  const viewer = await getSession()
-  const isOwner = detail.tpl.ownerId === viewer?.userId
+  const isOwner = detail.tpl.ownerId === viewerId
   const ok = canViewList(detail.tpl, {
     isOwner,
-    isCollaborator: isOwner ? false : await collabIfNeeded(detail.tpl, viewer?.userId),
-    isAdmin: isAdminHandle(viewer?.handle),
+    isCollaborator: isOwner ? false : await collabIfNeeded(detail.tpl, viewerId),
+    isAdmin: isAdminHandle(viewerHandle),
   })
   return ok ? detail : null
 }

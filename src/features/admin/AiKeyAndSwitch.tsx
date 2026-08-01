@@ -7,6 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Field } from '@/shared/ui/Field'
 
 export type AiProviderChoice = 'openrouter' | 'selectel' | 'yandex' | 'gigachat'
+export type KeySource = 'db' | 'env' | 'none'
+
+/** Radix Select не принимает пустую строку как значение — «нет запасного» несём явным словом,
+ *  а серверный экшен превращает его обратно в пустоту. */
+export const NO_FALLBACK = '__none__'
+
+const PROVIDER_LABEL: Record<AiProviderChoice, string> = {
+  openrouter: 'OpenRouter',
+  selectel: 'Selectel',
+  yandex: 'YandexGPT',
+  gigachat: 'GigaChat',
+}
 
 /** Провайдер ИИ + его ключи (маскированные) + переключатель генерации.
  *  Поля показываются под выбранный провайдер; полный ключ на клиент не приходит —
@@ -16,6 +28,8 @@ export function AiKeyAndSwitch({
   provider,
   hasKey,
   maskedKeys,
+  keySources,
+  fallbackProvider,
   yandexFolder,
   searchKeyMasked,
   ru,
@@ -27,6 +41,10 @@ export function AiKeyAndSwitch({
   hasKey: Record<AiProviderChoice, boolean>
   /** Маска сохранённого ключа (пусто = не задан). */
   maskedKeys: Record<AiProviderChoice, string>
+  /** Откуда ключ у каждого провайдера: база, env стенда или его нет. */
+  keySources: Record<AiProviderChoice, KeySource>
+  /** Запасной провайдер ('' = выключен). */
+  fallbackProvider: string
   /** Текущий folder_id Яндекса (БД или env) — он не секрет. */
   yandexFolder: string
   /** Маска ключа Yandex Search API (веб-гора); пусто = не задан. */
@@ -54,6 +72,18 @@ export function AiKeyAndSwitch({
     gigachat: { label: say('GigaChat authorization key (Basic)', 'Ключ авторизации GigaChat (Basic)'), placeholder: 'base64(ClientID:Secret)', name: 'gigachatKey' },
   }
   const field = KEY_FIELD[prov]
+
+  // ОТКУДА ключ — прямым текстом. «Ключ есть» с маской выглядит одинаково для базы и для env,
+  // а ведут себя они по-разному: после сброса базы остаётся env, после передеплоя без env —
+  // база. Отсюда и брались вопросы «ключ исчез, вводить заново?».
+  const KEY_HINT: Record<KeySource, string> = {
+    db: say('Saved in the database (shown masked). Leave blank to keep it.', 'Сохранён в базе (показан замаскированным). Оставьте поле пустым, чтобы не менять.'),
+    env: say(
+      'Taken from the stand environment variable — there is no key in the database. Entering one here will save it to the database and it will win.',
+      'Берётся из переменной окружения стенда — в базе ключа нет. Если ввести здесь, он сохранится в базу и станет главным.',
+    ),
+    none: say('Not set: neither in the database nor in the environment.', 'Не задан: ни в базе, ни в переменных окружения.'),
+  }
 
   const PROVIDER_NOTE: Record<AiProviderChoice, string> = {
     openrouter: say(
@@ -111,15 +141,39 @@ export function AiKeyAndSwitch({
         </Select>
       </Field>
 
+      {/* ЗАПАСНОЙ — на случай, когда основной недоступен (лёг egress-мост, гео-блок, авария у
+          провайдера). Выключен по умолчанию и задаётся руками СОЗНАТЕЛЬНО: молча уронить
+          генерацию с RU-провайдера на зарубежный значит отправить пользовательский текст за
+          границу без ведома владельца. */}
+      <Field
+        label={say('Spare provider (used when the main one is unreachable)', 'Запасной провайдер (когда основной недоступен)')}
+        hint={say(
+          'Off by default. Generation switches to it only while the main provider does not answer; the switch is written to the log. Mind the jurisdiction: a foreign spare sends user text abroad.',
+          'По умолчанию выключен. Генерация уходит на него, только пока основной не отвечает; подмена пишется в лог. Учитывай юрисдикцию: зарубежный запасной отправляет пользовательский текст за границу.',
+        )}
+      >
+        <Select name="fallbackProvider" defaultValue={fallbackProvider || NO_FALLBACK}>
+          <SelectTrigger className="text-[0.8125rem]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_FALLBACK}>{say('None', 'Нет')}</SelectItem>
+            {(['openrouter', 'selectel', 'yandex', 'gigachat'] as AiProviderChoice[])
+              .filter((p) => p !== prov && hasKey[p])
+              .map((p) => (
+                <SelectItem key={p} value={p}>
+                  {PROVIDER_LABEL[p]}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </Field>
+
       {/* htmlFor: рядом с полем кнопка «показать» — оборачивание в label ловило бы её клики. */}
       <Field
         label={field.label}
         htmlFor="ai-api-key"
-        hint={
-          hasKey[prov]
-            ? say('Key saved (shown masked). Leave blank to keep it.', 'Ключ сохранён (показан замаскированным). Оставьте поле пустым, чтобы не менять.')
-            : say('Stored in the DB (or set via an env variable).', 'Ключ хранится в БД (или задаётся env-переменной).')
-        }
+        hint={KEY_HINT[keySources[prov]]}
       >
         <div className="relative">
           <input

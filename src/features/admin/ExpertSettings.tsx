@@ -289,7 +289,7 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           </Field>
 
           <Field label={say('Model (empty = from council pool)', 'Модель (пусто = из пула совета)')} htmlFor={`model-${e.id}`}>
-            <ModelSelect id={`model-${e.id}`} name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" allowCustom customHint={say('Use', 'Использовать')} />
+            <ModelSelect id={`model-${e.id}`} name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" allowCustom customHint={say('Use', 'Использовать')} ru={ru} />
           </Field>
 
           <div className="flex items-center justify-between gap-3 pt-0.5">

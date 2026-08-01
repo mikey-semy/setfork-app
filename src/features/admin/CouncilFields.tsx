@@ -91,6 +91,7 @@ export function CouncilFields({ v, ru, modelOptions }: { v: CouncilValues; ru: b
           placeholder={say('Pick models', 'Выбери модели')}
           allowCustom
           customHint={say('Use', 'Использовать')}
+          ru={ru}
         />
       </Field>
 

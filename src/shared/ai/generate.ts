@@ -5,6 +5,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
+import { retryPlan } from './retry'
 import { sanitizeCommand } from './sanitize-command'
 import { lawBlock } from './list-laws'
 import { classifyListKind, shapeFor, type ListKind } from './list-kind'
@@ -158,55 +159,84 @@ async function runListModel(
   const online = (m: string) => (web && m ? `${m}:online` : m)
   const models = [base, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i).map(online)
 
-  const startedAt = Date.now()
-  try {
-    const result = await generateText({
-      model: client.chat(online(base), isOpenRouter ? { extraBody: { models, transforms: ['middle-out'] } } : undefined),
-      system,
-      prompt,
-      temperature: settings.temperature,
-      maxOutputTokens: settings.maxTokens,
-    })
-    // parseList чистый и не бросает — можно узнать исход ДО записи расхода:
-    // невалидный JSON = outcome 'invalid' (токены потрачены в любом случае).
-    const parsed = parseList(result.text, fallbackTitle)
-    const u = extractUsage(result)
-    await recordUsage({
-      userId: opts.userId,
-      feature,
-      // ИМЕННО online(base), а не base: у `:online` своя флэт-надбавка ($0.005/вызов у OpenRouter),
-      // и с голым base журнал показывал «дорогой gpt-4o-mini» вместо «веб-поиск» — из-за чего 60%
-      // расхода были не видны в админке вообще. Пишем то, что реально звали.
-      model: online(base),
-      input: u.input,
-      output: u.output,
-      total: u.total,
-      cost: u.cost,
-      refType: opts.refType,
-      refId: opts.refId,
-      outcome: parsed ? 'ok' : 'invalid',
-      durationMs: Date.now() - startedAt,
-      provider: client.cfg.provider,
-    })
-    return parsed
-  } catch (e) {
-    await recordUsage({
-      userId: opts.userId,
-      feature,
-      model: online(base),
-      input: 0,
-      output: 0,
-      total: 0,
-      cost: 0,
-      refType: opts.refType,
-      refId: opts.refId,
-      outcome: outcomeOf(e),
-      durationMs: Date.now() - startedAt,
-      provider: client.cfg.provider,
-    })
-    console.warn('[generate] failed', e instanceof Error ? e.message : e)
-    return null
+  /**
+   * КАНДИДАТЫ, а не одна модель. Раньше упавший вызов просто возвращал null: реакция на отказ
+   * измерялась часами (пока карантин не наберёт статистику), хотя запасная модель была назначена
+   * рядом. Теперь порядок такой же, как у LiteLLM: транзиентный отказ — повтор той же модели,
+   * отказ самой модели (снята, не влезли в контекст) — переход к следующей, отказ по ключу или
+   * деньгам — остановка, потому что другая модель не поможет.
+   */
+  const candidates = [base, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i)
+  let lastError: unknown = null
+
+  for (const candidate of candidates) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const startedAt = Date.now()
+      try {
+        const result = await generateText({
+          model: client.chat(online(candidate), isOpenRouter ? { extraBody: { models, transforms: ['middle-out'] } } : undefined),
+          system,
+          prompt,
+          temperature: settings.temperature,
+          maxOutputTokens: settings.maxTokens,
+        })
+        // parseList чистый и не бросает — можно узнать исход ДО записи расхода:
+        // невалидный JSON = outcome 'invalid' (токены потрачены в любом случае).
+        const parsed = parseList(result.text, fallbackTitle)
+        const u = extractUsage(result)
+        await recordUsage({
+          userId: opts.userId,
+          feature,
+          // Модель ИЗ ОТВЕТА, а не запрошенная: при фолбэке на стороне OpenRouter (extraBody.models)
+          // отвечает другая, и журнал приписывал цену и отказы невиновной — вместе с карантином,
+          // который на этом журнале и строится (аудит 2026-08-01). ':online' сохраняем: у него своя
+          // флэт-надбавка, и без суффикса 60% расхода были не видны в админке.
+          model: servedModel(result, online(candidate), web),
+          input: u.input,
+          output: u.output,
+          total: u.total,
+          cost: u.cost,
+          refType: opts.refType,
+          refId: opts.refId,
+          outcome: parsed ? 'ok' : 'invalid',
+          durationMs: Date.now() - startedAt,
+          provider: client.cfg.provider,
+        })
+        return parsed
+      } catch (e) {
+        lastError = e
+        await recordUsage({
+          userId: opts.userId,
+          feature,
+          model: online(candidate),
+          input: 0,
+          output: 0,
+          total: 0,
+          cost: 0,
+          refType: opts.refType,
+          refId: opts.refId,
+          outcome: outcomeOf(e),
+          durationMs: Date.now() - startedAt,
+          provider: client.cfg.provider,
+        })
+        const plan = retryPlan(e)
+        console.warn(`[generate] ${candidate} упала (${plan}):`, e instanceof Error ? e.message : e)
+        if (plan === 'stop') return null
+        if (plan === 'other') break // к следующему кандидату
+        // 'same' — второй заход той же моделью, дальше уходим к следующей
+      }
+    }
   }
+  if (lastError) console.warn('[generate] все кандидаты исчерпаны')
+  return null
+}
+
+/** Кто РЕАЛЬНО ответил: id из ответа провайдера, если он его назвал. */
+function servedModel(result: { response?: { modelId?: string } }, requested: string, web: boolean): string {
+  const served = result.response?.modelId
+  if (!served || served === requested) return requested
+  // Веб-надбавка привязана к вызову, а не к модели: суффикс переносим на реально ответившую.
+  return web ? `${served}:online` : served
 }
 
 /** Черновик эталонного списка по запросу. null при ошибке/выкл. */

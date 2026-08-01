@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { CheckCircle2, Loader2, PlugZap, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
@@ -9,7 +9,7 @@ import { Alert } from '@/shared/ui/Alert'
 import { AiKeyAndSwitch, type AiProviderChoice } from './AiKeyAndSwitch'
 import { ModelSelect, type Option } from './ModelSelect'
 import { CreditsWidget } from './CreditsWidget'
-import { loadProviderCatalog } from './model-catalog-action'
+import { checkProvider, loadProviderCatalog } from './model-catalog-action'
 import { CUR_SIGN, type Currency } from './model-options'
 
 /**
@@ -29,10 +29,37 @@ import { CUR_SIGN, type Currency } from './model-options'
  * это состояние («не загрузился, вот причина, вот кнопка повторить»), а не другой виджет:
  * подмена читалась как удалённая фича выбора моделей с ценами.
  */
+/**
+ * ПРИЧИНА человеческим языком. `fetch failed` в баннере — это не сообщение, а строка из
+ * недр node: владелец видел её и спрашивал «ключ есть или нет?», хотя ключ ни при чём.
+ * Различаем три случая, потому что чинятся они в трёх разных местах:
+ *  - нет ключа              → ввести ключ здесь;
+ *  - HTTP-код от провайдера → ключ/права/лимит на его стороне;
+ *  - соединение не встало   → СЕТЬ сервера (у нас это egress-мост до openrouter.ai),
+ *                             ни ключ, ни модель, ни код тут ни при чём.
+ */
+export function catalogProblem(error: string, say: (en: string, rus: string) => string): string {
+  if (error === 'no-key') {
+    return say('No key for this provider — enter it above.', 'У этого провайдера нет ключа — введите его выше.')
+  }
+  if (/^HTTP \d/.test(error)) {
+    return say(
+      `The provider answered ${error} — the key, its permissions or a limit on the provider side. The model id can still be typed by hand.`,
+      `Провайдер ответил ${error} — дело в ключе, его правах или лимите на стороне провайдера. Id модели можно ввести вручную.`,
+    )
+  }
+  return say(
+    `The server could not connect to the provider (${error}). This is the server network, not the key and not the model. Meanwhile: switch to another provider or type the model id by hand.`,
+    `Сервер не смог соединиться с провайдером (${error}). Это сеть сервера, а не ключ и не модель. Пока: переключись на другого провайдера или введи id модели вручную.`,
+  )
+}
+
 export function AiProviderModels({
   provider,
   hasKey,
   maskedKeys,
+  keySources,
+  fallbackProvider,
   yandexFolder,
   searchKeyMasked,
   enabled,
@@ -43,6 +70,9 @@ export function AiProviderModels({
   provider: AiProviderChoice
   hasKey: Record<string, boolean>
   maskedKeys: Record<string, string>
+  keySources: Record<string, 'db' | 'env' | 'none'>
+  /** Запасной провайдер ('' = выключен) — прокидываем вниз, форма одна. */
+  fallbackProvider: string
   yandexFolder: string
   searchKeyMasked: string
   enabled: boolean
@@ -59,7 +89,7 @@ export function AiProviderModels({
     /** Каталог не приехал: 'no-key' | HTTP-код | сетевая ошибка. */
     error?: string
   }
-  labels: { chat: string; fallback: string; embedding: string; pick: string; loading: string; noKey: string }
+  labels: { chat: string; fallback: string; embedding: string; embeddingHint: string; pick: string; loading: string; noKey: string }
 }) {
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
@@ -75,6 +105,10 @@ export function AiProviderModels({
   const [pricesKnown, setPricesKnown] = useState(initial.pricesKnown)
   const [error, setError] = useState<string | undefined>(initial.error)
   const [pending, startTransition] = useTransition()
+  // Результат явной проверки подключения: держим отдельно от каталога — это ответ на
+  // вопрос «живо ли сейчас», а не состояние списка.
+  const [checked, setChecked] = useState<{ ok: boolean; text: string } | null>(null)
+  const [checking, setChecking] = useState(false)
 
   const reload = (next: AiProviderChoice) => {
     setProv(next)
@@ -104,6 +138,8 @@ export function AiProviderModels({
         provider={provider}
         hasKey={hasKey}
         maskedKeys={maskedKeys}
+        keySources={keySources as Record<AiProviderChoice, 'db' | 'env' | 'none'>}
+        fallbackProvider={fallbackProvider}
         yandexFolder={yandexFolder}
         searchKeyMasked={searchKeyMasked}
         ru={ru}
@@ -116,17 +152,69 @@ export function AiProviderModels({
         </p>
       )}
 
+      {/* Ключ ВЫБРАННОГО провайдера. Раньше это предупреждение висело на странице СНАРУЖИ и
+          считалось для СОХРАНЁННОГО провайдера — поэтому рядом с полным списком моделей
+          могла гореть ошибка «провайдер не сконфигурирован»: они были про разных. */}
+      {!pending && !hasKey[prov] && (
+        <Alert variant="warn">
+          {say(
+            'This provider has no key — generation and the model catalog are unavailable until you enter one.',
+            'У этого провайдера нет ключа — генерация и каталог моделей недоступны, пока он не введён.',
+          )}
+        </Alert>
+      )}
+
+      {/* Состояние каталога словами + явная проверка подключения. Короткий список перестаёт
+          читаться как поломка, а «живо ли сейчас» больше не надо выяснять переключением. */}
+      {!pending && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {!error && hasKey[prov] && (
+            <span className="min-w-0 flex-1 text-[0.78125rem] text-muted">
+              {say(`Catalog: ${chat.length} chat models, ${embedding.length} embedding models.`, `Каталог: ${chat.length} моделей чата, ${embedding.length} эмбеддингов.`)}
+            </span>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            onClick={async () => {
+              setChecking(true)
+              setChecked(null)
+              try {
+                const r = await checkProvider(prov)
+                setChecked({
+                  ok: r.ok,
+                  text: r.ok
+                    ? say(`Connection is alive: ${r.chat} models.`, `Связь есть: ${r.chat} моделей.`)
+                    : catalogProblem(r.error ?? 'unknown', say),
+                })
+              } finally {
+                setChecking(false)
+              }
+            }}
+            disabled={checking}
+            className="min-h-11 shrink-0 max-sm:ml-auto"
+          >
+            {checking ? <Loader2 size={13} className="animate-spin" /> : <PlugZap size={13} />}
+            {say('Check', 'Проверить')}
+          </Button>
+        </div>
+      )}
+
+      {checked && (
+        <Alert variant={checked.ok ? 'ok' : 'warn'}>
+          <span className="min-w-0 [overflow-wrap:anywhere]">
+            {checked.ok && <CheckCircle2 size={13} className="mr-1 inline" />}
+            {checked.text}
+          </span>
+        </Alert>
+      )}
+
       {/* Причина всегда названа: молчаливый пустой список — это и есть «фичу откатили». */}
       {!pending && error && (
         <Alert variant="warn">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-              {error === 'no-key'
-                ? labels.noKey
-                : say(
-                    `The model catalog failed to load (${error}) — prices and the list are unavailable, the id can be typed by hand.`,
-                    `Каталог моделей не загрузился (${error}) — цены и список недоступны, id можно ввести вручную.`,
-                  )}
+              {catalogProblem(error, say)}
             </span>
             {/* max-sm:ml-auto — при переносе строки кнопка прижимается вправо, а не повисает по центру. */}
             <Button size="sm" onClick={() => reload(prov)} className="min-h-11 shrink-0 max-sm:ml-auto">
@@ -149,6 +237,7 @@ export function AiProviderModels({
           placeholder={emptyCatalog ? say('Type the model id', 'Введите id модели') : labels.pick}
           allowCustom
           customHint={customHint}
+          ru={ru}
         />
       </Field>
 
@@ -163,10 +252,12 @@ export function AiProviderModels({
           placeholder="—"
           allowCustom
           customHint={customHint}
+          ru={ru}
         />
       </Field>
 
-      <Field label={labels.embedding} htmlFor="embeddingModel">
+      {/* Подпись говорит ширину колонки (из схемы), хинт — ИЗМЕРЕННЫЙ ответ выбранной модели. */}
+      <Field label={labels.embedding} htmlFor="embeddingModel" hint={labels.embeddingHint}>
         <ModelSelect
           key={`emb-${prov}`}
           id="embeddingModel"
@@ -176,14 +267,15 @@ export function AiProviderModels({
           placeholder={embedding.length === 0 ? say('Type the model id', 'Введите id модели') : labels.pick}
           allowCustom
           customHint={customHint}
+          ru={ru}
         />
       </Field>
 
       <p className="text-[0.78125rem] text-muted">
         {pricesKnown
           ? say(
-              `Prices are per 1M tokens (prompt/completion), in ${sign}. Green = cheap, yellow = mid, red = expensive.`,
-              `Цены в списках — за 1М токенов (prompt/completion), в ${sign}. Зелёные дешевле, жёлтые средние, красные дорогие.`,
+              `Prices are per 1M tokens (prompt/completion), in ${sign}. Colour is relative to THIS catalog: green = its cheapest third, red = its priciest.`,
+              `Цены в списках — за 1М токенов (prompt/completion), в ${sign}. Цвет — относительно ЭТОГО каталога: зелёные — дешёвая треть, красные — дорогая.`,
             )
           : say(
               'This provider does not expose prices via API — check the provider console.',
@@ -211,8 +303,8 @@ export function AiProviderModels({
                     'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.',
                   )
                 : say(
-                    'Balance is not exposed by the API, so the threshold is DAILY spend (our journal, hardcoded prices): above it generation switches to the fallback model. 0 = off.',
-                    'Баланс в API Яндекс не отдаёт, поэтому порог — ДНЕВНОЙ расход (наш журнал, хардкод-прайс): выше него генерация переключается на запасную модель. 0 — выключено.',
+                    'Balance is not exposed by the API, so the threshold is DAILY spend (our journal, the stand price book): above it generation switches to the fallback model. 0 = off.',
+                    'Баланс в API Яндекс не отдаёт, поэтому порог — ДНЕВНОЙ расход (наш журнал по прайс-книге стенда): выше него генерация переключается на запасную модель. 0 — выключено.',
                   )
             }
           >

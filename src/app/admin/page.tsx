@@ -21,6 +21,7 @@ import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { buildOpts, withSavedOption } from '@/features/admin/model-options'
+import { modelMeta } from '@/features/admin/model-enrich'
 import { AiProviderModels } from '@/features/admin/AiProviderModels'
 import { AssistFields } from '@/features/admin/AssistFields'
 import { CouncilFields } from '@/features/admin/CouncilFields'
@@ -124,16 +125,26 @@ export default async function AdminPage() {
     imgproxyKeyMask: maskSecret(media.imgproxyKey),
     imgproxySaltMask: maskSecret(media.imgproxySalt),
   }
+  // Запасной провайдер (пусто = выключен) — читается тем же модулем, что решает подмену.
+  const { getFallbackProviderId } = await import('@/shared/ai/provider-failover')
+  const fallbackProvider = await getFallbackProviderId()
   const models = await fetchModels() // сам вернёт пустой каталог, если провайдер не сконфигурирован
+  // Наш опыт и занятость: без них список — 336 одинаковых строк, по которым нечем выбирать.
+  const meta = await modelMeta(models.currency, ru)
 
-  const chatOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.chatModel)
+  const chatOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, meta), settings.chatModel)
   // Ростер и галерея встроенных персонажей — читаем на сервере: клиенту не нужен доступ к БД и fs.
   const [rosterRows, gallery, uploaded] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars()])
   // Загруженная картинка идёт готовым URL (imgproxy/диск) — клиент не должен знать про S3-ключи.
   const roster = rosterRows.map((e) => ({ ...e, uploadedUrl: e.avatarUploaded ? uploaded[e.id] : undefined }))
-  const fallbackOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.fallbackModel)
+  const fallbackOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, meta), settings.fallbackModel)
   // Валюта — из каталога, а не 'USD' константой: эмбеддинги у RU-провайдеров считаются в ₽.
-  const embOpts = ensure(buildOpts(models.embedding, true, lang, models.currency, models.pricesKnown), settings.embeddingModel)
+  const embOpts = ensure(buildOpts(models.embedding, true, lang, models.currency, models.pricesKnown, meta), settings.embeddingModel)
+  // Что выбранная модель эмбеддингов отдаёт на самом деле — измеренный факт из памяти стенда
+  // (пишется обычными вызовами и пробой при сохранении). Не мерили — так и говорим.
+  const embedHint =
+    meta.get(settings.embeddingModel)?.embed?.hint ??
+    say('Not measured yet — it will be checked on save or at the first indexing.', 'Ещё не измеряли — проверим при сохранении или при первой индексации.')
 
   // Заголовки секций: ровно один двуязычный литерал на строку (i18n-правило),
   // используется и в липком меню, и в карточке.
@@ -209,21 +220,14 @@ export default async function AdminPage() {
             </Link>
           }
         >
-          {!hasKey && (
-            <Alert variant="warn" className="mb-5">
-              {say(
-                'The active provider is not configured (no key) — generation and model lists are unavailable (id can be typed manually).',
-                'Активный провайдер не сконфигурирован (нет ключа) — генерация и списки моделей недоступны (id можно ввести вручную).',
-              )}
-            </Alert>
-          )}
-
           <form action={setAiSettings} className="flex flex-col gap-5">
             <AiProviderModels
               enabled={settings.enabled}
               provider={aiProv.provider}
               hasKey={hasKeyByProvider}
               maskedKeys={maskedKeys}
+              keySources={aiProv.sources}
+              fallbackProvider={fallbackProvider}
               yandexFolder={aiProv.yandexFolder}
               searchKeyMasked={maskKey(aiProv.yandexSearchKey)}
               ru={ru}
@@ -241,9 +245,11 @@ export default async function AdminPage() {
               labels={{
                 chat: say('Chat model', 'Модель генерации'),
                 fallback: say('Fallback model (cheap mode)', 'Запасная модель (для дешёвого режима)'),
-                // Размерность подставляется из EMBEDDING_DIM: она задана схемой БД (pgvector),
-                // и подпись не должна расходиться со схемой из-за числа, набранного в тексте.
-                embedding: say(`Embedding model (RAG, ${EMBEDDING_DIM}-dim)`, `Модель эмбеддингов (RAG, ${EMBEDDING_DIM}-мерная)`),
+                // Ширина колонки читается из схемы (EMBEDDING_DIM ← halfvec в schema.ts), а что
+                // отдаёт конкретная модель — ИЗМЕРЕНО (embed-capability). Раньше здесь стояло
+                // число, разъехавшееся со схемой: подпись обещала 1536 при колонке 768.
+                embedding: say(`Embedding model (RAG, column ${EMBEDDING_DIM})`, `Модель эмбеддингов (RAG, колонка ${EMBEDDING_DIM})`),
+                embeddingHint: embedHint,
                 pick: say('Pick a model', 'Выбери модель'),
                 loading: say('Loading this provider’s models…', 'Загружаю модели этого провайдера…'),
                 noKey: say('No key for this provider — the catalog is unavailable, type the model id manually.', 'У этого провайдера нет ключа — каталог недоступен, id модели вводится вручную.'),

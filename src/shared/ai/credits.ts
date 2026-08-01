@@ -1,5 +1,9 @@
 import 'server-only'
-import { getAiProviderConfig, getOpenRouterApiKey, type AiSettings } from '@/shared/settings/ai'
+import { getModelSettings, getOpenRouterApiKey, type AiSettings } from '@/shared/settings/ai'
+import { generationProviderConfig } from './provider-failover'
+import { fetchModelsFor } from './models'
+import { liveModel, workhorses } from './model-picker'
+import { baseModelId, quarantinedModels } from './health'
 
 export interface OpenRouterCredits {
   total: number
@@ -51,23 +55,66 @@ async function dailySpendRub(threshold: number): Promise<number> {
   const [{ db, aiUsage }, { sql, gte }, { rubPerUsd }] = await Promise.all([
     import('@/shared/db'),
     import('drizzle-orm'),
-    import('./yandex-pricing'),
+    import('./pricing'),
   ])
   const [r] = await db
     .select({ usd: sql<number>`coalesce(sum(${aiUsage.costUsd}),0)::float8` })
     .from(aiUsage)
     .where(gte(aiUsage.createdAt, sql`date_trunc('day', now())`))
-  const rub = (r?.usd ?? 0) * rubPerUsd()
+  const rub = (r?.usd ?? 0) * (await rubPerUsd())
   daySpendCache = { rub, at: Date.now() }
   return rub
 }
 
-/** Активная модель: задан порог >0 и он превышен — fallback, иначе основная.
- *  OpenRouter: порог = минимальный остаток баланса ($). Яндекс: баланса в API нет —
- *  порог трактуется как ДНЕВНОЙ расход в ₽ (по нашему журналу с хардкод-прайсом). */
+/**
+ * Активная модель: задан порог >0 и он превышен — fallback, иначе основная.
+ * OpenRouter: порог = минимальный остаток баланса ($). Яндекс: баланса в API нет —
+ * порог трактуется как ДНЕВНОЙ расход в ₽ (по нашему журналу с прайс-таблицей).
+ *
+ * Последним шагом выбранная модель СВЕРЯЕТСЯ С КАТАЛОГОМ: провайдеры снимают модели с
+ * обслуживания, и назначенный id однажды начинает отвечать 404 при исправном ключе — именно
+ * так генерация молча возвращала пустоту (аудит 2026-08-01). Каталога нет (нет ключа, сеть,
+ * гео-блок) — выбор владельца остаётся как есть: отсутствие сведений не повод его подменять.
+ */
 export async function pickChatModel(settings: AiSettings): Promise<string> {
-  const cfg = await getAiProviderConfig()
+  const cfg = await generationProviderConfig()
   const provider = cfg?.provider ?? 'openrouter'
+  // Настройки моделей лежат в неймспейсе ПРОВАЙДЕРА. При уходе на запасного взять модель из
+  // неймспейса основного значило бы позвать чужой id — молча и с гарантированным отказом.
+  const effective = provider === settings.provider ? settings : { ...settings, ...(await getModelSettings(provider)) }
+  const wanted = await pickConfiguredModel(effective, provider, cfg?.headers?.['x-folder-id'] ?? '')
+  const { chat } = await fetchModelsFor(provider)
+  const live = liveModel(chat, wanted)
+  if (live !== wanted) {
+    console.warn(`[ai] модель ${wanted} отсутствует в каталоге ${provider} — беру живую ${live}`)
+  }
+  return healthy(live, effective.fallbackModel, chat, await quarantinedModels())
+}
+
+/**
+ * КАРАНТИН — и для одиночной генерации тоже. Механизм существовал только для пула совета:
+ * модель с проседающим успехом оставалась основной моделью обычной генерации, пока владелец
+ * не заметит и не сменит руками. Порядок замены: сперва назначенная запасная, потом самая
+ * дешёвая здоровая из каталога. Всё в карантине — работаем на исходной: медленная генерация
+ * лучше отсутствующей (то же правило, что у filterByQuarantine в совете).
+ */
+export function healthy(model: string, fallback: string, chat: Parameters<typeof workhorses>[0], bad: ReadonlySet<string>): string {
+  if (!model || !bad.has(baseModelId(model))) return model
+  if (fallback && !bad.has(baseModelId(fallback)) && chat.some((m) => m.id === fallback)) {
+    console.warn(`[ai] модель ${model} в карантине — беру запасную ${fallback}`)
+    return fallback
+  }
+  const spare = workhorses(chat).find((m) => !bad.has(baseModelId(m.id)) && m.id !== model)
+  if (spare) {
+    console.warn(`[ai] модель ${model} в карантине — беру здоровую ${spare.id} из каталога`)
+    return spare.id
+  }
+  return model
+}
+
+/** Что назначено настройками (без сверки с каталогом) — отдельно, чтобы правило чтения
+ *  настроек можно было читать глазами и проверять тестом. */
+async function pickConfiguredModel(settings: AiSettings, provider: string, folder: string): Promise<string> {
   if (provider === 'openrouter' && settings.cheapModeThreshold > 0 && settings.fallbackModel) {
     const credits = await getOpenRouterCredits()
     if (credits && credits.remaining < settings.cheapModeThreshold) return settings.fallbackModel
@@ -75,12 +122,10 @@ export async function pickChatModel(settings: AiSettings): Promise<string> {
   if (provider === 'yandex' && settings.cheapModeThreshold > 0 && settings.fallbackModel.startsWith('gpt://')) {
     if ((await dailySpendRub(settings.cheapModeThreshold)) > settings.cheapModeThreshold) return settings.fallbackModel
   }
-  // Неймспейсы дают провайдер-корректную модель уже на чтении; этот гвард —
-  // последний рубеж (руками вписали чужой id в яндекс-неймспейс).
-  if (provider === 'yandex' && !settings.chatModel.startsWith('gpt://')) {
-    const folder = cfg?.headers?.['x-folder-id'] ?? ''
-    return `gpt://${folder}/yandexgpt-5.1/latest`
-  }
-  if (provider === 'gigachat' && settings.chatModel.includes('/')) return 'GigaChat-2'
+  // Чужой id в неймспейсе провайдера (вписали руками) больше не лечится подстановкой
+  // конкретной модели из кода: такой id просто не найдётся в каталоге, и замену выберет
+  // сам каталог. Раньше здесь стояли 'gpt://…/yandexgpt-5.1/latest' и 'GigaChat-2' —
+  // те же мины замедленного действия, что и снятая модель в env.
+  void folder
   return settings.chatModel
 }

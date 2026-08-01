@@ -2,7 +2,9 @@ import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { getAiSettings, getApiKey } from '@/shared/settings/ai'
-import { fetchModels, type ModelOption } from '@/shared/ai/models'
+import { fetchModels } from '@/shared/ai/models'
+import { buildOpts } from '@/features/admin/model-options'
+import { modelMeta } from '@/features/admin/model-enrich'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { CouncilList, type CouncilRow } from '@/features/admin/CouncilList'
 import { gnomeReputation } from '@/shared/ai/gnome-reputation'
@@ -16,26 +18,6 @@ import type { Option } from '@/features/admin/ModelSelect'
 export async function generateMetadata() {
   const lang = await getLang()
   return { title: t('councilHall', lang) }
-}
-
-// Те же цены, что и в общей админке. Дублировать формулу не хочется, но и тащить её в shared ради
-// двух страниц рано — вынесем, когда появится третий потребитель.
-type Currency = 'USD' | 'RUB'
-function priceText(m: ModelOption, ru: boolean, cur: Currency): string {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
-  if (!m.priceKnown) return '—' // провайдер не прислал цену: неизвестно ≠ бесплатно
-  if (m.promptPrice < 0 || m.completionPrice < 0) return say('Variable', 'Плавающая')
-  if (!m.promptPrice && !m.completionPrice) return say('Free', 'Бесплатно')
-  const s = cur === 'RUB' ? '₽' : '$'
-  return `${s}${m.promptPrice.toFixed(2)} / ${s}${m.completionPrice.toFixed(2)}`
-}
-function priceClass(m: ModelOption, cur: Currency): string {
-  const v = m.completionPrice || m.promptPrice
-  const [ok, warn] = cur === 'RUB' ? [100, 1000] : [1, 10]
-  if (v < 0) return 'text-muted'
-  if (v <= ok) return 'text-ok'
-  if (v <= warn) return 'text-warn'
-  return 'text-danger'
 }
 
 /**
@@ -53,14 +35,13 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
+  // Третий потребитель формата цен появился (эта страница, /admin и серверный экшен смены
+  // провайдера) — формула переехала в model-options, локальные копии убраны. Заодно строки
+  // получили наш рейтинг и занятость: выбор модели везде объясняется одинаково.
   const models = apiKey ? await fetchModels() : null
-  const modelOptions: Option[] = [...(models?.chat ?? [])]
-    .sort((a, b) => (a.completionPrice || a.promptPrice) - (b.completionPrice || b.promptPrice))
-    .map((m) =>
-      models?.pricesKnown
-        ? { value: m.id, id: m.id, label: m.label, family: m.family, price: priceText(m, ru, models.currency), priceClass: priceClass(m, models.currency) }
-        : { value: m.id, id: m.id, label: m.label, family: m.family },
-    )
+  const modelOptions: Option[] = models
+    ? buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, await modelMeta(models.currency, ru))
+    : []
 
   const [rows, gallery, uploaded, signals, reps] = await Promise.all([
     getRosterAll(),
