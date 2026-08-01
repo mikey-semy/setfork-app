@@ -42,7 +42,7 @@ export async function enqueueJob(
  */
 export async function claimJob(): Promise<Job | null> {
   const res = await db.execute(sql`
-    UPDATE jobs SET status = 'processing', attempts = attempts + 1, updated_at = now()
+    UPDATE jobs SET status = 'processing', attempts = attempts + 1, updated_at = now(), heartbeat_at = now()
     WHERE id = (
       SELECT id FROM jobs
       WHERE status = 'pending' AND run_at <= now()
@@ -73,17 +73,32 @@ export async function completeJob(id: string): Promise<void> {
 }
 
 /**
+ * Пульс: «я ещё жив и держу эту задачу». Зовётся по таймеру, пока идёт обработка.
+ *
+ * `updated_at` НЕ трогаем намеренно: он про изменение самой задачи, и по нему считают возраст
+ * в других местах. Пульс — отдельное поле, иначе живая долгая задача выглядела бы вечно юной.
+ */
+export async function touchJob(id: string): Promise<void> {
+  await db.update(jobs).set({ heartbeatAt: new Date() }).where(eq(jobs.id, id))
+}
+
+/**
  * Возвращает «зависшие» задачи (упавший посреди работы воркер оставил их в
  * `processing`): либо снова в очередь (attempts < maxAttempts), либо в `failed`.
  * Без этого claim берёт только `pending`, и зависшая джоба терялась навсегда.
  *
- * Порог намеренно щедрый (дефолт 30 мин, env SETFORK_JOB_STALL_SEC): в мульти-инстанс
- * реапе НЕ должен переотдать ЖИВУЮ, но долгую джобу (sweep digest/gardener, refine с
- * web-search) второму воркеру — иначе двойное исполнение и двойной расход LLM. Порог
- * обязан превышать самый долгий хендлер; полноценное решение — heartbeat updated_at.
+ * ДВА ПОРОГА, и это главное здесь. Задача с пульсом (её держит воркер этой версии) считается
+ * мёртвой через SETFORK_JOB_HEARTBEAT_STALL_SEC — по умолчанию минуту: пульс бьётся раз в 15с,
+ * три пропуска подряд означают, что процесса больше нет. Задача БЕЗ пульса — взятая версией без
+ * heartbeat или переживающая выкатку — судится по-старому, щедрым SETFORK_JOB_STALL_SEC (30 мин).
+ *
+ * Щедрый порог был вынужденным: reaper не должен переотдать ЖИВУЮ, но долгую задачу (совет ≈ 9.5
+ * вызовов модели, sweep gardener) второму воркеру — это двойное исполнение и двойной расход LLM.
+ * Пульс снимает выбор между «быстро замечаем смерть» и «не отбираем живое»: долгая задача дышит.
  */
 export async function reapStalledJobs(
   olderThanSec = Number(process.env.SETFORK_JOB_STALL_SEC ?? 1800),
+  heartbeatStallSec = Number(process.env.SETFORK_JOB_HEARTBEAT_STALL_SEC ?? 60),
 ): Promise<{ reaped: number; abandoned: Job[] }> {
   // status — enum job_status: результат CASE имеет тип text и НЕ приводится к enum
   // неявно (одиночный литерал приводится, CASE — нет), поэтому явный ::job_status.
@@ -93,7 +108,13 @@ export async function reapStalledJobs(
         run_at = now(),
         updated_at = now(),
         last_error = coalesce(last_error, 'reaped: stalled in processing')
-    WHERE status = 'processing' AND updated_at < now() - (${olderThanSec}::int * interval '1 second')
+    WHERE status = 'processing'
+      AND (
+        CASE
+          WHEN heartbeat_at IS NOT NULL THEN heartbeat_at < now() - (${heartbeatStallSec}::int * interval '1 second')
+          ELSE updated_at < now() - (${olderThanSec}::int * interval '1 second')
+        END
+      )
     RETURNING id, type, payload, attempts, max_attempts, status
   `)
   const rows = (res as { rows?: Record<string, unknown>[] }).rows ?? []
@@ -197,4 +218,36 @@ export async function failJob(job: Job, error: string): Promise<boolean> {
     })
     .where(eq(jobs.id, job.id))
   return permanent
+}
+
+/**
+ * Уборка терминальных задач — таблица очереди не архив.
+ *
+ * У River на это отдельный job cleaner с разной выдержкой по исходу: успешные удаляются через
+ * сутки, отброшенные живут неделю. Логика та же и здесь: успех через день уже никому не
+ * интересен, а вот провал — это то, по чему разбирают инцидент, и выкидывать его назавтра
+ * нельзя. Обе выдержки — env, потому что «сутки» и «неделя» это не законы природы.
+ *
+ * УМЕРШИЕ БЕЗ ПОХОРОН НЕ ТРОГАЕМ. Строка `failed` с пустым `finalized_at` — это ещё не мусор,
+ * а невыполненная работа: её ждёт добор финализации. Удалив её, мы бы своими руками вернули
+ * вечный спиннер, который чинили в #637.
+ *
+ * `limit` держит проход коротким: удалять миллион строк одним DELETE — это долгая блокировка
+ * на горячей таблице, из-за которой встанут все воркеры.
+ */
+export async function cleanupTerminalJobs(
+  doneAfterHours = Number(process.env.SETFORK_JOB_RETAIN_DONE_H ?? 24),
+  failedAfterDays = Number(process.env.SETFORK_JOB_RETAIN_FAILED_D ?? 7),
+  limit = 5000,
+): Promise<number> {
+  const res = await db.execute(sql`
+    DELETE FROM jobs WHERE id IN (
+      SELECT id FROM jobs
+      WHERE (status = 'done' AND updated_at < now() - (${doneAfterHours}::int * interval '1 hour'))
+         OR (status = 'failed' AND finalized_at IS NOT NULL AND updated_at < now() - (${failedAfterDays}::int * interval '1 day'))
+      LIMIT ${limit}
+    )
+    RETURNING id
+  `)
+  return (res as { rows?: unknown[] }).rows?.length ?? 0
 }

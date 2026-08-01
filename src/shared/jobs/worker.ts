@@ -1,7 +1,18 @@
 import 'server-only'
 import { captureError, log } from '@/shared/observability'
 import { JOB_TYPES, type JobType } from '@/shared/db'
-import { claimJob, claimUnfinalizedJobs, completeJob, failJob, finalizeExhausted, markFinalized, reapStalledJobs, type Job } from './queue'
+import {
+  claimJob,
+  claimUnfinalizedJobs,
+  cleanupTerminalJobs,
+  completeJob,
+  failJob,
+  finalizeExhausted,
+  markFinalized,
+  reapStalledJobs,
+  touchJob,
+  type Job,
+} from './queue'
 import { AUTONOMOUS_LOOPS, recordAgentAction } from '@/shared/agents/policy'
 
 /** Записать падение задачи ПЕТЛИ в журнал действий (обычные задачи туда не пишем). */
@@ -44,6 +55,13 @@ const BATCH = 50 // максимум задач за тик — чтобы не 
 // то. Реальный потолок — контеншн вызовов модели. 12 советов ≈ ~115 вызовов в полёте — держит их
 // быстрыми под таймаутом 120с. Поднимать env'ом ТОЛЬКО после замера доли отказов, не по числу сокетов.
 const CONCURRENCY = Math.max(1, Number(process.env.SETFORK_JOB_CONCURRENCY) || 12)
+// Пульс живой задачи. 15с против минутного порога смерти в reaper — три пропуска подряд, чтобы
+// одна залипшая запись в БД не выглядела похоронами. Дешёвый UPDATE одной строки по первичному
+// ключу: даже при 12 задачах в полёте это ~1 запрос в секунду на весь инстанс.
+const HEARTBEAT_MS = 15_000
+// Уборка терминальных задач — раз в час (1200 тиков × 3с). Чаще незачем: выдержка измеряется
+// сутками, а каждый проход это DELETE по горячей таблице.
+const CLEANUP_EVERY_TICKS = 1200
 
 let started = false
 
@@ -106,6 +124,10 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
   const processOne = async (job: Job): Promise<void> => {
     // Проверку на отсутствие оставляем и здесь: в базе может лежать тип от старой версии кода.
     const handler = handlers[job.type]
+    // Пульс на всё время обработки: пока он бьётся, reaper знает, что процесс жив, и не
+    // отбирает задачу — даже если она честно идёт десять минут. Сбой пульса глушим: не
+    // достучались до базы одним UPDATE — работу из-за этого ронять нельзя.
+    const beat = setInterval(() => void touchJob(job.id).catch(() => {}), HEARTBEAT_MS)
     try {
       if (!handler) throw new Error(`no handler for job type: ${job.type}`)
       await handler(job.payload, job)
@@ -118,6 +140,10 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
       // никогда. То есть предохранитель был описан, но не мог сработать.
       await recordLoopFailure(job.type, e)
       if (await failJob(job, e instanceof Error ? e.message : String(e))) await finalize(job)
+    } finally {
+      // Пульс обязан замолчать вместе с работой — иначе завершённая задача «дышала» бы вечно,
+      // а таймер держал бы процесс и ссылку на неё.
+      clearInterval(beat)
     }
   }
 
@@ -145,6 +171,13 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
           log.info('jobs awaiting finalization', { count: lost.length })
           await Promise.all(lost.map(finalize))
         }
+      }
+      // Уборка терминальных — раз в час: таблица очереди не архив, а расти ей без предела
+      // некуда (у River на это отдельный cleaner). Идёт ПОСЛЕ финализации намеренно: успевшие
+      // похоронить свои задачи строки уже помечены и под удаление попадут законно.
+      if (ticks % CLEANUP_EVERY_TICKS === 1) {
+        const removed = await cleanupTerminalJobs()
+        if (removed) log.info('terminal jobs cleaned up', { removed })
       }
       // CONCURRENCY раннеров дренят очередь параллельно; каждый берёт задачу, обрабатывает, берёт
       // следующую — пока очередь не опустеет или не выберем BATCH за тик (общий кап, чтобы огромная
