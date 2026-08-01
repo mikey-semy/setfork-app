@@ -160,6 +160,6 @@ jobs:
       - name: cleanup (контейнер и сеть)
         if: always()
         run: |
-          docker rm -f "pg-${CI_NET}" >/dev/null 2>&1 || true
+          docker rm -f "pg-${CI_NET}" "core-${CI_NET}" >/dev/null 2>&1 || true
           docker network disconnect "${CI_NET}" "$(hostname)" >/dev/null 2>&1 || true
           docker network rm "${CI_NET}" >/dev/null 2>&1 || true
