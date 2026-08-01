@@ -24,6 +24,7 @@ const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string;
   'list.transfer-init': { icon: GitCommitVertical, ru: 'Предложена передача списка', en: 'List transfer offered', cls: 'text-warn' },
   'list.transfer-accept': { icon: GitCommitVertical, ru: 'Список передан', en: 'List transferred', cls: 'text-warn' },
   'git.push': { icon: GitCommitVertical, ru: 'Push в список', en: 'Push to list', cls: 'text-ink-2' },
+  'git.suggest': { icon: GitCommitVertical, ru: 'Правка из терминала', en: 'Change from terminal', cls: 'text-ink-2' },
   'session.revoke': { icon: LogOut, ru: 'Отозвана сессия', en: 'Session revoked', cls: 'text-ink-2' },
   'session.revoke_others': { icon: LogOut, ru: 'Выход с др. устройств', en: 'Signed out others', cls: 'text-ink-2' },
   '2fa.enable': { icon: ShieldCheck, ru: 'Включена 2FA', en: '2FA enabled', cls: 'text-ok' },

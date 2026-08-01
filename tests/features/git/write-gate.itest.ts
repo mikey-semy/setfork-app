@@ -22,7 +22,9 @@ vi.mock('@/features/git/core', () => ({
     },
     receivePack: async () => {
       h.calls.receive++
-      return { data: Buffer.from('ok'), newVersion: null }
+      // magic — форма ответа ядра с Ф4; двойник обязан её повторять, иначе он
+      // проверяет не тот контракт, что в проде.
+      return { data: Buffer.from('ok'), newVersion: null, magic: [] }
     },
   },
 }))

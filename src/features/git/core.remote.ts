@@ -54,14 +54,19 @@ export const gitCoreRemote: GitCore = {
     return res.data
   },
 
-  async receivePack(repo, body, gitProtocol, lang) {
+  async receivePack(repo, body, opts) {
     const res = await client.receivePack({
       repo: toRepoRef(repo),
       body,
-      gitProtocol: gitProtocol ?? '',
-      lang: lang ?? '',
+      gitProtocol: opts?.gitProtocol ?? '',
+      lang: opts?.lang ?? '',
+      actorHandle: opts?.actorHandle ?? '',
     })
-    return { data: res.data, newVersion: toNewVersion(res.newVersion) }
+    return {
+      data: res.data,
+      newVersion: toNewVersion(res.newVersion),
+      magic: res.magic.map((m) => ({ base: m.base, branch: m.branch, tipSha: m.tipSha })),
+    }
   },
 
   async bundle(repo) {

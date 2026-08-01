@@ -11,6 +11,77 @@ import { countApprovals, hasBlockingReview } from './review-queries'
 // eslint-disable-next-line boundaries/dependencies -- счётчик нерешённых обсуждений живёт в comments
 import { countUnresolvedThreads } from '@/features/comments/queries'
 import { blockingReportedChecks } from './suggestion-checks'
+import { sql } from 'drizzle-orm'
+
+/**
+ * Предложение из ветки: найти открытое или создать.
+ *
+ * Общая часть ДВУХ путей — кнопки «Открыть предложение» в интерфейсе и
+ * магического пуша `refs/for/main` из терминала (Ф4). Вынесена, а не
+ * скопирована: нумерация, авто-подписка и уведомление владельца должны
+ * совпадать, иначе предложение из терминала окажется второсортным — без номера
+ * или без уведомления, и разница вылезет не сразу.
+ *
+ * Сессии здесь НЕТ намеренно: git-путь авторизован токеном, а не куками, и
+ * `authorId` приходит уже проверенным. Поэтому и подписка идёт прямо в стор, а
+ * не через `ensureWatch`, который берёт пользователя из сессии.
+ *
+ * Идемпотентна: повторный вызов на ту же ветку возвращает существующее
+ * предложение. На этом держатся ревизии — повторный магический пуш двигает ту же
+ * ветку и обновляет ТО ЖЕ предложение, а не плодит новые.
+ */
+export async function ensureBranchSuggestion(input: {
+  templateId: string
+  ownerId: string
+  currentVersion: number
+  authorId: string
+  branch: string
+  note?: string
+}): Promise<{ id: string; created: boolean }> {
+  const open = await db.query.suggestions.findFirst({
+    where: (s) => and(eq(s.templateId, input.templateId), eq(s.branchRef, input.branch), eq(s.status, 'open')),
+  })
+  if (open) return { id: open.id, created: false }
+
+  // onConflictDoNothing + перечитывание: проверка выше и вставка — два шага, и
+  // между ними влезает параллельный запрос. Правило держит частичный уникальный
+  // индекс suggestions_open_branch; здесь мы лишь корректно переживаем гонку,
+  // возвращая победителя вместо ошибки.
+  const [row] = await db
+    .insert(suggestions)
+    .values({
+      templateId: input.templateId,
+      authorId: input.authorId,
+      note: input.note ?? `Merge branch '${input.branch}'`,
+      baseVersion: input.currentVersion,
+      items: [], // источник правды — tip ветки, материализуется при просмотре
+      branchRef: input.branch,
+      number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${input.templateId})`,
+    })
+    .onConflictDoNothing()
+    .returning({ id: suggestions.id })
+
+  if (!row) {
+    const winner = await db.query.suggestions.findFirst({
+      where: (s) => and(eq(s.templateId, input.templateId), eq(s.branchRef, input.branch), eq(s.status, 'open')),
+    })
+    // Гонку проиграли — предложение уже создано параллельным запросом.
+    if (winner) return { id: winner.id, created: false }
+    throw new Error('suggestion insert conflicted but no open suggestion found')
+  }
+
+  await curationStore.ensureWatch(input.templateId, input.authorId)
+  if (input.ownerId !== input.authorId) {
+    await notify({
+      recipientId: input.ownerId,
+      actorId: input.authorId,
+      type: 'suggestion_new',
+      templateId: input.templateId,
+      suggestionId: row.id,
+    })
+  }
+  return { id: row.id, created: true }
+}
 
 /**
  * Гейт внешних проверок — ОДИН на оба пути слияния.

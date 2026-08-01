@@ -205,7 +205,11 @@ export interface GitCore {
   /** receive-pack + проекция в версию (атомарно под локом). newVersion — созданная версия. */
   /** Приём пуша. `lang` — язык ЧЕЛОВЕКА для отказов pre-receive: их он читает
    *  прямо в выводе `git push`, переводить некому (И2). '' → английский. */
-  receivePack(repo: GitRepoRef, body: Uint8Array, gitProtocol?: string, lang?: string): Promise<{ data: Uint8Array; newVersion: number | null } | null>
+  receivePack(
+    repo: GitRepoRef,
+    body: Uint8Array,
+    opts?: { gitProtocol?: string; lang?: string; actorHandle?: string },
+  ): Promise<{ data: Uint8Array; newVersion: number | null; magic: MagicPush[] } | null>
   bundle(repo: GitRepoRef): Promise<Uint8Array | null>
   /** Ветки (A1 read-only): main первым; прочие — черновики без проекции. */
   listBranches(repo: GitRepoRef): Promise<GitBranch[]>
@@ -295,6 +299,14 @@ export interface MergeState {
 }
 
 /** Ошибка операций над ветками с машиночитаемой причиной (для UI-сообщений). */
+/** Ф4: что сделал магический пуш `refs/for/<base>` — ядро положило коммиты в
+ *  ветку автора, предложение из этого делает приложение. */
+export interface MagicPush {
+  base: string
+  branch: string
+  tipSha: string
+}
+
 export class BranchOpError extends Error {
   constructor(
     public code:
