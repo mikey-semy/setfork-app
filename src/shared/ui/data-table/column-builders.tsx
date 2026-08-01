@@ -42,7 +42,10 @@ export function numberColumn<T>(opts: {
     header: opts.header,
     size: opts.size ?? 96,
     enableSorting: true,
-    accessorFn: (row) => opts.value(row) ?? -Infinity,
+    // null → undefined + sortUndefined: «—» всегда ПОСЛЕ измеренных значений,
+    // в обоих направлениях (Codex #635: -Infinity ставил пустые первыми при asc).
+    accessorFn: (row) => opts.value(row) ?? undefined,
+    sortUndefined: 'last',
     cell: ({ row }) => {
       const v = opts.value(row.original)
       return (

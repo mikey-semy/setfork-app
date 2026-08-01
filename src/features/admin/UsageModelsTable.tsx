@@ -24,7 +24,8 @@ export interface UsageModelRow {
   quarantined: boolean
 }
 
-const num = (n: number) => new Intl.NumberFormat('en').format(n)
+const NUM_FMT = new Intl.NumberFormat('en') // модульный уровень: пересборка форматтера на каждый вызов дорога (react-doctor)
+const num = (n: number) => NUM_FMT.format(n)
 
 export function UsageModelsTable({ rows, lang }: { rows: UsageModelRow[]; lang: Lang }) {
   const columns: ColumnDef<UsageModelRow, unknown>[] = [

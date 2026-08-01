@@ -18,7 +18,8 @@ export interface UsageUserRow {
   costUsd: number
 }
 
-const num = (n: number) => new Intl.NumberFormat('en').format(n)
+const NUM_FMT = new Intl.NumberFormat('en') // модульный уровень: пересборка форматтера на каждый вызов дорога (react-doctor)
+const num = (n: number) => NUM_FMT.format(n)
 const money = (n: number) => '$' + n.toFixed(n < 1 ? 4 : 2)
 
 export function UsageByUserTable({ rows, lang }: { rows: UsageUserRow[]; lang: Lang }) {

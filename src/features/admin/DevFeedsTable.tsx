@@ -22,7 +22,8 @@ export interface FeedRow {
   humanEdits: number
 }
 
-const num = (n: number) => new Intl.NumberFormat('en').format(n)
+const NUM_FMT = new Intl.NumberFormat('en') // модульный уровень: пересборка форматтера на каждый вызов дорога (react-doctor)
+const num = (n: number) => NUM_FMT.format(n)
 
 export function DevFeedsTable({ rows, lang }: { rows: FeedRow[]; lang: Lang }) {
   const columns: ColumnDef<FeedRow, unknown>[] = [

@@ -130,11 +130,38 @@ export function DataTableV2<T>({
 
   // Карточная мобила: первая колонка — заголовок карточки, остальные — пары
   // «подпись: значение». Тач-цели и переносы — по правилам мобильной вёрстки.
+  // Сортировка на карточках — чипами (Codex #635: таблица со своими
+  // заголовками-сортировками ниже md скрыта целиком).
   const [head, ...rest] = table.getAllLeafColumns()
+  const sortableCols = table.getAllLeafColumns().filter((c) => c.getCanSort())
   return (
     <>
       {tableEl}
       <div className="flex flex-col gap-2 md:hidden">
+        {sortableCols.length > 0 && !loading && rows.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={cn('uppercase tracking-wide text-muted', TEXT.caption)}>⇅</span>
+            {sortableCols.map((c) => {
+              const dir = c.getIsSorted()
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={c.getToggleSortingHandler()}
+                  className={cn(
+                    'inline-flex min-h-8 items-center gap-1 rounded-md border px-2.5 pointer-coarse:min-h-11',
+                    TEXT.bodySm,
+                    dir ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2',
+                  )}
+                >
+                  {typeof c.columnDef.header === 'string' ? c.columnDef.header : c.id}
+                  {dir === 'asc' && <ArrowUp size={11} />}
+                  {dir === 'desc' && <ArrowDown size={11} />}
+                </button>
+              )
+            })}
+          </div>
+        )}
         {loading &&
           Array.from({ length: Math.min(4, skeletonRows) }, (_, i) => (
             <div key={i} className="h-20 animate-pulse rounded-lg border border-border bg-surface" />
