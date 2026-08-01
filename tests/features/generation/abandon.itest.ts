@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('next/cache', () => ({ revalidatePath: () => {}, revalidateTag: () => {}, unstable_cache: (f: unknown) => f }))
 
-const { db, users, generations, generationMessages } = await import('@/shared/db')
+const { db, users, generations, generationMessages, generationCandidates } = await import('@/shared/db')
 const { abandonGeneration } = await import('@/features/generation/service')
 const { parseFailure } = await import('@/shared/ai/failure')
 
@@ -67,5 +67,27 @@ describe('брошенная генерация', () => {
     await abandonGeneration(genId, 1)
 
     expect(await errors()).toHaveLength(1)
+  })
+
+  // Ниже — два положения дел, которые «статус pending» не различает сам по себе
+  // (находка авто-ревью по #637). Оба раньше кончались враньём человеку.
+
+  it('процесс умер ПОСЛЕ вставки варианта → это done, а не потеря', async () => {
+    await db.insert(generationCandidates).values({ generationId: genId, idx: 1, title: 'Сайты', items: [] })
+
+    await abandonGeneration(genId, 1)
+
+    expect(await status()).toBe('done') // вариант на экране есть — объявлять провал нельзя
+    expect(await errors()).toHaveLength(0)
+  })
+
+  it('человек уже запустил следующий виток → pending принадлежит ЕМУ, не трогаем', async () => {
+    // Реплика второго витка пишется действием сразу, до постановки задачи.
+    await db.insert(generationMessages).values({ generationId: genId, attempt: 2, kind: 'again', text: '' })
+
+    await abandonGeneration(genId, 1) // хороним ПЕРВЫЙ, давно умерший
+
+    expect(await status()).toBe('pending') // иначе экран объявит провал живой задаче и покажет «Ещё раз»
+    expect(await errors()).toHaveLength(0)
   })
 })

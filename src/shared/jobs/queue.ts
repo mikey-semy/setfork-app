@@ -101,15 +101,19 @@ export async function reapStalledJobs(
   // о смерти знает, фича — нет; связывает их финализатор в worker.
   return {
     reaped: rows.length,
-    abandoned: rows
-      .filter((r) => String(r.status) === 'failed')
-      .map((r) => ({
-        id: String(r.id),
-        type: String(r.type),
-        payload: r.payload,
-        attempts: Number(r.attempts),
-        maxAttempts: Number(r.max_attempts),
-      })),
+    abandoned: rows.flatMap((r) =>
+      String(r.status) === 'failed'
+        ? [
+            {
+              id: String(r.id),
+              type: String(r.type),
+              payload: r.payload,
+              attempts: Number(r.attempts),
+              maxAttempts: Number(r.max_attempts),
+            },
+          ]
+        : [],
+    ),
   }
 }
 

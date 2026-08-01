@@ -115,8 +115,9 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
         const { reaped, abandoned } = await reapStalledJobs()
         if (reaped) log.info('jobs reaped from stalled processing', { reaped, abandoned: abandoned.length })
         // Похороненным — финализатор: попытки у них кончились, и никакой хендлер уже не
-        // проснётся, чтобы закрыть видимое состояние фичи.
-        for (const job of abandoned) await finalize(job)
+        // проснётся, чтобы закрыть видимое состояние фичи. Задачи независимы (каждая про
+        // свою сущность), поэтому разом, а не по очереди.
+        await Promise.all(abandoned.map(finalize))
       }
       // CONCURRENCY раннеров дренят очередь параллельно; каждый берёт задачу, обрабатывает, берёт
       // следующую — пока очередь не опустеет или не выберем BATCH за тик (общий кап, чтобы огромная

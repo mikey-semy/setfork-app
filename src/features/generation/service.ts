@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, gte, sql } from 'drizzle-orm'
 import type { Lang } from '@/shared/i18n'
-import { aiUsage, db, generationCandidates, generationDrafts, generations, users, type CandidateItem } from '@/shared/db'
+import { aiUsage, db, generationCandidates, generationDrafts, generationMessages, generations, users, type CandidateItem } from '@/shared/db'
 import { generateChangeNote, generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
 import { serializeFailure, type AiFailure } from '@/shared/ai/failure'
 import { backfillRecipeSections } from '@/shared/ai/list-kind'
@@ -287,17 +287,43 @@ export async function addCandidate(
  * `finally` выше. Генерация осталась в 'pending' — экран поллит вечно и показывает работу
  * совета, которой давно нет. Здесь мы её закрываем, чтобы человек увидел причину и кнопку.
  *
- * Статус меняем УСЛОВНО (`status = 'pending'` в WHERE): пока сообщение о смерти шло, виток
- * мог всё-таки доехать до 'done' или сам объявить 'failed' — тогда трогать нечего, и лишней
- * реплики об ошибке в чате не появится.
+ * «Статус pending» САМ ПО СЕБЕ ничего не доказывает — за ним стоят три разных положения дел,
+ * и валить их в одно значит врать человеку (находка авто-ревью по #637):
+ *
+ *  1. Кандидат с этим idx УЖЕ ЛЕЖИТ в базе — процесс умер между вставкой варианта и
+ *     'done'. Вариант доставлен и оплачен: закрываем в 'done'. Объявить провал при готовом
+ *     списке на экране — худшее, что тут можно сделать.
+ *  2. Виток этой задачи — не последний: человек уже запустил следующий, и 'pending'
+ *     принадлежит ЕМУ. Трогать нельзя: иначе экран объявит провал живой задаче и покажет
+ *     «Ещё раз» — ровно та гонка двух генераций, которую чинили в #634.
+ *  3. Ни того, ни другого — виток действительно брошен: 'failed' + причина 'lost'.
+ *
+ * Все проверки — В САМОМ UPDATE (подзапросами), а не чтением до записи: между чтением и
+ * записью виток может доехать сам, и мы затрём его результат.
  */
 export async function abandonGeneration(generationId: string, idx: number): Promise<void> {
-  const closed = await db
-    .update(generations)
-    .set({ status: 'failed', updatedAt: new Date() })
-    .where(and(eq(generations.id, generationId), eq(generations.status, 'pending')))
-    .returning({ id: generations.id })
-  if (!closed.length) return
+  // (1) Вариант всё-таки доставлен — это успех, а не потеря.
+  const delivered = await db.execute(sql`
+    UPDATE ${generations} SET status = 'done', updated_at = now()
+    WHERE id = ${generationId} AND status = 'pending'
+      AND EXISTS (SELECT 1 FROM ${generationCandidates} WHERE generation_id = ${generationId} AND idx = ${idx})
+    RETURNING id
+  `)
+  if ((delivered as { rows?: unknown[] }).rows?.length) {
+    log.warn?.('generation closed as done: job died after the candidate was saved', { generationId, idx })
+    return
+  }
+
+  // (2)+(3) Хороним, только если этот виток — последний в нити: более поздняя реплика или
+  // кандидат означают, что 'pending' уже не наш.
+  const closed = await db.execute(sql`
+    UPDATE ${generations} SET status = 'failed', updated_at = now()
+    WHERE id = ${generationId} AND status = 'pending'
+      AND coalesce((SELECT max(attempt) FROM ${generationMessages} WHERE generation_id = ${generationId}), 0) <= ${idx}
+      AND coalesce((SELECT max(idx) FROM ${generationCandidates} WHERE generation_id = ${generationId}), 0) <= ${idx}
+    RETURNING id
+  `)
+  if (!(closed as { rows?: unknown[] }).rows?.length) return
   await pushMessage(generationId, { attempt: idx, kind: 'error', text: serializeFailure({ code: 'lost' }), who: 'council' })
   log.warn?.('generation abandoned: job died before reporting', { generationId, idx })
 }
