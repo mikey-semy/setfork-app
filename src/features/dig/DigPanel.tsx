@@ -27,7 +27,6 @@ export function DigPanel({
   canDig: boolean
   lang: Lang
 }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   const [layers, setLayers] = useState<DigLayerRow[]>(initial)
   const [open, setOpen] = useState(false)
   const [err, setErr] = useState('')
@@ -68,7 +67,7 @@ export function DigPanel({
             className="inline-flex items-center gap-1 rounded-md py-0.5 text-[0.6875rem] text-muted hover:text-ink-2"
           >
             <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
-            {say(`Mine: ${layers.length}`, `Шахта: ${layers.length}`)}
+            {t('dig.mineN', lang).replace('{n}', String(layers.length))}
           </button>
         )}
         {canDig && layers.length < MAX_LEVEL && (
@@ -79,7 +78,7 @@ export function DigPanel({
             className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[0.6875rem] text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50"
           >
             {pending ? <Loader2 size={12} className="animate-spin" /> : <Pickaxe size={12} />}
-            {layers.length === 0 ? t('dig.digDeeper2', lang) : say(`Dig lower (${layers.length}/${MAX_LEVEL})`, `Копаем ниже (${layers.length}/${MAX_LEVEL})`)}
+            {layers.length === 0 ? t('dig.digDeeper2', lang) : t('dig.digLowerN', lang).replace('{a}', String(layers.length)).replace('{b}', String(MAX_LEVEL))}
           </button>
         )}
         {err && <span className="text-[0.6875rem] text-warn">{err}</span>}
@@ -89,7 +88,7 @@ export function DigPanel({
           {layers.map((l) => (
             <div key={l.level}>
               <div className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
-                {say(`Layer ${l.level}`, `Слой ${l.level}`)} · {levelTitle(l.level)}
+                {t('dig.layerN', lang).replace('{n}', String(l.level))} · {levelTitle(l.level)}
               </div>
               <Markdown className="text-[0.78125rem] leading-relaxed text-ink-2">{l.content}</Markdown>
             </div>

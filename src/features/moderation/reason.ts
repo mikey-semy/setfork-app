@@ -9,7 +9,6 @@ import { t } from '@/shared/i18n'
  * либо новый машинный формат — сырая правда лучше спрятанной.
  */
 export function humanModerationReason(reason: string, lang: Lang): string {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   if (/^AI uncertain/i.test(reason))
     return t('moderation.theAutomaticCheckWas', lang)
   if (/^AI budget exhausted/i.test(reason)) return t('moderation.awaitingManualReview', lang)
@@ -21,6 +20,6 @@ export function humanModerationReason(reason: string, lang: Lang): string {
   if (/^spam heuristic: link farm/i.test(reason))
     return t('moderation.tooManyLinksDifferent', lang)
   const ai = reason.match(/^AI \[(.+?)\]/)
-  if (ai) return say(`the automatic check found a possible violation (${ai[1]})`, `автопроверка увидела возможное нарушение (${ai[1]})`)
+  if (ai) return t('moderation.aiFoundViolation', lang).replace('{code}', ai[1])
   return reason
 }

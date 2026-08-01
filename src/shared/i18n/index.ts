@@ -70,6 +70,7 @@ const PLURALS = {
   branches: { ru: ['ветка', 'ветки', 'веток'], en: ['branch', 'branches'] },
   versions: { ru: ['версия', 'версии', 'версий'], en: ['version', 'versions'] },
   runs: { ru: ['прогон', 'прогона', 'прогонов'], en: ['run', 'runs'] },
+  lists: { ru: ['список', 'списка', 'списков'], en: ['list', 'lists'] },
   suggestions: { ru: ['предложение', 'предложения', 'предложений'], en: ['suggestion', 'suggestions'] },
   contributors: { ru: ['участник', 'участника', 'участников'], en: ['contributor', 'contributors'] },
 } as const

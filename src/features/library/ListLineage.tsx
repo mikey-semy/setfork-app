@@ -15,7 +15,6 @@ import { SectionLabel } from '@/shared/ui/SectionLabel'
  * витка — за него заплачено, а внешне от него осталось только одно.
  */
 export function ListLineage({ lineage, exact, gnomeNames, lang }: { lineage: Lineage; exact: boolean; gnomeNames?: Record<string, string>; lang: Lang }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   return (
     <div className="mt-4 border-t border-border pt-3">
       <SectionLabel className="mb-2 flex items-center gap-1.5">
@@ -26,10 +25,7 @@ export function ListLineage({ lineage, exact, gnomeNames, lang }: { lineage: Lin
       </p>
       {!exact && (
         <p className="mt-1 text-[0.6875rem] text-muted">
-          {say(
-            'The exact variant was not recorded back then — the details below may describe a sibling variant.',
-            'Какой именно вариант приняли, тогда не записывалось — детали ниже могут относиться к соседнему варианту.',
-          )}
+          {t('library.theExactVariantWas', lang)}
         </p>
       )}
       <ProvenancePanel provenance={lineage.provenance} gnomeNames={gnomeNames} lang={lang} />

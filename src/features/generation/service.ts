@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, eq, gte, sql } from 'drizzle-orm'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { aiUsage, db, generationCandidates, generationDrafts, generationMessages, generations, users, type CandidateItem } from '@/shared/db'
 import { generateChangeNote, generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
 import { serializeFailure, type AiFailure } from '@/shared/ai/failure'
@@ -193,13 +193,12 @@ export async function addCandidate(
       const { filterDeadRefs } = await import('@/shared/lib/link-health')
       const dead = await filterDeadRefs(items)
       if (dead > 0) {
-        const sayL = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
         await pushMessage(generationId, {
           attempt: idx,
           kind: 'critique',
-          text: sayL(`Checked the links — removed dead ones: ${dead}`, `Проверил ссылки — выкинул мёртвых: ${dead}`),
+          text: t('generation.removedDeadLinks', lang).replace('{n}', String(dead)),
           who: 'critic',
-          name: sayL('Critic', 'Критик'),
+          name: t('ai.critic', lang),
         })
       }
     } catch {

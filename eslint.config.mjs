@@ -43,6 +43,21 @@ export default [
           message:
             'Двуязычную строку из тернарника вынеси в словарь i18n (t()/tr() из @/shared/i18n): третий язык не должен требовать правки 100+ файлов. Технический литерал (не UI) — оставь // eslint-disable-next-line no-restricted-syntax.',
         },
+        // Ф3 трека i18n-extraction: локальные say-хелперы и tr с инлайновыми
+        // литералами были легальным обходом тернарного правила — после экстракции
+        // (fe#646+) оба запрещены: строка живёт в dict/en.ts + dict/ru.ts.
+        {
+          selector: "VariableDeclarator[id.name='say']",
+          message:
+            'Локальный say(en, ru) запрещён (трек i18n-extraction, Ф3): добавь ключ в shared/i18n/dict/en.ts + ru.ts и используй t(key, lang). Плейсхолдеры — {n}/{a}/{b} + .replace().',
+        },
+        {
+          // Property-селектор, а не properties.0: литерал ловится в ЛЮБОЙ позиции
+          // объекта — tr({ en: value, ru: 'литерал' }) тоже запрещён (Codex #650).
+          selector: "CallExpression[callee.name='tr'] > ObjectExpression > Property:matches([value.type='Literal'], [value.type='TemplateLiteral'])",
+          message:
+            'tr({ en: …, ru: … }) с инлайновыми литералами запрещён (трек i18n-extraction, Ф3): строка должна жить в словаре dict/. tr() — только для LocaleText-КОНТЕНТА из данных.',
+        },
         // «У нас shadcn строго» (владелец, 2026-07-21, повторно): браузерные
         // формоэлементы запрещены — только shared/ui (Radix). Radix сам рендерит
         // скрытый нативный select для форм — правило ловит лишь НАШ JSX.

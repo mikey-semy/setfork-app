@@ -22,7 +22,6 @@ function normalize(s: string): string {
 }
 
 export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?: string; initial?: string[]; lang: Lang; max?: number }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // не тернар-с-литералами (i18n-lint)
   const [tags, setTags] = useState<string[]>(() => [...new Set(initial.map(normalize).filter(Boolean))].slice(0, max))
   const [q, setQ] = useState('')
   const [sugg, setSugg] = useState<Suggestion[]>([])
@@ -145,7 +144,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
           ))}
         </ul>
       )}
-      <p className="mt-1 text-[0.6875rem] text-muted">{say(`Pick from suggestions or type your own. Up to ${max}.`, `Выбери из подсказок или впиши свой. До ${max}.`)}</p>
+      <p className="mt-1 text-[0.6875rem] text-muted">{t('ui.pickFromSuggestions', lang).replace('{n}', String(max))}</p>
     </div>
   )
 }

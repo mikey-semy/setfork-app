@@ -16,7 +16,6 @@ const ROWS = 7
  *  на GitHub) — клетки наполняются долей прогресса; серый — ждёт, красный — ошибка. */
 export function ReindexPanel({ lang }: { lang: Lang }) {
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [spread, setSpread] = useState(0)
   const [status, setStatus] = useState<Status>(null)
   const [space, setSpace] = useState<SpaceInfo>(null)
@@ -89,7 +88,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
     setMsg(null)
     const res = await purgeEmbeddings()
     setPurging(false)
-    setMsg('error' in res ? res.error : say(`Removed orphaned: ${res.removed}`, `Удалено осиротевших: ${res.removed}`))
+    setMsg('error' in res ? res.error : t('admin.removedOrphaned', lang).replace('{n}', String(res.removed)))
   }
 
   const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[0.8125rem] font-semibold disabled:opacity-60'
@@ -129,7 +128,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
           </div>
           {!space.inSync && (
             <div className="mt-2 text-[0.78125rem] font-medium text-warn">
-              {say(`Target changed: ${space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter'} (${space.target.dim}-dim) — run a reindex to rebuild. Old vectors will be wiped.`, `Цель изменена: ${space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter'} (${space.target.dim}-мерное) — запусти реиндекс, чтобы перестроить индекс. Старые векторы будут стёрты.`)}
+              {t('admin.targetChanged', lang).replace('{p}', space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter').replace('{d}', String(space.target.dim))}
             </div>
           )}
           <div className="mt-2.5 flex items-center gap-2">
@@ -228,7 +227,7 @@ export function ReindexPanel({ lang }: { lang: Lang }) {
           {running
             ? t('admin.indexing', lang)
             : onCooldown
-              ? say(`In ${Math.ceil(cooldownLeft / 60000)} min`, `Через ${Math.ceil(cooldownLeft / 60000)} мин`)
+              ? t('admin.inMin', lang).replace('{n}', String(Math.ceil(cooldownLeft / 60000)))
               : t('admin.run', lang)}
         </button>
       </div>

@@ -81,7 +81,6 @@ const COUNCIL_KINDS = new Set<GenMessage['kind']>(['plan', 'summon', 'seek', 'dr
 /** Ход совета: пока виток идёт — раскрыт (это и есть лоадер), отработал — свёрнут в одну строку. */
 function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { messages: GenMessage[]; lang: Lang; defaultOpen: boolean; avatars: Record<string, string>; repBadges: Record<string, string> }) {
   const [open, setOpen] = useState(defaultOpen)
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   return (
     <div>
       <button
@@ -90,7 +89,7 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { mes
         className="inline-flex items-center gap-1 rounded-md py-0.5 text-[0.6875rem] text-muted hover:text-ink-2"
       >
         <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
-        {say(`Council: ${messages.length} lines`, `Ход совета: ${messages.length}`)}
+        {t('generation.councilLines', lang).replace('{n}', String(messages.length))}
       </button>
       {open && (
         <ol className="mt-2 flex flex-col gap-3">
@@ -136,7 +135,6 @@ interface Props {
 export function GenerationChat({ generationId, lang, candidates, status, messages, listKind, detail, avatars, gnomeNames, repBadges, error, clarifyQuestions }: Props) {
   const detailNow = toDetail(detail)
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const router = useRouter()
   const [pending, start] = useTransition()
 
@@ -204,7 +202,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
   const attempts = [...new Set([...messages.map((m) => m.attempt), ...candidates.map((c) => c.idx)])].sort((a, b) => a - b)
   const errText: Record<string, string> = {
     ratelimited: t('generation.tooManyRequestsPlease', lang),
-    variantcap: say(`You’ve hit the ${MAX_VARIANTS}-variant limit.`, `Достигнут предел в ${MAX_VARIANTS} вариантов.`),
+    variantcap: t('generation.variantLimit', lang).replace('{n}', String(MAX_VARIANTS)),
     ai_quota: t('generation.monthlyDraftLimitReached2', lang),
     list_quota: t('generation.listLimitReachedDelete', lang),
     aifail: t('generation.couldNotComeUp', lang),

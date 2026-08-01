@@ -81,7 +81,6 @@ export default async function AdminPage() {
     getChangelogSettings(),
   ])
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const pushValues = { publicKey: vapid.publicKey, subject: vapid.subject, configured: Boolean(vapid.publicKey && vapid.privateKey) }
   const emailValues = {
     host: email.host,
@@ -211,10 +210,7 @@ export default async function AdminPage() {
         >
           {!hasKey && (
             <Alert variant="warn" className="mb-5">
-              {say(
-                'The active provider is not configured (no key) — generation and model lists are unavailable (id can be typed manually).',
-                'Активный провайдер не сконфигурирован (нет ключа) — генерация и списки моделей недоступны (id можно ввести вручную).',
-              )}
+              {t('admin.theActiveProviderNot', lang)}
             </Alert>
           )}
 
@@ -243,7 +239,7 @@ export default async function AdminPage() {
                 fallback: t('admin.fallbackModelCheapMode', lang),
                 // Размерность подставляется из EMBEDDING_DIM: она задана схемой БД (pgvector),
                 // и подпись не должна расходиться со схемой из-за числа, набранного в тексте.
-                embedding: say(`Embedding model (RAG, ${EMBEDDING_DIM}-dim)`, `Модель эмбеддингов (RAG, ${EMBEDDING_DIM}-мерная)`),
+                embedding: t('admin.embeddingModelDim', lang).replace('{n}', String(EMBEDDING_DIM)),
                 pick: t('admin.pickModel', lang),
                 loading: t('admin.loadingProviderSModels', lang),
                 noKey: t('admin.noKeyProviderCatalog', lang),
@@ -261,13 +257,7 @@ export default async function AdminPage() {
 
             <Field
               label={t('admin.freePlanGenerationsMonth', lang)}
-              hint={tr(
-                {
-                  en: 'Generation limit for free users. 0 = monetization off (no limit). Pro / admin are always unlimited; the council is Pro-only.',
-                  ru: 'Лимит генераций для бесплатных. 0 = монетизация выключена (без лимита). Pro/админ — без лимита; «совет» — только Pro.',
-                },
-                lang,
-              )}
+              hint={t('admin.generationLimitFreeUsers', lang)}
             >
               <Input type="number" name="freeMonthlyGens" step="1" min="0" defaultValue={settings.freeMonthlyGens} />
             </Field>

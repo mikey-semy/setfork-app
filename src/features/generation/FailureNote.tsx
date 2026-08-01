@@ -53,7 +53,6 @@ export function FailureNote({
   lang: Lang
 }) {
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en)
   const [open, setOpen] = useState(false)
   const fail = parseFailure(raw)
   // Старые витки писали реплику ошибки пустой — показывать нечего, строку не рисуем вовсе.

@@ -14,7 +14,6 @@ import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from 
 // Админ-реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.
 // Экшены (requireAdmin) — в ./actions; revalidatePath('/admin/tags') + router.refresh().
 export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   const router = useRouter()
   const { confirm, confirmDialog } = useConfirm()
   const [pending, start] = useTransition()
@@ -110,7 +109,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                       onClick={async () => {
                         // Необратимая массовая операция — type-to-confirm по slug'у тега.
                         const ok = await confirm({
-                          title: say(`Delete tag "${tg.slug}"?`, `Удалить тег «${tg.slug}»?`),
+                          title: t('tags.deleteTagConfirm', lang).replace('{slug}', tg.slug),
                           intro: t('tags.itRemovedFromAll', lang),
                           confirmLabel: t('common.delete', lang),
                           cancelLabel: t('cancel', lang),

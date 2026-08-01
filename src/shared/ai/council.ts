@@ -230,7 +230,6 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
   const law = lawBlock(query)
   const feature: AiFeature = opts.feature ?? 'generate'
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   // Подпись говорящего в беседе (идентичность роли несёт аватарка, поэтому эмодзи в ростере больше нет).
   const gtitle = (e: Expert) => (ru ? e.nameRu : e.nameEn)
   // Беседа: пишем ход совета в БД (по refId=generationId). Виток = variant (idx кандидата) —
@@ -471,7 +470,7 @@ ${roster}`,
     if (!experts.some((e) => e.id === g.id)) experts.push(g)
   }
   const names = experts.map(gtitle).join(', ')
-  emit('summon', vl('crier', 'summon', { names }) ?? say(`Consulting: ${names}`, `Созываю: ${names}`), 'crier', t('ai.coordinator', lang))
+  emit('summon', vl('crier', 'summon', { names }) ?? t('ai.consultingNames', lang).replace('{names}', names), 'crier', t('ai.coordinator', lang))
 
   // 2.5) Старейшина-искатель: прецеденты из НАШИХ списков (pgvector). Пусто на пустом корпусе — ок.
   // Берём 10 (не 3): дальше каждый эксперт получает СВОЙ срез по своим доменам
@@ -480,7 +479,7 @@ ${roster}`,
   const { lists: precedents, steps: stepPrecedents } = await findPrecedents(query, lang, { userId: opts.userId, limit: 10, stepLimit: 6 })
   // Форма «X: N» — чтобы не склонять числительное (было «3 похожих списков») и не тащить плюрализацию в ленту.
   if (precedents.length)
-    emit('seek', vl('seek-lists', 'seek', { n: String(precedents.length) }) ?? say(`Similar lists in our library: ${precedents.length}`, `Похожих списков в библиотеке: ${precedents.length}`), 'seek-lists', t('ai.librarian', lang))
+    emit('seek', vl('seek-lists', 'seek', { n: String(precedents.length) }) ?? t('ai.similarListsN', lang).replace('{n}', String(precedents.length)), 'seek-lists', t('ai.librarian', lang))
   // Прецеденты — title/desc/tags ЧУЖИХ публичных списков: недоверенный текст, оборачиваем spotlight'ом.
   // Иначе — вектор межпользовательской инъекции: опубликовал список с инструкцией в заголовке и ждёшь
   // семантического матча (порог низкий, MIN_SIMILARITY=0.3).

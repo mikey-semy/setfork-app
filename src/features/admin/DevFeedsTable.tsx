@@ -47,7 +47,7 @@ export function DevFeedsTable({ rows, lang }: { rows: FeedRow[]; lang: Lang }) {
         const r = row.original
         return (
           <span className={`block text-right font-mono tabular-nums text-[0.78125rem] ${r.freshestAgeDays == null ? 'text-muted' : r.freshestAgeDays > 7 ? 'text-warn' : 'text-ok'}`}>
-            {r.freshestAgeDays == null ? '—' : tr({ en: `${r.freshestAgeDays}d`, ru: `${r.freshestAgeDays} дн.` }, lang)}
+            {r.freshestAgeDays == null ? '—' : t('admin.daysShort', lang).replace('{n}', String(r.freshestAgeDays))}
           </span>
         )
       },

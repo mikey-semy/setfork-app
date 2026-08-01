@@ -36,7 +36,6 @@ export function AiKeyAndSwitch({
   /** Смена провайдера — родитель подтягивает каталог моделей ВЫБРАННОГО провайдера. */
   onProviderChange?: (provider: AiProviderChoice) => void
 }) {
-  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [prov, setProv] = useState<AiProviderChoice>(provider)
   const [keyInput, setKeyInput] = useState('')
   const [reveal, setReveal] = useState(false)
@@ -57,22 +56,10 @@ export function AiKeyAndSwitch({
   const field = KEY_FIELD[prov]
 
   const PROVIDER_NOTE: Record<AiProviderChoice, string> = {
-    openrouter: say(
-      'Foreign aggregator: user text leaves the country. Use a RU provider for .ru.',
-      'Зарубежный агрегатор: пользовательский текст уходит за рубеж. Для .ru использовать RU-провайдера.',
-    ),
-    selectel: say(
-      'Traffic goes through Selectel (RU), prices in ₽. Foreign models are still called at their APIs — pick RU-hosted models for strict compliance.',
-      'Данные идут через инфраструктуру Selectel (РФ), цены в ₽. Зарубежные модели роутер зовёт у их API — для строгой юр-чистоты выбирайте RU-hosted модели.',
-    ),
-    yandex: say(
-      'Fully in RU (Yandex Cloud); prices — in the Yandex Cloud console. Model ids look like gpt://<folder>/…',
-      'Полностью в РФ (Yandex Cloud); цены — в консоли Yandex Cloud. Модели вида gpt://<каталог>/…',
-    ),
-    gigachat: say(
-      'Fully in RU (Sber). Needs the Russian Trusted CA cert (NODE_EXTRA_CA_CERTS, see certs/). Chat only: embeddings are a paid tier.',
-      'Полностью в РФ (Сбер). Нужен серт НУЦ Минцифры (NODE_EXTRA_CA_CERTS, см. certs/). Только чат: эмбеддинги — платный тариф.',
-    ),
+    openrouter: t('admin.foreignAggregatorUserText', lang),
+    selectel: t('admin.trafficGoesThroughSelectel', lang),
+    yandex: t('admin.fullyRuYandexCloud', lang),
+    gigachat: t('admin.fullyRuSberNeeds', lang),
   }
 
   return (
@@ -150,10 +137,7 @@ export function AiKeyAndSwitch({
         <div>
           <Field
             label={t('admin.yandexCloudFolderId', lang)}
-            hint={say(
-              'From the console URL: aistudio.yandex.ru/platform/folders/<folder_id>.',
-              'Из URL консоли: aistudio.yandex.ru/platform/folders/<folder_id>.',
-            )}
+            hint={t('admin.fromConsoleUrlAistudio', lang)}
           >
             <input
               name="yandexFolder"
@@ -169,10 +153,7 @@ export function AiKeyAndSwitch({
           <Field
             className="mt-4"
             label={t('admin.yandexSearchApiKey', lang)}
-            hint={say(
-              'Separate paid service — activate Search API in Yandex Cloud. Empty = council relies on our corpus only (no made-up web precedents). Leave blank to keep current.',
-              'Отдельный платный сервис — активируй Search API в Yandex Cloud. Пусто = совет опирается только на наш корпус (без выдуманных веб-прецедентов). Оставь пустым, чтобы не менять.',
-            )}
+            hint={t('admin.separatePaidServiceActivate', lang)}
           >
             <input
               name="yandexSearchKey"

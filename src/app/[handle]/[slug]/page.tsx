@@ -134,7 +134,6 @@ export default async function ListPage({
   const viewer = await getSession()
   // Писать можно только в текущую версию — см. readOnlyView выше.
   const canInteract = !!viewer && !readOnlyView
-  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументами (i18n-lint)
   const isOwner = viewer?.userId === tpl.ownerId
   // Точка на кирке: у каких пунктов есть сохранённая dig-сессия зрителя (resilient — [] без таблицы).
   const digSteps = viewer && !readOnlyView ? await digStepsWithSession(tpl.id, viewer.userId) : new Set<number>()
@@ -491,7 +490,7 @@ export default async function ListPage({
                   <span className="hidden sm:inline">
                     {' '}
                     · {timeAgo(histVer.createdAt, lang)} ·{' '}
-                    {say(`read-only, current is v${curNum}`, `только чтение, текущая — v${curNum}`)}
+                    {t('list.readOnlyCurrentV', lang).replace('{v}', String(curNum))}
                   </span>
                 </span>
                 <span className="flex items-center gap-2 max-sm:w-full max-sm:justify-end">
@@ -506,7 +505,7 @@ export default async function ListPage({
                   )}
                   <Link href={base}>
                     <Button variant="outline">
-                      {say(`To v${curNum}`, `К v${curNum}`)}
+                      {t('list.toV', lang).replace('{v}', String(curNum))}
                     </Button>
                   </Link>
                 </span>

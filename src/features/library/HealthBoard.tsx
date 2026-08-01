@@ -14,7 +14,6 @@ const DOT: Record<ListHealth['status'], string> = {
 }
 
 export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[]; lang: Lang; ownerHandle: string }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   if (items.length === 0) return null
   const attention = items.filter((i) => i.status !== 'green')
 
@@ -25,18 +24,18 @@ export function HealthBoard({ items, lang, ownerHandle }: { items: ListHealth[];
         <span className="text-[0.6875rem] text-muted">
           {attention.length === 0
             ? t('library.allCalm', lang)
-            : say(`${attention.length} need a look`, `требуют взгляда: ${attention.length}`)}
+            : t('library.needALookN', lang).replace('{n}', String(attention.length))}
         </span>
       </div>
       <ul className="flex flex-col gap-1.5">
         {items.slice(0, 8).map((it) => {
           const title = tr(it.title as LocaleText, lang) || it.slug
           const notes: string[] = []
-          if (it.openSuggestions) notes.push(say(`suggestions: ${it.openSuggestions}`, `предложений: ${it.openSuggestions}`))
-          if (it.openIssues) notes.push(say(`issues: ${it.openIssues}`, `issues: ${it.openIssues}`))
+          if (it.openSuggestions) notes.push(t('library.suggestionsN', lang).replace('{n}', String(it.openSuggestions)))
+          if (it.openIssues) notes.push(t('library.issuesN', lang).replace('{n}', String(it.openIssues)))
           if (it.freshStars) notes.push(`★ +${it.freshStars}`)
-          if (it.freshForks) notes.push(say(`forks +${it.freshForks}`, `форков +${it.freshForks}`))
-          if (it.freshDiscussions) notes.push(say(`talks +${it.freshDiscussions}`, `обсуждений +${it.freshDiscussions}`))
+          if (it.freshForks) notes.push(t('library.forksPlusN', lang).replace('{n}', String(it.freshForks)))
+          if (it.freshDiscussions) notes.push(t('library.talksPlusN', lang).replace('{n}', String(it.freshDiscussions)))
           // Красный ведёт ПРЯМО в боль: сначала предложения, потом issues.
           const base = `/${ownerHandle}/${it.slug}`
           const href = it.status === 'red' ? (it.openSuggestions ? `${base}/suggestions` : `${base}/issues`) : base

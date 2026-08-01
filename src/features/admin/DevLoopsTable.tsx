@@ -86,13 +86,7 @@ export function DevLoopsTable({ rows, lang }: { rows: LoopRow[]; lang: Lang }) {
     <div className="flex min-w-0 flex-col gap-2">
       <DataTableV2<LoopRow> cardOnMobile rowKey={(r) => r.type} columns={columns} data={rows} />
       <p className="text-[0.6875rem] text-muted">
-        {tr(
-          {
-            en: 'Pause stops the queue from handing out this loop’s jobs — atomically, on every instance, without a restart. The breaker is tripped by code and cleared by a human.',
-            ru: 'Стоп прекращает выдачу задач этой петли — атомарно, на всех инстансах, без рестарта. Предохранитель ставит код, снимает человек.',
-          },
-          lang,
-        )}
+        {t('admin.pauseStopsQueueFrom', lang)}
       </p>
     </div>
   )
