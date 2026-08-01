@@ -38,26 +38,26 @@ export default async function AdminDashboardPage() {
   const xLabels: [string, string] = [mmdd(series.days[0]), mmdd(series.days[series.days.length - 1])]
   const spendTotal = series.spend.reduce((s, v) => s + v, 0)
   const charts = [
-    { title: tr({ en: 'Spend / day', ru: 'Расход / день' }, lang), points: series.spend, color: 'accent' as const, total: '$' + spendTotal.toFixed(2) },
-    { title: tr({ en: 'Generations / day', ru: 'Генерации / день' }, lang), points: series.generations, color: 'ok' as const, total: num(series.generations.reduce((s, v) => s + v, 0)) },
-    { title: tr({ en: 'New lists / day', ru: 'Новые списки / день' }, lang), points: series.newLists, color: 'cur' as const, total: num(series.newLists.reduce((s, v) => s + v, 0)) },
-    { title: tr({ en: 'New users / day', ru: 'Новые юзеры / день' }, lang), points: series.signups, color: 'warn' as const, total: num(series.signups.reduce((s, v) => s + v, 0)) },
+    { title: t('admin.spendDay', lang), points: series.spend, color: 'accent' as const, total: '$' + spendTotal.toFixed(2) },
+    { title: t('admin.generationsDay', lang), points: series.generations, color: 'ok' as const, total: num(series.generations.reduce((s, v) => s + v, 0)) },
+    { title: t('admin.newListsDay', lang), points: series.newLists, color: 'cur' as const, total: num(series.newLists.reduce((s, v) => s + v, 0)) },
+    { title: t('admin.newUsersDay', lang), points: series.signups, color: 'warn' as const, total: num(series.signups.reduce((s, v) => s + v, 0)) },
   ]
 
   const inbox = [
-    { label: tr({ en: 'Moderation', ru: 'Модерация' }, lang), value: mod.pending, href: '/admin/moderation' },
-    { label: tr({ en: 'Reports', ru: 'Жалобы' }, lang), value: reports.new, href: '/admin/reports' },
-    { label: tr({ en: 'Feedback', ru: 'Фидбек' }, lang), value: feedback.new, href: '/admin/feedback' },
+    { label: t('admin.moderation', lang), value: mod.pending, href: '/admin/moderation' },
+    { label: t('admin.reports', lang), value: reports.new, href: '/admin/reports' },
+    { label: t('admin.feedback', lang), value: feedback.new, href: '/admin/feedback' },
   ]
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-6 px-5 py-6 md:px-8">
       <PageHeader
-        title={tr({ en: 'Dashboard', ru: 'Дашборд' }, lang)}
-        subtitle={tr({ en: 'Live monitoring — traffic, generations, spend, queue.', ru: 'Живой мониторинг — трафик, генерации, расход, очередь.' }, lang)}
+        title={t('admin.dashboard', lang)}
+        subtitle={t('admin.liveMonitoringTrafficGenerations', lang)}
         actions={
           <Link href="/admin/usage" className="text-[0.8125rem] text-accent hover:underline">
-            {tr({ en: 'Detailed usage →', ru: 'Подробный расход →' }, lang)}
+            {t('admin.detailedUsage', lang)}
           </Link>
         }
       />
@@ -68,7 +68,7 @@ export default async function AdminDashboardPage() {
       {/* Тренды за 14 дней */}
       <div className="flex flex-col gap-3">
         <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">
-          {tr({ en: 'Trends · 14 days', ru: 'Тренды · 14 дней' }, lang)}
+          {t('admin.trends14Days', lang)}
         </h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {charts.map((c) => (
@@ -85,7 +85,7 @@ export default async function AdminDashboardPage() {
 
       {/* Инбокс — очереди, требующие действия */}
       <div className="flex flex-col gap-3">
-        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Inbox', ru: 'Требует внимания' }, lang)}</h2>
+        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.inbox', lang)}</h2>
         <div className="grid grid-cols-3 gap-3">
           {inbox.map((i) => (
             <StatTile key={i.href} href={i.href} label={i.label} value={num(i.value)} tone={i.value > 0 ? 'accent' : 'ink'} />

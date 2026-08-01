@@ -431,11 +431,11 @@ export default async function ListPage({
                   lang={lang}
                   labels={{
                     history: t('versionsTab', lang),
-                    expand: say('Show full message', 'Показать сообщение целиком'),
-                    collapse: say('Hide message', 'Свернуть сообщение'),
-                    commitLink: say('This commit in history', 'Этот коммит в истории'),
-                    and: say(' and ', ' и '),
-                    others: say('and {n} others', 'и ещё {n}'),
+                    expand: t('list.showFullMessage', lang),
+                    collapse: t('list.hideMessage', lang),
+                    commitLink: t('list.thisCommitHistory', lang),
+                    and: t('list.and', lang),
+                    others: t('list.andNOthers', lang),
                   }}
                 />
               </>
@@ -487,7 +487,7 @@ export default async function ListPage({
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <Tag size={13} className="shrink-0 text-accent" />
                 <span className="min-w-0 flex-1 truncate">
-                  {say('Version', 'Версия')} <b>v{histNum}</b>
+                  {t('list.version', lang)} <b>v{histNum}</b>
                   <span className="hidden sm:inline">
                     {' '}
                     · {timeAgo(histVer.createdAt, lang)} ·{' '}
@@ -499,8 +499,8 @@ export default async function ListPage({
                     <form action={revertToVersion.bind(null, tpl.id, histNum)}>
                       <Button type="submit" variant="primary">
                         <History size={13} />
-                        <span className="max-sm:hidden">{say('Restore this version', 'Вернуть эту версию')}</span>
-                        <span className="sm:hidden">{say('Restore', 'Вернуть')}</span>
+                        <span className="max-sm:hidden">{t('list.restoreVersion', lang)}</span>
+                        <span className="sm:hidden">{t('list.restore', lang)}</span>
                       </Button>
                     </form>
                   )}
@@ -673,7 +673,7 @@ export default async function ListPage({
                         при переносе заголовка она уплывала в середину — фидбек владельца). */}
                     {viewer && !readOnlyView && typeof s.n === 'number' && (
                       <span className="absolute right-2 top-2 print:hidden">
-                        <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={say('Dig into this step', 'Копнуть этот пункт')} hasSession={digSteps.has(s.n)} />
+                        <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={t('list.digIntoStep', lang)} hasSession={digSteps.has(s.n)} />
                       </span>
                     )}
                     <div className="flex gap-3">
@@ -777,7 +777,7 @@ export default async function ListPage({
           <PageAside>
             <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
             {backlinks.length > 0 && (
-              <AsideCard title={say('Linked from', 'Ссылаются на этот список')}>
+              <AsideCard title={t('list.linkedFrom', lang)}>
                 <ul className="flex flex-col gap-1.5">
                   {backlinks.map((b) => (
                     <li key={`${b.handle}/${b.slug}`}>

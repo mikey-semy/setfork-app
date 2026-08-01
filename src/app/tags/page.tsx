@@ -13,16 +13,14 @@ export async function generateMetadata() {
 
 // Индекс тегов: все теги реестра чипами (курируемые/популярные выше) → /tags/[slug].
 export default async function TagsIndexPage() {
-  const lang = await getLang()
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
-  const tags = await listTags({ limit: 300 })
+  const lang = await getLang()  const tags = await listTags({ limit: 300 })
 
   return (
     <div className="mx-auto w-full max-w-[56.25rem] px-4 py-8">
       <PageHeader
         icon={<Tag size={18} />}
         title={t('tags', lang)}
-        subtitle={say('Browse lists by tag — curated first.', 'Списки по тегам — курируемые сверху.')}
+        subtitle={t('tags.browseListsByTag', lang)}
       />
       {tags.length ? (
         <div className="flex flex-wrap gap-2">
@@ -38,7 +36,7 @@ export default async function TagsIndexPage() {
           ))}
         </div>
       ) : (
-        <EmptyState icon={<Tag size={28} />} title={say('No tags yet', 'Тегов пока нет')} />
+        <EmptyState icon={<Tag size={28} />} title={t('tags.noTagsYet', lang)} />
       )}
     </div>
   )

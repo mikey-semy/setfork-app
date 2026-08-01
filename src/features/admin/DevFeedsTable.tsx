@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { DataTableV2, type ColumnDef } from '@/shared/ui/data-table/DataTableV2'
 import { nodeColumn, numberColumn } from '@/shared/ui/data-table/column-builders'
-import { tr, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 
 /**
  * Живые списки (/admin/development) — DataTableV2 (Ф11, хвост миграции с v1-моста).
@@ -29,7 +29,7 @@ export function DevFeedsTable({ rows, lang }: { rows: FeedRow[]; lang: Lang }) {
   const columns: ColumnDef<FeedRow, unknown>[] = [
     nodeColumn<FeedRow>({
       id: 'feed',
-      header: tr({ en: 'Feed', ru: 'Лента' }, lang),
+      header: t('admin.feed', lang),
       render: (r) => (
         <Link href={r.href} className="block min-w-0 truncate text-[0.8125rem] text-ink hover:text-accent" title={r.title}>
           {r.title}
@@ -38,7 +38,7 @@ export function DevFeedsTable({ rows, lang }: { rows: FeedRow[]; lang: Lang }) {
     }),
     {
       id: 'fresh',
-      header: tr({ en: 'Fresh', ru: 'Свежесть' }, lang),
+      header: t('admin.fresh2', lang),
       size: 92,
       enableSorting: true,
       // Неизвестная свежесть сортируется как самая старая — «—» не притворяется свежим.
@@ -52,12 +52,12 @@ export function DevFeedsTable({ rows, lang }: { rows: FeedRow[]; lang: Lang }) {
         )
       },
     },
-    numberColumn<FeedRow>({ id: 'grown', header: tr({ en: 'Grown', ru: 'Роста' }, lang), size: 84, value: (r) => r.grown, format: num }),
-    numberColumn<FeedRow>({ id: 'views', header: tr({ en: 'Views', ru: 'Просмотров' }, lang), size: 104, value: (r) => r.views, format: num }),
-    numberColumn<FeedRow>({ id: 'clicks', header: tr({ en: 'Source clicks', ru: 'Кликов' }, lang), size: 88, value: (r) => r.clicks, format: num }),
+    numberColumn<FeedRow>({ id: 'grown', header: t('admin.grown', lang), size: 84, value: (r) => r.grown, format: num }),
+    numberColumn<FeedRow>({ id: 'views', header: t('admin.views', lang), size: 104, value: (r) => r.views, format: num }),
+    numberColumn<FeedRow>({ id: 'clicks', header: t('admin.sourceClicks', lang), size: 88, value: (r) => r.clicks, format: num }),
     {
       id: 'humanEdits',
-      header: tr({ en: 'Human edits', ru: 'Правок людей' }, lang),
+      header: t('admin.humanEdits', lang),
       size: 112,
       enableSorting: true,
       accessorFn: (r) => r.humanEdits,

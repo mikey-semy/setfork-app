@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { Check, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { t, type Lang } from '@/shared/i18n'
 
 /**
  * ПОЛОСА СОХРАНЕНИЯ — у большого пальца, а не в конце простыни.
@@ -43,9 +44,7 @@ function snapshot(form: HTMLFormElement): string {
   return parts.join('&')
 }
 
-export function FormSaveBar({ ru }: { ru: boolean }) {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
-  const anchor = useRef<HTMLDivElement>(null)
+export function FormSaveBar({ lang }: { lang: Lang }) {  const anchor = useRef<HTMLDivElement>(null)
   const [dirty, setDirty] = useState(false)
   const { pending } = useFormStatus()
   const saved = useRef('')
@@ -116,15 +115,15 @@ export function FormSaveBar({ ru }: { ru: boolean }) {
           <div className="mx-auto flex max-w-[87.5rem] items-center justify-between gap-3 px-4 py-2.5 md:px-8">
             {/* На телефоне текста нет: там важнее две крупные кнопки, а не пояснение. */}
             <span className="hidden min-w-0 truncate text-[0.8125rem] text-ink-2 sm:inline">
-              {say('Unsaved changes', 'Есть несохранённые изменения')}
+              {t('ui.unsavedChanges', lang)}
             </span>
             <div className="flex flex-1 items-center justify-end gap-2 sm:flex-none">
               <Button type="button" variant="outline" size="md" onClick={discard} disabled={pending} className="h-11 max-sm:flex-1 sm:h-[2.375rem]">
-                {say('Discard', 'Отменить')}
+                {t('ui.discard', lang)}
               </Button>
               <Button type="submit" variant="primary" size="md" disabled={pending} className="h-11 max-sm:flex-1 sm:h-[2.375rem]">
                 {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-                {say('Save', 'Сохранить')}
+                {t('common.save', lang)}
               </Button>
             </div>
           </div>

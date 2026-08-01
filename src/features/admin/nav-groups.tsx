@@ -6,32 +6,30 @@ import type { AdminNavGroup } from './AdminNav'
  * Разделы админки — ОДИН список на всё: и для меню на /admin, и для меню на вложенных
  * страницах (layout). Держать два списка значит однажды добавить пункт в один из них.
  */
-export function adminNavGroups(lang: Lang): AdminNavGroup[] {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
-  return [
+export function adminNavGroups(lang: Lang): AdminNavGroup[] {  return [
     {
-      title: say('Overview', 'Обзор'),
+      title: t('admin.overview', lang),
       links: [
-        { href: '/admin/dashboard', label: tr({ en: 'Dashboard', ru: 'Дашборд' }, lang), icon: <LayoutDashboard size={14} /> },
-        { href: '/admin/development', label: tr({ en: 'Development', ru: 'Развитие' }, lang), icon: <TrendingUp size={14} /> },
-        { href: '/admin/usage', label: say('Draft usage', 'Расход на черновики'), icon: <BarChart3 size={14} /> },
-        { href: '/admin/audit', label: say('Audit', 'Аудит'), icon: <ScrollText size={14} /> },
+        { href: '/admin/dashboard', label: t('admin.dashboard', lang), icon: <LayoutDashboard size={14} /> },
+        { href: '/admin/development', label: t('admin.development', lang), icon: <TrendingUp size={14} /> },
+        { href: '/admin/usage', label: t('admin.draftUsage', lang), icon: <BarChart3 size={14} /> },
+        { href: '/admin/audit', label: t('admin.audit', lang), icon: <ScrollText size={14} /> },
         { href: '/admin/ui-kit', label: 'UI Kit', icon: <Palette size={14} /> },
       ],
     },
     {
-      title: say('Content', 'Контент'),
+      title: t('admin.content', lang),
       links: [
-        { href: '/admin/collections', label: say('Collections', 'Подборки'), icon: <FolderGit2 size={14} /> },
-        { href: '/admin/feeds', label: say('Feeds', 'Потоки'), icon: <Rss size={14} /> },
+        { href: '/admin/collections', label: t('admin.collections', lang), icon: <FolderGit2 size={14} /> },
+        { href: '/admin/feeds', label: t('admin.feeds', lang), icon: <Rss size={14} /> },
         { href: '/admin/tags', label: t('tags', lang), icon: <Tag size={14} /> },
-        { href: '/admin/landing', label: say('Landing', 'Лендинг'), icon: <Megaphone size={14} /> },
+        { href: '/admin/landing', label: t('admin.landing', lang), icon: <Megaphone size={14} /> },
       ],
     },
     {
-      title: say('People & complaints', 'Люди и жалобы'),
+      title: t('admin.peopleComplaints', lang),
       links: [
-        { href: '/admin/moderation', label: say('Moderation', 'Модерация'), icon: <Shield size={14} /> },
+        { href: '/admin/moderation', label: t('admin.moderation', lang), icon: <Shield size={14} /> },
         { href: '/admin/reports', label: t('reports', lang), icon: <Flag size={14} /> },
         { href: '/admin/feedback', label: t('feedback', lang), icon: <MessageSquare size={14} /> },
       ],
@@ -41,5 +39,5 @@ export function adminNavGroups(lang: Lang): AdminNavGroup[] {
 
 /** Пункт «настройки инстанса» — якоря секций самой /admin, их знает только та страница. */
 export function adminSettingsGroup(lang: Lang, sectionIds: string[]): AdminNavGroup {
-  return { title: tr({ en: 'Instance settings', ru: 'Настройки инстанса' }, lang), sectionIds }
+  return { title: t('admin.instanceSettings', lang), sectionIds }
 }

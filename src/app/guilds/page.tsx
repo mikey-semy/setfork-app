@@ -37,7 +37,7 @@ export default async function GuildsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[65rem] px-4 py-8 sm:px-6">
-      <h1 className="text-[1.375rem] font-bold text-ink">{say('The Workshop Guilds', 'Гильдии мастерской')}</h1>
+      <h1 className="text-[1.375rem] font-bold text-ink">{t('guilds.theWorkshopGuilds', lang)}</h1>
       <p className="mt-1.5 max-w-[40rem] text-[0.875rem] leading-relaxed text-ink-2">
         {say(
           'Every SetFork list is forged by a council of masters. Each master carries his guild — its code of quality and its reputation, earned list by list.',
@@ -62,7 +62,7 @@ export default async function GuildsPage() {
                       подмастерья; ученик — приглушённый текст без иконки.
                       tabIndex: Radix Tooltip открывается по focus — тап на touch
                       фокусирует бейдж и показывает подсказку (Codex #643). */}
-                  <Tooltip label={say('Craft rank — earned by lists people built from this master', 'Цеховой ранг — заработан списками, что люди собрали из черновиков мастера')}>
+                  <Tooltip label={t('guilds.craftRankEarnedBy', lang)}>
                     <span tabIndex={0} className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${RANK_CLS[rank.tier]}`}>
                       {rank.tier >= 1 && <Award size={11} />}
                       {ru ? rank.labelRu : rank.labelEn}
@@ -70,7 +70,7 @@ export default async function GuildsPage() {
                   </Tooltip>
                 </div>
                 {share !== null && (
-                  <Tooltip label={say('Share of councils whose list was accepted', 'Доля советов, чей список приняли')}>
+                  <Tooltip label={t('guilds.shareCouncilsWhoseList', lang)}>
                     <span tabIndex={0} className="ml-auto shrink-0 self-start rounded-full bg-(--accent-soft) px-2 py-0.5 text-[0.6875rem] font-semibold text-accent">
                       ✓ {share}%
                     </span>
@@ -79,7 +79,7 @@ export default async function GuildsPage() {
               </div>
               {e.code && (
                 <div className="mt-3">
-                  <div className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
+                  <div className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{t('common.guildCode', lang)}</div>
                   {/* Людям — на их языке; агентам в промпты всегда едет EN `code` (вердикт владельца, линза 07). */}
                   <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2">{ru ? e.codeRu || e.code : e.code}</p>
                 </div>
@@ -93,7 +93,7 @@ export default async function GuildsPage() {
                   ))}
                 </div>
               )}
-              {e.domains.includes('*') && <div className="mt-3 text-[0.6875rem] text-muted">{say('Any topic', 'Любая тема')}</div>}
+              {e.domains.includes('*') && <div className="mt-3 text-[0.6875rem] text-muted">{t('guilds.anyTopic', lang)}</div>}
               {r && r.gens > 0 && (
                 <div className="mt-3 text-[0.6875rem] text-muted">
                   {say(`Councils joined: ${r.gens}`, `Участие в советах: ${r.gens}`)}

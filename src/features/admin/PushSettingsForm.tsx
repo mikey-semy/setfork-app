@@ -1,5 +1,6 @@
 'use client'
 
+import { type Lang } from '@/shared/i18n'
 import { useState } from 'react'
 import { KeyRound, Loader2 } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
@@ -14,8 +15,9 @@ export interface PushFormValues {
   configured: boolean
 }
 
-export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+export function PushSettingsForm({ lang, v }: { lang: Lang; v: PushFormValues }) {
+  const ru = lang === 'ru'
+  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [pub, setPub] = useState(v.publicKey)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -77,7 +79,7 @@ export function PushSettingsForm({ ru, v }: { ru: boolean; v: PushFormValues }) 
         <Field label={ru ? 'Subject (mailto: или URL сайта)' : 'Subject (mailto: or site URL)'}>
           <Input name="subject" defaultValue={v.subject} placeholder="mailto:admin@setfork.com" className="font-mono" />
         </Field>
-        <FormSaveBar ru={ru} />
+        <FormSaveBar lang={lang} />
       </form>
       {confirmDialog}
     </div>

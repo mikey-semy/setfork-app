@@ -3,7 +3,7 @@
 import { DataTableV2, type ColumnDef } from '@/shared/ui/data-table/DataTableV2'
 import { nodeColumn, numberColumn } from '@/shared/ui/data-table/column-builders'
 import { UserLine } from '@/shared/ui/UserLine'
-import { tr, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 
 /**
  * Расход по пользователям (/admin/usage) — DataTableV2 (Ф11, хвост миграции с v1-моста).
@@ -26,19 +26,19 @@ export function UsageByUserTable({ rows, lang }: { rows: UsageUserRow[]; lang: L
   const columns: ColumnDef<UsageUserRow, unknown>[] = [
     nodeColumn<UsageUserRow>({
       id: 'user',
-      header: tr({ en: 'User', ru: 'Пользователь' }, lang),
+      header: t('admin.user', lang),
       render: (r) =>
         r.handle ? (
           <UserLine handle={r.handle} size="md" className="min-w-0" />
         ) : (
-          <span className="text-[0.8125rem] text-muted">{tr({ en: 'system / deleted', ru: 'система / удалён' }, lang)}</span>
+          <span className="text-[0.8125rem] text-muted">{t('admin.systemDeleted', lang)}</span>
         ),
     }),
-    numberColumn<UsageUserRow>({ id: 'calls', header: tr({ en: 'Calls', ru: 'Вызовы' }, lang), size: 112, value: (r) => r.calls, format: num }),
-    numberColumn<UsageUserRow>({ id: 'tokens', header: tr({ en: 'Tokens', ru: 'Токены' }, lang), size: 112, value: (r) => r.totalTokens, format: num }),
+    numberColumn<UsageUserRow>({ id: 'calls', header: t('admin.calls2', lang), size: 112, value: (r) => r.calls, format: num }),
+    numberColumn<UsageUserRow>({ id: 'tokens', header: t('admin.tokens2', lang), size: 112, value: (r) => r.totalTokens, format: num }),
     {
       id: 'cost',
-      header: tr({ en: 'Cost', ru: 'Стоимость' }, lang),
+      header: t('admin.cost', lang),
       size: 112,
       enableSorting: true,
       accessorFn: (r) => r.costUsd,
@@ -54,7 +54,7 @@ export function UsageByUserTable({ rows, lang }: { rows: UsageUserRow[]; lang: L
       rowKey={(r) => r.userId ?? 'system'}
       columns={columns}
       data={rows}
-      empty={{ hint: tr({ en: 'No usage yet.', ru: 'Пока нет расхода.' }, lang) }}
+      empty={{ hint: t('admin.noUsageYet', lang) }}
     />
   )
 }

@@ -47,7 +47,7 @@ export function GeneralSection({
           <ListTypeToggle ordered={ordered} lang={lang} />
         </Field>
 
-        <FormSaveBar ru={lang === 'ru'} />
+        <FormSaveBar lang={lang} />
       </form>
     </SettingsSection>
   )

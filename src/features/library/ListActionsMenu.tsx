@@ -39,9 +39,7 @@ export function ListActionsMenu({
   targetLang: Lang
 }) {
   const router = useRouter()
-  const [pending, start] = useTransition()
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
-  const translateLabel = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
+  const [pending, start] = useTransition()  const translateLabel = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
 
   const doTranslate = () =>
     start(async () => {
@@ -68,7 +66,7 @@ export function ListActionsMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" aria-label={say('More actions', 'Ещё действия')} className={btn}>
+        <button type="button" aria-label={t('library.moreActions', lang)} className={btn}>
           <MoreHorizontal size={16} />
         </button>
       </DropdownMenuTrigger>

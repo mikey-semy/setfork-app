@@ -5,6 +5,7 @@ import { ChevronRight, Loader2, Pickaxe } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Markdown } from '@/shared/ui/Markdown'
 import { digDeeper, type DigLayerRow } from './actions'
+import { t } from '@/shared/i18n'
 
 /**
  * «Копать глубже» под шагом (HQ §8): аккордеон слоёв + кнопка следующего слоя.
@@ -33,15 +34,15 @@ export function DigPanel({
   const [pending, start] = useTransition()
 
   const levelTitle = (lv: number) =>
-    lv === 1 ? say('Reasons & sources', 'Причины и источники') : lv === 2 ? say('Mechanism & exceptions', 'Механизм и исключения') : say('Fine points', 'Тонкости')
+    lv === 1 ? t('dig.reasonsSources', lang) : lv === 2 ? t('dig.mechanismExceptions', lang) : t('dig.finePoints', lang)
 
   const errText: Record<string, string> = {
-    ai_off: say('Drafting is not configured.', 'ИИ не настроен.'),
-    budget: say('AI budget is exhausted for today.', 'Дневной бюджет ИИ исчерпан.'),
-    quota: say('Your monthly AI quota is used up.', 'Твоя месячная ИИ-квота исчерпана.'),
-    ratelimited: say('Too fast — wait a minute.', 'Слишком часто — подожди минуту.'),
-    aifail: say('The digger could not finish — try again.', 'Копатель не справился — попробуй ещё раз.'),
-    'not found': say('Step not found.', 'Шаг не найден.'),
+    ai_off: t('dig.draftingNotConfigured', lang),
+    budget: t('dig.aIBudgetExhaustedToday', lang),
+    quota: t('dig.yourMonthlyAiQuota', lang),
+    ratelimited: t('dig.tooFastWaitMinute', lang),
+    aifail: t('dig.theDiggerCouldNot', lang),
+    'not found': t('dig.stepNotFound', lang),
   }
 
   const dig = () => {
@@ -78,7 +79,7 @@ export function DigPanel({
             className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[0.6875rem] text-ink-2 hover:border-border-strong hover:text-ink disabled:opacity-50"
           >
             {pending ? <Loader2 size={12} className="animate-spin" /> : <Pickaxe size={12} />}
-            {layers.length === 0 ? say('Dig deeper', 'Копнуть глубже') : say(`Dig lower (${layers.length}/${MAX_LEVEL})`, `Копаем ниже (${layers.length}/${MAX_LEVEL})`)}
+            {layers.length === 0 ? t('dig.digDeeper2', lang) : say(`Dig lower (${layers.length}/${MAX_LEVEL})`, `Копаем ниже (${layers.length}/${MAX_LEVEL})`)}
           </button>
         )}
         {err && <span className="text-[0.6875rem] text-warn">{err}</span>}

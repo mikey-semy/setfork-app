@@ -11,6 +11,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import type { LandingContent, LandingCopy } from '@/shared/settings/landing'
 import { saveLanding, suggestSlogan, uploadLandingImage } from './landing-actions'
+import { t } from '@/shared/i18n'
 
 type FieldKey = keyof Omit<LandingCopy, 'stats'>
 type Field = { key: FieldKey; label: string; max: number; area?: boolean; ai?: boolean }
@@ -29,9 +30,7 @@ const FIELDS: Field[] = [
   { key: 'footerNote', label: 'Футер — слоган', max: 40 },
 ]
 
-export function LandingEditor({ initial, heroPreview, lang }: { initial: LandingContent; heroPreview?: string; lang: Lang }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
-  const router = useRouter()
+export function LandingEditor({ initial, heroPreview, lang }: { initial: LandingContent; heroPreview?: string; lang: Lang }) {  const router = useRouter()
   const [c, setC] = useState<LandingContent>(initial)
   const [tab, setTab] = useState<'ru' | 'en'>('ru')
   const [pending, start] = useTransition()
@@ -73,7 +72,7 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
       </div>
 
       {/* Картинка hero — drag-and-drop (переиспользуем медиа-пайплайн) */}
-      <HeroImage initial={heroPreview} say={say} onRef={(ref) => setC((p) => ({ ...p, heroImage: ref }))} />
+      <HeroImage initial={heroPreview} lang={lang} onRef={(ref) => setC((p) => ({ ...p, heroImage: ref }))} />
 
       {/* Текстовые поля с лимитом + AI-кнопкой */}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -91,12 +90,12 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
 
       {/* Числа-статы (4 плитки) */}
       <div>
-        <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink-2">{say('Trust stats (4)', 'Плитки-статы (4)')}</div>
+        <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink-2">{t('admin.trustStats4', lang)}</div>
         <div className="grid gap-2 sm:grid-cols-4">
           {copy.stats.map((s, i) => (
             <div key={i} className="flex flex-col gap-1.5 rounded-md border border-border p-2">
               <Input value={s.num} maxLength={8} onChange={(e) => setStat(i, 'num', e.target.value)} placeholder="12k+" size="sm" />
-              <Input value={s.label} maxLength={30} onChange={(e) => setStat(i, 'label', e.target.value)} placeholder={say('label', 'подпись')} size="sm" />
+              <Input value={s.label} maxLength={30} onChange={(e) => setStat(i, 'label', e.target.value)} placeholder={t('admin.label', lang)} size="sm" />
             </div>
           ))}
         </div>
@@ -104,9 +103,9 @@ export function LandingEditor({ initial, heroPreview, lang }: { initial: Landing
 
       <div className="flex items-center gap-3">
         <Button type="button" variant="primary" onClick={save} disabled={pending} className="px-4 py-2 text-[0.875rem]">
-          {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {say('Save', 'Сохранить')}
+          {pending ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {t('common.save', lang)}
         </Button>
-        {saved && <span className="text-[0.8125rem] text-ok">{say('Saved', 'Сохранено')}</span>}
+        {saved && <span className="text-[0.8125rem] text-ok">{t('admin.saved', lang)}</span>}
         {err && <span className="text-[0.8125rem] text-danger">{err}</span>}
       </div>
     </div>
@@ -173,7 +172,7 @@ function LimitedField({
 }
 
 // ── Hero-картинка: drag-and-drop → медиа-пайплайн (uploadLandingImage) ──
-function HeroImage({ initial, onRef, say }: { initial?: string; onRef: (ref: string) => void; say: (en: string, ru: string) => string }) {
+function HeroImage({ initial, onRef, lang }: { initial?: string; onRef: (ref: string) => void; lang: Lang }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(initial ?? null)
   const [drag, setDrag] = useState(false)
@@ -181,7 +180,7 @@ function HeroImage({ initial, onRef, say }: { initial?: string; onRef: (ref: str
   const [err, setErr] = useState<string | null>(null)
 
   const upload = async (file: File) => {
-    if (!file.type.startsWith('image/')) return setErr(say('Image only', 'Только картинка'))
+    if (!file.type.startsWith('image/')) return setErr(t('admin.imageOnly', lang))
     setErr(null)
     setBusy(true)
     const fd = new FormData()
@@ -197,7 +196,7 @@ function HeroImage({ initial, onRef, say }: { initial?: string; onRef: (ref: str
 
   return (
     <div>
-      <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink-2">{say('Hero image', 'Картинка hero')}</div>
+      <div className="mb-1.5 text-[0.78125rem] font-semibold text-ink-2">{t('admin.heroImage', lang)}</div>
       <div
         role="button"
         tabIndex={0}
@@ -222,12 +221,12 @@ function HeroImage({ initial, onRef, say }: { initial?: string; onRef: (ref: str
         <div className="min-w-0 text-[0.8125rem]">
           <div className="flex items-center gap-1.5 font-medium text-ink">
             {busy ? <Loader2 size={15} className="animate-spin" /> : <ImageUp size={15} className="text-ink-2" />}
-            {drag ? say('Drop to upload', 'Отпусти, чтобы загрузить') : say('Drag an image or click', 'Перетащи картинку или кликни')}
+            {drag ? t('admin.dropUpload', lang) : t('admin.dragImageClick', lang)}
           </div>
-          <p className="mt-1 text-[0.78125rem] text-muted">{say('PNG/JPG/WebP. Replaces the hero illustration.', 'PNG/JPG/WebP. Заменит иллюстрацию hero.')}</p>
+          <p className="mt-1 text-[0.78125rem] text-muted">{t('admin.pNGJpgWebpReplaces', lang)}</p>
           {preview && (
             <button type="button" onClick={(e) => { e.stopPropagation(); setPreview(null); onRef('') }} className="mt-1 inline-flex items-center gap-1 text-[0.78125rem] text-ink-2 hover:text-danger">
-              <X size={12} /> {say('Reset to default', 'Сбросить на дефолт')}
+              <X size={12} /> {t('admin.resetDefault', lang)}
             </button>
           )}
           {err && <p className="mt-1 text-[0.78125rem] text-danger">{err}</p>}

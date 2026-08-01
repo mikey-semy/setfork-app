@@ -6,6 +6,7 @@ import { cn } from '@/shared/lib/cn'
 import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from './Tooltip'
 import type { Lang } from '@/shared/i18n'
+import { t } from '@/shared/i18n'
 
 // Чипы + автокомплит для тегов списка. Пишет скрытый <input name> со slug'ами
 // через пробел — серверный экшен (parseTags) работает без изменений. Подсказки
@@ -78,7 +79,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
             <button
               type="button"
               onClick={() => remove(tag)}
-              aria-label={say('Remove', 'Убрать')}
+              aria-label={t('ui.remove', lang)}
               className="grid size-4 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-danger"
             >
               <X size={11} />
@@ -132,7 +133,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
               >
                 <span className="flex items-center gap-1.5">
                   {s.curated && (
-                    <Tooltip label={say('Curated', 'Курируемый')}>
+                    <Tooltip label={t('common.curated', lang)}>
                       <span className="text-accent">✓</span>
                     </Tooltip>
                   )}

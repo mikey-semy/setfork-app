@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Radio } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
-import { tr, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { setListLiving } from './actions'
 
 /**
@@ -28,7 +28,7 @@ export function LivingSection({ templateId, living, lang }: { templateId: string
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 font-semibold text-ink">
-            <Radio size={15} className="text-muted" /> {tr({ en: 'Living list', ru: 'Живой список' }, lang)}
+            <Radio size={15} className="text-muted" /> {t('common.livingList', lang)}
           </div>
           <p className="mt-1 text-[0.78125rem] leading-snug text-ink-2">
             {tr(

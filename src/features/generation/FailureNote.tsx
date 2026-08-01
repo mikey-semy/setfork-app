@@ -6,6 +6,7 @@ import type { Lang } from '@/shared/i18n'
 import { parseFailure, type AiFailCode } from '@/shared/ai/failure'
 import { Button } from '@/shared/ui/button'
 import { toast } from '@/shared/ui/toast'
+import { t } from '@/shared/i18n'
 
 /**
  * «Почему не получилось» — свёрнуто по умолчанию.
@@ -17,23 +18,21 @@ import { toast } from '@/shared/ui/toast'
  */
 
 /** Подпись кода человеку. Код в БД машинный — фразу рисует UI, она не протухает при смене языка. */
-function reasonLabel(code: AiFailCode, ru: boolean): string {
-  const say = (en: string, rus: string) => (ru ? rus : en)
-  switch (code) {
+function reasonLabel(code: AiFailCode, lang: Lang): string {  switch (code) {
     case 'no_client':
-      return say('AI provider is not configured', 'Генератор не настроен')
+      return t('generation.aIProviderNotConfigured', lang)
     case 'ai_off':
-      return say('Generation is switched off', 'Генерация выключена')
+      return t('generation.generationSwitchedOff', lang)
     case 'budget':
-      return say('Daily spend cap reached', 'Исчерпан дневной лимит расхода')
+      return t('generation.dailySpendCapReached', lang)
     case 'invalid':
-      return say('The model answered, but not with a list', 'Модель ответила, но не списком')
+      return t('generation.theModelAnsweredBut', lang)
     case 'timeout':
-      return say('The model did not answer in time', 'Модель не ответила вовремя')
+      return t('generation.theModelDidNot', lang)
     case 'error':
-      return say('The model call failed', 'Сбой вызова модели')
+      return t('generation.theModelCallFailed', lang)
     case 'internal':
-      return say('We failed on our side', 'Сбой на нашей стороне')
+      return t('generation.weFailedOurSide', lang)
   }
 }
 
@@ -60,12 +59,12 @@ export function FailureNote({
   const when = new Date(at)
   // Отчёт для пересылки: одно поле в строке, без JSON — его читает человек, а не парсер.
   const report = [
-    say('SetFork — could not build the list', 'SetFork — не удалось собрать список'),
-    `${say('Reason', 'Причина')}: ${reasonLabel(fail.code, ru)} (${fail.code})`,
-    fail.model ? `${say('Model', 'Модель')}: ${fail.model}` : '',
-    `${say('Generation', 'Генерация')}: ${generationId} · ${say('attempt', 'виток')} ${attempt}`,
-    `${say('Time', 'Время')}: ${Number.isNaN(when.getTime()) ? String(at) : when.toISOString()}`,
-    fail.detail ? `${say('Details', 'Подробности')}:\n${fail.detail}` : '',
+    t('generation.setForkCouldNotBuild', lang),
+    `${t('generation.reason', lang)}: ${reasonLabel(fail.code, lang)} (${fail.code})`,
+    fail.model ? `${t('common.model', lang)}: ${fail.model}` : '',
+    `${t('generation.generation', lang)}: ${generationId} · ${t('generation.attempt', lang)} ${attempt}`,
+    `${t('generation.time', lang)}: ${Number.isNaN(when.getTime()) ? String(at) : when.toISOString()}`,
+    fail.detail ? `${t('generation.details', lang)}:\n${fail.detail}` : '',
   ]
     .filter(Boolean)
     .join('\n')
@@ -73,10 +72,10 @@ export function FailureNote({
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(report)
-      toast.success(say('Copied', 'Скопировано'))
+      toast.success(t('generation.copied', lang))
     } catch {
       // Буфер закрыт политикой браузера — текст на экране, выделить и скопировать можно руками.
-      toast.error(say('Could not copy — select the text manually', 'Не удалось скопировать — выдели текст руками'))
+      toast.error(t('generation.couldNotCopySelect', lang))
     }
   }
 
@@ -89,14 +88,14 @@ export function FailureNote({
         className="inline-flex items-center gap-1 rounded-md py-2 text-[0.6875rem] text-muted hover:text-ink-2 max-sm:min-h-11"
       >
         <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
-        {say('Details', 'Подробности')}
+        {t('generation.details', lang)}
       </button>
       {open && (
         <div className="mb-1 overflow-hidden rounded-md border border-border bg-surface-2">
           {/* Служебное действие — в правом верхнем углу контейнера (мобильный стандарт),
               а не в потоке под текстом: при переносе строк оно уплывало бы в середину. */}
           <div className="flex items-center justify-between gap-2 border-b border-border py-1 pl-2.5 pr-1">
-            <span className="truncate text-[0.6875rem] uppercase tracking-wide text-muted">{say('What happened', 'Что случилось')}</span>
+            <span className="truncate text-[0.6875rem] uppercase tracking-wide text-muted">{t('generation.whatHappened', lang)}</span>
             {/* На узком — только иконка, но тач-цель полная (44px). Именно min-*, а не h/w:
                 высота у кнопки уже задана шкалой контролов, а минимум её честно перебивает
                 независимо от порядка классов. */}
@@ -104,11 +103,11 @@ export function FailureNote({
               variant="ghost"
               size="xs"
               onClick={copy}
-              aria-label={say('Copy', 'Скопировать')}
+              aria-label={t('generation.copy', lang)}
               className="max-sm:min-h-11 max-sm:min-w-11 max-sm:px-0"
             >
               <Copy size={13} />
-              <span className="max-sm:hidden">{say('Copy', 'Скопировать')}</span>
+              <span className="max-sm:hidden">{t('generation.copy', lang)}</span>
             </Button>
           </div>
           {/* Перенос вместо горизонтального скролла: длинный ответ модели не должен уносить страницу вбок. */}

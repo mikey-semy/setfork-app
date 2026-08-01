@@ -3,7 +3,7 @@
 import { Badge } from '@/shared/ui/badge'
 import { DataTableV2, type ColumnDef } from '@/shared/ui/data-table/DataTableV2'
 import { nodeColumn, numberColumn } from '@/shared/ui/data-table/column-builders'
-import { tr, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 
 /**
@@ -32,17 +32,17 @@ export function UsageModelsTable({ rows, lang }: { rows: UsageModelRow[]; lang: 
   const columns: ColumnDef<UsageModelRow, unknown>[] = [
     nodeColumn<UsageModelRow>({
       id: 'model',
-      header: tr({ en: 'Model', ru: 'Модель' }, lang),
+      header: t('common.model', lang),
       render: (r) => (
         <Tooltip label={r.model}>
           <span className="block min-w-0 truncate font-mono text-[0.78125rem] text-ink">{r.name}</span>
         </Tooltip>
       ),
     }),
-    numberColumn<UsageModelRow>({ id: 'calls', header: tr({ en: 'Calls', ru: 'Вызовы' }, lang), size: 96, value: (r) => r.calls, format: num }),
+    numberColumn<UsageModelRow>({ id: 'calls', header: t('admin.calls2', lang), size: 96, value: (r) => r.calls, format: num }),
     {
       id: 'okRate',
-      header: tr({ en: 'Success', ru: 'Успех' }, lang),
+      header: t('admin.success', lang),
       size: 104,
       enableSorting: true,
       accessorFn: (r) => r.okRate,
@@ -60,14 +60,14 @@ export function UsageModelsTable({ rows, lang }: { rows: UsageModelRow[]; lang: 
     numberColumn<UsageModelRow>({ id: 'p95', header: 'p95', size: 88, value: (r) => r.p95Ms, format: (n) => `${(n / 1000).toFixed(1)}s` }),
     nodeColumn<UsageModelRow>({
       id: 'status',
-      header: tr({ en: 'Status', ru: 'Статус' }, lang),
+      header: t('admin.status', lang),
       size: 128,
       render: (r) => (
         <span className="block text-right">
           {r.quarantined ? (
-            <Badge variant="danger">{tr({ en: 'quarantine', ru: 'карантин' }, lang)}</Badge>
+            <Badge variant="danger">{t('admin.quarantine', lang)}</Badge>
           ) : (
-            <span className="text-[0.6875rem] text-muted">{tr({ en: 'in rotation', ru: 'в ротации' }, lang)}</span>
+            <span className="text-[0.6875rem] text-muted">{t('admin.inRotation', lang)}</span>
           )}
         </span>
       ),

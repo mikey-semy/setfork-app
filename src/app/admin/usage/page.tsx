@@ -66,7 +66,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
       <PageHeader
-        title={tr({ en: 'Draft usage', ru: 'Расход на черновики' }, lang)}
+        title={t('admin.draftUsage', lang)}
         subtitle={tr(
           {
             en: 'Who consumed what — tokens and money (actual OpenRouter cost).',
@@ -93,9 +93,9 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
       {/* Итог по сервису */}
       <div className="grid grid-cols-3 gap-3">
-        <StatTile label={tr({ en: 'Calls', ru: 'Вызовов' }, lang)} value={num(totals.calls)} />
-        <StatTile label={tr({ en: 'Tokens', ru: 'Токенов' }, lang)} value={num(totals.totalTokens)} />
-        <StatTile label={tr({ en: 'Cost', ru: 'Стоимость' }, lang)} value={money(totals.costUsd)} tone="accent" />
+        <StatTile label={t('admin.calls', lang)} value={num(totals.calls)} />
+        <StatTile label={t('admin.tokens', lang)} value={num(totals.totalTokens)} />
+        <StatTile label={t('admin.cost', lang)} value={money(totals.costUsd)} tone="accent" />
       </div>
 
       {/* Осязаемость: остаток OpenRouter → на сколько генераций хватит (по средней за период) */}
@@ -105,7 +105,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
             {credits && (
               <div>
                 <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
-                  {tr({ en: 'OpenRouter balance', ru: 'Остаток OpenRouter' }, lang)}
+                  {t('admin.openRouterBalance', lang)}
                 </div>
                 <div className="mt-1 text-[1.25rem] font-bold text-ink">{money(credits.remaining)}</div>
               </div>
@@ -113,7 +113,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
             {avgPerGen != null && (
               <div>
                 <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
-                  {tr({ en: 'Avg / generation', ru: 'Средняя за генерацию' }, lang)}
+                  {t('admin.avgGeneration', lang)}
                 </div>
                 <div className="mt-1 text-[1.25rem] font-bold text-ink">{money(avgPerGen)}</div>
               </div>
@@ -121,10 +121,10 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
             {runwayGens != null && (
               <div>
                 <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
-                  {tr({ en: 'Balance affords', ru: 'Остатка хватит на' }, lang)}
+                  {t('admin.balanceAffords', lang)}
                 </div>
                 <div className="mt-1 text-[1.25rem] font-bold text-(--accent)">
-                  ≈ {num(runwayGens)} {tr({ en: 'generations', ru: 'генераций' }, lang)}
+                  ≈ {num(runwayGens)} {t('admin.generations', lang)}
                 </div>
               </div>
             )}
@@ -137,7 +137,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
       {health.length > 0 && (
         <div className="rounded-lg border border-border bg-surface">
           <div className="border-b border-border px-4 py-2.5">
-            <span className="text-[0.8125rem] font-semibold text-ink">{tr({ en: 'Model reliability', ru: 'Надёжность моделей' }, lang)}</span>
+            <span className="text-[0.8125rem] font-semibold text-ink">{t('admin.modelReliability', lang)}</span>
             <span className="ml-2 text-[0.78125rem] text-muted">
               {tr(
                 {

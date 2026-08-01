@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { tr, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { StatTile } from '@/shared/ui/StatTile'
 import type { LiveMetrics } from './dashboard-types'
 
@@ -55,7 +55,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
   const online = m.umamiConfigured ? m.onlineAll : m.onlineAuth
   const onlineSub = m.umamiConfigured
     ? tr({ en: `logged-in: ${num(m.onlineAuth)}`, ru: `вошедших: ${num(m.onlineAuth)}` }, lang)
-    : tr({ en: 'logged-in only (Umami not set up)', ru: 'только вошедшие (Umami не настроен)' }, lang)
+    : t('admin.loggedOnlyUmamiNot', lang)
 
   const capPct = m.dailyCap > 0 ? Math.min(100, (m.spendToday / m.dailyCap) * 100) : 0
   const capTone = capPct >= 90 ? 'danger' : capPct >= 70 ? 'warn' : 'ink'
@@ -64,22 +64,22 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Now', ru: 'Сейчас' }, lang)}</h2>
+        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.now', lang)}</h2>
         <span className="flex items-center gap-1.5 text-[0.6875rem] text-muted">
           <span className={`inline-block h-1.5 w-1.5 rounded-full ${stale ? 'bg-warn' : 'bg-ok'}`} />
-          {stale ? tr({ en: 'reconnecting…', ru: 'переподключение…' }, lang) : tr({ en: 'live', ru: 'вживую' }, lang)}
+          {stale ? t('admin.reconnecting', lang) : t('admin.live', lang)}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
-          label={tr({ en: 'Online now', ru: 'Онлайн сейчас' }, lang)}
+          label={t('admin.onlineNow', lang)}
           value={online == null ? '—' : num(online)}
           hint={onlineSub}
           tone="accent"
         />
         <StatTile
-          label={tr({ en: 'Spent today', ru: 'Расход сегодня' }, lang)}
+          label={t('admin.spentToday', lang)}
           value={money(m.spendToday)}
           tone={capTone}
           hint={
@@ -87,7 +87,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
               <span>
                 {m.dailyCap > 0
                   ? tr({ en: `of $${m.dailyCap} cap`, ru: `из $${m.dailyCap} капа` }, lang)
-                  : tr({ en: 'daily cap off', ru: 'дневной кап выключен' }, lang)}
+                  : t('admin.dailyCapOff', lang)}
               </span>
               {m.dailyCap > 0 && (
                 <span className="block h-1 w-full overflow-hidden rounded-full bg-surface-2">
@@ -101,7 +101,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
           }
         />
         <StatTile
-          label={tr({ en: 'OpenRouter balance', ru: 'Остаток OpenRouter' }, lang)}
+          label={t('admin.openRouterBalance', lang)}
           value={m.balance == null ? '—' : money(m.balance)}
           hint={
             m.runwayGens != null
@@ -110,7 +110,7 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
           }
         />
         <StatTile
-          label={tr({ en: 'Generation queue', ru: 'Очередь генераций' }, lang)}
+          label={t('admin.generationQueue', lang)}
           value={num(queueDepth)}
           tone={m.queue.failed > 0 ? 'warn' : 'ink'}
           hint={tr(
@@ -120,20 +120,20 @@ export function DashboardLive({ initial, lang }: { initial: LiveMetrics; lang: L
         />
       </div>
 
-      <h2 className="mt-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{tr({ en: 'Today', ru: 'Сегодня' }, lang)}</h2>
+      <h2 className="mt-2 text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2">{t('admin.today', lang)}</h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
-          label={tr({ en: 'Generations', ru: 'Генераций' }, lang)}
+          label={t('admin.generations2', lang)}
           value={num(m.today.generations)}
           hint={m.today.generationsFailed > 0 ? tr({ en: `failed ${m.today.generationsFailed}`, ru: `упало ${m.today.generationsFailed}` }, lang) : undefined}
         />
-        <StatTile label={tr({ en: 'New users', ru: 'Новых юзеров' }, lang)} value={num(m.today.signups)} />
+        <StatTile label={t('admin.newUsers', lang)} value={num(m.today.signups)} />
         <StatTile
-          label={tr({ en: 'New lists', ru: 'Новых списков' }, lang)}
+          label={t('admin.newLists', lang)}
           value={num(m.today.newLists)}
           hint={tr({ en: `published ${m.today.published}`, ru: `опубл. ${m.today.published}` }, lang)}
         />
-        <StatTile label={tr({ en: 'Forks', ru: 'Форков' }, lang)} value={num(m.today.forks)} />
+        <StatTile label={t('admin.forks', lang)} value={num(m.today.forks)} />
       </div>
     </div>
   )
