@@ -726,7 +726,7 @@ export default async function ListPage({
                             {/* Горизонтальный скролл + выделение: можно доскроллить до конца строки
                                 и выделить/скопировать её часть, а не только всю через кнопку. */}
                             <span className="no-scrollbar min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap">{s.command}</span>
-                            <CopyButton text={s.command} />
+                            <CopyButton text={s.command} label={t('copy', lang)} copiedLabel={t('copied', lang)} />
                           </div>
                         )}
                         {subs.length > 0 && (
