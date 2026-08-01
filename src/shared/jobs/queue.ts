@@ -80,7 +80,9 @@ export async function completeJob(id: string): Promise<void> {
  * web-search) второму воркеру — иначе двойное исполнение и двойной расход LLM. Порог
  * обязан превышать самый долгий хендлер; полноценное решение — heartbeat updated_at.
  */
-export async function reapStalledJobs(olderThanSec = Number(process.env.SETFORK_JOB_STALL_SEC ?? 1800)): Promise<number> {
+export async function reapStalledJobs(
+  olderThanSec = Number(process.env.SETFORK_JOB_STALL_SEC ?? 1800),
+): Promise<{ reaped: number; abandoned: Job[] }> {
   // status — enum job_status: результат CASE имеет тип text и НЕ приводится к enum
   // неявно (одиночный литерал приводится, CASE — нет), поэтому явный ::job_status.
   const res = await db.execute(sql`
@@ -90,13 +92,33 @@ export async function reapStalledJobs(olderThanSec = Number(process.env.SETFORK_
         updated_at = now(),
         last_error = coalesce(last_error, 'reaped: stalled in processing')
     WHERE status = 'processing' AND updated_at < now() - (${olderThanSec}::int * interval '1 second')
-    RETURNING id
+    RETURNING id, type, payload, attempts, max_attempts, status
   `)
-  return (res as { rows?: unknown[] }).rows?.length ?? 0
+  const rows = (res as { rows?: Record<string, unknown>[] }).rows ?? []
+  // ОКОНЧАТЕЛЬНО похороненные отдаём поимённо, а не числом. Воркер умер посреди работы —
+  // значит хендлер до своего finally не дошёл, и состояние фичи осталось «в процессе»
+  // НАВСЕГДА: генерация висит в 'pending', то есть на экране вечный спиннер. Таблица задач
+  // о смерти знает, фича — нет; связывает их финализатор в worker.
+  return {
+    reaped: rows.length,
+    abandoned: rows
+      .filter((r) => String(r.status) === 'failed')
+      .map((r) => ({
+        id: String(r.id),
+        type: String(r.type),
+        payload: r.payload,
+        attempts: Number(r.attempts),
+        maxAttempts: Number(r.max_attempts),
+      })),
+  }
 }
 
-/** Ошибка — ретрай с backoff, либо `failed` после исчерпания попыток (attempts уже инкрементнут в claim). */
-export async function failJob(job: Job, error: string): Promise<void> {
+/**
+ * Ошибка — ретрай с backoff, либо `failed` после исчерпания попыток (attempts уже инкрементнут
+ * в claim). Возвращает true, когда попытки кончились: по этому признаку воркер зовёт
+ * финализатор типа задачи — иначе об окончательной смерти не знает никто, кроме таблицы.
+ */
+export async function failJob(job: Job, error: string): Promise<boolean> {
   const permanent = job.attempts >= job.maxAttempts
   await db
     .update(jobs)
@@ -107,4 +129,5 @@ export async function failJob(job: Job, error: string): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(jobs.id, job.id))
+  return permanent
 }

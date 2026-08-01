@@ -25,8 +25,11 @@ export type AiFailCode =
   | 'error'
   /** Упало у нас после ответа модели (запись кандидата и т.п.). */
   | 'internal'
+  /** Задача оборвалась вместе с процессом (деплой/OOM) и её похоронила очередь —
+   *  никакой виток об этом не отчитался, генерацию закрыл финализатор. */
+  | 'lost'
 
-const CODES = new Set<string>(['no_client', 'ai_off', 'budget', 'invalid', 'timeout', 'error', 'internal'])
+const CODES = new Set<string>(['no_client', 'ai_off', 'budget', 'invalid', 'timeout', 'error', 'internal', 'lost'])
 
 export interface AiFailure {
   code: AiFailCode

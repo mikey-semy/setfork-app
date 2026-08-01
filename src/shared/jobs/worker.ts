@@ -25,6 +25,15 @@ async function recordLoopFailure(jobType: string, e: unknown): Promise<void> {
  *  для обработчиков, которым важен номер попытки (moderate: fail-open на последней). */
 export type JobHandler = (payload: unknown, job: Job) => Promise<void>
 
+/**
+ * «Задача умерла окончательно» — попытки кончились или её похоронил reaper после смерти
+ * воркера. Нужен фичам, у которых есть ВИДИМОЕ состояние «в процессе»: генерация ставит
+ * 'pending' до старта и снимает его в своём finally, но упавший процесс до finally не
+ * доходит — и на экране остаётся вечный спиннер. Необязателен: у большинства типов задач
+ * такого состояния нет, им хватает записи в таблице.
+ */
+export type JobFinalizer = (payload: unknown, job: Job) => Promise<void>
+
 const POLL_MS = 3000
 const BATCH = 50 // максимум задач за тик — чтобы не голодать event loop
 // Сколько задач обрабатываем ОДНОВРЕМЕННО. Генерация — ожидание сети, а не CPU. НО: один совет — это
@@ -49,7 +58,7 @@ let started = false
  * внятной ошибкой. Так уже уезжало в прод дважды — `feedpull` без самозапуска и `gnome_task`
  * без обработчика вовсе. Пусть об этом говорит старт, а не failed-задачи через неделю.
  */
-export function startWorker(handlers: Record<string, JobHandler>): void {
+export function startWorker(handlers: Record<string, JobHandler>, finalizers: Record<string, JobFinalizer> = {}): void {
   if (started) return
   started = true
 
@@ -62,6 +71,18 @@ export function startWorker(handlers: Record<string, JobHandler>): void {
       `[jobs] нет обработчика для типов задач: ${missing.join(', ')}. ` +
         'Зарегистрируй их в instrumentation.ts — иначе такие задачи будут молча уходить в failed.',
     )
+  }
+
+  /** Похороны задачи — фича закрывает своё «в процессе». Падение финализатора не должно
+   *  ронять цикл: он и так вызывается по факту чужой аварии. */
+  const finalize = async (job: Job): Promise<void> => {
+    const fin = finalizers[job.type]
+    if (!fin) return
+    try {
+      await fin(job.payload, job)
+    } catch (e) {
+      captureError(e, { where: 'jobs.finalize', jobType: job.type, jobId: job.id })
+    }
   }
 
   const processOne = async (job: Job): Promise<void> => {
@@ -78,7 +99,7 @@ export function startWorker(handlers: Record<string, JobHandler>): void {
       // упавших проходов оставляли журнал чистым, и «пять ошибок подряд» не наступало
       // никогда. То есть предохранитель был описан, но не мог сработать.
       await recordLoopFailure(job.type, e)
-      await failJob(job, e instanceof Error ? e.message : String(e))
+      if (await failJob(job, e instanceof Error ? e.message : String(e))) await finalize(job)
     }
   }
 
@@ -91,8 +112,11 @@ export function startWorker(handlers: Record<string, JobHandler>): void {
       // Раз в ~минуту (20 тиков × 3с) возвращаем в очередь джобы, зависшие в
       // `processing` после падения воркера, — иначе они терялись навсегда.
       if (ticks++ % 20 === 0) {
-        const reaped = await reapStalledJobs()
-        if (reaped) log.info('jobs reaped from stalled processing', { reaped })
+        const { reaped, abandoned } = await reapStalledJobs()
+        if (reaped) log.info('jobs reaped from stalled processing', { reaped, abandoned: abandoned.length })
+        // Похороненным — финализатор: попытки у них кончились, и никакой хендлер уже не
+        // проснётся, чтобы закрыть видимое состояние фичи.
+        for (const job of abandoned) await finalize(job)
       }
       // CONCURRENCY раннеров дренят очередь параллельно; каждый берёт задачу, обрабатывает, берёт
       // следующую — пока очередь не опустеет или не выберем BATCH за тик (общий кап, чтобы огромная

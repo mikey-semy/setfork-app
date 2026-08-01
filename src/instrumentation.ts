@@ -56,16 +56,24 @@ export async function register() {
   const loopHandlers = Object.fromEntries(
     await Promise.all(LOOPS.map(async (l) => [l.jobType, await LOOP_WIRING[l.name].handler()] as const)),
   )
-  startWorker({
-    email: notifications.runEmailJob,
-    push: notifications.runPushJob,
-    generate: generation.runGenerateJob,
-    reindex: library.runReindexJob,
-    moderate: moderation.runModerateJobHandler,
-    gnome_review: gnomeReview.runGnomeReviewJob,
-    gnome_task: gnomeTask.runGnomeTaskJob,
-    ...loopHandlers,
-  })
+  // Финализаторы (второй реестр, необязательный) — только для задач с ВИДИМЫМ состоянием
+  // «в процессе». У генерации это статус 'pending': умер процесс, не дойдя до finally, —
+  // и на экране вечный спиннер, пока кто-то не закроет генерацию. Остальным типам хватает
+  // записи в таблице задач, поэтому их здесь нет.
+  const finalizers = { generate: generation.finalizeGenerateJob }
+  startWorker(
+    {
+      email: notifications.runEmailJob,
+      push: notifications.runPushJob,
+      generate: generation.runGenerateJob,
+      reindex: library.runReindexJob,
+      moderate: moderation.runModerateJobHandler,
+      gnome_review: gnomeReview.runGnomeReviewJob,
+      gnome_task: gnomeTask.runGnomeTaskJob,
+      ...loopHandlers,
+    },
+    finalizers,
+  )
 
   // САМОЗАПУСК ПЕТЕЛЬ — из того же реестра, что и обработчики: два рукописных списка
   // неизбежно разъезжаются, и один раз уже разъехались (feedpull зарегистрирован, но не

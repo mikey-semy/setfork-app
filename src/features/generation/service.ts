@@ -281,3 +281,23 @@ export async function addCandidate(
     }
   }
 }
+
+/**
+ * Задачу похоронила очередь, а её виток ничего не сказал: процесс умер (деплой, OOM) до
+ * `finally` выше. Генерация осталась в 'pending' — экран поллит вечно и показывает работу
+ * совета, которой давно нет. Здесь мы её закрываем, чтобы человек увидел причину и кнопку.
+ *
+ * Статус меняем УСЛОВНО (`status = 'pending'` в WHERE): пока сообщение о смерти шло, виток
+ * мог всё-таки доехать до 'done' или сам объявить 'failed' — тогда трогать нечего, и лишней
+ * реплики об ошибке в чате не появится.
+ */
+export async function abandonGeneration(generationId: string, idx: number): Promise<void> {
+  const closed = await db
+    .update(generations)
+    .set({ status: 'failed', updatedAt: new Date() })
+    .where(and(eq(generations.id, generationId), eq(generations.status, 'pending')))
+    .returning({ id: generations.id })
+  if (!closed.length) return
+  await pushMessage(generationId, { attempt: idx, kind: 'error', text: serializeFailure({ code: 'lost' }), who: 'council' })
+  log.warn?.('generation abandoned: job died before reporting', { generationId, idx })
+}
