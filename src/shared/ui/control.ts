@@ -75,6 +75,8 @@ export const LAYER = {
   toast: 'z-60',
 } as const
 
-/** Рамочное поле ввода — общая часть Input/Textarea/SelectTrigger. */
+/** Рамочное поле ввода — общая часть Input/Textarea/SelectTrigger.
+ * Фокус обязан быть ВИДИМ (WCAG 2.4.7): текстовые поля браузер считает
+ * focus-visible и при клике, так что кольцо показывается всегда. */
 export const FIELD_BOX =
-  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus:border-border-strong disabled:opacity-50'
+  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50'
