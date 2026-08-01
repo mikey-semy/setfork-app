@@ -62,6 +62,29 @@ describe('тело git-запроса не может съесть память'
     expect(maybeGunzip(payload, null, 1 * MB)).toBe(payload)
   })
 
+  it('ноль выключает потолок, а не запрещает всё', () => {
+    // Соглашение проекта: 0 = без ограничения (так же у SETFORK_MAX_PACK_MB и
+    // SETFORK_REPO_LIMIT_MB в ядре). Раньше ноль давал потолок 0 байт: несжатый
+    // запрос получал 413 на пустом месте, а сжатый — 500 из недр zlib.
+    process.env.SETFORK_GIT_MAX_BODY_MB = '0'
+    try {
+      expect(gitBodyMaxBytes()).toBe(Number.POSITIVE_INFINITY)
+      const payload = Buffer.from('0032want d3adbeef\n0000')
+      expect(maybeGunzip(gzipSync(payload), 'gzip').equals(payload)).toBe(true)
+    } finally {
+      delete process.env.SETFORK_GIT_MAX_BODY_MB
+    }
+  })
+
+  it('значение меньше байта — опечатка, а не «выключено»', () => {
+    process.env.SETFORK_GIT_MAX_BODY_MB = '0.0000001'
+    try {
+      expect(gitBodyMaxBytes()).toBe(1)
+    } finally {
+      delete process.env.SETFORK_GIT_MAX_BODY_MB
+    }
+  })
+
   it('дробная настройка в мегабайтах даёт целое число байт', () => {
     // Байты дробными не бывают, а это число уезжает в maxOutputLength zlib, чьи
     // требования к типу разнятся от версии к версии.

@@ -29,12 +29,23 @@ import { envNumber } from '@/shared/env'
 /**
  * Потолок тела git-запроса, байты (SETFORK_GIT_MAX_BODY_MB, деф. 32 МБ).
  *
- * Округляем вниз: настройка в мегабайтах, а байты дробными не бывают. `32.5`
- * даёт 34078720, а не 34078719.99 — и дальше это число уезжает в `maxOutputLength`
- * zlib, чьи требования к типу разнятся от версии к версии (на Node 22 дробное
- * принимается и работает, но полагаться на это незачем).
+ * `0` = БЕЗ ОГРАНИЧЕНИЯ — то же значение нуля, что у потолков ядра
+ * (`SETFORK_MAX_PACK_MB`, `SETFORK_REPO_LIMIT_MB`). Одно соглашение на проект:
+ * оператор, выключающий потолок привычным способом, не должен получить вместо
+ * этого «отвергать всё». Без этого ноль давал потолок 0 байт: несжатый запрос
+ * получал 413 на пустом месте, а сжатый уходил в `gunzipSync` с
+ * `maxOutputLength: 0`, где Node бросает ERR_OUT_OF_RANGE, — и вместо 413
+ * приходил 500 (авто-ревью fe#649).
+ *
+ * Округляем вниз: настройка в мегабайтах, а байты дробными не бывают. Значение
+ * меньше байта, но не ноль — это опечатка, а не «выключено»: оставляем байт,
+ * чтобы намерение «ограничить» не превратилось в свою противоположность.
  */
-export const gitBodyMaxBytes = (): number => Math.floor(envNumber('SETFORK_GIT_MAX_BODY_MB', 32) * 1024 * 1024)
+export function gitBodyMaxBytes(): number {
+  const mb = envNumber('SETFORK_GIT_MAX_BODY_MB', 32)
+  if (mb === 0) return Number.POSITIVE_INFINITY
+  return Math.max(1, Math.floor(mb * 1024 * 1024))
+}
 
 /** Тело больше потолка: роут отвечает на неё 413, а не 500. */
 export class GitBodyTooLarge extends Error {
@@ -87,6 +98,10 @@ export async function readGitBody(req: Request, maxBytes = gitBodyMaxBytes()): P
 export function maybeGunzip(body: Buffer, contentEncoding: string | null, maxBytes = gitBodyMaxBytes()): Buffer {
   if (!contentEncoding?.includes('gzip')) return body
   try {
+    // Потолок выключен — не передаём опцию вовсе: zlib и так упрётся в свой
+    // предел буфера. Подсунуть ему бесконечность значило бы получить не «без
+    // ограничения», а ошибку типа.
+    if (!Number.isFinite(maxBytes)) return gunzipSync(body)
     return gunzipSync(body, { maxOutputLength: maxBytes })
   } catch (e) {
     // ERR_BUFFER_TOO_LARGE — это превышение потолка, а не битые данные: отвечаем
