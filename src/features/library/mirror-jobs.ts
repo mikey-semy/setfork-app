@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, asc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
 import { db, jobs, templates, users } from '@/shared/db'
-import type { Job } from '@/shared/jobs/queue'
+import { jobStallSec, type Job } from '@/shared/jobs/queue'
 import { captureError, log } from '@/shared/observability'
 import { envNumber } from '@/shared/env'
 import { MIRROR_BACKOFF_MS, MIRROR_MAX_BACKOFF_MS, mirrorRetryDueAt } from './mirror-policy'
@@ -43,6 +43,14 @@ const BATCH = envNumber('SETFORK_MIRROR_SWEEP_BATCH', 50)
 /** Сколько раз на старте пробуем завести цепочку и с какой паузой. */
 const ENSURE_ATTEMPTS = envNumber('SETFORK_MIRROR_ENSURE_ATTEMPTS', 5)
 const ENSURE_RETRY_MS = envNumber('SETFORK_MIRROR_ENSURE_RETRY_SEC', 30) * 1000
+
+/**
+ * Сколько проходу отведено времени. Половина порога «задача зависла» — с запасом
+ * на то, что между последней проверкой и концом последнего пуша пройдёт ещё один
+ * дедлайн вызова. Считается ОТ порога жнеца, а не отдельным числом: разъехавшись,
+ * они дали бы ровно ту беду, от которой бюджет и заведён.
+ */
+const sweepBudgetMs = (): number => (jobStallSec() * 1000) / 2
 
 /** Кандидат на повтор: столько, сколько нужно для решения «пора или нет». */
 export type MirrorCandidate = { attempts: number; syncedAt: Date | null }
@@ -112,7 +120,20 @@ export async function sweepFailedMirrors(): Promise<void> {
 
   if (!due.length) return
   log.info('mirror.sweep', { due: due.length })
-  for (const r of due) {
+  const deadline = Date.now() + sweepBudgetMs()
+  for (const [i, r] of due.entries()) {
+    // ⚠️ Проход обязан укладываться в бюджет, и это не про аккуратность. Жнец
+    // считает задачу зависшей через SETFORK_JOB_STALL_SEC и отдаёт её другому
+    // воркеру. Полная пачка медленных зеркал (50 × дедлайн 90с) идёт дольше —
+    // и тогда тот же проход поехал бы ВТОРЫМ экземпляром параллельно, дублируя
+    // пуши и накручивая счётчики неудач (авто-ревью fe#645, четвёртый заход).
+    //
+    // Прерваться безопасно: проход не хранит состояния и каждый раз спрашивает
+    // базу заново — недоделанные зеркала возьмёт следующий, они никуда не денутся.
+    if (Date.now() > deadline) {
+      log.warn('mirror.sweep.budget', { done: i, left: due.length - i })
+      break
+    }
     // Последовательно, а не Promise.all: это фон, спешить некуда, а пачка
     // одновременных пушей — ровно та нагрузка, от которой ядро схлопывает свои.
     const res = await pushListMirror(r.handle, r.slug)
@@ -210,6 +231,24 @@ export async function ensureMirrorSweepScheduled(
       runAt: new Date(Date.now() + (opts.delayMs ?? 0)),
     })
   })
+}
+
+/**
+ * Похороны задачи `mirror`: восстановить цепочку.
+ *
+ * Финализатор зовут, когда жнец окончательно похоронил задачу — процесс умер на
+ * последней попытке, до постановки преемника дело не дошло. Без этого цепочка
+ * обрывалась НАВСЕГДА: старт видел мёртвую строку в `processing`, считал её
+ * живой цепочкой и ничего не ставил, а потом жнец помечал её `failed` — и
+ * повторов зеркал не оставалось до следующего рестарта (авто-ревью fe#645,
+ * четвёртый заход).
+ *
+ * `exceptJobId` — та самая похороненная задача: её нельзя принять за живую
+ * цепочку. Идемпотентность, которой требует контракт финализаторов, обеспечена
+ * самой `ensureMirrorSweepScheduled`: повторный вызов не создаст второй.
+ */
+export async function finalizeMirrorJob(_payload: unknown, job: Job): Promise<void> {
+  await ensureMirrorSweepScheduled({ delayMs: SWEEP_MS, exceptJobId: job.id })
 }
 
 /**

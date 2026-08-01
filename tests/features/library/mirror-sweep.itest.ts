@@ -26,7 +26,7 @@ vi.mock('@/features/library/actions', () => ({
 }))
 
 const { db, users, templates, jobs } = await import('@/shared/db')
-const { sweepFailedMirrors, ensureMirrorSweepScheduled, runMirrorJob } = await import(
+const { sweepFailedMirrors, ensureMirrorSweepScheduled, runMirrorJob, finalizeMirrorJob } = await import(
   '@/features/library/mirror-jobs'
 )
 const { mirrorRetryDueAt } = await import('@/features/library/mirror-policy')
@@ -108,6 +108,28 @@ describe('цепочка подметальщика — ровно одна', ()
     const rows = await mirrorJobs()
     expect(rows).toHaveLength(2) // сам проход + преемник
     expect(rows.some((r) => r.id !== self.id && r.status === 'pending')).toBe(true)
+  })
+
+  it('похороненная задача восстанавливает цепочку через финализатор', async () => {
+    // Процесс умер на последней попытке, до постановки преемника не дошёл. Жнец
+    // пометит строку failed — и без финализатора цепочка оборвалась бы навсегда:
+    // старт увидел бы мёртвую строку как живую цепочку и ничего не поставил.
+    const [dead] = await db
+      .insert(jobs)
+      .values({ type: 'mirror', payload: {}, status: 'failed', attempts: 5, maxAttempts: 5, runAt: new Date() })
+      .returning({ id: jobs.id })
+    await finalizeMirrorJob({}, { id: dead.id, type: 'mirror', payload: {}, attempts: 5, maxAttempts: 5 })
+    const alive = (await mirrorJobs()).filter((r) => r.status === 'pending')
+    expect(alive).toHaveLength(1)
+  })
+
+  it('финализатор идемпотентен: повтор не плодит цепочки', async () => {
+    // Контракт финализаторов: повтор здесь штатный (задачу добирает следующий
+    // проход, пока похороны не состоялись), поэтому второй вызов обязан молчать.
+    const job = { id: crypto.randomUUID(), type: 'mirror' as const, payload: {}, attempts: 5, maxAttempts: 5 }
+    await finalizeMirrorJob({}, job)
+    await finalizeMirrorJob({}, job)
+    expect(await mirrorJobs()).toHaveLength(1)
   })
 
   it('повторное исполнение той же задачи не плодит преемников', async () => {

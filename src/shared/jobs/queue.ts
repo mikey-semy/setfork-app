@@ -82,8 +82,16 @@ export async function completeJob(id: string): Promise<void> {
  * web-search) второму воркеру — иначе двойное исполнение и двойной расход LLM. Порог
  * обязан превышать самый долгий хендлер; полноценное решение — heartbeat updated_at.
  */
+/**
+ * Порог «задача зависла», секунды. Экспортируется, потому что нужен не только
+ * жнецу: долгий обработчик обязан укладываться в него САМ, иначе жнец переотдаст
+ * живую задачу второму воркеру. Читать одну и ту же env в двух местах нельзя —
+ * дефолты разъедутся, и разъедутся молча.
+ */
+export const jobStallSec = (): number => Number(process.env.SETFORK_JOB_STALL_SEC ?? 1800)
+
 export async function reapStalledJobs(
-  olderThanSec = Number(process.env.SETFORK_JOB_STALL_SEC ?? 1800),
+  olderThanSec = jobStallSec(),
 ): Promise<{ reaped: number; abandoned: Job[] }> {
   // status — enum job_status: результат CASE имеет тип text и НЕ приводится к enum
   // неявно (одиночный литерал приводится, CASE — нет), поэтому явный ::job_status.
