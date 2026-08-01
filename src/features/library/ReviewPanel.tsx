@@ -128,7 +128,7 @@ export function ReviewPanel({
                 </span>
                 <Button
                   variant="ghost"
-                  className="h-[2.375rem]"
+                  className="h-7"
                   disabled={pending}
                   onClick={() => startTransition(async () => void (await withdrawSuggestionReview(suggestionId)))}
                 >
@@ -146,13 +146,13 @@ export function ReviewPanel({
             {/* Ряд вердиктов: одна высота, к правому краю (thumb-зона). На мобиле
                 подписи короткие — иконка + одно-два слова. */}
             <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
-              <Button variant="ghost" className="h-[2.375rem]" disabled={pending} onClick={() => send('comment')}>
+              <Button variant="ghost" className="h-7" disabled={pending} onClick={() => send('comment')}>
                 <MessageSquare size={13} /> {labels.commentOnly}
               </Button>
-              <Button variant="outline" className="h-[2.375rem] text-danger" disabled={pending} onClick={() => send('changes')}>
+              <Button variant="outline" className="h-7 text-danger" disabled={pending} onClick={() => send('changes')}>
                 <GitPullRequestClosed size={13} /> {labels.requestChanges}
               </Button>
-              <Button variant="primary" className="h-[2.375rem]" disabled={pending} onClick={() => send('approve')}>
+              <Button variant="primary" className="h-7" disabled={pending} onClick={() => send('approve')}>
                 {pending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} {labels.approve}
               </Button>
             </div>
@@ -206,7 +206,7 @@ function DismissButton({
         <div className="mt-2 flex justify-end">
           <Button
             variant="primary"
-            className="h-[2.375rem]"
+            className="h-7"
             disabled={pending || !reason.trim()}
             onClick={() =>
               startTransition(async () => {

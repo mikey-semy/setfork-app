@@ -228,15 +228,15 @@ export function DiffComments({
                 </div>
               )}
               <div className="mt-2 flex items-center justify-end gap-2">
-                <Button variant="ghost" className="h-[2.375rem]" onClick={() => setOpen(false)} disabled={pending}>
+                <Button variant="ghost" className="h-7" onClick={() => setOpen(false)} disabled={pending}>
                   {labels.cancel}
                 </Button>
                 {/* Два способа отправки, как в GitHub: сразу или в пачку ревью.
                     Пачка — чтобы рецензент мог подумать и переписать до показа. */}
-                <Button variant="ghost" className="h-[2.375rem]" onClick={() => submit(true)} disabled={pending || !draft.trim()}>
+                <Button variant="ghost" className="h-7" onClick={() => submit(true)} disabled={pending || !draft.trim()}>
                   {labels.startReview}
                 </Button>
-                <Button variant="primary" className="h-[2.375rem]" onClick={() => submit(false)} disabled={pending || !draft.trim()}>
+                <Button variant="primary" className="h-7" onClick={() => submit(false)} disabled={pending || !draft.trim()}>
                   {pending ? <Loader2 size={13} className="animate-spin" /> : labels.send}
                 </Button>
               </div>
@@ -344,7 +344,7 @@ function ThreadCard({
 
       {canComment && (
         <div className="mt-2 flex items-center justify-end gap-2">
-          <Button variant="ghost" className="h-[2.375rem]" onClick={onReply}>
+          <Button variant="ghost" className="h-7" onClick={onReply}>
             {labels.reply}
           </Button>
           {/* Перенести разговор в задачу: обсуждение на пункте часто упирается в
@@ -353,7 +353,7 @@ function ThreadCard({
           <Tooltip label={labels.toIssue}>
             <Button
               variant="ghost"
-              className="h-[2.375rem]"
+              className="h-7"
               aria-label={labels.toIssue}
               disabled={pending}
               onClick={() => startTransition(async () => void (await threadToIssue(owner, slug, thread.id)))}
@@ -364,7 +364,7 @@ function ThreadCard({
           <Tooltip label={labels.resolve}>
             <Button
               variant="ghost"
-              className="h-[2.375rem]"
+              className="h-7"
               aria-label={labels.resolve}
               disabled={pending}
               onClick={() => startTransition(async () => void (await setBlockThreadResolved(owner, slug, thread.id, true)))}
@@ -401,7 +401,7 @@ function ResolvedRow({
       {canComment && (
         <Button
           variant="ghost"
-          className="h-[2.375rem]"
+          className="h-7"
           disabled={pending}
           onClick={() => startTransition(async () => void (await setBlockThreadResolved(owner, slug, resolved[0].thread.id, false)))}
         >

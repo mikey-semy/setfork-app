@@ -57,10 +57,10 @@ export function SuggestionTitle({
           className="min-w-0 flex-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[1rem] text-ink outline-hidden focus-visible:border-border-strong"
         />
         {/* Действия — вправо, одной высотой (стандарт кнопок). */}
-        <Button variant="ghost" className="h-[2.375rem]" onClick={() => setEditing(false)} disabled={pending}>
+        <Button variant="ghost" className="h-7" onClick={() => setEditing(false)} disabled={pending}>
           {labels.cancel}
         </Button>
-        <Button variant="primary" className="h-[2.375rem]" onClick={save} disabled={pending || !draft.trim()}>
+        <Button variant="primary" className="h-7" onClick={save} disabled={pending || !draft.trim()}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : labels.save}
         </Button>
       </div>

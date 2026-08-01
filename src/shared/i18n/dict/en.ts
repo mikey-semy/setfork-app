@@ -1560,7 +1560,7 @@ export const en = {
   'admin.noHandRolledField': 'No hand-rolled field classes in features — these primitives only.',
   'admin.onePrimitiveInstead27': 'One primitive instead of 27 hand-rolled h1 variants: page 18px / section 16px, truncate, actions wrap below on mobile.',
   'admin.oneSidenavSettingsAdmin': 'One SideNav for settings, admin and list settings — docs-style: groups, accent active item, mobile collapse.',
-  'admin.oneSourceSharedUi': 'One source — shared/ui/control.ts: same-size controls in a row must match in height and font. md = 38px (settings-row standard), sm = 32px, xs = 28px. Fields are 16px on mobile — otherwise iOS zooms.',
+  'admin.oneSourceSharedUi': 'One source — shared/ui/control.ts: same-size controls in a row must match in height and font. Primer scale: md = 28px (default), sm = 24px, xs = 20px. Fields are 16px on mobile — otherwise iOS zooms.',
   'admin.orderMatters1stModel': 'Order matters: the 1st model runs the intermediate steps (planner, critic) — pick a fast one; the rest go to experts in turn. Different vendors = more diverse opinions.',
   'admin.referenceSharedUiPrimitives': 'Reference for shared/ui primitives. Same-size controls in one row share one height and font; the scale lives in shared/ui/control.ts.',
   'admin.separatePaidServiceActivate': 'Separate paid service — activate Search API in Yandex Cloud. Empty = council relies on our corpus only (no made-up web precedents). Leave blank to keep current.',
