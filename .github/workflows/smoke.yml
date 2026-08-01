@@ -14,6 +14,17 @@ name: Smoke (setfork-sim)
 # ночью, на push в master и руками, когда трогали пользовательский путь.
 on:
   workflow_dispatch:
+    inputs:
+      # Скриншоты UI Kit (c9, Ф7b): off — не гонять; compare — сверка с
+      # эталонами sim; update — перегенерить эталоны (бутстрап/осознанное
+      # обновление; снимки забрать из артефакта uikit-snapshots и закоммитить
+      # в sim — runbook ui-kit-screens в HQ).
+      screens:
+        description: 'Скриншоты UI Kit: off | compare | update'
+        required: false
+        default: 'compare'
+        type: choice
+        options: ['off', 'compare', 'update']
   schedule:
     - cron: '0 2 * * *'
   push:
@@ -127,12 +138,21 @@ jobs:
           token: ${{ secrets.SIM_REPO_TOKEN }}
           path: _sim
 
-      - name: Run smoke (c1–c6)
+      - name: Run smoke (c1–c9)
         working-directory: _sim
+        env:
+          # push/schedule: compare (гейт визуальной регрессии всегда включён
+          # после бутстрапа эталонов); dispatch может выключить или обновить.
+          SCREENS_MODE: ${{ inputs.screens || 'compare' }}
         run: |
           npm ci --prefer-offline --no-audit --no-fund
           npx playwright install --with-deps chromium
-          npm run smoke
+          if [ "$SCREENS_MODE" != "off" ]; then export SIM_SCREENS=1; fi
+          if [ "$SCREENS_MODE" = "update" ]; then
+            npm run smoke -- --update-snapshots
+          else
+            npm run smoke
+          fi
 
       - name: Frontend log (on failure)
         if: failure()
