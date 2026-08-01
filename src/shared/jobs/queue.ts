@@ -1,5 +1,5 @@
 import 'server-only'
-import { eq, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db, jobs, type JobType } from '@/shared/db'
 import { backoffMs } from './backoff'
 
@@ -115,6 +115,40 @@ export async function reapStalledJobs(
         : [],
     ),
   }
+}
+
+/**
+ * Умершие задачи, чьи похороны ещё не состоялись: финализатор не вызывался или упал.
+ *
+ * Быстрый путь (позвать финализатор сразу после смерти задачи) переживает не всё: база могла
+ * моргнуть, процесс — умереть между пометкой 'failed' и вызовом. Reaper тут не поможет, он
+ * смотрит только 'processing'. Поэтому воркер периодически добирает отсюда — до тех пор, пока
+ * похороны не отметятся в `finalized_at`.
+ *
+ * `types` — только те, у кого финализатор есть: остальным колонка не нужна и они не копятся
+ * в выборке. Свежие первыми: их «в процессе» человек видит прямо сейчас.
+ */
+export async function unfinalizedJobs(types: string[], limit = 25): Promise<Job[]> {
+  if (!types.length) return []
+  const rows = await db
+    .select({
+      id: jobs.id,
+      type: jobs.type,
+      payload: jobs.payload,
+      attempts: jobs.attempts,
+      maxAttempts: jobs.maxAttempts,
+    })
+    .from(jobs)
+    .where(and(eq(jobs.status, 'failed'), isNull(jobs.finalizedAt), inArray(jobs.type, types)))
+    .orderBy(desc(jobs.updatedAt))
+    .limit(limit)
+  return rows as Job[]
+}
+
+/** Похороны состоялись — больше эту задачу финализатору не предлагаем. */
+export async function markFinalized(ids: string[]): Promise<void> {
+  if (!ids.length) return
+  await db.update(jobs).set({ finalizedAt: new Date() }).where(inArray(jobs.id, ids))
 }
 
 /**

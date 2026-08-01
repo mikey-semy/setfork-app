@@ -15,8 +15,10 @@ const claimJob = vi.fn()
 const completeJob = vi.fn(async () => {})
 const failJob = vi.fn(async () => false)
 const reapStalledJobs = vi.fn(async () => ({ reaped: 0, abandoned: [] as unknown[] }))
+const unfinalizedJobs = vi.fn(async () => [] as unknown[])
+const markFinalized = vi.fn(async () => {})
 
-vi.mock('@/shared/jobs/queue', () => ({ claimJob, completeJob, failJob, reapStalledJobs }))
+vi.mock('@/shared/jobs/queue', () => ({ claimJob, completeJob, failJob, reapStalledJobs, unfinalizedJobs, markFinalized }))
 
 const full = (over: Record<string, JobHandler> = {}): Record<string, JobHandler> => ({
   ...Object.fromEntries(JOB_TYPES.map((t) => [t, async () => {}] as const)),
@@ -83,7 +85,16 @@ describe('похороны задачи', () => {
     expect(fin).toHaveBeenCalledTimes(1)
   })
 
-  it('падение финализатора не роняет цикл задач', async () => {
+  it('успешные похороны отмечаются в задаче — повтор не спутать с первым разом', async () => {
+    claimJob.mockResolvedValueOnce(job).mockResolvedValue(null)
+    failJob.mockResolvedValueOnce(true)
+
+    await runOneTick({ generate: spyFinalizer() })
+
+    expect(markFinalized).toHaveBeenCalledWith(['j1'])
+  })
+
+  it('падение финализатора не роняет цикл и НЕ отмечается — иначе похороны потеряны навсегда', async () => {
     claimJob.mockResolvedValueOnce(job).mockResolvedValue(null)
     failJob.mockResolvedValueOnce(true)
     const fin = vi.fn(async () => {
@@ -92,6 +103,27 @@ describe('похороны задачи', () => {
 
     await expect(runOneTick({ generate: fin })).resolves.toBeUndefined()
     expect(fin).toHaveBeenCalledTimes(1)
+    expect(markFinalized).not.toHaveBeenCalled()
+  })
+
+  it('потерянные похороны добираются позже: задача уже failed, reaper её не отдаст', async () => {
+    // Моргнула база или процесс убили между пометкой 'failed' и вызовом финализатора.
+    claimJob.mockResolvedValue(null)
+    unfinalizedJobs.mockResolvedValueOnce([job])
+    const fin = spyFinalizer()
+
+    await runOneTick({ generate: fin })
+
+    expect(fin).toHaveBeenCalledTimes(1)
+    expect(markFinalized).toHaveBeenCalledWith(['j1'])
+  })
+
+  it('добор спрашивает ТОЛЬКО типы с финализатором — остальные в выборке не копятся', async () => {
+    claimJob.mockResolvedValue(null)
+
+    await runOneTick({ generate: spyFinalizer() })
+
+    expect(unfinalizedJobs).toHaveBeenCalledWith(['generate'])
   })
 
   it('тип без финализатора — просто ничего не происходит', async () => {

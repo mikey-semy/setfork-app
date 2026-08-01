@@ -1,7 +1,7 @@
 import 'server-only'
 import { captureError, log } from '@/shared/observability'
 import { JOB_TYPES, type JobType } from '@/shared/db'
-import { claimJob, completeJob, failJob, reapStalledJobs, type Job } from './queue'
+import { claimJob, completeJob, failJob, markFinalized, reapStalledJobs, unfinalizedJobs, type Job } from './queue'
 import { AUTONOMOUS_LOOPS, recordAgentAction } from '@/shared/agents/policy'
 
 /** Записать падение задачи ПЕТЛИ в журнал действий (обычные задачи туда не пишем). */
@@ -73,13 +73,22 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
     )
   }
 
-  /** Похороны задачи — фича закрывает своё «в процессе». Падение финализатора не должно
-   *  ронять цикл: он и так вызывается по факту чужой аварии. */
+  const finalizedTypes = Object.keys(finalizers)
+
+  /**
+   * Похороны задачи — фича закрывает своё «в процессе».
+   *
+   * Успех ОТМЕЧАЕМ в задаче: без отметки повтор не отличить от первого раза. Падение не
+   * роняет цикл (финализатор и так зовётся по факту чужой аварии) и НЕ отмечается — такую
+   * задачу доберёт периодический проход ниже, пока похороны не состоятся. Финализаторы
+   * обязаны быть идемпотентными: повтор здесь штатный, а не исключительный.
+   */
   const finalize = async (job: Job): Promise<void> => {
     const fin = finalizers[job.type]
     if (!fin) return
     try {
       await fin(job.payload, job)
+      await markFinalized([job.id])
     } catch (e) {
       captureError(e, { where: 'jobs.finalize', jobType: job.type, jobId: job.id })
     }
@@ -118,6 +127,15 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
         // проснётся, чтобы закрыть видимое состояние фичи. Задачи независимы (каждая про
         // свою сущность), поэтому разом, а не по очереди.
         await Promise.all(abandoned.map(finalize))
+        // ...и ДОБОР потерянных похорон. Быстрый путь выше переживает не всё: моргнула база,
+        // процесс убили между пометкой 'failed' и вызовом — задача уже не 'processing', и
+        // reaper её больше не предложит НИКОГДА. Тогда «в процессе» у фичи остаётся навсегда,
+        // то есть ровно тот вечный спиннер, ради которого всё это и делалось.
+        const lost = await unfinalizedJobs(finalizedTypes)
+        if (lost.length) {
+          log.info('jobs awaiting finalization', { count: lost.length })
+          await Promise.all(lost.map(finalize))
+        }
       }
       // CONCURRENCY раннеров дренят очередь параллельно; каждый берёт задачу, обрабатывает, берёт
       // следующую — пока очередь не опустеет или не выберем BATCH за тик (общий кап, чтобы огромная
