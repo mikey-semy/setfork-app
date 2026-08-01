@@ -12,6 +12,7 @@ import { HistoryNav } from '@/widgets/HistoryNav'
 import { CommitRow } from '@/features/library/CommitRow'
 import { commitCutoff } from '@/features/library/commit-filter'
 import { gitCore } from '@/features/git/core'
+import { EmptyState } from '@/shared/ui/EmptyState'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -112,14 +113,11 @@ export default async function CommitsPage({
       </div>
 
       {groups.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-[0.8125rem] text-muted">
-          {t('noCommitsMatch', lang)}
-          <div className="mt-3">
-            <Link href={versionsBase} className="text-accent hover:underline">
-              {t('resetFilters', lang)}
-            </Link>
-          </div>
-        </div>
+        <EmptyState hint={t('noCommitsMatch', lang)}>
+          <Link href={versionsBase} className="text-[0.8125rem] font-semibold text-accent hover:underline">
+            {t('resetFilters', lang)}
+          </Link>
+        </EmptyState>
       ) : (
         groups.map((g) => (
           <Fragment key={g.day}>

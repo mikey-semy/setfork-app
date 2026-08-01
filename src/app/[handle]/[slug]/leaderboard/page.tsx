@@ -7,6 +7,7 @@ import { Avatar } from '@/shared/ui/Avatar'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getCourseLeaderboard } from '@/features/quizzes/queries'
+import { EmptyState } from '@/shared/ui/EmptyState'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -32,9 +33,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ ha
         />
 
         {rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-14 text-center text-[0.8125rem] text-muted">
-            {ru ? 'Пока никто не прошёл этот курс — будьте первым!' : 'No one has completed this course yet — be the first!'}
-          </div>
+          <EmptyState hint={ru ? 'Пока никто не прошёл этот курс — будьте первым!' : 'No one has completed this course yet — be the first!'} />
         ) : (
           <ol className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
             {rows.map((r, i) => (
