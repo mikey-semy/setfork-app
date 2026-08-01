@@ -83,6 +83,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
           hasToken={!!meta.mirrorHasToken}
           syncedAt={meta.mirrorSyncedAt}
           error={meta.mirrorError}
+          attempts={meta.mirrorAttempts}
           lang={lang}
         />
       ),

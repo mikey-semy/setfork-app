@@ -82,6 +82,13 @@ const DICT = {
   mirrorOk: { en: 'Mirrored', ru: 'Отзеркалено' },
   mirrorFailed: { en: 'Mirror failed', ru: 'Пуш зеркала не удался' },
   mirrorNever: { en: 'Not synced yet', ru: 'Ещё не синхронизировалось' },
+  // Ф2: что будет дальше после неудачи. Без этого красная строка читается как
+  // тупик, хотя повтор уже назначен, — и владелец лезет чинить то, что чинится само.
+  mirrorWillRetry: { en: 'Will retry automatically', ru: 'Повторим автоматически' },
+  mirrorRetryStopped: {
+    en: 'Retries stopped — fix the token or the repository, then press Sync now',
+    ru: 'Повторы прекращены — почините токен или репозиторий и нажмите «Синхронизировать»',
+  },
   generalIntro: { en: 'Name, description, tags and visibility of the list.', ru: 'Название, описание, теги и видимость списка.' },
   coverTitle: { en: 'Cover', ru: 'Обложка' },
   templateTitle: { en: 'Template', ru: 'Шаблон' },
