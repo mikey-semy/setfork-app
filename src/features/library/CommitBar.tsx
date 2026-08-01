@@ -117,9 +117,9 @@ export function CommitBar({
             {`v${version}`}
           </Link>
         </Tooltip>
-        <span className="hidden shrink-0 whitespace-nowrap text-muted sm:inline" title={exact}>
-          {timeAgo(at, lang)}
-        </span>
+        <Tooltip label={exact}>
+          <span className="hidden shrink-0 whitespace-nowrap text-muted sm:inline">{timeAgo(at, lang)}</span>
+        </Tooltip>
         {/* Счётчик коммитов — как «96 Commits» у GitHub, ссылкой в историю. */}
         <Tooltip label={labels.history}>
           <Link

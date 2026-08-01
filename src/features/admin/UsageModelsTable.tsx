@@ -4,6 +4,7 @@ import { Badge } from '@/shared/ui/badge'
 import { DataTableV2, type ColumnDef } from '@/shared/ui/data-table/DataTableV2'
 import { nodeColumn, numberColumn } from '@/shared/ui/data-table/column-builders'
 import { tr, type Lang } from '@/shared/i18n'
+import { Tooltip } from '@/shared/ui/Tooltip'
 
 /**
  * Щиток надёжности моделей (/admin/usage) — DataTableV2 (Ф11, хвост миграции с v1-моста).
@@ -33,9 +34,9 @@ export function UsageModelsTable({ rows, lang }: { rows: UsageModelRow[]; lang: 
       id: 'model',
       header: tr({ en: 'Model', ru: 'Модель' }, lang),
       render: (r) => (
-        <span className="block min-w-0 truncate font-mono text-[0.78125rem] text-ink" title={r.model}>
-          {r.name}
-        </span>
+        <Tooltip label={r.model}>
+          <span className="block min-w-0 truncate font-mono text-[0.78125rem] text-ink">{r.name}</span>
+        </Tooltip>
       ),
     }),
     numberColumn<UsageModelRow>({ id: 'calls', header: tr({ en: 'Calls', ru: 'Вызовы' }, lang), size: 96, value: (r) => r.calls, format: num }),
