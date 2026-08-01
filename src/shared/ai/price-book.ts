@@ -44,7 +44,10 @@ export interface PriceBook {
 }
 
 export const PRICE_BOOK_SETTING = 'ai.price_book'
-/** Ссылка на СПИСОК SetFork, из которого берётся прайс: `handle/slug`. Пусто = запись стенда. */
+/** Ссылки на СПИСКИ SetFork с прайсом: `handle/slug`, через запятую. Пусто = запись стенда.
+ *  Списков несколько, потому что справочник ведётся ПО ИСТОЧНИКУ: у Яндекса и Сбера разные
+ *  прайс-страницы, разный темп изменений и разные даты проверки — в одном списке они бы
+ *  делили одну отметку свежести, и было бы не видно, чьи цифры протухли. */
 export const PRICE_BOOK_SOURCE_SETTING = 'ai.price_book_source'
 
 /**
@@ -95,22 +98,36 @@ const CACHE_TTL_MS = 60_000
  * Недоступен (не задан, не задеплоен, сеть, приватный) → null, и выше берётся запись стенда,
  * а за ней семя. Денежные лимиты не имеют права зависеть от доступности одной страницы.
  */
-async function priceBookFromSource(ref: string | undefined, base: PriceBook): Promise<PriceBook | null> {
-  const path = (ref ?? '').trim().replace(/^\/+|\/+$/g, '')
-  if (!path || !/^[^/]+\/[^/]+$/.test(path)) return null
+async function priceBookFromSource(refs: string | undefined, base: PriceBook): Promise<PriceBook | null> {
+  const paths = (refs ?? '')
+    .split(',')
+    .map((r) => r.trim().replace(/^\/+|\/+$/g, ''))
+    .filter((p) => /^[^/]+\/[^/]+$/.test(p))
+  if (!paths.length) return null
   const origin = (process.env.APP_URL || process.env.SETFORK_APP_URL || '').replace(/\/$/, '')
   if (!origin) return null
-  try {
-    const res = await fetch(`${origin}/${path}/data.json`, { signal: AbortSignal.timeout(8_000), cache: 'no-store' })
-    if (!res.ok) {
-      console.warn(`[price-book] список ${path} не отдал данные: HTTP ${res.status}`)
-      return null
+  const entries: PriceEntry[] = []
+  const seen: string[] = []
+  for (const path of paths) {
+    try {
+      const res = await fetch(`${origin}/${path}/data.json`, { signal: AbortSignal.timeout(8_000), cache: 'no-store' })
+      if (!res.ok) {
+        console.warn(`[price-book] список ${path} не отдал данные: HTTP ${res.status}`)
+        continue
+      }
+      const part = priceBookFromList(await res.json(), base)
+      // Списки складываются В ПОРЯДКЕ ССЫЛОК: приоритет строк остаётся управляемым, а провайдеры
+      // не пересекаются — каждая строка несёт своего провайдера явно.
+      if (part) {
+        entries.push(...part.entries)
+        seen.push(`${path} (${part.source})`)
+      }
+    } catch (e) {
+      console.warn(`[price-book] список ${path} недоступен:`, e instanceof Error ? e.message : e)
     }
-    return priceBookFromList(await res.json(), base)
-  } catch (e) {
-    console.warn(`[price-book] список ${path} недоступен:`, e instanceof Error ? e.message : e)
-    return null
   }
+  if (!entries.length) return null
+  return { ...base, entries, source: seen.join(' + ') }
 }
 
 export function clearPriceBookCache(): void {
