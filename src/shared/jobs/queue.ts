@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { eq, inArray, sql } from 'drizzle-orm'
 import { db, jobs, type JobType } from '@/shared/db'
 import { backoffMs } from './backoff'
 
@@ -9,6 +9,8 @@ export interface Job {
   payload: unknown
   attempts: number
   maxAttempts: number
+  /** Сколько раз пробовали похоронить (только у задач из добора незакрытых похорон). */
+  finalizeAttempts?: number
 }
 
 /** Поставить задачу в очередь. Это дешёвый insert — можно звать прямо из request-пути. */
@@ -118,31 +120,58 @@ export async function reapStalledJobs(
 }
 
 /**
- * Умершие задачи, чьи похороны ещё не состоялись: финализатор не вызывался или упал.
+ * Сколько раз пробуем похоронить, прежде чем сдаться. Предел обязателен: без него стабильно
+ * падающий финализатор перезывался бы каждую минуту вечно. Тот же приём в зрелых очередях —
+ * Oban Lifeline метит задачу с исчерпанными попытками 'discarded', River rescuer отбрасывает
+ * её по максимуму попыток.
+ */
+const FINALIZE_MAX_ATTEMPTS = Math.max(1, Number(process.env.SETFORK_JOB_FINALIZE_ATTEMPTS) || 5)
+
+/**
+ * Забирает умерших, чьи похороны ещё не состоялись: финализатор не вызывался или упал.
  *
  * Быстрый путь (позвать финализатор сразу после смерти задачи) переживает не всё: база могла
  * моргнуть, процесс — умереть между пометкой 'failed' и вызовом. Reaper тут не поможет, он
- * смотрит только 'processing'. Поэтому воркер периодически добирает отсюда — до тех пор, пока
- * похороны не отметятся в `finalized_at`.
+ * смотрит только 'processing'. Поэтому воркер периодически добирает отсюда — пока похороны не
+ * отметятся в `finalized_at` либо не кончатся попытки.
  *
- * `types` — только те, у кого финализатор есть: остальным колонка не нужна и они не копятся
- * в выборке. Свежие первыми: их «в процессе» человек видит прямо сейчас.
+ * Захват сделан UPDATE ... RETURNING с `FOR UPDATE SKIP LOCKED` — как в `claimJob`, и по той же
+ * причине: инстансов несколько, и простой SELECT отдал бы одни и те же строки всем сразу.
+ * Счётчик растёт В МОМЕНТ ЗАХВАТА, а не после неудачи: иначе смерть процесса прямо здесь не
+ * оставляла бы следа, и задача возвращалась бы бесконечно.
+ *
+ * `types` — только те, у кого финализатор есть: остальные в выборке не копятся. Свежие первыми:
+ * их «в процессе» человек видит прямо сейчас.
  */
-export async function unfinalizedJobs(types: string[], limit = 25): Promise<Job[]> {
+export async function claimUnfinalizedJobs(types: string[], limit = 25): Promise<Job[]> {
   if (!types.length) return []
-  const rows = await db
-    .select({
-      id: jobs.id,
-      type: jobs.type,
-      payload: jobs.payload,
-      attempts: jobs.attempts,
-      maxAttempts: jobs.maxAttempts,
-    })
-    .from(jobs)
-    .where(and(eq(jobs.status, 'failed'), isNull(jobs.finalizedAt), inArray(jobs.type, types)))
-    .orderBy(desc(jobs.updatedAt))
-    .limit(limit)
-  return rows as Job[]
+  const res = await db.execute(sql`
+    UPDATE jobs SET finalize_attempts = finalize_attempts + 1, updated_at = now()
+    WHERE id IN (
+      SELECT id FROM jobs
+      WHERE status = 'failed' AND finalized_at IS NULL
+        AND type = ANY(${sql.raw(`ARRAY[${types.map((t) => `'${t.replace(/'/g, "''")}'`).join(',')}]::text[]`)})
+        AND finalize_attempts < ${FINALIZE_MAX_ATTEMPTS}
+      ORDER BY updated_at DESC
+      FOR UPDATE SKIP LOCKED
+      LIMIT ${limit}
+    )
+    RETURNING id, type, payload, attempts, max_attempts, finalize_attempts
+  `)
+  const rows = (res as { rows?: Record<string, unknown>[] }).rows ?? []
+  return rows.map((r) => ({
+    id: String(r.id),
+    type: String(r.type),
+    payload: r.payload,
+    attempts: Number(r.attempts),
+    maxAttempts: Number(r.max_attempts),
+    finalizeAttempts: Number(r.finalize_attempts),
+  }))
+}
+
+/** Попытки похоронить исчерпаны — это уже не «подождём следующего прохода», а тревога. */
+export function finalizeExhausted(job: Job): boolean {
+  return (job.finalizeAttempts ?? 0) >= FINALIZE_MAX_ATTEMPTS
 }
 
 /** Похороны состоялись — больше эту задачу финализатору не предлагаем. */

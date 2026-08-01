@@ -15,10 +15,10 @@ const claimJob = vi.fn()
 const completeJob = vi.fn(async () => {})
 const failJob = vi.fn(async () => false)
 const reapStalledJobs = vi.fn(async () => ({ reaped: 0, abandoned: [] as unknown[] }))
-const unfinalizedJobs = vi.fn(async () => [] as unknown[])
+const claimUnfinalizedJobs = vi.fn(async () => [] as unknown[])
 const markFinalized = vi.fn(async () => {})
 
-vi.mock('@/shared/jobs/queue', () => ({ claimJob, completeJob, failJob, reapStalledJobs, unfinalizedJobs, markFinalized }))
+vi.mock('@/shared/jobs/queue', () => ({ claimJob, claimUnfinalizedJobs, completeJob, failJob, reapStalledJobs, markFinalized, finalizeExhausted: (j: { finalizeAttempts?: number }) => (j.finalizeAttempts ?? 0) >= 5 }))
 
 const full = (over: Record<string, JobHandler> = {}): Record<string, JobHandler> => ({
   ...Object.fromEntries(JOB_TYPES.map((t) => [t, async () => {}] as const)),
@@ -109,7 +109,7 @@ describe('похороны задачи', () => {
   it('потерянные похороны добираются позже: задача уже failed, reaper её не отдаст', async () => {
     // Моргнула база или процесс убили между пометкой 'failed' и вызовом финализатора.
     claimJob.mockResolvedValue(null)
-    unfinalizedJobs.mockResolvedValueOnce([job])
+    claimUnfinalizedJobs.mockResolvedValueOnce([job])
     const fin = spyFinalizer()
 
     await runOneTick({ generate: fin })
@@ -123,7 +123,7 @@ describe('похороны задачи', () => {
 
     await runOneTick({ generate: spyFinalizer() })
 
-    expect(unfinalizedJobs).toHaveBeenCalledWith(['generate'])
+    expect(claimUnfinalizedJobs).toHaveBeenCalledWith(['generate'])
   })
 
   it('тип без финализатора — просто ничего не происходит', async () => {

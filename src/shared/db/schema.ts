@@ -652,6 +652,12 @@ export const jobs = pgTable(
     // только 'processing' и мёртвую задачу больше никому не предложит (находка авто-ревью
     // по #637). Пусто у типов без финализатора — их никто и не выбирает.
     finalizedAt: timestamp('finalized_at', { withTimezone: true }),
+    // Сколько раз пробовали похоронить. Без предела стабильно падающий финализатор
+    // (сущность удалена, БД не отвечает) перезывался бы КАЖДУЮ минуту вечно. Так же
+    // устроено у зрелых очередей: Oban Lifeline при исчерпанных попытках метит задачу
+    // 'discarded', а не возвращает в очередь; River rescuer либо перезапускает, либо
+    // отбрасывает по максимуму попыток. Достигли потолка — сдаёмся с записью в Sentry.
+    finalizeAttempts: integer('finalize_attempts').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

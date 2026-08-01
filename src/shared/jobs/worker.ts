@@ -1,7 +1,7 @@
 import 'server-only'
 import { captureError, log } from '@/shared/observability'
 import { JOB_TYPES, type JobType } from '@/shared/db'
-import { claimJob, completeJob, failJob, markFinalized, reapStalledJobs, unfinalizedJobs, type Job } from './queue'
+import { claimJob, claimUnfinalizedJobs, completeJob, failJob, finalizeExhausted, markFinalized, reapStalledJobs, type Job } from './queue'
 import { AUTONOMOUS_LOOPS, recordAgentAction } from '@/shared/agents/policy'
 
 /** Записать падение задачи ПЕТЛИ в журнал действий (обычные задачи туда не пишем). */
@@ -90,7 +90,16 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
       await fin(job.payload, job)
       await markFinalized([job.id])
     } catch (e) {
-      captureError(e, { where: 'jobs.finalize', jobType: job.type, jobId: job.id })
+      // Попытки кончились — это уже не «повторим на следующем проходе», а тревога: состояние
+      // фичи так и осталось незакрытым, дальше нужен человек. Больше эту задачу не берём
+      // (счётчик вырос при захвате), поэтому шумим один раз и по делу.
+      captureError(e, {
+        where: 'jobs.finalize',
+        jobType: job.type,
+        jobId: job.id,
+        finalizeAttempts: job.finalizeAttempts ?? 1,
+        exhausted: finalizeExhausted(job),
+      })
     }
   }
 
@@ -131,7 +140,7 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
         // процесс убили между пометкой 'failed' и вызовом — задача уже не 'processing', и
         // reaper её больше не предложит НИКОГДА. Тогда «в процессе» у фичи остаётся навсегда,
         // то есть ровно тот вечный спиннер, ради которого всё это и делалось.
-        const lost = await unfinalizedJobs(finalizedTypes)
+        const lost = await claimUnfinalizedJobs(finalizedTypes)
         if (lost.length) {
           log.info('jobs awaiting finalization', { count: lost.length })
           await Promise.all(lost.map(finalize))
