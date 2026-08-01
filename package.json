@@ -53,6 +53,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.2",
+    "@tanstack/react-table": "^8.21.3",
     "@uiw/react-codemirror": "^4.25.11",
     "ai": "^6.0.218",
     "class-variance-authority": "^0.7.1",

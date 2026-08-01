@@ -7,6 +7,8 @@ import { Alert, type AlertVariant } from '@/shared/ui/Alert'
 import { Badge, type BadgeVariant } from '@/shared/ui/badge'
 import { ActionRow, DangerZone } from '@/shared/ui/DangerZone'
 import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
+import { DataTableV2 } from '@/shared/ui/data-table/DataTableV2'
+import { nodeColumn, numberColumn, textColumn } from '@/shared/ui/data-table/column-builders'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Field } from '@/shared/ui/Field'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
@@ -37,6 +39,7 @@ const BADGE_VARIANTS: BadgeVariant[] = ['outline', 'ok', 'accent', 'soft', 'dang
 const ALERT_VARIANTS: AlertVariant[] = ['danger', 'warn', 'ok', 'info']
 
 type Say = (en: string, ru: string) => string
+type DemoRow = { name: string; role: string; score: number }
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -291,6 +294,34 @@ export function UiKitGallery({ lang }: { lang: Lang }) {
           </ActionRow>
         </DangerZone>
         {confirmDialog}
+      </Section>
+
+      <Section
+        title={say('Data table v2', 'Таблица данных v2')}
+        hint={say(
+          'TanStack + real <table>: click-to-sort with aria-sort, skeletons, empty state inside; below md rows become cards (cardOnMobile). v1 div-grid stays as a bridge for simple read-only lists.',
+          'TanStack + настоящая <table>: сортировка кликом с aria-sort, скелетоны, пустое состояние внутри; ниже md строки становятся карточками (cardOnMobile). v1 див-грид остаётся мостом для простых списков.',
+        )}
+      >
+        <DataTableV2<DemoRow>
+          cardOnMobile
+          rowKey={(r) => r.name}
+          empty={{ hint: say('No rows', 'Строк нет') }}
+          columns={[
+            nodeColumn<DemoRow>({
+              id: 'person',
+              header: say('Person', 'Человек'),
+              render: (r) => <UserLine handle="demo" name={r.name} size="sm" />,
+            }),
+            textColumn<DemoRow>({ id: 'role', header: say('Role', 'Роль'), value: (r) => r.role }),
+            numberColumn<DemoRow>({ id: 'score', header: say('Score', 'Счёт'), value: (r) => r.score }),
+          ]}
+          data={[
+            { name: 'Demo User', role: 'admin', score: 42 },
+            { name: 'Second One', role: 'guest', score: 7 },
+            { name: 'Third Person', role: 'editor', score: 19 },
+          ]}
+        />
       </Section>
 
       <Section
