@@ -1,21 +1,20 @@
 import Link from 'next/link'
-import { Check, Pause, Play, TrendingUp, X } from 'lucide-react'
+import { TrendingUp } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { getCompanyDay, getDevelopmentMetrics, UNAVAILABLE, type NaReason } from '@/features/admin/development-queries'
 import { currentAgenda } from '@/features/partners/service'
 import { agendaLabel, type AgendaKind } from '@/shared/agents/agenda'
-import { decideAgendaItem } from '@/features/admin/agenda-actions'
 import { getDomainScorecards } from '@/features/admin/scorecard-queries'
-import { Button } from '@/shared/ui/button'
-import { DataTable, DataTableRow } from '@/shared/ui/DataTable'
+import { DevAgendaTable } from '@/features/admin/DevAgendaTable'
+import { DevFeedsTable } from '@/features/admin/DevFeedsTable'
+import { DevLoopsTable } from '@/features/admin/DevLoopsTable'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { StatTile } from '@/shared/ui/StatTile'
 import { TagChip } from '@/shared/ui/TagChip'
 import { AUTONOMOUS_LOOPS, allLoopPolicies } from '@/shared/agents/policy'
 import { stallReports } from '@/shared/agents/stall'
-import { resetLoopCircuit, toggleLoopDryRun, toggleLoopPause } from '@/features/admin/actions'
 
 /**
  * Дашборд РАЗВИТИЯ (Ф-D0) — компания гномов, видимая сверху: куда движемся, а не
@@ -45,13 +44,6 @@ function naText(reason: NaReason, lang: Lang): string {
 }
 
 const h2 = 'text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-2'
-
-// Столбцы лент фиксированной ширины (шаблоны — в DataTable): `auto` подгоняется под
-// содержимое КАЖДОЙ строки, и шапка со строками разъезжаются «волной» (за это уже
-// досталось на щитке моделей).
-const FEED_TEMPLATE = 'minmax(0,1fr) 92px 84px 104px 88px 112px'
-
-const AGENDA_TEMPLATE = 'minmax(0,1.2fr) minmax(0,1fr) 96px 128px'
 
 export default async function AdminDevelopmentPage() {
   await requireAdmin()
@@ -333,53 +325,17 @@ export default async function AdminDevelopmentPage() {
             )}
           </p>
         ) : (
-          <DataTable
-            template={AGENDA_TEMPLATE}
-            minWidth={720}
-            header={
-              <>
-                <span>{tr({ en: 'What to grow', ru: 'Что растим' }, lang)}</span>
-                <span>{tr({ en: 'Why (numbers)', ru: 'Почему (числа)' }, lang)}</span>
-                <span className="text-right">{tr({ en: 'Priority', ru: 'Приоритет' }, lang)}</span>
-                <span className="text-right">{tr({ en: 'Decision', ru: 'Решение' }, lang)}</span>
-              </>
-            }
-          >
-            {agenda.map((a) => (
-              <DataTableRow key={a.id}>
-                <span className="min-w-0 truncate text-[0.8125rem] text-ink">{agendaLabel(a.kind as AgendaKind, a.domain, lang === 'ru')}</span>
-                {/* Числа как есть: «списков 1 при пороге 5» проверяемо, «усилить направление» — нет. */}
-                <span className="min-w-0 truncate font-mono text-[0.6875rem] text-ink-2">
-                  {Object.entries(a.why).map(([k, v]) => `${k}=${v}`).join(' · ')}
-                </span>
-                <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">{a.score.toFixed(2)}</span>
-                <div className="flex items-center justify-end gap-0.5">
-                  {a.status === 'proposed' ? (
-                    <>
-                      <form action={decideAgendaItem}>
-                        <input type="hidden" name="id" value={a.id} />
-                        <input type="hidden" name="decision" value="approved" />
-                        <button type="submit" aria-label={tr({ en: 'Approve', ru: 'Одобрить' }, lang)} title={tr({ en: 'Approve', ru: 'Одобрить' }, lang)} className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ok">
-                          <Check size={16} />
-                        </button>
-                      </form>
-                      <form action={decideAgendaItem}>
-                        <input type="hidden" name="id" value={a.id} />
-                        <input type="hidden" name="decision" value="dismissed" />
-                        <button type="submit" aria-label={tr({ en: 'Dismiss', ru: 'Отклонить' }, lang)} title={tr({ en: 'Dismiss', ru: 'Отклонить' }, lang)} className="grid size-11 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-warn">
-                          <X size={16} />
-                        </button>
-                      </form>
-                    </>
-                  ) : (
-                    <span className={`text-[0.78125rem] ${a.status === 'approved' ? 'text-ok' : 'text-muted'}`} title={a.ownerExpertId ?? ''}>
-                      {a.status === 'approved' ? tr({ en: 'approved', ru: 'одобрено' }, lang) : tr({ en: 'dismissed', ru: 'отклонено' }, lang)}
-                    </span>
-                  )}
-                </div>
-              </DataTableRow>
-            ))}
-          </DataTable>
+          <DevAgendaTable
+            lang={lang}
+            rows={agenda.map((a) => ({
+              id: a.id,
+              label: agendaLabel(a.kind as AgendaKind, a.domain, lang === 'ru'),
+              why: Object.entries(a.why).map(([k, v]) => `${k}=${v}`).join(' · '),
+              score: a.score,
+              status: a.status,
+              ownerExpertId: a.ownerExpertId,
+            }))}
+          />
         )}
         <p className="text-[0.78125rem] text-muted">
           {tr(
@@ -398,37 +354,19 @@ export default async function AdminDevelopmentPage() {
       {m.feeds.length > 0 && (
         <section className="flex min-w-0 flex-col gap-3">
           <h2 className={h2}>{tr({ en: 'Living lists', ru: 'Живые списки' }, lang)}</h2>
-          <DataTable
-            template={FEED_TEMPLATE}
-            minWidth={720}
-            header={
-              <>
-                <span>{tr({ en: 'Feed', ru: 'Лента' }, lang)}</span>
-                <span className="text-right">{tr({ en: 'Fresh', ru: 'Свежесть' }, lang)}</span>
-                <span className="text-right">{tr({ en: 'Grown', ru: 'Роста' }, lang)}</span>
-                <span className="text-right">{tr({ en: 'Views', ru: 'Просмотров' }, lang)}</span>
-                <span className="text-right">{tr({ en: 'Source clicks', ru: 'Кликов' }, lang)}</span>
-                <span className="text-right">{tr({ en: 'Human edits', ru: 'Правок людей' }, lang)}</span>
-              </>
-            }
-          >
-            {m.feeds.map((f) => (
-              <DataTableRow key={f.id}>
-                <Link href={`/${f.handle}/${f.slug}`} className="min-w-0 truncate text-[0.8125rem] text-ink hover:text-accent" title={f.title}>
-                  {f.title}
-                </Link>
-                <span className={`text-right font-mono tabular-nums text-[0.78125rem] ${f.freshestAgeDays == null ? 'text-muted' : f.freshestAgeDays > 7 ? 'text-warn' : 'text-ok'}`}>
-                  {f.freshestAgeDays == null ? '—' : tr({ en: `${f.freshestAgeDays}d`, ru: `${f.freshestAgeDays} дн.` }, lang)}
-                </span>
-                <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">{num(f.grown)}</span>
-                <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">{num(f.views)}</span>
-                <span className="text-right font-mono tabular-nums text-[0.78125rem] text-ink-2">{num(f.clicks)}</span>
-                {/* Правки людей выделены: это единственная цифра здесь, которую нельзя получить,
-                    потратив свои же деньги. */}
-                <span className={`text-right font-mono tabular-nums text-[0.78125rem] ${f.humanEdits > 0 ? 'text-ok' : 'text-muted'}`}>{num(f.humanEdits)}</span>
-              </DataTableRow>
-            ))}
-          </DataTable>
+          <DevFeedsTable
+            lang={lang}
+            rows={m.feeds.map((f) => ({
+              id: f.id,
+              href: `/${f.handle}/${f.slug}`,
+              title: f.title,
+              freshestAgeDays: f.freshestAgeDays,
+              grown: f.grown,
+              views: f.views,
+              clicks: f.clicks,
+              humanEdits: f.humanEdits,
+            }))}
+          />
           <p className="text-[0.78125rem] text-muted">
             {tr(
               {
@@ -550,65 +488,10 @@ export default async function AdminDevelopmentPage() {
           это мостик, место, откуда останавливают работу, увидев неладное. */}
       <section className="flex min-w-0 flex-col gap-3">
         <h2 className={h2}>{tr({ en: 'Autonomous loops', ru: 'Автономные петли' }, lang)}</h2>
-        <DataTable
-          template="minmax(0,1fr) 112px 112px 112px"
-          minWidth={560}
-          header={
-            <>
-              <span>{tr({ en: 'Loop', ru: 'Петля' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'State', ru: 'Состояние' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'Dry run', ru: 'Сухой прогон' }, lang)}</span>
-              <span className="text-right">{tr({ en: 'Switch', ru: 'Рубильник' }, lang)}</span>
-            </>
-          }
-        >
-          {loops.map((l) => (
-            <DataTableRow key={l.type} className="py-3">
-              <span className="truncate font-mono text-[0.78125rem] text-ink">{l.type}</span>
-              <span className={`text-right text-[0.78125rem] ${l.circuitTripped ? 'text-danger' : l.paused ? 'text-warn' : 'text-ok'}`}>
-                {l.circuitTripped
-                  ? tr({ en: 'breaker tripped', ru: 'предохранитель' }, lang)
-                  : l.paused
-                    ? tr({ en: 'paused', ru: 'остановлена' }, lang)
-                    : tr({ en: 'running', ru: 'работает' }, lang)}
-              </span>
-              <form action={toggleLoopDryRun} className="text-right">
-                <input type="hidden" name="type" value={l.type} />
-                <input type="hidden" name="dryRun" value={String(l.dryRun)} />
-                <Button type="submit" size="md">
-                  {l.dryRun ? tr({ en: 'on', ru: 'вкл' }, lang) : tr({ en: 'off', ru: 'выкл' }, lang)}
-                </Button>
-              </form>
-              <div className="flex justify-end gap-2">
-                {l.circuitTripped && (
-                  <form action={resetLoopCircuit}>
-                    <input type="hidden" name="type" value={l.type} />
-                    <Button type="submit" variant="danger" size="md">
-                      {tr({ en: 'Reset', ru: 'Сбросить' }, lang)}
-                    </Button>
-                  </form>
-                )}
-                <form action={toggleLoopPause}>
-                  <input type="hidden" name="type" value={l.type} />
-                  <input type="hidden" name="paused" value={String(l.paused)} />
-                  <Button type="submit" size="md">
-                    {l.paused ? <Play size={13} /> : <Pause size={13} />}
-                    {l.paused ? tr({ en: 'Resume', ru: 'Пустить' }, lang) : tr({ en: 'Pause', ru: 'Стоп' }, lang)}
-                  </Button>
-                </form>
-              </div>
-            </DataTableRow>
-          ))}
-          <div className="px-4 py-2.5 text-[0.6875rem] text-muted">
-            {tr(
-              {
-                en: 'Pause stops the queue from handing out this loop’s jobs — atomically, on every instance, without a restart. The breaker is tripped by code and cleared by a human.',
-                ru: 'Стоп прекращает выдачу задач этой петли — атомарно, на всех инстансах, без рестарта. Предохранитель ставит код, снимает человек.',
-              },
-              lang,
-            )}
-          </div>
-        </DataTable>
+        <DevLoopsTable
+          lang={lang}
+          rows={loops.map((l) => ({ type: l.type, paused: l.paused, dryRun: l.dryRun, circuitTripped: l.circuitTripped }))}
+        />
       </section>
 
       <p className="text-[0.78125rem] text-muted">
