@@ -646,12 +646,28 @@ export const jobs = pgTable(
     maxAttempts: integer('max_attempts').notNull().default(5),
     runAt: timestamp('run_at', { withTimezone: true }).notNull().defaultNow(),
     lastError: text('last_error'),
+    // Похороны состоялись: фича узнала о смерти задачи и закрыла своё видимое «в процессе».
+    // Признак ПЕРСИСТЕНТНЫЙ намеренно — иначе потеря финализации необратима: моргнула база
+    // или процесс убили между пометкой 'failed' и вызовом финализатора, а reaper выбирает
+    // только 'processing' и мёртвую задачу больше никому не предложит (находка авто-ревью
+    // по #637). Пусто у типов без финализатора — их никто и не выбирает.
+    finalizedAt: timestamp('finalized_at', { withTimezone: true }),
+    // Сколько раз пробовали похоронить. Без предела стабильно падающий финализатор
+    // (сущность удалена, БД не отвечает) перезывался бы КАЖДУЮ минуту вечно. Так же
+    // устроено у зрелых очередей: Oban Lifeline при исчерпанных попытках метит задачу
+    // 'discarded', а не возвращает в очередь; River rescuer либо перезапускает, либо
+    // отбрасывает по максимуму попыток. Достигли потолка — сдаёмся с записью в Sentry.
+    finalizeAttempts: integer('finalize_attempts').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     // Индекс под выборку готовых к запуску pending-задач.
     ready: index('jobs_ready_idx').on(t.status, t.runAt),
+    // Под добор незакрытых похорон: узкий частичный индекс вместо скана всей таблицы задач.
+    unfinalized: index('jobs_unfinalized_idx')
+      .on(t.type, t.updatedAt)
+      .where(sql`status = 'failed' AND finalized_at IS NULL`),
   }),
 )
 
