@@ -127,7 +127,7 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
     // Пульс на всё время обработки: пока он бьётся, reaper знает, что процесс жив, и не
     // отбирает задачу — даже если она честно идёт десять минут. Сбой пульса глушим: не
     // достучались до базы одним UPDATE — работу из-за этого ронять нельзя.
-    const beat = setInterval(() => void touchJob(job.id).catch(() => {}), HEARTBEAT_MS)
+    const beat = setInterval(() => void touchJob(job.id, job.attempts).catch(() => {}), HEARTBEAT_MS)
     try {
       if (!handler) throw new Error(`no handler for job type: ${job.type}`)
       await handler(job.payload, job)

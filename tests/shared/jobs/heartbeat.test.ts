@@ -63,7 +63,7 @@ describe('пульс задачи', () => {
     await runWorker(slow, 60_000)
 
     expect(touchJob.mock.calls.length).toBeGreaterThanOrEqual(3)
-    expect(touchJob).toHaveBeenCalledWith('j1')
+    expect(touchJob).toHaveBeenCalledWith('j1', 1) // id + номер попытки: чужой удар не должен продлевать жизнь
   })
 
   it('работа кончилась — пульс замолкает (иначе завершённая задача «дышала» бы вечно)', async () => {

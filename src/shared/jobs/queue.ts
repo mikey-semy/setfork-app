@@ -78,17 +78,21 @@ export async function completeJob(id: string): Promise<void> {
  * `updated_at` НЕ трогаем намеренно: он про изменение самой задачи, и по нему считают возраст
  * в других местах. Пульс — отдельное поле, иначе живая долгая задача выглядела бы вечно юной.
  *
- * УСЛОВИЕ `status = 'processing'` — не украшение, а гонка. `clearInterval` отменяет будущие
- * удары, но НЕ отзывает уже улетевший UPDATE: он мог задержаться и приземлиться после того,
- * как задачу вернули в очередь, воскресив чужой пульс на новой попытке (находка авто-ревью
- * по #648). Postgres в READ COMMITTED перепроверяет предикат после ожидания блокировки,
- * поэтому такой запоздавший удар просто не находит строку и тихо ничего не делает.
+ * УСЛОВИЯ В WHERE — не украшение, а две гонки подряд (обе от авто-ревью по #648).
+ * `clearInterval` отменяет будущие удары, но НЕ отзывает уже улетевший UPDATE:
+ *
+ *  - он мог приземлиться после того, как задачу вернули в очередь → `status = 'processing'`;
+ *  - а если за это время её успели перезахватить, статус снова 'processing', и удар от ПРОШЛОЙ
+ *    попытки продлил бы жизнь ЧУЖОЙ → сверяем ещё и номер попытки.
+ *
+ * Postgres в READ COMMITTED перепроверяет предикат после ожидания блокировки, поэтому
+ * опоздавший удар просто не находит строку и тихо ничего не делает.
  */
-export async function touchJob(id: string): Promise<void> {
+export async function touchJob(id: string, attempt: number): Promise<void> {
   await db
     .update(jobs)
     .set({ heartbeatAt: new Date() })
-    .where(and(eq(jobs.id, id), eq(jobs.status, 'processing')))
+    .where(and(eq(jobs.id, id), eq(jobs.status, 'processing'), eq(jobs.attempts, attempt)))
 }
 
 /**

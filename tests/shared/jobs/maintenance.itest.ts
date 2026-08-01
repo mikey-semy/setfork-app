@@ -57,9 +57,20 @@ describe('reaper: пульс против таймаута', () => {
   it('пульс продлевает жизнь задаче прямо на ходу', async () => {
     const [live] = await add({ heartbeatAt: ago('5 minutes') as never })
 
-    await touchJob(live.id)
+    await touchJob(live.id, 1)
 
     expect((await reapStalledJobs()).reaped).toBe(0)
+  })
+
+  it('удар от ПРОШЛОЙ попытки не продлевает жизнь текущей', async () => {
+    // Опоздавший в сети UPDATE попытки №1 приземляется, когда задачу уже перезахватили (№2):
+    // статус снова 'processing', и без сверки попытки чужой пульс объявил бы её живой.
+    const [j] = await add({ attempts: 2, heartbeatAt: ago('5 minutes') as never })
+
+    await touchJob(j.id, 1)
+
+    const [row] = await db.select({ hb: jobs.heartbeatAt }).from(jobs).where(eq(jobs.id, j.id))
+    expect(row.hb?.getTime()).toBeLessThan(Date.now() - 60_000)
   })
 
   it('отпуская задачу, reaper гасит пульс — иначе новую попытку осудят по чужому', async () => {
@@ -79,7 +90,7 @@ describe('reaper: пульс против таймаута', () => {
     // приземлиться после возврата задачи в очередь и оживить чужой пульс на новой попытке.
     const [j] = await add({ status: 'pending', heartbeatAt: null })
 
-    await touchJob(j.id)
+    await touchJob(j.id, 1)
 
     const [row] = await db.select({ hb: jobs.heartbeatAt }).from(jobs).where(eq(jobs.id, j.id))
     expect(row.hb).toBeNull()
