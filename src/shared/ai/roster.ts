@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { councilExperts, db } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
+import { builtinAvatars } from './avatar-gallery'
 import { ORG_SEED } from './roster-org'
 import type { Lang } from '@/shared/i18n'
 
@@ -445,13 +446,20 @@ export async function rosterAvatars(viewerId?: string | null): Promise<Record<st
       .select()
       .from(councilExperts)
       .where(viewerId ? sql`(${councilExperts.ownerId} is null or ${councilExperts.ownerId} = ${viewerId})` : sql`${councilExperts.ownerId} is null`)
+    // Встроенные портреты резолвим по РЕАЛЬНЫМ файлам: у специализаций
+    // (backender/tester/…) своего webp нет, а на старых инсталляциях avatar
+    // насижен = id — прямой путь давал 404 на каждой поверхности (линза 07,
+    // дожим Codex #639). Нет файла → замысел из констант → пусто (заглушка
+    // GnomeAvatar без сетевой попытки).
+    const builtin = new Set(await builtinAvatars())
     const out: Record<string, string> = {}
     for (const r of rows) {
       if (r.avatarUploaded && r.avatar) {
         const url = await avatarSrc(r.avatar, 128)
         if (url) out[r.id] = url
-      } else if (r.avatar && r.avatar !== r.id) {
-        out[r.id] = `/gnomes/${r.avatar}.webp` // выбрали другого встроенного персонажа
+      } else {
+        const pick = [r.avatar || r.id, SEED_BY_ID.get(r.id)?.avatar].find((k) => k && builtin.has(k))
+        if (pick) out[r.id] = `/gnomes/${pick}.webp`
       }
     }
     return out

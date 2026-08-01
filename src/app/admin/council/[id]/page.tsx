@@ -11,6 +11,7 @@ import { gnomeKpi } from '@/features/admin/gnome-stats'
 import { gnomeMood, gnomeThanksCounts } from '@/shared/ai/gnome-reputation'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { ExpertSettings } from '@/features/admin/ExpertSettings'
+import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 
 /**
  * СТРАНИЦА СПЕЦИАЛИСТА (админу): его развитие И его настройки — в одном месте.
@@ -49,11 +50,12 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   const modelOptions = [...(models?.chat ?? [])]
     .sort((a, b) => (a.completionPrice || a.promptPrice) - (b.completionPrice || b.promptPrice))
     .map((m) => ({ value: m.id, id: m.id, label: m.label, family: m.family }))
-  const { builtinAvatars } = await import('@/features/admin/avatar-gallery')
+  const { builtinAvatars } = await import('@/shared/ai/avatar-gallery')
   const gallery = await builtinAvatars()
 
   const name = ru ? e.nameRu : e.nameEn
-  const avatarUrl = e.avatarUploaded ? avatars[e.id] : `/gnomes/${e.avatar || e.id}.webp`
+  // Карта уже отрезолвлена по реальным файлам (rosterAvatars); пусто → заглушка GnomeAvatar.
+  const avatarUrl = avatars[e.id]
   const acceptShare = kpi.gens ? Math.round((kpi.accepted / kpi.gens) * 100) : null
   // Настроение (RPG-развитие): демеанор из послужного списка — в стиль общения.
   const thanksN = (await gnomeThanksCounts())[e.id] ?? 0
@@ -78,9 +80,8 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
       </Link>
 
       <div className="mb-5 flex items-center gap-4">
-        {/* Аватар из ростера: загруженный URL или встроенный webp. */}
-        {/* eslint-disable-next-line @next/next/no-img-element -- локальная статика/imgproxy, размеры фиксированы */}
-        <img src={avatarUrl} alt="" width={64} height={64} className="size-16 rounded-full border border-border object-cover" />
+        {/* Аватар из ростера: загруженный URL или встроенный webp; пусто → заглушка без 404. */}
+        <GnomeAvatar src={avatarUrl} size={64} className="size-16 rounded-full border border-border object-cover" />
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-[1.25rem] font-bold text-ink">
             {name}
