@@ -63,10 +63,21 @@ async function gitPort() {
 }
 
 /** Ф3: пуш зеркала через ядро. Живёт здесь, а не в mirror-actions: порт
- *  features/git разрешён только из этого файла (baseline границ линтера). */
-export async function pushListMirror(owner: string, slug: string): Promise<{ ok: boolean; error: string }> {
+ *  features/git разрешён только из этого файла (baseline границ линтера).
+ *
+ *  `delivered` (Ф2) отличает «ядро ответило отказом» от «до ядра не дошло»
+ *  (лежит, истёк дедлайн вызова). Разница существенна для повторов: в первом
+ *  случае ядро уже записало неудачу и сдвинуло счётчик, во втором писать было
+ *  некому — и сделать это должен вызывающий, иначе лестница пауз не растёт. */
+export async function pushListMirror(
+  owner: string,
+  slug: string,
+): Promise<{ ok: boolean; error: string; delivered: boolean }> {
   const { gitCore } = await gitPort()
-  return gitCore.mirrorPush({ owner, slug }).catch(() => ({ ok: false, error: 'core unavailable' }))
+  return gitCore
+    .mirrorPush({ owner, slug })
+    .then((r) => ({ ...r, delivered: true }))
+    .catch(() => ({ ok: false, error: 'core unavailable', delivered: false }))
 }
 
 // ── Видимость списка (public/private) и удаление ─────────────────────

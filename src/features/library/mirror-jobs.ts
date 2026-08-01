@@ -70,10 +70,22 @@ export type MirrorCandidate = { attempts: number; syncedAt: Date | null }
  * живут в одном месте. Тестом это связано в `mirror-sweep.itest.ts`: там
  * настоящая Postgres и проверка, что запрос выбирает ровно тех, кого называет
  * `mirrorRetryDueAt`.
+ *
+ * ⚠️ Потолок применяется к СЕКУНДАМ, до `make_interval`, и это не стилистика.
+ * Раз повторы не кончаются, счётчик неудач растёт неограниченно: у зеркала,
+ * сломанного на полтора месяца, он доходит до ~44, а `2^43 * 600` секунд уже не
+ * помещается в интервал — и Postgres МОЛЧА переполняется в ОТРИЦАТЕЛЬНЫЙ
+ * интервал (проверено: `-2562047788:00:54`). Внешний `least` от этого не спасал:
+ * отрицательное меньше суток, поэтому оно и побеждало, время готовности уезжало
+ * в прошлое, и самое сломанное зеркало долбилось каждый проход — ровно то, от
+ * чего лестница пауз и заведена (авто-ревью fe#645, шестой заход).
+ * Показатель степени тоже ограничен: `power(2, огромное)` до `least` не доживёт.
  */
-const dueAtSql = sql<Date>`coalesce(${templates.mirrorSyncedAt}, to_timestamp(0)) + least(
-  make_interval(secs => ${MIRROR_BACKOFF_MS / 1000} * power(2, greatest(${templates.mirrorAttempts} - 1, 0))),
-  make_interval(secs => ${MIRROR_MAX_BACKOFF_MS / 1000})
+const dueAtSql = sql<Date>`coalesce(${templates.mirrorSyncedAt}, to_timestamp(0)) + make_interval(
+  secs => least(
+    ${MIRROR_BACKOFF_MS / 1000} * power(2, least(greatest(${templates.mirrorAttempts} - 1, 0), 60)),
+    ${MIRROR_MAX_BACKOFF_MS / 1000}
+  )
 )`
 
 /**
@@ -145,16 +157,23 @@ export async function sweepFailedMirrors(): Promise<void> {
     const res = await pushListMirror(r.handle, r.slug)
     if (!res.ok) {
       log.warn('mirror.retry.failed', { templateId: r.id, attempt: r.attempts + 1, error: res.error })
-      // Отмечаем попытку САМИ. Обычно это делает ядро вместе со статусом, но
-      // когда до ядра не дошло вовсе (оно лежит, истёк дедлайн вызова), писать
-      // некому: строка остаётся с прежним `mirror_synced_at`, то есть «пора» —
-      // и следующий проход берёт её снова, через пять минут, без всякой паузы.
-      // Авария ядра превращалась бы в равномерный долбёж (авто-ревью fe#645).
+      // Когда до ядра НЕ ДОШЛО (лежит, истёк дедлайн вызова), неудачу записать
+      // некому: строка остаётся с прежним `mirror_synced_at`, то есть «пора», и
+      // следующий проход берёт её снова через пять минут. Авария ядра
+      // превращалась бы в равномерный долбёж (авто-ревью fe#645).
       //
-      // Только отметка времени, без счётчика неудач: его ведёт ядро, и если оно
-      // всё же ответило, вторая рука сбила бы ему счёт. Здесь достаточно
-      // сдвинуть попытку — лестница пауз дальше сработает сама.
-      await db.update(templates).set({ mirrorSyncedAt: new Date() }).where(eq(templates.id, r.id))
+      // Пишем ровно то, что записало бы ядро: время попытки И счётчик неудач.
+      // Без счётчика пауза не росла бы — зеркало на первой неудаче стучалось бы
+      // каждые десять минут всю аварию, вместо 20/40/80 (шестой заход ревью).
+      //
+      // Только для НЕДОСТАВЛЕННЫХ: если ядро ответило, оно уже всё записало, и
+      // вторая рука сбила бы ему счёт.
+      if (!res.delivered) {
+        await db
+          .update(templates)
+          .set({ mirrorSyncedAt: new Date(), mirrorAttempts: sql`${templates.mirrorAttempts} + 1` })
+          .where(eq(templates.id, r.id))
+      }
     }
   }
 }

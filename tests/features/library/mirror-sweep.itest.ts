@@ -18,13 +18,16 @@ vi.mock('next/cache', () => ({ revalidatePath: () => {}, revalidateTag: () => {}
 // Толкать настоящий пуш здесь незачем: проверяется ОТБОР. Ядро в тестовой среде
 // недоступно, а без мока проход ушёл бы в сеть.
 const pushed: string[] = []
-// `down` изображает недоступное ядро: ровно тот случай, когда статус зеркала
-// писать некому и проход обязан отложить попытку сам.
+// `down` изображает НЕДОСТУПНОЕ ядро (до него не дошло — записывать неудачу
+// некому), `delivered` — ядро, которое ОТВЕТИЛО. Разница принципиальна: во
+// втором случае счётчик неудач уже сдвинуло само ядро.
 let down = false
+let delivered: { ok: boolean; error: string } | null = null
 vi.mock('@/features/library/actions', () => ({
   pushListMirror: async (handle: string, slug: string) => {
     pushed.push(`${handle}/${slug}`)
-    return down ? { ok: false, error: 'core unavailable' } : { ok: true, error: '' }
+    if (down) return { ok: false, error: 'core unavailable', delivered: false }
+    return { ...(delivered ?? { ok: true, error: '' }), delivered: true }
   },
 }))
 
@@ -54,6 +57,7 @@ async function failingMirror(slug: string, attempts: number, minutesAgo: number)
 beforeEach(async () => {
   pushed.length = 0
   down = false
+  delivered = null
   await db.execute(sql`truncate table ${users}, ${templates}, ${jobs} restart identity cascade`)
   const [u] = await db.insert(users).values({ handle: 'mirror-owner' }).returning({ id: users.id })
   ownerId = u.id
@@ -211,16 +215,45 @@ describe('отбор зеркал на повтор', () => {
     expect(pushed[0]).toBe('mirror-owner/never')
   })
 
-  it('недоступное ядро откладывает попытку, а не даёт долбить каждые пять минут', async () => {
-    // Ядро лежит — статус писать некому, и без своей отметки строка осталась бы
-    // «пора» навсегда: следующий проход брал бы её снова и снова.
+  it('недоступное ядро откладывает попытку и двигает счётчик', async () => {
+    // Ядро лежит — записать неудачу некому, и без своей отметки строка осталась
+    // бы «пора»: следующий проход брал бы её снова и снова. А без счётчика пауза
+    // не росла бы — стучались бы каждые десять минут всю аварию.
     down = true
     await failingMirror('unreachable', 1, 30)
     await sweepFailedMirrors()
     expect(pushed).toEqual(['mirror-owner/unreachable'])
+    const [row] = await db.select().from(templates).where(eq(templates.slug, 'unreachable'))
+    expect(row.mirrorAttempts).toBe(2)
     pushed.length = 0
     await sweepFailedMirrors() // следующий проход прямо сейчас
     expect(pushed).toEqual([])
+  })
+
+  it('ответивший отказом ядро счётчик не трогаем — его ведёт оно само', async () => {
+    // Иначе счёт шёл бы в две руки, и «повторяем раз в сутки» наступало бы вдвое
+    // раньше обещанного.
+    delivered = { ok: false, error: '403 Forbidden' }
+    await failingMirror('refused', 1, 30)
+    await sweepFailedMirrors()
+    const [row] = await db.select().from(templates).where(eq(templates.slug, 'refused'))
+    expect(row.mirrorAttempts).toBe(1)
+  })
+
+  it('зеркало, сломанное месяцами, не становится «всегда пора»', async () => {
+    // 600 * 2^43 секунд не помещается в интервал, и Postgres МОЛЧА переполняется
+    // в отрицательный: время готовности уезжало в прошлое, и самое сломанное
+    // зеркало долбилось каждый проход — ровно то, от чего лестница пауз заведена.
+    await failingMirror('ancient', 44, 60)
+    await sweepFailedMirrors()
+    expect(pushed).toEqual([])
+    // А через сутки с лишним — берём: потолок паузы остаётся сутками.
+    await db
+      .update(templates)
+      .set({ mirrorSyncedAt: new Date(Date.now() - 25 * 60 * MIN) })
+      .where(eq(templates.slug, 'ancient'))
+    await sweepFailedMirrors()
+    expect(pushed).toEqual(['mirror-owner/ancient'])
   })
 
   it('исправное зеркало не трогаем', async () => {
