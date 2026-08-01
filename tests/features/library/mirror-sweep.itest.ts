@@ -18,10 +18,13 @@ vi.mock('next/cache', () => ({ revalidatePath: () => {}, revalidateTag: () => {}
 // Толкать настоящий пуш здесь незачем: проверяется ОТБОР. Ядро в тестовой среде
 // недоступно, а без мока проход ушёл бы в сеть.
 const pushed: string[] = []
+// `down` изображает недоступное ядро: ровно тот случай, когда статус зеркала
+// писать некому и проход обязан отложить попытку сам.
+let down = false
 vi.mock('@/features/library/actions', () => ({
   pushListMirror: async (handle: string, slug: string) => {
     pushed.push(`${handle}/${slug}`)
-    return { ok: true, error: '' }
+    return down ? { ok: false, error: 'core unavailable' } : { ok: true, error: '' }
   },
 }))
 
@@ -50,6 +53,7 @@ async function failingMirror(slug: string, attempts: number, minutesAgo: number)
 
 beforeEach(async () => {
   pushed.length = 0
+  down = false
   await db.execute(sql`truncate table ${users}, ${templates}, ${jobs} restart identity cascade`)
   const [u] = await db.insert(users).values({ handle: 'mirror-owner' }).returning({ id: users.id })
   ownerId = u.id
@@ -186,6 +190,37 @@ describe('отбор зеркал на повтор', () => {
     })
     await sweepFailedMirrors()
     expect(pushed).toEqual(['mirror-owner/never'])
+  })
+
+  it('ни разу не пробованное идёт ПЕРВЫМ, а не последним', async () => {
+    // Postgres в `order by ... asc` кладёт NULL в конец: пока время готовности
+    // было NULL, такое зеркало при длинной очереди не попадало в пачку никогда —
+    // хотя из всех ждущих оно самое обделённое.
+    for (let i = 0; i < 5; i++) await failingMirror(`dated-${i}`, 1, 100)
+    await db.insert(templates).values({
+      ownerId,
+      slug: 'never',
+      title: { en: 'never' },
+      mirrorUrl: 'https://github.com/u/never',
+      mirrorToken: 'enc',
+      mirrorError: 'boom',
+      mirrorAttempts: 0,
+      mirrorSyncedAt: null,
+    })
+    await sweepFailedMirrors()
+    expect(pushed[0]).toBe('mirror-owner/never')
+  })
+
+  it('недоступное ядро откладывает попытку, а не даёт долбить каждые пять минут', async () => {
+    // Ядро лежит — статус писать некому, и без своей отметки строка осталась бы
+    // «пора» навсегда: следующий проход брал бы её снова и снова.
+    down = true
+    await failingMirror('unreachable', 1, 30)
+    await sweepFailedMirrors()
+    expect(pushed).toEqual(['mirror-owner/unreachable'])
+    pushed.length = 0
+    await sweepFailedMirrors() // следующий проход прямо сейчас
+    expect(pushed).toEqual([])
   })
 
   it('исправное зеркало не трогаем', async () => {
