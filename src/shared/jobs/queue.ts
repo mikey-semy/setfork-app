@@ -107,6 +107,12 @@ export async function reapStalledJobs(
     SET status = (CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END)::job_status,
         run_at = now(),
         updated_at = now(),
+        -- ПУЛЬС ГАСИМ, отпуская задачу. Иначе он остался бы от прошлого исполнителя, и
+        -- следующую попытку — вдруг её возьмёт воркер прежней версии, который пульса не
+        -- бьёт, — судили бы по короткому порогу: через минуту живую работу отобрали бы
+        -- второй раз (двойной расход на моделях). Пустой пульс = «судить щедро», и это
+        -- ровно то, что нужно, пока задачу не подхватит воркер, умеющий дышать.
+        heartbeat_at = NULL,
         last_error = coalesce(last_error, 'reaped: stalled in processing')
     WHERE status = 'processing'
       AND (
@@ -215,6 +221,9 @@ export async function failJob(job: Job, error: string): Promise<boolean> {
       runAt: permanent ? undefined : new Date(Date.now() + backoffMs(job.attempts)),
       lastError: error.slice(0, 1000),
       updatedAt: new Date(),
+      // Отпускаем задачу — гасим пульс (см. reapStalledJobs): чужой старый пульс на новой
+      // попытке заставил бы reaper судить её по минутному порогу и отобрать живую работу.
+      heartbeatAt: null,
     })
     .where(eq(jobs.id, job.id))
   return permanent
@@ -228,14 +237,19 @@ export async function failJob(job: Job, error: string): Promise<boolean> {
  * интересен, а вот провал — это то, по чему разбирают инцидент, и выкидывать его назавтра
  * нельзя. Обе выдержки — env, потому что «сутки» и «неделя» это не законы природы.
  *
- * УМЕРШИЕ БЕЗ ПОХОРОН НЕ ТРОГАЕМ. Строка `failed` с пустым `finalized_at` — это ещё не мусор,
- * а невыполненная работа: её ждёт добор финализации. Удалив её, мы бы своими руками вернули
- * вечный спиннер, который чинили в #637.
+ * УМЕРШИЕ БЕЗ ПОХОРОН НЕ ТРОГАЕМ — но только там, где похороны вообще положены. Строка
+ * `failed` с пустым `finalized_at` у типа С финализатором — это не мусор, а невыполненная
+ * работа: её ждёт добор финализации, и удалив её, мы бы своими руками вернули вечный спиннер
+ * из #637. А вот у типов БЕЗ финализатора (`email`, `push`, `reindex`…) `finalized_at` пуст
+ * всегда и по определению — требовать его от них значило бы не удалять их провалы никогда,
+ * то есть отменить смысл уборки для большинства таблицы (находка авто-ревью по #648).
+ * Поэтому список типов приходит снаружи: реестр финализаторов знает воркер, не очередь.
  *
  * `limit` держит проход коротким: удалять миллион строк одним DELETE — это долгая блокировка
  * на горячей таблице, из-за которой встанут все воркеры.
  */
 export async function cleanupTerminalJobs(
+  finalizedTypes: string[] = [],
   doneAfterHours = Number(process.env.SETFORK_JOB_RETAIN_DONE_H ?? 24),
   failedAfterDays = Number(process.env.SETFORK_JOB_RETAIN_FAILED_D ?? 7),
   limit = 5000,
@@ -244,7 +258,11 @@ export async function cleanupTerminalJobs(
     DELETE FROM jobs WHERE id IN (
       SELECT id FROM jobs
       WHERE (status = 'done' AND updated_at < now() - (${doneAfterHours}::int * interval '1 hour'))
-         OR (status = 'failed' AND finalized_at IS NOT NULL AND updated_at < now() - (${failedAfterDays}::int * interval '1 day'))
+         OR (
+              status = 'failed'
+              AND updated_at < now() - (${failedAfterDays}::int * interval '1 day')
+              AND (finalized_at IS NOT NULL OR NOT (type = any(${sql.param(finalizedTypes)}::text[])))
+            )
       LIMIT ${limit}
     )
     RETURNING id

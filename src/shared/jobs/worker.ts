@@ -176,7 +176,9 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
       // некуда (у River на это отдельный cleaner). Идёт ПОСЛЕ финализации намеренно: успевшие
       // похоронить свои задачи строки уже помечены и под удаление попадут законно.
       if (ticks % CLEANUP_EVERY_TICKS === 1) {
-        const removed = await cleanupTerminalJobs()
+        // Типы с финализатором передаём внутрь: у них провал без похорон удалять нельзя, у
+        // остальных `finalized_at` пуст всегда — требовать его значило бы не убирать их вовсе.
+        const removed = await cleanupTerminalJobs(finalizedTypes)
         if (removed) log.info('terminal jobs cleaned up', { removed })
       }
       // CONCURRENCY раннеров дренят очередь параллельно; каждый берёт задачу, обрабатывает, берёт
