@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, gte, sql } from 'drizzle-orm'
 import type { Lang } from '@/shared/i18n'
-import { aiUsage, db, generationCandidates, generationDrafts, generations, users, type CandidateItem } from '@/shared/db'
+import { aiUsage, db, generationCandidates, generationDrafts, generationMessages, generations, users, type CandidateItem } from '@/shared/db'
 import { generateChangeNote, generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
 import { serializeFailure, type AiFailure } from '@/shared/ai/failure'
 import { backfillRecipeSections } from '@/shared/ai/list-kind'
@@ -280,4 +280,49 @@ export async function addCandidate(
       await pushMessage(generationId, { attempt: idx, kind: 'error', text: serializeFailure(failure.reason), who: 'council' })
     }
   }
+}
+
+/**
+ * Задачу похоронила очередь, а её виток ничего не сказал: процесс умер (деплой, OOM) до
+ * `finally` выше. Генерация осталась в 'pending' — экран поллит вечно и показывает работу
+ * совета, которой давно нет. Здесь мы её закрываем, чтобы человек увидел причину и кнопку.
+ *
+ * «Статус pending» САМ ПО СЕБЕ ничего не доказывает — за ним стоят три разных положения дел,
+ * и валить их в одно значит врать человеку (находки авто-ревью по #637):
+ *
+ *  1. Наш виток — НЕ ПОСЛЕДНИЙ в нити: человек уже запустил следующий, и 'pending'
+ *     принадлежит ЕМУ. Тогда не трогаем НИЧЕГО, чем бы ни кончился наш: объявишь провал —
+ *     экран покажет «Ещё раз» живой задаче (гонка двух генераций из #634), объявишь успех —
+ *     спиннер погаснет и загорится снова. Это условие внешнее ко всем остальным, поэтому
+ *     живёт в WHERE одного запроса, а не в ветке после другого UPDATE.
+ *  2. Кандидат с этим idx УЖЕ ЛЕЖИТ в базе — процесс умер между вставкой варианта и 'done'.
+ *     Вариант доставлен и оплачен: закрываем в 'done'. Объявить провал при готовом списке
+ *     на экране — худшее, что тут можно сделать.
+ *  3. Ни того, ни другого — виток действительно брошен: 'failed' + причина 'lost'.
+ *
+ * Один UPDATE, а не цепочка: проверки в WHERE выполняются вместе с записью, поэтому виток,
+ * доехавший до 'done' между нашим чтением и записью, ничего не теряет. Что именно случилось,
+ * говорит RETURNING — по нему решаем, писать ли реплику об ошибке.
+ */
+export async function abandonGeneration(generationId: string, idx: number): Promise<void> {
+  const res = await db.execute(sql`
+    UPDATE ${generations}
+    SET status = (
+          CASE WHEN EXISTS (SELECT 1 FROM ${generationCandidates} WHERE generation_id = ${generationId} AND idx = ${idx})
+               THEN 'done' ELSE 'failed' END
+        )::generation_status,
+        updated_at = now()
+    WHERE id = ${generationId} AND status = 'pending'
+      AND coalesce((SELECT max(attempt) FROM ${generationMessages} WHERE generation_id = ${generationId}), 0) <= ${idx}
+      AND coalesce((SELECT max(idx) FROM ${generationCandidates} WHERE generation_id = ${generationId}), 0) <= ${idx}
+    RETURNING status
+  `)
+  const status = (res as { rows?: { status?: string }[] }).rows?.[0]?.status
+  if (!status) return // 'pending' уже не наш, или виток закрылся сам
+  if (status === 'done') {
+    log.warn?.('generation closed as done: job died after the candidate was saved', { generationId, idx })
+    return
+  }
+  await pushMessage(generationId, { attempt: idx, kind: 'error', text: serializeFailure({ code: 'lost' }), who: 'council' })
+  log.warn?.('generation abandoned: job died before reporting', { generationId, idx })
 }

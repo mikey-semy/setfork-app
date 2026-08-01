@@ -34,6 +34,8 @@ function reasonLabel(code: AiFailCode, ru: boolean): string {
       return say('The model call failed', 'Сбой вызова модели')
     case 'internal':
       return say('We failed on our side', 'Сбой на нашей стороне')
+    case 'lost':
+      return say('The job was interrupted (service restart)', 'Задача оборвалась — сервис перезапустился')
   }
 }
 
