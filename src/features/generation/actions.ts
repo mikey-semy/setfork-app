@@ -21,6 +21,7 @@ import { enqueueReindex } from '@/features/library/jobs'
 import { toProposedItems } from '@/features/library/editor'
 import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
+import { MAX_VARIANTS } from './limits'
 
 async function ownerHandle(userId: string): Promise<string> {
   const [u] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId))
@@ -41,24 +42,30 @@ async function enqueueGenerate(generationId: string, userId: string, query: stri
 }
 
 /**
- * Номер последнего витка — по кандидатам И по репликам.
+ * Состояние нити: номер последнего витка и число ДОСТАВЛЕННЫХ вариантов.
  *
- * Только по кандидатам считать нельзя: задача в полёте кандидата ещё не создала, поэтому два
- * «дополнить» подряд получали один и тот же номер, лезли в один слот (UNIQUE(generationId, idx) —
- * часть джоб падала), а их реплики сваливались в один виток: в ленте было «Ход совета: 26» с тремя
- * одинаковыми прогонами. Реплики пишутся действием сразу, поэтому виток в полёте по ним виден.
+ * Номер витка — по кандидатам И по репликам. Только по кандидатам считать нельзя: задача в
+ * полёте кандидата ещё не создала, поэтому два «дополнить» подряд получали один и тот же номер,
+ * лезли в один слот (UNIQUE(generationId, idx) — часть джоб падала), а их реплики сваливались в
+ * один виток: в ленте было «Ход совета: 26» с тремя одинаковыми прогонами. Реплики пишутся
+ * действием сразу, поэтому виток в полёте по ним виден.
+ *
+ * Варианты считаются ОТДЕЛЬНО от витков — в этом весь смысл (решение владельца): потолок
+ * упирался в номер витка, и шесть СОРВАВШИХСЯ попыток запирали человека с нулём вариантов и
+ * сообщением «достигнут предел в 6 вариантов». За неудачи ядра платит не пользователь.
  */
-async function maxIdx(generationId: string): Promise<number> {
-  const [{ max }] = await db
+async function threadState(generationId: string): Promise<{ maxIdx: number; variants: number }> {
+  const [r] = await db
     .select({
       max: sql<number>`greatest(
         coalesce((select max(idx) from ${generationCandidates} where generation_id = ${generationId}), 0),
         coalesce((select max(attempt) from ${generationMessages} where generation_id = ${generationId}), 0)
       )::int`,
+      variants: sql<number>`(select count(*) from ${generationCandidates} where generation_id = ${generationId})::int`,
     })
     .from(generations)
     .where(eq(generations.id, generationId))
-  return max ?? 0
+  return { maxIdx: r?.max ?? 0, variants: r?.variants ?? 0 }
 }
 
 /**
@@ -118,10 +125,11 @@ export async function regenerateCandidate(generationId: string): Promise<void> {
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
-  const max = await maxIdx(generationId)
-  const nextIdx = max + 1
-  // Потолок вариантов: не молча, а с флагом — UI покажет причину.
-  if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}&e=variantcap`)
+  const { maxIdx, variants } = await threadState(generationId)
+  // Потолок вариантов: не молча, а с флагом — UI покажет причину. Упирается в ДОСТАВЛЕННЫЕ
+  // варианты: сорвавшийся виток номер съедает, но права на попытку не отнимает.
+  if (variants >= MAX_VARIANTS) redirect(`/generate/${generationId}?v=${maxIdx}&e=variantcap`)
+  const nextIdx = maxIdx + 1
 
   // Текста у «ещё варианта» нет — намерение, а не фраза. Подпись рисует UI, поэтому она
   // локализуется на клиенте и не протухает в БД при смене языка.
@@ -141,8 +149,9 @@ export async function setGenerationKind(generationId: string, kind: string): Pro
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
-  const nextIdx = (await maxIdx(generationId)) + 1
-  if (nextIdx > 6) redirect(`/generate/${generationId}?e=variantcap`)
+  const { maxIdx, variants } = await threadState(generationId)
+  if (variants >= MAX_VARIANTS) redirect(`/generate/${generationId}?e=variantcap`)
+  const nextIdx = maxIdx + 1
 
   // Новый тип — источник правды для этой генерации и всех будущих витков.
   await db.update(generations).set({ listKind: kind }).where(eq(generations.id, generationId))
@@ -164,8 +173,9 @@ export async function setGenerationDetail(generationId: string, detail: string):
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
-  const nextIdx = (await maxIdx(generationId)) + 1
-  if (nextIdx > 6) redirect(`/generate/${generationId}?e=variantcap`)
+  const { maxIdx, variants } = await threadState(generationId)
+  if (variants >= MAX_VARIANTS) redirect(`/generate/${generationId}?e=variantcap`)
+  const nextIdx = maxIdx + 1
 
   await db.update(generations).set({ detail }).where(eq(generations.id, generationId))
   await pushMessage(generationId, { attempt: nextIdx, kind: 'again', text: '' })
@@ -186,8 +196,9 @@ export async function refineInChat(generationId: string, text: string): Promise<
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
-  const nextIdx = (await maxIdx(generationId)) + 1
-  if (nextIdx > 6) redirect(`/generate/${generationId}?e=variantcap`)
+  const { maxIdx, variants } = await threadState(generationId)
+  if (variants >= MAX_VARIANTS) redirect(`/generate/${generationId}?e=variantcap`)
+  const nextIdx = maxIdx + 1
 
   // Язык генерации залипал на языке ПЕРВОГО запроса: англ. первый запрос → русский
   // юзер не мог попросить «Давай по-русски», гном отвечал «continue in English».
@@ -224,9 +235,9 @@ export async function regenerateWithQuery(generationId: string, newQuery: string
   if (!allowed) redirect(`/generate/${generationId}?e=ratelimited`)
   if (!(await aiQuota(session.userId, session.handle)).ok) redirect(`/generate/${generationId}?e=ai_quota`)
 
-  const max = await maxIdx(generationId)
-  const nextIdx = max + 1
-  if (nextIdx > 6) redirect(`/generate/${generationId}?v=${max}&e=variantcap`)
+  const { maxIdx, variants } = await threadState(generationId)
+  if (variants >= MAX_VARIANTS) redirect(`/generate/${generationId}?v=${maxIdx}&e=variantcap`)
+  const nextIdx = maxIdx + 1
 
   // Обновляем запрос генерации: заголовок и будущие «ещё вариант» пойдут по нему.
   // Прежние кандидаты НЕ трогаем — пользователь сам решит, какой оставить.

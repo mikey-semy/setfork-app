@@ -3,6 +3,7 @@ import { and, eq, gte, sql } from 'drizzle-orm'
 import type { Lang } from '@/shared/i18n'
 import { aiUsage, db, generationCandidates, generationDrafts, generations, users, type CandidateItem } from '@/shared/db'
 import { generateChangeNote, generateListDraft, sanitizeCommand, type GenerateOptions, type GeneratedList } from '@/shared/ai/generate'
+import { serializeFailure, type AiFailure } from '@/shared/ai/failure'
 import { backfillRecipeSections } from '@/shared/ai/list-kind'
 import { toDetail } from '@/shared/ai/detail-level'
 import { generateListCouncil, type CouncilDraft, type CouncilProvenance } from '@/shared/ai/council'
@@ -80,6 +81,9 @@ export async function addCandidate(
   query: string,
   lang: Lang,
   idx: number,
+  /** Последняя ли это попытка очереди по задаче. Только на ней провал объявляется человеку.
+   *  Дефолт true — прямой вызов (не из воркера) означает, что повторять некому. */
+  opts?: { final?: boolean },
 ): Promise<boolean> {
   // ИДЕМПОТЕНТНОСТЬ ПО РАСХОДУ. Задача 'generate' ставится с maxAttempts: 2, плюс её
   // переподхватывает reapStalledJobs — то есть повтор штатный. А самая дорогая часть
@@ -110,6 +114,9 @@ export async function addCandidate(
     .from(generations)
     .where(eq(generations.id, generationId))
     .limit(1)
+  // Причину провала кладём в держатель, а не в let: пишется она из колбэка (глубина модели),
+  // а читается в finally — на обычной переменной анализатор типов увидел бы вечный null.
+  const failure: { reason: AiFailure | null } = { reason: null }
   const genOpts: GenerateOptions = {
     // Веб-поиск — по настройке, НЕ всегда: `:online` берёт флэт-фи ~$0.005/вызов (было 60% расхода,
     // включённое втихую на каждой генерации). Совет управляет вебом своим councilWebSeek отдельно.
@@ -121,6 +128,9 @@ export async function addCandidate(
     feature: idx > 1 ? 'regenerate' : 'generate',
     refType: 'generation',
     refId: generationId,
+    onFail: (f) => {
+      failure.reason = f
+    },
   }
 
   // Терминальный статус ГАРАНТИРОВАН через finally: любой throw ниже (insert, ошибка модели, TypeError)
@@ -249,11 +259,25 @@ export async function addCandidate(
     delivered = true
     await setGenerationStatus(generationId, 'done')
     return true
+  } catch (e) {
+    // Упало У НАС уже после модели (вставка кандидата, TypeError): своя причина не менее
+    // важна, чем причина модели, — иначе «Подробности» в чате остались бы пустыми.
+    // Ошибку не глотаем: воркер по ней решает про ретрай.
+    failure.reason = failure.reason ?? { code: 'internal', detail: e instanceof Error ? `${e.name}: ${e.message}` : String(e) }
+    throw e
   } finally {
     // Не успех и не уточнение → честный 'failed' + одна реплика ошибки. Гарантия против вечного спиннера.
-    if (!delivered && !clarified) {
+    // В текст реплики кладём причину кодом (shared/ai/failure): чат держит её свёрнутой,
+    // но человек может открыть и переслать нам — раньше она умирала в логах воркера.
+    //
+    // ТОЛЬКО НА ПОСЛЕДНЕЙ ПОПЫТКЕ. Пока в очереди лежит автоматический повтор, работа не
+    // закончена: объявив провал раньше, экран показывал бы кнопку «Ещё раз» параллельно
+    // живой задаче — нажатие поставило бы ВТОРУЮ генерацию, и обе жгли бы модели и клали
+    // по кандидату на один запрос. До повтора статус остаётся 'pending': человек видит,
+    // что совет ещё работает, — так оно и есть.
+    if (!delivered && !clarified && (opts?.final ?? true)) {
       await setGenerationStatus(generationId, 'failed')
-      await pushMessage(generationId, { attempt: idx, kind: 'error', text: '', who: 'council' })
+      await pushMessage(generationId, { attempt: idx, kind: 'error', text: serializeFailure(failure.reason), who: 'council' })
     }
   }
 }

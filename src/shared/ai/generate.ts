@@ -5,6 +5,7 @@ import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
+import type { AiFailure } from './failure'
 import { sanitizeCommand } from './sanitize-command'
 import { lawBlock } from './list-laws'
 import { classifyListKind, shapeFor, type ListKind } from './list-kind'
@@ -62,6 +63,12 @@ export interface GenerateOptions {
   feature?: AiFeature
   refType?: string
   refId?: string
+  /**
+   * Куда сообщить, ПОЧЕМУ списка не будет. Возврат null сам по себе ничего не объясняет:
+   * причина оставалась в логах воркера, а человек в чате видел глухое «не получилось».
+   * Зовётся перед каждым «сдаюсь»; последний вызов и есть причина витка.
+   */
+  onFail?: (f: AiFailure) => void
 }
 
 /**
@@ -145,10 +152,19 @@ async function runListModel(
   opts: GenerateOptions,
 ): Promise<GeneratedList | null> {
   const client = await getAiChatClient()
-  if (!client) return null
+  if (!client) {
+    opts.onFail?.({ code: 'no_client' })
+    return null
+  }
   const settings = await getAiSettings()
-  if (!settings.enabled) return null
-  if (!(await globalBudgetOk())) return null // глобальный дневной кап расхода исчерпан
+  if (!settings.enabled) {
+    opts.onFail?.({ code: 'ai_off' })
+    return null
+  }
+  if (!(await globalBudgetOk())) {
+    opts.onFail?.({ code: 'budget' }) // глобальный дневной кап расхода исчерпан
+    return null
+  }
 
   // :online-суффикс, models-фолбэк и middle-out — механики OpenRouter; на других
   // провайдерах зовём голую модель (веб-поиска и авто-фолбэка там нет).
@@ -188,6 +204,9 @@ async function runListModel(
       durationMs: Date.now() - startedAt,
       provider: client.cfg.provider,
     })
+    // Не разобрали ответ — в причину кладём его голову: по ней сразу видно, что именно
+    // пришло вместо списка (пустой текст, извинение модели, обрезанный JSON).
+    if (!parsed) opts.onFail?.({ code: 'invalid', model: online(base), detail: result.text.slice(0, 400) })
     return parsed
   } catch (e) {
     await recordUsage({
@@ -204,6 +223,8 @@ async function runListModel(
       durationMs: Date.now() - startedAt,
       provider: client.cfg.provider,
     })
+    const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+    opts.onFail?.({ code: outcomeOf(e) === 'timeout' ? 'timeout' : 'error', model: online(base), detail: msg })
     console.warn('[generate] failed', e instanceof Error ? e.message : e)
     return null
   }
