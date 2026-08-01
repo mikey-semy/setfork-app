@@ -104,7 +104,7 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {/* Настроение гнома (RPG): вытекает из принятости, окрашивает его реплики. */}
             <Tooltip label={mood.style || say('not enough data yet', 'пока мало данных')}>
-              <span className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[0.6875rem] text-ink-2">
+              <span tabIndex={0} className="inline-flex items-center gap-1 rounded-full bg-(--surface-2) px-2 py-0.5 text-[0.6875rem] text-ink-2">
                 {moodEmoji[mood.label] ?? '😐'} {ru ? mood.labelRu : mood.label}
               </span>
             </Tooltip>
