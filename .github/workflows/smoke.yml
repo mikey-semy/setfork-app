@@ -30,7 +30,6 @@ jobs:
       AUTH_SECRET: ci-placeholder-secret-at-least-32-characters-long
       POLYGON_URL: http://localhost:3000
       SIM_PROXY: 'off' # прокси нужен только для демо-стенда; локалхост — напрямую
-      # SETFORK_CORE_URL НЕ задаём → фронт использует inproc-git (системный git)
       # Ф7b (ui-system): c9-сценарий sim смотрит /admin/ui-kit под этим админом.
       # Скриншот-сравнение включается SIM_SCREENS=1 после бутстрапа эталонов
       # (runbook ui-kit-screens в HQ); дым-часть c9 работает всегда.
@@ -78,6 +77,33 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS vector;"
           npx drizzle-kit export > "$RUNNER_TEMP/schema.sql"
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/schema.sql"
+
+      # Админ для c9 (UI Kit) сидируется НАПРЯМУЮ: регистрация ников из
+      # ADMIN_HANDLES запрещена самим приложением (защита свободного
+      # админ-ника), поэтому c9 логинится, а не регистрируется.
+      - name: Seed e2e-admin (для c9 UI Kit)
+        run: |
+          HASH=$(node -e 'const {randomBytes,scryptSync}=require("crypto");const s=randomBytes(16);console.log(["scrypt",s.toString("hex"),scryptSync("e2e-admin-pass-1",s,64).toString("hex")].join("$"))')
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "INSERT INTO users (handle, email, name, password_hash, email_verified_at) VALUES ('e2e-admin', 'e2e-admin@sim.invalid', 'E2E Admin', '$HASH', now()) ON CONFLICT DO NOTHING;"
+
+      # Ядро обязательно с Ф0b git-трека (inproc удалён): без него создание
+      # списка падает — c1 и был вечно красным. Тот же sibling, что в ci.yml.
+      - name: setfork-core (sibling из GHCR — git-first запись версий)
+        run: |
+          IMAGE=ghcr.io/mikey-semy/setfork-core:latest
+          docker pull "$IMAGE" >/dev/null 2>&1 || true
+          docker rm -f "core-$CI_NET" >/dev/null 2>&1 || true
+          docker run -d --name "core-$CI_NET" --network "$CI_NET" \
+            -e DATABASE_URL="postgresql://sf:sf@pg-$CI_NET:5432/sf" \
+            -e SETFORK_ALLOW_INSECURE=1 \
+            "$IMAGE" >/dev/null
+          for i in $(seq 1 60); do
+            docker logs "core-$CI_NET" 2>&1 | grep -q "слушает" && { echo "core up"; break; }
+            sleep 1
+          done
+          docker logs "core-$CI_NET" 2>&1 | tail -3
+          echo "SETFORK_CORE_URL=1" >> "$GITHUB_ENV"
+          echo "SETFORK_CORE_ADDR=core-$CI_NET:50051" >> "$GITHUB_ENV"
 
       - name: Build
         run: npm run build
@@ -134,6 +160,6 @@ jobs:
       - name: cleanup (контейнер и сеть)
         if: always()
         run: |
-          docker rm -f "pg-${CI_NET}" >/dev/null 2>&1 || true
+          docker rm -f "pg-${CI_NET}" "core-${CI_NET}" >/dev/null 2>&1 || true
           docker network disconnect "${CI_NET}" "$(hostname)" >/dev/null 2>&1 || true
           docker network rm "${CI_NET}" >/dev/null 2>&1 || true
