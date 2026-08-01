@@ -69,7 +69,7 @@ SetFork — площадка для **канонических списков-и
 cp .env.example .env          # заполни AUTH_SECRET (openssl rand -hex 32)
 npm install
 npm run db:up                 # Postgres (pgvector) в docker, порт DB_PORT (по умолч. 5435)
-npm run db:push               # применить схему
+npm run db:init               # схема + расширения + канон поиска (чистая БД одной командой)
 npm run db:seed               # засеять публичную библиотеку (темы + списки)
 npm run dev                   # http://localhost:3000
 ```
