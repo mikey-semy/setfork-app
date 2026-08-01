@@ -822,7 +822,20 @@ export const suggestions = pgTable('suggestions', {
   // Откат — это НОВОЕ предложение, отменяющее старое (как Revert у GitHub), а не
   // тихая правка истории. Связь видна с обеих сторон: «отменяет #7» / «отменено в #9».
   revertOfId: uuid('revert_of_id'),
-}, (t) => [index('suggestions_tpl_idx').on(t.templateId, t.status), uniqueIndex('suggestions_tpl_number').on(t.templateId, t.number)])
+}, (t) => [
+  index('suggestions_tpl_idx').on(t.templateId, t.status),
+  uniqueIndex('suggestions_tpl_number').on(t.templateId, t.number),
+  // Одно ОТКРЫТОЕ предложение на ветку — правилом БД, а не проверкой в коде.
+  // Проверка «нет ли уже такого» и вставка — два шага, между ними влезает
+  // параллельный запрос, и на одну ветку появляются два открытых предложения с
+  // разными номерами. Ф4 добавила второй вход (магический пуш), и полагаться на
+  // удачу стало нельзя. Частичный индекс: закрытые не мешают открыть новое
+  // предложение на ту же ветку, а branch_ref is not null не трогает правки из
+  // пунктов (авто-ревью fe#636).
+  uniqueIndex('suggestions_open_branch')
+    .on(t.templateId, t.branchRef)
+    .where(sql`status = 'open' and branch_ref is not null`),
+])
 
 // ── Ревью правки (вердикт рецензента, как review в PR) ───────────────
 // Вердикты по модели GitHub/Gitea, но без их ловушек: у Gitea «request changes»

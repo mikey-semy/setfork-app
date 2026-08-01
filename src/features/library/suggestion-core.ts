@@ -43,6 +43,10 @@ export async function ensureBranchSuggestion(input: {
   })
   if (open) return { id: open.id, created: false }
 
+  // onConflictDoNothing + перечитывание: проверка выше и вставка — два шага, и
+  // между ними влезает параллельный запрос. Правило держит частичный уникальный
+  // индекс suggestions_open_branch; здесь мы лишь корректно переживаем гонку,
+  // возвращая победителя вместо ошибки.
   const [row] = await db
     .insert(suggestions)
     .values({
@@ -54,7 +58,17 @@ export async function ensureBranchSuggestion(input: {
       branchRef: input.branch,
       number: sql`(select coalesce(max(number), 0) + 1 from suggestions where template_id = ${input.templateId})`,
     })
+    .onConflictDoNothing()
     .returning({ id: suggestions.id })
+
+  if (!row) {
+    const winner = await db.query.suggestions.findFirst({
+      where: (s) => and(eq(s.templateId, input.templateId), eq(s.branchRef, input.branch), eq(s.status, 'open')),
+    })
+    // Гонку проиграли — предложение уже создано параллельным запросом.
+    if (winner) return { id: winner.id, created: false }
+    throw new Error('suggestion insert conflicted but no open suggestion found')
+  }
 
   await curationStore.ensureWatch(input.templateId, input.authorId)
   if (input.ownerId !== input.authorId) {
