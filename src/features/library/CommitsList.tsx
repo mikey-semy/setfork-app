@@ -6,7 +6,7 @@ import { CopyButton } from '@/shared/ui/CopyButton'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 
 /** Наш пользователь, опознанный по e-mail подписи коммита (может не найтись). */
 export interface CommitAuthor {
@@ -98,7 +98,7 @@ export function CommitsList({
                   тач-цель добирается padding'ом до полной. */}
               <span className="flex shrink-0 items-center gap-1.5 font-mono text-[0.78125rem] text-ink-2">
                 {c.sha.slice(0, 7)}
-                <CopyButton text={c.sha} />
+                <CopyButton text={c.sha} label={t('copy', lang)} copiedLabel={t('copied', lang)} />
                 {snapshotBase && (
                   <Tooltip label={labels.openAt}>
                     <Link

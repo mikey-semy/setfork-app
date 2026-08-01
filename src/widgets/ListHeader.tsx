@@ -79,7 +79,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               под-вкладках видны только табы. */}
           <ShowOnListRoot base={base}>
           <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
-            <Link href={`/${meta.ownerHandle}`} className="shrink-0">
+            <Link href={`/${meta.ownerHandle}`} aria-label={meta.ownerHandle} className="shrink-0">
               <Avatar handle={meta.ownerHandle} avatarUrl={meta.ownerAvatarUrl} size={26} />
             </Link>
             <h1 className="min-w-0 truncate text-[1.125rem] font-bold text-ink">{tr(meta.title, lang)}</h1>
@@ -150,7 +150,8 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
             {!session && (
               // Гостю тот же сплит, что вошедшему: анатомия ряда не должна зависеть от входа.
               <SplitButton>
-                <Link href="/login" className={splitSegment({ className: 'text-ink' })}>
+                {/* aria-label обязателен: текст скрыт ниже sm — на мобиле имя ссылки пустое (Lighthouse link-name). */}
+                <Link href="/login" aria-label={t('watch', lang)} className={splitSegment({ className: 'text-ink' })}>
                   <Eye size={14} /> <span className="hidden sm:inline">{t('watch', lang)}</span>
                 </Link>
                 {watchCount > 0 ? <span className={splitSegment({ interactive: false, muted: true })}>{watchCount}</span> : null}
@@ -172,7 +173,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
               // Гостю — та же кнопка, но ведёт на вход. Счётчик так же за разделителем
               // и так же скрыт при нуле: вид кнопки не должен зависеть от того, вошёл ты или нет.
               <SplitButton>
-                <Link href="/login" className={splitSegment({ className: 'text-ink' })}>
+                <Link href="/login" aria-label={t('star', lang)} className={splitSegment({ className: 'text-ink' })}>
                   <Star size={14} /> <span className="hidden sm:inline">{t('star', lang)}</span>
                 </Link>
                 {meta.starsCount > 0 ? <span className={splitSegment({ interactive: false, muted: true })}>{meta.starsCount}</span> : null}
@@ -190,14 +191,15 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
                 </Tooltip>
               ) : (
                 // Форк — отдельной страницей /fork (как GitHub), не модалкой. Гостя ведём на вход.
-                <Link href={session ? `${base}/fork` : '/login'} className={splitSegment({ className: 'text-ink' })}>
+                <Link href={session ? `${base}/fork` : '/login'} aria-label={t('fork', lang)} className={splitSegment({ className: 'text-ink' })}>
                   <GitFork size={14} /> <span className="hidden sm:inline">{t('fork', lang)}</span>
                 </Link>
               )}
               {/* Счётчик — ссылка в дерево форков (HQ §11): кто что вырастил из списка.
-                  Нуля нет: не из чего дерево, и место в ряду не занимаем. */}
+                  Нуля нет: не из чего дерево, и место в ряду не занимаем.
+                  Имя содержит видимое число (WCAG 2.5.3 label-in-name). */}
               {meta.forksCount > 0 ? (
-                <Link href={`${base}/forks`} aria-label={t('fork', lang)} className={splitSegment({ muted: true })}>
+                <Link href={`${base}/forks`} aria-label={`${t('fork', lang)}: ${meta.forksCount}`} className={splitSegment({ muted: true })}>
                   {meta.forksCount}
                 </Link>
               ) : null}

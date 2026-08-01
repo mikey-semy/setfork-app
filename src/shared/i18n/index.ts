@@ -404,6 +404,7 @@ const DICT = {
   cloneAuthHint: { en: 'Private lists: use an API token as the password.', ru: 'Приватные списки: используйте API-токен как пароль.' },
   downloadBundle: { en: 'Git bundle (.bundle)', ru: 'Git bundle (.bundle)' },
   copyUrl: { en: 'Copy URL', ru: 'Копировать URL' },
+  copy: { en: 'Copy', ru: 'Копировать' },
   exportHeading: { en: 'Export', ru: 'Экспорт' },
   printPdf: { en: 'Print / PDF', ru: 'Печать / PDF' },
   exportMd: { en: 'Markdown (.md)', ru: 'Markdown (.md)' },

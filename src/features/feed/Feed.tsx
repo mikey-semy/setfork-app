@@ -93,7 +93,7 @@ export function Feed({
             const Icon = ICONS[e.type as keyof typeof ICONS] ?? Tag
             return (
               <div key={eventKey(e)} className="flex gap-3 rounded-lg border border-border bg-surface p-3.5">
-                <Link href={`/${e.actorHandle}`} className="shrink-0">
+                <Link href={`/${e.actorHandle}`} aria-label={e.actorHandle} className="shrink-0">
                   <Avatar handle={e.actorHandle} avatarUrl={e.actorAvatarUrl} size={34} />
                 </Link>
                 <div className="min-w-0 flex-1">
