@@ -43,12 +43,9 @@ import {
 import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { SessionUser } from '@/shared/auth/session'
 
-// Роуты, чей первый сегмент — НЕ handle пользователя (для бредкрамба в шапке).
-const RESERVED_TOP = new Set([
-  'explore', 'search', 'settings', 'new', 'generate', 'login', 'register', 'admin', 'runs',
-  'notifications', 'api', 'about', 'terms', 'privacy', 'my-lists', 'catalogs',
-  'verify-email', 'forgot-password', 'reset-password', 'changelog',
-])
+// Роуты, чей первый сегмент — НЕ handle пользователя (для бредкрамба в шапке):
+// общий список под тестом-синхроном с src/app (разъезд давал «SF guilds»).
+import { RESERVED_TOP } from '@/shared/nav/reserved-top'
 
 export function TopNav({
   lang,
@@ -155,11 +152,17 @@ export function TopNav({
                 ? t('newList', lang)
                 : pathname.startsWith('/notifications')
                   ? t('notifications', lang)
-                  : pathname.startsWith('/admin/council')
-                    ? t('councilHall', lang)
-                    : pathname.startsWith('/admin')
-                      ? t('admin', lang)
-                      : ''
+                  : pathname.startsWith('/guilds')
+                    ? t('guildsTitle', lang)
+                    : pathname.startsWith('/tags')
+                      ? t('tags', lang)
+                      : pathname.startsWith('/feedback')
+                        ? t('feedback', lang)
+                        : pathname.startsWith('/admin/council')
+                          ? t('councilHall', lang)
+                          : pathname.startsWith('/admin')
+                            ? t('admin', lang)
+                            : ''
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5 print:hidden">

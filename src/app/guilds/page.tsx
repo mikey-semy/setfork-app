@@ -30,6 +30,8 @@ export default async function GuildsPage() {
   const lang = await getLang()
   const ru = lang === 'ru'
   const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументами (i18n-lint)
+  // Портреты резолвит rosterAvatars по реальным файлам public/gnomes: нет
+  // файла → замысел из констант → пусто (заглушка GnomeAvatar без 404).
   const [roster, avatars, rep] = await Promise.all([getRoster(), rosterAvatars(), gnomeReputation()])
 
   return (
@@ -51,7 +53,7 @@ export default async function GuildsPage() {
           return (
             <div key={e.id} className="rounded-lg border border-border bg-surface p-4">
               <div className="flex items-center gap-3">
-                <GnomeAvatar src={avatars[e.id] || `/gnomes/${e.avatar || e.id}.webp`} size={56} className="size-14 shrink-0" />
+                <GnomeAvatar src={avatars[e.id]} size={56} className="size-14 shrink-0" />
                 <div className="min-w-0">
                   <div className="text-[1rem] font-semibold text-ink">{ru ? e.nameRu : e.nameEn}</div>
                   {(ru ? e.guildRu : e.guildEn) && <div className="text-[0.78125rem] font-medium text-accent">{ru ? e.guildRu : e.guildEn}</div>}
@@ -71,7 +73,8 @@ export default async function GuildsPage() {
               {e.code && (
                 <div className="mt-3">
                   <div className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">{say('Guild code', 'Кодекс гильдии')}</div>
-                  <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2">{e.code}</p>
+                  {/* Людям — на их языке; агентам в промпты всегда едет EN `code` (вердикт владельца, линза 07). */}
+                  <p className="whitespace-pre-wrap text-[0.78125rem] leading-[1.55] text-ink-2">{ru ? e.codeRu || e.code : e.code}</p>
                 </div>
               )}
               {e.domains.length > 0 && !e.domains.includes('*') && (

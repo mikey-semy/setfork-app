@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { councilExperts, db } from '@/shared/db'
 import { avatarSrc } from '@/shared/media'
+import { builtinAvatars } from './avatar-gallery'
 import { ORG_SEED } from './roster-org'
 import type { Lang } from '@/shared/i18n'
 
@@ -47,6 +48,12 @@ export interface Expert {
   guildRu: string
   /** Кодекс гильдии — компактный свод стандартов качества (маркированные строки). */
   code: string
+  /** Русский текст кодекса — ТОЛЬКО для показа людям (/guilds, админка).
+   * Агентам в промпты всегда едет техническая EN-версия `code` (решение
+   * владельца, линза 07). Живёт в константах, не в БД: показывается лишь пока
+   * `code` строки совпадает с константой — правка кодекса в БД гасит перевод,
+   * а не показывает устаревший. */
+  codeRu: string
   /** Линза запроса (HQ §5): аспекты, которыми гном смотрит на любой запрос к базе. */
   lens: string
   /** Память (HQ §3 этап 2): выжимка ремесла из лучших списков доменов — пишет рудник. */
@@ -81,6 +88,10 @@ const SEED_BASE: SeedExpert[] = [
 - Success is proven by a health-check, not by hope
 - Repetitive manual work becomes a scripted step
 - Reliability is a number (SLO), not a feeling`,
+    codeRu: `- У каждого рискованного шага назван откат
+- Успех доказывает health-check, а не надежда
+- Повторяемая ручная работа становится скриптовым шагом
+- Надёжность — это число (SLO), а не ощущение`,
     lens: 'deploy rollback health-check automation reliability',
     memory: '',
     domains: ['deploy', 'devops', 'ci', 'servers', 'infra', 'docker', 'kubernetes'],
@@ -102,6 +113,10 @@ const SEED_BASE: SeedExpert[] = [
 - Commands are runnable exactly as written
 - Edge cases and failure modes are named, not implied
 - Correctness beats cleverness`,
+    codeRu: `- Шаги маленькие, однозадачные и пригодные к ревью
+- Команды запускаются ровно так, как написаны
+- Краевые случаи и режимы отказа названы, а не подразумеваются
+- Правильность важнее остроумия`,
     lens: 'code commands edge cases tests review',
     memory: '',
     domains: ['programming', 'software', 'coding', 'api', 'library', 'framework'],
@@ -123,6 +138,10 @@ const SEED_BASE: SeedExpert[] = [
 - Mise en place before heat
 - Food-safety critical points are called out (danger zone 5–57 °C)
 - Kitchen order: what waits, what runs in parallel, what must not`,
+    codeRu: `- Точные количества, тайминги и температуры — никакого «по вкусу» там, где есть число
+- Mise en place до огня
+- Критические точки пищевой безопасности названы (опасная зона 5–57 °C)
+- Кухонный порядок: что ждёт, что идёт параллельно, что совмещать нельзя`,
     lens: 'ingredients technique temperature timing food safety',
     memory: '',
     domains: ['cooking', 'food', 'recipe', 'kitchen', 'baking'],
@@ -144,6 +163,10 @@ const SEED_BASE: SeedExpert[] = [
 - Documents are verified against the official source for the traveller's date and passport
 - Every likely failure has a fallback
 - Budget and time cost sit next to each step`,
+    codeRu: `- Последовательность по срокам: за недели → за неделю → в день выезда
+- Документы сверяются с официальным источником под дату и паспорт путешественника
+- У каждого вероятного сбоя есть запасной план
+- Бюджет и затраты времени стоят рядом с каждым шагом`,
     lens: 'documents visas route timing budget fallback',
     memory: '',
     domains: ['travel', 'trip', 'city', 'tourism', 'itinerary'],
@@ -165,6 +188,10 @@ const SEED_BASE: SeedExpert[] = [
 - Every prescription is explicit: frequency, intensity, time, type, volume, progression
 - Progress raises ONE parameter at a time
 - Injury-causing form errors are named`,
+    codeRu: `- Скрининг до нагрузки; красные флаги → сначала к врачу
+- Каждое назначение явное: частота, интенсивность, время, тип, объём, прогрессия
+- Прогресс поднимает ОДИН параметр за раз
+- Травмоопасные ошибки техники названы`,
     lens: 'training load progression form safety',
     memory: '',
     domains: ['fitness', 'health', 'workout', 'sport', 'nutrition'],
@@ -186,6 +213,10 @@ const SEED_BASE: SeedExpert[] = [
 - The search path is reproducible: what was searched, included, rejected and why
 - Disagreements are cited, not smoothed over
 - Comprehension checks are built in`,
+    codeRu: `- Источники взвешиваются под ЭТОТ вопрос, а не по бренду
+- Путь поиска воспроизводим: что искали, что включили, что отвергли и почему
+- Разногласия цитируются, а не сглаживаются
+- Проверки понимания встроены в материал`,
     lens: 'sources study methods verification practice',
     memory: '',
     domains: ['study', 'learning', 'research', 'course', 'exam'],
@@ -207,6 +238,10 @@ const SEED_BASE: SeedExpert[] = [
 - Never just a name: what it is FOR, what it costs, and its catch
 - Primary and official sources are preferred
 - Staleness is admitted, never hidden`,
+    codeRu: `- Каждая находка проходит CRAAP: свежесть, релевантность, авторитетность, точность, назначение
+- Никогда не просто название: для чего это, сколько стоит и в чём подвох
+- Первичные и официальные источники предпочтительнее
+- Устаревание признаётся, а не прячется`,
     lens: 'tools resources links prices alternatives',
     memory: '',
     domains: ['*'],
@@ -228,6 +263,10 @@ const SEED_BASE: SeedExpert[] = [
 - "Look back" is a real step that verifies the result
 - Checklist shape: short blocks, clear pause points
 - Each step marked read-do or do-confirm`,
+    codeRu: `- Сначала классифицируй задачу, потом выбирай метод
+- «Оглянись» — настоящий шаг, который проверяет результат
+- Форма чек-листа: короткие блоки, ясные точки паузы
+- Каждый шаг помечен: читай-и-делай или сделай-и-проверь`,
     lens: 'method structure checklist verification',
     memory: '',
     domains: ['*'],
@@ -271,6 +310,8 @@ export const SEED: Expert[] = [
   ...ORG_SEED.map(({ orgRole, ...e }) => withDefaults(e, orgRole)),
 ]
 
+const SEED_BY_ID = new Map(SEED.map((e) => [e.id, e]))
+
 const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   id: r.id,
   nameEn: r.nameEn,
@@ -287,6 +328,9 @@ const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
   guildEn: r.guildEn,
   guildRu: r.guildRu,
   code: r.code,
+  // Перевод кодекса живёт в константах и валиден, лишь пока code в БД не
+  // редактировали: разошлись — показываем EN, а не устаревший перевод.
+  codeRu: r.code === SEED_BY_ID.get(r.id)?.code ? (SEED_BY_ID.get(r.id)?.codeRu ?? '') : '',
   lens: r.lens,
   memory: r.memory,
   domains: r.domains,
@@ -300,7 +344,9 @@ const row2expert = (r: typeof councilExperts.$inferSelect): Expert => ({
 export async function seedRoster(): Promise<void> {
   await db
     .insert(councilExperts)
-    .values(SEED.map((e, i) => ({ ...e, avatar: e.id, sort: i })))
+    // Аватар из констант, а не id: у специализаций (backender/tester/…) своего
+    // файла нет — сид с avatar=id давал 404-портреты на /guilds (линза 07).
+    .values(SEED.map((e, i) => ({ ...e, avatar: e.avatar || e.id, sort: i })))
     .onConflictDoNothing()
 }
 
@@ -400,13 +446,20 @@ export async function rosterAvatars(viewerId?: string | null): Promise<Record<st
       .select()
       .from(councilExperts)
       .where(viewerId ? sql`(${councilExperts.ownerId} is null or ${councilExperts.ownerId} = ${viewerId})` : sql`${councilExperts.ownerId} is null`)
+    // Встроенные портреты резолвим по РЕАЛЬНЫМ файлам: у специализаций
+    // (backender/tester/…) своего webp нет, а на старых инсталляциях avatar
+    // насижен = id — прямой путь давал 404 на каждой поверхности (линза 07,
+    // дожим Codex #639). Нет файла → замысел из констант → пусто (заглушка
+    // GnomeAvatar без сетевой попытки).
+    const builtin = new Set(await builtinAvatars())
     const out: Record<string, string> = {}
     for (const r of rows) {
       if (r.avatarUploaded && r.avatar) {
         const url = await avatarSrc(r.avatar, 128)
         if (url) out[r.id] = url
-      } else if (r.avatar && r.avatar !== r.id) {
-        out[r.id] = `/gnomes/${r.avatar}.webp` // выбрали другого встроенного персонажа
+      } else {
+        const pick = [r.avatar || r.id, SEED_BY_ID.get(r.id)?.avatar].find((k) => k && builtin.has(k))
+        if (pick) out[r.id] = `/gnomes/${pick}.webp`
       }
     }
     return out
