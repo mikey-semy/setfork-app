@@ -10,7 +10,7 @@ vi.mock('@/shared/db', () => ({
 }))
 
 const { dueMirrors } = await import('@/features/library/mirror-jobs')
-const { MIRROR_MAX_ATTEMPTS, mirrorRetryDelayMs, mirrorRetryDueAt } = await import(
+const { MIRROR_HELP_AFTER_ATTEMPTS, mirrorRetryDelayMs, mirrorRetryDueAt } = await import(
   '@/features/library/mirror-policy'
 )
 
@@ -54,10 +54,17 @@ describe('повторы зеркала — пауза растёт, попыт�
     expect(due[0]?.attempts).toBe(1)
   })
 
-  it('потолок попыток — общий у подметальщика и у настроек', () => {
-    // Число живёт в одном месте (mirror-policy): разъехавшись, интерфейс обещал
-    // бы повтор, которого уже не будет, — ровно то, что владелец читает как
-    // молчаливую поломку.
-    expect(MIRROR_MAX_ATTEMPTS).toBeGreaterThan(0)
+  it('давняя серия неудач НЕ выбывает из повторов — только разрежается до суток', () => {
+    // Это главное отличие от первой версии, где после N попыток зеркало
+    // переставало пробовать. Половина причин чинится на стороне форджи без нас
+    // (перевыпустили токен, вернули репозиторий, кончилась авария) — остановка
+    // превращала бы самолечащийся сбой в требующий ручного действия.
+    const hopeless = { attempts: MIRROR_HELP_AFTER_ATTEMPTS + 20, syncedAt: at(25 * 60 * MIN) }
+    expect(dueMirrors([hopeless], Date.now())).toEqual([hopeless])
+  })
+
+  it('но раньше суток такое зеркало не трогаем', () => {
+    const hopeless = { attempts: MIRROR_HELP_AFTER_ATTEMPTS + 20, syncedAt: at(23 * 60 * MIN) }
+    expect(dueMirrors([hopeless], Date.now())).toEqual([])
   })
 })

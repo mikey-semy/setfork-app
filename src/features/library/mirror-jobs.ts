@@ -1,10 +1,10 @@
 import 'server-only'
-import { and, asc, eq, isNotNull, lt } from 'drizzle-orm'
+import { and, asc, eq, isNotNull } from 'drizzle-orm'
 import { db, jobs, templates, users } from '@/shared/db'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { captureError, log } from '@/shared/observability'
 import { envNumber } from '@/shared/env'
-import { MIRROR_MAX_ATTEMPTS, mirrorRetryDueAt } from './mirror-policy'
+import { mirrorRetryDueAt } from './mirror-policy'
 import { pushListMirror } from './actions'
 
 /**
@@ -29,11 +29,11 @@ import { pushListMirror } from './actions'
  * ядро закрыть не может: перезапуск процесса внутри окна схлопывания теряет
  * отложенный пуш (см. setfork-core, src/throttle.rs).
  *
- * ЛИМИТ ПОПЫТОК. Отозванный токен и удалённый на фордже репозиторий не чинятся
- * повторами: пробовать вечно — это шуметь в чужой фордже и прятать от владельца
- * тот факт, что нужны его руки. После MIRROR_MAX_ATTEMPTS подряд повторы
- * прекращаются, и настройки говорят об этом прямым текстом. Счётчик обнуляет
- * успех — его ведёт ядро там же, где пишет статус.
+ * ПОВТОРЫ НЕ КОНЧАЮТСЯ, пауза растёт до суток — почему именно так и что здесь
+ * было раньше, см. `mirror-policy` (коротко: половина причин чинится на стороне
+ * форджи без нашего участия, а цена вечных попыток на потолке — один запрос в
+ * сутки; у Gitea отключения нет вовсе). Счётчик неудач ведёт ядро там же, где
+ * пишет статус, и обнуляет его успехом.
  */
 
 /** Как часто подметаем. */
@@ -73,15 +73,11 @@ export async function sweepFailedMirrors(): Promise<void> {
     })
     .from(templates)
     .innerJoin(users, eq(users.id, templates.ownerId))
-    .where(
-      and(
-        isNotNull(templates.mirrorUrl),
-        isNotNull(templates.mirrorError),
-        lt(templates.mirrorAttempts, MIRROR_MAX_ATTEMPTS),
-      ),
-    )
+    .where(and(isNotNull(templates.mirrorUrl), isNotNull(templates.mirrorError)))
     // Кто дольше всех ждёт — первым; за потолок пачки уезжают самые свежие, они
-    // и так не дозрели до повтора.
+    // и так не дозрели до повтора. Порядок важен именно потому, что повторы не
+    // кончаются: без него давние зеркала на потолке паузы могли бы вытесняться
+    // свежими и не получать своей суточной попытки.
     .orderBy(asc(templates.mirrorSyncedAt))
     .limit(BATCH)
 

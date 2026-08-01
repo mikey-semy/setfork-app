@@ -7,7 +7,7 @@ import { Field } from '@/shared/ui/Field'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { disableMirror, mirrorNow, saveMirror } from './mirror-actions'
-import { MIRROR_MAX_ATTEMPTS, mirrorRetryDueAt } from './mirror-policy'
+import { MIRROR_HELP_AFTER_ATTEMPTS, mirrorRetryDueAt } from './mirror-policy'
 
 /** Настройки списка → Зеркало (Ф3): push-копия на GitHub/GitLab.
  *  Пушит ядро после каждой версии; здесь URL + токен (шифруется, повторно не
@@ -34,10 +34,10 @@ export function MirrorSection({
   const sync = mirrorNow.bind(null, templateId)
   const disable = disableMirror.bind(null, templateId)
   const configured = !!url
-  // Ф2: одна и та же граница, что у подметальщика, — берём из его модуля, а не
-  // повторяем число здесь: разъехавшись, интерфейс обещал бы повтор, которого
-  // уже не будет.
-  const retrying = !!error && attempts < MIRROR_MAX_ATTEMPTS
+  // Ф2: повторы идут в обоих случаях, меняется только текст. Границу берём из
+  // модуля политики, а не повторяем число здесь: разъехавшись, интерфейс начал
+  // бы называть временным сбоем то, что давно им не является.
+  const longFailing = attempts >= MIRROR_HELP_AFTER_ATTEMPTS
 
   return (
     <SettingsSection title={t('mirrorTitle', lang)} hint={t('mirrorIntro', lang)}>
@@ -86,7 +86,9 @@ export function MirrorSection({
                   секцию (min-w-0 у родителя + break-words здесь). */}
               {error && (
                 <div className="mt-0.5 break-words text-muted">
-                  {retrying ? (
+                  {longFailing ? (
+                    t('mirrorNeedsOwner', lang)
+                  ) : (
                     <>
                       {t('mirrorWillRetry', lang)}
                       <span className="hidden sm:inline">
@@ -94,8 +96,6 @@ export function MirrorSection({
                         {mirrorRetryDueAt(attempts, syncedAt).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-GB')}
                       </span>
                     </>
-                  ) : (
-                    t('mirrorRetryStopped', lang)
                   )}
                 </div>
               )}

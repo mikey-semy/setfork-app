@@ -85,9 +85,11 @@ const DICT = {
   // Ф2: что будет дальше после неудачи. Без этого красная строка читается как
   // тупик, хотя повтор уже назначен, — и владелец лезет чинить то, что чинится само.
   mirrorWillRetry: { en: 'Will retry automatically', ru: 'Повторим автоматически' },
-  mirrorRetryStopped: {
-    en: 'Retries stopped — fix the token or the repository, then press Sync now',
-    ru: 'Повторы прекращены — почините токен или репозиторий и нажмите «Синхронизировать»',
+  // Повторы продолжаются и здесь — раз в сутки. Текст зовёт владельца не потому,
+  // что мы сдались, а потому что после серии неудач сбой уже не временный.
+  mirrorNeedsOwner: {
+    en: 'Failing for a while — check the token and the repository. Retrying daily meanwhile.',
+    ru: 'Не удаётся давно — проверьте токен и репозиторий. Пока повторяем раз в сутки.',
   },
   generalIntro: { en: 'Name, description, tags and visibility of the list.', ru: 'Название, описание, теги и видимость списка.' },
   coverTitle: { en: 'Cover', ru: 'Обложка' },

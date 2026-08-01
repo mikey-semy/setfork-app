@@ -85,10 +85,10 @@ export async function mirrorNow(templateId: string): Promise<void> {
   const session = await requireSession()
   const tpl = await ownedList(templateId, session.userId)
   if (!tpl?.mirrorUrl) return
-  // Ф2: ручной толчок начинает серию заново. Это единственный выход из состояния
-  // «повторы прекращены»: владелец починил доступ и просит попробовать ещё —
-  // значит и автоматические повторы обязаны снова работать, а не ждать, пока
-  // повезёт с одного раза. Провалится и эта попытка — ядро вернёт счётчик к 1.
+  // Ф2: ручной толчок начинает серию заново. Владелец починил доступ и просит
+  // попробовать ещё — значит и лестница пауз должна начаться с начала, иначе
+  // следующая автоматическая попытка после единственной осечки была бы только
+  // через сутки. Провалится и эта — ядро вернёт счётчик к 1.
   await db.update(templates).set({ mirrorAttempts: 0 }).where(eq(templates.id, templateId))
   const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
   if (owner) await pushListMirror(owner.handle, tpl.slug)
