@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { getAdmin, requireAdmin } from '@/shared/auth/admin'
 import { saveSettings } from '@/shared/settings/kv'
 import { maintenanceFlag, setMaintenance } from '@/shared/settings/maintenance'
+import { FALLBACK_PROVIDER_SETTING } from '@/shared/ai/provider-failover'
 import { AI_PROVIDERS, API_KEY_SETTING, GIGACHAT_KEY_SETTING, PROVIDER_SETTING, SELECTEL_KEY_SETTING, YANDEX_FOLDER_SETTING, YANDEX_KEY_SETTING, YANDEX_SEARCH_KEY_SETTING, defaultEmbeddingModel, getAiProviderRaw, hasApiKey, nsKey } from '@/shared/settings/ai'
 import { clearMediaCache, MEDIA_KEYS } from '@/shared/settings/media'
 import { clearSearchCache, SEARCH_KEYS, SEARCH_MODES, type SearchMode } from '@/shared/settings/search'
@@ -89,6 +90,10 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   }
   if (cheapModeThreshold != null) settings[nsKey(nsProv, 'cheap_mode_threshold')] = String(cheapModeThreshold)
   if (provider) settings[PROVIDER_SETTING] = provider
+  // Запасной провайдер: '__none__' из селекта = выключить (saveSettings сотрёт пустое значение).
+  const spareRaw = String(formData.get('fallbackProvider') ?? '').trim()
+  const spare = (AI_PROVIDERS as readonly string[]).includes(spareRaw) && spareRaw !== provider ? spareRaw : ''
+  settings[FALLBACK_PROVIDER_SETTING] = spare
   if (apiKey) settings[API_KEY_SETTING] = apiKey
   if (selectelKey) settings[SELECTEL_KEY_SETTING] = selectelKey
   if (yandexKey) settings[YANDEX_KEY_SETTING] = yandexKey
@@ -105,6 +110,32 @@ export async function setAiSettings(formData: FormData): Promise<void> {
   await saveSettings(settings)
   const keyExists = await hasApiKey()
   await saveSettings({ 'ai.enabled': enabled && keyExists ? 'true' : 'false' })
+  // Каталог кеширован (на нём держатся пул совета и подмена снятой модели) — после смены
+  // провайдера или ключа он обязан перечитаться немедленно, а не через TTL.
+  const { clearModelCatalogCache } = await import('@/shared/ai/models')
+  clearModelCatalogCache()
+  // Решение «на каком провайдере генерировать» кешируется на минуту — после смены настроек
+  // оно обязано пересобраться сразу, иначе владелец не увидит эффекта своей же правки.
+  const { clearProviderDecision } = await import('@/shared/ai/provider-failover')
+  clearProviderDecision()
+  // Совместимость выбранной модели эмбеддингов — ИЗМЕРЯЕМ одним коротким вызовом (доли цента),
+  // а не выводим из имени вендора: мерность вектора провайдеры в каталоге не публикуют, и
+  // «известные» списки в коде устаревают молча. Гонка с таймаутом: недоступный провайдер не
+  // должен подвешивать сохранение настроек — факт доедет при первой же индексации.
+  const emb = settings['ai.embedding_model']
+  if (emb) {
+    const [{ getTargetSpace }, { ensureCapability }] = await Promise.all([
+      import('@/shared/ai/embed-space'),
+      import('@/shared/ai/embed-capability'),
+    ])
+    const space = await getTargetSpace()
+    if (space.provider === 'openrouter') {
+      await Promise.race([
+        ensureCapability('openrouter', emb).catch(() => null),
+        new Promise((r) => setTimeout(r, 5_000)),
+      ])
+    }
+  }
   revalidatePath('/admin')
 }
 

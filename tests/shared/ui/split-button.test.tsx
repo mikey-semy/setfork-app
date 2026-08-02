@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { SplitButton } from '@/shared/ui/SplitButton'
+import { CONTROL_H } from '@/shared/ui/control'
 import { splitSegment } from '@/shared/ui/split-segment'
 
 /**
@@ -55,8 +56,11 @@ describe('сплит-кнопка', () => {
     expect(dividers(container)[0].className).toContain('bg-border')
   })
 
-  it('высота группы одна для всех — ряд не разъезжается', () => {
+  // Высота сверяется СО ШКАЛОЙ, а не с литералом: 02.08.2026 лестница поднялась на
+  // ступень (28→32), и зашитый 'h-9' сделал бы падение теста единственным признаком
+  // того, что сплит-кнопка отстала от ряда. Теперь тест держит само правило.
+  it('высота группы — из шкалы контролов, ряд не разъезжается', () => {
     const { container } = render(<SplitButton>{[seg('a')]}</SplitButton>)
-    expect((container.firstElementChild as HTMLElement).className).toContain('h-9')
+    expect((container.firstElementChild as HTMLElement).className).toContain(CONTROL_H.md)
   })
 })

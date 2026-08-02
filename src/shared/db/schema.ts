@@ -313,6 +313,11 @@ export const templates = pgTable(
     mirrorToken: text('mirror_token'),
     mirrorSyncedAt: timestamp('mirror_synced_at', { withTimezone: true }),
     mirrorError: text('mirror_error'),
+    /** Ф2: сколько пушей подряд не удалось. Пишет ЯДРО вместе со статусом (успех
+     *  обнуляет), читают подметальщик ретраев и настройки. Счётчик живёт на строке
+     *  зеркала, а не в очереди задач: очередь чистится, а «повторы прекращены» —
+     *  свойство самого зеркала, и владелец должен видеть его и через неделю. */
+    mirrorAttempts: integer('mirror_attempts').notNull().default(0),
     /**
      * ЖИВОЙ СПИСОК (лента): не «готов навсегда», а с ритмом обновления.
      *
@@ -632,6 +637,7 @@ export const JOB_TYPES = [
   'partners',
   'finance',
   'chronicle',
+  'mirror',
 ] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
@@ -658,6 +664,12 @@ export const jobs = pgTable(
     // 'discarded', а не возвращает в очередь; River rescuer либо перезапускает, либо
     // отбрасывает по максимуму попыток. Достигли потолка — сдаёмся с записью в Sentry.
     finalizeAttempts: integer('finalize_attempts').notNull().default(0),
+    // ПУЛЬС живого исполнителя: воркер обновляет его, пока держит задачу. Без пульса reaper
+    // отличает «процесс умер» от «работа долгая» только щедрым таймаутом (30 мин) — и всё это
+    // время экран показывает работу, которой давно нет. С пульсом смерть видна за минуту, а
+    // честная долгая задача (совет ≈ 9.5 вызовов модели) не отбирается вовсе. Пусто у задач,
+    // взятых версией без пульса, — для них остаётся прежний щедрый порог.
+    heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -668,6 +680,10 @@ export const jobs = pgTable(
     unfinalized: index('jobs_unfinalized_idx')
       .on(t.type, t.updatedAt)
       .where(sql`status = 'failed' AND finalized_at IS NULL`),
+    // Под уборку терминальных: сканировать всю таблицу ради «что удалить» незачем.
+    terminal: index('jobs_terminal_idx')
+      .on(t.status, t.updatedAt)
+      .where(sql`status in ('done','failed')`),
   }),
 )
 

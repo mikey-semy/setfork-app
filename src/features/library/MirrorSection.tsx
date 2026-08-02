@@ -7,6 +7,7 @@ import { Field } from '@/shared/ui/Field'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { disableMirror, mirrorNow, saveMirror } from './mirror-actions'
+import { MIRROR_HELP_AFTER_ATTEMPTS, mirrorRetryDueAt } from './mirror-policy'
 
 /** Настройки списка → Зеркало (Ф3): push-копия на GitHub/GitLab.
  *  Пушит ядро после каждой версии; здесь URL + токен (шифруется, повторно не
@@ -17,6 +18,7 @@ export function MirrorSection({
   hasToken,
   syncedAt,
   error,
+  attempts,
   lang,
 }: {
   templateId: string
@@ -24,12 +26,18 @@ export function MirrorSection({
   hasToken: boolean
   syncedAt: Date | null
   error: string | null
+  /** Ф2: сколько пушей подряд не удалось (счётчик ведёт ядро). */
+  attempts: number
   lang: Lang
 }) {
   const save = saveMirror.bind(null, templateId)
   const sync = mirrorNow.bind(null, templateId)
   const disable = disableMirror.bind(null, templateId)
   const configured = !!url
+  // Ф2: повторы идут в обоих случаях, меняется только текст. Границу берём из
+  // модуля политики, а не повторяем число здесь: разъехавшись, интерфейс начал
+  // бы называть временным сбоем то, что давно им не является.
+  const longFailing = attempts >= MIRROR_HELP_AFTER_ATTEMPTS
 
   return (
     <SettingsSection title={t('mirrorTitle', lang)} hint={t('mirrorIntro', lang)}>
@@ -71,6 +79,26 @@ export function MirrorSection({
                 )}
               </div>
               {error && <div className="mt-0.5 break-words text-danger">{error}</div>}
+              {/* Что будет дальше. Без этой строки красная ошибка читается как
+                  тупик, хотя повтор уже назначен, — и владелец идёт чинить то,
+                  что чинится само. Перенос по словам: на 360px текст «повторы
+                  прекращены…» занимает три строки и не имеет права распирать
+                  секцию (min-w-0 у родителя + break-words здесь). */}
+              {error && (
+                <div className="mt-0.5 break-words text-muted">
+                  {longFailing ? (
+                    t('mirrorNeedsOwner', lang)
+                  ) : (
+                    <>
+                      {t('mirrorWillRetry', lang)}
+                      <span className="hidden sm:inline">
+                        {' · '}
+                        {mirrorRetryDueAt(attempts, syncedAt).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-GB')}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

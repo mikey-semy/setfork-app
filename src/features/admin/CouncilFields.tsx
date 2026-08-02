@@ -85,6 +85,7 @@ export function CouncilFields({ v, lang, modelOptions }: { v: CouncilValues; lan
           placeholder={t('admin.pickModels', lang)}
           allowCustom
           customHint={t('admin.use2', lang)}
+          ru={lang === 'ru'}
         />
       </Field>
 

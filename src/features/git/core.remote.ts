@@ -1,6 +1,6 @@
 import 'server-only'
 import { Code, ConnectError, createClient } from '@connectrpc/connect'
-import { coreTransport } from '@/shared/core-transport'
+import { coreTransport, mirrorPushTimeoutMs } from '@/shared/core-transport'
 import type { GitCore, GitRepoRef } from '@/core'
 import { BranchOpError } from '@/core'
 import { GitCore as GitCoreService, type RepoRef } from '@/shared/gen/git_pb'
@@ -163,7 +163,11 @@ export const gitCoreRemote: GitCore = {
   },
 
   async mirrorPush(repo) {
-    const res = await client.mirrorPush(toRepoRef(repo))
+    // Дедлайн — точечный, не транспортный; почему именно так, см. рядом с
+    // `mirrorPushTimeoutMs`. Для фонового подметальщика зависший вызов это не
+    // «одна медленная задача», а смерть всей цепочки повторов: проход не доходит
+    // до постановки преемника.
+    const res = await client.mirrorPush(toRepoRef(repo), { timeoutMs: mirrorPushTimeoutMs() })
     return { ok: res.ok, error: res.error }
   },
 

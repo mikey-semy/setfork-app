@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
-import { pushListMirror } from './actions'
+import { pushListMirror } from './mirror-push'
 
 // Шифрование токена — формат shared/auth/totp.ts (base64(iv|tag|ct), AES-256-GCM),
 // но ключ от ОБЩЕГО с ядром секрета: расшифровывает ядро при пуше.
@@ -54,9 +54,13 @@ export async function saveMirror(templateId: string, formData: FormData): Promis
   // Пустой токен при уже настроенном зеркале = «оставить прежний» (его не показываем).
   const tokenEnc = token ? encryptMirrorToken(token) : tpl.mirrorToken
   if (!tokenEnc) return // первый раз токен обязателен
+  // Ф2: счётчик неудач обнуляем вместе с ошибкой. Владелец только что поменял
+  // настройки — это попытка с чистого листа, а не продолжение прежней серии.
+  // Иначе зеркало, дошедшее до потолка со старым токеном, объявило бы «повторы
+  // прекращены» сразу после первой же осечки с новым.
   await db
     .update(templates)
-    .set({ mirrorUrl: url, mirrorToken: tokenEnc, mirrorError: null })
+    .set({ mirrorUrl: url, mirrorToken: tokenEnc, mirrorError: null, mirrorAttempts: 0 })
     .where(eq(templates.id, templateId))
   // Первый пуш сразу: владелец увидит результат, не дожидаясь следующей версии.
   const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
@@ -71,7 +75,7 @@ export async function disableMirror(templateId: string): Promise<void> {
   if (!tpl) return
   await db
     .update(templates)
-    .set({ mirrorUrl: null, mirrorToken: null, mirrorSyncedAt: null, mirrorError: null })
+    .set({ mirrorUrl: null, mirrorToken: null, mirrorSyncedAt: null, mirrorError: null, mirrorAttempts: 0 })
     .where(eq(templates.id, templateId))
   revalidatePath(await settingsPath(tpl))
 }
@@ -81,6 +85,11 @@ export async function mirrorNow(templateId: string): Promise<void> {
   const session = await requireSession()
   const tpl = await ownedList(templateId, session.userId)
   if (!tpl?.mirrorUrl) return
+  // Ф2: ручной толчок начинает серию заново. Владелец починил доступ и просит
+  // попробовать ещё — значит и лестница пауз должна начаться с начала, иначе
+  // следующая автоматическая попытка после единственной осечки была бы только
+  // через сутки. Провалится и эта — ядро вернёт счётчик к 1.
+  await db.update(templates).set({ mirrorAttempts: 0 }).where(eq(templates.id, templateId))
   const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
   if (owner) await pushListMirror(owner.handle, tpl.slug)
   revalidatePath(await settingsPath(tpl))

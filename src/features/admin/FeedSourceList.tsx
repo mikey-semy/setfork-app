@@ -49,7 +49,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             required
             inputMode="url"
             placeholder="https://example.com/feed.xml"
-            className="h-7 w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
+            className="h-8 w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
         <label className="flex min-w-0 flex-col gap-1 sm:w-[12.5rem]">
@@ -58,7 +58,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             name="tags"
             required
             placeholder="devops, ci"
-            className="h-7 w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
+            className="h-8 w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
         <label className="flex flex-col gap-1 sm:w-[6rem]">
@@ -69,7 +69,7 @@ export function FeedSourceList({ rows, lang, err }: { rows: FeedSourceRow[]; lan
             min={1}
             max={168}
             defaultValue={6}
-            className="h-7 w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
+            className="h-8 w-full rounded-md border border-border bg-surface-2 px-2.5 text-[0.8125rem] text-ink outline-hidden focus:border-border-strong"
           />
         </label>
         <Button type="submit" variant="primary" size="md" className="shrink-0">

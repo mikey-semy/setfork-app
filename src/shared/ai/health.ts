@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, gte, ne, sql } from 'drizzle-orm'
 import { aiUsage, db } from '@/shared/db'
+import { envNumber } from '@/shared/env'
 
 // Здоровье моделей по журналу ai_usage (outcome + duration_ms) — сырьё для
 // щитка надёжности в админке и АВТОРОТАЦИИ пула совета: модель с проседающим
@@ -14,9 +15,11 @@ export interface ModelHealth {
   p95Ms: number
 }
 
-export const QUARANTINE_WINDOW_MS = 24 * 3_600_000
-export const QUARANTINE_MIN_CALLS = 8 // меньше — не статистика, а шум
-export const QUARANTINE_OK_THRESHOLD = 0.9
+// Планка карантина — настройка стенда, а не закон природы: у полигона и у прода разный
+// объём вызовов и разная терпимость к отказам. Дефолты те же, что были в коде.
+export const QUARANTINE_WINDOW_MS = envNumber('SETFORK_QUARANTINE_WINDOW_H', 24) * 3_600_000
+export const QUARANTINE_MIN_CALLS = envNumber('SETFORK_QUARANTINE_MIN_CALLS', 8) // меньше — не статистика, а шум
+export const QUARANTINE_OK_THRESHOLD = envNumber('SETFORK_QUARANTINE_OK_RATE', 0.9)
 const CACHE_TTL_MS = 5 * 60_000
 
 /** Карантин: достаточно вызовов и успех ниже порога. Чистая — юнит-тестируется. */
