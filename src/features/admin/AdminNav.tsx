@@ -75,15 +75,21 @@ export function AdminNav({
     .map((g) => ({
       title: g.title,
       items: [
-        ...(g.links ?? [])
-          .filter(hit)
-          .map((l) => ({
-            key: l.href,
-            href: l.href,
-            label: l.label,
-            icon: l.icon,
-            active: pathname === l.href,
-          })),
+        // Один проход (flatMap), а не filter+map: отбор и превращение в пункт —
+        // одно и то же действие над списком (React Doctor, js-combine-iterations).
+        ...(g.links ?? []).flatMap((l) =>
+          hit(l)
+            ? [
+                {
+                  key: l.href,
+                  href: l.href,
+                  label: l.label,
+                  icon: l.icon,
+                  active: pathname === l.href,
+                },
+              ]
+            : [],
+        ),
         ...(g.sectionIds ?? []).flatMap((id) => {
           const s = byId.get(id)
           if (!s) return []
