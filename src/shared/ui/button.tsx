@@ -34,7 +34,10 @@ export interface ButtonProps extends React.ComponentProps<'button'> {
   size?: ButtonSize
 }
 
-export function Button({ variant = 'outline', size = 'sm', className, type = 'button', ...props }: ButtonProps) {
+// Дефолт md — ТОТ ЖЕ, что у Input/SelectTrigger/SearchField (02.08.2026): пока
+// кнопка молчком бралась sm, а поле md, любой ряд «поле + кнопка» без явных
+// пропов расходился по высоте на ступень. Совпадение по умолчанию — смысл шкалы.
+export function Button({ variant = 'outline', size = 'md', className, type = 'button', ...props }: ButtonProps) {
   return (
     <button
       // eslint-disable-next-line react/button-has-type -- примитив безопасен по построению: дефолт 'button' задан в сигнатуре, submit — только явным пропом

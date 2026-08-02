@@ -123,8 +123,16 @@ export async function touchJob(id: string, attempt: number): Promise<void> {
  * вызовов модели, sweep gardener) второму воркеру — это двойное исполнение и двойной расход LLM.
  * Пульс снимает выбор между «быстро замечаем смерть» и «не отбираем живое»: долгая задача дышит.
  */
+/**
+ * Порог «задача зависла», секунды. Экспортируется, потому что нужен не только
+ * жнецу: долгий обработчик обязан укладываться в него САМ, иначе жнец переотдаст
+ * живую задачу второму воркеру. Читать одну и ту же env в двух местах нельзя —
+ * дефолты разъедутся, и разъедутся молча.
+ */
+export const jobStallSec = (): number => Number(process.env.SETFORK_JOB_STALL_SEC ?? 1800)
+
 export async function reapStalledJobs(
-  olderThanSec = Number(process.env.SETFORK_JOB_STALL_SEC ?? 1800),
+  olderThanSec = jobStallSec(),
   heartbeatStallSec = Number(process.env.SETFORK_JOB_HEARTBEAT_STALL_SEC ?? 60),
 ): Promise<{ reaped: number; abandoned: Job[] }> {
   // status — enum job_status: результат CASE имеет тип text и НЕ приводится к enum

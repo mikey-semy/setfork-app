@@ -198,7 +198,7 @@ export function DiffComments({
                 <button
                   type="button"
                   onClick={() => setSuggest(quote || '')}
-                  className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-[0.78125rem] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"
+                  className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[0.78125rem] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"
                 >
                   <Replace size={14} /> {labels.suggestLabel}
                 </button>
@@ -228,15 +228,15 @@ export function DiffComments({
                 </div>
               )}
               <div className="mt-2 flex items-center justify-end gap-2">
-                <Button variant="ghost" className="h-7" onClick={() => setOpen(false)} disabled={pending}>
+                <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
                   {labels.cancel}
                 </Button>
                 {/* Два способа отправки, как в GitHub: сразу или в пачку ревью.
                     Пачка — чтобы рецензент мог подумать и переписать до показа. */}
-                <Button variant="ghost" className="h-7" onClick={() => submit(true)} disabled={pending || !draft.trim()}>
+                <Button variant="ghost" onClick={() => submit(true)} disabled={pending || !draft.trim()}>
                   {labels.startReview}
                 </Button>
-                <Button variant="primary" className="h-7" onClick={() => submit(false)} disabled={pending || !draft.trim()}>
+                <Button variant="primary" onClick={() => submit(false)} disabled={pending || !draft.trim()}>
                   {pending ? <Loader2 size={13} className="animate-spin" /> : labels.send}
                 </Button>
               </div>
@@ -323,7 +323,7 @@ function ThreadCard({
                       canApply && (
                         <Button
                           variant="ghost"
-                          className="ml-auto h-9 shrink-0 px-2 text-[0.78125rem]"
+                          className="ml-auto shrink-0 px-2 text-[0.78125rem]"
                           disabled={pending}
                           onClick={() => startTransition(async () => void (await applySuggestedEdit(c.id)))}
                         >
@@ -344,7 +344,7 @@ function ThreadCard({
 
       {canComment && (
         <div className="mt-2 flex items-center justify-end gap-2">
-          <Button variant="ghost" className="h-7" onClick={onReply}>
+          <Button variant="ghost" onClick={onReply}>
             {labels.reply}
           </Button>
           {/* Перенести разговор в задачу: обсуждение на пункте часто упирается в
@@ -353,7 +353,6 @@ function ThreadCard({
           <Tooltip label={labels.toIssue}>
             <Button
               variant="ghost"
-              className="h-7"
               aria-label={labels.toIssue}
               disabled={pending}
               onClick={() => startTransition(async () => void (await threadToIssue(owner, slug, thread.id)))}
@@ -364,7 +363,6 @@ function ThreadCard({
           <Tooltip label={labels.resolve}>
             <Button
               variant="ghost"
-              className="h-7"
               aria-label={labels.resolve}
               disabled={pending}
               onClick={() => startTransition(async () => void (await setBlockThreadResolved(owner, slug, thread.id, true)))}
@@ -401,7 +399,6 @@ function ResolvedRow({
       {canComment && (
         <Button
           variant="ghost"
-          className="h-7"
           disabled={pending}
           onClick={() => startTransition(async () => void (await setBlockThreadResolved(owner, slug, resolved[0].thread.id, false)))}
         >

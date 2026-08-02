@@ -5,7 +5,6 @@ import { getLang, } from '@/shared/i18n/server'
 import { t, tr, type TKey } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
-import { PageHeader } from '@/shared/ui/PageHeader'
 import { getNotifications, type NotificationItem } from '@/features/notifications/queries'
 import { MarkRead } from '@/features/notifications/MarkRead'
 import { NOTIF_VERB } from '@/features/notifications/verbs'
@@ -24,7 +23,9 @@ export default async function NotificationsPage() {
   return (
     <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
       <MarkRead />
-      <PageHeader title={t('notifications', lang)} />
+      {/* Видимой шапки нет: тот же заголовок уже стоит в TopNav (см. /my-lists).
+          Здесь он остаётся только для скринридеров и структуры страницы. */}
+      <h1 className="sr-only print:not-sr-only print:mb-2 print:text-[1.125rem] print:font-bold print:text-ink">{t('notifications', lang)}</h1>
 
       {items.length === 0 ? (
         <EmptyState icon={<Bell size={34} strokeWidth={1.5} />} title={t('noNotifications', lang)} />

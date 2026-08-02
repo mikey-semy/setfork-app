@@ -104,7 +104,7 @@ export function SuggestionSelection({
               items={milestones.map((m) => ({ key: m.id, text: m.title }))}
               onPick={(key) => run({ kind: 'milestone', milestoneId: key })}
             />
-            <Button variant="ghost" className="h-7" disabled={pending} onClick={() => run({ kind: 'close' })}>
+            <Button variant="ghost" disabled={pending} onClick={() => run({ kind: 'close' })}>
               {pending ? <Loader2 size={14} className="animate-spin" /> : labels.close}
             </Button>
             <Tooltip label={labels.clear}>

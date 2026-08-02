@@ -313,6 +313,11 @@ export const templates = pgTable(
     mirrorToken: text('mirror_token'),
     mirrorSyncedAt: timestamp('mirror_synced_at', { withTimezone: true }),
     mirrorError: text('mirror_error'),
+    /** Ф2: сколько пушей подряд не удалось. Пишет ЯДРО вместе со статусом (успех
+     *  обнуляет), читают подметальщик ретраев и настройки. Счётчик живёт на строке
+     *  зеркала, а не в очереди задач: очередь чистится, а «повторы прекращены» —
+     *  свойство самого зеркала, и владелец должен видеть его и через неделю. */
+    mirrorAttempts: integer('mirror_attempts').notNull().default(0),
     /**
      * ЖИВОЙ СПИСОК (лента): не «готов навсегда», а с ритмом обновления.
      *
@@ -632,6 +637,7 @@ export const JOB_TYPES = [
   'partners',
   'finance',
   'chronicle',
+  'mirror',
 ] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
