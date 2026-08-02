@@ -61,6 +61,10 @@ export const gitCoreRemote: GitCore = {
       gitProtocol: opts?.gitProtocol ?? '',
       lang: opts?.lang ?? '',
       actorHandle: opts?.actorHandle ?? '',
+      // Ф5: пустая роль означает у ядра САМУЮ СТРОГУЮ («посторонний»), поэтому
+      // подставлять сюда «владельца» по умолчанию нельзя — это тихо раздало бы
+      // права. Пусто = пусть ядро решает строго.
+      actorRole: opts?.actorRole ?? '',
     })
     return {
       data: res.data,

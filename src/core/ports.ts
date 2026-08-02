@@ -204,11 +204,20 @@ export interface GitCore {
   uploadPack(repo: GitRepoRef, body: Uint8Array, gitProtocol?: string): Promise<Uint8Array | null>
   /** receive-pack + проекция в версию (атомарно под локом). newVersion — созданная версия. */
   /** Приём пуша. `lang` — язык ЧЕЛОВЕКА для отказов pre-receive: их он читает
-   *  прямо в выводе `git push`, переводить некому (И2). '' → английский. */
+   *  прямо в выводе `git push`, переводить некому (И2). '' → английский.
+   *  `actorRole` (Ф5) — уже принятое решение о правах: ядро исполняет по нему
+   *  правило пространства имён (посторонний пишет только в своё `u/<ник>/*` и в
+   *  `refs/for/main`). '' ядро трактует как САМУЮ СТРОГУЮ роль: забытое поле
+   *  обязано закрывать дверь, а не открывать. */
   receivePack(
     repo: GitRepoRef,
     body: Uint8Array,
-    opts?: { gitProtocol?: string; lang?: string; actorHandle?: string },
+    opts?: {
+      gitProtocol?: string
+      lang?: string
+      actorHandle?: string
+      actorRole?: 'owner' | 'collaborator' | 'contributor'
+    },
   ): Promise<{ data: Uint8Array; newVersion: number | null; magic: MagicPush[] } | null>
   bundle(repo: GitRepoRef): Promise<Uint8Array | null>
   /** Ветки (A1 read-only): main первым; прочие — черновики без проекции. */

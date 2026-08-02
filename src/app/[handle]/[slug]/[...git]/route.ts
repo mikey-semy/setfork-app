@@ -3,6 +3,7 @@ import { db, users } from '@/shared/db'
 // eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
 import { canEditList } from '@/core'
+import { openForContributions, type PushRole } from '@/features/library/push-role'
 import { ensureBranchSuggestion } from '@/features/library/suggestion-core'
 import { captureError } from '@/shared/observability'
 import { isCollaborator } from '@/features/collab/queries'
@@ -13,6 +14,7 @@ import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
 import { recordAudit } from '@/shared/audit'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
+import { envNumber } from '@/shared/env'
 
 // git smart-HTTP: `git clone/pull/push https://host/{owner}/{slug}.git`.
 // Работает из VSCode. Источник правды — персистентный bare-репо внутри ядра
@@ -49,20 +51,50 @@ async function authorizeRead(req: Request, meta: Meta): Promise<'ok' | 401 | 404
   return auth.userId === meta.ownerId ? 'ok' : 404
 }
 
-/** Доступ на запись (push): владелец/коллаборатор по токену со scope 'write' и список,
- *  в который вообще можно писать. Возвращает userId пушащего (для аудита), 401 или 403. */
-async function authorizeWrite(req: Request, meta: Meta): Promise<string | 401 | 403> {
+/**
+ * Сколько пушей в час разрешено ПОСТОРОННЕМУ (Ф5).
+ *
+ * Настройкой, а не числом в коде: величина зависит от того, как пойдёт, и
+ * подкручивается без выкатки. Двадцать — это заметно больше, чем нужно человеку,
+ * который правит список (пуш, посмотрел, поправил, ещё раз), и заметно меньше,
+ * чем нужно скрипту, чтобы шуметь.
+ */
+const CONTRIB_PUSHES_PER_HOUR = envNumber('SETFORK_GIT_CONTRIB_PUSHES_PER_HOUR', 20)
+
+
+/**
+ * Доступ на запись (push): кто пушит и в каком качестве.
+ *
+ * Ф5: помимо владельца и соавтора пускаем ЛЮБОГО пользователя с write-токеном,
+ * если список открыт для предложений. Раньше git-путь был строже веба без
+ * причины: `allowFrom` по умолчанию `'all'`, то есть веб уже разрешал предлагать
+ * правки кому угодно, а через git то же самое было нельзя. Правка из ветки ничем
+ * не опаснее правки из формы — она точно так же ничего не меняет, пока владелец
+ * её не сольёт.
+ *
+ * Роль уходит наружу, потому что ядро исполняет её МЕХАНИЧЕСКИ (посторонний
+ * пишет только в `refs/heads/u/<ник>/*` и `refs/for/main`). Само решение остаётся
+ * здесь: ADR-0011 §2 — пользовательской авторизации в ядре нет.
+ */
+async function authorizeWrite(req: Request, meta: Meta): Promise<{ userId: string; role: PushRole } | 401 | 403> {
   const auth = await userFromBasic(req)
   if (!auth || auth.scope !== 'write') return 401 // read-only токен не может пушить
-  const allowed = auth.userId === meta.ownerId || (await isCollaborator(meta.id, auth.userId))
-  if (!allowed) return 401
+  const role: PushRole | null =
+    auth.userId === meta.ownerId
+      ? 'owner'
+      : (await isCollaborator(meta.id, auth.userId))
+        ? 'collaborator'
+        : openForContributions(meta)
+          ? 'contributor'
+          : null
+  if (!role) return 401
   // Архив и заморозка — ограничения ЗАПИСИ, и git-путь обязан их соблюдать. Проверка
   // здесь, а не в ядре: на проде git идёт в Rust-ядро (SETFORK_CORE_URL), где понятий
   // frozen/archived нет вовсе, и push замороженного списка создавал новую версию —
   // ровно то, что заморозка обязана останавливать (линза 02, F3). Роут общий для
   // обоих режимов ядра, поэтому правило остаётся в одном месте.
   if (!canEditList(meta)) return 403
-  return auth.userId
+  return { userId: auth.userId, role }
 }
 
 /**
@@ -188,6 +220,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     const az = await authorizeWrite(req, meta)
     if (az === 401) return unauthorized()
     if (az === 403) return writeDisabled()
+    // Ф5: отдельный, более строгий лимит для ПОСТОРОННИХ — иначе «предлагать
+    // может кто угодно» превращается в открытую дверь. Считаем по пользователю,
+    // а не по IP: за NAT адрес общий, зато токен всегда именной.
+    //
+    // Лимит стоит ЗДЕСЬ, а не в ядре, сознательно: ADR-0011 §2 называет per-user
+    // лимит в ядре инфраструктурой без потребности, а во фронте `shared/rate-limit`
+    // уже есть. Проверка ДО чтения тела — чтобы не тянуть мегабайты ради отказа.
+    //
+    // Владельца и соавтора не касается: их пуши — обычная работа со своим
+    // списком, и общий лимит по IP на них уже действует.
+    if (az.role === 'contributor') {
+      const rlUser = await rateLimit(`git:contrib:${az.userId}`, CONTRIB_PUSHES_PER_HOUR, 3600_000)
+      if (!rlUser.ok) return tooMany(rlUser)
+    }
     let body: Buffer
     try {
       body = await readGitBody(req).then((raw) => maybeGunzip(raw, req.headers.get('content-encoding')))
@@ -202,11 +248,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     // проверка стала не только не устаревшей, но и не обходимой другими путями.
     // Ранняя проверка выше (authorizeWrite → canEditList) остаётся: она даёт быстрый
     // отказ ДО чтения тела, чтобы не тянуть мегабайты ради заведомого 403.
-    const who = await pusher(az, req)
+    const who = await pusher(az.userId, req)
     const res = await gitCore.receivePack(
       { owner: handle, slug },
       body,
-      { gitProtocol, lang: who.lang, actorHandle: who.handle },
+      // Ф5: роль едет вместе с ником — ядро исполнит по ней правило пространства.
+      { gitProtocol, lang: who.lang, actorHandle: who.handle, actorRole: az.role },
     )
     if (!res) return new Response('Repository unavailable', { status: 500 })
     // Ф4: магический пуш `refs/for/main` — ядро положило коммиты в ветку автора,
@@ -239,11 +286,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
             templateId: meta.id,
             ownerId: meta.ownerId,
             currentVersion: meta.currentVersion,
-            authorId: az,
+            authorId: az.userId,
             branch: m.branch,
           })
           await recordAudit('git.suggest', {
-            actorId: az,
+            actorId: az.userId,
             targetType: 'suggestion',
             targetId: sug.id,
             meta: { slug, branch: m.branch, tip: m.tipSha, revision: sug.created ? 'first' : 'new' },
@@ -261,7 +308,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     if (res.newVersion != null) {
       const watchers = await getWatcherIds(meta.id, 'versions')
       await notifyMany(watchers, { type: 'new_version', templateId: meta.id }).catch(() => {})
-      await recordAudit('git.push', { actorId: az, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } })
+      await recordAudit('git.push', { actorId: az.userId, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } })
       // push меняет title/desc/tags минуя формы → пере-проверяем публичный список в фоне.
       if (meta.visibility === 'public') {
         const { recheckList } = await import('@/features/moderation/moderate-list')

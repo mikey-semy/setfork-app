@@ -154,7 +154,7 @@ export const en = {
   prStartReview: 'Add to review',
   prSettingsTitle: 'Suggestions',
   prSetWho: 'Who can suggest',
-  prSetWhoHint: 'Anyone who can see the list, or collaborators only.',
+  prSetWhoHint: 'Anyone who can see the list, or collaborators only. Applies both to the web form and to git pushes.',
   prSetWhoAll: 'All users',
   prSetWhoCollab: 'Collaborators only',
   prSetApprovals: 'Required approvals',
