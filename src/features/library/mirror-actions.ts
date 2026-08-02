@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
-import { pushListMirror } from './actions'
+import { pushListMirror } from './mirror-push'
 
 // Шифрование токена — формат shared/auth/totp.ts (base64(iv|tag|ct), AES-256-GCM),
 // но ключ от ОБЩЕГО с ядром секрета: расшифровывает ядро при пуше.

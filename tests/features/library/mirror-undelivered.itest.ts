@@ -25,7 +25,7 @@ let behave: () => Promise<{ ok: boolean; error: string }> = async () => ({ ok: t
 vi.mock('@/features/git/core', () => ({ gitCore: { mirrorPush: () => behave() } }))
 
 const { db, users, templates } = await import('@/shared/db')
-const { pushListMirror } = await import('@/features/library/actions')
+const { pushListMirror } = await import('@/features/library/mirror-push')
 
 let ownerId = ''
 

@@ -6,7 +6,7 @@ import { captureError, log } from '@/shared/observability'
 import { envNumber } from '@/shared/env'
 import { mirrorPushTimeoutMs } from '@/shared/core-transport'
 import { MIRROR_BACKOFF_MS, MIRROR_MAX_BACKOFF_MS, mirrorRetryDueAt } from './mirror-policy'
-import { pushListMirror } from './actions'
+import { pushListMirror } from './mirror-push'
 
 /**
  * Ф2: повторы упавшего пуша зеркала.

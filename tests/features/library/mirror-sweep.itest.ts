@@ -23,7 +23,7 @@ const pushed: string[] = []
 // втором случае счётчик неудач уже сдвинуло само ядро.
 let down = false
 let delivered: { ok: boolean; error: string } | null = null
-vi.mock('@/features/library/actions', () => ({
+vi.mock('@/features/library/mirror-push', () => ({
   pushListMirror: async (handle: string, slug: string) => {
     pushed.push(`${handle}/${slug}`)
     if (!down) return { ...(delivered ?? { ok: true, error: '' }), delivered: true }
