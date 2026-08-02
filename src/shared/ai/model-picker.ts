@@ -50,7 +50,10 @@ export const QUALITY_PCTL = envNumber('SETFORK_COUNCIL_QUALITY_PCTL', 0.65)
 export const MIN_CONTEXT = envNumber('SETFORK_MIN_CONTEXT_TOKENS', 16_000)
 
 export function qualityFloor(models: ModelOption[], pctl: number): number {
-  const xs = models.map((m) => m.intelligence).filter((x) => x > 0).sort((a, b) => a - b)
+  // Один проход: оценки собираем и отсеиваем сразу — map().filter() гоняет список дважды.
+  const xs: number[] = []
+  for (const m of models) if (m.intelligence > 0) xs.push(m.intelligence)
+  xs.sort((a, b) => a - b)
   if (!xs.length) return 0
   return xs[Math.min(xs.length - 1, Math.floor(pctl * (xs.length - 1)))]
 }

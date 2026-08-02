@@ -94,13 +94,17 @@ export async function pickChatModels(settings: AiSettings): Promise<{ provider: 
   // Настройки моделей лежат в неймспейсе ПРОВАЙДЕРА. При уходе на запасного взять модель из
   // неймспейса основного значило бы позвать чужой id — молча и с гарантированным отказом.
   const effective = provider === settings.provider ? settings : { ...settings, ...(await getModelSettings(provider)) }
-  const wanted = await pickConfiguredModel(effective, provider, cfg?.headers?.['x-folder-id'] ?? '')
-  const { chat } = await fetchModelsFor(provider)
+  // Три обращения независимы (настройка модели, каталог, здоровье) — идут разом: последовательно
+  // они складывались бы в задержку перед КАЖДОЙ генерацией.
+  const [wanted, { chat }, bad] = await Promise.all([
+    pickConfiguredModel(effective, provider, cfg?.headers?.['x-folder-id'] ?? ''),
+    fetchModelsFor(provider),
+    quarantinedModels(),
+  ])
   const live = liveModel(chat, wanted)
   if (live !== wanted) {
     console.warn(`[ai] модель ${wanted} отсутствует в каталоге ${provider} — беру живую ${live}`)
   }
-  const bad = await quarantinedModels()
   // Запасная тоже сверяется с каталогом: мёртвый id в роли «запасной» — это не запас.
   const fallback = effective.fallbackModel && chat.some((m) => m.id === effective.fallbackModel) ? effective.fallbackModel : ''
   return { provider, base: healthy(live, fallback, chat, bad), fallback }
