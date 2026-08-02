@@ -8,7 +8,7 @@ import { captureError } from '@/shared/observability'
 import { isCollaborator } from '@/features/collab/queries'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { gitCore } from '@/features/git/core'
-import { maybeGunzip } from '@/features/git/http-body'
+import { GitBodyTooLarge, maybeGunzip, readGitBody } from '@/features/git/http-body'
 import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
 import { recordAudit } from '@/shared/audit'
@@ -64,6 +64,19 @@ async function authorizeWrite(req: Request, meta: Meta): Promise<string | 401 | 
   if (!canEditList(meta)) return 403
   return auth.userId
 }
+
+/**
+ * Ф0 (хвост): тело больше потолка. Текст английский, как и у соседних отказов
+ * здесь: git-инструментарий англоязычен, а этот ответ читает не только человек,
+ * но и лог CI. Число в тексте настоящее — без него отказ не подсказывает,
+ * насколько ужиматься.
+ */
+const tooLarge = (e: GitBodyTooLarge) =>
+  new Response(
+    `Push is too large: the limit is ${Math.round(e.maxBytes / 1024 / 1024)} MB per request.\n` +
+      'A list is text — this usually means binaries got committed. Keep images and attachments out of the repository.\n',
+    { status: 413, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
+  )
 
 const writeDisabled = () =>
   new Response('List is archived or frozen: writes are disabled', { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
@@ -159,8 +172,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
   if (path === 'git-upload-pack') {
     const az = await authorizeRead(req, meta)
     if (az !== 'ok') return az === 401 ? unauthorized() : new Response('Not found', { status: 404 })
-    const raw = Buffer.from(await req.arrayBuffer())
-    const out = await gitCore.uploadPack({ owner: handle, slug }, maybeGunzip(raw, req.headers.get('content-encoding')), gitProtocol)
+    let body: Buffer
+    try {
+      body = await readGitBody(req).then((raw) => maybeGunzip(raw, req.headers.get('content-encoding')))
+    } catch (e) {
+      if (e instanceof GitBodyTooLarge) return tooLarge(e)
+      throw e
+    }
+    const out = await gitCore.uploadPack({ owner: handle, slug }, body, gitProtocol)
     if (!out) return new Response('Repository unavailable', { status: 500 })
     return new Response(new Uint8Array(out), { headers: { 'Content-Type': 'application/x-git-upload-pack-result', ...noCache } })
   }
@@ -169,8 +188,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     const az = await authorizeWrite(req, meta)
     if (az === 401) return unauthorized()
     if (az === 403) return writeDisabled()
-    const raw = Buffer.from(await req.arrayBuffer())
-    const body = maybeGunzip(raw, req.headers.get('content-encoding'))
+    let body: Buffer
+    try {
+      body = await readGitBody(req).then((raw) => maybeGunzip(raw, req.headers.get('content-encoding')))
+    } catch (e) {
+      if (e instanceof GitBodyTooLarge) return tooLarge(e)
+      throw e
+    }
     // Второго перечитывания состояния здесь БОЛЬШЕ НЕТ. Оно стояло тут потому, что
     // большой push висит минутами и владелец может заморозить список ровно в это
     // окно, а ядро о заморозке не знало. С Ф1 (ADR-0015) знает: ядро само спрашивает
