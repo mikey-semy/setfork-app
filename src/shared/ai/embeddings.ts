@@ -2,6 +2,7 @@ import 'server-only'
 import { getAiProviderRaw, getOpenRouterApiKey } from '@/shared/settings/ai'
 import { COLUMN_DIM, fitToColumn, getIndexSpace, type EmbedSpace } from './embed-space'
 import { recordUsage } from './usage'
+import { dataCollectionPolicy } from './provider'
 
 // Эмбеддинги идут по ПРОСТРАНСТВУ ИНДЕКСА (embed-space): и документы при
 // индексации, и поисковые запросы — одним провайдером/моделью/мерностью, иначе
@@ -33,7 +34,17 @@ export async function isEmbeddingEnabled(): Promise<boolean> {
   return Boolean(await getOpenRouterApiKey())
 }
 
-async function endpointFor(space: EmbedSpace): Promise<{ url: string; headers: Record<string, string> } | null> {
+/**
+ * Куда и с чем стучаться за векторами.
+ *
+ * `body` — то, что кладётся в запрос ПОМИМО модели и текстов. У OpenRouter это политика
+ * данных: эмбеддинги идут мимо фабрики chat-моделей (свой HTTP-вызов), поэтому запрет на
+ * сбор, добавленный в provider.ts, их бы не коснулся — а на эмбеддинги уезжает СОДЕРЖИМОЕ
+ * списков целиком, включая приватные (находка авто-ревью по #654).
+ */
+async function endpointFor(
+  space: EmbedSpace,
+): Promise<{ url: string; headers: Record<string, string>; body?: Record<string, unknown> } | null> {
   if (space.provider === 'yandex') {
     const raw = await getAiProviderRaw()
     if (!raw.yandexKey) return null
@@ -51,6 +62,7 @@ async function endpointFor(space: EmbedSpace): Promise<{ url: string; headers: R
       'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
       'X-Title': 'SetFork',
     },
+    body: { provider: { data_collection: dataCollectionPolicy() } },
   }
 }
 
@@ -79,7 +91,7 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
  *  429 ретраится с бэкоффом (Retry-After провайдера или 1с/2с/4с) — реиндекс
  *  по одному тексту упирался в RPS-лимит Яндекса (прод 2026-07-22). */
 async function requestEmbeddings(
-  ep: { url: string; headers: Record<string, string> },
+  ep: { url: string; headers: Record<string, string>; body?: Record<string, unknown> },
   model: string,
   input: string[],
   withDims: boolean,
@@ -90,7 +102,7 @@ async function requestEmbeddings(
     res = await fetch(ep.url, {
       method: 'POST',
       headers: ep.headers,
-      body: JSON.stringify({ model, input, ...(withDims ? { dimensions: dims } : {}) }),
+      body: JSON.stringify({ model, input, ...(withDims ? { dimensions: dims } : {}), ...ep.body }),
       signal: AbortSignal.timeout(20_000),
     })
     if (res.status !== 429 || attempt === 3) break
