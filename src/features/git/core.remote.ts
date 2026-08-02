@@ -171,6 +171,14 @@ export const gitCoreRemote: GitCore = {
     return { ok: res.ok, error: res.error }
   },
 
+  async mirrorCheck(repo) {
+    // Тот же дедлайн, что у пуша: внутри ядра это тот же `git push`, только с
+    // `--dry-run`. Человек ждёт ответа на кнопку, так что зависший вызов здесь —
+    // просто вечный спиннер, но обрывать раньше ядра всё равно незачем.
+    const res = await client.mirrorCheck(toRepoRef(repo), { timeoutMs: mirrorPushTimeoutMs() })
+    return { ok: res.ok, error: res.error }
+  },
+
   async updateBranch(repo, name) {
     try {
       const res = await client.updateBranch({ repo: toRepoRef(repo), name })

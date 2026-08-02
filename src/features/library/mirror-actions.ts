@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { db, templates, users } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
-import { pushListMirror } from './mirror-push'
+import { checkListMirror, pushListMirror } from './mirror-push'
 
 // Шифрование токена — формат shared/auth/totp.ts (base64(iv|tag|ct), AES-256-GCM),
 // но ключ от ОБЩЕГО с ядром секрета: расшифровывает ядро при пуше.
@@ -93,4 +93,26 @@ export async function mirrorNow(templateId: string): Promise<void> {
   const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
   if (owner) await pushListMirror(owner.handle, tpl.slug)
   revalidatePath(await settingsPath(tpl))
+}
+
+/**
+ * Ф2: проверить доступ к зеркалу, ничего не пушив («Проверить доступ»).
+ *
+ * Зачем отдельно от пуша: до первой публикации пушить нечего, а узнать, что
+ * токен не тот, владелец должен СЕЙЧАС — иначе он узнаёт об этом через сутки по
+ * красному статусу. Ядро идёт `git push --dry-run`: аутентифицируется на пути
+ * ЗАПИСИ и не отправляет ни одной команды обновления.
+ *
+ * Статус зеркала не трогаем — ни здесь, ни в ядре: проверка ничего не изменила
+ * на фордже и не имеет права выдавать себя за попытку синхронизации, иначе
+ * отодвигала бы настоящий повтор. Исход возвращаем вызывающему: это ответ на
+ * нажатие кнопки, его показывают тут же, а не в поле статуса.
+ */
+export async function mirrorCheckAccess(templateId: string): Promise<{ ok: boolean; error: string }> {
+  const session = await requireSession()
+  const tpl = await ownedList(templateId, session.userId)
+  if (!tpl?.mirrorUrl) return { ok: false, error: 'not-configured' }
+  const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
+  if (!owner) return { ok: false, error: 'not-configured' }
+  return checkListMirror(owner.handle, tpl.slug)
 }
