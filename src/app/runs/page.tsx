@@ -1,11 +1,10 @@
 import Link from 'next/link'
-import { PlayCircle, ListChecks } from 'lucide-react'
+import { ListChecks } from 'lucide-react'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type Lang } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { EmptyState } from '@/shared/ui/EmptyState'
-import { PageHeader } from '@/shared/ui/PageHeader'
 import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
 import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
 
@@ -24,7 +23,9 @@ export default async function MyRunsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
-      <PageHeader icon={<PlayCircle size={18} />} title={t('myRuns', lang)} />
+      {/* Видимой шапки нет: тот же заголовок уже стоит в TopNav (см. /my-lists).
+          Здесь он остаётся только для скринридеров и структуры страницы. */}
+      <h1 className="sr-only">{t('myRuns', lang)}</h1>
 
       {runs.length === 0 ? (
         <EmptyState icon={<ListChecks size={34} strokeWidth={1.5} />} title={t('noRunsYet', lang)} />
