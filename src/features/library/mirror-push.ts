@@ -37,6 +37,20 @@ export async function pushListMirror(
 const CORE_UNAVAILABLE = 'core unavailable'
 
 /**
+ * Ф2: проверка доступа к зеркалу — тот же путь к ядру, но БЕЗ пуша и без записи
+ * статуса. Живёт здесь по той же причине, что и сам пуш: право звать порт
+ * GitCore переехало в этот файл, а `mirror-actions` — файл серверных экшенов,
+ * где каждый экспорт вызываем из браузера кем угодно.
+ *
+ * Недоступное ядро тут НЕ записываем неудачей зеркала: владелец нажал
+ * «проверить», а не «синхронизировать», и его нажатие не должно двигать лестницу
+ * пауз и счётчик неудач.
+ */
+export async function checkListMirror(owner: string, slug: string): Promise<{ ok: boolean; error: string }> {
+  return gitCore.mirrorCheck({ owner, slug }).catch(() => ({ ok: false, error: CORE_UNAVAILABLE }))
+}
+
+/**
  * Записать неудачу, о которой ядро не узнало.
  *
  * Зачем здесь, а не у вызывающих. Пуш зеркала зовут из трёх мест: подметальщик,

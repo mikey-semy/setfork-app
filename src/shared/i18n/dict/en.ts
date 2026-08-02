@@ -40,6 +40,9 @@ export const en = {
   // Повторы продолжаются и здесь — раз в сутки. Текст зовёт владельца не потому,
   // что мы сдались, а потому что после серии неудач сбой уже не временный.
   mirrorNeedsOwner: 'Failing for a while — check the token and the repository. Retrying daily meanwhile.',
+  mirrorCheckAccess: 'Check access',
+  mirrorCheckOk: 'Access confirmed: the token can push to this repository.',
+  mirrorCheckNotConfigured: 'Set the repository and token first.',
   generalIntro: 'Name, description, tags and visibility of the list.',
   coverTitle: 'Cover',
   templateTitle: 'Template',

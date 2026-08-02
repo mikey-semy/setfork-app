@@ -233,6 +233,11 @@ export interface GitCore {
   /** Ф3: пуш зеркала сейчас. Исход в теле (текст ошибки — владельцу в статус),
    *  не исключением: ошибка сети форджи — легитимный ответ. */
   mirrorPush(repo: GitRepoRef): Promise<{ ok: boolean; error: string }>
+  /** Ф2: проверить доступ к зеркалу БЕЗ пуша — «Проверить доступ» в настройках.
+   *  Ядро идёт `git push --dry-run`: аутентифицируется на пути ЗАПИСИ и ничего
+   *  не отправляет. Проверять чтением (`ls-remote`) нельзя — оно отвечает
+   *  успехом даже на мусорный токен, то есть обещало бы доступ, которого нет. */
+  mirrorCheck(repo: GitRepoRef): Promise<{ ok: boolean; error: string }>
   /** A5: влить main в ветку (обратное слияние). main не двигается → версии нет.
    *  Бросает BranchOpError('conflict'|'nothing-to-merge'|'not-found'). */
   updateBranch(repo: GitRepoRef, name: string): Promise<{ tipSha: string; fastForward: boolean }>

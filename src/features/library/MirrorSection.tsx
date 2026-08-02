@@ -8,6 +8,7 @@ import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { disableMirror, mirrorNow, saveMirror } from './mirror-actions'
 import { MIRROR_HELP_AFTER_ATTEMPTS, mirrorRetryDueAt } from './mirror-policy'
+import { MirrorCheckButton } from './MirrorCheckButton'
 
 /** Настройки списка → Зеркало (Ф3): push-копия на GitHub/GitLab.
  *  Пушит ядро после каждой версии; здесь URL + токен (шифруется, повторно не
@@ -111,7 +112,13 @@ export function MirrorSection({
           FormSaveBar считал отправку сохранением — гасил полосу, хотя правки
           URL/токена никуда не ушли (mirrorNow поля игнорирует). */}
       {configured && (
-        <div className="mt-4 flex items-center justify-end gap-2">
+        // flex-wrap: на 360px три кнопки в ряд не помещаются, и перенос обязан
+        // быть предусмотрен, а не случиться. Результат проверки — своей строкой
+        // на всю ширину (Alert внутри кнопки-компонента).
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          {/* Проверка доступа рядом с синхронизацией, но своей кнопкой: она
+              ничего не пушит и не трогает статус — путать их нельзя. */}
+          <MirrorCheckButton templateId={templateId} lang={lang} />
           <form action={disable}>
             <Tooltip label={t('mirrorDisable', lang)}>
               <Button type="submit" size="sm" variant="ghost" aria-label={t('mirrorDisable', lang)}>
