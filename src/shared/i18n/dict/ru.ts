@@ -39,6 +39,7 @@ export const ru: Record<DictKey, string> = {
   mirrorCheckAccess: 'Проверить доступ',
   mirrorCheckOk: 'Доступ есть: токен может пушить в этот репозиторий.',
   mirrorCheckNotConfigured: 'Сначала укажите репозиторий и токен.',
+  mirrorCheckSaveFirst: 'Сначала сохраните изменения — проверка читает сохранённые настройки.',
   generalIntro: 'Название, описание, теги и видимость списка.',
   coverTitle: 'Обложка',
   templateTitle: 'Шаблон',

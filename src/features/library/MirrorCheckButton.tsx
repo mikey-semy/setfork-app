@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CheckCircle2, Loader2, PlugZap } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Alert } from '@/shared/ui/Alert'
@@ -18,10 +18,30 @@ import { mirrorCheckAccess } from './mirror-actions'
 export function MirrorCheckButton({ templateId, lang }: { templateId: string; lang: Lang }) {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
+  const btn = useRef<HTMLButtonElement>(null)
+
+  /**
+   * Правки в форме, которые ещё не сохранены.
+   *
+   * Проверка ходит в ядро, а оно читает СОХРАНЁННЫЕ настройки. Значит владелец,
+   * вписавший новый токен и нажавший «Проверить» до сохранения, получил бы
+   * зелёный ответ про СТАРЫЙ — прямо перед тем, как сохранить неверный
+   * (авто-ревью fe#661). Ложный зелёный хуже отсутствия кнопки, поэтому в таком
+   * состоянии не проверяем вовсе, а просим сохранить.
+   *
+   * Смотрим значения в момент нажатия, а не подписываемся на ввод: одно чтение
+   * DOM вместо состояния, которое пришлось бы поднимать в серверный компонент.
+   */
+  const hasUnsaved = (): boolean => {
+    const form = btn.current?.closest('section')?.querySelector('form')
+    if (!form) return false
+    return [...form.querySelectorAll('input')].some((i) => i.value !== i.defaultValue)
+  }
 
   return (
     <>
       <Button
+        ref={btn}
         type="button"
         size="sm"
         variant="ghost"
@@ -29,6 +49,10 @@ export function MirrorCheckButton({ templateId, lang }: { templateId: string; la
         aria-label={t('mirrorCheckAccess', lang)}
         className="min-h-11"
         onClick={async () => {
+          if (hasUnsaved()) {
+            setResult({ ok: false, text: t('mirrorCheckSaveFirst', lang) })
+            return
+          }
           setBusy(true)
           setResult(null)
           try {

@@ -43,6 +43,7 @@ export const en = {
   mirrorCheckAccess: 'Check access',
   mirrorCheckOk: 'Access confirmed: the token can push to this repository.',
   mirrorCheckNotConfigured: 'Set the repository and token first.',
+  mirrorCheckSaveFirst: 'Save the changes first — the check reads the saved settings.',
   generalIntro: 'Name, description, tags and visibility of the list.',
   coverTitle: 'Cover',
   templateTitle: 'Template',
