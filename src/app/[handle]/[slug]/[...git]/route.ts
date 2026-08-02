@@ -3,7 +3,7 @@ import { db, users } from '@/shared/db'
 // eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
 import { canEditList } from '@/core'
-import { openForContributions, type PushRole } from '@/features/library/push-role'
+import { contributorsEnabled, openForContributions, type PushRole } from '@/features/library/push-role'
 import { ensureBranchSuggestion } from '@/features/library/suggestion-core'
 import { captureError } from '@/shared/observability'
 import { isCollaborator } from '@/features/collab/queries'
@@ -84,7 +84,7 @@ async function authorizeWrite(req: Request, meta: Meta): Promise<{ userId: strin
       ? 'owner'
       : (await isCollaborator(meta.id, auth.userId))
         ? 'collaborator'
-        : openForContributions(meta)
+        : contributorsEnabled() && openForContributions(meta)
           ? 'contributor'
           : null
   if (!role) return 401
