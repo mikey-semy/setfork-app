@@ -183,7 +183,7 @@ export function RunView({
                       if (ok) start(() => failRun(runId))
                     }}
                     aria-label={t('runFailAction', lang)}
-                    className="grid size-9 place-items-center rounded-md border border-danger/40 text-danger hover:bg-danger/10"
+                    className="grid size-8 place-items-center rounded-md border border-danger/40 text-danger hover:bg-danger/10"
                   >
                     <CircleAlert size={16} />
                   </button>
@@ -204,7 +204,7 @@ export function RunView({
                   if (ok) start(() => deleteRun(runId))
                 }}
                 aria-label={t('runDelete', lang)}
-                className="grid size-9 place-items-center rounded-md text-muted hover:text-danger"
+                className="grid size-8 place-items-center rounded-md text-muted hover:text-danger"
               >
                 <Trash2 size={16} />
               </button>
