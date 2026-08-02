@@ -23,6 +23,9 @@ export interface AdminLink {
   href: string
   label: string
   icon: ReactNode
+  /** Синонимы для поиска по меню («smtp» находит «Почта»). На /admin их даёт сама
+   *  секция, на остальных страницах они приезжают вместе со ссылкой. */
+  keywords?: string[]
 }
 
 export interface AdminNavGroup {
@@ -62,7 +65,8 @@ export function AdminNav({
 
   const byId = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections])
   // Поиск фильтрует и ссылки: пунктов больше десятка, и «где тут теги» — обычный вопрос.
-  const hit = (label: string) => !query || label.toLowerCase().includes(query)
+  const hit = (l: AdminLink) =>
+    !query || l.label.toLowerCase().includes(query) || (l.keywords ?? []).some((k) => k.toLowerCase().includes(query))
   const sectionHit = (s: SettingsSection) => !query || s.title.toLowerCase().includes(query) || s.keywords.some((k) => k.toLowerCase().includes(query))
 
   // Каркас и вид — общий SideNav (Ф10); здесь остаётся только логика админки:
@@ -72,7 +76,7 @@ export function AdminNav({
       title: g.title,
       items: [
         ...(g.links ?? [])
-          .filter((l) => hit(l.label))
+          .filter(hit)
           .map((l) => ({
             key: l.href,
             href: l.href,

@@ -1,6 +1,7 @@
 import { BarChart3, Flag, FolderGit2, LayoutDashboard, Megaphone, MessageSquare, Palette, Rss, ScrollText, Shield, Tag, TrendingUp } from 'lucide-react'
 import { t, tr, type Lang } from '@/shared/i18n'
 import type { AdminNavGroup } from './AdminNav'
+import { adminSettingsSections } from './settings-sections'
 
 /**
  * Разделы админки — ОДИН список на всё: и для меню на /admin, и для меню на вложенных
@@ -41,4 +42,21 @@ export function adminNavGroups(lang: Lang): AdminNavGroup[] {
 /** Пункт «настройки инстанса» — якоря секций самой /admin, их знает только та страница. */
 export function adminSettingsGroup(lang: Lang, sectionIds: string[]): AdminNavGroup {
   return { title: t('admin.instanceSettings', lang), sectionIds }
+}
+
+/**
+ * Та же группа для остальных страниц админки — обычными ссылками на /admin#<id>.
+ * Якоря со scrollspy работают только на самой /admin, но состав меню от страницы
+ * к странице меняться не должен: пропадающий раздел читается как потерянный.
+ */
+export function adminSettingsLinksGroup(lang: Lang): AdminNavGroup {
+  return {
+    title: t('admin.instanceSettings', lang),
+    links: adminSettingsSections(lang).map((s) => ({
+      href: `/admin#${s.id}`,
+      label: s.title,
+      icon: s.icon,
+      keywords: s.keywords,
+    })),
+  }
 }
