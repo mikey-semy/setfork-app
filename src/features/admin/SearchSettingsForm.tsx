@@ -1,5 +1,6 @@
 'use client'
 
+import { type Lang } from '@/shared/i18n'
 import { useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
@@ -8,7 +9,8 @@ import type { SearchMode, SearchSettings } from '@/shared/settings/search'
 import { setSearchSettings } from './actions'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 
-export function SearchSettingsForm({ current, ru }: { current: SearchSettings; ru: boolean }) {
+export function SearchSettingsForm({ current, lang }: { current: SearchSettings; lang: Lang }) {
+  const ru = lang === 'ru'
   const [mode, setMode] = useState<SearchMode>(current.mode)
   const vector = mode !== 'keyword'
 
@@ -70,7 +72,7 @@ export function SearchSettingsForm({ current, ru }: { current: SearchSettings; r
         </Field>
       </div>
 
-      <FormSaveBar ru={ru} />
+      <FormSaveBar lang={lang} />
     </form>
   )
 }

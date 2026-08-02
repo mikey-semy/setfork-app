@@ -17,7 +17,6 @@ type NavItem = { href: string; label: string; icon: typeof Home }
 export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolean; topLists: ListsPanelItem[] }) {
   const { collapsed, toggleCollapsed, mobileOpen, setMobileOpen } = useSidebar()
   const pathname = usePathname()
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
 
   const items: NavItem[] = [
@@ -103,11 +102,11 @@ export function Sidebar({ lang, authed, topLists }: { lang: Lang; authed: boolea
             <button
               type="button"
               onClick={toggleCollapsed}
-              aria-label={say('Hide menu', 'Скрыть меню')}
+              aria-label={t('nav.hideMenu', lang)}
               className="mt-2 flex h-8 shrink-0 items-center gap-2 rounded-md px-2.5 text-[0.78125rem] text-muted hover:bg-surface-2 hover:text-ink"
             >
               <ChevronLeft size={15} className="shrink-0" />
-              {say('Collapse', 'Свернуть')}
+              {t('nav.collapse', lang)}
             </button>
           </div>
         )}

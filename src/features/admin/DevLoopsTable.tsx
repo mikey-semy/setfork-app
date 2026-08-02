@@ -4,7 +4,7 @@ import { Pause, Play } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { DataTableV2, type ColumnDef } from '@/shared/ui/data-table/DataTableV2'
 import { nodeColumn } from '@/shared/ui/data-table/column-builders'
-import { tr, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { resetLoopCircuit, toggleLoopDryRun, toggleLoopPause } from '@/features/admin/actions'
 
 /**
@@ -24,40 +24,40 @@ export function DevLoopsTable({ rows, lang }: { rows: LoopRow[]; lang: Lang }) {
   const columns: ColumnDef<LoopRow, unknown>[] = [
     nodeColumn<LoopRow>({
       id: 'loop',
-      header: tr({ en: 'Loop', ru: 'Петля' }, lang),
+      header: t('admin.loop', lang),
       render: (r) => <span className="block min-w-0 truncate font-mono text-[0.78125rem] text-ink">{r.type}</span>,
     }),
     nodeColumn<LoopRow>({
       id: 'state',
-      header: tr({ en: 'State', ru: 'Состояние' }, lang),
+      header: t('admin.state', lang),
       size: 112,
       render: (r) => (
         <span className={`block text-right text-[0.78125rem] ${r.circuitTripped ? 'text-danger' : r.paused ? 'text-warn' : 'text-ok'}`}>
           {r.circuitTripped
-            ? tr({ en: 'breaker tripped', ru: 'предохранитель' }, lang)
+            ? t('admin.breakerTripped', lang)
             : r.paused
-              ? tr({ en: 'paused', ru: 'остановлена' }, lang)
-              : tr({ en: 'running', ru: 'работает' }, lang)}
+              ? t('admin.paused', lang)
+              : t('admin.running', lang)}
         </span>
       ),
     }),
     nodeColumn<LoopRow>({
       id: 'dryRun',
-      header: tr({ en: 'Dry run', ru: 'Сухой прогон' }, lang),
+      header: t('admin.dryRun', lang),
       size: 112,
       render: (r) => (
         <form action={toggleLoopDryRun} className="text-right">
           <input type="hidden" name="type" value={r.type} />
           <input type="hidden" name="dryRun" value={String(r.dryRun)} />
           <Button type="submit" size="md">
-            {r.dryRun ? tr({ en: 'on', ru: 'вкл' }, lang) : tr({ en: 'off', ru: 'выкл' }, lang)}
+            {r.dryRun ? t('admin.on', lang) : t('admin.off2', lang)}
           </Button>
         </form>
       ),
     }),
     nodeColumn<LoopRow>({
       id: 'switch',
-      header: tr({ en: 'Switch', ru: 'Рубильник' }, lang),
+      header: t('admin.switch', lang),
       size: 112,
       render: (r) => (
         // flex-wrap: в карточной мобиле «Сбросить» + «Пустить» стоят в половине ширины карточки.
@@ -66,7 +66,7 @@ export function DevLoopsTable({ rows, lang }: { rows: LoopRow[]; lang: Lang }) {
             <form action={resetLoopCircuit}>
               <input type="hidden" name="type" value={r.type} />
               <Button type="submit" variant="danger" size="md">
-                {tr({ en: 'Reset', ru: 'Сбросить' }, lang)}
+                {t('admin.reset', lang)}
               </Button>
             </form>
           )}
@@ -75,7 +75,7 @@ export function DevLoopsTable({ rows, lang }: { rows: LoopRow[]; lang: Lang }) {
             <input type="hidden" name="paused" value={String(r.paused)} />
             <Button type="submit" size="md">
               {r.paused ? <Play size={13} /> : <Pause size={13} />}
-              {r.paused ? tr({ en: 'Resume', ru: 'Пустить' }, lang) : tr({ en: 'Pause', ru: 'Стоп' }, lang)}
+              {r.paused ? t('admin.resume', lang) : t('admin.pause', lang)}
             </Button>
           </form>
         </div>
@@ -86,13 +86,7 @@ export function DevLoopsTable({ rows, lang }: { rows: LoopRow[]; lang: Lang }) {
     <div className="flex min-w-0 flex-col gap-2">
       <DataTableV2<LoopRow> cardOnMobile rowKey={(r) => r.type} columns={columns} data={rows} />
       <p className="text-[0.6875rem] text-muted">
-        {tr(
-          {
-            en: 'Pause stops the queue from handing out this loop’s jobs — atomically, on every instance, without a restart. The breaker is tripped by code and cleared by a human.',
-            ru: 'Стоп прекращает выдачу задач этой петли — атомарно, на всех инстансах, без рестарта. Предохранитель ставит код, снимает человек.',
-          },
-          lang,
-        )}
+        {t('admin.pauseStopsQueueFrom', lang)}
       </p>
     </div>
   )

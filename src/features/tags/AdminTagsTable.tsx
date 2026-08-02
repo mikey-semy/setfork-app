@@ -14,7 +14,6 @@ import { deleteTag, mergeTags, refreshTagUsage, renameTag, setTagCurated } from 
 // Админ-реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.
 // Экшены (requireAdmin) — в ./actions; revalidatePath('/admin/tags') + router.refresh().
 export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   const router = useRouter()
   const { confirm, confirmDialog } = useConfirm()
   const [pending, start] = useTransition()
@@ -34,14 +33,14 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
   return (
     <div>
       <div className="mb-4 flex items-center gap-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={say('Filter tags…', 'Фильтр тегов…')} className="max-w-[17.5rem]" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('tags.filterTags', lang)} className="max-w-[17.5rem]" />
         <button
           type="button"
           onClick={() => run(() => refreshTagUsage())}
           disabled={pending}
           className="ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-surface px-3 py-1.5 text-[0.8125rem] font-medium text-ink hover:border-border-strong disabled:opacity-50"
         >
-          {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {say('Refresh usage', 'Пересчитать usage')}
+          {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {t('tags.refreshUsage', lang)}
         </button>
       </div>
 
@@ -49,9 +48,9 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
         <table className="w-full text-[0.8125rem]">
           <thead className="bg-surface-2 text-[0.6875rem] uppercase tracking-wide text-muted">
             <tr>
-              <th className="px-3 py-2 text-left font-semibold">{say('Tag', 'Тег')}</th>
+              <th className="px-3 py-2 text-left font-semibold">{t('tags.tag', lang)}</th>
               <th className="px-3 py-2 text-right font-semibold">usage</th>
-              <th className="px-3 py-2 text-right font-semibold">{say('Actions', 'Действия')}</th>
+              <th className="px-3 py-2 text-right font-semibold">{t('tags.actions', lang)}</th>
             </tr>
           </thead>
           <tbody>
@@ -68,7 +67,7 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                         autoFocus
                         value={val}
                         onChange={(e) => setVal(e.target.value)}
-                        placeholder={edit.mode === 'rename' ? say('New slug', 'Новый slug') : say('Merge into…', 'Слить в…')}
+                        placeholder={edit.mode === 'rename' ? t('tags.newSlug', lang) : t('tags.mergeInto', lang)}
                         className="max-w-[12.5rem]"
                       />
                       <button
@@ -95,24 +94,24 @@ export function AdminTagsTable({ tags, lang }: { tags: TagRow[]; lang: Lang }) {
                 <td className="px-3 py-2 text-right font-mono text-muted">{tg.usageCount}</td>
                 <td className="px-3 py-2">
                   <div className="flex items-center justify-end gap-1">
-                    <IconBtn title={tg.curated ? say('Uncurate', 'Снять курирование') : say('Curate', 'Курировать')} active={tg.curated} onClick={() => run(() => setTagCurated(tg.slug, !tg.curated))}>
+                    <IconBtn title={tg.curated ? t('tags.uncurate', lang) : t('tags.curate', lang)} active={tg.curated} onClick={() => run(() => setTagCurated(tg.slug, !tg.curated))}>
                       <Star size={14} />
                     </IconBtn>
-                    <IconBtn title={say('Rename', 'Переименовать')} onClick={() => { setEdit({ slug: tg.slug, mode: 'rename' }); setVal('') }}>
+                    <IconBtn title={t('common.rename', lang)} onClick={() => { setEdit({ slug: tg.slug, mode: 'rename' }); setVal('') }}>
                       <Pencil size={14} />
                     </IconBtn>
-                    <IconBtn title={say('Merge', 'Слить')} onClick={() => { setEdit({ slug: tg.slug, mode: 'merge' }); setVal('') }}>
+                    <IconBtn title={t('tags.merge', lang)} onClick={() => { setEdit({ slug: tg.slug, mode: 'merge' }); setVal('') }}>
                       <GitMerge size={14} />
                     </IconBtn>
                     <IconBtn
-                      title={say('Delete', 'Удалить')}
+                      title={t('common.delete', lang)}
                       danger
                       onClick={async () => {
                         // Необратимая массовая операция — type-to-confirm по slug'у тега.
                         const ok = await confirm({
-                          title: say(`Delete tag "${tg.slug}"?`, `Удалить тег «${tg.slug}»?`),
-                          intro: say('It is removed from all lists.', 'Он исчезнет из всех списков.'),
-                          confirmLabel: say('Delete', 'Удалить'),
+                          title: t('tags.deleteTagConfirm', lang).replace('{slug}', tg.slug),
+                          intro: t('tags.itRemovedFromAll', lang),
+                          confirmLabel: t('common.delete', lang),
                           cancelLabel: t('cancel', lang),
                           confirmPhrase: tg.slug,
                           confirmHint: t('dangerConfirmHint', lang),

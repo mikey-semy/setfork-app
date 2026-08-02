@@ -134,7 +134,6 @@ export default async function ListPage({
   const viewer = await getSession()
   // Писать можно только в текущую версию — см. readOnlyView выше.
   const canInteract = !!viewer && !readOnlyView
-  const say = (en: string, rus: string) => (lang === 'ru' ? rus : en) // строки-аргументами (i18n-lint)
   const isOwner = viewer?.userId === tpl.ownerId
   // Точка на кирке: у каких пунктов есть сохранённая dig-сессия зрителя (resilient — [] без таблицы).
   const digSteps = viewer && !readOnlyView ? await digStepsWithSession(tpl.id, viewer.userId) : new Set<number>()
@@ -431,11 +430,11 @@ export default async function ListPage({
                   lang={lang}
                   labels={{
                     history: t('versionsTab', lang),
-                    expand: say('Show full message', 'Показать сообщение целиком'),
-                    collapse: say('Hide message', 'Свернуть сообщение'),
-                    commitLink: say('This commit in history', 'Этот коммит в истории'),
-                    and: say(' and ', ' и '),
-                    others: say('and {n} others', 'и ещё {n}'),
+                    expand: t('list.showFullMessage', lang),
+                    collapse: t('list.hideMessage', lang),
+                    commitLink: t('list.thisCommitHistory', lang),
+                    and: t('list.and', lang),
+                    others: t('list.andNOthers', lang),
                   }}
                 />
               </>
@@ -487,11 +486,11 @@ export default async function ListPage({
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <Tag size={13} className="shrink-0 text-accent" />
                 <span className="min-w-0 flex-1 truncate">
-                  {say('Version', 'Версия')} <b>v{histNum}</b>
+                  {t('list.version', lang)} <b>v{histNum}</b>
                   <span className="hidden sm:inline">
                     {' '}
                     · {timeAgo(histVer.createdAt, lang)} ·{' '}
-                    {say(`read-only, current is v${curNum}`, `только чтение, текущая — v${curNum}`)}
+                    {t('list.readOnlyCurrentV', lang).replace('{v}', String(curNum))}
                   </span>
                 </span>
                 <span className="flex items-center gap-2 max-sm:w-full max-sm:justify-end">
@@ -499,14 +498,14 @@ export default async function ListPage({
                     <form action={revertToVersion.bind(null, tpl.id, histNum)}>
                       <Button type="submit" variant="primary">
                         <History size={13} />
-                        <span className="max-sm:hidden">{say('Restore this version', 'Вернуть эту версию')}</span>
-                        <span className="sm:hidden">{say('Restore', 'Вернуть')}</span>
+                        <span className="max-sm:hidden">{t('list.restoreVersion', lang)}</span>
+                        <span className="sm:hidden">{t('list.restore', lang)}</span>
                       </Button>
                     </form>
                   )}
                   <Link href={base}>
                     <Button variant="outline">
-                      {say(`To v${curNum}`, `К v${curNum}`)}
+                      {t('list.toV', lang).replace('{v}', String(curNum))}
                     </Button>
                   </Link>
                 </span>
@@ -673,7 +672,7 @@ export default async function ListPage({
                         при переносе заголовка она уплывала в середину — фидбек владельца). */}
                     {viewer && !readOnlyView && typeof s.n === 'number' && (
                       <span className="absolute right-2 top-2 print:hidden">
-                        <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={say('Dig into this step', 'Копнуть этот пункт')} hasSession={digSteps.has(s.n)} />
+                        <DigChatOpen detail={{ templateId: tpl.id, stepN: s.n, stepTitle: tr(s.title, lang) }} label={t('list.digIntoStep', lang)} hasSession={digSteps.has(s.n)} />
                       </span>
                     )}
                     <div className="flex gap-3">
@@ -777,7 +776,7 @@ export default async function ListPage({
           <PageAside>
             <CourseOutline lessons={lessons} showProgress={!!viewer} lang={lang} />
             {backlinks.length > 0 && (
-              <AsideCard title={say('Linked from', 'Ссылаются на этот список')}>
+              <AsideCard title={t('list.linkedFrom', lang)}>
                 <ul className="flex flex-col gap-1.5">
                   {backlinks.map((b) => (
                     <li key={`${b.handle}/${b.slug}`}>

@@ -17,8 +17,20 @@ const failJob = vi.fn(async () => false)
 const reapStalledJobs = vi.fn(async () => ({ reaped: 0, abandoned: [] as unknown[] }))
 const claimUnfinalizedJobs = vi.fn(async () => [] as unknown[])
 const markFinalized = vi.fn(async () => {})
+const touchJob = vi.fn(async () => {})
+const cleanupTerminalJobs = vi.fn(async () => 0)
 
-vi.mock('@/shared/jobs/queue', () => ({ claimJob, claimUnfinalizedJobs, completeJob, failJob, reapStalledJobs, markFinalized, finalizeExhausted: (j: { finalizeAttempts?: number }) => (j.finalizeAttempts ?? 0) >= 5 }))
+vi.mock('@/shared/jobs/queue', () => ({
+  claimJob,
+  claimUnfinalizedJobs,
+  completeJob,
+  failJob,
+  reapStalledJobs,
+  markFinalized,
+  touchJob,
+  cleanupTerminalJobs,
+  finalizeExhausted: (j: { finalizeAttempts?: number }) => (j.finalizeAttempts ?? 0) >= 5,
+}))
 
 const full = (over: Record<string, JobHandler> = {}): Record<string, JobHandler> => ({
   ...Object.fromEntries(JOB_TYPES.map((t) => [t, async () => {}] as const)),

@@ -1,6 +1,7 @@
 import 'server-only'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { getAiProviderConfig, type AiProviderConfig } from '@/shared/settings/ai'
+import { type AiProviderConfig } from '@/shared/settings/ai'
+import { generationProviderConfig } from './provider-failover'
 import { getGigaChatToken } from './gigachat-token'
 
 // Единая точка создания chat-модели для generateText/generateObject.
@@ -21,7 +22,9 @@ export interface AiChatClient {
 }
 
 export async function getAiChatClient(): Promise<AiChatClient | null> {
-  const cfg = await getAiProviderConfig()
+  // Провайдер ДЛЯ ГЕНЕРАЦИИ: если активный не отвечает, а запасной задан и жив — работаем
+  // на запасном. Решение кешируется на минуту, поэтому выбор модели ниже увидит того же.
+  const cfg = await generationProviderConfig()
   if (!cfg) return null
   let bearer = cfg.apiKey
   if (cfg.provider === 'gigachat') {

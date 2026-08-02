@@ -6,6 +6,7 @@ import type { GenerationCandidate } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
 import { safeHref } from '@/shared/lib/safe-url'
 import { detectLang, LANG_LABEL } from '@/shared/ui/detect-lang'
+import { t } from '@/shared/i18n'
 
 /**
  * Вариант списка карточкой. СВЁРНУТ по умолчанию (фидбек владельца: показывать
@@ -25,7 +26,6 @@ export function CandidateCard({
   onSelect: () => void
   lang: Lang
 }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   const [open, setOpen] = useState(false)
   return (
     <button
@@ -59,7 +59,7 @@ export function CandidateCard({
         </div>
       )}
       {!open && (
-        <div className="mt-2 text-[0.6875rem] text-muted">{say('Tap to see the full list', 'Нажми — покажу список целиком')}</div>
+        <div className="mt-2 text-[0.6875rem] text-muted">{t('generation.tapSeeFullList', lang)}</div>
       )}
       {/* Секции (напр. рецепт: «Ингредиенты» / «Приготовление») — двойной список, а не всё в кучу.
           Группируем по item.section; нет секций → плоский список, как раньше. Нумерация внутри секции. */}

@@ -1,5 +1,6 @@
 'use client'
 
+import { type Lang } from '@/shared/i18n'
 import { useRef, useState, useTransition } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
@@ -11,7 +12,8 @@ import type { AchDisplayMap } from '@/features/profile/achievement-config'
 import { removeAchievementImage, setAchievementEnabled, uploadAchievementImage } from './achievement-actions'
 
 /** Админ-панель достижений: вкл/выкл + своя картинка (drag-and-drop) на каждое. */
-export function AchievementsAdmin({ initial, ru }: { initial: AchDisplayMap; ru: boolean }) {
+export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; lang: Lang }) {
+  const ru = lang === 'ru'
   const [map, setMap] = useState<AchDisplayMap>(initial)
   const [pending, start] = useTransition()
   const [err, setErr] = useState('')

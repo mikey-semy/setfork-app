@@ -174,7 +174,7 @@ export function MonetizationSettingsForm({ lang, v }: { lang: Lang; v: Monetizat
         <Input name="donateUrl" defaultValue={v.donateUrl} placeholder="https://…" className="font-mono" />
       </Field>
 
-      <FormSaveBar ru={lang === 'ru'} />
+      <FormSaveBar lang={lang} />
     </form>
   )
 }

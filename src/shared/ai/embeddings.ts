@@ -1,6 +1,7 @@
 import 'server-only'
 import { getAiProviderRaw, getOpenRouterApiKey } from '@/shared/settings/ai'
-import { COLUMN_DIM, fitToColumn, getIndexSpace, type EmbedSpace } from './embed-space'
+import { COLUMN_DIM, fitToColumn, getIndexSpace, type EmbedProvider, type EmbedSpace } from './embed-space'
+import { rememberCapability } from './embed-capability'
 import { recordUsage } from './usage'
 
 // Эмбеддинги идут по ПРОСТРАНСТВУ ИНДЕКСА (embed-space): и документы при
@@ -75,27 +76,49 @@ function cacheSet(key: string, vec: number[]): void {
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
-/** Один HTTP-вызов /embeddings: вектора (отсортированы по index) + токены.
+export interface EmbedResponse {
+  /** СЫРЫЕ вектора провайдера, отсортированы по index. К колонке приводит вызывающий:
+   *  проба совместимости обязана видеть настоящую мерность, а не уже подогнанную. */
+  vectors: number[][]
+  tokens: number
+  /** Цена вызова из ответа провайдера (OpenRouter отдаёт usage.cost), USD. 0 = не сказал. */
+  costUsd: number
+  /** Приняла ли модель параметр dimensions (false = пришлось звать без него). */
+  dimsAccepted: boolean
+}
+
+/** Один HTTP-вызов /embeddings.
  *  429 ретраится с бэкоффом (Retry-After провайдера или 1с/2с/4с) — реиндекс
- *  по одному тексту упирался в RPS-лимит Яндекса (прод 2026-07-22). */
+ *  по одному тексту упирался в RPS-лимит Яндекса (прод 2026-07-22).
+ *  400 с dimensions — НЕ приговор: часть моделей параметра не знает. Такой отказ
+ *  ровно один раз переспрашиваем без него и сообщаем об этом наверх, чтобы факт
+ *  запомнился (embed-capability), а не проверялся регуляркой по имени вендора. */
 async function requestEmbeddings(
   ep: { url: string; headers: Record<string, string> },
   model: string,
   input: string[],
-  withDims: boolean,
-  dims: number,
-): Promise<{ vectors: number[][]; tokens: number } | null> {
+  dims: number | null,
+): Promise<EmbedResponse | null> {
+  let sendDims = dims
   let res: Response | null = null
   for (let attempt = 0; attempt < 4; attempt++) {
     res = await fetch(ep.url, {
       method: 'POST',
       headers: ep.headers,
-      body: JSON.stringify({ model, input, ...(withDims ? { dimensions: dims } : {}) }),
+      body: JSON.stringify({ model, input, ...(sendDims ? { dimensions: sendDims } : {}) }),
       signal: AbortSignal.timeout(20_000),
     })
-    if (res.status !== 429 || attempt === 3) break
-    const retryAfter = Number(res.headers.get('retry-after')) * 1000
-    await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 10_000) : 1000 * 2 ** attempt)
+    if (res.status === 429 && attempt < 3) {
+      const retryAfter = Number(res.headers.get('retry-after')) * 1000
+      await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 10_000) : 1000 * 2 ** attempt)
+      continue
+    }
+    // Параметр не принят — пробуем без него (модель просто отдаст родную мерность).
+    if ((res.status === 400 || res.status === 422) && sendDims) {
+      sendDims = null
+      continue
+    }
+    break
   }
   if (!res || !res.ok) {
     console.warn(`[embeddings] HTTP ${res?.status} (model=${model})`)
@@ -103,15 +126,40 @@ async function requestEmbeddings(
   }
   const data = (await res.json()) as {
     data?: { embedding: number[]; index?: number }[]
-    usage?: { prompt_tokens?: number; total_tokens?: number }
+    usage?: { prompt_tokens?: number; total_tokens?: number; cost?: number }
   }
   if (!Array.isArray(data.data)) return null
   // Сортировка по index (фикс по ревью): спека OpenAI-совместимого ответа не гарантирует
   // порядок, а с чанками шагов путаница вектора списка и шага была бы тихой порчей индекса.
-  const vectors = [...data.data]
-    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-    .map((d) => fitToColumn(d.embedding))
-  return { vectors, tokens: data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0 }
+  const vectors = [...data.data].sort((a, b) => (a.index ?? 0) - (b.index ?? 0)).map((d) => d.embedding)
+  return {
+    vectors,
+    tokens: data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0,
+    // Цену эмбеддингов провайдер ОТДАЁТ (проверено живьём на OpenRouter): писать ноль
+    // значило скрывать расход от дневного капа и дашборда.
+    costUsd: Number(data.usage?.cost) || 0,
+    dimsAccepted: sendDims !== null || dims === null,
+  }
+}
+
+/**
+ * ПРОБА СОВМЕСТИМОСТИ: один короткий вызов, который отвечает на вопрос «что эта модель
+ * реально отдаёт, когда просишь мерность колонки». Стоит доли цента и заменяет собой список
+ * «известных» моделей в коде — тот устаревает молча и врал про 31 модель каталога.
+ */
+export async function probeEmbedModel(
+  provider: EmbedProvider,
+  model: string,
+): Promise<{ dim: number; dimsAccepted: boolean } | { error: string }> {
+  const ep = await endpointFor({ provider, docModel: model, queryModel: model, dim: COLUMN_DIM })
+  if (!ep) return { error: 'no-key' }
+  try {
+    const r = await requestEmbeddings(ep, model, ['probe'], COLUMN_DIM)
+    if (!r || !r.vectors[0]?.length) return { error: 'no-vector' }
+    return { dim: r.vectors[0].length, dimsAccepted: r.dimsAccepted }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'network error' }
+  }
 }
 
 export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: EmbedMeta): Promise<number[][] | null> {
@@ -125,35 +173,42 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
     const hit = cacheGet(cacheKey)
     if (hit) return [hit]
   }
-  // dimensions: Яндексу ОБЯЗАТЕЛЕН (дефолт v2 — 256), text-embedding-3-* умеет MRL;
-  // прочим не шлём — не все OpenRouter-модели принимают параметр (усечёт fitToColumn).
-  const withDims = space.provider === 'yandex' || /text-embedding-3/.test(model)
-  const dims = Math.min(space.dim, EMBEDDING_DIM)
+  // dimensions просим ВСЕГДА: не знает модель этого параметра — узнаем из её же ответа
+  // (requestEmbeddings переспросит без него), а не из списка «кто умеет» в коде.
+  const dims = space.dim
   try {
-    let out: number[][]
+    let raw: number[][]
     let tokens = 0
+    let costUsd = 0
+    let dimsAccepted = true
     if (space.provider === 'yandex' && texts.length > 1) {
       // Яндекс OpenAI-compat принимает РОВНО один текст на запрос («Array input
       // must contain exactly one string», прод 2026-07-22: реиндекс батчами по 32
       // ловил 400 и молча писал NULL-вектора). Шлём последовательно по одному —
       // и отдаём null ЦЕЛИКОМ, если упал хоть один: частичный батч = дыры в индексе.
-      out = []
+      raw = []
       for (const [i, t] of texts.entries()) {
         if (i > 0) await sleep(150) // щадим RPS-лимит Яндекса между запросами
-        const one = await requestEmbeddings(ep, model, [t], withDims, dims)
+        const one = await requestEmbeddings(ep, model, [t], dims)
         if (!one) return null
-        out.push(one.vectors[0])
+        raw.push(one.vectors[0])
         tokens += one.tokens
+        costUsd += one.costUsd
+        dimsAccepted = dimsAccepted && one.dimsAccepted
       }
     } else {
-      const r = await requestEmbeddings(ep, model, texts, withDims, dims)
+      const r = await requestEmbeddings(ep, model, texts, dims)
       if (!r) return null
-      out = r.vectors
+      raw = r.vectors
       tokens = r.tokens
+      costUsd = r.costUsd
+      dimsAccepted = r.dimsAccepted
     }
+    // Что модель ответила — ФАКТ: запоминаем (без сети) и приводим к колонке.
+    if (raw[0]?.length) void rememberCapability(space.provider, model, raw[0].length, dimsAccepted)
+    const out = raw.map(fitToColumn)
     // Эмбеддинги готовы — фиксируем их ДО учёта расхода, чтобы результат не зависел
     // от записи в ai_usage (recordUsage к тому же гасит свои ошибки и не бросает).
-    // Учёт расхода: стоимость эмбеддингов провайдер в теле не возвращает — токены, cost 0.
     await recordUsage({
       userId: meta?.userId ?? null,
       feature: 'embed',
@@ -161,7 +216,8 @@ export async function embedTexts(texts: string[], purpose: EmbedPurpose, meta?: 
       input: tokens,
       output: 0,
       total: tokens,
-      cost: 0,
+      // Цена из ответа провайдера; нет её — прайс-слой оценит по токенам (recordUsage).
+      cost: costUsd,
       refType: meta?.refType,
       refId: meta?.refId,
       provider: space.provider,

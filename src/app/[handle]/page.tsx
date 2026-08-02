@@ -220,7 +220,7 @@ export default async function ProfilePage({
                 заблуждение. Пометка ДАННЫЕ (account_type), а не догадка по нику. */}
             {user.accountType === 'agent' && (
               <div className="mt-2 inline-flex items-center rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-semibold text-ink-2">
-                {tr({ en: 'Service account', ru: 'Служебный аккаунт' }, lang)}
+                {t('list.serviceAccount', lang)}
               </div>
             )}
           </div>
@@ -323,7 +323,7 @@ export default async function ProfilePage({
               {agent && agent.tended.length > 0 && (
                 <div className="mb-6 min-w-0">
                   <div className="mb-2 text-[0.78125rem] font-semibold text-ink-2">
-                    {tr({ en: 'Tends these lists', ru: 'Ведёт эти списки' }, lang)}
+                    {t('list.tendsTheseLists', lang)}
                   </div>
                   <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
                     {agent.tended.map((it) => (
@@ -341,13 +341,7 @@ export default async function ProfilePage({
                     ))}
                   </ul>
                   <p className="mt-2 text-[0.6875rem] text-muted">
-                    {tr(
-                      {
-                        en: 'Responsibility zone by domain — the lists are their authors’, not this account’s.',
-                        ru: 'Зона ответственности по доменам — списки принадлежат своим авторам, не этому аккаунту.',
-                      },
-                      lang,
-                    )}
+                    {t('list.responsibilityZoneByDomain', lang)}
                   </p>
                 </div>
               )}

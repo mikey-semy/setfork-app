@@ -7,6 +7,9 @@ import { appSettings, db } from '@/shared/db'
 export const API_KEY_SETTING = 'ai.api_key'
 
 export interface AiSettings {
+  /** Провайдер, для которого разрешены модели ниже: они лежат в ЕГО неймспейсе.
+   *  Без этого поля нельзя понять, годятся ли настройки при уходе на запасного. */
+  provider: AiProviderId
   enabled: boolean
   chatModel: string
   fallbackModel: string
@@ -174,6 +177,14 @@ export function resolveAiProvider(
     : null
 }
 
+/** Откуда взялся ключ: из базы (правится в админке), из env стенда, или его нет вовсе.
+ *  Показывается в интерфейсе: без этого «ключ есть или нет» и «почему он исчез после
+ *  перезапуска» — неотвечаемые вопросы, а поле с маской выглядит одинаково в обоих случаях. */
+export type KeySource = 'db' | 'env' | 'none'
+
+export const keySource = (dbValue: string | undefined, envValue: string | undefined): KeySource =>
+  dbValue?.trim() ? 'db' : envValue?.trim() ? 'env' : 'none'
+
 /** Сырые провайдер-настройки для админки (БД → env). Ключи маскирует вызывающий. */
 export async function getAiProviderRaw(): Promise<{
   provider: AiProviderId
@@ -183,6 +194,7 @@ export async function getAiProviderRaw(): Promise<{
   yandexFolder: string
   gigachatKey: string
   yandexSearchKey: string
+  sources: Record<AiProviderId, KeySource>
 }> {
   const rows = await db
     .select()
@@ -198,6 +210,15 @@ export async function getAiProviderRaw(): Promise<{
     yandexFolder: m[YANDEX_FOLDER_SETTING] || process.env.YC_AI_FOLDER_ID?.trim() || '',
     gigachatKey: m[GIGACHAT_KEY_SETTING] || process.env.GIGACHAT_AUTH_KEY?.trim() || '',
     yandexSearchKey: m[YANDEX_SEARCH_KEY_SETTING] || process.env.YC_SEARCH_API_KEY?.trim() || '',
+    // Откуда именно взялся ключ — в интерфейс. «Ключ есть» с маской выглядит одинаково и
+    // когда он лежит в базе, и когда приходит из env стенда, а ведут себя эти случаи
+    // по-разному: env переживает сброс базы, база переживает передеплой без env.
+    sources: {
+      openrouter: keySource(m[API_KEY_SETTING], process.env.OPENROUTER_API_KEY),
+      selectel: keySource(m[SELECTEL_KEY_SETTING], process.env.SELECTEL_AI_KEY),
+      yandex: keySource(m[YANDEX_KEY_SETTING], process.env.YC_AI_API_KEY),
+      gigachat: keySource(m[GIGACHAT_KEY_SETTING], process.env.GIGACHAT_AUTH_KEY),
+    },
   }
 }
 
@@ -366,6 +387,7 @@ export async function getAiSettings(): Promise<AiSettings> {
   // Модели/пороги — из неймспейса АКТИВНОГО провайдера (легаси-ключи = фолбэк openrouter).
   const models = resolveModelSettings(m, provider)
   return {
+    provider,
     enabled: m['ai.enabled'] != null ? m['ai.enabled'] === 'true' : hasAiEnvConfig(),
     chatModel: models.chatModel,
     fallbackModel: models.fallbackModel,

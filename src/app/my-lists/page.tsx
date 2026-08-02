@@ -16,7 +16,6 @@ export async function generateMetadata() {
 
 export default async function MyListsPage({ searchParams }: { searchParams: Promise<{ sq?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   let items = session ? await getUserTemplates(session.userId, session.userId) : []
   const hadAny = items.length > 0
   // Сохранённые запросы (HQ §11): чипы-фильтры; ?sq=<id> применяется на сервере.
@@ -35,7 +34,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
             actions={
               <Link
                 href="/new"
-                className="inline-flex h-[2.375rem] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.875rem] font-semibold text-primary-fg hover:opacity-90"
+                className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
               >
                 {t('newList', lang)}
               </Link>
@@ -65,7 +64,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
                   когда списков сотни, — тогда им место в отдельном разделе, а не здесь.
                   Код фич не удалён: вернуть их дешевле, чем написать заново. */}
               {items.length === 0 ? (
-                <div className="py-10 text-center text-[0.8125rem] text-muted">{say('Nothing matches this query', 'Под запрос ничего не попало')}</div>
+                <div className="py-10 text-center text-[0.8125rem] text-muted">{t('library.nothingMatchesQuery', lang)}</div>
               ) : (
                 <FeedList items={items} lang={lang} viewerId={session.userId} />
               )}

@@ -103,7 +103,7 @@ export function MirrorSection({
           </div>
         )}
 
-        <FormSaveBar ru={lang === 'ru'} />
+        <FormSaveBar lang={lang} />
       </form>
 
       {/* Вторичные действия — ОТДЕЛЬНЫМИ формами, не formAction той же формы

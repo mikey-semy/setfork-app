@@ -85,9 +85,11 @@ jobs:
         # хрупкость) — детерминированно дампим полный DDL из schema.ts и накатываем.
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          # Бутстрап вне схемы (линза 07): расширения до DDL, канон поиска (0028) после.
+          npx tsx scripts/db-bootstrap.ts pre
           npx drizzle-kit export > "$RUNNER_TEMP/schema.sql"
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/schema.sql"
+          npx tsx scripts/db-bootstrap.ts post
 
       # Админ для c9 (UI Kit) сидируется НАПРЯМУЮ: регистрация ников из
       # ADMIN_HANDLES запрещена самим приложением (защита свободного

@@ -57,8 +57,6 @@ export default async function ForksPage({ params }: { params: Promise<{ handle: 
   const [{ handle: owner, slug }, lang] = await Promise.all([params, getLang()])
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  const say = (en: string, ru: string) => ((lang as Lang) === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
-
   const rows = await forkTree(meta.id)
   const fresh = (iso: string) => Date.now() - new Date(iso).getTime() < 7 * 24 * 60 * 60 * 1000
 
@@ -70,12 +68,12 @@ export default async function ForksPage({ params }: { params: Promise<{ handle: 
       </Link>
       <PageHeader
         icon={<GitFork size={17} />}
-        title={say('Fork tree', 'Дерево форков')}
-        subtitle={say('Who grew what from this list; branches edited this week glow.', 'Кто и что вырастил из этого списка; ветви с правками за неделю подсвечены.')}
+        title={t('list.forkTree', lang)}
+        subtitle={t('list.whoGrewWhatFrom', lang)}
       />
 
       {rows.length === 0 ? (
-        <p className="mt-8 text-[0.8125rem] text-muted">{say('No public forks yet — be the first to grow a branch.', 'Публичных форков пока нет — стань первой ветвью.')}</p>
+        <p className="mt-8 text-[0.8125rem] text-muted">{t('list.noPublicForksYet', lang)}</p>
       ) : (
         <ul className="mt-5 flex flex-col gap-1.5">
           {rows.map((r) => (

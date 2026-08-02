@@ -118,7 +118,7 @@ export default async function ListSettingsPage({ params }: { params: Promise<{ h
     },
     {
       id: 'living',
-      title: tr({ en: 'Living list', ru: 'Живой список' }, lang),
+      title: t('common.livingList', lang),
       icon: <Radio size={15} />,
       keywords: ['living', 'feed', 'fresh', 'news', 'updates', 'живой', 'лента', 'свежесть', 'новости', 'обновления'],
       content: <LivingSection templateId={meta.id} living={meta.living} lang={lang} />,

@@ -6,6 +6,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getImprovementFeed } from '@/features/improve/queries'
+import { EmptyState } from '@/shared/ui/EmptyState'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -31,11 +32,13 @@ export default async function ImprovePage() {
       />
 
       {items.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border py-14 text-center text-[0.8125rem] text-muted">
-          {ru
-            ? 'Пока нечего улучшать — отмечайте звёздами и прогоняйте списки, и здесь появятся те, что ждут вашего вклада.'
-            : 'Nothing to improve yet — star and run lists, and the ones awaiting your contribution will show up here.'}
-        </div>
+        <EmptyState
+          hint={
+            ru
+              ? 'Пока нечего улучшать — отмечайте звёздами и прогоняйте списки, и здесь появятся те, что ждут вашего вклада.'
+              : 'Nothing to improve yet — star and run lists, and the ones awaiting your contribution will show up here.'
+          }
+        />
       ) : (
         <ul className="flex flex-col gap-3">
           {items.map((it) => {

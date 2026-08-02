@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/button'
 import { DataTableV2 } from '@/shared/ui/data-table/DataTableV2'
 import { nodeColumn, numberColumn } from '@/shared/ui/data-table/column-builders'
 import { cn } from '@/shared/lib/cn'
-import { tr, type Lang } from '@/shared/i18n'
+import { t, tr, type Lang } from '@/shared/i18n'
 import { selfGenerateNow } from '@/features/admin/actions'
 import { Tooltip } from '@/shared/ui/Tooltip'
 
@@ -41,10 +41,10 @@ export interface CouncilRow {
 
 /** Подпись стадии карьеры. Слово «гном» в интерфейсе не появляется — только «специалист». */
 function stageLabel(s: CouncilRow['lifecycle'], lang: Lang): { text: string; cls: string } {
-  if (s === 'active') return { text: tr({ en: 'in service', ru: 'в строю' }, lang), cls: 'text-ok' }
-  if (s === 'idle') return { text: tr({ en: 'at risk', ru: 'под риском' }, lang), cls: 'text-warn' }
-  if (s === 'dormant') return { text: tr({ en: 'dormant', ru: 'спит' }, lang), cls: 'text-muted' }
-  return { text: tr({ en: 'archived', ru: 'в архиве' }, lang), cls: 'text-muted' }
+  if (s === 'active') return { text: t('admin.inService', lang), cls: 'text-ok' }
+  if (s === 'idle') return { text: t('admin.atRisk', lang), cls: 'text-warn' }
+  if (s === 'dormant') return { text: t('admin.dormant', lang), cls: 'text-muted' }
+  return { text: t('admin.archived', lang), cls: 'text-muted' }
 }
 
 export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lang: Lang; canAssign: boolean }) {
@@ -56,7 +56,7 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
         columns={[
           nodeColumn<CouncilRow>({
             id: 'specialist',
-            header: tr({ en: 'Specialist', ru: 'Специалист' }, lang),
+            header: t('admin.specialist', lang),
             render: (r) => (
               <div className={cn('flex min-w-0 items-center gap-2.5', !r.enabled && 'opacity-60')}>
                 <Avatar handle={r.handle ?? r.id} avatarUrl={r.avatarUrl} size={28} />
@@ -72,10 +72,10 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
                       </Link>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-warn">
-                        <CircleUser size={11} /> {tr({ en: 'no account', ru: 'нет аккаунта' }, lang)}
+                        <CircleUser size={11} /> {t('admin.noAccount', lang)}
                       </span>
                     )}
-                    {!r.enabled && <span>· {tr({ en: 'off', ru: 'выключен' }, lang)}</span>}
+                    {!r.enabled && <span>· {t('admin.off', lang)}</span>}
                   </div>
                 </div>
               </div>
@@ -83,7 +83,7 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
           }),
           nodeColumn<CouncilRow>({
             id: 'craft',
-            header: tr({ en: 'Craft', ru: 'Ремесло' }, lang),
+            header: t('admin.craft', lang),
             size: 132,
             render: (r) => (
               <Tooltip label={r.domains.join(', ')}>
@@ -95,15 +95,15 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
           }),
           nodeColumn<CouncilRow>({
             id: 'stage',
-            header: tr({ en: 'Stage', ru: 'Стадия' }, lang),
+            header: t('admin.stage', lang),
             size: 120,
             render: (r) => {
               const stage = stageLabel(r.lifecycle, lang)
               return <span className={cn('text-[0.78125rem]', stage.cls, !r.enabled && 'opacity-60')}>{stage.text}</span>
             },
           }),
-          numberColumn<CouncilRow>({ id: 'gens', header: tr({ en: 'Councils', ru: 'Советов' }, lang), size: 104, value: (r) => r.gens }),
-          numberColumn<CouncilRow>({ id: 'accepted', header: tr({ en: 'Accepted', ru: 'Принято' }, lang), size: 88, value: (r) => r.accepted }),
+          numberColumn<CouncilRow>({ id: 'gens', header: t('admin.councils', lang), size: 104, value: (r) => r.gens }),
+          numberColumn<CouncilRow>({ id: 'accepted', header: t('admin.accepted', lang), size: 88, value: (r) => r.accepted }),
         ]}
         data={rows}
       />
@@ -112,15 +112,9 @@ export function CouncilList({ rows, lang, canAssign }: { rows: CouncilRow[]; lan
           Кнопки только когда самогенерация включена: иначе обещали бы запрещённое настройками. */}
       {canAssign && (
         <div className="rounded-lg border border-border bg-surface p-3.5">
-          <div className="mb-1 text-[0.78125rem] font-semibold text-ink">{tr({ en: 'Assign a list', ru: 'Поручить список' }, lang)}</div>
+          <div className="mb-1 text-[0.78125rem] font-semibold text-ink">{t('admin.assignList', lang)}</div>
           <p className="mb-2.5 text-[0.6875rem] text-ink-2">
-            {tr(
-              {
-                en: 'The specialist picks what his area is missing and writes it. The result is a DRAFT authored by him — you publish it.',
-                ru: 'Специалист сам выберет, чего не хватает в его области, и напишет. Результат — ЧЕРНОВИК от его имени, публикуешь вы.',
-              },
-              lang,
-            )}
+            {t('admin.theSpecialistPicksWhat', lang)}
           </p>
           <div className="flex flex-wrap gap-2">
             {rows

@@ -33,11 +33,11 @@ export function FeedCard({ item, lang, starred = false }: { item: FeedItem; lang
         {/* 2. Заголовок owner/title + 3. Кнопка Star (как у нас), в правом верхнем углу. */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2">
-            <Link href={base} className="mt-0.5 shrink-0 text-muted hover:text-accent" aria-label={tr(item.title, lang)}>
+            <Link href={base} className="-m-1 mt-0.5 grid size-6 shrink-0 place-items-center text-muted hover:text-accent" aria-label={tr(item.title, lang)}>
               <ListChecks size={16} />
             </Link>
             <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[1rem] leading-tight">
-              <Link href={`/${item.ownerHandle}`} className="font-medium text-ink-2 hover:text-accent">
+              <Link href={`/${item.ownerHandle}`} className="-my-1 py-1 font-medium text-ink-2 hover:text-accent">
                 {item.ownerHandle}
               </Link>
               <span className="text-muted">/</span>

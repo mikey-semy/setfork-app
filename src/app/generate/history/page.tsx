@@ -21,19 +21,18 @@ export async function generateMetadata() {
 export default async function GenerationHistoryPage() {
   const [lang, session] = await Promise.all([getLang(), getSession()])
   if (!session) redirect('/login')
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   const items = await getRecentGenerations(session.userId, 50)
 
   return (
     <div className="mx-auto w-full max-w-[47.5rem] px-4 py-6 sm:px-6">
       <PageHeader
-        title={say('Draft history', 'История генераций')}
+        title={t('generation.draftHistory', lang)}
         actions={
           <Link
             href="/generate"
-            className="inline-flex h-[2.375rem] items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.875rem] font-semibold text-primary-fg hover:opacity-90"
+            className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
           >
-            <Sparkles size={14} /> {say('New draft', 'Новый черновик')}
+            <Sparkles size={14} /> {t('generation.newDraft', lang)}
           </Link>
         }
       />
@@ -41,9 +40,9 @@ export default async function GenerationHistoryPage() {
       {items.length === 0 ? (
         <EmptyState
           icon={<Sparkles size={34} strokeWidth={1.5} />}
-          title={say('No drafts yet', 'Черновиков пока нет')}
-          hint={say('Describe what you need — the draft will appear here.', 'Опиши, что нужно сделать — черновик появится здесь.')}
-          action={{ href: '/generate', label: say('Create a draft', 'Создать черновик') }}
+          title={t('generation.noDraftsYet', lang)}
+          hint={t('generation.describeWhatYouNeed', lang)}
+          action={{ href: '/generate', label: t('generation.createDraft', lang) }}
         />
       ) : (
         <ul className="flex flex-col gap-1.5">
@@ -78,10 +77,9 @@ function StatusIcon({ status, accepted }: { status: GenerationStatus; accepted: 
 }
 
 function statusLabel(status: GenerationStatus, accepted: boolean, lang: Lang): string {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
-  if (accepted) return say('List created', 'Список создан')
-  if (status === 'pending') return say('In progress', 'В работе')
-  if (status === 'failed') return say('Failed', 'Не удалось')
-  if (status === 'clarify') return say('Needs details', 'Нужны уточнения')
-  return say('Draft ready', 'Черновик готов')
+  if (accepted) return t('generation.listCreated', lang)
+  if (status === 'pending') return t('generation.inProgress', lang)
+  if (status === 'failed') return t('generation.failed', lang)
+  if (status === 'clarify') return t('generation.needsDetails', lang)
+  return t('generation.draftReady', lang)
 }

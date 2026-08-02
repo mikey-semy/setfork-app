@@ -21,6 +21,7 @@ import { setAiSettings } from '@/features/admin/actions'
 import { SearchSettingsForm } from '@/features/admin/SearchSettingsForm'
 import { ModelSelect, type Option } from '@/features/admin/ModelSelect'
 import { buildOpts, withSavedOption } from '@/features/admin/model-options'
+import { modelMeta } from '@/features/admin/model-enrich'
 import { AiProviderModels } from '@/features/admin/AiProviderModels'
 import { AssistFields } from '@/features/admin/AssistFields'
 import { CouncilFields } from '@/features/admin/CouncilFields'
@@ -81,7 +82,6 @@ export default async function AdminPage() {
     getChangelogSettings(),
   ])
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const pushValues = { publicKey: vapid.publicKey, subject: vapid.subject, configured: Boolean(vapid.publicKey && vapid.privateKey) }
   const emailValues = {
     host: email.host,
@@ -124,16 +124,29 @@ export default async function AdminPage() {
     imgproxyKeyMask: maskSecret(media.imgproxyKey),
     imgproxySaltMask: maskSecret(media.imgproxySalt),
   }
-  const models = await fetchModels() // сам вернёт пустой каталог, если провайдер не сконфигурирован
+  // Запасной провайдер (пусто = выключен) — читается тем же модулем, что решает подмену.
+  const { getFallbackProviderId } = await import('@/shared/ai/provider-failover')
+  // Каталог и наш опыт независимы — тянем разом, иначе страница ждёт их по очереди.
+  // (Валюта нужна мете только для форматирования; у активного провайдера она известна заранее.)
+  const [models, meta, fallbackProvider] = await Promise.all([
+    fetchModels(),
+    modelMeta(aiProv.provider === 'openrouter' ? 'USD' : 'RUB', ru),
+    getFallbackProviderId(),
+  ])
 
-  const chatOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.chatModel)
+  const chatOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, meta), settings.chatModel)
   // Ростер и галерея встроенных персонажей — читаем на сервере: клиенту не нужен доступ к БД и fs.
   const [rosterRows, gallery, uploaded] = await Promise.all([getRosterAll(), builtinAvatars(), rosterAvatars()])
   // Загруженная картинка идёт готовым URL (imgproxy/диск) — клиент не должен знать про S3-ключи.
   const roster = rosterRows.map((e) => ({ ...e, uploadedUrl: e.avatarUploaded ? uploaded[e.id] : undefined }))
-  const fallbackOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown), settings.fallbackModel)
+  const fallbackOpts = ensure(buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, meta), settings.fallbackModel)
   // Валюта — из каталога, а не 'USD' константой: эмбеддинги у RU-провайдеров считаются в ₽.
-  const embOpts = ensure(buildOpts(models.embedding, true, lang, models.currency, models.pricesKnown), settings.embeddingModel)
+  const embOpts = ensure(buildOpts(models.embedding, true, lang, models.currency, models.pricesKnown, meta), settings.embeddingModel)
+  // Что выбранная модель эмбеддингов отдаёт на самом деле — измеренный факт из памяти стенда
+  // (пишется обычными вызовами и пробой при сохранении). Не мерили — так и говорим.
+  const embedHint =
+    meta.get(settings.embeddingModel)?.embed?.hint ??
+    t('admin.embedNotMeasured', lang)
 
   // Заголовки секций: ровно один двуязычный литерал на строку (i18n-правило),
   // используется и в липком меню, и в карточке.
@@ -205,18 +218,10 @@ export default async function AdminPage() {
               href="/admin/council"
               className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink"
             >
-              <Bot size={14} /> {say('Council hall — experts, instructions, avatars', 'Зал совета — эксперты, инструкции, аватарки')}
+              <Bot size={14} /> {t('admin.councilHallExpertsInstructions', lang)}
             </Link>
           }
         >
-          {!hasKey && (
-            <Alert variant="warn" className="mb-5">
-              {say(
-                'The active provider is not configured (no key) — generation and model lists are unavailable (id can be typed manually).',
-                'Активный провайдер не сконфигурирован (нет ключа) — генерация и списки моделей недоступны (id можно ввести вручную).',
-              )}
-            </Alert>
-          )}
 
           <form action={setAiSettings} className="flex flex-col gap-5">
             <AiProviderModels
@@ -224,9 +229,11 @@ export default async function AdminPage() {
               provider={aiProv.provider}
               hasKey={hasKeyByProvider}
               maskedKeys={maskedKeys}
+              keySources={aiProv.sources}
+              fallbackProvider={fallbackProvider}
               yandexFolder={aiProv.yandexFolder}
               searchKeyMasked={maskKey(aiProv.yandexSearchKey)}
-              ru={ru}
+              lang={lang}
               initial={{
                 chat: chatOpts,
                 embedding: embOpts,
@@ -239,14 +246,15 @@ export default async function AdminPage() {
                 error: models.error,
               }}
               labels={{
-                chat: say('Chat model', 'Модель генерации'),
-                fallback: say('Fallback model (cheap mode)', 'Запасная модель (для дешёвого режима)'),
-                // Размерность подставляется из EMBEDDING_DIM: она задана схемой БД (pgvector),
-                // и подпись не должна расходиться со схемой из-за числа, набранного в тексте.
-                embedding: say(`Embedding model (RAG, ${EMBEDDING_DIM}-dim)`, `Модель эмбеддингов (RAG, ${EMBEDDING_DIM}-мерная)`),
-                pick: say('Pick a model', 'Выбери модель'),
-                loading: say('Loading this provider’s models…', 'Загружаю модели этого провайдера…'),
-                noKey: say('No key for this provider — the catalog is unavailable, type the model id manually.', 'У этого провайдера нет ключа — каталог недоступен, id модели вводится вручную.'),
+                chat: t('admin.chatModel', lang),
+                fallback: t('admin.fallbackModelCheapMode', lang),
+                // Ширина колонки читается из схемы (EMBEDDING_DIM ← halfvec в schema.ts), а что
+                // отдаёт конкретная модель — ИЗМЕРЕНО (embed-capability): хинт ниже.
+                embedding: t('admin.embeddingModelDim', lang).replace('{n}', String(EMBEDDING_DIM)),
+                embeddingHint: embedHint,
+                pick: t('admin.pickModel', lang),
+                loading: t('admin.loadingProviderSModels', lang),
+                noKey: t('admin.noKeyProviderCatalog', lang),
               }}
             />
 
@@ -260,14 +268,8 @@ export default async function AdminPage() {
             </div>
 
             <Field
-              label={tr({ en: 'Free plan: generations / month', ru: 'Free-тариф: генераций в месяц' }, lang)}
-              hint={tr(
-                {
-                  en: 'Generation limit for free users. 0 = monetization off (no limit). Pro / admin are always unlimited; the council is Pro-only.',
-                  ru: 'Лимит генераций для бесплатных. 0 = монетизация выключена (без лимита). Pro/админ — без лимита; «совет» — только Pro.',
-                },
-                lang,
-              )}
+              label={t('admin.freePlanGenerationsMonth', lang)}
+              hint={t('admin.generationLimitFreeUsers', lang)}
             >
               <Input type="number" name="freeMonthlyGens" step="1" min="0" defaultValue={settings.freeMonthlyGens} />
             </Field>
@@ -293,12 +295,12 @@ export default async function AdminPage() {
                 readinessMinGrade: settings.readinessMinGrade,
                 readinessPerDay: settings.readinessPerDay,
               }}
-              ru={ru}
+              lang={lang}
             />
 
-            <AssistFields v={{ enabled: settings.assistEnabled, audience: settings.assistAudience }} ru={ru} />
+            <AssistFields v={{ enabled: settings.assistEnabled, audience: settings.assistAudience }} lang={lang} />
 
-            <FormSaveBar ru={ru} />
+            <FormSaveBar lang={lang} />
           </form>
         </SettingsSection>
       ),
@@ -317,7 +319,7 @@ export default async function AdminPage() {
               : 'S3-compatible storage, imgproxy and CDN. Values override .env; an empty field falls back to .env.'
           }
         >
-          <MediaSettingsForm ru={ru} v={mediaValues} />
+          <MediaSettingsForm lang={lang} v={mediaValues} />
         </SettingsSection>
       ),
     },
@@ -335,7 +337,7 @@ export default async function AdminPage() {
               : 'Your own SMTP for email notifications. Values override .env; an empty field falls back to .env.'
           }
         >
-          <EmailSettingsForm ru={ru} v={emailValues} />
+          <EmailSettingsForm lang={lang} v={emailValues} />
         </SettingsSection>
       ),
     },
@@ -353,7 +355,7 @@ export default async function AdminPage() {
               : 'Background browser notifications via a service worker. Your own VAPID keys — no third-party service.'
           }
         >
-          <PushSettingsForm ru={ru} v={pushValues} />
+          <PushSettingsForm lang={lang} v={pushValues} />
         </SettingsSection>
       ),
     },
@@ -371,7 +373,7 @@ export default async function AdminPage() {
               : 'Search bar mode. Semantic and hybrid use the vector index (needs API key + indexing); falls back to keyword when unavailable.'
           }
         >
-          <SearchSettingsForm current={search} ru={ru} />
+          <SearchSettingsForm current={search} lang={lang} />
         </SettingsSection>
       ),
     },
@@ -411,7 +413,7 @@ export default async function AdminPage() {
               : 'Enable/disable achievements and set a custom image instead of the icon (drag-and-drop). Applies to all profiles.'
           }
         >
-          <AchievementsAdmin initial={achDisplay} ru={ru} />
+          <AchievementsAdmin initial={achDisplay} lang={lang} />
         </SettingsSection>
       ),
     },
@@ -420,7 +422,7 @@ export default async function AdminPage() {
       title: t('adminReindexTitle', lang),
       icon: <RefreshCw size={14} />,
       keywords: ['reindex', 'индексация', 'embeddings', 'эмбеддинги'],
-      content: <ReindexPanel ru={ru} />,
+      content: <ReindexPanel lang={lang} />,
     },
   ]
 
