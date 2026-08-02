@@ -12,7 +12,8 @@ export default async function FeedbackPage() {
   const lang = await getLang()
   return (
     <div className="mx-auto w-full max-w-[35rem] px-6 py-12">
-      <PageHeader title={t('feedbackTitle', lang)} subtitle={t('feedbackIntro', lang)} />
+      {/* «Обратная связь» уже стоит в шапке приложения — остаётся вводное пояснение. */}
+      <PageHeader hideTitle title={t('feedbackTitle', lang)} subtitle={t('feedbackIntro', lang)} />
       <FeedbackForm lang={lang} />
     </div>
   )

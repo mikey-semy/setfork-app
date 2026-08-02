@@ -4,6 +4,7 @@ import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { applySavedQuery, listSavedQueries } from '@/features/library/saved-queries'
@@ -31,7 +32,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
           {/* Видимой шапки у страницы нет: заголовок «Списки» и «Новый список» уже стоят
               в TopNav (заголовок раздела слева, «+» справа) — второй раз то же самое
               отжимало ленту вниз. Заголовок остаётся для скринридеров и структуры. */}
-          <h1 className="sr-only print:not-sr-only print:mb-2 print:text-[1.125rem] print:font-bold print:text-ink">{t('myLists', lang)}</h1>
+          <PageHeader hideTitle title={t('myLists', lang)} />
           {!session ? (
             <div className="py-16 text-center text-[0.8125rem] text-muted">
               {t('loginRequired', lang)}{' '}
