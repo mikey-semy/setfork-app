@@ -34,6 +34,8 @@ export const ru: Record<DictKey, string> = {
   mirrorOk: 'Отзеркалено',
   mirrorFailed: 'Пуш зеркала не удался',
   mirrorNever: 'Ещё не синхронизировалось',
+  mirrorWillRetry: 'Повторим автоматически',
+  mirrorNeedsOwner: 'Не удаётся давно — проверьте токен и репозиторий. Пока повторяем раз в сутки.',
   generalIntro: 'Название, описание, теги и видимость списка.',
   coverTitle: 'Обложка',
   templateTitle: 'Шаблон',

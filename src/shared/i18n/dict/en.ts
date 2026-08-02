@@ -34,6 +34,12 @@ export const en = {
   mirrorOk: 'Mirrored',
   mirrorFailed: 'Mirror failed',
   mirrorNever: 'Not synced yet',
+  // Ф2: что будет дальше после неудачи. Без этого красная строка читается как
+  // тупик, хотя повтор уже назначен, — и владелец лезет чинить то, что чинится само.
+  mirrorWillRetry: 'Will retry automatically',
+  // Повторы продолжаются и здесь — раз в сутки. Текст зовёт владельца не потому,
+  // что мы сдались, а потому что после серии неудач сбой уже не временный.
+  mirrorNeedsOwner: 'Failing for a while — check the token and the repository. Retrying daily meanwhile.',
   generalIntro: 'Name, description, tags and visibility of the list.',
   coverTitle: 'Cover',
   templateTitle: 'Template',

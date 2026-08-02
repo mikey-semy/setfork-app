@@ -737,6 +737,7 @@ export async function getListMeta(ownerHandle: string, slug: string) {
       mirrorHasToken: templates.mirrorToken,
       mirrorSyncedAt: templates.mirrorSyncedAt,
       mirrorError: templates.mirrorError,
+      mirrorAttempts: templates.mirrorAttempts,
       origin: templates.origin,
       status: templates.status,
       ordered: templates.ordered,
