@@ -131,7 +131,7 @@ export function startWorker(handlers: Record<string, JobHandler>, finalizers: Re
     try {
       if (!handler) throw new Error(`no handler for job type: ${job.type}`)
       await handler(job.payload, job)
-      await completeJob(job.id)
+      await completeJob(job.id, job.attempts)
     } catch (e) {
       captureError(e, { where: 'jobs.handle', jobType: job.type, jobId: job.id })
       // ПАДЕНИЕ ПЕТЛИ — в журнал действий, а не только в таблицу задач. Предохранитель

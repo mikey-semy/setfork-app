@@ -67,9 +67,19 @@ export async function claimJob(): Promise<Job | null> {
   }
 }
 
-/** Успех — задача выполнена. */
-export async function completeJob(id: string): Promise<void> {
-  await db.update(jobs).set({ status: 'done', updatedAt: new Date() }).where(eq(jobs.id, id))
+/**
+ * Успех — задача выполнена.
+ *
+ * Номер попытки в WHERE по той же причине, что и у пульса: обработчик мог пережить собственную
+ * попытку. Три пропущенных удара подряд (пауза event loop, насыщение пула) — и reaper вернул
+ * задачу в очередь, а её уже захватил другой воркер. Наш «успех» в этот момент пометил бы
+ * `done` работу, которая идёт прямо сейчас, и её результат пропал бы.
+ */
+export async function completeJob(id: string, attempt?: number): Promise<void> {
+  await db
+    .update(jobs)
+    .set({ status: 'done', updatedAt: new Date() })
+    .where(attempt === undefined ? eq(jobs.id, id) : and(eq(jobs.id, id), eq(jobs.attempts, attempt)))
 }
 
 /**
@@ -227,7 +237,7 @@ export async function markFinalized(ids: string[]): Promise<void> {
  */
 export async function failJob(job: Job, error: string): Promise<boolean> {
   const permanent = job.attempts >= job.maxAttempts
-  await db
+  const res = await db
     .update(jobs)
     .set({
       status: permanent ? 'failed' : 'pending',
@@ -238,8 +248,12 @@ export async function failJob(job: Job, error: string): Promise<boolean> {
       // попытке заставил бы reaper судить её по минутному порогу и отобрать живую работу.
       heartbeatAt: null,
     })
-    .where(eq(jobs.id, job.id))
-  return permanent
+    // Номер попытки — как в completeJob: пережившая себя попытка не должна объявлять исход за
+    // ту, что идёт сейчас. Промах здесь ВАЖЕН и возвращается наверх: без него воркер позвал бы
+    // финализатор и закрыл живую работу как брошенную.
+    .where(and(eq(jobs.id, job.id), eq(jobs.attempts, job.attempts)))
+    .returning({ id: jobs.id })
+  return permanent && res.length > 0
 }
 
 /**

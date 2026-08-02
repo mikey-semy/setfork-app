@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
  */
 
 const { db, jobs } = await import('@/shared/db')
-const { reapStalledJobs, cleanupTerminalJobs, touchJob, failJob } = await import('@/shared/jobs/queue')
+const { reapStalledJobs, cleanupTerminalJobs, touchJob, failJob, completeJob } = await import('@/shared/jobs/queue')
 
 const add = (over: Partial<typeof jobs.$inferInsert> = {}) =>
   db
@@ -94,6 +94,27 @@ describe('reaper: пульс против таймаута', () => {
 
     const [row] = await db.select({ hb: jobs.heartbeatAt }).from(jobs).where(eq(jobs.id, j.id))
     expect(row.hb).toBeNull()
+  })
+
+  it('пережившая себя попытка не объявляет успех за текущую', async () => {
+    // Три пропущенных удара (пауза event loop) — reaper вернул задачу, её взял другой воркер,
+    // а прежний обработчик всё ещё жив и вот-вот доложит «готово». Доложить он должен в пустоту.
+    const [j] = await add({ attempts: 2 })
+
+    await completeJob(j.id, 1)
+
+    const [row] = await db.select({ s: jobs.status }).from(jobs).where(eq(jobs.id, j.id))
+    expect(row.s).toBe('processing') // работа идёт, чужой «успех» её не закрыл
+  })
+
+  it('пережившая себя попытка не объявляет и провал — и финализатор не зовут', async () => {
+    const [j] = await add({ attempts: 2 })
+
+    const permanent = await failJob({ id: j.id, type: 'generate', payload: {}, attempts: 1, maxAttempts: 1 }, 'boom')
+
+    expect(permanent).toBe(false) // иначе воркер закрыл бы живую работу как брошенную
+    const [row] = await db.select({ s: jobs.status }).from(jobs).where(eq(jobs.id, j.id))
+    expect(row.s).toBe('processing')
   })
 
   it('failJob тоже гасит пульс при возврате в очередь', async () => {
