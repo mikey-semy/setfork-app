@@ -46,7 +46,9 @@ export function PageHeader({
           <h1
             className={cn(
               hideTitle
-                ? 'sr-only'
+                // На печати заголовок ВИДИМ: шапка приложения помечена print:hidden,
+                // и без этого распечатанный лист остался бы без названия страницы.
+                ? 'sr-only print:not-sr-only print:mb-2 print:text-[1.125rem] print:font-bold print:text-ink'
                 : 'min-w-0 truncate font-bold text-ink',
               !hideTitle && (size === 'page' ? 'text-[1.125rem]' : 'text-[1rem]'),
             )}
