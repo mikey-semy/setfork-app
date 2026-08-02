@@ -12,8 +12,12 @@ export async function GET(req: NextRequest) {
   const slug = searchParams.get('s')
   if (!handle || !slug) return NextResponse.json({ title: null })
   const meta = await requireViewableMeta(handle, slug)
+  // no-store, а НЕ private+max-age: ответ зависит от СЕССИИ — владельцу отдаётся
+  // название приватного списка и признак приватности. С max-age браузер имеет право
+  // переиспользовать его после выхода или смены аккаунта, и чужая сессия увидела бы
+  // приватное название. Тот же класс утечки уже закрывали в /api/lists/by-owner.
   return NextResponse.json(
     { title: meta?.title ?? null, visibility: meta?.visibility ?? null },
-    { headers: { 'Cache-Control': 'private, max-age=30' } },
+    { headers: { 'Cache-Control': 'no-store' } },
   )
 }
