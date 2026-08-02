@@ -20,7 +20,7 @@ import { translateList } from './actions'
  * понятно, что кнопка делает. Поэтому один пункт рисуем прямой кнопкой-иконкой с
  * тултипом, а «...» возвращается только когда в нём правда есть выбор.
  *
- * Высота у всех веток одна (h-9, как Run и «Получить») — ряд остаётся ровным.
+ * Высота у всех веток одна (32px шкалы, как Run и «Получить») — ряд остаётся ровным.
  */
 export function ListActionsMenu({
   base,
@@ -51,7 +51,7 @@ export function ListActionsMenu({
 
   const editHref = isOwner ? `${base}/edit` : `${base}/suggest`
   const editLabel = isOwner ? t('edit', lang) : t('suggestEdit', lang)
-  const btn = 'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border text-ink transition-colors hover:border-border-strong'
+  const btn = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-ink transition-colors hover:border-border-strong'
 
   // Единственное действие — сразу кнопкой, без меню.
   if (!canTranslate) {

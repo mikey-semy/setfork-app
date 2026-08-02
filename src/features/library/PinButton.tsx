@@ -36,7 +36,7 @@ export function PinButton({
       aria-label={opt ? unpinLabel : pinLabel}
       // На мобиле подписи нет — кнопка становится квадратом 36×36, как остальные
       // иконочные кнопки шапки (владелец: «сделай их примерно одинаковой ширины»).
-      className={`inline-flex h-9 items-center gap-2 rounded-md border px-3.5 text-[0.8125rem] font-semibold transition-colors disabled:opacity-60 max-sm:w-9 max-sm:justify-center max-sm:px-0 ${
+      className={`inline-flex h-8 items-center gap-2 rounded-md border px-3.5 text-[0.8125rem] font-semibold transition-colors disabled:opacity-60 max-sm:w-8 max-sm:justify-center max-sm:px-0 ${
         opt ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink hover:border-border-strong'
       }`}
     >

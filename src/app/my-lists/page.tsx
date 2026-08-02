@@ -34,7 +34,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
             actions={
               <Link
                 href="/new"
-                className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
+                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.8125rem] font-semibold text-primary-fg hover:opacity-90"
               >
                 {t('newList', lang)}
               </Link>
