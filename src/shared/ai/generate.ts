@@ -3,8 +3,9 @@ import { generateText } from 'ai'
 import { getAiSettings } from '@/shared/settings/ai'
 import { globalBudgetOk } from '@/shared/quota'
 import { getAiChatClient } from './provider'
-import { pickChatModel } from './credits'
+import { pickChatModels } from './credits'
 import { extractUsage, outcomeOf, recordUsage, type AiFeature } from './usage'
+import { retryPlan } from './retry'
 import type { AiFailure } from './failure'
 import { sanitizeCommand } from './sanitize-command'
 import { lawBlock } from './list-laws'
@@ -170,64 +171,102 @@ async function runListModel(
   // провайдерах зовём голую модель (веб-поиска и авто-фолбэка там нет).
   const isOpenRouter = client.cfg.provider === 'openrouter'
   const web = (opts.web ?? false) && isOpenRouter
-  const base = await pickChatModel(settings)
+  // Пара «основная + запасная» из ОДНОГО провайдера: при уходе на запасного настройки
+  // основного больше не годятся, и запасная модель из его неймспейса была бы чужим id.
+  const { base, fallback } = await pickChatModels(settings)
   const online = (m: string) => (web && m ? `${m}:online` : m)
-  const models = [base, settings.fallbackModel].filter((v, i, a) => v && a.indexOf(v) === i).map(online)
+  const models = [base, fallback].filter((v, i, a) => v && a.indexOf(v) === i).map(online)
 
-  const startedAt = Date.now()
-  try {
-    const result = await generateText({
-      model: client.chat(online(base), isOpenRouter ? { extraBody: { models, transforms: ['middle-out'] } } : undefined),
-      system,
-      prompt,
-      temperature: settings.temperature,
-      maxOutputTokens: settings.maxTokens,
-    })
-    // parseList чистый и не бросает — можно узнать исход ДО записи расхода:
-    // невалидный JSON = outcome 'invalid' (токены потрачены в любом случае).
-    const parsed = parseList(result.text, fallbackTitle)
-    const u = extractUsage(result)
-    await recordUsage({
-      userId: opts.userId,
-      feature,
-      // ИМЕННО online(base), а не base: у `:online` своя флэт-надбавка ($0.005/вызов у OpenRouter),
-      // и с голым base журнал показывал «дорогой gpt-4o-mini» вместо «веб-поиск» — из-за чего 60%
-      // расхода были не видны в админке вообще. Пишем то, что реально звали.
-      model: online(base),
-      input: u.input,
-      output: u.output,
-      total: u.total,
-      cost: u.cost,
-      refType: opts.refType,
-      refId: opts.refId,
-      outcome: parsed ? 'ok' : 'invalid',
-      durationMs: Date.now() - startedAt,
-      provider: client.cfg.provider,
-    })
-    // Не разобрали ответ — в причину кладём его голову: по ней сразу видно, что именно
-    // пришло вместо списка (пустой текст, извинение модели, обрезанный JSON).
-    if (!parsed) opts.onFail?.({ code: 'invalid', model: online(base), detail: result.text.slice(0, 400) })
-    return parsed
-  } catch (e) {
-    await recordUsage({
-      userId: opts.userId,
-      feature,
-      model: online(base),
-      input: 0,
-      output: 0,
-      total: 0,
-      cost: 0,
-      refType: opts.refType,
-      refId: opts.refId,
-      outcome: outcomeOf(e),
-      durationMs: Date.now() - startedAt,
-      provider: client.cfg.provider,
-    })
-    const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
-    opts.onFail?.({ code: outcomeOf(e) === 'timeout' ? 'timeout' : 'error', model: online(base), detail: msg })
-    console.warn('[generate] failed', e instanceof Error ? e.message : e)
-    return null
+  /**
+   * КАНДИДАТЫ, а не одна модель. Раньше упавший вызов просто возвращал null: реакция на отказ
+   * измерялась часами (пока карантин не наберёт статистику), хотя запасная модель была назначена
+   * рядом. Теперь порядок такой же, как у LiteLLM: транзиентный отказ — повтор той же модели,
+   * отказ самой модели (снята, не влезли в контекст) — переход к следующей, отказ по ключу или
+   * деньгам — остановка, потому что другая модель не поможет.
+   *
+   * Причина наверх (opts.onFail) сообщается ОДИН раз и только окончательная: промежуточные
+   * попытки — наша кухня, пользователю важно, чем всё кончилось.
+   */
+  const candidates = [base, fallback].filter((v, i, a) => v && a.indexOf(v) === i)
+  let lastFailure: AiFailure | null = null
+
+  for (const candidate of candidates) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const startedAt = Date.now()
+      try {
+        const result = await generateText({
+          model: client.chat(online(candidate), isOpenRouter ? { extraBody: { models, transforms: ['middle-out'] } } : undefined),
+          system,
+          prompt,
+          temperature: settings.temperature,
+          maxOutputTokens: settings.maxTokens,
+        })
+        // parseList чистый и не бросает — можно узнать исход ДО записи расхода:
+        // невалидный JSON = outcome 'invalid' (токены потрачены в любом случае).
+        const parsed = parseList(result.text, fallbackTitle)
+        const u = extractUsage(result)
+        await recordUsage({
+          userId: opts.userId,
+          feature,
+          // Модель ИЗ ОТВЕТА, а не запрошенная: при фолбэке на стороне OpenRouter (extraBody.models)
+          // отвечает другая, и журнал приписывал цену и отказы невиновной — вместе с карантином,
+          // который на этом журнале и строится (аудит 2026-08-01). ':online' сохраняем: у него своя
+          // флэт-надбавка, и без суффикса 60% расхода были не видны в админке.
+          model: servedModel(result, online(candidate), web),
+          input: u.input,
+          output: u.output,
+          total: u.total,
+          cost: u.cost,
+          refType: opts.refType,
+          refId: opts.refId,
+          outcome: parsed ? 'ok' : 'invalid',
+          durationMs: Date.now() - startedAt,
+          provider: client.cfg.provider,
+        })
+        if (parsed) return parsed
+        // Ответ пришёл, но списком не оказался. Голова ответа — в причину: по ней видно, что
+        // именно пришло (пустой текст, извинение модели, обрезанный JSON). Пробуем следующего
+        // кандидата: другая модель на том же промпте часто отвечает разбираемо.
+        lastFailure = { code: 'invalid', model: online(candidate), detail: result.text.slice(0, 400) }
+        break
+      } catch (e) {
+        const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+        await recordUsage({
+          userId: opts.userId,
+          feature,
+          model: online(candidate),
+          input: 0,
+          output: 0,
+          total: 0,
+          cost: 0,
+          refType: opts.refType,
+          refId: opts.refId,
+          outcome: outcomeOf(e),
+          durationMs: Date.now() - startedAt,
+          provider: client.cfg.provider,
+        })
+        const plan = retryPlan(e)
+        lastFailure = { code: outcomeOf(e) === 'timeout' ? 'timeout' : 'error', model: online(candidate), detail: msg }
+        console.warn(`[generate] ${candidate} упала (${plan}):`, e instanceof Error ? e.message : e)
+        if (plan === 'stop') {
+          opts.onFail?.(lastFailure)
+          return null
+        }
+        if (plan === 'other') break // к следующему кандидату
+        // 'same' — второй заход той же моделью, дальше уходим к следующей
+      }
+    }
   }
+  if (lastFailure) opts.onFail?.(lastFailure)
+  return null
+}
+
+/** Кто РЕАЛЬНО ответил: id из ответа провайдера, если он его назвал. */
+function servedModel(result: { response?: { modelId?: string } }, requested: string, web: boolean): string {
+  const served = result.response?.modelId
+  if (!served || served === requested) return requested
+  // Веб-надбавка привязана к вызову, а не к модели: суффикс переносим на реально ответившую.
+  return web ? `${served}:online` : served
 }
 
 /** Черновик эталонного списка по запросу. null при ошибке/выкл. */
@@ -268,7 +307,7 @@ export async function generateChangeNote(
   if (!settings.enabled) return null
   if (!(await globalBudgetOk())) return null // глобальный дневной кап расхода исчерпан
 
-  const model = await pickChatModel(settings)
+  const { base: model } = await pickChatModels(settings)
   const langName = langEnName(lang)
   const compact = (xs: NoteItem[]) =>
     xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n').slice(0, MAX_PROMPT_CHARS)

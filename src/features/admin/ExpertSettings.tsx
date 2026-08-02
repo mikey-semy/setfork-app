@@ -289,7 +289,7 @@ function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOpt
           </Field>
 
           <Field label={t('admin.modelEmptyFromCouncil', lang)} htmlFor={`model-${e.id}`}>
-            <ModelSelect id={`model-${e.id}`} name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" allowCustom customHint={t('admin.use', lang)} />
+            <ModelSelect id={`model-${e.id}`} name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" allowCustom customHint={t('admin.use', lang)} ru={lang === 'ru'} />
           </Field>
 
           <div className="flex items-center justify-between gap-3 pt-0.5">
