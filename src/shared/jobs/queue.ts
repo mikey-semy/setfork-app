@@ -101,7 +101,11 @@ export async function completeJob(id: string, attempt?: number): Promise<void> {
 export async function touchJob(id: string, attempt: number): Promise<void> {
   await db
     .update(jobs)
-    .set({ heartbeatAt: new Date() })
+    // Время БЕРЁМ У БАЗЫ (`now()`), а не у процесса: reaper сравнивает пульс со своим `now()`,
+    // и отставание часов инстанса на минуту означало бы, что его задачи рождаются уже
+    // «просроченными» и отбираются на первом же проходе. У часов разных машин расходиться —
+    // норма, поэтому единственные часы здесь — часы Postgres.
+    .set({ heartbeatAt: sql`now()` })
     .where(and(eq(jobs.id, id), eq(jobs.status, 'processing'), eq(jobs.attempts, attempt)))
 }
 
