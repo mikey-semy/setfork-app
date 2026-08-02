@@ -14,6 +14,7 @@ import { HistoryNav } from '@/widgets/HistoryNav'
 import { safeHref } from '@/shared/lib/safe-url'
 import { rowsToCmp } from '@/features/library/diff'
 import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
+import { PAGE } from '@/shared/ui/control'
 
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -59,7 +60,7 @@ export default async function ComparePage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[53.75rem] px-4 py-6">
+      <div className={PAGE}>
         <HistoryNav
           base={`/${owner}/${slug}`}
           active="compare"

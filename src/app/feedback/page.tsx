@@ -2,6 +2,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedbackForm } from '@/features/feedback/FeedbackForm'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -11,7 +12,7 @@ export async function generateMetadata() {
 export default async function FeedbackPage() {
   const lang = await getLang()
   return (
-    <div className="mx-auto w-full max-w-[35rem] px-6 py-12">
+    <div className={PAGE}>
       <PageHeader title={t('feedbackTitle', lang)} subtitle={t('feedbackIntro', lang)} />
       <FeedbackForm lang={lang} />
     </div>

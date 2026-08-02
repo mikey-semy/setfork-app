@@ -8,6 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
 import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -23,7 +24,7 @@ export default async function MyRunsPage() {
   const abandoned = runs.filter((r) => r.status === 'abandoned')
 
   return (
-    <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
+    <div className={PAGE}>
       <PageHeader icon={<PlayCircle size={18} />} title={t('myRuns', lang)} />
 
       {runs.length === 0 ? (

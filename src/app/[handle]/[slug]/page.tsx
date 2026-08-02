@@ -57,6 +57,7 @@ import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { ListActionsMenu } from '@/features/library/ListActionsMenu'
 import { ReportButton } from '@/features/reports/ReportButton'
 import { publishList } from '@/features/library/actions'
+import { PAGE } from '@/shared/ui/control'
 
 function fmt(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0) + 'k'
@@ -274,7 +275,7 @@ export default async function ListPage({
       <div className="print:hidden">
       </div>
 
-      <div className="mx-auto w-full max-w-[73.75rem] px-4 py-6">
+      <div className={PAGE}>
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Основное: содержимое-эталон */}
           <main className="min-w-0 flex-1">

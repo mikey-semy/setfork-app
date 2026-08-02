@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom'
 import { Check, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { t, type Lang } from '@/shared/i18n'
+import { PAGE_X } from '@/shared/ui/control'
 
 /**
  * ПОЛОСА СОХРАНЕНИЯ — у большого пальца, а не в конце простыни.
@@ -113,7 +114,7 @@ export function FormSaveBar({ lang }: { lang: Lang }) {
           data-sticky-input
           className="sf-rise-in fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
         >
-          <div className="mx-auto flex max-w-[87.5rem] items-center justify-between gap-3 px-4 py-2.5 md:px-8">
+          <div className={`${PAGE_X} flex items-center justify-between gap-3 py-2.5`}>
             {/* На телефоне текста нет: там важнее две крупные кнопки, а не пояснение. */}
             <span className="hidden min-w-0 truncate text-[0.8125rem] text-ink-2 sm:inline">
               {t('ui.unsavedChanges', lang)}

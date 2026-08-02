@@ -7,6 +7,7 @@ import { RotateCw, TriangleAlert } from 'lucide-react'
 import { DEFAULT_LANG, isLang, t, type Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { captureError } from '@/shared/observability'
+import { PAGE } from '@/shared/ui/control'
 
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const [lang, setLang] = useState<Lang>(DEFAULT_LANG)
@@ -26,7 +27,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
   }, [error])
 
   return (
-    <div className="mx-auto flex w-full max-w-[35rem] flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
+    <div className={`${PAGE} flex flex-1 flex-col items-center justify-center gap-4 text-center`}>
       <TriangleAlert size={44} strokeWidth={1.5} className="text-danger" />
       <h1 className="text-[1.25rem] font-bold text-ink">{t('somethingWrong', lang)}</h1>
       <p className="text-[0.875rem] text-ink-2">

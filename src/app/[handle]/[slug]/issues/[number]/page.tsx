@@ -18,6 +18,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
@@ -62,7 +63,7 @@ export default async function IssueThreadPage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[51.25rem] px-4 py-6">
+      <div className={PAGE}>
         <div className="mb-1 flex flex-wrap items-start gap-x-2 gap-y-1">
           <h1 className="text-[1.375rem] font-bold leading-tight text-ink">
             {issue.title} <span className="font-normal text-muted">#{issue.number}</span>

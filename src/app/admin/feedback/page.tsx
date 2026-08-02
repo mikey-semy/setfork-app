@@ -17,7 +17,7 @@ export default async function AdminFeedbackPage({ searchParams }: { searchParams
   const [items, counts] = await Promise.all([getFeedbackList(filter), getFeedbackCounts()])
 
   return (
-    <div className="mx-auto w-full max-w-[53.75rem] px-6 py-8">
+    <div className="min-w-0">
       <PageHeader title={t('feedback', lang)} subtitle={t('feedbackAdminIntro', lang)} />
       <FeedbackTable items={items} counts={counts} filter={filter} lang={lang} />
     </div>

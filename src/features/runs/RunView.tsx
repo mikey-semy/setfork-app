@@ -17,6 +17,7 @@ import { ProductBlock, type ProductLinkVM } from '@/shared/ui/ProductBlock'
 // eslint-disable-next-line boundaries/dependencies -- кирка/dig-чат из features/dig
 import { DIG_SAVED_EVENT, DigChatHost, DigChatOpen, type GnomeOption } from '@/features/dig/DigChat'
 import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
+import { PAGE } from '@/shared/ui/control'
 
 export interface RunStepVM {
   id: string
@@ -128,7 +129,7 @@ export function RunView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[47.5rem] px-4 py-8 sm:px-6">
+    <div className={PAGE}>
       <Link href={backHref} className="mb-4 inline-flex items-center gap-1.5 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={14} /> {backHref.replace(/^\//, '')}
       </Link>

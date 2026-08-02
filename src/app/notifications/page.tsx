@@ -9,6 +9,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { getNotifications, type NotificationItem } from '@/features/notifications/queries'
 import { MarkRead } from '@/features/notifications/MarkRead'
 import { NOTIF_VERB } from '@/features/notifications/verbs'
+import { PAGE } from '@/shared/ui/control'
 
 
 export async function generateMetadata() {
@@ -22,7 +23,7 @@ export default async function NotificationsPage() {
   const fmt = new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' })
 
   return (
-    <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
+    <div className={PAGE}>
       <MarkRead />
       <PageHeader title={t('notifications', lang)} />
 

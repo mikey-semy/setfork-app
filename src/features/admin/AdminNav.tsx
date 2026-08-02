@@ -120,8 +120,7 @@ export function AdminNavSlot({ groups, lang }: { groups: AdminNavGroup[]; lang: 
   const pathname = usePathname()
   if (pathname === '/admin') return null
   return (
-    <div className="px-5 pt-6 md:pl-8 md:pr-0">
-      <AdminNav groups={groups} lang={lang} />
-    </div>
+    // Полей и ширины здесь нет: рамку на меню и контент даёт layout админки.
+    <AdminNav groups={groups} lang={lang} />
   )
 }

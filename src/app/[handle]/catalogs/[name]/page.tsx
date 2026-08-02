@@ -9,6 +9,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { getListsInCatalog } from '@/features/library/queries'
 import { getCatalog } from '@/features/catalogs/queries'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; name: string }> }) {
   const { handle, name } = await params
@@ -22,7 +23,7 @@ export default async function CatalogPage({ params }: { params: Promise<{ handle
   const lists = await getListsInCatalog(cat.id, viewer?.userId)
 
   return (
-    <div className="mx-auto w-full max-w-[62.5rem] px-6 py-8">
+    <div className={PAGE}>
       <div className="mb-1 text-[0.8125rem] text-ink-2">
         <Link href={`/${handle}`} className="hover:text-accent">
           {handle}

@@ -3,6 +3,7 @@ import { t, type Lang } from '@/shared/i18n'
 import { legalUrl } from '@/shared/docs'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { APP_VERSION } from '@/shared/app-version'
+import { PAGE_X } from '@/shared/ui/control'
 // «О проекте» — отдельный маркетинг-лендинг (проект setfork-about). Живёт по ПУТИ
 // /about основного домена (basePath, не поддомен — лучше для SEO). Домен задаётся
 // env-переменной; дефолт — setfork.ru/about (куплен под РФ, ADR-0008).
@@ -19,7 +20,7 @@ export async function Footer({ lang }: { lang: Lang }) {
     <footer className="relative mt-auto print:hidden">
       {/* Копирайт — отдельной строкой ПОД ссылками и по центру (как у GitHub): в общем
           ряду он читался как ещё один пункт меню. */}
-      <div className="mx-auto flex w-full max-w-[67.5rem] flex-wrap items-center justify-center gap-x-4 gap-y-1 px-6 pt-6 text-[0.78125rem]">
+      <div className={`${PAGE_X} flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-6 text-[0.78125rem]`}>
         <Link href="/explore" className={link}>{t('explore', lang)}</Link>
         <a href={ABOUT_URL} className={link}>{t('aboutProject', lang)}</a>
         {/* «Исходный код» убран из футера (владелец): репо приватный, ссылка вела в доки,

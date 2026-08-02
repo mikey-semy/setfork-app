@@ -8,6 +8,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getCourseLeaderboard } from '@/features/quizzes/queries'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -25,7 +26,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ ha
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[45rem] px-4 py-6">
+      <div className={PAGE}>
         <PageHeader
           icon={<Trophy size={18} />}
           title={ru ? 'Лидерборд курса' : 'Course leaderboard'}

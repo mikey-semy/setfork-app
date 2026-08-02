@@ -63,6 +63,7 @@ import { setSuggestionDraft, setSuggestionLabels, setSuggestionMilestone, toggle
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 import type { ProposedItem } from '@/shared/db'
 import { isAdminHandle } from '@/shared/auth/admin'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; id: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -403,7 +404,7 @@ export default async function SuggestionThreadPage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[68.75rem] px-4 py-6">
+      <div className={PAGE}>
         {/* Шапка PR: сообщение правки как заголовок + номер #N. Номер — адрес для
             людей: /suggestions/12 работает наравне с uuid (getSuggestion берёт оба). */}
         <SuggestionTitle

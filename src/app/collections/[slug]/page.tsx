@@ -10,6 +10,7 @@ import { AutoBanner } from '@/shared/ui/AutoBanner'
 import { FeedList } from '@/features/library/FeedList'
 import { getCollectionDetail } from '@/features/collections/queries'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const [{ slug }, lang] = await Promise.all([params, getLang()])
@@ -27,7 +28,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
   if (!c) notFound()
 
   return (
-    <div className="mx-auto w-full max-w-[67.5rem] px-4 py-6">
+    <div className={PAGE}>
       <div className="mb-5 overflow-hidden rounded-xl border border-border">
         {c.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

@@ -18,6 +18,7 @@ import { ProvenancePanel } from './ProvenancePanel'
 import { ChatComposer } from '@/shared/ui/ChatComposer'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
 import { t } from '@/shared/i18n'
+import { PAGE } from '@/shared/ui/control'
 
 /** Первая буква — заглавная: hint приходит от модели строчными, а это готовое сообщение. */
 const capFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -211,8 +212,9 @@ export function GenerationChat({ generationId, lang, candidates, status, message
   return (
     // Контейнер минимум во весь экран под шапкой (она sticky, 53px) — иначе на коротком чате
     // sticky-поле ввода прижималось бы к концу текста, а не к низу окна, как в мессенджерах.
-    // 1040px, не 720: на десктопе половина экрана пустовала (фидбек владельца).
-    <div className="mx-auto flex min-h-[calc(100dvh-53px)] w-full max-w-[65rem] flex-col px-4 py-4 sm:px-6">
+    // Ширина — общая рамка сайта (была своя, 1040): на десктопе половина экрана
+    // пустовала при 720, а своя ширина у одной страницы — тот же разнобой.
+    <div className={`${PAGE} flex min-h-[calc(100dvh-53px)] flex-col`}>
       {/* Переключатель типа списка (ADR-0010): не тот тип? — жми, будет новый вариант в нужной форме.
           Дешевле и без трения, чем уточняющий вопрос; каждый клик — сигнал, что автоугадывание промахнулось.
           На узком — горизонтальный скролл, на sm+ — перенос строк: пилюли не должны уходить за экран. */}

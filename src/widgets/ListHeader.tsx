@@ -25,6 +25,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { humanModerationReason } from '@/features/moderation/reason'
 import { ListTabs } from './ListTabs'
 import { ShowOnListRoot } from './ShowOnListRoot'
+import { PAGE_X } from '@/shared/ui/control'
 
 /** Общая шапка страницы списка (= «репозиторий»): owner/name, действия, вкладки.
  *  Живёт в персистентном [handle]/[slug]/layout.tsx — не перемонтируется между
@@ -70,7 +71,7 @@ export async function ListHeader({ owner, slug }: { owner: string; slug: string 
         flags={{ issues: meta.issuesEnabled, discussions: meta.discussionsEnabled, owner: isOwner }}
       />
 
-      <div className="mx-auto w-full max-w-[73.75rem] px-4 pt-4">
+      <div className={`${PAGE_X} pt-4`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           {/* Название скрыто на узких экранах — оно уже в бредкрамбе шапки. На
               под-вкладках (Задачи/Предложения/…) скрыто и на широких: там оно

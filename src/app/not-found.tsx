@@ -2,11 +2,12 @@ import Link from 'next/link'
 import { FileQuestion } from 'lucide-react'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
+import { PAGE } from '@/shared/ui/control'
 
 export default async function NotFound() {
   const lang = await getLang()
   return (
-    <div className="mx-auto flex w-full max-w-[35rem] flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
+    <div className={`${PAGE} flex flex-1 flex-col items-center justify-center gap-4 text-center`}>
       <FileQuestion size={44} strokeWidth={1.5} className="text-muted" />
       <div className="font-mono text-[0.8125rem] text-muted">404</div>
       <h1 className="text-[1.25rem] font-bold text-ink">{t('pageNotFound', lang)}</h1>

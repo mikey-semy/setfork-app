@@ -16,6 +16,7 @@ import { searchPeople } from '@/features/profile/search'
 import { PeopleResults } from '@/features/profile/PeopleResults'
 import { getCollections } from '@/features/collections/queries'
 import { CollectionCard } from '@/features/collections/CollectionCard'
+import { PAGE } from '@/shared/ui/control'
 
 // Витрина-открытие (не поиск!) вкладками, как GitHub Explore. Без заголовка под шапкой.
 type Tab = 'explore' | 'topics' | 'trending' | 'collections'
@@ -79,7 +80,7 @@ export default async function ExplorePage({
           <TabItem key={tb.id} href={tabHref(tb.id)} on={tb.id === active} icon={TAB_ICON[tb.id]} label={t(tb.key, lang)} />
         ))}
       </TabNav>
-      <div className="mx-auto w-full max-w-[67.5rem] px-6 py-6">
+      <div className={PAGE}>
 
       {/* ── Explore: лента + сайдбар виджетов ── */}
       {active === 'explore' && (

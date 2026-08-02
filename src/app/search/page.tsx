@@ -17,6 +17,7 @@ import { PeopleResults } from '@/features/profile/PeopleResults'
 import { countIssues, searchIssues, type IssueStateFilter } from '@/features/issues/search'
 import { IssueResults } from '@/features/issues/IssueResults'
 import { parseSearchQuery } from '@/features/library/search-query'
+import { PAGE } from '@/shared/ui/control'
 
 const BASE = '/search'
 const SORTS: { key: FeedSort; tkey: 'trending' | 'newest' | 'mostStarred' }[] = [
@@ -116,8 +117,8 @@ export default async function SearchPage({
         {scope === 'lists' && <AdvancedFacets initialQ={sp.q ?? ''} tags={tags} lang={lang} basePath={BASE} />}
       </aside>
 
-      <section className="min-w-0 flex-1 px-4 py-4 md:px-6">
-       <div className="mx-auto flex w-full max-w-[70rem] gap-6">
+      <section className="min-w-0 flex-1">
+       <div className={`${PAGE} flex gap-6`}>
         <div className="min-w-0 flex-1">
         {/* Поле поиска живёт НА СТРАНИЦЕ, а не в шапке: в шапке на мобильном оно
             сжималось до ~100px (рядом с лого, переключателем языка и «Войти») и было
