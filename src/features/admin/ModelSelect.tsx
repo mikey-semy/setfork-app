@@ -5,6 +5,7 @@ import { Braces, Check, ChevronDown, Search, X } from 'lucide-react'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_TEXT_MOBILE, TEXT } from '@/shared/ui/control'
+import { t, type Lang } from '@/shared/i18n'
 
 /** Значение-пустышка для «нет модели». */
 export const NONE = '__none__'
@@ -75,12 +76,11 @@ const parseCsv = (s: string | undefined): string[] => (s || '').split(',').map((
 const GROUP_ORDER: Record<ModelGroup, number> = { active: 0, tried: 1, fresh: 2 }
 const groupOfOpt = (o: Option): ModelGroup => o.meta?.group ?? 'fresh'
 
-function groupTitles(ru: boolean): Record<ModelGroup, string> {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+function groupTitles(lang: Lang): Record<ModelGroup, string> {
   return {
-    active: say('In use by us', 'В работе у нас'),
-    tried: say('Tried before', 'Пробовали раньше'),
-    fresh: say('Not tried', 'Не пробовали'),
+    active: t('modelSelect.groupActive', lang),
+    tried: t('modelSelect.groupTried', lang),
+    fresh: t('modelSelect.groupFresh', lang),
   }
 }
 
@@ -122,7 +122,7 @@ export function ModelSelect({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(0)
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+  const lang: Lang = ru ? 'ru' : 'en'
 
   const value = values[0] ?? ''
   const optOf = (v: string) => options.find((o) => o.value === v)
@@ -144,7 +144,7 @@ export function ModelSelect({
     return [...list].sort((a, b) => GROUP_ORDER[groupOfOpt(a)] - GROUP_ORDER[groupOfOpt(b)])
   }, [query, options])
 
-  const titles = groupTitles(ru)
+  const titles = groupTitles(lang)
   // Счётчики считаем ОДИН раз: на 336 моделях фильтр внутри map — это 113k проходов на рендер.
   // Заголовки не рисуем вовсе, когда группа одна: журнал пуст → «не пробовали» над всем списком
   // это шум, а не подсказка.
@@ -154,7 +154,7 @@ export function ModelSelect({
     return c
   }, [filtered])
   const manyGroups = Object.values(counts).filter((n) => n > 0).length > 1
-  const triggerLabel = multiple ? (values.length ? say(`Models selected: ${values.length}`, `Выбрано моделей: ${values.length}`) : '') : labelOf(value)
+  const triggerLabel = multiple ? (values.length ? t('modelSelect.selectedCount', lang).replace('{n}', String(values.length)) : '') : labelOf(value)
 
   // Закрытие по клику вне и фокус в поиск при открытии.
   useEffect(() => {
@@ -241,14 +241,14 @@ export function ModelSelect({
                 onKeyDown={onKeyDown}
                 // Плейсхолдер — ПРИМЕР значения, а не инструкция «Поиск модели…» (правило
                 // мобильной вёрстки); подпись поля живёт в aria-label.
-                aria-label={say('Search models', 'Поиск модели')}
-                placeholder={say('gpt-4o-mini, OpenAI, chef…', 'gpt-4o-mini, OpenAI, повар…')}
+                aria-label={t('modelSelect.searchLabel', lang)}
+                placeholder={t('modelSelect.searchPlaceholder', lang)}
                 className={`w-full bg-transparent ${TEXT.body} ${FIELD_TEXT_MOBILE} text-ink outline-hidden placeholder:text-muted`}
               />
               {query && (
                 <button
                   type="button"
-                  aria-label={say('Clear search', 'Очистить поиск')}
+                  aria-label={t('modelSelect.clearSearch', lang)}
                   onClick={() => {
                     setQuery('')
                     inputRef.current?.focus()
@@ -285,7 +285,7 @@ export function ModelSelect({
                       onMouseEnter={() => setHighlight(i)}
                       onClick={() => pick(o.value)}
                     >
-                      <OptionBody o={o} ru={ru} />
+                      <OptionBody o={o} lang={lang} />
                     </Row>
                   </div>
                 )
@@ -293,12 +293,12 @@ export function ModelSelect({
               {showCustom && (
                 <Row selected={values.includes(custom)} highlighted={false} onClick={() => pick(custom)}>
                   <span className={`truncate ${TEXT.bodySm}`}>
-                    {customHint ?? say('Use', 'Использовать')} <span className="font-mono text-ink-2">{custom}</span>
+                    {customHint ?? t('modelSelect.use', lang)} <span className="font-mono text-ink-2">{custom}</span>
                   </span>
                 </Row>
               )}
               {filtered.length === 0 && !showCustom && (
-                <div className={`px-3 py-4 text-center ${TEXT.bodySm} text-muted`}>{say('Nothing found', 'Ничего не найдено')}</div>
+                <div className={`px-3 py-4 text-center ${TEXT.bodySm} text-muted`}>{t('modelSelect.nothingFound', lang)}</div>
               )}
             </div>
           </div>
@@ -314,7 +314,7 @@ export function ModelSelect({
               <span>{labelOf(v)}</span>
               <button
                 type="button"
-                aria-label={say(`Remove ${labelOf(v)}`, `Убрать ${labelOf(v)}`)}
+                aria-label={t('modelSelect.remove', lang).replace('{m}', labelOf(v))}
                 onClick={() => pick(v)}
                 className="grid size-4 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
               >
@@ -333,8 +333,7 @@ export function ModelSelect({
  * выталкивать друг друга. Верхняя — что это и почём (главное), нижняя — наш опыт и кто занял.
  * Техническое (контекст, строгий JSON) прячем до sm: на телефоне это шум.
  */
-function OptionBody({ o, ru }: { o: Option; ru: boolean }) {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+function OptionBody({ o, lang }: { o: Option; lang: Lang }) {
   const m = o.meta
   const holders = m?.holders ?? []
   const shown = holders.slice(0, 3)
@@ -350,7 +349,7 @@ function OptionBody({ o, ru }: { o: Option; ru: boolean }) {
         )}
         {o.missing && (
           <span className={`shrink-0 rounded-full border border-warn px-1.5 py-px ${TEXT.caption} text-warn`}>
-            {say('not in catalog', 'нет в каталоге')}
+            {t('models.notInCatalogShort', lang)}
           </span>
         )}
         {o.price && <span className={`ml-auto shrink-0 pl-2 tabular-nums ${TEXT.caption} ${o.priceClass ?? ''}`}>{o.price}</span>}
@@ -360,10 +359,7 @@ function OptionBody({ o, ru }: { o: Option; ru: boolean }) {
         <span className={`flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 ${TEXT.caption} text-muted`}>
           {m?.okPct != null && (
             <Tooltip
-              label={say(
-                `Our journal: ${m.calls} calls, ${m.okPct}% ok${m.p95 ? `, p95 ${m.p95}` : ''}${m.ourCost ? `, ${m.ourCost} per call` : ''}`,
-                `Наш журнал: ${m.calls} вызовов, ${m.okPct}% успеха${m.p95 ? `, p95 ${m.p95}` : ''}${m.ourCost ? `, ${m.ourCost} за вызов` : ''}`,
-              )}
+              label={`${t('modelSelect.journal', lang).replace('{n}', String(m.calls)).replace('{p}', String(m.okPct))}${m.p95 ? `, p95 ${m.p95}` : ''}${m.ourCost ? `, ${m.ourCost}` : ''}`}
             >
               <span className={`tabular-nums ${m.quarantined ? 'text-danger' : 'text-ok'}`}>
                 {m.okPct}% · {m.calls}
@@ -379,12 +375,12 @@ function OptionBody({ o, ru }: { o: Option; ru: boolean }) {
           )}
           {o.context && <span className="hidden tabular-nums sm:inline">{o.context}</span>}
           {o.intelligence ? (
-            <Tooltip label={say('Intelligence index published by the catalog', 'Оценка уровня, опубликованная каталогом')}>
-              <span className="hidden tabular-nums sm:inline">{say(`IQ ${o.intelligence}`, `ум ${o.intelligence}`)}</span>
+            <Tooltip label={t('modelSelect.intelligence', lang)}>
+              <span className="hidden tabular-nums sm:inline">{t('modelSelect.iq', lang).replace('{n}', String(o.intelligence))}</span>
             </Tooltip>
           ) : null}
           {o.structured && (
-            <Tooltip label={say('Supports strict JSON schema', 'Умеет строгий JSON по схеме')}>
+            <Tooltip label={t('models.strictJson', lang)}>
               <span className="hidden sm:inline-flex">
                 <Braces size={12} />
               </span>

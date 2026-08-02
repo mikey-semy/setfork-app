@@ -17,6 +17,7 @@ import { ActionsMenu } from './ActionsMenu'
 import { ProvenancePanel } from './ProvenancePanel'
 import { ChatComposer } from '@/shared/ui/ChatComposer'
 import { acceptCandidate, answerClarify, refineInChat, regenerateCandidate, setGenerationDetail, setGenerationKind } from './actions'
+import { t } from '@/shared/i18n'
 
 /** Первая буква — заглавная: hint приходит от модели строчными, а это готовое сообщение. */
 const capFirst = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
@@ -80,7 +81,6 @@ const COUNCIL_KINDS = new Set<GenMessage['kind']>(['plan', 'summon', 'seek', 'dr
 /** Ход совета: пока виток идёт — раскрыт (это и есть лоадер), отработал — свёрнут в одну строку. */
 function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { messages: GenMessage[]; lang: Lang; defaultOpen: boolean; avatars: Record<string, string>; repBadges: Record<string, string> }) {
   const [open, setOpen] = useState(defaultOpen)
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
   return (
     <div>
       <button
@@ -89,7 +89,7 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { mes
         className="inline-flex items-center gap-1 rounded-md py-0.5 text-[0.6875rem] text-muted hover:text-ink-2"
       >
         <ChevronRight size={12} className={`transition-transform ${open ? 'rotate-90' : ''}`} />
-        {say(`Council: ${messages.length} lines`, `Ход совета: ${messages.length}`)}
+        {t('generation.councilLines', lang).replace('{n}', String(messages.length))}
       </button>
       {open && (
         <ol className="mt-2 flex flex-col gap-3">
@@ -99,7 +99,7 @@ function CouncilTrail({ messages, lang, defaultOpen, avatars, repBadges }: { mes
                 who={m.who ?? undefined}
                 name={m.name ?? undefined}
                 badge={m.who ? repBadges[m.who] : undefined}
-                badgeTitle={say('Share of council lists people accepted', 'Доля советов, принятых людьми')}
+                badgeTitle={t('generation.shareCouncilListsPeople', lang)}
                 src={m.who ? avatars[m.who] : undefined}
               >
                 {m.text}
@@ -135,7 +135,6 @@ interface Props {
 export function GenerationChat({ generationId, lang, candidates, status, messages, listKind, detail, avatars, gnomeNames, repBadges, error, clarifyQuestions }: Props) {
   const detailNow = toDetail(detail)
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const router = useRouter()
   const [pending, start] = useTransition()
 
@@ -202,11 +201,11 @@ export function GenerationChat({ generationId, lang, candidates, status, message
   // обязан остаться видимым, иначе получается «потерял то, что сгенерировал».
   const attempts = [...new Set([...messages.map((m) => m.attempt), ...candidates.map((c) => c.idx)])].sort((a, b) => a - b)
   const errText: Record<string, string> = {
-    ratelimited: say('Too many requests — please wait a bit.', 'Слишком часто — подожди немного.'),
-    variantcap: say(`You’ve hit the ${MAX_VARIANTS}-variant limit.`, `Достигнут предел в ${MAX_VARIANTS} вариантов.`),
-    ai_quota: say('Monthly draft limit reached.', 'Исчерпан месячный лимит на черновики.'),
-    list_quota: say('List limit reached — delete some to save this draft.', 'Достигнут лимит списков — удали ненужные.'),
-    aifail: say('Could not come up with another variant.', 'Не удалось придумать ещё вариант.'),
+    ratelimited: t('generation.tooManyRequestsPlease', lang),
+    variantcap: t('generation.variantLimit', lang).replace('{n}', String(MAX_VARIANTS)),
+    ai_quota: t('generation.monthlyDraftLimitReached2', lang),
+    list_quota: t('generation.listLimitReachedDelete', lang),
+    aifail: t('generation.couldNotComeUp', lang),
   }
 
   return (
@@ -270,7 +269,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 <div key={m.id} className="flex animate-fadein justify-end">
                   {/* Кап 640px: на широком контейнере пузырь на 85% превращался в строку во весь экран. */}
                   <div className="w-fit max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[0.8125rem] leading-[1.5] text-primary-fg sm:max-w-[40rem]">
-                    {m.kind === 'again' ? say('Another variant', 'Ещё вариант') : m.text}
+                    {m.kind === 'again' ? t('generation.anotherVariant', lang) : m.text}
                   </div>
                 </div>
               ))}
@@ -278,8 +277,8 @@ export function GenerationChat({ generationId, lang, candidates, status, message
               {trail.length > 0 && <CouncilTrail messages={trail} lang={lang} defaultOpen={!cand && !failed} avatars={avatars} repBadges={repBadges} />}
               {failMsg && (
                 <div>
-                  <CouncilBubble who="council" name={say('Council', 'Совет')}>
-                    <span className="text-warn">{say('Could not finish this one — try again.', 'Не получилось — попробуй ещё раз.')}</span>
+                  <CouncilBubble who="council" name={t('generation.council', lang)}>
+                    <span className="text-warn">{t('generation.couldNotFinishOne', lang)}</span>
                   </CouncilBubble>
                   {/* Причина — свёрнутой: человеку она не нужна, но открыть и переслать нам он может. */}
                   <FailureNote raw={failMsg.text} generationId={generationId} attempt={n} at={failMsg.createdAt} lang={lang} />
@@ -302,14 +301,14 @@ export function GenerationChat({ generationId, lang, candidates, status, message
 
         {working && (
           <li className="animate-fadein">
-            <ThinkingIndicator ru={ru} slow={slow} slowText={say('Still working — runs in the background, we’ll ping you', 'Ещё думаем — идёт в фоне, пришлём уведомление')} />
+            <ThinkingIndicator ru={ru} slow={slow} slowText={t('generation.stillWorkingRunsBackground', lang)} />
           </li>
         )}
 
         {showClarify && (
           <li className="animate-fadein">
-            <CouncilBubble who="reporter" name={say('Reporter', 'Репортёр')}>
-              {say('A couple of details and the list will be sharper.', 'Пара деталей — и список будет точнее.')}
+            <CouncilBubble who="reporter" name={t('common.reporter', lang)}>
+              {t('generation.aCoupleDetailsList', lang)}
             </CouncilBubble>
             <div className="mt-2 space-y-3 pl-[3.25rem]">
               {/* Вопрос может нести быстрые варианты после «|»: «Какой стек? | Node.js | Docker».
@@ -356,7 +355,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 disabled={pending}
                 className="rounded-md bg-primary px-3.5 py-2 text-[0.8125rem] font-semibold text-primary-fg disabled:opacity-50"
               >
-                {say('Send', 'Ответить')}
+                {t('generation.send', lang)}
               </button>
             </div>
           </li>
@@ -380,7 +379,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 onClick={() => selId && start(() => acceptCandidate(generationId, selId))}
                 className="inline-flex items-center gap-1.5 rounded-full border border-(--accent)/60 bg-(--accent-soft) px-3 py-1.5 text-[0.78125rem] font-medium text-accent hover:opacity-90 disabled:opacity-40"
               >
-                <Check size={13} /> {say('Use this one', 'Использовать этот')}
+                <Check size={13} /> {t('generation.useOne', lang)}
               </button>
             )}
             {candidates.length < MAX_VARIANTS && (
@@ -390,7 +389,7 @@ export function GenerationChat({ generationId, lang, candidates, status, message
                 className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[0.78125rem] text-ink-2 hover:border-border-strong hover:text-ink"
               >
                 {/* Сравнивать нечего — значит это не «ещё вариант», а повтор того же запроса. */}
-                <RotateCw size={13} /> {last ? say('Another variant', 'Ещё вариант') : say('Try again', 'Ещё раз')}
+                <RotateCw size={13} /> {last ? t('generation.anotherVariant', lang) : t('generation.tryAgain', lang)}
               </button>
             )}
             {(last?.hint || '').trim() && (
@@ -411,10 +410,10 @@ export function GenerationChat({ generationId, lang, candidates, status, message
           value={note}
           onChange={setNote}
           onSend={submitNote}
-          placeholder={say('Your reply…', 'Ваш ответ…')}
+          placeholder={t('generation.yourReply', lang)}
           sendDisabled={!note.trim() || working}
           pending={working}
-          sendAriaLabel={say('Send', 'Отправить')}
+          sendAriaLabel={t('generation.send2', lang)}
           onTab={() => setNote(capFirst(last?.hint || refineHint(listKind, ru)))}
           leftSlot={
             <ActionsMenu

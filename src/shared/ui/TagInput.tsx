@@ -6,6 +6,7 @@ import { cn } from '@/shared/lib/cn'
 import { Badge } from '@/shared/ui/badge'
 import { Tooltip } from './Tooltip'
 import type { Lang } from '@/shared/i18n'
+import { t } from '@/shared/i18n'
 
 // Чипы + автокомплит для тегов списка. Пишет скрытый <input name> со slug'ами
 // через пробел — серверный экшен (parseTags) работает без изменений. Подсказки
@@ -21,7 +22,6 @@ function normalize(s: string): string {
 }
 
 export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?: string; initial?: string[]; lang: Lang; max?: number }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // не тернар-с-литералами (i18n-lint)
   const [tags, setTags] = useState<string[]>(() => [...new Set(initial.map(normalize).filter(Boolean))].slice(0, max))
   const [q, setQ] = useState('')
   const [sugg, setSugg] = useState<Suggestion[]>([])
@@ -71,14 +71,14 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
     <div ref={boxRef} className="relative">
       <input type="hidden" name={name} value={tags.join(' ')} />
       {/* min-h по шкале md (control.ts): в ряду с Input/Button не проседает; растёт при переносе тегов. */}
-      <div className="flex min-h-[2.375rem] flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
+      <div className="flex min-h-7 flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
         {tags.map((tag) => (
           <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-[0.78125rem] font-medium text-ink">
             {tag}
             <button
               type="button"
               onClick={() => remove(tag)}
-              aria-label={say('Remove', 'Убрать')}
+              aria-label={t('ui.remove', lang)}
               className="grid size-4 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-danger"
             >
               <X size={11} />
@@ -132,7 +132,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
               >
                 <span className="flex items-center gap-1.5">
                   {s.curated && (
-                    <Tooltip label={say('Curated', 'Курируемый')}>
+                    <Tooltip label={t('common.curated', lang)}>
                       <span className="text-accent">✓</span>
                     </Tooltip>
                   )}
@@ -144,7 +144,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
           ))}
         </ul>
       )}
-      <p className="mt-1 text-[0.6875rem] text-muted">{say(`Pick from suggestions or type your own. Up to ${max}.`, `Выбери из подсказок или впиши свой. До ${max}.`)}</p>
+      <p className="mt-1 text-[0.6875rem] text-muted">{t('ui.pickFromSuggestions', lang).replace('{n}', String(max))}</p>
     </div>
   )
 }

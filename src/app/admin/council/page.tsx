@@ -1,6 +1,6 @@
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { getAiSettings, getApiKey } from '@/shared/settings/ai'
 import { fetchModels } from '@/shared/ai/models'
 import { buildOpts } from '@/features/admin/model-options'
@@ -20,6 +20,7 @@ export async function generateMetadata() {
   return { title: t('councilHall', lang) }
 }
 
+
 /**
  * «Зал совета» — СОСТАВ специалистов: кто есть, в каком состоянии, куда нажать. Настройки
  * каждого — на его собственной странице (/admin/council/<id>), как у списка на странице списка.
@@ -33,14 +34,13 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
   await requireAdmin()
   const [lang, settings, apiKey, sp] = await Promise.all([getLang(), getAiSettings(), getApiKey(), searchParams])
   const ru = lang === 'ru'
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
   // Третий потребитель формата цен появился (эта страница, /admin и серверный экшен смены
   // провайдера) — формула переехала в model-options, локальные копии убраны. Заодно строки
   // получили наш рейтинг и занятость: выбор модели везде объясняется одинаково.
   const models = apiKey ? await fetchModels() : null
   const modelOptions: Option[] = models
-    ? buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, await modelMeta(models.currency, ru))
+    ? buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, await modelMeta(models.currency, lang === 'ru'))
     : []
 
   const [rows, gallery, uploaded, signals, reps] = await Promise.all([
@@ -79,15 +79,12 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
     <div className="flex w-full min-w-0 flex-col gap-4 px-5 py-6 md:px-8">
       {settings.councilEnabled ? null : (
         <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
-          {say(
-            'The council is off — these experts are not summoned. Turn it on in Admin → Generation & models.',
-            'Совет выключен — этих экспертов никто не зовёт. Включается в Админке → Генерация и модели.',
-          )}
+          {t('admin.theCouncilOffThese', lang)}
         </p>
       )}
       {sp.hire === 'failed' && (
         <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
-          {say('Hiring failed — the model did not return a valid profile. Try again.', 'Найм не удался — модель не вернула валидный профиль. Попробуй ещё раз.')}
+          {t('admin.hiringFailedModelDid', lang)}
         </p>
       )}
       {/* Найм (HQ §4в): темы, по которым 30 дней подряд отдувается универсал. Кнопка рождает
@@ -95,7 +92,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
       {signals.length > 0 && (
         <div className="mb-4 rounded-lg border border-(--accent)/40 bg-(--accent-soft) p-3.5">
           <div className="mb-2 text-[0.78125rem] font-semibold text-accent">
-            {say('Hiring signal: the generalist keeps covering these topics', 'Сигнал найма: универсал раз за разом отдувается по этим темам')}
+            {t('admin.hiringSignalGeneralistKeeps', lang)}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {signals.map((s) => (
@@ -105,14 +102,14 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
                   type="submit"
                   className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[0.78125rem] text-ink hover:border-border-strong"
                 >
-                  {say(`Hire a master for “${s.tag}”`, `Нанять мастера под «${s.tag}»`)}
+                  {t('admin.hireMasterFor', lang).replace('{tag}', s.tag)}
                   <span className="font-mono text-[0.6875rem] text-muted">×{s.n}</span>
                 </button>
               </form>
             ))}
           </div>
           <p className="mt-2 text-[0.6875rem] text-ink-2">
-            {say('The new master is created DISABLED — review the profile, tweak it and switch him on.', 'Новый мастер рождается ВЫКЛЮЧЕННЫМ — прочитай профиль, поправь и включи сам.')}
+            {t('admin.theNewMasterCreated', lang)}
           </p>
         </div>
       )}
@@ -123,25 +120,22 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3.5">
           <div className="min-w-0">
             <div className="text-[0.78125rem] font-semibold text-ink">
-              {say('Accounts are missing', 'Не у всех есть аккаунт')}
+              {t('admin.accountsMissing', lang)}
             </div>
             <p className="mt-0.5 text-[0.6875rem] text-ink-2">
-              {say(
-                `${noAccounts} of ${roster.length} have no user-level account — without it their edits are nobody’s and cannot be attributed.`,
-                `${noAccounts} из ${roster.length} без аккаунта уровня пользователя — без него их правки ничьи и их некому приписать.`,
-              )}
+              {t('admin.noAccountsAttribution', lang).replace('{a}', String(noAccounts)).replace('{b}', String(roster.length))}
             </p>
           </div>
           <form action={createGnomeAccounts}>
             <Button type="submit" variant="primary" size="md">
-              <UserPlus size={14} /> {say('Create accounts', 'Завести аккаунты')}
+              <UserPlus size={14} /> {t('admin.createAccounts', lang)}
             </Button>
           </form>
         </div>
       )}
       {sp.selfgen && (
         <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
-          {say(`Self-generation did not produce a draft: ${sp.selfgen}`, `Самогенерация не дала черновик: ${sp.selfgen}`)}
+          {t('admin.selfgenNoDraft', lang).replace('{e}', sp.selfgen)}
         </p>
       )}
       <CouncilList rows={listRows} lang={lang} canAssign={settings.selfGenMode !== 'off'} />

@@ -6,6 +6,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import type { Lang } from '@/shared/i18n'
 import type { GenerationCandidate } from '@/shared/db'
 import { MAX_VARIANTS } from './limits'
+import { t } from '@/shared/i18n'
 
 /**
  * Меню действий у поля ввода (фидбек владельца): «Использовать этот» и «Ещё
@@ -30,7 +31,6 @@ export function ActionsMenu({
   onAccept: () => void
   onRegen: () => void
 }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -65,12 +65,12 @@ export function ActionsMenu({
       {/* «+» ВНУТРИ поля (как у ChatGPT/Claude, фидбек владельца). Кликабелен ВСЕГДА:
           disabled-кнопка «нажимаю и ничего» ставила в тупик — теперь до первого варианта
           меню честно объясняет, что появится здесь. Тултип — shadcn, не браузерный title. */}
-      <Tooltip label={say('Variant actions', 'Действия с вариантами')}>
+      <Tooltip label={t('generation.variantActions', lang)}>
         <button
           type="button"
           aria-haspopup="menu"
           aria-expanded={open}
-          aria-label={say('Variant actions', 'Действия с вариантами')}
+          aria-label={t('generation.variantActions', lang)}
           onClick={() => setOpen((v) => !v)}
           className="grid size-9 place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-ink"
         >
@@ -80,7 +80,7 @@ export function ActionsMenu({
 
       {open && candidates.length === 0 && (
         <div className="absolute bottom-[calc(100%+8px)] left-0 z-30 w-[16.25rem] rounded-md border border-border bg-surface px-3 py-2.5 text-[0.78125rem] leading-relaxed text-muted shadow-card">
-          {say('Variant actions will appear here once the council forges the first list.', 'Здесь появятся действия с вариантами, когда совет выкует первый список.')}
+          {t('generation.variantActionsWillAppear', lang)}
         </div>
       )}
 
@@ -97,7 +97,7 @@ export function ActionsMenu({
           >
             <Check size={14} className="shrink-0 text-accent" />
             <span className="min-w-0">
-              {say('Use this one', 'Использовать этот')}
+              {t('generation.useOne', lang)}
               {selected && <span className="block truncate text-[0.6875rem] font-normal text-muted">{selected.title}</span>}
             </span>
           </button>
@@ -111,7 +111,7 @@ export function ActionsMenu({
             className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-left text-[0.8125rem] text-ink-2 hover:bg-surface-2 hover:text-ink disabled:opacity-40"
           >
             <RotateCw size={14} className="shrink-0" />
-            {say('Another variant', 'Ещё вариант')}{' '}
+            {t('generation.anotherVariant', lang)}{' '}
             <span className="ml-auto text-[0.6875rem] tabular-nums text-muted">
               {candidates.length}/{MAX_VARIANTS}
             </span>
@@ -119,7 +119,7 @@ export function ActionsMenu({
           {candidates.length > 1 && (
             <div className="border-t border-border">
               <div className="px-3 pb-1 pt-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
-                {say('Variants', 'Варианты')}
+                {t('generation.variants', lang)}
               </div>
               {candidates.map((c) => (
                 <button

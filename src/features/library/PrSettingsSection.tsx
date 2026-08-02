@@ -151,7 +151,7 @@ function WhoRow({ templateId, initial, lang }: { templateId: string; initial: 'a
           start(() => void setPrAllowFrom(templateId, next))
         }}
       >
-        <SelectTrigger className="h-[2.375rem] w-auto shrink-0 text-[0.8125rem]">
+        <SelectTrigger className="h-7 w-auto shrink-0 text-[0.8125rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -186,7 +186,7 @@ function MethodRow({ templateId, initial, lang }: { templateId: string; initial:
           start(() => void setPrMergeMethod(templateId, next))
         }}
       >
-        <SelectTrigger className="h-[2.375rem] w-auto shrink-0 text-[0.8125rem]">
+        <SelectTrigger className="h-7 w-auto shrink-0 text-[0.8125rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -216,7 +216,7 @@ function ApprovalsRow({ templateId, initial, lang }: { templateId: string; initi
           start(() => void setPrNumber(templateId, 'requiredApprovals', n))
         }}
       >
-        <SelectTrigger className="h-[2.375rem] w-auto shrink-0 text-[0.8125rem]">
+        <SelectTrigger className="h-7 w-auto shrink-0 text-[0.8125rem]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

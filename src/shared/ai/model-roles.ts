@@ -2,6 +2,7 @@ import 'server-only'
 import { getAiSettings } from '@/shared/settings/ai'
 import { getRosterAll, rosterAvatars } from './roster'
 import { baseModelId } from './health'
+import { t, type Lang } from '@/shared/i18n'
 
 /**
  * КТО ЗАНИМАЕТ МОДЕЛЬ — карта «id модели → на каких ролях она стоит».
@@ -39,28 +40,13 @@ export interface ModelRolesResult {
 
 /** Тексты ролей — здесь, а не в трёх разных компонентах: это одно объяснение на весь портал. */
 export function roleTexts(ru: boolean): Record<ModelRoleKind, { label: string; what: string }> {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+  const lang: Lang = ru ? 'ru' : 'en'
   return {
-    chat: {
-      label: say('Main', 'Основная'),
-      what: say('Writes the final list — quality matters most here.', 'Пишет финальный список — здесь важнее всего качество.'),
-    },
-    fallback: {
-      label: say('Backup', 'Запасная'),
-      what: say('Takes over when the main one is down or the balance is low.', 'Подхватывает, когда основная упала или кончается баланс.'),
-    },
-    embedding: {
-      label: say('Search', 'Поиск'),
-      what: say('Turns lists into vectors — semantic search and precedents run on it.', 'Превращает списки в векторы — на ней держатся поиск и прецеденты.'),
-    },
-    council: {
-      label: say('Council pool', 'Пул совета'),
-      what: say('Handed to experts in turn; the 1st one also runs the intermediate steps, so it should be fast.', 'Раздаётся экспертам по кругу; 1-я ещё и ведёт промежуточные шаги — ей быть быстрой.'),
-    },
-    gnome: {
-      label: say('Expert', 'Специалист'),
-      what: say('This expert thinks with it instead of taking one from the pool.', 'Этот специалист думает ею вместо модели из пула.'),
-    },
+    chat: { label: t('role.chat', lang), what: t('role.chatWhat', lang) },
+    fallback: { label: t('role.fallback', lang), what: t('role.fallbackWhat', lang) },
+    embedding: { label: t('role.embedding', lang), what: t('role.embeddingWhat', lang) },
+    council: { label: t('role.council', lang), what: t('role.councilWhat', lang) },
+    gnome: { label: t('role.gnome', lang), what: t('role.gnomeWhat', lang) },
   }
 }
 

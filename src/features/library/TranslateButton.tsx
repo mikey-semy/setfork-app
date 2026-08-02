@@ -14,13 +14,12 @@ import { translateList } from './actions'
 export function TranslateButton({ templateId, targetLang, lang, iconOnly }: { templateId: string; targetLang: Lang; lang: Lang; iconOnly?: boolean }) {
   const router = useRouter()
   const [pending, start] = useTransition()
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const label = t('translateInto', lang).replace('{lang}', LANG_META[targetLang].endonym)
 
   // Конкретная причина в тост (а не только «не удалось»): что именно случилось.
   const reason = (code: string): string => {
     if (code === 'ratelimited') return t('rateLimited', lang)
-    if (code === 'ai_quota') return say('Monthly limit reached. Try again next month.', 'Исчерпан месячный лимит. Попробуй в следующем месяце.')
+    if (code === 'ai_quota') return t('library.monthlyLimitReachedTry', lang)
     return t('translateFailed', lang) // aifail / mismatch / прочее
   }
 

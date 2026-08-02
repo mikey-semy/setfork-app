@@ -12,6 +12,7 @@ import { CreditsWidget } from './CreditsWidget'
 import { checkProvider, loadProviderCatalog } from './model-catalog-action'
 import { CUR_SIGN, type Currency } from './model-options'
 import { catalogProblem } from './catalog-problem'
+import { t, type Lang } from '@/shared/i18n'
 
 /**
  * ПРОВАЙДЕР, ЕГО МОДЕЛИ И ЕГО ДЕНЬГИ — одним блоком, потому что это одна связка.
@@ -39,7 +40,7 @@ export function AiProviderModels({
   yandexFolder,
   searchKeyMasked,
   enabled,
-  ru,
+  lang,
   initial,
   labels,
 }: {
@@ -52,7 +53,7 @@ export function AiProviderModels({
   yandexFolder: string
   searchKeyMasked: string
   enabled: boolean
-  ru: boolean
+  lang: Lang
   initial: {
     chat: Option[]
     embedding: Option[]
@@ -67,7 +68,6 @@ export function AiProviderModels({
   }
   labels: { chat: string; fallback: string; embedding: string; embeddingHint: string; pick: string; loading: string; noKey: string }
 }) {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
 
   const [prov, setProv] = useState<AiProviderChoice>(provider)
   const [chat, setChat] = useState<Option[]>(initial.chat)
@@ -91,7 +91,7 @@ export function AiProviderModels({
     startTransition(async () => {
       // Опции приходят готовыми: цены и валюта у провайдеров разные, и форматировать их на
       // клиенте значило бы держать вторую копию правил.
-      const cat = await loadProviderCatalog(next, ru ? 'ru' : 'en')
+      const cat = await loadProviderCatalog(next, lang)
       setChat(cat.chat)
       setEmbedding(cat.embedding)
       setValues({ chatModel: cat.saved.chatModel, fallbackModel: cat.saved.fallbackModel, cheapModeThreshold: cat.saved.cheapModeThreshold })
@@ -102,7 +102,7 @@ export function AiProviderModels({
   }
 
   const sign = CUR_SIGN[currency]
-  const customHint = say('Use', 'Использовать')
+  const customHint = t('admin.use2', lang)
   // Каталога нет вообще — единственный способ задать модель это ввести id руками, и об
   // этом надо сказать прямо в поле поиска, а не подменять виджет.
   const emptyCatalog = chat.length === 0
@@ -118,7 +118,7 @@ export function AiProviderModels({
         fallbackProvider={fallbackProvider}
         yandexFolder={yandexFolder}
         searchKeyMasked={searchKeyMasked}
-        ru={ru}
+        lang={lang}
         onProviderChange={reload}
       />
 
@@ -133,10 +133,7 @@ export function AiProviderModels({
           могла гореть ошибка «провайдер не сконфигурирован»: они были про разных. */}
       {!pending && !hasKey[prov] && (
         <Alert variant="warn">
-          {say(
-            'This provider has no key — generation and the model catalog are unavailable until you enter one.',
-            'У этого провайдера нет ключа — генерация и каталог моделей недоступны, пока он не введён.',
-          )}
+          {t('admin.providerNoKey', lang)}
         </Alert>
       )}
 
@@ -146,7 +143,7 @@ export function AiProviderModels({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {!error && hasKey[prov] && (
             <span className="min-w-0 flex-1 text-[0.78125rem] text-muted">
-              {say(`Catalog: ${chat.length} chat models, ${embedding.length} embedding models.`, `Каталог: ${chat.length} моделей чата, ${embedding.length} эмбеддингов.`)}
+              {t('admin.catalogCounts', lang).replace('{chat}', String(chat.length)).replace('{emb}', String(embedding.length))}
             </span>
           )}
           <Button
@@ -160,8 +157,8 @@ export function AiProviderModels({
                 setChecked({
                   ok: r.ok,
                   text: r.ok
-                    ? say(`Connection is alive: ${r.chat} models.`, `Связь есть: ${r.chat} моделей.`)
-                    : catalogProblem(r.error ?? 'unknown', say),
+                    ? t('admin.connectionAlive', lang).replace('{n}', String(r.chat))
+                    : catalogProblem(r.error ?? 'unknown', lang),
                 })
               } finally {
                 setChecking(false)
@@ -171,7 +168,7 @@ export function AiProviderModels({
             className="min-h-11 shrink-0 max-sm:ml-auto"
           >
             {checking ? <Loader2 size={13} className="animate-spin" /> : <PlugZap size={13} />}
-            {say('Check', 'Проверить')}
+            {t('admin.checkConnection', lang)}
           </Button>
         </div>
       )}
@@ -190,11 +187,11 @@ export function AiProviderModels({
         <Alert variant="warn">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-              {catalogProblem(error, say)}
+              {catalogProblem(error, lang)}
             </span>
             {/* max-sm:ml-auto — при переносе строки кнопка прижимается вправо, а не повисает по центру. */}
             <Button size="sm" onClick={() => reload(prov)} className="min-h-11 shrink-0 max-sm:ml-auto">
-              <RefreshCw size={13} /> {say('Retry', 'Повторить')}
+              <RefreshCw size={13} /> {t('admin.retry', lang)}
             </Button>
           </div>
         </Alert>
@@ -210,10 +207,10 @@ export function AiProviderModels({
           name="chatModel"
           defaultValue={values.chatModel}
           options={chat}
-          placeholder={emptyCatalog ? say('Type the model id', 'Введите id модели') : labels.pick}
+          placeholder={emptyCatalog ? t('admin.typeModelId', lang) : labels.pick}
           allowCustom
           customHint={customHint}
-          ru={ru}
+          ru={lang === 'ru'}
         />
       </Field>
 
@@ -228,7 +225,7 @@ export function AiProviderModels({
           placeholder="—"
           allowCustom
           customHint={customHint}
-          ru={ru}
+          ru={lang === 'ru'}
         />
       </Field>
 
@@ -240,48 +237,36 @@ export function AiProviderModels({
           name="embeddingModel"
           defaultValue={initial.embeddingModel}
           options={embedding}
-          placeholder={embedding.length === 0 ? say('Type the model id', 'Введите id модели') : labels.pick}
+          placeholder={embedding.length === 0 ? t('admin.typeModelId', lang) : labels.pick}
           allowCustom
           customHint={customHint}
-          ru={ru}
+          ru={lang === 'ru'}
         />
       </Field>
 
       <p className="text-[0.78125rem] text-muted">
         {pricesKnown
-          ? say(
-              `Prices are per 1M tokens (prompt/completion), in ${sign}. Colour is relative to THIS catalog: green = its cheapest third, red = its priciest.`,
-              `Цены в списках — за 1М токенов (prompt/completion), в ${sign}. Цвет — относительно ЭТОГО каталога: зелёные — дешёвая треть, красные — дорогая.`,
-            )
-          : say(
-              'This provider does not expose prices via API — check the provider console.',
-              'Провайдер не отдаёт цены по API — смотри тарифы в консоли провайдера.',
-            )}
+          ? t('admin.pricesPer1m', lang).replace('{s}', sign)
+          : t('admin.thisProviderDoesNot', lang)}
       </p>
 
       {/* Порог живёт у провайдера, поэтому и подпись, и валюта — от ВЫБРАННОГО, а не сохранённого. */}
       {(prov === 'openrouter' || prov === 'yandex') && (
         <div className="space-y-3 rounded-md border border-border bg-surface-2 p-3">
           <div className="text-[0.8125rem] font-medium text-ink">
-            {prov === 'openrouter' ? say('OpenRouter cost control', 'Контроль расходов OpenRouter') : say('Yandex cost control', 'Контроль расходов Яндекса')}
+            {prov === 'openrouter' ? t('admin.openRouterCostControl', lang) : t('admin.yandexCostControl', lang)}
           </div>
-          {prov === 'openrouter' && <CreditsWidget ru={ru} />}
+          {prov === 'openrouter' && <CreditsWidget lang={lang} />}
           <Field
             label={
               prov === 'openrouter'
-                ? say(`Auto-fallback threshold (balance, ${sign})`, `Порог авто-fallback (остаток, ${sign})`)
-                : say(`Auto-fallback threshold (${sign} per day)`, `Порог авто-fallback (расход, ${sign}/день)`)
+                ? t('admin.fallbackThresholdBalance', lang).replace('{s}', sign)
+                : t('admin.fallbackThresholdDaily', lang).replace('{s}', sign)
             }
             hint={
               prov === 'openrouter'
-                ? say(
-                    'When the balance drops below this, generation switches to the fallback model. 0 = off.',
-                    'Когда остаток упадёт ниже этой суммы — генерация переключится на запасную модель. 0 — выключено.',
-                  )
-                : say(
-                    'Balance is not exposed by the API, so the threshold is DAILY spend (our journal, the stand price book): above it generation switches to the fallback model. 0 = off.',
-                    'Баланс в API Яндекс не отдаёт, поэтому порог — ДНЕВНОЙ расход (наш журнал по прайс-книге стенда): выше него генерация переключается на запасную модель. 0 — выключено.',
-                  )
+                ? t('admin.whenBalanceDropsBelow', lang)
+                : t('admin.balanceNotExposedBy', lang)
             }
           >
             <Input

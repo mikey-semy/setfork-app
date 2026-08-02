@@ -54,26 +54,14 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
   // Опциональный «токенов на генерацию»-хвост сноски: гейтим ЧИСЛОМ (без кириллицы в ветках тернарника,
   // иначе no-restricted-syntax), кириллица — только внутри tr().
   const tokN = avgTokensPerGen ? num(avgTokensPerGen) : ''
-  const tokPart = tokN ? tr({ en: `, ~${tokN} tokens each`, ru: `, ~${tokN} токенов на генерацию` }, lang) : ''
-  const footnote = tr(
-    {
-      en: `Rough estimate from this window's average. Generations in window: ${num(totals.generations)}${tokPart}. Cost varies per query.`,
-      ru: `Оценка по средней за выбранный период. Генераций за период: ${num(totals.generations)}${tokPart}. На разных запросах цена гуляет — цифра грубая.`,
-    },
-    lang,
-  )
+  const tokPart = tokN ? t('admin.tokensEach', lang).replace('{n}', tokN) : ''
+  const footnote = t('admin.usageFootnote', lang).replace('{n}', num(totals.generations)).replace('{t}', tokPart)
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
       <PageHeader
-        title={tr({ en: 'Draft usage', ru: 'Расход на черновики' }, lang)}
-        subtitle={tr(
-          {
-            en: 'Who consumed what — tokens and money (actual OpenRouter cost).',
-            ru: 'Кто и на сколько сгенерировал — токены и деньги (фактическая стоимость OpenRouter).',
-          },
-          lang,
-        )}
+        title={t('admin.draftUsage', lang)}
+        subtitle={t('admin.whoConsumedWhatTokens', lang)}
         actions={
           <div className="flex gap-1 rounded-md border border-border bg-surface-2 p-0.5">
             {WINDOWS.map((w) => (
@@ -93,9 +81,9 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
 
       {/* Итог по сервису */}
       <div className="grid grid-cols-3 gap-3">
-        <StatTile label={tr({ en: 'Calls', ru: 'Вызовов' }, lang)} value={num(totals.calls)} />
-        <StatTile label={tr({ en: 'Tokens', ru: 'Токенов' }, lang)} value={num(totals.totalTokens)} />
-        <StatTile label={tr({ en: 'Cost', ru: 'Стоимость' }, lang)} value={money(totals.costUsd)} tone="accent" />
+        <StatTile label={t('admin.calls', lang)} value={num(totals.calls)} />
+        <StatTile label={t('admin.tokens', lang)} value={num(totals.totalTokens)} />
+        <StatTile label={t('admin.cost', lang)} value={money(totals.costUsd)} tone="accent" />
       </div>
 
       {/* Осязаемость: остаток OpenRouter → на сколько генераций хватит (по средней за период) */}
@@ -105,7 +93,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
             {credits && (
               <div>
                 <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
-                  {tr({ en: 'OpenRouter balance', ru: 'Остаток OpenRouter' }, lang)}
+                  {t('admin.openRouterBalance', lang)}
                 </div>
                 <div className="mt-1 text-[1.25rem] font-bold text-ink">{money(credits.remaining)}</div>
               </div>
@@ -113,7 +101,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
             {avgPerGen != null && (
               <div>
                 <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
-                  {tr({ en: 'Avg / generation', ru: 'Средняя за генерацию' }, lang)}
+                  {t('admin.avgGeneration', lang)}
                 </div>
                 <div className="mt-1 text-[1.25rem] font-bold text-ink">{money(avgPerGen)}</div>
               </div>
@@ -121,10 +109,10 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
             {runwayGens != null && (
               <div>
                 <div className="text-[0.6875rem] uppercase tracking-wide text-muted">
-                  {tr({ en: 'Balance affords', ru: 'Остатка хватит на' }, lang)}
+                  {t('admin.balanceAffords', lang)}
                 </div>
                 <div className="mt-1 text-[1.25rem] font-bold text-(--accent)">
-                  ≈ {num(runwayGens)} {tr({ en: 'generations', ru: 'генераций' }, lang)}
+                  ≈ {num(runwayGens)} {t('admin.generations', lang)}
                 </div>
               </div>
             )}
@@ -137,15 +125,9 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
       {health.length > 0 && (
         <div className="rounded-lg border border-border bg-surface">
           <div className="border-b border-border px-4 py-2.5">
-            <span className="text-[0.8125rem] font-semibold text-ink">{tr({ en: 'Model reliability', ru: 'Надёжность моделей' }, lang)}</span>
+            <span className="text-[0.8125rem] font-semibold text-ink">{t('admin.modelReliability', lang)}</span>
             <span className="ml-2 text-[0.78125rem] text-muted">
-              {tr(
-                {
-                  en: 'quarantined models are auto-rotated out of the council pool (24h sliding window)',
-                  ru: 'модели в карантине автоматически выпадают из пула совета (скользящие сутки)',
-                },
-                lang,
-              )}
+              {t('admin.quarantinedModelsAutoRotated', lang)}
             </span>
           </div>
           {/* Титульная полоса остаётся снаружи скролла: таблица внутри без своей рамки. */}

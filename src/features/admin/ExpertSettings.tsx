@@ -20,6 +20,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { Field } from '@/shared/ui/Field'
 import { ModelSelect, NONE, type Option } from './ModelSelect'
 import { resetExpertAvatar, saveExpert, setExpertAvatar, uploadExpertAvatar } from './actions'
+import { t, type Lang } from '@/shared/i18n'
 
 /**
  * Менеджер ростера совета: кто такие эксперты, как их зовут, чем они думают.
@@ -69,18 +70,17 @@ function AvatarPicker({
   value,
   uploadedUrl,
   gallery,
-  ru,
+  lang,
 }: {
   id: string
   value: string
   uploadedUrl?: string
   gallery: string[]
-  ru: boolean
+  lang: Lang
 }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const src = uploadedUrl || `/gnomes/${value}.webp`
 
   const upload = async (file: File) => {
@@ -97,7 +97,7 @@ function AvatarPicker({
 
   return (
     <div className="relative shrink-0">
-      <Tooltip label={say('Change', 'Сменить')}>
+      <Tooltip label={t('admin.change', lang)}>
         <button type="button" onClick={() => setOpen((v) => !v)} className="relative block">
           <GnomeAvatar src={src} size={64} className="size-16 rounded-full object-cover ring-1 ring-border hover:ring-(--accent)" />
           {busy && (
@@ -135,7 +135,7 @@ function AvatarPicker({
                   if (f) void upload(f)
                 }}
               />
-              {say('Upload own', 'Загрузить свою')}
+              {t('admin.uploadOwn', lang)}
             </label>
             {uploadedUrl && (
               <button
@@ -143,7 +143,7 @@ function AvatarPicker({
                 onClick={() => void resetExpertAvatar(id)}
                 className="text-[0.6875rem] text-muted hover:text-ink"
               >
-                {say('Reset', 'Вернуть встроенную')}
+                {t('admin.reset2', lang)}
               </button>
             )}
           </div>
@@ -154,8 +154,8 @@ function AvatarPicker({
   )
 }
 
-function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptions: Option[]; gallery: string[]; ru: boolean }) {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+function ExpertCard({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOptions: Option[]; gallery: string[]; lang: Lang }) {
+  const ru = lang === 'ru'
   const [pending, start] = useTransition()
   const [enabled, setEnabled] = useState(e.enabled)
   const [anyTopic, setAnyTopic] = useState(e.domains.includes('*'))
@@ -182,29 +182,29 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           (иначе под аватаром пустота, а поля уезжали вправо — фидбек владельца). Поля ниже
           во всю ширину карточки. */}
       <div className="mb-3 flex items-center gap-2">
-        <AvatarPicker id={e.id} value={e.avatarUploaded ? e.id : e.avatar || e.id} uploadedUrl={e.uploadedUrl} gallery={gallery} ru={ru} />
-        <Tooltip label={say('id is fixed: avatar name and who in past chats', 'id не меняется: имя аватарки и who в прошлых беседах')}>
+        <AvatarPicker id={e.id} value={e.avatarUploaded ? e.id : e.avatar || e.id} uploadedUrl={e.uploadedUrl} gallery={gallery} lang={lang} />
+        <Tooltip label={t('admin.idFixedAvatarName', lang)}>
           <code className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-[0.6875rem] text-muted">
             {e.id}
           </code>
         </Tooltip>
-        <Tooltip label={say('Personal page: KPI and knowledge base', 'Личная страница: KPI и база знаний')}>
-          <Link href={`/admin/council/${e.id}`} aria-label={say('Personal page', 'Личная страница')} className="grid h-6 w-6 place-items-center rounded-md text-muted hover:text-ink">
+        <Tooltip label={t('admin.personalPageKpiKnowledge', lang)}>
+          <Link href={`/admin/council/${e.id}`} aria-label={t('admin.personalPage', lang)} className="grid h-6 w-6 place-items-center rounded-md text-muted hover:text-ink">
             <BarChart3 size={13} />
           </Link>
         </Tooltip>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="text-[0.6875rem] text-muted">{say('On', 'Вкл')}</span>
+          <span className="text-[0.6875rem] text-muted">{t('admin.on2', lang)}</span>
           <Switch name="enabled" checked={enabled} onCheckedChange={setEnabled} />
         </div>
       </div>
 
       <div className="space-y-2.5">
           <div className="grid grid-cols-2 gap-2">
-            <Field label={say('Name (RU)', 'Имя (RU)')}>
+            <Field label={t('admin.nameRu', lang)}>
               <Input name="nameRu" defaultValue={e.nameRu} />
             </Field>
-            <Field label={say('Name (EN)', 'Имя (EN)')}>
+            <Field label={t('admin.nameEn', lang)}>
               <Input name="nameEn" defaultValue={e.nameEn} />
             </Field>
           </div>
@@ -212,19 +212,19 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
           {/* Профессия ОТДЕЛЬНО от имени: имя своё (мифологическое), профессия буквальная
               и показывается в профиле аккаунта как должность. */}
           <div className="grid grid-cols-2 gap-2">
-            <Field label={say('Profession (RU)', 'Профессия (RU)')}>
-              <Input name="professionRu" defaultValue={e.professionRu} placeholder={say('Chef', 'Повар')} />
+            <Field label={t('admin.professionRu', lang)}>
+              <Input name="professionRu" defaultValue={e.professionRu} placeholder={t('admin.chef', lang)} />
             </Field>
-            <Field label={say('Profession (EN)', 'Профессия (EN)')}>
+            <Field label={t('admin.professionEn', lang)}>
               <Input name="professionEn" defaultValue={e.professionEn} placeholder="Chef" />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Field label={say('Tier', 'Тир мастерства')}>
-              <Input name="tier" defaultValue={e.tier} placeholder={say('senior', 'сеньор')} />
+            <Field label={t('admin.tier', lang)}>
+              <Input name="tier" defaultValue={e.tier} placeholder={t('admin.senior', lang)} />
             </Field>
-            <Field label={say('Career', 'Карьера')}>
+            <Field label={t('admin.career', lang)}>
               {/* Стадии ставит и петля (по бездействию: в строю → под риском → спит), и человек
                   здесь же. «Под риском» — рабочая стадия: такой специалист идёт ПЕРВЫМ в очереди
                   на работу, чтобы вернуться в строй. Спящих совет не созывает, но петля будит
@@ -234,72 +234,72 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">{say('active', 'в строю')}</SelectItem>
-                  <SelectItem value="idle">{say('at risk — no work lately', 'под риском — давно без работы')}</SelectItem>
-                  <SelectItem value="dormant">{say('dormant', 'спит')}</SelectItem>
-                  <SelectItem value="archived">{say('archived', 'в архиве')}</SelectItem>
+                  <SelectItem value="active">{t('admin.active2', lang)}</SelectItem>
+                  <SelectItem value="idle">{t('admin.atRiskNoWork', lang)}</SelectItem>
+                  <SelectItem value="dormant">{t('admin.dormant', lang)}</SelectItem>
+                  <SelectItem value="archived">{t('admin.archived', lang)}</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Field label={say('Guild (RU)', 'Гильдия (RU)')}>
+            <Field label={t('admin.guildRu', lang)}>
               <Input name="guildRu" defaultValue={e.guildRu} />
             </Field>
-            <Field label={say('Guild (EN)', 'Гильдия (EN)')}>
+            <Field label={t('admin.guildEn', lang)}>
               <Input name="guildEn" defaultValue={e.guildEn} />
             </Field>
           </div>
 
-          <Field label={say('Guild code — quality standards (goes into the master’s and the critic’s prompts)', 'Кодекс гильдии — стандарты качества (уходит в промпт мастера и критика)')}>
+          <Field label={t('admin.guildCodeQualityStandards', lang)}>
             <Textarea name="code" defaultValue={e.code} rows={4} className="resize-y font-mono text-[0.78125rem] leading-[1.45]" />
           </Field>
 
-          <Field label={say('Query lens — aspects he searches the knowledge base by (ask_gnome, dig)', 'Линза запроса — аспекты, которыми он ищет по базе знаний (ask_gnome, раскопка)')}>
+          <Field label={t('admin.queryLensAspectsHe', lang)}>
             <Input name="lens" defaultValue={e.lens} className="font-mono text-[0.78125rem]" />
           </Field>
 
-          <Field label={say('Instruction (persona)', 'Инструкция (персона)')}>
+          <Field label={t('admin.instructionPersona', lang)}>
             <Textarea name="persona" defaultValue={e.persona} rows={7} className="resize-y leading-[1.45]" />
           </Field>
 
           {/* «Мечты» — что мешает работать; это сигнал в фиче-бэклог, а не служебная заметка. */}
-          <Field label={say('What’s missing (goes to the feature backlog)', 'Чего не хватает (уходит в фиче-бэклог)')}>
+          <Field label={t('admin.whatSMissingGoes', lang)}>
             <Textarea
               name="dreams"
               defaultValue={e.dreams}
               rows={2}
               className="resize-y leading-[1.45]"
-              placeholder={say('A step-timer for recipes', 'Таймер шага для рецептов')}
+              placeholder={t('admin.aStepTimerRecipes', lang)}
             />
           </Field>
 
           {/* htmlFor (а не оборачивание в label): внутри уже есть label тумблера — вложенные
               label невалидны, а связывать подпись группы с одним из контролов нечестно. */}
-          <Field label={say('Domains — what this expert is summoned for', 'Домены — на что зовут этого эксперта')} htmlFor={`domains-${e.id}`}>
+          <Field label={t('admin.domainsWhatExpertSummoned', lang)} htmlFor={`domains-${e.id}`}>
             {/* Домены — те же теги по смыслу, поэтому тот же TagInput: чипы, автокомплит из реестра.
                 «Любая тема» отдельным тумблером, а не доменом «*»: normalize у TagInput вырезает
                 звёздочку, да и тумблер честнее магического символа. */}
             <label className="mb-1.5 flex items-center gap-2 text-[0.78125rem] text-ink-2">
               <Switch name="anyTopic" checked={anyTopic} onCheckedChange={setAnyTopic} />
-              {say('Any topic (generalist)', 'Любая тема (универсал)')}
+              {t('admin.anyTopicGeneralist', lang)}
             </label>
             {anyTopic ? null : <TagInput name="domains" initial={e.domains.filter((d) => d !== '*')} lang={ru ? 'ru' : 'en'} max={12} />}
           </Field>
 
-          <Field label={say('Model (empty = from council pool)', 'Модель (пусто = из пула совета)')} htmlFor={`model-${e.id}`}>
-            <ModelSelect id={`model-${e.id}`} name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" allowCustom customHint={say('Use', 'Использовать')} ru={ru} />
+          <Field label={t('admin.modelEmptyFromCouncil', lang)} htmlFor={`model-${e.id}`}>
+            <ModelSelect id={`model-${e.id}`} name="model" defaultValue={e.model} options={modelOptions} allowEmpty placeholder="—" allowCustom customHint={t('admin.use', lang)} ru={lang === 'ru'} />
           </Field>
 
           <div className="flex items-center justify-between gap-3 pt-0.5">
             <label className="flex items-center gap-2 text-[0.78125rem] text-ink-2">
               <Switch name="online" checked={online} onCheckedChange={setOnline} />
-              {say('Web access (:online) — pricier', 'Веб-доступ (:online) — дороже')}
+              {t('admin.webAccessOnlinePricier', lang)}
             </label>
             <Button type="submit" variant="primary" disabled={pending}>
               {pending ? <Loader2 size={13} className="animate-spin" /> : saved ? <Check size={13} /> : null}
-              {saved ? say('Saved', 'Сохранено') : say('Save', 'Сохранить')}
+              {saved ? t('admin.saved', lang) : t('common.save', lang)}
             </Button>
           </div>
         </div>
@@ -307,8 +307,8 @@ function ExpertCard({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptio
   )
 }
 
-export function ExpertSettings({ e, modelOptions, gallery, ru }: { e: ExpertRow; modelOptions: Option[]; gallery: string[]; ru: boolean }) {
-  return <ExpertCard e={e} modelOptions={modelOptions} gallery={gallery} ru={ru} />
+export function ExpertSettings({ e, modelOptions, gallery, lang }: { e: ExpertRow; modelOptions: Option[]; gallery: string[]; lang: Lang }) {
+  return <ExpertCard e={e} modelOptions={modelOptions} gallery={gallery} lang={lang} />
 }
 
 export { NONE }

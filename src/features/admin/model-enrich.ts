@@ -4,7 +4,7 @@ import { modelRoles, type ModelRole } from '@/shared/ai/model-roles'
 import { fitOf, getCapabilities, type EmbedCapability } from '@/shared/ai/embed-capability'
 import { COLUMN_DIM } from '@/shared/ai/embed-space'
 import { rubPerUsd } from '@/shared/ai/pricing'
-import { tr } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import type { Currency } from './model-options'
 import type { ModelGroup, OptionMeta } from './ModelSelect'
 
@@ -38,7 +38,7 @@ function costText(usd: number, cur: Currency, rate: number): string {
 function p95Text(ms: number, ru: boolean): string {
   if (!ms) return ''
   const v = (ms / 1000).toFixed(ms < 10_000 ? 1 : 0)
-  return tr({ en: `${v}s`, ru: `${v}с` }, ru ? 'ru' : 'en')
+  return t('embed.seconds', ru ? 'ru' : 'en').replace('{v}', v)
 }
 
 function holderOf(r: ModelRole): NonNullable<OptionMeta['holders']>[number] {
@@ -50,31 +50,13 @@ function holderOf(r: ModelRole): NonNullable<OptionMeta['holders']>[number] {
  * из схемы (COLUMN_DIM), а мерность модели — из измерения: ни одного числа «по памяти».
  */
 function embedNote(cap: EmbedCapability, ru: boolean): NonNullable<OptionMeta['embed']> {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+  const lang: Lang = ru ? 'ru' : 'en'
   const fit = fitOf(cap.dim)
-  if (fit === 'exact')
-    return {
-      fit,
-      text: String(cap.dim),
-      hint: say(`Returns ${cap.dim} — exactly the column width.`, `Отдаёт ${cap.dim} — ровно ширина колонки.`),
-    }
-  if (fit === 'truncated')
-    return {
-      fit,
-      text: `${cap.dim} → ${COLUMN_DIM}`,
-      hint: say(
-        `Returns ${cap.dim}: we truncate to ${COLUMN_DIM} and re-normalise — quality drops unless the model is Matryoshka-trained.`,
-        `Отдаёт ${cap.dim}: усечём до ${COLUMN_DIM} и перенормируем — качество ниже, если модель не матрёшечная.`,
-      ),
-    }
-  return {
-    fit,
-    text: `${cap.dim} → ${COLUMN_DIM}`,
-    hint: say(
-      `Returns ${cap.dim}: we pad with zeros to ${COLUMN_DIM} — cosine similarity is preserved exactly.`,
-      `Отдаёт ${cap.dim}: дополним нулями до ${COLUMN_DIM} — косинусная близость сохраняется точно.`,
-    ),
-  }
+  const hint = (key: 'embed.exact' | 'embed.truncated' | 'embed.padded') =>
+    t(key, lang).replace('{d}', String(cap.dim)).replace('{c}', String(COLUMN_DIM))
+  if (fit === 'exact') return { fit, text: String(cap.dim), hint: hint('embed.exact') }
+  if (fit === 'truncated') return { fit, text: `${cap.dim} → ${COLUMN_DIM}`, hint: hint('embed.truncated') }
+  return { fit, text: `${cap.dim} → ${COLUMN_DIM}`, hint: hint('embed.padded') }
 }
 
 /**

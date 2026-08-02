@@ -94,7 +94,7 @@ export function NotifyPrefsForm({
         </div>
       </div>
 
-      <FormSaveBar ru={lang === 'ru'} />
+      <FormSaveBar lang={lang} />
     </form>
   )
 }

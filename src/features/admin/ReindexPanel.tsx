@@ -5,6 +5,7 @@ import { Eraser, Loader2, Sparkles } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { getEmbedSpaceInfo, getReindexStatus, purgeEmbeddings, setEmbedTarget, startReindex } from './actions'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { t, type Lang } from '@/shared/i18n'
 
 type Status = Awaited<ReturnType<typeof getReindexStatus>>
 type SpaceInfo = Awaited<ReturnType<typeof getEmbedSpaceInfo>>
@@ -13,8 +14,8 @@ const ROWS = 7
 
 /** Переиндексация эмбеддингов: прогресс сеткой-прямоугольником (как контрибуции
  *  на GitHub) — клетки наполняются долей прогресса; серый — ждёт, красный — ошибка. */
-export function ReindexPanel({ ru }: { ru: boolean }) {
-  const say = (en: string, rus: string) => (ru ? rus : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
+export function ReindexPanel({ lang }: { lang: Lang }) {
+  const ru = lang === 'ru'
   const [spread, setSpread] = useState(0)
   const [status, setStatus] = useState<Status>(null)
   const [space, setSpace] = useState<SpaceInfo>(null)
@@ -87,7 +88,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
     setMsg(null)
     const res = await purgeEmbeddings()
     setPurging(false)
-    setMsg('error' in res ? res.error : say(`Removed orphaned: ${res.removed}`, `Удалено осиротевших: ${res.removed}`))
+    setMsg('error' in res ? res.error : t('admin.removedOrphaned', lang).replace('{n}', String(res.removed)))
   }
 
   const btn = 'inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-[0.8125rem] font-semibold disabled:opacity-60'
@@ -96,9 +97,9 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
     // Та же читаемая ширина, что у карточек-секций /admin (const card на странице):
     // без кэпа панель растягивалась на весь экран и выбивалась из колонны секций.
     <div className="w-full max-w-[53.75rem] rounded-lg border border-border bg-surface p-4">
-      <div className="mb-1 font-semibold text-ink">{say('Search index (embeddings)', 'Индексация поиска (эмбеддинги)')}</div>
+      <div className="mb-1 font-semibold text-ink">{t('admin.searchIndexEmbeddings', lang)}</div>
       <p className="mb-3 text-[0.8125rem] text-ink-2">
-        {say('Rebuild the vector index of lists. Runs in batches, at most once per 30 min.', 'Пересчёт векторного индекса списков. Идёт батчами, не чаще раза в 30 минут.')}
+        {t('admin.rebuildVectorIndexLists', lang)}
       </p>
 
       {space && (
@@ -107,11 +108,11 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
             {/* Мерность — крупным бейджем: в чём реально построен индекс */}
             <span className="inline-flex items-baseline gap-1 rounded-md bg-primary px-2.5 py-1.5 font-mono text-primary-fg">
               <span className="text-[1.125rem] font-bold leading-none">{space.index.dim}</span>
-              <span className="text-[0.6875rem] uppercase opacity-80">{say('dim', 'мерн.')}</span>
+              <span className="text-[0.6875rem] uppercase opacity-80">{t('admin.dim', lang)}</span>
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 text-[0.8125rem] font-medium text-ink">
-                {say('Index space:', 'Пространство индекса:')}
+                {t('admin.indexSpace', lang)}
                 <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-[0.6875rem] font-semibold">
                   {space.index.provider === 'yandex' ? 'Yandex v2 🇷🇺' : 'OpenRouter'}
                 </span>
@@ -120,18 +121,18 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
                 </Tooltip>
               </div>
               <div className="mt-0.5 text-[0.78125rem] text-muted">
-                {space.vectorized}/{space.rows} {say('rows vectorized', 'строк с векторами')}
-                {space.index.at ? ` · ${say('reindexed', 'реиндекс')} ${new Date(space.index.at).toLocaleString()}` : ''}
+                {space.vectorized}/{space.rows} {t('admin.rowsVectorized', lang)}
+                {space.index.at ? ` · ${t('admin.reindexed', lang)} ${new Date(space.index.at).toLocaleString()}` : ''}
               </div>
             </div>
           </div>
           {!space.inSync && (
             <div className="mt-2 text-[0.78125rem] font-medium text-warn">
-              {say(`Target changed: ${space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter'} (${space.target.dim}-dim) — run a reindex to rebuild. Old vectors will be wiped.`, `Цель изменена: ${space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter'} (${space.target.dim}-мерное) — запусти реиндекс, чтобы перестроить индекс. Старые векторы будут стёрты.`)}
+              {t('admin.targetChanged', lang).replace('{p}', space.target.provider === 'yandex' ? 'Yandex v2' : 'OpenRouter').replace('{d}', String(space.target.dim))}
             </div>
           )}
           <div className="mt-2.5 flex items-center gap-2">
-            <label className="text-[0.78125rem] text-ink-2">{say('Target:', 'Цель:')}</label>
+            <label htmlFor="reindex-target" className="text-[0.78125rem] text-ink-2">{t('admin.target', lang)}</label>
             <Select
               value={space.target.provider}
               disabled={switching || running}
@@ -143,7 +144,7 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
                 setSwitching(false)
               }}
             >
-              <SelectTrigger className="h-auto w-auto min-w-[11.875rem] px-2 py-1 text-[0.78125rem]">
+              <SelectTrigger id="reindex-target" className="h-auto w-auto min-w-[11.875rem] px-2 py-1 text-[0.78125rem]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -157,8 +158,9 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
       )}
 
       <div className="mb-3">
-        <label className="mb-1 block text-[0.78125rem] text-ink-2">{say('Spread over, min', 'Разнести на, мин')}</label>
+        <label htmlFor="reindex-spread" className="mb-1 block text-[0.78125rem] text-ink-2">{t('admin.spreadOverMin', lang)}</label>
         <input
+          id="reindex-spread"
           type="number"
           min={0}
           max={120}
@@ -175,21 +177,21 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
         <div className="flex items-center justify-between text-[0.78125rem] text-muted">
           <span>
             {stalled
-              ? say('Interrupted — run again', 'Прервано — запустите заново')
+              ? t('admin.interruptedRunAgain', lang)
               : running
-                ? say('Indexing…', 'Индексируем…')
+                ? t('admin.indexing', lang)
                 : status?.status === 'done'
                   ? status.vectorized
-                    ? say('Done', 'Готово')
+                    ? t('admin.done', lang)
                     : // Векторов нет: контент проиндексирован, но у эмбеддинг-провайдера НЕТ ключа.
                       // Называем какой именно — иначе непонятно, что настраивать (ключ эмбеддингов
                       // ≠ ключ чат-провайдера).
                       space?.index.provider === 'yandex'
-                      ? say('Done, but 0 vectors — set the Yandex API key + folder', 'Готово, но 0 векторов — задайте ключ Yandex API и folder')
-                      : say('Done, but 0 vectors — set the OpenRouter key (ai.api_key)', 'Готово, но 0 векторов — задайте ключ OpenRouter (ai.api_key)')
+                      ? t('admin.doneBut0Vectors', lang)
+                      : t('admin.doneBut0Vectors2', lang)
                   : status?.status === 'error'
-                    ? `${say('Error', 'Ошибка')}: ${status.error ?? ''}`
-                    : say('Not indexed yet', 'Индекс ещё не построен')}
+                    ? `${t('admin.error', lang)}: ${status.error ?? ''}`
+                    : t('admin.notIndexedYet', lang)}
           </span>
           <span className="font-mono">
             {status?.doneItems ?? 0}/{status?.total ?? 0} · {pct}%
@@ -218,15 +220,15 @@ export function ReindexPanel({ ru }: { ru: boolean }) {
       <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-4">
         <button type="button" onClick={purge} disabled={purging || running} className={`${btn} border border-border text-ink hover:border-border-strong`}>
           {purging ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} />}
-          {say('Purge', 'Почистить')}
+          {t('admin.purge', lang)}
         </button>
         <button type="button" onClick={start} disabled={running || onCooldown || starting} className={`${btn} bg-primary text-primary-fg`}>
           {running || starting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
           {running
-            ? say('Indexing…', 'Индексируем…')
+            ? t('admin.indexing', lang)
             : onCooldown
-              ? say(`In ${Math.ceil(cooldownLeft / 60000)} min`, `Через ${Math.ceil(cooldownLeft / 60000)} мин`)
-              : say('Run', 'Запустить')}
+              ? t('admin.inMin', lang).replace('{n}', String(Math.ceil(cooldownLeft / 60000)))
+              : t('admin.run', lang)}
         </button>
       </div>
     </div>

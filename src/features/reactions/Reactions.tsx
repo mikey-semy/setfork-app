@@ -5,6 +5,7 @@ import { EmojiPickerPopover } from '@/shared/ui/EmojiPickerPopover'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { ReactionAgg } from './constants'
 import { toggleReaction } from './actions'
+import { t, type Lang } from '@/shared/i18n'
 
 export function Reactions({
   targetType,
@@ -19,10 +20,9 @@ export function Reactions({
   reactions: ReactionAgg[]
   canReact: boolean
   path: string
-  lang?: string
+  lang?: Lang
 }) {
   const [pending, start] = useTransition()
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументы, не тернар-с-литералами (i18n-lint)
   const react = (emoji: string) => {
     if (emoji) start(() => void toggleReaction({ targetType, targetId, emoji, path }))
   }
@@ -33,7 +33,7 @@ export function Reactions({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {shown.map((r) => (
-        <Tooltip key={r.emoji} label={r.mine ? say('remove reaction', 'снять реакцию') : say('reaction', 'реакция')}>
+        <Tooltip key={r.emoji} label={r.mine ? t('reactions.removeReaction', lang) : t('reactions.reaction', lang)}>
           <button
             type="button"
             disabled={!canReact || pending}
@@ -53,12 +53,12 @@ export function Reactions({
         // в body спасает от overflow/z-index карточки. Тултип на самой кнопке.
         <EmojiPickerPopover
           lang={lang}
-          tooltip={say('Add reaction', 'Добавить реакцию')}
+          tooltip={t('reactions.addReaction', lang)}
           onPick={react}
           button={
             <button
               type="button"
-              aria-label={say('Add reaction', 'Добавить реакцию')}
+              aria-label={t('reactions.addReaction', lang)}
               className="inline-flex items-center rounded-full border border-border bg-surface-2 px-2 py-1 text-muted hover:text-ink"
             >
               <SmilePlus size={14} />

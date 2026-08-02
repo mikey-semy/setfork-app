@@ -13,16 +13,15 @@ export async function generateMetadata() {
 
 export default async function AdminTagsPage() {
   await requireAdmin()
-  const lang = await getLang()
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en)
-  const tags = await listTags({ limit: 2000 })
+  // Независимые запросы — параллельно (react-doctor).
+  const [lang, tags] = await Promise.all([getLang(), listTags({ limit: 2000 })])
 
   return (
     <div className="mx-auto w-full max-w-[53.75rem] px-6 py-8">
       <PageHeader
         icon={<Tag size={18} />}
         title={t('tags', lang)}
-        subtitle={say('Tag registry: curate, rename, merge, delete, recompute usage.', 'Реестр тегов: курирование, переименование, слияние, удаление, пересчёт usage.')}
+        subtitle={t('admin.tagRegistryCurateRename', lang)}
       />
       <AdminTagsTable tags={tags} lang={lang} />
     </div>

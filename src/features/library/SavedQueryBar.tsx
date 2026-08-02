@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { createSavedQuery, deleteSavedQuery } from './saved-queries-actions'
 import type { SavedQuery } from './saved-queries'
+import { t } from '@/shared/i18n'
 
 /**
  * Чипы сохранённых запросов на /my-lists (HQ §11, Dataview-аналог): клик —
@@ -19,7 +20,6 @@ import type { SavedQuery } from './saved-queries'
  * Input/TagInput/Select — по правилу проекта, без браузерных контролов).
  */
 export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]; active?: string; lang: Lang }) {
-  const say = (en: string, ru: string) => (lang === 'ru' ? ru : en) // строки-аргументами (i18n-lint)
   const [pending, start] = useTransition()
 
   return (
@@ -36,7 +36,7 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
             <Link href={isActive ? '/my-lists' : `/my-lists?sq=${q.id}`}>{q.name}</Link>
             <button
               type="button"
-              aria-label={say('Delete query', 'Удалить запрос')}
+              aria-label={t('library.deleteQuery', lang)}
               disabled={pending}
               onClick={() => start(() => deleteSavedQuery(q.id))}
               className="grid size-4 place-items-center rounded-full text-muted hover:text-danger"
@@ -49,32 +49,32 @@ export function SavedQueryBar({ queries, active, lang }: { queries: SavedQuery[]
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="xs">
-            <Plus size={13} /> {say('Query', 'Запрос')}
+            <Plus size={13} /> {t('library.query', lang)}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[17.5rem]">
           <form action={createSavedQuery} className="space-y-2.5">
-            <Field label={say('Name', 'Название')}>
-              <Input name="name" required maxLength={60} placeholder={say('Books I started', 'Книги, которые начал')} />
+            <Field label={t('library.name', lang)}>
+              <Input name="name" required maxLength={60} placeholder={t('library.booksIStarted', lang)} />
             </Field>
             {/* htmlFor: внутри TagInput чипы с кнопками удаления — оборачивание в label ловило бы их клики. */}
-            <Field label={say('Tags (any of)', 'Теги (любой из)')} htmlFor="sq-tags">
+            <Field label={t('library.tagsAny', lang)} htmlFor="sq-tags">
               <TagInput initial={[]} lang={lang} />
             </Field>
-            <Field label={say('My run', 'Мой прогон')}>
+            <Field label={t('library.myRun', lang)}>
               <Select name="runState" defaultValue="any">
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="any">{say('Any', 'Неважно')}</SelectItem>
-                  <SelectItem value="started">{say('Started', 'Начат')}</SelectItem>
-                  <SelectItem value="done">{say('Completed', 'Завершён')}</SelectItem>
+                  <SelectItem value="any">{t('library.any', lang)}</SelectItem>
+                  <SelectItem value="started">{t('library.started', lang)}</SelectItem>
+                  <SelectItem value="done">{t('library.completed', lang)}</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
             <Button type="submit" size="sm" className="w-full">
-              {say('Save query', 'Сохранить запрос')}
+              {t('library.saveQuery', lang)}
             </Button>
           </form>
         </PopoverContent>
