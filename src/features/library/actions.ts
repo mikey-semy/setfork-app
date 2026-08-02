@@ -1,6 +1,6 @@
 'use server'
 
-import { and, asc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { blockComments, blockCommentThreads, db, issues, steps, suggestionAssignees, suggestionComments, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
@@ -74,10 +74,57 @@ export async function pushListMirror(
   slug: string,
 ): Promise<{ ok: boolean; error: string; delivered: boolean }> {
   const { gitCore } = await gitPort()
-  return gitCore
+  // Момент начала — он же метка «наша попытка новее того, что записало ядро».
+  const startedAt = new Date()
+  const res = await gitCore
     .mirrorPush({ owner, slug })
     .then((r) => ({ ...r, delivered: true }))
-    .catch(() => ({ ok: false, error: 'core unavailable', delivered: false }))
+    .catch(() => ({ ok: false, error: CORE_UNAVAILABLE, delivered: false }))
+  if (!res.delivered) await recordUndeliveredMirrorPush(owner, slug, startedAt)
+  return res
+}
+
+const CORE_UNAVAILABLE = 'core unavailable'
+
+/**
+ * Записать неудачу, о которой ядро не узнало.
+ *
+ * Зачем здесь, а не у вызывающих. Пуш зеркала зовут из трёх мест: подметальщик,
+ * сохранение настроек и кнопка «Синхронизировать». Пока запись была только в
+ * подметальщике, два других теряли неудачу целиком — и это не мелочь:
+ * `saveMirror` перед пушем ОБНУЛЯЕТ `mirror_error`, а подметальщик берёт только
+ * строки с ошибкой. Настроил зеркало при лежащем ядре — и оно не синхронизируется
+ * НИКОГДА, молча, пока случайная новая версия списка не заставит ядро записать
+ * ошибку самому (авто-ревью fe#645, седьмой заход).
+ *
+ * Пишем ровно то же, что записало бы ядро: текст, время попытки и счётчик неудач
+ * (по нему растёт пауза). Иначе повторы шли бы с минимальной паузой всю аварию.
+ *
+ * ⚠️ Условие на время — защита от ДВОЙНОГО счёта. `delivered:false` означает «мы
+ * не получили ответ», а не «ядро не получило запрос»: ядро могло всё сделать и
+ * записать, а ответ потеряться или опоздать к дедлайну. Тогда его запись новее
+ * начала нашего вызова — и мы не трогаем строку, иначе одна и та же неудача
+ * считалась бы дважды и лестница пауз проходилась бы вдвое быстрее обещанного.
+ */
+async function recordUndeliveredMirrorPush(owner: string, slug: string, startedAt: Date): Promise<void> {
+  await db
+    .update(templates)
+    .set({
+      mirrorError: CORE_UNAVAILABLE,
+      mirrorSyncedAt: new Date(),
+      mirrorAttempts: sql`${templates.mirrorAttempts} + 1`,
+    })
+    .where(
+      and(
+        eq(templates.slug, slug),
+        eq(
+          templates.ownerId,
+          sql`(select ${users.id} from ${users} where ${users.handle} = ${owner})`,
+        ),
+        or(isNull(templates.mirrorSyncedAt), lt(templates.mirrorSyncedAt, startedAt)),
+      ),
+    )
+    .catch(() => {}) // запись статуса не должна ронять сам вызов
 }
 
 // ── Видимость списка (public/private) и удаление ─────────────────────

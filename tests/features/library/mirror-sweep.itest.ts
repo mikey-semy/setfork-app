@@ -26,8 +26,21 @@ let delivered: { ok: boolean; error: string } | null = null
 vi.mock('@/features/library/actions', () => ({
   pushListMirror: async (handle: string, slug: string) => {
     pushed.push(`${handle}/${slug}`)
-    if (down) return { ok: false, error: 'core unavailable', delivered: false }
-    return { ...(delivered ?? { ok: true, error: '' }), delivered: true }
+    if (!down) return { ...(delivered ?? { ok: true, error: '' }), delivered: true }
+    // Настоящий `pushListMirror` при недоставленном вызове САМ записывает
+    // неудачу (иначе строка не попадёт в повторы вовсе — см.
+    // mirror-undelivered.itest). Мок обязан вести себя так же, иначе проверка
+    // «следующий проход не берёт её снова» ничего не значит.
+    const dbm = await import('@/shared/db')
+    await dbm.db
+      .update(dbm.templates)
+      .set({
+        mirrorError: 'core unavailable',
+        mirrorSyncedAt: new Date(),
+        mirrorAttempts: sql`${dbm.templates.mirrorAttempts} + 1`,
+      })
+      .where(eq(dbm.templates.slug, slug))
+    return { ok: false, error: 'core unavailable', delivered: false }
   },
 }))
 

@@ -4,6 +4,7 @@ import { db, jobs, templates, users } from '@/shared/db'
 import { jobStallSec, type Job } from '@/shared/jobs/queue'
 import { captureError, log } from '@/shared/observability'
 import { envNumber } from '@/shared/env'
+import { mirrorPushTimeoutMs } from '@/shared/core-transport'
 import { MIRROR_BACKOFF_MS, MIRROR_MAX_BACKOFF_MS, mirrorRetryDueAt } from './mirror-policy'
 import { pushListMirror } from './actions'
 
@@ -51,6 +52,20 @@ const ENSURE_RETRY_MS = envNumber('SETFORK_MIRROR_ENSURE_RETRY_SEC', 30) * 1000
  * они дали бы ровно ту беду, от которой бюджет и заведён.
  */
 const sweepBudgetMs = (): number => (jobStallSec() * 1000) / 2
+
+/**
+ * Бюджет должен вмещать хотя бы один вызов, иначе проход не сделает НИЧЕГО и
+ * будет так молчать каждые пять минут. Настройки независимы, поэтому случай
+ * реален; говорим о нём вслух, а не подстраиваемся молча.
+ */
+function warnIfBudgetTooTight(): void {
+  if (sweepBudgetMs() > mirrorPushTimeoutMs()) return
+  log.warn('mirror.sweep.budget.tooTight', {
+    budgetSec: Math.round(sweepBudgetMs() / 1000),
+    pushTimeoutSec: Math.round(mirrorPushTimeoutMs() / 1000),
+    note: 'SETFORK_MIRROR_PUSH_TIMEOUT_SEC не помещается в половину SETFORK_JOB_STALL_SEC — проход не успеет ни одного пуша',
+  })
+}
 
 /** Кандидат на повтор: столько, сколько нужно для решения «пора или нет». */
 export type MirrorCandidate = { attempts: number; syncedAt: Date | null }
@@ -138,6 +153,7 @@ export async function sweepFailedMirrors(): Promise<void> {
 
   if (!due.length) return
   log.info('mirror.sweep', { due: due.length })
+  warnIfBudgetTooTight()
   const deadline = Date.now() + sweepBudgetMs()
   for (const [i, r] of due.entries()) {
     // ⚠️ Проход обязан укладываться в бюджет, и это не про аккуратность. Жнец
@@ -148,33 +164,21 @@ export async function sweepFailedMirrors(): Promise<void> {
     //
     // Прерваться безопасно: проход не хранит состояния и каждый раз спрашивает
     // базу заново — недоделанные зеркала возьмёт следующий, они никуда не денутся.
-    if (Date.now() > deadline) {
+    //
+    // Резервируем время НА САМ ВЫЗОВ, а не просто смотрим на часы: пуш и бюджет
+    // настраиваются независимо, и вызов, начатый за секунду до конца бюджета,
+    // мог бы тянуться ещё полторы минуты — за порог жнеца, ради которого бюджет
+    // и заведён (авто-ревью fe#645, седьмой заход).
+    if (Date.now() + mirrorPushTimeoutMs() > deadline) {
       log.warn('mirror.sweep.budget', { done: i, left: due.length - i })
       break
     }
     // Последовательно, а не Promise.all: это фон, спешить некуда, а пачка
     // одновременных пушей — ровно та нагрузка, от которой ядро схлопывает свои.
     const res = await pushListMirror(r.handle, r.slug)
-    if (!res.ok) {
-      log.warn('mirror.retry.failed', { templateId: r.id, attempt: r.attempts + 1, error: res.error })
-      // Когда до ядра НЕ ДОШЛО (лежит, истёк дедлайн вызова), неудачу записать
-      // некому: строка остаётся с прежним `mirror_synced_at`, то есть «пора», и
-      // следующий проход берёт её снова через пять минут. Авария ядра
-      // превращалась бы в равномерный долбёж (авто-ревью fe#645).
-      //
-      // Пишем ровно то, что записало бы ядро: время попытки И счётчик неудач.
-      // Без счётчика пауза не росла бы — зеркало на первой неудаче стучалось бы
-      // каждые десять минут всю аварию, вместо 20/40/80 (шестой заход ревью).
-      //
-      // Только для НЕДОСТАВЛЕННЫХ: если ядро ответило, оно уже всё записало, и
-      // вторая рука сбила бы ему счёт.
-      if (!res.delivered) {
-        await db
-          .update(templates)
-          .set({ mirrorSyncedAt: new Date(), mirrorAttempts: sql`${templates.mirrorAttempts} + 1` })
-          .where(eq(templates.id, r.id))
-      }
-    }
+    // Недоставленный вызов записывает неудачу сам, внутри pushListMirror: пуш
+    // зовут из трёх мест, и запись обязана быть одна на всех (см. там же).
+    if (!res.ok) log.warn('mirror.retry.failed', { templateId: r.id, attempt: r.attempts + 1, error: res.error })
   }
 }
 

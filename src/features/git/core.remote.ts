@@ -1,7 +1,6 @@
 import 'server-only'
 import { Code, ConnectError, createClient } from '@connectrpc/connect'
-import { envNumber } from '@/shared/env'
-import { coreTransport } from '@/shared/core-transport'
+import { coreTransport, mirrorPushTimeoutMs } from '@/shared/core-transport'
 import type { GitCore, GitRepoRef } from '@/core'
 import { BranchOpError } from '@/core'
 import { GitCore as GitCoreService, type RepoRef } from '@/shared/gen/git_pb'
@@ -17,13 +16,6 @@ import { toWireContent } from './list-content'
 
 // Единый транспорт к ядру (h2c + Bearer-токен канала, см. shared/core-transport).
 const client = createClient(GitCoreService, coreTransport())
-
-/**
- * Потолок ожидания ответа на пуш зеркала. С запасом больше внутреннего таймаута
- * `git push` в ядре (60с) — иначе мы обрывали бы вызовы, которым оставалось
- * секунды до честного ответа.
- */
-const MIRROR_PUSH_TIMEOUT_MS = envNumber('SETFORK_MIRROR_PUSH_TIMEOUT_SEC', 90) * 1000
 
 // Порт разделяет owner/slug; в proto это вложенный RepoRef.
 function toRepoRef(repo: GitRepoRef): RepoRef {
@@ -171,16 +163,11 @@ export const gitCoreRemote: GitCore = {
   },
 
   async mirrorPush(repo) {
-    // Дедлайн ЗДЕСЬ, а не на транспорте: у транспорта его нет сознательно —
-    // клон и пуш длинного репозитория идут минутами, и общий потолок рвал бы их.
-    // А вот пуш зеркала ограничен по смыслу: внутри ядра у самого `git push`
-    // стоит таймаут 60с, и ответ обязан прийти вскоре после.
-    //
-    // Без дедлайна ядро, принявшее соединение и не ответившее, вешало вызов
-    // навсегда. Для фонового подметальщика это не «одна медленная задача», а
-    // смерть всей цепочки повторов: проход не доходит до постановки преемника
-    // (авто-ревью fe#645, третий заход).
-    const res = await client.mirrorPush(toRepoRef(repo), { timeoutMs: MIRROR_PUSH_TIMEOUT_MS })
+    // Дедлайн — точечный, не транспортный; почему именно так, см. рядом с
+    // `mirrorPushTimeoutMs`. Для фонового подметальщика зависший вызов это не
+    // «одна медленная задача», а смерть всей цепочки повторов: проход не доходит
+    // до постановки преемника.
+    const res = await client.mirrorPush(toRepoRef(repo), { timeoutMs: mirrorPushTimeoutMs() })
     return { ok: res.ok, error: res.error }
   },
 
