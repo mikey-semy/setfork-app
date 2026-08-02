@@ -41,9 +41,11 @@ import { pushListMirror } from './mirror-push'
 const SWEEP_MS = envNumber('SETFORK_MIRROR_SWEEP_MIN', 5) * 60_000
 /** Потолок зеркал за один проход: очередь чинит, а не устраивает шторм. */
 const BATCH = envNumber('SETFORK_MIRROR_SWEEP_BATCH', 50)
-/** Сколько раз на старте пробуем завести цепочку и с какой паузой. */
+/** Первые попытки завести цепочку — частые и шумные; дальше реже и тише. */
 const ENSURE_ATTEMPTS = envNumber('SETFORK_MIRROR_ENSURE_ATTEMPTS', 5)
 const ENSURE_RETRY_MS = envNumber('SETFORK_MIRROR_ENSURE_RETRY_SEC', 30) * 1000
+/** Как часто напоминать в журнал, что база всё ещё недоступна. */
+const ENSURE_QUIET_EVERY = 10
 
 /**
  * Сколько проходу отведено времени. Половина порога «задача зависла» — с запасом
@@ -169,7 +171,15 @@ export async function sweepFailedMirrors(): Promise<void> {
     // настраиваются независимо, и вызов, начатый за секунду до конца бюджета,
     // мог бы тянуться ещё полторы минуты — за порог жнеца, ради которого бюджет
     // и заведён (авто-ревью fe#645, седьмой заход).
-    if (Date.now() + mirrorPushTimeoutMs() > deadline) {
+    //
+    // ⚠️ `i > 0` обязательно. Пуш и бюджет настраиваются независимо, и при
+    // `SETFORK_MIRROR_PUSH_TIMEOUT_SEC` больше половины порога жнеца проверка
+    // была бы истинной ещё ДО первого кандидата — проход выходил бы, не тронув
+    // ни одного зеркала, и так каждые пять минут ВЕЧНО. Предупреждение о таких
+    // настройках есть, но система, которая при них молча ничего не делает,
+    // хуже системы, которая делает по одному (авто-ревью fe#645, восьмой заход).
+    // Один пуш заведомо короче порога жнеца при любых вменяемых значениях.
+    if (i > 0 && Date.now() + mirrorPushTimeoutMs() > deadline) {
       log.warn('mirror.sweep.budget', { done: i, left: due.length - i })
       break
     }
@@ -301,25 +311,33 @@ export async function finalizeMirrorJob(_payload: unknown, job: Job): Promise<vo
  * (авто-ревью fe#645). Пробрасывать ошибку выше бессмысленно: там её тоже некому
  * обработать, кроме лога.
  *
- * Попытки редкие и конечные: база, не поднявшаяся за эти минуты, — уже не
- * моргание, и тогда неработающие зеркала не самая большая беда, но в логе об
- * этом сказано прямо.
+ * ⚠️ Попытки НЕ КОНЧАЮТСЯ — они разрежаются. Конечный счётчик здесь был ошибкой
+ * того же рода, что и «повторы прекращаются» у самих зеркал: база, лежащая
+ * дольше пяти попыток (плановое обслуживание, перенос, долгий рестарт), — это
+ * ровно тот случай, когда починка нужнее всего, а мы бы сдались и не завели
+ * цепочку ДО СЛЕДУЮЩЕГО РЕСТАРТА процесса, то есть, возможно, неделями
+ * (авто-ревью fe#645, восьмой заход).
+ *
+ * Цена бесконечности мизерная: один запрос раз в несколько минут, и только пока
+ * база недоступна. Первые попытки частые (моргание лечится сразу), дальше
+ * интервал растёт до `SETFORK_MIRROR_SWEEP_MIN` — чаще подметать всё равно
+ * незачем. Первый же успех прекращает цикл.
+ *
+ * Пробрасывать ошибку выше по-прежнему бессмысленно: в `instrumentation.ts` её
+ * тоже некому обработать, кроме лога.
  */
 export async function startMirrorSweepChain(): Promise<void> {
-  for (let attempt = 1; attempt <= ENSURE_ATTEMPTS; attempt++) {
+  for (let attempt = 1; ; attempt++) {
     try {
       await ensureMirrorSweepScheduled()
+      if (attempt > 1) log.info('mirror.ensure.recovered', { attempt })
       return
     } catch (e) {
-      captureError(e, { where: 'mirror.ensure', attempt })
-      if (attempt === ENSURE_ATTEMPTS) {
-        log.error('mirror.ensure.gaveup', {
-          attempts: attempt,
-          note: 'повторы зеркал не заведены — цепочка появится только при следующем старте',
-        })
-        return
-      }
-      await new Promise((r) => setTimeout(r, ENSURE_RETRY_MS))
+      // Шумим подробно только вначале: авария на час не должна залить журнал
+      // одинаковыми записями, но и молчать о ней нельзя.
+      if (attempt <= ENSURE_ATTEMPTS) captureError(e, { where: 'mirror.ensure', attempt })
+      else if (attempt % ENSURE_QUIET_EVERY === 0) log.warn('mirror.ensure.stillFailing', { attempt })
+      await new Promise((r) => setTimeout(r, Math.min(ENSURE_RETRY_MS * attempt, SWEEP_MS)))
     }
   }
 }

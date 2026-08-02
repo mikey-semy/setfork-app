@@ -253,6 +253,24 @@ describe('отбор зеркал на повтор', () => {
     expect(row.mirrorAttempts).toBe(1)
   })
 
+  it('при тесных настройках проход делает хотя бы одно зеркало, а не ноль', async () => {
+    // Пуш и бюджет настраиваются независимо. Когда дедлайн вызова больше
+    // половины порога жнеца, проверка резерва истинна ещё ДО первого кандидата —
+    // и проход выходил бы пустым каждые пять минут вечно. Один пуш заведомо
+    // короче порога жнеца, поэтому первый идёт всегда.
+    const prev = process.env.SETFORK_MIRROR_PUSH_TIMEOUT_SEC
+    process.env.SETFORK_MIRROR_PUSH_TIMEOUT_SEC = String(24 * 3600) // заведомо больше бюджета
+    try {
+      await failingMirror('first', 1, 40)
+      await failingMirror('second', 1, 30)
+      await sweepFailedMirrors()
+      expect(pushed).toHaveLength(1)
+    } finally {
+      if (prev === undefined) delete process.env.SETFORK_MIRROR_PUSH_TIMEOUT_SEC
+      else process.env.SETFORK_MIRROR_PUSH_TIMEOUT_SEC = prev
+    }
+  })
+
   it('зеркало, сломанное месяцами, не становится «всегда пора»', async () => {
     // 600 * 2^43 секунд не помещается в интервал, и Postgres МОЛЧА переполняется
     // в отрицательный: время готовности уезжало в прошлое, и самое сломанное
