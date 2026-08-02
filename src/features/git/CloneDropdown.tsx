@@ -59,14 +59,14 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        {/* Фиксированная высота 36px (h-9) — ряд действий панели списка ровный. */}
+        {/* Высота из шкалы (CONTROL_H.md = 32px) — ряд действий панели списка ровный. */}
         {/* Первичное действие списка — заливкой, как зелёная Code у GitHub, но своим
             токеном темы (--ok-solid читается с белым текстом в обеих темах). Иконки нет:
             текст короткий и однозначный, а рядом стоит синяя кнопка прогона — два
             цветных значка в ряд спорили бы за внимание. */}
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-(--ok-solid) px-3.5 text-[0.8125rem] font-semibold text-white transition-opacity hover:opacity-90"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-(--ok-solid) px-3.5 text-[0.8125rem] font-semibold text-white transition-opacity hover:opacity-90"
         >
           {t('cloneMenuLabel', lang)} <ChevronDown size={13} />
         </button>

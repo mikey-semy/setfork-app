@@ -29,6 +29,7 @@ import { MobileSearch } from './MobileSearch'
 import { ListSwitcher } from './ListSwitcher'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { LangSwitch, ThemeModeSwitch } from '@/shared/ui/controls'
+import { CONTROL_H } from '@/shared/ui/control'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { useSidebar } from './sidebar-context'
@@ -124,7 +125,9 @@ export function TopNav({
   // Убираем дефолтный аутлайн (Radix возвращает фокус на триггер после закрытия —
   // из-за этого «залипало» выделение); кольцо оставляем только для клавиатуры.
   const focusRing = 'outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong'
-  const iconBtn = `grid h-8 w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`
+  // Высота — из шкалы (CONTROL_H.md), а не рукописная: иконки шапки стоят в одном
+  // ряду с поиском, и любое своё число тут же читается как «разъехалось».
+  const iconBtn = `grid ${CONTROL_H.md} w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`
   // Иконки пунктов меню — приглушённые: ведёт текст, значок только помогает нащупать
   // строку взглядом (как в меню аккаунта у GitHub).
   const menuIcon = 'text-muted'
@@ -172,7 +175,7 @@ export function TopNav({
           type="button"
           aria-label={t('menu', lang)}
           onClick={toggleSidebar}
-          className={`grid h-8 w-8 place-items-center rounded-md text-ink hover:bg-surface-2 ${focusRing}`}
+          className={`grid ${CONTROL_H.md} w-8 place-items-center rounded-md text-ink hover:bg-surface-2 ${focusRing}`}
         >
           <Menu size={21} strokeWidth={2.75} />
         </button>
@@ -288,7 +291,7 @@ export function TopNav({
               <QualifierSearch
                 lang={lang}
                 initial=""
-                size="sm"
+                size="md"
                 containerClassName="w-[13.75rem] xl:w-[18.75rem]"
                 hint={
                   <kbd className="hidden rounded-md border border-border px-1.5 text-[0.6875rem] font-medium leading-[1.125rem] text-muted lg:inline">/</kbd>
@@ -316,7 +319,7 @@ export function TopNav({
                 <button
                   type="button"
                   aria-label={t('create', lang)}
-                  className={`inline-flex h-8 items-center gap-0.5 rounded-md border border-border px-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`}
+                  className={`inline-flex ${CONTROL_H.md} items-center gap-0.5 rounded-md border border-border px-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`}
                 >
                   <Plus size={16} /> <ChevronDown size={13} />
                 </button>
@@ -342,7 +345,7 @@ export function TopNav({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button type="button" aria-label={user.handle} className={`shrink-0 rounded-full ${focusRing}`}>
-                  <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={30} />
+                  <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={32} />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -438,7 +441,7 @@ export function TopNav({
               <button
                 type="button"
                 aria-label={t('signIn', lang)}
-                className={`grid size-[1.875rem] shrink-0 place-items-center rounded-full border border-border text-ink-2 hover:text-ink ${focusRing}`}
+                className={`grid size-8 shrink-0 place-items-center rounded-full border border-border text-ink-2 hover:text-ink ${focusRing}`}
               >
                 <UserRound size={17} />
               </button>

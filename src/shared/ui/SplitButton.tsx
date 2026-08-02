@@ -28,7 +28,7 @@ export function SplitButton({
 }) {
   const parts = React.Children.toArray(children).filter(Boolean)
   return (
-    <span className={cn('inline-flex h-9 items-stretch overflow-hidden rounded-md border transition-colors', TONE_BORDER[tone], className)}>
+    <span className={cn('inline-flex h-8 items-stretch overflow-hidden rounded-md border transition-colors', TONE_BORDER[tone], className)}>
       {parts.map((part, i) => (
         <React.Fragment key={i}>
           {/* Разделитель — своей линией, а не border у половинки: внешняя рамка остаётся

@@ -80,12 +80,12 @@ export function MergedPanel({
       </div>
       {/* Действие — к правому краю (thumb-зона), единая высота ряда. */}
       {revertOf && (
-        <Button variant="outline" className="h-7" disabled={pending} onClick={revert}>
+        <Button variant="outline" disabled={pending} onClick={revert}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : <Undo2 size={13} />} {labels.revert}
         </Button>
       )}
       {branch && !done && (
-        <Button variant="outline" className="h-7" disabled={pending} onClick={remove}>
+        <Button variant="outline" disabled={pending} onClick={remove}>
           {pending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} {labels.deleteBranch}
         </Button>
       )}

@@ -71,7 +71,7 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
     <div ref={boxRef} className="relative">
       <input type="hidden" name={name} value={tags.join(' ')} />
       {/* min-h по шкале md (control.ts): в ряду с Input/Button не проседает; растёт при переносе тегов. */}
-      <div className="flex min-h-7 flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
+      <div className="flex min-h-8 flex-wrap items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2 py-1.5 focus-within:border-border-strong">
         {tags.map((tag) => (
           <Badge key={tag} variant="soft" className="gap-1 bg-surface pr-1 text-[0.78125rem] font-medium text-ink">
             {tag}
