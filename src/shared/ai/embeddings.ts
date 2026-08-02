@@ -3,6 +3,7 @@ import { getAiProviderRaw, getOpenRouterApiKey } from '@/shared/settings/ai'
 import { COLUMN_DIM, fitToColumn, getIndexSpace, type EmbedProvider, type EmbedSpace } from './embed-space'
 import { rememberCapability } from './embed-capability'
 import { recordUsage } from './usage'
+import { dataCollectionPolicy } from './provider'
 
 // Эмбеддинги идут по ПРОСТРАНСТВУ ИНДЕКСА (embed-space): и документы при
 // индексации, и поисковые запросы — одним провайдером/моделью/мерностью, иначе
@@ -34,7 +35,17 @@ export async function isEmbeddingEnabled(): Promise<boolean> {
   return Boolean(await getOpenRouterApiKey())
 }
 
-async function endpointFor(space: EmbedSpace): Promise<{ url: string; headers: Record<string, string> } | null> {
+/**
+ * Куда и с чем стучаться за векторами.
+ *
+ * `body` — то, что кладётся в запрос ПОМИМО модели и текстов. У OpenRouter это политика
+ * данных: эмбеддинги идут мимо фабрики chat-моделей (свой HTTP-вызов), поэтому запрет на
+ * сбор, добавленный в provider.ts, их бы не коснулся — а на эмбеддинги уезжает СОДЕРЖИМОЕ
+ * списков целиком, включая приватные (находка авто-ревью по #654).
+ */
+async function endpointFor(
+  space: EmbedSpace,
+): Promise<{ url: string; headers: Record<string, string>; body?: Record<string, unknown> } | null> {
   if (space.provider === 'yandex') {
     const raw = await getAiProviderRaw()
     if (!raw.yandexKey) return null
@@ -52,6 +63,7 @@ async function endpointFor(space: EmbedSpace): Promise<{ url: string; headers: R
       'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
       'X-Title': 'SetFork',
     },
+    body: { provider: { data_collection: dataCollectionPolicy() } },
   }
 }
 
@@ -94,7 +106,7 @@ export interface EmbedResponse {
  *  ровно один раз переспрашиваем без него и сообщаем об этом наверх, чтобы факт
  *  запомнился (embed-capability), а не проверялся регуляркой по имени вендора. */
 async function requestEmbeddings(
-  ep: { url: string; headers: Record<string, string> },
+  ep: { url: string; headers: Record<string, string>; body?: Record<string, unknown> },
   model: string,
   input: string[],
   dims: number | null,
@@ -105,7 +117,7 @@ async function requestEmbeddings(
     res = await fetch(ep.url, {
       method: 'POST',
       headers: ep.headers,
-      body: JSON.stringify({ model, input, ...(sendDims ? { dimensions: sendDims } : {}) }),
+      body: JSON.stringify({ model, input, ...(sendDims ? { dimensions: sendDims } : {}), ...ep.body }),
       signal: AbortSignal.timeout(20_000),
     })
     if (res.status === 429 && attempt < 3) {
