@@ -2,6 +2,9 @@ import 'server-only'
 import { generateText } from 'ai'
 import { getAiSettings, modelAllowed, parseModelAllowlist } from '@/shared/settings/ai'
 import { globalBudgetOk } from '@/shared/quota'
+import { envNumber } from '@/shared/env'
+import { fetchModelsFor } from './models'
+import { deriveCouncilPool } from './model-picker'
 import { getAiChatClient } from './provider'
 import { pickChatModel } from './credits'
 import { baseModelId, filterByQuarantine, quarantinedModels } from './health'
@@ -31,13 +34,11 @@ import { t, langEnName, type Lang } from '@/shared/i18n'
  * (pgvector), диалог/уточняющие вопросы, память сессии.
  */
 
-const DEFAULT_COUNCIL_MODELS = ['openai/gpt-4o-mini', 'meta-llama/llama-3.3-70b-instruct', 'mistralai/mistral-nemo']
-// Дефолтный пул для Яндекса: без него OpenRouter-дефолты фильтровались в пусто и
-// совет МОЛЧА становился одномодельным. 4 семейства RU-hosted, цены известны
-// (yandex-pricing); flash первым — он ведёт промежуточные шаги (цена/скорость).
-const DEFAULT_YANDEX_POOL = ['aliceai-llm-flash', 'qwen3.6-35b-a3b', 'gpt-oss-120b', 'deepseek-v4-flash']
-// У GigaChat одна семья — гетерогенность слабее (размеры вместо семейств).
-const DEFAULT_GIGACHAT_POOL = ['GigaChat-2', 'GigaChat-2-Pro', 'GigaChat-2-Max']
+// Дефолтного пула СПИСКОМ здесь больше нет — по одному на провайдера они устаревали молча
+// (модель снимают с обслуживания, и совет получает 404 при исправном ключе). Пул выводится из
+// живого каталога тем же правилом для всех: самая дешёвая рабочая лошадка каждого вендора,
+// первая — самая дешёвая, она ведёт промежуточные шаги (model-picker.deriveCouncilPool).
+const COUNCIL_POOL_SIZE = envNumber('SETFORK_COUNCIL_POOL_SIZE', 3)
 const INNOVATOR_TEMP = 0.9
 // Потолок на ОДИН вызов: зависшая/медленная модель не должна вешать весь совет (6-7 вызовов).
 // Превышение → вызов падает → гном «выпадает», совет продолжает без него.
@@ -196,13 +197,24 @@ export async function generateListCouncil(query: string, lang: Lang, opts: Gener
         ? !m.includes('/') // id GigaChat без слешей; чужие — vendor/model или gpt://
         : true
   const yandexFolder = client.cfg.headers?.['x-folder-id'] ?? ''
-  const defaultPool =
-    client.cfg.provider === 'yandex' && yandexFolder
-      ? DEFAULT_YANDEX_POOL.map((n) => `gpt://${yandexFolder}/${n}/latest`)
-      : client.cfg.provider === 'gigachat'
-        ? DEFAULT_GIGACHAT_POOL
-        : DEFAULT_COUNCIL_MODELS
-  const rawPool = settings.councilModels.length ? settings.councilModels : defaultPool
+  // Пул по умолчанию — из каталога АКТИВНОГО провайдера (каталог кеширован, сети на каждый
+  // совет нет). Каталог недоступен → пустой список, и buildCouncilPool честно откатится на
+  // базовую модель: лучше одномодельный совет, чем вызовы к снятым с обслуживания id.
+  const catalog = (await fetchModelsFor(client.cfg.provider)).chat
+  const defaultPool = deriveCouncilPool(catalog, COUNCIL_POOL_SIZE)
+  // Ручной пул тоже сверяем с каталогом: у одиночной модели такая сверка есть (liveModel), а
+  // здесь снятая с обслуживания модель обнаруживалась только после нескольких отказов подряд.
+  // Каталог пуст (сеть/ключ) — не трогаем выбор владельца.
+  // Множество вместо перебора: каталог до 336 моделей, и `some`/`includes` в цикле сканируют
+  // его целиком на каждую строку пула.
+  const catalogIds = new Set(catalog.map((c) => c.id))
+  const listed = settings.councilModels.filter((m) => !catalogIds.size || catalogIds.has(m))
+  if (settings.councilModels.length && listed.length !== settings.councilModels.length) {
+    const kept = new Set(listed)
+    const gone = settings.councilModels.filter((m) => !kept.has(m))
+    console.warn(`[council] моделей нет в каталоге ${client.cfg.provider}, исключены из пула: ${gone.join(', ')}`)
+  }
+  const rawPool = listed.length ? listed : defaultPool
   // АВТОРОТАЦИЯ: модели с проседающим success-rate за сутки (журнал ai_usage)
   // временно выпадают из ротации; окно скользящее — возврат автоматический.
   const quarantined = await quarantinedModels()

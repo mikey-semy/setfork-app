@@ -1,4 +1,4 @@
-import { BarChart3, Flag, FolderGit2, LayoutDashboard, Megaphone, MessageSquare, Palette, Rss, ScrollText, Shield, Tag, TrendingUp } from 'lucide-react'
+import { BarChart3, Cpu, Flag, FolderGit2, LayoutDashboard, Megaphone, MessageSquare, Palette, Rss, ScrollText, Shield, Tag, TrendingUp } from 'lucide-react'
 import { t, tr, type Lang } from '@/shared/i18n'
 import type { AdminNavGroup } from './AdminNav'
 
@@ -14,6 +14,8 @@ export function adminNavGroups(lang: Lang): AdminNavGroup[] {
         { href: '/admin/dashboard', label: t('admin.dashboard', lang), icon: <LayoutDashboard size={14} /> },
         { href: '/admin/development', label: t('admin.development', lang), icon: <TrendingUp size={14} /> },
         { href: '/admin/usage', label: t('admin.draftUsage', lang), icon: <BarChart3 size={14} /> },
+        // Модели рядом с расходом: это два взгляда на одни деньги — «кто тратит» и «на чём».
+        { href: '/admin/models', label: t('admin.models', lang), icon: <Cpu size={14} /> },
         { href: '/admin/audit', label: t('admin.audit', lang), icon: <ScrollText size={14} /> },
         { href: '/admin/ui-kit', label: 'UI Kit', icon: <Palette size={14} /> },
       ],

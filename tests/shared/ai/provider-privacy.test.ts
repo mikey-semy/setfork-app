@@ -15,7 +15,9 @@ vi.mock('@openrouter/ai-sdk-provider', () => ({ createOpenRouter: () => ({ chat 
 vi.mock('@/shared/ai/gigachat-token', () => ({ getGigaChatToken: async () => 'tok' }))
 
 const providerCfg = vi.fn(async () => ({ provider: 'openrouter', baseUrl: 'https://openrouter.ai/api/v1', apiKey: 'k' }))
-vi.mock('@/shared/settings/ai', async (orig) => ({ ...(await orig()), getAiProviderConfig: () => providerCfg() }))
+// Конфиг берётся через failover-слой (он умеет уводить генерацию на запасного провайдера),
+// поэтому подменяем именно его — не настройки.
+vi.mock('@/shared/ai/provider-failover', () => ({ generationProviderConfig: () => providerCfg() }))
 
 const { getAiChatClient } = await import('@/shared/ai/provider')
 

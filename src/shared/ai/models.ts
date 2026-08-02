@@ -1,5 +1,6 @@
 import 'server-only'
 import { getAiProviderConfig, modelAllowed, parseModelAllowlist, type AiProviderId } from '@/shared/settings/ai'
+import { envNumber } from '@/shared/env'
 
 export interface ModelOption {
   id: string
@@ -12,6 +13,16 @@ export interface ModelOption {
   priceKnown: boolean
   promptPrice: number // за 1M prompt-токенов, в валюте провайдера (currency)
   completionPrice: number // за 1M completion-токенов
+  /** Окно контекста, токенов. 0 = провайдер не сказал. */
+  contextLength: number
+  /** Умеет ли модель строгий JSON по схеме (structured outputs). Наша генерация списков
+   *  просит именно его, и модель без поддержки отвечает прозой — это видно только тут. */
+  structured: boolean
+  /** Внешняя оценка «уровня» модели (artificial_analysis intelligence index из каталога
+   *  провайдера). 0 = не опубликована. Это единственный сигнал КАЧЕСТВА, который каталог
+   *  даёт объективно: без него «дешёвая» и «годная» неразличимы, и автоподбор вытаскивает
+   *  ролеплейные файнтюны по цене. */
+  intelligence: number
 }
 
 // Чистые имена вынесены в model-names.ts (клиенту нужен prettyModelName в родословной,
@@ -41,6 +52,10 @@ interface RawModel {
   display_name?: string
   owned_by?: string
   pricing?: { prompt?: string; completion?: string }
+  /** OpenRouter отдаёт окно контекста, список принимаемых параметров и внешние бенчи. */
+  context_length?: number
+  supported_parameters?: string[]
+  benchmarks?: { artificial_analysis?: { intelligence_index?: number } }
 }
 
 function toOptions(raw: RawModel[] | undefined): ModelOption[] {
@@ -53,21 +68,24 @@ function toOptions(raw: RawModel[] | undefined): ModelOption[] {
       priceKnown: m.pricing != null,
       promptPrice: (Number(m.pricing?.prompt) || 0) * 1_000_000,
       completionPrice: (Number(m.pricing?.completion) || 0) * 1_000_000,
+      contextLength: Number(m.context_length) || 0,
+      // Поле есть только у OpenRouter; у прочих провайдеров молчание = «не знаем»,
+      // и врать «умеет» нельзя — на этом основан выбор модели под строгий JSON.
+      structured: Array.isArray(m.supported_parameters) && m.supported_parameters.includes('structured_outputs'),
+      intelligence: Number(m.benchmarks?.artificial_analysis?.intelligence_index) || 0,
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 }
 
-/** Размерность колонки embeddings.embedding (pgvector) — совместимы только модели с ней.
- *  Число живёт ЗДЕСЬ, а не в подписи поля: подпись его подставляет, схема БД и UI не разъезжаются. */
-export const EMBEDDING_DIM = 1536
+/** Размерность колонки embeddings.embedding (pgvector). ЕДИНЫЙ источник — embed-space:
+ *  здесь стояло 1536, хотя колонка давно halfvec(768), и подпись поля в админке говорила
+ *  владельцу неправду про то, что он выбирает. */
+export { COLUMN_DIM as EMBEDDING_DIM } from './embed-space'
 
-/** Размерности эмбеддинг-моделей: провайдеры их в /models не отдают, а совместимость
- *  определяется именно ими. Данные, а не «магический» фильтр по двум именам. */
-const EMBEDDING_DIMS: Record<string, number> = {
-  'openai/text-embedding-3-small': 1536,
-  'openai/text-embedding-ada-002': 1536,
-  'openai/text-embedding-3-large': 3072,
-}
+// Списка «совместимых» эмбеддинг-моделей здесь нет и быть не должно: провайдеры мерность в
+// /models не отдают, а любая табличка или регулярка по имени вендора устаревает молча (так из
+// 31 модели каталога предлагались две). Совместимость — ИЗМЕРЯЕМЫЙ факт (embed-capability):
+// каталог отдаёт всё, что есть у провайдера, а выбор объясняется измеренной мерностью.
 
 interface ListResult {
   models: RawModel[]
@@ -76,9 +94,14 @@ interface ListResult {
   error?: string
 }
 
+/** Потолок ожидания каталога. Он теперь на горячем пути (пул совета, сверка модели), а
+ *  недоступный провайдер — штатная ситуация RU-стенда: без таймаута зависший коннект держал
+ *  бы генерацию столько, сколько ему вздумается. */
+const CATALOG_TIMEOUT_MS = envNumber('SETFORK_MODEL_CATALOG_TIMEOUT_S', 10) * 1000
+
 async function fetchList(url: string, init?: RequestInit): Promise<ListResult> {
   try {
-    const res = await fetch(url, init)
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(CATALOG_TIMEOUT_MS) })
     if (!res.ok) return { models: [], error: `HTTP ${res.status}` }
     const data = (await res.json()) as { data?: RawModel[] }
     return { models: data.data ?? [] }
@@ -89,10 +112,29 @@ async function fetchList(url: string, init?: RequestInit): Promise<ListResult> {
 
 const EMPTY: ModelsResult = { provider: 'openrouter', currency: 'USD', pricesKnown: true, configured: false, chat: [], embedding: [] }
 
+/**
+ * КЕШ КАТАЛОГА. Раньше каждый вызов ходил в сеть, и каталог был «дорогой справкой для
+ * админки». Теперь он нужен на горячем пути (пул совета и подмена снятой модели выводятся
+ * ИЗ НЕГО, а не из списков в коде) — значит, обязан быть дешёвым.
+ *
+ * Отказ кешируется КОРОТКО, а успех — надолго: моргание сети не должно на десять минут
+ * превращаться в «у провайдера нет моделей», но и долбить недоступный провайдер на каждую
+ * генерацию нельзя (RU-стенд без egress-моста — штатная ситуация, а не исключение).
+ * Ключ включает baseUrl: сменили стенд/провайдера — другой ключ. Смена API-ключа гасит кеш
+ * явно (clearModelCatalogCache из сохранения настроек).
+ */
+const CATALOG_TTL_MS = envNumber('SETFORK_MODEL_CATALOG_TTL_S', 600) * 1000
+const CATALOG_FAIL_TTL_MS = Math.min(envNumber('SETFORK_MODEL_CATALOG_FAIL_TTL_S', 60) * 1000, CATALOG_TTL_MS)
+const catalogCache = new Map<string, { at: number; ttl: number; result: ModelsResult }>()
+
+export function clearModelCatalogCache(): void {
+  catalogCache.clear()
+}
+
 /** Каталог моделей АКТИВНОГО провайдера (OpenAI-совместимый /models) — для
  *  селектов в админке. Список эмбеддингов — только у OpenRouter (фаза 2).
- *  Цены: OpenRouter — USD/токен из API, Selectel — RUB/токен из API; Яндекс в
- *  API цен не отдаёт — подставляем хардкод-прайс (yandex-pricing, ₽/1M). */
+ *  Цены: OpenRouter — USD/токен из API, Selectel — RUB/токен из API; Яндекс и GigaChat
+ *  API цен не отдают — подставляем прайс-книгу стенда (price-book, ₽/1M). */
 export async function fetchModels(): Promise<ModelsResult> {
   return fetchModelsForConfig(await getAiProviderConfig())
 }
@@ -101,17 +143,31 @@ export async function fetchModels(): Promise<ModelsResult> {
  * Каталог УКАЗАННОГО провайдера — для админки: там провайдера выбирают до сохранения.
  * Без этого выбор в селекте ничего не менял в списке моделей (баг 2026-07-27).
  */
-export async function fetchModelsFor(provider: AiProviderId): Promise<ModelsResult> {
+export async function fetchModelsFor(provider: AiProviderId, opts?: { maxAgeMs?: number }): Promise<ModelsResult> {
   const { getProviderConfigFor } = await import('@/shared/settings/ai')
   const cfg = await getProviderConfigFor(provider)
   // Ключа нет — каталог пуст, но провайдера возвращаем ВЫБРАННОГО: интерфейс должен
   // сказать «у этого провайдера нет ключа», а не молча показать чужой список.
   if (!cfg) return { ...EMPTY, provider, error: 'no-key' }
-  return fetchModelsForConfig(cfg)
+  return fetchModelsForConfig(cfg, opts?.maxAgeMs)
 }
 
-async function fetchModelsForConfig(cfg: Awaited<ReturnType<typeof getAiProviderConfig>>): Promise<ModelsResult> {
+async function fetchModelsForConfig(cfg: Awaited<ReturnType<typeof getAiProviderConfig>>, maxAgeMs?: number): Promise<ModelsResult> {
   if (!cfg) return EMPTY
+  const cacheKey = `${cfg.provider} ${cfg.baseUrl}`
+  const hit = catalogCache.get(cacheKey)
+  // maxAgeMs — для тех, кому нужен СВЕЖИЙ ответ: проверка доступности провайдера не вправе
+  // опираться на успех десятиминутной давности, иначе после падения основного мы ещё десять
+  // минут уверенно шлём туда генерацию вместо запасного (находка авто-ревью, P2).
+  const fresh = maxAgeMs == null ? hit && Date.now() - hit.at < hit.ttl : hit && Date.now() - hit.at < Math.min(hit.ttl, maxAgeMs)
+  if (hit && fresh) return hit.result
+  const result = await loadCatalog(cfg)
+  const ok = !result.error && result.chat.length > 0
+  catalogCache.set(cacheKey, { at: Date.now(), ttl: ok ? CATALOG_TTL_MS : CATALOG_FAIL_TTL_MS, result })
+  return result
+}
+
+async function loadCatalog(cfg: NonNullable<Awaited<ReturnType<typeof getAiProviderConfig>>>): Promise<ModelsResult> {
   const init = { headers: { Authorization: `Bearer ${cfg.apiKey}`, ...(cfg.headers ?? {}) } }
   const [chatRes, embeddingRes] = await Promise.all([
     fetchList(`${cfg.baseUrl}/models`, init),
@@ -133,21 +189,15 @@ async function fetchModelsForConfig(cfg: Awaited<ReturnType<typeof getAiProvider
       !/\/(rc|deprecated)$/.test(m.id) &&
       modelAllowed(m.id, allowlist), // allowlist стенда (env AI_MODEL_ALLOWLIST)
   )
-  if (cfg.provider === 'yandex') {
-    const { yandexPriceRub } = await import('./yandex-pricing')
+  // У Яндекса и GigaChat в /models цен нет вовсе — подставляем прайс-книгу стенда
+  // (данные, не таблица в коде). Одно правило на обоих: раньше это были две разные
+  // ветки с разными единицами (₽/1000 против ₽/1М) — расхождение единиц ждало своего часа.
+  if (cfg.provider === 'yandex' || cfg.provider === 'gigachat') {
+    const [{ getPriceBook, priceRub1M }] = await Promise.all([import('./price-book')])
+    const book = await getPriceBook()
     chatOpts = chatOpts.map((m) => {
-      const price = yandexPriceRub(m.id)
-      // Прайс за 1000 токенов → приводим к ₽/1M, как у остальных провайдеров.
-      return price
-        ? { ...m, priceKnown: true, promptPrice: price[0] * 1000, completionPrice: price[1] * 1000 }
-        : m
-    })
-  }
-  if (cfg.provider === 'gigachat') {
-    const { gigachatPriceRub1M } = await import('./pricing')
-    chatOpts = chatOpts.map((m) => {
-      const price = gigachatPriceRub1M(m.id) // ₽/1М, вход=выход единая
-      return price != null ? { ...m, priceKnown: true, promptPrice: price, completionPrice: price } : m
+      const price = priceRub1M(book, cfg.provider as 'yandex' | 'gigachat', m.id)
+      return price ? { ...m, priceKnown: true, promptPrice: price[0], completionPrice: price[1] } : m
     })
   }
   return {
@@ -156,7 +206,7 @@ async function fetchModelsForConfig(cfg: Awaited<ReturnType<typeof getAiProvider
     currency: cfg.provider === 'openrouter' ? 'USD' : 'RUB',
     pricesKnown: true, // per-model приоритетнее: без прайса опция покажет «—»
     chat: chatOpts,
-    embedding: toOptions(embedding).filter((m) => EMBEDDING_DIMS[m.id] === EMBEDDING_DIM),
+    embedding: toOptions(embedding),
     error: chatRes.error,
   }
 }

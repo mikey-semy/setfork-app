@@ -1,5 +1,6 @@
 import 'server-only'
 import { getSettings, saveSettings } from '@/shared/settings/kv'
+import { embeddings } from '@/shared/db'
 import { defaultEmbeddingModel } from '@/shared/settings/ai'
 
 // «Пространство» эмбеддингов = провайдер + модели (doc/query) + мерность.
@@ -8,13 +9,25 @@ import { defaultEmbeddingModel } from '@/shared/settings/ai'
 // пространством, иначе близость — мусор. Цель (embed.provider) меняется в
 // админке и вступает в силу ТОЛЬКО через полный реиндекс.
 //
-// Колонка — halfvec(768) (P4 анализа поиска): 768 — родная мерность Яндекс v2
-// и MRL-срез text-embedding-3-small (dimensions=768). Вектор короче колонки —
-// паддинг нулями (косинус сохраняется точно); длиннее (не-MRL модель без
-// dimensions) — усечение + L2-нормализация: для MRL-моделей это штатный режим,
-// для прочих — осознанная деградация с warn (лучше, чем падение индексации).
+// Мерность колонки задана СХЕМОЙ (halfvec, P4 анализа поиска) и читается из неё же.
+// У всех провайдеров просим ровно её (параметр dimensions). Что модель на это ответит —
+// ФАКТ, который мы измеряем и запоминаем (embed-capability), а не угадываем по имени
+// вендора: вернула столько же — идеально; вернула больше — усечение + L2-нормализация
+// (осознанная деградация, о ней говорим вслух); меньше — паддинг нулями (косинус точен).
 
 export type EmbedProvider = 'openrouter' | 'yandex'
+
+/**
+ * Мерность колонки — ЧИТАЕТСЯ ИЗ СХЕМЫ, а не повторяется числом. Пока это была отдельная
+ * константа, она разъехалась со схемой (в каталоге моделей жило 1536 при колонке 768) и
+ * подпись поля в админке говорила владельцу неправду. Схема — единственный источник.
+ */
+// Тип PgColumn мерность не раскрывает (она в конфиге колонки), поэтому доступ узко
+// типизирован здесь — один раз и с проверкой. Это по-прежнему ЧТЕНИЕ СХЕМЫ: поменяли
+// halfvec в schema.ts — поменялось всё, что ниже, без правок в других файлах.
+const columnDimensions = (embeddings.embedding as unknown as { dimensions?: number }).dimensions
+if (!columnDimensions) throw new Error('embeddings.embedding: не удалось прочитать мерность колонки из схемы')
+export const COLUMN_DIM: number = columnDimensions
 
 export interface EmbedSpace {
   provider: EmbedProvider
@@ -28,8 +41,6 @@ export interface EmbedSpace {
 
 export const EMBED_TARGET_SETTING = 'embed.provider'
 export const EMBED_SPACE_SETTING = 'embed.index_space'
-export const COLUMN_DIM = 768
-export const YANDEX_EMBED_DIM = 768 // максимум v2-моделей (128/256/512/768)
 
 /** Чистый резолв ЦЕЛЕВОГО пространства (юнит-тестируется). */
 export function resolveTargetSpace(
@@ -44,11 +55,11 @@ export function resolveTargetSpace(
       // Пара doc/query — у Яндекса это РАЗНЫЕ модели одного пространства.
       docModel: `emb://${folder}/text-embeddings-v2-doc/latest`,
       queryModel: `emb://${folder}/text-embeddings-v2-query/latest`,
-      dim: YANDEX_EMBED_DIM,
+      // Просим мерность колонки у ЛЮБОГО провайдера — своей цифры на провайдера больше нет.
+      dim: COLUMN_DIM,
     }
   }
   const model = m['ai.embedding_model']?.trim() || defaultEmbeddingModel()
-  // 768 и для OpenRouter: text-embedding-3-* — матрёшечные (MRL), dimensions=768 штатен.
   return { provider: 'openrouter', docModel: model, queryModel: model, dim: COLUMN_DIM }
 }
 
