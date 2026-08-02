@@ -76,7 +76,7 @@ export default async function CouncilPage({ searchParams }: { searchParams: Prom
   const noAccounts = rows.filter((e) => e.enabled && e.lifecycle === 'active' && !e.userId).length
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-4 px-5 py-6 md:px-8">
+    <div className="flex w-full min-w-0 flex-col gap-4">
       {settings.councilEnabled ? null : (
         <p className="mb-4 rounded-md border border-warn/50 bg-surface px-3 py-2 text-[0.78125rem] text-warn">
           {t('admin.theCouncilOffThese', lang)}

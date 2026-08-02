@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { SideNav } from '@/shared/ui/SideNav'
 import { t, type Lang } from '@/shared/i18n'
+import { PAGE } from '@/shared/ui/control'
 
 export interface SettingsSection {
   id: string
@@ -54,9 +55,9 @@ export function SettingsShell({ sections, lang }: { sections: SettingsSection[];
   }, [visible])
 
   return (
-    <div className="mx-auto flex w-full max-w-[57.5rem] flex-col gap-8 px-6 py-8 md:flex-row">
-      {/* top = высота шапки (57) + верхний паддинг (py-8 = 32) → без «прыжка» к шапке при скролле. */}
-      <aside className="shrink-0 md:sticky md:top-[5.5625rem] md:h-fit md:w-[13.75rem]">
+    <div className={`${PAGE} flex flex-col gap-8 md:flex-row`}>
+      {/* top = высота шапки (57) + верхний паддинг рамки (py-6 = 24) → без «прыжка» к шапке при скролле. */}
+      <aside className="shrink-0 md:sticky md:top-[5.0625rem] md:h-fit md:w-[13.75rem]">
         <SideNav
           mobileLabel={t('settings', lang)}
           search={{ value: q, onChange: setQ, placeholder: t('settingsSearchPh', lang), clearLabel: t('clear', lang) }}

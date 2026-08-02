@@ -30,6 +30,7 @@ import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { FollowButton } from '@/features/follows/FollowButton'
 import { avatarSrc } from '@/shared/media'
 import { SocialIcon, socialLabel } from '@/features/settings/socials'
+import { PAGE } from '@/shared/ui/control'
 
 function displayUrl(url: string): string {
   return url.replace(/^https?:\/\//i, '').replace(/\/$/, '')
@@ -179,7 +180,7 @@ export default async function ProfilePage({
   return (
     <div className="w-full">
       {/* Табы профиля — full-width под шапкой; единый TabNav из shared/ui. */}
-      <TabNav maxWidthClass="max-w-[61.25rem]" scope="profile" overflow={{ moreLabel: t('moreTabs', lang) }}>
+      <TabNav scope="profile" overflow={{ moreLabel: t('moreTabs', lang) }}>
         {isPeopleTab ? (
           <>
             <TabItem href={`/${handle}?tab=followers`} on={tab === 'followers'} icon={<Users size={15} />} label={t('followersLabel', lang)} count={followCounts.followers} />
@@ -198,7 +199,7 @@ export default async function ProfilePage({
       </TabNav>
 
       {sp.e === 'list_quota' && isOwner && (
-        <div className="mx-auto mt-4 max-w-[61.25rem] px-6 lg:px-8">
+        <div className={`${PAGE} mt-4`}>
           <div className="rounded-md border border-warn/50 bg-surface px-3 py-2.5 text-[0.8125rem] text-warn">
             {lang === 'ru'
               ? 'Достигнут лимит списков — удали ненужные, чтобы создать/форкнуть новый.'
@@ -207,8 +208,8 @@ export default async function ProfilePage({
         </div>
       )}
 
-      <div className="px-6 py-8 lg:px-8">
-      <div className="mx-auto flex max-w-[61.25rem] flex-col gap-8 md:flex-row">
+      <div className={PAGE}>
+      <div className="flex flex-col gap-8 md:flex-row">
         <aside className="shrink-0 md:w-[17.5rem]">
           <Avatar handle={user.handle} avatarUrl={bigAvatar} size={180} rounded={user.avatarShape === 'square' ? 'rounded-2xl' : 'rounded-full'} />
           <div className="mt-4">

@@ -6,6 +6,7 @@ import { MoreHorizontal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './dropdown-menu'
 import { Tooltip } from './Tooltip'
 import { ScrollRow } from './ScrollRow'
+import { PAGE_X } from './control'
 
 // Единый таб-бар под шапкой (GitHub-стиль) — ОДИН источник правды для профиля,
 // страницы списка, Explore и любых будущих разделов. Активная вкладка подчёркнута
@@ -61,7 +62,6 @@ function Underline({ bar }: { bar: { left: number; width: number } | null }) {
 
 interface TabNavBase {
   children: ReactNode
-  maxWidthClass?: string
   /** Ключ памяти позиции: табы одного раздела (напр. 'list') анимируются между маршрутами. */
   scope?: string
   /** Центрировать вкладки (витрина Explore); по умолчанию слева (GitHub-стиль). */
@@ -85,7 +85,6 @@ export type TabNavProps = TabNavBase &
 export function TabNav(props: TabNavProps) {
   return props.overflow ? (
     <OverflowTabNav
-      maxWidthClass={props.maxWidthClass}
       scope={props.scope}
       center={props.center}
       moreLabel={props.overflow.moreLabel}
@@ -94,7 +93,6 @@ export function TabNav(props: TabNavProps) {
     </OverflowTabNav>
   ) : (
     <ScrollTabNav
-      maxWidthClass={props.maxWidthClass}
       scope={props.scope}
       center={props.center}
       arrows={props.arrows}
@@ -106,7 +104,6 @@ export function TabNav(props: TabNavProps) {
 
 function ScrollTabNav({
   children,
-  maxWidthClass = 'max-w-[73.75rem]',
   scope = 'default',
   center = false,
   arrows,
@@ -126,7 +123,7 @@ function ScrollTabNav({
       <ScrollRow
         scrollerRef={ref}
         label={arrows}
-        className={`mx-auto flex w-full gap-1 px-4 text-[0.875rem] ${center ? 'justify-center-safe' : ''} ${maxWidthClass}`}
+        className={`${PAGE_X} flex gap-1 text-[0.875rem] ${center ? 'justify-center-safe' : ''}`}
       >
         {children}
         <Underline bar={bar} />
@@ -152,7 +149,6 @@ const moreTabClass =
 
 function OverflowTabNav({
   children,
-  maxWidthClass = 'max-w-[73.75rem]',
   scope = 'default',
   center = false,
   moreLabel,
@@ -225,7 +221,7 @@ function OverflowTabNav({
 
   return (
     <div className="border-b border-border">
-      <div className={`relative mx-auto w-full px-4 ${maxWidthClass}`}>
+      <div className={`${PAGE_X} relative`}>
         <div
           ref={ref}
           className={`relative flex w-full gap-1 overflow-hidden text-[0.875rem] ${center ? 'justify-center' : ''}`}

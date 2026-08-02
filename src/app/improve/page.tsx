@@ -7,6 +7,7 @@ import { t, tr } from '@/shared/i18n'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getImprovementFeed } from '@/features/improve/queries'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -20,7 +21,7 @@ export default async function ImprovePage() {
   const items = await getImprovementFeed(session.userId)
 
   return (
-    <div className="mx-auto w-full max-w-[47.5rem] px-4 py-6">
+    <div className={PAGE_NARROW}>
       <PageHeader
         icon={<Sparkles size={18} />}
         title={ru ? 'Что улучшить' : 'What to improve'}

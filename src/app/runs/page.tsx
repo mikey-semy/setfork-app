@@ -8,6 +8,7 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getUserRuns, type UserRunRow } from '@/features/runs/queries'
 import { DeleteRunButton } from '@/features/runs/DeleteRunButton'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -23,7 +24,7 @@ export default async function MyRunsPage() {
   const abandoned = runs.filter((r) => r.status === 'abandoned')
 
   return (
-    <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
+    <div className={PAGE}>
       {/* Видимой шапки нет: тот же заголовок уже стоит в TopNav (см. /my-lists).
           Здесь он остаётся только для скринридеров и структуры страницы. */}
       <PageHeader hideTitle title={t('myRuns', lang)} />

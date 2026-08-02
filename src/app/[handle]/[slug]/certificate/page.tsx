@@ -7,6 +7,7 @@ import { t, tr } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { CertificatePrintButton } from '@/features/quizzes/CertificatePrintButton'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -27,7 +28,7 @@ export default async function CertificatePage({ params }: { params: Promise<{ ha
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[47.5rem] px-4 py-8">
+      <div className={PAGE_NARROW}>
         {!session ? (
           <p className="text-[0.875rem] text-ink-2">
             {ru ? 'Войдите, чтобы увидеть свой сертификат.' : 'Log in to see your certificate.'}{' '}

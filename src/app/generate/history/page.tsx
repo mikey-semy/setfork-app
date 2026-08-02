@@ -8,6 +8,7 @@ import { getRecentGenerations, type GenerationStatus } from '@/features/generati
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { timeAgo } from '@/shared/ui/timeAgo'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -24,7 +25,7 @@ export default async function GenerationHistoryPage() {
   const items = await getRecentGenerations(session.userId, 50)
 
   return (
-    <div className="mx-auto w-full max-w-[47.5rem] px-4 py-6 sm:px-6">
+    <div className={PAGE}>
       <PageHeader
         title={t('generation.draftHistory', lang)}
         actions={

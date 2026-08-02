@@ -33,7 +33,7 @@ export default async function AdminFeedsPage({ searchParams }: { searchParams: P
   const [lang, sp, [rows, items]] = await Promise.all([getLang(), searchParams, Promise.all([feedSourceRows(), recentFeedItems()])])
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
+    <div className="flex w-full min-w-0 flex-col gap-5">
       <PageHeader
         title={t('admin.feeds', lang)}
         subtitle={t('admin.sourcesCompanyDrawsEvents', lang)}

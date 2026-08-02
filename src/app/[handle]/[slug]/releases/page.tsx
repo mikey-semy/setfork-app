@@ -17,6 +17,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { getReleases } from '@/features/releases/queries'
 import { HistoryNav } from '@/widgets/HistoryNav'
 import { deleteRelease } from '@/features/releases/actions'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -36,7 +37,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[51.25rem] px-4 py-6">
+      <div className={PAGE}>
         <HistoryNav
           base={base}
           active="releases"

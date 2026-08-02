@@ -60,7 +60,7 @@ export default async function AdminDevelopmentPage() {
   const period = t('admin.inDays', lang).replace('{n}', String(m.periodDays))
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-6 px-5 py-6 md:px-8">
+    <div className="flex w-full min-w-0 flex-col gap-6">
       <PageHeader
         icon={<TrendingUp size={17} />}
         title={t('admin.development', lang)}

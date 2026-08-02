@@ -5,6 +5,7 @@ import { listTags } from '@/features/tags/queries'
 import { TagChip } from '@/shared/ui/TagChip'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -17,7 +18,7 @@ export default async function TagsIndexPage() {
   const [lang, tags] = await Promise.all([getLang(), listTags({ limit: 300 })])
 
   return (
-    <div className="mx-auto w-full max-w-[56.25rem] px-4 py-8">
+    <div className={PAGE}>
       {/* «Теги» уже написаны в шапке приложения — на странице остаётся пояснение. */}
       <PageHeader hideTitle title={t('tags', lang)} subtitle={t('tags.browseListsByTag', lang)} />
       {tags.length ? (

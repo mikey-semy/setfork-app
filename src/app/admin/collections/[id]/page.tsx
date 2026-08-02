@@ -27,7 +27,7 @@ export default async function EditCollectionPage({ params, searchParams }: { par
   if (!c) notFound()
 
   return (
-    <div className="mx-auto flex w-full max-w-[45rem] flex-col gap-6 px-6 py-8">
+    <div className="flex min-w-0 flex-col gap-6">
       <div className="flex items-center justify-between">
         <Link href="/admin/collections" className="text-[0.8125rem] text-ink-2 hover:text-ink">← {ru ? 'Все подборки' : 'All collections'}</Link>
         <Link href={`/collections/${c.slug}`} className="inline-flex items-center gap-1.5 text-[0.8125rem] text-accent hover:underline">

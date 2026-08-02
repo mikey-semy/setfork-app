@@ -11,6 +11,7 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { headers } from 'next/headers'
 import { getInsightTotals, getWeeklySeries, WEEKS } from '@/features/insights/queries'
 import { BadgesCard } from '@/features/badges/BadgesCard'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -57,7 +58,7 @@ export default async function InsightsPage({ params }: { params: Promise<{ handl
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[73.75rem] px-4 py-6">
+      <div className={PAGE}>
         {/* Итоги */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           {stats.map(({ icon: Icon, label, v }) => (

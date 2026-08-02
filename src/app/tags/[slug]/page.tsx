@@ -8,6 +8,7 @@ import { FeedList } from '@/features/library/FeedList'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Badge } from '@/shared/ui/badge'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -22,7 +23,7 @@ export default async function TagPage({ params }: { params: Promise<{ slug: stri
   const [tag, items] = await Promise.all([getTag(slug), getFeed({ tag: slug, sort: 'trending' }, session?.userId, lang)])
 
   return (
-    <div className="mx-auto w-full max-w-[56.25rem] px-4 py-8">
+    <div className={PAGE}>
       <PageHeader
         icon={
           <span className="grid size-10 place-items-center rounded-lg bg-(--accent-soft)">

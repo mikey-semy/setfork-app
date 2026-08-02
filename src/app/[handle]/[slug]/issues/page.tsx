@@ -17,6 +17,7 @@ import { resolveChip } from '@/shared/lib/labels'
 import { isCollaborator } from '@/features/collab/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { Tag } from 'lucide-react'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -66,7 +67,7 @@ export default async function IssuesPage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[56.25rem] px-4 py-6">
+      <div className={PAGE}>
         {/* Поиск + New */}
         <div className="mb-3 flex items-center gap-2">
           <form action={base} method="get" className="flex-1">

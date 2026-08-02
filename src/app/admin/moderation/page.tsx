@@ -17,7 +17,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
   const [items, counts] = await Promise.all([getModerationList(filter), getModerationCounts()])
 
   return (
-    <div className="mx-auto w-full max-w-[53.75rem] px-6 py-8">
+    <div className="min-w-0">
       <PageHeader title={t('moderation', lang)} subtitle={t('moderationIntro', lang)} />
       <ModerationTable items={items} counts={counts} filter={filter} lang={lang} />
     </div>

@@ -11,6 +11,7 @@ import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { requireViewableMeta } from '@/features/library/guard'
 import { createDiscussion } from '@/features/discussions/actions'
 import { DISCUSSION_CATEGORIES } from '@/features/discussions/constants'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -33,7 +34,7 @@ export default async function NewDiscussionPage({
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[51.25rem] px-4 py-6">
+      <div className={PAGE_NARROW}>
       <FloatingBack href={`/${owner}/${slug}/discussions`} label={t('featDiscussions', lang)} />
         <PageHeader icon={<MessagesSquare size={18} />} title={ru ? 'Новое обсуждение' : 'New discussion'} />
         <form action={createDiscussion} className="flex flex-col gap-3">

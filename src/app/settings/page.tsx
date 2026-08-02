@@ -25,6 +25,7 @@ import { SettingsShell, type SettingsSection as ShellSection } from '@/features/
 import { NotifyPrefsForm } from '@/features/notifications/NotifyPrefsForm'
 import { getUserSessions } from '@/features/sessions/queries'
 import { SessionsList } from '@/features/sessions/SessionsList'
+import { PAGE_X } from '@/shared/ui/control'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -234,7 +235,9 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <div className="mx-auto w-full max-w-[57.5rem] px-6 pt-8">
+      {/* Шапка — без нижнего поля: вертикальный ритм ниже задаёт сама оболочка
+          настроек, иначе две рамки подряд дают двойной отступ. */}
+      <div className={`${PAGE_X} pt-6`}>
         {/* «Настройки» уже написаны в шапке приложения — остаётся пояснение. */}
         <PageHeader hideTitle title={t('settings', lang)} subtitle={t('profileIntro', lang)} />
       </div>

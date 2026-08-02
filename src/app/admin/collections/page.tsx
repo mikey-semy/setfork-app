@@ -23,7 +23,7 @@ export default async function AdminCollectionsPage() {
   const list = await getAdminCollections()
 
   return (
-    <div className="mx-auto flex w-full max-w-[45rem] flex-col gap-6 px-6 py-8">
+    <div className="flex min-w-0 flex-col gap-6">
       <PageHeader
         title={ru ? 'Подборки' : 'Collections'}
         subtitle={

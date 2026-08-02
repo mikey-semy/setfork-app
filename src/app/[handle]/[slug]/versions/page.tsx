@@ -13,6 +13,7 @@ import { CommitRow } from '@/features/library/CommitRow'
 import { commitCutoff } from '@/features/library/commit-filter'
 import { gitCore } from '@/features/git/core'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -67,7 +68,7 @@ export default async function CommitsPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[56.25rem] px-4 py-6">
+    <div className={PAGE}>
       <HistoryNav
         base={base}
         active="commits"

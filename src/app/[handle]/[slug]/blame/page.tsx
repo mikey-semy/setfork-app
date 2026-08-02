@@ -8,6 +8,7 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
 import { getListBlame } from '@/features/library/blame'
+import { PAGE } from '@/shared/ui/control'
 
 // «Blame» по шагам: видно, что давно не трогали, а что свежее. Автор версий
 // пока не хранится — показываем версию/дату/note изменения.
@@ -29,7 +30,7 @@ export default async function BlamePage({ params }: { params: Promise<{ handle: 
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[56.25rem] px-4 py-6">
+      <div className={PAGE}>
         <PageHeader icon={<History size={18} className="text-muted" />} title={t('blameTitle', lang)} subtitle={t('blameHint', lang)} />
 
         <div className="divide-y divide-border rounded-lg border border-border bg-surface">

@@ -74,7 +74,7 @@ export default async function AuditPage() {
   const entries = await getAuditLog(200)
 
   return (
-    <div className="mx-auto w-full max-w-[60rem] px-6 py-8">
+    <div className="min-w-0">
       <PageHeader
         title={ru ? 'Журнал аудита' : 'Audit log'}
         subtitle={

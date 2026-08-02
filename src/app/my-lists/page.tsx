@@ -8,6 +8,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { applySavedQuery, listSavedQueries } from '@/features/library/saved-queries'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -28,7 +29,7 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
   // Панель здоровья (HQ §11): «где болит прямо сейчас» — выше ленты.
 
   return (
-    <div className="mx-auto w-full max-w-[68.75rem] px-6 py-6">
+    <div className={PAGE}>
           {/* Видимой шапки у страницы нет: заголовок «Списки» и «Новый список» уже стоят
               в TopNav (заголовок раздела слева, «+» справа) — второй раз то же самое
               отжимало ленту вниз. Заголовок остаётся для скринридеров и структуры. */}

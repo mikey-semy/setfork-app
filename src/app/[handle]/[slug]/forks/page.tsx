@@ -8,6 +8,7 @@ import { t, tr, type Lang, type LocaleText } from '@/shared/i18n'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { requireViewableMeta } from '@/features/library/guard'
+import { PAGE } from '@/shared/ui/control'
 
 /**
  * Дерево форков (HQ §11, Obsidian-вектор → «какие форки от какого списка
@@ -61,7 +62,7 @@ export default async function ForksPage({ params }: { params: Promise<{ handle: 
   const fresh = (iso: string) => Date.now() - new Date(iso).getTime() < 7 * 24 * 60 * 60 * 1000
 
   return (
-    <div className="mx-auto w-full max-w-[53.75rem] px-4 py-6 sm:px-6">
+    <div className={PAGE}>
       {/* Назад к списку — показываем title (как в шапке), а не технический slug. */}
       <Link href={`/${owner}/${slug}`} className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {owner} / {tr(meta.title, lang)}

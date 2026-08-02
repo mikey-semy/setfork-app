@@ -6,6 +6,7 @@ import { getRoster, rosterAvatars } from '@/shared/ai/roster'
 import { gnomeRank, gnomeReputation, REP_MIN_GENS } from '@/features/generation/reputation'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
+import { PAGE } from '@/shared/ui/control'
 
 // Стиль бейджа ранга по tier: выше — заметнее. Ученик (0) — приглушённо (стартовый
 // ранг, не «пусто»); Старший мастер (3) — самый выразительный. Только токены темы.
@@ -35,7 +36,7 @@ export default async function GuildsPage() {
   const [roster, avatars, rep] = await Promise.all([getRoster(), rosterAvatars(), gnomeReputation()])
 
   return (
-    <div className="mx-auto w-full max-w-[65rem] px-4 py-8 sm:px-6">
+    <div className={PAGE}>
       <h1 className="text-[1.375rem] font-bold text-ink">{t('guilds.theWorkshopGuilds', lang)}</h1>
       <p className="mt-1.5 max-w-[40rem] text-[0.875rem] leading-relaxed text-ink-2">
         {t('guilds.everySetforkListForged', lang)}

@@ -17,7 +17,7 @@ export default async function AdminTagsPage() {
   const [lang, tags] = await Promise.all([getLang(), listTags({ limit: 2000 })])
 
   return (
-    <div className="mx-auto w-full max-w-[53.75rem] px-6 py-8">
+    <div className="min-w-0">
       <PageHeader
         icon={<Tag size={18} />}
         title={t('tags', lang)}

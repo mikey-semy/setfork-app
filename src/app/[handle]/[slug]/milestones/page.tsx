@@ -11,6 +11,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { getMilestones } from '@/features/milestones/queries'
 import { MilestoneForm } from '@/features/milestones/MilestoneForm'
 import { deleteMilestone, toggleMilestoneClosed } from '@/features/milestones/actions'
+import { PAGE } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -27,7 +28,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[56.25rem] px-4 py-6">
+      <div className={PAGE}>
         <PageHeader
           icon={<MilestoneIcon size={18} />}
           title={t('milestonesTitle', lang)}

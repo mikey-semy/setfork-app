@@ -1,9 +1,10 @@
 import { FeedListSkeleton, Skeleton } from '@/shared/ui/Skeleton'
+import { PAGE } from '@/shared/ui/control'
 
 // Соответствует витрине /explore (discovery): без сайдбара, ~1080, темы + лента.
 export default function Loading() {
   return (
-    <div className="mx-auto w-full max-w-[67.5rem] px-6 py-8">
+    <div className={PAGE}>
       <Skeleton className="mb-6 h-7 w-40" />
       <Skeleton className="mb-3 h-3 w-28" />
       <div className="mb-8 flex flex-wrap gap-2">

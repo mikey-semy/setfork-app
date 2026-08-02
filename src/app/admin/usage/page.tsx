@@ -58,7 +58,7 @@ export default async function AdminUsagePage({ searchParams }: { searchParams: P
   const footnote = t('admin.usageFootnote', lang).replace('{n}', num(totals.generations)).replace('{t}', tokPart)
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-5 px-5 py-6 md:px-8">
+    <div className="flex w-full min-w-0 flex-col gap-5">
       <PageHeader
         title={t('admin.draftUsage', lang)}
         subtitle={t('admin.whoConsumedWhatTokens', lang)}
