@@ -235,7 +235,8 @@ export default async function SettingsPage() {
   return (
     <div>
       <div className="mx-auto w-full max-w-[57.5rem] px-6 pt-8">
-        <PageHeader title={t('settings', lang)} subtitle={t('profileIntro', lang)} />
+        {/* «Настройки» уже написаны в шапке приложения — остаётся пояснение. */}
+        <PageHeader hideTitle title={t('settings', lang)} subtitle={t('profileIntro', lang)} />
       </div>
       <SettingsShell sections={sections} lang={lang} />
     </div>

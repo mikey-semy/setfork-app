@@ -18,11 +18,8 @@ export default async function TagsIndexPage() {
 
   return (
     <div className="mx-auto w-full max-w-[56.25rem] px-4 py-8">
-      <PageHeader
-        icon={<Tag size={18} />}
-        title={t('tags', lang)}
-        subtitle={t('tags.browseListsByTag', lang)}
-      />
+      {/* «Теги» уже написаны в шапке приложения — на странице остаётся пояснение. */}
+      <PageHeader hideTitle title={t('tags', lang)} subtitle={t('tags.browseListsByTag', lang)} />
       {tags.length ? (
         <div className="flex flex-wrap gap-2">
           {tags.map((tg) => (
