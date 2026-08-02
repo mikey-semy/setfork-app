@@ -106,25 +106,30 @@ async function priceBookFromSource(refs: string | undefined, base: PriceBook): P
   if (!paths.length) return null
   const origin = (process.env.APP_URL || process.env.SETFORK_APP_URL || '').replace(/\/$/, '')
   if (!origin) return null
+  // Списки независимы — тянем ОДНОВРЕМЕННО, а складываем строго в порядке ссылок: порядок
+  // задаёт приоритет строк, и терять его из-за того, кто первым ответил, нельзя.
+  const loaded = await Promise.all(
+    paths.map(async (path) => {
+      try {
+        const res = await fetch(`${origin}/${path}/data.json`, { signal: AbortSignal.timeout(8_000), cache: 'no-store' })
+        if (!res.ok) {
+          console.warn(`[price-book] список ${path} не отдал данные: HTTP ${res.status}`)
+          return null
+        }
+        const part = priceBookFromList(await res.json(), base)
+        return part ? { path, part } : null
+      } catch (e) {
+        console.warn(`[price-book] список ${path} недоступен:`, e instanceof Error ? e.message : e)
+        return null
+      }
+    }),
+  )
   const entries: PriceEntry[] = []
   const seen: string[] = []
-  for (const path of paths) {
-    try {
-      const res = await fetch(`${origin}/${path}/data.json`, { signal: AbortSignal.timeout(8_000), cache: 'no-store' })
-      if (!res.ok) {
-        console.warn(`[price-book] список ${path} не отдал данные: HTTP ${res.status}`)
-        continue
-      }
-      const part = priceBookFromList(await res.json(), base)
-      // Списки складываются В ПОРЯДКЕ ССЫЛОК: приоритет строк остаётся управляемым, а провайдеры
-      // не пересекаются — каждая строка несёт своего провайдера явно.
-      if (part) {
-        entries.push(...part.entries)
-        seen.push(`${path} (${part.source})`)
-      }
-    } catch (e) {
-      console.warn(`[price-book] список ${path} недоступен:`, e instanceof Error ? e.message : e)
-    }
+  for (const item of loaded) {
+    if (!item) continue
+    entries.push(...item.part.entries)
+    seen.push(`${item.path} (${item.part.source})`)
   }
   if (!entries.length) return null
   return { ...base, entries, source: seen.join(' + ') }

@@ -50,12 +50,12 @@ export default async function GnomePage({ params }: { params: Promise<{ id: stri
   const models = apiKey ? await fetchModels() : null
   // Тот же построитель опций, что и в общей админке: цены, наш рейтинг, занятость. Здесь
   // раньше был третий, обеднённый вариант списка — без цен и без опыта, то есть выбор вслепую.
-  const { buildOpts } = await import('@/features/admin/model-options')
-  const { modelMeta } = await import('@/features/admin/model-enrich')
-  const [meta, { builtinAvatars }] = await Promise.all([
-    modelMeta(models?.currency ?? 'USD', ru),
+  const [{ buildOpts }, { modelMeta }, { builtinAvatars }] = await Promise.all([
+    import('@/features/admin/model-options'),
+    import('@/features/admin/model-enrich'),
     import('@/shared/ai/avatar-gallery'),
   ])
+  const meta = await modelMeta(models?.currency ?? 'USD', ru)
   const modelOptions = models ? buildOpts(models.chat, false, lang, models.currency, models.pricesKnown, meta) : []
   // Чем думает ЭТОТ специалист: его модель, наш опыт с ней и кто ещё на ней сидит.
   const myMeta = e.model ? meta.get(baseModelId(e.model)) : undefined
