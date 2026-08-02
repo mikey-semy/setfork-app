@@ -3,8 +3,8 @@ import { FolderGit2 } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
-import { PageHeader } from '@/shared/ui/PageHeader'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { PageHeader } from '@/shared/ui/PageHeader'
 import { FeedList } from '@/features/library/FeedList'
 import { getUserTemplates } from '@/features/library/queries'
 import { applySavedQuery, listSavedQueries } from '@/features/library/saved-queries'
@@ -30,17 +30,10 @@ export default async function MyListsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className={PAGE}>
-          <PageHeader
-            title={t('myLists', lang)}
-            actions={
-              <Link
-                href="/new"
-                className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
-              >
-                {t('newList', lang)}
-              </Link>
-            }
-          />
+          {/* Видимой шапки у страницы нет: заголовок «Списки» и «Новый список» уже стоят
+              в TopNav (заголовок раздела слева, «+» справа) — второй раз то же самое
+              отжимало ленту вниз. Заголовок остаётся для скринридеров и структуры. */}
+          <PageHeader hideTitle title={t('myLists', lang)} />
           {!session ? (
             <div className="py-16 text-center text-[0.8125rem] text-muted">
               {t('loginRequired', lang)}{' '}

@@ -31,7 +31,8 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
     <div className={PAGE_NARROW}>
       <FloatingBack href={'/my-lists'} label={t('myLists', lang)} />
       <form action={createTemplate}>
-        <PageHeader title={t('newList', lang)} />
+        {/* Название страницы уже стоит в шапке приложения. */}
+        <PageHeader hideTitle title={t('newList', lang)} />
 
         {quotaHit && q && (
           <Alert variant="warn" className="mb-5">

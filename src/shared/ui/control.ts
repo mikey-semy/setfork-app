@@ -6,28 +6,30 @@
 export type ControlSize = 'xs' | 'sm' | 'md'
 
 /** Высота: xs — плотные тулбары/поповеры, sm — панели/фильтры, md — формы.
- *  Шкала = Primer (GitHub): 28/24/20px. До 01.08.2026 md был 38px (стандарт
- *  рядов настроек того времени); владелец, глядя на /admin/ui-kit, выбрал
- *  компактную плотность («переходим на xs») — вся лестница сдвинута к
- *  Primer small, сайт плотностью как GitHub. */
+ *  Шкала 32/28/24px. История: md 38px (стандарт рядов настроек) → 01.08.2026
+ *  владелец на /admin/ui-kit выбрал «переходим на xs» и лестница ушла к
+ *  28/24/20 → 02.08.2026 «всё же увеличить до sm»: 20px оказалось мелко, а
+ *  ряд в шапке разъезжался (поле 28 против рукописных кнопок 32). Дефолт
+ *  теперь 32px — это и есть закрытый хвост трека ui-system «плотность 38↔32»,
+ *  и ровно та высота, до которой поле само дотягивается на touch (FIELD_BOX). */
 export const CONTROL_H: Record<ControlSize, string> = {
-  xs: 'h-5',
-  sm: 'h-6',
-  md: 'h-7',
+  xs: 'h-6',
+  sm: 'h-7',
+  md: 'h-8',
 }
 
 export const CONTROL_TEXT: Record<ControlSize, string> = {
-  xs: 'text-[0.6875rem]',
-  sm: 'text-[0.75rem]',
-  md: 'text-[0.78125rem]',
+  xs: 'text-[0.75rem]',
+  sm: 'text-[0.78125rem]',
+  md: 'text-[0.8125rem]',
 }
 
 /** Горизонтальные отступы полей ввода; у Button свои (шире на md — текст в
  *  кнопке дышит), заданы в button.tsx поверх этой же высоты. */
 export const CONTROL_PX: Record<ControlSize, string> = {
-  xs: 'px-1.5',
+  xs: 'px-2',
   sm: 'px-2',
-  md: 'px-2',
+  md: 'px-2.5',
 }
 
 /** Текст ПОЛЕЙ ВВОДА на мобиле — 16px: меньший кегль заставляет iOS зумить
@@ -59,9 +61,9 @@ export const TEXT = {
 
 /** Размер lucide-иконки при размере контрола: единый вместо 12 разных чисел. */
 export const ICON_SIZE: Record<ControlSize, number> = {
-  xs: 11,
-  sm: 12,
-  md: 13,
+  xs: 12,
+  sm: 13,
+  md: 14,
 }
 
 // ── Ширина страницы ──────────────────────────────────────────────────────
@@ -106,6 +108,7 @@ export const LAYER = {
  * Фокус обязан быть ВИДИМ (WCAG 2.4.7): текстовые поля браузер считает
  * focus-visible и при клике, так что кольцо показывается всегда.
  * На touch/узких экранах поле не ниже 32px: globals.css форсит там 16px
- * кегль (анти-зум iOS), в компактные 28px он влезает впритык (Codex #651). */
+ * кегль (анти-зум iOS), в компактные 28px он влезает впритык (Codex #651).
+ * С дефолтом md=32 это касается только рядов, явно переведённых на xs/sm. */
 export const FIELD_BOX =
   'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 max-sm:min-h-8 pointer-coarse:min-h-8'

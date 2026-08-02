@@ -238,7 +238,8 @@ export default async function SettingsPage() {
       {/* Шапка — без нижнего поля: вертикальный ритм ниже задаёт сама оболочка
           настроек, иначе две рамки подряд дают двойной отступ. */}
       <div className={`${PAGE_X} pt-6`}>
-        <PageHeader title={t('settings', lang)} subtitle={t('profileIntro', lang)} />
+        {/* «Настройки» уже написаны в шапке приложения — остаётся пояснение. */}
+        <PageHeader hideTitle title={t('settings', lang)} subtitle={t('profileIntro', lang)} />
       </div>
       <SettingsShell sections={sections} lang={lang} />
     </div>

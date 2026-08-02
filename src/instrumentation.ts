@@ -42,7 +42,7 @@ export async function register() {
   // РАЗОВЫЕ джобы перечислены здесь руками — их ставит пользовательское действие.
   // ПЕТЛИ берутся из реестра shared/agents/loops: раньше их приходилось вписывать дважды
   // (обработчик + самозапуск), и `feedpull` уехал в прод с обработчиком, но без запуска.
-  const [{ startWorker }, { LOOPS }, { LOOP_WIRING }, notifications, generation, library, moderation, gnomeReview, gnomeTask] = await Promise.all([
+  const [{ startWorker }, { LOOPS }, { LOOP_WIRING }, notifications, generation, library, moderation, gnomeReview, gnomeTask, mirror] = await Promise.all([
     import('@/shared/jobs/worker'),
     import('@/shared/agents/loops'),
     import('@/instrumentation-loops'),
@@ -52,15 +52,20 @@ export async function register() {
     import('@/features/moderation/jobs'),
     import('@/features/library/gnome-review-jobs'),
     import('@/features/library/gnome-task-jobs'),
+    import('@/features/library/mirror-jobs'),
   ])
   const loopHandlers = Object.fromEntries(
     await Promise.all(LOOPS.map(async (l) => [l.jobType, await LOOP_WIRING[l.name].handler()] as const)),
   )
-  // Финализаторы (второй реестр, необязательный) — только для задач с ВИДИМЫМ состоянием
-  // «в процессе». У генерации это статус 'pending': умер процесс, не дойдя до finally, —
-  // и на экране вечный спиннер, пока кто-то не закроет генерацию. Остальным типам хватает
-  // записи в таблице задач, поэтому их здесь нет.
-  const finalizers = { generate: generation.finalizeGenerateJob }
+  // Финализаторы (второй реестр, необязательный) — для задач, чья смерть оставляет
+  // что-то незакрытым. У генерации это статус 'pending': умер процесс, не дойдя до
+  // finally, — и на экране вечный спиннер, пока кто-то не закроет генерацию.
+  //
+  // У подметальщика зеркал незакрытым остаётся не экран, а САМА ЦЕПОЧКА: задача
+  // ставит преемника перед завершением, и смерть на последней попытке обрывает
+  // повторы навсегда — до следующего рестарта процесса. Финализатор ставит
+  // преемника за неё.
+  const finalizers = { generate: generation.finalizeGenerateJob, mirror: mirror.finalizeMirrorJob }
   startWorker(
     {
       email: notifications.runEmailJob,
@@ -70,10 +75,15 @@ export async function register() {
       moderate: moderation.runModerateJobHandler,
       gnome_review: gnomeReview.runGnomeReviewJob,
       gnome_task: gnomeTask.runGnomeTaskJob,
+      mirror: mirror.runMirrorJob,
       ...loopHandlers,
     },
     finalizers,
   )
+
+  // Ф2: подметальщик упавших зеркал. Не петля агента (там политика, журнал и
+  // предохранитель) — обычная инфраструктурная задача, поэтому здесь руками.
+  void mirror.startMirrorSweepChain()
 
   // САМОЗАПУСК ПЕТЕЛЬ — из того же реестра, что и обработчики: два рукописных списка
   // неизбежно разъезжаются, и один раз уже разъехались (feedpull зарегистрирован, но не

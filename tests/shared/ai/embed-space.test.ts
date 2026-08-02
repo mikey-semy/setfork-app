@@ -6,7 +6,6 @@ import {
   parseIndexSpace,
   resolveTargetSpace,
   sameSpace,
-  YANDEX_EMBED_DIM,
 } from '@/shared/ai/embed-space'
 
 describe('resolveTargetSpace', () => {
@@ -17,13 +16,13 @@ describe('resolveTargetSpace', () => {
     expect(s.dim).toBe(COLUMN_DIM)
   })
 
-  it('yandex: пара doc/query-моделей с folder_id и 768-мерность', () => {
+  it('yandex: пара doc/query-моделей с folder_id и мерность КОЛОНКИ (своей цифры на провайдера нет)', () => {
     const s = resolveTargetSpace({ [EMBED_TARGET_SETTING]: 'yandex', 'ai.yandex_folder_id': 'b1gx' }, {})
     expect(s).toMatchObject({
       provider: 'yandex',
       docModel: 'emb://b1gx/text-embeddings-v2-doc/latest',
       queryModel: 'emb://b1gx/text-embeddings-v2-query/latest',
-      dim: YANDEX_EMBED_DIM,
+      dim: COLUMN_DIM,
     })
   })
 

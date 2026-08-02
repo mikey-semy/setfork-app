@@ -1,6 +1,6 @@
 'use server'
 
-import { and, asc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { blockComments, blockCommentThreads, db, issues, steps, suggestionAssignees, suggestionComments, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
@@ -60,13 +60,6 @@ import { canEditList, canViewList } from '@/core'
 async function gitPort() {
   const [core, ports] = await Promise.all([import('@/features/git/core'), import('@/core')])
   return { gitCore: core.gitCore, BranchOpError: ports.BranchOpError }
-}
-
-/** Ф3: пуш зеркала через ядро. Живёт здесь, а не в mirror-actions: порт
- *  features/git разрешён только из этого файла (baseline границ линтера). */
-export async function pushListMirror(owner: string, slug: string): Promise<{ ok: boolean; error: string }> {
-  const { gitCore } = await gitPort()
-  return gitCore.mirrorPush({ owner, slug }).catch(() => ({ ok: false, error: 'core unavailable' }))
 }
 
 // ── Видимость списка (public/private) и удаление ─────────────────────

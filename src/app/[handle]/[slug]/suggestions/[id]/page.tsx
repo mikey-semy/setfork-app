@@ -553,7 +553,7 @@ export default async function SuggestionThreadPage({
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Link
                 href={`${path}?tab=commits`}
-                className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-[0.78125rem] font-semibold text-ink hover:border-border-strong"
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-[0.78125rem] font-semibold text-ink hover:border-border-strong"
               >
                 <ArrowLeft size={14} /> <span className="max-sm:hidden">{t('prAllCommits', lang)}</span>
               </Link>
@@ -602,7 +602,7 @@ export default async function SuggestionThreadPage({
           {canEditItems && (
             <Link
               href={`${path}/edit`}
-              className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-[0.78125rem] font-semibold text-ink hover:border-border-strong"
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-[0.78125rem] font-semibold text-ink hover:border-border-strong"
             >
               <Pencil size={14} /> {t('prEdit', lang)}
             </Link>

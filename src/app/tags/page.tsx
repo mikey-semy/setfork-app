@@ -19,11 +19,8 @@ export default async function TagsIndexPage() {
 
   return (
     <div className={PAGE}>
-      <PageHeader
-        icon={<Tag size={18} />}
-        title={t('tags', lang)}
-        subtitle={t('tags.browseListsByTag', lang)}
-      />
+      {/* «Теги» уже написаны в шапке приложения — на странице остаётся пояснение. */}
+      <PageHeader hideTitle title={t('tags', lang)} subtitle={t('tags.browseListsByTag', lang)} />
       {tags.length ? (
         <div className="flex flex-wrap gap-2">
           {tags.map((tg) => (

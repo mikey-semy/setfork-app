@@ -25,7 +25,9 @@ export default async function NotificationsPage() {
   return (
     <div className={PAGE}>
       <MarkRead />
-      <PageHeader title={t('notifications', lang)} />
+      {/* Видимой шапки нет: тот же заголовок уже стоит в TopNav (см. /my-lists).
+          Здесь он остаётся только для скринридеров и структуры страницы. */}
+      <PageHeader hideTitle title={t('notifications', lang)} />
 
       {items.length === 0 ? (
         <EmptyState icon={<Bell size={34} strokeWidth={1.5} />} title={t('noNotifications', lang)} />

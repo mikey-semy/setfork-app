@@ -83,10 +83,10 @@ export function CommentActions({
       <div className="mt-2">
         <MarkdownEditor name="editBody" defaultValue={body} rows={4} lang={lang} onValueChange={setDraft} />
         <div className="mt-2 flex items-center justify-end gap-2">
-          <Button variant="ghost" className="h-7" onClick={() => setEditing(false)} disabled={pending}>
+          <Button variant="ghost" onClick={() => setEditing(false)} disabled={pending}>
             {labels.cancel}
           </Button>
-          <Button variant="primary" className="h-7" onClick={save} disabled={pending || !draft.trim()}>
+          <Button variant="primary" onClick={save} disabled={pending || !draft.trim()}>
             {pending ? <Loader2 size={13} className="animate-spin" /> : labels.save}
           </Button>
         </div>

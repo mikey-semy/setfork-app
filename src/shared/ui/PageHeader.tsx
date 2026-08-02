@@ -16,6 +16,7 @@ export function PageHeader({
   icon,
   meta,
   actions,
+  hideTitle,
   size = 'page',
   className,
 }: {
@@ -28,23 +29,33 @@ export function PageHeader({
   meta?: ReactNode
   /** Действия — правый край ряда; на мобиле переносятся вниз вправо. */
   actions?: ReactNode
+  /** Название раздела УЖЕ написано в шапке приложения (TopNav рисует его слева).
+   *  Второй раз на странице оно только отжимает контент вниз, но совсем убрать
+   *  h1 нельзя: в шапке заголовок — span, а странице нужен заголовок для
+   *  скринридеров и структуры документа. Иконка и meta при этом не рисуются —
+   *  они подпись к невидимому тексту; подзаголовок и действия остаются. */
+  hideTitle?: boolean
   size?: 'page' | 'section'
   className?: string
 }) {
   return (
-    <header className={cn('mb-5', className)}>
+    <header className={cn(hideTitle && !subtitle && !actions ? undefined : 'mb-5', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          {icon && <span className="shrink-0 text-accent">{icon}</span>}
+          {icon && !hideTitle && <span className="shrink-0 text-accent">{icon}</span>}
           <h1
             className={cn(
-              'min-w-0 truncate font-bold text-ink',
-              size === 'page' ? 'text-[1.125rem]' : 'text-[1rem]',
+              hideTitle
+                // На печати заголовок ВИДИМ: шапка приложения помечена print:hidden,
+                // и без этого распечатанный лист остался бы без названия страницы.
+                ? 'sr-only print:not-sr-only print:mb-2 print:text-[1.125rem] print:font-bold print:text-ink'
+                : 'min-w-0 truncate font-bold text-ink',
+              !hideTitle && (size === 'page' ? 'text-[1.125rem]' : 'text-[1rem]'),
             )}
           >
             {title}
           </h1>
-          {meta && <div className="flex shrink-0 items-center gap-2">{meta}</div>}
+          {meta && !hideTitle && <div className="flex shrink-0 items-center gap-2">{meta}</div>}
         </div>
         {actions && (
           <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:justify-end">{actions}</div>

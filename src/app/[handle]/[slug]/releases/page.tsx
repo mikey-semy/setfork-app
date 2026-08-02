@@ -57,7 +57,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
               {canManage && (
                 <Link
                   href={`${base}/releases/new`}
-                  className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[0.78125rem] font-semibold text-primary-fg hover:opacity-90"
                 >
                   <Plus size={13} /> {ru ? 'Новый релиз' : 'New release'}
                 </Link>

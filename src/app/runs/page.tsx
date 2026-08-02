@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { PlayCircle, ListChecks } from 'lucide-react'
+import { ListChecks } from 'lucide-react'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr, type Lang } from '@/shared/i18n'
@@ -25,7 +25,9 @@ export default async function MyRunsPage() {
 
   return (
     <div className={PAGE}>
-      <PageHeader icon={<PlayCircle size={18} />} title={t('myRuns', lang)} />
+      {/* Видимой шапки нет: тот же заголовок уже стоит в TopNav (см. /my-lists).
+          Здесь он остаётся только для скринридеров и структуры страницы. */}
+      <PageHeader hideTitle title={t('myRuns', lang)} />
 
       {runs.length === 0 ? (
         <EmptyState icon={<ListChecks size={34} strokeWidth={1.5} />} title={t('noRunsYet', lang)} />

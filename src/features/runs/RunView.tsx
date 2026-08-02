@@ -134,7 +134,7 @@ export function RunView({
         <ArrowLeft size={14} /> {backHref.replace(/^\//, '')}
       </Link>
 
-      {/* Прогресс. Кнопки одной высоты (h-9): «Завершить» текстом, остальное — иконки. */}
+      {/* Прогресс. Кнопки одной высоты (32px шкалы): «Завершить» текстом, остальное — иконки. */}
       <div className="sticky top-[4rem] z-10 mb-5 rounded-lg border border-border bg-surface/95 p-4 backdrop-blur-sm">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -157,7 +157,7 @@ export function RunView({
               <button
                 type="button"
                 onClick={() => start(() => reopenRun(runId))}
-                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[0.78125rem] text-ink hover:border-border-strong"
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[0.78125rem] text-ink hover:border-border-strong"
               >
                 <RotateCcw size={14} /> {t('runReopen', lang)}
               </button>
@@ -166,7 +166,7 @@ export function RunView({
                 <button
                   type="button"
                   onClick={() => start(() => finishRun(runId))}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.8125rem] font-semibold text-primary-fg"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3.5 text-[0.8125rem] font-semibold text-primary-fg"
                 >
                   <CircleCheckBig size={15} /> {t('runFinish', lang)}
                 </button>
@@ -184,7 +184,7 @@ export function RunView({
                       if (ok) start(() => failRun(runId))
                     }}
                     aria-label={t('runFailAction', lang)}
-                    className="grid size-9 place-items-center rounded-md border border-danger/40 text-danger hover:bg-danger/10"
+                    className="grid size-8 place-items-center rounded-md border border-danger/40 text-danger hover:bg-danger/10"
                   >
                     <CircleAlert size={16} />
                   </button>
@@ -205,7 +205,7 @@ export function RunView({
                   if (ok) start(() => deleteRun(runId))
                 }}
                 aria-label={t('runDelete', lang)}
-                className="grid size-9 place-items-center rounded-md text-muted hover:text-danger"
+                className="grid size-8 place-items-center rounded-md text-muted hover:text-danger"
               >
                 <Trash2 size={16} />
               </button>
