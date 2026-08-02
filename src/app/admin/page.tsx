@@ -13,8 +13,8 @@ import { getVapid } from '@/shared/push/vapid'
 import { getOnlineUsers } from '@/features/sessions/queries'
 import { Avatar } from '@/shared/ui/Avatar'
 import Link from 'next/link'
-import { Megaphone } from 'lucide-react'
-import { Award, BarChart3, Bell, Bot, Coins, Database, Flag, FolderGit2, LayoutDashboard, Mail, MessageSquare, RefreshCw, Rss, ScrollText, Search, Shield, Tag, TrendingUp, Users, Wrench } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Bot } from 'lucide-react'
 import { fetchModels, EMBEDDING_DIM, type ModelOption } from '@/shared/ai/models'
 import { getRosterAll, rosterAvatars } from '@/shared/ai/roster'
 import { setAiSettings } from '@/features/admin/actions'
@@ -37,6 +37,7 @@ import type { SettingsSection as ShellSection } from '@/features/settings/Settin
 import { SettingsSection } from '@/shared/ui/SettingsSection'
 import { AdminShell } from '@/features/admin/AdminShell'
 import { adminNavGroups, adminSettingsGroup } from '@/features/admin/nav-groups'
+import { adminSettingsSections, type AdminSectionId } from '@/features/admin/settings-sections'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
@@ -148,38 +149,28 @@ export default async function AdminPage() {
     meta.get(settings.embeddingModel)?.embed?.hint ??
     t('admin.embedNotMeasured', lang)
 
-  // Заголовки секций: ровно один двуязычный литерал на строку (i18n-правило),
-  // используется и в липком меню, и в карточке.
+  // Заголовки секций — из словаря: те же строки нужны меню админки на других
+  // страницах, где этой страницы (и её локальных литералов) нет.
   const T = {
-    online: ru ? 'Сейчас онлайн' : 'Online now',
-    ai: ru ? 'Генерация и модели' : 'Generation & models',
-    media: ru ? 'Хранилище и изображения' : 'Storage & images',
-    email: ru ? 'Почта (SMTP)' : 'Email (SMTP)',
-    push: ru ? 'Push-уведомления (Web Push)' : 'Push notifications (Web Push)',
-    search: ru ? 'Поиск' : 'Search',
-    ach: ru ? 'Достижения профиля' : 'Profile achievements',
+    online: t('admin.sect.online', lang),
+    ai: t('admin.sect.ai', lang),
+    media: t('admin.sect.media', lang),
+    email: t('admin.sect.email', lang),
+    push: t('admin.sect.push', lang),
+    search: t('admin.sect.search', lang),
+    ach: t('admin.sect.achievements', lang),
   }
 
-  // Секции — через SettingsShell (как в настройках пользователя): липкое меню
-  // слева со scrollspy-подсветкой активного пункта + поиск по секциям.
-  const sections: ShellSection[] = [
-    {
-      id: 'maintenance',
-      title: t('adminMaintenance', lang),
-      icon: <Wrench size={14} />,
-      keywords: ['maintenance', 'ремонт', 'обслуживание', '503'],
-      content: (
+  // Содержимое секций по id. Подписи, иконки, синонимы для поиска и ПОРЯДОК живут
+  // в общем списке (settings-sections) — по нему же строится группа «Настройки
+  // инстанса» в меню на остальных страницах админки.
+  const content: Record<AdminSectionId, ReactNode> = {
+    maintenance: (
         <SettingsSection title={t('adminMaintenance', lang)}>
           <MaintenanceSection initialOn={maintOn} envOverride={maintenanceEnvOverride()} lang={lang} />
         </SettingsSection>
       ),
-    },
-    {
-      id: 'online',
-      title: T.online,
-      icon: <Users size={14} />,
-      keywords: ['online', 'онлайн', 'presence'],
-      content: (
+    online: (
         <SettingsSection
           title={
             <span className="flex items-center gap-2">
@@ -202,13 +193,7 @@ export default async function AdminPage() {
           )}
         </SettingsSection>
       ),
-    },
-    {
-      id: 'ai',
-      title: T.ai,
-      icon: <Bot size={14} />,
-      keywords: ['ai', 'openrouter', 'model', 'модель', 'генерация', 'температура', 'токены'],
-      content: (
+    ai: (
         <SettingsSection
           title={T.ai}
           footer={
@@ -304,13 +289,7 @@ export default async function AdminPage() {
           </form>
         </SettingsSection>
       ),
-    },
-    {
-      id: 'media',
-      title: T.media,
-      icon: <Database size={14} />,
-      keywords: ['s3', 'imgproxy', 'cdn', 'хранилище', 'картинки', 'storage'],
-      content: (
+    media: (
         <SettingsSection
           title={T.media}
           hint={
@@ -322,13 +301,7 @@ export default async function AdminPage() {
           <MediaSettingsForm lang={lang} v={mediaValues} />
         </SettingsSection>
       ),
-    },
-    {
-      id: 'email',
-      title: T.email,
-      icon: <Mail size={14} />,
-      keywords: ['smtp', 'email', 'почта', 'mail'],
-      content: (
+    email: (
         <SettingsSection
           title={T.email}
           hint={
@@ -340,13 +313,7 @@ export default async function AdminPage() {
           <EmailSettingsForm lang={lang} v={emailValues} />
         </SettingsSection>
       ),
-    },
-    {
-      id: 'push',
-      title: T.push,
-      icon: <Bell size={14} />,
-      keywords: ['push', 'vapid', 'web push', 'уведомления'],
-      content: (
+    push: (
         <SettingsSection
           title={T.push}
           hint={
@@ -358,13 +325,7 @@ export default async function AdminPage() {
           <PushSettingsForm lang={lang} v={pushValues} />
         </SettingsSection>
       ),
-    },
-    {
-      id: 'search',
-      title: T.search,
-      icon: <Search size={14} />,
-      keywords: ['search', 'поиск', 'semantic', 'вектор', 'rag'],
-      content: (
+    search: (
         <SettingsSection
           title={T.search}
           hint={
@@ -376,35 +337,17 @@ export default async function AdminPage() {
           <SearchSettingsForm current={search} lang={lang} />
         </SettingsSection>
       ),
-    },
-    {
-      id: 'changelog',
-      title: 'Changelog',
-      icon: <ScrollText size={14} />,
-      keywords: ['changelog', 'релизы', 'github', 'история', 'обновления'],
-      content: (
+    changelog: (
         <SettingsSection title="Changelog" hint={t('changelogAdminHint', lang)}>
           <ChangelogSettingsForm current={changelogSettings} lang={lang} />
         </SettingsSection>
       ),
-    },
-    {
-      id: 'monetization',
-      title: t('adminMonetization', lang),
-      icon: <Coins size={14} />,
-      keywords: ['monetization', 'монетизация', 'affiliate', 'партнёрка', 'donate', 'донат', 'клики', 'просмотры', 'ftc'],
-      content: (
+    monetization: (
         <SettingsSection title={t('adminMonetization', lang)} hint={t('adminMonetizationIntro', lang)}>
           <MonetizationSettingsForm lang={lang} v={monetization} />
         </SettingsSection>
       ),
-    },
-    {
-      id: 'achievements',
-      title: T.ach,
-      icon: <Award size={14} />,
-      keywords: ['achievements', 'достижения', 'бейджи', 'badges'],
-      content: (
+    achievements: (
         <SettingsSection
           title={T.ach}
           hint={
@@ -416,15 +359,12 @@ export default async function AdminPage() {
           <AchievementsAdmin initial={achDisplay} lang={lang} />
         </SettingsSection>
       ),
-    },
-    {
-      id: 'reindex',
-      title: t('adminReindexTitle', lang),
-      icon: <RefreshCw size={14} />,
-      keywords: ['reindex', 'индексация', 'embeddings', 'эмбеддинги'],
-      content: <ReindexPanel lang={lang} />,
-    },
-  ]
+    reindex: <ReindexPanel lang={lang} />,
+  }
+
+  // Секции — через SettingsShell (как в настройках пользователя): липкое меню
+  // слева со scrollspy-подсветкой активного пункта + поиск по секциям.
+  const sections: ShellSection[] = adminSettingsSections(lang).map((s) => ({ ...s, content: content[s.id] }))
 
   // Своего заголовка у страницы нет: «Админка» уже написана в шапке приложения, а
   // подзаголовок про «хранятся в БД» — рассказ про устройство, а не подпись к экрану.
