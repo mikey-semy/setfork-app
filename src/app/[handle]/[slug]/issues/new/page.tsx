@@ -8,7 +8,7 @@ import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { requireViewableMeta } from '@/features/library/guard'
 import { NewIssueForm } from '@/features/issues/NewIssueForm'
 import { getListLabels } from '@/features/issues/queries'
-import { PAGE } from '@/shared/ui/control'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -25,7 +25,7 @@ export default async function NewIssuePage({ params }: { params: Promise<{ handl
 
   return (
     <>
-      <div className={PAGE}>
+      <div className={PAGE_NARROW}>
       <FloatingBack href={`/${owner}/${slug}/issues`} label={t('issuesTab', lang)} />
         <PageHeader icon={<CircleDot size={18} className="text-ok" />} title={t('newIssue', lang)} />
         <NewIssueForm owner={owner} slug={slug} lang={lang} custom={custom} />

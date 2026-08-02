@@ -17,7 +17,7 @@ import { ChangeNoteField } from '@/features/library/ChangeNoteField'
 import { toEditorItems } from '@/features/library/editor'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { PageHeader } from '@/shared/ui/PageHeader'
-import { PAGE } from '@/shared/ui/control'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -43,7 +43,7 @@ export default async function EditPage({
   const action = saveNewVersion.bind(null, tpl.id)
 
   return (
-    <div className={PAGE}>
+    <div className={PAGE_NARROW}>
       <Link
         href={`/${owner}/${slug}`}
         className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink"

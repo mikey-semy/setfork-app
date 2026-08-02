@@ -13,7 +13,7 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { getDiscussion, getDiscussionComments } from '@/features/discussions/queries'
 import { addDiscussionComment } from '@/features/discussions/actions'
 import { categoryLabel, categoryMeta } from '@/features/discussions/constants'
-import { PAGE } from '@/shared/ui/control'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
@@ -36,7 +36,7 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
   const card = 'rounded-lg border border-border bg-surface'
   return (
     <>
-      <div className={PAGE}>
+      <div className={PAGE_NARROW}>
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <Tooltip label={categoryLabel(disc.category, lang)}>
             <span className="text-[1rem]">{categoryMeta(disc.category).icon}</span>

@@ -7,7 +7,7 @@ import { t, tr } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { ForkForm } from '@/features/library/ForkForm'
-import { PAGE } from '@/shared/ui/control'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -24,7 +24,7 @@ export default async function ForkPage({ params }: { params: Promise<{ handle: s
   if (session.userId === meta.ownerId) redirect(base) // свой список форкнуть нельзя (как GitHub)
 
   return (
-    <div className={PAGE}>
+    <div className={PAGE_NARROW}>
       <Link href={base} className="mb-5 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {owner} / {tr(meta.title, lang)}
       </Link>

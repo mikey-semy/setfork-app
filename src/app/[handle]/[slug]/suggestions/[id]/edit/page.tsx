@@ -17,7 +17,7 @@ import { ListEditor } from '@/features/library/ListEditor'
 import { toEditorItems } from '@/features/library/editor'
 import { gitCore } from '@/features/git/core'
 import type { ProposedItem } from '@/shared/db'
-import { PAGE } from '@/shared/ui/control'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; id: string }> }) {
   const [{ handle, slug, id }, lang] = await Promise.all([params, getLang()])
@@ -57,7 +57,7 @@ export default async function EditSuggestionPage({
   const initial = toEditorItems(items as never, lang, {})
 
   return (
-    <div className={PAGE}>
+    <div className={PAGE_NARROW}>
       <Link href={path} className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} />
         {/* Длинный заголовок не должен разносить строку — усечение, а не перенос. */}

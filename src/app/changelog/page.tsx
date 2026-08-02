@@ -9,7 +9,7 @@ import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { entryText, getChangelog } from '@/features/changelog/service'
-import { PAGE } from '@/shared/ui/control'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export const metadata: Metadata = { title: 'Changelog' }
 
@@ -29,7 +29,7 @@ export default async function ChangelogPage() {
   const fmt = new Intl.DateTimeFormat(lang === 'ru' ? 'ru' : 'en', { year: 'numeric', month: 'long', day: 'numeric' })
 
   return (
-    <div className={PAGE}>
+    <div className={PAGE_NARROW}>
       <Link href="/" className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
         <ArrowLeft size={15} /> {t('home', lang)}
       </Link>

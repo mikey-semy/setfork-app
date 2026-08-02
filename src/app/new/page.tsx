@@ -13,7 +13,7 @@ import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/ListEditor'
 import { ListTypeToggle } from '@/features/library/ListTypeToggle'
 import { listQuota } from '@/shared/quota'
-import { PAGE } from '@/shared/ui/control'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 export async function generateMetadata() {
   const lang = await getLang()
@@ -28,7 +28,7 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
   const q = quotaHit ? await listQuota(session.userId, session.handle) : null
 
   return (
-    <div className={PAGE}>
+    <div className={PAGE_NARROW}>
       <FloatingBack href={'/my-lists'} label={t('myLists', lang)} />
       <form action={createTemplate}>
         <PageHeader title={t('newList', lang)} />

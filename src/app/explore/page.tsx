@@ -75,7 +75,7 @@ export default async function ExplorePage({
     <div className="w-full">
       {/* Единый TabNav (как профиль/список): полоска активной вкладки и «…» для не
           влезших вкладок. Ряд НЕ листается вбок — поведение одно на всех разделах. */}
-      <TabNav maxWidthClass="max-w-[67.5rem]" scope="explore" overflow={{ moreLabel: t('moreTabs', lang) }}>
+      <TabNav scope="explore" overflow={{ moreLabel: t('moreTabs', lang) }}>
         {TABS.map((tb) => (
           <TabItem key={tb.id} href={tabHref(tb.id)} on={tb.id === active} icon={TAB_ICON[tb.id]} label={t(tb.key, lang)} />
         ))}

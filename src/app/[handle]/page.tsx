@@ -180,7 +180,7 @@ export default async function ProfilePage({
   return (
     <div className="w-full">
       {/* Табы профиля — full-width под шапкой; единый TabNav из shared/ui. */}
-      <TabNav maxWidthClass="max-w-[61.25rem]" scope="profile" overflow={{ moreLabel: t('moreTabs', lang) }}>
+      <TabNav scope="profile" overflow={{ moreLabel: t('moreTabs', lang) }}>
         {isPeopleTab ? (
           <>
             <TabItem href={`/${handle}?tab=followers`} on={tab === 'followers'} icon={<Users size={15} />} label={t('followersLabel', lang)} count={followCounts.followers} />

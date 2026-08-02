@@ -15,7 +15,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { createRelease } from '@/features/releases/actions'
 import { VersionSelect } from '@/features/releases/VersionSelect'
 import { ReleaseNotesGen } from '@/features/releases/ReleaseNotesGen'
-import { PAGE } from '@/shared/ui/control'
+import { PAGE_NARROW } from '@/shared/ui/control'
 
 const ERR: Record<string, { ru: string; en: string }> = {
   badtag: { ru: 'Тег: буквы/цифры и .-_ (до 40 символов).', en: 'Tag: letters/digits and .-_ (max 40 chars).' },
@@ -55,7 +55,7 @@ export default async function NewReleasePage({
 
   return (
     <>
-      <div className={PAGE}>
+      <div className={PAGE_NARROW}>
       <FloatingBack href={`/${owner}/${slug}/releases`} label={t('releasesLabel', lang)} />
         <PageHeader
           icon={<Tag size={16} />}
