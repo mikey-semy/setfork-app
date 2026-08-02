@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, ChevronDown, Code2, Copy, FileCode, FileDown, GitBranch, Printer, Sparkles, Terminal } from 'lucide-react'
+import { Braces, Check, ChevronDown, Code2, Copy, FileCode, FileDown, GitBranch, Printer, Sparkles, Terminal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
 import { t, type Lang } from '@/shared/i18n'
@@ -20,6 +20,8 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
 
   const cloneUrl = `${origin}${base}.git`
   const mcpUrl = `${origin}/api/mcp`
+  // Список как ДАННЫЕ — близнец /raw: тот отдаёт скрипт, этот json со строками и версией.
+  const dataUrl = `${origin}${base}/data.json`
   const embedCode = `<iframe src="${origin}${base}/embed" width="100%" height="480" style="border:1px solid #ddd;border-radius:8px" loading="lazy"></iframe>`
 
   const copy = (key: string, text: string) => {
@@ -128,12 +130,23 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
 
           {tab === 'embed' && (
             <>
-              {heading(<Sparkles size={12} />, t('mcpHeading', lang))}
-              {copyField('mcp', mcpUrl)}
-              <p className="mt-1 text-[0.6875rem] text-ink-2">{t('mcpHint', lang)}</p>
-              <Link href="/settings#mcp" className="mt-1 inline-block text-[0.78125rem] text-accent hover:underline">
-                {t('getTokenLink', lang)}
-              </Link>
+              {/* Данные идут ПЕРВЫМИ: это самый частый программный сценарий — забрать список
+                  json'ом. MCP ниже нужен агенту, iframe — сайту. */}
+              {heading(<Braces size={12} />, t('dataHeading', lang))}
+              {copyField('data', dataUrl)}
+              <p className="mt-1 text-[0.6875rem] text-ink-2">{t('dataHint', lang)}</p>
+              <a href={`${base}/data.json`} className={`${row} mt-1`}>
+                <Braces size={14} className="text-muted" /> {t('openData', lang)}
+              </a>
+
+              <div className="mt-2.5 border-t border-border pt-2">
+                {heading(<Sparkles size={12} />, t('mcpHeading', lang))}
+                {copyField('mcp', mcpUrl)}
+                <p className="mt-1 text-[0.6875rem] text-ink-2">{t('mcpHint', lang)}</p>
+                <Link href="/settings#mcp" className="mt-1 inline-block text-[0.78125rem] text-accent hover:underline">
+                  {t('getTokenLink', lang)}
+                </Link>
+              </div>
 
               <div className="mt-2.5 border-t border-border pt-2">
                 {heading(<Code2 size={12} />, t('embedHeading', lang))}

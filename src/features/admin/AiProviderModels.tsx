@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { CheckCircle2, Loader2, PlugZap, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Field } from '@/shared/ui/Field'
@@ -9,8 +9,9 @@ import { Alert } from '@/shared/ui/Alert'
 import { AiKeyAndSwitch, type AiProviderChoice } from './AiKeyAndSwitch'
 import { ModelSelect, type Option } from './ModelSelect'
 import { CreditsWidget } from './CreditsWidget'
-import { loadProviderCatalog } from './model-catalog-action'
+import { checkProvider, loadProviderCatalog } from './model-catalog-action'
 import { CUR_SIGN, type Currency } from './model-options'
+import { catalogProblem } from './catalog-problem'
 import { t, type Lang } from '@/shared/i18n'
 
 /**
@@ -34,6 +35,8 @@ export function AiProviderModels({
   provider,
   hasKey,
   maskedKeys,
+  keySources,
+  fallbackProvider,
   yandexFolder,
   searchKeyMasked,
   enabled,
@@ -44,6 +47,9 @@ export function AiProviderModels({
   provider: AiProviderChoice
   hasKey: Record<string, boolean>
   maskedKeys: Record<string, string>
+  keySources: Record<string, 'db' | 'env' | 'none'>
+  /** Запасной провайдер ('' = выключен) — прокидываем вниз, форма одна. */
+  fallbackProvider: string
   yandexFolder: string
   searchKeyMasked: string
   enabled: boolean
@@ -60,7 +66,7 @@ export function AiProviderModels({
     /** Каталог не приехал: 'no-key' | HTTP-код | сетевая ошибка. */
     error?: string
   }
-  labels: { chat: string; fallback: string; embedding: string; pick: string; loading: string; noKey: string }
+  labels: { chat: string; fallback: string; embedding: string; embeddingHint: string; pick: string; loading: string; noKey: string }
 }) {
 
   const [prov, setProv] = useState<AiProviderChoice>(provider)
@@ -75,6 +81,10 @@ export function AiProviderModels({
   const [pricesKnown, setPricesKnown] = useState(initial.pricesKnown)
   const [error, setError] = useState<string | undefined>(initial.error)
   const [pending, startTransition] = useTransition()
+  // Результат явной проверки подключения: держим отдельно от каталога — это ответ на
+  // вопрос «живо ли сейчас», а не состояние списка.
+  const [checked, setChecked] = useState<{ ok: boolean; text: string } | null>(null)
+  const [checking, setChecking] = useState(false)
 
   const reload = (next: AiProviderChoice) => {
     setProv(next)
@@ -104,6 +114,8 @@ export function AiProviderModels({
         provider={provider}
         hasKey={hasKey}
         maskedKeys={maskedKeys}
+        keySources={keySources as Record<AiProviderChoice, 'db' | 'env' | 'none'>}
+        fallbackProvider={fallbackProvider}
         yandexFolder={yandexFolder}
         searchKeyMasked={searchKeyMasked}
         lang={lang}
@@ -116,14 +128,66 @@ export function AiProviderModels({
         </p>
       )}
 
+      {/* Ключ ВЫБРАННОГО провайдера. Раньше это предупреждение висело на странице СНАРУЖИ и
+          считалось для СОХРАНЁННОГО провайдера — поэтому рядом с полным списком моделей
+          могла гореть ошибка «провайдер не сконфигурирован»: они были про разных. */}
+      {!pending && !hasKey[prov] && (
+        <Alert variant="warn">
+          {t('admin.providerNoKey', lang)}
+        </Alert>
+      )}
+
+      {/* Состояние каталога словами + явная проверка подключения. Короткий список перестаёт
+          читаться как поломка, а «живо ли сейчас» больше не надо выяснять переключением. */}
+      {!pending && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {!error && hasKey[prov] && (
+            <span className="min-w-0 flex-1 text-[0.78125rem] text-muted">
+              {t('admin.catalogCounts', lang).replace('{chat}', String(chat.length)).replace('{emb}', String(embedding.length))}
+            </span>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            onClick={async () => {
+              setChecking(true)
+              setChecked(null)
+              try {
+                const r = await checkProvider(prov)
+                setChecked({
+                  ok: r.ok,
+                  text: r.ok
+                    ? t('admin.connectionAlive', lang).replace('{n}', String(r.chat))
+                    : catalogProblem(r.error ?? 'unknown', lang),
+                })
+              } finally {
+                setChecking(false)
+              }
+            }}
+            disabled={checking}
+            className="min-h-11 shrink-0 max-sm:ml-auto"
+          >
+            {checking ? <Loader2 size={13} className="animate-spin" /> : <PlugZap size={13} />}
+            {t('admin.checkConnection', lang)}
+          </Button>
+        </div>
+      )}
+
+      {checked && (
+        <Alert variant={checked.ok ? 'ok' : 'warn'}>
+          <span className="min-w-0 [overflow-wrap:anywhere]">
+            {checked.ok && <CheckCircle2 size={13} className="mr-1 inline" />}
+            {checked.text}
+          </span>
+        </Alert>
+      )}
+
       {/* Причина всегда названа: молчаливый пустой список — это и есть «фичу откатили». */}
       {!pending && error && (
         <Alert variant="warn">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-              {error === 'no-key'
-                ? labels.noKey
-                : t('admin.catalogFailed', lang).replace('{e}', error)}
+              {catalogProblem(error, lang)}
             </span>
             {/* max-sm:ml-auto — при переносе строки кнопка прижимается вправо, а не повисает по центру. */}
             <Button size="sm" onClick={() => reload(prov)} className="min-h-11 shrink-0 max-sm:ml-auto">
@@ -146,6 +210,7 @@ export function AiProviderModels({
           placeholder={emptyCatalog ? t('admin.typeModelId', lang) : labels.pick}
           allowCustom
           customHint={customHint}
+          ru={lang === 'ru'}
         />
       </Field>
 
@@ -160,10 +225,12 @@ export function AiProviderModels({
           placeholder="—"
           allowCustom
           customHint={customHint}
+          ru={lang === 'ru'}
         />
       </Field>
 
-      <Field label={labels.embedding} htmlFor="embeddingModel">
+      {/* Подпись говорит ширину колонки (из схемы), хинт — ИЗМЕРЕННЫЙ ответ выбранной модели. */}
+      <Field label={labels.embedding} htmlFor="embeddingModel" hint={labels.embeddingHint}>
         <ModelSelect
           key={`emb-${prov}`}
           id="embeddingModel"
@@ -173,6 +240,7 @@ export function AiProviderModels({
           placeholder={embedding.length === 0 ? t('admin.typeModelId', lang) : labels.pick}
           allowCustom
           customHint={customHint}
+          ru={lang === 'ru'}
         />
       </Field>
 
