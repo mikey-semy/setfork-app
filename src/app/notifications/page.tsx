@@ -25,7 +25,7 @@ export default async function NotificationsPage() {
       <MarkRead />
       {/* Видимой шапки нет: тот же заголовок уже стоит в TopNav (см. /my-lists).
           Здесь он остаётся только для скринридеров и структуры страницы. */}
-      <h1 className="sr-only">{t('notifications', lang)}</h1>
+      <h1 className="sr-only print:not-sr-only print:mb-2 print:text-[1.125rem] print:font-bold print:text-ink">{t('notifications', lang)}</h1>
 
       {items.length === 0 ? (
         <EmptyState icon={<Bell size={34} strokeWidth={1.5} />} title={t('noNotifications', lang)} />

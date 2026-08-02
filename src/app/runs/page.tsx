@@ -25,7 +25,7 @@ export default async function MyRunsPage() {
     <div className="mx-auto w-full max-w-[45rem] px-6 py-8">
       {/* Видимой шапки нет: тот же заголовок уже стоит в TopNav (см. /my-lists).
           Здесь он остаётся только для скринридеров и структуры страницы. */}
-      <h1 className="sr-only">{t('myRuns', lang)}</h1>
+      <h1 className="sr-only print:not-sr-only print:mb-2 print:text-[1.125rem] print:font-bold print:text-ink">{t('myRuns', lang)}</h1>
 
       {runs.length === 0 ? (
         <EmptyState icon={<ListChecks size={34} strokeWidth={1.5} />} title={t('noRunsYet', lang)} />
