@@ -5,6 +5,7 @@ import { RefreshCw, TriangleAlert } from 'lucide-react'
 import { APP_VERSION } from '@/shared/app-version'
 import type { Lang } from '@/shared/i18n'
 import { t } from '@/shared/i18n'
+import { useViewportBottom } from './use-viewport-bottom'
 
 /**
  * «Вышло обновление» — детект устаревшей вкладки. После деплоя старые вкладки шлют
@@ -20,6 +21,8 @@ export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
   // nextBuild — build-id серверной сборки, отличный от нашего: показываем короткий
   // хвост как «что именно изменилось» (semver 0.1.0 между деплоями не двигается).
   const [nextBuild, setNextBuild] = useState<string | null>(null)
+  // bottom от ВИДИМОГО низа: иначе на мобиле баннер всплывал посередине экрана.
+  const { gap } = useViewportBottom()
 
   useEffect(() => {
     if (build === 'dev' || nextBuild) return // dev пересобирается на лету; уже показали — хватит дёргать сеть
@@ -55,6 +58,7 @@ export function UpdateBanner({ build, lang }: { build: string; lang: Lang }) {
     // иконка внимания, заголовок с версией, кнопка-иконка перезагрузки (без текста).
     <div
       role="alert"
+      style={gap ? { bottom: gap + 16 } : undefined}
       className="fixed bottom-4 left-1/2 z-50 flex w-[min(92vw,400px)] -translate-x-1/2 animate-fadein items-start gap-3 border border-border border-l-2 border-l-warn bg-surface px-4 py-3 shadow-card"
     >
       <TriangleAlert size={18} className="mt-0.5 shrink-0 text-warn" />

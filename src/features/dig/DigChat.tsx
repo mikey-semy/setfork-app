@@ -10,6 +10,7 @@ import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Markdown } from '@/shared/ui/Markdown'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { useViewportBottom } from '@/shared/ui/use-viewport-bottom'
 import { digChatAsk, getDigChatHistory, thankGnome, type DigChatMsg } from './chat-actions'
 
 /**
@@ -49,6 +50,8 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
   const [pending, start] = useTransition()
+  // Поправка на расхождение layout/visual viewport — см. use-viewport-bottom.
+  const { gap: vpGap, visibleHeight } = useViewportBottom()
   const scrollRef = useRef<HTMLDivElement>(null)
   const lastReplyRef = useRef<HTMLDivElement>(null)
   const ctxRef = useRef<DigChatOpenDetail | null>(null) // актуальный ctx без stale-замыкания в слушателе
@@ -169,8 +172,16 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
     </div>
   )
 
+  // data-sticky-input — общий признак нижней панели: по нему кнопка «наверх» садится
+  // ВЫШЕ чата (на десктопе она пряталась за этой панелью). bottom/maxHeight считаем от
+  // ВИДИМОГО низа: при расхождении layout и visual viewport (панели мобильного
+  // браузера) панель иначе открывалась посередине экрана.
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex max-h-[70dvh] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+    <div
+      data-sticky-input
+      style={vpGap ? { bottom: vpGap + 16, maxHeight: Math.round(visibleHeight * 0.7) } : undefined}
+      className="fixed bottom-4 right-4 z-50 flex max-h-[70dvh] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card"
+    >
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
         <Pickaxe size={14} className="shrink-0 text-accent" />
         <div className="min-w-0 flex-1">
