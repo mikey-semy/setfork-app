@@ -188,8 +188,8 @@ export const gitCoreRemote: GitCore = {
    *  Любая неудача — «не умеет»: и UNIMPLEMENTED старого ядра, и обрыв связи.
    *  Различать их не нужно, потому что вывод из обоих один: раз ядро не
    *  подтвердило, что исполняет роли, постороннего пускать нельзя. */
-  async capabilities() {
-    const res = await client.getCapabilities({}).catch(() => null)
+  async capabilities(opts) {
+    const res = await client.getCapabilities({}, { timeoutMs: opts?.timeoutMs }).catch(() => null)
     return { enforcesPushRoles: res?.enforcesPushRoles === true }
   },
 

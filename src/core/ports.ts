@@ -259,8 +259,13 @@ export interface GitCore {
    *
    *  Молчание = «не умею»: старое ядро на неизвестный метод отвечает
    *  UNIMPLEMENTED, и это ответ по существу, а не сбой связи. Та же форма, что у
-   *  самого git: сервер объявляет возможности, клиент пользуется объявленным. */
-  capabilities(): Promise<{ enforcesPushRoles: boolean }>
+   *  самого git: сервер объявляет возможности, клиент пользуется объявленным.
+  *
+   *  Ответ НЕ кэшируется вызывающим: право, запомненное про запас, действует
+   *  дольше основания — откат ядра назад отменял бы правило, а фронт продолжал
+   *  бы пускать. `timeoutMs` обязателен по той же причине: зависшее ядро должно
+   *  давать честный отказ, а не бесконечное ожидание. */
+  capabilities(opts?: { timeoutMs?: number }): Promise<{ enforcesPushRoles: boolean }>
   /** A5: влить main в ветку (обратное слияние). main не двигается → версии нет.
    *  Бросает BranchOpError('conflict'|'nothing-to-merge'|'not-found'). */
   updateBranch(repo: GitRepoRef, name: string): Promise<{ tipSha: string; fastForward: boolean }>

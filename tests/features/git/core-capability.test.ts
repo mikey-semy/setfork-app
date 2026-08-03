@@ -19,41 +19,42 @@ vi.mock('@/features/git/core', () => ({
   },
 }))
 
-const { coreEnforcesPushRoles, resetCoreCapabilityCache } = await import('@/features/git/capabilities')
+const { coreEnforcesPushRoles } = await import('@/features/git/capabilities')
 
 describe('возможности ядра', () => {
   beforeEach(() => {
     h.calls = 0
     h.answer = null
-    resetCoreCapabilityCache()
   })
 
   it('молчание ядра читается как «не умею»', async () => {
     expect(await coreEnforcesPushRoles()).toBe(false)
   })
 
-  it('подтверждение помнит, лишний раз не спрашивает', async () => {
+  it('подтверждение принимается', async () => {
     h.answer = { enforcesPushRoles: true }
     expect(await coreEnforcesPushRoles()).toBe(true)
+  })
+
+  /**
+   * Ключевое свойство: ответ НЕ запоминается. Кэш здесь однажды был и отменял
+   * ровно тот сценарий, ради которого проверка заведена, — откат ядра назад
+   * (авто-ревью fe#662). Право, запомненное про запас, действует дольше
+   * основания.
+   */
+  it('откат ядра назад закрывает дверь СРАЗУ, без запомненного «умеет»', async () => {
+    h.answer = { enforcesPushRoles: true }
     expect(await coreEnforcesPushRoles()).toBe(true)
-    expect(h.calls).toBe(1)
+    h.answer = { enforcesPushRoles: false } // ядро откатили
+    expect(await coreEnforcesPushRoles()).toBe(false)
+    expect(h.calls).toBe(2) // спросил оба раза
   })
 
-  it('отказ помнит НЕДОЛГО — выкаченное ядро подхватывается само', async () => {
-    const t0 = 1_000_000
-    expect(await coreEnforcesPushRoles(t0)).toBe(false)
-    // Ядро выкатили; фронт не перезапускали.
+  it('спрашивает ядро на каждом пуше', async () => {
     h.answer = { enforcesPushRoles: true }
-    expect(await coreEnforcesPushRoles(t0 + 29_000)).toBe(false) // ещё помнит отказ
-    expect(await coreEnforcesPushRoles(t0 + 31_000)).toBe(true) // спросил заново
-  })
-
-  it('подтверждение помнит ДОЛЬШЕ, чем отказ', async () => {
-    const t0 = 2_000_000
-    h.answer = { enforcesPushRoles: true }
-    expect(await coreEnforcesPushRoles(t0)).toBe(true)
-    h.answer = { enforcesPushRoles: false }
-    expect(await coreEnforcesPushRoles(t0 + 60_000)).toBe(true)
-    expect(h.calls).toBe(1)
+    await coreEnforcesPushRoles()
+    await coreEnforcesPushRoles()
+    await coreEnforcesPushRoles()
+    expect(h.calls).toBe(3)
   })
 })
