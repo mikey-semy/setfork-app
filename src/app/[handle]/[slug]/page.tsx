@@ -58,7 +58,7 @@ import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { ListActionsMenu } from '@/features/library/ListActionsMenu'
 import { ReportButton } from '@/features/reports/ReportButton'
 import { publishList } from '@/features/library/actions'
-import { PAGE } from '@/shared/ui/control'
+import { PAGE, STACK } from '@/shared/ui/control'
 
 function fmt(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0) + 'k'
@@ -290,9 +290,11 @@ export default async function ListPage({
       <div className={PAGE}>
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Основное: содержимое-эталон */}
-          <main className="min-w-0 flex-1">
+          {/* Единый вертикальный ритм колонки: интервал задаёт контейнер, а не
+              каждая полоса своим mb-* (см. STACK). */}
+          <main className={`min-w-0 flex-1 ${STACK}`}>
             {/* Заголовок только для печати (в экране он в шапке) */}
-            <div className="mb-4 hidden print:block">
+            <div className="hidden print:block">
               <h1 className="text-[1.25rem] font-bold text-ink">{tr(tpl.title, lang)}</h1>
               {tr(tpl.desc, lang) && <p className="mt-1 text-[0.8125rem] text-ink-2">{tr(tpl.desc, lang)}</p>}
               <p className="mt-1 font-mono text-[0.6875rem] text-muted">
@@ -302,7 +304,7 @@ export default async function ListPage({
 
             {/* About на мобиле — НАВЕРХУ (как GitHub): описание, теги, статы со словами.
                 На десктопе всё это в About-сайдбаре справа. */}
-            <div className="mb-4 lg:hidden print:hidden">
+            <div className="lg:hidden print:hidden">
               {/* Описание и теги пишет человек, длину тега никто не режет — без переноса
                   один тег или «слово» в описании уносит страницу за край (мобила 390px). */}
               {tr(tpl.desc, lang) && <p className="text-[0.8125rem] leading-snug text-ink-2 [overflow-wrap:anywhere]">{tr(tpl.desc, lang)}</p>}
@@ -333,7 +335,7 @@ export default async function ListPage({
             </div>
 
             {tpl.status === 'draft' && isOwner && (
-              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-warn bg-surface px-4 py-3 print:hidden">
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-warn bg-surface px-4 py-3 print:hidden">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-warn">
                     <FileText size={15} /> {t('draftBadge', lang)}
@@ -350,16 +352,18 @@ export default async function ListPage({
             {tpl.origin === 'ai_draft' && tpl.status === 'published' && (
               <DismissibleHint
                 storageKey={`hint:ai-draft:${tpl.id}`}
-                className="mb-4 rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3 text-[0.8125rem] text-accent print:hidden"
+                className="rounded-lg border border-(--accent) bg-(--accent-soft) px-4 py-3 text-[0.8125rem] text-accent print:hidden"
               >
                 <Sparkles size={15} className="shrink-0" /> {t('aiVerifyHint', lang)}
               </DismissibleHint>
             )}
             {/* РФ-маркировка «Реклама» — до ссылок; компактная пометка (сам erid
                 едет в ссылке через /api/go). ч. 16 ст. 18.1 требует назвать
-                рекламодателя — добавляем наименование+ИНН из правил. */}
+                рекламодателя — добавляем наименование+ИНН из правил.
+                self-start: во flex-колонке элемент иначе растянулся бы на всю
+                ширину, а пометка должна быть по содержимому. */}
             {showAdMarking && (
-              <div className="mb-2 inline-flex flex-wrap items-center gap-x-1.5 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] font-medium text-ink-2">
+              <div className="inline-flex flex-wrap items-center gap-x-1.5 self-start rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] font-medium text-ink-2">
                 <span>{mon.adMarkingText}</span>
                 {adAdvertisers.length > 0 && (
                   <span className="font-normal text-muted">
@@ -373,7 +377,7 @@ export default async function ListPage({
             )}
             {/* FTC-дисклеймер: показывается ДО ссылок (требование к affiliate-раскрытию). */}
             {showDisclosure && (
-              <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[0.78125rem] text-ink-2">
+              <div className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-4 py-3 text-[0.78125rem] text-ink-2">
                 <Info size={15} className="shrink-0 text-muted" /> {mon.disclosureText}
               </div>
             )}
@@ -389,7 +393,7 @@ export default async function ListPage({
                     как у GitHub, где «main ▾» и «Code» стоят НАД коробкой последнего
                     коммита, а не внутри неё. Рамка вокруг кнопок читалась как лишний
                     контейнер: она ничего не группировала, кроме самой себя. */}
-                <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.78125rem] text-ink-2 print:hidden">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.78125rem] text-ink-2 print:hidden">
                   {/* Пикер веток показываем ВСЕГДА, когда ветка есть (как GitHub «main ▾» —
                       даже одна ветка и на чужом списке; canManage лишь гейтит создание). */}
                   {branches.length > 0 && (
@@ -459,7 +463,7 @@ export default async function ListPage({
                 плашка, а не ветковая: у коммита нет ahead/behind, и предлагать
                 «открыть pull request» с исторического снимка бессмысленно. */}
             {refCommit && snapshot && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <GitCommitHorizontal size={13} className="shrink-0 text-muted" />
                 <span className="min-w-0">
                   {t('viewingAtCommit', lang)} <b className="font-mono">{refCommit.slice(0, 7)}</b>
@@ -472,7 +476,7 @@ export default async function ListPage({
 
             {/* Просмотр «на ветке» (A1 read-only): черновик без версий. */}
             {refBranch && branchInfo && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <GitCommitHorizontal size={13} className="shrink-0 text-warn" />
                 <span>
                   {lang === 'ru' ? 'Ветка' : 'Branch'} <b className="font-mono">{refBranch}</b> · +{branchInfo.ahead}/-{branchInfo.behind}{' '}
@@ -498,7 +502,7 @@ export default async function ListPage({
 
             {/* Просмотр прошлой версии (?v=N): снимок только для чтения + возврат. */}
             {histVer && histNum && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <Tag size={13} className="shrink-0 text-accent" />
                 <span className="min-w-0 flex-1 truncate">
                   {t('list.version', lang)} <b>v{histNum}</b>
@@ -528,7 +532,7 @@ export default async function ListPage({
             )}
             {/* Результат поиска внутри списка (?find=). */}
             {find && (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-(--accent)/50 bg-(--accent-soft) px-3 py-2 text-[0.78125rem] text-ink print:hidden">
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-(--accent)/50 bg-(--accent-soft) px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <Info size={13} className="shrink-0 text-accent" />
                 <span>
                   <b>{steps.length}</b> / {allSteps.length} {lang === 'ru' ? 'шагов по запросу' : 'steps match'}{' '}
