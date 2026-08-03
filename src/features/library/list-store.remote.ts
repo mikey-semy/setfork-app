@@ -1,6 +1,7 @@
 import 'server-only'
 import { createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
+import { assertNoDestructiveSteps } from '@/core/domain/destructive-command'
 import type { Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
 import {
   ListRead,
@@ -128,6 +129,16 @@ const toPbLoc = (l: LocaleText) => ({ v: Object.fromEntries(Object.entries(l).fi
  *  уезжают в ядро. Раньше их в proto не было, и запись через ядро СТЁРЛА бы
  *  идентичность блоков и пометку — молча, потому что набор шагов
  *  перезаписывается целиком, и поле, о котором путь не знает, просто исчезает. */
+/**
+ * Страж исполняемого выхода. Стоит ЗДЕСЬ, а не в экшенах, потому что это единственная
+ * точка, через которую проходят все пути записи версии — редактор, MCP-публикация,
+ * генерация, садовник. Проверка в экшене закрыла бы один путь и оставила остальные,
+ * а именно так и появляются дыры: `sanitizeCommand` вызывается только из ИИ-веток и
+ * поэтому не видит ни редактор, ни MCP, ни git.
+ *
+ * Известная незакрытая дыра: черновиковая ветка MCP пишет шаги прямым delete+insert
+ * мимо ядра (отдельная находка ревью) — до её починки страж туда не достаёт.
+ */
 /** Шаг → proto NewStep. ОДИН маппер на addVersion и create: две копии уже разошлись
  *  однажды — поле, добавленное в одну, во второй забыли. */
 const toPbStep = (s: NewVersionInput['steps'][number]) => ({
@@ -152,6 +163,7 @@ const toPbStep = (s: NewVersionInput['steps'][number]) => ({
 
 export const listWriteRemote = {
   async addVersion(listId: string, input: NewVersionInput): Promise<Version> {
+    assertNoDestructiveSteps(input.steps)
     const res = await writeClient.addVersion({
       listId,
       note: input.note,
@@ -170,6 +182,7 @@ export const listWriteRemote = {
     return toVersion(res)
   },
   async create(input: CreateListInput): Promise<List> {
+    assertNoDestructiveSteps(input.steps)
     const res = await writeClient.create({
       ownerId: input.ownerId,
       slug: input.slug,

@@ -18,6 +18,7 @@ import { toEditorItems } from '@/features/library/editor'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { Alert } from '@/shared/ui/Alert'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -26,10 +27,12 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 
 export default async function EditPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ handle: string; slug: string }>
+  searchParams: Promise<{ blocked?: string; step?: string }>
 }) {
-  const [{ handle: owner, slug }, lang, session] = await Promise.all([params, getLang(), getSession()])
+  const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   if (!session) redirect('/login')
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) notFound()
@@ -52,6 +55,19 @@ export default async function EditPage({
       </Link>
       {/* На длинном списке верхняя ссылка уезжает — плавающий дубль слева-внизу (фидбек владельца). */}
       <FloatingBack href={`/${owner}/${slug}`} label={tr(tpl.title, lang) || `${tpl.owner.handle}/${tpl.slug}`} />
+
+      {/* Отказ стража исполняемых команд: причина названа словами и привязана к
+          номеру шага — иначе кнопка «Сохранить» выглядит как сломанная. */}
+      {sp.blocked && (
+        <Alert variant="danger" className="mb-4">
+          <span className="block font-semibold">{t('destructiveBlockedTitle', lang)}</span>
+          <span className="block">
+            {t('destructiveBlockedBody', lang)
+              .replace('{n}', sp.step ?? '?')
+              .replace('{reason}', t(`destructive.${sp.blocked}` as Parameters<typeof t>[0], lang))}
+          </span>
+        </Alert>
+      )}
 
       <form action={action}>
         <PageHeader

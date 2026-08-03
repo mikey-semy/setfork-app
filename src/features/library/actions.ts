@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { blockComments, blockCommentThreads, db, issues, steps, suggestionAssignees, suggestionComments, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
+import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { recordAudit } from '@/shared/audit'
 import { captureError } from '@/shared/observability'
 import { getLang } from '@/shared/i18n/server'
@@ -280,12 +281,22 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await db.update(templates).set({ gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   await registerTags(tags)
   // Создание версии = git-коммит + проекция в ядре (доменный порт ListStore).
-  await listStore.addVersion(tpl.id, {
-    note: note || 'edit',
-    steps: toStepInput(proposed),
-    authorId: session.userId,
-    meta: { tags, ordered },
-  })
+  // Страж исполняемого выхода стоит в фасаде записи (одна точка на все пути), а
+  // здесь — показ причины автору: молчаливый отказ читается как «кнопка не
+  // работает», а необработанное исключение — как поломка сайта.
+  try {
+    await listStore.addVersion(tpl.id, {
+      note: note || 'edit',
+      steps: toStepInput(proposed),
+      authorId: session.userId,
+      meta: { tags, ordered },
+    })
+  } catch (e) {
+    if (e instanceof DestructiveCommandError) {
+      redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/edit?blocked=${e.reason}&step=${e.stepIndex}`)
+    }
+    throw e
+  }
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
