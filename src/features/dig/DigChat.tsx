@@ -224,7 +224,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
             <div key={i} ref={i === messages.length - 1 ? lastReplyRef : undefined} className="group flex items-start gap-2">
               <GnomeAvatar src={`/gnomes/${m.who ?? 'generalist'}.webp`} size={32} className="size-8 shrink-0" />
               <div className="min-w-0 rounded-2xl rounded-bl-md bg-(--surface-2) px-3 py-1.5">
-                <Markdown codeCards className="text-[0.8125rem] leading-[1.5] text-ink-2">{m.text}</Markdown>
+                <Markdown className="text-[0.8125rem] leading-[1.5] text-ink-2">{m.text}</Markdown>
                 {/* «Спасибо» гному (одушевление) + копировать — проявляются при наведении. */}
                 <div className="mt-1 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <ThankButton who={m.who ?? 'generalist'} thanked={thanked.has(i)} onThank={() => thank(i, m.who ?? 'generalist')} lang={lang} />
