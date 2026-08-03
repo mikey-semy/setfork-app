@@ -40,6 +40,52 @@ import { sql } from 'drizzle-orm'
  */
 export const SUGGESTION_NOTE_MAX = 2000
 
+/**
+ * ПЕРЕХОДНОЕ (живёт до снятия `actor_handle`): подобрать предложение, чья ветка
+ * названа по нику, и перевести его на ветку по идентификатору.
+ *
+ * Зачем. До Ф5 ветку правки называло ядро по НИКУ, теперь — по неизменному
+ * идентификатору. Фронт и ядро выкатываются порознь, и в окно между выкатками
+ * магический пуш ещё попадает в `u/<ник>/main`. После выката ядра тот же человек
+ * пушит ревизию — она ложится уже в `u/<id>/main`, дедупликация идёт строго по
+ * ветке, и вместо новой ревизии появляется ВТОРОЕ предложение, а первое висит
+ * открытым и обновить его нечем (авто-ревью core#80).
+ *
+ * Правило самоочищается: подбираем только ветки вида `u/<НЕ-идентификатор>/…`.
+ * Как только все ветки заведены по идентификатору — а это ровно после выката, —
+ * условие не выполняется никогда, и функцию можно удалить вместе с полем
+ * `actor_handle` (хвост записан в трек git-surface).
+ *
+ * Строже некуда: тот же список, тот же автор, открытое, та же база ветки. Ветку
+ * в git не трогаем — старая остаётся как есть, предложение просто смотрит на
+ * новую, где и лежит свежая ревизия.
+ */
+async function adoptLegacyHandleBranch(input: {
+  templateId: string
+  authorId: string
+  branch: string
+}): Promise<string | null> {
+  const parts = input.branch.split('/')
+  if (parts.length !== 3 || parts[0] !== 'u') return null
+  const base = parts[2]!
+  const legacy = await db.query.suggestions.findFirst({
+    where: (s) =>
+      and(
+        eq(s.templateId, input.templateId),
+        eq(s.authorId, input.authorId),
+        eq(s.status, 'open'),
+        sql`${s.branchRef} like 'u/%/' || ${base}`,
+        sql`${s.branchRef} <> ${input.branch}`,
+        // Только ник: ветка, названная по идентификатору, — уже новая, и подбирать
+        // её нельзя (у автора может быть несколько своих предложений).
+        sql`${s.branchRef} !~* '^u/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/'`,
+      ),
+  })
+  if (!legacy) return null
+  await db.update(suggestions).set({ branchRef: input.branch }).where(eq(suggestions.id, legacy.id))
+  return legacy.id
+}
+
 export async function ensureBranchSuggestion(input: {
   templateId: string
   ownerId: string
@@ -52,6 +98,9 @@ export async function ensureBranchSuggestion(input: {
     where: (s) => and(eq(s.templateId, input.templateId), eq(s.branchRef, input.branch), eq(s.status, 'open')),
   })
   if (open) return { id: open.id, created: false }
+
+  const adopted = await adoptLegacyHandleBranch(input)
+  if (adopted) return { id: adopted, created: false }
 
   // onConflictDoNothing + перечитывание: проверка выше и вставка — два шага, и
   // между ними влезает параллельный запрос. Правило держит частичный уникальный
