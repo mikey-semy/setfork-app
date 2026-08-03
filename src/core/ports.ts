@@ -205,6 +205,9 @@ export interface GitCore {
   /** receive-pack + проекция в версию (атомарно под локом). newVersion — созданная версия. */
   /** Приём пуша. `lang` — язык ЧЕЛОВЕКА для отказов pre-receive: их он читает
    *  прямо в выводе `git push`, переводить некому (И2). '' → английский.
+   *  `actorId` (Ф4) — НЕИЗМЕННЫЙ идентификатор автора: по нему ядро называет
+   *  ветку правки. Не ник: ник сменяем и достаётся другому, а имя ветки живёт
+   *  вечно (у Gerrit и GitHub ветки вклада по той же причине не именуются ником).
    *  `actorRole` (Ф5) — уже принятое решение о правах: ядро исполняет по нему
    *  правило пространства имён (посторонний пишет только в своё `u/<ник>/*` и в
    *  `refs/for/main`). '' ядро трактует как САМУЮ СТРОГУЮ роль: забытое поле
@@ -215,7 +218,7 @@ export interface GitCore {
     opts?: {
       gitProtocol?: string
       lang?: string
-      actorHandle?: string
+      actorId?: string
       actorRole?: 'owner' | 'collaborator' | 'contributor'
     },
   ): Promise<{ data: Uint8Array; newVersion: number | null; magic: MagicPush[] } | null>

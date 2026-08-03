@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, like, ne } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { toStepInput } from '@/shared/lib/step-input'
 // eslint-disable-next-line boundaries/dependencies -- уведомления автору и наблюдателям: тот же кросс-фич-паттерн, что в actions.ts
@@ -30,34 +30,6 @@ import { sql } from 'drizzle-orm'
  * предложение. На этом держатся ревизии — повторный магический пуш двигает ту же
  * ветку и обновляет ТО ЖЕ предложение, а не плодит новые.
  */
-/**
- * Ф5: не занято ли пространство `u/<ник>/…` ЧУЖИМ открытым предложением.
- *
- * Ник сменяем, и после смены он свободен — `changeHandle` просто пишет новое
- * значение, старое никем не удерживается. Отсюда цепочка: Алиса предъявила
- * правку (ветка `u/alice/main`, предложение за её авторством) → переименовалась
- * → Борис взял ник `alice` → пушит `refs/for/main` → попадает в ТУ ЖЕ ветку, и
- * предложение Алисы начинает показывать содержимое Бориса, оставаясь подписанным
- * Алисой (авто-ревью fe#662).
- *
- * Спрашиваем ДО приёма пуша: имя ветки выводится из ника и известно ещё до
- * чтения пака. Совпало — не пускаем вовсе: это конфликт личности, а не вопрос
- * прав, и разрешать его должен человек, а не молчаливая перезапись чужого.
- *
- * ⚠️ Это ЗАСЛОНКА, а не лечение. Лечится на уровне личности: либо ник после
- * смены не отдаётся другому, либо пространство зовётся неизменным
- * идентификатором. У Gerrit и GitHub ветки вклада вообще не именуются ником
- * (`refs/changes/NN/…`, `refs/pull/N/head`) — ровно поэтому. Записано в трек
- * как условие включения SETFORK_GIT_CONTRIBUTORS.
- */
-export async function namespaceTakenByOther(handle: string, userId: string): Promise<boolean> {
-  if (!handle) return false
-  const row = await db.query.suggestions.findFirst({
-    where: (s) => and(eq(s.status, 'open'), like(s.branchRef, `u/${handle}/%`), ne(s.authorId, userId)),
-  })
-  return !!row
-}
-
 export async function ensureBranchSuggestion(input: {
   templateId: string
   ownerId: string

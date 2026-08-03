@@ -151,6 +151,7 @@ export const ru: Record<DictKey, string> = {
   prSettingsTitle: 'Предложения',
   prSetWho: 'Кто может предлагать',
   prSetWhoHint: 'Любой, кто видит список, или только коллабораторы. Действует на веб-форму; на пуш через git — когда вклад через git включён на этом сервере.',
+  prFromTerminal: 'из терминала',
   prSetWhoAll: 'Все',
   prSetWhoCollab: 'Только коллабораторы',
   prSetApprovals: 'Нужно одобрений',

@@ -237,8 +237,15 @@ export default async function SuggestionsPage({
                   </span>
                   <span>{fmt.format(new Date(s.createdAt))}</span>
                   {s.branchRef ? (
-                    <span className="inline-flex items-center gap-1 font-mono">
-                      <GitBranch size={11} /> {s.branchRef}
+                    // Ветка, названную СЕРВЕРОМ (`u/<id>/<база>` после пуша в
+                    // refs/for/main), человеку показывать нечего: это внутренний
+                    // идентификатор, он его не набирал и набирать не будет.
+                    // Осмысленно только имя, которое человек придумал сам.
+                    <span className="inline-flex min-w-0 items-center gap-1 font-mono">
+                      <GitBranch size={11} className="shrink-0" />
+                      <span className="truncate">
+                        {s.branchRef.startsWith('u/') ? t('prFromTerminal', lang) : s.branchRef}
+                      </span>
                     </span>
                   ) : (
                     <span className="max-sm:hidden">
