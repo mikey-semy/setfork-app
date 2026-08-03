@@ -40,7 +40,8 @@ interface Rule {
 const RULES: Rule[] = [
   // Рекурсивное удаление корня или домашнего каталога. Вариации с -f/-r в любом
   // порядке, с --no-preserve-root и с путём, состоящим из одних слешей.
-  { reason: 'wipesFilesystem', re: /\brm\s+(-[a-z]*[rf][a-z]*\s+)+(--no-preserve-root\s+)?(\/|~|\/\*|\$HOME)(\s|$|\*)/i },
+  // Граница справа включает кавычку: `bash -c "rm -rf /"` — исполнение, а не показ.
+  { reason: 'wipesFilesystem', re: /\brm\s+(-[a-z]*[rf][a-z]*\s+)+(--no-preserve-root\s+)?(\/|~|\/\*|\$HOME)(\s|$|\*|["'`])/i },
   // Запись поверх блочного устройства: гарантированная потеря диска целиком.
   { reason: 'overwritesDisk', re: /\b(dd|cat|tee)\b[^|;]*\bof=\/dev\/(sd|nvme|hd|vd|disk)/i },
   { reason: 'overwritesDisk', re: />\s*\/dev\/(sd|nvme|hd|vd|disk)[a-z0-9]*/i },
@@ -60,15 +61,65 @@ const RULES: Rule[] = [
 ]
 
 /**
+ * Строки команды в том виде, в каком их увидит интерпретатор.
+ *
+ * Разбор «по строкам как есть» обходится продолжением строки: `rm -rf \` и на
+ * следующей строке `/` по отдельности не совпадают ни с одним правилом, а bash
+ * склеивает их в `rm -rf /`. То же с конвейером, разорванным переносом. Поэтому
+ * сначала склеиваем продолжения, и только потом проверяем.
+ */
+function joinContinuations(text: string): string[] {
+  const out: string[] = []
+  let acc = ''
+  for (const raw of text.split(/\r\n|\r|\n/)) {
+    const line = acc + raw
+    // Нечётное число обратных слешей в конце = продолжение (чётное — экранированный слеш).
+    const trailing = /\\+$/.exec(line)
+    if (trailing && trailing[0].length % 2 === 1) {
+      acc = line.slice(0, -1)
+      continue
+    }
+    acc = ''
+    out.push(line)
+  }
+  if (acc) out.push(acc)
+  return out
+}
+
+/** Комментарий вне кавычек до конца строки — это не исполняемая часть. */
+function stripComment(line: string): string {
+  let quote: string | null = null
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (quote) {
+      if (ch === quote && line[i - 1] !== '\\') quote = null
+      continue
+    }
+    if (ch === '"' || ch === "'") quote = ch
+    else if (ch === '#' && (i === 0 || /\s/.test(line[i - 1]))) return line.slice(0, i)
+  }
+  return line
+}
+
+/**
+ * Строка лишь ПЕЧАТАЕТ текст, а не исполняет его. Инструкция вправе показать
+ * опасную команду как пример («вот так делать нельзя»), и блокировать за это —
+ * ровно тот широкий фильтр, из-за которого авторы перестают доверять отказу.
+ * Исполнители (`eval`, `bash -c`, `sh -c`) сюда НЕ попадают: у них содержимое
+ * кавычек и есть исполняемая часть.
+ */
+const PRINTS_ONLY = /^\s*(sudo\s+)?(echo|printf|cat\s*<<|#)/i
+
+/**
  * Первое совпадение или null. Проверяется КАЖДАЯ строка команды: многострочное поле
  * — это произвольный скрипт, и опасная строка может стоять не первой.
  */
 export function findDestructive(command: string): DestructiveMatch | null {
   const text = (command ?? '').trim()
   if (!text) return null
-  for (const line of text.split(/\r\n|\r|\n/)) {
-    const l = line.trim()
-    if (!l || l.startsWith('#')) continue
+  for (const joined of joinContinuations(text)) {
+    const l = stripComment(joined).trim()
+    if (!l || PRINTS_ONLY.test(l)) continue
     for (const rule of RULES) {
       const m = rule.re.exec(l)
       if (m) return { reason: rule.reason, fragment: m[0].trim().slice(0, 120) }

