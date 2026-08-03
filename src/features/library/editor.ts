@@ -11,7 +11,6 @@ const asQuizKind = (v: unknown): QuizKind => (QUIZ_KINDS.includes(v as QuizKind)
 
 const LEVELS: StepLevel[] = ['required', 'recommended', 'optional']
 const asLevel = (v: unknown): StepLevel => (LEVELS.includes(v as StepLevel) ? (v as StepLevel) : 'required')
-const asType = asBlockType
 
 export type EditorRef = { label: string; url: string }
 // Товар product-блока; tier '' = без яруса.
@@ -221,9 +220,11 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
         needsHumanAsk: it.needsHuman && it.needsHumanAsk.trim() ? { [lang]: it.needsHumanAsk.trim() } : {},
         section: it.section.trim() ? { [lang]: it.section.trim() } : {},
         subtasks: it.subtasks.filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
+        // url санитизируем на записи, как у video/file/product (второй рубеж к
+        // SafeLink): ссылки шага теперь принимает и MCP, а не только редактор.
         refs: it.refs
           .filter((r) => r.label.trim())
-          .map((r) => ({ label: { [lang]: r.label.trim() }, url: r.url.trim() || undefined })),
+          .map((r) => ({ label: { [lang]: r.label.trim() }, url: safeHref(r.url) || undefined })),
       }
     })
     .map((p, i) => ({ ...p, blockId: kept[i].bid || newBlockId() }))
@@ -252,7 +253,7 @@ type LocaleItem = {
  *  Для image-блоков ключ картинки лежит в content.ref. */
 export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<string, string> = {}): EditorItem[] {
   return items.map((it): EditorItem => {
-    const type = asType(it.type)
+    const type = asBlockType(it.type)
     // Идентичность: колонка block_id — источник правды; content.bid — легаси-дом
     // не-step блоков (и то, что переживает git-round-trip). Пусто у старых строк.
     const bid = it.blockId || (typeof it.content?.bid === 'string' ? it.content.bid : '')
@@ -384,7 +385,7 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
     const arr = JSON.parse(raw)
     if (!Array.isArray(arr)) return []
     return arr.map((it) => ({
-      type: asType(it?.type),
+      type: asBlockType(it?.type),
       bid: String(it?.bid ?? ''),
       text: String(it?.text ?? ''),
       caption: String(it?.caption ?? ''),
