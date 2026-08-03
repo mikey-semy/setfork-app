@@ -4,7 +4,7 @@ import { getLang } from '@/shared/i18n/server'
 import { t, tr, type LocaleText } from '@/shared/i18n'
 import { getRun } from '@/features/runs/queries'
 import { RunView, type RunStepVM } from '@/features/runs/RunView'
-import { productItems } from '@/features/library/blocks'
+import { asBlockType, blockChatTitle, productItems } from '@/features/library/blocks'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getAiSettings } from '@/shared/settings/ai'
@@ -44,6 +44,9 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
         ? productItems(s.content).map((p) => ({ ...p, href: mon.linkTracking ? `/api/go/${s.id}/p${p.idx}` : undefined }))
         : [],
     title: tr(s.title, lang),
+    // Подпись для шапки чата раскопки: у презентационного блока заголовка нет,
+    // и вместо пустой шапки идёт структурный контекст — секция урока или тип блока.
+    digTitle: blockChatTitle(asBlockType(s.type), tr(s.title, lang), tr(s.section, lang), lang),
     desc: tr(s.desc, lang),
     command: s.command,
     level: s.level,

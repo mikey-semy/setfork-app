@@ -53,4 +53,21 @@ describe('mcp create/get/update — владение и видимость по 
   it('update несуществующего списка → not found', async () => {
     expect(await mcpUpdateList(ownerId, 'mowner', 'no-such-slug', { items: [{ title: 'x' }] })).toMatchObject({ error: expect.stringContaining('not found') })
   })
+
+  // Ссылки: get_list их отдавал, а положить было нечем — записать через API стало
+  // возможно только вместе с типом 'file' и полем refs у шага.
+  it('ссылки едут в обе стороны: refs шага и file-блок сохраняются и читаются', async () => {
+    const created = await mcpCreateList(ownerId, {
+      title: 'Links',
+      items: [
+        { title: 'read the docs', refs: [{ label: 'MDN', url: 'https://developer.mozilla.org' }, { label: 'no-url' }] },
+        { type: 'file', url: 'https://example.com/spec.pdf', fileName: 'spec.pdf' },
+      ],
+    })
+    const slug = refSlug((created as { ref: string }).ref)
+    const list = (await mcpGetList(ownerId, 'mowner', slug)) as { steps: Record<string, unknown>[] }
+    const step = list.steps.find((b) => b.type === 'step') as { refs: { label: string; url?: string }[] }
+    expect(step.refs).toEqual([{ label: 'MDN', url: 'https://developer.mozilla.org' }, { label: 'no-url', url: undefined }])
+    expect(list.steps.find((b) => b.type === 'file')).toMatchObject({ url: 'https://example.com/spec.pdf', name: 'spec.pdf' })
+  })
 })

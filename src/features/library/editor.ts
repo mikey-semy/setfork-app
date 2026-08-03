@@ -3,7 +3,7 @@
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
 import { blankCount, type QuizKind } from '@/core'
-import { isBlockType, newBlockId, newOptionId, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
+import { asBlockType, isBlockType, newBlockId, newOptionId, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
 import { safeHref } from '@/shared/lib/safe-url'
 
 const QUIZ_KINDS: QuizKind[] = ['choice', 'text', 'number', 'blank', 'match', 'sort', 'code']
@@ -11,7 +11,7 @@ const asQuizKind = (v: unknown): QuizKind => (QUIZ_KINDS.includes(v as QuizKind)
 
 const LEVELS: StepLevel[] = ['required', 'recommended', 'optional']
 const asLevel = (v: unknown): StepLevel => (LEVELS.includes(v as StepLevel) ? (v as StepLevel) : 'required')
-const asType = (v: unknown): BlockType => (typeof v === 'string' && isBlockType(v) ? v : 'step')
+const asType = asBlockType
 
 export type EditorRef = { label: string; url: string }
 // Товар product-блока; tier '' = без яруса.

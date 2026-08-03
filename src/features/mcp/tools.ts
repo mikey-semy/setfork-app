@@ -39,7 +39,8 @@ export interface McpBlockOption {
 }
 
 // Один блок списка через MCP. type по умолчанию 'step'. Поля по типу:
-//  step  — title(+desc/command/level/why/section/subtasks); text — text(markdown);
+//  step  — title(+desc/command/level/why/section/subtasks/refs); text — text(markdown);
+//  file  — url + fileName (ссылка на документ/вложение);
 //  image — caption(+imageRef); video — url(+caption); poll — question/options/multi/deadline;
 //  quiz  — question/explain + по quizKind: choice=options(correct)/multi;
 //          text=accept/caseSensitive; number=answer/tolerance.
@@ -52,6 +53,7 @@ export interface McpItemInput {
   why?: string
   section?: string
   subtasks?: string[]
+  refs?: { label: string; url?: string }[] // step — ссылки под шагом (док, источник)
   text?: string
   caption?: string
   imageRef?: string
@@ -109,7 +111,19 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
         },
       }
     }
-    return { ...b, title: (it.title ?? '').trim(), desc: (it.desc ?? '').trim(), command: it.command?.trim() ?? '', level: it.level ?? 'required', why: (it.why ?? '').trim(), section: (it.section ?? '').trim(), subtasks: (it.subtasks ?? []).filter((s) => s.trim()) }
+    return {
+      ...b,
+      title: (it.title ?? '').trim(),
+      desc: (it.desc ?? '').trim(),
+      command: it.command?.trim() ?? '',
+      level: it.level ?? 'required',
+      why: (it.why ?? '').trim(),
+      section: (it.section ?? '').trim(),
+      subtasks: (it.subtasks ?? []).filter((s) => s.trim()),
+      // Ссылки шага: get_list их отдаёт, а положить было нечем — асимметрия чтения
+      // и записи. Пустые метки отсеивает сериализатор (toProposedItems).
+      refs: (it.refs ?? []).map((r) => ({ label: String(r?.label ?? '').trim(), url: String(r?.url ?? '').trim() })),
+    }
   })
   return toProposedItems(editor, 'en')
 }

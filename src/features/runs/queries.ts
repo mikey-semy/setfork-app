@@ -91,6 +91,9 @@ export async function getRun(runId: string, userId: string) {
       command: s.command,
       level: s.level,
       why: s.why,
+      // Секция-урок: в прогоне не рендерится, но служит подписью блока без
+      // заголовка в шапке чата раскопки (blockChatTitle).
+      section: s.section,
       subtasks: s.subtasks,
       refs: s.refs,
       state: stateByStep.get(s.id) ?? null,
