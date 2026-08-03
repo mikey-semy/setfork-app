@@ -6,6 +6,7 @@ import { isPubliclyVisible } from '@/core'
 import { dataEtag, toDataEnvelope } from '@/features/library/data-envelope'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
+import { cacheHeaders, noStoreHeaders, notModified } from '@/shared/http/cache'
 
 /**
  * GET /{handle}/{slug}/data.json — СПИСОК КАК ДАННЫЕ.
@@ -30,6 +31,10 @@ function json(body: string, status: number, headers: Record<string, string> = {}
   return new Response(body, { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...headers } })
 }
 
+/** Отказ: тела нет, и хранить его не должен никто — иначе созданный позже список
+ *  какое-то время продолжит отвечать «не найдено» из чужого прокси. */
+const fail = (body: string, status: number) => json(body, status, noStoreHeaders())
+
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
   const u = new URL(req.url)
@@ -46,12 +51,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // браузере с активной сессией давал бы права сессии — тихая подмена субъекта.
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
   const auth = bearer ? await verifyApiToken(bearer) : null
-  if (bearer && !auth) return json(JSON.stringify({ error: 'invalid_token' }), 401)
+  if (bearer && !auth) return fail(JSON.stringify({ error: 'invalid_token' }), 401)
 
   const detail = auth ? await requireViewableDetailFor(handle, slug, auth.userId) : await requireViewableDetail(handle, slug)
   // Приватный список без прав неотличим от несуществующего — иначе 403 подтверждал бы,
   // что такой список есть.
-  if (!detail) return json(NOT_FOUND, 404)
+  if (!detail) return fail(NOT_FOUND, 404)
 
   const updatedAt = detail.tpl.updatedAt ?? new Date(0)
   const etag = dataEtag(detail.currentVersion?.version ?? detail.tpl.currentVersion, updatedAt, lang)
@@ -70,13 +75,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
    * пускаем только явно запрошенный язык, а договорный отдаём приватно и с Vary.
    */
   const explicitLang = isLang(asked)
-  const shared = isPublic && explicitLang
-  const cache = shared ? 'public, max-age=60, stale-while-revalidate=600' : 'private, no-store'
-  const headers: Record<string, string> = { ETag: etag, 'Cache-Control': cache, Vary: 'Accept-Language, Cookie, Authorization' }
+  // Политика кеша — общая на все машинные поверхности (shared/http/cache). У публичного
+  // ответа нет окна свежести: разослать отзыв доступа внешнему кешу некому, поэтому
+  // хранить можно, а отдавать без проверки — нет.
+  const headers = cacheHeaders({ shared: isPublic && explicitLang && !auth, etag })
   // CORS только для публичных: браузерному коду это нужно, а приватное отдаём лишь по токену.
   if (isPublic) headers['Access-Control-Allow-Origin'] = '*'
 
-  if (req.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers })
+  const cached = notModified(req, etag, headers)
+  if (cached) return cached
 
   const envelope = toDataEnvelope(toExportList(detail), lang, `${u.origin}/${handle}/${slug}`, updatedAt)
   return json(JSON.stringify(envelope, null, 2), 200, headers)
