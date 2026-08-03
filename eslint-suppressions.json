@@ -1,9 +1,4 @@
 {
-  "src/app/[handle]/[slug]/certificate/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 12
-    }
-  },
   "src/app/[handle]/[slug]/discussions/[number]/page.tsx": {
     "no-restricted-syntax": {
       "count": 5

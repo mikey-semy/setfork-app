@@ -4,6 +4,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { courseCompletions, db, quizAttempts, steps, templates, templateVersions, users } from '@/shared/db'
 import { recordCompletionIfDone } from '@/shared/completion'
+import { quizContentHash } from '@/core/domain/quiz-fingerprint'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
 import { gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, quizKind, type QuizAnswer, type QuizBlockContent } from '@/core'
@@ -92,10 +93,10 @@ export async function submitQuiz(templateId: string, bid: string, answer: QuizAn
 
   const [row] = await db
     .insert(quizAttempts)
-    .values({ templateId, bid, userId: session.userId, selected, correct: ok })
+    .values({ templateId, bid, userId: session.userId, selected, correct: ok, contentHash: quizContentHash(content as unknown as Record<string, unknown>) })
     .onConflictDoUpdate({
       target: [quizAttempts.userId, quizAttempts.templateId, quizAttempts.bid],
-      set: { selected, correct: ok, attempts: sql`${quizAttempts.attempts} + 1`, updatedAt: sql`now()` },
+      set: { selected, correct: ok, contentHash: quizContentHash(content as unknown as Record<string, unknown>), attempts: sql`${quizAttempts.attempts} + 1`, updatedAt: sql`now()` },
     })
     .returning({ attempts: quizAttempts.attempts })
 
