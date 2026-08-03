@@ -55,6 +55,10 @@ export function BranchPicker({
   const [err, setErr] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   if (branches.length === 0 && !canManage) return null
+  // Подпись активной ветки — та же, что у строк списка: иначе выбор серверной
+  // ветки тут же показывал бы сырой идентификатор на кнопке и в подписи «от …»
+  // (авто-ревью fe#662).
+  const currentLabel = branchLabel(current, lang)
   const term = q.trim().toLowerCase()
   // Ищем и по настоящему имени, и по подписи: имя серверной ветки на экране не
   // показано, и набирать `u/<id>/…` человеку неоткуда — зато «терминал» он наберёт.
@@ -91,7 +95,7 @@ export function BranchPicker({
       <Tooltip label={ru ? 'Ветки' : 'Branches'}>
         <Button onClick={() => setOpen((v) => !v)} aria-expanded={open}>
           <GitBranch size={13} className="text-muted" />
-          <span className="max-w-[8.75rem] truncate">{current}</span>
+          <span className="max-w-[8.75rem] truncate">{currentLabel}</span>
           <ChevronDown size={12} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
         </Button>
       </Tooltip>
@@ -127,7 +131,7 @@ export function BranchPicker({
                         <Plus size={12} /> {t('create', lang)}
                       </Button>
                     </div>
-                    <p className="px-0.5 pt-1 text-[0.6875rem] text-muted">{err ?? (ru ? `от ${current}` : `from ${current}`)}</p>
+                    <p className="px-0.5 pt-1 text-[0.6875rem] text-muted">{err ?? (ru ? `от ${currentLabel}` : `from ${currentLabel}`)}</p>
                   </>
                 ) : null
               }
