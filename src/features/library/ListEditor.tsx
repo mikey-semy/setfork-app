@@ -355,6 +355,16 @@ export function ListEditor({
       )}
 
       <div ref={listRef} className="flex flex-col gap-3">
+      {/* Инсертер НАД первым блоком: вставить в начало списка. Без него «добавить
+          сверху» стоило двух действий — добавить в конец и гнать блок наверх
+          стрелками (фидбек владельца). Симметричен главному инсертеру снизу и
+          виден всегда: у between-варианта кнопка проявляется по наведению,
+          а на тач-экране наведения нет. */}
+      {items.length > 0 && (
+        <div className="flex justify-center">
+          <BlockInserter onInsert={(type) => insertAt(0, type)} repeatType={items[0]?.type ?? 'step'} ru={ru} />
+        </div>
+      )}
       {items.map((it, i) => (
         <div
           key={uids[i]}
@@ -1338,7 +1348,9 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={`z-1 grid place-items-center rounded-full border transition-all ${
-          between ? 'h-7 w-7 opacity-0 group-hover:opacity-100' : 'h-11 w-11'
+          // На тач-экране наведения нет: инсертер между блоками, спрятанный до
+          // hover, там недостижим вовсе — показываем его сразу.
+          between ? 'h-7 w-7 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100' : 'h-11 w-11'
         } ${open ? 'rotate-45 border-accent bg-accent text-white' : 'border-border bg-surface text-ink-2 hover:border-border-strong hover:text-ink'} ${open ? 'opacity-100' : ''}`}
       >
         <Plus size={between ? 15 : 20} />
