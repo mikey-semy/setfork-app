@@ -11,23 +11,35 @@ import { sql } from 'drizzle-orm'
  * ссылающуюся колонку индекс не создаёт, и это легко не заметить: на маленькой базе
  * Seq Scan быстрый, а деградация приходит от размера ВСЕГО корпуса, а не своего списка.
  *
- * Тест проверяет НАЛИЧИЕ индекса, а не план запроса: планировщик на пустой тестовой
- * базе вправе выбрать Seq Scan, и ассерт на план был бы нестабилен by design.
+ * Проверяется НАЛИЧИЕ и ПОРЯДОК колонок, а не план запроса: планировщик на пустой
+ * тестовой базе вправе выбрать Seq Scan, и ассерт на план был бы нестабилен by design.
  */
-const HOT: { table: string; index: string; columns: string[] }[] = [
-  { table: 'steps', index: 'steps_version_n_idx', columns: ['version_id', 'n'] },
+const HOT: { table: string; index: string; columns: string }[] = [
+  // Порядок значим: предикат по version_id + сортировка по n. Обратный порядок
+  // (n, version_id) для этого запроса бесполезен, поэтому сверяем строку целиком.
+  { table: 'steps', index: 'steps_version_n_idx', columns: 'version_id, n' },
 ]
 
 describe('индексы под горячие запросы существуют', () => {
   for (const { table, index, columns } of HOT) {
-    it(`${table}: ${index} по (${columns.join(', ')})`, async () => {
-      const res = await db.execute(
-        sql`select indexdef from pg_indexes where tablename = ${table} and indexname = ${index}`,
-      )
-      const rows = (res as unknown as { rows?: { indexdef: string }[] }).rows ?? (res as unknown as { indexdef: string }[])
-      expect(rows.length, `индекс ${index} отсутствует — горячий запрос идёт Seq Scan'ом`).toBe(1)
-      const def = (rows[0] as { indexdef: string }).indexdef
-      for (const c of columns) expect(def).toContain(c)
+    it(`${table}: ${index} по (${columns})`, async () => {
+      // Ключевые колонки берём из каталога в порядке следования, а не разбором
+      // indexdef подстроками: имя индекса само содержит имена колонок, и проверка
+      // «каждая колонка где-то упомянута» приняла бы и одноколоночный, и обратный
+      // индекс — то есть осталась бы зелёной ровно тогда, когда запрос теряет путь.
+      const res = await db.execute(sql`
+        select a.attname as col
+        from pg_index i
+        join pg_class c on c.oid = i.indexrelid
+        join pg_class t on t.oid = i.indrelid
+        join lateral unnest(i.indkey) with ordinality as k(attnum, ord) on true
+        join pg_attribute a on a.attrelid = t.oid and a.attnum = k.attnum
+        where t.relname = ${table} and c.relname = ${index}
+        order by k.ord
+      `)
+      const rows = (res as unknown as { rows?: { col: string }[] }).rows ?? (res as unknown as { col: string }[])
+      const actual = rows.map((r) => r.col).join(', ')
+      expect(actual, `индекс ${index}: ожидались колонки (${columns}) именно в этом порядке`).toBe(columns)
     })
   }
 })
