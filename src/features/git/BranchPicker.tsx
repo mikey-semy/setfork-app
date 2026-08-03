@@ -11,7 +11,7 @@ import type { GitBranch as Branch } from '@/core'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { t, type Lang } from '@/shared/i18n'
 import { createBranchAction, deleteBranchAction, type BranchActionResult } from './actions'
-import { branchLabel } from './branch-label'
+import { branchLabel, isServerBranch } from './branch-label'
 
 const ERR: Record<string, { ru: string; en: string }> = {
   'bad-name': { ru: 'Только буквы/цифры и .-_', en: 'Letters/digits and .-_ only' },
@@ -54,17 +54,24 @@ export function BranchPicker({
   const [q, setQ] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
-  if (branches.length === 0 && !canManage) return null
+  // Ветки, заведённые СЕРВЕРОМ под правки из терминала, в списке не показываем.
+  // Так же поступают те, у кого взята сама модель: GitHub не держит `refs/pull/*`
+  // среди веток, Gerrit — `refs/changes/*`. Причина та же: это не ветки
+  // репозитория в пользовательском смысле, у них своя поверхность — страница
+  // Предложений. Показывать их здесь значило бы дать владельцу список
+  // одинаковых подписей, где не разобрать, какую правку открываешь и какую
+  // удаляешь (авто-ревью fe#662), а кнопка удаления рядом ещё и осиротила бы
+  // предложение.
+  //
+  // Смотреть такую ветку можно — по ссылке со страницы предложения; тогда она
+  // стоит активной и подписана `currentLabel` на кнопке.
+  const own = branches.filter((b) => !isServerBranch(b.name))
+  if (own.length === 0 && !canManage) return null
   // Подпись активной ветки — та же, что у строк списка: иначе выбор серверной
-  // ветки тут же показывал бы сырой идентификатор на кнопке и в подписи «от …»
-  // (авто-ревью fe#662).
+  // ветки тут же показывал бы сырой идентификатор на кнопке и в подписи «от …».
   const currentLabel = branchLabel(current, lang)
   const term = q.trim().toLowerCase()
-  // Ищем и по настоящему имени, и по подписи: имя серверной ветки на экране не
-  // показано, и набирать `u/<id>/…` человеку неоткуда — зато «терминал» он наберёт.
-  const shown = term
-    ? branches.filter((b) => `${b.name} ${branchLabel(b.name, lang)}`.toLowerCase().includes(term))
-    : branches
+  const shown = term ? own.filter((b) => b.name.toLowerCase().includes(term)) : own
 
   const fail = (r: BranchActionResult) => {
     if (!r.ok) setErr(ERR[r.code]?.[ru ? 'ru' : 'en'] ?? ERR.internal[ru ? 'ru' : 'en'])
@@ -110,7 +117,7 @@ export function BranchPicker({
               closeLabel={t('close', lang)}
               // Поиск — когда веток больше горстки: у списка из двух он лишний шум.
               search={
-                branches.length > 5
+                own.length > 5
                   ? { value: q, onChange: setQ, placeholder: t('findBranch', lang), clearLabel: t('clear', lang) }
                   : undefined
               }

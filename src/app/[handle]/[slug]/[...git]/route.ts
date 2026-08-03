@@ -290,6 +290,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     if (!fresh || !canEditList(fresh)) return writeDisabled()
     const role = await resolveRole(az.userId, fresh)
     if (!role) return unauthorized()
+    // Лимит считается по ФИНАЛЬНОЙ роли, иначе его обходят сменой качества:
+    // соавтор открывает пуши, лишается соавторства за время закачки — и приходит
+    // как посторонний, ни разу не тронув счётчик (авто-ревью fe#662). Второй раз
+    // с того же пуша не списываем: у пришедшего посторонним счётчик уже двинулся
+    // выше, до чтения тела.
+    if (role === 'contributor' && az.role !== 'contributor') {
+      const rlLate = await rateLimit(`git:contrib:${az.userId}`, CONTRIB_PUSHES_PER_HOUR, 3600_000)
+      if (!rlLate.ok) return tooMany(rlLate)
+    }
     const who = await pusher(az.userId, req)
     const res = await gitCore.receivePack(
       { owner: handle, slug },
