@@ -91,6 +91,10 @@ describe('/raw: политика кеша', () => {
   it('публичный без токена — общий кеш и честный Vary', async () => {
     const res = await get('pub')
     expect(res.headers.get('cache-control')).toContain('public')
+    // Окна свежести быть не должно: инвалидацию внешнему кешу слать некому, и после
+    // закрытия списка аноним получал бы скрипт из кеша мимо проверки доступа.
+    expect(res.headers.get('cache-control')).toContain('no-cache')
+    expect(res.headers.get('cache-control') ?? '').not.toMatch(/max-age=[1-9]/)
     const vary = res.headers.get('vary') ?? ''
     expect(vary).toContain('Cookie')
     expect(vary).toContain('Authorization')
