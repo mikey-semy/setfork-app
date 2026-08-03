@@ -128,6 +128,33 @@ async function main() {
     }
   }
 
+  // Уникальный индекс на СУЩЕСТВУЮЩИХ данных: если инвариант нарушался до его
+  // появления, дубликаты уже лежат в таблице, и CREATE UNIQUE INDEX не пройдёт — а
+  // push отчитается нулевым кодом (случай 1 в шапке файла). Ровно этот случай:
+  // гонка «один аккаунт — один форк списка» могла уже создать по два форка одного
+  // источника. Схлопываем детерминированно и только потом отдаём управление push.
+  const dup = await pool.query(
+    `SELECT owner_id, forked_from_id, count(*)::int AS c
+       FROM templates WHERE forked_from_id IS NOT NULL
+      GROUP BY owner_id, forked_from_id HAVING count(*) > 1`,
+  )
+  if (dup.rowCount) {
+    console.log(`[preflight] пар (владелец, источник) с дублями форков: ${dup.rowCount}`)
+    const { rows } = await pool.query(
+      `WITH ranked AS (
+         SELECT id, row_number() OVER (PARTITION BY owner_id, forked_from_id ORDER BY created_at, id) AS rn
+           FROM templates WHERE forked_from_id IS NOT NULL
+       )
+       UPDATE templates t SET forked_from_id = NULL
+         FROM ranked r WHERE r.id = t.id AND r.rn > 1
+       RETURNING t.id`,
+    )
+    // Снимается только СВЯЗЬ с источником, сам список остаётся: человек мог уже
+    // внести в него правки. Потерянная связь честнее потерянного содержимого, а
+    // список продолжает жить как самостоятельный.
+    console.log(`[preflight] отвязано от источника лишних копий: ${rows.length}`)
+  }
+
   for (const { table, column, dims, index } of PREFLIGHT_HALFVEC) {
     const { rows } = await pool.query(
       `SELECT udt_name FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,

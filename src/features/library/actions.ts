@@ -1255,8 +1255,12 @@ async function createForkOrNull(input: Parameters<typeof listStore.create>[0]) {
   try {
     return await listStore.create(input)
   } catch (e) {
-    const text = e instanceof Error ? `${e.message}` : String(e)
-    if (/templates_owner_fork_uq|duplicate key|unique constraint/i.test(text)) return null
+    // Только НАШ индекс. Общий шаблон «duplicate key» глушил бы и посторонние
+    // нарушения — например, столкновение по имени (templates_owner_slug), когда два
+    // форка РАЗНЫХ источников выбрали одинаковое имя. Тогда форка текущего источника
+    // не существует, и настоящая ошибка превратилась бы в «попробуйте ещё раз».
+    const text = e instanceof Error ? e.message : String(e)
+    if (/templates_owner_fork_uq/i.test(text)) return null
     throw e
   }
 }
