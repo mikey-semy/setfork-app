@@ -15,7 +15,7 @@ import { aiQuota } from '@/shared/quota'
 import { assistOnStep } from '@/shared/ai/assist'
 import { collabStore } from '@/features/collab-store/store'
 import { isCollaborator } from '@/features/collab/queries'
-import { recordRunCompletionIfDone } from '@/features/library/completion'
+import { recordRunCompletionIfDone } from '@/shared/completion'
 import { stepStuckStats } from './queries'
 
 async function ownedRun(runId: string, userId: string) {
