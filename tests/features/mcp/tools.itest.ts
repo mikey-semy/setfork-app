@@ -352,6 +352,31 @@ describe('patch_list — точечная правка вместо переза
     expect(after.steps.find((b) => b.type === 'text')).toMatchObject({ section: 'Урок 2', text: 'врезка' })
   })
 
+  // Правка ложится в ТУ локаль, из которой чтение взяло показанное значение.
+  // Иначе она обновит другой перевод, а get_list продолжит отдавать прежний текст.
+  it('правка двуязычного поля видна в ответе и не портит второй перевод', async () => {
+    const created = await mcpCreateList(ownerId, { title: 'Locales', items: [{ title: 'one' }] })
+    const slug = refSlug((created as { ref: string }).ref)
+    const [{ id: tplId }] = await db.select({ id: templates.id }).from(templates).where(eq(templates.slug, slug))
+    const [ver] = await db.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, tplId))
+    // Порядок ключей — русский первым: раньше правка уходила именно в него, хотя
+    // наружу отдавался английский.
+    await db.update(steps).set({ title: { ru: 'старое', en: 'old' } }).where(eq(steps.versionId, ver.id))
+
+    const read = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
+    expect(read.steps[0].title).toBe('old')
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: read.steps[0].bid, title: 'new' }],
+    })
+    expect('error' in res).toBe(false)
+
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect(after.steps[0].title).toBe('new') // правка ВИДНА
+    const [row] = await db.select({ title: steps.title }).from(steps).where(eq(steps.versionId, ver.id))
+    expect(row.title).toEqual({ ru: 'старое', en: 'new' }) // второй перевод цел
+  })
+
   it('патчить чужой список нельзя', async () => {
     const { slug, read } = await three()
     const res = await mcpPatchList(otherId, 'mowner', slug, {

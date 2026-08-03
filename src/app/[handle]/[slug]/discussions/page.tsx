@@ -70,7 +70,7 @@ export default async function DiscussionsPage({
                   <span className="mt-0.5 text-[1rem]">{categoryMeta(d.category).icon}</span>
                 </Tooltip>
                 <div className="min-w-0 flex-1">
-                  <Link href={`${base}/${d.number}`} className="text-[0.875rem] font-semibold text-ink hover:text-accent">
+                  <Link href={`${base}/${d.number}`} className="min-w-0 text-[0.875rem] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]">
                     {d.title}
                   </Link>
                   <div className="mt-0.5 text-[0.78125rem] text-muted">

@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, asc, desc, eq, sql } from 'drizzle-orm'
-import { db, knowledgeSources, runs, runStepState, steps, suggestionReportedChecks, suggestions, templates, users, type ProposedItem } from '@/shared/db'
-import { tr, type LocaleText } from '@/shared/i18n'
+import { db, knowledgeSources, runs, runStepState, steps, suggestionReportedChecks, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
+import { tr, trKey, type LocaleText } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { canEditList, canViewList, ListWriteError } from '@/core'
@@ -818,12 +818,12 @@ const CONTENT_KEY: Record<string, string | undefined> = {
   sortItems: 'items',
 }
 
-/** Язык, в котором поле уже записано (первый непустой ключ), иначе 'en'. Правка
- *  из API языка не несёт, а список может быть целиком русским. */
-const langOfField = (lt: unknown): string => {
-  const rec = (lt ?? {}) as Record<string, string>
-  return Object.keys(rec).find((k) => (rec[k] ?? '').trim()) ?? 'en'
-}
+/** Ключ локали, В КОТОРЫЙ ложится правка. Это ровно тот ключ, ОТКУДА чтение взяло
+ *  показанное агенту значение (trKey повторяет выбор tr): у списка с двумя
+ *  переводами `{ ru: 'старое', en: 'old' }` get_list отдаёт английский, и правка
+ *  обязана лечь в en. Иначе она обновит русский, а наружу продолжит отдаваться
+ *  прежний английский — правка выглядит принятой, но не видна. */
+const langOfField = (lt: unknown): string => trKey(lt as LocaleText, 'en') ?? 'en'
 const putLang = (before: unknown, flat: string): Record<string, string> => {
   const base = (before ?? {}) as Record<string, string>
   return flat.trim() ? { ...base, [langOfField(before)]: flat.trim() } : {}
@@ -991,9 +991,28 @@ export async function mcpPatchList(
     // ЧЕРНОВИК: читаем состав и заменяем его ПОД ОДНИМ замком. Конкурирующий патч
     // ждёт на нём и потом читает уже новое состояние — вместо того чтобы наложить
     // свои операции на снимок, который к моменту записи устарел.
-    const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
     return db.transaction(async (tx) => {
       await lockList(tx, tpl.id)
+      // Статус и версию ПЕРЕЧИТЫВАЕМ под замком: между чтением списка и взятием
+      // замка его могли опубликовать. Со старым статусом на руках правка заменила
+      // бы шаги уже опубликованной версии НА МЕСТЕ — без новой версии и без
+      // git-коммита, то есть мимо истории.
+      const [fresh] = await tx
+        .select({ status: templates.status, current: templates.currentVersion })
+        .from(templates)
+        .where(eq(templates.id, tpl.id))
+      if (!fresh) return { error: 'list not found' }
+      if (fresh.status !== 'draft')
+        return { error: 'the list was published while the patch was being prepared — read it again (get_list) and patch the published version' }
+      if (input.baseVersion !== fresh.current)
+        return { error: `list changed: it is at version ${fresh.current}, your patch is based on ${input.baseVersion} — read it again (get_list) and rebuild the ops` }
+      const [cur] = await tx
+        .select({ id: templateVersions.id, version: templateVersions.version })
+        .from(templateVersions)
+        .where(and(eq(templateVersions.templateId, tpl.id), eq(templateVersions.version, fresh.current)))
+        .limit(1)
+      if (!cur) return { error: 'list not found' }
+
       const rows = await tx.select().from(steps).where(eq(steps.versionId, cur.id)).orderBy(asc(steps.n))
       const applied = applyPatchOps<ProposedItem>(rowsToProposed(rows as unknown as DetailStep[]), ops, patchIO)
       if ('error' in applied) return applied
