@@ -771,8 +771,10 @@ export default async function ListPage({
                               {t('stepChecksLabel', lang)}
                             </div>
                             <ul className="flex flex-col gap-1.5">
+                              {/* Ключ по тексту проверки, а не по индексу: при правке шага
+                                  список пересобирается, и индексные ключи путают строки. */}
                               {subs.map((label, i) => (
-                                <li key={i} className="flex gap-2 text-[0.8125rem] text-ink-2 [overflow-wrap:anywhere]">
+                                <li key={`${label}#${i}`} className="flex gap-2 text-[0.8125rem] text-ink-2 [overflow-wrap:anywhere]">
                                   <SquareCheckBig size={14} className="mt-0.5 shrink-0 text-muted" />
                                   {label}
                                 </li>

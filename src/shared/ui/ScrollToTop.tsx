@@ -19,46 +19,50 @@ export function ScrollToTop({ label = 'Наверх' }: { label?: string }) {
   // Тем же признаком помечен чат раскопок: на десктопе кнопка пряталась ЗА его
   // панелью (фидбек владельца 03.08.2026) — теперь садится над ней.
   const [barH, setBarH] = useState(0)
+  // Сама панель как элемент: её ищет один эффект, а МЕРИТ другой. Раньше и поиск, и
+  // подписка жили в одном колбэке — наблюдатель создавался внутри measure(), и по
+  // коду было не видно, что он освобождается (находка React Doctor: подписка в
+  // useEffect без явного cleanup рядом). Разделение чинит и это, и прежнюю дыру:
+  // наблюдатель размера создаётся ПОД КОНКРЕТНУЮ панель, когда она появилась.
+  const [bar, setBar] = useState<HTMLElement | null>(null)
   // Поправка на расхождение layout/visual viewport: без неё кнопка «прижата к низу
   // страницы», а на экране висит посередине (жалоба владельца по мобиле).
   const { gap, visibleHeight } = useViewportBottom()
 
   useEffect(() => {
-    // Наблюдатель размера привязывается к панели, КОГДА ОНА ПОЯВИЛАСЬ. Раньше он
-    // создавался один раз на монтировании: панели тогда ещё нет (чат раскопок и полоса
-    // сохранения приходят позже), наблюдать было нечего — и рост панели кнопка
-    // пропускала. Проверено: чат, выросший с 283 до 700px, оставлял кнопку на прежнем
-    // месте, то есть прямо под собой.
-    let ro: ResizeObserver | null = null
-    let observed: HTMLElement | null = null
-    const measure = () => {
-      const el = document.querySelector<HTMLElement>('[data-sticky-input]')
-      setBarH(el ? el.offsetHeight : 0)
-      if (el !== observed) {
-        if (observed && ro) ro.unobserve(observed)
-        observed = el
-        if (el && ro) ro.observe(el)
-      }
-    }
+    const findBar = () => setBar(document.querySelector<HTMLElement>('[data-sticky-input]'))
     const onScroll = () => {
       setShow(window.scrollY > 600)
-      measure()
+      findBar()
     }
-    ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => measure()) : null
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
-    // Панель может ПОЯВИТЬСЯ позже (полоса сохранения выезжает, когда форму тронули).
-    // Без наблюдения за DOM кнопка «наверх» переехала бы только на следующем скролле —
-    // то есть ровно в тот момент, когда она уже налезла на «Сохранить». Атрибуты тоже
-    // важны: высота панели меняется и через style/класс, а не только через содержимое.
-    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(measure) : null
-    mo?.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] })
+    // Панель может ПОЯВИТЬСЯ позже (полоса сохранения выезжает, когда форму тронули,
+    // чат раскопок — по клику на кирку). Без наблюдения за DOM кнопка «наверх»
+    // переехала бы только на следующем скролле — то есть ровно в тот момент, когда
+    // она уже налезла на «Сохранить».
+    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(findBar) : null
+    mo?.observe(document.body, { childList: true, subtree: true })
     return () => {
       window.removeEventListener('scroll', onScroll)
-      ro?.disconnect()
       mo?.disconnect()
     }
   }, [])
+
+  useEffect(() => {
+    if (!bar) {
+      setBarH(0)
+      return
+    }
+    // Высота панели меняется и без правок DOM-структуры: растёт поле ввода, приходит
+    // ответ в чат. Поэтому именно ResizeObserver, а не разовый замер.
+    const measure = () => setBarH(bar.offsetHeight)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(bar)
+    return () => ro.disconnect()
+  }, [bar])
 
   if (!show) return null
   // Над нижней панелью (если она есть) и над видимым низом; выше кромки экрана не уходим.
