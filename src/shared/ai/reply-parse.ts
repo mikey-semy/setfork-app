@@ -1,3 +1,25 @@
+/** Места под вопросы в строке NEXT — ЕДИНСТВЕННЫЙ источник: отсюда собирается
+ *  и образец для промпта, и фильтр заготовок в ответе (иначе они разъедутся). */
+export const NEXT_SLOTS = ['first question', 'second question', 'third question'] as const
+/** Образец строки NEXT, который видит модель (вставляется в промпт гнома). */
+export const NEXT_TEMPLATE = `NEXT: ${NEXT_SLOTS.map((s) => `<${s}>`).join(' | ')}`
+
+/** Скобки образца вокруг вопроса: модель то подставляет текст ВМЕСТО «<…>», то
+ *  внутрь них — «<Почему именно winget?>». Во втором случае вопрос настоящий,
+ *  и показывать его надо без скобок, а не выбрасывать. */
+const unwrap = (s: string) => s.replace(/^[<[{]\s*/, '').replace(/\s*[>\]}]$/, '').trim()
+
+/**
+ * Заготовка из образца вместо живого вопроса: модель иногда копирует форму
+ * строки NEXT дословно — гость видел кнопки «q1 | q2 | q3» (фидбек владельца).
+ * Такие «вопросы» не показываем: пустой список — это сигнал поверхности
+ * показать свои универсальные направления.
+ */
+const isPlaceholder = (s: string) => {
+  const inner = s.toLowerCase()
+  return !inner || (NEXT_SLOTS as readonly string[]).includes(inner) || /^(?:q|question|вопрос)\s*[-_]?\d+[.?]?$/.test(inner)
+}
+
 /**
  * Отделяет хвост «NEXT: …» (фоллоу-апы) от текста ответа гнома. Модель выдаёт
  * вопросы то в строку через «|», то СПИСКОМ с новой строки/маркерами — раньше
@@ -10,8 +32,8 @@ export function parseFollowups(raw: string): { text: string; followups: string[]
   if (!nm) return { text: raw, followups: [] }
   const followups = nm[1]
     .split(/\||\n/)
-    .map((s) => s.replace(/^[\s>*\-–—•\d.)\]]+/, '').trim())
-    .filter(Boolean)
+    .map((s) => unwrap(s.replace(/^[\s>*\-–—•\d.)\]]+/, '').trim()))
+    .filter((s) => s && !isPlaceholder(s))
     .slice(0, 3)
   return { text: raw.slice(0, nm.index).trim(), followups }
 }
