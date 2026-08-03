@@ -83,7 +83,8 @@ export async function isCourseCompleted(
           inArray(quizAttempts.bid, quizBids),
         ),
       )
-    const ok = new Set(passed.filter((r) => !r.hash || r.hash === expectedHash.get(r.bid)).map((r) => r.bid))
+    const ok = new Set<string>()
+    for (const r of passed) if (!r.hash || r.hash === expectedHash.get(r.bid)) ok.add(r.bid)
     if (!quizBids.every((b) => ok.has(b))) return false
   }
 

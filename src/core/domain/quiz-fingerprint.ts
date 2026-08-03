@@ -36,8 +36,11 @@ export function quizContentHash(content: Record<string, unknown>): string {
       ? (content.pairs as { left?: unknown; right?: unknown }[]).map((p) => ({ left: str(p?.left), right: str(p?.right) }))
       : null,
     caseSensitive: !!content.caseSensitive,
-    // сам вопрос: смена формулировки меняет задачу
+    // сам вопрос: смена формулировки меняет задачу. Для blank сама задача живёт в
+    // template (текст с пропусками) — переписать его, сохранив принимаемые ответы,
+    // значит задать другой вопрос.
     question: str(content.question ?? content.text),
+    template: str(content.template),
   }
   return createHash('sha256').update(JSON.stringify(graded)).digest('hex').slice(0, 32)
 }

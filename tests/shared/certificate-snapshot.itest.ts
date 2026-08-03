@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { courseCompletions, db, quizAttempts, steps, templates, templateVersions, users } from '@/shared/db'
 import { isCourseCompleted, recordCompletionIfDone } from '@/shared/completion'
 import { quizContentHash } from '@/core/domain/quiz-fingerprint'
+import { completionHolderMeta } from '@/features/quizzes/queries'
 
 /**
  * Сертификат — документ о ПРОШЛОМ. Три способа, которыми он врал:
@@ -128,5 +129,37 @@ describe('ответ привязан к содержимому вопроса',
     const c = await makeCourse('course-e', QUIZ)
     await db.insert(quizAttempts).values({ templateId: c.templateId, bid: 'q1', userId: ctx.learner, selected: ['a'], correct: true })
     expect(await isCourseCompleted(ctx.learner, c)).toBe(true)
+  })
+})
+
+describe('доступ к документу удалённого курса', () => {
+  it('после удаления курса сертификат резолвится по снимку, а не 404', async () => {
+    const c = await makeCourse('course-f', QUIZ)
+    await db.insert(quizAttempts).values({
+      templateId: c.templateId,
+      bid: 'q1',
+      userId: ctx.learner,
+      selected: ['a'],
+      correct: true,
+      contentHash: quizContentHash(QUIZ),
+    })
+    await recordCompletionIfDone(ctx.learner, c)
+    await db.delete(templates).where(eq(templates.id, c.templateId))
+
+    // Ровно то, что делает страница сертификата, когда живого курса уже нет.
+    const holder = await completionHolderMeta(OWNER, 'course-f', ctx.learner)
+    expect(holder, 'документ удалённого курса обязан находиться по снимку').not.toBeNull()
+    expect(holder?.title).toEqual({ en: 'Original title' })
+    expect(holder?.ownerHandle).toBe(OWNER)
+  })
+
+  it('чужому человеку документа не отдаёт', async () => {
+    const c = await makeCourse('course-g', QUIZ)
+    await db.insert(quizAttempts).values({ templateId: c.templateId, bid: 'q1', userId: ctx.learner, selected: ['a'], correct: true, contentHash: quizContentHash(QUIZ) })
+    await recordCompletionIfDone(ctx.learner, c)
+    await db.delete(templates).where(eq(templates.id, c.templateId))
+
+    expect(await completionHolderMeta(OWNER, 'course-g', ctx.owner)).toBeNull()
+    expect(await completionHolderMeta(OWNER, 'course-g', undefined)).toBeNull()
   })
 })
