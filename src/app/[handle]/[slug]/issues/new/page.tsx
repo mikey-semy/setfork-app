@@ -9,6 +9,7 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { NewIssueForm } from '@/features/issues/NewIssueForm'
 import { getListLabels } from '@/features/issues/queries'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { isFeatureEnabled } from '@/core'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -20,7 +21,9 @@ export default async function NewIssuePage({ params }: { params: Promise<{ handl
   if (!session) redirect(`/login?next=/${owner}/${slug}/issues/new`)
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  if (!meta.issuesEnabled) notFound() // раздел выключен владельцем (Settings → Features)
+  // Тот же предикат, что у записи (canWriteToFeature): страница отражает решение
+  // владельца, но не заменяет его — проверка живёт в actions.
+  if (!isFeatureEnabled(meta, 'issues')) notFound() // раздел выключен (Settings → Features)
   const custom = await getListLabels(meta.id)
 
   return (

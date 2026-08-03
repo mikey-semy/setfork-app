@@ -6,11 +6,11 @@ import { redirect } from 'next/navigation'
 import { db, discussionComments, discussions } from '@/shared/db'
 import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { requireSession } from '@/shared/auth/session'
-import { canViewList } from '@/core'
+import { canWriteToFeature } from '@/core'
 import { ensureWatch } from '@/features/watch/actions'
 import { isCategory } from './constants'
 
-/** Открыть тред. Любой залогиненный, кто видит список. */
+/** Открыть тред. Любой залогиненный, кто видит список, — пока раздел включён. */
 export async function createDiscussion(formData: FormData): Promise<void> {
   const session = await requireSession()
   const owner = String(formData.get('owner') ?? '')
@@ -23,7 +23,10 @@ export async function createDiscussion(formData: FormData): Promise<void> {
 
   const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
-  if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
+  // Право писать = раздел включён И список виден. Проверка на СТРАНИЦЕ отвечает только
+  // за то, что видно: сохранённая форма и прямой вызов server action её не проходят, и
+  // выключенный владельцем раздел продолжал принимать записи в невидимые треды.
+  if (!canWriteToFeature(tpl, 'discussions', { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
 
   // Номер per-list — подзапросом в одном INSERT (атомарно; гонку добьёт unique).
   const [row] = await db
@@ -43,7 +46,7 @@ export async function createDiscussion(formData: FormData): Promise<void> {
   redirect(`/${owner}/${slug}/discussions/${row.number}`)
 }
 
-/** Ответить в тред. Любой залогиненный, кто видит список. */
+/** Ответить в тред. Любой залогиненный, кто видит список, — пока раздел включён. */
 export async function addDiscussionComment(formData: FormData): Promise<void> {
   const session = await requireSession()
   const owner = String(formData.get('owner') ?? '')
@@ -54,7 +57,7 @@ export async function addDiscussionComment(formData: FormData): Promise<void> {
 
   const tpl = await resolveListBySlug(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
-  if (!canViewList(tpl, { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
+  if (!canWriteToFeature(tpl, 'discussions', { isOwner: tpl.ownerId === session.userId })) redirect(`/${owner}/${slug}`)
 
   const [disc] = await db
     .select({ id: discussions.id })

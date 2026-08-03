@@ -40,6 +40,35 @@ export function isPubliclyVisible(list: ListAccess): boolean {
   return canViewList(list, { isOwner: false, isAdmin: false })
 }
 
+// ── Разделы, которые владелец может выключить (Settings → Features) ──
+// Выключенный раздел — это не оформление, а решение владельца о том, что в его
+// списке НЕ ведётся. Значит проверять его обязана запись, а не только страница:
+// страница отвечает за то, что видно, и сохранённая форма или прямой вызов
+// server action её вообще не спрашивают.
+
+export type ListFeature = 'issues' | 'discussions'
+
+export interface ListFeatures {
+  issuesEnabled: boolean
+  discussionsEnabled: boolean
+}
+
+/** Включён ли раздел. Один предикат для страниц (что показывать) и для записи. */
+export function isFeatureEnabled(list: ListFeatures, feature: ListFeature): boolean {
+  return feature === 'issues' ? list.issuesEnabled : list.discussionsEnabled
+}
+
+/**
+ * Можно ли писать в раздел: он включён И зритель вправе видеть список.
+ *
+ * Порядок важен ровно настолько, насколько важна причина отказа; оба условия
+ * обязательны. Владелец выключенного раздела тоже не пишет — сначала включает
+ * его обратно, иначе «выключено» означало бы «выключено для других».
+ */
+export function canWriteToFeature(list: ListAccess & ListFeatures, feature: ListFeature, viewer: ListViewer): boolean {
+  return isFeatureEnabled(list, feature) && canViewList(list, viewer)
+}
+
 // ── Обратимые ограниченные состояния (архив / заморозка) ─────────────
 // Ортогональны видимости и модерации: архивный/замороженный список остаётся
 // ВИДИМЫМ (canViewList его не трогает), но ограничен в записи. Чистые предикаты

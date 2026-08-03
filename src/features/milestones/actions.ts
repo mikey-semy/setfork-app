@@ -2,19 +2,15 @@
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, issues, milestones, templates, users } from '@/shared/db'
+import { db, issues, milestones } from '@/shared/db'
+import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { requireSession } from '@/shared/auth/session'
+import { isFeatureEnabled } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
 
-async function resolveTpl(owner: string, slug: string) {
-  const [row] = await db
-    .select({ id: templates.id, ownerId: templates.ownerId })
-    .from(templates)
-    .innerJoin(users, eq(templates.ownerId, users.id))
-    .where(and(eq(users.handle, owner), eq(templates.slug, slug)))
-    .limit(1)
-  return row ?? null
-}
+// Лукап списка — общий (resolveListBySlug). Своя копия здесь брала только id и
+// ownerId, поэтому проверить состояние раздела было физически нечем.
+const resolveTpl = resolveListBySlug
 
 async function canManage(userId: string, tplId: string, ownerId: string) {
   return userId === ownerId || (await isCollaborator(tplId, userId))
@@ -66,6 +62,9 @@ export async function setIssueMilestone(owner: string, slug: string, number: num
   const session = await requireSession()
   const tpl = await resolveTpl(owner, slug)
   if (!tpl) redirect(`/${owner}/${slug}`)
+  // Веха ставится ЗАДАЧЕ, то есть это запись в раздел «Вопросы»: выключен — отказ,
+  // как и у комментария, статуса и меток.
+  if (!isFeatureEnabled(tpl, 'issues')) redirect(`/${owner}/${slug}`)
   if (!(await canManage(session.userId, tpl.id, tpl.ownerId))) redirect(`/${owner}/${slug}/issues/${number}`)
   // валидируем веху (если задана) в рамках этого списка
   let value: string | null = null

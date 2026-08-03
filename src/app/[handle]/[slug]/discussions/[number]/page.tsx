@@ -14,6 +14,7 @@ import { getDiscussion, getDiscussionComments } from '@/features/discussions/que
 import { addDiscussionComment } from '@/features/discussions/actions'
 import { categoryLabel, categoryMeta } from '@/features/discussions/constants'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { isFeatureEnabled } from '@/core'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
@@ -27,7 +28,9 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  if (!meta.discussionsEnabled) notFound() // раздел выключен владельцем (Settings → Features)
+  // Тот же предикат, что у записи (canWriteToFeature): страница отражает решение
+  // владельца, но не заменяет его — проверка живёт в actions.
+  if (!isFeatureEnabled(meta, 'discussions')) notFound() // раздел выключен (Settings → Features)
   const disc = number > 0 ? await getDiscussion(meta.id, number) : null
   if (!disc) notFound()
   const comments = await getDiscussionComments(disc.id)
