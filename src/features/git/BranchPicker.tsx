@@ -11,6 +11,7 @@ import type { GitBranch as Branch } from '@/core'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { t, type Lang } from '@/shared/i18n'
 import { createBranchAction, deleteBranchAction, type BranchActionResult } from './actions'
+import { branchLabel } from './branch-label'
 
 const ERR: Record<string, { ru: string; en: string }> = {
   'bad-name': { ru: 'Только буквы/цифры и .-_', en: 'Letters/digits and .-_ only' },
@@ -55,7 +56,11 @@ export function BranchPicker({
   const [pending, startTransition] = useTransition()
   if (branches.length === 0 && !canManage) return null
   const term = q.trim().toLowerCase()
-  const shown = term ? branches.filter((b) => b.name.toLowerCase().includes(term)) : branches
+  // Ищем и по настоящему имени, и по подписи: имя серверной ветки на экране не
+  // показано, и набирать `u/<id>/…` человеку неоткуда — зато «терминал» он наберёт.
+  const shown = term
+    ? branches.filter((b) => `${b.name} ${branchLabel(b.name, lang)}`.toLowerCase().includes(term))
+    : branches
 
   const fail = (r: BranchActionResult) => {
     if (!r.ok) setErr(ERR[r.code]?.[ru ? 'ru' : 'en'] ?? ERR.internal[ru ? 'ru' : 'en'])
@@ -131,7 +136,7 @@ export function BranchPicker({
                 <PickerRow
                   key={b.name}
                   selected={b.name === current}
-                  label={b.name}
+                  label={branchLabel(b.name, lang)}
                   onClick={() => {
                     setOpen(false)
                     router.push(b.isDefault ? base : `${base}?ref=${encodeURIComponent(b.name)}`)

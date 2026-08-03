@@ -19,6 +19,7 @@ import { ConflictResolver } from '@/features/git/ConflictResolver'
 import { threeWayMerge } from '@/features/git/three-way'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
+import { branchLabel } from '@/features/git/branch-label'
 import { snapshotSteps } from '@/features/git/snapshot-steps'
 import { CodeDiff, ListDiff } from '@/features/library/DiffViews'
 import { diffSteps, rowsToCmp } from '@/features/library/diff'
@@ -462,7 +463,7 @@ export default async function SuggestionThreadPage({
             {sug.branchRef ? (
               <>
                 <Link href={`/${owner}/${slug}?ref=${encodeURIComponent(sug.branchRef)}`} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[0.78125rem] text-ink hover:text-accent">
-                  <GitBranch size={11} /> {sug.branchRef}
+                  <GitBranch size={11} /> {branchLabel(sug.branchRef, lang)}
                 </Link>{' '}
                 → <Tooltip label={t('defaultBranchHint', lang)}><span className="font-mono text-[0.78125rem]">main</span></Tooltip>
               </>
@@ -521,8 +522,8 @@ export default async function SuggestionThreadPage({
         {branchMissing && (
           <Alert variant="warn" className="mb-3">
             {lang === 'ru'
-              ? `Ветка «${sug.branchRef}» удалена — предложение неактуально, можно только отклонить.`
-              : `Branch “${sug.branchRef}” was deleted — this PR is stale and can only be closed.`}
+              ? `Ветка «${branchLabel(sug.branchRef!, lang)}» удалена — предложение неактуально, можно только отклонить.`
+              : `Branch “${branchLabel(sug.branchRef!, lang)}” was deleted — this PR is stale and can only be closed.`}
           </Alert>
         )}
 

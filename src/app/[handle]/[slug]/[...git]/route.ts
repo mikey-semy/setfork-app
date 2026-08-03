@@ -79,14 +79,7 @@ const CONTRIB_PUSHES_PER_HOUR = envNumber('SETFORK_GIT_CONTRIB_PUSHES_PER_HOUR',
 async function authorizeWrite(req: Request, meta: Meta): Promise<{ userId: string; role: PushRole } | 401 | 403> {
   const auth = await userFromBasic(req)
   if (!auth || auth.scope !== 'write') return 401 // read-only токен не может пушить
-  const role: PushRole | null =
-    auth.userId === meta.ownerId
-      ? 'owner'
-      : (await isCollaborator(meta.id, auth.userId))
-        ? 'collaborator'
-        : contributorsEnabled() && openForContributions(meta)
-          ? 'contributor'
-          : null
+  const role = await resolveRole(auth.userId, meta)
   if (!role) return 401
   // Архив и заморозка — ограничения ЗАПИСИ, и git-путь обязан их соблюдать. Проверка
   // здесь, а не в ядре: на проде git идёт в Rust-ядро (SETFORK_CORE_URL), где понятий
@@ -95,6 +88,20 @@ async function authorizeWrite(req: Request, meta: Meta): Promise<{ userId: strin
   // обоих режимов ядра, поэтому правило остаётся в одном месте.
   if (!canEditList(meta)) return 403
   return { userId: auth.userId, role }
+}
+
+/**
+ * В каком качестве этот человек пишет в ЭТОТ список — по текущему состоянию списка.
+ *
+ * Отдельно от `authorizeWrite`, потому что зовётся ДВАЖДЫ: до чтения тела (быстрый
+ * отказ) и вплотную к передаче пака в ядро. Между этими моментами проходит всё
+ * время закачки — у большого пуша это минуты, и за них владелец успевает закрыть
+ * приём предложений, спрятать список или снять соавторство.
+ */
+async function resolveRole(userId: string, meta: Meta): Promise<PushRole | null> {
+  if (userId === meta.ownerId) return 'owner'
+  if (await isCollaborator(meta.id, userId)) return 'collaborator'
+  return contributorsEnabled() && openForContributions(meta) ? 'contributor' : null
 }
 
 /**
@@ -241,19 +248,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
       if (e instanceof GitBodyTooLarge) return tooLarge(e)
       throw e
     }
-    // Второго перечитывания состояния здесь БОЛЬШЕ НЕТ. Оно стояло тут потому, что
-    // большой push висит минутами и владелец может заморозить список ровно в это
-    // окно, а ядро о заморозке не знало. С Ф1 (ADR-0015) знает: ядро само спрашивает
-    // /api/internal/write-allowed вплотную к записи и под репо-локом — то есть
-    // проверка стала не только не устаревшей, но и не обходимой другими путями.
-    // Ранняя проверка выше (authorizeWrite → canEditList) остаётся: она даёт быстрый
-    // отказ ДО чтения тела, чтобы не тянуть мегабайты ради заведомого 403.
+    // Заморозку и архив здесь перечитывать НЕ НАДО: с Ф1 (ADR-0015) ядро само
+    // спрашивает /api/internal/write-allowed вплотную к записи и под репо-локом —
+    // проверка там и свежее, и необходима всем путям записи сразу.
+    //
+    // А вот КТО пишет, тот колбэк не проверяет и проверять не может: он спрашивает
+    // про список, а не про человека (ADR-0011 §2 — пользовательской авторизации в
+    // ядре нет). Поэтому роль перечитываем здесь, вплотную к передаче пака. Пока
+    // качалось тело — а у большого пуша это минуты — владелец мог закрыть приём
+    // предложений, спрятать список или снять соавторство, и устаревшая роль
+    // проехала бы в ядро как действующая (авто-ревью fe#662). Ранняя проверка выше
+    // остаётся: она даёт отказ ДО чтения тела, чтобы не тянуть мегабайты зря.
+    const fresh = await getListMeta(handle, slug)
+    if (!fresh || !canEditList(fresh)) return writeDisabled()
+    const role = await resolveRole(az.userId, fresh)
+    if (!role) return unauthorized()
     const who = await pusher(az.userId, req)
     const res = await gitCore.receivePack(
       { owner: handle, slug },
       body,
-      // Ф5: роль едет вместе с ником — ядро исполнит по ней правило пространства.
-      { gitProtocol, lang: who.lang, actorId: az.userId, actorRole: az.role },
+      // Ф5: роль едет вместе с автором — ядро исполнит по ней правило пространства.
+      { gitProtocol, lang: who.lang, actorId: az.userId, actorRole: role },
     )
     if (!res) return new Response('Repository unavailable', { status: 500 })
     // Ф4: магический пуш `refs/for/main` — ядро положило коммиты в ветку автора,

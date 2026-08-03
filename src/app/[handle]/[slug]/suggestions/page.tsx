@@ -13,6 +13,7 @@ import {
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, type Lang } from '@/shared/i18n'
+import { branchLabel } from '@/features/git/branch-label'
 import { Avatar } from '@/shared/ui/Avatar'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { FilterMenu } from '@/shared/ui/FilterMenu'
@@ -237,15 +238,9 @@ export default async function SuggestionsPage({
                   </span>
                   <span>{fmt.format(new Date(s.createdAt))}</span>
                   {s.branchRef ? (
-                    // Ветка, названную СЕРВЕРОМ (`u/<id>/<база>` после пуша в
-                    // refs/for/main), человеку показывать нечего: это внутренний
-                    // идентификатор, он его не набирал и набирать не будет.
-                    // Осмысленно только имя, которое человек придумал сам.
                     <span className="inline-flex min-w-0 items-center gap-1 font-mono">
                       <GitBranch size={11} className="shrink-0" />
-                      <span className="truncate">
-                        {s.branchRef.startsWith('u/') ? t('prFromTerminal', lang) : s.branchRef}
-                      </span>
+                      <span className="truncate">{branchLabel(s.branchRef, lang)}</span>
                     </span>
                   ) : (
                     <span className="max-sm:hidden">
