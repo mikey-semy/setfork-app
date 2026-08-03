@@ -1,10 +1,11 @@
 import 'server-only'
-import { and, asc, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import { db, knowledgeSources, runs, runStepState, steps, suggestionReportedChecks, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
 import { tr, trKey, type LocaleText } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { canEditList, canViewList, ListWriteError } from '@/core'
+import { assertNoDestructiveSteps, DestructiveCommandError } from '@/core/domain/destructive-command'
 import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
@@ -167,28 +168,49 @@ async function replaceDraftStepsIn(tx: Tx, versionId: string, items: ProposedIte
   // Форму строк берём у ОБЩЕГО конвертера (stepInput): своя копия здесь молча
   // теряла blockId и «здесь нужен человек» — а с ними комментарии к пункту,
   // merge по идентичности и приглашение ответить из опыта.
-  await tx.delete(steps).where(eq(steps.versionId, versionId))
-  await tx.insert(steps).values(
-    stepInput(items).map((it) => ({
-      versionId,
-      n: it.n,
-      type: it.type,
-      content: it.content,
-      blockId: it.blockId,
-      title: it.title,
-      desc: it.desc,
-      command: it.command,
-      hasImage: !!it.imageRef,
-      imageKey: it.imageRef,
-      level: it.level,
-      why: it.why,
-      needsHuman: it.needsHuman,
-      needsHumanAsk: it.needsHumanAsk,
-      section: it.section,
-      subtasks: it.subtasks,
-      refs: it.refs,
-    })),
-  )
+  const rows = stepInput(items)
+  // Страж разрушительных команд стоит в фасаде listStore, но ПРЯМАЯ правка
+  // черновика идёт мимо него: без этой проверки через API можно было положить
+  // `rm -rf /` в черновик, а get_script отдал бы его готовым скриптом.
+  assertNoDestructiveSteps(rows)
+
+  const cols = (it: (typeof rows)[number]) => ({
+    n: it.n,
+    type: it.type,
+    content: it.content,
+    blockId: it.blockId,
+    title: it.title,
+    desc: it.desc,
+    command: it.command,
+    hasImage: !!it.imageRef,
+    imageKey: it.imageRef,
+    level: it.level,
+    why: it.why,
+    needsHuman: it.needsHuman,
+    needsHumanAsk: it.needsHumanAsk,
+    section: it.section,
+    subtasks: it.subtasks,
+    refs: it.refs,
+  })
+
+  // Строки СВЕРЯЕМ по идентичности блока, а не сносим все разом. steps.id —
+  // якорь состояния активного прогона (run_step_state.step_id, ON DELETE CASCADE):
+  // полная перезапись стирала отметки, заметки и подпункты у идущего прогона, а
+  // сам прогон оставался активным — со ссылками на строки, которых больше нет.
+  const existing = await tx.select({ id: steps.id, blockId: steps.blockId }).from(steps).where(eq(steps.versionId, versionId))
+  const byBlock = new Map(existing.filter((r) => r.blockId).map((r) => [r.blockId as string, r.id]))
+  const kept = new Set<string>()
+  for (const it of rows) {
+    const id = it.blockId ? byBlock.get(it.blockId) : undefined
+    if (id) {
+      await tx.update(steps).set(cols(it)).where(eq(steps.id, id))
+      kept.add(id)
+    } else {
+      await tx.insert(steps).values({ versionId, ...cols(it) })
+    }
+  }
+  const gone = existing.filter((r) => !kept.has(r.id)).map((r) => r.id)
+  if (gone.length) await tx.delete(steps).where(inArray(steps.id, gone))
 }
 
 async function replaceDraftSteps(versionId: string, items: ProposedItem[]): Promise<void> {
@@ -872,17 +894,31 @@ function patchBlock(item: ProposedItem, op: McpPatchOp): ProposedItem | { error:
   if (!built) return { error: 'the patch would leave the block empty (a step needs a title)' }
 
   const out = { ...built, blockId: item.blockId } as unknown as Record<string, unknown>
+  // Снятая пометка «нужен человек» уносит и вопрос: иначе get_list продолжал бы
+  // отдавать вопрос при снятой пометке, а повторное включение воскрешало старый.
+  const clears = new Set<string>(Object.keys(fields))
+  if (fields.needsHuman === false) clears.add('needsHumanAsk')
   for (const f of LOCALIZED) {
-    out[f] = f in fields ? putLang(item[f], tr(built[f] as LocaleText, 'en')) : item[f]
+    out[f] = clears.has(f) ? putLang(item[f], tr(built[f] as LocaleText, 'en')) : item[f]
   }
-  // Списки локализованных значений: тронуты — дописываем в язык прежнего элемента,
-  // не тронуты — остаются словарями как были.
+  // Списки локализованных значений сопоставляем по ПОКАЗАННОМУ тексту, а не по
+  // позиции: вставка в начало сдвигала бы переводы на соседние пункты — русский
+  // текст оказывался у чужой проверки. Совпал текст — элемент тот же, словарь
+  // переносим целиком; не совпал — это новое значение, пишем в язык блока.
+  const blockLang = langOfField(item.title)
+  const pickLocales = (oldList: LocaleText[], flat: string): LocaleText => {
+    const same = oldList.find((o) => tr(o, 'en') === flat)
+    return same ?? ({ [blockLang]: flat } as LocaleText)
+  }
   const oldSubs = (item.subtasks ?? []) as LocaleText[]
-  out.subtasks = 'subtasks' in fields ? (built.subtasks ?? []).map((s, i) => putLang(oldSubs[i], tr(s as LocaleText, 'en'))) : oldSubs
+  out.subtasks = 'subtasks' in fields ? (built.subtasks ?? []).map((s) => pickLocales(oldSubs, tr(s as LocaleText, 'en'))) : oldSubs
   const oldRefs = (item.refs ?? []) as { label: LocaleText; url?: string }[]
   out.refs =
     'refs' in fields
-      ? (built.refs ?? []).map((r, i) => ({ label: putLang(oldRefs[i]?.label, tr(r.label as LocaleText, 'en')), ...(r.url ? { url: r.url } : {}) }))
+      ? (built.refs ?? []).map((r) => ({
+          label: pickLocales(oldRefs.map((x) => x.label), tr(r.label as LocaleText, 'en')),
+          ...(r.url ? { url: r.url } : {}),
+        }))
       : oldRefs
   // Ключи content, которых плоская форма не знает, сохраняем: иначе патч соседнего
   // поля вычищал бы всё, что MCP пока не умеет представлять (например товары).
@@ -899,6 +935,13 @@ function patchBlock(item: ProposedItem, op: McpPatchOp): ProposedItem | { error:
   out.content = content
   return out as unknown as ProposedItem
 }
+
+/** Отказ стража разрушительных команд → ответ инструмента. Это не сбой, а
+ *  вердикт: агенту нужно назвать причину, а не увидеть стектрейс. */
+const destructiveError = (e: unknown): { error: string } | null =>
+  e instanceof DestructiveCommandError
+    ? { error: `refused: step ${e.stepIndex} has a destructive command (${e.reason}): ${e.fragment}` }
+    : null
 
 /** Список во владении пользователя (для записи) + его версии. */
 async function ownedList(userId: string, handle: string, slug: string) {
@@ -936,15 +979,21 @@ async function writeProposed(
     // замена удаляет и вставляет строки, пока патч держит только замок списка, и
     // чья-то работа пропадает при обоих «успешных» ответах.
     const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
-    const gate = await db.transaction(async (tx) => {
-      await lockList(tx, tpl.id)
-      const denied = await draftWritable(tx, tpl.id)
-      if (denied) return denied
-      await replaceDraftStepsIn(tx, cur.id, proposed)
-      await tx.update(templates).set({ tags: meta.tags, ordered: meta.ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-      return null
-    })
-    if (gate) return gate
+    try {
+      const gate = await db.transaction(async (tx) => {
+        await lockList(tx, tpl.id)
+        const denied = await draftWritable(tx, tpl.id)
+        if (denied) return denied
+        await replaceDraftStepsIn(tx, cur.id, proposed)
+        await tx.update(templates).set({ tags: meta.tags, ordered: meta.ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+        return null
+      })
+      if (gate) return gate
+    } catch (e) {
+      const refused = destructiveError(e)
+      if (refused) return refused
+      throw e
+    }
     return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version }
   }
 
@@ -1023,7 +1072,8 @@ export async function mcpPatchList(
     // ЧЕРНОВИК: читаем состав и заменяем его ПОД ОДНИМ замком. Конкурирующий патч
     // ждёт на нём и потом читает уже новое состояние — вместо того чтобы наложить
     // свои операции на снимок, который к моменту записи устарел.
-    return db.transaction(async (tx) => {
+    try {
+      return await db.transaction(async (tx) => {
       await lockList(tx, tpl.id)
       // Состояние ПЕРЕЧИТЫВАЕМ под замком: пока патч готовили, список могли
       // опубликовать, заморозить или заархивировать. Со старыми данными на руках
@@ -1046,10 +1096,15 @@ export async function mcpPatchList(
       const applied = applyPatchOps<ProposedItem>(rowsToProposed(rows as unknown as DetailStep[]), ops, patchIO)
       if ('error' in applied) return applied
       if (!applied.items.length) return { error: 'at least one item with a title is required' }
-      await replaceDraftStepsIn(tx, cur.id, applied.items)
-      await tx.update(templates).set({ updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-      return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version, ops: ops.length, blocks: applied.items.length }
-    })
+        await replaceDraftStepsIn(tx, cur.id, applied.items)
+        await tx.update(templates).set({ updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+        return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version, ops: ops.length, blocks: applied.items.length }
+      })
+    } catch (e) {
+      const refused = destructiveError(e)
+      if (refused) return refused
+      throw e
+    }
   }
 
   const detail = await getTemplateDetail(handle, slug)

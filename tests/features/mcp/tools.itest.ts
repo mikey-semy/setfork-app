@@ -5,7 +5,7 @@ import type { McpItemInput } from '@/features/mcp/tools'
 // MCP-инструменты берут userId прямо из токена (не cookie-сессия) → тестируются без
 // моков, чистой БД. Сквозной поток create→get→update + проверки владения/видимости:
 // список создаётся ЧЕРНОВИКОМ (виден только владельцу), обновлять может только владелец.
-const { db, steps, templates, templateVersions, users } = await import('@/shared/db')
+const { db, runs, runStepState, steps, templates, templateVersions, users } = await import('@/shared/db')
 const { mcpCreateList, mcpGetList, mcpPatchList, mcpUpdateList } = await import('@/features/mcp/tools')
 
 let ownerId = ''
@@ -412,6 +412,44 @@ describe('patch_list — точечная правка вместо переза
     const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
     expect([3, 4]).toContain(after.steps.length)
     expect(after.steps.every((b) => !!b.bid)).toBe(true)
+  })
+
+  // Страж разрушительных команд стоит в фасаде записи версий, а прямая правка
+  // черновика шла мимо него: через API можно было положить в черновик команду,
+  // которую get_script отдаёт готовым к запуску скриптом.
+  it('разрушительная команда не проходит и в черновик', async () => {
+    const { slug, read } = await three()
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: read.steps[0].bid, command: 'rm -rf /' }],
+    })
+    expect(res).toMatchObject({ error: expect.stringContaining('destructive') })
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect(after.steps[0].command).not.toContain('rm -rf')
+  })
+
+  // steps.id — якорь состояния прогона (run_step_state.step_id, ON DELETE CASCADE).
+  // Полная перезапись строк стирала прогресс идущего прогона, оставляя его активным.
+  it('патч не сбрасывает прогресс активного прогона', async () => {
+    const { slug, read } = await three()
+    const [{ id: tplId }] = await db.select({ id: templates.id }).from(templates).where(eq(templates.slug, slug))
+    const [ver] = await db.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, tplId))
+    const rows = await db.select({ id: steps.id }).from(steps).where(eq(steps.versionId, ver.id)).orderBy(asc(steps.n))
+    const [run] = await db
+      .insert(runs)
+      .values({ templateId: tplId, userId: ownerId, versionId: ver.id, version: read.version })
+      .returning({ id: runs.id })
+    await db.insert(runStepState).values({ runId: run.id, stepId: rows[0].id, status: 'done' })
+
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: read.steps[2].bid, title: 'третий, переименован' }],
+    })
+    expect('error' in res).toBe(false)
+
+    const state = await db.select({ stepId: runStepState.stepId, status: runStepState.status }).from(runStepState).where(eq(runStepState.runId, run.id))
+    expect(state).toHaveLength(1) // отметка «сделано» пережила правку соседнего блока
+    expect(state[0].stepId).toBe(rows[0].id)
   })
 
   it('патчить чужой список нельзя', async () => {
