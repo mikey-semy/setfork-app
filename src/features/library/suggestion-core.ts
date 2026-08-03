@@ -30,6 +30,16 @@ import { sql } from 'drizzle-orm'
  * предложение. На этом держатся ревизии — повторный магический пуш двигает ту же
  * ветку и обновляет ТО ЖЕ предложение, а не плодит новые.
  */
+/**
+ * Потолок заголовка предложения.
+ *
+ * Одно число на все пути, а не по копии у каждого: веб-форма ограничивала, а
+ * терминальный путь — нет, и тема коммита ехала в базу целиком. Пак жмётся, так
+ * что многомегабайтная первая строка проходит под лимитом тела, а потом её
+ * читают и отдают все запросы списка предложений (авто-ревью fe#662).
+ */
+export const SUGGESTION_NOTE_MAX = 2000
+
 export async function ensureBranchSuggestion(input: {
   templateId: string
   ownerId: string
@@ -52,7 +62,7 @@ export async function ensureBranchSuggestion(input: {
     .values({
       templateId: input.templateId,
       authorId: input.authorId,
-      note: input.note ?? `Merge branch '${input.branch}'`,
+      note: (input.note ?? `Merge branch '${input.branch}'`).slice(0, SUGGESTION_NOTE_MAX),
       baseVersion: input.currentVersion,
       items: [], // источник правды — tip ветки, материализуется при просмотре
       branchRef: input.branch,
@@ -287,7 +297,7 @@ export async function createSuggestion(
   }
   if (!(await rateLimit(`suggest:${actorUserId}`, 10, 10 * 60_000)).ok) return { ok: false, reason: 'rate limited' }
 
-  const note = input.note.trim().slice(0, 2000)
+  const note = input.note.trim().slice(0, SUGGESTION_NOTE_MAX)
   const created = await collabStore.createSuggestion(tpl.id, actorUserId, note, toStepInput(input.items as never))
   await curationStore.ensureWatch(tpl.id, actorUserId) // автор правки следит за списком
   await notify({ recipientId: tpl.ownerId, actorId: actorUserId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })

@@ -17,7 +17,9 @@ describe('подпись ветки', () => {
   })
 
   it('имя, придуманное человеком, оставляет как есть', () => {
-    for (const ref of ['main', 'fix-typo', 'v2.1_draft', 'u', 'user/main', 'u/x/y/z']) {
+    // `u/team/main` — настоящая ветка: владелец вправе завести её пушем из
+    // терминала, и подпись у неё своя (авто-ревью fe#662).
+    for (const ref of ['main', 'fix-typo', 'v2.1_draft', 'u', 'user/main', 'u/x/y/z', 'u/team/main', 'u/123/main']) {
       expect(isServerBranch(ref), ref).toBe(false)
       expect(branchLabel(ref, 'ru')).toBe(ref)
     }
