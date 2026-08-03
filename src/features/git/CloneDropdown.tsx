@@ -32,11 +32,6 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
   const dataUrl = `${origin}${base}/data.json`
   const embedCode = `<iframe src="${origin}${base}/embed" width="100%" height="480" style="border:1px solid #ddd;border-radius:8px" loading="lazy"></iframe>`
 
-  const copyLabels = {
-    label: t('copyUrl', lang),
-    copiedLabel: t('copied', lang),
-    failedLabel: t('copyFailed', lang),
-  }
 
   const heading = (icon: React.ReactNode, label: string) => (
     <SectionLabel className="mb-1.5 flex items-center gap-1.5">
@@ -53,7 +48,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
         onFocus={(e) => e.currentTarget.select()}
         className={`min-w-0 flex-1 bg-transparent text-[0.78125rem] text-ink outline-hidden ${mono ? 'font-mono' : ''}`}
       />
-      <CopyButton text={value} {...copyLabels} />
+      <CopyButton text={value} lang={lang} />
     </div>
   )
 
@@ -142,8 +137,8 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
                   было видно меньше трети команды, и `| bash` оставался за краем — то
                   есть подсказка «сначала проверь» относилась к невидимому тексту. */}
               {heading(<Terminal size={12} />, t('runHeading', lang))}
-              <CodeCard code={`curl -fsSL ${origin}${base}/raw | bash`} name="bash" />
-              <CodeCard code={`irm "${origin}${base}/raw?lang=ps1" | iex`} name="powershell" />
+              <CodeCard code={`curl -fsSL ${origin}${base}/raw | bash`} name="bash" lang={lang} />
+              <CodeCard code={`irm "${origin}${base}/raw?lang=ps1" | iex`} name="powershell" lang={lang} />
               <p className="mt-1 text-[0.78125rem] text-ink-2">{t('runHint', lang)}</p>
               <a href={`${base}/raw`} className={`${row} mt-1`}>
                 <FileCode size={14} className="text-muted" /> {t('viewRaw', lang)}
@@ -186,7 +181,7 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
 
               <div className="mt-2.5 border-t border-border pt-2">
                 {heading(<Code2 size={12} />, t('embedHeading', lang))}
-                <CodeCard code={embedCode} name="iframe" />
+                <CodeCard code={embedCode} name="iframe" lang={lang} />
                 <p className="mt-1 text-[0.78125rem] text-ink-2">{t('embedHint', lang)}</p>
               </div>
             </div>

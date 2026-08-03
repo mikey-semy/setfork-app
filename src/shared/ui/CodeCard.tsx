@@ -1,17 +1,18 @@
 import { CopyButton } from './CopyButton'
+import type { Lang } from '@/shared/i18n'
 
 /**
  * Карточка кода для ЧТЕНИЯ (не редактор): шапка с именем и кнопкой «копировать»
  * в правом верхнем углу, номера строк, перенос длинных строк вместо
  * горизонтального скролла (правило владельца: код в своей форме, скролла нет).
  */
-export function CodeCard({ code, name }: { code: string; name?: string }) {
+export function CodeCard({ code, name, lang }: { code: string; name?: string; lang?: Lang }) {
   const lines = code.replace(/\n$/, '').split('\n')
   return (
     <div className="my-1.5 overflow-hidden rounded-md border border-border bg-surface-2">
       <div className="flex items-center justify-between gap-2 border-b border-border px-2.5 py-1">
         <span className="truncate font-mono text-[0.6875rem] uppercase tracking-wide text-muted">{name || 'code'}</span>
-        <CopyButton text={code} />
+        <CopyButton text={code} lang={lang} />
       </div>
       <div className="py-1.5 font-mono text-[0.78125rem] leading-[1.55] text-ink">
         {lines.map((ln, i) => (

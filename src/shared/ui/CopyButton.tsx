@@ -3,34 +3,42 @@
 import { useState } from 'react'
 import { Check, Copy, X } from 'lucide-react'
 import { Tooltip } from './Tooltip'
+import { t, type Lang } from '@/shared/i18n'
 
 /**
  * Кнопка-иконка «скопировать»: aria-label обязателен по смыслу (иконка без
- * текста — Lighthouse button-name, линза 07); подписи прокидывает вызывающий
- * на языке страницы, дефолты — EN.
+ * текста — Lighthouse button-name, линза 07).
+ *
+ * Язык передаётся ОДНИМ пропом `lang`, а не тремя подписями: у кнопки восемь
+ * вызывающих, половина не передавала подписей вовсе — и любое новое состояние
+ * (например, отказ) автоматически оказывалось англоязычным на русской странице.
+ * Явные подписи по-прежнему перекрывают словарь — для мест со своей формулировкой.
  *
  * Отказ буфера НЕ проглатывается. В небезопасном контексте (http, своё
  * развёртывание) `navigator.clipboard` отсутствует, а `writeText` возвращает
- * промис — прежний `try/catch` вокруг несинхронного вызова отказ не ловил
- * вовсе. Молчаливая кнопка приводит к тому, что человек вставляет в терминал
- * прошлое содержимое буфера.
+ * промис — прежний `try/catch` вокруг несинхронного вызова отказ не ловил вовсе.
+ * Молчаливая кнопка приводит к тому, что человек вставляет в терминал прошлое
+ * содержимое буфера.
  *
- * Бокс кнопки задан явно: у иконки 14px без него тач-цель равна 14×14 при
- * норме 44×44 (Apple HIG) — на крупном указателе цель растёт до полной.
+ * Бокс кнопки задан явно: у иконки 14px без него тач-цель равна 14×14 при норме
+ * 44×44 (Apple HIG) — на крупном указателе цель растёт до полной.
  */
 export function CopyButton({
   text,
-  label = 'Copy',
-  copiedLabel = 'Copied',
-  failedLabel = 'Copy failed',
+  lang = 'en',
+  label,
+  copiedLabel,
+  failedLabel,
 }: {
   text: string
+  lang?: Lang
   label?: string
   copiedLabel?: string
   failedLabel?: string
 }) {
   const [state, setState] = useState<'idle' | 'done' | 'failed'>('idle')
-  const title = state === 'done' ? copiedLabel : state === 'failed' ? failedLabel : label
+  const title =
+    state === 'done' ? (copiedLabel ?? t('copied', lang)) : state === 'failed' ? (failedLabel ?? t('copyFailed', lang)) : (label ?? t('copy', lang))
 
   const onClick = async () => {
     try {
