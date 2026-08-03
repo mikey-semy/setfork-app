@@ -53,7 +53,7 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
   // Поэтому на lg — ДВЕ колонки (списки + лента), три — только с xl, где ширины хватает:
   // 1280 − 240 − 64 = 976, минус 260+260 боковых = ~410 на ленту.
   return (
-    <div className="grid w-full gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 xl:grid-cols-[260px_minmax(0,1fr)_260px] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
+    <div className="grid w-full grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 xl:grid-cols-[260px_minmax(0,1fr)_260px] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
       {/* Слева: твои списки (переиспользуемая панель). top = высота шапки (57) + верхний
           паддинг сетки (py-6 = 24) → панель НЕ подпрыгивает к шапке при скролле. */}
       <aside className="lg:sticky lg:top-[5.0625rem] lg:self-start">
