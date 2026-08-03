@@ -22,10 +22,14 @@ function codeOf(children: ReactNode): { code: string; name?: string } | null {
 // для кросс-ссылок `#N` на issue (напр. /owner/slug/issues); задаётся в issue/suggestion.
 // codeCards: код-блоки рендерятся карточкой CodeCard (имя+копировать+номера строк,
 // перенос вместо горизонтального скролла) — включено в чатах гномов.
+// Перенос длинных слов задан на обёртке, а не только у инлайн-кода: сюда едут тела
+// задач и обсуждений, описания шагов и заметки релизов — текст, который пишет человек.
+// Абзацы и автоссылки GFM сами не рвутся, поэтому одна ссылка без пробелов уносила
+// страницу за край (замер: тело обсуждения — 2235px при экране 390).
 export function Markdown({ children, className, refBase, codeCards }: { children: string; className?: string; refBase?: string; codeCards?: boolean }) {
   if (!children?.trim()) return null
   return (
-    <div className={cn('text-[0.8125rem] leading-snug text-ink-2 [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
+    <div className={cn('text-[0.8125rem] leading-snug text-ink-2 [overflow-wrap:anywhere] [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
       <ReactMarkdown
         remarkPlugins={refBase ? [remarkGfm, remarkIssueRefs(refBase)] : [remarkGfm]}
         components={{

@@ -307,7 +307,8 @@ export function RunView({
                 </button>
                 <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-2 pt-1">
                   {ordered && <span className="font-mono text-[0.78125rem] text-muted">{stepNo}</span>}
-                  <span className={`text-[0.875rem] font-semibold ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
+                  {/* Заголовок шага пишет человек: без переноса длинное слово уносит страницу (замер 976px при экране 390). */}
+                  <span className={`min-w-0 text-[0.875rem] font-semibold [overflow-wrap:anywhere] ${s.done ? 'text-ink-2 line-through' : 'text-ink'}`}>{s.title}</span>
                   <StepLevelBadge level={s.level} lang={lang} />
                 </div>
               </div>
@@ -318,7 +319,7 @@ export function RunView({
                 {s.why && (
                   <div className="flex gap-1.5 text-[0.78125rem] text-ink-2">
                     <Info size={13} className="mt-0.5 shrink-0 text-muted" />
-                    <span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
                       <span className="font-medium">{t('whyLabel', lang)}:</span> {s.why}
                     </span>
                   </div>
@@ -340,7 +341,7 @@ export function RunView({
                         <li key={idx}>
                           <button type="button" onClick={() => toggleSub(i, idx)} className="flex items-start gap-2 text-left text-[0.8125rem] text-ink-2">
                             <span className={`mt-0.5 shrink-0 ${checked ? 'text-ok' : 'text-muted'}`}>{checked ? <Check size={14} /> : <Square size={14} />}</span>
-                            <span className={checked ? 'line-through opacity-70' : ''}>{sub}</span>
+                            <span className={`min-w-0 [overflow-wrap:anywhere] ${checked ? 'line-through opacity-70' : ''}`}>{sub}</span>
                           </button>
                         </li>
                       )
@@ -356,7 +357,7 @@ export function RunView({
                           {r.label}
                         </SafeLink>
                       ) : (
-                        <span key={`${r.label}:`} className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-ink-2">
+                        <span key={`${r.label}:`} className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-ink-2 [overflow-wrap:anywhere]">
                           {r.label}
                         </span>
                       ),

@@ -196,7 +196,8 @@ export function QuizBlock({
     <div className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-2.5 flex items-center gap-2">
         <GraduationCap size={15} className="shrink-0 text-accent" />
-        <span className="text-[0.875rem] font-semibold text-ink">{content.question || (ru ? 'Тест' : 'Quiz')}</span>
+        {/* Вопрос пишет автор списка, длина не ограничена — без переноса блок уносит страницу. */}
+        <span className="min-w-0 text-[0.875rem] font-semibold text-ink [overflow-wrap:anywhere]">{content.question || (ru ? 'Тест' : 'Quiz')}</span>
       </div>
 
       {kind === 'choice' && (
@@ -222,7 +223,7 @@ export function QuizBlock({
                 >
                   {sel && <Check size={11} />}
                 </span>
-                <span className="min-w-0 flex-1 text-ink">{o.text}</span>
+                <span className="min-w-0 flex-1 text-ink [overflow-wrap:anywhere]">{o.text}</span>
                 {showRight && <Check size={15} className="shrink-0 text-ok" />}
                 {showWrong && <X size={15} className="shrink-0 text-danger" />}
               </button>

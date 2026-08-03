@@ -86,7 +86,9 @@ export default async function IssueThreadPage({
         </div>
 
         {/* Исполнители + веха */}
-        <div className="mb-4 grid gap-4 rounded-lg border border-border bg-surface-2 px-4 py-3 sm:grid-cols-2">
+        {/* grid-cols-1 на мобиле: без него трек неявный (auto) и берёт min-content
+            содержимого — длинное название вехи раздувало сетку до 908px при экране 390. */}
+        <div className="mb-4 grid grid-cols-1 gap-4 rounded-lg border border-border bg-surface-2 px-4 py-3 sm:grid-cols-2">
           <AssigneePicker owner={owner} slug={slug} number={issue.number} assignees={assignees} canEdit={canManage} lang={lang} />
           <MilestonePicker
             owner={owner}

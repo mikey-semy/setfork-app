@@ -51,7 +51,7 @@ export default async function MilestonesPage({ params }: { params: Promise<{ han
                           {m.closed ? <CircleCheck size={12} /> : <CircleDot size={12} />}
                           {m.closed ? t('closedLabel', lang) : t('openLabel', lang)}
                         </span>
-                        <span className="text-[1rem] font-semibold text-ink">{m.title}</span>
+                        <span className="min-w-0 text-[1rem] font-semibold text-ink [overflow-wrap:anywhere]">{m.title}</span>
                       </div>
                       {m.dueOn && (
                         <div className="mt-0.5 inline-flex items-center gap-1 text-[0.78125rem] text-muted">

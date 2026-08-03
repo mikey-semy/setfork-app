@@ -39,7 +39,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ slu
       </div>
 
       <h1 className="text-[1.5rem] font-bold leading-tight text-ink [overflow-wrap:anywhere]">{tr(c.title, lang) || c.slug}</h1>
-      {tr(c.desc, lang) && <p className="mt-1 max-w-[70ch] text-[0.875rem] text-ink-2">{tr(c.desc, lang)}</p>}
+      {tr(c.desc, lang) && <p className="mt-1 max-w-[70ch] text-[0.875rem] text-ink-2 [overflow-wrap:anywhere]">{tr(c.desc, lang)}</p>}
 
       {c.lists.length > 0 && (
         <section className="mt-6">
