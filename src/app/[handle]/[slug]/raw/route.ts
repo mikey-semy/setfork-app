@@ -5,6 +5,7 @@ import { isPubliclyVisible } from '@/core'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
+import { cacheHeaders, noStoreHeaders, notModified } from '@/shared/http/cache'
 
 /**
  * GET /{handle}/{slug}/raw[?lang=sh|ps1|py] — СПИСОК КАК ИСПОЛНЯЕМЫЙ СКРИПТ (gist-стиль).
@@ -21,7 +22,7 @@ import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 export const runtime = 'nodejs'
 
 const plain = (body: string, status: number, mime: string) =>
-  new Response(body, { status, headers: { 'Content-Type': mime, 'Cache-Control': 'private, no-store' } })
+  new Response(body, { status, headers: { 'Content-Type': mime, ...noStoreHeaders() } })
 
 /**
  * Имя файла для Content-Disposition. Слаг приходит из АДРЕСА, а адреса старых списков
@@ -72,27 +73,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // Общий кеш — только для того, что вправе увидеть аноним, и предикат единый:
   // собственная проверка «публичный и не черновик» пропускала МОДЕРАЦИЮ, и общий прокси
   // раздал бы анониму скрытое содержимое, ни разу не спросив guard.
+  // Язык текста здесь ДОГОВОРНЫЙ: `?lang=` у этой поверхности выбирает диалект скрипта,
+  // а не язык шагов — тот приходит из куки и Accept-Language, и кеш обязан их различать.
   const shared = isPubliclyVisible(detail.tpl) && !auth
   const headers: Record<string, string> = {
     'Content-Type': mime,
     'Content-Disposition': `inline; filename="${safeFilename(slug, dialectExt(dialect))}"`,
-    ETag: etag,
-    // Тело зависит от языка (тексты шагов), от куки и от токена (кому вообще отдаём).
-    // Прежний Vary перечислял только RSC-измерения и вводил кеш в заблуждение.
-    Vary: 'Accept-Language, Cookie, Authorization',
-    // Общий кеш РАЗРЕШЁН, но обязан перепроверять каждый раз. Окно свежести здесь
-    // держать нельзя: когда публичный список закрывают или снимают модерацией,
-    // разослать инвалидацию некому — смена видимости зовёт только revalidatePath
-    // внутри приложения и не достаёт до внешнего прокси. С max-age=60 и stale до
-    // 600 секунд аноним продолжал бы получать исполняемый скрипт уже закрытого
-    // списка, ни разу не задев guard. `no-cache` + ETag сохраняет экономию трафика
-    // (304 вместо тела), но каждый ответ проходит через проверку доступа.
-    'Cache-Control': shared ? 'public, no-cache' : 'private, no-store',
+    ...cacheHeaders({ shared, etag, negotiated: true }),
   }
 
   // Условный запрос: у машинной поверхности, которую опрашивают в цикле, повторный
   // ответ не должен стоить ни генерации, ни трафика.
-  if (req.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers })
+  const cached = notModified(req, etag, headers)
+  if (cached) return cached
 
   return new Response(toRunnableScript(toExportList(detail), lang, rawUrl, dialect), { headers })
 }

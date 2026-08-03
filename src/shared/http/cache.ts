@@ -1,0 +1,74 @@
+/**
+ * Кеш-политика машинных поверхностей списка — ОДНО определение на приложение.
+ *
+ * Поверхностей пять: `/raw` (список как скрипт), `/data.json` (как данные), `/embed`
+ * (как iframe), `/badge/*.svg` (как картинка) и `/export` (как файл). Правило у них
+ * общее: тело зависит от того, ВПРАВЕ ли аноним его видеть, а право меняется
+ * мгновенно — список закрывают, снимают модерацией, переводят в черновик.
+ *
+ * Разослать инвалидацию в этот момент некому: смена видимости зовёт `revalidatePath`
+ * внутри приложения и не достаёт ни до CDN, ни до чужого прокси. Значит окна свежести
+ * у публичного ответа быть не может: `max-age=60` (а с `stale-while-revalidate=600` —
+ * все 660 секунд) продолжал бы отдавать содержимое уже закрытого списка, ни разу не
+ * задев guard.
+ *
+ * Отсюда контракт: `public, no-cache` + ETag. Хранить можно, отдавать без вопроса —
+ * нельзя; каждый ответ проходит проверку доступа, а трафик экономит 304.
+ *
+ * ETag отзывом НЕ является: он работает только после обращения к origin, а без
+ * `no-cache` обращения не будет вовсе.
+ */
+
+export interface CachePolicy {
+  /** Тело вправе увидеть аноним, и оно не зависит от того, кто именно спросил. */
+  shared: boolean
+  /** Валидатор представления; для 304 сравнивается с `If-None-Match`. */
+  etag?: string
+  /**
+   * Язык представления ДОГОВОРНЫЙ (кука + Accept-Language), а не задан адресом.
+   * Тогда под одним URL лежат разные тела, и общий кеш обязан различать их по
+   * заголовкам — иначе первый русский ответ достанется следующему англоязычному.
+   */
+  negotiated?: boolean
+}
+
+/**
+ * Заголовки кеша для ответа машинной поверхности.
+ *
+ * `Vary` перечисляет РЕАЛЬНЫЕ измерения представления, а не всё подряд: у публичного
+ * ответа с языком из адреса тело определяется URL, и лишний `Vary: Cookie` дробил бы
+ * общий кеш на персональные копии — почти уникальная кука делает его бесполезным.
+ */
+export function cacheHeaders(policy: CachePolicy): Record<string, string> {
+  const headers: Record<string, string> = {}
+  if (policy.etag) headers.ETag = policy.etag
+
+  if (!policy.shared) {
+    // Приватное не хранит никто, включая браузер: файл в общей папке загрузок и
+    // ответ в диске прокси — та же утечка, что и в CDN.
+    headers['Cache-Control'] = 'private, no-store'
+    headers.Vary = 'Accept-Language, Cookie, Authorization'
+    return headers
+  }
+
+  headers['Cache-Control'] = 'public, no-cache'
+  headers.Vary = policy.negotiated ? 'Accept-Language, Cookie, Authorization' : 'Authorization'
+  return headers
+}
+
+/**
+ * Заголовки отрицательного ответа (404 и прочие отказы).
+ *
+ * Без явной политики HTTP разрешает кешу назначить 404 эвристический срок свежести:
+ * созданный или опубликованный позже список продолжал бы отдавать «не найдено» столько,
+ * сколько решит чужой прокси. Отказ не хранит никто.
+ */
+export function noStoreHeaders(): Record<string, string> {
+  return { 'Cache-Control': 'private, no-store' }
+}
+
+/** Ответ 304 на условный запрос, если представление не изменилось. */
+export function notModified(req: Request, etag: string | undefined, headers: Record<string, string>): Response | null {
+  if (!etag || req.headers.get('if-none-match') !== etag) return null
+  return new Response(null, { status: 304, headers })
+}
