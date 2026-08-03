@@ -452,6 +452,42 @@ describe('patch_list — точечная правка вместо переза
     expect(state[0].stepId).toBe(rows[0].id)
   })
 
+  // Строки состояния заводятся разом при СТАРТЕ прогона. Блок, вставленный
+  // позже, без своей строки не отмечается вовсе — ни в вебе, ни через API.
+  it('вставленный блок получает состояние в идущем прогоне', async () => {
+    const { slug, read } = await three()
+    const [{ id: tplId }] = await db.select({ id: templates.id }).from(templates).where(eq(templates.slug, slug))
+    const [ver] = await db.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, tplId))
+    const before = await db.select({ id: steps.id }).from(steps).where(eq(steps.versionId, ver.id))
+    const [run] = await db
+      .insert(runs)
+      .values({ templateId: tplId, userId: ownerId, versionId: ver.id, version: read.version })
+      .returning({ id: runs.id })
+    await db.insert(runStepState).values(before.map((s) => ({ runId: run.id, stepId: s.id })))
+
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'insert', after: 'end', block: { title: 'новый шаг' } }],
+    })
+    expect('error' in res).toBe(false)
+
+    const stepRows = await db.select({ id: steps.id, type: steps.type }).from(steps).where(eq(steps.versionId, ver.id))
+    const states = await db.select({ stepId: runStepState.stepId }).from(runStepState).where(eq(runStepState.runId, run.id))
+    const stepIds = stepRows.filter((r) => r.type === 'step').map((r) => r.id)
+    // У КАЖДОГО шаг-блока есть строка состояния, включая только что вставленный.
+    expect(new Set(states.map((s) => s.stepId))).toEqual(new Set(stepIds))
+  })
+
+  it('два блока с одним bid отбиваются, список не теряет блок', async () => {
+    const { slug, read } = await three()
+    const res = await mcpUpdateList(ownerId, 'mowner', slug, {
+      items: [...read.steps, { ...read.steps[0], title: 'клон первого' }],
+    })
+    expect(res).toMatchObject({ error: expect.stringContaining('same bid') })
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect(after.steps).toHaveLength(read.steps.length)
+  })
+
   it('патчить чужой список нельзя', async () => {
     const { slug, read } = await three()
     const res = await mcpPatchList(otherId, 'mowner', slug, {

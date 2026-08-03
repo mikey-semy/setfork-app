@@ -198,19 +198,46 @@ async function replaceDraftStepsIn(tx: Tx, versionId: string, items: ProposedIte
   // полная перезапись стирала отметки, заметки и подпункты у идущего прогона, а
   // сам прогон оставался активным — со ссылками на строки, которых больше нет.
   const existing = await tx.select({ id: steps.id, blockId: steps.blockId }).from(steps).where(eq(steps.versionId, versionId))
-  const byBlock = new Map(existing.filter((r) => r.blockId).map((r) => [r.blockId as string, r.id]))
+  const byBlock = new Map(existing.flatMap((r) => (r.blockId ? [[r.blockId, r.id] as const] : [])))
   const kept = new Set<string>()
+  const addedStepIds: string[] = []
+  // Запросы идут ПОСЛЕДОВАТЕЛЬНО намеренно: это одна транзакция на одном
+  // соединении, параллелить её операции нельзя (Promise.all их только перемешает).
   for (const it of rows) {
     const id = it.blockId ? byBlock.get(it.blockId) : undefined
     if (id) {
       await tx.update(steps).set(cols(it)).where(eq(steps.id, id))
       kept.add(id)
     } else {
-      await tx.insert(steps).values({ versionId, ...cols(it) })
+      const [row] = await tx.insert(steps).values({ versionId, ...cols(it) }).returning({ id: steps.id, type: steps.type })
+      if (row.type === 'step') addedStepIds.push(row.id)
     }
   }
-  const gone = existing.filter((r) => !kept.has(r.id)).map((r) => r.id)
+  const gone = existing.flatMap((r) => (kept.has(r.id) ? [] : [r.id]))
   if (gone.length) await tx.delete(steps).where(inArray(steps.id, gone))
+
+  // Новый шаг-блок в версии, по которой УЖЕ идёт прогон, обязан получить строку
+  // состояния: её заводят разом при старте прогона, и без неё отметка нового шага
+  // молча не срабатывает — ни в вебе (toggleStep выходит), ни через API.
+  if (addedStepIds.length) {
+    const active = await tx.select({ id: runs.id }).from(runs).where(and(eq(runs.versionId, versionId), eq(runs.status, 'active')))
+    if (active.length)
+      await tx.insert(runStepState).values(active.flatMap((r) => addedStepIds.map((stepId) => ({ runId: r.id, stepId }))))
+  }
+}
+
+/** Два блока с одним bid: reconcile попадёт в одну строку дважды, и один блок
+ *  молча исчезнет. У патча дубли отбивает applyPatchOps, но полная замена идёт
+ *  мимо него — проверяем состав перед записью на обоих путях. */
+function duplicateBid(items: ProposedItem[]): string | null {
+  const seen = new Set<string>()
+  for (const it of items) {
+    const id = it.blockId
+    if (!id) continue
+    if (seen.has(id)) return id
+    seen.add(id)
+  }
+  return null
 }
 
 async function replaceDraftSteps(versionId: string, items: ProposedItem[]): Promise<void> {
@@ -972,6 +999,8 @@ async function writeProposed(
   expectedVersion?: number,
 ) {
   if (!proposed.length) return { error: 'at least one item with a title is required' }
+  const dup = duplicateBid(proposed)
+  if (dup) return { error: `two blocks share the same bid "${dup}" — a block id must be unique within a list` }
 
   if (tpl.status === 'draft') {
     // черновик — перезаписываем текущую версию на месте (без плодения версий).
@@ -1096,7 +1125,9 @@ export async function mcpPatchList(
       const applied = applyPatchOps<ProposedItem>(rowsToProposed(rows as unknown as DetailStep[]), ops, patchIO)
       if ('error' in applied) return applied
       if (!applied.items.length) return { error: 'at least one item with a title is required' }
-        await replaceDraftStepsIn(tx, cur.id, applied.items)
+      const dupBid = duplicateBid(applied.items)
+      if (dupBid) return { error: `two blocks share the same bid "${dupBid}" — a block id must be unique within a list` }
+      await replaceDraftStepsIn(tx, cur.id, applied.items)
         await tx.update(templates).set({ updatedAt: new Date() }).where(eq(templates.id, tpl.id))
         return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version, ops: ops.length, blocks: applied.items.length }
       })
