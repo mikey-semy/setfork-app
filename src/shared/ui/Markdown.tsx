@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { cn } from '@/shared/lib/cn'
 import { SmartImage } from './SmartImage'
 import { CodeCard } from './CodeCard'
+import { codeLabel } from '@/shared/lib/detect-code-lang'
 import { remarkIssueRefs } from './remark-issue-refs'
 
 /** Текст код-блока и его язык из children элемента pre (react-markdown кладёт туда <code className="language-x">). */
@@ -20,20 +21,30 @@ function codeOf(children: ReactNode): { code: string; name?: string } | null {
 // Безопасный рендер markdown (react-markdown не пропускает сырой HTML) + GFM
 // (таск-листы, таблицы, strikethrough, автоссылки) + картинки. refBase — префикс
 // для кросс-ссылок `#N` на issue (напр. /owner/slug/issues); задаётся в issue/suggestion.
-// codeCards: код-блоки рендерятся карточкой CodeCard (имя+копировать+номера строк,
-// перенос вместо горизонтального скролла) — включено в чатах гномов.
-export function Markdown({ children, className, refBase, codeCards }: { children: string; className?: string; refBase?: string; codeCards?: boolean }) {
+// Код-блоки — ВСЕГДА карточкой CodeCard: подпись языка, копирование, номера строк,
+// подсветка, перенос вместо горизонтального скролла. Раньше карточка включалась флагом
+// и жила только в чатах гномов, а в описаниях шагов, задачах и релизах код рендерился
+// голым <pre> — без копирования, языка и подсветки (жалоба владельца 03.08.2026). Флага
+// больше нет: одна форма кода на весь продукт. Язык берём из ограды, а если её нет —
+// опознаём по синтаксису (detect-code-lang): в списках люди пишут просто ```.
+// Перенос длинных слов задан на обёртке, а не только у инлайн-кода: сюда едут тела
+// задач и обсуждений, описания шагов и заметки релизов — текст, который пишет человек.
+// Абзацы и автоссылки GFM сами не рвутся, поэтому одна ссылка без пробелов уносила
+// страницу за край (замер: тело обсуждения — 2235px при экране 390).
+export function Markdown({ children, className, refBase }: { children: string; className?: string; refBase?: string }) {
   if (!children?.trim()) return null
   return (
-    <div className={cn('text-[0.8125rem] leading-snug text-ink-2 [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
+    <div className={cn('text-[0.8125rem] leading-snug text-ink-2 [overflow-wrap:anywhere] [&>*+*]:mt-1.5 [&_li:has(input)]:list-none', className)}>
       <ReactMarkdown
         remarkPlugins={refBase ? [remarkGfm, remarkIssueRefs(refBase)] : [remarkGfm]}
         components={{
           a: (p) => <a {...p} target="_blank" rel="noreferrer" className="text-accent hover:underline" />,
           code: (p) => <code {...p} className="rounded-md bg-surface-2 px-1 py-0.5 font-mono text-[0.9em] text-ink [overflow-wrap:anywhere]" />,
           pre: (p) => {
-            const c = codeCards ? codeOf(p.children) : null
-            if (c) return <CodeCard code={c.code} name={c.name} />
+            const c = codeOf(p.children)
+            if (c) return <CodeCard code={c.code} name={codeLabel(c.name, c.code)} />
+            // Фолбэк: содержимое не удалось вынуть строкой (вложенная разметка) —
+            // остаётся прежний <pre>, но с переносом, а не горизонтальным скроллом.
             return <pre {...p} className="overflow-x-auto rounded-md border border-border bg-surface-2 p-2.5 font-mono text-[0.78125rem] text-ink" />
           },
           ul: (p) => <ul {...p} className="list-disc pl-5" />,

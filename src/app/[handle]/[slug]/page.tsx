@@ -306,11 +306,13 @@ export default async function ListPage({
             {/* About на мобиле — НАВЕРХУ (как GitHub): описание, теги, статы со словами.
                 На десктопе всё это в About-сайдбаре справа. */}
             <div className="lg:hidden print:hidden">
-              {tr(tpl.desc, lang) && <p className="text-[0.8125rem] leading-snug text-ink-2">{tr(tpl.desc, lang)}</p>}
+              {/* Описание и теги пишет человек, длину тега никто не режет — без переноса
+                  один тег или «слово» в описании уносит страницу за край (мобила 390px). */}
+              {tr(tpl.desc, lang) && <p className="text-[0.8125rem] leading-snug text-ink-2 [overflow-wrap:anywhere]">{tr(tpl.desc, lang)}</p>}
               {tpl.tags.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {tpl.tags.map((tg) => (
-                    <Link key={tg} href={`/search?q=${encodeURIComponent(`tag:${tg}`)}`} className="rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[0.78125rem] text-accent">
+                    <Link key={tg} href={`/search?q=${encodeURIComponent(`tag:${tg}`)}`} className="min-w-0 rounded-full bg-(--accent-soft) px-2.5 py-0.5 text-[0.78125rem] text-accent [overflow-wrap:anywhere]">
                       {tg}
                     </Link>
                   ))}
@@ -553,7 +555,7 @@ export default async function ListPage({
                 const prevSection = si > 0 ? tr(steps[si - 1].section, lang) : ''
                 const showHeader = !!section && section !== prevSection
                 const header = showHeader ? (
-                  <h2 id={sectionAnchor(section)} className={`scroll-mt-24 text-[0.8125rem] font-semibold uppercase tracking-[0.06em] text-ink-2 ${si > 0 ? 'mt-3' : ''}`}>
+                  <h2 id={sectionAnchor(section)} className={`scroll-mt-24 text-[0.8125rem] font-semibold uppercase tracking-[0.06em] text-ink-2 [overflow-wrap:anywhere] ${si > 0 ? 'mt-3' : ''}`}>
                     {section}
                   </h2>
                 ) : null
@@ -710,14 +712,16 @@ export default async function ListPage({
                       <span className="mt-0.5 font-mono text-[0.8125rem] text-muted">{tpl.ordered ? displayNum[si] : '•'}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 pr-7">
-                          <span className="text-[0.875rem] font-semibold text-ink">{tr(s.title, lang)}</span>
+                          {/* Заголовок шага пишет человек: слово без пробелов иначе уезжает
+                              за правый край и тянет за собой страницу (мобила 390px). */}
+                          <span className="min-w-0 text-[0.875rem] font-semibold text-ink [overflow-wrap:anywhere]">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
                         </div>
                         {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}
                         {tr(s.why, lang) && (
                           <div className="mt-1.5 flex gap-1.5 text-[0.78125rem] text-ink-2">
                             <Info size={13} className="mt-0.5 shrink-0 text-muted" />
-                            <span>
+                            <span className="min-w-0 [overflow-wrap:anywhere]">
                               <span className="font-medium text-ink-2">{t('whyLabel', lang)}:</span> {tr(s.why, lang)}
                             </span>
                           </div>
@@ -729,7 +733,7 @@ export default async function ListPage({
                         {s.needsHuman && (
                           <div className="mt-1.5 flex gap-1.5 rounded-md border border-dashed border-border bg-surface-2 px-2.5 py-2 text-[0.78125rem] text-ink-2">
                             <UserRound size={13} className="mt-0.5 shrink-0 text-muted" />
-                            <span className="min-w-0">
+                            <span className="min-w-0 [overflow-wrap:anywhere]">
                               <span className="font-medium text-ink-2">{t('needsHumanLabel', lang)}:</span>{' '}
                               {tr(s.needsHumanAsk, lang) || t('needsHumanGeneric', lang)}
                               {!readOnlyView && (
@@ -768,8 +772,10 @@ export default async function ListPage({
                               {t('stepChecksLabel', lang)}
                             </div>
                             <ul className="flex flex-col gap-1.5">
+                              {/* Ключ по тексту проверки, а не по индексу: при правке шага
+                                  список пересобирается, и индексные ключи путают строки. */}
                               {subs.map((label, i) => (
-                                <li key={i} className="flex gap-2 text-[0.8125rem] text-ink-2">
+                                <li key={`${label}#${i}`} className="flex gap-2 text-[0.8125rem] text-ink-2 [overflow-wrap:anywhere]">
                                   <SquareCheckBig size={14} className="mt-0.5 shrink-0 text-muted" />
                                   {label}
                                 </li>
@@ -780,8 +786,9 @@ export default async function ListPage({
                         {refs.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {refs.map((r) => {
+                              // Подпись ссылки нередко и есть URL — без переноса чип уносит страницу.
                               const cls =
-                                'inline-flex items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-accent'
+                                'inline-flex min-w-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-accent [overflow-wrap:anywhere]'
                               return r.url ? (
                                 <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className={cls}>
                                   <ExternalLink size={11} /> {r.label}

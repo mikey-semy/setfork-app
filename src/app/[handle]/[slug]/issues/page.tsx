@@ -162,7 +162,7 @@ export default async function IssuesPage({
                     </Link>
                     <LabelChips labels={it.labels} lang={lang} custom={custom} />
                     {it.milestoneTitle && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2">
+                      <span className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[0.6875rem] text-ink-2 [overflow-wrap:anywhere]">
                         <MilestoneIcon size={11} className="text-accent" /> {it.milestoneTitle}
                       </span>
                     )}

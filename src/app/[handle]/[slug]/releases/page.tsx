@@ -102,7 +102,7 @@ export default async function ReleasesPage({ params }: { params: Promise<{ handl
                   )}
                 </div>
 
-                <div className="mt-2 text-[1rem] font-semibold text-ink">{r.title || r.tag}</div>
+                <div className="mt-2 text-[1rem] font-semibold text-ink [overflow-wrap:anywhere]">{r.title || r.tag}</div>
                 {r.notes && (
                   <div className="mt-2 border-t border-border/60 pt-2">
                     <Markdown refBase={`${base}/issues`}>{r.notes}</Markdown>

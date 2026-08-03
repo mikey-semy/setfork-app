@@ -44,7 +44,7 @@ export default async function DiscussionThreadPage({ params }: { params: Promise
           <Tooltip label={categoryLabel(disc.category, lang)}>
             <span className="text-[1rem]">{categoryMeta(disc.category).icon}</span>
           </Tooltip>
-          <h1 className="text-[1.375rem] font-bold leading-tight text-ink">
+          <h1 className="text-[1.375rem] font-bold leading-tight text-ink [overflow-wrap:anywhere]">
             {disc.title} <span className="font-normal text-muted">#{disc.number}</span>
           </h1>
         </div>

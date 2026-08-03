@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Tooltip } from './Tooltip'
+import { useViewportBottom } from './use-viewport-bottom'
 
 /**
  * Плавающий «назад» — спутник верхней back-ссылки на длинных страницах (редактор
@@ -14,6 +15,8 @@ import { Tooltip } from './Tooltip'
  */
 export function FloatingBack({ href, label }: { href: string; label: string }) {
   const [show, setShow] = useState(false)
+  // Тот же расчёт, что у кнопки «наверх»: bottom считаем от ВИДИМОГО низа.
+  const { gap } = useViewportBottom()
 
   useEffect(() => {
     const onScroll = () => setShow(window.scrollY > 400)
@@ -28,7 +31,8 @@ export function FloatingBack({ href, label }: { href: string; label: string }) {
       <Link
         href={href}
         aria-label={label}
-        className="fixed bottom-5 left-5 z-40 grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink-2 shadow-card transition-colors hover:border-border-strong hover:text-ink print:hidden"
+        style={gap ? { bottom: gap + 20 } : undefined}
+        className={`fixed left-5 z-40 grid h-10 w-10 place-items-center rounded-full border border-border bg-surface text-ink-2 shadow-card transition-colors hover:border-border-strong hover:text-ink print:hidden ${gap ? '' : 'bottom-5'}`}
       >
         <ArrowLeft size={18} />
       </Link>

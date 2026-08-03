@@ -112,6 +112,14 @@
   --surface-2-rgb: 251 251 250;
   --ink-rgb: 28 28 26;
   --accent-rgb: 33 89 214;
+  /* Подсветка кода (классы highlight.js). Палитра — как у GitHub, она проверена на
+     контраст и узнаваема; сами цвета живут ЗДЕСЬ, в теме, а не в компоненте. */
+  --code-keyword: #cf222e;
+  --code-string: #0a3069;
+  --code-number: #0550ae;
+  --code-func: #8250df;
+  --code-type: #953800;
+  --code-comment: var(--muted);
 }
 
 .dark {
@@ -140,6 +148,12 @@
   --surface-2-rgb: 13 17 25;
   --ink-rgb: 232 237 245;
   --accent-rgb: 125 192 255;
+  --code-keyword: #ff7b72;
+  --code-string: #a5d6ff;
+  --code-number: #79c0ff;
+  --code-func: #d2a8ff;
+  --code-type: #ffa657;
+  --code-comment: var(--muted);
 }
 
 /* ── Масштаб интерфейса (настройки → Appearance; data-scale на html, Ф6):
@@ -383,4 +397,76 @@ em-emoji-picker {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+}
+
+/* ── Подсветка кода: классы highlight.js → токены темы ─────────────────────
+   Раскраска нужна и в светлой, и в тёмной теме, поэтому идёт через переменные.
+   Наборы классов — из грамматик highlight.js (одна роль = один токен цвета). */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section,
+.hljs-doctag,
+.hljs-name {
+  color: var(--code-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-char.escape_,
+.hljs-subst {
+  color: var(--code-string);
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-attr,
+.hljs-attribute,
+.hljs-selector-attr,
+.hljs-selector-pseudo {
+  color: var(--code-number);
+}
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-title.class_,
+.hljs-variable.language_ {
+  color: var(--code-func);
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-class .hljs-title,
+.hljs-params {
+  color: var(--code-type);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--code-comment);
+  font-style: italic;
+}
+
+.hljs-meta,
+.hljs-meta .hljs-keyword {
+  color: var(--ink-2);
+}
+
+/* Диффы читаются цветом статуса, как в остальном интерфейсе. */
+.hljs-addition {
+  color: var(--ok);
+}
+
+.hljs-deletion {
+  color: var(--danger);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 600;
 }

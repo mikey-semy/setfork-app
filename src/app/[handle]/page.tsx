@@ -213,10 +213,12 @@ export default async function ProfilePage({
         <aside className="shrink-0 md:w-[17.5rem]">
           <Avatar handle={user.handle} avatarUrl={bigAvatar} size={180} rounded={user.avatarShape === 'square' ? 'rounded-2xl' : 'rounded-full'} />
           <div className="mt-4">
-            {user.name && <div className="text-[1.375rem] font-bold leading-tight text-ink">{user.name}</div>}
-            <div className="text-[1.125rem] text-ink-2">{user.handle}</div>
+            {/* Имя и ник задаёт человек: слово без пробелов иначе вылезает за колонку
+                профиля и тянет за собой всю страницу на мобиле. */}
+            {user.name && <div className="text-[1.375rem] font-bold leading-tight text-ink [overflow-wrap:anywhere]">{user.name}</div>}
+            <div className="text-[1.125rem] text-ink-2 [overflow-wrap:anywhere]">{user.handle}</div>
             {/* Профессия — должность под ником (у служебных участников буквальная). */}
-            {user.profession && <div className="mt-0.5 text-[0.875rem] text-ink-2">{user.profession}</div>}
+            {user.profession && <div className="mt-0.5 text-[0.875rem] text-ink-2 [overflow-wrap:anywhere]">{user.profession}</div>}
             {/* ADR-0004: нечеловечность обязана быть видна — иначе профиль вводит в
                 заблуждение. Пометка ДАННЫЕ (account_type), а не догадка по нику. */}
             {user.accountType === 'agent' && (
@@ -225,7 +227,9 @@ export default async function ProfilePage({
               </div>
             )}
           </div>
-          {user.bio && <p className="mt-3 text-[0.875rem] leading-snug text-ink">{user.bio}</p>}
+          {/* Био — 280 символов свободного текста, туда часто вставляют ссылку: без
+              переноса одна такая строка уносила страницу на 2200px (экран 390). */}
+          {user.bio && <p className="mt-3 text-[0.875rem] leading-snug text-ink [overflow-wrap:anywhere]">{user.bio}</p>}
 
           <div className="mt-4">
             {isOwner ? (
@@ -271,7 +275,7 @@ export default async function ProfilePage({
           {(user.location || user.website || user.socials.length > 0) && (
             <div className="mt-4 flex flex-col gap-2 text-[0.8125rem]">
               {user.location && (
-                <div className="flex items-center gap-2 text-ink-2">
+                <div className="flex min-w-0 items-center gap-2 text-ink-2 [overflow-wrap:anywhere]">
                   <MapPin size={15} className="shrink-0 text-muted" /> {user.location}
                 </div>
               )}

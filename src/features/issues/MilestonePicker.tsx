@@ -74,9 +74,11 @@ export function MilestonePicker({
       </div>
 
       {current ? (
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-[0.78125rem]">
-          <MilestoneIcon size={13} className="text-accent" />
-          <span className="text-ink">{current.title}</span>
+        <span className="inline-flex w-fit min-w-0 max-w-full items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-[0.78125rem]">
+          <MilestoneIcon size={13} className="shrink-0 text-accent" />
+          {/* Название вехи — до 120 символов от человека: без переноса чип уносил
+              сайдбар задачи за край (замер: 906px при экране 390). */}
+          <span className="min-w-0 text-ink [overflow-wrap:anywhere]">{current.title}</span>
           {canEdit && (
             <button type="button" disabled={pending} onClick={() => set('')} aria-label={L('снять', 'clear')} className="text-muted hover:text-danger">
               <X size={13} />

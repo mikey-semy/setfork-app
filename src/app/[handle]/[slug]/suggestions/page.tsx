@@ -223,7 +223,7 @@ export default async function SuggestionsPage({
                   </Link>
                   <LabelChips labels={s.labels} lang={lang} custom={custom} />
                   {s.milestoneTitle && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-ink-2">
+                    <span className="inline-flex min-w-0 items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[0.6875rem] text-ink-2 [overflow-wrap:anywhere]">
                       <MilestoneIcon size={11} className="text-accent" /> {s.milestoneTitle}
                     </span>
                   )}
