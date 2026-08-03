@@ -225,6 +225,10 @@ const handler = createMcpHandler(
       imageRef: z.string().optional().describe('image: storage key of an already-uploaded image (rarely set via API)'),
       url: z.string().optional().describe('video: link to YouTube/Vimeo or a direct .mp4/.webm; file: link to the attachment'),
       fileName: z.string().optional().describe('file: display name of the attachment — for type "file"'),
+      // get_list отдаёт file.name и image.ref — принимаем их под теми же именами,
+      // чтобы прочитанный список можно было отдать обратно в update_list как есть.
+      name: z.string().optional().describe('file: same as fileName — the shape get_list returns'),
+      ref: z.string().optional().describe('image: same as imageRef — the shape get_list returns'),
       // poll / quiz
       question: z.string().optional().describe('poll/quiz: the question'),
       options: z
