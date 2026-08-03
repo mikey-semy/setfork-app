@@ -99,6 +99,30 @@ describe('смешанная версия: шаги и тесты вместе',
   })
 })
 
+describe('прогоны не складываются', () => {
+  it('два неполных прогона одной версии не дают прохождения', async () => {
+    const v = await makeVersion('two-runs', [{ type: 'step' }, { type: 'step' }])
+    const rows = await db.select({ id: steps.id }).from(steps).where(eq(steps.versionId, v.versionId))
+    // Первый прогон: отмечен только первый шаг. Второй прогон: только второй.
+    for (const [i, s] of rows.entries()) {
+      const [r] = await db.insert(runs).values({ templateId: v.templateId, versionId: v.versionId, version: 1, userId: ctx.user }).returning({ id: runs.id })
+      await db.insert(runStepState).values({ runId: r.id, stepId: s.id, status: 'done' })
+      void i
+    }
+    expect(await isCourseCompleted(ctx.user, v)).toBe(false)
+  })
+
+  it('повторная отметка того же шага в другом прогоне не засчитывается дважды', async () => {
+    const v = await makeVersion('same-step-twice', [{ type: 'step' }, { type: 'step' }])
+    const [first] = await db.select({ id: steps.id }).from(steps).where(eq(steps.versionId, v.versionId))
+    for (let i = 0; i < 2; i++) {
+      const [r] = await db.insert(runs).values({ templateId: v.templateId, versionId: v.versionId, version: 1, userId: ctx.user }).returning({ id: runs.id })
+      await db.insert(runStepState).values({ runId: r.id, stepId: first.id, status: 'done' })
+    }
+    expect(await isCourseCompleted(ctx.user, v)).toBe(false)
+  })
+})
+
 describe('однородные версии', () => {
   it('только шаги — достаточно отметить их', async () => {
     const v = await makeVersion('steps-only', [{ type: 'step' }, { type: 'step' }])

@@ -23,22 +23,35 @@ export async function isCourseCompleted(
     .from(steps)
     .where(eq(steps.versionId, version.versionId))
 
-  const stepCount = blocks.filter((b) => b.type === 'step').length
-  const quizBids = blocks
-    .filter((b) => b.type === 'quiz')
-    .map((b) => (b.content as { bid?: string }).bid)
-    .filter((b): b is string => !!b)
+  // Один проход по блокам: и счёт шагов, и сбор идентификаторов тестов.
+  let stepCount = 0
+  const quizBids: string[] = []
+  for (const b of blocks) {
+    if (b.type === 'step') stepCount++
+    else if (b.type === 'quiz') {
+      const bid = (b.content as { bid?: string }).bid
+      if (bid) quizBids.push(bid)
+    }
+  }
 
   if (!stepCount && !quizBids.length) return false // нечего проходить
 
-  // Шаги: нужен прогон ЭТОЙ версии, где отмечены все шаг-блоки.
+  // Шаги: все шаг-блоки версии отмечены В ОДНОМ прогоне.
+  //
+  // Считать «сколько done у пользователя на этой версии» нельзя: человек может
+  // бросить наполовину пройденный прогон и начать новый — тогда два неполных прогона
+  // складываются в «полный», и курс засчитывается, хотя ни один прогон не пройден
+  // целиком. Отметки одного и того же шага в разных прогонах суммировались бы так же.
+  // Поэтому группируем по прогону и требуем, чтобы нашёлся хотя бы один, где отмечено
+  // нужное число РАЗНЫХ шагов.
   if (stepCount) {
-    const [done] = await db
-      .select({ c: sql<number>`count(*)::int` })
+    const perRun = await db
+      .select({ runId: runStepState.runId, c: sql<number>`count(distinct ${runStepState.stepId})::int` })
       .from(runStepState)
       .innerJoin(runs, eq(runs.id, runStepState.runId))
       .where(and(eq(runs.userId, userId), eq(runs.versionId, version.versionId), eq(runStepState.status, 'done')))
-    if ((done?.c ?? 0) < stepCount) return false
+      .groupBy(runStepState.runId)
+    if (!perRun.some((r) => (r.c ?? 0) >= stepCount)) return false
   }
 
   // Тесты: по каждому quiz-блоку версии нужна успешная попытка.
