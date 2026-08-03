@@ -95,4 +95,36 @@ describe('mcp create/get/update — владение и видимость по 
     expect(again.steps.find((b) => b.type === 'image')).toMatchObject({ ref: 'uploads/pic.webp', caption: 'схема' })
     expect(again.steps.find((b) => b.type === 'step')?.refs).toEqual([{ label: 'docs', url: 'https://example.com/docs' }])
   })
+
+  // Идентичность блока сквозь версии: на ней держатся комментарии к пункту, голоса
+  // опроса, попытки теста и merge по id. MCP-путь собирал блоки заново — каждая
+  // запись через API обнуляла её, и всё привязанное осиротевало.
+  it('круг сохраняет идентичность: bid блоков, id вариантов, needsHuman и картинку шага', async () => {
+    const created = await mcpCreateList(ownerId, {
+      title: 'Identity',
+      items: [
+        { title: 'ask a local', needsHuman: true, needsHumanAsk: 'сколько стоит у вас?', imageRef: 'uploads/shot.webp' },
+        { type: 'poll', question: 'чем ставить?', options: [{ text: 'winget' }, { text: 'вручную' }] },
+        { type: 'text', text: 'врезка' },
+      ],
+    })
+    const slug = refSlug((created as { ref: string }).ref)
+    const before = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    // Идентичность видна снаружи — иначе патчить блок нечем.
+    expect(before.steps.every((b) => !!b.bid)).toBe(true)
+    const pollBefore = before.steps.find((b) => b.type === 'poll')
+    expect(pollBefore?.options?.every((o) => !!o.id)).toBe(true)
+
+    const updated = await mcpUpdateList(ownerId, 'mowner', slug, { items: before.steps })
+    expect('error' in updated).toBe(false)
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+
+    expect(after.steps.map((b) => b.bid)).toEqual(before.steps.map((b) => b.bid))
+    expect(after.steps.find((b) => b.type === 'poll')?.options).toEqual(pollBefore?.options)
+    expect(after.steps.find((b) => b.type === 'step')).toMatchObject({
+      needsHuman: true,
+      needsHumanAsk: 'сколько стоит у вас?',
+      imageRef: 'uploads/shot.webp',
+    })
+  })
 })

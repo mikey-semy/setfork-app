@@ -206,6 +206,12 @@ const handler = createMcpHandler(
     // Блок списка. type по умолчанию 'step'. Для не-step заполняй поля своего типа.
     const itemShape = z.object({
       type: z.enum(['step', 'text', 'image', 'poll', 'video', 'quiz', 'file']).optional().describe('Block type (default "step")'),
+      // Идентичность блока: пришла — блок остаётся тем же (комментарии, голоса,
+      // попытки, merge по id). Не пришла — заводится новый блок.
+      bid: z
+        .string()
+        .optional()
+        .describe('Stable block id as returned by get_list. Keep it to edit an existing block; omit it to create a new one'),
       // step
       title: z.string().optional().describe('Step title (short imperative) — for type "step"'),
       desc: z.string().optional().describe('Step: one or two clarifying sentences (light markdown ok)'),
@@ -214,6 +220,8 @@ const handler = createMcpHandler(
       why: z.string().optional().describe('Step: why this step matters (rationale)'),
       section: z.string().optional().describe('Step: optional section header; consecutive steps sharing it are grouped'),
       subtasks: z.array(z.string()).optional().describe('Step: verification checks'),
+      needsHuman: z.boolean().optional().describe('Step: mark that this point needs a human — local prices, taste, personal experience'),
+      needsHumanAsk: z.string().optional().describe('Step: what exactly to ask the human (shown with the mark)'),
       refs: z
         .array(z.object({ label: z.string().describe('Link text'), url: z.string().optional().describe('Link target') }))
         .optional()
@@ -232,7 +240,15 @@ const handler = createMcpHandler(
       // poll / quiz
       question: z.string().optional().describe('poll/quiz: the question'),
       options: z
-        .array(z.object({ text: z.string(), correct: z.boolean().optional().describe('quiz choice only: mark this option correct') }))
+        .array(
+          z.object({
+            // id варианта — якорь голосов (poll_votes) и попыток (quiz_attempts):
+            // перевыдал его при перезаписи — осиротил чужие голоса.
+            id: z.string().optional().describe('Stable option id as returned by get_list; keep it so existing votes/attempts stay attached'),
+            text: z.string(),
+            correct: z.boolean().optional().describe('quiz choice only: mark this option correct'),
+          }),
+        )
         .optional()
         .describe('poll / quiz(choice): answer options'),
       multi: z.boolean().optional().describe('poll / quiz(choice): allow multiple selections / multiple correct'),

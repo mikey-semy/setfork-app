@@ -16,6 +16,9 @@ import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { attributionLine, checkLicense } from '@/shared/ai/source-license'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
+// Единый конвертер шагов на запись — тот же, что у веба, садовника и предложений.
+// Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
+import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { isCollaborator } from '@/features/collab/queries'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/features/library/suggestion-checks'
@@ -34,6 +37,7 @@ async function mcpCanView(tpl: { id: string; ownerId: string; visibility: 'publi
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')
 
 export interface McpBlockOption {
+  id?: string // стабильный id варианта: к нему привязаны голоса опроса и попытки теста
   text: string
   correct?: boolean // только для quiz — верный вариант
 }
@@ -45,6 +49,9 @@ export interface McpBlockOption {
 //  quiz  — question/explain + по quizKind: choice=options(correct)/multi;
 //          text=accept/caseSensitive; number=answer/tolerance.
 export interface McpItemInput {
+  /** Идентичность блока сквозь версии (как отдаёт get_list). Пришёл — блок остаётся
+   *  ТЕМ ЖЕ: при нём живут комментарии к пункту, голоса, попытки и merge по id. */
+  bid?: string
   type?: string
   title?: string
   desc?: string
@@ -63,6 +70,8 @@ export interface McpItemInput {
   // «прочитал → отдал обратно в update_list» терял имя файла и ссылку картинки.
   name?: string
   ref?: string
+  needsHuman?: boolean // step — «здесь нужен человек» (машина честно не знает)
+  needsHumanAsk?: string // step — что именно спросить у человека
   question?: string
   options?: McpBlockOption[]
   multi?: boolean
@@ -85,13 +94,18 @@ export interface McpItemInput {
 function toProposed(items: McpItemInput[]): ProposedItem[] {
   const editor: EditorItem[] = (items ?? []).map((it): EditorItem => {
     const type = isBlockType(it.type ?? '') ? (it.type as EditorItem['type']) : 'step'
-    const b = emptyBlock(type)
+    // Пришедший bid СОХРАНЯЕМ: блок остаётся тем же сквозь версии (комментарии,
+    // голоса, попытки, merge по идентичности). Нет bid — блок новый, id выдаст emptyBlock.
+    const fresh = emptyBlock(type)
+    const b: EditorItem = { ...fresh, bid: (it.bid ?? '').trim() || fresh.bid }
+    // id варианта — якорь голоса/попытки: свой, если прислан, иначе новый.
+    const optId = (o: McpBlockOption) => (o?.id ?? '').trim() || newOptionId()
     if (type === 'text') return { ...b, text: (it.text ?? '').trim() }
     if (type === 'image') return { ...b, imageKey: (it.imageRef ?? it.ref ?? '').trim(), caption: (it.caption ?? '').trim() }
     if (type === 'video') return { ...b, videoUrl: (it.url ?? '').trim(), caption: (it.caption ?? '').trim() }
     if (type === 'file') return { ...b, fileUrl: (it.url ?? '').trim(), fileName: (it.fileName ?? it.name ?? '').trim() }
     if (type === 'poll')
-      return { ...b, poll: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim() })), multi: it.multi === true, deadline: (it.deadline ?? '').trim() } }
+      return { ...b, poll: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: optId(o), text: (o.text ?? '').trim() })), multi: it.multi === true, deadline: (it.deadline ?? '').trim() } }
     if (type === 'quiz') {
       const KINDS = ['text', 'number', 'blank', 'match', 'sort', 'code'] as const
       const kind = (KINDS as readonly string[]).includes(it.quizKind ?? '') ? (it.quizKind as (typeof KINDS)[number]) : 'choice'
@@ -101,7 +115,7 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
           ...b.quiz,
           kind,
           question: (it.question ?? '').trim(),
-          options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim(), correct: o.correct === true })),
+          options: (it.options ?? []).map((o) => ({ id: optId(o), text: (o.text ?? '').trim(), correct: o.correct === true })),
           multi: it.multi === true,
           accept: (it.accept ?? []).map((a) => String(a)),
           caseSensitive: it.caseSensitive === true,
@@ -123,6 +137,11 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
       level: it.level ?? 'required',
       why: (it.why ?? '').trim(),
       section: (it.section ?? '').trim(),
+      // Скриншот шага и «здесь нужен человек» — тоже содержимое пункта, а не мета:
+      // без них круг чтения-записи стирал картинку и вопрос к человеку.
+      imageKey: (it.imageRef ?? it.ref ?? '').trim(),
+      needsHuman: it.needsHuman === true,
+      needsHumanAsk: (it.needsHumanAsk ?? '').trim(),
       subtasks: (it.subtasks ?? []).filter((s) => s.trim()),
       // Ссылки шага: get_list их отдаёт, а положить было нечем — асимметрия чтения
       // и записи. Пустые метки отсеивает сериализатор (toProposedItems).
@@ -136,43 +155,30 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
 // TODO(rust-boundary): вынести в порт (ListStore.replaceDraftSteps) при следующем проходе.
 async function insertSteps(versionId: string, items: ProposedItem[]): Promise<void> {
   if (!items.length) return
+  // Форму строк берём у ОБЩЕГО конвертера (stepInput): своя копия здесь молча
+  // теряла blockId и «здесь нужен человек» — а с ними комментарии к пункту,
+  // merge по идентичности и приглашение ответить из опыта.
   await db.insert(steps).values(
-    items.map((it, i) => ({
+    stepInput(items).map((it) => ({
       versionId,
-      n: i + 1,
-      type: it.type ?? 'step',
-      content: it.content ?? {},
+      n: it.n,
+      type: it.type,
+      content: it.content,
+      blockId: it.blockId,
       title: it.title,
       desc: it.desc,
       command: it.command,
-      hasImage: !!it.imageKey,
-      imageKey: it.imageKey ?? null,
+      hasImage: !!it.imageRef,
+      imageKey: it.imageRef,
       level: it.level,
       why: it.why,
+      needsHuman: it.needsHuman,
+      needsHumanAsk: it.needsHumanAsk,
       section: it.section,
       subtasks: it.subtasks,
       refs: it.refs,
     })),
   )
-}
-
-/** ProposedItem[] → доменный вход шагов для ListStore.create/addVersion.
- *  Несёт type/content — иначе не-step блоки (poll/video/quiz/text/image) теряются. */
-function stepInput(items: ProposedItem[]) {
-  return items.map((it, i) => ({
-    n: i + 1,
-    type: it.type ?? 'step',
-    content: it.content ?? {},
-    title: it.title,
-    desc: it.desc,
-    command: it.command,
-    level: it.level,
-    why: it.why,
-    section: it.section,
-    subtasks: it.subtasks,
-    refs: it.refs,
-    imageRef: it.imageKey ?? null,
-  }))
 }
 
 // Инструменты MCP работают от имени пользователя токена (userId).
@@ -203,18 +209,33 @@ function blockForMcp(s: DetailStep) {
   const type = (s.type ?? 'step') as string
   const c = (s.content ?? {}) as Record<string, unknown>
   const str = (v: unknown): string => (typeof v === 'string' ? v : '')
-  if (type === 'text') return { n: s.n, type, text: str(c.md) }
-  if (type === 'image') return { n: s.n, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
-  if (type === 'video') return { n: s.n, type, url: str(c.url), caption: str(c.caption) || undefined }
-  if (type === 'file') return { n: s.n, type, url: str(c.url), name: str(c.name) }
+  // Идентичность блока СКВОЗЬ версии. У не-step она лежит в content.bid, у шага —
+  // в колонке block_id. Без неё агент не может ни адресовать блок (patch_list), ни
+  // вернуть прочитанное так, чтобы к блоку остались привязаны голоса и комментарии.
+  const bid = str(c.bid) || s.blockId || undefined
+  if (type === 'text') return { n: s.n, bid, type, text: str(c.md) }
+  if (type === 'image') return { n: s.n, bid, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
+  if (type === 'video') return { n: s.n, bid, type, url: str(c.url), caption: str(c.caption) || undefined }
+  if (type === 'file') return { n: s.n, bid, type, url: str(c.url), name: str(c.name) }
   if (type === 'poll') {
+    // id вариантов — якорь голосов (poll_votes.option_id). Отдаём их наружу: без id
+    // круг «прочитал → записал» перевыдавал варианты заново и голоса осиротевали.
     const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
-    return { n: s.n, type, question: str(c.question), options: opts.map((o) => ({ text: str(o.text) })), multi: c.multi === true || undefined, deadline: str(c.deadline) || undefined }
+    return {
+      n: s.n,
+      bid,
+      type,
+      question: str(c.question),
+      options: opts.map((o) => ({ id: str(o.id) || undefined, text: str(o.text) })),
+      multi: c.multi === true || undefined,
+      deadline: str(c.deadline) || undefined,
+    }
   }
   if (type === 'quiz') {
     const KINDS = ['text', 'number', 'blank', 'match', 'sort', 'code']
     const kind = KINDS.includes(c.kind as string) ? (c.kind as string) : 'choice'
-    const base = { n: s.n, type, quizKind: kind, question: str(c.question), explain: str(c.explain) || undefined }
+    // id вариантов теста — якорь попыток (quiz_attempts.selected), как у опроса.
+    const base = { n: s.n, bid, type, quizKind: kind, question: str(c.question), explain: str(c.explain) || undefined }
     if (kind === 'text' || kind === 'code') return { ...base, accept: Array.isArray(c.accept) ? (c.accept as unknown[]).map((a) => str(a)) : [], caseSensitive: c.caseSensitive === true || undefined }
     if (kind === 'sort') return { ...base, sortItems: Array.isArray(c.items) ? (c.items as unknown[]).map((x) => str(x)) : [], caseSensitive: c.caseSensitive === true || undefined }
     if (kind === 'number') return { ...base, answer: typeof c.answer === 'number' ? c.answer : undefined, tolerance: typeof c.tolerance === 'number' ? c.tolerance : undefined }
@@ -223,14 +244,20 @@ function blockForMcp(s: DetailStep) {
     if (kind === 'match')
       return { ...base, pairs: Array.isArray(c.pairs) ? (c.pairs as Record<string, unknown>[]).map((p) => ({ left: str(p.left), right: str(p.right) })) : [], caseSensitive: c.caseSensitive === true || undefined }
     const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
-    return { ...base, options: opts.map((o) => ({ text: str(o.text), correct: o.correct === true })), multi: c.multi === true || undefined }
+    return { ...base, options: opts.map((o) => ({ id: str(o.id) || undefined, text: str(o.text), correct: o.correct === true })), multi: c.multi === true || undefined }
   }
   return {
     n: s.n,
+    bid,
     type: 'step',
     title: tr(s.title, 'en'),
     desc: tr(s.desc, 'en'),
     command: s.command || undefined,
+    // Скриншот шага и пометка «здесь нужен человек» — часть содержимого пункта:
+    // круг без них стирал картинку и приглашение ответить из личного опыта.
+    imageRef: s.imageKey ?? undefined,
+    needsHuman: s.needsHuman || undefined,
+    needsHumanAsk: tr(s.needsHumanAsk, 'en') || undefined,
     level: s.level,
     why: tr(s.why, 'en') || undefined,
     subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
