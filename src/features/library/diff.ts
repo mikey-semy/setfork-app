@@ -1,5 +1,6 @@
 import type { StepLevel } from '@/shared/db'
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
+import { matchBlocks } from './block-identity'
 
 // Дифф двух версий списка построчно, но нумерация — по ПУНКТАМ (не «строки кода»):
 // номер пункта показывается у его заголовка, продолжения (описание/команда/подпункты)
@@ -290,38 +291,10 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
   entries: DiffEntry[]
   summary: { added: number; removed: number; changed: number; moved: number }
 } {
-  const byId = new Map<string, number>()
-  const byKey = new Map<string, number[]>()
-  from.forEach((s, i) => {
-    if (s.blockId) byId.set(s.blockId, i)
-    const k = skey(s)
-    byKey.set(k, [...(byKey.get(k) ?? []), i])
-  })
-
-  // Индексы from, уже отданные какому-то блоку из to: одна строка старой версии
-  // не может быть источником для двух новых (иначе дубли подписей врут в счётчиках).
-  const taken = new Set<number>()
-  // Есть ли в СТАРОЙ версии пункты без идентичности. Это не редкость, а обычное
-  // состояние всего, что записано до ADR-0013 и до переводов, терявших blockId.
-  const fromHasIdless = from.some((s) => !s.blockId)
-  /** Индекс блока в from + как он найден: по идентичности или по подписи. */
-  const pick = (s: CmpStep): { i: number; byIdentity: boolean } | null => {
-    if (s.blockId) {
-      const i = byId.get(s.blockId)
-      if (i != null && !taken.has(i)) return { i, byIdentity: true }
-      // Блок с известной идентичностью, которой не было раньше, — точно новый:
-      // по подписи не ищем, иначе «добавили пункт с тем же заголовком» слипнется.
-      //
-      // НО только когда у старой версии идентичности вообще были. Если там есть
-      // пункты без blockId, короткий вывод неверен: первая же запись после появления
-      // идентичностей выдавала бы «всё удалено и всё добавлено» — весь список читался
-      // бы как переписанный заново.
-      if (i == null && !fromHasIdless) return null
-    }
-    const queue = byKey.get(skey(s)) ?? []
-    for (const i of queue) if (!taken.has(i)) return { i, byIdentity: false }
-    return null
-  }
+  // Сопоставление — общее с blame (block-identity): одна строка from достаётся
+  // не более чем одному блоку to, иначе дубли подписей врут в счётчиках.
+  const matches = matchBlocks(from, to, (s) => s.blockId, skey)
+  const taken = new Set(matches.filter((m) => m !== null).map((m) => m.i))
 
   const entries: DiffEntry[] = []
   let added = 0
@@ -329,14 +302,13 @@ export function diffSteps(from: CmpStep[], to: CmpStep[]): {
   let removed = 0
   let moved = 0
   to.forEach((s, i) => {
-    const hit = pick(s)
+    const hit = matches[i]
     if (!hit) {
       entries.push({ ...s, status: 'added', changes: [] })
       added++
       return
     }
     const { i: fi, byIdentity } = hit
-    taken.add(fi)
     const before = from[fi]
     const changes: string[] = []
     // Заголовок сравниваем ТОЛЬКО при матче по идентичности — так виден
