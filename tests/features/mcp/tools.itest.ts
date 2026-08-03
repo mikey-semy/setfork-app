@@ -458,7 +458,8 @@ describe('patch_list — точечная правка вместо переза
     const { slug, read } = await three()
     const [{ id: tplId }] = await db.select({ id: templates.id }).from(templates).where(eq(templates.slug, slug))
     const [ver] = await db.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, tplId))
-    const before = await db.select({ id: steps.id }).from(steps).where(eq(steps.versionId, ver.id))
+    // Состояние заводится ТОЛЬКО шаг-блокам (text/image — контекст, их не отмечают).
+    const before = await db.select({ id: steps.id }).from(steps).where(and(eq(steps.versionId, ver.id), eq(steps.type, 'step')))
     const [run] = await db
       .insert(runs)
       .values({ templateId: tplId, userId: ownerId, versionId: ver.id, version: read.version })
