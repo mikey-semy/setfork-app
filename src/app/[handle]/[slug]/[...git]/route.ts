@@ -75,7 +75,7 @@ const CONTRIB_PUSHES_PER_HOUR = envNumber('SETFORK_GIT_CONTRIB_PUSHES_PER_HOUR',
  * её не сольёт.
  *
  * Роль уходит наружу, потому что ядро исполняет её МЕХАНИЧЕСКИ (посторонний
- * пишет только в `refs/heads/u/<ник>/*` и `refs/for/main`). Само решение остаётся
+ * пишет только в `refs/for/main`, а имя ветки придумывает сервер). Само решение остаётся
  * здесь: ADR-0011 §2 — пользовательской авторизации в ядре нет.
  */
 async function authorizeWrite(req: Request, meta: Meta): Promise<{ userId: string; role: PushRole } | 401 | 403> {
