@@ -46,6 +46,12 @@ export interface NewVersionInput {
     tags?: string[]
     ordered?: boolean
   }
+  /** Версия, НА КОТОРОЙ основана правка (то, что писавший читал). Ядро сверяет её
+   *  с текущей ВНУТРИ транзакции, где строка списка уже взята `for update`, и при
+   *  расхождении отказывает — правка, готовившаяся на устаревшем снимке, не
+   *  вытеснит чужую. Проверять это в приложении бесполезно: между проверкой и
+   *  вызовом есть окно. Не задано — прежнее поведение (последняя запись побеждает). */
+  expectedVersion?: number
 }
 
 export interface CreateListInput {
@@ -310,6 +316,16 @@ export interface MagicPush {
   base: string
   branch: string
   tipSha: string
+}
+
+/** Запись версии отклонена ядром по предусловию.
+ *  'stale' — правка основана не на текущей версии (её готовили, пока список ушёл
+ *  вперёд). Не сбой: писавший перечитывает список и накладывает правку заново. */
+export class ListWriteError extends Error {
+  constructor(public code: 'stale') {
+    super(`list write rejected: ${code}`)
+    this.name = 'ListWriteError'
+  }
 }
 
 export class BranchOpError extends Error {

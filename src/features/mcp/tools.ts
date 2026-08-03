@@ -4,7 +4,7 @@ import { db, knowledgeSources, runs, runStepState, steps, suggestionReportedChec
 import { tr, type LocaleText } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
-import { canEditList, canViewList } from '@/core'
+import { canEditList, canViewList, ListWriteError } from '@/core'
 import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
@@ -851,6 +851,7 @@ async function writeProposed(
   proposed: ProposedItem[],
   note: string,
   meta: { tags: string[]; ordered: boolean },
+  expectedVersion?: number,
 ) {
   if (!proposed.length) return { error: 'at least one item with a title is required' }
 
@@ -864,7 +865,18 @@ async function writeProposed(
 
   // tags/ordered едут ВНУТРИ addVersion (Ф2a-довесок): ядро применяет мету той же
   // транзакцией, что и версию, — канон коммита сразу несёт свежие значения.
-  const ver = await listStore.addVersion(tpl.id, { note, steps: stepInput(proposed), meta })
+  // expectedVersion (если задан) ядро сверяет ТАМ ЖЕ: сравнение и запись под одним
+  // замком строки, иначе между ними успевает лечь чужая версия.
+  let ver
+  try {
+    ver = await listStore.addVersion(tpl.id, { note, steps: stepInput(proposed), meta, expectedVersion })
+  } catch (e) {
+    // Отказ ядра по устаревшей версии — не сбой, а нормальный исход гонки: пока
+    // правку готовили, список ушёл вперёд. Агент перечитывает и накладывает заново.
+    if (e instanceof ListWriteError && e.code === 'stale')
+      return { error: 'list changed while the patch was being applied — read it again (get_list) and rebuild the ops' }
+    throw e
+  }
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающий
   // контент, залитый через MCP, не минует модерацию, и здесь её дублировать не нужно.
   const { enqueueReindex } = await import('@/features/library/jobs')
@@ -925,10 +937,18 @@ export async function mcpPatchList(
   })
   if ('error' in applied) return applied
 
-  const res = await writeProposed(tpl, handle, slug, applied.items, input.note?.trim() || 'patched via API', {
-    tags: tpl.tags,
-    ordered: tpl.ordered,
-  })
+  // Сверку версии выше делает приложение — она отсеивает заведомо устаревший
+  // патч ДО работы. Но решает не она: baseVersion уходит в ядро, и настоящая
+  // проверка происходит там, внутри транзакции, где строка списка заблокирована.
+  const res = await writeProposed(
+    tpl,
+    handle,
+    slug,
+    applied.items,
+    input.note?.trim() || 'patched via API',
+    { tags: tpl.tags, ordered: tpl.ordered },
+    input.baseVersion,
+  )
   return 'error' in res ? res : { ...res, ops: input.ops.length, blocks: applied.items.length }
 }
 
