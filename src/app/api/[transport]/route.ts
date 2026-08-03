@@ -250,6 +250,16 @@ const handler = createMcpHandler(
             correct: z.boolean().optional().describe('quiz choice only: mark this option correct'),
           }),
         )
+        // Один id у двух вариантов = два неразличимых ответа: интерфейс ключует
+        // их по id, голоса и попытки адресуются им же. Пустые не проверяем —
+        // им id выдаётся при записи.
+        .refine(
+          (opts) => {
+            const ids = opts.map((o) => (o.id ?? '').trim()).filter(Boolean)
+            return new Set(ids).size === ids.length
+          },
+          { message: 'option ids must be unique within the block' },
+        )
         .optional()
         .describe('poll / quiz(choice): answer options'),
       multi: z.boolean().optional().describe('poll / quiz(choice): allow multiple selections / multiple correct'),

@@ -204,6 +204,22 @@ async function replaceDraftSteps(versionId: string, items: ProposedItem[]): Prom
 const lockList = (tx: Tx, listId: string) =>
   tx.execute(sql`select id from ${templates} where ${templates.id} = ${listId} for update`)
 
+/** Состояние списка ПОД ЗАМКОМ: пока правку готовили, его могли опубликовать,
+ *  заморозить или заархивировать. Прямая правка черновика идёт мимо фасада
+ *  listStore, который стережёт эти запреты у опубликованного пути, — значит
+ *  проверяем сами и на свежих данных, а не на прочитанных до замка. */
+async function draftWritable(tx: Tx, listId: string): Promise<{ error: string } | null> {
+  const [row] = await tx
+    .select({ status: templates.status, archivedAt: templates.archivedAt, frozenAt: templates.frozenAt })
+    .from(templates)
+    .where(eq(templates.id, listId))
+  if (!row) return { error: 'list not found' }
+  if (!canEditList(row)) return { error: 'forbidden: list is archived or frozen' }
+  if (row.status !== 'draft')
+    return { error: 'the list was published while the edit was being prepared — read it again (get_list) and write to the published version' }
+  return null
+}
+
 // Инструменты MCP работают от имени пользователя токена (userId).
 // Приватность соблюдается: getFeed/visibleFilter уже фильтруют по viewerId,
 // get_list проверяет доступ явно. Контент отдаём в EN (locale-JSON, tr с фолбэком).
@@ -825,8 +841,14 @@ const CONTENT_KEY: Record<string, string | undefined> = {
  *  прежний английский — правка выглядит принятой, но не видна. */
 const langOfField = (lt: unknown): string => trKey(lt as LocaleText, 'en') ?? 'en'
 const putLang = (before: unknown, flat: string): Record<string, string> => {
-  const base = (before ?? {}) as Record<string, string>
-  return flat.trim() ? { ...base, [langOfField(before)]: flat.trim() } : {}
+  const base = { ...((before ?? {}) as Record<string, string>) }
+  const key = langOfField(before)
+  // Очистка убирает ТОЛЬКО ту локаль, которую агент видел и стёр. Прежде она
+  // сносила словарь целиком — правка «убрать описание» по-английски уносила с
+  // собой и русское описание, которого агент даже не видел.
+  if (flat.trim()) base[key] = flat.trim()
+  else delete base[key]
+  return base
 }
 
 /**
@@ -909,10 +931,20 @@ async function writeProposed(
   if (!proposed.length) return { error: 'at least one item with a title is required' }
 
   if (tpl.status === 'draft') {
-    // черновик — перезаписываем текущую версию на месте (без плодения версий)
+    // черновик — перезаписываем текущую версию на месте (без плодения версий).
+    // ПОД ТЕМ ЖЕ замком, что и патч: иначе полная замена и патч переплетаются —
+    // замена удаляет и вставляет строки, пока патч держит только замок списка, и
+    // чья-то работа пропадает при обоих «успешных» ответах.
     const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
-    await replaceDraftSteps(cur.id, proposed)
-    await db.update(templates).set({ tags: meta.tags, ordered: meta.ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+    const gate = await db.transaction(async (tx) => {
+      await lockList(tx, tpl.id)
+      const denied = await draftWritable(tx, tpl.id)
+      if (denied) return denied
+      await replaceDraftStepsIn(tx, cur.id, proposed)
+      await tx.update(templates).set({ tags: meta.tags, ordered: meta.ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+      return null
+    })
+    if (gate) return gate
     return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version }
   }
 
@@ -993,17 +1025,14 @@ export async function mcpPatchList(
     // свои операции на снимок, который к моменту записи устарел.
     return db.transaction(async (tx) => {
       await lockList(tx, tpl.id)
-      // Статус и версию ПЕРЕЧИТЫВАЕМ под замком: между чтением списка и взятием
-      // замка его могли опубликовать. Со старым статусом на руках правка заменила
-      // бы шаги уже опубликованной версии НА МЕСТЕ — без новой версии и без
-      // git-коммита, то есть мимо истории.
-      const [fresh] = await tx
-        .select({ status: templates.status, current: templates.currentVersion })
-        .from(templates)
-        .where(eq(templates.id, tpl.id))
+      // Состояние ПЕРЕЧИТЫВАЕМ под замком: пока патч готовили, список могли
+      // опубликовать, заморозить или заархивировать. Со старыми данными на руках
+      // правка заменила бы шаги уже опубликованной версии НА МЕСТЕ — без новой
+      // версии и без git-коммита, то есть мимо истории.
+      const denied = await draftWritable(tx, tpl.id)
+      if (denied) return denied
+      const [fresh] = await tx.select({ current: templates.currentVersion }).from(templates).where(eq(templates.id, tpl.id))
       if (!fresh) return { error: 'list not found' }
-      if (fresh.status !== 'draft')
-        return { error: 'the list was published while the patch was being prepared — read it again (get_list) and patch the published version' }
       if (input.baseVersion !== fresh.current)
         return { error: `list changed: it is at version ${fresh.current}, your patch is based on ${input.baseVersion} — read it again (get_list) and rebuild the ops` }
       const [cur] = await tx

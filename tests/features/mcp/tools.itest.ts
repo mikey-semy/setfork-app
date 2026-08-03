@@ -377,6 +377,43 @@ describe('patch_list — точечная правка вместо переза
     expect(row.title).toEqual({ ru: 'старое', en: 'new' }) // второй перевод цел
   })
 
+  it('очистка поля убирает только показанную локаль, второй перевод цел', async () => {
+    const created = await mcpCreateList(ownerId, { title: 'Clear locale', items: [{ title: 'one', desc: 'About' }] })
+    const slug = refSlug((created as { ref: string }).ref)
+    const [{ id: tplId }] = await db.select({ id: templates.id }).from(templates).where(eq(templates.slug, slug))
+    const [ver] = await db.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, tplId))
+    await db.update(steps).set({ desc: { en: 'About', ru: 'Описание' } }).where(eq(steps.versionId, ver.id))
+
+    const read = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: read.steps[0].bid, desc: '' }],
+    })
+    expect('error' in res).toBe(false)
+    const [row] = await db.select({ desc: steps.desc }).from(steps).where(eq(steps.versionId, ver.id))
+    expect(row.desc).toEqual({ ru: 'Описание' }) // русский перевод НЕ снесён вместе с английским
+  })
+
+  // Полная замена (update_list) и патч правят один черновик разными путями —
+  // и обязаны идти через один замок, иначе чья-то работа исчезает при двух
+  // «успешных» ответах.
+  it('патч и полная замена черновика не переплетаются', async () => {
+    const { slug, read } = await three()
+    const [a] = read.steps.map((s) => s.bid)
+    const [rPatch, rReplace] = await Promise.all([
+      mcpPatchList(ownerId, 'mowner', slug, { baseVersion: read.version, ops: [{ op: 'update', bid: a, title: 'ИЗ ПАТЧА' }] }),
+      mcpUpdateList(ownerId, 'mowner', slug, { items: [...read.steps, { title: 'из полной замены' }] }),
+    ])
+    expect('error' in rPatch).toBe(false)
+    expect('error' in rReplace).toBe(false)
+
+    // Кто бы ни записал вторым, список остаётся целым и непротиворечивым: либо
+    // 3 блока с правкой патча, либо 4 блока полной замены — но не мешанина.
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect([3, 4]).toContain(after.steps.length)
+    expect(after.steps.every((b) => !!b.bid)).toBe(true)
+  })
+
   it('патчить чужой список нельзя', async () => {
     const { slug, read } = await three()
     const res = await mcpPatchList(otherId, 'mowner', slug, {
