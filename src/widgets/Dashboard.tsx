@@ -52,8 +52,17 @@ export async function Dashboard({ lang, userId }: { lang: Lang; userId: string }
   // 720px, из которых 300+300 забирают боковые колонки.
   // Поэтому на lg — ДВЕ колонки (списки + лента), три — только с xl, где ширины хватает:
   // 1280 − 240 − 64 = 976, минус 260+260 боковых = ~410 на ленту.
+  // grid-cols-1 НА МОБИЛЕ ОБЯЗАТЕЛЕН, хотя колонка там и так одна. Без него трек
+  // неявный (auto), его min-функция — auto, а значит для содержимого включается
+  // content-based автоминимум: колонка раздувается до min-content потомков. Строка
+  // панели списков — truncate, то есть white-space: nowrap, и её min-content равен
+  // ПОЛНОЙ длине названия (min-w-0 разрешает сжатие при заданной ширине, но
+  // intrinsic min-content не уменьшает). Один длинный заголовок раздувал колонку до
+  // 464px при экране 390: страница уезжала вправо на ~90px, у поиска, «Создать»,
+  // «Фильтр» и карточек ленты срезало правый край, а truncate не срабатывал вовсе.
+  // grid-cols-1 = repeat(1, minmax(0,1fr)): min-функция 0 → автоминимум выключен.
   return (
-    <div className="grid w-full gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 xl:grid-cols-[260px_minmax(0,1fr)_260px] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
+    <div className="grid w-full grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 xl:grid-cols-[260px_minmax(0,1fr)_260px] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
       {/* Слева: твои списки (переиспользуемая панель). top = высота шапки (57) + верхний
           паддинг сетки (py-6 = 24) → панель НЕ подпрыгивает к шапке при скролле. */}
       <aside className="lg:sticky lg:top-[5.0625rem] lg:self-start">
