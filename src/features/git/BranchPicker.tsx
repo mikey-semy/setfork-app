@@ -11,6 +11,7 @@ import type { GitBranch as Branch } from '@/core'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
 import { t, type Lang } from '@/shared/i18n'
 import { createBranchAction, deleteBranchAction, type BranchActionResult } from './actions'
+import { branchLabel, isServerBranch } from './branch-label'
 
 const ERR: Record<string, { ru: string; en: string }> = {
   'bad-name': { ru: 'Только буквы/цифры и .-_', en: 'Letters/digits and .-_ only' },
@@ -53,9 +54,24 @@ export function BranchPicker({
   const [q, setQ] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
-  if (branches.length === 0 && !canManage) return null
+  // Ветки, заведённые СЕРВЕРОМ под правки из терминала, в списке не показываем.
+  // Так же поступают те, у кого взята сама модель: GitHub не держит `refs/pull/*`
+  // среди веток, Gerrit — `refs/changes/*`. Причина та же: это не ветки
+  // репозитория в пользовательском смысле, у них своя поверхность — страница
+  // Предложений. Показывать их здесь значило бы дать владельцу список
+  // одинаковых подписей, где не разобрать, какую правку открываешь и какую
+  // удаляешь (авто-ревью fe#662), а кнопка удаления рядом ещё и осиротила бы
+  // предложение.
+  //
+  // Смотреть такую ветку можно — по ссылке со страницы предложения; тогда она
+  // стоит активной и подписана `currentLabel` на кнопке.
+  const own = branches.filter((b) => !isServerBranch(b.name))
+  if (own.length === 0 && !canManage) return null
+  // Подпись активной ветки — та же, что у строк списка: иначе выбор серверной
+  // ветки тут же показывал бы сырой идентификатор на кнопке и в подписи «от …».
+  const currentLabel = branchLabel(current, lang)
   const term = q.trim().toLowerCase()
-  const shown = term ? branches.filter((b) => b.name.toLowerCase().includes(term)) : branches
+  const shown = term ? own.filter((b) => b.name.toLowerCase().includes(term)) : own
 
   const fail = (r: BranchActionResult) => {
     if (!r.ok) setErr(ERR[r.code]?.[ru ? 'ru' : 'en'] ?? ERR.internal[ru ? 'ru' : 'en'])
@@ -86,7 +102,7 @@ export function BranchPicker({
       <Tooltip label={ru ? 'Ветки' : 'Branches'}>
         <Button onClick={() => setOpen((v) => !v)} aria-expanded={open}>
           <GitBranch size={13} className="text-muted" />
-          <span className="max-w-[8.75rem] truncate">{current}</span>
+          <span className="max-w-[8.75rem] truncate">{currentLabel}</span>
           <ChevronDown size={12} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
         </Button>
       </Tooltip>
@@ -101,7 +117,7 @@ export function BranchPicker({
               closeLabel={t('close', lang)}
               // Поиск — когда веток больше горстки: у списка из двух он лишний шум.
               search={
-                branches.length > 5
+                own.length > 5
                   ? { value: q, onChange: setQ, placeholder: t('findBranch', lang), clearLabel: t('clear', lang) }
                   : undefined
               }
@@ -122,7 +138,7 @@ export function BranchPicker({
                         <Plus size={12} /> {t('create', lang)}
                       </Button>
                     </div>
-                    <p className="px-0.5 pt-1 text-[0.6875rem] text-muted">{err ?? (ru ? `от ${current}` : `from ${current}`)}</p>
+                    <p className="px-0.5 pt-1 text-[0.6875rem] text-muted">{err ?? (ru ? `от ${currentLabel}` : `from ${currentLabel}`)}</p>
                   </>
                 ) : null
               }
@@ -131,7 +147,7 @@ export function BranchPicker({
                 <PickerRow
                   key={b.name}
                   selected={b.name === current}
-                  label={b.name}
+                  label={branchLabel(b.name, lang)}
                   onClick={() => {
                     setOpen(false)
                     router.push(b.isDefault ? base : `${base}?ref=${encodeURIComponent(b.name)}`)

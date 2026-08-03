@@ -13,6 +13,7 @@ import { Button } from '@/shared/ui/button'
 import { gitCore } from '@/features/git/core'
 import { snapshotSteps } from '@/features/git/snapshot-steps'
 import { BranchPicker } from '@/features/git/BranchPicker'
+import { branchLabel } from '@/features/git/branch-label'
 import { isCollaborator } from '@/features/collab/queries'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
@@ -477,7 +478,7 @@ export default async function ListPage({
               <div className="flex flex-wrap items-center gap-2 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-[0.78125rem] text-ink print:hidden">
                 <GitCommitHorizontal size={13} className="shrink-0 text-warn" />
                 <span>
-                  {lang === 'ru' ? 'Ветка' : 'Branch'} <b className="font-mono">{refBranch}</b> · +{branchInfo.ahead}/-{branchInfo.behind}{' '}
+                  {lang === 'ru' ? 'Ветка' : 'Branch'} <b className="font-mono">{branchLabel(refBranch, lang)}</b> · +{branchInfo.ahead}/-{branchInfo.behind}{' '}
                   {lang === 'ru' ? 'относительно main (черновик, версии не создаются)' : 'vs main (draft — no versions projected)'}
                 </span>
                 <span className="ml-auto flex items-center gap-3">

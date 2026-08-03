@@ -60,7 +60,12 @@ export const gitCoreRemote: GitCore = {
       body,
       gitProtocol: opts?.gitProtocol ?? '',
       lang: opts?.lang ?? '',
+      actorId: opts?.actorId ?? '',
       actorHandle: opts?.actorHandle ?? '',
+      // Ф5: пустая роль означает у ядра САМУЮ СТРОГУЮ («посторонний»), поэтому
+      // подставлять сюда «владельца» по умолчанию нельзя — это тихо раздало бы
+      // права. Пусто = пусть ядро решает строго.
+      actorRole: opts?.actorRole ?? '',
     })
     return {
       data: res.data,
@@ -177,6 +182,16 @@ export const gitCoreRemote: GitCore = {
     // просто вечный спиннер, но обрывать раньше ядра всё равно незачем.
     const res = await client.mirrorCheck(toRepoRef(repo), { timeoutMs: mirrorPushTimeoutMs() })
     return { ok: res.ok, error: res.error }
+  },
+
+  /** Возможности ядра (Ф5). Договор — в порту; здесь только вызов.
+   *
+   *  Любая неудача — «не умеет»: и UNIMPLEMENTED старого ядра, и обрыв связи.
+   *  Различать их не нужно, потому что вывод из обоих один: раз ядро не
+   *  подтвердило, что исполняет роли, постороннего пускать нельзя. */
+  async capabilities(opts) {
+    const res = await client.getCapabilities({}, { timeoutMs: opts?.timeoutMs }).catch(() => null)
+    return { enforcesPushRoles: res?.enforcesPushRoles === true }
   },
 
   async updateBranch(repo, name) {

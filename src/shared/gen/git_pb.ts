@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file git.proto.
  */
 export const file_git: GenFile = /*@__PURE__*/
-  fileDesc("CglnaXQucHJvdG8SDnNldGZvcmsuZ2l0LnYxIiYKB1JlcG9SZWYSDQoFb3duZXIYASABKAkSDAoEc2x1ZxgCIAEoCSJOCg9JbmZvUmVmc1JlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSFAoMZ2l0X3Byb3RvY29sGAIgASgJInwKC1Bvc3RSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBGJvZHkYAiABKAwSFAoMZ2l0X3Byb3RvY29sGAMgASgJEgwKBGxhbmcYBCABKAkSFAoMYWN0b3JfaGFuZGxlGAUgASgJIh0KDUJ5dGVzUmVzcG9uc2USDAoEZGF0YRgBIAEoDCI6CglNYWdpY1B1c2gSDAoEYmFzZRgBIAEoCRIOCgZicmFuY2gYAiABKAkSDwoHdGlwX3NoYRgDIAEoCSJiChNSZWNlaXZlUGFja1Jlc3BvbnNlEgwKBGRhdGEYASABKAwSEwoLbmV3X3ZlcnNpb24YAiABKAUSKAoFbWFnaWMYAyADKAsyGS5zZXRmb3JrLmdpdC52MS5NYWdpY1B1c2gihwEKC0xpc3RDb250ZW50Eg0KBXRpdGxlGAEgASgJEgwKBGRlc2MYAiABKAkSDAoEdGFncxgDIAMoCRIPCgdvcmRlcmVkGAQgASgIEg8KB3ZlcnNpb24YBSABKAUSKwoFc3RlcHMYBiADKAsyHC5zZXRmb3JrLmdpdC52MS5TbmFwc2hvdFN0ZXAi3wEKFUNvbW1pdFRvQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIOCgZicmFuY2gYAiABKAkSDwoHbWVzc2FnZRgEIAEoCRIUCgxleHBlY3RlZF90aXAYBSABKAkSEwoLYXV0aG9yX25hbWUYBiABKAkSFAoMYXV0aG9yX2VtYWlsGAcgASgJEiwKB2NvbnRlbnQYCCABKAsyGy5zZXRmb3JrLmdpdC52MS5MaXN0Q29udGVudEoECAMQBFIJbGlzdF9qc29uIjoKFkNvbW1pdFRvQnJhbmNoUmVzcG9uc2USDwoHdGlwX3NoYRgBIAEoCRIPCgdjaGFuZ2VkGAIgASgIIkoKE1VwZGF0ZUJyYW5jaFJlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSDAoEbmFtZRgCIAEoCSI9ChRVcGRhdGVCcmFuY2hSZXNwb25zZRIPCgd0aXBfc2hhGAEgASgJEhQKDGZhc3RfZm9yd2FyZBgCIAEoCCJnChJMaXN0Q29tbWl0c1JlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSCwoDcmV2GAIgASgJEg4KBm5vdF9pbhgDIAEoCRINCgVsaW1pdBgEIAEoBSJzCgZDb21taXQSCwoDc2hhGAEgASgJEg8KB21lc3NhZ2UYAiABKAkSEwoLYXV0aG9yX25hbWUYAyABKAkSFAoMYXV0aG9yX2VtYWlsGAQgASgJEg8KB2F0X3VuaXgYBSABKAMSDwoHcGFyZW50cxgGIAEoBSJJCg9Db21taXRzUmVzcG9uc2USDQoFZm91bmQYASABKAgSJwoHY29tbWl0cxgCIAMoCzIWLnNldGZvcmsuZ2l0LnYxLkNvbW1pdCJYChBDcmVhdGVUYWdSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBG5hbWUYAiABKAkSDwoHdmVyc2lvbhgDIAEoBSInCgNUYWcSDAoEbmFtZRgBIAEoCRISCgp0YXJnZXRfc2hhGAIgASgJIjEKDFRhZ3NSZXNwb25zZRIhCgR0YWdzGAEgAygLMhMuc2V0Zm9yay5naXQudjEuVGFnIkoKEU1lcmdlU3RhdGVSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEg4KBmJyYW5jaBgCIAEoCSLfAQoSTWVyZ2VTdGF0ZVJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEhYKDm1lcmdlX2Jhc2Vfc2hhGAIgASgJEjQKBGJhc2UYAyABKAsyJi5zZXRmb3JrLmdpdC52MS5CcmFuY2hTbmFwc2hvdFJlc3BvbnNlEjQKBG91cnMYBCABKAsyJi5zZXRmb3JrLmdpdC52MS5CcmFuY2hTbmFwc2hvdFJlc3BvbnNlEjYKBnRoZWlycxgFIAEoCzImLnNldGZvcmsuZ2l0LnYxLkJyYW5jaFNuYXBzaG90UmVzcG9uc2UiqwEKFE1lcmdlUmVzb2x2ZWRSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEg4KBmJyYW5jaBgCIAEoCRIsCgdjb250ZW50GAQgASgLMhsuc2V0Zm9yay5naXQudjEuTGlzdENvbnRlbnQSDAoEbW9kZRgFIAEoCRIPCgdtZXNzYWdlGAYgASgJSgQIAxAEUglsaXN0X2pzb24iaAoSTWVyZ2VCcmFuY2hSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBG5hbWUYAiABKAkSDAoEbW9kZRgDIAEoCRIPCgdtZXNzYWdlGAQgASgJIlEKE01lcmdlQnJhbmNoUmVzcG9uc2USDwoHdGlwX3NoYRgBIAEoCRITCgtuZXdfdmVyc2lvbhgCIAEoBRIUCgxmYXN0X2ZvcndhcmQYAyABKAgiWAoTQ3JlYXRlQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRuYW1lGAIgASgJEgwKBGZyb20YAyABKAkiSgoTRGVsZXRlQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRuYW1lGAIgASgJIiMKEEJyYW5jaE9wUmVzcG9uc2USDwoHdGlwX3NoYRgBIAEoCSJaCgZCcmFuY2gSDAoEbmFtZRgBIAEoCRIPCgd0aXBfc2hhGAIgASgJEhIKCmlzX2RlZmF1bHQYAyABKAgSDQoFYWhlYWQYBCABKAUSDgoGYmVoaW5kGAUgASgFIjwKEEJyYW5jaGVzUmVzcG9uc2USKAoIYnJhbmNoZXMYASADKAsyFi5zZXRmb3JrLmdpdC52MS5CcmFuY2giTgoVQnJhbmNoU25hcHNob3RSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEg4KBmJyYW5jaBgCIAEoCSLnAQoMU25hcHNob3RTdGVwEgkKAW4YASABKAUSDQoFdGl0bGUYAiABKAkSDAoEZGVzYxgDIAEoCRIPCgdjb21tYW5kGAQgASgJEg0KBWxldmVsGAUgASgJEgsKA3doeRgGIAEoCRIPCgdzZWN0aW9uGAcgASgJEhAKCHN1YnRhc2tzGAggAygJEikKBHJlZnMYCSADKAsyGy5zZXRmb3JrLmdpdC52MS5TbmFwc2hvdFJlZhIMCgR0eXBlGAogASgJEhQKDGNvbnRlbnRfanNvbhgLIAEoCRIQCghibG9ja19pZBgMIAEoCSIpCgtTbmFwc2hvdFJlZhINCgVsYWJlbBgBIAEoCRILCgN1cmwYAiABKAkioQEKFkJyYW5jaFNuYXBzaG90UmVzcG9uc2USDQoFZm91bmQYASABKAgSDwoHdGlwX3NoYRgCIAEoCRINCgV0aXRsZRgDIAEoCRIMCgRkZXNjGAQgASgJEgwKBHRhZ3MYBSADKAkSDwoHb3JkZXJlZBgGIAEoCBIrCgVzdGVwcxgHIAMoCzIcLnNldGZvcmsuZ2l0LnYxLlNuYXBzaG90U3RlcCIvChJNaXJyb3JQdXNoUmVzcG9uc2USCgoCb2sYASABKAgSDQoFZXJyb3IYAiABKAkiMAoTTWlycm9yQ2hlY2tSZXNwb25zZRIKCgJvaxgBIAEoCBINCgVlcnJvchgCIAEoCTK+DAoHR2l0Q29yZRJUChJJbmZvUmVmc1VwbG9hZFBhY2sSHy5zZXRmb3JrLmdpdC52MS5JbmZvUmVmc1JlcXVlc3QaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlElUKE0luZm9SZWZzUmVjZWl2ZVBhY2sSHy5zZXRmb3JrLmdpdC52MS5JbmZvUmVmc1JlcXVlc3QaHS5zZXRmb3JrLmdpdC52MS5CeXRlc1Jlc3BvbnNlEkgKClVwbG9hZFBhY2sSGy5zZXRmb3JrLmdpdC52MS5Qb3N0UmVxdWVzdBodLnNldGZvcmsuZ2l0LnYxLkJ5dGVzUmVzcG9uc2USTwoLUmVjZWl2ZVBhY2sSGy5zZXRmb3JrLmdpdC52MS5Qb3N0UmVxdWVzdBojLnNldGZvcmsuZ2l0LnYxLlJlY2VpdmVQYWNrUmVzcG9uc2USRgoMQ3JlYXRlQnVuZGxlEhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhodLnNldGZvcmsuZ2l0LnYxLkJ5dGVzUmVzcG9uc2USSQoMTGlzdEJyYW5jaGVzEhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhogLnNldGZvcmsuZ2l0LnYxLkJyYW5jaGVzUmVzcG9uc2USYgoRR2V0QnJhbmNoU25hcHNob3QSJS5zZXRmb3JrLmdpdC52MS5CcmFuY2hTbmFwc2hvdFJlcXVlc3QaJi5zZXRmb3JrLmdpdC52MS5CcmFuY2hTbmFwc2hvdFJlc3BvbnNlElUKDENyZWF0ZUJyYW5jaBIjLnNldGZvcmsuZ2l0LnYxLkNyZWF0ZUJyYW5jaFJlcXVlc3QaIC5zZXRmb3JrLmdpdC52MS5CcmFuY2hPcFJlc3BvbnNlElUKDERlbGV0ZUJyYW5jaBIjLnNldGZvcmsuZ2l0LnYxLkRlbGV0ZUJyYW5jaFJlcXVlc3QaIC5zZXRmb3JrLmdpdC52MS5CcmFuY2hPcFJlc3BvbnNlElYKC01lcmdlQnJhbmNoEiIuc2V0Zm9yay5naXQudjEuTWVyZ2VCcmFuY2hSZXF1ZXN0GiMuc2V0Zm9yay5naXQudjEuTWVyZ2VCcmFuY2hSZXNwb25zZRJWCg1HZXRNZXJnZVN0YXRlEiEuc2V0Zm9yay5naXQudjEuTWVyZ2VTdGF0ZVJlcXVlc3QaIi5zZXRmb3JrLmdpdC52MS5NZXJnZVN0YXRlUmVzcG9uc2USWgoNTWVyZ2VSZXNvbHZlZBIkLnNldGZvcmsuZ2l0LnYxLk1lcmdlUmVzb2x2ZWRSZXF1ZXN0GiMuc2V0Zm9yay5naXQudjEuTWVyZ2VCcmFuY2hSZXNwb25zZRJPCglDcmVhdGVUYWcSIC5zZXRmb3JrLmdpdC52MS5DcmVhdGVUYWdSZXF1ZXN0GiAuc2V0Zm9yay5naXQudjEuQnJhbmNoT3BSZXNwb25zZRJBCghMaXN0VGFncxIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYaHC5zZXRmb3JrLmdpdC52MS5UYWdzUmVzcG9uc2USSQoKTWlycm9yUHVzaBIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYaIi5zZXRmb3JrLmdpdC52MS5NaXJyb3JQdXNoUmVzcG9uc2USSwoLTWlycm9yQ2hlY2sSFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmGiMuc2V0Zm9yay5naXQudjEuTWlycm9yQ2hlY2tSZXNwb25zZRJZCgxVcGRhdGVCcmFuY2gSIy5zZXRmb3JrLmdpdC52MS5VcGRhdGVCcmFuY2hSZXF1ZXN0GiQuc2V0Zm9yay5naXQudjEuVXBkYXRlQnJhbmNoUmVzcG9uc2USUgoLTGlzdENvbW1pdHMSIi5zZXRmb3JrLmdpdC52MS5MaXN0Q29tbWl0c1JlcXVlc3QaHy5zZXRmb3JrLmdpdC52MS5Db21taXRzUmVzcG9uc2USXwoOQ29tbWl0VG9CcmFuY2gSJS5zZXRmb3JrLmdpdC52MS5Db21taXRUb0JyYW5jaFJlcXVlc3QaJi5zZXRmb3JrLmdpdC52MS5Db21taXRUb0JyYW5jaFJlc3BvbnNlYgZwcm90bzM");
+  fileDesc("CglnaXQucHJvdG8SDnNldGZvcmsuZ2l0LnYxIiYKB1JlcG9SZWYSDQoFb3duZXIYASABKAkSDAoEc2x1ZxgCIAEoCSJOCg9JbmZvUmVmc1JlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSFAoMZ2l0X3Byb3RvY29sGAIgASgJIqIBCgtQb3N0UmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRib2R5GAIgASgMEhQKDGdpdF9wcm90b2NvbBgDIAEoCRIMCgRsYW5nGAQgASgJEhQKDGFjdG9yX2hhbmRsZRgFIAEoCRIQCghhY3Rvcl9pZBgHIAEoCRISCgphY3Rvcl9yb2xlGAYgASgJIh0KDUJ5dGVzUmVzcG9uc2USDAoEZGF0YRgBIAEoDCI6CglNYWdpY1B1c2gSDAoEYmFzZRgBIAEoCRIOCgZicmFuY2gYAiABKAkSDwoHdGlwX3NoYRgDIAEoCSJiChNSZWNlaXZlUGFja1Jlc3BvbnNlEgwKBGRhdGEYASABKAwSEwoLbmV3X3ZlcnNpb24YAiABKAUSKAoFbWFnaWMYAyADKAsyGS5zZXRmb3JrLmdpdC52MS5NYWdpY1B1c2gihwEKC0xpc3RDb250ZW50Eg0KBXRpdGxlGAEgASgJEgwKBGRlc2MYAiABKAkSDAoEdGFncxgDIAMoCRIPCgdvcmRlcmVkGAQgASgIEg8KB3ZlcnNpb24YBSABKAUSKwoFc3RlcHMYBiADKAsyHC5zZXRmb3JrLmdpdC52MS5TbmFwc2hvdFN0ZXAi3wEKFUNvbW1pdFRvQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIOCgZicmFuY2gYAiABKAkSDwoHbWVzc2FnZRgEIAEoCRIUCgxleHBlY3RlZF90aXAYBSABKAkSEwoLYXV0aG9yX25hbWUYBiABKAkSFAoMYXV0aG9yX2VtYWlsGAcgASgJEiwKB2NvbnRlbnQYCCABKAsyGy5zZXRmb3JrLmdpdC52MS5MaXN0Q29udGVudEoECAMQBFIJbGlzdF9qc29uIjoKFkNvbW1pdFRvQnJhbmNoUmVzcG9uc2USDwoHdGlwX3NoYRgBIAEoCRIPCgdjaGFuZ2VkGAIgASgIIkoKE1VwZGF0ZUJyYW5jaFJlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSDAoEbmFtZRgCIAEoCSI9ChRVcGRhdGVCcmFuY2hSZXNwb25zZRIPCgd0aXBfc2hhGAEgASgJEhQKDGZhc3RfZm9yd2FyZBgCIAEoCCJnChJMaXN0Q29tbWl0c1JlcXVlc3QSJQoEcmVwbxgBIAEoCzIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYSCwoDcmV2GAIgASgJEg4KBm5vdF9pbhgDIAEoCRINCgVsaW1pdBgEIAEoBSJzCgZDb21taXQSCwoDc2hhGAEgASgJEg8KB21lc3NhZ2UYAiABKAkSEwoLYXV0aG9yX25hbWUYAyABKAkSFAoMYXV0aG9yX2VtYWlsGAQgASgJEg8KB2F0X3VuaXgYBSABKAMSDwoHcGFyZW50cxgGIAEoBSJJCg9Db21taXRzUmVzcG9uc2USDQoFZm91bmQYASABKAgSJwoHY29tbWl0cxgCIAMoCzIWLnNldGZvcmsuZ2l0LnYxLkNvbW1pdCJYChBDcmVhdGVUYWdSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBG5hbWUYAiABKAkSDwoHdmVyc2lvbhgDIAEoBSInCgNUYWcSDAoEbmFtZRgBIAEoCRISCgp0YXJnZXRfc2hhGAIgASgJIjEKDFRhZ3NSZXNwb25zZRIhCgR0YWdzGAEgAygLMhMuc2V0Zm9yay5naXQudjEuVGFnIkoKEU1lcmdlU3RhdGVSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEg4KBmJyYW5jaBgCIAEoCSLfAQoSTWVyZ2VTdGF0ZVJlc3BvbnNlEg0KBWZvdW5kGAEgASgIEhYKDm1lcmdlX2Jhc2Vfc2hhGAIgASgJEjQKBGJhc2UYAyABKAsyJi5zZXRmb3JrLmdpdC52MS5CcmFuY2hTbmFwc2hvdFJlc3BvbnNlEjQKBG91cnMYBCABKAsyJi5zZXRmb3JrLmdpdC52MS5CcmFuY2hTbmFwc2hvdFJlc3BvbnNlEjYKBnRoZWlycxgFIAEoCzImLnNldGZvcmsuZ2l0LnYxLkJyYW5jaFNuYXBzaG90UmVzcG9uc2UiqwEKFE1lcmdlUmVzb2x2ZWRSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEg4KBmJyYW5jaBgCIAEoCRIsCgdjb250ZW50GAQgASgLMhsuc2V0Zm9yay5naXQudjEuTGlzdENvbnRlbnQSDAoEbW9kZRgFIAEoCRIPCgdtZXNzYWdlGAYgASgJSgQIAxAEUglsaXN0X2pzb24iaAoSTWVyZ2VCcmFuY2hSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEgwKBG5hbWUYAiABKAkSDAoEbW9kZRgDIAEoCRIPCgdtZXNzYWdlGAQgASgJIlEKE01lcmdlQnJhbmNoUmVzcG9uc2USDwoHdGlwX3NoYRgBIAEoCRITCgtuZXdfdmVyc2lvbhgCIAEoBRIUCgxmYXN0X2ZvcndhcmQYAyABKAgiWAoTQ3JlYXRlQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRuYW1lGAIgASgJEgwKBGZyb20YAyABKAkiSgoTRGVsZXRlQnJhbmNoUmVxdWVzdBIlCgRyZXBvGAEgASgLMhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhIMCgRuYW1lGAIgASgJIiMKEEJyYW5jaE9wUmVzcG9uc2USDwoHdGlwX3NoYRgBIAEoCSJaCgZCcmFuY2gSDAoEbmFtZRgBIAEoCRIPCgd0aXBfc2hhGAIgASgJEhIKCmlzX2RlZmF1bHQYAyABKAgSDQoFYWhlYWQYBCABKAUSDgoGYmVoaW5kGAUgASgFIjwKEEJyYW5jaGVzUmVzcG9uc2USKAoIYnJhbmNoZXMYASADKAsyFi5zZXRmb3JrLmdpdC52MS5CcmFuY2giTgoVQnJhbmNoU25hcHNob3RSZXF1ZXN0EiUKBHJlcG8YASABKAsyFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmEg4KBmJyYW5jaBgCIAEoCSLnAQoMU25hcHNob3RTdGVwEgkKAW4YASABKAUSDQoFdGl0bGUYAiABKAkSDAoEZGVzYxgDIAEoCRIPCgdjb21tYW5kGAQgASgJEg0KBWxldmVsGAUgASgJEgsKA3doeRgGIAEoCRIPCgdzZWN0aW9uGAcgASgJEhAKCHN1YnRhc2tzGAggAygJEikKBHJlZnMYCSADKAsyGy5zZXRmb3JrLmdpdC52MS5TbmFwc2hvdFJlZhIMCgR0eXBlGAogASgJEhQKDGNvbnRlbnRfanNvbhgLIAEoCRIQCghibG9ja19pZBgMIAEoCSIpCgtTbmFwc2hvdFJlZhINCgVsYWJlbBgBIAEoCRILCgN1cmwYAiABKAkioQEKFkJyYW5jaFNuYXBzaG90UmVzcG9uc2USDQoFZm91bmQYASABKAgSDwoHdGlwX3NoYRgCIAEoCRINCgV0aXRsZRgDIAEoCRIMCgRkZXNjGAQgASgJEgwKBHRhZ3MYBSADKAkSDwoHb3JkZXJlZBgGIAEoCBIrCgVzdGVwcxgHIAMoCzIcLnNldGZvcmsuZ2l0LnYxLlNuYXBzaG90U3RlcCIvChJNaXJyb3JQdXNoUmVzcG9uc2USCgoCb2sYASABKAgSDQoFZXJyb3IYAiABKAkiMAoTTWlycm9yQ2hlY2tSZXNwb25zZRIKCgJvaxgBIAEoCBINCgVlcnJvchgCIAEoCSIVChNDYXBhYmlsaXRpZXNSZXF1ZXN0IjMKFENhcGFiaWxpdGllc1Jlc3BvbnNlEhsKE2VuZm9yY2VzX3B1c2hfcm9sZXMYASABKAgynA0KB0dpdENvcmUSXAoPR2V0Q2FwYWJpbGl0aWVzEiMuc2V0Zm9yay5naXQudjEuQ2FwYWJpbGl0aWVzUmVxdWVzdBokLnNldGZvcmsuZ2l0LnYxLkNhcGFiaWxpdGllc1Jlc3BvbnNlElQKEkluZm9SZWZzVXBsb2FkUGFjaxIfLnNldGZvcmsuZ2l0LnYxLkluZm9SZWZzUmVxdWVzdBodLnNldGZvcmsuZ2l0LnYxLkJ5dGVzUmVzcG9uc2USVQoTSW5mb1JlZnNSZWNlaXZlUGFjaxIfLnNldGZvcmsuZ2l0LnYxLkluZm9SZWZzUmVxdWVzdBodLnNldGZvcmsuZ2l0LnYxLkJ5dGVzUmVzcG9uc2USSAoKVXBsb2FkUGFjaxIbLnNldGZvcmsuZ2l0LnYxLlBvc3RSZXF1ZXN0Gh0uc2V0Zm9yay5naXQudjEuQnl0ZXNSZXNwb25zZRJPCgtSZWNlaXZlUGFjaxIbLnNldGZvcmsuZ2l0LnYxLlBvc3RSZXF1ZXN0GiMuc2V0Zm9yay5naXQudjEuUmVjZWl2ZVBhY2tSZXNwb25zZRJGCgxDcmVhdGVCdW5kbGUSFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmGh0uc2V0Zm9yay5naXQudjEuQnl0ZXNSZXNwb25zZRJJCgxMaXN0QnJhbmNoZXMSFy5zZXRmb3JrLmdpdC52MS5SZXBvUmVmGiAuc2V0Zm9yay5naXQudjEuQnJhbmNoZXNSZXNwb25zZRJiChFHZXRCcmFuY2hTbmFwc2hvdBIlLnNldGZvcmsuZ2l0LnYxLkJyYW5jaFNuYXBzaG90UmVxdWVzdBomLnNldGZvcmsuZ2l0LnYxLkJyYW5jaFNuYXBzaG90UmVzcG9uc2USVQoMQ3JlYXRlQnJhbmNoEiMuc2V0Zm9yay5naXQudjEuQ3JlYXRlQnJhbmNoUmVxdWVzdBogLnNldGZvcmsuZ2l0LnYxLkJyYW5jaE9wUmVzcG9uc2USVQoMRGVsZXRlQnJhbmNoEiMuc2V0Zm9yay5naXQudjEuRGVsZXRlQnJhbmNoUmVxdWVzdBogLnNldGZvcmsuZ2l0LnYxLkJyYW5jaE9wUmVzcG9uc2USVgoLTWVyZ2VCcmFuY2gSIi5zZXRmb3JrLmdpdC52MS5NZXJnZUJyYW5jaFJlcXVlc3QaIy5zZXRmb3JrLmdpdC52MS5NZXJnZUJyYW5jaFJlc3BvbnNlElYKDUdldE1lcmdlU3RhdGUSIS5zZXRmb3JrLmdpdC52MS5NZXJnZVN0YXRlUmVxdWVzdBoiLnNldGZvcmsuZ2l0LnYxLk1lcmdlU3RhdGVSZXNwb25zZRJaCg1NZXJnZVJlc29sdmVkEiQuc2V0Zm9yay5naXQudjEuTWVyZ2VSZXNvbHZlZFJlcXVlc3QaIy5zZXRmb3JrLmdpdC52MS5NZXJnZUJyYW5jaFJlc3BvbnNlEk8KCUNyZWF0ZVRhZxIgLnNldGZvcmsuZ2l0LnYxLkNyZWF0ZVRhZ1JlcXVlc3QaIC5zZXRmb3JrLmdpdC52MS5CcmFuY2hPcFJlc3BvbnNlEkEKCExpc3RUYWdzEhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhocLnNldGZvcmsuZ2l0LnYxLlRhZ3NSZXNwb25zZRJJCgpNaXJyb3JQdXNoEhcuc2V0Zm9yay5naXQudjEuUmVwb1JlZhoiLnNldGZvcmsuZ2l0LnYxLk1pcnJvclB1c2hSZXNwb25zZRJLCgtNaXJyb3JDaGVjaxIXLnNldGZvcmsuZ2l0LnYxLlJlcG9SZWYaIy5zZXRmb3JrLmdpdC52MS5NaXJyb3JDaGVja1Jlc3BvbnNlElkKDFVwZGF0ZUJyYW5jaBIjLnNldGZvcmsuZ2l0LnYxLlVwZGF0ZUJyYW5jaFJlcXVlc3QaJC5zZXRmb3JrLmdpdC52MS5VcGRhdGVCcmFuY2hSZXNwb25zZRJSCgtMaXN0Q29tbWl0cxIiLnNldGZvcmsuZ2l0LnYxLkxpc3RDb21taXRzUmVxdWVzdBofLnNldGZvcmsuZ2l0LnYxLkNvbW1pdHNSZXNwb25zZRJfCg5Db21taXRUb0JyYW5jaBIlLnNldGZvcmsuZ2l0LnYxLkNvbW1pdFRvQnJhbmNoUmVxdWVzdBomLnNldGZvcmsuZ2l0LnYxLkNvbW1pdFRvQnJhbmNoUmVzcG9uc2ViBnByb3RvMw");
 
 /**
  * @generated from message setfork.git.v1.RepoRef
@@ -90,14 +90,64 @@ export type PostRequest = Message<"setfork.git.v1.PostRequest"> & {
   lang: string;
 
   /**
-   * Ф4: ник пушащего — нужен магическому рефу `refs/for/<base>`: коммиты кладутся
-   * в ЕГО ветку `u/<handle>/<base>`. Ядро пользователей не знает, ник приходит от
-   * фронта, который пуш уже авторизовал. '' → магический реф отвергается хуком
-   * с объяснением (а не молча игнорируется).
+   * ПЕРЕХОДНОЕ ПОЛЕ, живёт до выката Ф5 на прод.
+   *
+   * До Ф5 здесь ехал ник, и по нему ядро называло ветку правки. Ф5 перешла на
+   * неизменный идентификатор — но номер поля под новый смысл переиспользовать
+   * нельзя: номер обязан значить одно и то же всегда, иначе в окно выкатки ник
+   * приедет под видом идентификатора.
+   *
+   * Просто убрать поле тоже нельзя: фронт и ядро выкатываются порознь, и в окно
+   * между выкатками СТАРОЕ ядро (Ф4) читает ник именно отсюда. Без него оно
+   * отвергает `refs/for/main` с «непонятно, кто пушит» — то есть рабочая функция
+   * ложится на всё время выкатки, и порядок тут не спасает: при обратном порядке
+   * ложится ровно так же, только на другой стороне (авто-ревью fe#662).
+   *
+   * Поэтому канонический переход protobuf: новое поле рядом со старым, фронт
+   * пишет ОБА, старое ядро читает своё, новое — своё. После выката Ф5 поле
+   * удаляется, номер уходит в reserved. Хвост записан в трек git-surface.
+   *
+   * Ядро с Ф5 читает это поле ТОЛЬКО когда `actor_id` пуст, то есть когда фронт
+   * ещё старый. Иначе обратный порядок выкатки (ядро раньше фронта) ронял бы
+   * магический пуш точно так же — просто на другой стороне. В логике ник не
+   * участвует и здесь: он лишь называет ветку, ровно как называл до Ф5.
    *
    * @generated from field: string actor_handle = 5;
    */
   actorHandle: string;
+
+  /**
+   * Ф4: НЕИЗМЕННЫЙ идентификатор пушащего — нужен магическому рефу
+   * `refs/for/<base>`: коммиты кладутся в его ветку `u/<id>/<base>`. Ядро
+   * пользователей не знает, значение приходит от фронта, который пуш уже
+   * авторизовал. '' → магический реф отвергается хуком с объяснением.
+   *
+   * ⚠️ Именно идентификатор, а НЕ ник. Ник сменяем и после смены достаётся
+   * другому человеку, а имя ветки живёт вечно: с ником в имени новый владелец
+   * ника попадал бы в чужую ветку и переписывал чужое предложение. У Gerrit и
+   * GitHub ветки вклада (`refs/changes/…`, `refs/pull/N/head`) по той же причине
+   * не именуются ником вовсе.
+   *
+   * @generated from field: string actor_id = 7;
+   */
+  actorId: string;
+
+  /**
+   * Ф5: роль пушащего — 'owner' | 'collaborator' | 'contributor'.
+   *
+   * РЕШАЕТ фронт: владение, соавторство, `prSettings.allowFrom`, модерация — это
+   * пользовательская авторизация, и по ADR-0011 §2 её место там. Ядро исполняет
+   * МЕХАНИЧЕСКОЕ следствие роли: посторонний предъявляет правку ТОЛЬКО через
+   * `refs/for/main` и не пишет никаких веток напрямую — как у Gerrit, где вклад
+   * приходит одним магическим рефом, а имя ветки придумывает сервер.
+   *
+   * '' означает «фронт старше Ф5»: он ролей не шлёт — и посторонних не впускает,
+   * поэтому ограничивать нечего. Ядро пишет об этом в лог, чтобы состояние окна
+   * выкатки не было тихим.
+   *
+   * @generated from field: string actor_role = 6;
+   */
+  actorRole: string;
 };
 
 /**
@@ -141,7 +191,7 @@ export type MagicPush = Message<"setfork.git.v1.MagicPush"> & {
   base: string;
 
   /**
-   * куда легли коммиты: u/<handle>/<base>
+   * куда легли коммиты: u/<id>/<base> (имя придумал сервер)
    *
    * @generated from field: string branch = 2;
    */
@@ -1107,9 +1157,68 @@ export const MirrorCheckResponseSchema: GenMessage<MirrorCheckResponse> = /*@__P
   messageDesc(file_git, 32);
 
 /**
+ * Ф5: что умеет ЭТО ядро.
+ *
+ * Нужно потому, что правило «посторонний пишет только в своё пространство»
+ * исполняет ядро, а пускает постороннего фронт — и выкатываются они порознь.
+ * Фронт с Ф5 рядом со старым ядром пустил бы постороннего к ядру, которое роли
+ * не смотрит вовсе, и тот дописал бы прямо в main (авто-ревью core#80).
+ *
+ * Порядок выкатки такую пару чинит только на бумаге: инструкцию можно
+ * перепутать, а ядро — откатить назад, оставив фронт новым. Поэтому фронт
+ * СПРАШИВАЕТ, а не полагается на порядок.
+ *
+ * Форма — та же, что у самого git: сервер объявляет возможности (`report-status`,
+ * `side-band-64k`, `delete-refs`), клиент пользуется только объявленным. Молчание
+ * значит «не умею»: старое ядро на неизвестный метод ответит UNIMPLEMENTED, и
+ * фронт обязан прочитать это как отказ, а не как ошибку связи.
+ *
+ * @generated from message setfork.git.v1.CapabilitiesRequest
+ */
+export type CapabilitiesRequest = Message<"setfork.git.v1.CapabilitiesRequest"> & {
+};
+
+/**
+ * Describes the message setfork.git.v1.CapabilitiesRequest.
+ * Use `create(CapabilitiesRequestSchema)` to create a new message.
+ */
+export const CapabilitiesRequestSchema: GenMessage<CapabilitiesRequest> = /*@__PURE__*/
+  messageDesc(file_git, 33);
+
+/**
+ * @generated from message setfork.git.v1.CapabilitiesResponse
+ */
+export type CapabilitiesResponse = Message<"setfork.git.v1.CapabilitiesResponse"> & {
+  /**
+   * Ядро смотрит на роль пушащего и держит постороннего в его пространстве (Ф5).
+   *
+   * @generated from field: bool enforces_push_roles = 1;
+   */
+  enforcesPushRoles: boolean;
+};
+
+/**
+ * Describes the message setfork.git.v1.CapabilitiesResponse.
+ * Use `create(CapabilitiesResponseSchema)` to create a new message.
+ */
+export const CapabilitiesResponseSchema: GenMessage<CapabilitiesResponse> = /*@__PURE__*/
+  messageDesc(file_git, 34);
+
+/**
  * @generated from service setfork.git.v1.GitCore
  */
 export const GitCore: GenService<{
+  /**
+   * Ф5: возможности ядра — см. CapabilitiesResponse. Читается ДО авторизации
+   * постороннего, поэтому дешёвый и без побочных действий.
+   *
+   * @generated from rpc setfork.git.v1.GitCore.GetCapabilities
+   */
+  getCapabilities: {
+    methodKind: "unary";
+    input: typeof CapabilitiesRequestSchema;
+    output: typeof CapabilitiesResponseSchema;
+  },
   /**
    * @generated from rpc setfork.git.v1.GitCore.InfoRefsUploadPack
    */
@@ -1263,7 +1372,7 @@ export const GitCore: GenService<{
   /**
    * Ф2: проверка доступа к зеркалу БЕЗ пуша — кнопка «Проверить доступ», чтобы
    * владелец узнал о неверном токене сразу, а не после первой публикации.
-   * 
+   *
    * ⚠️ Проверяется именно ЗАПИСЬ. `git ls-remote` для этого не годится: на
    * публичном репозитории он отвечает успехом даже с заведомо мусорным токеном
    * (проверено на живом GitHub — exit 0), и кнопка давала бы зелёный там, где
@@ -1305,10 +1414,10 @@ export const GitCore: GenService<{
    * Записать list.json в ВЕТКУ одним коммитом. Нужно «предложенным правкам»:
    * рецензент даёт готовый текст пункта, автор жмёт «Применить» — и правка
    * ложится в ветку предложения, а не требует локального клона.
-   * 
+   *
    * MergeResolved пишет в main, здесь main НЕ трогается: ветка — черновик,
    * версии рождаются только из main, поэтому проекции нет.
-   * 
+   *
    * expected_tip — оптимистичная блокировка: между чтением ветки и записью в неё
    * мог прийти чужой пуш, и без сверки мы бы молча его перезаписали.
    * Не совпало → failed_precondition('stale').

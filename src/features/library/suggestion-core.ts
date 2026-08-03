@@ -32,6 +32,62 @@ import { sql } from 'drizzle-orm'
  * предложение. На этом держатся ревизии — повторный магический пуш двигает ту же
  * ветку и обновляет ТО ЖЕ предложение, а не плодит новые.
  */
+/**
+ * Потолок заголовка предложения.
+ *
+ * Одно число на все пути, а не по копии у каждого: веб-форма ограничивала, а
+ * терминальный путь — нет, и тема коммита ехала в базу целиком. Пак жмётся, так
+ * что многомегабайтная первая строка проходит под лимитом тела, а потом её
+ * читают и отдают все запросы списка предложений (авто-ревью fe#662).
+ */
+export const SUGGESTION_NOTE_MAX = 2000
+
+/**
+ * ПЕРЕХОДНОЕ (живёт до снятия `actor_handle`): перевести предложение с ветки,
+ * названной по нику, на ветку по идентификатору.
+ *
+ * Зачем. До Ф5 ветку правки называло ядро по НИКУ, теперь — по неизменному
+ * идентификатору. Фронт и ядро выкатываются порознь, и в окно между выкатками
+ * магический пуш ещё попадает в `u/<ник>/main`. После выката ядра ревизия того
+ * же человека ложится уже в `u/<id>/main`, дедупликация идёт строго по ветке, и
+ * вместо новой ревизии появлялось бы ВТОРОЕ предложение, а первое висело бы
+ * открытым и обновить его было бы нечем (авто-ревью core#80).
+ *
+ * Подбор идёт по ТОЧНОМУ имени, которое вызывающий обязан назвать сам
+ * (`legacyBranch`), а не по шаблону «любая ветка `u/…` этого автора». Шаблон
+ * забирал бы и ветку, заведённую руками: `u/team/main` — законное имя, владелец
+ * вправе запушить такую из терминала, и её предложение вместе с обсуждением
+ * молча переехало бы на чужое содержимое (авто-ревью fe#662).
+ *
+ * Цена точности: если ник сменился между пушем и ревизией, перенос не
+ * сработает и появится второе предложение. Это лучше, чем забрать чужое, — и
+ * это ровно та ненадёжность ника, из-за которой от него и ушли.
+ *
+ * Ветку в git не трогаем: старая остаётся как есть, предложение просто смотрит
+ * на новую, где лежит свежая ревизия.
+ */
+async function adoptLegacyHandleBranch(input: {
+  templateId: string
+  authorId: string
+  branch: string
+  legacyBranch?: string
+}): Promise<string | null> {
+  const legacyRef = input.legacyBranch
+  if (!legacyRef || legacyRef === input.branch) return null
+  const legacy = await db.query.suggestions.findFirst({
+    where: (s) =>
+      and(
+        eq(s.templateId, input.templateId),
+        eq(s.authorId, input.authorId),
+        eq(s.status, 'open'),
+        eq(s.branchRef, legacyRef),
+      ),
+  })
+  if (!legacy) return null
+  await db.update(suggestions).set({ branchRef: input.branch }).where(eq(suggestions.id, legacy.id))
+  return legacy.id
+}
+
 export async function ensureBranchSuggestion(input: {
   templateId: string
   ownerId: string
@@ -39,11 +95,17 @@ export async function ensureBranchSuggestion(input: {
   authorId: string
   branch: string
   note?: string
+  /** ПЕРЕХОДНОЕ: как эта же правка называлась до Ф5 (`u/<ник>/<база>`). См.
+   *  `adoptLegacyHandleBranch`; убрать вместе с полем `actor_handle`. */
+  legacyBranch?: string
 }): Promise<{ id: string; created: boolean }> {
   const open = await db.query.suggestions.findFirst({
     where: (s) => and(eq(s.templateId, input.templateId), eq(s.branchRef, input.branch), eq(s.status, 'open')),
   })
   if (open) return { id: open.id, created: false }
+
+  const adopted = await adoptLegacyHandleBranch(input)
+  if (adopted) return { id: adopted, created: false }
 
   // onConflictDoNothing + перечитывание: проверка выше и вставка — два шага, и
   // между ними влезает параллельный запрос. Правило держит частичный уникальный
@@ -54,7 +116,7 @@ export async function ensureBranchSuggestion(input: {
     .values({
       templateId: input.templateId,
       authorId: input.authorId,
-      note: input.note ?? `Merge branch '${input.branch}'`,
+      note: (input.note ?? `Merge branch '${input.branch}'`).slice(0, SUGGESTION_NOTE_MAX),
       baseVersion: input.currentVersion,
       items: [], // источник правды — tip ветки, материализуется при просмотре
       branchRef: input.branch,
@@ -301,7 +363,7 @@ export async function createSuggestion(
   }
   if (!(await rateLimit(`suggest:${actorUserId}`, 10, 10 * 60_000)).ok) return { ok: false, reason: 'rate limited' }
 
-  const note = input.note.trim().slice(0, 2000)
+  const note = input.note.trim().slice(0, SUGGESTION_NOTE_MAX)
   const created = await collabStore.createSuggestion(tpl.id, actorUserId, note, toStepInput(input.items as never))
   await curationStore.ensureWatch(tpl.id, actorUserId) // автор правки следит за списком
   await notify({ recipientId: tpl.ownerId, actorId: actorUserId, type: 'suggestion_new', templateId: tpl.id, suggestionId: created.id })

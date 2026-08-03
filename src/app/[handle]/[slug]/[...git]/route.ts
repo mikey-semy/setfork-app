@@ -3,6 +3,8 @@ import { db, users } from '@/shared/db'
 // eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
 import { canEditList } from '@/core'
+import { contributorsEnabled, openForContributions, type PushRole } from '@/features/library/push-role'
+import { coreEnforcesPushRoles } from '@/features/git/capabilities'
 import { ensureBranchSuggestion } from '@/features/library/suggestion-core'
 import { captureError } from '@/shared/observability'
 import { isCollaborator } from '@/features/collab/queries'
@@ -13,6 +15,8 @@ import { notifyMany } from '@/features/notifications/notify'
 import { getWatcherIds } from '@/features/watch/queries'
 import { recordAudit } from '@/shared/audit'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
+import { envNumber } from '@/shared/env'
+import { t, type Lang } from '@/shared/i18n'
 
 // git smart-HTTP: `git clone/pull/push https://host/{owner}/{slug}.git`.
 // Работает из VSCode. Источник правды — персистентный bare-репо внутри ядра
@@ -49,20 +53,60 @@ async function authorizeRead(req: Request, meta: Meta): Promise<'ok' | 401 | 404
   return auth.userId === meta.ownerId ? 'ok' : 404
 }
 
-/** Доступ на запись (push): владелец/коллаборатор по токену со scope 'write' и список,
- *  в который вообще можно писать. Возвращает userId пушащего (для аудита), 401 или 403. */
-async function authorizeWrite(req: Request, meta: Meta): Promise<string | 401 | 403> {
+/**
+ * Сколько пушей в час разрешено ПОСТОРОННЕМУ (Ф5).
+ *
+ * Настройкой, а не числом в коде: величина зависит от того, как пойдёт, и
+ * подкручивается без выкатки. Двадцать — это заметно больше, чем нужно человеку,
+ * который правит список (пуш, посмотрел, поправил, ещё раз), и заметно меньше,
+ * чем нужно скрипту, чтобы шуметь.
+ */
+const CONTRIB_PUSHES_PER_HOUR = envNumber('SETFORK_GIT_CONTRIB_PUSHES_PER_HOUR', 20)
+
+
+/**
+ * Доступ на запись (push): кто пушит и в каком качестве.
+ *
+ * Ф5: помимо владельца и соавтора пускаем ЛЮБОГО пользователя с write-токеном,
+ * если список открыт для предложений. Раньше git-путь был строже веба без
+ * причины: `allowFrom` по умолчанию `'all'`, то есть веб уже разрешал предлагать
+ * правки кому угодно, а через git то же самое было нельзя. Правка из ветки ничем
+ * не опаснее правки из формы — она точно так же ничего не меняет, пока владелец
+ * её не сольёт.
+ *
+ * Роль уходит наружу, потому что ядро исполняет её МЕХАНИЧЕСКИ (посторонний
+ * пишет только в `refs/for/main`, а имя ветки придумывает сервер). Само решение остаётся
+ * здесь: ADR-0011 §2 — пользовательской авторизации в ядре нет.
+ */
+async function authorizeWrite(req: Request, meta: Meta): Promise<{ userId: string; role: PushRole } | 401 | 403> {
   const auth = await userFromBasic(req)
   if (!auth || auth.scope !== 'write') return 401 // read-only токен не может пушить
-  const allowed = auth.userId === meta.ownerId || (await isCollaborator(meta.id, auth.userId))
-  if (!allowed) return 401
+  const role = await resolveRole(auth.userId, meta)
+  if (!role) return 401
   // Архив и заморозка — ограничения ЗАПИСИ, и git-путь обязан их соблюдать. Проверка
   // здесь, а не в ядре: на проде git идёт в Rust-ядро (SETFORK_CORE_URL), где понятий
   // frozen/archived нет вовсе, и push замороженного списка создавал новую версию —
   // ровно то, что заморозка обязана останавливать (линза 02, F3). Роут общий для
   // обоих режимов ядра, поэтому правило остаётся в одном месте.
   if (!canEditList(meta)) return 403
-  return auth.userId
+  return { userId: auth.userId, role }
+}
+
+/**
+ * В каком качестве этот человек пишет в ЭТОТ список — по текущему состоянию списка.
+ *
+ * Отдельно от `authorizeWrite`, потому что зовётся ДВАЖДЫ: до чтения тела (быстрый
+ * отказ) и вплотную к передаче пака в ядро. Между этими моментами проходит всё
+ * время закачки — у большого пуша это минуты, и за них владелец успевает закрыть
+ * приём предложений, спрятать список или снять соавторство.
+ */
+async function resolveRole(userId: string, meta: Meta): Promise<PushRole | null> {
+  if (userId === meta.ownerId) return 'owner'
+  if (await isCollaborator(meta.id, userId)) return 'collaborator'
+  // Порядок проверок — от дешёвой к дорогой: у выключенного рубильника до ядра
+  // дело не доходит вовсе.
+  if (!contributorsEnabled() || !openForContributions(meta)) return null
+  return (await coreEnforcesPushRoles()) ? 'contributor' : null
 }
 
 /**
@@ -108,7 +152,7 @@ const writeDisabled = () =>
  * Английский по умолчанию — решение владельца: git-инструментарий англоязычен, и
  * незнакомый язык в выводе `git push` читается как поломка, а не как забота.
  */
-async function pusher(userId: string, req: Request): Promise<{ lang: string; handle: string }> {
+async function pusher(userId: string, req: Request): Promise<{ lang: Lang; handle: string }> {
   const [u] = await db
     .select({ lang: users.lang, handle: users.handle })
     .from(users)
@@ -118,9 +162,9 @@ async function pusher(userId: string, req: Request): Promise<{ lang: string; han
 }
 
 /** Язык из профиля и заголовка (см. док выше у `pusher`). */
-function pickLang(profile: string | undefined, req: Request): string {
+function pickLang(profile: string | undefined, req: Request): Lang {
   // Не 'en' — значит язык меняли руками: это и есть осознанный выбор.
-  if (profile && profile !== 'en') return profile
+  if (profile && profile !== 'en') return profile as Lang
   // Первый тег заголовка: `ru, *;q=0.9` → `ru`. Качества не взвешиваем — языка
   // два, и предпочтительный по спецификации и так стоит первым.
   const header = req.headers.get('accept-language') ?? ''
@@ -159,6 +203,28 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   return new Response('Service not available', { status: 403 })
 }
 
+/**
+ * Заголовок предложения, пришедшего из терминала.
+ *
+ * По умолчанию `ensureBranchSuggestion` берёт `Merge branch '<ветка>'`, а ветку
+ * магическому пушу называет сервер — `u/<идентификатор>/<база>`. В списке
+ * предложений это самая крупная строка карточки, и в ней торчал бы внутренний
+ * идентификатор: подпись `branchLabel` прячет его в метаданных, но заголовок
+ * лежит в базе отдельным полем и форматтеру не подчиняется (авто-ревью fe#662).
+ *
+ * Берём тему коммита — ровно как GitHub, который подставляет в заголовок PR
+ * тему единственного коммита, а при нескольких переходит на имя ветки. Имя
+ * ветки нам не годится, поэтому вторая ветка развилки — общая подпись.
+ *
+ * Ошибку глотаем: заголовок — не повод отменять уже принятый пуш.
+ */
+async function terminalPushNote(repo: { owner: string; slug: string }, branch: string, lang: Lang): Promise<string> {
+  const commits = await gitCore.listCommits(repo, branch, { notIn: 'main', limit: 2 }).catch(() => null)
+  // Первая строка сообщения: остальное — тело коммита, в заголовок ему нельзя.
+  const subject = commits?.length === 1 ? (commits[0]?.message.split('\n')[0]?.trim() ?? '') : ''
+  return subject || t('prFromTerminal', lang)
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
   const rl = await rateLimit(`git:${clientIp(req)}`, 240, 60_000)
   if (!rl.ok) return tooMany(rl)
@@ -188,6 +254,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     const az = await authorizeWrite(req, meta)
     if (az === 401) return unauthorized()
     if (az === 403) return writeDisabled()
+    // Ф5: отдельный, более строгий лимит для ПОСТОРОННИХ — иначе «предлагать
+    // может кто угодно» превращается в открытую дверь. Считаем по пользователю,
+    // а не по IP: за NAT адрес общий, зато токен всегда именной.
+    //
+    // Лимит стоит ЗДЕСЬ, а не в ядре, сознательно: ADR-0011 §2 называет per-user
+    // лимит в ядре инфраструктурой без потребности, а во фронте `shared/rate-limit`
+    // уже есть. Проверка ДО чтения тела — чтобы не тянуть мегабайты ради отказа.
+    //
+    // Владельца и соавтора не касается: их пуши — обычная работа со своим
+    // списком, и общий лимит по IP на них уже действует.
+    if (az.role === 'contributor') {
+      const rlUser = await rateLimit(`git:contrib:${az.userId}`, CONTRIB_PUSHES_PER_HOUR, 3600_000)
+      if (!rlUser.ok) return tooMany(rlUser)
+    }
     let body: Buffer
     try {
       body = await readGitBody(req).then((raw) => maybeGunzip(raw, req.headers.get('content-encoding')))
@@ -195,18 +275,39 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
       if (e instanceof GitBodyTooLarge) return tooLarge(e)
       throw e
     }
-    // Второго перечитывания состояния здесь БОЛЬШЕ НЕТ. Оно стояло тут потому, что
-    // большой push висит минутами и владелец может заморозить список ровно в это
-    // окно, а ядро о заморозке не знало. С Ф1 (ADR-0015) знает: ядро само спрашивает
-    // /api/internal/write-allowed вплотную к записи и под репо-локом — то есть
-    // проверка стала не только не устаревшей, но и не обходимой другими путями.
-    // Ранняя проверка выше (authorizeWrite → canEditList) остаётся: она даёт быстрый
-    // отказ ДО чтения тела, чтобы не тянуть мегабайты ради заведомого 403.
-    const who = await pusher(az, req)
+    // Заморозку и архив здесь перечитывать НЕ НАДО: с Ф1 (ADR-0015) ядро само
+    // спрашивает /api/internal/write-allowed вплотную к записи и под репо-локом —
+    // проверка там и свежее, и необходима всем путям записи сразу.
+    //
+    // А вот КТО пишет, тот колбэк не проверяет и проверять не может: он спрашивает
+    // про список, а не про человека (ADR-0011 §2 — пользовательской авторизации в
+    // ядре нет). Поэтому роль перечитываем здесь, вплотную к передаче пака. Пока
+    // качалось тело — а у большого пуша это минуты — владелец мог закрыть приём
+    // предложений, спрятать список или снять соавторство, и устаревшая роль
+    // проехала бы в ядро как действующая (авто-ревью fe#662). Ранняя проверка выше
+    // остаётся: она даёт отказ ДО чтения тела, чтобы не тянуть мегабайты зря.
+    const fresh = await getListMeta(handle, slug)
+    if (!fresh || !canEditList(fresh)) return writeDisabled()
+    const role = await resolveRole(az.userId, fresh)
+    if (!role) return unauthorized()
+    // Лимит считается по ФИНАЛЬНОЙ роли, иначе его обходят сменой качества:
+    // соавтор открывает пуши, лишается соавторства за время закачки — и приходит
+    // как посторонний, ни разу не тронув счётчик (авто-ревью fe#662). Второй раз
+    // с того же пуша не списываем: у пришедшего посторонним счётчик уже двинулся
+    // выше, до чтения тела.
+    if (role === 'contributor' && az.role !== 'contributor') {
+      const rlLate = await rateLimit(`git:contrib:${az.userId}`, CONTRIB_PUSHES_PER_HOUR, 3600_000)
+      if (!rlLate.ok) return tooMany(rlLate)
+    }
+    const who = await pusher(az.userId, req)
     const res = await gitCore.receivePack(
       { owner: handle, slug },
       body,
-      { gitProtocol, lang: who.lang, actorHandle: who.handle },
+      // Ф5: роль едет вместе с автором — ядро исполнит по ней правило пространства.
+      // `actorHandle` — переходное поле для СТАРОГО ядра: пока на проде Ф4, ветку
+      // правки оно называет по нику и без него отвергает магический реф. Новое
+      // ядро его игнорирует. Убрать, когда ядро с Ф5 везде (трек git-surface).
+      { gitProtocol, lang: who.lang, actorId: az.userId, actorHandle: who.handle, actorRole: role },
     )
     if (!res) return new Response('Repository unavailable', { status: 500 })
     // Ф4: магический пуш `refs/for/main` — ядро положило коммиты в ветку автора,
@@ -239,11 +340,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
             templateId: meta.id,
             ownerId: meta.ownerId,
             currentVersion: meta.currentVersion,
-            authorId: az,
+            authorId: az.userId,
             branch: m.branch,
+            note: await terminalPushNote({ owner: handle, slug }, m.branch, who.lang),
+            // ПЕРЕХОДНОЕ: как ветка называлась бы у ядра до Ф5 — по нику. Нужно,
+            // чтобы ревизия правки, начатой в окно выкатки, продолжила ТО ЖЕ
+            // предложение. Убрать вместе с `actorHandle`.
+            legacyBranch: who.handle ? `u/${who.handle}/${m.branch.split('/')[2] ?? 'main'}` : undefined,
           })
           await recordAudit('git.suggest', {
-            actorId: az,
+            actorId: az.userId,
             targetType: 'suggestion',
             targetId: sug.id,
             meta: { slug, branch: m.branch, tip: m.tipSha, revision: sug.created ? 'first' : 'new' },
@@ -261,7 +367,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     if (res.newVersion != null) {
       const watchers = await getWatcherIds(meta.id, 'versions')
       await notifyMany(watchers, { type: 'new_version', templateId: meta.id }).catch(() => {})
-      await recordAudit('git.push', { actorId: az, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } })
+      await recordAudit('git.push', { actorId: az.userId, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } })
       // push меняет title/desc/tags минуя формы → пере-проверяем публичный список в фоне.
       if (meta.visibility === 'public') {
         const { recheckList } = await import('@/features/moderation/moderate-list')
