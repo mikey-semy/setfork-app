@@ -39,7 +39,8 @@ export interface McpBlockOption {
 }
 
 // Один блок списка через MCP. type по умолчанию 'step'. Поля по типу:
-//  step  — title(+desc/command/level/why/section/subtasks); text — text(markdown);
+//  step  — title(+desc/command/level/why/section/subtasks/refs); text — text(markdown);
+//  file  — url + fileName (ссылка на документ/вложение);
 //  image — caption(+imageRef); video — url(+caption); poll — question/options/multi/deadline;
 //  quiz  — question/explain + по quizKind: choice=options(correct)/multi;
 //          text=accept/caseSensitive; number=answer/tolerance.
@@ -52,11 +53,16 @@ export interface McpItemInput {
   why?: string
   section?: string
   subtasks?: string[]
+  refs?: { label: string; url?: string }[] // step — ссылки под шагом (док, источник)
   text?: string
   caption?: string
   imageRef?: string
   url?: string
   fileName?: string // file — имя вложения (url = ссылка на уже загруженный файл)
+  // get_list отдаёт эти поля как name/ref — принимаем ОБЕ формы, иначе круг
+  // «прочитал → отдал обратно в update_list» терял имя файла и ссылку картинки.
+  name?: string
+  ref?: string
   question?: string
   options?: McpBlockOption[]
   multi?: boolean
@@ -81,9 +87,9 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
     const type = isBlockType(it.type ?? '') ? (it.type as EditorItem['type']) : 'step'
     const b = emptyBlock(type)
     if (type === 'text') return { ...b, text: (it.text ?? '').trim() }
-    if (type === 'image') return { ...b, imageKey: (it.imageRef ?? '').trim(), caption: (it.caption ?? '').trim() }
+    if (type === 'image') return { ...b, imageKey: (it.imageRef ?? it.ref ?? '').trim(), caption: (it.caption ?? '').trim() }
     if (type === 'video') return { ...b, videoUrl: (it.url ?? '').trim(), caption: (it.caption ?? '').trim() }
-    if (type === 'file') return { ...b, fileUrl: (it.url ?? '').trim(), fileName: (it.fileName ?? '').trim() }
+    if (type === 'file') return { ...b, fileUrl: (it.url ?? '').trim(), fileName: (it.fileName ?? it.name ?? '').trim() }
     if (type === 'poll')
       return { ...b, poll: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim() })), multi: it.multi === true, deadline: (it.deadline ?? '').trim() } }
     if (type === 'quiz') {
@@ -109,7 +115,19 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
         },
       }
     }
-    return { ...b, title: (it.title ?? '').trim(), desc: (it.desc ?? '').trim(), command: it.command?.trim() ?? '', level: it.level ?? 'required', why: (it.why ?? '').trim(), section: (it.section ?? '').trim(), subtasks: (it.subtasks ?? []).filter((s) => s.trim()) }
+    return {
+      ...b,
+      title: (it.title ?? '').trim(),
+      desc: (it.desc ?? '').trim(),
+      command: it.command?.trim() ?? '',
+      level: it.level ?? 'required',
+      why: (it.why ?? '').trim(),
+      section: (it.section ?? '').trim(),
+      subtasks: (it.subtasks ?? []).filter((s) => s.trim()),
+      // Ссылки шага: get_list их отдаёт, а положить было нечем — асимметрия чтения
+      // и записи. Пустые метки отсеивает сериализатор (toProposedItems).
+      refs: (it.refs ?? []).map((r) => ({ label: String(r?.label ?? '').trim(), url: String(r?.url ?? '').trim() })),
+    }
   })
   return toProposedItems(editor, 'en')
 }

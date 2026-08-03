@@ -205,7 +205,7 @@ const handler = createMcpHandler(
 
     // Блок списка. type по умолчанию 'step'. Для не-step заполняй поля своего типа.
     const itemShape = z.object({
-      type: z.enum(['step', 'text', 'image', 'poll', 'video', 'quiz']).optional().describe('Block type (default "step")'),
+      type: z.enum(['step', 'text', 'image', 'poll', 'video', 'quiz', 'file']).optional().describe('Block type (default "step")'),
       // step
       title: z.string().optional().describe('Step title (short imperative) — for type "step"'),
       desc: z.string().optional().describe('Step: one or two clarifying sentences (light markdown ok)'),
@@ -214,6 +214,10 @@ const handler = createMcpHandler(
       why: z.string().optional().describe('Step: why this step matters (rationale)'),
       section: z.string().optional().describe('Step: optional section header; consecutive steps sharing it are grouped'),
       subtasks: z.array(z.string()).optional().describe('Step: verification checks'),
+      refs: z
+        .array(z.object({ label: z.string().describe('Link text'), url: z.string().optional().describe('Link target') }))
+        .optional()
+        .describe('Step: reference links shown under the step (docs, sources). get_list returns them in the same shape'),
       // text
       text: z.string().optional().describe('Text block: markdown content — for type "text"'),
       // image / video
@@ -221,6 +225,10 @@ const handler = createMcpHandler(
       imageRef: z.string().optional().describe('image: storage key of an already-uploaded image (rarely set via API)'),
       url: z.string().optional().describe('video: link to YouTube/Vimeo or a direct .mp4/.webm; file: link to the attachment'),
       fileName: z.string().optional().describe('file: display name of the attachment — for type "file"'),
+      // get_list отдаёт file.name и image.ref — принимаем их под теми же именами,
+      // чтобы прочитанный список можно было отдать обратно в update_list как есть.
+      name: z.string().optional().describe('file: same as fileName — the shape get_list returns'),
+      ref: z.string().optional().describe('image: same as imageRef — the shape get_list returns'),
       // poll / quiz
       question: z.string().optional().describe('poll/quiz: the question'),
       options: z
@@ -254,7 +262,7 @@ const handler = createMcpHandler(
           desc: z.string().optional().describe('One-line description'),
           tags: z.array(z.string()).optional().describe('3-6 short tags'),
           ordered: z.boolean().optional().describe('true = ordered steps, false = unordered set (default true)'),
-          items: z.array(itemShape).min(1).describe('The blocks (steps and optionally text/image/poll/video/quiz)'),
+          items: z.array(itemShape).min(1).describe('The blocks (steps and optionally text/image/poll/video/quiz/file)'),
         },
       },
       async (userId, args) => {
@@ -267,7 +275,7 @@ const handler = createMcpHandler(
       'update_list',
       {
         title: 'Update a list',
-        description: 'Replace the blocks of a list you own (steps and/or text/image/poll/video/quiz). A draft is edited in place; a published list gets a new version.',
+        description: 'Replace the blocks of a list you own (steps and/or text/image/poll/video/quiz/file). A draft is edited in place; a published list gets a new version.',
         inputSchema: {
           handle: z.string().describe('Owner handle (must be you)'),
           slug: z.string().describe('List slug'),

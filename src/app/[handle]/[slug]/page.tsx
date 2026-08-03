@@ -47,7 +47,7 @@ import { getCourseCompletion, getQuizState } from '@/features/quizzes/queries'
 import { quizContentHash } from '@/core/domain/quiz-fingerprint'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
-import { pollDeadlineMs, productItems } from '@/features/library/blocks'
+import { blockChatTitle, pollDeadlineMs, productItems } from '@/features/library/blocks'
 import { ProductBlock } from '@/shared/ui/ProductBlock'
 import { requireViewableDetail, requireViewableMeta } from '@/features/library/guard'
 import { db, listLinks, templates as templatesTable, users as usersTable, publiclyVisible } from '@/shared/db'
@@ -575,9 +575,22 @@ export default async function ListPage({
                   let el: ReactNode = null
                   if (s.type === 'text') {
                     const md = typeof s.content?.md === 'string' ? s.content.md : ''
+                    // Текст-блок — такая же карточка с киркой, как шаг: это часть материала,
+                    // по которой так же копают (в прохождении он уже такой — RunView). Раньше
+                    // здесь был голый абзац: ни рамки, ни входа в чат (фидбек владельца).
+                    const canDig = !!viewer && !readOnlyView && typeof s.n === 'number'
                     el = md ? (
-                      <div className="break-inside-avoid px-1 py-1">
-                        <Markdown className="text-[0.875rem] leading-relaxed text-ink-2">{renderWikiLinks(md)}</Markdown>
+                      <div className="relative break-inside-avoid rounded-lg border border-border bg-surface p-4">
+                        {viewer && !readOnlyView && typeof s.n === 'number' && (
+                          <span className="absolute right-2 top-2 print:hidden">
+                            <DigChatOpen
+                              detail={{ templateId: tpl.id, stepN: s.n, stepTitle: blockChatTitle('text', '', section, lang) }}
+                              label={t('list.digIntoStep', lang)}
+                              hasSession={digSteps.has(s.n)}
+                            />
+                          </span>
+                        )}
+                        <Markdown className={`text-[0.875rem] leading-relaxed text-ink-2${canDig ? ' pr-10' : ''}`}>{renderWikiLinks(md)}</Markdown>
                       </div>
                     ) : null
                   } else if (s.type === 'image') {

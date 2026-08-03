@@ -28,6 +28,9 @@ export interface RunStepVM {
   productTitle: string // заголовок подборки product-блока
   products: ProductLinkVM[] // товары product-блока (href — трекинговый /api/go)
   title: string
+  /** Подпись блока в шапке чата раскопки: у шага — заголовок, у блока без
+   *  заголовка — его секция-урок или имя типа (считает blockChatTitle). */
+  digTitle: string
   desc: string
   command: string
   level: StepLevel
@@ -245,7 +248,7 @@ export function RunView({
                 <div key={s.id} className="relative rounded-lg border border-border bg-surface p-4">
                   {digEnabled && (
                     <div className="absolute right-2 top-2">
-                      <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.title }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />
+                      <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.digTitle }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />
                     </div>
                   )}
                   <Markdown className={`text-[0.875rem] leading-relaxed text-ink-2${digEnabled ? ' pr-10' : ''}`}>{s.text}</Markdown>
@@ -288,7 +291,7 @@ export function RunView({
                       </button>
                     </Tooltip>
                   )}
-                  {digEnabled && <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.title }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />}
+                  {digEnabled && <DigChatOpen detail={{ templateId, stepN: s.n, stepTitle: s.digTitle }} label={t('digStep', lang)} hasSession={dugLocal.has(s.n)} />}
                 </div>
               )}
 

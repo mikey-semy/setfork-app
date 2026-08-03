@@ -1,10 +1,15 @@
 // Типы блоков списка (всё-блочная модель). Чистый модуль без server-only —
 // используется и на сервере, и в редакторе. См. дизайн-док по блочному редактору.
 
+import type { Lang } from '@/shared/i18n'
+
 export const BLOCK_TYPES = ['step', 'text', 'image', 'poll', 'video', 'quiz', 'file', 'product'] as const
 export type BlockType = (typeof BLOCK_TYPES)[number]
 
 export const isBlockType = (t: string): t is BlockType => (BLOCK_TYPES as readonly string[]).includes(t)
+
+/** Значение из БД/входа → тип блока; неизвестное трактуем шагом (как редактор). */
+export const asBlockType = (v: unknown): BlockType => (typeof v === 'string' && isBlockType(v) ? v : 'step')
 
 /** Стабильный id блока — живёт ВНУТРИ content (content.bid) у не-step блоков.
  *  Даёт идентичность для three-way merge: правка text/image — modify, а не add+remove.
@@ -96,6 +101,13 @@ export const BLOCK_META: Record<BlockType, { icon: string; en: string; ru: strin
   file: { icon: '📎', en: 'File', ru: 'Файл' },
   product: { icon: '🛒', en: 'Products', ru: 'Товары' },
 }
+
+/** Подпись блока для шапки чата раскопки. У шага это его заголовок; у
+ *  презентационного блока заголовка нет, а разбирать содержимое ради подписи
+ *  нельзя — первой строкой может оказаться картинка, таблица или код. Берём
+ *  структурный контекст: секцию урока, иначе имя типа из каталога блоков. */
+export const blockChatTitle = (type: BlockType, title: string, section: string, lang: Lang): string =>
+  title.trim() || section.trim() || (lang === 'ru' ? BLOCK_META[type].ru : BLOCK_META[type].en)
 
 /** Стабильный id варианта опроса (на него ссылаются голоса). */
 export const newOptionId = newBlockId
