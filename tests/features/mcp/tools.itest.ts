@@ -6,7 +6,7 @@ import type { McpItemInput } from '@/features/mcp/tools'
 // моков, чистой БД. Сквозной поток create→get→update + проверки владения/видимости:
 // список создаётся ЧЕРНОВИКОМ (виден только владельцу), обновлять может только владелец.
 const { db, templates, users } = await import('@/shared/db')
-const { mcpCreateList, mcpGetList, mcpUpdateList } = await import('@/features/mcp/tools')
+const { mcpCreateList, mcpGetList, mcpPatchList, mcpUpdateList } = await import('@/features/mcp/tools')
 
 let ownerId = ''
 let otherId = ''
@@ -126,5 +126,101 @@ describe('mcp create/get/update — владение и видимость по 
       needsHumanAsk: 'сколько стоит у вас?',
       imageRef: 'uploads/shot.webp',
     })
+  })
+})
+
+describe('patch_list — точечная правка вместо перезаписи всего списка', () => {
+  const three = async () => {
+    const created = await mcpCreateList(ownerId, {
+      title: 'Patchable',
+      items: [{ title: 'install', command: 'winget install X' }, { type: 'text', text: 'врезка' }, { title: 'configure' }],
+    })
+    const slug = refSlug((created as { ref: string }).ref)
+    const read = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
+    return { slug, read }
+  }
+
+  it('правит один блок: соседи и их идентичность не тронуты', async () => {
+    const { slug, read } = await three()
+    const target = read.steps[0]
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: target.bid, title: 'Установить X' }],
+    })
+    expect('error' in res).toBe(false)
+
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect(after.steps.map((b) => b.bid)).toEqual(read.steps.map((b) => b.bid))
+    // Заголовок сменился, команда того же блока — нет (патч частичный).
+    expect(after.steps[0]).toMatchObject({ title: 'Установить X', command: 'winget install X' })
+    expect(after.steps[1]).toEqual(read.steps[1])
+    expect(after.steps[2]).toEqual(read.steps[2])
+  })
+
+  it('вставка, удаление и перестановка идут одним патчем', async () => {
+    const { slug, read } = await three()
+    const [a, b, c] = read.steps.map((s) => s.bid)
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [
+        { op: 'insert', after: a, block: { type: 'text', text: 'новая врезка' } },
+        { op: 'delete', bid: b },
+        { op: 'move', bid: c, after: 'start' },
+      ],
+    })
+    expect('error' in res).toBe(false)
+
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect(after.steps.map((s) => s.type)).toEqual(['step', 'step', 'text'])
+    expect(after.steps[0].bid).toBe(c)
+    expect(after.steps[1].bid).toBe(a)
+    expect(after.steps[2].text).toBe('новая врезка')
+  })
+
+  it('чужая версия → отказ, список не тронут', async () => {
+    const { slug, read } = await three()
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version + 5,
+      ops: [{ op: 'delete', bid: read.steps[0].bid }],
+    })
+    expect(res).toMatchObject({ error: expect.stringContaining('list changed') })
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect(after.steps.map((b) => b.bid)).toEqual(read.steps.map((b) => b.bid))
+  })
+
+  it('ошибка в одной операции отменяет весь патч — в списке ничего не изменилось', async () => {
+    const { slug, read } = await three()
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: read.steps[0].bid, title: 'изменено' }, { op: 'delete', bid: 'no-such-block' }],
+    })
+    expect(res).toMatchObject({ error: expect.stringContaining('op #2') })
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect(after.steps[0].title).toBe('install')
+  })
+
+  // Идентичность приходит снаружи, а steps.block_id — колонка uuid. Мусорное
+  // значение роняло вставку УЖЕ ПОСЛЕ удаления старых шагов, и черновик оставался
+  // пустым: правка через API теряла работу владельца целиком.
+  it('нераспознанный bid не оставляет черновик пустым', async () => {
+    const { slug, read } = await three()
+    const res = await mcpUpdateList(ownerId, 'mowner', slug, {
+      items: read.steps.map((b, i) => (i === 0 ? { ...b, bid: 'not-a-uuid' } : b)),
+    })
+    expect('error' in res).toBe(false)
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect(after.steps).toHaveLength(read.steps.length)
+    // Блок уцелел и получил канонический id вместо мусорного.
+    expect(after.steps[0].title).toBe('install')
+    expect(after.steps[0].bid).not.toBe('not-a-uuid')
+  })
+
+  it('патчить чужой список нельзя', async () => {
+    const { slug, read } = await three()
+    const res = await mcpPatchList(otherId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'delete', bid: read.steps[0].bid }],
+    })
+    expect(res).toMatchObject({ error: expect.stringContaining('forbidden') })
   })
 })

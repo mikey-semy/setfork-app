@@ -16,6 +16,7 @@ import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { attributionLine, checkLicense } from '@/shared/ai/source-license'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
+import { applyPatchOps, type McpPatchOp } from './patch'
 // Единый конвертер шагов на запись — тот же, что у веба, садовника и предложений.
 // Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
@@ -152,33 +153,39 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
 }
 
 // Прямая перезапись шагов версии (для in-place правки черновика; порт addVersion создаёт НОВУЮ).
+// Удаление и вставка — ОДНОЙ транзакцией: они и раньше шли парой, но по отдельности,
+// и любой сбой вставки (мусорное значение из внешнего вызова, обрыв связи) оставлял
+// черновик БЕЗ шагов — то есть терял работу владельца целиком.
 // TODO(rust-boundary): вынести в порт (ListStore.replaceDraftSteps) при следующем проходе.
-async function insertSteps(versionId: string, items: ProposedItem[]): Promise<void> {
+async function replaceDraftSteps(versionId: string, items: ProposedItem[]): Promise<void> {
   if (!items.length) return
   // Форму строк берём у ОБЩЕГО конвертера (stepInput): своя копия здесь молча
   // теряла blockId и «здесь нужен человек» — а с ними комментарии к пункту,
   // merge по идентичности и приглашение ответить из опыта.
-  await db.insert(steps).values(
-    stepInput(items).map((it) => ({
-      versionId,
-      n: it.n,
-      type: it.type,
-      content: it.content,
-      blockId: it.blockId,
-      title: it.title,
-      desc: it.desc,
-      command: it.command,
-      hasImage: !!it.imageRef,
-      imageKey: it.imageRef,
-      level: it.level,
-      why: it.why,
-      needsHuman: it.needsHuman,
-      needsHumanAsk: it.needsHumanAsk,
-      section: it.section,
-      subtasks: it.subtasks,
-      refs: it.refs,
-    })),
-  )
+  await db.transaction(async (tx) => {
+    await tx.delete(steps).where(eq(steps.versionId, versionId))
+    await tx.insert(steps).values(
+      stepInput(items).map((it) => ({
+        versionId,
+        n: it.n,
+        type: it.type,
+        content: it.content,
+        blockId: it.blockId,
+        title: it.title,
+        desc: it.desc,
+        command: it.command,
+        hasImage: !!it.imageRef,
+        imageKey: it.imageRef,
+        level: it.level,
+        why: it.why,
+        needsHuman: it.needsHuman,
+        needsHumanAsk: it.needsHumanAsk,
+        section: it.section,
+        subtasks: it.subtasks,
+        refs: it.refs,
+      })),
+    )
+  })
 }
 
 // Инструменты MCP работают от имени пользователя токена (userId).
@@ -209,10 +216,12 @@ function blockForMcp(s: DetailStep) {
   const type = (s.type ?? 'step') as string
   const c = (s.content ?? {}) as Record<string, unknown>
   const str = (v: unknown): string => (typeof v === 'string' ? v : '')
-  // Идентичность блока СКВОЗЬ версии. У не-step она лежит в content.bid, у шага —
-  // в колонке block_id. Без неё агент не может ни адресовать блок (patch_list), ни
-  // вернуть прочитанное так, чтобы к блоку остались привязаны голоса и комментарии.
-  const bid = str(c.bid) || s.blockId || undefined
+  // Идентичность блока СКВОЗЬ версии. Источник правды — колонка block_id (на ней
+  // комментарии к пункту и blame); content.bid — легаси-дом не-step блоков, он
+  // может РАСХОДИТЬСЯ с каноном у строк, которым id проставлял бэкфилл. Порядок
+  // тот же, что у редактора (toEditorItems): канон первичен, content.bid — фолбэк.
+  // Отдай мы content.bid, круг чтения-записи затирал бы канон и рвал комментарии.
+  const bid = s.blockId || str(c.bid) || undefined
   if (type === 'text') return { n: s.n, bid, type, text: str(c.md) }
   if (type === 'image') return { n: s.n, bid, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
   if (type === 'video') return { n: s.n, bid, type, url: str(c.url), caption: str(c.caption) || undefined }
@@ -265,6 +274,10 @@ function blockForMcp(s: DetailStep) {
   }
 }
 
+/** Блоки списка в форме MCP: та же форма у чтения и у входа записи — на ней
+ *  держится и круг «прочитал → отдал обратно», и точечный патч. */
+const blocksForMcp = (rows: DetailStep[]) => rows.map((s) => ({ ...blockForMcp(s), section: tr(s.section, 'en') || undefined }))
+
 export async function mcpGetList(userId: string, handle: string, slug: string) {
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return null
@@ -282,7 +295,7 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     verified: tpl.verified,
     // Все блоки списка (шаги + текст/картинки/опросы/видео/тесты) — полный контекст.
     // section = заголовок урока/секции (для контекста границ уроков у AI).
-    steps: steps.map((s) => ({ ...blockForMcp(s), section: tr(s.section, 'en') || undefined })),
+    steps: blocksForMcp(steps),
   }
 }
 
@@ -732,48 +745,105 @@ export interface McpUpdateInput {
   ordered?: boolean
 }
 
-/** Обновить список (только владелец). Черновик — правим на месте; опубликованный — новая версия. */
-export async function mcpUpdateList(userId: string, handle: string, slug: string, input: McpUpdateInput) {
+/** Список во владении пользователя (для записи) + его версии. */
+async function ownedList(userId: string, handle: string, slug: string) {
   const owner = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
-  if (!owner[0]) return { error: 'list not found' }
+  if (!owner[0]) return { error: 'list not found' as const }
   const tpl = await db.query.templates.findFirst({
     where: (t) => and(eq(t.ownerId, owner[0].id), eq(t.slug, slug)),
     with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
   })
-  if (!tpl) return { error: 'list not found' }
-  if (tpl.ownerId !== userId) return { error: 'forbidden: you are not the owner' }
-
-  const proposed = toProposed(input.items ?? [])
-  if (!proposed.length) return { error: 'at least one item with a title is required' }
-  const tags = input.tags
-    ? input.tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
-    : tpl.tags
-
+  if (!tpl) return { error: 'list not found' as const }
+  if (tpl.ownerId !== userId) return { error: 'forbidden: you are not the owner' as const }
   // Архив/заморозка: гейт нужен ЗДЕСЬ, а не только в фасадном бэкстопе addVersion —
   // мета (tags/ordered) обновляется до версии и не должна утечь в read-only список.
-  if (!canEditList(tpl)) return { error: 'forbidden: list is archived or frozen' }
+  if (!canEditList(tpl)) return { error: 'forbidden: list is archived or frozen' as const }
+  return { tpl }
+}
+
+/** Записать НОВЫЙ состав блоков: черновик правится на месте, опубликованный
+ *  получает новую версию. Общая половина update_list и patch_list — писать список
+ *  двумя разными путями значит рано или поздно расхождение между ними. */
+async function writeBlocks(
+  tpl: NonNullable<Awaited<ReturnType<typeof ownedList>>['tpl']>,
+  handle: string,
+  slug: string,
+  items: McpItemInput[],
+  note: string,
+  meta: { tags: string[]; ordered: boolean },
+) {
+  const proposed = toProposed(items)
+  if (!proposed.length) return { error: 'at least one item with a title is required' }
 
   if (tpl.status === 'draft') {
     // черновик — перезаписываем текущую версию на месте (без плодения версий)
     const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
-    await db.delete(steps).where(eq(steps.versionId, cur.id))
-    await insertSteps(cur.id, proposed)
-    await db.update(templates).set({ tags, ordered: input.ordered ?? tpl.ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+    await replaceDraftSteps(cur.id, proposed)
+    await db.update(templates).set({ tags: meta.tags, ordered: meta.ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
     return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version }
   }
 
   // tags/ordered едут ВНУТРИ addVersion (Ф2a-довесок): ядро применяет мету той же
   // транзакцией, что и версию, — канон коммита сразу несёт свежие значения.
-  const ver = await listStore.addVersion(tpl.id, {
-    note: input.note?.trim() || 'updated via API',
-    steps: stepInput(proposed),
-    meta: { tags, ordered: input.ordered ?? tpl.ordered },
-  })
+  const ver = await listStore.addVersion(tpl.id, { note, steps: stepInput(proposed), meta })
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающий
   // контент, залитый через MCP, не минует модерацию, и здесь её дублировать не нужно.
   const { enqueueReindex } = await import('@/features/library/jobs')
   await enqueueReindex(tpl.id)
   return { ref: `${handle}/${slug}`, status: 'published', version: ver.version }
+}
+
+/** Обновить список (только владелец). Черновик — правим на месте; опубликованный — новая версия. */
+export async function mcpUpdateList(userId: string, handle: string, slug: string, input: McpUpdateInput) {
+  const found = await ownedList(userId, handle, slug)
+  if ('error' in found) return found
+  const { tpl } = found
+  const tags = input.tags
+    ? input.tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
+    : tpl.tags
+  return writeBlocks(tpl, handle, slug, input.items ?? [], input.note?.trim() || 'updated via API', {
+    tags,
+    ordered: input.ordered ?? tpl.ordered,
+  })
+}
+
+/**
+ * Точечная правка: операции над блоками по стабильному bid вместо перезаписи
+ * всего списка. Агент шлёт только дельту, состав блоков сервер берёт сам —
+ * поэтому непатченные блоки не могут пострадать от неполного тела запроса.
+ *
+ * baseVersion обязателен (решение владельца; так же устроены sha в GitHub
+ * contents API и requiredRevisionId в Google Docs): правка применяется только к
+ * той версии, которую агент читал. Иначе он затирал бы правку, сделанную в вебе
+ * секундой раньше, даже не заметив её.
+ *
+ * ОГРАНИЧЕНИЕ: у черновика номер версии не растёт (он правится на месте), так что
+ * для черновиков сверка версии конфликт не поймает — там последняя запись побеждает.
+ */
+export async function mcpPatchList(
+  userId: string,
+  handle: string,
+  slug: string,
+  input: { baseVersion: number; ops: McpPatchOp[]; note?: string },
+) {
+  const found = await ownedList(userId, handle, slug)
+  if ('error' in found) return found
+  const { tpl } = found
+
+  const detail = await getTemplateDetail(handle, slug)
+  if (!detail) return { error: 'list not found' }
+  const current = detail.currentVersion?.version ?? tpl.currentVersion
+  if (input.baseVersion !== current)
+    return { error: `list changed: it is at version ${current}, your patch is based on ${input.baseVersion} — read it again (get_list) and rebuild the ops` }
+
+  const applied = applyPatchOps(blocksForMcp(detail.steps), input.ops ?? [])
+  if ('error' in applied) return applied
+
+  const res = await writeBlocks(tpl, handle, slug, applied.items, input.note?.trim() || 'patched via API', {
+    tags: tpl.tags,
+    ordered: tpl.ordered,
+  })
+  return 'error' in res ? res : { ...res, ops: input.ops.length, blocks: applied.items.length }
 }
 
 // ── Прогоны (runs): запуск/просмотр/отметка шагов через MCP ──────────

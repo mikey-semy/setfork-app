@@ -15,6 +15,7 @@ import {
   mcpListSources,
   mcpPendingSuggestions,
   mcpMergeSuggestion,
+  mcpPatchList,
   mcpReportCheck,
   mcpRevertSuggestion,
   mcpReviewSuggestion,
@@ -303,6 +304,41 @@ const handler = createMcpHandler(
       },
       async (userId, { handle, slug, ...rest }) => {
         const res = await mcpUpdateList(userId, handle, slug, rest)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    // Точечная правка вместо перезаписи всего списка. Адресация — по стабильному
+    // bid блока (как в Notion), а не по индексу: индекс сдвигает любая вставка.
+    writeTool(
+      'patch_list',
+      {
+        title: 'Patch a list',
+        description:
+          'Edit SPECIFIC blocks of a list you own instead of resending the whole list. Ops address blocks by their stable "bid" from get_list: update (change only the fields you pass), insert (new block at start/end/after a bid), delete, move. All ops apply together or none at all. baseVersion is required — pass the "version" you got from get_list; if the list changed meanwhile the patch is rejected so you cannot silently overwrite someone else\'s edit. Prefer this over update_list for edits; a draft is patched in place, a published list gets a new version.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle (must be you)'),
+          slug: z.string().describe('List slug'),
+          baseVersion: z.number().int().describe('The "version" get_list returned — the patch applies only to that version'),
+          ops: z
+            .array(
+              z.object({
+                op: z.enum(['update', 'insert', 'delete', 'move']).describe('What to do'),
+                bid: z.string().optional().describe('Block to update / delete / move (stable id from get_list)'),
+                after: z.string().optional().describe('Where to put it (insert, move): "start", "end" (default) or the bid to place it after'),
+                block: itemShape.optional().describe('The new block — for op "insert"'),
+              })
+                // update несёт поля блока прямо в операции: {op:"update", bid, title:"…"}.
+                // Незаданное поле остаётся прежним — в этом и смысл точечной правки.
+                .and(itemShape.partial()),
+            )
+            .min(1)
+            .describe('Operations, applied in order'),
+          note: z.string().optional().describe('Change note (for published lists)'),
+        },
+      },
+      async (userId, { handle, slug, ...rest }) => {
+        const res = await mcpPatchList(userId, handle, slug, rest)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )
