@@ -3,7 +3,7 @@
 import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { ProposedItem, StepLevel } from '@/shared/db'
 import { blankCount, type QuizKind } from '@/core'
-import { asBlockType, isBlockType, newBlockId, newOptionId, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
+import { asBlockType, isBlockType, isBlockUuid, newBlockId, newOptionId, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
 import { safeHref } from '@/shared/lib/safe-url'
 
 const QUIZ_KINDS: QuizKind[] = ['choice', 'text', 'number', 'blank', 'match', 'sort', 'code']
@@ -227,7 +227,11 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
           .map((r) => ({ label: { [lang]: r.label.trim() }, url: safeHref(r.url) || undefined })),
       }
     })
-    .map((p, i) => ({ ...p, blockId: kept[i].bid || newBlockId() }))
+    // В колонку block_id (тип uuid) кладём ТОЛЬКО uuid: идентичность приходит и
+    // снаружи (API, импорт), а нераспознанное значение уронило бы вставку шагов —
+    // у черновика она идёт после удаления старых, и список остался бы пустым.
+    // Легаси-bid (не-uuid) при этом живёт дальше в content.bid, как и жил.
+    .map((p, i) => ({ ...p, blockId: isBlockUuid(kept[i].bid) ? kept[i].bid : newBlockId() }))
 }
 
 type LocaleItem = {

@@ -45,6 +45,19 @@ export function tr(text: LocaleText | null | undefined, lang: Lang): string {
   return text[lang] || text.en || Object.values(text).find(Boolean) || ''
 }
 
+/** Ключ, ИЗ КОТОРОГО tr() возьмёт значение (undefined — брать нечего).
+ *
+ *  Нужен там, где правка кладётся поверх ПРОЧИТАННОГО: записать её в другой ключ
+ *  значит обновить один перевод, а наружу продолжать отдавать прежний — правка
+ *  выглядит применённой, но не видна. Порядок ОБЯЗАН повторять tr() выше, поэтому
+ *  они и живут рядом. */
+export function trKey(text: LocaleText | null | undefined, lang: Lang): string | undefined {
+  if (!text) return undefined
+  if (text[lang]) return lang
+  if (text.en) return 'en'
+  return Object.keys(text).find((k) => text[k as Lang])
+}
+
 // Словарь UI-строк живёт по языкам в dict/ (Ф1 трека i18n-extraction):
 // en.ts — источник ключей (DictKey), остальные — Record<DictKey, string>,
 // паритет держит компилятор. Новый язык = файл в dict/ + строка в DICTS

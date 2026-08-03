@@ -151,7 +151,10 @@ export default async function IssuesPage({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link href={`${base}/${it.number}`} className="text-[0.875rem] font-semibold text-ink hover:text-accent">
+                    {/* Заголовок пишет человек: одно длинное слово без пробелов иначе
+                        распирает страницу на мобиле. Тот же приём, что в списке
+                        предложений — там он уже стоял. */}
+                    <Link href={`${base}/${it.number}`} className="min-w-0 text-[0.875rem] font-semibold text-ink hover:text-accent [overflow-wrap:anywhere]">
                       {it.title}
                     </Link>
                     <LabelChips labels={it.labels} lang={lang} custom={custom} />

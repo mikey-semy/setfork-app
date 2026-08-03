@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { blockChatTitle } from '@/features/library/blocks'
+import { blockChatTitle, isBlockUuid, newBlockId } from '@/features/library/blocks'
+import { toProposedItems, emptyBlock } from '@/features/library/editor'
 
 // Подпись блока в шапке чата раскопки. Содержимое блока НЕ разбираем: первой
 // строкой markdown может быть картинка, таблица или код — подпись берётся из
@@ -17,5 +18,24 @@ describe('blockChatTitle', () => {
   })
   it('пробельные значения не считаются подписью', () => {
     expect(blockChatTitle('text', '   ', '  ', 'en')).toBe('Text')
+  })
+})
+
+// steps.block_id — колонка uuid, и значение туда приходит в том числе снаружи (API).
+// Мусор в ней роняет ВСТАВКУ шагов, а у черновика вставка идёт после удаления
+// старых: падение оставляло бы список без единого блока.
+describe('идентичность блока годится для колонки uuid', () => {
+  it('newBlockId всегда даёт uuid — в том числе запасным генератором', () => {
+    expect(isBlockUuid(newBlockId())).toBe(true)
+  })
+  it('легаси-bid (не uuid) в канон не попадает — блок получает свежий uuid', () => {
+    const items = toProposedItems([{ ...emptyBlock('step'), bid: 'b7x3k9qz', title: 'шаг' }], 'ru')
+    expect(isBlockUuid(items[0].blockId)).toBe(true)
+    expect(items[0].blockId).not.toBe('b7x3k9qz')
+  })
+  it('uuid, пришедший снаружи, сохраняется как есть (это и есть идентичность)', () => {
+    const bid = newBlockId()
+    const items = toProposedItems([{ ...emptyBlock('step'), bid, title: 'шаг' }], 'ru')
+    expect(items[0].blockId).toBe(bid)
   })
 })

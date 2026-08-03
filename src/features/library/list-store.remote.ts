@@ -1,7 +1,8 @@
 import 'server-only'
-import { createClient } from '@connectrpc/connect'
+import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { coreTransport } from '@/shared/core-transport'
 import { assertNoDestructiveSteps } from '@/core/domain/destructive-command'
+import { ListWriteError } from '@/core'
 import type { Contributor, CreateListInput, List, LocaleText, NewVersionInput, Step, StepRef, Version } from '@/core'
 import {
   ListRead,
@@ -19,6 +20,22 @@ import {
 const transport = coreTransport()
 const client = createClient(ListRead, transport)
 const writeClient = createClient(ListWrite, transport)
+
+/** Вызов addVersion с переводом отказа по предусловию в доменную ошибку.
+ *  Причину читаем из трейлера sf-reason (контракт ядра, AIP-193), а по коду
+ *  ABORTED страхуемся: фронт выкатывается раньше ядра, и старая сборка причины
+ *  ещё не шлёт. Текст ошибки НЕ разбираем — угадывание по подстрокам уже было
+ *  проблемой (см. core.remote.ts). */
+async function callAddVersion(req: Parameters<typeof writeClient.addVersion>[0]): Promise<PbVersion> {
+  try {
+    return await writeClient.addVersion(req)
+  } catch (e) {
+    if (e instanceof ConnectError && (e.metadata.get('sf-reason') === 'STALE' || e.code === Code.Aborted)) {
+      throw new ListWriteError('stale')
+    }
+    throw e
+  }
+}
 
 const loc = (l?: PbLoc): LocaleText => (l?.v ?? {}) as LocaleText
 const orNull = (s: string): string | null => (s === '' ? null : s)
@@ -164,7 +181,7 @@ const toPbStep = (s: NewVersionInput['steps'][number]) => ({
 export const listWriteRemote = {
   async addVersion(listId: string, input: NewVersionInput): Promise<Version> {
     assertNoDestructiveSteps(input.steps)
-    const res = await writeClient.addVersion({
+    const res = await callAddVersion({
       listId,
       note: input.note,
       authorId: input.authorId ?? '', // '' = null (parity с Postgres-адаптером/proto author_id)
@@ -178,6 +195,9 @@ export const listWriteRemote = {
             ordered: input.meta.ordered,
           }
         : undefined,
+      // Версия, на которой основана правка: сверку делает ЯДРО в той же транзакции,
+      // где строка списка уже заблокирована, — снаружи такой гарантии нет.
+      expectedVersion: input.expectedVersion,
     })
     return toVersion(res)
   },

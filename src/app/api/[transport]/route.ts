@@ -15,6 +15,7 @@ import {
   mcpListSources,
   mcpPendingSuggestions,
   mcpMergeSuggestion,
+  mcpPatchList,
   mcpReportCheck,
   mcpRevertSuggestion,
   mcpReviewSuggestion,
@@ -206,6 +207,12 @@ const handler = createMcpHandler(
     // Блок списка. type по умолчанию 'step'. Для не-step заполняй поля своего типа.
     const itemShape = z.object({
       type: z.enum(['step', 'text', 'image', 'poll', 'video', 'quiz', 'file']).optional().describe('Block type (default "step")'),
+      // Идентичность блока: пришла — блок остаётся тем же (комментарии, голоса,
+      // попытки, merge по id). Не пришла — заводится новый блок.
+      bid: z
+        .string()
+        .optional()
+        .describe('Stable block id as returned by get_list. Keep it to edit an existing block; omit it to create a new one'),
       // step
       title: z.string().optional().describe('Step title (short imperative) — for type "step"'),
       desc: z.string().optional().describe('Step: one or two clarifying sentences (light markdown ok)'),
@@ -214,6 +221,8 @@ const handler = createMcpHandler(
       why: z.string().optional().describe('Step: why this step matters (rationale)'),
       section: z.string().optional().describe('Step: optional section header; consecutive steps sharing it are grouped'),
       subtasks: z.array(z.string()).optional().describe('Step: verification checks'),
+      needsHuman: z.boolean().optional().describe('Step: mark that this point needs a human — local prices, taste, personal experience'),
+      needsHumanAsk: z.string().optional().describe('Step: what exactly to ask the human (shown with the mark)'),
       refs: z
         .array(z.object({ label: z.string().describe('Link text'), url: z.string().optional().describe('Link target') }))
         .optional()
@@ -232,7 +241,25 @@ const handler = createMcpHandler(
       // poll / quiz
       question: z.string().optional().describe('poll/quiz: the question'),
       options: z
-        .array(z.object({ text: z.string(), correct: z.boolean().optional().describe('quiz choice only: mark this option correct') }))
+        .array(
+          z.object({
+            // id варианта — якорь голосов (poll_votes) и попыток (quiz_attempts):
+            // перевыдал его при перезаписи — осиротил чужие голоса.
+            id: z.string().optional().describe('Stable option id as returned by get_list; keep it so existing votes/attempts stay attached'),
+            text: z.string(),
+            correct: z.boolean().optional().describe('quiz choice only: mark this option correct'),
+          }),
+        )
+        // Один id у двух вариантов = два неразличимых ответа: интерфейс ключует
+        // их по id, голоса и попытки адресуются им же. Пустые не проверяем —
+        // им id выдаётся при записи.
+        .refine(
+          (opts) => {
+            const ids = opts.map((o) => (o.id ?? '').trim()).filter(Boolean)
+            return new Set(ids).size === ids.length
+          },
+          { message: 'option ids must be unique within the block' },
+        )
         .optional()
         .describe('poll / quiz(choice): answer options'),
       multi: z.boolean().optional().describe('poll / quiz(choice): allow multiple selections / multiple correct'),
@@ -287,6 +314,41 @@ const handler = createMcpHandler(
       },
       async (userId, { handle, slug, ...rest }) => {
         const res = await mcpUpdateList(userId, handle, slug, rest)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    // Точечная правка вместо перезаписи всего списка. Адресация — по стабильному
+    // bid блока (как в Notion), а не по индексу: индекс сдвигает любая вставка.
+    writeTool(
+      'patch_list',
+      {
+        title: 'Patch a list',
+        description:
+          'Edit SPECIFIC blocks of a list you own instead of resending the whole list. Ops address blocks by their stable "bid" from get_list: update (change only the fields you pass), insert (new block at start/end/after a bid), delete, move. All ops apply together or none at all. baseVersion is required — pass the "version" you got from get_list; if the list changed meanwhile the patch is rejected so you cannot silently overwrite someone else\'s edit. Prefer this over update_list for edits; a draft is patched in place, a published list gets a new version.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle (must be you)'),
+          slug: z.string().describe('List slug'),
+          baseVersion: z.number().int().describe('The "version" get_list returned — the patch applies only to that version'),
+          ops: z
+            .array(
+              z.object({
+                op: z.enum(['update', 'insert', 'delete', 'move']).describe('What to do'),
+                bid: z.string().optional().describe('Block to update / delete / move (stable id from get_list)'),
+                after: z.string().optional().describe('Where to put it (insert, move): "start", "end" (default) or the bid to place it after'),
+                block: itemShape.optional().describe('The new block — for op "insert"'),
+              })
+                // update несёт поля блока прямо в операции: {op:"update", bid, title:"…"}.
+                // Незаданное поле остаётся прежним — в этом и смысл точечной правки.
+                .and(itemShape.partial()),
+            )
+            .min(1)
+            .describe('Operations, applied in order'),
+          note: z.string().optional().describe('Change note (for published lists)'),
+        },
+      },
+      async (userId, { handle, slug, ...rest }) => {
+        const res = await mcpPatchList(userId, handle, slug, rest)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )

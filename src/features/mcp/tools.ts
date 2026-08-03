@@ -1,10 +1,11 @@
 import 'server-only'
-import { and, desc, eq, sql } from 'drizzle-orm'
-import { db, knowledgeSources, runs, runStepState, steps, suggestionReportedChecks, suggestions, templates, users, type ProposedItem } from '@/shared/db'
-import { tr } from '@/shared/i18n'
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
+import { db, knowledgeSources, runs, runStepState, steps, suggestionReportedChecks, suggestions, templates, templateVersions, users, type ProposedItem } from '@/shared/db'
+import { tr, trKey, type LocaleText } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
-import { canEditList, canViewList } from '@/core'
+import { canEditList, canViewList, ListWriteError } from '@/core'
+import { assertNoDestructiveSteps, DestructiveCommandError } from '@/core/domain/destructive-command'
 import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
 import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
@@ -16,6 +17,10 @@ import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { attributionLine, checkLicense } from '@/shared/ai/source-license'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
+import { applyPatchOps, patchFields, type McpPatchOp } from './patch'
+// Единый конвертер шагов на запись — тот же, что у веба, садовника и предложений.
+// Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
+import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { isCollaborator } from '@/features/collab/queries'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/features/library/suggestion-checks'
@@ -34,6 +39,7 @@ async function mcpCanView(tpl: { id: string; ownerId: string; visibility: 'publi
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.APP_URL ?? 'https://setfork.com').replace(/\/$/, '')
 
 export interface McpBlockOption {
+  id?: string // стабильный id варианта: к нему привязаны голоса опроса и попытки теста
   text: string
   correct?: boolean // только для quiz — верный вариант
 }
@@ -45,6 +51,9 @@ export interface McpBlockOption {
 //  quiz  — question/explain + по quizKind: choice=options(correct)/multi;
 //          text=accept/caseSensitive; number=answer/tolerance.
 export interface McpItemInput {
+  /** Идентичность блока сквозь версии (как отдаёт get_list). Пришёл — блок остаётся
+   *  ТЕМ ЖЕ: при нём живут комментарии к пункту, голоса, попытки и merge по id. */
+  bid?: string
   type?: string
   title?: string
   desc?: string
@@ -63,6 +72,8 @@ export interface McpItemInput {
   // «прочитал → отдал обратно в update_list» терял имя файла и ссылку картинки.
   name?: string
   ref?: string
+  needsHuman?: boolean // step — «здесь нужен человек» (машина честно не знает)
+  needsHumanAsk?: string // step — что именно спросить у человека
   question?: string
   options?: McpBlockOption[]
   multi?: boolean
@@ -85,13 +96,21 @@ export interface McpItemInput {
 function toProposed(items: McpItemInput[]): ProposedItem[] {
   const editor: EditorItem[] = (items ?? []).map((it): EditorItem => {
     const type = isBlockType(it.type ?? '') ? (it.type as EditorItem['type']) : 'step'
-    const b = emptyBlock(type)
+    // Пришедший bid СОХРАНЯЕМ: блок остаётся тем же сквозь версии (комментарии,
+    // голоса, попытки, merge по идентичности). Нет bid — блок новый, id выдаст emptyBlock.
+    const fresh = emptyBlock(type)
+    // section (заголовок урока) есть у ЛЮБОГО блока и get_list его отдаёт всем —
+    // но переносила его только step-ветка ниже, и запись через API теряла урок
+    // у текста, картинки, опроса и теста. Ставим один раз, до ветвления по типу.
+    const b: EditorItem = { ...fresh, bid: (it.bid ?? '').trim() || fresh.bid, section: (it.section ?? '').trim() }
+    // id варианта — якорь голоса/попытки: свой, если прислан, иначе новый.
+    const optId = (o: McpBlockOption) => (o?.id ?? '').trim() || newOptionId()
     if (type === 'text') return { ...b, text: (it.text ?? '').trim() }
     if (type === 'image') return { ...b, imageKey: (it.imageRef ?? it.ref ?? '').trim(), caption: (it.caption ?? '').trim() }
     if (type === 'video') return { ...b, videoUrl: (it.url ?? '').trim(), caption: (it.caption ?? '').trim() }
     if (type === 'file') return { ...b, fileUrl: (it.url ?? '').trim(), fileName: (it.fileName ?? it.name ?? '').trim() }
     if (type === 'poll')
-      return { ...b, poll: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim() })), multi: it.multi === true, deadline: (it.deadline ?? '').trim() } }
+      return { ...b, poll: { question: (it.question ?? '').trim(), options: (it.options ?? []).map((o) => ({ id: optId(o), text: (o.text ?? '').trim() })), multi: it.multi === true, deadline: (it.deadline ?? '').trim() } }
     if (type === 'quiz') {
       const KINDS = ['text', 'number', 'blank', 'match', 'sort', 'code'] as const
       const kind = (KINDS as readonly string[]).includes(it.quizKind ?? '') ? (it.quizKind as (typeof KINDS)[number]) : 'choice'
@@ -101,7 +120,7 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
           ...b.quiz,
           kind,
           question: (it.question ?? '').trim(),
-          options: (it.options ?? []).map((o) => ({ id: newOptionId(), text: (o.text ?? '').trim(), correct: o.correct === true })),
+          options: (it.options ?? []).map((o) => ({ id: optId(o), text: (o.text ?? '').trim(), correct: o.correct === true })),
           multi: it.multi === true,
           accept: (it.accept ?? []).map((a) => String(a)),
           caseSensitive: it.caseSensitive === true,
@@ -123,6 +142,11 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
       level: it.level ?? 'required',
       why: (it.why ?? '').trim(),
       section: (it.section ?? '').trim(),
+      // Скриншот шага и «здесь нужен человек» — тоже содержимое пункта, а не мета:
+      // без них круг чтения-записи стирал картинку и вопрос к человеку.
+      imageKey: (it.imageRef ?? it.ref ?? '').trim(),
+      needsHuman: it.needsHuman === true,
+      needsHumanAsk: (it.needsHumanAsk ?? '').trim(),
       subtasks: (it.subtasks ?? []).filter((s) => s.trim()),
       // Ссылки шага: get_list их отдаёт, а положить было нечем — асимметрия чтения
       // и записи. Пустые метки отсеивает сериализатор (toProposedItems).
@@ -133,46 +157,116 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
 }
 
 // Прямая перезапись шагов версии (для in-place правки черновика; порт addVersion создаёт НОВУЮ).
+// Удаление и вставка — ОДНОЙ транзакцией: они и раньше шли парой, но по отдельности,
+// и любой сбой вставки (мусорное значение из внешнего вызова, обрыв связи) оставлял
+// черновик БЕЗ шагов — то есть терял работу владельца целиком.
 // TODO(rust-boundary): вынести в порт (ListStore.replaceDraftSteps) при следующем проходе.
-async function insertSteps(versionId: string, items: ProposedItem[]): Promise<void> {
-  if (!items.length) return
-  await db.insert(steps).values(
-    items.map((it, i) => ({
-      versionId,
-      n: i + 1,
-      type: it.type ?? 'step',
-      content: it.content ?? {},
-      title: it.title,
-      desc: it.desc,
-      command: it.command,
-      hasImage: !!it.imageKey,
-      imageKey: it.imageKey ?? null,
-      level: it.level,
-      why: it.why,
-      section: it.section,
-      subtasks: it.subtasks,
-      refs: it.refs,
-    })),
-  )
-}
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
-/** ProposedItem[] → доменный вход шагов для ListStore.create/addVersion.
- *  Несёт type/content — иначе не-step блоки (poll/video/quiz/text/image) теряются. */
-function stepInput(items: ProposedItem[]) {
-  return items.map((it, i) => ({
-    n: i + 1,
-    type: it.type ?? 'step',
-    content: it.content ?? {},
+async function replaceDraftStepsIn(tx: Tx, versionId: string, items: ProposedItem[]): Promise<void> {
+  if (!items.length) return
+  // Форму строк берём у ОБЩЕГО конвертера (stepInput): своя копия здесь молча
+  // теряла blockId и «здесь нужен человек» — а с ними комментарии к пункту,
+  // merge по идентичности и приглашение ответить из опыта.
+  const rows = stepInput(items)
+  // Страж разрушительных команд стоит в фасаде listStore, но ПРЯМАЯ правка
+  // черновика идёт мимо него: без этой проверки через API можно было положить
+  // `rm -rf /` в черновик, а get_script отдал бы его готовым скриптом.
+  assertNoDestructiveSteps(rows)
+
+  const cols = (it: (typeof rows)[number]) => ({
+    n: it.n,
+    type: it.type,
+    content: it.content,
+    blockId: it.blockId,
     title: it.title,
     desc: it.desc,
     command: it.command,
+    hasImage: !!it.imageRef,
+    imageKey: it.imageRef,
     level: it.level,
     why: it.why,
+    needsHuman: it.needsHuman,
+    needsHumanAsk: it.needsHumanAsk,
     section: it.section,
     subtasks: it.subtasks,
     refs: it.refs,
-    imageRef: it.imageKey ?? null,
-  }))
+  })
+
+  // Строки СВЕРЯЕМ по идентичности блока, а не сносим все разом. steps.id —
+  // якорь состояния активного прогона (run_step_state.step_id, ON DELETE CASCADE):
+  // полная перезапись стирала отметки, заметки и подпункты у идущего прогона, а
+  // сам прогон оставался активным — со ссылками на строки, которых больше нет.
+  const existing = await tx.select({ id: steps.id, blockId: steps.blockId }).from(steps).where(eq(steps.versionId, versionId))
+  const byBlock = new Map(existing.flatMap((r) => (r.blockId ? [[r.blockId, r.id] as const] : [])))
+  const kept = new Set<string>()
+  const addedStepIds: string[] = []
+  // Запросы идут ПОСЛЕДОВАТЕЛЬНО намеренно: это одна транзакция на одном
+  // соединении, параллелить её операции нельзя (Promise.all их только перемешает).
+  for (const it of rows) {
+    const id = it.blockId ? byBlock.get(it.blockId) : undefined
+    if (id) {
+      await tx.update(steps).set(cols(it)).where(eq(steps.id, id))
+      kept.add(id)
+    } else {
+      const [row] = await tx.insert(steps).values({ versionId, ...cols(it) }).returning({ id: steps.id, type: steps.type })
+      if (row.type === 'step') addedStepIds.push(row.id)
+    }
+  }
+  const gone = existing.flatMap((r) => (kept.has(r.id) ? [] : [r.id]))
+  if (gone.length) await tx.delete(steps).where(inArray(steps.id, gone))
+
+  // Новый шаг-блок в версии, по которой УЖЕ идёт прогон, обязан получить строку
+  // состояния: её заводят разом при старте прогона, и без неё отметка нового шага
+  // молча не срабатывает — ни в вебе (toggleStep выходит), ни через API.
+  if (addedStepIds.length) {
+    const active = await tx.select({ id: runs.id }).from(runs).where(and(eq(runs.versionId, versionId), eq(runs.status, 'active')))
+    if (active.length)
+      await tx.insert(runStepState).values(active.flatMap((r) => addedStepIds.map((stepId) => ({ runId: r.id, stepId }))))
+  }
+}
+
+/** Два блока с одним bid: reconcile попадёт в одну строку дважды, и один блок
+ *  молча исчезнет. У патча дубли отбивает applyPatchOps, но полная замена идёт
+ *  мимо него — проверяем состав перед записью на обоих путях. */
+function duplicateBid(items: ProposedItem[]): string | null {
+  const seen = new Set<string>()
+  for (const it of items) {
+    const id = it.blockId
+    if (!id) continue
+    if (seen.has(id)) return id
+    seen.add(id)
+  }
+  return null
+}
+
+async function replaceDraftSteps(versionId: string, items: ProposedItem[]): Promise<void> {
+  if (!items.length) return
+  await db.transaction((tx) => replaceDraftStepsIn(tx, versionId, items))
+}
+
+/** Замок на список внутри транзакции. Патч черновика читает блоки и пишет их
+ *  под ним: у черновика номер версии не растёт, поэтому сверять «правка основана
+ *  на текущей версии» там нечем — второй патч с тем же baseVersion прошёл бы
+ *  проверку и затёр первый. С замком конкурент ждёт и читает УЖЕ новое состояние
+ *  (для опубликованных ту же роль играет expected_version в ядре). */
+const lockList = (tx: Tx, listId: string) =>
+  tx.execute(sql`select id from ${templates} where ${templates.id} = ${listId} for update`)
+
+/** Состояние списка ПОД ЗАМКОМ: пока правку готовили, его могли опубликовать,
+ *  заморозить или заархивировать. Прямая правка черновика идёт мимо фасада
+ *  listStore, который стережёт эти запреты у опубликованного пути, — значит
+ *  проверяем сами и на свежих данных, а не на прочитанных до замка. */
+async function draftWritable(tx: Tx, listId: string): Promise<{ error: string } | null> {
+  const [row] = await tx
+    .select({ status: templates.status, archivedAt: templates.archivedAt, frozenAt: templates.frozenAt })
+    .from(templates)
+    .where(eq(templates.id, listId))
+  if (!row) return { error: 'list not found' }
+  if (!canEditList(row)) return { error: 'forbidden: list is archived or frozen' }
+  if (row.status !== 'draft')
+    return { error: 'the list was published while the edit was being prepared — read it again (get_list) and write to the published version' }
+  return null
 }
 
 // Инструменты MCP работают от имени пользователя токена (userId).
@@ -203,18 +297,35 @@ function blockForMcp(s: DetailStep) {
   const type = (s.type ?? 'step') as string
   const c = (s.content ?? {}) as Record<string, unknown>
   const str = (v: unknown): string => (typeof v === 'string' ? v : '')
-  if (type === 'text') return { n: s.n, type, text: str(c.md) }
-  if (type === 'image') return { n: s.n, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
-  if (type === 'video') return { n: s.n, type, url: str(c.url), caption: str(c.caption) || undefined }
-  if (type === 'file') return { n: s.n, type, url: str(c.url), name: str(c.name) }
+  // Идентичность блока СКВОЗЬ версии. Источник правды — колонка block_id (на ней
+  // комментарии к пункту и blame); content.bid — легаси-дом не-step блоков, он
+  // может РАСХОДИТЬСЯ с каноном у строк, которым id проставлял бэкфилл. Порядок
+  // тот же, что у редактора (toEditorItems): канон первичен, content.bid — фолбэк.
+  // Отдай мы content.bid, круг чтения-записи затирал бы канон и рвал комментарии.
+  const bid = s.blockId || str(c.bid) || undefined
+  if (type === 'text') return { n: s.n, bid, type, text: str(c.md) }
+  if (type === 'image') return { n: s.n, bid, type, ref: str(c.ref) || undefined, caption: str(c.caption) || undefined }
+  if (type === 'video') return { n: s.n, bid, type, url: str(c.url), caption: str(c.caption) || undefined }
+  if (type === 'file') return { n: s.n, bid, type, url: str(c.url), name: str(c.name) }
   if (type === 'poll') {
+    // id вариантов — якорь голосов (poll_votes.option_id). Отдаём их наружу: без id
+    // круг «прочитал → записал» перевыдавал варианты заново и голоса осиротевали.
     const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
-    return { n: s.n, type, question: str(c.question), options: opts.map((o) => ({ text: str(o.text) })), multi: c.multi === true || undefined, deadline: str(c.deadline) || undefined }
+    return {
+      n: s.n,
+      bid,
+      type,
+      question: str(c.question),
+      options: opts.map((o) => ({ id: str(o.id) || undefined, text: str(o.text) })),
+      multi: c.multi === true || undefined,
+      deadline: str(c.deadline) || undefined,
+    }
   }
   if (type === 'quiz') {
     const KINDS = ['text', 'number', 'blank', 'match', 'sort', 'code']
     const kind = KINDS.includes(c.kind as string) ? (c.kind as string) : 'choice'
-    const base = { n: s.n, type, quizKind: kind, question: str(c.question), explain: str(c.explain) || undefined }
+    // id вариантов теста — якорь попыток (quiz_attempts.selected), как у опроса.
+    const base = { n: s.n, bid, type, quizKind: kind, question: str(c.question), explain: str(c.explain) || undefined }
     if (kind === 'text' || kind === 'code') return { ...base, accept: Array.isArray(c.accept) ? (c.accept as unknown[]).map((a) => str(a)) : [], caseSensitive: c.caseSensitive === true || undefined }
     if (kind === 'sort') return { ...base, sortItems: Array.isArray(c.items) ? (c.items as unknown[]).map((x) => str(x)) : [], caseSensitive: c.caseSensitive === true || undefined }
     if (kind === 'number') return { ...base, answer: typeof c.answer === 'number' ? c.answer : undefined, tolerance: typeof c.tolerance === 'number' ? c.tolerance : undefined }
@@ -223,20 +334,30 @@ function blockForMcp(s: DetailStep) {
     if (kind === 'match')
       return { ...base, pairs: Array.isArray(c.pairs) ? (c.pairs as Record<string, unknown>[]).map((p) => ({ left: str(p.left), right: str(p.right) })) : [], caseSensitive: c.caseSensitive === true || undefined }
     const opts = Array.isArray(c.options) ? (c.options as Record<string, unknown>[]) : []
-    return { ...base, options: opts.map((o) => ({ text: str(o.text), correct: o.correct === true })), multi: c.multi === true || undefined }
+    return { ...base, options: opts.map((o) => ({ id: str(o.id) || undefined, text: str(o.text), correct: o.correct === true })), multi: c.multi === true || undefined }
   }
   return {
     n: s.n,
+    bid,
     type: 'step',
     title: tr(s.title, 'en'),
     desc: tr(s.desc, 'en'),
     command: s.command || undefined,
+    // Скриншот шага и пометка «здесь нужен человек» — часть содержимого пункта:
+    // круг без них стирал картинку и приглашение ответить из личного опыта.
+    imageRef: s.imageKey ?? undefined,
+    needsHuman: s.needsHuman || undefined,
+    needsHumanAsk: tr(s.needsHumanAsk, 'en') || undefined,
     level: s.level,
     why: tr(s.why, 'en') || undefined,
     subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
     refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label),
   }
 }
+
+/** Блоки списка в форме MCP: та же форма у чтения и у входа записи — на ней
+ *  держится и круг «прочитал → отдал обратно», и точечный патч. */
+const blocksForMcp = (rows: DetailStep[]) => rows.map((s) => ({ ...blockForMcp(s), section: tr(s.section, 'en') || undefined }))
 
 export async function mcpGetList(userId: string, handle: string, slug: string) {
   const detail = await getTemplateDetail(handle, slug)
@@ -255,7 +376,7 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
     verified: tpl.verified,
     // Все блоки списка (шаги + текст/картинки/опросы/видео/тесты) — полный контекст.
     // section = заголовок урока/секции (для контекста границ уроков у AI).
-    steps: steps.map((s) => ({ ...blockForMcp(s), section: tr(s.section, 'en') || undefined })),
+    steps: blocksForMcp(steps),
   }
 }
 
@@ -705,48 +826,340 @@ export interface McpUpdateInput {
   ordered?: boolean
 }
 
-/** Обновить список (только владелец). Черновик — правим на месте; опубликованный — новая версия. */
-export async function mcpUpdateList(userId: string, handle: string, slug: string, input: McpUpdateInput) {
+/** Строки версии → доменные блоки БЕЗ потерь: locale-JSON, content и идентичность
+ *  как есть. Этим путём патч ведёт НЕТРОНУТЫЕ блоки: плоская MCP-форма отдаёт по
+ *  одной строке на поле (переводы схлопнулись бы) и не знает про товары. */
+function rowsToProposed(rows: DetailStep[]): ProposedItem[] {
+  return rows.map(
+    (s) =>
+      ({
+        blockId: s.blockId ?? undefined,
+        type: s.type ?? 'step',
+        content: (s.content ?? {}) as Record<string, unknown>,
+        title: s.title,
+        desc: s.desc,
+        command: s.command,
+        hasImage: s.hasImage,
+        imageKey: s.imageKey ?? undefined,
+        level: s.level,
+        why: s.why,
+        section: s.section,
+        needsHuman: s.needsHuman,
+        needsHumanAsk: s.needsHumanAsk,
+        subtasks: s.subtasks,
+        refs: s.refs,
+      }) as unknown as ProposedItem,
+  )
+}
+
+/** Локализованные поля блока: их правка обязана дописываться В ЯЗЫК, а не поверх
+ *  всего словаря — иначе патч по-английски стирает русский текст списка. */
+const LOCALIZED = ['title', 'desc', 'why', 'section', 'needsHumanAsk'] as const
+
+/** Поле входа MCP → ключ в content не-step блока. Нужен, чтобы отличить «поле не
+ *  трогали» от «поле явно очистили»: сериализатор пустое и false опускает, и без
+ *  этой карты очистка молча не применялась бы. */
+const CONTENT_KEY: Record<string, string | undefined> = {
+  text: 'md',
+  ref: 'ref',
+  imageRef: 'ref',
+  url: 'url',
+  name: 'name',
+  fileName: 'name',
+  caption: 'caption',
+  question: 'question',
+  options: 'options',
+  multi: 'multi',
+  deadline: 'deadline',
+  explain: 'explain',
+  quizKind: 'kind',
+  accept: 'accept',
+  caseSensitive: 'caseSensitive',
+  answer: 'answer',
+  tolerance: 'tolerance',
+  template: 'template',
+  blanks: 'blanks',
+  pairs: 'pairs',
+  sortItems: 'items',
+}
+
+/** Ключ локали, В КОТОРЫЙ ложится правка. Это ровно тот ключ, ОТКУДА чтение взяло
+ *  показанное агенту значение (trKey повторяет выбор tr): у списка с двумя
+ *  переводами `{ ru: 'старое', en: 'old' }` get_list отдаёт английский, и правка
+ *  обязана лечь в en. Иначе она обновит русский, а наружу продолжит отдаваться
+ *  прежний английский — правка выглядит принятой, но не видна. */
+const langOfField = (lt: unknown): string => trKey(lt as LocaleText, 'en') ?? 'en'
+const putLang = (before: unknown, flat: string): Record<string, string> => {
+  const base = { ...((before ?? {}) as Record<string, string>) }
+  const key = langOfField(before)
+  // Очистка убирает ТОЛЬКО ту локаль, которую агент видел и стёр. Прежде она
+  // сносила словарь целиком — правка «убрать описание» по-английски уносила с
+  // собой и русское описание, которого агент даже не видел.
+  if (flat.trim()) base[key] = flat.trim()
+  else delete base[key]
+  return base
+}
+
+/**
+ * Наложить операцию update на существующий блок.
+ *
+ * Плоскую форму проходит ТОЛЬКО этот блок, и только ради полей, которые агент
+ * действительно прислал: остальное берётся у прежнего блока как есть. Поэтому
+ * перевод, картинка и содержимое непереданных полей переживают патч.
+ */
+function patchBlock(item: ProposedItem, op: McpPatchOp): ProposedItem | { error: string } {
+  const fields = patchFields(op)
+  if (!Object.keys(fields).length) return { error: 'nothing to update — pass at least one field' }
+  const type = item.type ?? 'step'
+  // Товары через MCP пока не представлены (нет ни в чтении, ни во входе). Честный
+  // отказ вместо тихого превращения подборки в пустой шаг.
+  if (type === 'product') return { error: 'product blocks cannot be patched through the API yet' }
+  if (fields.type && fields.type !== type) return { error: `cannot change block type (${type} → ${fields.type}); delete and insert instead` }
+
+  const flatBefore = { ...blockForMcp(item as unknown as DetailStep), section: tr(item.section as LocaleText, 'en') || undefined }
+  const [built] = toProposed([{ ...flatBefore, ...fields, type }])
+  if (!built) return { error: 'the patch would leave the block empty (a step needs a title)' }
+
+  const out = { ...built, blockId: item.blockId } as unknown as Record<string, unknown>
+  // Снятая пометка «нужен человек» уносит и вопрос: иначе get_list продолжал бы
+  // отдавать вопрос при снятой пометке, а повторное включение воскрешало старый.
+  const clears = new Set<string>(Object.keys(fields))
+  if (fields.needsHuman === false) clears.add('needsHumanAsk')
+  for (const f of LOCALIZED) {
+    out[f] = clears.has(f) ? putLang(item[f], tr(built[f] as LocaleText, 'en')) : item[f]
+  }
+  // Списки локализованных значений сопоставляем по ПОКАЗАННОМУ тексту, а не по
+  // позиции: вставка в начало сдвигала бы переводы на соседние пункты — русский
+  // текст оказывался у чужой проверки. Совпал текст — элемент тот же, словарь
+  // переносим целиком; не совпал — это новое значение, пишем в язык блока.
+  const blockLang = langOfField(item.title)
+  const pickLocales = (oldList: LocaleText[], flat: string): LocaleText => {
+    const same = oldList.find((o) => tr(o, 'en') === flat)
+    return same ?? ({ [blockLang]: flat } as LocaleText)
+  }
+  const oldSubs = (item.subtasks ?? []) as LocaleText[]
+  out.subtasks = 'subtasks' in fields ? (built.subtasks ?? []).map((s) => pickLocales(oldSubs, tr(s as LocaleText, 'en'))) : oldSubs
+  const oldRefs = (item.refs ?? []) as { label: LocaleText; url?: string }[]
+  out.refs =
+    'refs' in fields
+      ? (built.refs ?? []).map((r) => ({
+          label: pickLocales(oldRefs.map((x) => x.label), tr(r.label as LocaleText, 'en')),
+          ...(r.url ? { url: r.url } : {}),
+        }))
+      : oldRefs
+  // Ключи content, которых плоская форма не знает, сохраняем: иначе патч соседнего
+  // поля вычищал бы всё, что MCP пока не умеет представлять (например товары).
+  const oldContent = (item.content ?? {}) as Record<string, unknown>
+  const newContent = (built.content ?? {}) as Record<string, unknown>
+  const content: Record<string, unknown> = { ...oldContent, ...newContent }
+  // …но ЯВНАЯ очистка обязана срабатывать. Сериализатор опускает пустое и false
+  // (multi: false, пустой deadline/caption/explain) — при простом слиянии поверх
+  // старого значения такая правка не делала бы ничего, а ответ был бы успешным.
+  for (const field of Object.keys(fields)) {
+    const key = CONTENT_KEY[field]
+    if (key && !(key in newContent)) delete content[key]
+  }
+  out.content = content
+  return out as unknown as ProposedItem
+}
+
+/** Отказ стража разрушительных команд → ответ инструмента. Это не сбой, а
+ *  вердикт: агенту нужно назвать причину, а не увидеть стектрейс. */
+const destructiveError = (e: unknown): { error: string } | null =>
+  e instanceof DestructiveCommandError
+    ? { error: `refused: step ${e.stepIndex} has a destructive command (${e.reason}): ${e.fragment}` }
+    : null
+
+/** Список во владении пользователя (для записи) + его версии. */
+async function ownedList(userId: string, handle: string, slug: string) {
   const owner = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
-  if (!owner[0]) return { error: 'list not found' }
+  if (!owner[0]) return { error: 'list not found' as const }
   const tpl = await db.query.templates.findFirst({
     where: (t) => and(eq(t.ownerId, owner[0].id), eq(t.slug, slug)),
     with: { versions: { orderBy: (v, { desc: d }) => d(v.version) } },
   })
-  if (!tpl) return { error: 'list not found' }
-  if (tpl.ownerId !== userId) return { error: 'forbidden: you are not the owner' }
-
-  const proposed = toProposed(input.items ?? [])
-  if (!proposed.length) return { error: 'at least one item with a title is required' }
-  const tags = input.tags
-    ? input.tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
-    : tpl.tags
-
+  if (!tpl) return { error: 'list not found' as const }
+  if (tpl.ownerId !== userId) return { error: 'forbidden: you are not the owner' as const }
   // Архив/заморозка: гейт нужен ЗДЕСЬ, а не только в фасадном бэкстопе addVersion —
   // мета (tags/ordered) обновляется до версии и не должна утечь в read-only список.
-  if (!canEditList(tpl)) return { error: 'forbidden: list is archived or frozen' }
+  if (!canEditList(tpl)) return { error: 'forbidden: list is archived or frozen' as const }
+  return { tpl }
+}
+
+/** Записать НОВЫЙ состав блоков (доменная форма): черновик правится на месте,
+ *  опубликованный получает новую версию. Общая половина update_list и patch_list —
+ *  писать список двумя разными путями значит рано или поздно расхождение. */
+async function writeProposed(
+  tpl: NonNullable<Awaited<ReturnType<typeof ownedList>>['tpl']>,
+  handle: string,
+  slug: string,
+  proposed: ProposedItem[],
+  note: string,
+  meta: { tags: string[]; ordered: boolean },
+  expectedVersion?: number,
+) {
+  if (!proposed.length) return { error: 'at least one item with a title is required' }
+  const dup = duplicateBid(proposed)
+  if (dup) return { error: `two blocks share the same bid "${dup}" — a block id must be unique within a list` }
 
   if (tpl.status === 'draft') {
-    // черновик — перезаписываем текущую версию на месте (без плодения версий)
+    // черновик — перезаписываем текущую версию на месте (без плодения версий).
+    // ПОД ТЕМ ЖЕ замком, что и патч: иначе полная замена и патч переплетаются —
+    // замена удаляет и вставляет строки, пока патч держит только замок списка, и
+    // чья-то работа пропадает при обоих «успешных» ответах.
     const cur = tpl.versions.find((v) => v.version === tpl.currentVersion) ?? tpl.versions[0]
-    await db.delete(steps).where(eq(steps.versionId, cur.id))
-    await insertSteps(cur.id, proposed)
-    await db.update(templates).set({ tags, ordered: input.ordered ?? tpl.ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+    try {
+      const gate = await db.transaction(async (tx) => {
+        await lockList(tx, tpl.id)
+        const denied = await draftWritable(tx, tpl.id)
+        if (denied) return denied
+        await replaceDraftStepsIn(tx, cur.id, proposed)
+        await tx.update(templates).set({ tags: meta.tags, ordered: meta.ordered, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+        return null
+      })
+      if (gate) return gate
+    } catch (e) {
+      const refused = destructiveError(e)
+      if (refused) return refused
+      throw e
+    }
     return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version }
   }
 
   // tags/ordered едут ВНУТРИ addVersion (Ф2a-довесок): ядро применяет мету той же
   // транзакцией, что и версию, — канон коммита сразу несёт свежие значения.
-  const ver = await listStore.addVersion(tpl.id, {
-    note: input.note?.trim() || 'updated via API',
-    steps: stepInput(proposed),
-    meta: { tags, ordered: input.ordered ?? tpl.ordered },
-  })
+  // expectedVersion (если задан) ядро сверяет ТАМ ЖЕ: сравнение и запись под одним
+  // замком строки, иначе между ними успевает лечь чужая версия.
+  let ver
+  try {
+    ver = await listStore.addVersion(tpl.id, { note, steps: stepInput(proposed), meta, expectedVersion })
+  } catch (e) {
+    // Отказ ядра по устаревшей версии — не сбой, а нормальный исход гонки: пока
+    // правку готовили, список ушёл вперёд. Агент перечитывает и накладывает заново.
+    if (e instanceof ListWriteError && e.code === 'stale')
+      return { error: 'list changed while the patch was being applied — read it again (get_list) and rebuild the ops' }
+    throw e
+  }
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер): нарушающий
   // контент, залитый через MCP, не минует модерацию, и здесь её дублировать не нужно.
   const { enqueueReindex } = await import('@/features/library/jobs')
   await enqueueReindex(tpl.id)
   return { ref: `${handle}/${slug}`, status: 'published', version: ver.version }
+}
+
+/** Обновить список (только владелец). Черновик — правим на месте; опубликованный — новая версия. */
+export async function mcpUpdateList(userId: string, handle: string, slug: string, input: McpUpdateInput) {
+  const found = await ownedList(userId, handle, slug)
+  if ('error' in found) return found
+  const { tpl } = found
+  const tags = input.tags
+    ? input.tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
+    : tpl.tags
+  return writeProposed(tpl, handle, slug, toProposed(input.items ?? []), input.note?.trim() || 'updated via API', {
+    tags,
+    ordered: input.ordered ?? tpl.ordered,
+  })
+}
+
+/**
+ * Точечная правка: операции над блоками по стабильному bid вместо перезаписи
+ * всего списка. Агент шлёт только дельту, состав блоков сервер берёт сам —
+ * поэтому непатченные блоки не могут пострадать от неполного тела запроса.
+ *
+ * baseVersion обязателен (решение владельца; так же устроены sha в GitHub
+ * contents API и requiredRevisionId в Google Docs): правка применяется только к
+ * той версии, которую агент читал. Иначе он затирал бы правку, сделанную в вебе
+ * секундой раньше, даже не заметив её.
+ *
+ * Потерянных обновлений нет ни на одном из двух путей записи, но защищают их
+ * РАЗНЫЕ механизмы: у опубликованного — expected_version в ядре, у черновика (где
+ * номер версии не растёт и сверять нечем) — замок строки списка, под которым идут
+ * и чтение блоков, и их замена.
+ */
+export async function mcpPatchList(
+  userId: string,
+  handle: string,
+  slug: string,
+  input: { baseVersion: number; ops: McpPatchOp[]; note?: string },
+) {
+  const found = await ownedList(userId, handle, slug)
+  if ('error' in found) return found
+  const { tpl } = found
+  const ops = input.ops ?? []
+
+  // Нетронутые блоки идут в запись СВОЕЙ, доменной формой: со всеми переводами и
+  // содержимым как есть. Через плоскую MCP-форму проходит только патчимый блок —
+  // иначе правка одного заголовка стирала бы переводы и товары у всего списка.
+  const patchIO = {
+    bidOf: (it: ProposedItem) =>
+      it.blockId ?? (typeof (it.content as Record<string, unknown> | undefined)?.bid === 'string' ? (it.content as Record<string, string>).bid : undefined),
+    update: patchBlock,
+    create: (block: McpItemInput) => toProposed([block])[0] ?? { error: 'the inserted block is empty (a step needs a title)' },
+  }
+
+  if (tpl.status === 'draft') {
+    // ЧЕРНОВИК: читаем состав и заменяем его ПОД ОДНИМ замком. Конкурирующий патч
+    // ждёт на нём и потом читает уже новое состояние — вместо того чтобы наложить
+    // свои операции на снимок, который к моменту записи устарел.
+    try {
+      return await db.transaction(async (tx) => {
+      await lockList(tx, tpl.id)
+      // Состояние ПЕРЕЧИТЫВАЕМ под замком: пока патч готовили, список могли
+      // опубликовать, заморозить или заархивировать. Со старыми данными на руках
+      // правка заменила бы шаги уже опубликованной версии НА МЕСТЕ — без новой
+      // версии и без git-коммита, то есть мимо истории.
+      const denied = await draftWritable(tx, tpl.id)
+      if (denied) return denied
+      const [fresh] = await tx.select({ current: templates.currentVersion }).from(templates).where(eq(templates.id, tpl.id))
+      if (!fresh) return { error: 'list not found' }
+      if (input.baseVersion !== fresh.current)
+        return { error: `list changed: it is at version ${fresh.current}, your patch is based on ${input.baseVersion} — read it again (get_list) and rebuild the ops` }
+      const [cur] = await tx
+        .select({ id: templateVersions.id, version: templateVersions.version })
+        .from(templateVersions)
+        .where(and(eq(templateVersions.templateId, tpl.id), eq(templateVersions.version, fresh.current)))
+        .limit(1)
+      if (!cur) return { error: 'list not found' }
+
+      const rows = await tx.select().from(steps).where(eq(steps.versionId, cur.id)).orderBy(asc(steps.n))
+      const applied = applyPatchOps<ProposedItem>(rowsToProposed(rows as unknown as DetailStep[]), ops, patchIO)
+      if ('error' in applied) return applied
+      if (!applied.items.length) return { error: 'at least one item with a title is required' }
+      const dupBid = duplicateBid(applied.items)
+      if (dupBid) return { error: `two blocks share the same bid "${dupBid}" — a block id must be unique within a list` }
+      await replaceDraftStepsIn(tx, cur.id, applied.items)
+        await tx.update(templates).set({ updatedAt: new Date() }).where(eq(templates.id, tpl.id))
+        return { ref: `${handle}/${slug}`, status: 'draft', version: cur.version, ops: ops.length, blocks: applied.items.length }
+      })
+    } catch (e) {
+      const refused = destructiveError(e)
+      if (refused) return refused
+      throw e
+    }
+  }
+
+  const detail = await getTemplateDetail(handle, slug)
+  if (!detail) return { error: 'list not found' }
+  const current = detail.currentVersion?.version ?? tpl.currentVersion
+  if (input.baseVersion !== current)
+    return { error: `list changed: it is at version ${current}, your patch is based on ${input.baseVersion} — read it again (get_list) and rebuild the ops` }
+
+  const applied = applyPatchOps<ProposedItem>(rowsToProposed(detail.steps), ops, patchIO)
+  if ('error' in applied) return applied
+
+  // Сверка версии выше — ранний отсев: отбить заведомо устаревший патч дешевле, чем
+  // собирать состав. Но решает не она: baseVersion уходит в ядро, и настоящая
+  // проверка происходит там, внутри транзакции, где строка списка заблокирована.
+  const res = await writeProposed(
+    tpl,
+    handle,
+    slug,
+    applied.items,
+    input.note?.trim() || 'patched via API',
+    { tags: tpl.tags, ordered: tpl.ordered },
+    input.baseVersion,
+  )
+  return 'error' in res ? res : { ...res, ops: ops.length, blocks: applied.items.length }
 }
 
 // ── Прогоны (runs): запуск/просмотр/отметка шагов через MCP ──────────
