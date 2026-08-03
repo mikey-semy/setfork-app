@@ -279,11 +279,6 @@
       "count": 2
     }
   },
-  "src/features/git/CloneDropdown.tsx": {
-    "no-restricted-syntax": {
-      "count": 3
-    }
-  },
   "src/features/git/ConflictResolver.tsx": {
     "no-restricted-syntax": {
       "count": 12
