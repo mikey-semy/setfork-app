@@ -1,17 +1,20 @@
 import 'server-only'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, lte } from 'drizzle-orm'
 import { db, steps as stepsTable, templateVersions, templates } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
+import { lastChangedVersions, type HistoryBlock } from './block-identity'
 
-// «Blame» по шагам: для каждого шага текущей версии — в какой версии он в
-// последний раз менялся (по позиции n, как git blame по строкам). Автора у
-// версий пока нет (см. план) — показываем версию, дату и note.
+// «Blame» по блокам: для каждого блока текущей версии — в какой версии его
+// содержимое менялось в последний раз. Сопоставление блоков сквозь версии и
+// определение «содержимое изменилось» живут в block-identity: это те же правила,
+// по которым работает структурный дифф. Автора у версий пока не показываем —
+// версия, дата и note.
 
 export interface StepBlame {
   n: number
   title: LocaleText
   section: LocaleText
-  lastVersion: number // версия, где контент шага последний раз изменился
+  lastVersion: number // версия, где контент блока последний раз изменился
   lastAt: Date
   note: string
 }
@@ -20,23 +23,35 @@ export interface ListBlame {
   steps: StepBlame[]
 }
 
-// Канонический слепок контента шага для сравнения между версиями. jsonb в PG
-// отдаёт ключи в стабильном порядке, поэтому JSON.stringify детерминирован.
-function canon(s: { title: unknown; desc: unknown; command: string; level: string; why: unknown; section: unknown; subtasks: unknown; refs: unknown }): string {
-  return JSON.stringify([s.title, s.desc, s.command, s.level, s.why, s.section, s.subtasks, s.refs])
-}
+/** Блок версии: содержимое + идентичность + номер по порядку. */
+type BlameBlock = HistoryBlock & { n: number }
 
 export async function getListBlame(templateId: string): Promise<ListBlame | null> {
   const [tpl] = await db.select({ current: templates.currentVersion }).from(templates).where(eq(templates.id, templateId)).limit(1)
   if (!tpl) return null
 
-  // Все шаги всех версий одним запросом (версии по возрастанию, шаги по n).
-  const rows = await db
+  // Оба запроса независимы — идут параллельно, зритель не ждёт их по очереди.
+  //
+  // Версии берутся ОТДЕЛЬНО от блоков: версия без блоков (удалили все пункты) в
+  // join не появилась бы вовсе, и «блок убрали, а потом вернули» читалось бы как
+  // «блок не менялся» — сравнивались бы снимки по обе стороны провала.
+  //
+  // Блоки: версии по возрастанию, блоки по n. Выбираются ВСЕ поля содержимого —
+  // отпечаток блока обязан покрывать блочную модель целиком, иначе правка
+  // остаётся невидимой.
+  const versionsQuery = db
+    .select({ version: templateVersions.version, createdAt: templateVersions.createdAt, note: templateVersions.note })
+    .from(templateVersions)
+    .where(and(eq(templateVersions.templateId, templateId), lte(templateVersions.version, tpl.current)))
+    .orderBy(asc(templateVersions.version))
+
+  const blocksQuery = db
     .select({
       version: templateVersions.version,
-      createdAt: templateVersions.createdAt,
-      note: templateVersions.note,
       n: stepsTable.n,
+      blockId: stepsTable.blockId,
+      type: stepsTable.type,
+      content: stepsTable.content,
       title: stepsTable.title,
       desc: stepsTable.desc,
       command: stepsTable.command,
@@ -45,37 +60,57 @@ export async function getListBlame(templateId: string): Promise<ListBlame | null
       section: stepsTable.section,
       subtasks: stepsTable.subtasks,
       refs: stepsTable.refs,
+      hasImage: stepsTable.hasImage,
+      imageKey: stepsTable.imageKey,
+      needsHuman: stepsTable.needsHuman,
+      needsHumanAsk: stepsTable.needsHumanAsk,
     })
     .from(stepsTable)
     .innerJoin(templateVersions, eq(stepsTable.versionId, templateVersions.id))
-    .where(eq(templateVersions.templateId, templateId))
+    .where(and(eq(templateVersions.templateId, templateId), lte(templateVersions.version, tpl.current)))
     .orderBy(asc(templateVersions.version), asc(stepsTable.n))
 
-  // version → (n → canon), плюс метаданные версии.
-  const byVersion = new Map<number, Map<number, string>>()
-  const verMeta = new Map<number, { createdAt: Date; note: string }>()
-  const currentSteps = new Map<number, { title: LocaleText; section: LocaleText }>()
+  const [versions, rows] = await Promise.all([versionsQuery, blocksQuery])
+
+  const byVersion = new Map<number, BlameBlock[]>()
   for (const r of rows) {
-    if (!byVersion.has(r.version)) byVersion.set(r.version, new Map())
-    byVersion.get(r.version)!.set(r.n, canon(r))
-    if (!verMeta.has(r.version)) verMeta.set(r.version, { createdAt: r.createdAt, note: r.note })
-    if (r.version === tpl.current) currentSteps.set(r.n, { title: r.title as LocaleText, section: r.section as LocaleText })
+    let blocks = byVersion.get(r.version)
+    if (!blocks) {
+      blocks = []
+      byVersion.set(r.version, blocks)
+    }
+    blocks.push({
+      n: r.n,
+      blockId: r.blockId,
+      type: r.type,
+      content: r.content,
+      title: r.title,
+      desc: r.desc,
+      command: r.command,
+      level: r.level,
+      why: r.why,
+      section: r.section,
+      subtasks: r.subtasks,
+      refs: r.refs,
+      hasImage: r.hasImage,
+      imageKey: r.imageKey,
+      needsHuman: r.needsHuman,
+      needsHumanAsk: r.needsHumanAsk,
+    })
   }
 
-  const versionsAsc = [...byVersion.keys()].sort((a, b) => a - b)
-  const out: StepBlame[] = []
-  for (const [n, disp] of [...currentSteps.entries()].sort((a, b) => a[0] - b[0])) {
-    // Идём по версиям вверх до текущей: фиксируем версию, где canon шага n сменился.
-    let prev: string | undefined
-    let lastVersion = versionsAsc[0] ?? tpl.current
-    for (const v of versionsAsc) {
-      if (v > tpl.current) break
-      const c = byVersion.get(v)!.get(n) // undefined = шага n в этой версии не было
-      if (c !== prev) lastVersion = v
-      prev = c
-    }
+  const history = versions.map((v) => ({ version: v.version, blocks: byVersion.get(v.version) ?? [] }))
+  const verMeta = new Map(versions.map((v) => [v.version, { createdAt: v.createdAt, note: v.note }]))
+
+  const current = history[history.length - 1]
+  // Текущей версии нет в таблице или у неё нет блоков — показывать нечего.
+  if (!current || current.version !== tpl.current || !current.blocks.length) return { currentVersion: tpl.current, steps: [] }
+
+  const lastVersions = lastChangedVersions(history)
+  const out = current.blocks.map((b, i) => {
+    const lastVersion = lastVersions[i]
     const meta = verMeta.get(lastVersion)!
-    out.push({ n, title: disp.title, section: disp.section, lastVersion, lastAt: meta.createdAt, note: meta.note })
-  }
+    return { n: b.n, title: b.title, section: b.section, lastVersion, lastAt: meta.createdAt, note: meta.note }
+  })
   return { currentVersion: tpl.current, steps: out }
 }
