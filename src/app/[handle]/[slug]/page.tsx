@@ -705,7 +705,9 @@ export default async function ListPage({
                       <span className="mt-0.5 font-mono text-[0.8125rem] text-muted">{tpl.ordered ? displayNum[si] : '•'}</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 pr-7">
-                          <span className="text-[0.875rem] font-semibold text-ink">{tr(s.title, lang)}</span>
+                          {/* Заголовок шага пишет человек: слово без пробелов иначе уезжает
+                              за правый край и тянет за собой страницу (мобила 390px). */}
+                          <span className="min-w-0 text-[0.875rem] font-semibold text-ink [overflow-wrap:anywhere]">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
                         </div>
                         {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}

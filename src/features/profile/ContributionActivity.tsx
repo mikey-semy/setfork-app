@@ -81,8 +81,11 @@ export function ContributionActivity({
               </div>
               <ul className="mt-2 flex flex-col gap-1">
                 {listsCreated.slice(0, 5).map((l) => (
-                  <li key={l.slug}>
-                    <Link href={`/${handle}/${l.slug}`} className="text-[0.8125rem] text-accent hover:underline">
+                  <li key={l.slug} className="min-w-0">
+                    {/* block + truncate, как в блоке версий выше: название списка пишет
+                        человек, и одно длинное слово иначе распирает страницу на мобиле
+                        (overflow: hidden у truncate заодно снимает автоминимум flex-строки). */}
+                    <Link href={`/${handle}/${l.slug}`} className="block truncate text-[0.8125rem] text-accent hover:underline">
                       {tr(l.title, lang)}
                     </Link>
                   </li>

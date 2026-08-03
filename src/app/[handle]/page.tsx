@@ -213,8 +213,10 @@ export default async function ProfilePage({
         <aside className="shrink-0 md:w-[17.5rem]">
           <Avatar handle={user.handle} avatarUrl={bigAvatar} size={180} rounded={user.avatarShape === 'square' ? 'rounded-2xl' : 'rounded-full'} />
           <div className="mt-4">
-            {user.name && <div className="text-[1.375rem] font-bold leading-tight text-ink">{user.name}</div>}
-            <div className="text-[1.125rem] text-ink-2">{user.handle}</div>
+            {/* Имя и ник задаёт человек: слово без пробелов иначе вылезает за колонку
+                профиля и тянет за собой всю страницу на мобиле. */}
+            {user.name && <div className="text-[1.375rem] font-bold leading-tight text-ink [overflow-wrap:anywhere]">{user.name}</div>}
+            <div className="text-[1.125rem] text-ink-2 [overflow-wrap:anywhere]">{user.handle}</div>
             {/* Профессия — должность под ником (у служебных участников буквальная). */}
             {user.profession && <div className="mt-0.5 text-[0.875rem] text-ink-2">{user.profession}</div>}
             {/* ADR-0004: нечеловечность обязана быть видна — иначе профиль вводит в
