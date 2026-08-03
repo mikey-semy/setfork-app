@@ -100,7 +100,7 @@ export function CommitsList({
                   тач-цель добирается padding'ом до полной. */}
               <span className="flex shrink-0 items-center gap-1.5 font-mono text-[0.78125rem] text-ink-2">
                 {c.sha.slice(0, 7)}
-                <CopyButton text={c.sha} label={t('copy', lang)} copiedLabel={t('copied', lang)} />
+                <CopyButton text={c.sha} lang={lang} />
                 {snapshotBase && (
                   <Tooltip label={labels.openAt}>
                     <Link
