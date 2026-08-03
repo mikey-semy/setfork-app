@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { blockComments, blockCommentThreads, db, issues, steps, suggestionAssignees, suggestionComments, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
+import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { recordAudit } from '@/shared/audit'
 import { captureError } from '@/shared/observability'
 import { getLang } from '@/shared/i18n/server'
@@ -208,19 +209,28 @@ export async function createTemplate(formData: FormData): Promise<void> {
     .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, slug)))
   if (owned.length) slug = `${slug}-${Date.now().toString(36).slice(-4)}`
 
-  const list = await listStore.create({
-    ownerId: session.userId,
-    slug,
-    title: { [lang]: title },
-    desc: desc ? { [lang]: desc } : {},
-    tags,
-    ordered,
-    visibility,
-    status: 'published',
-    origin: 'authored',
-    note: 'initial',
-    steps: toStepInput(proposed),
-  })
+  // Страж исполняемых команд стоит в фасаде записи и на СОЗДАНИИ тоже. Без разбора
+  // отказа человек получил бы общую ошибку серверного действия («что-то пошло не
+  // так») вместо объяснения, какой шаг и чем именно не годится.
+  let list
+  try {
+    list = await listStore.create({
+      ownerId: session.userId,
+      slug,
+      title: { [lang]: title },
+      desc: desc ? { [lang]: desc } : {},
+      tags,
+      ordered,
+      visibility,
+      status: 'published',
+      origin: 'authored',
+      note: 'initial',
+      steps: toStepInput(proposed),
+    })
+  } catch (e) {
+    if (e instanceof DestructiveCommandError) redirect(`/new?blocked=${e.reason}&step=${e.stepIndex}`)
+    throw e
+  }
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
   await registerTags(tags) // новые теги → в реестр
   await ensureWatch(list.id) // владелец следит за своим списком
@@ -280,12 +290,22 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await db.update(templates).set({ gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
   await registerTags(tags)
   // Создание версии = git-коммит + проекция в ядре (доменный порт ListStore).
-  await listStore.addVersion(tpl.id, {
-    note: note || 'edit',
-    steps: toStepInput(proposed),
-    authorId: session.userId,
-    meta: { tags, ordered },
-  })
+  // Страж исполняемого выхода стоит в фасаде записи (одна точка на все пути), а
+  // здесь — показ причины автору: молчаливый отказ читается как «кнопка не
+  // работает», а необработанное исключение — как поломка сайта.
+  try {
+    await listStore.addVersion(tpl.id, {
+      note: note || 'edit',
+      steps: toStepInput(proposed),
+      authorId: session.userId,
+      meta: { tags, ordered },
+    })
+  } catch (e) {
+    if (e instanceof DestructiveCommandError) {
+      redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}/edit?blocked=${e.reason}&step=${e.stepIndex}`)
+    }
+    throw e
+  }
   // Пере-проверку публичного списка делает фасад listStore.addVersion (барьер) — здесь не дублируем.
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)

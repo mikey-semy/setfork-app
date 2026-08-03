@@ -20,7 +20,7 @@ export async function generateMetadata() {
   return { title: t('newList', lang) }
 }
 
-export default async function NewListPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
+export default async function NewListPage({ searchParams }: { searchParams: Promise<{ e?: string; blocked?: string; step?: string }> }) {
   const [lang, session, sp] = await Promise.all([getLang(), getSession(), searchParams])
   if (!session) redirect('/login')
   const ru = lang === 'ru'
@@ -33,6 +33,19 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
       <form action={createTemplate}>
         {/* Название страницы уже стоит в шапке приложения. */}
         <PageHeader hideTitle title={t('newList', lang)} />
+
+        {/* Отказ стража исполняемых команд: причина словами и номер шага — иначе
+            кнопка «Создать» выглядит сломанной. */}
+        {sp.blocked && (
+          <Alert variant="danger" className="mb-5">
+            <span className="block font-semibold">{t('destructiveBlockedTitle', lang)}</span>
+            <span className="block">
+              {t('destructiveBlockedBody', lang)
+                .replace('{n}', sp.step ?? '?')
+                .replace('{reason}', t(`destructive.${sp.blocked}` as Parameters<typeof t>[0], lang))}
+            </span>
+          </Alert>
+        )}
 
         {quotaHit && q && (
           <Alert variant="warn" className="mb-5">
