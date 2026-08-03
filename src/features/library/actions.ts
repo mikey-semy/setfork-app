@@ -1245,6 +1245,22 @@ export async function forkNameStatus(name: string): Promise<{ slug: string; avai
 /** Форк списка = «Create a new fork» на GitHub: диалог задаёт имя (по умолчанию slug
  *  источника — у тебя он уникален) и опциональное описание; авто-суффикса `-fork`
  *  больше нет. Свой список форкнуть нельзя (у своих вместо Fork — Pin). */
+/**
+ * Создание форка с уважением к уникальному индексу «один аккаунт — один форк списка».
+ * Нарушение индекса означает, что параллельный запрос уже создал форк: это не ошибка
+ * приложения, а нормальный исход гонки, и вызывающий ведёт человека на существующий.
+ * Любая другая ошибка пробрасывается — глушить неизвестное здесь нельзя.
+ */
+async function createForkOrNull(input: Parameters<typeof listStore.create>[0]) {
+  try {
+    return await listStore.create(input)
+  } catch (e) {
+    const text = e instanceof Error ? `${e.message}` : String(e)
+    if (/templates_owner_fork_uq|duplicate key|unique constraint/i.test(text)) return null
+    throw e
+  }
+}
+
 export async function forkTemplate(templateId: string, opts?: { name?: string; description?: string }): Promise<ForkResult | void> {
   const session = await requireSession()
   const src = await db.query.templates.findFirst({
@@ -1286,7 +1302,9 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
   const srcSteps = srcCurrent
     ? await db.select().from(steps).where(eq(steps.versionId, srcCurrent.id)).orderBy(asc(steps.n))
     : []
-  const forked = await listStore.create({
+  // Инвариант «один форк» держит уникальный индекс в БД, а проверка выше лишь
+  // экономит работу. Проигравший гонку получает не ошибку, а свой уже созданный форк.
+  const created = await createForkOrNull({
     ownerId: session.userId,
     slug,
     title: src.title,
@@ -1311,8 +1329,32 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
       subtasks: s.subtasks,
       refs: s.refs,
       imageRef: s.imageKey ?? null,
+      // Пометка «здесь нужен человек» и её вопрос — часть шага, а не украшение. Шаг,
+      // про который автор честно сказал «этого я знать не могу, проверь у себя», после
+      // копирования выглядел обычным утверждением — при том что копия наследует ЧУЖОЙ
+      // опыт, и теряется ровно та отметка, которая от этого и защищает.
+      needsHuman: s.needsHuman,
+      needsHumanAsk: s.needsHumanAsk,
+      // Идентичность блока: на ней держатся комментарии к пункту и сравнение с
+      // источником. Без неё каждый блок форка выглядит новым, и различие с оригиналом
+      // показывает полную замену содержимого вместо реальных отличий.
+      blockId: s.blockId,
     })),
   })
+
+  // Гонку проиграли: параллельный запрос уже создал форк этого источника, и уникальный
+  // индекс не дал сделать второй. Ведём на существующий — счётчик форков и уведомление
+  // при этом НЕ повторяются, иначе одно действие пользователя считалось бы дважды.
+  if (!created) {
+    const [mine] = await db
+      .select({ slug: templates.slug })
+      .from(templates)
+      .where(and(eq(templates.ownerId, session.userId), eq(templates.forkedFromId, src.id)))
+      .limit(1)
+    if (mine) redirect(`/${session.handle}/${mine.slug}`)
+    return { error: 'Не удалось создать форк — попробуйте ещё раз.' }
+  }
+  const forked = created
 
   await db
     .update(templates)
