@@ -99,11 +99,15 @@ describe('push в замороженный и архивный список', ()
     expect((await advertise('live-list')).status).toBe(200)
   })
 
-  it('чужой и read-only токен по-прежнему 401, а не 403', async () => {
+  it('чужой и read-only токен — 403: личность доказана, не хватает прав', async () => {
+    // Было 401 на обоих случаях. 401 отправляет git к credential helper за новым
+    // паролем, хотя пароль верный, а список человек видит — отказ не про личность
+    // (карточка [...git]/012). «Не ваш ЗАКРЫТЫЙ список» — по-прежнему 404, чтобы
+    // не выдать его существование: см. transport-access.itest.ts.
     h.auth = { userId: uid.stranger, scope: 'write' }
-    expect((await push('live-list')).status).toBe(401)
+    expect((await push('live-list')).status).toBe(403)
     h.auth = { userId: uid.owner, scope: 'read' }
-    expect((await push('live-list')).status).toBe(401)
+    expect((await push('live-list')).status).toBe(403)
     expect(h.calls.receive).toBe(0)
   })
 
