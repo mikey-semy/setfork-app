@@ -150,7 +150,7 @@ export const ru: Record<DictKey, string> = {
   prStartReview: 'Добавить в ревью',
   prSettingsTitle: 'Предложения',
   prSetWho: 'Кто может предлагать',
-  prSetWhoHint: 'Любой, кто видит список, или только коллабораторы. Действует и на веб-форму, и на пуш через git.',
+  prSetWhoHint: 'Любой, кто видит список, или только коллабораторы. Действует на веб-форму; на пуш через git — когда вклад через git включён на этом сервере.',
   prSetWhoAll: 'Все',
   prSetWhoCollab: 'Только коллабораторы',
   prSetApprovals: 'Нужно одобрений',

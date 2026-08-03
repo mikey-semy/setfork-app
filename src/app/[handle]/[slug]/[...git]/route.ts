@@ -4,7 +4,7 @@ import { db, users } from '@/shared/db'
 import { getListMeta } from '@/features/library/queries'
 import { canEditList } from '@/core'
 import { contributorsEnabled, openForContributions, type PushRole } from '@/features/library/push-role'
-import { ensureBranchSuggestion } from '@/features/library/suggestion-core'
+import { ensureBranchSuggestion, namespaceTakenByOther } from '@/features/library/suggestion-core'
 import { captureError } from '@/shared/observability'
 import { isCollaborator } from '@/features/collab/queries'
 import { verifyApiToken } from '@/shared/auth/api-token'
@@ -108,6 +108,17 @@ const tooLarge = (e: GitBodyTooLarge) =>
     `Push is too large: the limit is ${Math.round(e.maxBytes / 1024 / 1024)} MB per request.\n` +
       'A list is text — this usually means binaries got committed. Keep images and attachments out of the repository.\n',
     { status: 413, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
+  )
+
+/**
+ * Ф5: пространство веток занято прежним владельцем этого ника. Отказ, а не
+ * перезапись: молча заменить чужую правку — худшее, что можно сделать.
+ */
+const namespaceConflict = () =>
+  new Response(
+    'This handle previously belonged to someone else who still has an open suggestion in its branch namespace.\n' +
+      'Rename your account or ask support to release the namespace before pushing.\n',
+    { status: 409, headers: { 'Content-Type': 'text/plain; charset=utf-8' } },
   )
 
 const writeDisabled = () =>
@@ -234,6 +245,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
       const rlUser = await rateLimit(`git:contrib:${az.userId}`, CONTRIB_PUSHES_PER_HOUR, 3600_000)
       if (!rlUser.ok) return tooMany(rlUser)
     }
+    // Ф5: ник сменяем и после смены свободен, а пространство веток зовётся по
+    // нему. Если в `u/<мой ник>/…` уже висит ЧУЖОЕ открытое предложение — ник
+    // достался нам от другого человека, и пуш сюда переписал бы его правку,
+    // оставив её подписанной им. Проверяем ДО чтения тела: имя ветки известно
+    // из ника, пак для этого не нужен.
+    const who0 = await pusher(az.userId, req)
+    if (await namespaceTakenByOther(who0.handle, az.userId)) return namespaceConflict()
     let body: Buffer
     try {
       body = await readGitBody(req).then((raw) => maybeGunzip(raw, req.headers.get('content-encoding')))
@@ -248,7 +266,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     // проверка стала не только не устаревшей, но и не обходимой другими путями.
     // Ранняя проверка выше (authorizeWrite → canEditList) остаётся: она даёт быстрый
     // отказ ДО чтения тела, чтобы не тянуть мегабайты ради заведомого 403.
-    const who = await pusher(az.userId, req)
+    const who = who0
     const res = await gitCore.receivePack(
       { owner: handle, slug },
       body,
