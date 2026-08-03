@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
 // eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
-import { canEditList } from '@/core'
+import { canEditList, canViewList, isPubliclyVisible } from '@/core'
 import { contributorsEnabled, openForContributions, type PushRole } from '@/features/library/push-role'
 import { coreEnforcesPushRoles } from '@/features/git/capabilities'
 import { ensureBranchSuggestion } from '@/features/library/suggestion-core'
@@ -28,15 +28,52 @@ const noCache = { Expires: 'Fri, 01 Jan 1980 00:00:00 GMT', Pragma: 'no-cache', 
 const unauthorized = () =>
   new Response('Authentication required', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="SetFork", charset="UTF-8"' } })
 
-async function userFromBasic(req: Request): Promise<{ userId: string; scope: 'read' | 'write' } | null> {
+/**
+ * «Нет объекта» и «объект есть, но он не ваш» отвечают ОДИНАКОВО — иначе транспорт
+ * превращается в перечислитель чужих закрытых списков: слаг выводится из заголовка
+ * публичным правилом нормализации, а лимит здесь 240 запросов в минуту.
+ */
+const notFound = () => new Response('Repository not found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+
+/** Личность доказана, объект виден, но операция не разрешена — это НЕ вопрос аутентификации. */
+const forbidden = (why: string) => new Response(why, { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+
+/**
+ * Хранилище токенов недоступно. Отдать здесь 401 значило бы сказать человеку
+ * «ваш токен не годится» про исправный токен: он полезет перевыпускать секрет,
+ * а CI запишет отказ доступа вместо аварии (карточка 005).
+ */
+const authUnavailable = () =>
+  new Response('Authentication is temporarily unavailable, retry later', {
+    status: 503,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '30' },
+  })
+
+/** Результат разбора Basic: «не предъявлен» и «не принят» — разные вещи, а «сломалось» — третья. */
+type Basic =
+  | { kind: 'none' }
+  | { kind: 'invalid' }
+  | { kind: 'unavailable' }
+  | { kind: 'ok'; userId: string; scope: 'read' | 'write' }
+
+async function userFromBasic(req: Request): Promise<Basic> {
   const h = req.headers.get('authorization') ?? ''
-  if (!h.toLowerCase().startsWith('basic ')) return null
+  if (!h.toLowerCase().startsWith('basic ')) return { kind: 'none' }
+  let pass: string
   try {
     const decoded = Buffer.from(h.slice(6).trim(), 'base64').toString('utf8')
-    const pass = decoded.slice(decoded.indexOf(':') + 1) // git PAT = пароль (логин любой)
-    return await verifyApiToken(pass)
+    pass = decoded.slice(decoded.indexOf(':') + 1) // git PAT = пароль (логин любой)
   } catch {
-    return null
+    return { kind: 'invalid' } // мусор вместо base64 — это неверный кредитив
+  }
+  try {
+    const auth = await verifyApiToken(pass)
+    return auth ? { kind: 'ok', userId: auth.userId, scope: auth.scope } : { kind: 'invalid' }
+  } catch (e) {
+    // Отдельная ветка, а не общий catch: раньше падение БД внутри verifyApiToken
+    // приходило сюда же, где разбирается base64, и становилось «неверным токеном».
+    captureError(e, { where: 'git.auth' })
+    return { kind: 'unavailable' }
   }
 }
 
@@ -44,13 +81,48 @@ const cleanSlug = (raw: string) => raw.replace(/\.git$/, '')
 
 type Meta = NonNullable<Awaited<ReturnType<typeof getListMeta>>>
 
-/** Доступ на чтение (clone/pull): public — аноним; private/draft — владелец по токену. */
-async function authorizeRead(req: Request, meta: Meta): Promise<'ok' | 401 | 404> {
-  const needsAuth = meta.visibility === 'private' || meta.status === 'draft' || meta.moderation !== 'active'
-  if (!needsAuth) return 'ok'
+/** Видит ли этот пользователь список — ОБЩИЙ предикат домена, а не своя копия правила. */
+async function canRead(meta: Meta, userId: string): Promise<boolean> {
+  const isOwner = meta.ownerId === userId
+  if (canViewList(meta, { isOwner })) return true
+  // Соредактор ведёт список вместе с владельцем: в вебе он приватный список видит и
+  // правит, а `git clone` того же списка получал 404. Проверка отдельным запросом —
+  // и только когда без неё отказ, чтобы не ходить в БД на каждый публичный клон.
+  return canViewList(meta, { isOwner, isCollaborator: await isCollaborator(meta.id, userId) })
+}
+
+/** Доступ разрешён: список и — если предъявлен кредитив — его владелец. */
+type Granted = { meta: Meta; userId: string | null; scope: 'read' | 'write' | null }
+
+/**
+ * Единый гейт git-транспорта: и для рекламы рефов, и для самих сервисов.
+ *
+ * Порядок отказов повторяет GitHub, проверено живьём на его smart-HTTP:
+ * анонимный запрос к приватному и к НЕСУЩЕСТВУЮЩЕМУ репозиторию отвечает
+ * одинаково — 401 с вызовом аутентификации (публичный при этом отдаёт 200), а
+ * предъявленный, но не подходящий кредитив получает 404 «Repository not found».
+ * Gitea здесь различает 401 и 404, то есть оракул существования у неё остаётся;
+ * нам он не годится: `/raw` и `data.json` этой же поверхности уже платят
+ * одинаковым отказом ровно ради того, чтобы факт существования не утекал.
+ */
+async function gitAccess(req: Request, handle: string, slug: string, need: 'read' | 'write'): Promise<Granted | Response> {
   const auth = await userFromBasic(req)
-  if (!auth) return 401
-  return auth.userId === meta.ownerId ? 'ok' : 404
+  if (auth.kind === 'unavailable') return authUnavailable()
+
+  const meta = await getListMeta(handle, slug)
+
+  // Единственный путь без кредитива — чтение того, что и так открыто всем.
+  if (need === 'read' && auth.kind === 'none' && meta && isPubliclyVisible(meta)) {
+    return { meta, userId: null, scope: null }
+  }
+  // Кредитива нет или он не принят: вызов аутентификации, одинаковый для всего
+  // остального — существует список или нет, отсюда не видно.
+  if (auth.kind !== 'ok') return unauthorized()
+
+  // Дальше личность известна, и отказы уже могут быть по существу — но чужого
+  // закрытого списка это по-прежнему не касается.
+  if (!meta || !(await canRead(meta, auth.userId))) return notFound()
+  return { meta, userId: auth.userId, scope: auth.scope }
 }
 
 /**
@@ -78,18 +150,24 @@ const CONTRIB_PUSHES_PER_HOUR = envNumber('SETFORK_GIT_CONTRIB_PUSHES_PER_HOUR',
  * пишет только в `refs/for/main`, а имя ветки придумывает сервер). Само решение остаётся
  * здесь: ADR-0011 §2 — пользовательской авторизации в ядре нет.
  */
-async function authorizeWrite(req: Request, meta: Meta): Promise<{ userId: string; role: PushRole } | 401 | 403> {
-  const auth = await userFromBasic(req)
-  if (!auth || auth.scope !== 'write') return 401 // read-only токен не может пушить
-  const role = await resolveRole(auth.userId, meta)
-  if (!role) return 401
+async function authorizeWrite(granted: Granted): Promise<{ userId: string; role: PushRole } | Response> {
+  const { meta, userId, scope } = granted
+  // Сюда приходят только с доказанной личностью: гейт выше уже отдал 401 анониму и
+  // 404 тому, кому список не виден.
+  if (!userId) return unauthorized()
+  // Дальше отказы ЧЕСТНЫЕ: 403, а не 401. Личность доказана, список человек видит,
+  // и повторный запрос пароля ничего не изменит — git-клиент же по 401 идёт к
+  // credential helper и просит ввести секрет заново (карточка 012).
+  if (scope !== 'write') return forbidden('Token has no write scope')
+  const role = await resolveRole(userId, meta)
+  if (!role) return forbidden('You are not allowed to push to this list')
   // Архив и заморозка — ограничения ЗАПИСИ, и git-путь обязан их соблюдать. Проверка
   // здесь, а не в ядре: на проде git идёт в Rust-ядро (SETFORK_CORE_URL), где понятий
   // frozen/archived нет вовсе, и push замороженного списка создавал новую версию —
   // ровно то, что заморозка обязана останавливать (линза 02, F3). Роут общий для
   // обоих режимов ядра, поэтому правило остаётся в одном месте.
-  if (!canEditList(meta)) return 403
-  return { userId: auth.userId, role }
+  if (!canEditList(meta)) return writeDisabled()
+  return { userId, role }
 }
 
 /**
@@ -176,25 +254,27 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const rl = await rateLimit(`git:${clientIp(req)}`, 240, 60_000)
   if (!rl.ok) return tooMany(rl)
   const { handle, slug: rawSlug, git } = await params
-  if ((git ?? []).join('/') !== 'info/refs') return new Response('Not found', { status: 404 })
+  if ((git ?? []).join('/') !== 'info/refs') return notFound()
   const service = new URL(req.url).searchParams.get('service')
   const slug = cleanSlug(rawSlug)
-  const meta = await getListMeta(handle, slug)
-  if (!meta) return new Response('Not found', { status: 404 })
   const gitProtocol = req.headers.get('git-protocol') ?? undefined
 
   if (service === 'git-upload-pack') {
-    const az = await authorizeRead(req, meta)
-    if (az !== 'ok') return az === 401 ? unauthorized() : new Response('Not found', { status: 404 })
+    // Мета читается ВНУТРИ гейта: раньше отсутствующий список отвечал 404 раньше
+    // всякой авторизации, и разница «401 против 404» выдавала анониму сам факт
+    // существования закрытого списка (карточка 015).
+    const az = await gitAccess(req, handle, slug, 'read')
+    if (az instanceof Response) return az
     const body = await gitCore.infoRefsUploadPack({ owner: handle, slug }, gitProtocol)
     if (!body) return new Response('Repository unavailable', { status: 500 })
     return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-upload-pack-advertisement', ...noCache } })
   }
 
   if (service === 'git-receive-pack') {
-    const az = await authorizeWrite(req, meta)
-    if (az === 401) return unauthorized()
-    if (az === 403) return writeDisabled()
+    const granted = await gitAccess(req, handle, slug, 'write')
+    if (granted instanceof Response) return granted
+    const az = await authorizeWrite(granted)
+    if (az instanceof Response) return az
     const body = await gitCore.infoRefsReceivePack({ owner: handle, slug }, gitProtocol)
     if (!body) return new Response('Repository unavailable', { status: 500 })
     return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-receive-pack-advertisement', ...noCache } })
@@ -231,13 +311,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
   const { handle, slug: rawSlug, git } = await params
   const path = (git ?? []).join('/')
   const slug = cleanSlug(rawSlug)
-  const meta = await getListMeta(handle, slug)
-  if (!meta) return new Response('Not found', { status: 404 })
   const gitProtocol = req.headers.get('git-protocol') ?? undefined
 
   if (path === 'git-upload-pack') {
-    const az = await authorizeRead(req, meta)
-    if (az !== 'ok') return az === 401 ? unauthorized() : new Response('Not found', { status: 404 })
+    const az = await gitAccess(req, handle, slug, 'read')
+    if (az instanceof Response) return az
     let body: Buffer
     try {
       body = await readGitBody(req).then((raw) => maybeGunzip(raw, req.headers.get('content-encoding')))
@@ -251,9 +329,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
   }
 
   if (path === 'git-receive-pack') {
-    const az = await authorizeWrite(req, meta)
-    if (az === 401) return unauthorized()
-    if (az === 403) return writeDisabled()
+    const granted = await gitAccess(req, handle, slug, 'write')
+    if (granted instanceof Response) return granted
+    const meta = granted.meta
+    const az = await authorizeWrite(granted)
+    if (az instanceof Response) return az
     // Ф5: отдельный, более строгий лимит для ПОСТОРОННИХ — иначе «предлагать
     // может кто угодно» превращается в открытую дверь. Считаем по пользователю,
     // а не по IP: за NAT адрес общий, зато токен всегда именной.
