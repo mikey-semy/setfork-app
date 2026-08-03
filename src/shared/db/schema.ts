@@ -455,7 +455,20 @@ export const steps = pgTable('steps', {
   // Подшаги и ссылки — простой контент шага, храним как locale-JSON.
   subtasks: jsonb('subtasks').notNull().default([]).$type<LocaleText[]>(),
   refs: jsonb('refs').notNull().default([]).$type<{ label: LocaleText; url?: string }[]>(),
-}, (t) => [index('steps_block_idx').on(t.blockId)])
+}, (t) => [
+  index('steps_block_idx').on(t.blockId),
+  // Горячий запрос всей системы: шаги версии по version_id с сортировкой по n —
+  // страница списка, прогон, /raw, /export, /embed, data.json, MCP. Под ссылающуюся
+  // колонку PostgreSQL индекс не создаёт, поэтому запрос шёл Seq Scan'ом по САМОЙ
+  // быстрорастущей таблице проекта: версия = полная копия блоков, то есть строк здесь
+  // столько, сколько версий × блоков по всем спискам вместе. Цена запроса шагов
+  // маленького списка росла от размера всего сайта.
+  // Замер на 200 000 строк (2000 списков × 5 версий × 20 блоков, 39 МБ):
+  //   без индекса — параллельный Seq Scan + Sort, 43.9 мс, 3826 буферов;
+  //   с индексом  — Bitmap Heap Scan,              0.5 мс,   26 буферов.
+  // Составной, а не по одной колонке: покрывает и предикат, и ORDER BY n.
+  index('steps_version_n_idx').on(t.versionId, t.n),
+])
 
 // ── Runs (прогон = исполняемый экземпляр шаблона на версии) ──────────
 export const runs = pgTable('runs', {
