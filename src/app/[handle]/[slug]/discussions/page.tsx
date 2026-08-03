@@ -12,6 +12,7 @@ import { requireViewableMeta } from '@/features/library/guard'
 import { getDiscussions } from '@/features/discussions/queries'
 import { DISCUSSION_CATEGORIES, categoryLabel, categoryMeta } from '@/features/discussions/constants'
 import { PAGE } from '@/shared/ui/control'
+import { isFeatureEnabled } from '@/core'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -29,7 +30,9 @@ export default async function DiscussionsPage({
   const ru = lang === 'ru'
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  if (!meta.discussionsEnabled) notFound() // раздел выключен владельцем (Settings → Features)
+  // Тот же предикат, что у записи (canWriteToFeature): страница отражает решение
+  // владельца, но не заменяет его — проверка живёт в actions.
+  if (!isFeatureEnabled(meta, 'discussions')) notFound() // раздел выключен (Settings → Features)
 
   const category = sp.category && DISCUSSION_CATEGORIES.some((c) => c.key === sp.category) ? sp.category : undefined
   const list = await getDiscussions(meta.id, { category })

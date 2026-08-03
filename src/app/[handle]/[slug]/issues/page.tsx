@@ -18,6 +18,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { Tag } from 'lucide-react'
 import { PAGE } from '@/shared/ui/control'
+import { isFeatureEnabled } from '@/core'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
   const [{ handle, slug }, lang] = await Promise.all([params, getLang()])
@@ -34,7 +35,9 @@ export default async function IssuesPage({
   const [{ handle: owner, slug }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
   const meta = await requireViewableMeta(owner, slug)
   if (!meta) notFound()
-  if (!meta.issuesEnabled) notFound() // раздел выключен владельцем (Settings → Features)
+  // Тот же предикат, что у записи (canWriteToFeature): страница отражает решение
+  // владельца, но не заменяет его — проверка живёт в actions.
+  if (!isFeatureEnabled(meta, 'issues')) notFound() // раздел выключен (Settings → Features)
 
   const status: IssueFilter = sp.status === 'closed' ? 'closed' : 'open'
   const q = sp.q?.trim() || undefined

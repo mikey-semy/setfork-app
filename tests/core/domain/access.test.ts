@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { canViewList, type ListAccess } from '@/core/domain/access'
+import { canViewList, canWriteToFeature, isFeatureEnabled, type ListAccess, type ListFeatures } from '@/core/domain/access'
 
 const list = (over: Partial<ListAccess> = {}): ListAccess => ({
   visibility: 'public',
@@ -66,5 +66,48 @@ describe('canViewList', () => {
     for (const mod of ['flagged', 'hidden']) {
       expect(canViewList(list({ moderation: mod }), collab)).toBe(false)
     }
+  })
+})
+
+// ── Разделы, выключаемые владельцем ─────────────────────────────────
+// «Выключен» — решение владельца о том, что в списке НЕ ведётся, значит его
+// обязана спрашивать запись. До этого предиката проверка жила только на странице,
+// то есть там, где сохранённая форма её не встречает.
+const withFeatures = (over: Partial<ListAccess & ListFeatures> = {}): ListAccess & ListFeatures => ({
+  ...list(),
+  issuesEnabled: true,
+  discussionsEnabled: true,
+  ...over,
+})
+
+describe('canWriteToFeature', () => {
+  it('включённый раздел на видимом списке: писать можно', () => {
+    expect(canWriteToFeature(withFeatures(), 'issues', other)).toBe(true)
+    expect(canWriteToFeature(withFeatures(), 'discussions', other)).toBe(true)
+  })
+
+  it('выключенный раздел закрыт для записи — включая владельца', () => {
+    const l = withFeatures({ discussionsEnabled: false })
+    expect(canWriteToFeature(l, 'discussions', other)).toBe(false)
+    // Иначе «выключено» означало бы «выключено для других».
+    expect(canWriteToFeature(l, 'discussions', owner)).toBe(false)
+    expect(canWriteToFeature(l, 'discussions', admin)).toBe(false)
+    // Соседний раздел не задет.
+    expect(canWriteToFeature(l, 'issues', other)).toBe(true)
+  })
+
+  it('включённый раздел не открывает невидимый список', () => {
+    const priv = withFeatures({ visibility: 'private' })
+    expect(canWriteToFeature(priv, 'issues', other)).toBe(false)
+    expect(canWriteToFeature(priv, 'issues', owner)).toBe(true)
+    expect(canWriteToFeature(priv, 'issues', { isOwner: false, isCollaborator: true })).toBe(true)
+    // Модерационный takedown коллаборатор не обходит и здесь.
+    expect(canWriteToFeature(withFeatures({ moderation: 'hidden' }), 'issues', { isOwner: false, isCollaborator: true })).toBe(false)
+  })
+
+  it('isFeatureEnabled различает разделы и не зависит от видимости', () => {
+    expect(isFeatureEnabled(withFeatures({ issuesEnabled: false }), 'issues')).toBe(false)
+    expect(isFeatureEnabled(withFeatures({ issuesEnabled: false }), 'discussions')).toBe(true)
+    expect(isFeatureEnabled(withFeatures({ visibility: 'private' }), 'issues')).toBe(true)
   })
 })

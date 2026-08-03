@@ -19,6 +19,7 @@ import { getReactionsFor } from '@/features/reactions/queries'
 import { Reactions } from '@/features/reactions/Reactions'
 import { CommentCard } from '@/features/collab/CommentCard'
 import { PAGE_NARROW } from '@/shared/ui/control'
+import { isFeatureEnabled } from '@/core'
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string; number: string }> }) {
   const [{ handle, slug, number }, lang] = await Promise.all([params, getLang()])
@@ -34,7 +35,9 @@ export default async function IssueThreadPage({
   const number = Number(numStr)
   const [lang, session, meta] = await Promise.all([getLang(), getSession(), requireViewableMeta(owner, slug)])
   if (!meta) notFound()
-  if (!meta.issuesEnabled) notFound() // раздел выключен владельцем (Settings → Features)
+  // Тот же предикат, что у записи (canWriteToFeature): страница отражает решение
+  // владельца, но не заменяет его — проверка живёт в actions.
+  if (!isFeatureEnabled(meta, 'issues')) notFound() // раздел выключен (Settings → Features)
   const issue = number > 0 ? await getIssue(meta.id, number) : null
   if (!issue) notFound()
   const comments = await getIssueComments(issue.id)

@@ -8,7 +8,7 @@ import { enqueueJob } from '@/shared/jobs/queue'
 import { getLang } from '@/shared/i18n/server'
 import { resolveListBySlug } from '@/shared/db/resolve-list'
 import { requireSession } from '@/shared/auth/session'
-import { canViewList } from '@/core'
+import { canWriteToFeature, isFeatureEnabled } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
 import { notify, notifyMany, notifyMentions } from '@/features/notifications/notify'
 import { ensureWatch } from '@/features/watch/actions'
@@ -37,11 +37,14 @@ export async function createIssue(formData: FormData): Promise<void> {
   // заголовку), владельцу летело уведомление, notifyMentions рассылал упоминания
   // (линза 02, F4). Заодно уходит перекос: коллаборатор приватного списка, который
   // список видит, теперь может завести в нём задачу.
+  // Раздел, выключенный владельцем, тоже проверяется ЗДЕСЬ, а не только на странице:
+  // сохранённая форма и прямой вызов action страницу не проходят, и задачи заводились
+  // в списке, где раздел «Вопросы» отключён и не показывается никому.
   const isOwner = tpl.ownerId === session.userId
-  const canView =
-    canViewList(tpl, { isOwner }) ||
-    canViewList(tpl, { isOwner, isCollaborator: await isCollaborator(tpl.id, session.userId) })
-  if (!canView) redirect(`/${owner}/${slug}`)
+  const canWrite =
+    canWriteToFeature(tpl, 'issues', { isOwner }) ||
+    canWriteToFeature(tpl, 'issues', { isOwner, isCollaborator: await isCollaborator(tpl.id, session.userId) })
+  if (!canWrite) redirect(`/${owner}/${slug}`)
 
   const labels = cleanLabels(rawLabels, await customIdSet(tpl.id))
   const ins = await collabStore.openIssue(tpl.id, session.userId, title, body, labels)
@@ -56,7 +59,9 @@ export async function createIssue(formData: FormData): Promise<void> {
 
 async function loadIssue(owner: string, slug: string, number: number) {
   const tpl = await resolveListBySlug(owner, slug)
-  if (!tpl) return null
+  // Выключенный раздел не отдаёт задачу вовсе: всё, что ниже по этому пути, — записи
+  // (комментарий, статус, метки, исполнитель) в раздел, которого в списке больше нет.
+  if (!tpl || !isFeatureEnabled(tpl, 'issues')) return null
   const [iss] = await db
     .select({ id: issues.id, authorId: issues.authorId, status: issues.status })
     .from(issues)
@@ -85,8 +90,8 @@ export async function addIssueComment(formData: FormData): Promise<void> {
   // комментария — тред, доступный только на запись первой строки (P2 авто-ревью #582).
   const isOwnerC = tpl.ownerId === session.userId
   const canComment =
-    canViewList(tpl, { isOwner: isOwnerC }) ||
-    canViewList(tpl, { isOwner: isOwnerC, isCollaborator: await isCollaborator(tpl.id, session.userId) })
+    canWriteToFeature(tpl, 'issues', { isOwner: isOwnerC }) ||
+    canWriteToFeature(tpl, 'issues', { isOwner: isOwnerC, isCollaborator: await isCollaborator(tpl.id, session.userId) })
   if (!canComment) redirect(`/${owner}/${slug}`)
 
   await collabStore.addIssueComment(iss.id, session.userId, body)
