@@ -1339,6 +1339,14 @@ export const quizAttempts = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     selected: jsonb('selected').$type<string[]>().notNull(), // optionId, которые выбрал
     correct: boolean('correct').notNull(), // прошёл ли (точное совпадение с верными)
+    // Отпечаток СОДЕРЖИМОГО вопроса на момент ответа. Попытка привязана к блоку по
+    // стабильному bid, а bid переживает правку: автор мог изменить сам вопрос и
+    // эталонный ответ, сохранив блок, — и прежнее «отвечено верно» продолжало
+    // засчитываться за новый вопрос, вплоть до выдачи сертификата.
+    // NULL = ответ дан до появления отпечатка (такие попытки требуют пересдачи только
+    // если содержимое вопроса с тех пор менялось — проверить это нечем, поэтому они
+    // засчитываются как прежде).
+    contentHash: text('content_hash'),
     attempts: integer('attempts').notNull().default(1), // число попыток (пересдачи)
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1356,14 +1364,29 @@ export const courseCompletions = pgTable(
   'course_completions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    templateId: uuid('template_id')
-      .notNull()
-      .references(() => templates.id, { onDelete: 'cascade' }),
+    // Ссылка на курс НЕ каскадная и допускает NULL: прохождение — факт биографии
+    // человека, а не часть чужого списка. Раньше удаление курса уносило запись с
+    // собой, и достижение исчезало у того, кто его заработал. Теперь рвётся только
+    // связь, а сам документ живёт на снимке фактов ниже.
+    templateId: uuid('template_id').references(() => templates.id, { onDelete: 'set null' }),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     version: integer('version').notNull(), // версия списка на момент завершения
     completedAt: timestamp('completed_at', { withTimezone: true }).notNull().defaultNow(),
+    // СНИМОК ФАКТОВ на момент выдачи. Сертификат — документ о прошлом, а название
+    // курса, имя автора и имя учащегося меняются: после переименования курса, смены
+    // имени в профиле или передачи списка другому владельцу тот же документ начинал
+    // утверждать другое. Особенно при передаче владения: документ старой версии
+    // говорил, что курс выдал человек, который его не вёл.
+    // NULL = запись сделана до появления снимка; страница берёт текущие значения и
+    // помечает документ как восстановленный, а не выдаёт их за исходные.
+    courseTitle: jsonb('course_title').$type<LocaleText>(),
+    courseSlug: text('course_slug'),
+    issuerHandle: text('issuer_handle'),
+    issuerName: text('issuer_name'),
+    learnerHandle: text('learner_handle'),
+    learnerName: text('learner_name'),
   },
   (t) => [
     uniqueIndex('course_completions_uq').on(t.userId, t.templateId),

@@ -112,7 +112,8 @@ export async function getReceivedStats(userId: string): Promise<{ stars: number;
 }
 
 export interface CompletedCourse {
-  templateId: string
+  /** NULL, если курс с тех пор удалили: достижение остаётся, ссылка на него — нет. */
+  templateId: string | null
   title: LocaleText
   slug: string
   ownerHandle: string

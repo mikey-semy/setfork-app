@@ -44,6 +44,7 @@ import { QuizBlock } from '@/features/quizzes/QuizBlock'
 import { hasAffiliateLink, hasMarkedAffiliate, markedAdvertisers, quizKind, stripQuizAnswers, type QuizBlockContent } from '@/core'
 import { getMonetizationSettings } from '@/shared/settings/monetization'
 import { getCourseCompletion, getQuizState } from '@/features/quizzes/queries'
+import { quizContentHash } from '@/core/domain/quiz-fingerprint'
 import { CourseProgress } from '@/features/quizzes/CourseProgress'
 import { CourseOutline, type OutlineLesson } from '@/features/library/CourseOutline'
 import { pollDeadlineMs, productItems } from '@/features/library/blocks'
@@ -154,9 +155,20 @@ export default async function ListPage({
   // Результаты poll-блоков (голоса вне git — по стабильному content.bid).
   const pollBids = steps.filter((s) => s.type === 'poll' && typeof s.content?.bid === 'string').map((s) => (s.content as { bid: string }).bid)
   const pollResults = pollBids.length ? await getPollResults(tpl.id, pollBids, viewer?.userId) : {}
-  // Состояние quiz-блоков (последняя попытка зрителя — по content.bid).
-  const quizBids = steps.filter((s) => s.type === 'quiz' && typeof s.content?.bid === 'string').map((s) => (s.content as { bid: string }).bid)
-  const quizStates = quizBids.length ? await getQuizState(tpl.id, quizBids, viewer?.userId) : {}
+  // Состояние quiz-блоков (последняя попытка зрителя — по content.bid). Вместе с bid
+  // считаем отпечаток ТЕКУЩЕГО содержимого: ответ на прежнюю редакцию вопроса не
+  // должен показываться пройденным — иначе страница открывала бы зависимые уроки,
+  // тогда как выдача сертификата требует пересдачи.
+  const quizBids: string[] = []
+  const quizHashes = new Map<string, string>()
+  for (const s of steps) {
+    if (s.type !== 'quiz') continue
+    const c = (s.content ?? {}) as Record<string, unknown>
+    if (typeof c.bid !== 'string') continue
+    quizBids.push(c.bid)
+    quizHashes.set(c.bid, quizContentHash(c))
+  }
+  const quizStates = quizBids.length ? await getQuizState(tpl.id, quizBids, viewer?.userId, quizHashes) : {}
   // Прохождение курса — ПОСТОЯННЫЙ факт: плашка с сертификатом видна и после
   // правок тестов автором (иначе вернувшемуся «проходи заново ради бумажки»).
   const completion = viewer ? await getCourseCompletion(tpl.id, viewer.userId) : null

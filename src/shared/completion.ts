@@ -1,6 +1,7 @@
 import 'server-only'
 import { and, eq, inArray, sql } from 'drizzle-orm'
-import { courseCompletions, db, quizAttempts, runStepState, runs, steps } from '@/shared/db'
+import { courseCompletions, db, quizAttempts, runStepState, runs, steps, templates, users } from '@/shared/db'
+import { quizContentHash } from '@/core/domain/quiz-fingerprint'
 
 /**
  * ЕДИНОЕ определение «курс версии пройден». Раньше их было два, и они не знали друг
@@ -23,14 +24,21 @@ export async function isCourseCompleted(
     .from(steps)
     .where(eq(steps.versionId, version.versionId))
 
-  // Один проход по блокам: и счёт шагов, и сбор идентификаторов тестов.
+  // Один проход по блокам: и счёт шагов, и сбор тестов вместе с отпечатком их
+  // содержимого — по нему отсеиваются ответы на ПРЕЖНЮЮ редакцию вопроса.
   let stepCount = 0
   const quizBids: string[] = []
+  const expectedHash = new Map<string, string>()
   for (const b of blocks) {
-    if (b.type === 'step') stepCount++
-    else if (b.type === 'quiz') {
-      const bid = (b.content as { bid?: string }).bid
-      if (bid) quizBids.push(bid)
+    if (b.type === 'step') {
+      stepCount++
+    } else if (b.type === 'quiz') {
+      const c = (b.content ?? {}) as Record<string, unknown>
+      const bid = typeof c.bid === 'string' ? c.bid : null
+      if (bid) {
+        quizBids.push(bid)
+        expectedHash.set(bid, quizContentHash(c))
+      }
     }
   }
 
@@ -54,10 +62,18 @@ export async function isCourseCompleted(
     if (!perRun.some((r) => (r.c ?? 0) >= stepCount)) return false
   }
 
-  // Тесты: по каждому quiz-блоку версии нужна успешная попытка.
+  // Тесты: по каждому quiz-блоку версии нужна успешная попытка ИМЕННО НА ЭТОТ вопрос.
+  //
+  // Одного `correct = true` мало: попытка привязана к блоку по стабильному bid, а bid
+  // переживает правку содержимого. Автор менял сам вопрос и эталонный ответ, сохранив
+  // блок, — и старое «отвечено верно» продолжало засчитываться за новый вопрос.
+  // Поэтому сверяем отпечаток содержимого: не совпал — тест нужно пересдать.
+  // Попытки без отпечатка (сделанные до его появления) засчитываем как прежде: чем
+  // именно они отвечали, узнать неоткуда, и обнулять чужой прогресс задним числом
+  // было бы хуже.
   if (quizBids.length) {
     const passed = await db
-      .select({ bid: quizAttempts.bid })
+      .select({ bid: quizAttempts.bid, hash: quizAttempts.contentHash })
       .from(quizAttempts)
       .where(
         and(
@@ -67,7 +83,8 @@ export async function isCourseCompleted(
           inArray(quizAttempts.bid, quizBids),
         ),
       )
-    const ok = new Set(passed.map((r) => r.bid))
+    const ok = new Set<string>()
+    for (const r of passed) if (!r.hash || r.hash === expectedHash.get(r.bid)) ok.add(r.bid)
     if (!quizBids.every((b) => ok.has(b))) return false
   }
 
@@ -88,9 +105,34 @@ export async function recordCompletionIfDone(
 ): Promise<boolean> {
   if (!(await isCourseCompleted(userId, version))) return false
 
+  // Снимок фактов на момент выдачи: название курса, автор и учащийся такие, какими
+  // они были СЕЙЧАС. Иначе документ о прошлом пересобирался бы из текущих данных и
+  // после переименования курса или передачи владения начинал утверждать другое.
+  const [tpl] = await db
+    .select({ title: templates.title, slug: templates.slug, ownerId: templates.ownerId })
+    .from(templates)
+    .where(eq(templates.id, version.templateId))
+    .limit(1)
+  const who = await db
+    .select({ id: users.id, handle: users.handle, name: users.name })
+    .from(users)
+    .where(inArray(users.id, [userId, tpl?.ownerId].filter((v): v is string => !!v)))
+  const learner = who.find((u) => u.id === userId)
+  const issuer = who.find((u) => u.id === tpl?.ownerId)
+
   await db
     .insert(courseCompletions)
-    .values({ templateId: version.templateId, userId, version: version.version })
+    .values({
+      templateId: version.templateId,
+      userId,
+      version: version.version,
+      courseTitle: tpl?.title ?? null,
+      courseSlug: tpl?.slug ?? null,
+      issuerHandle: issuer?.handle ?? null,
+      issuerName: issuer?.name ?? null,
+      learnerHandle: learner?.handle ?? null,
+      learnerName: learner?.name ?? null,
+    })
     .onConflictDoNothing({ target: [courseCompletions.userId, courseCompletions.templateId] })
   return true
 }
