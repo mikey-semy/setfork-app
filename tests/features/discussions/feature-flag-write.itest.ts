@@ -30,9 +30,10 @@ vi.mock('@/features/notifications/notify', () => ({
   notifyMentions: async () => {},
 }))
 
-const { db, discussionComments, discussions, issueComments, issues, templateVersions, templates, users } = await import('@/shared/db')
+const { db, discussionComments, discussions, issueComments, issues, milestones, templateVersions, templates, users } = await import('@/shared/db')
 const { createDiscussion, addDiscussionComment } = await import('@/features/discussions/actions')
 const { createIssue, addIssueComment, setIssueStatus } = await import('@/features/issues/actions')
+const { setIssueMilestone } = await import('@/features/milestones/actions')
 
 const OWNER = 'ff-owner'
 const VISITOR = 'ff-visitor'
@@ -70,7 +71,7 @@ const setFeatures = (patch: { issuesEnabled?: boolean; discussionsEnabled?: bool
   db.update(templates).set(patch).where(eq(templates.id, tplId))
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${discussionComments}, ${discussions}, ${issueComments}, ${issues}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await db.execute(sql`truncate table ${discussionComments}, ${discussions}, ${issueComments}, ${issues}, ${milestones}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
   const [o] = await db.insert(users).values({ handle: OWNER }).returning({ id: users.id })
   const [v] = await db.insert(users).values({ handle: VISITOR }).returning({ id: users.id })
   ownerId = o.id
@@ -88,6 +89,7 @@ beforeEach(async () => {
   await db.delete(discussions)
   await db.delete(issueComments)
   await db.delete(issues)
+  await db.delete(milestones)
   await setFeatures({ issuesEnabled: true, discussionsEnabled: true })
 })
 
@@ -149,6 +151,16 @@ describe('запись при выключенном разделе «Вопро
     await call(() => setIssueStatus(OWNER, SLUG, 1, 'closed'))
     const [iss] = await db.select({ status: issues.status }).from(issues)
     expect(iss.status).toBe('open')
+  })
+
+  it('веха задаче не назначается — это тоже запись в выключенный раздел', async () => {
+    h.session = { userId: ownerId, handle: OWNER }
+    await call(() => createIssue(form({ owner: OWNER, slug: SLUG, title: 'Задача', body: 'текст' })))
+    const [m] = await db.insert(milestones).values({ templateId: tplId, title: 'Веха' }).returning({ id: milestones.id })
+    await setFeatures({ issuesEnabled: false })
+    await call(() => setIssueMilestone(OWNER, SLUG, 1, m.id))
+    const [iss] = await db.select({ milestoneId: issues.milestoneId }).from(issues)
+    expect(iss.milestoneId).toBeNull()
   })
 
   it('включённый раздел работает как раньше', async () => {
