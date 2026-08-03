@@ -209,19 +209,28 @@ export async function createTemplate(formData: FormData): Promise<void> {
     .where(and(eq(templates.ownerId, session.userId), eq(templates.slug, slug)))
   if (owned.length) slug = `${slug}-${Date.now().toString(36).slice(-4)}`
 
-  const list = await listStore.create({
-    ownerId: session.userId,
-    slug,
-    title: { [lang]: title },
-    desc: desc ? { [lang]: desc } : {},
-    tags,
-    ordered,
-    visibility,
-    status: 'published',
-    origin: 'authored',
-    note: 'initial',
-    steps: toStepInput(proposed),
-  })
+  // Страж исполняемых команд стоит в фасаде записи и на СОЗДАНИИ тоже. Без разбора
+  // отказа человек получил бы общую ошибку серверного действия («что-то пошло не
+  // так») вместо объяснения, какой шаг и чем именно не годится.
+  let list
+  try {
+    list = await listStore.create({
+      ownerId: session.userId,
+      slug,
+      title: { [lang]: title },
+      desc: desc ? { [lang]: desc } : {},
+      tags,
+      ordered,
+      visibility,
+      status: 'published',
+      origin: 'authored',
+      note: 'initial',
+      steps: toStepInput(proposed),
+    })
+  } catch (e) {
+    if (e instanceof DestructiveCommandError) redirect(`/new?blocked=${e.reason}&step=${e.stepIndex}`)
+    throw e
+  }
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
   await registerTags(tags) // новые теги → в реестр
   await ensureWatch(list.id) // владелец следит за своим списком
