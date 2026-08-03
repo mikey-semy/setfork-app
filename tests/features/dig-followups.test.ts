@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseFollowups } from '@/features/dig/followups'
+import { NEXT_TEMPLATE } from '@/shared/ai/reply-parse'
 
 describe('parseFollowups (NEXT: не должен вылезать текстом)', () => {
   it('формат в строку через «|»', () => {
@@ -37,9 +38,13 @@ describe('parseFollowups (NEXT: не должен вылезать тексто�
     expect(r.text).not.toContain('NEXT')
     expect(r.followups).toEqual([])
   })
-  it('заготовки в угловых скобках тоже не показываем', () => {
-    const r = parseFollowups('Ответ.\nNEXT: <first question> | <second question> | <third question>')
+  it('образец из промпта скопирован целиком → кнопок нет', () => {
+    const r = parseFollowups(`Ответ.\n${NEXT_TEMPLATE}`)
     expect(r.followups).toEqual([])
+  })
+  it('живой вопрос ВНУТРИ скобок образца остаётся — скобки снимаются', () => {
+    const r = parseFollowups('Ответ.\nNEXT: <Почему именно winget?> | <Как обновлять?> | <Что если нет PATH?>')
+    expect(r.followups).toEqual(['Почему именно winget?', 'Как обновлять?', 'Что если нет PATH?'])
   })
   it('заготовки отсеиваются, живые вопросы остаются', () => {
     const r = parseFollowups('Ответ.\nNEXT: q1 | а если сеть отвалится? | <third question>')

@@ -9,7 +9,7 @@ import { spotlight } from './spotlight'
 import { getRoster, type Expert } from './roster'
 import { gnomeCard } from './gnome-character'
 import { gnomeMood, gnomeReflection, gnomeReputation, gnomeThanksCounts, gnomeUserThanks, gnomeUserAccepts } from './gnome-reputation'
-import { parseFollowups, parseSummon } from './reply-parse'
+import { NEXT_TEMPLATE, parseFollowups, parseSummon } from './reply-parse'
 import { langEnName, type Lang } from '@/shared/i18n'
 
 /**
@@ -121,7 +121,7 @@ Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now
 
   const followupsRule =
     opts.followups && !opts.short
-      ? `\nYou are the guide in this mountain of knowledge — unless you are summoning a colleague, you MUST end EVERY reply with one final line of this shape:\nNEXT: <first question> | <second question> | <third question>\nWrite the ACTUAL questions the person would plausibly ask you next about this very topic — three of them, SHORT (max ~6 words each), in the answer language, separated by " | ". Never emit the placeholders or any label instead of a real question. Mandatory (except when summoning); nothing after that line.`
+      ? `\nYou are the guide in this mountain of knowledge — unless you are summoning a colleague, you MUST end EVERY reply with one final line of this shape:\n${NEXT_TEMPLATE}\nWrite the ACTUAL questions the person would plausibly ask you next about this very topic — three of them, SHORT (max ~6 words each), in the answer language, separated by " | ". Never emit the placeholders or any label instead of a real question. Mandatory (except when summoning); nothing after that line.`
       : ''
 
   const task = opts.short
