@@ -30,19 +30,22 @@ export async function getListBlame(templateId: string): Promise<ListBlame | null
   const [tpl] = await db.select({ current: templates.currentVersion }).from(templates).where(eq(templates.id, templateId)).limit(1)
   if (!tpl) return null
 
-  // Версии — отдельным запросом. Версия без блоков (удалили все пункты) в join
-  // не появилась бы вовсе, и «блок убрали, а потом вернули» читалось бы как
-  // «блок не менялся»: сравнивались бы снимки по обе стороны провала.
-  const versions = await db
+  // Оба запроса независимы — идут параллельно, зритель не ждёт их по очереди.
+  //
+  // Версии берутся ОТДЕЛЬНО от блоков: версия без блоков (удалили все пункты) в
+  // join не появилась бы вовсе, и «блок убрали, а потом вернули» читалось бы как
+  // «блок не менялся» — сравнивались бы снимки по обе стороны провала.
+  //
+  // Блоки: версии по возрастанию, блоки по n. Выбираются ВСЕ поля содержимого —
+  // отпечаток блока обязан покрывать блочную модель целиком, иначе правка
+  // остаётся невидимой.
+  const versionsQuery = db
     .select({ version: templateVersions.version, createdAt: templateVersions.createdAt, note: templateVersions.note })
     .from(templateVersions)
     .where(and(eq(templateVersions.templateId, templateId), lte(templateVersions.version, tpl.current)))
     .orderBy(asc(templateVersions.version))
 
-  // Блоки этих версий одним запросом (версии по возрастанию, блоки по n).
-  // Выбираются ВСЕ поля содержимого: отпечаток блока обязан покрывать блочную
-  // модель целиком, иначе правка остаётся невидимой.
-  const rows = await db
+  const blocksQuery = db
     .select({
       version: templateVersions.version,
       n: stepsTable.n,
@@ -66,6 +69,8 @@ export async function getListBlame(templateId: string): Promise<ListBlame | null
     .innerJoin(templateVersions, eq(stepsTable.versionId, templateVersions.id))
     .where(and(eq(templateVersions.templateId, templateId), lte(templateVersions.version, tpl.current)))
     .orderBy(asc(templateVersions.version), asc(stepsTable.n))
+
+  const [versions, rows] = await Promise.all([versionsQuery, blocksQuery])
 
   const byVersion = new Map<number, BlameBlock[]>()
   for (const r of rows) {
