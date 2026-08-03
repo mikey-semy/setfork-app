@@ -1,11 +1,11 @@
-import { sql } from 'drizzle-orm'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { McpItemInput } from '@/features/mcp/tools'
 
 // MCP-инструменты берут userId прямо из токена (не cookie-сессия) → тестируются без
 // моков, чистой БД. Сквозной поток create→get→update + проверки владения/видимости:
 // список создаётся ЧЕРНОВИКОМ (виден только владельцу), обновлять может только владелец.
-const { db, templates, users } = await import('@/shared/db')
+const { db, steps, templates, templateVersions, users } = await import('@/shared/db')
 const { mcpCreateList, mcpGetList, mcpPatchList, mcpUpdateList } = await import('@/features/mcp/tools')
 
 let ownerId = ''
@@ -213,6 +213,78 @@ describe('patch_list — точечная правка вместо переза
     // Блок уцелел и получил канонический id вместо мусорного.
     expect(after.steps[0].title).toBe('install')
     expect(after.steps[0].bid).not.toBe('not-a-uuid')
+  })
+
+  // Патч правит ОДИН блок, но список переписывается целиком — значит всё, чего
+  // плоская форма MCP не умеет выразить (переводы, товары), обязано ехать мимо неё.
+  it('перевод соседнего блока и товары переживают патч', async () => {
+    const created = await mcpCreateList(ownerId, { title: 'Mixed', items: [{ title: 'one' }, { title: 'two' }] })
+    const slug = refSlug((created as { ref: string }).ref)
+    const [{ id: tplId }] = await db.select({ id: templates.id }).from(templates).where(eq(templates.slug, slug))
+    const [ver] = await db.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, tplId))
+
+    // Двуязычный шаг и подборка товаров кладём напрямую: через MCP их пока не создать.
+    await db
+      .update(steps)
+      .set({ title: { en: 'two', ru: 'второй' }, desc: { en: 'about', ru: 'описание' } })
+      .where(and(eq(steps.versionId, ver.id), eq(steps.n, 2)))
+    await db.insert(steps).values({
+      versionId: ver.id,
+      n: 3,
+      type: 'product',
+      content: { bid: 'prod-1', title: 'Инструменты', items: [{ name: 'Отвёртка', url: 'https://example.com/x' }] },
+      title: {},
+      desc: {},
+      command: '',
+      level: 'required',
+      why: {},
+      section: {},
+      subtasks: [],
+      refs: [],
+    })
+
+    const read = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
+    const first = read.steps.find((b) => b.title === 'one')
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: first?.bid, title: 'ONE' }],
+    })
+    expect('error' in res).toBe(false)
+
+    const rows = await db.select().from(steps).where(eq(steps.versionId, ver.id)).orderBy(asc(steps.n))
+    // Русский перевод НЕ тронутого патчем блока на месте.
+    expect(rows.find((r) => (r.title as Record<string, string>).en === 'two')?.title).toEqual({ en: 'two', ru: 'второй' })
+    // Подборка товаров не превратилась в пустой шаг и не исчезла.
+    const product = rows.find((r) => r.type === 'product')
+    expect(product?.content).toMatchObject({ title: 'Инструменты' })
+  })
+
+  it('товары через API не патчатся — честный отказ вместо тихой порчи', async () => {
+    const created = await mcpCreateList(ownerId, { title: 'WithProduct', items: [{ title: 'one' }] })
+    const slug = refSlug((created as { ref: string }).ref)
+    const [{ id: tplId }] = await db.select({ id: templates.id }).from(templates).where(eq(templates.slug, slug))
+    const [ver] = await db.select({ id: templateVersions.id }).from(templateVersions).where(eq(templateVersions.templateId, tplId))
+    await db.insert(steps).values({
+      versionId: ver.id,
+      n: 2,
+      type: 'product',
+      content: { bid: 'prod-2', title: 'Набор', items: [{ name: 'Ключ', url: 'https://example.com/k' }] },
+      title: {},
+      desc: {},
+      command: '',
+      level: 'required',
+      why: {},
+      section: {},
+      subtasks: [],
+      refs: [],
+    })
+    const read = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
+    const prod = read.steps.find((b) => b.bid === 'prod-2')
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: prod?.bid, title: 'другое' }],
+    })
+    expect(res).toMatchObject({ error: expect.stringContaining('product') })
   })
 
   it('патчить чужой список нельзя', async () => {

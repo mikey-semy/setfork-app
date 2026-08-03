@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { db, knowledgeSources, runs, runStepState, steps, suggestionReportedChecks, suggestions, templates, users, type ProposedItem } from '@/shared/db'
-import { tr } from '@/shared/i18n'
+import { tr, type LocaleText } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { canEditList, canViewList } from '@/core'
@@ -16,7 +16,7 @@ import { findExistingNearDuplicate } from '@/shared/ai/near-dup-check'
 import { attributionLine, checkLicense } from '@/shared/ai/source-license'
 import { emptyBlock, toProposedItems, type EditorItem } from '@/features/library/editor'
 import { isBlockType, newOptionId } from '@/features/library/blocks'
-import { applyPatchOps, type McpPatchOp } from './patch'
+import { applyPatchOps, patchFields, type McpPatchOp } from './patch'
 // Единый конвертер шагов на запись — тот же, что у веба, садовника и предложений.
 // Своя копия в MCP теряла blockId и «здесь нужен человек» (см. комментарий в модуле).
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
@@ -745,6 +745,86 @@ export interface McpUpdateInput {
   ordered?: boolean
 }
 
+/** Строки версии → доменные блоки БЕЗ потерь: locale-JSON, content и идентичность
+ *  как есть. Этим путём патч ведёт НЕТРОНУТЫЕ блоки: плоская MCP-форма отдаёт по
+ *  одной строке на поле (переводы схлопнулись бы) и не знает про товары. */
+function rowsToProposed(rows: DetailStep[]): ProposedItem[] {
+  return rows.map(
+    (s) =>
+      ({
+        blockId: s.blockId ?? undefined,
+        type: s.type ?? 'step',
+        content: (s.content ?? {}) as Record<string, unknown>,
+        title: s.title,
+        desc: s.desc,
+        command: s.command,
+        hasImage: s.hasImage,
+        imageKey: s.imageKey ?? undefined,
+        level: s.level,
+        why: s.why,
+        section: s.section,
+        needsHuman: s.needsHuman,
+        needsHumanAsk: s.needsHumanAsk,
+        subtasks: s.subtasks,
+        refs: s.refs,
+      }) as unknown as ProposedItem,
+  )
+}
+
+/** Локализованные поля блока: их правка обязана дописываться В ЯЗЫК, а не поверх
+ *  всего словаря — иначе патч по-английски стирает русский текст списка. */
+const LOCALIZED = ['title', 'desc', 'why', 'section', 'needsHumanAsk'] as const
+
+/** Язык, в котором поле уже записано (первый непустой ключ), иначе 'en'. Правка
+ *  из API языка не несёт, а список может быть целиком русским. */
+const langOfField = (lt: unknown): string => {
+  const rec = (lt ?? {}) as Record<string, string>
+  return Object.keys(rec).find((k) => (rec[k] ?? '').trim()) ?? 'en'
+}
+const putLang = (before: unknown, flat: string): Record<string, string> => {
+  const base = (before ?? {}) as Record<string, string>
+  return flat.trim() ? { ...base, [langOfField(before)]: flat.trim() } : {}
+}
+
+/**
+ * Наложить операцию update на существующий блок.
+ *
+ * Плоскую форму проходит ТОЛЬКО этот блок, и только ради полей, которые агент
+ * действительно прислал: остальное берётся у прежнего блока как есть. Поэтому
+ * перевод, картинка и содержимое непереданных полей переживают патч.
+ */
+function patchBlock(item: ProposedItem, op: McpPatchOp): ProposedItem | { error: string } {
+  const fields = patchFields(op)
+  if (!Object.keys(fields).length) return { error: 'nothing to update — pass at least one field' }
+  const type = item.type ?? 'step'
+  // Товары через MCP пока не представлены (нет ни в чтении, ни во входе). Честный
+  // отказ вместо тихого превращения подборки в пустой шаг.
+  if (type === 'product') return { error: 'product blocks cannot be patched through the API yet' }
+  if (fields.type && fields.type !== type) return { error: `cannot change block type (${type} → ${fields.type}); delete and insert instead` }
+
+  const flatBefore = { ...blockForMcp(item as unknown as DetailStep), section: tr(item.section as LocaleText, 'en') || undefined }
+  const [built] = toProposed([{ ...flatBefore, ...fields, type }])
+  if (!built) return { error: 'the patch would leave the block empty (a step needs a title)' }
+
+  const out = { ...built, blockId: item.blockId } as unknown as Record<string, unknown>
+  for (const f of LOCALIZED) {
+    out[f] = f in fields ? putLang(item[f], tr(built[f] as LocaleText, 'en')) : item[f]
+  }
+  // Списки локализованных значений: тронуты — дописываем в язык прежнего элемента,
+  // не тронуты — остаются словарями как были.
+  const oldSubs = (item.subtasks ?? []) as LocaleText[]
+  out.subtasks = 'subtasks' in fields ? (built.subtasks ?? []).map((s, i) => putLang(oldSubs[i], tr(s as LocaleText, 'en'))) : oldSubs
+  const oldRefs = (item.refs ?? []) as { label: LocaleText; url?: string }[]
+  out.refs =
+    'refs' in fields
+      ? (built.refs ?? []).map((r, i) => ({ label: putLang(oldRefs[i]?.label, tr(r.label as LocaleText, 'en')), ...(r.url ? { url: r.url } : {}) }))
+      : oldRefs
+  // Ключи content, которых плоская форма не знает, сохраняем: иначе патч соседнего
+  // поля вычищал бы всё, что MCP пока не умеет представлять.
+  out.content = { ...((item.content ?? {}) as Record<string, unknown>), ...((built.content ?? {}) as Record<string, unknown>) }
+  return out as unknown as ProposedItem
+}
+
 /** Список во владении пользователя (для записи) + его версии. */
 async function ownedList(userId: string, handle: string, slug: string) {
   const owner = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
@@ -761,18 +841,17 @@ async function ownedList(userId: string, handle: string, slug: string) {
   return { tpl }
 }
 
-/** Записать НОВЫЙ состав блоков: черновик правится на месте, опубликованный
- *  получает новую версию. Общая половина update_list и patch_list — писать список
- *  двумя разными путями значит рано или поздно расхождение между ними. */
-async function writeBlocks(
+/** Записать НОВЫЙ состав блоков (доменная форма): черновик правится на месте,
+ *  опубликованный получает новую версию. Общая половина update_list и patch_list —
+ *  писать список двумя разными путями значит рано или поздно расхождение. */
+async function writeProposed(
   tpl: NonNullable<Awaited<ReturnType<typeof ownedList>>['tpl']>,
   handle: string,
   slug: string,
-  items: McpItemInput[],
+  proposed: ProposedItem[],
   note: string,
   meta: { tags: string[]; ordered: boolean },
 ) {
-  const proposed = toProposed(items)
   if (!proposed.length) return { error: 'at least one item with a title is required' }
 
   if (tpl.status === 'draft') {
@@ -801,7 +880,7 @@ export async function mcpUpdateList(userId: string, handle: string, slug: string
   const tags = input.tags
     ? input.tags.map((t) => t.toLowerCase().replace(/[^a-z0-9а-яё-]/gi, '')).filter(Boolean).slice(0, 8)
     : tpl.tags
-  return writeBlocks(tpl, handle, slug, input.items ?? [], input.note?.trim() || 'updated via API', {
+  return writeProposed(tpl, handle, slug, toProposed(input.items ?? []), input.note?.trim() || 'updated via API', {
     tags,
     ordered: input.ordered ?? tpl.ordered,
   })
@@ -836,10 +915,17 @@ export async function mcpPatchList(
   if (input.baseVersion !== current)
     return { error: `list changed: it is at version ${current}, your patch is based on ${input.baseVersion} — read it again (get_list) and rebuild the ops` }
 
-  const applied = applyPatchOps(blocksForMcp(detail.steps), input.ops ?? [])
+  // Нетронутые блоки идут в запись СВОЕЙ, доменной формой: со всеми переводами и
+  // содержимым как есть. Через плоскую MCP-форму проходит только патчимый блок —
+  // иначе правка одного заголовка стирала бы переводы и товары у всего списка.
+  const applied = applyPatchOps<ProposedItem>(rowsToProposed(detail.steps), input.ops ?? [], {
+    bidOf: (it) => it.blockId ?? (typeof (it.content as Record<string, unknown> | undefined)?.bid === 'string' ? ((it.content as Record<string, string>).bid) : undefined),
+    update: patchBlock,
+    create: (block) => toProposed([block])[0] ?? { error: 'the inserted block is empty (a step needs a title)' },
+  })
   if ('error' in applied) return applied
 
-  const res = await writeBlocks(tpl, handle, slug, applied.items, input.note?.trim() || 'patched via API', {
+  const res = await writeProposed(tpl, handle, slug, applied.items, input.note?.trim() || 'patched via API', {
     tags: tpl.tags,
     ordered: tpl.ordered,
   })
