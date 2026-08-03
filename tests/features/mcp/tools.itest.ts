@@ -287,6 +287,71 @@ describe('patch_list — точечная правка вместо переза
     expect(res).toMatchObject({ error: expect.stringContaining('product') })
   })
 
+  // У черновика номер версии не растёт — сверять «правка основана на текущей»
+  // там нечем, и два патча с одним baseVersion оба прошли бы проверку. Защищает
+  // замок: чтение состава и его замена идут под ним, поэтому второй патч видит
+  // результат первого, а не свой устаревший снимок.
+  it('два одновременных патча черновика не теряют друг друга', async () => {
+    const { slug, read } = await three()
+    const [a, , c] = read.steps.map((s) => s.bid)
+    const [r1, r2] = await Promise.all([
+      mcpPatchList(ownerId, 'mowner', slug, { baseVersion: read.version, ops: [{ op: 'update', bid: a, title: 'ПЕРВЫЙ' }] }),
+      mcpPatchList(ownerId, 'mowner', slug, { baseVersion: read.version, ops: [{ op: 'update', bid: c, title: 'ТРЕТИЙ' }] }),
+    ])
+    expect('error' in r1).toBe(false)
+    expect('error' in r2).toBe(false)
+
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    // Обе правки на месте: ни одна не была затёрта снимком другой.
+    expect(after.steps.find((b) => b.bid === a)?.title).toBe('ПЕРВЫЙ')
+    expect(after.steps.find((b) => b.bid === c)?.title).toBe('ТРЕТИЙ')
+  })
+
+  it('явная очистка поля применяется, а не тонет в слиянии со старым', async () => {
+    const created = await mcpCreateList(ownerId, {
+      title: 'Clearing',
+      items: [
+        { title: 'step' },
+        { type: 'poll', question: 'что ставим?', options: [{ text: 'winget' }, { text: 'msi' }], multi: true, deadline: '2030-01-01' },
+      ],
+    })
+    const slug = refSlug((created as { ref: string }).ref)
+    const read = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
+    const poll = read.steps.find((b) => b.type === 'poll')
+    expect(poll).toMatchObject({ multi: true, deadline: '2030-01-01' })
+
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: poll?.bid, multi: false, deadline: '' }],
+    })
+    expect('error' in res).toBe(false)
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    const patched = after.steps.find((b) => b.type === 'poll')
+    expect(patched?.multi).toBeUndefined()
+    expect(patched?.deadline).toBeUndefined()
+    expect(patched?.question).toBe('что ставим?') // не тронутое поле на месте
+  })
+
+  it('секция правится и у блока без заголовка (не только у шага)', async () => {
+    const created = await mcpCreateList(ownerId, {
+      title: 'Sections',
+      items: [{ title: 'step', section: 'Урок 1' }, { type: 'text', text: 'врезка', section: 'Урок 1' }],
+    })
+    const slug = refSlug((created as { ref: string }).ref)
+    const read = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { version: number; steps: McpItemInput[] }
+    // Секция доезжает при создании — раньше её переносила только step-ветка.
+    expect(read.steps.find((b) => b.type === 'text')?.section).toBe('Урок 1')
+
+    const text = read.steps.find((b) => b.type === 'text')
+    const res = await mcpPatchList(ownerId, 'mowner', slug, {
+      baseVersion: read.version,
+      ops: [{ op: 'update', bid: text?.bid, section: 'Урок 2' }],
+    })
+    expect('error' in res).toBe(false)
+    const after = (await mcpGetList(ownerId, 'mowner', slug)) as unknown as { steps: McpItemInput[] }
+    expect(after.steps.find((b) => b.type === 'text')).toMatchObject({ section: 'Урок 2', text: 'врезка' })
+  })
+
   it('патчить чужой список нельзя', async () => {
     const { slug, read } = await three()
     const res = await mcpPatchList(otherId, 'mowner', slug, {
