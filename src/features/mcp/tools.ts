@@ -20,7 +20,7 @@ import { isCollaborator } from '@/features/collab/queries'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
 import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/features/library/suggestion-checks'
 import { currentRevision } from '@/features/library/suggestion-core'
-import { recordRunCompletionIfDone } from '@/features/library/completion'
+import { recordRunCompletionIfDone } from '@/shared/completion'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 
 // Единая проверка «зритель вправе видеть» для MCP: тот же canViewList, что и на

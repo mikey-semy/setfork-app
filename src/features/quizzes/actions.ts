@@ -3,6 +3,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { courseCompletions, db, quizAttempts, steps, templates, templateVersions, users } from '@/shared/db'
+import { recordCompletionIfDone } from '@/shared/completion'
 import { requireSession } from '@/shared/auth/session'
 import { canViewList } from '@/core'
 import { gradeBlank, gradeMatch, gradeNumber, gradeSort, gradeText, quizKind, type QuizAnswer, type QuizBlockContent } from '@/core'
@@ -98,26 +99,13 @@ export async function submitQuiz(templateId: string, bid: string, answer: QuizAn
     })
     .returning({ attempts: quizAttempts.attempts })
 
-  // Завершение курса: если этой сдачей пройдены ВСЕ тесты текущей версии — фиксируем.
-  let completed = false
-  if (ok) {
-    const quizRows = await db.select({ content: steps.content }).from(steps).where(and(eq(steps.versionId, ver.id), eq(steps.type, 'quiz')))
-    const allBids = quizRows.map((r) => (r.content as { bid?: string }).bid).filter((b): b is string => !!b)
-    if (allBids.length) {
-      const passed = await db
-        .select({ bid: quizAttempts.bid })
-        .from(quizAttempts)
-        .where(and(eq(quizAttempts.userId, session.userId), eq(quizAttempts.templateId, templateId), eq(quizAttempts.correct, true), inArray(quizAttempts.bid, allBids)))
-      const passedSet = new Set(passed.map((r) => r.bid))
-      if (allBids.every((b) => passedSet.has(b))) {
-        await db
-          .insert(courseCompletions)
-          .values({ templateId, userId: session.userId, version: tpl.currentVersion })
-          .onConflictDoNothing({ target: [courseCompletions.userId, courseCompletions.templateId] })
-        completed = true
-      }
-    }
-  }
+  // Завершение курса — ОБЩЕЕ определение на оба пути (features/library/completion).
+  // Своя копия здесь проверяла только тесты и не знала про шаг-блоки той же версии:
+  // на смешанной версии сдача последнего теста выдавала прохождение, даже если ни один
+  // обычный шаг не был отмечен. Симметричная дыра была у пути прогона.
+  const completed = ok
+    ? await recordCompletionIfDone(session.userId, { templateId, versionId: ver.id, version: tpl.currentVersion })
+    : false
 
   const [owner] = await db.select({ handle: users.handle }).from(users).where(eq(users.id, tpl.ownerId)).limit(1)
   if (owner) revalidatePath(`/${owner.handle}/${tpl.slug}`)
