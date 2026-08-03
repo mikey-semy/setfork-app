@@ -19,7 +19,19 @@ describe('подпись ветки', () => {
   it('имя, придуманное человеком, оставляет как есть', () => {
     // `u/team/main` — настоящая ветка: владелец вправе завести её пушем из
     // терминала, и подпись у неё своя (авто-ревью fe#662).
-    for (const ref of ['main', 'fix-typo', 'v2.1_draft', 'u', 'user/main', 'u/x/y/z', 'u/team/main', 'u/123/main']) {
+    // `u/<uuid>/fix-typo` — ветка ПОСТОРОННЕГО: по контракту Ф5 он вправе пушить
+    // обычные ветки в своё пространство, сам их называет, и прятать их нельзя.
+    for (const ref of [
+      'main',
+      'fix-typo',
+      'v2.1_draft',
+      'u',
+      'user/main',
+      'u/x/y/z',
+      'u/team/main',
+      'u/123/main',
+      'u/0d5a3f6e-6a1c-4a25-9f5f-2b0a1c9d7e11/fix-typo',
+    ]) {
       expect(isServerBranch(ref), ref).toBe(false)
       expect(branchLabel(ref, 'ru')).toBe(ref)
     }
