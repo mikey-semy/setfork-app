@@ -219,7 +219,7 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
                   <ThankButton who={m.who ?? 'generalist'} thanked={thanked.has(i)} onThank={() => thank(i, m.who ?? 'generalist')} lang={lang} />
                   {/* Копируем КАК ИЗ ЧАТА: с вопросом и подписью отвечавшего —
                       иначе вставленный кусок теряет, кто это сказал и на что. */}
-                  <CopyButton text={transcriptOf(i)} label={t('copy', lang)} copiedLabel={t('copied', lang)} />
+                  <CopyButton text={transcriptOf(i)} lang={lang} />
                 </div>
               </div>
             </div>
