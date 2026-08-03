@@ -46,6 +46,11 @@ const addVersion = async (version: number, blocks: Block[]) => {
       createdAt: new Date(Date.UTC(2026, 0, version)),
     })
     .returning({ id: templateVersions.id })
+  // Версия без блоков — законное состояние (удалили все пункты), и её строк нет.
+  if (!blocks.length) {
+    await db.update(templates).set({ currentVersion: version }).where(eq(templates.id, tplId))
+    return
+  }
   await db.insert(steps).values(
     blocks.map((b, i) => ({
       versionId: v.id,
@@ -138,6 +143,20 @@ describe('blame по истории версий', () => {
     const blame = await getListBlame(tplId)
     expect(blame!.currentVersion).toBe(1)
     expect(blame!.steps.map((s) => s.lastVersion)).toEqual([1])
+  })
+
+  it('версия без блоков не выпадает из истории: возврат пункта — это изменение', async () => {
+    await addVersion(1, [step('a', 'A')])
+    await addVersion(2, [])
+    await addVersion(3, [step('a', 'A')])
+    expect(await lastVersions()).toEqual([3])
+  })
+
+  it('у текущей версии нет блоков — пустой ответ, а не блоки прошлой версии', async () => {
+    await addVersion(1, [step('a', 'A')])
+    await addVersion(2, [])
+    const blame = await getListBlame(tplId)
+    expect(blame).toMatchObject({ currentVersion: 2, steps: [] })
   })
 
   it('несуществующий список — null, а не пустой ответ', async () => {

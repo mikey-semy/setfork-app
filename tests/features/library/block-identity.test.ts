@@ -88,6 +88,27 @@ describe('сопоставление блоков', () => {
     expect(m[1]).toBeNull()
   })
 
+  it('блок со своей идентичностью не отбирает источник у блока с чужой', () => {
+    // Смешанные данные: часть блоков ещё без blockId. Новый блок с тем же
+    // заголовком не должен «занять» источник, у которого идентичность своя.
+    const old = block({ blockId: 'old', title: { ru: 'Повторить' } })
+    const legacy = block({ title: { ru: 'Хвост' } })
+    const fresh = block({ blockId: 'new', title: { ru: 'Повторить' } })
+    const m = matchBlocks([old, legacy], [fresh, old, legacy], (s) => s.blockId, blockMatchKey)
+    expect(m[0]).toBeNull() // новый блок — новый, а не «переименованный old»
+    expect(m[1]).toMatchObject({ i: 0, byIdentity: true })
+    expect(m[2]).toMatchObject({ i: 1, byIdentity: false })
+  })
+
+  it('блок без идентичности всё ещё сопоставляется с источником, у которого она есть', () => {
+    // Обратный ход: запись, потерявшая blockId (перевод, импорт), не должна
+    // читаться как «старое удалено, новое добавлено».
+    const withId = block({ blockId: 'a', title: { ru: 'A' } })
+    const idless = block({ title: { ru: 'A' } })
+    const m = matchBlocks([withId], [idless], (s) => s.blockId, blockMatchKey)
+    expect(m[0]).toMatchObject({ i: 0, byIdentity: false })
+  })
+
   it('презентационные блоки без идентичности различаются по содержимому, а не по пустому заголовку', () => {
     const t1 = block({ type: 'text', content: { md: 'первый' } })
     const t2 = block({ type: 'text', content: { md: 'второй' } })
@@ -157,6 +178,11 @@ describe('когда блок менялся в последний раз', () =
     const b = step('B')
     const withIds = [step('A', { blockId: 'a' }), step('B', { blockId: 'b' })]
     expect(lastChangedVersions(history([a, b], withIds))).toEqual([1, 1])
+  })
+
+  it('блок, исчезавший в пустой версии, считается изменённым при возврате', () => {
+    const a = step('A', { blockId: 'a' })
+    expect(lastChangedVersions(history([a], [], [a]))).toEqual([3])
   })
 
   it('пустая история даёт пустой ответ', () => {

@@ -30,14 +30,21 @@ export async function getListBlame(templateId: string): Promise<ListBlame | null
   const [tpl] = await db.select({ current: templates.currentVersion }).from(templates).where(eq(templates.id, templateId)).limit(1)
   if (!tpl) return null
 
-  // Все блоки всех версий до текущей одним запросом (версии по возрастанию,
-  // блоки по n). Выбираются ВСЕ поля содержимого: отпечаток блока обязан
-  // покрывать блочную модель целиком, иначе правка остаётся невидимой.
+  // Версии — отдельным запросом. Версия без блоков (удалили все пункты) в join
+  // не появилась бы вовсе, и «блок убрали, а потом вернули» читалось бы как
+  // «блок не менялся»: сравнивались бы снимки по обе стороны провала.
+  const versions = await db
+    .select({ version: templateVersions.version, createdAt: templateVersions.createdAt, note: templateVersions.note })
+    .from(templateVersions)
+    .where(and(eq(templateVersions.templateId, templateId), lte(templateVersions.version, tpl.current)))
+    .orderBy(asc(templateVersions.version))
+
+  // Блоки этих версий одним запросом (версии по возрастанию, блоки по n).
+  // Выбираются ВСЕ поля содержимого: отпечаток блока обязан покрывать блочную
+  // модель целиком, иначе правка остаётся невидимой.
   const rows = await db
     .select({
       version: templateVersions.version,
-      createdAt: templateVersions.createdAt,
-      note: templateVersions.note,
       n: stepsTable.n,
       blockId: stepsTable.blockId,
       type: stepsTable.type,
@@ -60,15 +67,14 @@ export async function getListBlame(templateId: string): Promise<ListBlame | null
     .where(and(eq(templateVersions.templateId, templateId), lte(templateVersions.version, tpl.current)))
     .orderBy(asc(templateVersions.version), asc(stepsTable.n))
 
-  const history: { version: number; blocks: BlameBlock[] }[] = []
-  const verMeta = new Map<number, { createdAt: Date; note: string }>()
+  const byVersion = new Map<number, BlameBlock[]>()
   for (const r of rows) {
-    let bucket = history[history.length - 1]
-    if (!bucket || bucket.version !== r.version) {
-      bucket = { version: r.version, blocks: [] }
-      history.push(bucket)
+    let blocks = byVersion.get(r.version)
+    if (!blocks) {
+      blocks = []
+      byVersion.set(r.version, blocks)
     }
-    bucket.blocks.push({
+    blocks.push({
       n: r.n,
       blockId: r.blockId,
       type: r.type,
@@ -86,13 +92,14 @@ export async function getListBlame(templateId: string): Promise<ListBlame | null
       needsHuman: r.needsHuman,
       needsHumanAsk: r.needsHumanAsk,
     })
-    if (!verMeta.has(r.version)) verMeta.set(r.version, { createdAt: r.createdAt, note: r.note })
   }
 
+  const history = versions.map((v) => ({ version: v.version, blocks: byVersion.get(v.version) ?? [] }))
+  const verMeta = new Map(versions.map((v) => [v.version, { createdAt: v.createdAt, note: v.note }]))
+
   const current = history[history.length - 1]
-  // У текущей версии нет блоков — показывать нечего (версия без блоков в историю
-  // не попадает вовсе: строк по ней нет).
-  if (!current || current.version !== tpl.current) return { currentVersion: tpl.current, steps: [] }
+  // Текущей версии нет в таблице или у неё нет блоков — показывать нечего.
+  if (!current || current.version !== tpl.current || !current.blocks.length) return { currentVersion: tpl.current, steps: [] }
 
   const lastVersions = lastChangedVersions(history)
   const out = current.blocks.map((b, i) => {

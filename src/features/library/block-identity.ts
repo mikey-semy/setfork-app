@@ -131,17 +131,18 @@ export function matchBlocks<T>(
 ): (BlockMatch | null)[] {
   const byId = new Map<string, number>()
   const byKey = new Map<string, number[]>()
+  // Отдельная очередь источников БЕЗ идентичности: только они годятся в
+  // фолбэк блоку, у которого идентичность есть.
+  const byKeyIdless = new Map<string, number[]>()
   from.forEach((s, i) => {
     const id = identity(s)
     if (id) byId.set(id, i)
     const k = fallbackKey(s)
     byKey.set(k, [...(byKey.get(k) ?? []), i])
+    if (!id) byKeyIdless.set(k, [...(byKeyIdless.get(k) ?? []), i])
   })
 
   const taken = new Set<number>()
-  // Есть ли в старом наборе блоки без идентичности. Это не редкость, а обычное
-  // состояние всего, что записано до ADR-0013 и до переводов, терявших blockId.
-  const fromHasIdless = from.some((s) => !identity(s))
 
   return to.map((s) => {
     const id = identity(s)
@@ -151,15 +152,14 @@ export function matchBlocks<T>(
         taken.add(i)
         return { i, byIdentity: true }
       }
-      // Блок с известной идентичностью, которой раньше не было, — точно новый:
-      // по подписи не ищем, иначе «добавили пункт с тем же заголовком» слипнется.
-      //
-      // НО только когда у старого набора идентичности вообще были. Если там есть
-      // блоки без blockId, короткий вывод неверен: первая же запись после появления
-      // идентичностей выдавала бы «всё удалено и всё добавлено».
-      if (i == null && !fromHasIdless) return null
     }
-    const queue = byKey.get(fallbackKey(s)) ?? []
+    // Фолбэк по подписи. У блока со СВОЕЙ идентичностью источником может быть
+    // только блок БЕЗ идентичности: источник с другим blockId — заведомо другой
+    // блок, и отдавать его нельзя, иначе вставка одноимённого пункта в смешанные
+    // данные отбирает источник у настоящего владельца и меняет местами их даты.
+    // Совсем без фолбэка тоже нельзя: первая запись после появления идентичностей
+    // читалась бы как «всё удалено и всё добавлено» — весь список переписан заново.
+    const queue = (id ? byKeyIdless : byKey).get(fallbackKey(s)) ?? []
     for (const i of queue) {
       if (!taken.has(i)) {
         taken.add(i)
