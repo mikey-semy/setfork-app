@@ -67,8 +67,28 @@ export function noStoreHeaders(): Record<string, string> {
   return { 'Cache-Control': 'private, no-store' }
 }
 
-/** Ответ 304 на условный запрос, если представление не изменилось. */
+/**
+ * Валидатор без пометки слабости: у условного GET сравнение СЛАБОЕ, то есть `W/"x"`
+ * и `"x"` — один и тот же ресурс (RFC 9110 §8.8.3.2). Строгое сравнение здесь было бы
+ * не «строже, значит безопаснее», а просто мимо: клиент вправе прислать любую из форм.
+ */
+const weakValidator = (tag: string) => tag.trim().replace(/^W\//, '')
+
+/**
+ * Ответ 304 на условный запрос, если представление не изменилось.
+ *
+ * `If-None-Match` — это СПИСОК валидаторов (`W/"v1", W/"v2"`) либо `*`, а не одна
+ * строка. Сравнение по всему заголовку целиком промахивалось бы мимо совпадения, и
+ * каждый запрос получал бы полное тело вместо 304 — на поверхностях с `no-cache`,
+ * где ревалидация происходит при КАЖДОМ обращении, это вся экономия трафика разом.
+ */
 export function notModified(req: Request, etag: string | undefined, headers: Record<string, string>): Response | null {
-  if (!etag || req.headers.get('if-none-match') !== etag) return null
+  if (!etag) return null
+  const header = req.headers.get('if-none-match')
+  if (!header) return null
+  // Разбор регуляркой, а не split(','): запятая — допустимый символ внутри ETag.
+  const sent = header.match(/(?:W\/)?"[^"]*"/g) ?? []
+  const matched = header.trim() === '*' || sent.some((tag) => weakValidator(tag) === weakValidator(etag))
+  if (!matched) return null
   return new Response(null, { status: 304, headers })
 }

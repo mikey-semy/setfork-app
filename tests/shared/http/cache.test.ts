@@ -58,6 +58,27 @@ describe('условный запрос', () => {
     expect(notModified(req(), 'W/"v2"', {})).toBeNull()
   })
 
+  it('заголовок — СПИСОК валидаторов: совпадение любого даёт 304', () => {
+    // Клиент вправе прислать несколько сохранённых представлений сразу.
+    expect(notModified(req('W/"v1", W/"v2"'), 'W/"v2"', {})?.status).toBe(304)
+    expect(notModified(req('W/"v1", W/"v3"'), 'W/"v2"', {})).toBeNull()
+  })
+
+  it('сравнение слабое: W/"x" и "x" — одно представление', () => {
+    // RFC 9110 §8.8.3.2 — у условного GET сравнение валидаторов слабое.
+    expect(notModified(req('"v2"'), 'W/"v2"', {})?.status).toBe(304)
+    expect(notModified(req('W/"v2"'), '"v2"', {})?.status).toBe(304)
+  })
+
+  it('звёздочка совпадает с любым представлением', () => {
+    expect(notModified(req('*'), 'W/"v2"', {})?.status).toBe(304)
+  })
+
+  it('запятая внутри ETag не рвёт разбор списка', () => {
+    expect(notModified(req('W/"a,b"'), 'W/"a,b"', {})?.status).toBe(304)
+    expect(notModified(req('W/"a,b"'), 'W/"b"', {})).toBeNull()
+  })
+
   it('без ETag условный запрос не срабатывает', () => {
     expect(notModified(req('W/"v2"'), undefined, {})).toBeNull()
   })
