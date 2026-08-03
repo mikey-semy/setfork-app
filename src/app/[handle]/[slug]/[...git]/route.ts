@@ -343,6 +343,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
             authorId: az.userId,
             branch: m.branch,
             note: await terminalPushNote({ owner: handle, slug }, m.branch, who.lang),
+            // ПЕРЕХОДНОЕ: как ветка называлась бы у ядра до Ф5 — по нику. Нужно,
+            // чтобы ревизия правки, начатой в окно выкатки, продолжила ТО ЖЕ
+            // предложение. Убрать вместе с `actorHandle`.
+            legacyBranch: who.handle ? `u/${who.handle}/${m.branch.split('/')[2] ?? 'main'}` : undefined,
           })
           await recordAudit('git.suggest', {
             actorId: az.userId,

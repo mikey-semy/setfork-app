@@ -88,6 +88,7 @@ describe('ветка правки сменила имя в окно выкатк
       currentVersion: 1,
       authorId,
       branch: ID_BRANCH,
+      legacyBranch: 'u/bauthor/main',
     })
 
     expect(res.id).toBe(legacy)
@@ -106,6 +107,7 @@ describe('ветка правки сменила имя в окно выкатк
       currentVersion: 1,
       authorId,
       branch: ID_BRANCH,
+      legacyBranch: 'u/bother/main', // даже если имя названо — предложение чужое
     })
 
     expect(res.created).toBe(true)
@@ -129,6 +131,7 @@ describe('ветка правки сменила имя в окно выкатк
       currentVersion: 1,
       authorId,
       branch: ID_BRANCH,
+      legacyBranch: 'u/bauthor/main',
     })
 
     expect(res.created).toBe(true)
@@ -146,9 +149,34 @@ describe('ветка правки сменила имя в окно выкатк
       currentVersion: 1,
       authorId,
       branch: ID_BRANCH,
+      legacyBranch: 'u/bauthor/main', // ревизия к main, а не к draft
     })
 
     expect(res.created).toBe(true)
     expect(await branchOf(legacy)).toBe('u/bauthor/draft')
+  })
+
+  /**
+   * `u/team/main` — законное имя: владелец вправе завести такую ветку пушем из
+   * терминала. Подбор идёт по ТОЧНОМУ старому имени этого автора, поэтому
+   * предложение с рукотворной ветки вместе с его обсуждением остаётся на месте
+   * (авто-ревью fe#662).
+   */
+  it('рукотворную ветку того же автора не забирает', async () => {
+    const tpl = await seedTemplate()
+    const handmade = await seedBranchSuggestion(tpl, 'u/team/main')
+
+    const res = await ensureBranchSuggestion({
+      templateId: tpl,
+      ownerId,
+      currentVersion: 1,
+      authorId,
+      branch: ID_BRANCH,
+      legacyBranch: 'u/bauthor/main',
+    })
+
+    expect(res.created).toBe(true)
+    expect(await branchOf(handmade)).toBe('u/team/main')
+    expect(await openCount(tpl)).toBe(2)
   })
 })
