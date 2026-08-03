@@ -183,6 +183,16 @@ export const gitCoreRemote: GitCore = {
     return { ok: res.ok, error: res.error }
   },
 
+  /** Возможности ядра (Ф5). Договор — в порту; здесь только вызов.
+   *
+   *  Любая неудача — «не умеет»: и UNIMPLEMENTED старого ядра, и обрыв связи.
+   *  Различать их не нужно, потому что вывод из обоих один: раз ядро не
+   *  подтвердило, что исполняет роли, постороннего пускать нельзя. */
+  async capabilities() {
+    const res = await client.getCapabilities({}).catch(() => null)
+    return { enforcesPushRoles: res?.enforcesPushRoles === true }
+  },
+
   async updateBranch(repo, name) {
     try {
       const res = await client.updateBranch({ repo: toRepoRef(repo), name })

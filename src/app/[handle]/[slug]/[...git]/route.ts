@@ -4,6 +4,7 @@ import { db, users } from '@/shared/db'
 import { getListMeta } from '@/features/library/queries'
 import { canEditList } from '@/core'
 import { contributorsEnabled, openForContributions, type PushRole } from '@/features/library/push-role'
+import { coreEnforcesPushRoles } from '@/features/git/capabilities'
 import { ensureBranchSuggestion } from '@/features/library/suggestion-core'
 import { captureError } from '@/shared/observability'
 import { isCollaborator } from '@/features/collab/queries'
@@ -15,6 +16,7 @@ import { getWatcherIds } from '@/features/watch/queries'
 import { recordAudit } from '@/shared/audit'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 import { envNumber } from '@/shared/env'
+import { t, type Lang } from '@/shared/i18n'
 
 // git smart-HTTP: `git clone/pull/push https://host/{owner}/{slug}.git`.
 // Работает из VSCode. Источник правды — персистентный bare-репо внутри ядра
@@ -101,7 +103,10 @@ async function authorizeWrite(req: Request, meta: Meta): Promise<{ userId: strin
 async function resolveRole(userId: string, meta: Meta): Promise<PushRole | null> {
   if (userId === meta.ownerId) return 'owner'
   if (await isCollaborator(meta.id, userId)) return 'collaborator'
-  return contributorsEnabled() && openForContributions(meta) ? 'contributor' : null
+  // Порядок проверок — от дешёвой к дорогой: у выключенного рубильника до ядра
+  // дело не доходит вовсе.
+  if (!contributorsEnabled() || !openForContributions(meta)) return null
+  return (await coreEnforcesPushRoles()) ? 'contributor' : null
 }
 
 /**
@@ -147,7 +152,7 @@ const writeDisabled = () =>
  * Английский по умолчанию — решение владельца: git-инструментарий англоязычен, и
  * незнакомый язык в выводе `git push` читается как поломка, а не как забота.
  */
-async function pusher(userId: string, req: Request): Promise<{ lang: string; handle: string }> {
+async function pusher(userId: string, req: Request): Promise<{ lang: Lang; handle: string }> {
   const [u] = await db
     .select({ lang: users.lang, handle: users.handle })
     .from(users)
@@ -157,9 +162,9 @@ async function pusher(userId: string, req: Request): Promise<{ lang: string; han
 }
 
 /** Язык из профиля и заголовка (см. док выше у `pusher`). */
-function pickLang(profile: string | undefined, req: Request): string {
+function pickLang(profile: string | undefined, req: Request): Lang {
   // Не 'en' — значит язык меняли руками: это и есть осознанный выбор.
-  if (profile && profile !== 'en') return profile
+  if (profile && profile !== 'en') return profile as Lang
   // Первый тег заголовка: `ru, *;q=0.9` → `ru`. Качества не взвешиваем — языка
   // два, и предпочтительный по спецификации и так стоит первым.
   const header = req.headers.get('accept-language') ?? ''
@@ -196,6 +201,28 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   }
 
   return new Response('Service not available', { status: 403 })
+}
+
+/**
+ * Заголовок предложения, пришедшего из терминала.
+ *
+ * По умолчанию `ensureBranchSuggestion` берёт `Merge branch '<ветка>'`, а ветку
+ * магическому пушу называет сервер — `u/<идентификатор>/<база>`. В списке
+ * предложений это самая крупная строка карточки, и в ней торчал бы внутренний
+ * идентификатор: подпись `branchLabel` прячет его в метаданных, но заголовок
+ * лежит в базе отдельным полем и форматтеру не подчиняется (авто-ревью fe#662).
+ *
+ * Берём тему коммита — ровно как GitHub, который подставляет в заголовок PR
+ * тему единственного коммита, а при нескольких переходит на имя ветки. Имя
+ * ветки нам не годится, поэтому вторая ветка развилки — общая подпись.
+ *
+ * Ошибку глотаем: заголовок — не повод отменять уже принятый пуш.
+ */
+async function terminalPushNote(repo: { owner: string; slug: string }, branch: string, lang: Lang): Promise<string> {
+  const commits = await gitCore.listCommits(repo, branch, { notIn: 'main', limit: 2 }).catch(() => null)
+  // Первая строка сообщения: остальное — тело коммита, в заголовок ему нельзя.
+  const subject = commits?.length === 1 ? (commits[0]?.message.split('\n')[0]?.trim() ?? '') : ''
+  return subject || t('prFromTerminal', lang)
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
@@ -303,6 +330,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
             currentVersion: meta.currentVersion,
             authorId: az.userId,
             branch: m.branch,
+            note: await terminalPushNote({ owner: handle, slug }, m.branch, who.lang),
           })
           await recordAudit('git.suggest', {
             actorId: az.userId,

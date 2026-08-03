@@ -84,6 +84,9 @@ message ReceivePackResponse {
 }
 
 service GitCore {
+  // Ф5: возможности ядра — см. CapabilitiesResponse. Читается ДО авторизации
+  // постороннего, поэтому дешёвый и без побочных действий.
+  rpc GetCapabilities(CapabilitiesRequest) returns (CapabilitiesResponse);
   rpc InfoRefsUploadPack(InfoRefsRequest) returns (BytesResponse);
   rpc InfoRefsReceivePack(InfoRefsRequest) returns (BytesResponse);
   rpc UploadPack(PostRequest) returns (BytesResponse);
@@ -350,4 +353,26 @@ message MirrorPushResponse {
 message MirrorCheckResponse {
   bool ok = 1;
   string error = 2; // '' при ok; текст без кредов
+}
+
+// Ф5: что умеет ЭТО ядро.
+//
+// Нужно потому, что правило «посторонний пишет только в своё пространство»
+// исполняет ядро, а пускает постороннего фронт — и выкатываются они порознь.
+// Фронт с Ф5 рядом со старым ядром пустил бы постороннего к ядру, которое роли
+// не смотрит вовсе, и тот дописал бы прямо в main (авто-ревью core#80).
+//
+// Порядок выкатки такую пару чинит только на бумаге: инструкцию можно
+// перепутать, а ядро — откатить назад, оставив фронт новым. Поэтому фронт
+// СПРАШИВАЕТ, а не полагается на порядок.
+//
+// Форма — та же, что у самого git: сервер объявляет возможности (`report-status`,
+// `side-band-64k`, `delete-refs`), клиент пользуется только объявленным. Молчание
+// значит «не умею»: старое ядро на неизвестный метод ответит UNIMPLEMENTED, и
+// фронт обязан прочитать это как отказ, а не как ошибку связи.
+message CapabilitiesRequest {}
+
+message CapabilitiesResponse {
+  // Ядро смотрит на роль пушащего и держит постороннего в его пространстве (Ф5).
+  bool enforces_push_roles = 1;
 }
