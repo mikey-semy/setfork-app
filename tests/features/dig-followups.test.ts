@@ -31,6 +31,20 @@ describe('parseFollowups (NEXT: не должен вылезать тексто�
     const r = parseFollowups('X\nNEXT: a | b | c | d | e')
     expect(r.followups).toHaveLength(3)
   })
+  it('модель скопировала шаблон промпта → кнопок нет (реальный кейс с прода)', () => {
+    const r = parseFollowups('winget ставит VS Code воспроизводимо…\nNEXT: q1 | q2 | q3')
+    expect(r.text).toContain('winget')
+    expect(r.text).not.toContain('NEXT')
+    expect(r.followups).toEqual([])
+  })
+  it('заготовки в угловых скобках тоже не показываем', () => {
+    const r = parseFollowups('Ответ.\nNEXT: <first question> | <second question> | <third question>')
+    expect(r.followups).toEqual([])
+  })
+  it('заготовки отсеиваются, живые вопросы остаются', () => {
+    const r = parseFollowups('Ответ.\nNEXT: q1 | а если сеть отвалится? | <third question>')
+    expect(r.followups).toEqual(['а если сеть отвалится?'])
+  })
 })
 
 describe('parseSummon (реальный созыв гнома)', () => {

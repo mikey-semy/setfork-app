@@ -121,7 +121,7 @@ Character: ${card.trait}; your quirk — ${card.quirk}.${mood ? ` Mood right now
 
   const followupsRule =
     opts.followups && !opts.short
-      ? `\nYou are the guide in this mountain of knowledge — unless you are summoning a colleague, you MUST end EVERY reply with, on its own final line, exactly: "NEXT: q1 | q2 | q3" — three SHORT follow-up questions (max ~6 words each, in the answer language, separated by " | "). Mandatory (except when summoning); nothing after it.`
+      ? `\nYou are the guide in this mountain of knowledge — unless you are summoning a colleague, you MUST end EVERY reply with one final line of this shape:\nNEXT: <first question> | <second question> | <third question>\nWrite the ACTUAL questions the person would plausibly ask you next about this very topic — three of them, SHORT (max ~6 words each), in the answer language, separated by " | ". Never emit the placeholders or any label instead of a real question. Mandatory (except when summoning); nothing after that line.`
       : ''
 
   const task = opts.short
