@@ -271,17 +271,28 @@ ${steps}
 </html>`
 }
 
+// ГРАНИЦА «данные vs код». Всё, что пришло из полей списка, обязано пройти здесь: текст не
+// может начать новую строку скрипта. Терминатор строки — не только \n: python3 и PowerShell
+// так же трактуют одиночный \r (проверено их парсерами), поэтому /\r?\n/ границу НЕ держит —
+// на этом подтверждались инъекции из title и из desc/why/текстовых блоков.
+const LINE_TERMINATORS = /\r\n|\r|\n/g
+/** Одна строка вместо любой многострочности — для мест, где перенос недопустим. */
+const flatten = (s: string): string => s.replace(LINE_TERMINATORS, ' ')
+
 // Все три диалекта комментируют через «# …» — общий хелпер (без хвостовых пробелов).
 function hashComment(s: string): string {
   return s
-    .split(/\r?\n/)
+    .split(LINE_TERMINATORS)
     .map((l) => `# ${l}`.replace(/\s+$/, ''))
     .join('\n')
 }
 // Экранирование строк для echo/print каждого диалекта (переводы строк → пробел).
-const escSh = (s: string) => s.replace(/\r?\n/g, ' ').replace(/'/g, `'\\''`)
-const escPs = (s: string) => s.replace(/\r?\n/g, ' ').replace(/`/g, '``').replace(/"/g, '`"').replace(/\$/g, '`$')
-const escPy = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, ' ')
+const escSh = (s: string) => flatten(s).replace(/'/g, `'\\''`)
+const escPs = (s: string) => flatten(s).replace(/`/g, '``').replace(/"/g, '`"').replace(/\$/g, '`$')
+// Python: содержимое литерала в двойных кавычках даёт встроенная сериализация — она
+// экранирует кавычки, слеши и ВЕСЬ диапазон управляющих символов, чего самописный вариант
+// не делал (на \r литерал оставался незакрытым и скрипт не компилировался целиком).
+const escPy = (s: string) => JSON.stringify(flatten(s)).slice(1, -1)
 
 export type ScriptDialect = 'sh' | 'ps1' | 'py'
 export function normalizeDialect(v: string | null | undefined): ScriptDialect {
@@ -381,7 +392,9 @@ export function toRunnableScript(list: ExportList, lang: Lang, url: string, dial
     }
     scriptNo++
     const n = scriptNo
-    const st = tr(s.title, lang)
+    // Декоративный заголовок собирается интерполяцией, поэтому заголовок обязан быть
+    // однострочным: иначе всё после переноса оказывается ВНЕ комментария (это была P1).
+    const st = flatten(tr(s.title, lang))
     out.push(`# ── ${n}. ${st} ${'─'.repeat(Math.max(3, 50 - st.length))}`)
     const dd = tr(s.desc, lang)
     if (dd) out.push(hashComment(dd))
