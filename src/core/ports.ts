@@ -219,6 +219,10 @@ export interface GitCore {
       gitProtocol?: string
       lang?: string
       actorId?: string
+      /** ПЕРЕХОДНОЕ: ник для СТАРОГО ядра (до Ф5) — оно называет ветку правки по
+       *  нему и без него отвергает `refs/for/main` всё время выкатки. Новое ядро
+       *  поле игнорирует. Убрать, когда ядро с Ф5 везде (трек git-surface). */
+      actorHandle?: string
       actorRole?: 'owner' | 'collaborator' | 'contributor'
     },
   ): Promise<{ data: Uint8Array; newVersion: number | null; magic: MagicPush[] } | null>

@@ -304,7 +304,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
       { owner: handle, slug },
       body,
       // Ф5: роль едет вместе с автором — ядро исполнит по ней правило пространства.
-      { gitProtocol, lang: who.lang, actorId: az.userId, actorRole: role },
+      // `actorHandle` — переходное поле для СТАРОГО ядра: пока на проде Ф4, ветку
+      // правки оно называет по нику и без него отвергает магический реф. Новое
+      // ядро его игнорирует. Убрать, когда ядро с Ф5 везде (трек git-surface).
+      { gitProtocol, lang: who.lang, actorId: az.userId, actorHandle: who.handle, actorRole: role },
     )
     if (!res) return new Response('Repository unavailable', { status: 500 })
     // Ф4: магический пуш `refs/for/main` — ядро положило коммиты в ветку автора,
