@@ -27,7 +27,7 @@ import { curationStore } from '@/features/curation/store'
 import { collabStore, suggestionCommenterIds } from '@/features/collab-store/store'
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
 import { toStepInput } from '@/shared/lib/step-input'
-import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
+import { emptyItem, parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { getVersionSteps } from './queries'
 import { countApprovals, hasBlockingReview } from './review-queries'
 // eslint-disable-next-line boundaries/dependencies -- гейт «нерешённые обсуждения» живёт с комментариями
@@ -911,27 +911,17 @@ export async function refineList(input: {
   if (!refined) return { error: 'aifail' }
 
   // Refine переписывает текстовое содержимое шагов; скриншоты не переносятся, ссылки — да.
+  // Форма блока — от ОБЩЕГО конструктора (emptyItem), а не выписанная здесь
+  // повторно: иначе каждое новое поле блока надо помнить дописать и сюда.
   const items: EditorItem[] = refined.items.map((it) => ({
-    type: 'step' as const,
-    bid: '',
-    text: '',
-    caption: '',
-    videoUrl: '',
-    fileUrl: '',
-    fileName: '',
-    poll: { question: '', options: [], multi: false, deadline: '' },
-    quiz: { kind: 'choice' as const, question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], items: [], explain: '' },
-    products: [],
+    ...emptyItem(),
     title: it.title,
     desc: it.desc,
     command: it.command,
-    imageKey: '',
-    imagePreview: '',
     level: it.level,
     why: it.why,
     needsHuman: it.needsHuman === true,
     needsHumanAsk: it.needsHumanAsk ?? '',
-    section: '',
     subtasks: it.subtasks,
     refs: (it.refs ?? []).map((r) => ({ label: r.label, url: r.url })),
   }))

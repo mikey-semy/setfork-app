@@ -4,6 +4,7 @@ import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
 import { escapeHtml as esc } from '@/shared/lib/escape'
 import { markdownCodeBlock } from '@/shared/lib/markdown'
+import { stepDanger } from '@/core/domain/destructive-command'
 import { productItems } from './blocks'
 
 export interface ExportStep {
@@ -12,11 +13,16 @@ export interface ExportStep {
   // презентационные: в скрипте — комментарий, не исполняются.
   type?: string
   content?: Record<string, unknown>
+  /** Стабильная идентичность блока — АДРЕС пункта: по нему из справочника
+   *  забирают один пункт вместо скрипта на тридцать команд. */
+  bid?: string | null
   title: LocaleText
   desc: LocaleText
   command: string
   level: StepLevel
   why: LocaleText
+  /** Пометка автора «пункт разрушительный» (в скрипте — закомментирован). */
+  danger?: boolean
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
 }
@@ -70,11 +76,15 @@ export function toExportList(detail: TemplateDetail): ExportList {
       n: s.n,
       type: s.type,
       content: s.content,
+      // Идентичность блока: колонка — источник правды, content.bid — легаси-дом
+      // не-step блоков (тот же порядок, что у редактора и MCP).
+      bid: s.blockId || (typeof s.content?.bid === 'string' ? s.content.bid : null),
       title: s.title,
       desc: s.desc,
       command: s.command,
       level: s.level,
       why: s.why,
+      danger: s.danger,
       subtasks: s.subtasks,
       refs: s.refs,
     })),
@@ -358,18 +368,62 @@ export const dialectMime = (d: ScriptDialect) => DIALECTS[d].mime
  */
 const VAR_RE = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g
 /** Уникальные `${VAR}`-плейсхолдеры во всех командах (по порядку появления). */
-function scriptVariables(list: ExportList): string[] {
+function scriptVariables(steps: ExportStep[]): string[] {
   const seen = new Set<string>()
-  for (const s of list.steps) {
+  for (const s of steps) {
     for (const m of (s.command ?? '').matchAll(VAR_RE)) seen.add(m[1])
   }
   return [...seen]
 }
 
-export function toRunnableScript(list: ExportList, lang: Lang, url: string, dialect: ScriptDialect = 'sh'): string {
+/** Пункт, оставшийся за бортом: не исполняется, но назван (для ответа API). */
+export interface ScriptSkip {
+  n: number
+  bid?: string | null
+  /** Ключ причины из детектора (RISKY) или 'danger' — пометка автора. */
+  reason: string
+}
+
+export interface ScriptOptions {
+  /** Адреса пунктов (bid). Пусто/не задано — весь список, как раньше.
+   *  Порядок ВСЕГДА по списку, а не по порядку в этом массиве. */
+  only?: string[]
+}
+
+export function toRunnableScript(
+  list: ExportList,
+  lang: Lang,
+  url: string,
+  dialect: ScriptDialect = 'sh',
+  opts: ScriptOptions = {},
+): string {
+  return buildScript(list, lang, url, dialect, opts).script
+}
+
+/**
+ * Скрипт + отчёт о том, что в него не попало исполняемым.
+ *
+ * Отдельная функция от `toRunnableScript`, потому что у поверхностей разные
+ * потребности: `/raw` отдаёт голый текст в шелл, а MCP обязан СКАЗАТЬ агенту,
+ * что пункт закомментирован, — иначе тот сочтёт, что команда выполнилась.
+ */
+export function buildScript(
+  list: ExportList,
+  lang: Lang,
+  url: string,
+  dialect: ScriptDialect = 'sh',
+  opts: ScriptOptions = {},
+): { script: string; included: { n: number; bid?: string | null }[]; skipped: ScriptSkip[] } {
   const d = DIALECTS[dialect]
   const title = tr(list.title, lang)
-  const vars = scriptVariables(list) // опционально: нет ${VAR} → скрипт как раньше
+  // Выбор пунктов: фильтруем по адресам, порядок оставляем СПИСКА. Иначе
+  // «собери мне пункты 7, 3 и 12» дало бы скрипт, где шаги идут не в том порядке,
+  // в каком их писал автор, — а зависимости между ними никуда не делись.
+  const picked = new Set(opts.only ?? [])
+  const steps = picked.size ? list.steps.filter((s) => s.bid && picked.has(s.bid)) : list.steps
+  const vars = scriptVariables(steps) // опционально: нет ${VAR} → скрипт как раньше
+  const included: { n: number; bid?: string | null }[] = []
+  const skipped: ScriptSkip[] = []
   const out: string[] = []
   if (d.shebang) out.push(d.shebang)
   out.push(hashComment(title))
@@ -377,6 +431,9 @@ export function toRunnableScript(list: ExportList, lang: Lang, url: string, dial
   const desc = tr(list.desc, lang)
   if (desc) out.push(hashComment(desc))
   out.push('#', '# ⚠  Review before running — this script comes from a SetFork list, not from you.', `#    Run:  ${d.run(url)}`)
+  // Выборка пунктов названа прямо в шапке: иначе скрипт из трёх команд неотличим
+  // от списка, у которого три команды и есть.
+  if (picked.size) out.push(`#    Selected steps only: ${steps.length} of ${list.steps.length} blocks`)
   if (vars.length) out.push(`#    Required variables (pass as env): ${vars.map((v) => `${v}=…`).join(' ')}`)
   out.push('')
   if (d.pre) out.push(d.pre, '')
@@ -389,7 +446,7 @@ export function toRunnableScript(list: ExportList, lang: Lang, url: string, dial
   }
 
   let scriptNo = 0
-  list.steps.forEach((s) => {
+  steps.forEach((s) => {
     // Не-step блоки — только контекст: комментарий (text) / подпись (image),
     // ничего не исполняется. Нумерация идёт только по шаг-блокам.
     if (!isStepBlk(s)) {
@@ -410,17 +467,31 @@ export function toRunnableScript(list: ExportList, lang: Lang, url: string, dial
     if (dd) out.push(hashComment(dd))
     const why = tr(s.why, lang)
     if (why) out.push(hashComment(`Why: ${why}`))
-    out.push(d.echo(`==> ${n}. ${st}`))
-    if (s.command && s.command.trim()) {
-      out.push(s.command.trim())
+    const cmd = (s.command ?? '').trim()
+    const danger = cmd ? stepDanger(s) : null
+    if (danger) {
+      // РАЗРУШИТЕЛЬНЫЙ ПУНКТ приезжает закомментированным (решение владельца):
+      // он остаётся на своём месте, со своим номером и текстом, но шелл его не
+      // исполнит. Пропустить молча нельзя — человек ждёт, что скрипт делает то,
+      // что написано в списке; выполнить нельзя — это необратимо.
+      out.push(hashComment(`⚠ Destructive step — skipped. Review and uncomment to run it yourself.`))
+      out.push(d.echo(`==> ${n}. ${st} — skipped (destructive)`))
+      out.push(hashComment(cmd))
+      skipped.push({ n, bid: s.bid, reason: danger })
     } else {
-      s.subtasks.forEach((stk) => {
-        const tt = tr(stk, lang)
-        if (tt) out.push(d.echo(`     - ${tt}`))
-      })
+      out.push(d.echo(`==> ${n}. ${st}`))
+      if (cmd) out.push(cmd)
+      included.push({ n, bid: s.bid })
     }
+    // Подпункты — ПРОВЕРКА после выполнения, а не замена команды. Раньше они
+    // печатались только у пунктов без команды, и в скрипте из одного пункта
+    // «как убедиться, что получилось» терялось ровно там, где нужнее всего.
+    s.subtasks.forEach((stk) => {
+      const tt = tr(stk, lang)
+      if (tt) out.push(d.echo(`     - ${tt}`))
+    })
     out.push('')
   })
   out.push(d.echo(`✓ ${title} — done`), '')
-  return out.join('\n')
+  return { script: out.join('\n'), included, skipped }
 }

@@ -268,7 +268,7 @@ function toSnapshot(res: {
   desc: string
   tags: string[]
   ordered: boolean
-  steps: { n: number; type: string; contentJson: string; blockId: string; title: string; desc: string; command: string; level: string; why: string; section: string; subtasks: string[]; refs: { label: string; url: string }[] }[]
+  steps: { n: number; type: string; contentJson: string; blockId: string; title: string; desc: string; command: string; level: string; why: string; section: string; subtasks: string[]; refs: { label: string; url: string }[]; danger?: boolean }[]
 }) {
   const parseContent = (json: string): Record<string, unknown> => {
     if (!json) return {}
@@ -299,6 +299,9 @@ function toSnapshot(res: {
       section: s.section,
       subtasks: s.subtasks,
       refs: s.refs.map((r) => ({ label: r.label, ...(r.url ? { url: r.url } : {}) })),
+      // Пометка «разрушительный пункт» из канона ветки: смотрящий чужую правку
+      // обязан видеть её ДО слияния, а не узнать из собранного скрипта.
+      danger: s.danger === true,
     })),
   }
 }

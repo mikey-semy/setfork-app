@@ -30,7 +30,7 @@ import { Markdown } from '@/shared/ui/Markdown'
 import { DigChatHost, DigChatOpen } from '@/features/dig/DigChat'
 import { digStepsWithSession } from '@/features/dig/queries'
 import { getRoster } from '@/shared/ai/roster'
-import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
+import { StepDangerBadge, StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
 import { getContributors, getStepPreviews, getVersionAuthors, getVersionSteps } from '@/features/library/queries'
 import { CommitBar } from '@/features/library/CommitBar'
@@ -717,6 +717,9 @@ export default async function ListPage({
                               за правый край и тянет за собой страницу (мобила 390px). */}
                           <span className="min-w-0 text-[0.875rem] font-semibold text-ink [overflow-wrap:anywhere]">{tr(s.title, lang)}</span>
                           <StepLevelBadge level={s.level} lang={lang} />
+                          {/* Разрушительный пункт виден ДО того, как его скопировали
+                              в терминал, — на сайте, а не только в скрипте. */}
+                          <StepDangerBadge step={s} lang={lang} />
                         </div>
                         {tr(s.desc, lang) && <Markdown className="mt-1">{renderWikiLinks(tr(s.desc, lang))}</Markdown>}
                         {tr(s.why, lang) && (

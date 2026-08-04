@@ -100,6 +100,9 @@ export type ProposedItem = {
   needsHuman?: boolean
   /** Что спросить у человека (пусто при needsHuman → общий текст). */
   needsHumanAsk?: LocaleText
+  /** Разрушительный пункт: команда необратима — в собранном скрипте приезжает
+   *  закомментированной. Не задано = «решай по команде» (см. toStepInput). */
+  danger?: boolean
   section: LocaleText // заголовок секции-группы (пусто — без секции)
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
@@ -457,6 +460,15 @@ export const steps = pgTable('steps', {
   needsHuman: boolean('needs_human').notNull().default(false),
   /** Что именно спросить у человека («сколько стоит в вашем городе»). Пусто — общий текст. */
   needsHumanAsk: jsonb('needs_human_ask').notNull().default({}).$type<LocaleText>(),
+
+  // РАЗРУШИТЕЛЬНЫЙ ПУНКТ — второй, мягкий уровень защиты исполняемого выхода.
+  // Первый (destructive-command.ts) вовсе НЕ ПУСКАЕТ в публикацию команды без
+  // законного применения (`rm -rf /`, `mkfs`). Но `docker system prune -a
+  // --volumes` или `terraform destroy` законны и в справочнике по эксплуатации
+  // уместны — а исполнить их одним кликом стоит данных. Пункт с этой пометкой
+  // приезжает в собранный скрипт ЗАКОММЕНТИРОВАННЫМ.
+  // Ставится автором вручную либо автоматически по шаблону команды на записи.
+  danger: boolean('danger').notNull().default(false),
   section: jsonb('section').notNull().default({}).$type<LocaleText>(), // заголовок секции-группы
 
   // Подшаги и ссылки — простой контент шага, храним как locale-JSON.

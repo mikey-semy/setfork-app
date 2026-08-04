@@ -176,6 +176,9 @@ const toPbStep = (s: NewVersionInput['steps'][number]) => ({
   // Пометка «здесь нужен человек» — часть шага, а не украшение.
   needsHuman: s.needsHuman ?? false,
   needsHumanAsk: toPbLoc(s.needsHumanAsk ?? {}),
+  // Разрушительный пункт: без этого поля запись через ядро снимала бы пометку —
+  // набор шагов версии перезаписывается целиком.
+  danger: s.danger ?? false,
 })
 
 export const listWriteRemote = {

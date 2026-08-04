@@ -40,6 +40,7 @@ import { CodeEditor } from '@/shared/ui/CodeEditor'
 import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorProduct, type EditorQuiz } from './editor'
 import { t } from '@/shared/i18n'
 import { blankCount, type QuizKind } from '@/core'
+import { isRiskyCommand } from '@/core/domain/destructive-command'
 import { classifyListKind, refineHint } from '@/shared/ai/list-kind'
 import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
 import { fetchLinkTitleAction, refineList, uploadStepFile, uploadStepImage, uploadStepVideo } from './actions'
@@ -536,6 +537,27 @@ export function ListEditor({
                 ariaLabel={t('needsHumanAskLabel', lang)}
                 placeholder={t('needsHumanAskPlaceholder', lang)}
               />
+            )}
+
+            {/* РАЗРУШИТЕЛЬНЫЙ ПУНКТ. Виден только у пункта с командой: пометка — про
+                неё. Тумблер стартует со значения детектора (`docker … prune --volumes`
+                поднимет его сам), но последнее слово за автором. Снятая пометка НЕ
+                делает скрипт исполняемым, если команда всё равно попадает под шаблон —
+                об этом честно говорим ниже, а не делаем вид, что переключатель всесилен. */}
+            {it.command.trim() && (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 text-[0.6875rem] text-muted">{t('dangerLabel', lang)}</span>
+                  <Switch
+                    checked={it.danger ?? isRiskyCommand(it.command)}
+                    onCheckedChange={(on) => patch(i, { danger: on })}
+                    aria-label={`${i + 1}: ${t('dangerLabel', lang)}`}
+                  />
+                </div>
+                {it.danger === false && isRiskyCommand(it.command) && (
+                  <p className="text-[0.6875rem] text-muted">{t('dangerStillCommented', lang)}</p>
+                )}
+              </>
             )}
 
             {/* Подпункты */}
