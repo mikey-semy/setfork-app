@@ -856,6 +856,16 @@ export const listDrafts = pgTable(
     meta: jsonb('meta').notNull().default({}).$type<{ tags?: string[]; ordered?: boolean; gated?: boolean }>(),
     /** Заметка к будущей версии — чтобы не набирать её заново при публикации. */
     note: text('note').notNull().default(''),
+    /**
+     * Счётчик правок черновика. Публикация удаляет ИМЕННО ту ревизию, которую
+     * опубликовала: пока идёт вызов ядра, другой вход мог сохранить новые правки, и
+     * безусловное удаление стёрло бы их.
+     *
+     * Именно счётчик, а не updated_at: у timestamptz в базе микросекунды, а драйвер
+     * отдаёт JS-Date с миллисекундами — сравнение «то же время» не находило строку, и
+     * черновик оставался жить после публикации (поймано на живом прогоне).
+     */
+    rev: integer('rev').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

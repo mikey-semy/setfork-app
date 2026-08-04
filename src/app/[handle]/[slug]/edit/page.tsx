@@ -115,6 +115,11 @@ export default async function EditPage({
             <span className="block">{t('draftStaleRefused', lang)}</span>
           </Alert>
         )}
+        {sp.e === 'nodraft' && (
+          <Alert variant="warn" className="mb-4">
+            <span className="block">{t('draftNothing', lang)}</span>
+          </Alert>
+        )}
         {sp.e === 'empty' && (
           <Alert variant="warn" className="mb-4">
             <span className="block">{t('draftEmpty', lang)}</span>

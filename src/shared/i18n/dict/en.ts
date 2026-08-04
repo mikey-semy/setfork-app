@@ -665,6 +665,7 @@ export const en = {
   draftSaved: 'Draft saved.',
   draftStaleRefused: 'The list moved on while your edits sat in the draft. Publishing was cancelled — nothing was overwritten.',
   draftEmpty: 'No items left in the draft, so it was deleted.',
+  draftNothing: 'Nothing to publish — there are no pending edits.',
   draftSavedAt: 'Draft saved {when}. A version appears only when you publish.',
   draftStale: 'This draft is based on v{base}, but the list is already at v{cur}. Re-read the list and redo the edits.',
   draftKeepsVersion: 'Kept as a draft — no version is created',

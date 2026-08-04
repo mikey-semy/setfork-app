@@ -3,11 +3,10 @@
 import { and, asc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { blockComments, blockCommentThreads, db, issues, listDrafts, steps, suggestionAssignees, suggestionComments, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
+import { blockComments, blockCommentThreads, db, issues, steps, suggestionAssignees, suggestionComments, suggestionReviews, suggestions, templates, users, type ProposedItem } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
-import { ListWriteError } from '@/core/ports'
 import { recordAudit } from '@/shared/audit'
 import { captureError } from '@/shared/observability'
 import { getLang } from '@/shared/i18n/server'
@@ -30,6 +29,7 @@ import { gateListPublication, recheckList } from '@/features/moderation/moderate
 import { toStepInput } from '@/shared/lib/step-input'
 import { parseEditorItems, toProposedItems, type EditorItem } from './editor'
 import { getDraft, getVersionSteps } from './queries'
+import { deleteDraft, publishDraftFor, upsertDraft, type PublishResult } from './draft'
 import { countApprovals, hasBlockingReview } from './review-queries'
 // eslint-disable-next-line boundaries/dependencies -- гейт «нерешённые обсуждения» живёт с комментариями
 import { countUnresolvedThreads } from '@/features/comments/queries'
@@ -360,20 +360,14 @@ async function upsertDraftFromForm(templateId: string, formData: FormData) {
   // Пустой состав в черновике не храним: он подменил бы опубликованный список
   // пустотой в редакторе, а опубликовать его всё равно нельзя.
   if (items.length === 0) {
-    await db.delete(listDrafts).where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, session.userId)))
+    await deleteDraft(tpl.id, session.userId)
     redirect(`/${handle}/${tpl.slug}/edit?e=empty`)
   }
   // base_version НЕ переписываем у уже устаревшего черновика: сдвинуть его значит
   // сказать «правки сделаны от свежей версии», а они сделаны от старой — и следующая
   // публикация затёрла бы чужую работу молча. Признак устаревания снимает только
   // осознанный отказ от правок (discardDraft), а не автосохранение.
-  await db
-    .insert(listDrafts)
-    .values({ templateId: tpl.id, authorId: session.userId, baseVersion: tpl.currentVersion, items, meta, note })
-    .onConflictDoUpdate({
-      target: [listDrafts.templateId, listDrafts.authorId],
-      set: { items, meta, note, updatedAt: new Date() },
-    })
+  await upsertDraft(tpl, session.userId, { items, meta, note })
   return { tpl, handle }
 }
 
@@ -383,7 +377,7 @@ export async function discardDraft(templateId: string): Promise<void> {
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  await db.delete(listDrafts).where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, session.userId)))
+  await deleteDraft(tpl.id, session.userId)
   const handle = await ownerHandle(tpl.ownerId)
   revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
   redirect(`/${handle}/${tpl.slug}`)
@@ -403,45 +397,31 @@ export async function publishDraft(templateId: string): Promise<void> {
   const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
   if (!tpl) return
   if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
-  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
-
-  const draft = await getDraft(tpl.id, session.userId)
-  if (!draft || draft.items.length === 0) return
   const handle = await ownerHandle(tpl.ownerId)
-  if (draft.baseVersion !== tpl.currentVersion) redirect(`/${handle}/${tpl.slug}/edit?e=stale`)
+  if (!canEditList(tpl)) redirect(`/${handle}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
 
-  const tags = draft.meta.tags ?? tpl.tags
-  const ordered = draft.meta.ordered ?? tpl.ordered
-  await registerTags(tags)
+  // Теги черновика — в реестр (иначе новый тег не появится в каталоге и подсказках).
+  const pending = await getDraft(tpl.id, session.userId)
+  if (pending?.meta.tags?.length) await registerTags(pending.meta.tags)
+  let res: PublishResult
   try {
-    // expectedVersion — НАСТОЯЩАЯ защита от гонки: ядро сверяет её внутри транзакции,
-    // где строка списка уже взята for update. Сравнение чисел выше — только быстрый
-    // ответ пользователю; между ним и вызовом есть окно, и двойной клик или второй
-    // таб успевали бы создать две версии с одним составом.
-    await listStore.addVersion(tpl.id, {
-      note: draft.note.trim() || 'edit',
-      steps: toStepInput(draft.items),
-      authorId: session.userId,
-      meta: { tags, ordered },
-      expectedVersion: draft.baseVersion,
-    })
+    res = await publishDraftFor(tpl, session.userId)
   } catch (e) {
-    if (e instanceof DestructiveCommandError) {
-      redirect(`/${handle}/${tpl.slug}/edit?blocked=${e.reason}&step=${e.stepIndex}`)
-    }
-    if (e instanceof ListWriteError && e.code === 'stale') redirect(`/${handle}/${tpl.slug}/edit?e=stale`)
+    // Запрещённая команда — показываем автору причину и номер шага, как при
+    // обычном сохранении: молчаливый отказ читается как «кнопка не работает».
+    if (e instanceof DestructiveCommandError) redirect(`/${handle}/${tpl.slug}/edit?blocked=${e.reason}&step=${e.stepIndex}`)
     throw e
   }
-  // gated — не канон, поэтому пишется ПОСЛЕ успешной версии: при отказе ядра мета
-  // не должна уезжать вперёд содержимого.
-  await db.update(templates).set({ gated: draft.meta.gated ?? tpl.gated, updatedAt: new Date() }).where(eq(templates.id, tpl.id))
-  // Удаляем ИМЕННО опубликованный черновик: пока шёл вызов ядра, соседний таб мог
-  // сохранить новые правки, и безусловное удаление стёрло бы их.
-  await db
-    .delete(listDrafts)
-    .where(and(eq(listDrafts.templateId, tpl.id), eq(listDrafts.authorId, session.userId), eq(listDrafts.updatedAt, draft.updatedAt)))
+  // Причины РАЗНЫЕ: «нечего публиковать» и «черновик опустел» — разные сообщения,
+  // иначе человек читает про удаление, которого не было.
+  if ('error' in res) {
+    const reason = res.error === 'stale' ? 'stale' : res.error === 'empty' ? 'empty' : 'nodraft'
+    redirect(`/${handle}/${tpl.slug}/edit?e=${reason}`)
+  }
+
   await notifyWatchersNewVersion(tpl.id, session.userId)
   await enqueueReindex(tpl.id)
+  revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
   redirect(`/${handle}/${tpl.slug}`)
 }
 
