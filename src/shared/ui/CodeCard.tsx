@@ -22,8 +22,12 @@ import type { Lang } from '@/shared/i18n'
 export function CodeCard({ code, name, lang }: { code: string; name?: string; lang?: Lang }) {
   const label = name || 'code'
   const lines = highlightLines(code, name)
+  // Минимальная высота карточки — под служебный угол, а не под текст: блок из ОДНОЙ
+  // строки занимает ~37px, а кнопка копирования на тач-экране 44px, и угол выпирал за
+  // низ карточки (жалоба владельца 04.08.2026). Уменьшать кнопку нельзя — 44px это
+  // норма тач-цели, поэтому карточка просто не бывает ниже своего угла.
   return (
-    <div className="relative my-1.5 overflow-hidden rounded-md border border-border bg-surface-2">
+    <div className="relative my-1.5 min-h-10 overflow-hidden rounded-md border border-border bg-surface-2 pointer-coarse:min-h-13">
       {/* Правый верхний угол — служебное (правило углов). Подложка у бейджа на случай,
           если первая строка всё же окажется длинной и пройдёт под ним. */}
       <div className="absolute right-1 top-1 z-10 flex items-center gap-1">
