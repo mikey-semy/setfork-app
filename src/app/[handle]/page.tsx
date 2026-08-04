@@ -30,11 +30,8 @@ import { getFollowCounts, isFollowing } from '@/features/follows/queries'
 import { FollowButton } from '@/features/follows/FollowButton'
 import { avatarSrc } from '@/shared/media'
 import { SocialIcon, socialLabel } from '@/features/settings/socials'
+import { displayUrl } from '@/shared/lib/link-label'
 import { PAGE } from '@/shared/ui/control'
-
-function displayUrl(url: string): string {
-  return url.replace(/^https?:\/\//i, '').replace(/\/$/, '')
-}
 
 type Tab = 'overview' | 'lists' | 'starred' | 'catalogs' | 'followers' | 'following'
 

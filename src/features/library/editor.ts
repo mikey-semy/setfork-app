@@ -222,9 +222,13 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
         subtasks: it.subtasks.filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
         // url санитизируем на записи, как у video/file/product (второй рубеж к
         // SafeLink): ссылки шага теперь принимает и MCP, а не только редактор.
+        // Ссылка живёт, если есть ХОТЬ ЧТО-ТО: раньше выживала только та, у которой
+        // написана подпись, и «просто ссылка» молча пропадала при сохранении
+        // (жалоба владельца 04.08.2026 про обязательный label в API). Подпись теперь
+        // не обязательна — интерфейс покажет домен (shared/lib/link-label).
         refs: it.refs
-          .filter((r) => r.label.trim())
-          .map((r) => ({ label: { [lang]: r.label.trim() }, url: safeHref(r.url) || undefined })),
+          .filter((r) => r.label.trim() || r.url.trim())
+          .map((r) => ({ label: r.label.trim() ? { [lang]: r.label.trim() } : {}, url: safeHref(r.url) || undefined })),
       }
     })
     // В колонку block_id (тип uuid) кладём ТОЛЬКО uuid: идентичность приходит и

@@ -55,6 +55,7 @@ import { db, listLinks, templates as templatesTable, users as usersTable, public
 import { and as andOp, eq } from 'drizzle-orm'
 import { SafeLink } from '@/shared/ui/SafeLink'
 import { renderWikiLinks } from '@/shared/lib/wiki-links'
+import { linkLabel } from '@/shared/lib/link-label'
 import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { ListActionsMenu } from '@/features/library/ListActionsMenu'
 import { ReportButton } from '@/features/reports/ReportButton'
@@ -789,13 +790,15 @@ export default async function ListPage({
                               // Подпись ссылки нередко и есть URL — без переноса чип уносит страницу.
                               const cls =
                                 'inline-flex min-w-0 items-center gap-1 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-accent [overflow-wrap:anywhere]'
+                              // Подписи может не быть (ссылку кладут одним url) — показываем домен.
+                              const text = linkLabel(r.label, r.url)
                               return r.url ? (
                                 <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className={cls}>
-                                  <ExternalLink size={11} /> {r.label}
+                                  <ExternalLink size={11} /> {text}
                                 </SafeLink>
                               ) : (
                                 <span key={`${r.label}:`} className={cls}>
-                                  <ExternalLink size={11} /> {r.label}
+                                  <ExternalLink size={11} /> {text}
                                 </span>
                               )
                             })}
