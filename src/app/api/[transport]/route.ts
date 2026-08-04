@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto'
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js'
 import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { z } from 'zod'
+import { APP_VERSION } from '@/shared/app-version'
+import { getBuildId } from '@/shared/version'
 import { verifyApiToken } from '@/shared/auth/api-token'
 import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
 import {
@@ -24,6 +26,7 @@ import {
   mcpSearch,
   mcpStartRun,
   mcpUpdateList,
+  mcpDeleteList,
 } from '@/features/mcp/tools'
 import { mcpAskGnome, mcpGnomeReview, mcpListGnomes } from '@/features/mcp/gnome'
 import { mcpCouncilDraft, mcpGetCouncilDraft } from '@/features/mcp/council'
@@ -50,14 +53,25 @@ const handler = createMcpHandler(
       config: unknown,
       cb: (args: any, extra: Extra) => unknown,
     ) => void
+    // ПОДСКАЗКИ АГЕНТУ — часть способа регистрации, как и скоуп. Аннотации MCP
+    // (readOnlyHint/destructiveHint/idempotentHint/openWorldHint) клиент показывает
+    // модели и по ним же решает, спрашивать ли человека перед вызовом. Проставляем их
+    // здесь, а не в каждом инструменте: иначе новый инструмент однажды приедет без
+    // подсказок, и агент будет гадать, что тот делает. Отдельный инструмент может
+    // уточнить свои (например delete_list — destructiveHint).
+    type ToolConfig = { title?: string; description?: string; inputSchema?: unknown; annotations?: Record<string, unknown> }
+    const annotate = (config: unknown, base: Record<string, unknown>) => {
+      const c = (config ?? {}) as ToolConfig
+      return { ...c, annotations: { ...(c.title ? { title: c.title } : {}), ...base, ...(c.annotations ?? {}) } }
+    }
     const readTool = (name: string, config: unknown, fn: ToolFn) =>
-      register(name, config, async (args, extra) => {
+      register(name, annotate(config, { readOnlyHint: true, idempotentHint: true, openWorldHint: false }), async (args, extra) => {
         const userId = userIdOf(extra)
         if (!userId) return err('Unauthorized')
         return fn(userId, args, extra)
       })
     const writeTool = (name: string, config: unknown, fn: ToolFn) =>
-      register(name, config, async (args, extra) => {
+      register(name, annotate(config, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }), async (args, extra) => {
         const userId = userIdOf(extra)
         if (!userId) return err('Unauthorized')
         if (!canWrite(extra)) return err(READONLY)
@@ -224,9 +238,14 @@ const handler = createMcpHandler(
       needsHuman: z.boolean().optional().describe('Step: mark that this point needs a human — local prices, taste, personal experience'),
       needsHumanAsk: z.string().optional().describe('Step: what exactly to ask the human (shown with the mark)'),
       refs: z
-        .array(z.object({ label: z.string().describe('Link text'), url: z.string().optional().describe('Link target') }))
+        .array(
+          z.object({
+            url: z.string().optional().describe('Link target, e.g. "https://docs.astral.sh/uv/"'),
+            label: z.string().optional().describe('Link text; omit it and the UI shows the domain'),
+          }),
+        )
         .optional()
-        .describe('Step: reference links shown under the step (docs, sources). get_list returns them in the same shape'),
+        .describe('Step: reference links shown under the step (docs, sources). One link is just {"url": "..."} — label is optional. get_list returns them in the same shape'),
       // text
       text: z.string().optional().describe('Text block: markdown content — for type "text"'),
       // image / video
@@ -302,7 +321,11 @@ const handler = createMcpHandler(
       'update_list',
       {
         title: 'Update a list',
-        description: 'Replace the blocks of a list you own (steps and/or text/image/poll/video/quiz/file). A draft is edited in place; a published list gets a new version.',
+        // Замена всего состава: незаданный блок ИСЧЕЗАЕТ — для агента это разрушающая
+        // операция, и клиент вправе спросить человека. Точечная правка — patch_list.
+        annotations: { destructiveHint: true },
+        description:
+          'Replace ALL blocks of a list you own (steps and/or text/image/poll/video/quiz/file) — anything you omit is removed. For editing a few blocks use patch_list instead. A draft is edited in place; a published list gets a new version.',
         inputSchema: {
           handle: z.string().describe('Owner handle (must be you)'),
           slug: z.string().describe('List slug'),
@@ -349,6 +372,27 @@ const handler = createMcpHandler(
       },
       async (userId, { handle, slug, ...rest }) => {
         const res = await mcpPatchList(userId, handle, slug, rest)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    // Убрать свой список. Пока инструмента не было, пробный черновик агента мог
+    // удалить только человек руками в интерфейсе (жалоба владельца 04.08.2026).
+    writeTool(
+      'delete_list',
+      {
+        title: 'Delete a list',
+        annotations: { destructiveHint: true, idempotentHint: true },
+        description:
+          'Delete a list you own FOR GOOD, with its versions, steps, stars and suggested edits. Two-step by design: without confirm it only reports what would be deleted and writes nothing; pass confirm:true to actually delete. A list locked by moderation cannot be deleted — appeal instead.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle (must be you)'),
+          slug: z.string().describe('List slug'),
+          confirm: z.boolean().optional().describe('Default FALSE — report only. Pass true to delete for good.'),
+        },
+      },
+      async (userId, { handle, slug, confirm }) => {
+        const res = await mcpDeleteList(userId, handle, slug, confirm === true)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )
@@ -572,7 +616,35 @@ const handler = createMcpHandler(
       },
     )
   },
-  { serverInfo: { name: 'setfork', version: '0.1.0' }, capabilities: { tools: {} } },
+  {
+    // Версия = семантическая + идентификатор сборки: семантическая меняется редко, а
+    // инструменты приезжают с каждой выкаткой — по хвосту видно, ту ли схему держит клиент.
+    serverInfo: { name: 'setfork', version: `${APP_VERSION}+${getBuildId()}` },
+    // listChanged заявляем честно: набор инструментов меняется с выкаткой, и клиент
+    // должен знать, что список стоит перечитывать, а не держать вечно. Версия сервера
+    // берётся из сборки, а не из строки в коде: по ней видно, свежую ли схему держит
+    // клиент (жалоба владельца 04.08.2026: клиент отдавал схему без refs).
+    capabilities: { tools: { listChanged: true } },
+    // instructions агент получает при подключении — это его карта сервера. Без неё он
+    // угадывает порядок работы и, например, шлёт список целиком там, где хватило бы
+    // точечной правки.
+    instructions: [
+      'SetFork keeps runnable, versioned checklists ("lists"). A list is a sequence of blocks: step, text, image, poll, video, quiz, file.',
+      '',
+      'Working loop:',
+      '1. Find it: search_lists, then get_list — it returns every block with a stable "bid" and the list "version".',
+      '2. Change it: patch_list. Address blocks by "bid", send ONLY the fields you change, pass baseVersion = the "version" from get_list. Ops: update, insert, delete, move.',
+      '   Use update_list only to replace the whole set of blocks — anything omitted there is removed.',
+      '3. Batch: one patch_list call = one new version of a published list. Put all your edits into a single call instead of one call per block.',
+      '',
+      'Good to know:',
+      '- A draft is edited in place and does not pile up versions; a published list gets a new version per write call.',
+      '- baseVersion protects you: if someone edited the list meanwhile, the patch is rejected instead of overwriting their work — re-read with get_list and retry.',
+      '- Step links are just {"url": "..."}; a label is optional and the interface falls back to the domain.',
+      '- delete_list is irreversible and needs confirm:true; without it the call only reports what would go.',
+      '- Write tools need a token with write scope; read tools work with any token.',
+    ].join('\n'),
+  },
   { basePath: '/api' }, // → эндпоинт /api/mcp (Streamable HTTP), /api/sse (legacy)
 )
 

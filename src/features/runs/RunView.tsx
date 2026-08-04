@@ -16,6 +16,7 @@ import { ProductBlock, type ProductLinkVM } from '@/shared/ui/ProductBlock'
 // dig-чат («кирка» на шаге) — UI-фича, переиспользуем в прогоне (как и в детали списка).
 // eslint-disable-next-line boundaries/dependencies -- кирка/dig-чат из features/dig
 import { DIG_SAVED_EVENT, DigChatHost, DigChatOpen, type GnomeOption } from '@/features/dig/DigChat'
+import { linkLabel } from '@/shared/lib/link-label'
 import { blockStep, deleteRun, failRun, finishRun, reopenRun, reportBlockedStep, toggleStep, toggleSubtask, unblockStep } from './actions'
 import { PAGE_NARROW } from '@/shared/ui/control'
 
@@ -353,12 +354,12 @@ export function RunView({
                   <div className="flex flex-wrap gap-2">
                     {s.refs.map((r) =>
                       r.url ? (
-                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-accent">
-                          {r.label}
+                        <SafeLink key={`${r.label}:${r.url}`} href={r.href ?? r.url} rel="nofollow noreferrer" className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-accent [overflow-wrap:anywhere]">
+                          {linkLabel(r.label, r.url)}
                         </SafeLink>
                       ) : (
                         <span key={`${r.label}:`} className="min-w-0 rounded-md border border-border bg-surface-2 px-2.5 py-1 text-[0.6875rem] text-ink-2 [overflow-wrap:anywhere]">
-                          {r.label}
+                          {linkLabel(r.label, r.url)}
                         </span>
                       ),
                     )}

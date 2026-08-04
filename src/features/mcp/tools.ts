@@ -23,6 +23,7 @@ import { applyPatchOps, patchFields, type McpPatchOp } from './patch'
 import { toStepInput as stepInput } from '@/shared/lib/step-input'
 import { isCollaborator } from '@/features/collab/queries'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
+import { recordAudit } from '@/shared/audit'
 import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/features/library/suggestion-checks'
 import { currentRevision } from '@/features/library/suggestion-core'
 import { recordRunCompletionIfDone } from '@/shared/completion'
@@ -351,7 +352,9 @@ function blockForMcp(s: DetailStep) {
     level: s.level,
     why: tr(s.why, 'en') || undefined,
     subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
-    refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label),
+    // Ссылка без подписи — нормальная ссылка (её показывают доменом), поэтому
+    // фильтруем по «есть хоть что-то», иначе чтение теряло бы то, что записано.
+    refs: s.refs.map((r) => ({ label: tr(r.label, 'en'), url: r.url })).filter((r) => r.label || r.url),
   }
 }
 
@@ -1048,6 +1051,40 @@ async function writeProposed(
 }
 
 /** Обновить список (только владелец). Черновик — правим на месте; опубликованный — новая версия. */
+/** Удалить свой список целиком. Пробный черновик, созданный агентом, раньше можно
+ *  было убрать только руками в интерфейсе (жалоба владельца 04.08.2026: после пробы
+ *  остался мусорный черновик, а API его не удаляет).
+ *
+ *  Удаление НЕОБРАТИМО (каскадом уходят версии, шаги, звёзды, предложения), поэтому
+ *  оно требует явного confirm — тем же приёмом, что сухой прогон у bulk_create_lists.
+ *  Снятый модерацией список владелец удалить не может: hard-delete стёр бы его
+ *  contentFingerprint, то есть защиту от повторной заливки того же контента. */
+export async function mcpDeleteList(userId: string, handle: string, slug: string, confirm: boolean) {
+  const owner = await db.select({ id: users.id }).from(users).where(eq(users.handle, handle)).limit(1)
+  if (!owner[0]) return { error: 'list not found' as const }
+  const tpl = await db.query.templates.findFirst({ where: (t) => and(eq(t.ownerId, owner[0].id), eq(t.slug, slug)) })
+  if (!tpl) return { error: 'list not found' as const }
+  if (tpl.ownerId !== userId) return { error: 'forbidden: you are not the owner' as const }
+
+  const me = await db.select({ handle: users.handle }).from(users).where(eq(users.id, userId)).limit(1)
+  if ((tpl.moderation === 'flagged' || tpl.moderation === 'hidden') && !isAdminHandle(me[0]?.handle ?? null)) {
+    return { error: 'forbidden: list is locked by moderation — appeal instead of deleting' as const }
+  }
+  if (!confirm) {
+    return {
+      ref: `${handle}/${slug}`,
+      deleted: false,
+      title: tr(tpl.title, 'en'),
+      status: tpl.status,
+      version: tpl.currentVersion,
+      hint: 'nothing was deleted — call again with confirm:true to delete this list for good (versions, steps, stars and suggested edits go with it)',
+    }
+  }
+  await db.delete(templates).where(eq(templates.id, tpl.id)) // каскад: версии/шаги/звёзды/предложения
+  await recordAudit('list.delete', { actorId: userId, targetType: 'list', targetId: tpl.id, meta: { slug: tpl.slug, via: 'mcp' } })
+  return { ref: `${handle}/${slug}`, deleted: true }
+}
+
 export async function mcpUpdateList(userId: string, handle: string, slug: string, input: McpUpdateInput) {
   const found = await ownedList(userId, handle, slug)
   if ('error' in found) return found
