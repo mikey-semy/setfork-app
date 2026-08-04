@@ -250,6 +250,21 @@ describe('gateListPublication — публикация уже существую
   })
 })
 
+describe('исчерпанный кап проверок', () => {
+  it('рождённый pending список получает причину, а не висит в очереди молча', async () => {
+    // Кап считается по джобам автора за сутки; забиваем его целиком.
+    for (let i = 0; i < 20; i++) {
+      await db.insert(jobs).values({ type: 'moderate', payload: { templateId: `x-${i}`, gate: true, ownerId } })
+    }
+    const list = await listStore.create(newList())
+
+    expect(await modOf(list.id)).toBe('pending')
+    const row = await db.query.templates.findFirst({ where: (t, { eq: e }) => e(t.id, list.id) })
+    expect(row?.moderationReason).toBe('publication rate limit — awaiting manual review')
+    expect(row?.moderationSeverity).toBe(1)
+  })
+})
+
 describe('окно выкатки: ядро без поля moderation', () => {
   it('потерянное ядром состояние восстанавливается апдейтом, а не остаётся публичным', async () => {
     // Эмуляция старой сборки ядра: поле в запросе есть, но записывается дефолт схемы.

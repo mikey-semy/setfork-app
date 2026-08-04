@@ -124,6 +124,17 @@ async function enqueueModerate(templateId: string, gate: boolean, ownerId: strin
   return 'queued'
 }
 
+/** Кап расхода исчерпан: список, ждущий проверку, остаётся pending — но с внятной
+ *  причиной, иначе в очереди модерации он выглядит просто «висящим». Пометка нужна
+ *  ОБОИМ путям: и публикации существующего списка, и созданию нового (там состояние
+ *  решено до записи, а джобу ставит барьер фасада — см. recheckList). */
+async function markCapped(templateId: string): Promise<void> {
+  await db
+    .update(templates)
+    .set({ moderationReason: 'publication rate limit — awaiting manual review', moderationSeverity: 1 })
+    .where(and(eq(templates.id, templateId), eq(templates.moderation, 'pending')))
+}
+
 /**
  * Гейт публикации УЖЕ СУЩЕСТВУЮЩЕГО списка (модель YouTube): публикация черновика,
  * открытие приватного, автономная публикация петлёй. Список уходит в pending — не
@@ -155,14 +166,7 @@ export async function gateListPublication(templateId: string): Promise<void> {
       .update(templates)
       .set({ moderation: 'pending', moderationReason: null, moderationSeverity: 0 })
       .where(eq(templates.id, templateId))
-    const q = await enqueueModerate(templateId, true, tpl.ownerId)
-    if (q === 'capped') {
-      // кап расхода: остаётся pending с пометкой — решит человек, LLM не тратим
-      await db
-        .update(templates)
-        .set({ moderationReason: 'publication rate limit — awaiting manual review', moderationSeverity: 1 })
-        .where(and(eq(templates.id, templateId), eq(templates.moderation, 'pending')))
-    }
+    if ((await enqueueModerate(templateId, true, tpl.ownerId)) === 'capped') await markCapped(templateId)
   } catch (e) {
     // гейт не должен ронять публикацию; список остаётся active — но след оставляем
     captureError(e, { where: 'moderation.gate', templateId })
@@ -190,7 +194,12 @@ export async function recheckList(templateId: string): Promise<void> {
       .set({ appealedAt: null })
       .where(and(eq(templates.id, templateId), sql`${templates.appealedAt} is not null`))
     if (!(await getApiKey())) return
-    await enqueueModerate(templateId, false, tpl.ownerId)
+    // Список, РОЖДЁННЫЙ pending (недоверенный автор — состояние решено до записи),
+    // приходит сюда как единственный барьер очереди: джоба ставится тем же вызовом,
+    // а исчерпанный кап обязан оставить причину — иначе он висит в очереди модерации
+    // без объяснения. Для уже видимого списка (обычная пере-проверка) ветка молчит:
+    // markCapped пишет только в строку, которая ждёт проверку.
+    if ((await enqueueModerate(templateId, false, tpl.ownerId)) === 'capped') await markCapped(templateId)
   } catch (e) {
     captureError(e, { where: 'moderation.recheck', templateId })
   }
