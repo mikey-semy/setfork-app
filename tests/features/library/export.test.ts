@@ -74,6 +74,7 @@ describe('Markdown-экспорт: команда остаётся кодом', 
     // Следующая строка-ограждение той же длины — это ЗАКРЫВАЮЩАЯ; между ней и
     // открывающей обязана лежать вся полезная нагрузка, включая её три кавычки.
     const close = lines.findIndex((l, i) => i > open && l.trim().length >= fence.length && /^`+$/.test(l.trim()))
+    expect(close).toBeGreaterThan(open) // блок вообще закрыт — иначе проверка ниже бессмысленна
     const inside = lines.slice(open + 1, close)
     expect(inside.some((l) => l.includes('<img src=x onerror=alert(1)>'))).toBe(true)
     expect(inside.some((l) => l.trim() === '```')).toBe(true)
@@ -83,5 +84,19 @@ describe('Markdown-экспорт: команда остаётся кодом', 
     const md = toMarkdown(list([step({ command: 'cd /tmp\nmake all' })]), 'en')
     expect(md).toContain('   cd /tmp')
     expect(md).toContain('   make all')
+  })
+})
+
+// Отступ продолжения пункта считается по маркеру: у «10.» он длиннее, и трёх
+// пробелов уже не хватает — по CommonMark содержимое выпадает из пункта.
+describe('Markdown-экспорт: пункты от десятого', () => {
+  it('десятый пункт держит своё содержимое', () => {
+    const steps = Array.from({ length: 10 }, (_, i) => step({ n: i + 1, title: { en: `S${i + 1}` }, command: 'make all' }))
+    const md = toMarkdown(list(steps), 'en')
+    const lines = md.split('\n')
+    const head = lines.findIndex((l) => l.startsWith('10. '))
+    // Всё, что принадлежит пункту, отступлено на длину маркера «10. » = 4.
+    const body = lines.slice(head + 1).filter((l) => l.trim())
+    expect(body[0].startsWith('    ')).toBe(true)
   })
 })
