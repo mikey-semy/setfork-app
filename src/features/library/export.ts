@@ -3,6 +3,7 @@ import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
 import { escapeHtml as esc } from '@/shared/lib/escape'
+import { markdownCodeBlock } from '@/shared/lib/markdown'
 import { productItems } from './blocks'
 
 export interface ExportStep {
@@ -102,20 +103,29 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
     }
     stepNo++
     const marker = list.ordered ? `${stepNo}.` : '-'
+    // Продолжение пункта отступается ПО ДЛИНЕ МАРКЕРА, а не на фиксированные три
+    // пробела: у пункта «10.» маркер уже четыре символа, и трёх пробелов мало —
+    // по CommonMark содержимое перестаёт принадлежать пункту и выпадает из него.
+    // У списка от десяти шагов это касалось всего, что ниже заголовка.
+    const indent = ' '.repeat(marker.length + 1)
     const lvl = s.level !== 'required' ? ` _(${s.level})_` : ''
     out.push(`${marker} **${tr(s.title, lang)}**${lvl}`)
     const d = tr(s.desc, lang)
-    if (d) out.push(`   ${d}`)
+    if (d) out.push(`${indent}${d}`)
     const why = tr(s.why, lang)
-    if (why) out.push(`   > Why: ${why}`)
-    if (s.command) out.push('', '   ```', `   ${s.command}`, '   ```')
+    if (why) out.push(`${indent}> Why: ${why}`)
+    // Ограждение подбирается под содержимое (shared/lib/markdown): фиксированные
+    // три кавычки автор закрывал изнутри, и остаток документа переставал быть кодом.
+    // Отступ у КАЖДОЙ строки: раньше его получала только первая, и многострочная
+    // команда со второй строки вываливалась из пункта списка.
+    if (s.command) out.push('', ...markdownCodeBlock(s.command, { indent }))
     s.subtasks.forEach((st) => {
       const t = tr(st, lang)
-      if (t) out.push(`   - [ ] ${t}`)
+      if (t) out.push(`${indent}- [ ] ${t}`)
     })
     s.refs.forEach((r) => {
       const label = tr(r.label, lang)
-      if (label) out.push(r.url ? `   - [${label}](${r.url})` : `   - ${label}`)
+      if (label) out.push(r.url ? `${indent}- [${label}](${r.url})` : `${indent}- ${label}`)
     })
     out.push('')
   })

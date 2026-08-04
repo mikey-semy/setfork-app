@@ -65,7 +65,12 @@ async function describeChange(
       .where(and(eq(generationCandidates.generationId, generationId), eq(generationCandidates.idx, idx - 1)))
       .limit(1)
     if (!prev) return ''
-    return (await generateChangeNote(prev.items, items, lang, { ...opts, feature: 'note' })) ?? ''
+    // Здесь сравниваются два САМОСТОЯТЕЛЬНЫХ варианта, а не правка одного списка,
+    // поэтому хватает пары списков заголовков; структурный дифф живёт в features/library
+    // и слой generation его не тянет (границы: features → core/shared).
+    const compact = (xs: CandidateItem[]) => xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n')
+    const delta = `BEFORE\n${compact(prev.items) || '(empty)'}\n\nAFTER\n${compact(items) || '(empty)'}`
+    return (await generateChangeNote(delta, lang, { ...opts, feature: 'note' })) ?? ''
   } catch {
     return ''
   }

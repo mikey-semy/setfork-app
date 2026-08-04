@@ -292,12 +292,17 @@ ${sp.rule()}`
   return runListModel(system, `Create the reference list for the topic below.\n${sp.wrap('TOPIC', query)}`, query, feature, { ...opts, web })
 }
 
-type NoteItem = { title: string; desc: string; command: string; subtasks: string[] }
-
-/** Примечание к версии из диффа (как git-commit message). Возвращает одну строку или null. */
+/**
+ * Примечание к версии по ГОТОВОМУ диффу (как git-commit message). Одна строка или null.
+ *
+ * Раньше сюда приходили два списка заголовков, и правка описания или команды была
+ * модели попросту не видна: BEFORE и AFTER совпадали, а она вместо описания правки
+ * выдавала совет («удалите пустые пункты»). Теперь дифф считает вызывающий
+ * (features/library/change-summary) и передаёт фактом: какой блок, что с ним
+ * сделали, какие поля изменились.
+ */
 export async function generateChangeNote(
-  base: NoteItem[],
-  next: NoteItem[],
+  diff: string,
   lang: Lang,
   opts: GenerateOptions = {},
 ): Promise<string | null> {
@@ -309,17 +314,18 @@ export async function generateChangeNote(
 
   const { base: model } = await pickChatModels(settings)
   const langName = langEnName(lang)
-  const compact = (xs: NoteItem[]) =>
-    xs.map((x, i) => `${i + 1}. ${x.title}${x.command ? ` [${x.command}]` : ''}`).join('\n').slice(0, MAX_PROMPT_CHARS)
   const sp = spotlight()
 
   const startedAt = Date.now()
   try {
     const result = await generateText({
       model: client.chat(model),
-      system: `You write a SHORT changelog note (like a git commit message) describing what changed between two versions of a list, and why it matters. One concise line, imperative mood, in ${langName}. No quotes, no markdown, max ~90 characters.
+      // Модель ОПИСЫВАЕТ переданный дифф, а не оценивает список: сочинённый совет
+      // вместо описания правки — это ровно то, что выходило, когда разницы в данных
+      // она не видела.
+      system: `You write a SHORT changelog note (like a git commit message) for an ALREADY MADE change. You are given the exact diff. Describe ONLY what the diff shows: do not suggest improvements and do not invent changes. If the change is tiny (a typo, one word, punctuation), say exactly that. One concise line, imperative mood, in ${langName}. No quotes, no markdown, max ~90 characters.
 ${sp.rule()}`,
-      prompt: `${sp.wrap('BEFORE', compact(base) || '(empty)')}\n\n${sp.wrap('AFTER', compact(next) || '(empty)')}\n\nWrite the change note.`,
+      prompt: `${sp.wrap('DIFF', diff.slice(0, MAX_PROMPT_CHARS) || '(no changes)')}\n\nWrite the change note.`,
       temperature: 0.3,
       maxOutputTokens: 60,
     })
