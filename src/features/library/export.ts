@@ -3,6 +3,7 @@ import { tr, type Lang, type LocaleText } from '@/shared/i18n'
 import type { StepLevel } from '@/shared/db'
 import { safeHref } from '@/shared/lib/safe-url'
 import { escapeHtml as esc } from '@/shared/lib/escape'
+import { markdownCodeBlock } from '@/shared/lib/markdown'
 import { productItems } from './blocks'
 
 export interface ExportStep {
@@ -108,7 +109,11 @@ export function toMarkdown(list: ExportList, lang: Lang): string {
     if (d) out.push(`   ${d}`)
     const why = tr(s.why, lang)
     if (why) out.push(`   > Why: ${why}`)
-    if (s.command) out.push('', '   ```', `   ${s.command}`, '   ```')
+    // Ограждение подбирается под содержимое (shared/lib/markdown): фиксированные
+    // три кавычки автор закрывал изнутри, и остаток документа переставал быть кодом.
+    // Отступ у КАЖДОЙ строки: раньше его получала только первая, и многострочная
+    // команда со второй строки вываливалась из пункта списка.
+    if (s.command) out.push('', ...markdownCodeBlock(s.command, { indent: '   ' }))
     s.subtasks.forEach((st) => {
       const t = tr(st, lang)
       if (t) out.push(`   - [ ] ${t}`)

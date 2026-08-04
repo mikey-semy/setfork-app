@@ -60,3 +60,28 @@ describe('export — блочная модель', () => {
     expect(md).toContain('2. **B**')
   })
 })
+
+// Регрессия карточки export/001: команду пишет автор, и она не имеет права
+// закрыть ограждение и превратить остаток документа в размеченный текст.
+describe('Markdown-экспорт: команда остаётся кодом', () => {
+  const payload = 'echo ok\n```\n<img src=x onerror=alert(1)>'
+
+  it('вставленное ограждение не закрывает блок кода', () => {
+    const md = toMarkdown(list([step({ command: payload })]), 'en')
+    const lines = md.split('\n')
+    const open = lines.findIndex((l) => /^\s*`{3,}$/.test(l))
+    const fence = lines[open].trim()
+    // Следующая строка-ограждение той же длины — это ЗАКРЫВАЮЩАЯ; между ней и
+    // открывающей обязана лежать вся полезная нагрузка, включая её три кавычки.
+    const close = lines.findIndex((l, i) => i > open && l.trim().length >= fence.length && /^`+$/.test(l.trim()))
+    const inside = lines.slice(open + 1, close)
+    expect(inside.some((l) => l.includes('<img src=x onerror=alert(1)>'))).toBe(true)
+    expect(inside.some((l) => l.trim() === '```')).toBe(true)
+  })
+
+  it('многострочная команда целиком лежит в отступе пункта', () => {
+    const md = toMarkdown(list([step({ command: 'cd /tmp\nmake all' })]), 'en')
+    expect(md).toContain('   cd /tmp')
+    expect(md).toContain('   make all')
+  })
+})
