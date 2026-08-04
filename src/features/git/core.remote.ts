@@ -3,6 +3,7 @@ import { Code, ConnectError, createClient } from '@connectrpc/connect'
 import { coreTransport, mirrorPushTimeoutMs } from '@/shared/core-transport'
 import type { GitCore, GitRepoRef } from '@/core'
 import { BranchOpError } from '@/core'
+import { toTransportError } from './transport-error'
 import { GitCore as GitCoreService, type RepoRef } from '@/shared/gen/git_pb'
 import { toWireContent } from './list-content'
 
@@ -28,45 +29,63 @@ function toNewVersion(n: number): number | null {
   return n === 0 ? null : n
 }
 
+/** Обёртка вызова протокола: наружу уходит только типизированный отказ
+ *  (раскладка кодов — в transport-error.ts, она проверяется юнитом отдельно). */
+async function proto<T>(op: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run()
+  } catch (e) {
+    throw toTransportError(e, op)
+  }
+}
+
 export const gitCoreRemote: GitCore = {
   async infoRefsUploadPack(repo, gitProtocol) {
-    const res = await client.infoRefsUploadPack({
-      repo: toRepoRef(repo),
-      gitProtocol: gitProtocol ?? '',
-    })
+    const res = await proto('info/refs upload-pack', () =>
+      client.infoRefsUploadPack({
+        repo: toRepoRef(repo),
+        gitProtocol: gitProtocol ?? '',
+      }),
+    )
     return res.data
   },
 
   async infoRefsReceivePack(repo, gitProtocol) {
-    const res = await client.infoRefsReceivePack({
-      repo: toRepoRef(repo),
-      gitProtocol: gitProtocol ?? '',
-    })
+    const res = await proto('info/refs receive-pack', () =>
+      client.infoRefsReceivePack({
+        repo: toRepoRef(repo),
+        gitProtocol: gitProtocol ?? '',
+      }),
+    )
     return res.data
   },
 
   async uploadPack(repo, body, gitProtocol) {
-    const res = await client.uploadPack({
-      repo: toRepoRef(repo),
-      body,
-      gitProtocol: gitProtocol ?? '',
-    })
+    const res = await proto('upload-pack', () =>
+      client.uploadPack({
+        repo: toRepoRef(repo),
+        body,
+        gitProtocol: gitProtocol ?? '',
+      }),
+    )
     return res.data
   },
 
   async receivePack(repo, body, opts) {
-    const res = await client.receivePack({
-      repo: toRepoRef(repo),
-      body,
-      gitProtocol: opts?.gitProtocol ?? '',
-      lang: opts?.lang ?? '',
-      actorId: opts?.actorId ?? '',
-      actorHandle: opts?.actorHandle ?? '',
-      // Ф5: пустая роль означает у ядра САМУЮ СТРОГУЮ («посторонний»), поэтому
-      // подставлять сюда «владельца» по умолчанию нельзя — это тихо раздало бы
-      // права. Пусто = пусть ядро решает строго.
-      actorRole: opts?.actorRole ?? '',
-    })
+    const res = await proto('receive-pack', () =>
+      client.receivePack({
+        repo: toRepoRef(repo),
+        body,
+        gitProtocol: opts?.gitProtocol ?? '',
+        lang: opts?.lang ?? '',
+        actorId: opts?.actorId ?? '',
+        actorHandle: opts?.actorHandle ?? '',
+        // Ф5: пустая роль означает у ядра САМУЮ СТРОГУЮ («посторонний»), поэтому
+        // подставлять сюда «владельца» по умолчанию нельзя — это тихо раздало бы
+        // права. Пусто = пусть ядро решает строго.
+        actorRole: opts?.actorRole ?? '',
+      }),
+    )
     return {
       data: res.data,
       newVersion: toNewVersion(res.newVersion),

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { db, users } from '@/shared/db'
 // eslint-disable-next-line no-restricted-imports -- git smart-HTTP: своя авторизация (токен/коллаборатор), не cookie-сессия
 import { getListMeta } from '@/features/library/queries'
-import { canEditList, canViewList, isPubliclyVisible } from '@/core'
+import { canEditList, canViewList, GitTransportError, isPubliclyVisible } from '@/core'
 import { contributorsEnabled, openForContributions, type PushRole } from '@/features/library/push-role'
 import { coreEnforcesPushRoles } from '@/features/git/capabilities'
 import { ensureBranchSuggestion } from '@/features/library/suggestion-core'
@@ -48,6 +48,30 @@ const authUnavailable = () =>
     status: 503,
     headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '30' },
   })
+
+const plain = (body: string, status: number, headers: Record<string, string> = {}) =>
+  new Response(body, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8', ...headers } })
+
+/**
+ * Отказ ядра → стабильный ответ протокола вместо 500 фреймворка.
+ *
+ * Роут рассчитывал на ветку `if (!body) return 'Repository unavailable'`, но
+ * адаптер в этом случае ничего не возвращал: он бросал ошибку транспорта, и она
+ * уходила мимо роута — git-клиент получал HTML страницы ошибки, а в наблюдаемость
+ * не попадало ни операции, ни репозитория (карточка 007).
+ *
+ * Коды разделены по смыслу: недоступность и дедлайн временные, их стоит повторить
+ * (503/504 + Retry-After); «ядро не знает такого репозитория» — рассинхрон с базой,
+ * для клиента это 404; остальное — 502: сломались не мы и не запрос, а ответ ядра.
+ */
+function coreFailure(e: unknown, repo: { owner: string; slug: string }): Response {
+  const err = e instanceof GitTransportError ? e : new GitTransportError('internal', 'unknown', { cause: e })
+  captureError(err, { where: 'git.core', op: err.op, code: err.code, owner: repo.owner, slug: repo.slug })
+  if (err.code === 'unavailable') return plain('Repository storage is temporarily unavailable, retry later\n', 503, { 'Retry-After': '30' })
+  if (err.code === 'timeout') return plain('Repository operation timed out, retry later\n', 504, { 'Retry-After': '30' })
+  if (err.code === 'not-found') return notFound()
+  return plain('Repository backend error\n', 502)
+}
 
 /** Результат разбора Basic: «не предъявлен» и «не принят» — разные вещи, а «сломалось» — третья. */
 type Basic =
@@ -265,8 +289,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
     // существования закрытого списка (карточка 015).
     const az = await gitAccess(req, handle, slug, 'read')
     if (az instanceof Response) return az
-    const body = await gitCore.infoRefsUploadPack({ owner: handle, slug }, gitProtocol)
-    if (!body) return new Response('Repository unavailable', { status: 500 })
+    let body: Uint8Array
+    try {
+      const res = await gitCore.infoRefsUploadPack({ owner: handle, slug }, gitProtocol)
+      if (!res) return coreFailure(new GitTransportError('internal', 'info/refs upload-pack'), { owner: handle, slug })
+      body = res
+    } catch (e) {
+      return coreFailure(e, { owner: handle, slug })
+    }
     return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-upload-pack-advertisement', ...noCache } })
   }
 
@@ -275,8 +305,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
     if (granted instanceof Response) return granted
     const az = await authorizeWrite(granted)
     if (az instanceof Response) return az
-    const body = await gitCore.infoRefsReceivePack({ owner: handle, slug }, gitProtocol)
-    if (!body) return new Response('Repository unavailable', { status: 500 })
+    let body: Uint8Array
+    try {
+      const res = await gitCore.infoRefsReceivePack({ owner: handle, slug }, gitProtocol)
+      if (!res) return coreFailure(new GitTransportError('internal', 'info/refs receive-pack'), { owner: handle, slug })
+      body = res
+    } catch (e) {
+      return coreFailure(e, { owner: handle, slug })
+    }
     return new Response(new Uint8Array(body), { headers: { 'Content-Type': 'application/x-git-receive-pack-advertisement', ...noCache } })
   }
 
@@ -305,6 +341,25 @@ async function terminalPushNote(repo: { owner: string; slug: string }, branch: s
   return subject || t('prFromTerminal', lang)
 }
 
+/**
+ * Граница эффектов ПОСЛЕ принятого пуша: сюда ошибка не проходит.
+ *
+ * За `gitCore.receivePack` пак уже принят, версия создана, git-объекты на месте.
+ * Любое исключение дальше — уведомления, аудит, модерация — превратило бы успешную
+ * запись в неуспешный `git push` для клиента, и тот пошёл бы пушить снова. Отказ
+ * доставки громко пишется в наблюдаемость, но ответ протокола не меняет.
+ *
+ * Отдельная функция, а не `.catch(() => {})` по месту: молчаливое глотание уже
+ * скрывало сбой рассылки, а пропуск одной строки (чтения наблюдателей) стоил P1.
+ */
+async function safeEffects(where: string, ctx: Record<string, unknown>, run: () => Promise<unknown>): Promise<void> {
+  try {
+    await run()
+  } catch (e) {
+    captureError(e, { where, ...ctx })
+  }
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ handle: string; slug: string; git: string[] }> }) {
   const rl = await rateLimit(`git:${clientIp(req)}`, 240, 60_000)
   if (!rl.ok) return tooMany(rl)
@@ -323,8 +378,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
       if (e instanceof GitBodyTooLarge) return tooLarge(e)
       throw e
     }
-    const out = await gitCore.uploadPack({ owner: handle, slug }, body, gitProtocol)
-    if (!out) return new Response('Repository unavailable', { status: 500 })
+    let out: Uint8Array
+    try {
+      const res = await gitCore.uploadPack({ owner: handle, slug }, body, gitProtocol)
+      if (!res) return coreFailure(new GitTransportError('internal', 'upload-pack'), { owner: handle, slug })
+      out = res
+    } catch (e) {
+      return coreFailure(e, { owner: handle, slug })
+    }
     return new Response(new Uint8Array(out), { headers: { 'Content-Type': 'application/x-git-upload-pack-result', ...noCache } })
   }
 
@@ -380,16 +441,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
       if (!rlLate.ok) return tooMany(rlLate)
     }
     const who = await pusher(az.userId, req)
-    const res = await gitCore.receivePack(
-      { owner: handle, slug },
-      body,
-      // Ф5: роль едет вместе с автором — ядро исполнит по ней правило пространства.
-      // `actorHandle` — переходное поле для СТАРОГО ядра: пока на проде Ф4, ветку
-      // правки оно называет по нику и без него отвергает магический реф. Новое
-      // ядро его игнорирует. Убрать, когда ядро с Ф5 везде (трек git-surface).
-      { gitProtocol, lang: who.lang, actorId: az.userId, actorHandle: who.handle, actorRole: role },
-    )
-    if (!res) return new Response('Repository unavailable', { status: 500 })
+    let res: Awaited<ReturnType<typeof gitCore.receivePack>>
+    try {
+      res = await gitCore.receivePack(
+        { owner: handle, slug },
+        body,
+        // Ф5: роль едет вместе с автором — ядро исполнит по ней правило пространства.
+        // `actorHandle` — переходное поле для СТАРОГО ядра: пока на проде Ф4, ветку
+        // правки оно называет по нику и без него отвергает магический реф. Новое
+        // ядро его игнорирует. Убрать, когда ядро с Ф5 везде (трек git-surface).
+        { gitProtocol, lang: who.lang, actorId: az.userId, actorHandle: who.handle, actorRole: role },
+      )
+    } catch (e) {
+      // ВАЖНО: это единственное место, где ошибка ядра ещё означает «пак не принят».
+      // Всё, что ниже, происходит уже ПОСЛЕ записи, и туда отказ пробрасывать нельзя.
+      return coreFailure(e, { owner: handle, slug })
+    }
+    if (!res) return coreFailure(new GitTransportError('internal', 'receive-pack'), { owner: handle, slug })
     // Ф4: магический пуш `refs/for/main` — ядро положило коммиты в ветку автора,
     // предложение делаем здесь. Ядро о нумерации, уведомлениях и аудите не знает
     // и знать не должно (ADR-0015 провёл ту же границу для предусловий записи).
@@ -445,13 +513,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ handle:
     )
     // Уведомление наблюдателей + аудит — delivery-эффекты, вне git-ядра.
     if (res.newVersion != null) {
-      const watchers = await getWatcherIds(meta.id, 'versions')
-      await notifyMany(watchers, { type: 'new_version', templateId: meta.id }).catch(() => {})
-      await recordAudit('git.push', { actorId: az.userId, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } })
+      await safeEffects('git.push-notify', { slug }, async () => {
+        // Список наблюдателей читается из БД, и его сбой роняет ответ на УЖЕ
+        // принятый пуш: `.catch()` стоял только на рассылке, строкой ниже
+        // (карточка 002). Клиент видел неуспешный `git push` при записанных
+        // данных и логично пробовал ещё раз.
+        const watchers = await getWatcherIds(meta.id, 'versions')
+        await notifyMany(watchers, { type: 'new_version', templateId: meta.id })
+      })
+      await safeEffects('git.push-audit', { slug }, () =>
+        recordAudit('git.push', { actorId: az.userId, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } }),
+      )
       // push меняет title/desc/tags минуя формы → пере-проверяем публичный список в фоне.
       if (meta.visibility === 'public') {
-        const { recheckList } = await import('@/features/moderation/moderate-list')
-        await recheckList(meta.id).catch(() => {})
+        await safeEffects('git.push-recheck', { slug }, async () => {
+          const { recheckList } = await import('@/features/moderation/moderate-list')
+          await recheckList(meta.id)
+        })
       }
     }
     return new Response(new Uint8Array(res.data), { headers: { 'Content-Type': 'application/x-git-receive-pack-result', ...noCache } })
