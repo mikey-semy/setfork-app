@@ -43,6 +43,8 @@ import { applyFieldValue } from './suggestion-apply'
 import { parseTags, slugify } from './slug'
 import { registerTags } from '@/features/tags/service'
 import { canEditList, canViewList } from '@/core'
+import { hasChanges, summarizeDiffForNote } from './change-summary'
+import { diffSteps, rowsToCmp } from './diff'
 
 /**
  * Ленивый доступ к git-порту и его ошибкам.
@@ -1057,17 +1059,17 @@ export async function generateChangeNoteAction(
   const baseSteps = cur
     ? await db.select().from(steps).where(eq(steps.versionId, cur.id)).orderBy(asc(steps.n))
     : []
-  const base = baseSteps.map((s) => ({
-    title: tr(s.title, lang),
-    desc: tr(s.desc, lang),
-    command: s.command,
-    subtasks: s.subtasks.map((x) => tr(x, lang)),
-  }))
-  const next = parseEditorItems(itemsJson)
-    .filter((it) => it.title.trim())
-    .map((it) => ({ title: it.title, desc: it.desc, command: it.command, subtasks: it.subtasks.filter((s) => s.trim()) }))
+  // Заметку пишем по СТРУКТУРНОМУ диффу — тому же, что показывает страница сравнения.
+  // Списком заголовков правка описания или команды не видна, и модель, не найдя
+  // разницы, сочиняла совет вместо описания (жалоба владельца 04.08.2026).
+  const baseCmp = rowsToCmp(baseSteps as unknown as Parameters<typeof rowsToCmp>[0], lang)
+  const nextRows = toProposedItems(parseEditorItems(itemsJson), lang)
+  const nextCmp = rowsToCmp(nextRows as unknown as Parameters<typeof rowsToCmp>[0], lang)
+  const { entries, summary } = diffSteps(baseCmp, nextCmp)
+  // Менять нечего — модель не зовём вовсе: это и лишний расход, и источник выдумок.
+  if (!hasChanges(summary)) return { error: 'nochange' }
 
-  const note = await generateChangeNote(base, next, lang, { userId: session.userId, refType: 'template', refId: tpl.id })
+  const note = await generateChangeNote(summarizeDiffForNote(entries), lang, { userId: session.userId, refType: 'template', refId: tpl.id })
   if (!note) return { error: 'aifail' }
   return { note }
 }
