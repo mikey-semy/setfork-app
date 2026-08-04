@@ -15,6 +15,7 @@ const h = vi.hoisted(() => ({
   // Падает ли ПОСТАНОВКА задачи доставки — единственный эффект, оставшийся на пути пуша.
   enqueueThrows: false,
   newVersion: null as number | null,
+  magic: [] as { branch: string; tipSha: string }[],
   captured: [] as { where: unknown; op?: unknown }[],
   calls: { receive: 0 },
 }))
@@ -51,7 +52,7 @@ vi.mock('@/features/git/core', () => ({
     receivePack: async () => {
       h.calls.receive++
       if (h.coreThrows) throw h.coreThrows
-      return { data: Buffer.from('unpack ok'), newVersion: h.newVersion, magic: [] }
+      return { data: Buffer.from('unpack ok'), newVersion: h.newVersion, magic: h.magic }
     },
   },
 }))
@@ -88,6 +89,7 @@ beforeEach(async () => {
   h.coreThrows = null
   h.enqueueThrows = false
   h.newVersion = null
+  h.magic = []
   h.captured = []
   h.calls.receive = 0
   await db.delete(jobs)
@@ -160,10 +162,20 @@ describe('после принятого пака ответ не зависит 
     expect(h.calls.receive).toBe(1) // повторной записи из-за сбоя эффекта не происходит
   })
 
-  it('пуш без новой версии тоже ставит задачу: ветка правки — это тоже эффект', async () => {
+  it('пуш, которому нечего доставлять, задачу НЕ ставит', async () => {
+    // Ни новой версии, ни ветки правки (например, обновление существующего рефа):
+    // пустое намерение в очереди — это шум, который воркер будет разбирать зря.
     h.newVersion = null
     await service('git-receive-pack')
     const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(jobs)
-    expect(n).toBe(1)
+    expect(n).toBe(0)
+  })
+
+  it('ветка правки без новой версии — эффект есть, задача ставится', async () => {
+    h.newVersion = null
+    h.magic = [{ branch: 'u/pr-owner/main', tipSha: 'abc123' }]
+    await service('git-receive-pack')
+    const rows = await db.select({ type: jobs.type }).from(jobs)
+    expect(rows.map((r) => r.type)).toEqual(['git_push'])
   })
 })

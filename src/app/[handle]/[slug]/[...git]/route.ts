@@ -360,22 +360,29 @@ async function receivePack(req: Request, op: GitHttpOperation, meta: Meta, early
   // Дальше пак УЖЕ принят. Единственное, что делается синхронно, — запись намерения в
   // очередь: предложение из ветки, уведомления, аудит и модерация исполняются фоном и
   // не имеют права держать байты протокола (карточка 008).
-  await scheduleAcceptedPushEffects({
-    repo: op.repo,
-    listId: meta.id,
-    ownerId: meta.ownerId,
-    currentVersion: meta.currentVersion,
-    actorId: early.userId,
-    actorHandle: who.handle,
-    lang: who.lang,
-    newVersion: res.newVersion ?? null,
-    // `?? []` — не перестраховка: фронт выкатывается РАНЬШЕ ядра, и у старого ядра поля
-    // magic в ответе нет вовсе. Убрать, когда ядро с Ф4 на проде.
-    magic: (res.magic ?? []).map((m) => ({ branch: m.branch, tipSha: m.tipSha })),
-    isPublic: meta.visibility === 'public',
-    // Адрес берём ЗДЕСЬ: у фоновой задачи request-контекста нет, и без явного значения
-    // аудит записался бы без адреса (см. док у `AcceptedPush.ip`).
-    ip: clientIp(req),
-  })
+  //
+  // Доставлять нечего — задачу не ставим: пуш, не создавший ни версии, ни ветки правки
+  // (например, обновление уже существующего рефа), иначе клал бы в очередь пустое
+  // намерение на каждый вызов.
+  // `?? []` у magic — не перестраховка: фронт выкатывается РАНЬШЕ ядра, и у старого ядра
+  // этого поля в ответе нет вовсе. Убрать, когда ядро с Ф4 на проде.
+  const magic = (res.magic ?? []).map((m) => ({ branch: m.branch, tipSha: m.tipSha }))
+  if (res.newVersion != null || magic.length > 0) {
+    await scheduleAcceptedPushEffects({
+      repo: op.repo,
+      listId: meta.id,
+      ownerId: meta.ownerId,
+      currentVersion: meta.currentVersion,
+      actorId: early.userId,
+      actorHandle: who.handle,
+      lang: who.lang,
+      newVersion: res.newVersion ?? null,
+      magic,
+      isPublic: meta.visibility === 'public',
+      // Адрес берём ЗДЕСЬ: у фоновой задачи request-контекста нет, и без явного значения
+      // аудит записался бы без адреса (см. док у `AcceptedPush.ip`).
+      ip: clientIp(req),
+    })
+  }
   return gitBytesResponse(res.data, GIT_CONTENT_TYPE.receive)
 }
