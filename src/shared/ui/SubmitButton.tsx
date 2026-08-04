@@ -15,12 +15,17 @@ export function SubmitButton({
   variant = 'primary',
   size = 'md',
   'aria-label': ariaLabel,
+  formAction,
 }: {
   children: React.ReactNode
   className?: string
   variant?: ButtonVariant
   size?: ButtonSize
   'aria-label'?: string
+  /** Своё действие для этой кнопки. Нужно формам с ДВУМЯ исходами (сохранить /
+   *  опубликовать): вторая кнопка обязана отправлять те же поля, что видит человек,
+   *  а не жить в отдельной форме со своим, уже устаревшим состоянием. */
+  formAction?: (formData: FormData) => void | Promise<void>
 }) {
   const { pending } = useFormStatus()
   return (
@@ -31,6 +36,7 @@ export function SubmitButton({
       disabled={pending}
       aria-busy={pending}
       aria-label={ariaLabel}
+      formAction={formAction}
       className={className}
     >
       {children}

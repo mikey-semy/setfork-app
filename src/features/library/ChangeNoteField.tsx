@@ -12,13 +12,21 @@ export function ChangeNoteField({
   templateId,
   lang,
   placeholder,
+  required = true,
+  initial = '',
 }: {
   templateId: string
   lang: Lang
   placeholder: string
+  /** Уже написанная заметка (из черновика): без неё повторное сохранение затирало
+   *  её пустотой — поле контролируемое и стартовало с ''. */
+  initial?: string
+  /** Обязательна ли заметка. У черновика — нет: он копится, а описывают правку при
+   *  публикации. Обязательное поле здесь просто не давало сохранить черновик. */
+  required?: boolean
 }) {
   const ru = lang === 'ru'
-  const [note, setNote] = useState('')
+  const [note, setNote] = useState(initial)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [invalid, setInvalid] = useState(false)
@@ -46,7 +54,7 @@ export function ChangeNoteField({
         <input
           ref={ref}
           name="note"
-          required
+          required={required}
           value={note}
           onChange={(e) => {
             setNote(e.target.value)

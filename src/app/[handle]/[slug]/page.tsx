@@ -32,7 +32,7 @@ import { digStepsWithSession } from '@/features/dig/queries'
 import { getRoster } from '@/shared/ai/roster'
 import { StepLevelBadge } from '@/shared/ui/StepLevelBadge'
 import { timeAgo } from '@/shared/ui/timeAgo'
-import { getContributors, getStepPreviews, getVersionAuthors, getVersionSteps } from '@/features/library/queries'
+import { getContributors, getStepPreviews, getVersionAuthors, getVersionSteps, getDraft } from '@/features/library/queries'
 import { CommitBar } from '@/features/library/CommitBar'
 import { ListStats } from '@/features/library/ListStats'
 import { getWatchCount } from '@/features/watch/queries'
@@ -60,7 +60,7 @@ import { ViewBeacon } from '@/features/analytics/ViewBeacon'
 import { ListActionsMenu } from '@/features/library/ListActionsMenu'
 import { ReportButton } from '@/features/reports/ReportButton'
 import { publishList } from '@/features/library/actions'
-import { PAGE, STACK } from '@/shared/ui/control'
+import { CONTROL_H, CONTROL_TEXT, PAGE, STACK } from '@/shared/ui/control'
 
 function fmt(n: number): string {
   if (n >= 1000) return (n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0) + 'k'
@@ -143,6 +143,9 @@ export default async function ListPage({
   const digSteps = viewer && !readOnlyView ? await digStepsWithSession(tpl.id, viewer.userId) : new Set<number>()
   // Ветками управляют те, кто может пушить: владелец или коллаборатор.
   const canManageBranches = isOwner || (!!viewer && (await isCollaborator(tpl.id, viewer.userId)))
+  // Черновик правок ТЕКУЩЕГО зрителя (у каждого автора свой) — только чтобы показать
+  // метку «есть неопубликованные правки»; содержимое списка он не подменяет.
+  const myDraft = viewer && !readOnlyView && (isOwner || canManageBranches) ? await getDraft(tpl.id, viewer.userId) : null
   // Резолвим скриншоты шагов (storage_key → подписанный imgproxy-URL), ключ = id шага.
   const previews = await getStepPreviews(steps, 'rs:fit:1400:1400')
   const stepImages: Record<string, string> = Object.fromEntries(
@@ -335,6 +338,30 @@ export default async function ListPage({
                 />
               </div>
             </div>
+
+            {/* Неопубликованные правки видит только тот, кто их писал: черновик у
+                каждого автора свой, и чужой черновик — не его дело. Без этой метки
+                про накопленные правки легко забыть — список выглядит как обычно. */}
+            {myDraft && (
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-2 px-4 py-3 print:hidden">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-ink">
+                    <FileText size={15} className="text-muted" /> {t('draftEditsPending', lang)}
+                  </div>
+                  <p className="mt-0.5 text-[0.78125rem] text-ink-2">
+                    {t('draftEditsPendingHint', lang).replace('{when}', timeAgo(myDraft.updatedAt, lang))}
+                  </p>
+                </div>
+                {/* Ссылка-кнопка тем же размером, что кнопки рядом: высоты берём из
+                    шкалы контролов, а не подбираем на глаз. */}
+                <Link
+                  href={`${base}/edit`}
+                  className={`inline-flex ${CONTROL_H.md} items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 ${CONTROL_TEXT.md} font-semibold text-ink hover:border-border-strong`}
+                >
+                  {t('openDraft', lang)}
+                </Link>
+              </div>
+            )}
 
             {tpl.status === 'draft' && isOwner && (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-warn bg-surface px-4 py-3 print:hidden">
