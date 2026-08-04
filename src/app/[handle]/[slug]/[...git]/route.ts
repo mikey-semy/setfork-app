@@ -5,7 +5,6 @@ import { getListMeta } from '@/features/library/queries'
 import { canEditList, canViewList, GitTransportError, isPubliclyVisible } from '@/core'
 import { contributorsEnabled, openForContributions, type PushRole } from '@/features/library/push-role'
 import { coreEnforcesPushRoles } from '@/features/git/capabilities'
-import { ensureBranchSuggestion } from '@/features/library/suggestion-core'
 import { captureError } from '@/shared/observability'
 import { isCollaborator } from '@/features/collab/queries'
 import { gitCore } from '@/features/git/core'
@@ -13,12 +12,10 @@ import { GitBodyMalformed, GitBodyTooLarge, maybeGunzip, readGitBody } from '@/f
 import { identifyGitActor } from '@/features/git/http-auth'
 import { GIT_CONTENT_TYPE, parseGitHttpRequest, type GitHttpOperation } from '@/features/git/http-request'
 import { gitBytesResponse, gitFailureResponse, type GitHttpFailure } from '@/features/git/http-response'
-import { notifyMany } from '@/features/notifications/notify'
-import { getWatcherIds } from '@/features/watch/queries'
-import { recordAudit } from '@/shared/audit'
+import { scheduleAcceptedPushEffects } from '@/features/git/push-effects'
 import { clientIp, rateLimit } from '@/shared/rate-limit'
 import { envNumber } from '@/shared/env'
-import { t, type Lang } from '@/shared/i18n'
+import type { Lang } from '@/shared/i18n'
 
 // git smart-HTTP: `git clone/pull/push https://host/{owner}/{slug}.git`.
 // Работает из VSCode. Источник правды — персистентный bare-репо внутри ядра
@@ -216,48 +213,7 @@ async function readBody(req: Request, operation: 'read' | 'write'): Promise<Buff
 
 const isFailure = (x: unknown): x is GitHttpFailure => !!x && typeof x === 'object' && 'code' in x
 
-/**
- * Заголовок предложения, пришедшего из терминала.
- *
- * По умолчанию `ensureBranchSuggestion` берёт `Merge branch '<ветка>'`, а ветку
- * магическому пушу называет сервер — `u/<идентификатор>/<база>`. В списке предложений
- * это самая крупная строка карточки, и в ней торчал бы внутренний идентификатор:
- * подпись `branchLabel` прячет его в метаданных, но заголовок лежит в базе отдельным
- * полем и форматтеру не подчиняется (авто-ревью fe#662).
- *
- * Берём тему коммита — ровно как GitHub, который подставляет в заголовок PR тему
- * единственного коммита, а при нескольких переходит на имя ветки. Имя ветки нам не
- * годится, поэтому вторая ветка развилки — общая подпись.
- *
- * Ошибку глотаем: заголовок — не повод отменять уже принятый пуш.
- */
-async function terminalPushNote(repo: { owner: string; slug: string }, branch: string, lang: Lang): Promise<string> {
-  const commits = await gitCore.listCommits(repo, branch, { notIn: 'main', limit: 2 }).catch(() => null)
-  // Первая строка сообщения: остальное — тело коммита, в заголовок ему нельзя.
-  const subject = commits?.length === 1 ? (commits[0]?.message.split('\n')[0]?.trim() ?? '') : ''
-  return subject || t('prFromTerminal', lang)
-}
-
-/**
- * Граница эффектов ПОСЛЕ принятого пуша: сюда ошибка не проходит.
- *
- * За `gitCore.receivePack` пак уже принят, версия создана, git-объекты на месте. Любое
- * исключение дальше — уведомления, аудит, модерация — превратило бы успешную запись в
- * неуспешный `git push` для клиента, и тот пошёл бы пушить снова. Отказ доставки громко
- * пишется в наблюдаемость, но ответ протокола не меняет.
- *
- * Отдельная функция, а не `.catch(() => {})` по месту: молчаливое глотание уже скрывало
- * сбой рассылки, а пропуск одной строки (чтения наблюдателей) стоил P1.
- */
-async function safeEffects(where: string, ctx: Record<string, unknown>, run: () => Promise<unknown>): Promise<void> {
-  try {
-    await run()
-  } catch (e) {
-    captureError(e, { where, ...ctx })
-  }
-}
-
-type RouteContext = { params: Promise<{ handle: string; slug: string; git: string[] }> }
+type RouteContext ={ params: Promise<{ handle: string; slug: string; git: string[] }> }
 
 export async function GET(req: Request, ctx: RouteContext) {
   return dispatch(req, ctx, 'GET')
@@ -401,83 +357,32 @@ async function receivePack(req: Request, op: GitHttpOperation, meta: Meta, early
   }
   if (!res) return gitFailureResponse(coreFailure(new GitTransportError('internal', 'receive-pack'), op.repo))
 
-  await pushEffects({ repo: op.repo, meta, actorId: early.userId, lang: who.lang, handle: who.handle }, res)
-  return gitBytesResponse(res.data, GIT_CONTENT_TYPE.receive)
-}
-
-/** Всё, что происходит ПОСЛЕ принятого пака: ни один сбой здесь не меняет ответ клиенту. */
-async function pushEffects(
-  ctx: { repo: { owner: string; slug: string }; meta: Meta; actorId: string; lang: Lang; handle: string },
-  res: NonNullable<Awaited<ReturnType<typeof gitCore.receivePack>>>,
-): Promise<void> {
-  const { repo, meta, actorId } = ctx
-  const slug = repo.slug
-  // Ф4: магический пуш `refs/for/main` — ядро положило коммиты в ветку автора,
-  // предложение делаем здесь. Ядро о нумерации, уведомлениях и аудите не знает и знать
-  // не должно (ADR-0015 провёл ту же границу для предусловий записи).
+  // Дальше пак УЖЕ принят. Единственное, что делается синхронно, — запись намерения в
+  // очередь: предложение из ветки, уведомления, аудит и модерация исполняются фоном и
+  // не имеют права держать байты протокола (карточка 008).
   //
-  // Идемпотентно по ветке: повторный пуш двигает ту же ветку и обновляет ТО ЖЕ
-  // предложение — новая ревизия, а не второе предложение.
-  // `?? []` — не перестраховка: фронт выкатывается РАНЬШЕ ядра, и у старого ядра поля
-  // magic в ответе нет вовсе. Без этого первый же push после выкатки фронта падал бы с
-  // TypeError уже ПОСЛЕ приёма пака — то есть человек видел бы ошибку на успешном пуше.
-  // Убрать, когда ядро с Ф4 на проде.
-  await Promise.all(
-    (res.magic ?? []).map(async (m) => {
-      try {
-        // Ветка обязана материализоваться в список — ровно как на пути кнопки «Открыть
-        // предложение». Хук требует наличия list.json, но не его разбираемости: битый
-        // JSON проходит `cat-file -e`. Предложение, которое не рендерится, хуже
-        // отсутствующего (авто-ревью fe#636).
-        const snap = await gitCore.branchSnapshot(repo, m.branch).catch(() => null)
-        if (!snap) {
-          captureError(new Error('magic push: branch does not materialize as a list'), { where: 'git.magic-push', slug, branch: m.branch })
-          return
-        }
-        const sug = await ensureBranchSuggestion({
-          templateId: meta.id,
-          ownerId: meta.ownerId,
-          currentVersion: meta.currentVersion,
-          authorId: actorId,
-          branch: m.branch,
-          note: await terminalPushNote(repo, m.branch, ctx.lang),
-          // ПЕРЕХОДНОЕ: как ветка называлась бы у ядра до Ф5 — по нику. Нужно, чтобы
-          // ревизия правки, начатой в окно выкатки, продолжила ТО ЖЕ предложение.
-          // Убрать вместе с `actorHandle`.
-          legacyBranch: ctx.handle ? `u/${ctx.handle}/${m.branch.split('/')[2] ?? 'main'}` : undefined,
-        })
-        await recordAudit('git.suggest', {
-          actorId,
-          targetType: 'suggestion',
-          targetId: sug.id,
-          meta: { slug, branch: m.branch, tip: m.tipSha, revision: sug.created ? 'first' : 'new' },
-        })
-      } catch (e) {
-        // Пуш УЖЕ принят: git-объекты на месте, ветка автора создана. Уронить здесь ответ
-        // значило бы показать человеку ошибку при успешном пуше и подтолкнуть его пушить
-        // снова. Громко в лог — и живём: предложение можно открыть кнопкой из этой же
-        // ветки.
-        captureError(e, { where: 'git.magic-push', slug, branch: m.branch })
-      }
-    }),
-  )
-  if (res.newVersion == null) return
-  // Уведомление наблюдателей + аудит — delivery-эффекты, вне git-ядра.
-  await safeEffects('git.push-notify', { slug }, async () => {
-    // Список наблюдателей читается из БД, и его сбой роняет ответ на УЖЕ принятый пуш:
-    // `.catch()` стоял только на рассылке, строкой ниже (карточка 002). Клиент видел
-    // неуспешный `git push` при записанных данных и логично пробовал ещё раз.
-    const watchers = await getWatcherIds(meta.id, 'versions')
-    await notifyMany(watchers, { type: 'new_version', templateId: meta.id })
-  })
-  await safeEffects('git.push-audit', { slug }, () =>
-    recordAudit('git.push', { actorId, targetType: 'list', targetId: meta.id, meta: { version: res.newVersion, slug } }),
-  )
-  // push меняет title/desc/tags минуя формы → пере-проверяем публичный список в фоне.
-  if (meta.visibility === 'public') {
-    await safeEffects('git.push-recheck', { slug }, async () => {
-      const { recheckList } = await import('@/features/moderation/moderate-list')
-      await recheckList(meta.id)
+  // Доставлять нечего — задачу не ставим: пуш, не создавший ни версии, ни ветки правки
+  // (например, обновление уже существующего рефа), иначе клал бы в очередь пустое
+  // намерение на каждый вызов.
+  // `?? []` у magic — не перестраховка: фронт выкатывается РАНЬШЕ ядра, и у старого ядра
+  // этого поля в ответе нет вовсе. Убрать, когда ядро с Ф4 на проде.
+  const magic = (res.magic ?? []).map((m) => ({ branch: m.branch, tipSha: m.tipSha }))
+  if (res.newVersion != null || magic.length > 0) {
+    await scheduleAcceptedPushEffects({
+      repo: op.repo,
+      listId: meta.id,
+      ownerId: meta.ownerId,
+      currentVersion: meta.currentVersion,
+      actorId: early.userId,
+      actorHandle: who.handle,
+      lang: who.lang,
+      newVersion: res.newVersion ?? null,
+      magic,
+      isPublic: meta.visibility === 'public',
+      // Адрес берём ЗДЕСЬ: у фоновой задачи request-контекста нет, и без явного значения
+      // аудит записался бы без адреса (см. док у `AcceptedPush.ip`).
+      ip: clientIp(req),
     })
   }
+  return gitBytesResponse(res.data, GIT_CONTENT_TYPE.receive)
 }
