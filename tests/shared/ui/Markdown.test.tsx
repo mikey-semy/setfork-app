@@ -27,3 +27,24 @@ describe('Markdown', () => {
     expect(container.firstChild).toBeNull()
   })
 })
+
+// Перенос по любому месту нужен абзацам и ссылкам, но НЕ ячейкам таблицы: там он
+// ломал слова посреди буквы («Manage/r»), когда колонка сжата. Таблица едет в своём
+// контейнере со скроллом — это и есть штатный способ показать широкую таблицу.
+describe('Markdown: таблица', () => {
+  const table = ['| Что | Куда |', '| --- | --- |', '| Базы данных | Manager |'].join('\n')
+
+  it('ячейки не рвут слова по буквам', () => {
+    const { container } = render(<Markdown>{table}</Markdown>)
+    const el = container.querySelector('table')
+    expect(el?.className).toContain('[overflow-wrap:normal]')
+  })
+
+  it('таблица не сжимается уже содержимого и скроллится в своём контейнере', () => {
+    const { container } = render(<Markdown>{table}</Markdown>)
+    const el = container.querySelector('table')
+    expect(el?.className).toContain('w-max')
+    expect(el?.className).toContain('min-w-full')
+    expect(el?.parentElement?.className).toContain('overflow-x-auto')
+  })
+})

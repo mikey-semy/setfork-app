@@ -59,9 +59,15 @@ export function Markdown({ children, className, refBase }: { children: string; c
           img: (p) => (
             <SmartImage src={typeof p.src === 'string' ? p.src : ''} alt={p.alt || ''} className="my-1.5 max-w-full rounded-md border border-border" />
           ),
+          // ТАБЛИЦА — исключение из «рвать длинные слова». Перенос по любому месту
+          // задан на обёртке ради абзацев и ссылок, но в ячейке он ломает слова
+          // посреди буквы («Manage/r»), потому что колонка сжимается до предела
+          // (жалоба владельца 04.08.2026). У таблицы для этого есть свой контейнер
+          // со скроллом: w-max + min-w-full — не уже контейнера, но и не сжимается
+          // ниже содержимого, а горизонтально едет сам контейнер, не страница.
           table: (p) => (
             <div className="overflow-x-auto">
-              <table {...p} className="w-full border-collapse text-[0.78125rem]" />
+              <table {...p} className="w-max min-w-full border-collapse text-[0.78125rem] [overflow-wrap:normal]" />
             </div>
           ),
           th: (p) => <th {...p} className="border border-border px-2 py-1 text-left font-semibold text-ink" />,
