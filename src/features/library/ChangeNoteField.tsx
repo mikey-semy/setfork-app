@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { generateChangeNoteAction } from './actions'
 
@@ -17,7 +17,6 @@ export function ChangeNoteField({
   lang: Lang
   placeholder: string
 }) {
-  const ru = lang === 'ru'
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -33,7 +32,10 @@ export function ChangeNoteField({
     const res = await generateChangeNoteAction(templateId, itemsJson)
     setBusy(false)
     if ('error' in res) {
-      setErr(res.error === 'ratelimited' ? (ru ? 'Слишком часто — подожди.' : 'Too many requests.') : ru ? 'Не удалось сгенерировать.' : 'Could not generate.')
+      // «Изменений нет» — не сбой ИИ, а факт: описывать нечего, и модель не звалась
+      // вовсе. Раньше в этом случае она сочиняла совет вместо описания правки.
+      const key = res.error === 'nochange' ? 'changeNoteNothing' : res.error === 'ratelimited' ? 'changeNoteTooOften' : 'changeNoteFailed'
+      setErr(t(key, lang))
       return
     }
     setNote(res.note)
@@ -66,19 +68,19 @@ export function ChangeNoteField({
           }`}
         />
         {/* Иконка-генерация внутри инпута справа, как commit-message в VSCode */}
-        <Tooltip label={ru ? 'Сгенерировать из изменений' : 'Generate commit message from changes'}>
+        <Tooltip label={t('generateFromChanges', lang)}>
           <button
             type="button"
             onClick={generate}
             disabled={busy}
-            aria-label={ru ? 'Сгенерировать из изменений' : 'Generate commit message from changes'}
+            aria-label={t('generateFromChanges', lang)}
             className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink-2"
           >
             {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
           </button>
         </Tooltip>
       </div>
-      {invalid && <p className="mt-1 text-[0.78125rem] text-danger">{ru ? 'Опишите, что изменили и почему.' : 'Describe what you changed and why.'}</p>}
+      {invalid && <p className="mt-1 text-[0.78125rem] text-danger">{t('changeNoteRequired', lang)}</p>}
       {err && <p className="mt-1 text-[0.78125rem] text-danger">{err}</p>}
     </div>
   )
