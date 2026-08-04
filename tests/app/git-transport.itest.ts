@@ -138,6 +138,14 @@ describe('discovery: кто может узнать о существовани�
     expect((await get(PUB, 'info/refs', '?service=git-evil-pack')).status).toBe(403)
     expect((await get(PUB, 'objects/info/packs')).status).toBe(404)
   })
+
+  it('discovery БЕЗ параметров — это тупой протокол, а не плохой запрос', async () => {
+    // «Dumb HTTP clients MUST make a GET request to $GIT_URL/info/refs, without any
+    // search/query parameters» (gitprotocol-http). Мы его не обслуживаем — 403,
+    // а не 400: запрос валиден, просто сервис не предоставляется.
+    const res = await get(PUB, 'info/refs')
+    expect(res.status).toBe(403)
+  })
 })
 
 describe('сервисы: передача байтов и отказы ядра', () => {

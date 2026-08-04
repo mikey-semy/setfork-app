@@ -48,14 +48,21 @@ export function parseGitHttpRequest(req: RawRequest): GitHttpOperation | GitHttp
 
   if (req.method === 'GET') {
     if (path !== 'info/refs') return { code: 'not_found' }
-    const params = [...new URL(req.url).searchParams.keys()]
-    // Ровно один параметр, и это `service`. Лишние параметры — не «мусор, который
-    // можно игнорировать»: они делают канонический URL неоднозначным.
+    const query = new URL(req.url).searchParams
+    const params = [...query.keys()]
+    // Запрос БЕЗ параметров — это не поломка, а discovery ТУПОГО протокола:
+    // «Dumb HTTP clients MUST make a GET request to $GIT_URL/info/refs, without any
+    // search/query parameters» (gitprotocol-http). Мы его не обслуживаем — значит
+    // «сервис недоступен», как и было до разбора файла, а не «плохой запрос».
+    if (params.length === 0) return { code: 'service_not_available' }
+    // А вот у умного discovery контракт жёсткий: «The request MUST contain exactly one
+    // query parameter, service=$servicename… MUST NOT contain additional query
+    // parameters». Лишние параметры — не мусор, который можно игнорировать: они делают
+    // канонический URL неоднозначным для кешей и прокси.
     if (params.length !== 1 || params[0] !== 'service') {
       return { code: 'bad_request', detail: 'Smart HTTP discovery takes exactly one query parameter: service' }
     }
-    const service = new URL(req.url).searchParams.get('service') ?? ''
-    const known = SERVICES[service]
+    const known = SERVICES[query.get('service') ?? '']
     // Неизвестный сервис — это не «плохой запрос», а «мы его не обслуживаем»:
     // так же отвечает git-сервер на выключенный receive-pack.
     if (!known) return { code: 'service_not_available' }
