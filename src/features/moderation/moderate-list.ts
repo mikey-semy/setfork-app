@@ -1,10 +1,11 @@
 import 'server-only'
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm'
-import { db, jobs, steps, templates, templateVersions, users } from '@/shared/db'
+import { db, jobs, steps, templates, templateVersions } from '@/shared/db'
 import type { LocaleText } from '@/shared/i18n'
 import { captureError } from '@/shared/observability'
 import { moderateContent, type ModerationVerdict } from '@/shared/ai/moderate'
 import { getApiKey } from '@/shared/settings/ai'
+import { publicationDecision } from '@/shared/moderation/publication-state'
 import { globalBudgetOk } from '@/shared/quota'
 import { enqueueJob } from '@/shared/jobs/queue'
 import {
@@ -84,25 +85,6 @@ export function verdictReason(v: ModerationVerdict): string {
   return `AI [${v.category || '—'}]: ${v.reason}`
 }
 
-/** Доверенный автор (Discourse-модель): кураторский аккаунт либо история
- *  без нарушений (≥3 живых публичных списков НЕ считая проверяемого, 0 flagged/hidden).
- *  В зачёт идут только СВОИ (origin='authored') списки: иначе доверие накручивалось бы
- *  форками чужих хороших списков (форкнул 3 популярных → мгновенно «доверенный»). */
-async function isTrustedAuthor(ownerId: string, exceptTemplateId: string): Promise<boolean> {
-  const [r] = await db
-    .select({
-      curated: users.curated,
-      good: sql<number>`count(*) filter (where ${templates.moderation} = 'active' and ${templates.visibility} = 'public' and ${templates.status} = 'published' and ${templates.origin} = 'authored' and ${templates.id} <> ${exceptTemplateId})::int`,
-      bad: sql<number>`count(*) filter (where ${templates.moderation} in ('flagged','hidden'))::int`,
-    })
-    .from(users)
-    .leftJoin(templates, eq(templates.ownerId, users.id))
-    .where(eq(users.id, ownerId))
-    .groupBy(users.id, users.curated)
-  if (!r) return false
-  return r.curated || (r.good >= 3 && r.bad === 0)
-}
-
 /** Нарушитель: уже имеет flagged/hidden списки (кроме проверяемого). Ему не
  *  положен fail-open — при недоступном ИИ его публикация ждёт человека. */
 async function isOffenderAuthor(ownerId: string, exceptTemplateId: string): Promise<boolean> {
@@ -142,21 +124,41 @@ async function enqueueModerate(templateId: string, gate: boolean, ownerId: strin
   return 'queued'
 }
 
+/** Кап расхода исчерпан: список, ждущий проверку, остаётся pending — но с внятной
+ *  причиной, иначе в очереди модерации он выглядит просто «висящим». Пометка нужна
+ *  ОБОИМ путям: и публикации существующего списка, и созданию нового (там состояние
+ *  решено до записи, а джобу ставит барьер фасада — см. recheckList). */
+async function markCapped(templateId: string): Promise<void> {
+  await db
+    .update(templates)
+    .set({ moderationReason: 'publication rate limit — awaiting manual review', moderationSeverity: 1 })
+    .where(and(eq(templates.id, templateId), eq(templates.moderation, 'pending')))
+}
+
 /**
- * Гейт публикации (модель YouTube): публичный список уходит в pending —
- * не виден никому, кроме владельца/админа, — и встаёт в очередь на авто-проверку.
+ * Гейт публикации УЖЕ СУЩЕСТВУЮЩЕГО списка (модель YouTube): публикация черновика,
+ * открытие приватного, автономная публикация петлёй. Список уходит в pending — не
+ * виден никому, кроме владельца/админа, — и встаёт в очередь на авто-проверку.
  * Доверенные авторы публикуются сразу (пере-проверка фоном). Без настроенного
  * ИИ-ключа гейт выключен: список остаётся active (dev/стенды).
+ *
+ * НОВЫЙ список сюда не приходит: его состояние решает то же правило
+ * (`initialModeration`) ДО записи, и в ядро оно уезжает значением вставки —
+ * иначе между insert и этим апдейтом список недоверенного автора публичен.
  */
 export async function gateListPublication(templateId: string): Promise<void> {
   try {
-    if (!(await getApiKey())) return
     const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
     if (!tpl) return
     // flagged/hidden не «отмываются» переключением видимости/повторной публикацией —
     // их судьбу решает только админ (апелляция или очередь).
     if (tpl.moderation === 'flagged' || tpl.moderation === 'hidden') return
-    if (await isTrustedAuthor(tpl.ownerId, templateId)) {
+    // Решение — общее с путём создания (shared/moderation/publication-state):
+    // копия правила в двух путях публикации разъезжается, и одна из веток начинает
+    // пускать непроверенное в паблик.
+    const decision = await publicationDecision(tpl.ownerId, templateId)
+    if (decision === 'gate-off') return
+    if (decision === 'trusted') {
       await enqueueModerate(templateId, false, tpl.ownerId)
       return
     }
@@ -164,14 +166,7 @@ export async function gateListPublication(templateId: string): Promise<void> {
       .update(templates)
       .set({ moderation: 'pending', moderationReason: null, moderationSeverity: 0 })
       .where(eq(templates.id, templateId))
-    const q = await enqueueModerate(templateId, true, tpl.ownerId)
-    if (q === 'capped') {
-      // кап расхода: остаётся pending с пометкой — решит человек, LLM не тратим
-      await db
-        .update(templates)
-        .set({ moderationReason: 'publication rate limit — awaiting manual review', moderationSeverity: 1 })
-        .where(and(eq(templates.id, templateId), eq(templates.moderation, 'pending')))
-    }
+    if ((await enqueueModerate(templateId, true, tpl.ownerId)) === 'capped') await markCapped(templateId)
   } catch (e) {
     // гейт не должен ронять публикацию; список остаётся active — но след оставляем
     captureError(e, { where: 'moderation.gate', templateId })
@@ -199,7 +194,12 @@ export async function recheckList(templateId: string): Promise<void> {
       .set({ appealedAt: null })
       .where(and(eq(templates.id, templateId), sql`${templates.appealedAt} is not null`))
     if (!(await getApiKey())) return
-    await enqueueModerate(templateId, false, tpl.ownerId)
+    // Список, РОЖДЁННЫЙ pending (недоверенный автор — состояние решено до записи),
+    // приходит сюда как единственный барьер очереди: джоба ставится тем же вызовом,
+    // а исчерпанный кап обязан оставить причину — иначе он висит в очереди модерации
+    // без объяснения. Для уже видимого списка (обычная пере-проверка) ветка молчит:
+    // markCapped пишет только в строку, которая ждёт проверку.
+    if ((await enqueueModerate(templateId, false, tpl.ownerId)) === 'capped') await markCapped(templateId)
   } catch (e) {
     captureError(e, { where: 'moderation.recheck', templateId })
   }

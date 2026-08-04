@@ -1,8 +1,10 @@
 import 'server-only'
 import { eq } from 'drizzle-orm'
-import type { ListStore } from '@/core'
+import type { List, ListStore, Moderation } from '@/core'
 import { canEditList } from '@/core'
 import { db, templates } from '@/shared/db'
+import { initialModeration } from '@/shared/moderation/publication-state'
+import { captureError } from '@/shared/observability'
 import { listStore as drizzleStore } from './list-store.adapter'
 import { listReadRemote, listWriteRemote } from './list-store.remote'
 
@@ -65,6 +67,28 @@ async function assertVersionAllowed(templateId: string): Promise<void> {
   }
 }
 
+/**
+ * Страховка на окно выкатки: фронт и ядро выкатываются порознь, и сборка ядра без
+ * поля `moderation` (или откат образа назад) молча запишет свой дефолт — 'active'.
+ * Тогда список, который обязан ждать проверку, оказался бы публичным, а гейта после
+ * create больше нет, и исправить это было бы некому.
+ *
+ * Поэтому: сверяем ответ ядра с решением и, если оно потеряно, закрываем список
+ * апдейтом — с записью в observability, потому что окно между вставкой и этой
+ * строкой существует. Это АВАРИЙНЫЙ путь (старое ядро), а не нормальная работа:
+ * с ядром, знающим поле, ветка не выполняется вовсе.
+ */
+async function enforceModeration(list: List, expected: Moderation): Promise<void> {
+  if (expected === 'active' || list.moderation === expected) return
+  await db.update(templates).set({ moderation: expected }).where(eq(templates.id, list.id))
+  captureError(new Error('core ignored moderation on create — list was public until this update'), {
+    where: 'listStore.create',
+    listId: list.id,
+    expected,
+    got: list.moderation,
+  })
+}
+
 export const listStore: ListStore = {
   ...base,
   async addVersion(templateId, input) {
@@ -74,7 +98,15 @@ export const listStore: ListStore = {
     return ver
   },
   async create(input) {
-    const list = await base.create(input)
+    // Состояние публикации решается ЗДЕСЬ, до записи, и уезжает в ядро значением
+    // вставки. Раньше список рождался видимым, а гейт прятал его отдельным апдейтом
+    // после — между этими двумя шагами публичный список недоверенного автора был
+    // виден всем, а при сбое гейта оставался виден навсегда (fork/page.tsx 005).
+    // Точка одна и обойти её нельзя — как барьер moderate ниже и assertVersionAllowed
+    // выше: правило, размазанное по семи местам создания списка, теряется в одном из них.
+    const moderation = await initialModeration(input)
+    const list = await base.create({ ...input, moderation })
+    await enforceModeration(list, moderation)
     await moderate(list.id)
     return list
   },

@@ -236,7 +236,8 @@ export async function createTemplate(formData: FormData): Promise<void> {
   if (gated) await db.update(templates).set({ gated: true }).where(eq(templates.id, list.id)) // course quiz-gate
   await registerTags(tags) // новые теги → в реестр
   await ensureWatch(list.id) // владелец следит за своим списком
-  if (visibility === 'public') await gateListPublication(list.id) // приватные не модерируем
+  // Гейта публикации здесь больше нет: состояние решено ДО записи и приехало значением
+  // вставки (фасад listStore.create), а проверку в очередь ставит тот же фасад.
   await enqueueReindex(list.id) // авто-индексация в поиск (через очередь)
 
   redirect(`/${await ownerHandle(session.userId)}/${slug}`)
@@ -1244,7 +1245,7 @@ export async function useTemplate(templateId: string): Promise<void> {
       imageRef: s.imageKey ?? null,
     })),
   })
-  await gateListPublication(created.id) // копия публикуется — гейт как у любой публикации
+  // Копия публикуется — но состояние публикации ей задал фасад create, до записи.
   revalidatePath('/', 'layout')
   redirect(`/${session.handle}/${slug}`)
 }
@@ -1387,7 +1388,8 @@ export async function forkTemplate(templateId: string, opts?: { name?: string; d
     .set({ forksCount: sql`${templates.forksCount} + 1` })
     .where(eq(templates.id, src.id))
   await notify({ recipientId: src.ownerId, actorId: session.userId, type: 'fork', templateId: src.id })
-  if (src.visibility === 'public') await gateListPublication(forked.id) // форк — тоже публикация
+  // Форк — тоже публикация, и его состояние решено фасадом create ДО записи: публичный
+  // форк недоверенного автора рождается pending, а не «догоняется» апдейтом после.
   await enqueueReindex(forked.id)
 
   revalidatePath('/explore')
