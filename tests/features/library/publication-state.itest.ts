@@ -19,6 +19,9 @@ const h = vi.hoisted(() => ({
   created: [] as { moderation?: string }[],
   /** true — мок пишет строку так, как это делала бы сборка ядра БЕЗ поля moderation. */
   coreIgnoresModeration: false,
+  session: null as null | { userId: string; handle: string },
+  /** Была ли строка видна публичной проекции в МОМЕНТ вставки (см. мок ядра). */
+  visibleAtBirth: [] as { id: string; visible: boolean }[],
 }))
 
 vi.mock('@/shared/settings/ai', () => ({
@@ -39,9 +42,12 @@ vi.mock('@/features/library/list-store.remote', async () => {
             ownerId: input.ownerId as string,
             slug: input.slug as string,
             title: input.title as Record<string, string>,
+            desc: (input.desc ?? {}) as Record<string, string>,
+            tags: (input.tags ?? []) as string[],
             visibility: input.visibility as 'public' | 'private',
             status: input.status as 'draft' | 'published',
             origin: input.origin as 'authored' | 'forked' | 'ai_draft',
+            forkedFromId: (input.forkedFromId ?? null) as string | null,
             // Ровно как ядро: пустое/незаданное значение = дефолт схемы ('active').
             ...(input.moderation && !h.coreIgnoresModeration
               ? { moderation: input.moderation as 'active' | 'pending' }
@@ -49,6 +55,12 @@ vi.mock('@/features/library/list-store.remote', async () => {
           })
           .returning()
         await database.insert(vers).values({ templateId: row.id, version: 1, note: 'initial' })
+        // Замер В МОМЕНТ РОЖДЕНИЯ строки: видна ли она публичной проекции прямо сейчас,
+        // до всего, что вызывающий сделает после. Конечное состояние на этот вопрос не
+        // отвечает — «догоняющий» апдейт приводит к тому же итогу, просто позже.
+        const { getFeed: feedNow } = await import('@/features/library/queries')
+        const seen = new Set((await feedNow({}, undefined)).map((r) => r.id))
+        h.visibleAtBirth.push({ id: row.id, visible: seen.has(row.id) })
         return { ...row, currentVersion: 1 }
       },
       async addVersion() {
@@ -65,6 +77,29 @@ vi.mock('@/shared/jobs/queue', () => ({
     throw new Error('queue is down')
   },
 }))
+
+// Окружение серверного экшена forkTemplate (сценарий карточки целиком, а не только
+// фасад): сессия, переходы и посторонние эффекты — заглушками, БД и модерация настоящие.
+vi.mock('@/shared/auth/session', () => ({
+  requireSession: async () => {
+    if (!h.session) throw new Error('no session')
+    return h.session
+  },
+  getSession: async () => h.session,
+}))
+vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
+vi.mock('next/navigation', () => ({
+  redirect: (u: string) => {
+    throw new Error(`REDIRECT:${u}`)
+  },
+  notFound: () => {
+    throw new Error('NOT_FOUND')
+  },
+}))
+vi.mock('@/features/notifications/notify', () => ({ notify: async () => {}, notifyMany: async () => {}, notifyMentions: async () => {} }))
+vi.mock('@/features/library/jobs', () => ({ enqueueReindex: async () => {}, enqueueLinkCheck: async () => {} }))
+vi.mock('@/shared/i18n/server', () => ({ getLang: async () => 'ru' }))
+vi.mock('@/shared/media', () => ({ avatarSrc: async () => null, imageUrl: () => null, isS3Configured: () => false }))
 
 const { db, jobs, templates, templateVersions, users } = await import('@/shared/db')
 const { listStore, registerAfterVersion } = await import('@/features/library/list-store')
@@ -103,6 +138,8 @@ beforeEach(async () => {
   h.apiKey = 'test-key'
   h.created = []
   h.coreIgnoresModeration = false
+  h.session = null
+  h.visibleAtBirth = []
 })
 afterAll(async () => {
   await db.execute(sql`truncate table ${jobs}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
@@ -116,6 +153,7 @@ describe('listStore.create — состояние публикации прие�
     const list = await listStore.create(newList())
 
     expect(h.created.at(-1)?.moderation).toBe('pending') // решение принято ДО записи
+    expect(h.visibleAtBirth.at(-1)?.visible).toBe(false) // и строка родилась уже скрытой
     expect(await modOf(list.id)).toBe('pending')
     const feed = new Set((await getFeed({}, undefined)).map((r) => r.id))
     expect(feed.has(list.id)).toBe(false)
@@ -222,6 +260,34 @@ describe('окно выкатки: ядро без поля moderation', () => {
     expect(await modOf(list.id)).toBe('pending') // и доведено до строки, раз ядро его потеряло
     const feed = new Set((await getFeed({}, undefined)).map((r) => r.id))
     expect(feed.has(list.id)).toBe(false)
+  })
+})
+
+describe('forkTemplate — сценарий карточки целиком', () => {
+  it('публичный форк недоверенного автора не появляется в ленте ни на мгновение', async () => {
+    // Источник: чужой публичный список с одной версией.
+    const [author] = await db.insert(users).values({ handle: 'ps-author' }).returning({ id: users.id })
+    const [src] = await db
+      .insert(templates)
+      .values({ ownerId: author.id, slug: 'source', title: { ru: 'Источник' }, origin: 'authored' })
+      .returning({ id: templates.id })
+    await db.insert(templateVersions).values({ templateId: src.id, version: 1, note: 'initial' })
+
+    h.session = { userId: ownerId, handle: 'ps-owner' }
+    const { forkTemplate } = await import('@/features/library/actions')
+    await expect(forkTemplate(src.id)).rejects.toThrow(/REDIRECT:/) // успех экшена = переход на форк
+
+    const fork = await db.query.templates.findFirst({
+      where: (t, { eq: e }) => e(t.forkedFromId, src.id),
+    })
+    expect(fork?.moderation).toBe('pending')
+    // Главное утверждение карточки: НИ В ОДИН МОМЕНТ. Конечное состояние даёт то же
+    // самое и у старого кода — он доводил список до pending апдейтом после вставки;
+    // разница видна только в замере, снятом в момент рождения строки.
+    expect(h.visibleAtBirth.at(-1)).toEqual({ id: fork!.id, visible: false })
+    const feed = new Set((await getFeed({}, undefined)).map((r) => r.id))
+    expect(feed.has(fork!.id)).toBe(false)
+    expect(feed.has(src.id)).toBe(true) // сам источник видимости не терял
   })
 })
 
