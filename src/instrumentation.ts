@@ -36,24 +36,45 @@ export async function register() {
   ])
   registerModerationGate(gateListPublication)
 
+  // Эффекты ПРИНЯТОГО git-пуша исполняются фоновой задачей и трогают сразу четыре
+  // области: библиотеку (предложение из ветки), наблюдателей, уведомления и модерацию.
+  // Фиче git видеть их напрямую нельзя (границы слоёв), поэтому связываем здесь — тем же
+  // приёмом, что и два барьера выше.
+  const [{ registerPushEffectsPorts }, suggestionCore, watchQueries, notify, moderate] = await Promise.all([
+    import('@/features/git/push-effects'),
+    import('@/features/library/suggestion-core'),
+    import('@/features/watch/queries'),
+    import('@/features/notifications/notify'),
+    import('@/features/moderation/moderate-list'),
+  ])
+  registerPushEffectsPorts({
+    ensureBranchSuggestion: suggestionCore.ensureBranchSuggestion,
+    watcherIds: watchQueries.getWatcherIds,
+    notifyNewVersion: (recipientIds, { actorId, listId }) =>
+      notify.notifyMany(recipientIds, { actorId, type: 'new_version', templateId: listId }),
+    recheckList: moderate.recheckList,
+  })
+
   // Фоновый воркер очереди задач. Idempotent, безопасен между инстансами.
   // Реестр обработчиков: по одному модулю jobs.ts на фичу-владельца.
   //
   // РАЗОВЫЕ джобы перечислены здесь руками — их ставит пользовательское действие.
   // ПЕТЛИ берутся из реестра shared/agents/loops: раньше их приходилось вписывать дважды
   // (обработчик + самозапуск), и `feedpull` уехал в прод с обработчиком, но без запуска.
-  const [{ startWorker }, { LOOPS }, { LOOP_WIRING }, notifications, generation, library, moderation, gnomeReview, gnomeTask, mirror] = await Promise.all([
-    import('@/shared/jobs/worker'),
-    import('@/shared/agents/loops'),
-    import('@/instrumentation-loops'),
-    import('@/features/notifications/jobs'),
-    import('@/features/generation/jobs'),
-    import('@/features/library/jobs'),
-    import('@/features/moderation/jobs'),
-    import('@/features/library/gnome-review-jobs'),
-    import('@/features/library/gnome-task-jobs'),
-    import('@/features/library/mirror-jobs'),
-  ])
+  const [{ startWorker }, { LOOPS }, { LOOP_WIRING }, notifications, generation, library, moderation, gnomeReview, gnomeTask, mirror, gitPush] =
+    await Promise.all([
+      import('@/shared/jobs/worker'),
+      import('@/shared/agents/loops'),
+      import('@/instrumentation-loops'),
+      import('@/features/notifications/jobs'),
+      import('@/features/generation/jobs'),
+      import('@/features/library/jobs'),
+      import('@/features/moderation/jobs'),
+      import('@/features/library/gnome-review-jobs'),
+      import('@/features/library/gnome-task-jobs'),
+      import('@/features/library/mirror-jobs'),
+      import('@/features/git/push-effects'),
+    ])
   const loopHandlers = Object.fromEntries(
     await Promise.all(LOOPS.map(async (l) => [l.jobType, await LOOP_WIRING[l.name].handler()] as const)),
   )
@@ -76,6 +97,7 @@ export async function register() {
       gnome_review: gnomeReview.runGnomeReviewJob,
       gnome_task: gnomeTask.runGnomeTaskJob,
       mirror: mirror.runMirrorJob,
+      git_push: gitPush.runGitPushEffects,
       ...loopHandlers,
     },
     finalizers,
