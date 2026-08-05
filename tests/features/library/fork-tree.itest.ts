@@ -151,6 +151,23 @@ describe('обход ограничен и говорит об этом (forks/0
     expect(ids(tree.roots)).not.toContain(chain[7])
   })
 
+  it('лишние дети одного узла обрезаются и помечаются', async () => {
+    // Ширина считается оконной функцией ДО LIMIT — иначе флаг усечения был бы всегда
+    // ложным, а страница молча показывала бы часть детей как всё дерево.
+    process.env.SETFORK_FORK_TREE_MAX_CHILDREN = '2'
+    try {
+      for (let i = 0; i < 4; i++) await fork(`wide-${i}`, rootId)
+
+      const tree = await getForkTree(rootId)
+
+      expect(tree.count).toBe(2)
+      expect(tree.truncated.width).toBe(true)
+      expect(tree.truncated.depth).toBe(false)
+    } finally {
+      delete process.env.SETFORK_FORK_TREE_MAX_CHILDREN
+    }
+  })
+
   it('полное дерево усечением не помечается', async () => {
     const a = await fork('a', rootId)
     await fork('a-child', a)
@@ -167,5 +184,32 @@ describe('пустое дерево', () => {
     expect(tree.roots).toEqual([])
     expect(tree.count).toBe(0)
     expect(tree.truncated.nodes).toBe(false)
+  })
+
+  it('единственный скрытый форк = пустое дерево, а не намёк на его существование', async () => {
+    await fork('hidden-only', rootId, { visibility: 'private' })
+
+    const tree = await getForkTree(rootId)
+
+    expect(tree.roots).toEqual([])
+    expect(tree.count).toBe(0)
+  })
+})
+
+describe('потолок узлов', () => {
+  it('лишние узлы отсекаются и помечаются флагом', async () => {
+    process.env.SETFORK_FORK_TREE_MAX_NODES = '2'
+    try {
+      const a = await fork('n1', rootId)
+      await fork('n2', rootId)
+      await fork('n3', a)
+
+      const tree = await getForkTree(rootId)
+
+      expect(tree.count).toBe(2)
+      expect(tree.truncated.nodes).toBe(true)
+    } finally {
+      delete process.env.SETFORK_FORK_TREE_MAX_NODES
+    }
   })
 })
