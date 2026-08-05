@@ -840,6 +840,55 @@ export const digests = pgTable(
   (t) => [index('digests_user_idx').on(t.userId, t.sentAt)],
 )
 
+// ── Черновики правок (рабочая копия поверх опубликованной версии) ──
+/**
+ * ЧЕРНОВИК ПРАВОК к уже опубликованному списку: рабочая копия, которую можно
+ * править сколько угодно раз, а версию создать один раз — явной публикацией
+ * (решение владельца 04.08.2026: «из-за одного символа менять версию не хочется»).
+ *
+ * Отдельная лёгкая таблица, а НЕ черновая строка в template_versions: нумерация
+ * версий и git-канон принадлежат ядру, и незавершённая правка не должна занимать
+ * номер, попадать в историю и уезжать в зеркало. Здесь же черновик не виден никому,
+ * кроме автора, и исчезает при публикации.
+ *
+ * Одна строка на (список, автор): у владельца и каждого соавтора своя рабочая копия,
+ * иначе они затирали бы друг друга. base_version — версия, от которой правили: если
+ * список ушёл вперёд, черновик устарел, и это видно до публикации.
+ */
+export const listDrafts = pgTable(
+  'list_drafts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Версия, от которой правили (для «черновик устарел»). */
+    baseVersion: integer('base_version').notNull(),
+    /** Состав блоков в доменной форме — тот же, что уходит в версию при публикации. */
+    items: jsonb('items').notNull().default([]).$type<ProposedItem[]>(),
+    /** Мета списка, которую правят вместе с блоками (теги, порядок, курс). */
+    meta: jsonb('meta').notNull().default({}).$type<{ tags?: string[]; ordered?: boolean; gated?: boolean }>(),
+    /** Заметка к будущей версии — чтобы не набирать её заново при публикации. */
+    note: text('note').notNull().default(''),
+    /**
+     * Счётчик правок черновика. Публикация удаляет ИМЕННО ту ревизию, которую
+     * опубликовала: пока идёт вызов ядра, другой вход мог сохранить новые правки, и
+     * безусловное удаление стёрло бы их.
+     *
+     * Именно счётчик, а не updated_at: у timestamptz в базе микросекунды, а драйвер
+     * отдаёт JS-Date с миллисекундами — сравнение «то же время» не находило строку, и
+     * черновик оставался жить после публикации (поймано на живом прогоне).
+     */
+    rev: integer('rev').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('list_drafts_tpl_author').on(t.templateId, t.authorId)],
+)
+
 // ── Suggestions (предложения правок, PR) ─────────────────────────────
 export const suggestions = pgTable('suggestions', {
   id: uuid('id').primaryKey().defaultRandom(),

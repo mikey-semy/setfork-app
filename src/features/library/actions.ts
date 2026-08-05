@@ -28,7 +28,8 @@ import { collabStore, suggestionCommenterIds } from '@/features/collab-store/sto
 import { gateListPublication, recheckList } from '@/features/moderation/moderate-list'
 import { toStepInput } from '@/shared/lib/step-input'
 import { emptyItem, parseEditorItems, toProposedItems, type EditorItem } from './editor'
-import { getVersionSteps } from './queries'
+import { getDraft, getVersionSteps } from './queries'
+import { deleteDraft, publishDraftFor, upsertDraft, type PublishResult } from './draft'
 import { countApprovals, hasBlockingReview } from './review-queries'
 // eslint-disable-next-line boundaries/dependencies -- гейт «нерешённые обсуждения» живёт с комментариями
 import { countUnresolvedThreads } from '@/features/comments/queries'
@@ -314,6 +315,117 @@ export async function saveNewVersion(templateId: string, formData: FormData): Pr
   await enqueueReindex(tpl.id)
 
   redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}`)
+}
+
+// ── Черновик правок к опубликованному списку ──────────────────────────
+/**
+ * РАБОЧАЯ КОПИЯ вместо версии на каждую правку (решение владельца 04.08.2026:
+ * «из-за одного символа менять версию не хочется»). Правки копятся в черновике
+ * сколько угодно раз, а версия создаётся ОДНА — явной публикацией.
+ *
+ * Черновик у каждого автора свой (владелец, соавторы): общая копия затиралась бы
+ * при параллельной работе. base_version запоминает, от чего правили, — если список
+ * успел уйти вперёд, публикация об этом скажет, а не перезапишет чужое молча.
+ */
+export async function saveDraft(templateId: string, formData: FormData): Promise<void> {
+  const { tpl, handle } = await upsertDraftFromForm(templateId, formData)
+  revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
+  redirect(`/${handle}/${tpl.slug}/edit?saved=1`)
+}
+
+/**
+ * Опубликовать ТО, ЧТО СЕЙЧАС В РЕДАКТОРЕ: сначала сохраняем состав формы в черновик,
+ * потом публикуем его. Кнопка публикации живёт в той же форме, что и «сохранить», —
+ * иначе она уносила бы предыдущее сохранение, а всё дописанное после него пропадало
+ * бы молча (находка self-review).
+ */
+export async function publishEdits(templateId: string, formData: FormData): Promise<void> {
+  await upsertDraftFromForm(templateId, formData)
+  await publishDraft(templateId)
+}
+
+/** Общая часть: собрать черновик из формы редактора и записать его. */
+async function upsertDraftFromForm(templateId: string, formData: FormData) {
+  const session = await requireSession()
+  const [lang, tpl] = await Promise.all([getLang(), db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })])
+  if (!tpl) redirect('/')
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) redirect('/')
+  if (!canEditList(tpl)) redirect(`/${await ownerHandle(tpl.ownerId)}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+
+  const items = toProposedItems(parseEditorItems(formData.get('items')), lang)
+  const meta = {
+    tags: parseTags(formData.get('tags')),
+    ordered: formData.get('ordered') !== 'unordered',
+    gated: formData.get('gated') === 'on',
+  }
+  const note = String(formData.get('note') ?? '').trim()
+  const handle = await ownerHandle(tpl.ownerId)
+  // Пустой состав в черновике не храним: он подменил бы опубликованный список
+  // пустотой в редакторе, а опубликовать его всё равно нельзя.
+  if (items.length === 0) {
+    await deleteDraft(tpl.id, session.userId)
+    redirect(`/${handle}/${tpl.slug}/edit?e=empty`)
+  }
+  // base_version НЕ переписываем у уже устаревшего черновика: сдвинуть его значит
+  // сказать «правки сделаны от свежей версии», а они сделаны от старой — и следующая
+  // публикация затёрла бы чужую работу молча. Признак устаревания снимает только
+  // осознанный отказ от правок (discardDraft), а не автосохранение.
+  await upsertDraft(tpl, session.userId, { items, meta, note })
+  return { tpl, handle }
+}
+
+/** Убрать черновик и вернуться к опубликованному состоянию. */
+export async function discardDraft(templateId: string): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl) return
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+  await deleteDraft(tpl.id, session.userId)
+  const handle = await ownerHandle(tpl.ownerId)
+  revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
+  redirect(`/${handle}/${tpl.slug}`)
+}
+
+/**
+ * Опубликовать накопленный черновик ОДНОЙ версией. Путь записи тот же, что у
+ * обычного сохранения (ListStore.addVersion → git-коммит + проекция), — черновик
+ * лишь копил состав, поэтому публикация ничем не отличается от прежней правки.
+ *
+ * Если список успел уйти вперёд (кто-то опубликовал версию, пока правки лежали в
+ * черновике), публикацию не делаем: молча перезаписать чужую работу хуже, чем
+ * попросить перечитать. Автор увидит это на странице редактора.
+ */
+export async function publishDraft(templateId: string): Promise<void> {
+  const session = await requireSession()
+  const tpl = await db.query.templates.findFirst({ where: (t) => eq(t.id, templateId) })
+  if (!tpl) return
+  if (tpl.ownerId !== session.userId && !(await isCollaborator(tpl.id, session.userId))) return
+  const handle = await ownerHandle(tpl.ownerId)
+  if (!canEditList(tpl)) redirect(`/${handle}/${tpl.slug}?e=${tpl.archivedAt ? 'archived' : 'frozen'}`)
+
+  // Теги черновика — в реестр (иначе новый тег не появится в каталоге и подсказках).
+  const pending = await getDraft(tpl.id, session.userId)
+  if (pending?.meta.tags?.length) await registerTags(pending.meta.tags)
+  let res: PublishResult
+  try {
+    res = await publishDraftFor(tpl, session.userId)
+  } catch (e) {
+    // Запрещённая команда — показываем автору причину и номер шага, как при
+    // обычном сохранении: молчаливый отказ читается как «кнопка не работает».
+    if (e instanceof DestructiveCommandError) redirect(`/${handle}/${tpl.slug}/edit?blocked=${e.reason}&step=${e.stepIndex}`)
+    throw e
+  }
+  // Причины РАЗНЫЕ: «нечего публиковать» и «черновик опустел» — разные сообщения,
+  // иначе человек читает про удаление, которого не было.
+  if ('error' in res) {
+    const reason = res.error === 'stale' ? 'stale' : res.error === 'empty' ? 'empty' : 'nodraft'
+    redirect(`/${handle}/${tpl.slug}/edit?e=${reason}`)
+  }
+
+  await notifyWatchersNewVersion(tpl.id, session.userId)
+  await enqueueReindex(tpl.id)
+  revalidatePath(`/${handle}/${tpl.slug}`, 'layout')
+  redirect(`/${handle}/${tpl.slug}`)
 }
 
 // ── Возврат к прошлой версии ──────────────────────────────────────────

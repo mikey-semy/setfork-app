@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, cosineDistance, desc, eq, gte, ilike, inArray, isNotNull, or, sql, type SQL } from 'drizzle-orm'
-import { db, embeddings, issues, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, templateVersions, users, publiclyVisible } from '@/shared/db'
+import { db, embeddings, issues, listDrafts, milestones, stars, steps, suggestionAssignees, suggestionComments, suggestionReviewRequests, suggestions, suggestionViewed, templates, templateVersions, users, publiclyVisible } from '@/shared/db'
 import type { Lang, LocaleText } from '@/shared/i18n'
 import { avatarSrc, imageUrl } from '@/shared/media'
 import { getSearchSettings } from '@/shared/settings/search'
@@ -899,4 +899,20 @@ export async function getSuggestionMilestone(suggestionId: string): Promise<{ id
     .where(eq(suggestions.id, suggestionId))
     .limit(1)
   return r ?? null
+}
+
+/**
+ * Черновик правок автора к этому списку (null — правок нет).
+ *
+ * ЧИТАЕТСЯ ТОЛЬКО НА СЕРВЕРЕ. В actions.ts ему не место: файл там помечен
+ * 'use server', и каждый его экспорт — публичный эндпоинт; функция с authorId в
+ * аргументе отдавала бы чужие неопубликованные правки любому желающему.
+ */
+export async function getDraft(templateId: string, authorId: string) {
+  const [row] = await db
+    .select()
+    .from(listDrafts)
+    .where(and(eq(listDrafts.templateId, templateId), eq(listDrafts.authorId, authorId)))
+    .limit(1)
+  return row ?? null
 }
