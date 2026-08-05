@@ -62,6 +62,10 @@ export type EditorItem = {
   needsHuman: boolean
   /** Что спросить у человека ('' → общий текст приглашения). */
   needsHumanAsk: string
+  /** Разрушительный пункт: команда необратима — в собранный скрипт попадёт
+   *  закомментированной. undefined = автор не решал: значение берётся по шаблону
+   *  команды. Явные true/false — решение автора, детектор его не переспорит. */
+  danger?: boolean
   section: string // заголовок секции-группы ('' — без секции)
   subtasks: string[]
   refs: EditorRef[]
@@ -218,6 +222,9 @@ export function toProposedItems(items: EditorItem[], lang: Lang): ProposedItem[]
         // единственный способ её закрыть.
         needsHuman: it.needsHuman,
         needsHumanAsk: it.needsHuman && it.needsHumanAsk.trim() ? { [lang]: it.needsHumanAsk.trim() } : {},
+        // Пометка «разрушительный пункт» едет как решение автора — включая снятое.
+        // Дальше её досматривает toStepInput: не заданную ставит по шаблону команды.
+        danger: it.danger,
         section: it.section.trim() ? { [lang]: it.section.trim() } : {},
         subtasks: it.subtasks.filter((s) => s.trim()).map((s) => ({ [lang]: s.trim() })),
         // url санитизируем на записи, как у video/file/product (второй рубеж к
@@ -251,6 +258,7 @@ type LocaleItem = {
   why?: LocaleText
   needsHuman?: boolean
   needsHumanAsk?: LocaleText
+  danger?: boolean
   section?: LocaleText
   subtasks: LocaleText[]
   refs: { label: LocaleText; url?: string }[]
@@ -379,6 +387,9 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
       why: it.why ? tr(it.why, lang) : '',
       needsHuman: it.needsHuman === true,
       needsHumanAsk: it.needsHumanAsk ? tr(it.needsHumanAsk, lang) : '',
+      // Сохранённое значение — это уже решение автора (или авто-простановка на
+      // прошлой записи), поэтому читаем как есть.
+      danger: it.danger === true,
       section: it.section ? tr(it.section, lang) : '',
       subtasks: (it.subtasks ?? []).map((s) => tr(s, lang)),
       refs: (it.refs ?? []).map((r) => ({ label: tr(r.label, lang), url: r.url ?? '' })),
@@ -444,6 +455,8 @@ export function parseEditorItems(raw: unknown): EditorItem[] {
       why: String(it?.why ?? ''),
       needsHuman: it?.needsHuman === true,
       needsHumanAsk: String(it?.needsHumanAsk ?? ''),
+      // Тристейт переживает форму: пришло не-boolean — «автор не решал».
+      danger: typeof it?.danger === 'boolean' ? it.danger : undefined,
       section: String(it?.section ?? ''),
       subtasks: Array.isArray(it?.subtasks) ? it.subtasks.map((s: unknown) => String(s)) : [],
       refs: Array.isArray(it?.refs)

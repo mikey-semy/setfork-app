@@ -1,6 +1,7 @@
 import type { GeneratedItem } from '@/shared/ai/generate'
 import type { ProposedItem } from '@/shared/db'
 import type { Lang } from '@/shared/i18n'
+import { isRiskyCommand } from '@/core/domain/destructive-command'
 
 /**
  * Единая конвертация шагов на запись: сгенерированный ИИ пункт → ProposedItem →
@@ -50,6 +51,11 @@ export function toStepInput(items: ProposedItem[]) {
     why: it.why,
     needsHuman: it.needsHuman ?? false,
     needsHumanAsk: it.needsHumanAsk ?? {},
+    // РАЗРУШИТЕЛЬНЫЙ ПУНКТ. Тристейт намеренный: пометка не задана — ставим её по
+    // шаблону команды, задана (в т.ч. явным false) — уважаем решение автора.
+    // Место одно на все пути записи (редактор, генерация, садовник, MCP): будь
+    // авто-простановка в каждом из них, ровно один однажды бы её потерял.
+    danger: it.danger ?? isRiskyCommand(it.command),
     section: it.section,
     subtasks: it.subtasks,
     refs: it.refs,

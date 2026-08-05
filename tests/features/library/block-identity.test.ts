@@ -30,6 +30,7 @@ const block = (over: Partial<HistoryBlock> = {}): HistoryBlock => ({
   imageKey: null,
   needsHuman: false,
   needsHumanAsk: {},
+  danger: false,
   ...over,
 })
 

@@ -66,9 +66,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // источником `https://0.0.0.0:3000`: артефакт не имел проверяемого происхождения, а
   // напечатанная в нём команда запуска была нерабочей.
   const rawUrl = `${appOrigin()}/${handle}/${slug}/raw`
+  // Выбор пунктов: ?bid=<id> (можно несколько раз) или ?bids=a,b. Справочник на
+  // тридцать пунктов не нужно тащить целиком ради одного — тот же адрес блока,
+  // что отдаёт get_list. Неизвестный адрес — явный отказ, а не тихо весь список.
+  const list = toExportList(detail)
+  const only = [...u.searchParams.getAll('bid'), ...(u.searchParams.get('bids') ?? '').split(',')]
+    .map((b) => b.trim())
+    .filter(Boolean)
+  const known = new Set(list.steps.flatMap((s) => (s.bid ? [s.bid] : [])))
+  const unknown = only.filter((b) => !known.has(b))
+  if (unknown.length) return plain(`# No such block: ${unknown.join(', ')}\n`, 404, mime)
+
   const version = detail.currentVersion?.version ?? detail.tpl.currentVersion
   const updatedAt = detail.tpl.updatedAt ?? new Date(0)
-  const etag = `W/"v${version}-${updatedAt.getTime()}-${lang}-${dialect}"`
+  // Выборка — часть ответа, значит и часть ключа кеша: без неё общий прокси отдал
+  // бы скрипт одного пункта тому, кто просил другой.
+  const etag = `W/"v${version}-${updatedAt.getTime()}-${lang}-${dialect}${only.length ? `-${only.join('.')}` : ''}"`
 
   // Общий кеш — только для того, что вправе увидеть аноним, и предикат единый:
   // собственная проверка «публичный и не черновик» пропускала МОДЕРАЦИЮ, и общий прокси
@@ -87,5 +100,5 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const cached = notModified(req, etag, headers)
   if (cached) return cached
 
-  return new Response(toRunnableScript(toExportList(detail), lang, rawUrl, dialect), { headers })
+  return new Response(toRunnableScript(list, lang, rawUrl, dialect, { only }), { headers })
 }

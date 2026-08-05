@@ -64,6 +64,7 @@ export async function getListBlame(templateId: string): Promise<ListBlame | null
       imageKey: stepsTable.imageKey,
       needsHuman: stepsTable.needsHuman,
       needsHumanAsk: stepsTable.needsHumanAsk,
+      danger: stepsTable.danger,
     })
     .from(stepsTable)
     .innerJoin(templateVersions, eq(stepsTable.versionId, templateVersions.id))
@@ -96,6 +97,7 @@ export async function getListBlame(templateId: string): Promise<ListBlame | null
       imageKey: r.imageKey,
       needsHuman: r.needsHuman,
       needsHumanAsk: r.needsHumanAsk,
+      danger: r.danger,
     })
   }
 

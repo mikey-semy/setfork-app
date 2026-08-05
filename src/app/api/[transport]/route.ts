@@ -27,6 +27,8 @@ import {
   mcpStartRun,
   mcpUpdateList,
   mcpDeleteList,
+  mcpPublishDraft,
+  mcpDiscardDraft,
 } from '@/features/mcp/tools'
 import { mcpAskGnome, mcpGnomeReview, mcpListGnomes } from '@/features/mcp/gnome'
 import { mcpCouncilDraft, mcpGetCouncilDraft } from '@/features/mcp/council'
@@ -97,7 +99,7 @@ const handler = createMcpHandler(
       {
         title: 'Get a list',
         description:
-          'Fetch a full list by ref (owner handle + slug). Returns ALL blocks with their type — steps (title/command/subtasks/links) plus text, image, poll, video and quiz blocks with their content — so you get the complete context, not just text.',
+          'Fetch a full list by ref (owner handle + slug). Returns ALL blocks with their type — steps (title/command/subtasks/links) plus text, image, poll, video and quiz blocks with their content — so you get the complete context, not just text. If YOU have unpublished edits on this list, they come back as "pendingEdits" (their own blocks and baseVersion) — patch those further with publish:false or publish them with publish_draft.',
         inputSchema: {
           handle: z.string().describe('Owner handle, e.g. "acme"'),
           slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
@@ -114,16 +116,23 @@ const handler = createMcpHandler(
       {
         title: 'Get a runnable script',
         description:
-          'Render a list as a ready-to-run script (its commands, with progress echoes). dialect: "sh" bash (default), "ps1" PowerShell, "py" python. Commands come from the list authors — review before running.',
+          'Render a list as a ready-to-run script (its commands, with progress echoes). dialect: "sh" bash (default), "ps1" PowerShell, "py" python. Pass bid/bids (block ids from get_list) to build a script from just those steps — a reference list of 30 items does not have to come as one script. Destructive steps arrive commented out and are reported in "skipped". Commands come from the list authors — review before running.',
         inputSchema: {
           handle: z.string().describe('Owner handle, e.g. "acme"'),
           slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
           dialect: z.enum(['sh', 'ps1', 'py']).optional().describe('Script dialect (default "sh")'),
+          bid: z.string().optional().describe('Single block id — script from just this step'),
+          bids: z.array(z.string()).optional().describe('Block ids — script from these steps, always in list order'),
         },
       },
-      async (userId, { handle, slug, dialect }) => {
-        const r = await mcpGetScript(userId, handle, slug, dialect)
-        return r ? json(r) : err('List not found or not accessible')
+      async (userId, { handle, slug, dialect, bid, bids }) => {
+        // Обе формы разом: одна — для «дай мне вот этот пункт», массив — для
+        // «собери последовательность». Внутри это один и тот же список адресов.
+        const only = [...(bids ?? []), ...(bid ? [bid] : [])]
+        const r = await mcpGetScript(userId, handle, slug, dialect, only)
+        if (!r) return err('List not found or not accessible')
+        if ('error' in r && r.error) return err(r.error)
+        return json(r)
       },
     )
 
@@ -348,11 +357,14 @@ const handler = createMcpHandler(
       {
         title: 'Patch a list',
         description:
-          'Edit SPECIFIC blocks of a list you own instead of resending the whole list. Ops address blocks by their stable "bid" from get_list: update (change only the fields you pass), insert (new block at start/end/after a bid), delete, move. All ops apply together or none at all. baseVersion is required — pass the "version" you got from get_list; if the list changed meanwhile the patch is rejected so you cannot silently overwrite someone else\'s edit. Prefer this over update_list for edits; a draft is patched in place, a published list gets a new version.',
+          'Edit SPECIFIC blocks of a list you own instead of resending the whole list. Ops address blocks by their stable "bid" from get_list: update (change only the fields you pass), insert (new block at start/end/after a bid), delete, move. All ops apply together or none at all. baseVersion is required — pass the "version" you got from get_list; if the list changed meanwhile the patch is rejected so you cannot silently overwrite someone else\'s edit. By default each call publishes a new version; pass publish:false to COLLECT edits instead — they pile up in the same draft the editor shows (get_list returns it as pendingEdits), and publish_draft turns the whole pile into ONE version. Prefer this over update_list for edits; a list that was never published is patched in place.',
         inputSchema: {
           handle: z.string().describe('Owner handle (must be you)'),
           slug: z.string().describe('List slug'),
-          baseVersion: z.number().int().describe('The "version" get_list returned — the patch applies only to that version'),
+          baseVersion: z
+            .number()
+            .int()
+            .describe('The "version" get_list returned — or pendingEdits.baseVersion if you already have pending edits, because the patch stacks on top of those'),
           ops: z
             .array(
               z.object({
@@ -368,10 +380,55 @@ const handler = createMcpHandler(
             .min(1)
             .describe('Operations, applied in order'),
           note: z.string().optional().describe('Change note (for published lists)'),
+          publish: z
+            .boolean()
+            .optional()
+            .describe('Default TRUE — the patch becomes a new version at once. Pass false to collect edits in the draft instead, then call publish_draft.'),
         },
       },
       async (userId, { handle, slug, ...rest }) => {
         const res = await mcpPatchList(userId, handle, slug, rest)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    // Опубликовать накопленные правки одной версией — второй такт к patch_list с
+    // publish:false. Без него пачка так и лежала бы черновиком.
+    writeTool(
+      'publish_draft',
+      {
+        title: 'Publish pending edits',
+        description:
+          'Turn the pending edits of this list into ONE new version. TWO-STEP: without confirm it reports what would be published (how many blocks, which version it becomes) and writes nothing; pass confirm:true to publish. Two steps on purpose — the pending edits are shared with the web editor, so unfinished work of yours may be sitting there. Nothing pending — it says so. If the list moved on meanwhile, publishing is refused instead of overwriting the work of others: discard_draft or redo the edits on the fresh version.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle (must be you)'),
+          slug: z.string().describe('List slug'),
+          note: z.string().optional().describe('Change note for this version; omitted — the note saved with the draft is used'),
+          confirm: z.boolean().optional().describe('Default FALSE — report only. Pass true to actually publish.'),
+        },
+      },
+      async (userId, { handle, slug, note, confirm }) => {
+        const res = await mcpPublishDraft(userId, handle, slug, note, confirm === true)
+        return 'error' in res ? err(res.error as string) : json(res)
+      },
+    )
+
+    // Выход из тупика: черновик устарел (список ушёл вперёд) — правки нужно выбросить,
+    // иначе publish_draft будет отказывать всегда, а patch_list копить в никуда.
+    writeTool(
+      'discard_draft',
+      {
+        title: 'Discard pending edits',
+        annotations: { destructiveHint: true, idempotentHint: true },
+        description:
+          'Throw away the pending (unpublished) edits of this list — the same ones get_list returns as pendingEdits and the web editor shows as a draft. Use it when the list moved on and publishing is refused, or when the collected edits are no longer wanted. The published list itself is untouched.',
+        inputSchema: {
+          handle: z.string().describe('Owner handle (must be you)'),
+          slug: z.string().describe('List slug'),
+        },
+      },
+      async (userId, { handle, slug }) => {
+        const res = await mcpDiscardDraft(userId, handle, slug)
         return 'error' in res ? err(res.error as string) : json(res)
       },
     )
@@ -635,10 +692,10 @@ const handler = createMcpHandler(
       '1. Find it: search_lists, then get_list — it returns every block with a stable "bid" and the list "version".',
       '2. Change it: patch_list. Address blocks by "bid", send ONLY the fields you change, pass baseVersion = the "version" from get_list. Ops: update, insert, delete, move.',
       '   Use update_list only to replace the whole set of blocks — anything omitted there is removed.',
-      '3. Batch: one patch_list call = one new version of a published list. Put all your edits into a single call instead of one call per block.',
+      '3. Batch: by default one patch_list call = one new version. To let several rounds of edits land as ONE version, call patch_list with publish:false — they pile up in a draft (get_list shows it as pendingEdits) — and finish with publish_draft (two-step: it reports first, publishes with confirm:true). Stuck because the list moved on? discard_draft throws the pile away.',
       '',
       'Good to know:',
-      '- A draft is edited in place and does not pile up versions; a published list gets a new version per write call.',
+      '- A list that was never published is edited in place; for a published list every write call makes a version unless you pass publish:false.',
       '- baseVersion protects you: if someone edited the list meanwhile, the patch is rejected instead of overwriting their work — re-read with get_list and retry.',
       '- Step links are just {"url": "..."}; a label is optional and the interface falls back to the domain.',
       '- delete_list is irreversible and needs confirm:true; without it the call only reports what would go.',
