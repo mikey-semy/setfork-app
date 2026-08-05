@@ -1545,6 +1545,7 @@ export const ru: Record<DictKey, string> = {
   'list.andNOthers': 'и ещё {n}',
   'list.digIntoStep': 'Копнуть этот пункт',
   'list.forkTree': 'Дерево форков',
+  'list.forkTreeTruncated': 'Показаны не все ветви — дерево слишком большое.',
   'list.hideMessage': 'Свернуть сообщение',
   'list.linkedFrom': 'Ссылаются на этот список',
   'list.noPublicForksYet': 'Публичных форков пока нет — стань первой ветвью.',

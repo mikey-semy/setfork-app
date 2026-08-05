@@ -1551,6 +1551,7 @@ export const en = {
   'list.andNOthers': 'and {n} others',
   'list.digIntoStep': 'Dig into this step',
   'list.forkTree': 'Fork tree',
+  'list.forkTreeTruncated': 'Some branches are hidden — the tree is too large.',
   'list.hideMessage': 'Hide message',
   'list.linkedFrom': 'Linked from',
   'list.noPublicForksYet': 'No public forks yet — be the first to grow a branch.',
