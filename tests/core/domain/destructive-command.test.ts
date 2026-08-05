@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findDestructive, findDestructiveSteps } from '@/core/domain/destructive-command'
+import { findDestructive, findDestructiveSteps, findRisky, stepDanger } from '@/core/domain/destructive-command'
 
 /**
  * Золотой набор. Слева — то, что обязано быть отклонено на записи: список отдаётся
@@ -81,5 +81,68 @@ describe('разрушительные команды не попадают в �
     expect(found).toHaveLength(1)
     expect(found[0].index).toBe(2)
     expect(found[0].match.reason).toBe('formatsDisk')
+  })
+})
+
+/**
+ * ВТОРОЙ УРОВЕНЬ: «законно, но необратимо». Эти команды публиковать МОЖНО (в
+ * справочнике по эксплуатации им место), но исполнять из собранного скрипта — нет.
+ * Слева — то, что обязано приезжать закомментированным, справа — рабочая рутина,
+ * которую пометка трогать не должна.
+ */
+const RISKY: [string, string][] = [
+  ['docker system prune -a --volumes', 'prunesVolumes'],
+  ['docker volume rm app_pgdata', 'prunesVolumes'],
+  ['docker compose down -v', 'prunesVolumes'],
+  ['rm -rf ./node_modules', 'deletesRecursively'],
+  ['Remove-Item -Recurse -Force .\\dist', 'deletesRecursively'],
+  ['psql -c "drop table sessions"', 'dropsData'],
+  ['psql -c "delete from jobs"', 'dropsData'],
+  ['truncate table events', 'dropsData'],
+  ['terraform destroy -auto-approve', 'resetsEnvironment'],
+  ['kubectl delete pod api-0', 'resetsEnvironment'],
+  ['helm uninstall api', 'resetsEnvironment'],
+  ['npx prisma migrate reset', 'resetsEnvironment'],
+  ['git clean -xfd', 'discardsWork'],
+  ['git reset --hard origin/main', 'discardsWork'],
+  ['git push --force origin main', 'discardsWork'],
+]
+
+const ROUTINE = [
+  'docker compose up -d',
+  'docker ps -a',
+  'docker image prune', // без --volumes/-a: чистит только висячие слои
+  'psql -c "delete from jobs where status = \'done\'"', // с WHERE — обычная уборка
+  'psql -c "select count(*) from events"',
+  'kubectl get pods',
+  'kubectl apply -f deploy.yml',
+  'git clean -n', // сухой прогон
+  'git push --force-with-lease origin feature', // безопасная форма
+  'npm ci && npm run build',
+  'terraform plan',
+]
+
+describe('разрушительные, но законные команды — пометка, а не запрет', () => {
+  for (const [cmd, reason] of RISKY) {
+    it(`помечает: ${cmd}`, () => {
+      expect(findRisky(cmd)?.reason).toBe(reason)
+      // И при этом публиковать её МОЖНО — иначе справочник по эксплуатации не написать.
+      expect(findDestructive(cmd)).toBeNull()
+    })
+  }
+
+  for (const cmd of ROUTINE) {
+    it(`не трогает рутину: ${cmd}`, () => {
+      expect(findRisky(cmd)).toBeNull()
+    })
+  }
+
+  it('пометка автора сильнее молчания детектора', () => {
+    expect(stepDanger({ command: './cleanup.sh' })).toBeNull()
+    expect(stepDanger({ danger: true, command: './cleanup.sh' })).toBe('danger')
+  })
+
+  it('снятая пометка НЕ отменяет шаблон: команда всё равно разрушительна', () => {
+    expect(stepDanger({ danger: false, command: 'docker system prune -a --volumes' })).toBe('prunesVolumes')
   })
 })

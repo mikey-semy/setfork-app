@@ -116,16 +116,23 @@ const handler = createMcpHandler(
       {
         title: 'Get a runnable script',
         description:
-          'Render a list as a ready-to-run script (its commands, with progress echoes). dialect: "sh" bash (default), "ps1" PowerShell, "py" python. Commands come from the list authors — review before running.',
+          'Render a list as a ready-to-run script (its commands, with progress echoes). dialect: "sh" bash (default), "ps1" PowerShell, "py" python. Pass bid/bids (block ids from get_list) to build a script from just those steps — a reference list of 30 items does not have to come as one script. Destructive steps arrive commented out and are reported in "skipped". Commands come from the list authors — review before running.',
         inputSchema: {
           handle: z.string().describe('Owner handle, e.g. "acme"'),
           slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
           dialect: z.enum(['sh', 'ps1', 'py']).optional().describe('Script dialect (default "sh")'),
+          bid: z.string().optional().describe('Single block id — script from just this step'),
+          bids: z.array(z.string()).optional().describe('Block ids — script from these steps, always in list order'),
         },
       },
-      async (userId, { handle, slug, dialect }) => {
-        const r = await mcpGetScript(userId, handle, slug, dialect)
-        return r ? json(r) : err('List not found or not accessible')
+      async (userId, { handle, slug, dialect, bid, bids }) => {
+        // Обе формы разом: одна — для «дай мне вот этот пункт», массив — для
+        // «собери последовательность». Внутри это один и тот же список адресов.
+        const only = [...(bids ?? []), ...(bid ? [bid] : [])]
+        const r = await mcpGetScript(userId, handle, slug, dialect, only)
+        if (!r) return err('List not found or not accessible')
+        if ('error' in r && r.error) return err(r.error)
+        return json(r)
       },
     )
 

@@ -18,7 +18,7 @@ import { aiQuota, freeGenQuota, listQuota } from '@/shared/quota'
 import { getAiSettings } from '@/shared/settings/ai'
 import { enqueueJob } from '@/shared/jobs/queue'
 import { enqueueReindex } from '@/features/library/jobs'
-import { toProposedItems } from '@/features/library/editor'
+import { emptyItem, toProposedItems } from '@/features/library/editor'
 import { listStore } from '@/features/library/list-store'
 import { uniqueSlug } from '@/features/library/slug'
 import { MAX_VARIANTS } from './limits'
@@ -295,17 +295,11 @@ export async function acceptCandidate(generationId: string, candidateId: string)
   const genLang: Lang = isLang(gen.lang) ? gen.lang : DEFAULT_LANG
   const slug = await uniqueSlug(cand.title || gen.query, session.userId)
   const proposed = toProposedItems(
+    // Форма блока — от ОБЩЕГО конструктора (emptyItem): здесь она была выписана
+    // руками, поэтому каждое новое поле блока приходилось дописывать и сюда —
+    // а забытое молча уезжало со значением «нет».
     cand.items.map((it) => ({
-      type: 'step' as const,
-      bid: '',
-      text: '',
-      caption: '',
-      videoUrl: '',
-      fileUrl: '',
-      fileName: '',
-      poll: { question: '', options: [], multi: false, deadline: '' },
-      quiz: { kind: 'choice' as const, question: '', options: [], multi: false, accept: [], caseSensitive: false, answer: '', tolerance: '', template: '', blanks: [], pairs: [], items: [], explain: '' },
-      products: [],
+      ...emptyItem(),
       title: it.title,
       desc: it.desc,
       command: sanitizeCommand(it.command ?? ''),

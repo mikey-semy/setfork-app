@@ -187,6 +187,10 @@ export interface ListBlock {
   section: string
   subtasks: string[]
   refs: { label: string; url?: string }[]
+  /** Разрушительный пункт (из канона ветки). На ЗАПИСИ поле игнорируется: ядро
+   *  берёт пометку из текущей версии по blockId — иначе клиент, который её не
+   *  заполнил, снимал бы её с необратимой команды одной правкой в ветке. */
+  danger?: boolean
 }
 
 export interface BranchSnapshot {

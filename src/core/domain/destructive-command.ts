@@ -61,6 +61,50 @@ const RULES: Rule[] = [
 ]
 
 /**
+ * ВТОРОЙ УРОВЕНЬ: «законно, но необратимо».
+ *
+ * Правила выше отвечают на вопрос «можно ли это вообще опубликовать» и потому
+ * узки до предела. Но список отдаётся как исполняемый скрипт, а с адресацией по
+ * пункту его стало можно запускать по кусочку — и появился класс команд, которым
+ * в справочнике по эксплуатации самое место, а в автозапуске нет:
+ * `docker system prune -a --volumes`, `terraform destroy`, `DROP TABLE`.
+ * Запрещать их нельзя (это честная работа эксплуатации), исполнять молча — тоже.
+ *
+ * Поэтому здесь не запрет, а ПОМЕТКА: пункт с совпадением приезжает в собранный
+ * скрипт закомментированным, с причиной и приглашением раскомментировать. Тот же
+ * приём, что `excludeFromRunAll` у Runme и `isDangerous` у Fig: инструмент не
+ * решает за человека, но и не запускает необратимое за него.
+ *
+ * Ложное срабатывание стоит дёшево (снять комментарий — одно движение), пропуск —
+ * дорого (данные), поэтому набор ШИРЕ запрещающего. Пополняется по инцидентам
+ * вместе с тестом, как и RULES.
+ */
+const RISKY: Rule[] = [
+  // Рекурсивное удаление по произвольному пути. Корень и `~` ловит RULES выше
+  // (там это запрет), сюда попадает всё остальное: рабочие каталоги, кэши, тома.
+  { reason: 'deletesRecursively', re: /\brm\s+(-[a-z]*[rf][a-z]*\s+)+\S/i },
+  { reason: 'deletesRecursively', re: /\bRemove-Item\b[^|;]*-Recurse\b/i },
+  // Уборка окружения контейнеров: prune с томами уносит данные баз, поднятых
+  // в docker, — самый частый способ потерять чужую БД по инструкции.
+  { reason: 'prunesVolumes', re: /\b(docker|podman)\b[^|;]*\bprune\b[^|;]*(--volumes|-a\b|--all\b)/i },
+  { reason: 'prunesVolumes', re: /\b(docker|podman)\s+volume\s+(rm|prune)\b/i },
+  { reason: 'prunesVolumes', re: /\bdocker\s+compose\b[^|;]*\bdown\b[^|;]*(-v\b|--volumes)/i },
+  // Схема и данные БД: DROP/TRUNCATE и DELETE без WHERE — необратимы без бэкапа.
+  { reason: 'dropsData', re: /\bdrop\s+(table|database|schema|index)\b/i },
+  { reason: 'dropsData', re: /\btruncate\s+(table\s+)?\S/i },
+  { reason: 'dropsData', re: /\bdelete\s+from\s+\S+(?![\s\S]*\bwhere\b)/i },
+  // Пересоздание окружения «с нуля»: миграции reset и destroy инфраструктуры.
+  { reason: 'resetsEnvironment', re: /\b(terraform|tofu)\s+destroy\b/i },
+  { reason: 'resetsEnvironment', re: /\b(prisma|drizzle-kit)\b[^|;]*\b(reset|drop)\b/i },
+  { reason: 'resetsEnvironment', re: /\bkubectl\s+delete\b/i },
+  { reason: 'resetsEnvironment', re: /\bhelm\s+(uninstall|delete)\b/i },
+  // Затирание незакоммиченной работы в рабочей копии.
+  { reason: 'discardsWork', re: /\bgit\s+clean\b[^|;]*-[a-z]*[xd][a-z]*f?/i },
+  { reason: 'discardsWork', re: /\bgit\s+reset\s+--hard\b/i },
+  { reason: 'discardsWork', re: /\bgit\s+push\b[^|;]*(--force(?!-with-lease)|(\s|^)-f(\s|$))/i },
+]
+
+/**
  * Строки команды в том виде, в каком их увидит интерпретатор.
  *
  * Разбор «по строкам как есть» обходится продолжением строки: `rm -rf \` и на
@@ -111,21 +155,54 @@ function stripComment(line: string): string {
 const PRINTS_ONLY = /^\s*(sudo\s+)?(echo|printf|cat\s*<<|#)/i
 
 /**
- * Первое совпадение или null. Проверяется КАЖДАЯ строка команды: многострочное поле
- * — это произвольный скрипт, и опасная строка может стоять не первой.
+ * Первое совпадение набора или null. Проверяется КАЖДАЯ строка команды:
+ * многострочное поле — это произвольный скрипт, и опасная строка может стоять не
+ * первой. Разбор строк (склейка продолжений, комментарии, «только печатает») один
+ * на оба набора: разъедься они, запрет и пометка ловили бы разное в одном тексте.
  */
-export function findDestructive(command: string): DestructiveMatch | null {
+function firstMatch(command: string, rules: Rule[]): DestructiveMatch | null {
   const text = (command ?? '').trim()
   if (!text) return null
   for (const joined of joinContinuations(text)) {
     const l = stripComment(joined).trim()
     if (!l || PRINTS_ONLY.test(l)) continue
-    for (const rule of RULES) {
+    for (const rule of rules) {
       const m = rule.re.exec(l)
       if (m) return { reason: rule.reason, fragment: m[0].trim().slice(0, 120) }
     }
   }
   return null
+}
+
+/** Запрещённая к публикации команда или null (набор RULES). */
+export function findDestructive(command: string): DestructiveMatch | null {
+  return firstMatch(command, RULES)
+}
+
+/**
+ * Пометка «разрушительно, но законно» или null (набор RISKY). Не запрет:
+ * вызывающий решает, что с ней делать — проставить пометку блоку на записи или
+ * закомментировать пункт в собранном скрипте.
+ */
+export function findRisky(command: string): DestructiveMatch | null {
+  return firstMatch(command, RISKY)
+}
+
+/** Разрушительна ли команда — для авто-простановки пометки на записи. */
+export const isRiskyCommand = (command: string | null | undefined): boolean => findRisky(command ?? '') !== null
+
+/**
+ * Разрушителен ли ПУНКТ: пометка автора или шаблон его команды. Ключ причины
+ * или null.
+ *
+ * Одна функция на скрипт и на страницу списка намеренно: разойдись они, человек
+ * видел бы на сайте пункт без пометки, а в скрипте — закомментированную команду
+ * (или наоборот). Детектор работает и без пометки — списки, написанные до её
+ * появления, тоже отдаются скриптом.
+ */
+export function stepDanger(step: { danger?: boolean | null; command?: string | null }): string | null {
+  if (step.danger) return 'danger'
+  return findRisky(step.command ?? '')?.reason ?? null
 }
 
 /**

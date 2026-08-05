@@ -5,10 +5,10 @@ import { tr, trKey, type LocaleText } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getFeed, getTemplateDetail } from '@/features/library/queries'
 import { canEditList, canViewList, ListWriteError } from '@/core'
-import { assertNoDestructiveSteps, DestructiveCommandError } from '@/core/domain/destructive-command'
+import { assertNoDestructiveSteps, DestructiveCommandError, findRisky } from '@/core/domain/destructive-command'
 import { listQuota } from '@/shared/quota'
 import { detectTextLang } from '@/shared/lib/translit'
-import { dialectExt, normalizeDialect, toExportList, toRunnableScript } from '@/features/library/export'
+import { buildScript, dialectExt, normalizeDialect, toExportList } from '@/features/library/export'
 import { listStore } from '@/features/library/list-store'
 import { applySuggestion, createSuggestion, mergeSuggestion, reviewSuggestion, revertSuggestion } from '@/features/library/suggestion-core'
 import { slugify, uniqueSlug } from '@/features/library/slug'
@@ -77,6 +77,9 @@ export interface McpItemInput {
   ref?: string
   needsHuman?: boolean // step — «здесь нужен человек» (машина честно не знает)
   needsHumanAsk?: string // step — что именно спросить у человека
+  /** step — разрушительный пункт (в собранном скрипте приезжает закомментированным).
+   *  Не передан — решается по команде (см. toStepInput), явный false уважается. */
+  danger?: boolean
   question?: string
   options?: McpBlockOption[]
   multi?: boolean
@@ -150,6 +153,9 @@ function toProposed(items: McpItemInput[]): ProposedItem[] {
       imageKey: (it.imageRef ?? it.ref ?? '').trim(),
       needsHuman: it.needsHuman === true,
       needsHumanAsk: (it.needsHumanAsk ?? '').trim(),
+      // Пометку разрушительности НЕ приводим к false молча: неуказанную решит
+      // детектор на записи, и авто-простановка не потеряется на пути через API.
+      danger: it.danger,
       subtasks: (it.subtasks ?? []).filter((s) => s.trim()),
       // Ссылки шага: get_list их отдаёт, а положить было нечем — асимметрия чтения
       // и записи. Пустые метки отсеивает сериализатор (toProposedItems).
@@ -351,6 +357,10 @@ function blockForMcp(s: DetailStep) {
     imageRef: s.imageKey ?? undefined,
     needsHuman: s.needsHuman || undefined,
     needsHumanAsk: tr(s.needsHumanAsk, 'en') || undefined,
+    // Пометка автора и ПОДСКАЗКА детектора — раздельно. Слей их в одно поле, и
+    // круг «прочитал → записал» превратил бы догадку про команду в решение автора.
+    danger: s.danger || undefined,
+    dangerHint: (!s.danger && findRisky(s.command ?? '')?.reason) || undefined,
     level: s.level,
     why: tr(s.why, 'en') || undefined,
     subtasks: s.subtasks.map((x) => tr(x, 'en')).filter(Boolean),
@@ -407,22 +417,49 @@ export async function mcpGetList(userId: string, handle: string, slug: string) {
 
 // get_script: тот же список, но как готовый исполняемый скрипт (bash/ps1/py) —
 // удобно агенту, который прогоняет список (CI-for-AI). Приватность как у get_list.
-export async function mcpGetScript(userId: string, handle: string, slug: string, dialectRaw?: string) {
+//
+// bids — АДРЕСА пунктов (те же, что отдаёт get_list): справочник на тридцать
+// пунктов не надо тащить целиком ради одного. Пустой список = весь список, как
+// раньше. Неизвестный адрес — ошибка, а не тихий пропуск: агент должен узнать,
+// что взял не тот пункт, а не получить скрипт «почти из того, что просил».
+export async function mcpGetScript(
+  userId: string,
+  handle: string,
+  slug: string,
+  dialectRaw?: string,
+  bids?: string[],
+) {
   const detail = await getTemplateDetail(handle, slug)
   if (!detail) return null
   const { tpl } = detail
   if (!(await mcpCanView(tpl, userId))) return null
 
   const dialect = normalizeDialect(dialectRaw)
-  const url = `${SITE_URL}/${handle}/${slug}/raw`
+  const rawUrl = `${SITE_URL}/${handle}/${slug}/raw`
   const list = toExportList(detail)
+  const only = (bids ?? []).map((b) => b.trim()).filter(Boolean)
+  const known = new Set(list.steps.flatMap((s) => (s.bid ? [s.bid] : [])))
+  const unknown = only.filter((b) => !known.has(b))
+  if (unknown.length) return { error: `no such block in ${handle}/${slug}: ${unknown.join(', ')}` }
+
+  const { script, included, skipped } = buildScript(list, 'en', rawUrl, dialect, { only })
+  const params = new URLSearchParams()
+  if (dialect !== 'sh') params.set('lang', dialect)
+  only.forEach((b) => params.append('bid', b))
+  const qs = params.toString()
   return {
     ref: `${handle}/${slug}`,
     dialect,
     filename: `${slug}.${dialectExt(dialect)}`,
-    url: dialect === 'sh' ? url : `${url}?lang=${dialect}`,
+    url: qs ? `${rawUrl}?${qs}` : rawUrl,
     note: 'Commands come from the list authors — review before running.',
-    script: toRunnableScript(list, 'en', url, dialect),
+    script,
+    included,
+    // Разрушительные пункты приезжают закомментированными — про это обязан знать
+    // и вызывающий: иначе он сочтёт команду выполненной.
+    ...(skipped.length
+      ? { skipped, skippedNote: 'these steps are commented out in the script — run them yourself after reviewing' }
+      : {}),
   }
 }
 

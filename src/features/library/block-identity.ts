@@ -33,6 +33,9 @@ export interface BlockContent {
   imageKey: string | null
   needsHuman: boolean
   needsHumanAsk: LocaleText
+  /** Разрушительный пункт: снять пометку — такое же изменение содержимого, как
+   *  правка самой команды (после него скрипт станет исполнять то, что не исполнял). */
+  danger: boolean
 }
 
 /**
@@ -56,6 +59,7 @@ const CONTENT: Record<keyof BlockContent, true> = {
   imageKey: true,
   needsHuman: true,
   needsHumanAsk: true,
+  danger: true,
 }
 
 /** Поля содержимого в порядке объявления (порядок фиксирует вид отпечатка). */

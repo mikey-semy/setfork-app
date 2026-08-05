@@ -35,6 +35,8 @@ export interface SnapshotStepRow {
   /** Пометка «здесь нужен человек» — в git не сериализуется (golden-паритет). */
   needsHuman: boolean
   needsHumanAsk: Record<string, unknown>
+  /** Разрушительный пункт — в каноне ЕСТЬ, поэтому из снимка ветки честно виден. */
+  danger: boolean
 }
 
 export function snapshotSteps(snapshot: BranchSnapshot, idPrefix = 'br'): SnapshotStepRow[] {
@@ -61,5 +63,6 @@ export function snapshotSteps(snapshot: BranchSnapshot, idPrefix = 'br'): Snapsh
     // это не ложное false, а честное «из снимка неизвестно».
     needsHuman: false,
     needsHumanAsk: {},
+    danger: s.danger === true,
   }))
 }
