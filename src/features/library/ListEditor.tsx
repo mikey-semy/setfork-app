@@ -21,6 +21,8 @@ import {
   Redo2,
   ShoppingCart,
   Sparkles,
+  Eye,
+  Pencil,
   Text as TextIcon,
   Trash2,
   Undo2,
@@ -37,7 +39,8 @@ import { DatePicker } from '@/shared/ui/DatePicker'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Switch } from '@/shared/ui/switch'
 import { CodeEditor } from '@/shared/ui/CodeEditor'
-import { emptyItem, emptyBlock, type EditorItem, type EditorPoll, type EditorProduct, type EditorQuiz } from './editor'
+import { emptyItem, emptyBlock, toProposedItems, type EditorItem, type EditorPoll, type EditorProduct, type EditorQuiz } from './editor'
+import { SuggestionResult } from './SuggestionResult'
 import { t } from '@/shared/i18n'
 import { blankCount, type QuizKind } from '@/core'
 import { isRiskyCommand } from '@/core/domain/destructive-command'
@@ -98,6 +101,11 @@ export function ListEditor({
   const ru = lang === 'ru'
   const first = initialItems.length ? initialItems : [emptyItem()]
   const [items, setItemsRaw] = useState<EditorItem[]>(first)
+  // ПРЕДПРОСМОТР рядом с правкой: до него единственным способом увидеть, что
+  // получится, было сохранить версию (жалоба владельца 04.08.2026). Показываем тем
+  // же рендером, которым показываются предложения правок, — вторая копия страницы
+  // списка разъехалась бы с первой на первой же новой фиче блоков.
+  const [preview, setPreview] = useState(false)
   const [uploading, setUploading] = useState<number | null>(null)
   const [dragI, setDragI] = useState<number | null>(null)
   const [overI, setOverI] = useState<number | null>(null)
@@ -316,10 +324,31 @@ export function ListEditor({
             <Redo2 size={13} /> {ru ? 'Повторить' : 'Redo'}
           </button>
         </Tooltip>
+        <Tooltip label={t(preview ? 'editTip' : 'previewTip', lang)}>
+          <button
+            type="button"
+            onClick={() => setPreview((v) => !v)}
+            aria-pressed={preview}
+            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 hover:border-border-strong ${
+              preview ? 'border-accent text-accent' : 'border-border text-ink-2'
+            }`}
+          >
+            {preview ? <Pencil size={13} /> : <Eye size={13} />} {t(preview ? 'editToggle' : 'previewToggle', lang)}
+          </button>
+        </Tooltip>
         <span className="ml-1 hidden sm:inline">{ru ? 'перетаскивай ⠿, Alt+↑/↓ — двигать' : 'drag ⠿, Alt+↑/↓ to move'}</span>
       </div>
 
-      {aiRefine && (
+      {preview ? (
+        // Состав, приведённый к доменной форме — ровно то, что уедет в версию.
+        // Черновые пункты без заголовка сюда не попадают, как и при сохранении.
+        <div className="rounded-lg border border-dashed border-border p-3">
+          <div className="mb-2 text-[0.78125rem] text-muted">{t('previewHint', lang)}</div>
+          <SuggestionResult items={toProposedItems(items, lang)} lang={lang} ordered={ordered} />
+        </div>
+      ) : null}
+
+      {!preview && aiRefine && (
         <div className="rounded-lg border border-(--accent) bg-(--accent-soft) p-3">
           <div className="mb-2 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-accent">
             <Sparkles size={14} /> {ru ? 'Улучшить' : 'Improve'}
@@ -355,7 +384,7 @@ export function ListEditor({
         </div>
       )}
 
-      <div ref={listRef} className="flex flex-col gap-3">
+      <div ref={listRef} className={`flex flex-col gap-3 ${preview ? 'hidden' : ''}`}>
       {/* Инсертер НАД первым блоком: вставить в начало списка. Без него «добавить
           сверху» стоило двух действий — добавить в конец и гнать блок наверх
           стрелками (фидбек владельца). Симметричен главному инсертеру снизу и
