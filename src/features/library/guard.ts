@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { eq } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
 import { getSession } from '@/shared/auth/session'
@@ -24,8 +25,18 @@ async function collabIfNeeded(
   return isCollaborator(list.id, viewerId)
 }
 
-/** meta списка, если зритель вправе его видеть; иначе null (→ notFound). */
-export async function requireViewableMeta(owner: string, slug: string) {
+/**
+ * meta списка, если зритель вправе его видеть; иначе null (→ notFound).
+ *
+ * Мемоизировано НА ЗАПРОС (`cache` из React). Layout любой вкладки списка рисует шапку и
+ * зовёт этот guard, следом его зовёт сама страница — то есть каждое открытие стоило двух
+ * одинаковых чтений меты, а на приватном пути ещё и повторного лукапа соавторства
+ * (карточка ревью forks/010, корень K02 — шесть карточек реестра).
+ *
+ * Безопасность не страдает: решение зависит от меты и сессии, а сессия внутри одного
+ * запроса не меняется. Кеш не переживает запрос и не смешивает разные `owner/slug`.
+ */
+export const requireViewableMeta = cache(async (owner: string, slug: string) => {
   const meta = await getListMeta(owner, slug)
   if (!meta) return null
   const viewer = await getSession()
@@ -36,7 +47,7 @@ export async function requireViewableMeta(owner: string, slug: string) {
     isAdmin: isAdminHandle(viewer?.handle),
   })
   return ok ? meta : null
-}
+})
 
 /** Полный detail (tpl + версии + шаги), если зритель вправе его видеть; иначе null. */
 export async function requireViewableDetail(owner: string, slug: string) {

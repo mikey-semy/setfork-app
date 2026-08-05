@@ -1,11 +1,12 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, GitFork } from 'lucide-react'
+import { GitFork } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { requireViewableMeta } from '@/features/library/guard'
 import { PageHeader } from '@/shared/ui/PageHeader'
+import { BackLink } from '@/shared/ui/BackLink'
 import { ForkForm } from '@/features/library/ForkForm'
 import { PAGE_NARROW } from '@/shared/ui/control'
 
@@ -25,9 +26,7 @@ export default async function ForkPage({ params }: { params: Promise<{ handle: s
 
   return (
     <div className={PAGE_NARROW}>
-      <Link href={base} className="mb-5 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink">
-        <ArrowLeft size={15} /> {owner} / {tr(meta.title, lang)}
-      </Link>
+      <BackLink href={base} label={`${owner} / ${tr(meta.title, lang)}`} className="mb-2" />
       <PageHeader
         icon={<GitFork size={18} className="text-muted" />}
         title={t('forkDialogTitle', lang)}

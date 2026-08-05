@@ -1,6 +1,4 @@
-import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
@@ -9,6 +7,7 @@ import { getStepPreviews, getTemplateDetail, getDraft } from '@/features/library
 import { canWriteList } from '@/features/collab/queries'
 import { canEditList } from '@/core'
 import { discardDraft, publishEdits, saveDraft } from '@/features/library/actions'
+import { BackLink } from '@/shared/ui/BackLink'
 import { ListEditor } from '@/features/library/ListEditor'
 import { ListTypeToggle } from '@/features/library/ListTypeToggle'
 import { TagInput } from '@/shared/ui/TagInput'
@@ -68,12 +67,7 @@ export default async function EditPage({
 
   return (
     <div className={PAGE_NARROW}>
-      <Link
-        href={`/${owner}/${slug}`}
-        className="mb-4 inline-flex items-center gap-2 text-[0.8125rem] text-ink-2 hover:text-ink"
-      >
-        <ArrowLeft size={15} /> {tpl.owner.handle} / {tr(tpl.title, lang) || tpl.slug}
-      </Link>
+      <BackLink href={`/${owner}/${slug}`} label={`${tpl.owner.handle} / ${tr(tpl.title, lang) || tpl.slug}`} className="mb-1" />
       {/* На длинном списке верхняя ссылка уезжает — плавающий дубль слева-внизу (фидбек владельца). */}
       <FloatingBack href={`/${owner}/${slug}`} label={tr(tpl.title, lang) || `${tpl.owner.handle}/${tpl.slug}`} />
 
