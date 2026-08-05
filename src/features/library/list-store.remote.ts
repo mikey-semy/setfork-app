@@ -219,6 +219,10 @@ export const listWriteRemote = {
       forkedFromId: input.forkedFromId ?? '',
       note: input.note,
       steps: input.steps.map(toPbStep),
+      // Состояние публикации едет ЗНАЧЕНИЕМ ВСТАВКИ: список недоверенного автора
+      // рождается pending, а не становится им догоняющим апдейтом (окно между
+      // insert в ядре и update в БД — это время, когда он публичен). '' = active.
+      moderation: input.moderation ?? '',
     })
     return toList(res)
   },

@@ -14,6 +14,7 @@ import type {
   ListOrigin,
   ListStatus,
   LocaleText,
+  Moderation,
   NewStepInput,
   NotificationType,
   Step,
@@ -67,6 +68,12 @@ export interface CreateListInput {
   forkedFromId?: Id | null
   note: string // заметка первой версии
   steps: NewStepInput[]
+  /** Состояние публикации новой строки. Его НЕ задают вызывающие: фасад listStore
+   *  считает его сам (`initialModeration`) и подставляет перед записью — иначе
+   *  правило премодерации жило бы в семи точках создания списка и одна из них
+   *  рано или поздно пустила бы непроверенное в паблик.
+   *  Не задано = 'active' (ядро трактует пустое поле так же). */
+  moderation?: Moderation
 }
 
 export interface ListStore {

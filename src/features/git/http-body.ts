@@ -56,6 +56,24 @@ export class GitBodyTooLarge extends Error {
 }
 
 /**
+ * Клиент объявил сжатие, но прислал не gzip (обрыв, чужой алгоритм, битые байты).
+ *
+ * Отдельный класс, потому что это ошибка ЗАПРОСА, а не сервера: раньше ошибка zlib
+ * (`Z_DATA_ERROR`, `unexpected end of file`) уходила мимо роута в фреймворк и
+ * становилась общим 500 — авария в логах и неунифицированный ответ git-клиенту на
+ * заведомо невалидный вход (карточка ревью 014).
+ */
+export class GitBodyMalformed extends Error {
+  constructor(
+    readonly encoding: string,
+    options?: { cause?: unknown },
+  ) {
+    super(`git body is not valid ${encoding}`, options)
+    this.name = 'GitBodyMalformed'
+  }
+}
+
+/**
  * Прочитать тело запроса, не дав ему превысить потолок.
  *
  * Заголовку `Content-Length` верим только для БЫСТРОГО отказа: он позволяет не
@@ -105,8 +123,10 @@ export function maybeGunzip(body: Buffer, contentEncoding: string | null, maxByt
     return gunzipSync(body, { maxOutputLength: maxBytes })
   } catch (e) {
     // ERR_BUFFER_TOO_LARGE — это превышение потолка, а не битые данные: отвечаем
-    // 413, как и на несжатое большое тело. Остальные ошибки пусть падают.
+    // 413, как и на несжатое большое тело.
     if ((e as NodeJS.ErrnoException)?.code === 'ERR_BUFFER_TOO_LARGE') throw new GitBodyTooLarge(maxBytes)
-    throw e
+    // Всё остальное от zlib — это про СОДЕРЖИМОЕ запроса: клиент объявил gzip и
+    // прислал не gzip. Такой вход не должен выглядеть аварией сервера.
+    throw new GitBodyMalformed('gzip', { cause: e })
   }
 }

@@ -340,4 +340,10 @@ message CreateListRequest {
   string forked_from_id = 10; // '' = null
   string note = 11;      // заметка первой версии
   repeated NewStep steps = 12;
+  // Состояние публикации НОВОГО списка: active | pending | flagged | hidden.
+  // '' = active (сборка фронта без этого поля пишет как раньше).
+  // Едет ВСТАВКОЙ, а не отдельным update после неё: список, рождённый видимым,
+  // публичен всё время до «догоняющего» апдейта, и окно премодерации нельзя
+  // закрыть снаружи (та же форма, что post_status у wp_insert_post).
+  string moderation = 13;
 }

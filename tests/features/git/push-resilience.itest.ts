@@ -12,9 +12,10 @@ const h = vi.hoisted(() => ({
   auth: null as null | { userId: string; scope: 'read' | 'write' },
   // Что бросает ядро на каждой операции (null — работает штатно).
   coreThrows: null as null | Error,
-  // Что бросает чтение наблюдателей — эффект ПОСЛЕ принятого пака.
-  watchersThrow: false,
+  // Падает ли ПОСТАНОВКА задачи доставки — единственный эффект, оставшийся на пути пуша.
+  enqueueThrows: false,
   newVersion: null as number | null,
+  magic: [] as { branch: string; tipSha: string }[],
   captured: [] as { where: unknown; op?: unknown }[],
   calls: { receive: 0 },
 }))
@@ -25,10 +26,13 @@ vi.mock('@/shared/observability', () => ({
     h.captured.push(ctx as { where: unknown; op?: unknown })
   },
 }))
-vi.mock('@/features/watch/queries', () => ({
-  getWatcherIds: async () => {
-    if (h.watchersThrow) throw new Error('watchers lookup failed')
-    return []
+// Очередь настоящая по форме (строка в jobs), но управляемая: тесту нужно уметь
+// уронить именно ПОСТАНОВКУ — это единственный эффект, оставшийся на пути пуша.
+vi.mock('@/shared/jobs/queue', () => ({
+  enqueueJob: async (type: string, payload: Record<string, unknown>) => {
+    if (h.enqueueThrows) throw new Error('queue is down')
+    const { db: database, jobs: jobsTable } = await import('@/shared/db')
+    await database.insert(jobsTable).values({ type, payload })
   },
 }))
 vi.mock('@/features/git/core', () => ({
@@ -48,13 +52,13 @@ vi.mock('@/features/git/core', () => ({
     receivePack: async () => {
       h.calls.receive++
       if (h.coreThrows) throw h.coreThrows
-      return { data: Buffer.from('unpack ok'), newVersion: h.newVersion, magic: [] }
+      return { data: Buffer.from('unpack ok'), newVersion: h.newVersion, magic: h.magic }
     },
   },
 }))
 
 const { GitTransportError } = await import('@/core')
-const { db, users, templates } = await import('@/shared/db')
+const { db, jobs, users, templates } = await import('@/shared/db')
 const route = await import('@/app/[handle]/[slug]/[...git]/route')
 
 const OWNER = 'pr-owner'
@@ -80,13 +84,15 @@ beforeAll(async () => {
   await db.insert(templates).values({ ownerId, slug: SLUG, title: { en: 'bread' }, currentVersion: 1 })
 }, 60_000)
 
-beforeEach(() => {
+beforeEach(async () => {
   h.auth = { userId: ownerId, scope: 'write' }
   h.coreThrows = null
-  h.watchersThrow = false
+  h.enqueueThrows = false
   h.newVersion = null
+  h.magic = []
   h.captured = []
   h.calls.receive = 0
+  await db.delete(jobs)
 })
 
 describe('сбой ядра — понятный отказ протокола, а не 500 фреймворка', () => {
@@ -128,34 +134,48 @@ describe('сбой ядра — понятный отказ протокола, 
 })
 
 describe('после принятого пака ответ не зависит от эффектов доставки', () => {
-  it('сбой чтения наблюдателей не превращает успешный push в ошибку', async () => {
+  // С выносом доставки в очередь (карточка 008) маршрут больше не читает наблюдателей и
+  // никого не рассылает: он ставит ОДНУ задачу и отдаёт байты. Сама доставка проверяется
+  // там, где теперь живёт, — tests/features/git/push-effects.itest.ts.
+  it('клиент получает исходные байты receive-pack', async () => {
     h.newVersion = 2
-    h.watchersThrow = true
     const res = await service('git-receive-pack')
     expect(res.status).toBe(200)
-    // Именно исходные байты receive-pack: клиент обязан увидеть свой успех.
     expect(await res.text()).toBe('unpack ok')
     expect(h.calls.receive).toBe(1)
   })
 
-  it('провал доставки виден в наблюдаемости, а не проглочен', async () => {
+  it('на пути пуша ставится ровно одна задача доставки', async () => {
     h.newVersion = 2
-    h.watchersThrow = true
     await service('git-receive-pack')
-    expect(h.captured).toContainEqual(expect.objectContaining({ where: 'git.push-notify', slug: SLUG }))
+    const rows = await db.select({ type: jobs.type }).from(jobs)
+    expect(rows.map((r) => r.type)).toEqual(['git_push'])
   })
 
-  it('повторной записи из-за сбоя эффекта не происходит', async () => {
+  it('сбой ПОСТАНОВКИ не превращает успешный push в ошибку, но виден в наблюдаемости', async () => {
     h.newVersion = 2
-    h.watchersThrow = true
-    await service('git-receive-pack')
-    expect(h.calls.receive).toBe(1) // ядро вызвано ровно один раз
+    h.enqueueThrows = true
+    const res = await service('git-receive-pack')
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('unpack ok')
+    expect(h.captured).toContainEqual(expect.objectContaining({ where: 'git.push-effects.enqueue', slug: SLUG }))
+    expect(h.calls.receive).toBe(1) // повторной записи из-за сбоя эффекта не происходит
   })
 
-  it('без новой версии эффекты не запускаются вовсе', async () => {
+  it('пуш, которому нечего доставлять, задачу НЕ ставит', async () => {
+    // Ни новой версии, ни ветки правки (например, обновление существующего рефа):
+    // пустое намерение в очереди — это шум, который воркер будет разбирать зря.
     h.newVersion = null
-    h.watchersThrow = true
-    expect((await service('git-receive-pack')).status).toBe(200)
-    expect(h.captured).toEqual([])
+    await service('git-receive-pack')
+    const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(jobs)
+    expect(n).toBe(0)
+  })
+
+  it('ветка правки без новой версии — эффект есть, задача ставится', async () => {
+    h.newVersion = null
+    h.magic = [{ branch: 'u/pr-owner/main', tipSha: 'abc123' }]
+    await service('git-receive-pack')
+    const rows = await db.select({ type: jobs.type }).from(jobs)
+    expect(rows.map((r) => r.type)).toEqual(['git_push'])
   })
 })
