@@ -14,7 +14,6 @@ import {
   GripVertical,
   Heading,
   Image as ImageIcon,
-  ImageUp,
   Loader2,
   Paperclip,
   Plus,
@@ -39,10 +38,12 @@ import { DatePicker } from '@/shared/ui/DatePicker'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Switch } from '@/shared/ui/switch'
 import { CodeEditor } from '@/shared/ui/CodeEditor'
-import { emptyItem, emptyBlock, toProposedItems, type EditorItem, type EditorPoll, type EditorProduct, type EditorQuiz } from './editor'
+import { emptyItem, emptyBlock, toProposedItems, type EditorItem, type EditorPoll, type EditorProduct } from './editor'
+import { AddLink, CheckLabel, FieldRow, LineField, RemoveBtn } from './block-fields'
+import { FileDrop, type DropKind } from './FileDrop'
+import { QuizBlockBody } from './QuizBlockBody'
 import { SuggestionResult } from './SuggestionResult'
 import { t } from '@/shared/i18n'
-import { blankCount, type QuizKind } from '@/core'
 import { isRiskyCommand } from '@/core/domain/destructive-command'
 import { classifyListKind, refineHint } from '@/shared/ai/list-kind'
 import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
@@ -106,7 +107,7 @@ export function ListEditor({
   // же рендером, которым показываются предложения правок, — вторая копия страницы
   // списка разъехалась бы с первой на первой же новой фиче блоков.
   const [preview, setPreview] = useState(false)
-  const [uploading, setUploading] = useState<number | null>(null)
+  const [uploading, setUploading] = useState<{ i: number; kind: DropKind } | null>(null)
   const [dragI, setDragI] = useState<number | null>(null)
   const [overI, setOverI] = useState<number | null>(null)
 
@@ -216,34 +217,30 @@ export function ListEditor({
     }
   }
 
-  async function uploadFor(i: number, file: File) {
-    setUploading(i)
+  const busy = (i: number, kind: DropKind) => uploading?.i === i && uploading.kind === kind
+  // Загрузка в блок i: вид выбирает экшен, дальше цикл общий — пометить занятость,
+  // отправить, снять, отказ показать тостом. Занятость одна на редактор: грузится
+  // ровно тот блок, в который перетащили.
+  async function upload(i: number, kind: DropKind, file: File) {
+    setUploading({ i, kind })
     const fd = new FormData()
     fd.append('file', file)
-    const res = await uploadStepImage(fd)
+    // Ветки различаются только экшеном и полями, куда лечь результату; общий разбор
+    // одним union не пишется — сужение по свойству даёт `unknown` на трёх исходах.
+    if (kind === 'image') {
+      const r = await uploadStepImage(fd)
+      if ('error' in r) toast.error(r.error)
+      else patch(i, { imageKey: r.key, imagePreview: r.url })
+    } else if (kind === 'video') {
+      const r = await uploadStepVideo(fd)
+      if ('error' in r) toast.error(r.error)
+      else patch(i, { videoUrl: r.url })
+    } else {
+      const r = await uploadStepFile(fd)
+      if ('error' in r) toast.error(r.error)
+      else patch(i, { fileUrl: r.url, fileName: r.name })
+    }
     setUploading(null)
-    if ('error' in res) toast.error(res.error)
-    else patch(i, { imageKey: res.key, imagePreview: res.url })
-  }
-  const [videoUploading, setVideoUploading] = useState<number | null>(null)
-  async function uploadVideoFor(i: number, file: File) {
-    setVideoUploading(i)
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await uploadStepVideo(fd)
-    setVideoUploading(null)
-    if ('error' in res) toast.error(res.error)
-    else patch(i, { videoUrl: res.url })
-  }
-  const [fileUploading, setFileUploading] = useState<number | null>(null)
-  async function uploadFileFor(i: number, file: File) {
-    setFileUploading(i)
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await uploadStepFile(fd)
-    setFileUploading(null)
-    if ('error' in res) toast.error(res.error)
-    else patch(i, { fileUrl: res.url, fileName: res.name })
   }
   // Вставка блока на позицию index (0..len). index === len → в конец.
   const insertAt = (index: number, type: BlockType) => {
@@ -491,14 +488,7 @@ export function ListEditor({
 
           {it.type === 'step' && (
           <div className="flex flex-col gap-2">
-            <BubbleTextEditor
-              value={it.title}
-              onChange={(v) => patch(i, { title: v })}
-              singleLine
-              lang={ru ? 'ru' : 'en'}
-              ariaLabel={ru ? `Заголовок пункта ${i + 1}` : `Item ${i + 1} title`}
-              placeholder={ru ? 'Заголовок пункта' : 'Item title'}
-            />
+            <LineField value={it.title} onChange={(title) => patch(i, { title })} ru={ru} className="" label={ru ? `Заголовок пункта ${i + 1}` : `Item ${i + 1} title`} placeholder={ru ? 'Заголовок пункта' : 'Item title'} />
             {/* Описание пункта — Markdown со всплывающей панелью форматирования
                 (выдели текст → мини-тулбар). Картинки/файлы — отдельными блоками. */}
             <BubbleTextEditor
@@ -536,14 +526,7 @@ export function ListEditor({
                 </button>
               ))}
             </div>
-            <BubbleTextEditor
-              value={it.why}
-              onChange={(v) => patch(i, { why: v })}
-              singleLine
-              lang={ru ? 'ru' : 'en'}
-              ariaLabel={ru ? 'Зачем этот шаг' : 'Why this step matters'}
-              placeholder={ru ? 'Зачем этот шаг (необязательно)' : 'Why this step matters (optional)'}
-            />
+            <LineField value={it.why} onChange={(why) => patch(i, { why })} ru={ru} className="" label={ru ? 'Зачем этот шаг' : 'Why this step matters'} placeholder={ru ? 'Зачем этот шаг (необязательно)' : 'Why this step matters (optional)'} />
 
             {/* «ЗДЕСЬ НУЖЕН ЧЕЛОВЕК»: пункт зависит от того, чего не знает никакая модель —
                 местные цены, вкус, время на вашем оборудовании. Снятая галочка = «человек
@@ -558,12 +541,12 @@ export function ListEditor({
               />
             </div>
             {it.needsHuman && (
-              <BubbleTextEditor
+              <LineField
                 value={it.needsHumanAsk}
-                onChange={(v) => patch(i, { needsHumanAsk: v })}
-                singleLine
-                lang={ru ? 'ru' : 'en'}
-                ariaLabel={t('needsHumanAskLabel', lang)}
+                onChange={(needsHumanAsk) => patch(i, { needsHumanAsk })}
+                ru={ru}
+                className=""
+                label={t('needsHumanAskLabel', lang)}
                 placeholder={t('needsHumanAskPlaceholder', lang)}
               />
             )}
@@ -595,23 +578,14 @@ export function ListEditor({
                 {it.subtasks.map((s, si) => (
                   <div key={si} className="flex items-center gap-2">
                     <span className="text-muted">–</span>
-                    <BubbleTextEditor
+                    <LineField
                       value={s}
                       onChange={(v) => patch(i, { subtasks: it.subtasks.map((x, xi) => (xi === si ? v : x)) })}
-                      singleLine
-                      className="flex-1"
-                      lang={ru ? 'ru' : 'en'}
-                      ariaLabel={ru ? `Подпункт ${si + 1}` : `Sub-item ${si + 1}`}
+                      ru={ru}
+                      label={ru ? `Подпункт ${si + 1}` : `Sub-item ${si + 1}`}
                       placeholder={ru ? 'Подпункт' : 'Sub-item'}
                     />
-                    <button
-                      type="button"
-                      onClick={() => patch(i, { subtasks: it.subtasks.filter((_, xi) => xi !== si) })}
-                      className="text-muted hover:text-danger"
-                      aria-label={ru ? 'Удалить подпункт' : 'Remove sub-item'}
-                    >
-                      <X size={14} />
-                    </button>
+                    <RemoveBtn onClick={() => patch(i, { subtasks: it.subtasks.filter((_, xi) => xi !== si) })} label={ru ? 'Удалить подпункт' : 'Remove sub-item'} />
                   </div>
                 ))}
               </div>
@@ -648,14 +622,7 @@ export function ListEditor({
                         patch(i, { refs: it.refs.map((x, xi) => (xi === ri ? { ...x, url: e.target.value } : x)) })
                       }
                     />
-                    <button
-                      type="button"
-                      onClick={() => patch(i, { refs: it.refs.filter((_, xi) => xi !== ri) })}
-                      className="text-muted hover:text-danger"
-                      aria-label={ru ? 'Удалить ссылку' : 'Remove link'}
-                    >
-                      <X size={14} />
-                    </button>
+                    <RemoveBtn onClick={() => patch(i, { refs: it.refs.filter((_, xi) => xi !== ri) })} label={ru ? 'Удалить ссылку' : 'Remove link'} />
                   </div>
                 ))}
               </div>
@@ -676,24 +643,12 @@ export function ListEditor({
                 </button>
               </div>
             ) : (
-              <StepImageInput uploading={uploading === i} onFile={(f) => uploadFor(i, f)} ru={ru} />
+              <FileDrop kind="image" uploading={busy(i, 'image')} onFile={(f) => upload(i, 'image', f)} ru={ru} />
             )}
 
             <div className="flex flex-wrap gap-3 pt-1 text-[0.78125rem]">
-              <button
-                type="button"
-                onClick={() => patch(i, { subtasks: [...it.subtasks, ''] })}
-                className="text-accent hover:underline"
-              >
-                + {ru ? 'подпункт' : 'sub-item'}
-              </button>
-              <button
-                type="button"
-                onClick={() => patch(i, { refs: [...it.refs, { label: '', url: '' }] })}
-                className="text-accent hover:underline"
-              >
-                + {ru ? 'ссылку' : 'link'}
-              </button>
+              <AddLink onClick={() => patch(i, { subtasks: [...it.subtasks, ''] })}>{ru ? 'подпункт' : 'sub-item'}</AddLink>
+              <AddLink onClick={() => patch(i, { refs: [...it.refs, { label: '', url: '' }] })}>{ru ? 'ссылку' : 'link'}</AddLink>
             </div>
           </div>
           )}
@@ -718,16 +673,9 @@ export function ListEditor({
                   </button>
                 </div>
               ) : (
-                <StepImageInput uploading={uploading === i} onFile={(f) => uploadFor(i, f)} ru={ru} />
+                <FileDrop kind="image" uploading={busy(i, 'image')} onFile={(f) => upload(i, 'image', f)} ru={ru} />
               )}
-              <BubbleTextEditor
-                value={it.caption}
-                onChange={(v) => patch(i, { caption: v })}
-                singleLine
-                lang={ru ? 'ru' : 'en'}
-                ariaLabel={ru ? 'Подпись картинки' : 'Image caption'}
-                placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'}
-              />
+              <LineField value={it.caption} onChange={(caption) => patch(i, { caption })} ru={ru} className="" label={ru ? 'Подпись картинки' : 'Image caption'} placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'} />
             </div>
           )}
 
@@ -753,17 +701,10 @@ export function ListEditor({
                     {ru ? 'или' : 'or'}
                     <span className="h-px flex-1 bg-border" />
                   </div>
-                  <VideoFileInput uploading={videoUploading === i} onFile={(f) => uploadVideoFor(i, f)} ru={ru} />
+                  <FileDrop kind="video" uploading={busy(i, 'video')} onFile={(f) => upload(i, 'video', f)} ru={ru} />
                 </>
               )}
-              <BubbleTextEditor
-                value={it.caption}
-                onChange={(v) => patch(i, { caption: v })}
-                singleLine
-                lang={ru ? 'ru' : 'en'}
-                ariaLabel={ru ? 'Подпись видео' : 'Video caption'}
-                placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'}
-              />
+              <LineField value={it.caption} onChange={(caption) => patch(i, { caption })} ru={ru} className="" label={ru ? 'Подпись видео' : 'Video caption'} placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'} />
               {it.videoUrl.trim() &&
                 (() => {
                   const kind = parseVideoEmbed(it.videoUrl).kind
@@ -793,7 +734,7 @@ export function ListEditor({
                   </button>
                 </div>
               ) : (
-                <FileDropInput uploading={fileUploading === i} onFile={(f) => uploadFileFor(i, f)} ru={ru} />
+                <FileDrop kind="file" uploading={busy(i, 'file')} onFile={(f) => upload(i, 'file', f)} ru={ru} />
               )}
             </div>
           )}
@@ -904,9 +845,7 @@ function ProductBlockBody({
         </div>
       ))}
       <div className="text-[0.78125rem]">
-        <button type="button" onClick={() => onProducts([...products, { name: '', url: '', tier: '', note: '' }])} className="text-accent hover:underline">
-          + {t('productAdd', lang)}
-        </button>
+        <AddLink onClick={() => onProducts([...products, { name: '', url: '', tier: '', note: '' }])}>{t('productAdd', lang)}</AddLink>
       </div>
     </div>
   )
@@ -916,370 +855,35 @@ function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p:
   const set = (p: Partial<EditorPoll>) => onChange({ ...poll, ...p })
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
-      <BubbleTextEditor
-        value={poll.question}
-        onChange={(v) => set({ question: v })}
-        singleLine
-        lang={ru ? 'ru' : 'en'}
-        ariaLabel={ru ? 'Вопрос опроса' : 'Poll question'}
-        placeholder={ru ? 'Вопрос опроса' : 'Poll question'}
-      />
+      <LineField value={poll.question} onChange={(question) => set({ question })} label={ru ? 'Вопрос опроса' : 'Poll question'} ru={ru} className="" />
       <div className="flex flex-col gap-1.5">
         {poll.options.map((o, oi) => (
           <div key={o.id} className="flex items-center gap-2">
             <span className="w-4 text-right text-[0.6875rem] text-muted">{oi + 1}</span>
-            <BubbleTextEditor
+            <LineField
               value={o.text}
               onChange={(v) => set({ options: poll.options.map((x, xi) => (xi === oi ? { ...x, text: v } : x)) })}
-              singleLine
-              className="flex-1"
-              lang={ru ? 'ru' : 'en'}
-              ariaLabel={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
-              placeholder={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+              label={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
+              ru={ru}
             />
-            <button
-              type="button"
+            <RemoveBtn
               onClick={() => set({ options: poll.options.filter((_, xi) => xi !== oi) })}
               disabled={poll.options.length <= 2}
-              className="text-muted hover:text-danger disabled:opacity-30"
-              aria-label={ru ? 'Удалить вариант' : 'Remove option'}
-            >
-              <X size={14} />
-            </button>
+              label={ru ? 'Удалить вариант' : 'Remove option'}
+            />
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[0.78125rem]">
-        <button type="button" onClick={() => set({ options: [...poll.options, { id: newOptionId(), text: '' }] })} className="text-accent hover:underline">
-          + {ru ? 'вариант' : 'option'}
-        </button>
-        <label className="inline-flex cursor-pointer items-center gap-1.5 text-ink-2">
-          <Checkbox checked={poll.multi} onChange={(e) => set({ multi: e.target.checked })} />
+      <FieldRow>
+        <AddLink onClick={() => set({ options: [...poll.options, { id: newOptionId(), text: '' }] })}>{ru ? 'вариант' : 'option'}</AddLink>
+        <CheckLabel checked={poll.multi} onChange={(multi) => set({ multi })}>
           {ru ? 'Мультивыбор' : 'Multi-select'}
-        </label>
+        </CheckLabel>
         <span className="inline-flex items-center gap-1.5 text-ink-2">
           {ru ? 'Дедлайн' : 'Deadline'}:
           <DatePicker value={poll.deadline} onChange={(v) => set({ deadline: v })} lang={ru ? 'ru' : 'en'} />
         </span>
-      </div>
-    </div>
-  )
-}
-
-/** Quiz-блок в редакторе: вопрос + варианты с пометкой «верный» + пояснение.
- *  При одиночном режиме пометка «верный» эксклюзивна (снимает у остальных). */
-const QUIZ_KIND_OPTS: { k: QuizKind; ru: string; en: string }[] = [
-  { k: 'choice', ru: 'Выбор', en: 'Choice' },
-  { k: 'text', ru: 'Текст', en: 'Text' },
-  { k: 'number', ru: 'Число', en: 'Number' },
-  { k: 'blank', ru: 'Пропуски', en: 'Blanks' },
-  { k: 'match', ru: 'Пары', en: 'Match' },
-  { k: 'sort', ru: 'Порядок', en: 'Sort' },
-  { k: 'code', ru: 'Код', en: 'Code' },
-]
-
-function QuizBlockBody({ quiz, onChange, ru }: { quiz: EditorQuiz; onChange: (q: EditorQuiz) => void; ru: boolean }) {
-  const set = (q: Partial<EditorQuiz>) => onChange({ ...quiz, ...q })
-  const toggleCorrect = (oi: number) =>
-    set({
-      options: quiz.options.map((x, xi) =>
-        xi === oi ? { ...x, correct: !x.correct } : quiz.multi ? x : { ...x, correct: false },
-      ),
-    })
-  const accept = quiz.accept.length ? quiz.accept : ['']
-  return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
-      {/* Тип теста */}
-      <div className="flex items-center gap-1 self-start rounded-md border border-border bg-surface p-0.5 text-[0.78125rem]">
-        {QUIZ_KIND_OPTS.map((o) => (
-          <button
-            key={o.k}
-            type="button"
-            onClick={() => set({ kind: o.k })}
-            className={`rounded px-2.5 py-1 ${quiz.kind === o.k ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
-          >
-            {ru ? o.ru : o.en}
-          </button>
-        ))}
-      </div>
-
-      <BubbleTextEditor
-        value={quiz.question}
-        onChange={(v) => set({ question: v })}
-        singleLine
-        lang={ru ? 'ru' : 'en'}
-        ariaLabel={ru ? 'Вопрос теста' : 'Quiz question'}
-        placeholder={ru ? 'Вопрос теста' : 'Quiz question'}
-      />
-
-      {quiz.kind === 'choice' && (
-        <>
-          <div className="flex flex-col gap-1.5">
-            {quiz.options.map((o, oi) => (
-              <div key={o.id} className="flex items-center gap-2">
-                <Tooltip label={o.correct ? (ru ? 'Верный ответ' : 'Correct answer') : ru ? 'Отметить верным' : 'Mark correct'}>
-                  <button
-                    type="button"
-                    onClick={() => toggleCorrect(oi)}
-                    aria-pressed={o.correct}
-                    aria-label={ru ? 'Отметить верным' : 'Mark correct'}
-                    className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors ${
-                      o.correct ? 'border-ok bg-ok/15 text-ok' : 'border-border-strong text-transparent hover:border-ok'
-                    }`}
-                  >
-                    <Check size={13} />
-                  </button>
-                </Tooltip>
-                <BubbleTextEditor
-                  value={o.text}
-                  onChange={(v) => set({ options: quiz.options.map((x, xi) => (xi === oi ? { ...x, text: v } : x)) })}
-                  singleLine
-                  className="flex-1"
-                  lang={ru ? 'ru' : 'en'}
-                  ariaLabel={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
-                  placeholder={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => set({ options: quiz.options.filter((_, xi) => xi !== oi) })}
-                  disabled={quiz.options.length <= 2}
-                  className="text-muted hover:text-danger disabled:opacity-30"
-                  aria-label={ru ? 'Удалить вариант' : 'Remove option'}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[0.78125rem]">
-            <button
-              type="button"
-              onClick={() => set({ options: [...quiz.options, { id: newOptionId(), text: '', correct: false }] })}
-              className="text-accent hover:underline"
-            >
-              + {ru ? 'вариант' : 'option'}
-            </button>
-            <label className="inline-flex cursor-pointer items-center gap-1.5 text-ink-2">
-              <Checkbox checked={quiz.multi} onChange={(e) => set({ multi: e.target.checked })} />
-              {ru ? 'Несколько верных' : 'Multiple correct'}
-            </label>
-          </div>
-        </>
-      )}
-
-      {(quiz.kind === 'text' || quiz.kind === 'code') && (
-        <>
-          {quiz.kind === 'code' && <span className="text-[0.6875rem] text-muted">{ru ? 'Ответ вводится моноширинно; сверяется с принимаемыми (регистр обычно важен).' : 'Answer is entered monospace; matched against accepted (case usually matters).'}</span>}
-          <div className="flex flex-col gap-1.5">
-            {accept.map((a, ai) => (
-              <div key={ai} className="flex items-center gap-2">
-                <span className="w-4 text-right text-[0.6875rem] text-muted">✓</span>
-                <BubbleTextEditor
-                  value={a}
-                  onChange={(v) => set({ accept: accept.map((x, xi) => (xi === ai ? v : x)) })}
-                  singleLine
-                  className="flex-1"
-                  lang={ru ? 'ru' : 'en'}
-                  ariaLabel={ru ? `Принимаемый ответ ${ai + 1}` : `Accepted answer ${ai + 1}`}
-                  placeholder={ru ? `Принимаемый ответ ${ai + 1}` : `Accepted answer ${ai + 1}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => set({ accept: accept.filter((_, xi) => xi !== ai) })}
-                  disabled={accept.length <= 1}
-                  className="text-muted hover:text-danger disabled:opacity-30"
-                  aria-label={ru ? 'Удалить ответ' : 'Remove answer'}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[0.78125rem]">
-            <button type="button" onClick={() => set({ accept: [...accept, ''] })} className="text-accent hover:underline">
-              + {ru ? 'вариант ответа' : 'accepted answer'}
-            </button>
-            <label className="inline-flex cursor-pointer items-center gap-1.5 text-ink-2">
-              <Checkbox checked={quiz.caseSensitive} onChange={(e) => set({ caseSensitive: e.target.checked })} />
-              {ru ? 'Учитывать регистр' : 'Case-sensitive'}
-            </label>
-          </div>
-          <span className="text-[0.6875rem] text-muted">{ru ? 'Любой из принимаемых ответов засчитывается (пробелы/регистр нормализуются).' : 'Any accepted answer counts (whitespace/case normalized).'}</span>
-        </>
-      )}
-
-      {quiz.kind === 'number' && (
-        <div className="flex flex-wrap items-end gap-3 text-[0.78125rem]">
-          <label className="flex flex-col gap-1 text-ink-2">
-            {ru ? 'Верный ответ' : 'Correct answer'}
-            <Input
-              className="w-32"
-              inputMode="decimal"
-              aria-label={ru ? 'Числовой ответ' : 'Numeric answer'}
-              placeholder="42"
-              value={quiz.answer}
-              onChange={(e) => set({ answer: e.target.value })}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-ink-2">
-            {ru ? 'Допуск ±' : 'Tolerance ±'}
-            <Input
-              className="w-24"
-              inputMode="decimal"
-              aria-label={ru ? 'Допуск' : 'Tolerance'}
-              placeholder="0"
-              value={quiz.tolerance}
-              onChange={(e) => set({ tolerance: e.target.value })}
-            />
-          </label>
-        </div>
-      )}
-
-      {quiz.kind === 'blank' && (
-        <>
-          <textarea
-            className="min-h-[3.25rem] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[0.8125rem] leading-relaxed text-ink outline-hidden focus:border-border-strong"
-            aria-label={ru ? 'Текст с пропусками' : 'Text with blanks'}
-            placeholder={ru ? 'Текст с пропусками. Пишите ___ там, где пропуск.' : 'Text with blanks. Write ___ where a blank goes.'}
-            value={quiz.template}
-            onChange={(e) => set({ template: e.target.value })}
-          />
-          {(() => {
-            const n = blankCount(quiz.template)
-            if (n === 0) return <span className="text-[0.6875rem] text-muted">{ru ? 'Добавьте ___ в текст, чтобы задать пропуски.' : 'Add ___ to the text to create blanks.'}</span>
-            return (
-              <div className="flex flex-col gap-1.5">
-                {Array.from({ length: n }, (_, bi) => (
-                  <div key={bi} className="flex items-center gap-2">
-                    <span className="w-5 shrink-0 text-right font-mono text-[0.6875rem] text-muted">#{bi + 1}</span>
-                    <BubbleTextEditor
-                      value={quiz.blanks[bi] ?? ''}
-                      onChange={(v) => set({ blanks: Array.from({ length: n }, (_, i) => (i === bi ? v : quiz.blanks[i] ?? '')) })}
-                      singleLine
-                      className="flex-1"
-                      lang={ru ? 'ru' : 'en'}
-                      ariaLabel={ru ? `Ответы для пропуска ${bi + 1}` : `Answers for blank ${bi + 1}`}
-                      placeholder={ru ? 'Принимаемые ответы через запятую' : 'Accepted answers, comma-separated'}
-                    />
-                  </div>
-                ))}
-              </div>
-            )
-          })()}
-          <label className="inline-flex cursor-pointer items-center gap-1.5 self-start text-[0.78125rem] text-ink-2">
-            <Checkbox checked={quiz.caseSensitive} onChange={(e) => set({ caseSensitive: e.target.checked })} />
-            {ru ? 'Учитывать регистр' : 'Case-sensitive'}
-          </label>
-        </>
-      )}
-
-      {quiz.kind === 'match' && (() => {
-        const pairs = quiz.pairs.length ? quiz.pairs : [{ left: '', right: '' }, { left: '', right: '' }]
-        const setPairs = (p: { left: string; right: string }[]) => set({ pairs: p })
-        return (
-          <>
-            <div className="flex flex-col gap-1.5">
-              {pairs.map((p, pi) => (
-                <div key={pi} className="flex items-center gap-2">
-                  <BubbleTextEditor
-                    value={p.left}
-                    onChange={(v) => setPairs(pairs.map((x, xi) => (xi === pi ? { ...x, left: v } : x)))}
-                    singleLine
-                    className="flex-1"
-                    lang={ru ? 'ru' : 'en'}
-                    ariaLabel={ru ? `Слева ${pi + 1}` : `Left ${pi + 1}`}
-                    placeholder={ru ? 'Слева' : 'Left'}
-                  />
-                  <span className="shrink-0 text-muted">→</span>
-                  <BubbleTextEditor
-                    value={p.right}
-                    onChange={(v) => setPairs(pairs.map((x, xi) => (xi === pi ? { ...x, right: v } : x)))}
-                    singleLine
-                    className="flex-1"
-                    lang={ru ? 'ru' : 'en'}
-                    ariaLabel={ru ? `Справа ${pi + 1}` : `Right ${pi + 1}`}
-                    placeholder={ru ? 'Справа' : 'Right'}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setPairs(pairs.filter((_, xi) => xi !== pi))}
-                    disabled={pairs.length <= 2}
-                    className="text-muted hover:text-danger disabled:opacity-30"
-                    aria-label={ru ? 'Удалить пару' : 'Remove pair'}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[0.78125rem]">
-              <button type="button" onClick={() => setPairs([...pairs, { left: '', right: '' }])} className="text-accent hover:underline">
-                + {ru ? 'пара' : 'pair'}
-              </button>
-              <label className="inline-flex cursor-pointer items-center gap-1.5 text-ink-2">
-                <Checkbox checked={quiz.caseSensitive} onChange={(e) => set({ caseSensitive: e.target.checked })} />
-                {ru ? 'Учитывать регистр' : 'Case-sensitive'}
-              </label>
-            </div>
-            <span className="text-[0.6875rem] text-muted">{ru ? 'Правые части ученику показываются перемешанными.' : 'Right sides are shuffled for the learner.'}</span>
-          </>
-        )
-      })()}
-
-      {quiz.kind === 'sort' && (() => {
-        const items = quiz.items.length ? quiz.items : ['', '']
-        const setItems = (xs: string[]) => set({ items: xs })
-        const move = (i: number, d: -1 | 1) => {
-          const j = i + d
-          if (j < 0 || j >= items.length) return
-          const next = [...items]
-          ;[next[i], next[j]] = [next[j], next[i]]
-          setItems(next)
-        }
-        return (
-          <>
-            <div className="flex flex-col gap-1.5">
-              {items.map((it2, ii) => (
-                <div key={ii} className="flex items-center gap-1.5">
-                  <span className="w-4 text-right font-mono text-[0.6875rem] text-muted">{ii + 1}</span>
-                  <div className="flex flex-col">
-                    <button type="button" onClick={() => move(ii, -1)} disabled={ii === 0} className="text-muted hover:text-ink disabled:opacity-20" aria-label="up"><ChevronUp size={13} /></button>
-                    <button type="button" onClick={() => move(ii, 1)} disabled={ii === items.length - 1} className="text-muted hover:text-ink disabled:opacity-20" aria-label="down"><ChevronDown size={13} /></button>
-                  </div>
-                  <BubbleTextEditor
-                    value={it2}
-                    onChange={(v) => setItems(items.map((x, xi) => (xi === ii ? v : x)))}
-                    singleLine
-                    className="flex-1"
-                    lang={ru ? 'ru' : 'en'}
-                    ariaLabel={ru ? `Элемент ${ii + 1}` : `Item ${ii + 1}`}
-                    placeholder={ru ? `Элемент ${ii + 1}` : `Item ${ii + 1}`}
-                  />
-                  <button type="button" onClick={() => setItems(items.filter((_, xi) => xi !== ii))} disabled={items.length <= 2} className="text-muted hover:text-danger disabled:opacity-30" aria-label={ru ? 'Удалить' : 'Remove'}>
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-4 pt-0.5 text-[0.78125rem]">
-              <button type="button" onClick={() => setItems([...items, ''])} className="text-accent hover:underline">+ {ru ? 'элемент' : 'item'}</button>
-              <span className="text-[0.6875rem] text-muted">{ru ? 'Задайте ПРАВИЛЬНЫЙ порядок (сверху вниз). Ученику покажем перемешанными.' : 'Set the CORRECT order (top to bottom). Shuffled for the learner.'}</span>
-            </div>
-          </>
-        )
-      })()}
-
-      <BubbleTextEditor
-        value={quiz.explain}
-        onChange={(v) => set({ explain: v })}
-        rows={2}
-        lang={ru ? 'ru' : 'en'}
-        ariaLabel={ru ? 'Пояснение (после проверки)' : 'Explanation (after check)'}
-        placeholder={ru ? 'Пояснение — покажется после проверки (необязательно)' : 'Explanation — shown after checking (optional)'}
-      />
-      <span className="text-[0.6875rem] text-muted">
-        {ru ? 'Проверка — на странице списка.' : 'Checking happens on the list page.'}
-      </span>
+      </FieldRow>
     </div>
   )
 }
@@ -1406,128 +1010,6 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
       >
         <Plus size={between ? 15 : 20} />
       </button>
-    </div>
-  )
-}
-
-function StepImageInput({ uploading, onFile, ru }: { uploading: boolean; onFile: (f: File) => void; ru: boolean }) {
-  const ref = useRef<HTMLInputElement>(null)
-  const [over, setOver] = useState(false)
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => ref.current?.click()}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setOver(false)
-        const f = e.dataTransfer.files?.[0]
-        if (f) onFile(f)
-      }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[0.78125rem] transition-colors ${
-        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
-      }`}
-    >
-      {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImageUp size={14} />}
-      {uploading ? (ru ? 'Загрузка…' : 'Uploading…') : ru ? 'Скриншот: перетащите или нажмите' : 'Screenshot: drag or click'}
-      <input
-        ref={ref}
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) onFile(f)
-          e.target.value = ''
-        }}
-      />
-    </div>
-  )
-}
-
-function VideoFileInput({ uploading, onFile, ru }: { uploading: boolean; onFile: (f: File) => void; ru: boolean }) {
-  const ref = useRef<HTMLInputElement>(null)
-  const [over, setOver] = useState(false)
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => ref.current?.click()}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setOver(true)
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setOver(false)
-        const f = e.dataTransfer.files?.[0]
-        if (f) onFile(f)
-      }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[0.78125rem] transition-colors ${
-        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
-      }`}
-    >
-      {uploading ? <Loader2 size={14} className="animate-spin" /> : <VideoIcon size={14} />}
-      {uploading
-        ? ru
-          ? 'Загрузка…'
-          : 'Uploading…'
-        : ru
-          ? 'Свой файл: перетащите или нажмите (MP4/WEBM, до 50 МБ)'
-          : 'Own file: drag or click (MP4/WEBM, up to 50 MB)'}
-      <input
-        ref={ref}
-        type="file"
-        accept="video/mp4,video/webm,video/ogg"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) onFile(f)
-          e.target.value = ''
-        }}
-      />
-    </div>
-  )
-}
-
-function FileDropInput({ uploading, onFile, ru }: { uploading: boolean; onFile: (f: File) => void; ru: boolean }) {
-  const ref = useRef<HTMLInputElement>(null)
-  const [over, setOver] = useState(false)
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => ref.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setOver(true) }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault()
-        setOver(false)
-        const f = e.dataTransfer.files?.[0]
-        if (f) onFile(f)
-      }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[0.78125rem] transition-colors ${
-        over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
-      }`}
-    >
-      {uploading ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} />}
-      {uploading ? (ru ? 'Загрузка…' : 'Uploading…') : ru ? 'Файл: перетащите или нажмите (PDF/док/архив, до 25 МБ)' : 'File: drag or click (PDF/doc/archive, up to 25 MB)'}
-      <input
-        ref={ref}
-        type="file"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) onFile(f)
-          e.target.value = ''
-        }}
-      />
     </div>
   )
 }

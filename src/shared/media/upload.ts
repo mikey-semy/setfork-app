@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isS3Configured } from '@/shared/settings/media'
+import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from './limits'
 import { deleteObject, putObject } from './s3'
 
 const MAX_BYTES = 4 * 1024 * 1024 // 4 МБ для скриншотов
@@ -44,7 +45,6 @@ export async function uploadImageFile(dir: string, file: File): Promise<string> 
   return `/uploads/${dir}/${name}`
 }
 
-const VIDEO_MAX_BYTES = 50 * 1024 * 1024 // 50 МБ на клип (без транскодинга; часовые лекции — Cloudflare Stream позже)
 const VIDEO_EXT: Record<string, string> = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/ogg': 'ogv' }
 /** Тип видео по сигнатуре (magic bytes), НЕ по client-mime. */
 function sniffVideo(b: Buffer): string | null {
@@ -57,7 +57,7 @@ function sniffVideo(b: Buffer): string | null {
 /** Загрузка видео-файла (свой клип) на диск (`/uploads/videos/...`), отдаётся <video>.
  *  Тип — по содержимому. Всегда диск (S3-стриминг видео = отдельный роут/Cloudflare). */
 export async function uploadVideoFile(dir: string, file: File): Promise<string> {
-  if (file.size > VIDEO_MAX_BYTES) throw new Error('Файл больше 50 МБ.')
+  if (file.size > VIDEO_MAX_BYTES) throw new Error(`Файл больше ${megabytes(VIDEO_MAX_BYTES)} МБ.`)
   const buffer = Buffer.from(await file.arrayBuffer())
   const mime = sniffVideo(buffer)
   const ext = mime ? VIDEO_EXT[mime] : undefined
@@ -69,7 +69,6 @@ export async function uploadVideoFile(dir: string, file: File): Promise<string> 
   return `/uploads/${dir}/${name}`
 }
 
-const ATTACH_MAX_BYTES = 25 * 1024 * 1024 // 25 МБ на вложение
 // Разрешённые расширения вложений (не-картинки). Исполняемое/скриптовое — не пускаем.
 // SVG НАМЕРЕННО исключён: файл отдаётся инлайн с того же origin, а `<script>` внутри SVG
 // → хранимый XSS. Векторные картинки не нужны для списков.
@@ -84,7 +83,7 @@ export async function uploadAttachmentFile(file: File): Promise<{ url: string; n
   const dot = file.name.lastIndexOf('.')
   const ext = dot >= 0 ? file.name.slice(dot + 1).toLowerCase() : ''
   if (!ATTACH_EXT.has(ext)) throw new Error(`Тип .${ext || '?'} не разрешён для вложения.`)
-  if (file.size > ATTACH_MAX_BYTES) throw new Error('Файл больше 25 МБ.')
+  if (file.size > ATTACH_MAX_BYTES) throw new Error(`Файл больше ${megabytes(ATTACH_MAX_BYTES)} МБ.`)
   const buffer = Buffer.from(await file.arrayBuffer())
   const stored = `${randomUUID()}.${ext}`
   const diskDir = join(process.cwd(), 'public', 'uploads', 'files')
