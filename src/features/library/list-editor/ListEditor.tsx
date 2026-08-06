@@ -8,6 +8,7 @@ import { BlockCard } from './BlockCard'
 import { BlockInserter } from './BlockInserter'
 import { EditorToolbar } from './EditorToolbar'
 import { RefineBar } from './RefineBar'
+import { useBlockDrag } from './use-block-drag'
 import { useBlockList } from './use-block-list'
 import { useBlockUploads } from './use-block-uploads'
 import { useFlipReorder } from './use-flip-reorder'
@@ -42,8 +43,7 @@ export function ListEditor({
   // было сохранить версию (жалоба владельца 04.08.2026). Показываем тем же
   // рендером, что и предложения правок, — вторая копия разъехалась бы с первой.
   const [preview, setPreview] = useState(false)
-  const [draggedFrom, setDraggedFrom] = useState<number | null>(null)
-  const [dropTarget, setDropTarget] = useState<number | null>(null)
+  const drag = useBlockDrag(list.reorder)
 
   // Ctrl/⌘+Z, +Shift+Z, +Y — отмена и повтор (в полях ввода не перехватываем, там
   // работает браузерная); Alt+↑/↓ — двигать блок, на котором стоит фокус.
@@ -110,26 +110,7 @@ export function ListEditor({
             isFirst={i === 0}
             isLast={i === list.items.length - 1}
             lang={lang}
-            drag={{
-              dragging: draggedFrom === i,
-              over: dropTarget === i && draggedFrom !== null,
-              onDragStart: () => setDraggedFrom(i),
-              onDragEnd: () => {
-                setDraggedFrom(null)
-                setDropTarget(null)
-              },
-              onDragOver: (e) => {
-                if (draggedFrom === null) return
-                e.preventDefault()
-                if (dropTarget !== i) setDropTarget(i)
-              },
-              onDrop: (e) => {
-                e.preventDefault()
-                if (draggedFrom !== null) list.reorder(draggedFrom, i)
-                setDraggedFrom(null)
-                setDropTarget(null)
-              },
-            }}
+            drag={{ dragging: drag.draggingFrom === i, line: drag.lineAt(i), ...drag.handlers(i) }}
             onPatch={(p) => list.patch(i, p)}
             onMove={(dir) => list.move(i, dir)}
             onMoveToEdge={(edge) => list.moveToEdge(i, edge)}

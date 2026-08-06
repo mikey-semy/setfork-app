@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { insertBlock, moveBlock, patchBlock, removeBlock, reorderBlocks, type Snapshot } from '@/features/library/list-editor/block-ops'
+import { dropTargetIndex, insertBlock, moveBlock, patchBlock, removeBlock, reorderBlocks, type Snapshot } from '@/features/library/list-editor/block-ops'
 import { emptyItem, type EditorItem } from '@/features/library/editor'
 
 /**
@@ -64,6 +64,22 @@ describe('операции над составом списка', () => {
     expect(reorderBlocks(s, 1, 1)).toBe(s)
     expect(reorderBlocks(s, 0, 5)).toBe(s)
     expect(reorderBlocks(s, -1, 0)).toBe(s)
+  })
+
+  it('бросок у кромки карточки попадает туда, где показана линия', () => {
+    // [a,b,c,d]: тащим a вниз и бросаем над c — встать должен ровно перед c.
+    const s = snapOf(['a', 'b', 'c', 'd'])
+    expect(titlesOf(reorderBlocks(s, 0, dropTargetIndex(0, 2, 'before')))).toEqual(['b', 'a', 'c', 'd'])
+    expect(titlesOf(reorderBlocks(s, 0, dropTargetIndex(0, 2, 'after')))).toEqual(['b', 'c', 'a', 'd'])
+    // Вверх поправка на изъятие не нужна — цели выше не съезжают.
+    expect(titlesOf(reorderBlocks(s, 3, dropTargetIndex(3, 1, 'before')))).toEqual(['a', 'd', 'b', 'c'])
+    expect(titlesOf(reorderBlocks(s, 3, dropTargetIndex(3, 1, 'after')))).toEqual(['a', 'b', 'd', 'c'])
+  })
+
+  it('бросок на своё же место ничего не меняет', () => {
+    const s = snapOf(['a', 'b', 'c'])
+    expect(titlesOf(reorderBlocks(s, 1, dropTargetIndex(1, 1, 'before')))).toEqual(['a', 'b', 'c'])
+    expect(titlesOf(reorderBlocks(s, 1, dropTargetIndex(1, 1, 'after')))).toEqual(['a', 'b', 'c'])
   })
 
   it('правка полей меняет только свой пункт и не трогает id', () => {

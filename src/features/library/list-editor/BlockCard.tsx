@@ -16,7 +16,8 @@ import type { DropKind } from './FileDrop'
 
 export type CardDrag = {
   dragging: boolean
-  over: boolean
+  /** У какой кромки показать линию места вставки; null — курсор не над карточкой. */
+  line: 'before' | 'after' | null
   onDragStart: () => void
   onDragEnd: () => void
   onDragOver: (e: DragEvent) => void
@@ -103,8 +104,16 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
       data-uid={uid}
       onDragOver={drag.onDragOver}
       onDrop={drag.onDrop}
-      className={`rounded-lg border bg-surface p-4 transition-colors ${drag.over ? 'border-accent' : 'border-border'} ${drag.dragging ? 'opacity-50' : ''}`}
+      className={`relative rounded-lg border border-border bg-surface p-4 ${drag.dragging ? 'opacity-50' : ''}`}
     >
+      {/* Линия места вставки: отвечает на вопрос «выше или ниже встанет», которого
+          подсветка рамки не решала. */}
+      {drag.line && (
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute inset-x-0 h-0.5 rounded-full bg-accent ${drag.line === 'before' ? '-top-2' : '-bottom-2'}`}
+        />
+      )}
       <div className="mb-2.5 flex items-center gap-2">
         <Tooltip label={t('editor.dragToReorder', lang)}>
           <span draggable onDragStart={drag.onDragStart} onDragEnd={drag.onDragEnd} className="cursor-grab rounded-md p-0.5 text-muted hover:text-ink active:cursor-grabbing">

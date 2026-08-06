@@ -52,6 +52,20 @@ export function reorderBlocks(snap: Snapshot, from: number, to: number): Snapsho
   return { items: shift(snap.items, from, to), uids: shift(snap.uids, from, to) }
 }
 
+/**
+ * Куда встанет блок, если бросить его у края карточки `over`.
+ *
+ * Считается ПОСЛЕ изъятия блока с места `from` — поэтому цели ниже съезжают на одну
+ * позицию вверх. Без этой поправки бросок вниз промахивался на строку: линия
+ * показывала одно место, а блок вставал в соседнее.
+ */
+export function dropTargetIndex(from: number, over: number, side: 'before' | 'after'): number {
+  // Бросок на самого себя — никуда: у своей карточки нижняя половина иначе уводила
+  // бы блок на позицию вниз.
+  if (from === over) return from
+  return over - (from < over ? 1 : 0) + (side === 'after' ? 1 : 0)
+}
+
 /** Правка полей блока: состав и порядок те же, меняется только содержимое. */
 export function patchBlock(snap: Snapshot, i: number, p: Partial<EditorItem>): Snapshot {
   return { items: snap.items.map((it, idx) => (idx === i ? { ...it, ...p } : it)), uids: snap.uids }
