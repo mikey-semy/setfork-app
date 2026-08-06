@@ -4,7 +4,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { toast } from '@/shared/ui/toast'
 import {
   BarChart3,
-  Check,
   ChevronDown,
   ChevronsDown,
   ChevronsUp,
@@ -30,7 +29,6 @@ import {
 } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
-import { Checkbox } from '@/shared/ui/checkbox'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -107,7 +105,10 @@ export function ListEditor({
   // же рендером, которым показываются предложения правок, — вторая копия страницы
   // списка разъехалась бы с первой на первой же новой фиче блоков.
   const [preview, setPreview] = useState(false)
-  const [uploading, setUploading] = useState<{ i: number; kind: DropKind } | null>(null)
+  // Что сейчас грузится — ключи `блок:вид`, а не одна пара: пока летит видео, можно
+  // перетащить картинку в другой блок, и обе полосы «Загрузка…» должны стоять до
+  // своего конца. С одиночным состоянием первая гасла на финише второй.
+  const [uploading, setUploading] = useState<string[]>([])
   const [dragI, setDragI] = useState<number | null>(null)
   const [overI, setOverI] = useState<number | null>(null)
 
@@ -217,12 +218,13 @@ export function ListEditor({
     }
   }
 
-  const busy = (i: number, kind: DropKind) => uploading?.i === i && uploading.kind === kind
+  const busy = (i: number, kind: DropKind) => uploading.includes(`${i}:${kind}`)
   // Загрузка в блок i: вид выбирает экшен, дальше цикл общий — пометить занятость,
   // отправить, снять, отказ показать тостом. Занятость одна на редактор: грузится
   // ровно тот блок, в который перетащили.
   async function upload(i: number, kind: DropKind, file: File) {
-    setUploading({ i, kind })
+    const key = `${i}:${kind}`
+    setUploading((u) => [...u, key])
     const fd = new FormData()
     fd.append('file', file)
     // Ветки различаются только экшеном и полями, куда лечь результату; общий разбор
@@ -240,7 +242,7 @@ export function ListEditor({
       if ('error' in r) toast.error(r.error)
       else patch(i, { fileUrl: r.url, fileName: r.name })
     }
-    setUploading(null)
+    setUploading((u) => u.filter((k) => k !== key))
   }
   // Вставка блока на позицию index (0..len). index === len → в конец.
   const insertAt = (index: number, type: BlockType) => {
