@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { ImageUp, Loader2, Paperclip, Video as VideoIcon } from 'lucide-react'
+import { t, type Lang, type TKey } from '@/shared/i18n'
 import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/limits'
 
 export type DropKind = 'image' | 'video' | 'file'
@@ -9,19 +10,19 @@ export type DropKind = 'image' | 'video' | 'file'
 /**
  * Виды дропзоны — таблица, а не три копии одного компонента: скриншот, свой видеофайл
  * и вложение отличались только MIME-фильтром, иконкой и подписью. Размер в подписи
- * берётся из констант, по которым отказывает сервер, — иначе тексты разъезжаются с
- * проверкой. У вложения фильтра нет намеренно: расширения режет сервер белым списком.
+ * подставляется из констант, по которым отказывает сервер, — иначе текст разъезжается
+ * с проверкой. У вложения фильтра нет намеренно: расширения режет сервер белым списком.
  */
-const KINDS: Record<DropKind, { accept?: string; Icon: typeof ImageUp; ru: string; en: string }> = {
-  image: { accept: 'image/png,image/jpeg,image/webp,image/gif', Icon: ImageUp, ru: 'Скриншот: перетащите или нажмите', en: 'Screenshot: drag or click' },
-  video: { accept: 'video/mp4,video/webm,video/ogg', Icon: VideoIcon, ru: `Свой файл: перетащите или нажмите (MP4/WEBM, до ${megabytes(VIDEO_MAX_BYTES)} МБ)`, en: `Own file: drag or click (MP4/WEBM, up to ${megabytes(VIDEO_MAX_BYTES)} MB)` },
-  file: { Icon: Paperclip, ru: `Файл: перетащите или нажмите (PDF/док/архив, до ${megabytes(ATTACH_MAX_BYTES)} МБ)`, en: `File: drag or click (PDF/doc/archive, up to ${megabytes(ATTACH_MAX_BYTES)} MB)` },
+const KINDS: Record<DropKind, { accept?: string; Icon: typeof ImageUp; label: TKey; mb?: number }> = {
+  image: { accept: 'image/png,image/jpeg,image/webp,image/gif', Icon: ImageUp, label: 'editor.dropImage' },
+  video: { accept: 'video/mp4,video/webm,video/ogg', Icon: VideoIcon, label: 'editor.dropVideo', mb: megabytes(VIDEO_MAX_BYTES) },
+  file: { Icon: Paperclip, label: 'editor.dropFile', mb: megabytes(ATTACH_MAX_BYTES) },
 }
 
-export function FileDrop({ kind, uploading, onFile, ru }: { kind: DropKind; uploading: boolean; onFile: (f: File) => void; ru: boolean }) {
+export function FileDrop({ kind, uploading, onFile, lang }: { kind: DropKind; uploading: boolean; onFile: (f: File) => void; lang: Lang }) {
   const ref = useRef<HTMLInputElement>(null)
   const [over, setOver] = useState(false)
-  const { accept, Icon, ...label } = KINDS[kind]
+  const { accept, Icon, label, mb } = KINDS[kind]
   const take = (f: File | undefined) => {
     if (f) onFile(f)
   }
@@ -45,7 +46,7 @@ export function FileDrop({ kind, uploading, onFile, ru }: { kind: DropKind; uplo
       }`}
     >
       {uploading ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
-      {uploading ? (ru ? 'Загрузка…' : 'Uploading…') : ru ? label.ru : label.en}
+      {uploading ? t('editor.uploading', lang) : t(label, lang).replace('{n}', String(mb))}
       <input
         ref={ref}
         type="file"

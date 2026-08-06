@@ -27,7 +27,7 @@ import {
   Video as VideoIcon,
   X,
 } from 'lucide-react'
-import type { Lang } from '@/shared/i18n'
+import { t, type Lang, type TKey } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -41,14 +41,32 @@ import { AddLink, CheckLabel, FieldRow, LineField, RemoveBtn } from './block-fie
 import { FileDrop, type DropKind } from './FileDrop'
 import { QuizBlockBody } from './QuizBlockBody'
 import { SuggestionResult } from './SuggestionResult'
-import { t } from '@/shared/i18n'
 import { isRiskyCommand } from '@/core/domain/destructive-command'
 import { classifyListKind, refineHint } from '@/shared/ai/list-kind'
-import { BLOCK_TYPES, BLOCK_META, newOptionId, parseVideoEmbed, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
+import { BLOCK_TYPES, newOptionId, parseVideoEmbed, PRODUCT_TIERS, type BlockType, type ProductTier } from './blocks'
 import { fetchLinkTitleAction, refineList, uploadStepFile, uploadStepImage, uploadStepVideo } from './actions'
 
 const BLOCK_ICON: Record<BlockType, typeof Footprints> = { step: Footprints, text: TextIcon, image: ImageIcon, poll: BarChart3, video: VideoIcon, quiz: GraduationCap, file: Paperclip, product: ShoppingCart }
-const blockLabel = (t: BlockType, ru: boolean): string => (ru ? BLOCK_META[t].ru : BLOCK_META[t].en)
+
+// Подписи блоков и уровней — таблицы «значение → ключ словаря». Подпись блока
+// раньше бралась из двух полей каталога (BLOCK_META.ru/.en), а уровень собирался
+// вложенным тернарником: третий язык требовал бы правки обоих мест.
+const BLOCK_LABEL: Record<BlockType, TKey> = {
+  step: 'block.step',
+  text: 'block.text',
+  image: 'block.image',
+  poll: 'block.poll',
+  video: 'block.video',
+  quiz: 'block.quiz',
+  file: 'block.file',
+  product: 'block.product',
+}
+const LEVEL_LABEL: Record<EditorItem['level'], TKey> = {
+  required: 'editor.levelRequired',
+  recommended: 'editor.levelRecommended',
+  optional: 'editor.levelOptional',
+}
+const blockLabel = (type: BlockType, lang: Lang): string => t(BLOCK_LABEL[type], lang)
 
 // Загрузка СВОИХ видеофайлов на наш хостинг выключена по умолчанию (нет ресурса
 // обслуживать объёмы без дохода). Код загрузки на месте — включается флагом,
@@ -57,7 +75,7 @@ const VIDEO_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_VIDEO_UPLOAD === '1'
 
 // Кнопка внутри поля подписи ссылки: по URL тянет <title> страницы и подставляет
 // его в название. Своё busy-состояние на строку. Неактивна без валидного URL.
-function LinkTitleButton({ url, onLabel, ru }: { url: string; onLabel: (v: string) => void; ru: boolean }) {
+function LinkTitleButton({ url, onLabel, lang }: { url: string; onLabel: (v: string) => void; lang: Lang }) {
   const [busy, setBusy] = useState(false)
   const ok = /^https?:\/\/\S+/i.test(url.trim())
   async function gen() {
@@ -68,12 +86,12 @@ function LinkTitleButton({ url, onLabel, ru }: { url: string; onLabel: (v: strin
     if ('label' in res) onLabel(res.label)
   }
   return (
-    <Tooltip label={ru ? 'Название из ссылки' : 'Get title from link'}>
+    <Tooltip label={t('editor.linkTitleFromUrl', lang)}>
       <button
         type="button"
         onClick={gen}
         disabled={busy || !ok}
-        aria-label={ru ? 'Название из ссылки' : 'Get title from link'}
+        aria-label={t('editor.linkTitleFromUrl', lang)}
         className="grid h-6 w-6 place-items-center rounded-md text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-2"
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
@@ -97,7 +115,7 @@ export function ListEditor({
   /** Упорядоченный список — нумерация; иначе набор (маркеры). */
   ordered?: boolean
 }) {
-  const ru = lang === 'ru'
+  
   const first = initialItems.length ? initialItems : [emptyItem()]
   const [items, setItemsRaw] = useState<EditorItem[]>(first)
   // ПРЕДПРОСМОТР рядом с правкой: до него единственным способом увидеть, что
@@ -205,10 +223,10 @@ export function ListEditor({
     if ('error' in res) {
       setRefineErr(
         res.error === 'ratelimited'
-          ? ru ? 'Слишком часто — подожди.' : 'Too many requests — wait a bit.'
+          ? t('editor.refineRateLimited', lang)
           : res.error === 'ai_quota'
-            ? ru ? 'Исчерпан месячный лимит на правки.' : 'Monthly refine limit reached.'
-            : ru ? 'Не удалось. Переформулируй.' : 'Failed. Try rephrasing.',
+            ? t('editor.refineQuota', lang)
+            : t('editor.refineFailed', lang),
       )
       return
     }
@@ -303,24 +321,24 @@ export function ListEditor({
 
       {/* Тулбар: undo/redo + подсказка */}
       <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
-        <Tooltip label={ru ? 'Отменить (Ctrl+Z)' : 'Undo (Ctrl+Z)'}>
+        <Tooltip label={t('editor.undoHint', lang)}>
           <button
             type="button"
             onClick={undo}
             disabled={!canUndo}
             className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2"
           >
-            <Undo2 size={13} /> {ru ? 'Отменить' : 'Undo'}
+            <Undo2 size={13} /> {t('editor.undo', lang)}
           </button>
         </Tooltip>
-        <Tooltip label={ru ? 'Повторить (Ctrl+Shift+Z)' : 'Redo (Ctrl+Shift+Z)'}>
+        <Tooltip label={t('editor.redoHint', lang)}>
           <button
             type="button"
             onClick={redo}
             disabled={!canRedo}
             className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2"
           >
-            <Redo2 size={13} /> {ru ? 'Повторить' : 'Redo'}
+            <Redo2 size={13} /> {t('editor.redo', lang)}
           </button>
         </Tooltip>
         <Tooltip label={t(preview ? 'editTip' : 'previewTip', lang)}>
@@ -335,7 +353,7 @@ export function ListEditor({
             {preview ? <Pencil size={13} /> : <Eye size={13} />} {t(preview ? 'editToggle' : 'previewToggle', lang)}
           </button>
         </Tooltip>
-        <span className="ml-1 hidden sm:inline">{ru ? 'перетаскивай ⠿, Alt+↑/↓ — двигать' : 'drag ⠿, Alt+↑/↓ to move'}</span>
+        <span className="ml-1 hidden sm:inline">{t('editor.dragHint', lang)}</span>
       </div>
 
       {preview ? (
@@ -350,7 +368,7 @@ export function ListEditor({
       {!preview && aiRefine && (
         <div className="rounded-lg border border-(--accent) bg-(--accent-soft) p-3">
           <div className="mb-2 flex items-center gap-1.5 text-[0.78125rem] font-semibold text-accent">
-            <Sparkles size={14} /> {ru ? 'Улучшить' : 'Improve'}
+            <Sparkles size={14} /> {t('editor.improve', lang)}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {/* Плейсхолдер — готовая фраза ПО ТИПУ списка (тот же refineHint, что в чате
@@ -358,7 +376,7 @@ export function ListEditor({
                 LLM-вызова. Хардкод «про TLS» на рецепте выглядел нелепо (фидбек владельца). */}
             <Input
               className="min-w-[15rem] flex-1"
-              placeholder={refineHint(classifyListKind(aiRefine.title), ru)}
+              placeholder={refineHint(classifyListKind(aiRefine.title), lang === 'ru')}
               value={instruction}
               disabled={refining}
               onChange={(e) => setInstruction(e.target.value)}
@@ -371,14 +389,10 @@ export function ListEditor({
             />
             <Button variant="primary" size="md" onClick={() => void runRefine()} disabled={refining || !instruction.trim()}>
               {refining ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              {refining ? (ru ? 'Правлю…' : 'Refining…') : ru ? 'Применить' : 'Apply'}
+              {t(refining ? 'editor.refining' : 'editor.apply', lang)}
             </Button>
           </div>
-          <p className="mt-1.5 text-[0.6875rem] text-ink-2">
-            {ru
-              ? 'Пункты будут переписаны. Скриншоты и ссылки при этом сбрасываются.'
-              : 'The items get rewritten. Screenshots and links are reset.'}
-          </p>
+          <p className="mt-1.5 text-[0.6875rem] text-ink-2">{t('editor.refineWarning', lang)}</p>
           {refineErr && <p className="mt-1 text-[0.78125rem] text-danger">{refineErr}</p>}
         </div>
       )}
@@ -391,7 +405,7 @@ export function ListEditor({
           а на тач-экране наведения нет. */}
       {items.length > 0 && (
         <div className="flex justify-center">
-          <BlockInserter onInsert={(type) => insertAt(0, type)} repeatType={items[0]?.type ?? 'step'} ru={ru} />
+          <BlockInserter onInsert={(type) => insertAt(0, type)} repeatType={items[0]?.type ?? 'step'} lang={lang} />
         </div>
       )}
       {items.map((it, i) => (
@@ -416,7 +430,7 @@ export function ListEditor({
           } ${dragI === i ? 'opacity-50' : ''}`}
         >
           <div className="mb-2.5 flex items-center gap-2">
-            <Tooltip label={ru ? 'Перетащить' : 'Drag to reorder'}>
+            <Tooltip label={t('editor.dragToReorder', lang)}>
               <span
                 draggable
                 onDragStart={() => setDragI(i)}
@@ -431,7 +445,7 @@ export function ListEditor({
             </Tooltip>
             {it.type === 'step' ? (
               <span className="font-mono text-[0.78125rem] text-muted">
-                {ordered ? `${ru ? 'Пункт' : 'Item'} ${items.slice(0, i).filter((x) => x.type === 'step').length + 1}` : '•'}
+                {ordered ? t('editor.itemN', lang).replace('{n}', String(items.slice(0, i).filter((x) => x.type === 'step').length + 1)) : '•'}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 font-mono text-[0.78125rem] text-muted">
@@ -439,31 +453,31 @@ export function ListEditor({
                   const Icon = BLOCK_ICON[it.type]
                   return <Icon size={13} />
                 })()}
-                {blockLabel(it.type, ru)}
+                {blockLabel(it.type, lang)}
               </span>
             )}
             <div className="ml-auto flex items-center gap-1">
-              <Tooltip label={ru ? 'В начало' : 'Move to top'}>
+              <Tooltip label={t('editor.moveTop', lang)}>
                 <button type="button" onClick={() => moveToEdge(i, 'top')} disabled={i === 0} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
                   <ChevronsUp size={15} />
                 </button>
               </Tooltip>
-              <Tooltip label={ru ? 'Выше' : 'Move up'}>
+              <Tooltip label={t('editor.moveUp', lang)}>
                 <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
                   <ChevronUp size={15} />
                 </button>
               </Tooltip>
-              <Tooltip label={ru ? 'Ниже' : 'Move down'}>
+              <Tooltip label={t('editor.moveDown', lang)}>
                 <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
                   <ChevronDown size={15} />
                 </button>
               </Tooltip>
-              <Tooltip label={ru ? 'В конец' : 'Move to bottom'}>
+              <Tooltip label={t('editor.moveBottom', lang)}>
                 <button type="button" onClick={() => moveToEdge(i, 'bottom')} disabled={i === items.length - 1} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
                   <ChevronsDown size={15} />
                 </button>
               </Tooltip>
-              <Tooltip label={ru ? 'Удалить' : 'Remove'}>
+              <Tooltip label={t('editor.remove', lang)}>
                 <button type="button" onClick={() => removeItem(i)} className="rounded-md p-1 text-muted hover:text-danger">
                   <Trash2 size={15} />
                 </button>
@@ -482,35 +496,35 @@ export function ListEditor({
               bare
               className="flex-1"
               textareaClassName="text-[0.78125rem] font-semibold placeholder:font-normal placeholder:text-muted"
-              lang={ru ? 'ru' : 'en'}
-              ariaLabel={ru ? `Урок/секция блока ${i + 1}` : `Block ${i + 1} lesson/section`}
-              placeholder={ru ? 'Урок/секция (необязательно) — группирует блоки ниже' : 'Lesson/section (optional) — groups the blocks below'}
+              lang={lang}
+              ariaLabel={t('editor.sectionOfBlockN', lang).replace('{n}', String(i + 1))}
+              placeholder={t('editor.sectionPh', lang)}
             />
           </div>
 
           {it.type === 'step' && (
           <div className="flex flex-col gap-2">
-            <LineField value={it.title} onChange={(title) => patch(i, { title })} ru={ru} className="" label={ru ? `Заголовок пункта ${i + 1}` : `Item ${i + 1} title`} placeholder={ru ? 'Заголовок пункта' : 'Item title'} />
+            <LineField value={it.title} onChange={(title) => patch(i, { title })} lang={lang} className="" label={t('editor.itemTitleN', lang).replace('{n}', String(i + 1))} placeholder={t('editor.itemTitlePh', lang)} />
             {/* Описание пункта — Markdown со всплывающей панелью форматирования
                 (выдели текст → мини-тулбар). Картинки/файлы — отдельными блоками. */}
             <BubbleTextEditor
               value={it.desc}
               onChange={(v) => patch(i, { desc: v })}
               rows={3}
-              lang={ru ? 'ru' : 'en'}
-              ariaLabel={ru ? `Описание пункта ${i + 1}` : `Item ${i + 1} description`}
-              placeholder={ru ? 'Описание (Markdown, необязательно)' : 'Description (Markdown, optional)'}
+              lang={lang}
+              ariaLabel={t('editor.itemDescN', lang).replace('{n}', String(i + 1))}
+              placeholder={t('editor.itemDescPh', lang)}
             />
             <CodeEditor
               value={it.command || ''}
               onChange={(v) => patch(i, { command: v })}
-              ariaLabel={ru ? `Команда пункта ${i + 1}` : `Item ${i + 1} command`}
-              placeholder={ru ? 'Команда или код (необязательно)' : 'Command or code (optional)'}
+              ariaLabel={t('editor.itemCommandN', lang).replace('{n}', String(i + 1))}
+              placeholder={t('editor.itemCommandPh', lang)}
             />
 
             {/* Уровень + «зачем» */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[0.6875rem] text-muted">{ru ? 'Уровень' : 'Level'}:</span>
+              <span className="text-[0.6875rem] text-muted">{t('editor.level', lang)}:</span>
               {(['required', 'recommended', 'optional'] as const).map((lv) => (
                 <button
                   key={lv}
@@ -520,15 +534,11 @@ export function ListEditor({
                     it.level === lv ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-ink-2 hover:text-ink'
                   }`}
                 >
-                  {lv === 'required'
-                    ? ru ? 'Обязательно' : 'Required'
-                    : lv === 'recommended'
-                      ? ru ? 'Рекомендуется' : 'Recommended'
-                      : ru ? 'Опционально' : 'Optional'}
+                  {t(LEVEL_LABEL[lv], lang)}
                 </button>
               ))}
             </div>
-            <LineField value={it.why} onChange={(why) => patch(i, { why })} ru={ru} className="" label={ru ? 'Зачем этот шаг' : 'Why this step matters'} placeholder={ru ? 'Зачем этот шаг (необязательно)' : 'Why this step matters (optional)'} />
+            <LineField value={it.why} onChange={(why) => patch(i, { why })} lang={lang} className="" label={t('editor.why', lang)} placeholder={t('editor.whyPh', lang)} />
 
             {/* «ЗДЕСЬ НУЖЕН ЧЕЛОВЕК»: пункт зависит от того, чего не знает никакая модель —
                 местные цены, вкус, время на вашем оборудовании. Снятая галочка = «человек
@@ -546,7 +556,7 @@ export function ListEditor({
               <LineField
                 value={it.needsHumanAsk}
                 onChange={(needsHumanAsk) => patch(i, { needsHumanAsk })}
-                ru={ru}
+                lang={lang}
                 className=""
                 label={t('needsHumanAskLabel', lang)}
                 placeholder={t('needsHumanAskPlaceholder', lang)}
@@ -583,11 +593,11 @@ export function ListEditor({
                     <LineField
                       value={s}
                       onChange={(v) => patch(i, { subtasks: it.subtasks.map((x, xi) => (xi === si ? v : x)) })}
-                      ru={ru}
-                      label={ru ? `Подпункт ${si + 1}` : `Sub-item ${si + 1}`}
-                      placeholder={ru ? 'Подпункт' : 'Sub-item'}
+                      lang={lang}
+                      label={t('editor.subitemN', lang).replace('{n}', String(si + 1))}
+                      placeholder={t('editor.subitemPh', lang)}
                     />
-                    <RemoveBtn onClick={() => patch(i, { subtasks: it.subtasks.filter((_, xi) => xi !== si) })} label={ru ? 'Удалить подпункт' : 'Remove sub-item'} />
+                    <RemoveBtn onClick={() => patch(i, { subtasks: it.subtasks.filter((_, xi) => xi !== si) })} label={t('editor.removeSubitem', lang)} />
                   </div>
                 ))}
               </div>
@@ -604,27 +614,27 @@ export function ListEditor({
                       singleLine
                       className="w-[12.5rem] shrink-0"
                       textareaClassName="leading-normal"
-                      lang={ru ? 'ru' : 'en'}
-                      ariaLabel={ru ? 'Название ссылки' : 'Link label'}
-                      placeholder={ru ? 'Название ссылки' : 'Link label'}
+                      lang={lang}
+                      ariaLabel={t('editor.linkLabel', lang)}
+                      placeholder={t('editor.linkLabel', lang)}
                       trailing={
                         <LinkTitleButton
                           url={r.url}
-                          ru={ru}
+                          lang={lang}
                           onLabel={(v) => patch(i, { refs: it.refs.map((x, xi) => (xi === ri ? { ...x, label: v } : x)) })}
                         />
                       }
                     />
                     <Input
                       className="font-mono leading-normal"
-                      aria-label={ru ? 'URL ссылки' : 'Link URL'}
+                      aria-label={t('editor.linkUrl', lang)}
                       placeholder="https://…"
                       value={r.url}
                       onChange={(e) =>
                         patch(i, { refs: it.refs.map((x, xi) => (xi === ri ? { ...x, url: e.target.value } : x)) })
                       }
                     />
-                    <RemoveBtn onClick={() => patch(i, { refs: it.refs.filter((_, xi) => xi !== ri) })} label={ru ? 'Удалить ссылку' : 'Remove link'} />
+                    <RemoveBtn onClick={() => patch(i, { refs: it.refs.filter((_, xi) => xi !== ri) })} label={t('editor.removeLink', lang)} />
                   </div>
                 ))}
               </div>
@@ -645,18 +655,18 @@ export function ListEditor({
                 </button>
               </div>
             ) : (
-              <FileDrop kind="image" uploading={busy(i, 'image')} onFile={(f) => upload(i, 'image', f)} ru={ru} />
+              <FileDrop kind="image" uploading={busy(i, 'image')} onFile={(f) => upload(i, 'image', f)} lang={lang} />
             )}
 
             <div className="flex flex-wrap gap-3 pt-1 text-[0.78125rem]">
-              <AddLink onClick={() => patch(i, { subtasks: [...it.subtasks, ''] })}>{ru ? 'подпункт' : 'sub-item'}</AddLink>
-              <AddLink onClick={() => patch(i, { refs: [...it.refs, { label: '', url: '' }] })}>{ru ? 'ссылку' : 'link'}</AddLink>
+              <AddLink onClick={() => patch(i, { subtasks: [...it.subtasks, ''] })}>{t('editor.addSubitem', lang)}</AddLink>
+              <AddLink onClick={() => patch(i, { refs: [...it.refs, { label: '', url: '' }] })}>{t('editor.addLinkWord', lang)}</AddLink>
             </div>
           </div>
           )}
 
           {/* Text-блок: богатый markdown-редактор (как в комментариях). */}
-          {it.type === 'text' && <TextBlockBody value={it.text} onChange={(v) => patch(i, { text: v })} ru={ru} />}
+          {it.type === 'text' && <TextBlockBody value={it.text} onChange={(v) => patch(i, { text: v })} lang={lang} />}
 
           {/* Image-блок: картинка + подпись. */}
           {it.type === 'image' && (
@@ -675,24 +685,24 @@ export function ListEditor({
                   </button>
                 </div>
               ) : (
-                <FileDrop kind="image" uploading={busy(i, 'image')} onFile={(f) => upload(i, 'image', f)} ru={ru} />
+                <FileDrop kind="image" uploading={busy(i, 'image')} onFile={(f) => upload(i, 'image', f)} lang={lang} />
               )}
-              <LineField value={it.caption} onChange={(caption) => patch(i, { caption })} ru={ru} className="" label={ru ? 'Подпись картинки' : 'Image caption'} placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'} />
+              <LineField value={it.caption} onChange={(caption) => patch(i, { caption })} lang={lang} className="" label={t('editor.imageCaption', lang)} placeholder={t('editor.captionPh', lang)} />
             </div>
           )}
 
           {/* Poll-блок: вопрос + варианты + мульти + дедлайн. */}
-          {it.type === 'poll' && <PollBlockBody poll={it.poll} onChange={(poll) => patch(i, { poll })} ru={ru} />}
+          {it.type === 'poll' && <PollBlockBody poll={it.poll} onChange={(poll) => patch(i, { poll })} lang={lang} />}
 
           {/* Quiz-блок: вопрос + варианты с пометкой верных + пояснение. */}
-          {it.type === 'quiz' && <QuizBlockBody quiz={it.quiz} onChange={(quiz) => patch(i, { quiz })} ru={ru} />}
+          {it.type === 'quiz' && <QuizBlockBody quiz={it.quiz} onChange={(quiz) => patch(i, { quiz })} lang={lang} />}
 
           {/* Video-блок: ссылка (YouTube/Vimeo/mp4) + подпись; хинт распознанного типа. */}
           {it.type === 'video' && (
             <div className="flex flex-col gap-2">
               <Input
-                aria-label={ru ? 'Ссылка на видео' : 'Video URL'}
-                placeholder={ru ? 'Ссылка: YouTube / Vimeo / .mp4' : 'URL: YouTube / Vimeo / .mp4'}
+                aria-label={t('editor.videoUrl', lang)}
+                placeholder={t('editor.videoUrlPh', lang)}
                 value={it.videoUrl}
                 onChange={(e) => patch(i, { videoUrl: e.target.value })}
               />
@@ -700,13 +710,13 @@ export function ListEditor({
                 <>
                   <div className="flex items-center gap-2 text-[0.6875rem] text-muted">
                     <span className="h-px flex-1 bg-border" />
-                    {ru ? 'или' : 'or'}
+                    {t('editor.or', lang)}
                     <span className="h-px flex-1 bg-border" />
                   </div>
-                  <FileDrop kind="video" uploading={busy(i, 'video')} onFile={(f) => upload(i, 'video', f)} ru={ru} />
+                  <FileDrop kind="video" uploading={busy(i, 'video')} onFile={(f) => upload(i, 'video', f)} lang={lang} />
                 </>
               )}
-              <LineField value={it.caption} onChange={(caption) => patch(i, { caption })} ru={ru} className="" label={ru ? 'Подпись видео' : 'Video caption'} placeholder={ru ? 'Подпись (необязательно)' : 'Caption (optional)'} />
+              <LineField value={it.caption} onChange={(caption) => patch(i, { caption })} lang={lang} className="" label={t('editor.videoCaption', lang)} placeholder={t('editor.captionPh', lang)} />
               {it.videoUrl.trim() &&
                 (() => {
                   const kind = parseVideoEmbed(it.videoUrl).kind
@@ -714,8 +724,8 @@ export function ListEditor({
                     <span className={`text-[0.6875rem] ${kind === 'link' ? 'text-warn' : 'text-muted'}`}>
                       {kind === 'youtube' && '▶ YouTube'}
                       {kind === 'vimeo' && '▶ Vimeo'}
-                      {kind === 'file' && (ru ? '▶ Видеофайл' : '▶ Video file')}
-                      {kind === 'link' && (ru ? '⚠ Не распознано — будет показано ссылкой' : '⚠ Not recognized — shown as a link')}
+                      {kind === 'file' && t('editor.videoFile', lang)}
+                      {kind === 'link' && t('editor.videoNotRecognized', lang)}
                     </span>
                   )
                 })()}
@@ -731,12 +741,12 @@ export function ListEditor({
                   <a href={it.fileUrl} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-accent hover:underline">
                     {it.fileName || it.fileUrl}
                   </a>
-                  <button type="button" onClick={() => patch(i, { fileUrl: '', fileName: '' })} className="text-muted hover:text-danger" aria-label={ru ? 'Удалить' : 'Remove'}>
+                  <button type="button" onClick={() => patch(i, { fileUrl: '', fileName: '' })} className="text-muted hover:text-danger" aria-label={t('editor.remove', lang)}>
                     <X size={14} />
                   </button>
                 </div>
               ) : (
-                <FileDrop kind="file" uploading={busy(i, 'file')} onFile={(f) => upload(i, 'file', f)} ru={ru} />
+                <FileDrop kind="file" uploading={busy(i, 'file')} onFile={(f) => upload(i, 'file', f)} lang={lang} />
               )}
             </div>
           )}
@@ -748,7 +758,7 @@ export function ListEditor({
               caption={it.caption}
               onProducts={(products) => patch(i, { products })}
               onCaption={(caption) => patch(i, { caption })}
-              ru={ru}
+              lang={lang}
             />
           )}
 
@@ -756,7 +766,7 @@ export function ListEditor({
               не рисуем — конец списка покрывает главный инсертер ниже (без дубля).
               «Повторить предыдущий» = тип блока, ПОД которым стоит инсертер. */}
           {i < items.length - 1 && (
-            <BlockInserter onInsert={(type) => insertAt(i + 1, type)} repeatType={it.type} ru={ru} between />
+            <BlockInserter onInsert={(type) => insertAt(i + 1, type)} repeatType={it.type} lang={lang} between />
           )}
         </div>
       ))}
@@ -764,7 +774,7 @@ export function ListEditor({
 
       {/* Главный инсертер — добавить блок в конец списка. Повтор = тип последнего блока. */}
       <div className="flex justify-center pt-1">
-        <BlockInserter onInsert={(type) => insertAt(items.length, type)} repeatType={items[items.length - 1]?.type ?? 'step'} ru={ru} />
+        <BlockInserter onInsert={(type) => insertAt(items.length, type)} repeatType={items[items.length - 1]?.type ?? 'step'} lang={lang} />
       </div>
     </div>
   )
@@ -778,15 +788,14 @@ function ProductBlockBody({
   caption,
   onProducts,
   onCaption,
-  ru,
+  lang,
 }: {
   products: EditorProduct[]
   caption: string
   onProducts: (p: EditorProduct[]) => void
   onCaption: (c: string) => void
-  ru: boolean
+  lang: Lang
 }) {
-  const lang = ru ? ('ru' as const) : ('en' as const)
   const patchRow = (i: number, p: Partial<EditorProduct>) => onProducts(products.map((x, xi) => (xi === i ? { ...x, ...p } : x)))
   const tierLabel = (tr: ProductTier): string =>
     tr === 'budget' ? t('productTierBudget', lang) : tr === 'mid' ? t('productTierMid', lang) : t('productTierPremium', lang)
@@ -853,11 +862,11 @@ function ProductBlockBody({
   )
 }
 
-function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p: EditorPoll) => void; ru: boolean }) {
+function PollBlockBody({ poll, onChange, lang }: { poll: EditorPoll; onChange: (p: EditorPoll) => void; lang: Lang }) {
   const set = (p: Partial<EditorPoll>) => onChange({ ...poll, ...p })
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
-      <LineField value={poll.question} onChange={(question) => set({ question })} label={ru ? 'Вопрос опроса' : 'Poll question'} ru={ru} className="" />
+      <LineField value={poll.question} onChange={(question) => set({ question })} lang={lang} className="" label={t('poll.questionPh', lang)} />
       <div className="flex flex-col gap-1.5">
         {poll.options.map((o, oi) => (
           <div key={o.id} className="flex items-center gap-2">
@@ -865,25 +874,25 @@ function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p:
             <LineField
               value={o.text}
               onChange={(v) => set({ options: poll.options.map((x, xi) => (xi === oi ? { ...x, text: v } : x)) })}
-              label={ru ? `Вариант ${oi + 1}` : `Option ${oi + 1}`}
-              ru={ru}
+              lang={lang}
+              label={t('editor.optionN', lang).replace('{n}', String(oi + 1))}
             />
             <RemoveBtn
               onClick={() => set({ options: poll.options.filter((_, xi) => xi !== oi) })}
               disabled={poll.options.length <= 2}
-              label={ru ? 'Удалить вариант' : 'Remove option'}
+              label={t('editor.removeOption', lang)}
             />
           </div>
         ))}
       </div>
       <FieldRow>
-        <AddLink onClick={() => set({ options: [...poll.options, { id: newOptionId(), text: '' }] })}>{ru ? 'вариант' : 'option'}</AddLink>
+        <AddLink onClick={() => set({ options: [...poll.options, { id: newOptionId(), text: '' }] })}>{t('editor.addOption', lang)}</AddLink>
         <CheckLabel checked={poll.multi} onChange={(multi) => set({ multi })}>
-          {ru ? 'Мультивыбор' : 'Multi-select'}
+          {t('poll.multi', lang)}
         </CheckLabel>
         <span className="inline-flex items-center gap-1.5 text-ink-2">
-          {ru ? 'Дедлайн' : 'Deadline'}:
-          <DatePicker value={poll.deadline} onChange={(v) => set({ deadline: v })} lang={ru ? 'ru' : 'en'} />
+          {t('poll.deadline', lang)}:
+          <DatePicker value={poll.deadline} onChange={(v) => set({ deadline: v })} lang={lang} />
         </span>
       </FieldRow>
     </div>
@@ -892,15 +901,15 @@ function PollBlockBody({ poll, onChange, ru }: { poll: EditorPoll; onChange: (p:
 
 // Text-блок: Markdown со всплывающей панелью форматирования (выдели текст →
 // мини-тулбар). Картинки/файлы — отдельными блоками, не в тулбаре.
-function TextBlockBody({ value, onChange, ru }: { value: string; onChange: (v: string) => void; ru: boolean }) {
+function TextBlockBody({ value, onChange, lang }: { value: string; onChange: (v: string) => void; lang: Lang }) {
   return (
     <BubbleTextEditor
       value={value}
       onChange={onChange}
       rows={4}
-      lang={ru ? 'ru' : 'en'}
-      ariaLabel={ru ? 'Текстовый блок (Markdown)' : 'Text block (Markdown)'}
-      placeholder={ru ? 'Текст в разметке Markdown…' : 'Markdown text…'}
+      lang={lang}
+      ariaLabel={t('editor.textBlockAria', lang)}
+      placeholder={t('editor.textBlockPh', lang)}
     />
   )
 }
@@ -908,7 +917,7 @@ function TextBlockBody({ value, onChange, ru }: { value: string; onChange: (v: s
 /** Радиальный «+»-инсертер: по клику из кнопки веером («улыбкой») вылетают
  *  кружки типов блоков; нижний-центральный (primary) = повтор предыдущего типа.
  *  between=true — тонкая линия-разделитель, появляется при наведении. */
-function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert: (t: BlockType) => void; repeatType: BlockType; ru: boolean; between?: boolean }) {
+function BlockInserter({ onInsert, repeatType, lang, between = false }: { onInsert: (t: BlockType) => void; repeatType: BlockType; lang: Lang; between?: boolean }) {
   const [open, setOpen] = useState(false)
   const [hoverK, setHoverK] = useState<number | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -941,20 +950,20 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
         <span className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border opacity-0 transition-opacity group-hover:opacity-100" />
       )}
       {/* Кружки-типы (веером). Появляются при open. */}
-      {arc.map((t, k) => {
+      {arc.map((type, k) => {
         const ang = arc.length > 1 ? start - (spread / (arc.length - 1)) * k : 90
         const rad = (ang * Math.PI) / 180
         const hovered = hoverK === k
         const rr = hovered ? R + 14 : R // при наведении — «выдвигаем» наружу
         const x = Math.cos(rad) * rr
         const y = -Math.sin(rad) * rr
-        const Icon = BLOCK_ICON[t]
+        const Icon = BLOCK_ICON[type]
         return (
-          <Tooltip key={t} label={blockLabel(t, ru)}>
+          <Tooltip key={type} label={blockLabel(type, lang)}>
             <button
               type="button"
-              aria-label={blockLabel(t, ru)}
-              onClick={() => pick(t)}
+              aria-label={blockLabel(type, lang)}
+              onClick={() => pick(type)}
               onMouseEnter={() => setHoverK(k)}
               onMouseLeave={() => setHoverK((h) => (h === k ? null : h))}
               onFocus={() => setHoverK(k)}
@@ -979,10 +988,10 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
       {(() => {
         const Icon = BLOCK_ICON[repeatType]
         return (
-          <Tooltip label={`${ru ? 'Как предыдущий' : 'Same as previous'}: ${blockLabel(repeatType, ru)}`}>
+          <Tooltip label={`${t('editor.sameAsPrevious', lang)}: ${blockLabel(repeatType, lang)}`}>
             <button
               type="button"
-              aria-label={`${ru ? 'Повторить' : 'Repeat'}: ${blockLabel(repeatType, ru)}`}
+              aria-label={`${t('editor.repeat', lang)}: ${blockLabel(repeatType, lang)}`}
               onClick={() => pick(repeatType)}
               tabIndex={open ? 0 : -1}
               className="absolute grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-fg shadow-md transition-all duration-200 hover:opacity-90 motion-reduce:transition-none"
@@ -1001,7 +1010,7 @@ function BlockInserter({ onInsert, repeatType, ru, between = false }: { onInsert
       {/* Центральная «+» кнопка. */}
       <button
         type="button"
-        aria-label={ru ? 'Добавить блок' : 'Add block'}
+        aria-label={t('editor.addBlock', lang)}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={`z-1 grid place-items-center rounded-full border transition-all ${

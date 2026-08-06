@@ -19,28 +19,28 @@ const inputOf = (): HTMLInputElement => document.querySelector('input[type="file
 
 describe('FileDrop', () => {
   it('вид задаёт MIME-фильтр: картинка и видео фильтруют, вложение принимает любой тип', () => {
-    const { rerender } = render(<FileDrop kind="image" uploading={false} onFile={() => {}} ru />)
+    const { rerender } = render(<FileDrop kind="image" uploading={false} onFile={() => {}} lang="ru" />)
     expect(inputOf().accept).toContain('image/png')
 
-    rerender(<FileDrop kind="video" uploading={false} onFile={() => {}} ru />)
+    rerender(<FileDrop kind="video" uploading={false} onFile={() => {}} lang="ru" />)
     expect(inputOf().accept).toContain('video/mp4')
 
     // Вложению фильтр не ставим: расширение проверяет сервер по своему белому списку.
-    rerender(<FileDrop kind="file" uploading={false} onFile={() => {}} ru />)
+    rerender(<FileDrop kind="file" uploading={false} onFile={() => {}} lang="ru" />)
     expect(inputOf().accept).toBe('')
   })
 
   it('размер в подписи — из константы сервера, а не своим числом', () => {
-    const { rerender } = render(<FileDrop kind="video" uploading={false} onFile={() => {}} ru />)
+    const { rerender } = render(<FileDrop kind="video" uploading={false} onFile={() => {}} lang="ru" />)
     expect(screen.getByRole('button')).toHaveTextContent(`${megabytes(VIDEO_MAX_BYTES)} МБ`)
 
-    rerender(<FileDrop kind="file" uploading={false} onFile={() => {}} ru={false} />)
+    rerender(<FileDrop kind="file" uploading={false} onFile={() => {}} lang="en" />)
     expect(screen.getByRole('button')).toHaveTextContent(`${megabytes(ATTACH_MAX_BYTES)} MB`)
   })
 
   it('выбранный файл уходит наверх, а поле очищается — тот же файл можно выбрать снова', async () => {
     const onFile = vi.fn()
-    render(<FileDrop kind="image" uploading={false} onFile={onFile} ru />)
+    render(<FileDrop kind="image" uploading={false} onFile={onFile} lang="ru" />)
     const file = new File(['x'], 'shot.png', { type: 'image/png' })
 
     await userEvent.upload(inputOf(), file)
@@ -50,7 +50,7 @@ describe('FileDrop', () => {
   })
 
   it('во время загрузки подпись меняется на «Загрузка…»', () => {
-    render(<FileDrop kind="image" uploading onFile={() => {}} ru />)
+    render(<FileDrop kind="image" uploading onFile={() => {}} lang="ru" />)
     expect(screen.getByRole('button')).toHaveTextContent('Загрузка…')
   })
 })

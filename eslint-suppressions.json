@@ -314,24 +314,9 @@
       "count": 5
     }
   },
-  "src/features/library/FileDrop.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
-  "src/features/library/ListEditor.tsx": {
-    "no-restricted-syntax": {
-      "count": 59
-    }
-  },
   "src/features/library/ListSettingsDanger.tsx": {
     "boundaries/dependencies": {
       "count": 1
-    }
-  },
-  "src/features/library/QuizBlockBody.tsx": {
-    "no-restricted-syntax": {
-      "count": 31
     }
   },
   "src/features/library/TemplateSection.tsx": {

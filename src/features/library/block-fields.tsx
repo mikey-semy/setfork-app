@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { X } from 'lucide-react'
+import type { Lang } from '@/shared/i18n'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Checkbox } from '@/shared/ui/checkbox'
 
@@ -13,8 +14,8 @@ import { Checkbox } from '@/shared/ui/checkbox'
  */
 
 /** Однострочное поле. Подпись служит и placeholder'ом, если он не задан. */
-export function LineField({ value, onChange, label, placeholder, ru, className = 'flex-1' }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; ru: boolean; className?: string }) {
-  return <BubbleTextEditor value={value} onChange={onChange} singleLine className={className} lang={ru ? 'ru' : 'en'} ariaLabel={label} placeholder={placeholder ?? label} />
+export function LineField({ value, onChange, label, placeholder, lang, className = 'flex-1' }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; lang: Lang; className?: string }) {
+  return <BubbleTextEditor value={value} onChange={onChange} singleLine className={className} lang={lang} ariaLabel={label} placeholder={placeholder ?? label} />
 }
 
 /** Кнопка «убрать строку»; неактивна, когда меньше строк уже нельзя. */
