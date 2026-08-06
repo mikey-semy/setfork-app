@@ -7,8 +7,8 @@ import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { blankCount, type QuizKind } from '@/core'
 import { AddLink, CheckLabel, FieldRow, Hint, LineField, RemoveBtn } from './block-fields'
-import { newOptionId } from './blocks'
-import type { EditorQuiz } from './editor'
+import { newOptionId } from '../blocks'
+import type { EditorQuiz } from '../editor'
 
 /** Виды теста — таблица «значение → ключ подписи»; кнопки строятся из неё. */
 const QUIZ_KINDS: { k: QuizKind; label: TKey }[] = [

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { FileDrop } from '@/features/library/FileDrop'
+import { FileDrop } from '@/features/library/list-editor/FileDrop'
 import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/limits'
 
 /**
