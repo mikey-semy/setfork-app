@@ -11,36 +11,44 @@ import type { DropKind } from './FileDrop'
  *
  * Занятость помечается ключом `блок:вид`, а не одним значением: пока летит видео,
  * можно перетащить картинку в другой блок — и обе полосы «Загрузка…» должны стоять
- * до своего конца. Что делать с ответом, знает только вызывающая сторона — сюда
- * приходит `patch`, которым результат ложится в поля блока.
+ * до своего конца.
+ *
+ * Куда лечь результату, знает таблица видов; сами экшены приходят параметром, чтобы
+ * хук проверялся без поднятия серверных действий.
  */
-export function useBlockUploads(patch: (i: number, p: Partial<EditorItem>) => void) {
+export type Uploaders = {
+  [K in DropKind]: (form: FormData) => Promise<{ error: string } | Partial<EditorItem>>
+}
+
+export const serverUploaders: Uploaders = {
+  image: async (form) => {
+    const res = await uploadStepImage(form)
+    return 'error' in res ? res : { imageKey: res.key, imagePreview: res.url }
+  },
+  video: async (form) => {
+    const res = await uploadStepVideo(form)
+    return 'error' in res ? res : { videoUrl: res.url }
+  },
+  file: async (form) => {
+    const res = await uploadStepFile(form)
+    return 'error' in res ? res : { fileUrl: res.url, fileName: res.name }
+  },
+}
+
+export function useBlockUploads(patch: (i: number, p: Partial<EditorItem>) => void, uploaders: Uploaders = serverUploaders) {
   const [running, setRunning] = useState<string[]>([])
 
-  const isBusy = (i: number, kind: DropKind) => running.includes(`${i}:${kind}`)
-
-  async function upload(i: number, kind: DropKind, file: File) {
-    const key = `${i}:${kind}`
-    setRunning((keys) => [...keys, key])
-    const form = new FormData()
-    form.append('file', file)
-    // Ветки различаются экшеном и полями, куда лечь результату. Общий разбор одним
-    // union не пишется: сужение по свойству даёт `unknown` на трёх разных исходах.
-    if (kind === 'image') {
-      const res = await uploadStepImage(form)
+  return {
+    isBusy: (i: number, kind: DropKind) => running.includes(`${i}:${kind}`),
+    upload: async (i: number, kind: DropKind, file: File) => {
+      const key = `${i}:${kind}`
+      setRunning((keys) => [...keys, key])
+      const form = new FormData()
+      form.append('file', file)
+      const res = await uploaders[kind](form)
       if ('error' in res) toast.error(res.error)
-      else patch(i, { imageKey: res.key, imagePreview: res.url })
-    } else if (kind === 'video') {
-      const res = await uploadStepVideo(form)
-      if ('error' in res) toast.error(res.error)
-      else patch(i, { videoUrl: res.url })
-    } else {
-      const res = await uploadStepFile(form)
-      if ('error' in res) toast.error(res.error)
-      else patch(i, { fileUrl: res.url, fileName: res.name })
-    }
-    setRunning((keys) => keys.filter((k) => k !== key))
+      else patch(i, res)
+      setRunning((keys) => keys.filter((k) => k !== key))
+    },
   }
-
-  return { isBusy, upload }
 }
