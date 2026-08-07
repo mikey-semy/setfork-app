@@ -14,33 +14,48 @@ import type { EditorBlockPatch, EditorItem } from '../editor'
 const REFINE_ERROR: Record<string, TKey> = { ratelimited: 'editor.refineRateLimited', ai_quota: 'editor.refineQuota' }
 
 /**
- * Правка блока разговором: кнопка в углу карточки открывает чат, где просят
- * доработать ИМЕННО этот пункт.
+ * Правка блока разговором: кнопка в шапке карточки открывает чат про ЭТОТ блок.
  *
  * Пришла на смену панели «Улучшить» над списком. Та переписывала ВЕСЬ состав по одной
- * фразе и стирала скриншоты — пользоваться ею было страшно, а сформулировать «поправь
- * третий шаг» в такой форме невозможно. Здесь предмет разговора задан самим местом
- * кнопки, а результат виден до применения: предложение приходит репликой, и человек
- * решает, брать его или просить иначе.
+ * фразе и стирала скриншоты — пользоваться ею было страшно, а сказать «поправь третий
+ * шаг» в такой форме невозможно. Здесь предмет разговора задаёт само место кнопки, а
+ * результат виден до применения: предложение приходит репликой, и человек решает,
+ * брать его или просить иначе.
  *
- * Оболочка чата — общая (ChatDock), та же, что у раскопки пункта: окно, лента,
- * подсказки и композер живут в одном месте, а фичи приносят только собеседника.
+ * Окно ОДНО на редактор — как кирка на странице списка: у каждой карточки своё
+ * состояние давало два окна внахлёст, стоило открыть чат у второго блока. Поэтому
+ * кнопка только сообщает наверх, какой блок правят, а хост живёт рядом со списком.
+ *
+ * Оболочка чата общая (ChatDock): окно, лента, подсказки и композер — те же, что у
+ * раскопки пункта.
  */
-export function BlockChat({
+export function BlockChatButton({ onOpen, active, lang }: { onOpen: () => void; active: boolean; lang: Lang }) {
+  const label = t('editor.improveBlock', lang)
+  return (
+    <Tooltip label={label}>
+      <IconButton variant="ghost" size="sm" label={label} onClick={onOpen} className={active ? 'text-accent' : 'text-muted hover:text-accent'}>
+        <Sparkles size={iconSizeFor('sm')} />
+      </IconButton>
+    </Tooltip>
+  )
+}
+
+export function BlockChatHost({
   item,
   context,
   onApply,
+  onClose,
   lang,
 }: {
   item: EditorItem
   /** Название и описание списка — контекст для модели, чтобы правка не выпадала из темы. */
   context: { title: string; desc: string }
   onApply: (patch: EditorBlockPatch) => void
+  onClose: () => void
   lang: Lang
 }) {
-  const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatBubble[]>([])
-  // Предложения по индексу реплики: у каждой своя кнопка «Применить».
+  // Предложение по индексу реплики: у каждой своя кнопка «Применить».
   const [patches, setPatches] = useState<Record<number, EditorBlockPatch>>({})
   const [applied, setApplied] = useState<number | null>(null)
   const [text, setText] = useState('')
@@ -52,6 +67,9 @@ export function BlockChat({
     if (!ask || pending) return
     setText('')
     setError('')
+    // Индекс будущего ответа считаем ЗДЕСЬ: класть setState в апдейтер соседнего
+    // состояния — значит полагаться на то, что React вызовет его ровно один раз.
+    const replyAt = messages.length + 1
     setMessages((m) => [...m, { role: 'user', text: ask }])
     start(async () => {
       const res = await refineBlock({
@@ -71,59 +89,50 @@ export function BlockChat({
         setError(t(REFINE_ERROR[res.error] ?? 'editor.refineFailed', lang))
         return
       }
-      setMessages((m) => {
-        const next = [...m, { role: 'gnome' as const, text: preview(res.block, lang) }]
-        setPatches((p) => ({ ...p, [next.length - 1]: res.block }))
-        return next
-      })
+      setPatches((p) => ({ ...p, [replyAt]: res.block }))
+      setMessages((m) => [...m, { role: 'gnome', text: preview(res.block, lang) }])
     })
   }
 
-  const label = t('editor.improveBlock', lang)
   return (
-    <>
-      <Tooltip label={label}>
-        <IconButton variant="ghost" size="sm" label={label} onClick={() => setOpen(true)} className="text-muted hover:text-accent">
-          <Sparkles size={iconSizeFor('sm')} />
-        </IconButton>
-      </Tooltip>
-      {open && (
-        <ChatDock
-          icon={<Sparkles size={14} />}
-          title={item.title.trim() || t('editor.improveBlock', lang)}
-          messages={messages}
-          emptyHint={t('editor.improveBlockHint', lang)}
-          chips={messages.length === 0 ? [t('editor.chipClearer', lang), t('editor.chipShorter', lang), t('editor.chipAddCommand', lang), t('editor.chipWhy', lang)] : undefined}
-          pending={pending}
-          pendingLabel={t('editor.refining', lang)}
-          error={error}
-          value={text}
-          onChange={setText}
-          onSend={send}
-          onClose={() => setOpen(false)}
-          placeholder={t('editor.improveBlockPh', lang)}
-          sendAriaLabel={t('dig.sendEnter', lang)}
-          sendTooltip={t('dig.enterSendShiftEnter', lang)}
-          lang={lang}
-          bubbleActions={(i) =>
-            patches[i] ? (
-              <IconButton
-                size="sm"
-                variant="ghost"
-                label={t('editor.applyToBlock', lang)}
-                className={applied === i ? 'text-ok' : ''}
-                onClick={() => {
-                  onApply(patches[i])
-                  setApplied(i)
-                }}
-              >
-                <Check size={iconSizeFor('sm')} />
-              </IconButton>
-            ) : null
-          }
-        />
-      )}
-    </>
+    <ChatDock
+      icon={<Sparkles size={14} />}
+      title={item.title.trim() || t('editor.improveBlock', lang)}
+      messages={messages}
+      emptyHint={t('editor.improveBlockHint', lang)}
+      chips={
+        messages.length === 0
+          ? [t('editor.chipClearer', lang), t('editor.chipShorter', lang), t('editor.chipAddCommand', lang), t('editor.chipWhy', lang)]
+          : undefined
+      }
+      pending={pending}
+      pendingLabel={t('editor.refining', lang)}
+      error={error}
+      value={text}
+      onChange={setText}
+      onSend={send}
+      onClose={onClose}
+      placeholder={t('editor.improveBlockPh', lang)}
+      sendAriaLabel={t('dig.sendEnter', lang)}
+      sendTooltip={t('dig.enterSendShiftEnter', lang)}
+      lang={lang}
+      bubbleActions={(i) =>
+        patches[i] ? (
+          <IconButton
+            size="sm"
+            variant="ghost"
+            label={t('editor.applyToBlock', lang)}
+            className={applied === i ? 'text-ok' : ''}
+            onClick={() => {
+              onApply(patches[i])
+              setApplied(i)
+            }}
+          >
+            <Check size={iconSizeFor('sm')} />
+          </IconButton>
+        ) : null
+      }
+    />
   )
 }
 
@@ -133,6 +142,7 @@ function preview(patch: EditorBlockPatch, lang: Lang): string {
   if (patch.desc.trim()) lines.push(patch.desc)
   if (patch.command.trim()) lines.push('```\n' + patch.command + '\n```')
   if (patch.why.trim()) lines.push(`_${t('editor.why', lang)}: ${patch.why}_`)
-  if (patch.subtasks.filter((s) => s.trim()).length) lines.push(patch.subtasks.filter((s) => s.trim()).map((s) => `- ${s}`).join('\n'))
+  const subtasks = patch.subtasks.filter((s) => s.trim())
+  if (subtasks.length) lines.push(subtasks.map((s) => `- ${s}`).join('\n'))
   return lines.join('\n\n')
 }

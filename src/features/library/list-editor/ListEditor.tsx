@@ -9,7 +9,7 @@ import { BlockInserter } from './BlockInserter'
 import { EditorToolbar } from './EditorToolbar'
 import { commandFor } from './hotkeys'
 import { KeyboardDock } from './KeyboardDock'
-import { BlockChat } from './BlockChat'
+import { BlockChatButton, BlockChatHost } from './BlockChat'
 import { useBlockDrag } from './use-block-drag'
 import { useBlockList } from './use-block-list'
 import { useBlockUploads } from './use-block-uploads'
@@ -45,6 +45,11 @@ export function ListEditor({
   // было сохранить версию (жалоба владельца 04.08.2026). Показываем тем же
   // рендером, что и предложения правок, — вторая копия разъехалась бы с первой.
   const [preview, setPreview] = useState(false)
+  // Какой блок правят разговором — по стабильному id, а не по номеру: пока чат
+  // открыт, список живёт (блок выше могли удалить), и номер начал бы указывать на
+  // соседа. ОДНО окно на редактор: своё состояние у каждой карточки давало два чата
+  // внахлёст, стоило открыть второй.
+  const [chatUid, setChatUid] = useState<string | null>(null)
   const drag = useBlockDrag(list.reorder, listRef)
   // Границы редактора: по ним панель понимает, что клавиатуру открыли ЗДЕСЬ, а не в
   // соседнем поле формы (название списка, теги).
@@ -129,7 +134,7 @@ export function ListEditor({
             onRetype={(type) => list.retype(i, type)}
             // Чат правки — только у шага: у опроса и картинки текстовых полей,
             // которые он правит, попросту нет.
-            chat={aiRefine && item.type === 'step' ? <BlockChat item={item} context={aiRefine} onApply={(patch) => list.patch(i, patch)} lang={lang} /> : undefined}
+            chat={aiRefine && item.type === 'step' ? <BlockChatButton onOpen={() => setChatUid(list.uids[i])} active={chatUid === list.uids[i]} lang={lang} /> : undefined}
             isUploading={(kind) => uploads.isBusy(list.uids[i], kind)}
             onUpload={(kind, file) => void uploads.upload(list.uids[i], kind, file)}
             // Инсертер после ПОСЛЕДНЕГО блока не рисуем: конец списка покрывает
@@ -138,6 +143,25 @@ export function ListEditor({
           />
         ))}
       </div>
+
+      {/* Чат правки блока — один на редактор, поверх страницы. */}
+      {aiRefine &&
+        (() => {
+          const at = chatUid ? list.uids.indexOf(chatUid) : -1
+          if (at < 0) return null
+          return (
+            <BlockChatHost
+              // key по id блока: сменили блок — начинается новый разговор, а не
+              // продолжается чужой.
+              key={chatUid}
+              item={list.items[at]}
+              context={aiRefine}
+              onApply={(patch) => list.patchByUid(chatUid!, patch)}
+              onClose={() => setChatUid(null)}
+              lang={lang}
+            />
+          )
+        })()}
 
       {/* Главный инсертер — добавить блок в конец списка. */}
       <div className="flex justify-center pt-1">

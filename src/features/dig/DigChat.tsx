@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react'
-import { ChevronDown, Heart, Loader2, Pickaxe, X } from 'lucide-react'
+import { ChevronDown, Heart, Pickaxe } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
-import { Button } from '@/shared/ui/button'
 import { ChatDock } from '@/shared/ui/ChatDock'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Tooltip } from '@/shared/ui/Tooltip'
