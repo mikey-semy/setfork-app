@@ -16,7 +16,7 @@ import { useFlipReorder } from './use-flip-reorder'
 /**
  * Редактор состава списка: собирает воедино состояние (useBlockList), загрузки
  * (useBlockUploads), анимацию перестановки (useFlipReorder) и карточки блоков.
- * Сам ничего не хранит, кроме предпросмотра и того, что тащат мышью.
+ * Сам ничего не хранит, кроме предпросмотра и того, что тащат указателем.
  *
  * Состав уходит на сервер скрытым полем формы — редактор не знает, кто его submit'ит
  * (новый список, правка версии или предложение).
@@ -43,7 +43,7 @@ export function ListEditor({
   // было сохранить версию (жалоба владельца 04.08.2026). Показываем тем же
   // рендером, что и предложения правок, — вторая копия разъехалась бы с первой.
   const [preview, setPreview] = useState(false)
-  const drag = useBlockDrag(list.reorder)
+  const drag = useBlockDrag(list.reorder, listRef)
 
   // Ctrl/⌘+Z, +Shift+Z, +Y — отмена и повтор (в полях ввода не перехватываем, там
   // работает браузерная); Alt+↑/↓ — двигать блок, на котором стоит фокус.
@@ -110,7 +110,7 @@ export function ListEditor({
             isFirst={i === 0}
             isLast={i === list.items.length - 1}
             lang={lang}
-            drag={{ dragging: drag.draggingFrom === i, line: drag.lineAt(i), ...drag.handlers(i) }}
+            drag={{ dragging: drag.draggingFrom === i, line: drag.lineAt(i), handle: drag.handleProps(i) }}
             onPatch={(p) => list.patch(i, p)}
             onMove={(dir) => list.move(i, dir)}
             onMoveToEdge={(edge) => list.moveToEdge(i, edge)}
