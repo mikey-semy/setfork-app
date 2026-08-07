@@ -2,8 +2,7 @@
 
 import { Eye, Pencil, Redo2, Undo2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { iconSizeFor } from '@/shared/ui/IconButton'
-import { TOUCH_MIN_H } from '@/shared/ui/control'
+import { iconSizeFor, TOUCH_MIN_H } from '@/shared/ui/control'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 

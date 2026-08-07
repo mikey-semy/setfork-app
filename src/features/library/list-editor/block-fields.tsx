@@ -5,8 +5,8 @@ import { X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Checkbox } from '@/shared/ui/checkbox'
-import { TOUCH_MIN_H } from '@/shared/ui/control'
-import { IconButton, iconSizeFor } from '@/shared/ui/IconButton'
+import { iconSizeFor, TOUCH_MIN_H } from '@/shared/ui/control'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /**
  * Детали строк редактора: варианты опроса, принимаемые ответы, пары, элементы порядка,
