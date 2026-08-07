@@ -10,6 +10,7 @@ import { discardDraft, publishEdits, saveDraft } from '@/features/library/action
 import { BackLink } from '@/shared/ui/BackLink'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
 import { GatedToggle, ListTypeToggle } from '@/features/library/ListFormToggles'
+import { ListSettingsSheet } from '@/features/library/ListSettingsSheet'
 import { TagInput } from '@/shared/ui/TagInput'
 import { Field } from '@/shared/ui/Field'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
@@ -132,24 +133,31 @@ export default async function EditPage({
 
         <ChangeNoteField templateId={tpl.id} lang={lang} placeholder={t('changeNote', lang)} required={false} initial={draft?.note ?? ''} />
 
-        {/* htmlFor: внутри TagInput чипы с кнопками удаления — оборачивание в label ловило бы их клики. */}
-        <Field label={t('tags', lang)} htmlFor="edit-tags" className="mb-6">
-          <TagInput initial={draftTags} lang={lang} />
-        </Field>
+        {/* Свойства списка — в боковой панели: экран правки принадлежит пунктам, а
+            теги, тип и режим курса меняют куда реже, чем сам состав (решение владельца).
+            Панель не уходит в портал — её поля остаются полями ЭТОЙ формы.
+            Видимость здесь не правится: она живёт в опасной зоне настроек (как
+            «Change visibility» у GitHub). */}
+        <div className="mb-6">
+          <ListSettingsSheet lang={lang}>
+            {/* htmlFor: внутри TagInput чипы с кнопками удаления — оборачивание в label ловило бы их клики. */}
+            <Field label={t('tags', lang)} htmlFor="edit-tags">
+              <TagInput initial={draftTags} lang={lang} />
+            </Field>
 
-        {/* Тип и режим курса — одним рядом, как в форме создания. Видимость здесь не
-            правится: она живёт в опасной зоне настроек (как «Change visibility» у GitHub).
-            htmlFor: внутри тумблеров свои label — вложенные невалидны. */}
-        <div className="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3">
-          <Field label={t('listKind', lang)} htmlFor="edit-kind">
-            <ListTypeToggle ordered={draftOrdered} lang={lang} />
-          </Field>
-          <Field label={t('gatedShort', lang)} htmlFor="edit-gated">
-            <GatedToggle gated={draftGated} lang={lang} />
-          </Field>
+            {/* htmlFor: внутри тумблеров свои label — вложенные невалидны. */}
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+              <Field label={t('listKind', lang)} htmlFor="edit-kind">
+                <ListTypeToggle ordered={draftOrdered} lang={lang} />
+              </Field>
+              <Field label={t('gatedShort', lang)} htmlFor="edit-gated">
+                <GatedToggle gated={draftGated} lang={lang} />
+              </Field>
+            </div>
+          </ListSettingsSheet>
         </div>
 
-        <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{lang === 'ru' ? 'Пункты' : 'Items'}</label>
+        <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{t('listItems', lang)}</label>
         <ListEditor
           name="items"
           initialItems={initial}

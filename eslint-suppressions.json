@@ -14,11 +14,6 @@
       "count": 3
     }
   },
-  "src/app/[handle]/[slug]/edit/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/app/[handle]/[slug]/insights/page.tsx": {
     "no-restricted-syntax": {
       "count": 21
@@ -112,11 +107,6 @@
   "src/app/login/page.tsx": {
     "no-restricted-syntax": {
       "count": 3
-    }
-  },
-  "src/app/new/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 6
     }
   },
   "src/app/reset-password/page.tsx": {
