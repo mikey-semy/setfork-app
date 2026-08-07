@@ -11,7 +11,7 @@ import { PageHeader } from '@/shared/ui/PageHeader'
 import { FloatingBack } from '@/shared/ui/FloatingBack'
 import { createTemplate } from '@/features/library/actions'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
-import { ListTypeToggle } from '@/features/library/ListTypeToggle'
+import { GatedToggle, ListTypeToggle, VisibilityToggle } from '@/features/library/ListFormToggles'
 import { listQuota } from '@/shared/quota'
 import { PAGE_NARROW } from '@/shared/ui/control'
 
@@ -77,38 +77,19 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
           <TagInput lang={lang} />
         </Field>
 
-        {/* htmlFor: тумблер типа — группа кнопок, не одиночный контрол. */}
-        <Field label={t('listKind', lang)} htmlFor="new-kind" className="mb-6">
-          <ListTypeToggle ordered lang={lang} />
-        </Field>
-
-        {/* htmlFor: внутри радио-карточки со своими label — вложенные label невалидны. */}
-        <Field label={t('visibility', lang)} htmlFor="new-visibility" className="mb-6">
-          <div className="flex flex-col gap-2">
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
-            <input type="radio" name="visibility" value="public" defaultChecked className="mt-0.5" />
-            <span>
-              <span className="block text-[0.8125rem] font-medium text-ink">{t('publicLabel', lang)}</span>
-              <span className="block text-[0.78125rem] text-ink-2">{t('publicHint', lang)}</span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
-            <input type="radio" name="visibility" value="private" className="mt-0.5" />
-            <span>
-              <span className="block text-[0.8125rem] font-medium text-ink">{t('privateLabel', lang)}</span>
-              <span className="block text-[0.78125rem] text-ink-2">{t('privateHint', lang)}</span>
-            </span>
-          </label>
-          </div>
-        </Field>
-
-        <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
-          <input type="checkbox" name="gated" className="mt-0.5" />
-          <span>
-            <span className="block text-[0.8125rem] font-medium text-ink">{ru ? 'Последовательный курс' : 'Sequential course'}</span>
-            <span className="block text-[0.78125rem] text-ink-2">{ru ? 'Следующий урок откроется только после сдачи тестов предыдущего' : 'The next lesson unlocks only after passing the previous lesson’s tests'}</span>
-          </span>
-        </label>
+        {/* Тип, видимость и режим курса — один ряд: в каждом выбор из двух состояний,
+            а тремя карточками в столбик они занимали пол-экрана телефона.
+            htmlFor: внутри каждого тумблера свои label — вложенные невалидны. */}
+        <div className="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3">
+          <Field label={t('listKind', lang)} htmlFor="new-kind">
+            <ListTypeToggle ordered lang={lang} />
+          </Field>
+          <Field label={t('visibility', lang)} htmlFor="new-visibility">
+            <VisibilityToggle isPublic lang={lang} />
+          </Field>
+          {/* Без подписи сверху: у пометки она своя, внутри чипа. */}
+          <GatedToggle gated={false} lang={lang} />
+        </div>
 
         <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{ru ? 'Пункты' : 'Items'}</label>
         <ListEditor name="items" initialItems={[]} lang={lang} aiRefine={{ title: '', desc: '', tags: [] }} />
