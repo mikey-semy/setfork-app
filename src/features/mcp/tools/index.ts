@@ -7,7 +7,10 @@
  * одной строкой, и трогать его незачем.
  */
 export * from './lists'
-export * from './shared'
+// Из общего наружу торчат только ТИПЫ входных блоков — их знает patch.ts и тесты.
+// Сами помощники (проверка видимости, конвертеры) остаются деталью каталога:
+// `export *` сделал бы их публичным API модуля, хотя они нужны только соседям.
+export type { McpBlockOption, McpItemInput } from './shared'
 export * from './runs'
 export * from './suggestions'
 export * from './sources'
