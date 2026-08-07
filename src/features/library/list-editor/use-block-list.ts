@@ -3,7 +3,7 @@
 import { useRef } from 'react'
 import { emptyItem, type EditorItem } from '../editor'
 import type { BlockType } from '../blocks'
-import { insertBlock, moveBlock, patchBlock, removeBlock, reorderBlocks, type Snapshot } from './block-ops'
+import { insertBlock, moveBlock, patchBlock, removeBlock, reorderBlocks, retypeBlock, type Snapshot } from './block-ops'
 import { useUndoRedo } from './use-undo-redo'
 
 export type BlockList = ReturnType<typeof useBlockList>
@@ -39,6 +39,8 @@ export function useBlockList(initial: EditorItem[]) {
     move: (i: number, dir: -1 | 1) => history.commit(moveBlock(snap, i, dir)),
     moveToEdge: (i: number, edge: 'top' | 'bottom') => history.commit(reorderBlocks(snap, i, edge === 'top' ? 0 : snap.items.length - 1)),
     reorder: (from: number, to: number) => history.commit(reorderBlocks(snap, from, to)),
+    /** Смена типа блока на месте (слэш-меню): структурная правка, отменяется целиком. */
+    retype: (i: number, type: BlockType) => history.commit(retypeBlock(snap, i, type)),
     /** Полная замена состава (правка ИИ): строки новые, id тоже новые. */
     replaceAll: (next: EditorItem[]) => history.commit({ items: next, uids: next.map(() => newUid()) }),
   }

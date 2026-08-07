@@ -8,8 +8,9 @@ import { iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
+import type { BlockType } from '../blocks'
 import type { EditorItem } from '../editor'
-import { BLOCK_ICON, blockLabel } from './BlockInserter'
+import { BLOCK_ICON, blockLabel } from './block-meta'
 import { FileBlockBody, ImageBlockBody, TextBlockBody, VideoBlockBody } from './MediaBlocks'
 import { PollBlockBody } from './PollBlockBody'
 import { ProductBlockBody } from './ProductBlockBody'
@@ -45,6 +46,8 @@ type BlockCardProps = {
   onMove: (dir: -1 | 1) => void
   onMoveToEdge: (edge: 'top' | 'bottom') => void
   onRemove: () => void
+  /** Смена типа блока на месте — выбор в слэш-меню. */
+  onRetype: (type: BlockType) => void
   isUploading: (kind: DropKind) => boolean
   onUpload: (kind: DropKind, file: File) => void
   /** Инсертер следующего блока — стоит внутри карточки, под её содержимым. */
@@ -56,6 +59,7 @@ function BlockBody({
   item,
   index,
   onPatch,
+  onRetype,
   lang,
   isUploading,
   onUpload,
@@ -63,6 +67,7 @@ function BlockBody({
   item: EditorItem
   index: number
   onPatch: (p: Partial<EditorItem>) => void
+  onRetype: (type: BlockType) => void
   lang: Lang
   isUploading: (kind: DropKind) => boolean
   onUpload: (kind: DropKind, file: File) => void
@@ -78,7 +83,7 @@ function BlockBody({
     case 'step':
       return <StepBlockBody item={item} index={index} onPatch={onPatch} lang={lang} uploading={media.uploading} onFile={media.onFile} />
     case 'text':
-      return <TextBlockBody value={item.text} onChange={(text) => onPatch({ text })} lang={lang} />
+      return <TextBlockBody value={item.text} onChange={(text) => onPatch({ text })} onRetype={onRetype} lang={lang} />
     case 'image':
       return <ImageBlockBody {...media} />
     case 'video':
@@ -102,7 +107,7 @@ function BlockBody({
  * Стрелки не вспомогательные, а основной путь: перетаскивание построено на HTML5
  * drag-and-drop, который на тач-экранах работает не везде.
  */
-export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, isUploading, onUpload, insertAfter }: BlockCardProps) {
+export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, onRetype, isUploading, onUpload, insertAfter }: BlockCardProps) {
   const TypeIcon = BLOCK_ICON[item.type]
   return (
     <div data-i={index} data-uid={uid} className={`relative rounded-lg border border-border bg-surface p-4 ${drag.dragging ? 'opacity-50' : ''}`}>
@@ -187,7 +192,7 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
         />
       </div>
 
-      <BlockBody item={item} index={index} onPatch={onPatch} lang={lang} isUploading={isUploading} onUpload={onUpload} />
+      <BlockBody item={item} index={index} onPatch={onPatch} onRetype={onRetype} lang={lang} isUploading={isUploading} onUpload={onUpload} />
       {insertAfter}
     </div>
   )

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, type KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
 import { t, type Lang } from '@/shared/i18n'
 import { toProposedItems, type EditorItem } from '../editor'
 import { SuggestionResult } from '../SuggestionResult'
 import { BlockCard } from './BlockCard'
 import { BlockInserter } from './BlockInserter'
 import { EditorToolbar } from './EditorToolbar'
+import { KeyboardDock } from './KeyboardDock'
 import { RefineBar } from './RefineBar'
 import { useBlockDrag } from './use-block-drag'
 import { useBlockList } from './use-block-list'
@@ -44,6 +45,9 @@ export function ListEditor({
   // рендером, что и предложения правок, — вторая копия разъехалась бы с первой.
   const [preview, setPreview] = useState(false)
   const drag = useBlockDrag(list.reorder, listRef)
+  // Границы редактора: по ним панель понимает, что клавиатуру открыли ЗДЕСЬ, а не в
+  // соседнем поле формы (название списка, теги).
+  const editorRef = useRef<HTMLDivElement>(null)
 
   // Ctrl/⌘+Z, +Shift+Z, +Y — отмена и повтор (в полях ввода не перехватываем, там
   // работает браузерная); Alt+↑/↓ — двигать блок, на котором стоит фокус.
@@ -68,18 +72,22 @@ export function ListEditor({
   const stepNumberAt = (i: number) => (ordered ? list.items.slice(0, i).filter((x) => x.type === 'step').length + 1 : null)
 
   return (
-    <div className="flex flex-col gap-3" onKeyDown={onKeyDown}>
+    <div ref={editorRef} className="flex flex-col gap-3" onKeyDown={onKeyDown}>
       <input type="hidden" name={name} value={JSON.stringify(list.items)} />
 
-      <EditorToolbar
-        canUndo={list.canUndo}
-        canRedo={list.canRedo}
-        onUndo={list.undo}
-        onRedo={list.redo}
-        preview={preview}
-        onTogglePreview={() => setPreview((v) => !v)}
-        lang={lang}
-      />
+      {/* Пока правят текст на телефоне, отмена и повтор переезжают к клавиатуре: в
+          верху формы на длинном списке до них не дотянуться. */}
+      <KeyboardDock scopeRef={editorRef}>
+        <EditorToolbar
+          canUndo={list.canUndo}
+          canRedo={list.canRedo}
+          onUndo={list.undo}
+          onRedo={list.redo}
+          preview={preview}
+          onTogglePreview={() => setPreview((v) => !v)}
+          lang={lang}
+        />
+      </KeyboardDock>
 
       {preview && (
         // Состав, приведённый к доменной форме, — ровно то, что уедет в версию.
@@ -115,6 +123,7 @@ export function ListEditor({
             onMove={(dir) => list.move(i, dir)}
             onMoveToEdge={(edge) => list.moveToEdge(i, edge)}
             onRemove={() => list.removeAt(i)}
+            onRetype={(type) => list.retype(i, type)}
             isUploading={(kind) => uploads.isBusy(i, kind)}
             onUpload={(kind, file) => void uploads.upload(i, kind, file)}
             // Инсертер после ПОСЛЕДНЕГО блока не рисуем: конец списка покрывает
