@@ -324,12 +324,34 @@
       "count": 2
     }
   },
-  "src/features/library/actions.ts": {
+  "src/features/library/actions/ai.ts": {
     "boundaries/dependencies": {
-      "count": 11
-    },
-    "no-restricted-syntax": {
-      "count": 3
+      "count": 1
+    }
+  },
+  "src/features/library/actions/forks.ts": {
+    "boundaries/dependencies": {
+      "count": 4
+    }
+  },
+  "src/features/library/actions/list-settings.ts": {
+    "boundaries/dependencies": {
+      "count": 8
+    }
+  },
+  "src/features/library/actions/shared.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/features/library/actions/suggestions.ts": {
+    "boundaries/dependencies": {
+      "count": 8
+    }
+  },
+  "src/features/library/actions/versions.ts": {
+    "boundaries/dependencies": {
+      "count": 4
     }
   },
   "src/features/library/cover-actions.ts": {
