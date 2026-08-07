@@ -1,6 +1,6 @@
 'use client'
 
-import { type Lang } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { useRef, useState, useTransition } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
 import { Switch } from '@/shared/ui/switch'
@@ -49,7 +49,7 @@ export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; l
     <div className="flex flex-col gap-2">
       {err && <Alert variant="danger">{err}</Alert>}
       {ACHIEVEMENT_KEYS.map((key) => (
-        <AchRow key={key} k={key} d={map[key]} ru={ru} pending={pending} onToggle={toggle} onUpload={upload} onClear={clearImage} />
+        <AchRow key={key} k={key} d={map[key]} lang={lang} pending={pending} onToggle={toggle} onUpload={upload} onClear={clearImage} />
       ))}
       <p className="mt-1 text-[0.78125rem] text-muted">
         {ru
@@ -63,7 +63,7 @@ export function AchievementsAdmin({ initial, lang }: { initial: AchDisplayMap; l
 function AchRow({
   k,
   d,
-  ru,
+  lang,
   pending,
   onToggle,
   onUpload,
@@ -71,7 +71,7 @@ function AchRow({
 }: {
   k: AchievementKey
   d: { enabled: boolean; imageUrl: string }
-  ru: boolean
+  lang: Lang
   pending: boolean
   onToggle: (k: AchievementKey, v: boolean) => void
   onUpload: (k: AchievementKey, f: File | undefined | null) => void
@@ -85,7 +85,7 @@ function AchRow({
   return (
     <div className={`flex items-center gap-3 rounded-md border border-border bg-surface-2 p-2.5 ${d.enabled ? '' : 'opacity-60'}`}>
       {/* Плитка-дропзона: картинка или иконка-фолбэк. */}
-      <Tooltip label={ru ? 'Перетащи или выбери картинку' : 'Drag or pick an image'}>
+      <Tooltip label={t('ach.pickImage', lang)}>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -117,12 +117,12 @@ function AchRow({
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={(e) => onUpload(k, e.target.files?.[0])} />
 
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[0.8125rem] font-medium text-ink">{ru ? meta.ru : meta.en}</div>
+        <div className="truncate text-[0.8125rem] font-medium text-ink">{t(meta.label, lang)}</div>
         <div className="font-mono text-[0.6875rem] text-muted">{k}</div>
       </div>
 
       {d.imageUrl && (
-        <Tooltip label={ru ? 'Сбросить к иконке' : 'Reset to icon'}>
+        <Tooltip label={t('ach.resetImage', lang)}>
           <button
             type="button"
             onClick={() => onClear(k)}

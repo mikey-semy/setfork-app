@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Check, Eye, GitBranch, GitMerge, GitPullRequest, GitPullRequestClosed, GitPullRequestDraft, Pencil, RefreshCw, X } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, type TKey } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
 import { Badge, type BadgeVariant } from '@/shared/ui/badge'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -175,26 +175,19 @@ export default async function SuggestionThreadPage({
   const branchBehind = !!mergeState && mergeState.mergeBaseSha !== mergeState.ours.tipSha
   const hasConflicts = !!threeWay && (threeWay.conflicts.length > 0 || threeWay.metaConflicts.length > 0)
 
-  const MERGE_ERR: Record<string, { ru: string; en: string }> = {
-    conflict: {
-      ru: 'Конфликт: main ушёл вперёд и не сливается автоматически. Обнови ветку (влей main в неё) и попробуй снова.',
-      en: 'Conflict: main has diverged and cannot be merged automatically. Update the branch (merge main into it) and retry.',
-    },
-    'nothing-to-merge': { ru: 'Ветка не содержит новых коммитов относительно main.', en: 'The branch has no new commits over main.' },
-    'not-linear': {
-      ru: 'На списке включена линейная история: сливать можно только fast-forward. Обнови ветку из main и попробуй снова.',
-      en: 'This list requires linear history: only fast-forward merges are allowed. Update the branch from main and retry.',
-    },
-    unresolved: { ru: 'Разрешены не все конфликты (или ветка изменилась) — выбери версии заново.', en: 'Not all conflicts were resolved (or the branch changed) — pick again.' },
+  // Почему merge не прошёл — по коду из ?e=. Тексты в словаре: это то, что человек
+  // читает, а не техническая метка.
+  const MERGE_ERR: Record<string, TKey> = {
+    conflict: 'prMergeErrConflict',
+    'nothing-to-merge': 'prMergeErrNothing',
+    'not-linear': 'prMergeErrNotLinear',
+    unresolved: 'prMergeErrUnresolved',
     // Правку не записали, потому что ветку подвинули: чужой пуш не затираем.
-    stale: { ru: t('prStaleWrite', 'ru'), en: t('prStaleWrite', 'en') },
+    stale: 'prStaleWrite',
     // Применяли предложенную правку, а пункта уже нет — применять некуда.
-    orphaned: {
-      ru: 'Пункт, к которому относилась предложенная правка, исчез из предложения — применять некуда.',
-      en: 'The item this suggestion pointed at is gone — there is nothing to apply it to.',
-    },
+    orphaned: 'prMergeErrOrphaned',
   }
-  const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? { ru: 'Не удалось выполнить merge.', en: 'Merge failed.' }) : null
+  const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? 'prMergeErrGeneric') : null
 
   // Участники для @mention: автор правки + комментаторы, без дублей.
   const sugSeen = new Set<string>()
@@ -516,7 +509,7 @@ export default async function SuggestionThreadPage({
         )}
         {mergeErr && (
           <Alert variant="danger" className="mb-3">
-            {lang === 'ru' ? mergeErr.ru : mergeErr.en}
+            {t(mergeErr, lang)}
           </Alert>
         )}
         {branchMissing && (
