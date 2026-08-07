@@ -87,8 +87,9 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
           <Field label={t('visibility', lang)} htmlFor="new-visibility">
             <VisibilityToggle isPublic lang={lang} />
           </Field>
-          {/* Без подписи сверху: у пометки она своя, внутри чипа. */}
-          <GatedToggle gated={false} lang={lang} />
+          <Field label={t('gatedShort', lang)} htmlFor="new-gated">
+            <GatedToggle gated={false} lang={lang} />
+          </Field>
         </div>
 
         <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{ru ? 'Пункты' : 'Items'}</label>

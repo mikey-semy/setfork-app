@@ -144,8 +144,9 @@ export default async function EditPage({
           <Field label={t('listKind', lang)} htmlFor="edit-kind">
             <ListTypeToggle ordered={draftOrdered} lang={lang} />
           </Field>
-          {/* Без подписи сверху: у пометки она своя, внутри чипа. */}
-          <GatedToggle gated={draftGated} lang={lang} />
+          <Field label={t('gatedShort', lang)} htmlFor="edit-gated">
+            <GatedToggle gated={draftGated} lang={lang} />
+          </Field>
         </div>
 
         <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{lang === 'ru' ? 'Пункты' : 'Items'}</label>

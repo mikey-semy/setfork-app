@@ -41,5 +41,5 @@ export function VisibilityToggle({ isPublic, lang }: { isPublic: boolean; lang: 
 
 /** Последовательный курс: следующий урок открывается после тестов предыдущего. */
 export function GatedToggle({ gated, lang }: { gated: boolean; lang: Lang }) {
-  return <IconCheckbox name="gated" checked={gated} Icon={GraduationCap} short={t('gatedShort', lang)} label={t('gatedLabel', lang)} hint={t('gatedHint', lang)} />
+  return <IconCheckbox name="gated" checked={gated} Icon={GraduationCap} label={t('gatedLabel', lang)} hint={t('gatedHint', lang)} />
 }
