@@ -354,7 +354,7 @@
       "count": 1
     }
   },
-  "src/features/library/queries.ts": {
+  "src/features/library/queries/list.ts": {
     "boundaries/dependencies": {
       "count": 1
     }
