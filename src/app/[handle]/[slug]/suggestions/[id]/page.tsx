@@ -12,6 +12,8 @@ import { SubmitButton } from '@/shared/ui/SubmitButton'
 import { Alert } from '@/shared/ui/Alert'
 import { MarkdownEditor } from '@/shared/ui/MarkdownEditor'
 import { loadSuggestionPage } from './load'
+import { SuggestionAside } from './SuggestionAside'
+import { SuggestionConversation } from './SuggestionConversation'
 import { requireViewableMeta } from '@/features/library/guard'
 import { acceptSuggestion, addSuggestionComment, mergeBranchPr, rejectSuggestion, resolveBranchPr, updateBranchFromMain } from '@/features/library/actions'
 import { canEditSuggestionItems } from '@/features/library/suggestion-perms'
@@ -79,6 +81,7 @@ export default async function SuggestionThreadPage({
   searchParams: Promise<{ e?: string; tab?: string; view?: string; commit?: string }>
 }) {
   const [{ handle: owner, slug, id }, sp, lang, session] = await Promise.all([params, searchParams, getLang(), getSession()])
+  const loaded = await loadSuggestionPage({ owner, slug, id, sp, lang, session })
   const {
     comments,
     sugR,
@@ -134,7 +137,7 @@ export default async function SuggestionThreadPage({
     coauthors,
     statusVariant,
     blockReasons,
-  } = await loadSuggestionPage({ owner, slug, id, sp, lang, session })
+  } = loaded
 
   const reviewPanel =
     sug.status === 'open' ? (
@@ -449,350 +452,12 @@ export default async function SuggestionThreadPage({
 
         {/* Обсуждение — вкладка по умолчанию. Заметка правки и ревью видны здесь,
             чтобы разговор шёл при полном контексте, как в Conversation у GitHub. */}
-        {tab === 'conversation' && (<>
-        {/* Заметка правки — первое сообщение обсуждения (как тело PR у GitHub), а
-            не шапка на всех вкладках: в «Проверках» и «Изменениях» она мешала. */}
-        {sug.note && (
-          <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface">
-            <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-3.5 py-2 text-[0.78125rem] text-ink-2">
-              <Avatar handle={sug.author.handle} avatarUrl={sug.author.avatarUrl} size={22} />
-              <span className="font-semibold text-ink">{sug.author.handle}</span>
-            </div>
-            <div className="px-4 py-3">
-              <Markdown refBase={`/${owner}/${slug}/issues`}>{sug.note}</Markdown>
-              <div className="mt-2">
-                <Reactions targetType="suggestion" targetId={sug.id} reactions={sugR[sug.id] ?? []} canReact={!!session} path={path} lang={lang} />
-              </div>
-            </div>
-          </div>
+        {tab === 'conversation' && (
+          <SuggestionConversation owner={owner} slug={slug} lang={lang} session={session} data={loaded} reviewPanel={reviewPanel} />
         )}
-
-        <SuggestionTimeline
-          events={timeline}
-          lang={lang}
-          labels={{
-            opened: t('tlOpened', lang),
-            approved: t('tlApproved', lang),
-            requestedChanges: t('tlRequestedChanges', lang),
-            commented: t('tlCommented', lang),
-            resolved: t('tlResolved', lang),
-            merged: t('tlMerged', lang),
-            closed: t('tlClosed', lang),
-          }}
-        />
-        <h2 className="mt-6 mb-3 text-[0.875rem] font-bold text-ink">{t('discussionHeading', lang)}</h2>
-        {comments.length === 0 ? (
-          <p className="mb-3 text-[0.8125rem] text-muted">{t('noCommentsYet', lang)}</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {comments.map((c) => (
-              <CommentCard
-                key={c.id}
-                id={c.id}
-                actions={
-                  <CommentActions
-                    commentId={c.id}
-                    body={c.body}
-                    path={path}
-                    canEdit={session?.userId === c.authorId}
-                    lang={lang}
-                    labels={{
-                      more: t('cmMore', lang),
-                      copyLink: t('cmCopyLink', lang),
-                      copyMarkdown: t('cmCopyMarkdown', lang),
-                      quoteReply: t('cmQuoteReply', lang),
-                      edit: t('cmEdit', lang),
-                      save: t('cmSave', lang),
-                      cancel: t('commentCancel', lang),
-                    }}
-                  />
-                }
-                handle={c.authorHandle}
-                avatarUrl={c.authorAvatarUrl}
-                date={c.createdAt}
-                body={c.body}
-                refBase={`/${owner}/${slug}/issues`}
-                lang={lang}
-                reactions={<Reactions targetType="suggestion_comment" targetId={c.id} reactions={cmtR[c.id] ?? []} canReact={!!session} path={path} lang={lang} />}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Блок слияния — там же, где обсуждение: решение принимают, прочитав
-            разговор. Предупреждение про устаревшую базу и резолвер конфликтов
-            стоят рядом с кнопкой, а не на вкладке изменений. */}
-        {isOwner && !sug.branchRef && sug.status === 'open' && meta.currentVersion > sug.baseVersion && (
-          <Alert variant="warn" className="mt-3">
-            {lang === 'ru'
-              ? `Предложение основано на v${sug.baseVersion}, а список уже на v${meta.currentVersion}. Принятие перезапишет более новые изменения (v${sug.baseVersion + 1}–v${meta.currentVersion}).`
-              : `This suggestion is based on v${sug.baseVersion}, but the list is now at v${meta.currentVersion}. Accepting will overwrite the newer changes (v${sug.baseVersion + 1}–v${meta.currentVersion}).`}
-          </Alert>
-        )}
-
-        {/* Черновик: слияния нет, вместо него — отметка готовности (автор или мейнтейнер). */}
-        {isDraft && (session?.userId === sug.authorId || canMerge) && (
-          <DraftToggle
-            draft
-            action={setSuggestionDraft.bind(null, sug.id)}
-            labels={{ ready: t('prReadyForReview', lang), back: t('prBackToDraft', lang), hint: t('prDraftHint', lang) }}
-          />
-        )}
-
-        {/* Ветка отстала от main — обратное слияние одной кнопкой. Показываем и при
-            конфликте: как раз тогда обновление чаще всего и решает дело. */}
-        {branchBehind && sug.status === 'open' && !branchMissing && (
-          <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3.5 py-2.5">
-            <span className="text-[0.78125rem] text-ink-2">{t('prBranchBehind', lang)}</span>
-            <form action={updateBranchFromMain.bind(null, sug.id)} className="ml-auto">
-              <SubmitButton variant="outline">
-                <RefreshCw size={14} /> {t('prUpdateBranch', lang)}
-              </SubmitButton>
-            </form>
-          </div>
-        )}
-
-        {blockReasons.length > 0 && sug.status === 'open' && !isDraft && (
-          <Alert variant="danger" className="mt-3">
-            {t('prMergeBlocked', lang)}: {blockReasons.join('; ')}
-          </Alert>
-        )}
-
-        {((sug.branchRef ? canMerge : isOwner) && sug.status === 'open' && !isDraft) && (
-          <div className="mt-3 flex gap-2.5">
-            {/* Кнопка слияния прячется при блокировке, «Отклонить» — нет: отклонить
-                предложение можно в любом состоянии, это не обход гейта. */}
-            {blockReasons.length > 0 ? null : sug.branchRef ? (
-              !branchMissing &&
-              !hasConflicts && (
-                <form action={mergeBranchPr.bind(null, sug.id)}>
-                  <SubmitButton>
-                    <GitMerge size={14} />
-                    {/* На мобиле одно слово, на широком — полное действие: способ
-                        слияния меняет результат, и знать о нём надо ДО нажатия. */}
-                    <span className="sm:hidden">{t('prMergeShort', lang)}</span>
-                    <span className="hidden sm:inline">
-                      {prs.mergeMethod === 'squash' ? t('prSquashAndMerge', lang) : t('prMergeToMain', lang)}
-                    </span>
-                  </SubmitButton>
-                </form>
-              )
-            ) : (
-              <form action={acceptSuggestion.bind(null, sug.id)}>
-                <SubmitButton>
-                  <Check size={14} /> {t('accept', lang)}
-                </SubmitButton>
-              </form>
-            )}
-            <form action={rejectSuggestion.bind(null, sug.id)}>
-              <SubmitButton variant="outline">
-                <X size={14} /> {t('reject', lang)}
-              </SubmitButton>
-            </form>
-          </div>
-        )}
-
-        {!isDraft && sug.status === 'open' && (session?.userId === sug.authorId || canMerge) && (
-          <DraftToggle
-            draft={false}
-            action={setSuggestionDraft.bind(null, sug.id)}
-            labels={{ ready: t('prReadyForReview', lang), back: t('prBackToDraft', lang), hint: t('prDraftHint', lang) }}
-          />
-        )}
-
-        {/* Резолвер — только тому, кто может сливать: его экшен всё равно требует
-            прав, а показывать автору форму, которая ничего не сделает, — обман. */}
-        {hasConflicts && threeWay && sug.branchRef && canMerge && (
-          <ConflictResolver
-            conflicts={threeWay.conflicts}
-            metaConflicts={threeWay.metaConflicts}
-            branch={sug.branchRef}
-            lang={lang}
-            action={resolveBranchPr.bind(null, sug.id)}
-          />
-        )}
-
-        {reviewPanel}
-
-        {session ? (
-          <div className="mt-4 rounded-lg border border-border bg-surface p-4">
-            <form action={addSuggestionComment} className="flex flex-col gap-3">
-              <input type="hidden" name="suggestionId" value={sug.id} />
-              <MarkdownEditor name="body" rows={4} placeholder={t('writeComment', lang)} maxLength={20000} lang={lang} refScope={{ owner, slug }} people={sugPeople} />
-              <div className="flex justify-end">
-                <SubmitButton>
-                  {t('commentBtn', lang)}
-                </SubmitButton>
-              </div>
-            </form>
-          </div>
-        ) : (
-          <div className="mt-4 rounded-lg border border-border bg-surface px-4 py-3 text-[0.8125rem] text-ink-2">
-            <Link href={`/login?next=${path}`} className="font-semibold text-accent hover:underline">
-              {t('signInToComment', lang)}
-            </Link>
-          </div>
-        )}
-        </>)}
           </div>
 
-          <PageAside>
-            <AsideCard title={t('reviewTitle', lang)}>
-              {reviews.length === 0 ? (
-                <p className="text-[0.78125rem] text-muted">{t('reviewNobodyYet', lang)}</p>
-              ) : (
-                <ul className="flex flex-col gap-1.5">
-                  {reviews.map((r) => (
-                    <li key={r.id} className="flex items-center gap-2 text-[0.78125rem]">
-                      <Avatar handle={r.reviewer.handle} avatarUrl={r.reviewer.avatarUrl} size={20} />
-                      <span className="min-w-0 flex-1 truncate text-ink-2">{r.reviewer.name || r.reviewer.handle}</span>
-                      <span className={r.verdict === 'approve' ? 'text-ok' : r.verdict === 'changes' ? 'text-danger' : 'text-muted'}>
-                        {r.verdict === 'approve' ? t('reviewApprove', lang) : r.verdict === 'changes' ? t('reviewRequestChanges', lang) : t('reviewCommentOnly', lang)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </AsideCard>
-
-            {session && watchState && (
-              <AsideCard title={t('notifications', lang)}>
-                <WatchButton
-                  templateId={meta.id}
-                  state={watchState}
-                  count={watchCount}
-                  labels={{
-                    watch: t('watch', lang),
-                    unwatch: t('unwatch', lang),
-                    title: t('watchTitle', lang),
-                    participating: t('watchParticipating', lang),
-                    participatingDesc: t('watchParticipatingDesc', lang),
-                    all: t('watchAll', lang),
-                    allDesc: t('watchAllDesc', lang),
-                    ignore: t('watchIgnore', lang),
-                    ignoreDesc: t('watchIgnoreDesc', lang),
-                    custom: t('watchCustom', lang),
-                    customDesc: t('watchCustomDesc', lang),
-                    customTitle: t('watchCustomTitle', lang),
-                    evVersions: t('versionsTab', lang),
-                    evIssues: t('issuesTab', lang),
-                    evSuggestions: t('suggestions', lang),
-                    apply: t('apply', lang),
-                  }}
-                />
-              </AsideCard>
-            )}
-
-            <AsideCard title={t('labelsLabel', lang)}>
-              <LabelEditor
-                owner={owner}
-                slug={slug}
-                labels={(sug.labels as string[]) ?? []}
-                canEdit={canMerge}
-                lang={lang}
-                custom={customLabels}
-                onSave={setSuggestionLabels.bind(null, sug.id)}
-              />
-            </AsideCard>
-
-            {/* Запрошенные рецензенты — ТОТ ЖЕ пикер, что исполнители: набор людей
-                с поиском по handle. Разница только в подписях и в действии. */}
-            <AsideCard>
-              <AssigneePicker
-                owner={owner}
-                slug={slug}
-                assignees={reviewRequests}
-                canEdit={canMerge || session?.userId === sug.authorId}
-                lang={lang}
-                onToggle={toggleReviewRequest.bind(null, sug.id)}
-                labels={{
-                  title: t('prReviewers', lang),
-                  add: t('prRequestReview', lang),
-                  empty: t('prReviewersEmpty', lang),
-                  remove: t('prCancelRequest', lang),
-                }}
-              />
-            </AsideCard>
-
-            <AsideCard>
-              <AssigneePicker
-                owner={owner}
-                slug={slug}
-                assignees={assignees}
-                canEdit={canMerge}
-                lang={lang}
-                onToggle={toggleSuggestionAssignee.bind(null, sug.id)}
-              />
-            </AsideCard>
-
-            <AsideCard>
-              <MilestonePicker
-                owner={owner}
-                slug={slug}
-                current={curMilestone}
-                options={msOptions}
-                canEdit={canMerge}
-                lang={lang}
-                onSet={setSuggestionMilestone.bind(null, sug.id)}
-              />
-            </AsideCard>
-
-            {/* Development у GitHub: какие задачи закроет слияние. Привязка живёт
-                строкой `closes #N` в тексте — пикер её дописывает, поэтому набранное
-                руками и выбранное мышью это одно и то же. */}
-            {(linkedIssues.length > 0 || (canLinkIssues && openIssues.length > 0)) && (
-              <AsideCard title={t('prLinkedIssues', lang)}>
-                {linkedIssues.length > 0 && (
-                  <ul className="mb-1.5 flex flex-col gap-1.5">
-                    {linkedIssues.map((iss) => (
-                      <li key={iss.number} className="flex items-start gap-1.5 text-[0.78125rem]">
-                        <Link href={`/${owner}/${slug}/issues/${iss.number}`} className="font-mono text-muted hover:text-accent">
-                          #{iss.number}
-                        </Link>
-                        <span className={`min-w-0 flex-1 ${iss.status === 'closed' ? 'text-muted line-through' : 'text-ink-2'}`}>{iss.title}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <LinkIssuePicker
-                  suggestionId={sug.id}
-                  issues={openIssues}
-                  linked={closingRefs(sug.note)}
-                  canEdit={canLinkIssues}
-                  labels={{
-                    add: t('prLinkIssue', lang),
-                    empty: t('prLinkIssueEmpty', lang),
-                    filter: t('prLinkIssueFilter', lang),
-                    remove: t('prLinkIssueRemove', lang),
-                    hint: t('prLinkedIssuesHint', lang),
-                    clear: t('clear', lang),
-                  }}
-                />
-              </AsideCard>
-            )}
-
-            {/* Замок обсуждения — служебное и редкое, поэтому в самом низу панели,
-                а не рядом с частыми действиями. */}
-            {canMerge && (
-              <AsideCard>
-                <LockToggle
-                  suggestionId={sug.id}
-                  locked={!!sug.lockedAt}
-                  labels={{ lock: t('prLock', lang), unlock: t('prUnlock', lang), hint: t('prLockHint', lang) }}
-                />
-              </AsideCard>
-            )}
-
-            <AsideCard title={t('participants', lang)}>
-              <div className="flex flex-wrap gap-1.5">
-                {sugPeople.map((p) => (
-                  <Link key={p.handle} href={`/${p.handle}`} title={p.handle}>
-                    <Avatar handle={p.handle} avatarUrl={p.avatarUrl} size={24} />
-                  </Link>
-                ))}
-              </div>
-            </AsideCard>
-          </PageAside>
+          <SuggestionAside owner={owner} slug={slug} lang={lang} session={session} data={loaded} />
         </div>
       </div>
     </>
