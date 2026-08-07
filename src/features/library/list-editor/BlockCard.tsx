@@ -1,8 +1,10 @@
 'use client'
 
 import type { PointerEvent, ReactNode } from 'react'
-import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, GripVertical, Heading, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, GripVertical, Heading, MoreHorizontal, Trash2 } from 'lucide-react'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { IconButton, iconSizeFor } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 import type { EditorItem } from '../editor'
@@ -117,15 +119,9 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
             уйти в прокрутку. Из таб-порядка ручка убрана: с клавиатуры блок двигают
             соседние кнопки и Alt+↑/↓, а фокус на пустышке только мешал бы. */}
         <Tooltip label={t('editor.dragToReorder', lang)}>
-          <button
-            type="button"
-            tabIndex={-1}
-            aria-label={t('editor.dragToReorder', lang)}
-            {...drag.handle}
-            className="grid size-11 shrink-0 cursor-grab touch-none place-items-center rounded-md text-muted select-none hover:text-ink active:cursor-grabbing"
-          >
-            <GripVertical size={15} />
-          </button>
+          <IconButton variant="ghost" tabIndex={-1} label={t('editor.dragToReorder', lang)} {...drag.handle} className="cursor-grab touch-none select-none active:cursor-grabbing">
+            <GripVertical size={iconSizeFor()} />
+          </IconButton>
         </Tooltip>
         {item.type === 'step' ? (
           <span className="font-mono text-[0.78125rem] text-muted">{stepNumber === null ? '•' : t('editor.itemN', lang).replace('{n}', String(stepNumber))}</span>
@@ -135,31 +131,40 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
             {blockLabel(item.type, lang)}
           </span>
         )}
+        {/* Порядок и удаление — иконочные кнопки общей шкалы: пальцем цель вырастает
+            до 44px, мышью остаётся плотной. «В начало» и «в конец» уехали в «…»:
+            пять целей по 44 не помещаются в шапку 390px рядом с номером пункта, а
+            вторичному место в меню, а не второй строкой. */}
         <div className="ml-auto flex items-center gap-1">
-          <Tooltip label={t('editor.moveTop', lang)}>
-            <button type="button" onClick={() => onMoveToEdge('top')} disabled={isFirst} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
-              <ChevronsUp size={15} />
-            </button>
-          </Tooltip>
           <Tooltip label={t('editor.moveUp', lang)}>
-            <button type="button" onClick={() => onMove(-1)} disabled={isFirst} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
-              <ChevronUp size={15} />
-            </button>
+            <IconButton variant="ghost" label={t('editor.moveUp', lang)} onClick={() => onMove(-1)} disabled={isFirst}>
+              <ChevronUp size={iconSizeFor()} />
+            </IconButton>
           </Tooltip>
           <Tooltip label={t('editor.moveDown', lang)}>
-            <button type="button" onClick={() => onMove(1)} disabled={isLast} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
-              <ChevronDown size={15} />
-            </button>
+            <IconButton variant="ghost" label={t('editor.moveDown', lang)} onClick={() => onMove(1)} disabled={isLast}>
+              <ChevronDown size={iconSizeFor()} />
+            </IconButton>
           </Tooltip>
-          <Tooltip label={t('editor.moveBottom', lang)}>
-            <button type="button" onClick={() => onMoveToEdge('bottom')} disabled={isLast} className="rounded-md p-1 text-muted hover:text-ink disabled:opacity-30 disabled:hover:text-muted">
-              <ChevronsDown size={15} />
-            </button>
-          </Tooltip>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <IconButton variant="ghost" label={t('editor.blockActions', lang)}>
+                <MoreHorizontal size={iconSizeFor()} />
+              </IconButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onMoveToEdge('top')} disabled={isFirst}>
+                <ChevronsUp size={iconSizeFor('xs')} /> {t('editor.moveTop', lang)}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onMoveToEdge('bottom')} disabled={isLast}>
+                <ChevronsDown size={iconSizeFor('xs')} /> {t('editor.moveBottom', lang)}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Tooltip label={t('editor.remove', lang)}>
-            <button type="button" onClick={onRemove} className="rounded-md p-1 text-muted hover:text-danger">
-              <Trash2 size={15} />
-            </button>
+            <IconButton variant="danger" label={t('editor.remove', lang)} onClick={onRemove}>
+              <Trash2 size={iconSizeFor()} />
+            </IconButton>
           </Tooltip>
         </div>
       </div>
