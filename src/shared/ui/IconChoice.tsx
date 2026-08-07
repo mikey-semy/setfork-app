@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { TOUCH_BOX, TOUCH_MIN_H } from './control'
+import { TOUCH_BOX } from './control'
 import { Tooltip } from './Tooltip'
 
 /**
@@ -35,22 +35,23 @@ export function IconRadioGroup({ name, options }: { name: string; options: reado
 }
 
 /**
- * Одиночная пометка-переключатель. В отличие от сегмента подпись остаётся видимой:
- * у «или-или» невыбранный вариант подсказывает смысл выбранного, а у одинокой иконки
- * подсказки нет — и на тач-экране, где тултип не показывается, она превращается в
- * ребус.
+ * Одиночная пометка-переключатель — ТА ЖЕ геометрия, что у сегмента: рамка, внутри
+ * квадрат. Чип с текстом стоял в одном ряду с сегментами на несколько пикселей ниже,
+ * и ряд читался неровным (замечание владельца 07.08).
+ *
+ * Смысл несёт подпись поля сверху, как у соседей: у «или-или» невыбранный вариант
+ * подсказывает смысл выбранного, а одинокая иконка без подписи — ребус, особенно на
+ * тач-экране, где тултипа нет.
  */
-export function IconCheckbox({ name, Icon, label, hint, checked, short }: Omit<IconOption, 'value'> & { name: string; short: string }) {
+export function IconCheckbox({ name, Icon, label, hint, checked }: Omit<IconOption, 'value'> & { name: string }) {
   return (
-    <Tooltip label={title(label, hint)}>
-      <label
-        aria-label={label}
-        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface-2 px-2.5 py-2 text-[0.78125rem] text-ink-2 transition-colors hover:text-ink has-[:checked]:border-accent has-[:checked]:text-accent ${TOUCH_MIN_H}`}
-      >
-        <input type="checkbox" name={name} defaultChecked={checked} className="sr-only" />
-        <Icon size={16} className="shrink-0" />
-        {short}
-      </label>
-    </Tooltip>
+    <div className="inline-flex rounded-md border border-border bg-surface-2 p-0.5">
+      <Tooltip label={title(label, hint)}>
+        <label aria-label={label} className={`${BOX} ${CHECKED}`}>
+          <input type="checkbox" name={name} defaultChecked={checked} className="sr-only" />
+          <Icon size={16} />
+        </label>
+      </Tooltip>
+    </div>
   )
 }

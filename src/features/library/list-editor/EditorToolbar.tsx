@@ -1,12 +1,18 @@
 'use client'
 
 import { Eye, Pencil, Redo2, Undo2 } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
-import { iconSizeFor, TOUCH_MIN_H } from '@/shared/ui/control'
+import { iconSizeFor } from '@/shared/ui/control'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 
-/** Верхний ряд редактора: отмена, повтор и переключатель предпросмотра. */
+/**
+ * Верхний ряд редактора: отмена, повтор, предпросмотр.
+ *
+ * Только иконки: три подписи занимали треть ширины телефона ради действий, которые
+ * узнаются по значку (решение владельца 07.08). Смысл каждой — в тултипе и в
+ * подписи для диктора, как у остальных иконочных кнопок приложения.
+ */
 export function EditorToolbar({
   canUndo,
   canRedo,
@@ -25,21 +31,27 @@ export function EditorToolbar({
   lang: Lang
 }) {
   return (
-    <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
+    <div className="flex items-center gap-1 text-[0.78125rem] text-muted">
       <Tooltip label={t('editor.undoHint', lang)}>
-        <Button size="sm" onClick={onUndo} disabled={!canUndo} className={TOUCH_MIN_H}>
-          <Undo2 size={iconSizeFor('sm')} /> {t('editor.undo', lang)}
-        </Button>
+        <IconButton variant="ghost" onClick={onUndo} disabled={!canUndo} label={t('editor.undo', lang)}>
+          <Undo2 size={iconSizeFor()} />
+        </IconButton>
       </Tooltip>
       <Tooltip label={t('editor.redoHint', lang)}>
-        <Button size="sm" onClick={onRedo} disabled={!canRedo} className={TOUCH_MIN_H}>
-          <Redo2 size={iconSizeFor('sm')} /> {t('editor.redo', lang)}
-        </Button>
+        <IconButton variant="ghost" onClick={onRedo} disabled={!canRedo} label={t('editor.redo', lang)}>
+          <Redo2 size={iconSizeFor()} />
+        </IconButton>
       </Tooltip>
       <Tooltip label={t(preview ? 'editTip' : 'previewTip', lang)}>
-        <Button size="sm" onClick={onTogglePreview} aria-pressed={preview} className={`${TOUCH_MIN_H} ${preview ? 'border-accent text-accent' : ''}`}>
-          {preview ? <Pencil size={iconSizeFor('sm')} /> : <Eye size={iconSizeFor('sm')} />} {t(preview ? 'editToggle' : 'previewToggle', lang)}
-        </Button>
+        <IconButton
+          variant="ghost"
+          onClick={onTogglePreview}
+          aria-pressed={preview}
+          label={t(preview ? 'editToggle' : 'previewToggle', lang)}
+          className={preview ? 'text-accent' : ''}
+        >
+          {preview ? <Pencil size={iconSizeFor()} /> : <Eye size={iconSizeFor()} />}
+        </IconButton>
       </Tooltip>
       {/* Подсказка — только на широком экране: половина её про Alt+↑/↓, а клавиатуры
           на телефоне нет. Сам перенос работает и пальцем. */}
