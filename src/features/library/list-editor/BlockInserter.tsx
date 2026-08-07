@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
+import { TOUCH_BOX } from '@/shared/ui/control'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 import { BLOCK_TYPES, type BlockType } from '../blocks'
@@ -112,7 +113,9 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={`z-1 grid place-items-center rounded-full border transition-all ${
-          between ? 'h-7 w-7 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100' : 'h-11 w-11'
+          // Разделитель между карточками мышью незаметен до наведения, но пальцем в
+          // 28px не попасть — на грубом указателе он и виден, и полной цели.
+          between ? `h-7 w-7 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 ${TOUCH_BOX}` : 'h-11 w-11'
         } ${open ? 'rotate-45 border-accent bg-accent text-white' : 'border-border bg-surface text-ink-2 hover:border-border-strong hover:text-ink'} ${open ? 'opacity-100' : ''}`}
       >
         <Plus size={between ? 15 : 20} />
