@@ -38,7 +38,7 @@ export function ListEditor({
   ordered?: boolean
 }) {
   const list = useBlockList(initialItems)
-  const uploads = useBlockUploads(list.patch)
+  const uploads = useBlockUploads(list.patchByUid)
   const listRef = useFlipReorder(list.uids)
   // ПРЕДПРОСМОТР рядом с правкой: до него единственным способом увидеть результат
   // было сохранить версию (жалоба владельца 04.08.2026). Показываем тем же
@@ -124,8 +124,8 @@ export function ListEditor({
             onMoveToEdge={(edge) => list.moveToEdge(i, edge)}
             onRemove={() => list.removeAt(i)}
             onRetype={(type) => list.retype(i, type)}
-            isUploading={(kind) => uploads.isBusy(i, kind)}
-            onUpload={(kind, file) => void uploads.upload(i, kind, file)}
+            isUploading={(kind) => uploads.isBusy(list.uids[i], kind)}
+            onUpload={(kind, file) => void uploads.upload(list.uids[i], kind, file)}
             // Инсертер после ПОСЛЕДНЕГО блока не рисуем: конец списка покрывает
             // главный инсертер ниже. «Повторить» = тип блока, под которым он стоит.
             insertAfter={i < list.items.length - 1 ? <BlockInserter onInsert={(type) => list.insertAt(i + 1, type)} repeatType={item.type} lang={lang} between /> : undefined}
