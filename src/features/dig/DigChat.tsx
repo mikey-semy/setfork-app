@@ -4,13 +4,10 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { ChevronDown, Heart, Loader2, Pickaxe, X } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { Button } from '@/shared/ui/button'
-import { ChatComposer } from '@/shared/ui/ChatComposer'
+import { ChatDock } from '@/shared/ui/ChatDock'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
-import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
-import { Markdown } from '@/shared/ui/Markdown'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
-import { useViewportBottom } from '@/shared/ui/use-viewport-bottom'
 import { digChatAsk, getDigChatHistory, thankGnome, type DigChatMsg } from './chat-actions'
 
 /**
@@ -50,10 +47,6 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
   const [text, setText] = useState('')
   const [err, setErr] = useState('')
   const [pending, start] = useTransition()
-  // Поправка на расхождение layout/visual viewport — см. use-viewport-bottom.
-  const { gap: vpGap, visibleHeight } = useViewportBottom()
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const lastReplyRef = useRef<HTMLDivElement>(null)
   const ctxRef = useRef<DigChatOpenDetail | null>(null) // актуальный ctx без stale-замыкания в слушателе
 
   useEffect(() => {
@@ -77,16 +70,6 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
     return () => window.removeEventListener(DIG_CHAT_EVENT, onOpen)
   }, [])
 
-  useEffect(() => {
-    // Пришёл ответ гнома → скроллим к его НАЧАЛУ (читают сверху, не с конца);
-    // свой вопрос/индикатор — вниз, как обычно. scrollTo по offsetTop, а не
-    // scrollIntoView: последний не должен дёргать скролл самой страницы.
-    const box = scrollRef.current
-    if (!box) return
-    const last = messages[messages.length - 1]
-    if (last?.role === 'gnome' && lastReplyRef.current) box.scrollTo({ top: lastReplyRef.current.offsetTop - 8, behavior: 'smooth' })
-    else box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' })
-  }, [messages, pending])
 
   if (!ctx) return null
 
@@ -162,105 +145,53 @@ export function DigChatHost({ gnomes, lang }: { gnomes: GnomeOption[]; lang: Lan
     t('dig.anyAlternatives', lang),
   ]
   const chips = messages.length === 0 ? starterQuestions : followups.length ? followups : deeperFallback
-  const chipRow = chips.length > 0 && !pending && (
-    <div className="flex flex-wrap gap-1.5">
-      {chips.map((q) => (
-        <Button key={q} variant="outline" size="xs" className="rounded-full font-normal" onClick={() => send(q)}>
-          {q}
-        </Button>
-      ))}
-    </div>
+  // Собеседника выбирают под заголовком: «авто по теме» или конкретный гном ростера.
+  const gnomePicker = (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="inline-flex items-center gap-1 text-[0.6875rem] text-muted hover:text-ink-2">
+        {gnome === 'auto' ? t('dig.autoByTopic', lang) : `${current?.name ?? gnome}${current?.guild ? ` · ${current.guild}` : ''}`}
+        <ChevronDown size={11} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem onSelect={() => setGnome('auto')}>{t('dig.autoByTopic', lang)}</DropdownMenuItem>
+        {gnomes.map((g) => (
+          <DropdownMenuItem key={g.id} onSelect={() => setGnome(g.id)}>
+            {g.name}
+            {g.guild && <span className="ml-1.5 text-[0.6875rem] text-muted">{g.guild}</span>}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 
-  // data-sticky-input — общий признак нижней панели: по нему кнопка «наверх» садится
-  // ВЫШЕ чата (на десктопе она пряталась за этой панелью). bottom/maxHeight считаем от
-  // ВИДИМОГО низа: при расхождении layout и visual viewport (панели мобильного
-  // браузера) панель иначе открывалась посередине экрана.
   return (
-    <div
-      data-sticky-input
-      style={vpGap ? { bottom: vpGap + 16, maxHeight: Math.round(visibleHeight * 0.7) } : undefined}
-      className="fixed bottom-4 right-4 z-50 flex max-h-[70dvh] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card"
-    >
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <Pickaxe size={14} className="shrink-0 text-accent" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[0.78125rem] font-semibold text-ink">{ctx.stepTitle}</div>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center gap-1 text-[0.6875rem] text-muted hover:text-ink-2">
-              {gnome === 'auto' ? t('dig.autoByTopic', lang) : `${current?.name ?? gnome}${current?.guild ? ` · ${current.guild}` : ''}`}
-              <ChevronDown size={11} />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onSelect={() => setGnome('auto')}>{t('dig.autoByTopic', lang)}</DropdownMenuItem>
-              {gnomes.map((g) => (
-                <DropdownMenuItem key={g.id} onSelect={() => setGnome(g.id)}>
-                  {g.name}
-                  {g.guild && <span className="ml-1.5 text-[0.6875rem] text-muted">{g.guild}</span>}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <Button variant="ghost" size="xs" aria-label={t('dig.close', lang)} onClick={() => setCtx(null)}>
-          <X size={15} />
-        </Button>
-      </div>
-
-      <div ref={scrollRef} className="min-h-[7.5rem] flex-1 space-y-3 overflow-y-auto px-3 py-3">
-        {messages.length === 0 && (
-          <p className="text-[0.78125rem] leading-relaxed text-muted">
-            {t('dig.askAnythingAboutStep', lang)}
-          </p>
-        )}
-        {/* Фрагмент переписки для копирования: предшествующий вопрос + ответ с
-            именем гнома. Без этого из буфера выпадает вся атрибуция. */}
-        {messages.map((m, i) =>
-          m.role === 'user' ? (
-            <div key={i} className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3 py-1.5 text-[0.8125rem] leading-[1.5] text-primary-fg">{m.text}</div>
-            </div>
-          ) : (
-            <div key={i} ref={i === messages.length - 1 ? lastReplyRef : undefined} className="group flex items-start gap-2">
-              <GnomeAvatar src={`/gnomes/${m.who ?? 'generalist'}.webp`} size={32} className="size-8 shrink-0" />
-              <div className="min-w-0 rounded-2xl rounded-bl-md bg-(--surface-2) px-3 py-1.5">
-                <Markdown className="text-[0.8125rem] leading-[1.5] text-ink-2">{m.text}</Markdown>
-                {/* «Спасибо» гному (одушевление) + копировать — проявляются при наведении. */}
-                <div className="mt-1 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                  <ThankButton who={m.who ?? 'generalist'} thanked={thanked.has(i)} onThank={() => thank(i, m.who ?? 'generalist')} lang={lang} />
-                  {/* Копируем КАК ИЗ ЧАТА: с вопросом и подписью отвечавшего —
-                      иначе вставленный кусок теряет, кто это сказал и на что. */}
-                  <CopyButton text={transcriptOf(i)} lang={lang} />
-                </div>
-              </div>
-            </div>
-          ),
-        )}
-        {pending && (
-          <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
-            <Loader2 size={13} className="animate-spin" /> {t('dig.digging', lang)}
-          </div>
-        )}
-        {err && <p className="text-[0.78125rem] text-warn">{err}</p>}
-        {chipRow}
-      </div>
-
-      <div className="border-t border-border px-2.5 py-2">
-        {/* Композер — общий дом гномов (UI): то же поле+круглая кнопка+хоткеи, что в
-            чате генерации. Esc закрывает окно раскопки (специфика этой поверхности). */}
-        <ChatComposer
-          value={text}
-          onChange={setText}
-          onSend={() => send()}
-          placeholder={t('dig.whyExactlyWay', lang)}
-          sendDisabled={!text.trim() || pending}
-          pending={pending}
-          sendAriaLabel={t('dig.sendEnter', lang)}
-          sendTooltip={t('dig.enterSendShiftEnter', lang)}
-          onEscape={() => setCtx(null)}
-        />
-      </div>
-    </div>
+    <ChatDock
+      icon={<Pickaxe size={14} />}
+      title={ctx.stepTitle}
+      subtitle={gnomePicker}
+      messages={messages}
+      emptyHint={t('dig.askAnythingAboutStep', lang)}
+      chips={chips}
+      pending={pending}
+      pendingLabel={t('dig.digging', lang)}
+      error={err}
+      value={text}
+      onChange={setText}
+      onSend={(preset) => send(preset)}
+      onClose={() => setCtx(null)}
+      placeholder={t('dig.whyExactlyWay', lang)}
+      sendAriaLabel={t('dig.sendEnter', lang)}
+      sendTooltip={t('dig.enterSendShiftEnter', lang)}
+      lang={lang}
+      bubbleActions={(i, m) => (
+        <>
+          <ThankButton who={m.who ?? 'generalist'} thanked={thanked.has(i)} onThank={() => thank(i, m.who ?? 'generalist')} lang={lang} />
+          {/* Копируем КАК ИЗ ЧАТА: с вопросом и подписью отвечавшего — иначе
+              вставленный кусок теряет, кто это сказал и на что. */}
+          <CopyButton text={transcriptOf(i)} lang={lang} />
+        </>
+      )}
+    />
   )
 }
 

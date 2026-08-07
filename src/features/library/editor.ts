@@ -35,6 +35,13 @@ export type EditorQuiz = {
   items: string[] // sort: элементы в правильном порядке
   explain: string
 }
+/**
+ * Поля блока, которые правит ИИ по инструкции из чата. Именно поля, а не весь
+ * EditorItem: у блока в редакторе есть своя идентичность, загруженная картинка и
+ * голоса опроса — правка текста их трогать не должна.
+ */
+export type EditorBlockPatch = Pick<EditorItem, 'title' | 'desc' | 'command' | 'level' | 'why' | 'needsHuman' | 'needsHumanAsk' | 'subtasks' | 'refs'>
+
 export type EditorItem = {
   // Блочная модель: 'step' (runnable/чекаемый) | 'text' (markdown) | 'image' | 'poll'.
   type: BlockType

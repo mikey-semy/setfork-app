@@ -9,7 +9,7 @@ import { BlockInserter } from './BlockInserter'
 import { EditorToolbar } from './EditorToolbar'
 import { commandFor } from './hotkeys'
 import { KeyboardDock } from './KeyboardDock'
-import { RefineBar } from './RefineBar'
+import { BlockChat } from './BlockChat'
 import { useBlockDrag } from './use-block-drag'
 import { useBlockList } from './use-block-list'
 import { useBlockUploads } from './use-block-uploads'
@@ -33,7 +33,7 @@ export function ListEditor({
   name?: string
   initialItems: EditorItem[]
   lang: Lang
-  /** Включает панель «Улучшить»; title/desc/tags идут в модель как контекст. */
+  /** Контекст списка для чата правки блока: без него модель правит пункт вслепую. */
   aiRefine?: { title: string; desc: string; tags: string[] }
   /** Упорядоченный список — нумерация; иначе набор (маркеры). */
   ordered?: boolean
@@ -103,8 +103,6 @@ export function ListEditor({
         </div>
       )}
 
-      {!preview && aiRefine && <RefineBar items={list.items} context={aiRefine} onResult={list.replaceAll} lang={lang} />}
-
       <div ref={listRef} className={`flex flex-col gap-3 ${preview ? 'hidden' : ''}`}>
         {/* Инсертер НАД первым блоком: без него «добавить сверху» стоило двух
             действий — добавить в конец и гнать блок наверх стрелками. */}
@@ -129,6 +127,9 @@ export function ListEditor({
             onMoveToEdge={(edge) => list.moveToEdge(i, edge)}
             onRemove={() => list.removeAt(i)}
             onRetype={(type) => list.retype(i, type)}
+            // Чат правки — только у шага: у опроса и картинки текстовых полей,
+            // которые он правит, попросту нет.
+            chat={aiRefine && item.type === 'step' ? <BlockChat item={item} context={aiRefine} onApply={(patch) => list.patch(i, patch)} lang={lang} /> : undefined}
             isUploading={(kind) => uploads.isBusy(list.uids[i], kind)}
             onUpload={(kind, file) => void uploads.upload(list.uids[i], kind, file)}
             // Инсертер после ПОСЛЕДНЕГО блока не рисуем: конец списка покрывает
