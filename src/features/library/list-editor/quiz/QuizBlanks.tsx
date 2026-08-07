@@ -1,0 +1,46 @@
+'use client'
+
+import { blankCount } from '@/core'
+import { t } from '@/shared/i18n'
+import { Hint, LineField } from '../block-fields'
+import type { QuizKindProps } from './kind-props'
+
+/**
+ * Пропуски: текст с «___», под каждым пропуском — принимаемые ответы.
+ *
+ * Число полей считается из САМОГО текста (blankCount), а не хранится отдельно:
+ * иначе правка шаблона молча расходилась бы со списком ответов.
+ */
+export function QuizBlanks({ quiz, set, lang, caseBox, nth }: QuizKindProps) {
+  const n = blankCount(quiz.template)
+  return (
+    <>
+      <textarea
+        className="min-h-[3.25rem] w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-[0.8125rem] leading-relaxed text-ink outline-hidden focus:border-border-strong"
+        aria-label={t('quiz.blankText', lang)}
+        placeholder={t('quiz.blankTextPh', lang)}
+        value={quiz.template}
+        onChange={(e) => set({ template: e.target.value })}
+      />
+      {n === 0 ? (
+        <Hint>{t('quiz.blankNone', lang)}</Hint>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {Array.from({ length: n }, (_, bi) => (
+            <div key={bi} className="flex items-center gap-2">
+              <span className="w-5 shrink-0 text-right font-mono text-[0.6875rem] text-muted">#{bi + 1}</span>
+              <LineField
+                value={quiz.blanks[bi] ?? ''}
+                onChange={(v) => set({ blanks: Array.from({ length: n }, (_, i) => (i === bi ? v : (quiz.blanks[i] ?? ''))) })}
+                lang={lang}
+                label={nth('quiz.blankAnswersN', bi + 1)}
+                placeholder={t('quiz.blankAnswersPh', lang)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="self-start text-[0.78125rem]">{caseBox}</div>
+    </>
+  )
+}
