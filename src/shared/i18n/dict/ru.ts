@@ -1807,6 +1807,7 @@ export const ru: Record<DictKey, string> = {
   'poll.questionPh': 'Вопрос опроса',
   'poll.multi': 'Мультивыбор',
   'poll.deadline': 'Дедлайн',
+  'quiz.kind': 'Вид теста',
   'quiz.kindChoice': 'Выбор',
   'quiz.kindText': 'Текст',
   'quiz.kindNumber': 'Число',

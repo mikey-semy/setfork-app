@@ -1817,6 +1817,7 @@ export const en = {
   'poll.questionPh': 'Poll question',
   'poll.multi': 'Multi-select',
   'poll.deadline': 'Deadline',
+  'quiz.kind': 'Quiz kind',
   'quiz.kindChoice': 'Choice',
   'quiz.kindText': 'Text',
   'quiz.kindNumber': 'Number',

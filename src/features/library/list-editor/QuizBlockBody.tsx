@@ -2,7 +2,9 @@
 
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { blankCount, type QuizKind } from '@/core'
@@ -39,19 +41,21 @@ export function QuizBlockBody({ quiz, onChange, lang }: { quiz: EditorQuiz; onCh
   const accept = quiz.accept.length ? quiz.accept : ['']
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
-      {/* Тип теста */}
-      <div className="flex items-center gap-1 self-start rounded-md border border-border bg-surface p-0.5 text-[0.78125rem]">
-        {QUIZ_KINDS.map((o) => (
-          <button
-            key={o.k}
-            type="button"
-            onClick={() => set({ kind: o.k })}
-            className={`rounded px-2.5 py-1 ${quiz.kind === o.k ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
-          >
-            {t(o.label, lang)}
-          </button>
-        ))}
-      </div>
+      {/* ТИП ТЕСТА — списком, а не рядом кнопок: семи подписей в ряд нужен 481px, и
+          на экране 390 они распирали страницу горизонтальной прокруткой (замер
+          07.08.2026). Список из семи и по сути не сегмент. */}
+      <Select value={quiz.kind} onValueChange={(v) => set({ kind: v as QuizKind })}>
+        <SelectTrigger className="w-full self-start sm:w-[12rem]" aria-label={t('quiz.kind', lang)}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {QUIZ_KINDS.map((o) => (
+            <SelectItem key={o.k} value={o.k}>
+              {t(o.label, lang)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       <LineField value={quiz.question} onChange={(question) => set({ question })} lang={lang} className="" label={t('quiz.questionPh', lang)} />
 
@@ -61,17 +65,24 @@ export function QuizBlockBody({ quiz, onChange, lang }: { quiz: EditorQuiz; onCh
             {quiz.options.map((o, oi) => (
               <div key={o.id} className="flex items-center gap-2">
                 <Tooltip label={t(o.correct ? 'quiz.correctAnswer' : 'quiz.markCorrect', lang)}>
-                  <button
-                    type="button"
+                  {/* Пометка «верный» — тач-цель как у остальных иконок; кружок
+                      рисуется внутри, чтобы область касания не зависела от него. */}
+                  <IconButton
+                    size="sm"
+                    variant="ghost"
                     onClick={() => toggleCorrect(oi)}
                     aria-pressed={o.correct}
-                    aria-label={t('quiz.markCorrect', lang)}
-                    className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors ${
-                      o.correct ? 'border-ok bg-ok/15 text-ok' : 'border-border-strong text-transparent hover:border-ok'
-                    }`}
+                    label={t('quiz.markCorrect', lang)}
+                    className="rounded-full border-0 hover:bg-transparent"
                   >
-                    <Check size={13} />
-                  </button>
+                    <span
+                      className={`grid size-5 place-items-center rounded-full border transition-colors ${
+                        o.correct ? 'border-ok bg-ok/15 text-ok' : 'border-border-strong text-transparent'
+                      }`}
+                    >
+                      <Check size={13} />
+                    </span>
+                  </IconButton>
                 </Tooltip>
                 <LineField value={o.text} onChange={(v) => set({ options: quiz.options.map((x, xi) => (xi === oi ? { ...x, text: v } : x)) })} lang={lang} label={nth('editor.optionN', oi + 1)} />
                 <RemoveBtn onClick={() => set({ options: quiz.options.filter((_, xi) => xi !== oi) })} disabled={quiz.options.length <= 2} label={t('editor.removeOption', lang)} />
