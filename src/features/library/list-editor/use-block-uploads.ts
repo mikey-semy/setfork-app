@@ -13,6 +13,10 @@ import type { DropKind } from './FileDrop'
  * можно перетащить картинку в другой блок — и обе полосы «Загрузка…» должны стоять
  * до своего конца.
  *
+ * Блок адресуется СТАБИЛЬНЫМ id, а не номером в списке. Файл возвращается через
+ * секунды, и за это время блок можно переставить или удалить: по номеру полоса
+ * «Загрузка…» повисала бы на чужой карточке, а результат ложился бы в чужой блок.
+ *
  * Куда лечь результату, знает таблица видов; сами экшены приходят параметром, чтобы
  * хук проверялся без поднятия серверных действий.
  */
@@ -35,19 +39,19 @@ export const serverUploaders: Uploaders = {
   },
 }
 
-export function useBlockUploads(patch: (i: number, p: Partial<EditorItem>) => void, uploaders: Uploaders = serverUploaders) {
+export function useBlockUploads(patchByUid: (uid: string, p: Partial<EditorItem>) => void, uploaders: Uploaders = serverUploaders) {
   const [running, setRunning] = useState<string[]>([])
 
   return {
-    isBusy: (i: number, kind: DropKind) => running.includes(`${i}:${kind}`),
-    upload: async (i: number, kind: DropKind, file: File) => {
-      const key = `${i}:${kind}`
+    isBusy: (uid: string, kind: DropKind) => running.includes(`${uid}:${kind}`),
+    upload: async (uid: string, kind: DropKind, file: File) => {
+      const key = `${uid}:${kind}`
       setRunning((keys) => [...keys, key])
       const form = new FormData()
       form.append('file', file)
       const res = await uploaders[kind](form)
       if ('error' in res) toast.error(res.error)
-      else patch(i, res)
+      else patchByUid(uid, res)
       setRunning((keys) => keys.filter((k) => k !== key))
     },
   }
