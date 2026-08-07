@@ -66,6 +66,19 @@ export function dropTargetIndex(from: number, over: number, side: 'before' | 'af
   return over - (from < over ? 1 : 0) + (side === 'after' ? 1 : 0)
 }
 
+/**
+ * Смена типа блока на месте — это выбор в слэш-меню: «/» в пустом текстовом блоке и
+ * есть заявка «я хотел не текст, а вот это».
+ *
+ * Содержимое не переносится: поля у видов разные, и «сохранить что получится» дало бы
+ * блок с чужими остатками. Зато id СОХРАНЯЕТСЯ — блок остался на своём месте, и
+ * анимация не должна показывать переезд.
+ */
+export function retypeBlock(snap: Snapshot, i: number, type: BlockType): Snapshot {
+  if (i < 0 || i >= snap.items.length || snap.items[i].type === type) return snap
+  return { items: snap.items.map((it, idx) => (idx === i ? emptyBlock(type) : it)), uids: snap.uids }
+}
+
 /** Правка полей блока: состав и порядок те же, меняется только содержимое. */
 export function patchBlock(snap: Snapshot, i: number, p: Partial<EditorItem>): Snapshot {
   return { items: snap.items.map((it, idx) => (idx === i ? { ...it, ...p } : it)), uids: snap.uids }

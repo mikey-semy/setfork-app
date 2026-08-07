@@ -1,33 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { BarChart3, Footprints, GraduationCap, Image as ImageIcon, Paperclip, Plus, ShoppingCart, Text as TextIcon, Video as VideoIcon } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Tooltip } from '@/shared/ui/Tooltip'
-import { t, type Lang, type TKey } from '@/shared/i18n'
+import { t, type Lang } from '@/shared/i18n'
 import { BLOCK_TYPES, type BlockType } from '../blocks'
-
-/** Иконка и подпись типа блока — один справочник на редактор. */
-export const BLOCK_ICON: Record<BlockType, typeof Footprints> = {
-  step: Footprints,
-  text: TextIcon,
-  image: ImageIcon,
-  poll: BarChart3,
-  video: VideoIcon,
-  quiz: GraduationCap,
-  file: Paperclip,
-  product: ShoppingCart,
-}
-const BLOCK_LABEL: Record<BlockType, TKey> = {
-  step: 'block.step',
-  text: 'block.text',
-  image: 'block.image',
-  poll: 'block.poll',
-  video: 'block.video',
-  quiz: 'block.quiz',
-  file: 'block.file',
-  product: 'block.product',
-}
-export const blockLabel = (type: BlockType, lang: Lang): string => t(BLOCK_LABEL[type], lang)
+import { BLOCK_ICON, blockLabel } from './block-meta'
 
 // Геометрия веера: радиус и разброс подобраны так, чтобы восемь кружков не липли
 // друг к другу и не уезжали за край карточки.
@@ -90,7 +68,7 @@ export function BlockInserter({ onInsert, repeatType, lang, between = false }: {
               onFocus={() => setHovered(k)}
               onBlur={() => setHovered((h) => (h === k ? null : h))}
               tabIndex={open ? 0 : -1}
-              className={`absolute grid h-10 w-10 place-items-center rounded-full border shadow-md transition-all duration-200 motion-reduce:transition-none ${
+              className={`absolute grid h-10 w-10 place-items-center rounded-full border shadow-md transition-[transform,opacity,color,background-color,border-color] duration-200 motion-reduce:transition-none ${
                 lifted ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border bg-surface text-ink'
               }`}
               style={{

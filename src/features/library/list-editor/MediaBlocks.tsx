@@ -4,10 +4,11 @@ import { Paperclip, X } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { t, type Lang } from '@/shared/i18n'
-import { parseVideoEmbed } from '../blocks'
+import { parseVideoEmbed, type BlockType } from '../blocks'
 import type { EditorItem } from '../editor'
 import { LineField } from './block-fields'
 import { FileDrop } from './FileDrop'
+import { SlashMenu, useSlashMenu } from './SlashMenu'
 
 // Загрузка СВОИХ видеофайлов выключена по умолчанию: держать объёмы без дохода
 // нечем. Код на месте и включается флагом, когда появится хостинг (S3/Cloudflare
@@ -102,16 +103,21 @@ export function FileBlockBody({ item, onPatch, uploading, onFile, lang }: BodyPr
 }
 
 /** Text-блок: Markdown со всплывающей панелью форматирования (выдели текст →
- *  мини-тулбар). Картинки и файлы — отдельными блоками, не в тулбаре. */
-export function TextBlockBody({ value, onChange, lang }: { value: string; onChange: (v: string) => void; lang: Lang }) {
+ *  мини-тулбар). Картинки и файлы — отдельными блоками, не в тулбаре.
+ *  «/» в начале пустого блока открывает выбор типа — блок станет тем, что выберут. */
+export function TextBlockBody({ value, onChange, onRetype, lang }: { value: string; onChange: (v: string) => void; onRetype: (type: BlockType) => void; lang: Lang }) {
+  const menu = useSlashMenu({ value, lang, onPick: onRetype })
   return (
-    <BubbleTextEditor
-      value={value}
-      onChange={onChange}
-      rows={4}
-      lang={lang}
-      ariaLabel={t('editor.textBlockAria', lang)}
-      placeholder={t('editor.textBlockPh', lang)}
-    />
+    <div className="relative" onKeyDown={menu.onKeyDown}>
+      <BubbleTextEditor
+        value={value}
+        onChange={onChange}
+        rows={4}
+        lang={lang}
+        ariaLabel={t('editor.textBlockAria', lang)}
+        placeholder={t('editor.textBlockPh', lang)}
+      />
+      <SlashMenu menu={menu} lang={lang} />
+    </div>
   )
 }

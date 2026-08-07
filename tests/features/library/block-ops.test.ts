@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dropTargetIndex, insertBlock, moveBlock, patchBlock, removeBlock, reorderBlocks, type Snapshot } from '@/features/library/list-editor/block-ops'
+import { dropTargetIndex, insertBlock, moveBlock, patchBlock, removeBlock, reorderBlocks, retypeBlock, type Snapshot } from '@/features/library/list-editor/block-ops'
 import { emptyItem, type EditorItem } from '@/features/library/editor'
 
 /**
@@ -80,6 +80,23 @@ describe('операции над составом списка', () => {
     const s = snapOf(['a', 'b', 'c'])
     expect(titlesOf(reorderBlocks(s, 1, dropTargetIndex(1, 1, 'before')))).toEqual(['a', 'b', 'c'])
     expect(titlesOf(reorderBlocks(s, 1, dropTargetIndex(1, 1, 'after')))).toEqual(['a', 'b', 'c'])
+  })
+
+  it('смена типа оставляет блок на месте и сохраняет его id', () => {
+    // Выбор в слэш-меню: блок был текстовым, стал опросом — но это тот же блок,
+    // и анимация не должна показывать переезд.
+    const s = snapOf(['a', 'b'])
+    const next = retypeBlock(s, 1, 'poll')
+    expect(next.items[1].type).toBe('poll')
+    expect(next.items[1].title).toBe('')
+    expect(next.uids).toEqual(s.uids)
+    expect(next.items[0]).toBe(s.items[0])
+  })
+
+  it('смена типа на тот же и за пределами списка ничего не делает', () => {
+    const s = snapOf(['a'])
+    expect(retypeBlock(s, 0, s.items[0].type)).toBe(s)
+    expect(retypeBlock(s, 5, 'text')).toBe(s)
   })
 
   it('правка полей меняет только свой пункт и не трогает id', () => {
