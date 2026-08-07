@@ -66,6 +66,9 @@ export const ICON_SIZE: Record<ControlSize, number> = {
   md: 14,
 }
 
+/** То же с дефолтом — чтобы в разметке не писать ICON_SIZE.md у каждой иконки. */
+export const iconSizeFor = (size: ControlSize = 'md'): number => ICON_SIZE[size]
+
 // ── Ширина страницы ──────────────────────────────────────────────────────
 // Решение владельца 02.08.2026: ширина контента ОДНА на весь сайт. До этого
 // каждая страница выбирала свою — 1180/1120/1100/1080/980/920/860/720, и ещё
@@ -119,3 +122,14 @@ export const LAYER = {
  * С дефолтом md=32 это касается только рядов, явно переведённых на xs/sm. */
 export const FIELD_BOX =
   'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 max-sm:min-h-8 pointer-coarse:min-h-8'
+
+// ── Тач-цель ─────────────────────────────────────────────────────────────
+// Шкала контролов (24/28/32) — про ВИД: мышь попадает в такую кнопку без труда.
+// Палец не попадает: минимум цели 44pt у Apple HIG и 48dp у Material. Поэтому на
+// грубом указателе квадратная иконочная кнопка вырастает до 44px, а на мыши
+// остаётся по шкале. Класс живёт здесь, а не копией в каждой фиче: до этого
+// `pointer-coarse:size-11` был размножен по восьми файлам, и любое изменение
+// правила пришлось бы ловить по всему коду.
+export const TOUCH_BOX = 'pointer-coarse:size-11'
+/** То же для НЕквадратных целей: текстовая кнопка-ссылка, строка меню. */
+export const TOUCH_MIN_H = 'pointer-coarse:min-h-11'

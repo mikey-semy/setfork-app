@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { ImageUp, Loader2, Paperclip, Video as VideoIcon } from 'lucide-react'
+import { TOUCH_MIN_H } from '@/shared/ui/control'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { ATTACH_MAX_BYTES, megabytes, VIDEO_MAX_BYTES } from '@/shared/media/limits'
 
@@ -41,7 +42,7 @@ export function FileDrop({ kind, uploading, onFile, lang }: { kind: DropKind; up
         setOver(false)
         take(e.dataTransfer.files?.[0])
       }}
-      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[0.78125rem] transition-colors ${
+      className={`flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-[0.78125rem] transition-colors ${TOUCH_MIN_H} ${
         over ? 'border-accent bg-(--accent-soft) text-accent' : 'border-border text-ink-2 hover:border-border-strong'
       }`}
     >

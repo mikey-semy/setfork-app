@@ -5,6 +5,8 @@ import { X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Checkbox } from '@/shared/ui/checkbox'
+import { iconSizeFor, TOUCH_MIN_H } from '@/shared/ui/control'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /**
  * Детали строк редактора: варианты опроса, принимаемые ответы, пары, элементы порядка,
@@ -21,16 +23,17 @@ export function LineField({ value, onChange, label, placeholder, lang, className
 /** Кнопка «убрать строку»; неактивна, когда меньше строк уже нельзя. */
 export function RemoveBtn({ onClick, disabled = false, label }: { onClick: () => void; disabled?: boolean; label: string }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className="text-muted hover:text-danger disabled:opacity-30" aria-label={label}>
-      <X size={14} />
-    </button>
+    <IconButton size="sm" variant="danger" onClick={onClick} disabled={disabled} label={label}>
+      <X size={iconSizeFor('sm')} />
+    </IconButton>
   )
 }
 
 /** Ссылка-действие «+ вариант» под списком строк. */
 export function AddLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className="text-accent hover:underline">
+    // Вид ссылки, цель — кнопки: пальцем в 19px строки текста не попадают.
+    <button type="button" onClick={onClick} className={`inline-flex items-center text-accent hover:underline ${TOUCH_MIN_H}`}>
       + {children}
     </button>
   )
@@ -39,7 +42,7 @@ export function AddLink({ onClick, children }: { onClick: () => void; children: 
 /** Галочка с подписью: мультивыбор, «учитывать регистр» и прочие тумблеры строки. */
 export function CheckLabel({ checked, onChange, children }: { checked: boolean; onChange: (on: boolean) => void; children: ReactNode }) {
   return (
-    <label className="inline-flex cursor-pointer items-center gap-1.5 text-ink-2">
+    <label className={`inline-flex cursor-pointer items-center gap-1.5 text-ink-2 ${TOUCH_MIN_H}`}>
       <Checkbox checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {children}
     </label>

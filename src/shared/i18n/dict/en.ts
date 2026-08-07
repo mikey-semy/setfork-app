@@ -1878,6 +1878,7 @@ export const en = {
   'editor.moveDown': 'Move down',
   'editor.moveBottom': 'Move to bottom',
   'editor.remove': 'Remove',
+  'editor.blockActions': 'More actions',
   'editor.sectionOfBlockN': 'Block {n} lesson/section',
   'editor.sectionPh': 'Lesson/section (optional) — groups the blocks below',
   'editor.itemTitleN': 'Item {n} title',

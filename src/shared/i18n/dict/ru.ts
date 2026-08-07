@@ -1868,6 +1868,7 @@ export const ru: Record<DictKey, string> = {
   'editor.moveDown': 'Ниже',
   'editor.moveBottom': 'В конец',
   'editor.remove': 'Удалить',
+  'editor.blockActions': 'Ещё действия',
   'editor.sectionOfBlockN': 'Урок/секция блока {n}',
   'editor.sectionPh': 'Урок/секция (необязательно) — группирует блоки ниже',
   'editor.itemTitleN': 'Заголовок пункта {n}',

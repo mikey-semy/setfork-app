@@ -1,10 +1,10 @@
 'use client'
 
 import { Eye, Pencil, Redo2, Undo2 } from 'lucide-react'
+import { Button } from '@/shared/ui/button'
+import { iconSizeFor, TOUCH_MIN_H } from '@/shared/ui/control'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
-
-const BTN = 'inline-flex items-center gap-1 rounded-md border px-2 py-1'
 
 /** Верхний ряд редактора: отмена, повтор и переключатель предпросмотра. */
 export function EditorToolbar({
@@ -27,19 +27,19 @@ export function EditorToolbar({
   return (
     <div className="flex items-center gap-2 text-[0.78125rem] text-muted">
       <Tooltip label={t('editor.undoHint', lang)}>
-        <button type="button" onClick={onUndo} disabled={!canUndo} className={`${BTN} border-border disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2`}>
-          <Undo2 size={13} /> {t('editor.undo', lang)}
-        </button>
+        <Button size="sm" onClick={onUndo} disabled={!canUndo} className={TOUCH_MIN_H}>
+          <Undo2 size={iconSizeFor('sm')} /> {t('editor.undo', lang)}
+        </Button>
       </Tooltip>
       <Tooltip label={t('editor.redoHint', lang)}>
-        <button type="button" onClick={onRedo} disabled={!canRedo} className={`${BTN} border-border disabled:opacity-40 enabled:hover:border-border-strong enabled:text-ink-2`}>
-          <Redo2 size={13} /> {t('editor.redo', lang)}
-        </button>
+        <Button size="sm" onClick={onRedo} disabled={!canRedo} className={TOUCH_MIN_H}>
+          <Redo2 size={iconSizeFor('sm')} /> {t('editor.redo', lang)}
+        </Button>
       </Tooltip>
       <Tooltip label={t(preview ? 'editTip' : 'previewTip', lang)}>
-        <button type="button" onClick={onTogglePreview} aria-pressed={preview} className={`${BTN} hover:border-border-strong ${preview ? 'border-accent text-accent' : 'border-border text-ink-2'}`}>
-          {preview ? <Pencil size={13} /> : <Eye size={13} />} {t(preview ? 'editToggle' : 'previewToggle', lang)}
-        </button>
+        <Button size="sm" onClick={onTogglePreview} aria-pressed={preview} className={`${TOUCH_MIN_H} ${preview ? 'border-accent text-accent' : ''}`}>
+          {preview ? <Pencil size={iconSizeFor('sm')} /> : <Eye size={iconSizeFor('sm')} />} {t(preview ? 'editToggle' : 'previewToggle', lang)}
+        </Button>
       </Tooltip>
       {/* Подсказка — только на широком экране: половина её про Alt+↑/↓, а клавиатуры
           на телефоне нет. Сам перенос работает и пальцем. */}

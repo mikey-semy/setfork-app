@@ -3,7 +3,10 @@
 import { useState } from 'react'
 import { Loader2, Sparkles, X } from 'lucide-react'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
+import { Button } from '@/shared/ui/button'
 import { CodeEditor } from '@/shared/ui/CodeEditor'
+import { iconSizeFor, TOUCH_MIN_H } from '@/shared/ui/control'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
 import { Switch } from '@/shared/ui/switch'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -35,15 +38,9 @@ function LinkTitleButton({ url, onLabel, lang }: { url: string; onLabel: (v: str
   }
   return (
     <Tooltip label={t('editor.linkTitleFromUrl', lang)}>
-      <button
-        type="button"
-        onClick={gen}
-        disabled={busy || !ok}
-        aria-label={t('editor.linkTitleFromUrl', lang)}
-        className="grid h-6 w-6 place-items-center rounded-md text-ink-2 transition-colors hover:bg-surface hover:text-accent disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-2"
-      >
-        {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-      </button>
+      <IconButton size="xs" variant="ghost" onClick={gen} disabled={busy || !ok} label={t('editor.linkTitleFromUrl', lang)} className="hover:text-accent">
+        {busy ? <Loader2 size={iconSizeFor('sm')} className="animate-spin" /> : <Sparkles size={iconSizeFor('sm')} />}
+      </IconButton>
     </Tooltip>
   )
 }
@@ -80,14 +77,15 @@ export function StepBlockBody({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[0.6875rem] text-muted">{t('editor.level', lang)}:</span>
         {LEVELS.map((level) => (
-          <button
+          <Button
             key={level}
-            type="button"
+            size="xs"
+            variant={item.level === level ? 'primary' : 'ghost'}
             onClick={() => onPatch({ level })}
-            className={`rounded px-2 py-0.5 text-[0.6875rem] ${item.level === level ? 'bg-primary text-primary-fg' : 'bg-surface-2 text-ink-2 hover:text-ink'}`}
+            className={`${TOUCH_MIN_H} ${item.level === level ? '' : 'bg-surface-2'}`}
           >
             {t(LEVEL_LABEL[level], lang)}
-          </button>
+          </Button>
         ))}
       </div>
       <LineField value={item.why} onChange={(why) => onPatch({ why })} lang={lang} className="" label={t('editor.why', lang)} placeholder={t('editor.whyPh', lang)} />
@@ -176,14 +174,15 @@ export function StepBlockBody({
         <div className="relative w-fit">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={item.imagePreview} alt="" className="max-h-[10rem] rounded-md border border-border" />
-          <button
-            type="button"
+          {/* Снять скриншот — служебное действие в правом верхнем углу картинки. */}
+          <IconButton
+            size="sm"
             onClick={() => onPatch({ imageKey: '', imagePreview: '' })}
-            aria-label={t('editor.remove', lang)}
-            className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-md bg-black/60 text-white hover:bg-black/80"
+            label={t('editor.remove', lang)}
+            className="absolute top-1.5 right-1.5 border-0 bg-black/60 text-white hover:bg-black/80 hover:text-white"
           >
-            <X size={14} />
-          </button>
+            <X size={iconSizeFor('sm')} />
+          </IconButton>
         </div>
       ) : (
         <FileDrop kind="image" uploading={uploading} onFile={onFile} lang={lang} />
