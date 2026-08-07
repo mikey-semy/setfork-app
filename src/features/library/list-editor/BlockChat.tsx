@@ -7,7 +7,7 @@ import { iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang, type TKey } from '@/shared/i18n'
-import { refineBlock } from '../actions'
+import { refineBlock } from '../actions/ai'
 import type { EditorBlockPatch, EditorItem } from '../editor'
 
 /** Отказ модели → своя строка. Незнакомая причина не выдаётся за известную. */
