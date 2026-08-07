@@ -1,6 +1,8 @@
 'use client'
 
 import { Trash2 } from 'lucide-react'
+import { iconSizeFor } from '@/shared/ui/control'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { t, type Lang, type TKey } from '@/shared/i18n'
@@ -59,14 +61,15 @@ export function ProductBlockBody({
             value={p.note}
             onChange={(e) => patchRow(pi, { note: e.target.value })}
           />
-          <button
-            type="button"
+          <IconButton
+            size="sm"
+            variant="danger"
             onClick={() => onProducts(products.filter((_, xi) => xi !== pi))}
-            className="grid h-7 w-7 shrink-0 place-items-center self-end rounded-md text-muted hover:text-danger sm:self-auto"
-            aria-label={t('productRemove', lang)}
+            label={t('productRemove', lang)}
+            className="self-end sm:self-auto"
           >
-            <Trash2 size={13} />
-          </button>
+            <Trash2 size={iconSizeFor('sm')} />
+          </IconButton>
         </div>
       ))}
       <div className="text-[0.78125rem]">
