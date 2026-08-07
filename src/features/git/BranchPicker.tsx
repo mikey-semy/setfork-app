@@ -9,16 +9,16 @@ import { Input } from '@/shared/ui/input'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import type { GitBranch as Branch } from '@/core'
 import { PickerPanel, PickerRow } from '@/shared/ui/PickerPanel'
-import { t, type Lang } from '@/shared/i18n'
+import { t, type Lang, type TKey } from '@/shared/i18n'
 import { createBranchAction, deleteBranchAction, type BranchActionResult } from './actions'
 import { branchLabel, isServerBranch } from './branch-label'
 
-const ERR: Record<string, { ru: string; en: string }> = {
-  'bad-name': { ru: 'Только буквы/цифры и .-_', en: 'Letters/digits and .-_ only' },
-  exists: { ru: 'Ветка уже есть', en: 'Branch already exists' },
-  'not-found': { ru: 'Не найдено', en: 'Not found' },
-  protected: { ru: 'main защищена', en: 'main is protected' },
-  internal: { ru: 'Ошибка, попробуйте ещё раз', en: 'Something went wrong' },
+const ERR: Record<string, TKey> = {
+  'bad-name': 'branch.errBadName',
+  'exists': 'branch.errExists',
+  'not-found': 'branch.errNotFound',
+  'protected': 'branch.errProtected',
+  'internal': 'branch.errInternal',
 }
 
 /** Селектор веток (как GitHub branch-picker) в version-bar. Выбор → ?ref=<branch>.
@@ -74,7 +74,7 @@ export function BranchPicker({
   const shown = term ? own.filter((b) => b.name.toLowerCase().includes(term)) : own
 
   const fail = (r: BranchActionResult) => {
-    if (!r.ok) setErr(ERR[r.code]?.[ru ? 'ru' : 'en'] ?? ERR.internal[ru ? 'ru' : 'en'])
+    if (!r.ok) setErr(t(ERR[r.code] ?? ERR.internal, lang))
   }
 
   const create = () => {

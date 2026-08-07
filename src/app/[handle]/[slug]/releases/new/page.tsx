@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { Tag } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, type TKey } from '@/shared/i18n'
 import { Input } from '@/shared/ui/input'
 import { Alert } from '@/shared/ui/Alert'
 import { SubmitButton } from '@/shared/ui/SubmitButton'
@@ -17,18 +17,12 @@ import { VersionSelect } from '@/features/releases/VersionSelect'
 import { ReleaseNotesGen } from '@/features/releases/ReleaseNotesGen'
 import { PAGE_NARROW } from '@/shared/ui/control'
 
-const ERR: Record<string, { ru: string; en: string }> = {
-  badtag: { ru: 'Тег: буквы/цифры и .-_ (до 40 символов).', en: 'Tag: letters/digits and .-_ (max 40 chars).' },
-  badversion: { ru: 'Такой версии нет.', en: 'No such version.' },
-  tagtaken: { ru: 'Тег уже занят другим релизом.', en: 'This tag is already used by another release.' },
-  vreserved: {
-    ru: 'Имена вида v12 заняты автоматическими версиями — выберите другое, например v1.0 или stable.',
-    en: 'Names like v12 are reserved for automatic versions — pick another, e.g. v1.0 or stable.',
-  },
-  tagfail: {
-    ru: 'Не удалось создать git-тег — релиз не опубликован. Попробуйте ещё раз.',
-    en: 'Could not create the git tag — the release was not published. Please try again.',
-  },
+const ERR: Record<string, TKey> = {
+  badtag: 'release.errBadtag',
+  badversion: 'release.errBadversion',
+  tagtaken: 'release.errTagtaken',
+  vreserved: 'release.errVreserved',
+  tagfail: 'release.errTagfail',
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; slug: string }> }) {
@@ -51,7 +45,7 @@ export default async function NewReleasePage({
   const canManage = session.userId === meta.ownerId || (await isCollaborator(meta.id, session.userId))
   if (!canManage) redirect(`/${owner}/${slug}/releases`)
   const versions = await getVersions(meta.id)
-  const err = sp.e ? ERR[sp.e] : null
+  const errKey = sp.e ? ERR[sp.e] : null
 
   return (
     <>
@@ -67,9 +61,9 @@ export default async function NewReleasePage({
           }
         />
 
-        {err && (
+        {errKey && (
           <Alert variant="danger" className="mb-4">
-            {ru ? err.ru : err.en}
+            {t(errKey, lang)}
           </Alert>
         )}
 

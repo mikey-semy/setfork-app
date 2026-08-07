@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { AtSign, Ban, Coins, Fingerprint, Flag, GitCommitVertical, KeyRound, LogOut, Mail, ShieldCheck, ShieldX, Trash2, Wrench } from 'lucide-react'
 import { requireAdmin } from '@/shared/auth/admin'
 import { getLang } from '@/shared/i18n/server'
-import { t } from '@/shared/i18n'
+import { t, type Lang, type TKey } from '@/shared/i18n'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { PageHeader } from '@/shared/ui/PageHeader'
 import { getAuditLog, type AuditEntry } from '@/features/admin/audit-queries'
@@ -10,38 +10,38 @@ import type { AuditAction } from '@/shared/audit'
 
 export const dynamic = 'force-dynamic'
 
-const META: Record<AuditAction, { icon: typeof KeyRound; ru: string; en: string; cls: string }> = {
-  'maintenance.on': { icon: Wrench, ru: 'Сайт закрыт на обслуживание', en: 'Site closed for maintenance', cls: 'text-warn' },
-  'maintenance.off': { icon: Wrench, ru: 'Сайт открыт после обслуживания', en: 'Site reopened after maintenance', cls: 'text-ok' },
-  'monetization.settings': { icon: Coins, ru: 'Изменены настройки монетизации', en: 'Monetization settings changed', cls: 'text-warn' },
-  'token.create': { icon: KeyRound, ru: 'Создан токен', en: 'Token created', cls: 'text-ink-2' },
-  'token.revoke': { icon: Ban, ru: 'Отозван токен', en: 'Token revoked', cls: 'text-warn' },
-  'list.delete': { icon: Trash2, ru: 'Удалён список', en: 'List deleted', cls: 'text-danger' },
-  'list.moderate': { icon: ShieldX, ru: 'Модерация списка', en: 'List moderated', cls: 'text-warn' },
-  'list.appeal': { icon: ShieldCheck, ru: 'Апелляция владельца', en: 'Moderation appeal', cls: 'text-accent' },
-  'list.report': { icon: Flag, ru: 'Жалоба на список', en: 'List reported', cls: 'text-warn' },
-  'list.verify': { icon: ShieldCheck, ru: 'Верификация списка', en: 'List verified', cls: 'text-ok' },
-  'list.transfer-init': { icon: GitCommitVertical, ru: 'Предложена передача списка', en: 'List transfer offered', cls: 'text-warn' },
-  'list.transfer-accept': { icon: GitCommitVertical, ru: 'Список передан', en: 'List transferred', cls: 'text-warn' },
-  'git.push': { icon: GitCommitVertical, ru: 'Push в список', en: 'Push to list', cls: 'text-ink-2' },
-  'git.suggest': { icon: GitCommitVertical, ru: 'Правка из терминала', en: 'Change from terminal', cls: 'text-ink-2' },
-  'session.revoke': { icon: LogOut, ru: 'Отозвана сессия', en: 'Session revoked', cls: 'text-ink-2' },
-  'session.revoke_others': { icon: LogOut, ru: 'Выход с др. устройств', en: 'Signed out others', cls: 'text-ink-2' },
-  '2fa.enable': { icon: ShieldCheck, ru: 'Включена 2FA', en: '2FA enabled', cls: 'text-ok' },
-  '2fa.disable': { icon: ShieldX, ru: 'Отключена 2FA', en: '2FA disabled', cls: 'text-warn' },
-  '2fa.recovery-regenerate': { icon: KeyRound, ru: 'Новые recovery-коды', en: 'Recovery codes regenerated', cls: 'text-ink-2' },
-  'password.reset': { icon: KeyRound, ru: 'Сброс пароля', en: 'Password reset', cls: 'text-warn' },
-  'email.change-request': { icon: Mail, ru: 'Запрос смены почты', en: 'Email change requested', cls: 'text-ink-2' },
-  'email.change': { icon: AtSign, ru: 'Смена почты', en: 'Email changed', cls: 'text-warn' },
-  'passkey.add': { icon: Fingerprint, ru: 'Добавлен passkey', en: 'Passkey added', cls: 'text-ok' },
-  'passkey.remove': { icon: Fingerprint, ru: 'Удалён passkey', en: 'Passkey removed', cls: 'text-warn' },
-  'passkey.login': { icon: Fingerprint, ru: 'Вход по passkey', en: 'Passkey sign-in', cls: 'text-ink-2' },
-  'account.delete': { icon: Trash2, ru: 'Удалён аккаунт', en: 'Account deleted', cls: 'text-danger' },
-  'account.handle-change': { icon: AtSign, ru: 'Смена ника', en: 'Handle changed', cls: 'text-warn' },
+const META: Record<AuditAction, { icon: typeof KeyRound; label: TKey; cls: string }> = {
+  'maintenance.on': { icon: Wrench, label: 'audit.maintenanceOn', cls: 'text-warn' },
+  'maintenance.off': { icon: Wrench, label: 'audit.maintenanceOff', cls: 'text-ok' },
+  'monetization.settings': { icon: Coins, label: 'audit.monetizationSettings', cls: 'text-warn' },
+  'token.create': { icon: KeyRound, label: 'audit.tokenCreate', cls: 'text-ink-2' },
+  'token.revoke': { icon: Ban, label: 'audit.tokenRevoke', cls: 'text-warn' },
+  'list.delete': { icon: Trash2, label: 'audit.listDelete', cls: 'text-danger' },
+  'list.moderate': { icon: ShieldX, label: 'audit.listModerate', cls: 'text-warn' },
+  'list.appeal': { icon: ShieldCheck, label: 'audit.listAppeal', cls: 'text-accent' },
+  'list.report': { icon: Flag, label: 'audit.listReport', cls: 'text-warn' },
+  'list.verify': { icon: ShieldCheck, label: 'audit.listVerify', cls: 'text-ok' },
+  'list.transfer-init': { icon: GitCommitVertical, label: 'audit.listTransferInit', cls: 'text-warn' },
+  'list.transfer-accept': { icon: GitCommitVertical, label: 'audit.listTransferAccept', cls: 'text-warn' },
+  'git.push': { icon: GitCommitVertical, label: 'audit.gitPush', cls: 'text-ink-2' },
+  'git.suggest': { icon: GitCommitVertical, label: 'audit.gitSuggest', cls: 'text-ink-2' },
+  'session.revoke': { icon: LogOut, label: 'audit.sessionRevoke', cls: 'text-ink-2' },
+  'session.revoke_others': { icon: LogOut, label: 'audit.sessionRevoke_others', cls: 'text-ink-2' },
+  '2fa.enable': { icon: ShieldCheck, label: 'audit.2faEnable', cls: 'text-ok' },
+  '2fa.disable': { icon: ShieldX, label: 'audit.2faDisable', cls: 'text-warn' },
+  '2fa.recovery-regenerate': { icon: KeyRound, label: 'audit.2faRecoveryRegenerate', cls: 'text-ink-2' },
+  'password.reset': { icon: KeyRound, label: 'audit.passwordReset', cls: 'text-warn' },
+  'email.change-request': { icon: Mail, label: 'audit.emailChangeRequest', cls: 'text-ink-2' },
+  'email.change': { icon: AtSign, label: 'audit.emailChange', cls: 'text-warn' },
+  'passkey.add': { icon: Fingerprint, label: 'audit.passkeyAdd', cls: 'text-ok' },
+  'passkey.remove': { icon: Fingerprint, label: 'audit.passkeyRemove', cls: 'text-warn' },
+  'passkey.login': { icon: Fingerprint, label: 'audit.passkeyLogin', cls: 'text-ink-2' },
+  'account.delete': { icon: Trash2, label: 'audit.accountDelete', cls: 'text-danger' },
+  'account.handle-change': { icon: AtSign, label: 'audit.accountHandleChange', cls: 'text-warn' },
 }
 
-function fmt(d: Date, ru: boolean): string {
-  return new Intl.DateTimeFormat(ru ? 'ru-RU' : 'en-US', {
+function fmt(d: Date, lang: Lang): string {
+  return new Intl.DateTimeFormat(lang, {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
@@ -70,26 +70,21 @@ export async function generateMetadata() {
 export default async function AuditPage() {
   await requireAdmin()
   const lang = await getLang()
-  const ru = lang === 'ru'
   const entries = await getAuditLog(200)
 
   return (
     <div className="min-w-0">
       <PageHeader
-        title={ru ? 'Журнал аудита' : 'Audit log'}
-        subtitle={
-          ru
-            ? 'Чувствительные действия: токены, удаление и модерация списков, push, сессии. Последние 200 записей.'
-            : 'Sensitive actions: tokens, list deletion & moderation, pushes, sessions. Last 200 entries.'
-        }
+        title={t('audit.title', lang)}
+        subtitle={t('audit.subtitle', lang)}
       />
 
       {entries.length === 0 ? (
-        <EmptyState variant="plain" hint={ru ? 'Пока пусто.' : 'Nothing yet.'} />
+        <EmptyState variant="plain" hint={t('audit.empty', lang)} />
       ) : (
         <div className="overflow-hidden rounded-lg border border-border bg-surface">
           {entries.map((e, i) => {
-            const m = META[e.action] ?? { icon: GitCommitVertical, ru: e.action, en: e.action, cls: 'text-ink-2' }
+            const m = META[e.action]
             const Icon = m.icon
             const details = metaText(e)
             return (
@@ -100,13 +95,13 @@ export default async function AuditPage() {
                 <Icon size={16} className={`mt-0.5 shrink-0 ${m.cls}`} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <span className="text-[0.8125rem] font-semibold text-ink">{ru ? m.ru : m.en}</span>
+                    <span className="text-[0.8125rem] font-semibold text-ink">{t(m.label, lang)}</span>
                     {e.actorHandle ? (
                       <Link href={`/${e.actorHandle}`} className="text-[0.8125rem] text-primary hover:underline">
                         {e.actorHandle}
                       </Link>
                     ) : (
-                      <span className="text-[0.8125rem] text-muted">{ru ? 'система' : 'system'}</span>
+                      <span className="text-[0.8125rem] text-muted">{t('audit.system', lang)}</span>
                     )}
                     {e.targetType && e.targetId ? (
                       <span className="font-mono text-[0.6875rem] text-muted">
@@ -117,7 +112,7 @@ export default async function AuditPage() {
                   {details ? <div className="mt-0.5 truncate font-mono text-[0.6875rem] text-ink-2">{details}</div> : null}
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-[0.78125rem] tabular-nums text-ink-2">{fmt(e.createdAt, ru)}</div>
+                  <div className="text-[0.78125rem] tabular-nums text-ink-2">{fmt(e.createdAt, lang)}</div>
                   {e.ip ? <div className="font-mono text-[0.6875rem] text-muted">{e.ip}</div> : null}
                 </div>
               </div>

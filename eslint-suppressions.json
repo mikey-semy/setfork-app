@@ -59,11 +59,6 @@
       "count": 3
     }
   },
-  "src/app/admin/audit/page.tsx": {
-    "no-restricted-syntax": {
-      "count": 4
-    }
-  },
   "src/app/admin/collections/[id]/page.tsx": {
     "no-restricted-syntax": {
       "count": 17
@@ -141,7 +136,7 @@
   },
   "src/features/admin/AchievementsAdmin.tsx": {
     "no-restricted-syntax": {
-      "count": 3
+      "count": 1
     }
   },
   "src/features/admin/CreditsWidget.tsx": {
@@ -396,11 +391,6 @@
   },
   "src/features/polls/actions.ts": {
     "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/features/profile/AchievementsCard.tsx": {
-    "no-restricted-syntax": {
       "count": 1
     }
   },

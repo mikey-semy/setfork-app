@@ -116,14 +116,11 @@ export const draftLetter = (i: number) => String.fromCharCode(65 + i)
  * незачем знать нашу внутреннюю нумерацию, а латиница посреди русской реплики — это утечка
  * потрохов наружу, чем она и является.
  */
-/** Подпись черновика словами — картой, а не тернарником: правило i18n не пускает
- *  «строка ? строка», и справедливо: это пользовательский текст, а не техническая метка. */
-const DRAFT_LABEL = { ru: 'вариант', en: 'draft' } as const
-
 export function clip(raw: string, max: number, ru = true): string {
   // Подпись следует языку интерфейса: русское слово в английской ленте — та же утечка
-  // наизнанку, что и латинский ярлык в русской (находка ревью на #555).
-  const label = DRAFT_LABEL[ru ? 'ru' : 'en']
+  // наизнанку, что и латинский ярлык в русской (находка ревью на #555). Берём её из
+  // словаря: пользовательский текст живёт там, а не картой рядом с кодом.
+  const label = t('council.draftWord', ru ? 'ru' : 'en')
   const human = raw.replace(/DRAFT\s+([A-Z])/g, (_m, letter) => `${label} ${letter}`)
   if (human.length <= max) return human
   const cut = human.slice(0, max)
