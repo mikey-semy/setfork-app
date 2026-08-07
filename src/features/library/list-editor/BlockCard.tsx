@@ -1,6 +1,6 @@
 'use client'
 
-import type { DragEvent, ReactNode } from 'react'
+import type { PointerEvent, ReactNode } from 'react'
 import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, GripVertical, Heading, Trash2 } from 'lucide-react'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -16,12 +16,15 @@ import type { DropKind } from './FileDrop'
 
 export type CardDrag = {
   dragging: boolean
-  /** У какой кромки показать линию места вставки; null — курсор не над карточкой. */
+  /** У какой кромки показать линию места вставки; null — указатель целится не сюда. */
   line: 'before' | 'after' | null
-  onDragStart: () => void
-  onDragEnd: () => void
-  onDragOver: (e: DragEvent) => void
-  onDrop: (e: DragEvent) => void
+  /** Обработчики ручки: цель переноса считает хук по геометрии, карточке знать её незачем. */
+  handle: {
+    onPointerDown: (e: PointerEvent) => void
+    onPointerMove: (e: PointerEvent) => void
+    onPointerUp: () => void
+    onPointerCancel: () => void
+  }
 }
 
 type BlockCardProps = {
@@ -99,13 +102,7 @@ function BlockBody({
 export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, isUploading, onUpload, insertAfter }: BlockCardProps) {
   const TypeIcon = BLOCK_ICON[item.type]
   return (
-    <div
-      data-i={index}
-      data-uid={uid}
-      onDragOver={drag.onDragOver}
-      onDrop={drag.onDrop}
-      className={`relative rounded-lg border border-border bg-surface p-4 ${drag.dragging ? 'opacity-50' : ''}`}
-    >
+    <div data-i={index} data-uid={uid} className={`relative rounded-lg border border-border bg-surface p-4 ${drag.dragging ? 'opacity-50' : ''}`}>
       {/* Линия места вставки: отвечает на вопрос «выше или ниже встанет», которого
           подсветка рамки не решала. */}
       {drag.line && (
@@ -115,10 +112,20 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
         />
       )}
       <div className="mb-2.5 flex items-center gap-2">
+        {/* Ручка — полная тач-цель: иконка мелкая, а промах пальцем по ней означает
+            прокрутку страницы вместо переноса. `touch-none` не даёт жесту с ручки
+            уйти в прокрутку. Из таб-порядка ручка убрана: с клавиатуры блок двигают
+            соседние кнопки и Alt+↑/↓, а фокус на пустышке только мешал бы. */}
         <Tooltip label={t('editor.dragToReorder', lang)}>
-          <span draggable onDragStart={drag.onDragStart} onDragEnd={drag.onDragEnd} className="cursor-grab rounded-md p-0.5 text-muted hover:text-ink active:cursor-grabbing">
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label={t('editor.dragToReorder', lang)}
+            {...drag.handle}
+            className="grid size-11 shrink-0 cursor-grab touch-none place-items-center rounded-md text-muted select-none hover:text-ink active:cursor-grabbing"
+          >
             <GripVertical size={15} />
-          </span>
+          </button>
         </Tooltip>
         {item.type === 'step' ? (
           <span className="font-mono text-[0.78125rem] text-muted">{stepNumber === null ? '•' : t('editor.itemN', lang).replace('{n}', String(stepNumber))}</span>

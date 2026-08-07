@@ -41,8 +41,8 @@ export function EditorToolbar({
           {preview ? <Pencil size={13} /> : <Eye size={13} />} {t(preview ? 'editToggle' : 'previewToggle', lang)}
         </button>
       </Tooltip>
-      {/* Подсказка про перетаскивание — только на широком экране: на тач-экране
-          перетаскивания может не быть вовсе, и обещать его там нечестно. */}
+      {/* Подсказка — только на широком экране: половина её про Alt+↑/↓, а клавиатуры
+          на телефоне нет. Сам перенос работает и пальцем. */}
       <span className="ml-1 hidden sm:inline">{t('editor.dragHint', lang)}</span>
     </div>
   )
