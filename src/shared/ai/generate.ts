@@ -362,6 +362,41 @@ Translate the list above into ${langName} and return the full JSON list in the s
   return runListModel(system, prompt, current.title, 'translate', { ...opts, web: false })
 }
 
+/**
+ * Правка ОДНОГО пункта по инструкции — то же, что refine, но в границах блока.
+ *
+ * Отдельная функция, а не refine со списком из одного элемента: модели нужно прямо
+ * сказать «верни ровно один пункт», иначе она охотно дописывает соседние шаги, и
+ * правка одного блока молча превращается в переписывание всего списка.
+ */
+export async function generateBlockRefine(
+  block: GeneratedItem,
+  instruction: string,
+  context: { title: string; desc: string },
+  lang: Lang,
+  opts: GenerateOptions = {},
+): Promise<GeneratedItem | null> {
+  const langName = langEnName(lang)
+  const sp = spotlight()
+  const system = `You REFINE a SINGLE list item per the user's instruction and return STRICT JSON.
+All content MUST be in ${langName}.
+Translation is never an improvement: if the ITEM is written in a different language than ${langName}, keep its language — unless the INSTRUCTION explicitly asks to translate.
+Return EXACTLY ONE item in "items": never add, split or drop items — the user is editing this one block.
+Preserve "section", "needsHuman" and "needsHumanAsk" unless the instruction actually changes what they mean.
+${jsonShapeFor(opts.kind ?? 'procedure')}
+- Everything in ${langName}.
+${sp.rule()}`
+  const prompt = `${sp.wrap('LIST CONTEXT', JSON.stringify(context).slice(0, 1_000))}
+
+${sp.wrap('ITEM (JSON)', JSON.stringify(block).slice(0, MAX_PROMPT_CHARS))}
+
+${sp.wrap('INSTRUCTION', instruction.slice(0, 2_000))}
+
+Apply the instruction to the item and return a list containing only the updated item.`
+  const out = await runListModel(system, prompt, block.title, 'refine', { ...opts, web: false })
+  return out?.items?.[0] ?? null
+}
+
 /** Правка существующего списка по инструкции пользователя (AI-refine).
  *  opts.kind задаёт форму JSON по типу списка (рецепт хранит секции и т.д.) —
  *  раньше форма всегда была procedure, и refine рецепта ломал его структуру. */

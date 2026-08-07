@@ -45,6 +45,8 @@ type BlockCardProps = {
   onRemove: () => void
   /** Смена типа блока на месте — выбор в слэш-меню. */
   onRetype: (type: BlockType) => void
+  /** Чат правки этого блока; у видов без текстовых полей его нет. */
+  chat?: ReactNode
   isUploading: (kind: DropKind) => boolean
   onUpload: (kind: DropKind, file: File) => void
   /** Инсертер следующего блока — стоит внутри карточки, под её содержимым. */
@@ -104,7 +106,7 @@ function BlockBody({
  * Стрелки и Alt+↑/↓ не вспомогательные, а полноценный путь: перенос указателем удобен,
  * но с клавиатуры он недоступен по своей природе.
  */
-export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, onRetype, isUploading, onUpload, insertAfter }: BlockCardProps) {
+export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, onRetype, isUploading, onUpload, insertAfter, chat }: BlockCardProps) {
   return (
     <div data-i={index} data-uid={uid} className={`relative rounded-lg border border-border bg-surface p-4 ${drag.dragging ? 'opacity-50' : ''}`}>
       {/* Линия места вставки: отвечает на вопрос «выше или ниже встанет», которого
@@ -125,6 +127,7 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
         onMove={onMove}
         onMoveToEdge={onMoveToEdge}
         onRemove={onRemove}
+        chat={chat}
       />
 
       {/* Урок/секция есть у ЛЮБОГО блока: заданный заголовок начинает новую группу

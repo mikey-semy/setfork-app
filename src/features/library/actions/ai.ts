@@ -3,11 +3,11 @@
 import { and, asc, eq, lt, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, steps, templates, users, type ProposedItem } from '@/shared/db'
+import { db, steps, templates, users, type ProposedItem, type StepLevel } from '@/shared/db'
 import { requireSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { isLang, langEnName, type LocaleText } from '@/shared/i18n'
-import { generateChangeNote, generateListRefine, generateListTranslation } from '@/shared/ai/generate'
+import { generateBlockRefine, generateChangeNote, generateListRefine, generateListTranslation } from '@/shared/ai/generate'
 import { checkRateLimit } from '@/shared/ai/rate-limit'
 import { fetchPublicUrl } from '@/shared/lib/safe-fetch'
 import { aiQuota } from '@/shared/quota'
@@ -15,7 +15,7 @@ import { textLang } from '@/shared/i18n/detect-text-lang'
 import { toStepInput } from '@/shared/lib/step-input'
 import { canEditList, canViewList } from '@/core'
 import { isCollaborator } from '@/features/collab/queries'
-import { emptyItem, parseEditorItems, toProposedItems, type EditorItem } from '../editor'
+import { emptyItem, parseEditorItems, toProposedItems, type EditorBlockPatch, type EditorItem } from '../editor'
 import { getVersionSteps } from '../queries'
 import { listStore } from '../list-store'
 import { hasChanges, summarizeDiffForNote } from '../change-summary'
@@ -87,6 +87,65 @@ export async function refineList(input: {
     refs: (it.refs ?? []).map((r) => ({ label: r.label, url: r.url })),
   }))
   return { items }
+}
+
+/**
+ * Правка ОДНОГО блока по инструкции из чата (кнопка в углу карточки).
+ *
+ * Отличие от refineList не только в объёме: тот переписывает весь состав и стирает
+ * скриншоты, поэтому его нельзя звать «на всякий случай». Здесь человек правит
+ * конкретный блок и видит, что именно предлагается, — применить или нет, решает он.
+ *
+ * Возвращаем ПОЛЯ, а не готовый EditorItem: блок в редакторе живёт со своим id,
+ * загруженной картинкой и голосами опроса — их правка текста трогать не должна.
+ */
+export async function refineBlock(input: {
+  block: { title: string; desc: string; command: string; level: StepLevel; why: string; subtasks: string[]; refs: { label: string; url: string }[] }
+  instruction: string
+  context: { title: string; desc: string }
+}): Promise<{ block: EditorBlockPatch } | { error: string }> {
+  const session = await requireSession()
+  const lang = await getLang()
+  const instruction = String(input.instruction ?? '').trim()
+  if (!instruction) return { error: 'empty' }
+
+  const { allowed } = await checkRateLimit(`refine:${session.userId}`)
+  if (!allowed) return { error: 'ratelimited' }
+  if (!(await aiQuota(session.userId, session.handle)).ok) return { error: 'ai_quota' }
+
+  // Язык правки — язык СОДЕРЖИМОГО блока, не интерфейса: русский пункт при
+  // en-интерфейсе иначе «улучшался» переводом (та же причина, что у refineList).
+  const contentLang = input.block.title || input.block.desc ? textLang([input.block.title, input.block.desc]) : lang
+  const refined = await generateBlockRefine(
+    {
+      title: input.block.title,
+      desc: input.block.desc,
+      command: input.block.command,
+      level: input.block.level,
+      why: input.block.why,
+      subtasks: (input.block.subtasks || []).filter((x) => x.trim()),
+      refs: (input.block.refs || []).filter((r) => r.label?.trim() && r.url?.trim()),
+    },
+    instruction,
+    { title: input.context.title || '', desc: input.context.desc || '' },
+    contentLang,
+    { userId: session.userId, feature: 'refine' },
+  )
+  if (!refined) return { error: 'aifail' }
+
+  return {
+    block: {
+      title: refined.title,
+      desc: refined.desc,
+      command: refined.command,
+      level: refined.level,
+      why: refined.why,
+      needsHuman: refined.needsHuman === true,
+      needsHumanAsk: refined.needsHumanAsk ?? '',
+      subtasks: refined.subtasks,
+      refs: (refined.refs ?? []).map((r) => ({ label: r.label, url: r.url })),
+    },
+  }
 }
 
 // ── AI-перевод списка: добавить язык, не трогая оригинал (ADR-0009) ───

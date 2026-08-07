@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from '@/shared/ui/toast'
-import { uploadStepFile, uploadStepImage, uploadStepVideo } from '../actions'
+import { uploadStepFile, uploadStepImage, uploadStepVideo } from '../actions/uploads'
 import type { EditorItem } from '../editor'
 import type { DropKind } from './FileDrop'
 
