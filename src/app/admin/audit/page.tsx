@@ -68,9 +68,9 @@ export async function generateMetadata() {
 }
 
 export default async function AuditPage() {
-  await requireAdmin()
-  const lang = await getLang()
-  const entries = await getAuditLog(200)
+  // Проверка прав, язык и сам журнал независимы — ждём их разом, а не по очереди
+  // (React Doctor: server-sequential-independent-await).
+  const [, lang, entries] = await Promise.all([requireAdmin(), getLang(), getAuditLog(200)])
 
   return (
     <div className="min-w-0">
