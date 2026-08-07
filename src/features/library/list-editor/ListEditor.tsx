@@ -7,6 +7,7 @@ import { SuggestionResult } from '../SuggestionResult'
 import { BlockCard } from './BlockCard'
 import { BlockInserter } from './BlockInserter'
 import { EditorToolbar } from './EditorToolbar'
+import { commandFor } from './hotkeys'
 import { KeyboardDock } from './KeyboardDock'
 import { RefineBar } from './RefineBar'
 import { useBlockDrag } from './use-block-drag'
@@ -49,24 +50,28 @@ export function ListEditor({
   // соседнем поле формы (название списка, теги).
   const editorRef = useRef<HTMLDivElement>(null)
 
-  // Ctrl/⌘+Z, +Shift+Z, +Y — отмена и повтор (в полях ввода не перехватываем, там
-  // работает браузерная); Alt+↑/↓ — двигать блок, на котором стоит фокус.
+  // Клавиатура редактора: что означает нажатие — чистая функция с тестами, здесь
+  // только исполнение команды. Номер блока берём у карточки под фокусом.
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     const el = e.target as HTMLElement
-    const inField = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
-    const mod = e.ctrlKey || e.metaKey
-    const key = e.key.toLowerCase()
-    if (mod && (key === 'z' || key === 'y')) {
-      if (inField) return
-      e.preventDefault()
-      if (key === 'y' || e.shiftKey) list.redo()
-      else list.undo()
-    } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    const cmd = commandFor({
+      key: e.key,
+      mod: e.ctrlKey || e.metaKey,
+      shift: e.shiftKey,
+      alt: e.altKey,
+      inField: el.tagName === 'INPUT' || el.tagName === 'TEXTAREA',
+    })
+    if (!cmd) return
+    if (cmd.kind === 'move') {
       const card = el.closest('[data-i]') as HTMLElement | null
       if (!card) return
       e.preventDefault()
-      list.move(Number(card.dataset.i), e.key === 'ArrowUp' ? -1 : 1)
+      list.move(Number(card.dataset.i), cmd.dir)
+      return
     }
+    e.preventDefault()
+    if (cmd.kind === 'redo') list.redo()
+    else list.undo()
   }
 
   const stepNumberAt = (i: number) => (ordered ? list.items.slice(0, i).filter((x) => x.type === 'step').length + 1 : null)
