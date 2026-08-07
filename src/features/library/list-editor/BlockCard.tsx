@@ -1,16 +1,13 @@
 'use client'
 
 import type { PointerEvent, ReactNode } from 'react'
-import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, GripVertical, Heading, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Heading } from 'lucide-react'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { iconSizeFor } from '@/shared/ui/control'
-import { IconButton } from '@/shared/ui/IconButton'
-import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 import type { BlockType } from '../blocks'
 import type { EditorItem } from '../editor'
-import { BLOCK_ICON, blockLabel } from './block-meta'
+import { BlockCardHeader } from './BlockCardHeader'
 import { FileBlockBody, ImageBlockBody, TextBlockBody, VideoBlockBody } from './MediaBlocks'
 import { PollBlockBody } from './PollBlockBody'
 import { ProductBlockBody } from './ProductBlockBody'
@@ -100,15 +97,14 @@ function BlockBody({
 }
 
 /**
- * Карточка блока: обвязка, одинаковая у всех восьми видов, — ручка перетаскивания,
- * номер или подпись типа, кнопки порядка и удаления, поле «урок/секция». Что внутри,
- * решает тип блока.
+ * Карточка блока: линия места вставки, шапка с действиями, поле «урок/секция» и тело
+ * по типу блока. Сама она только собирает — за шапку отвечает BlockCardHeader, за
+ * содержимое тип блока.
  *
- * Стрелки не вспомогательные, а основной путь: перетаскивание построено на HTML5
- * drag-and-drop, который на тач-экранах работает не везде.
+ * Стрелки и Alt+↑/↓ не вспомогательные, а полноценный путь: перенос указателем удобен,
+ * но с клавиатуры он недоступен по своей природе.
  */
 export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, onRetype, isUploading, onUpload, insertAfter }: BlockCardProps) {
-  const TypeIcon = BLOCK_ICON[item.type]
   return (
     <div data-i={index} data-uid={uid} className={`relative rounded-lg border border-border bg-surface p-4 ${drag.dragging ? 'opacity-50' : ''}`}>
       {/* Линия места вставки: отвечает на вопрос «выше или ниже встанет», которого
@@ -119,61 +115,17 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
           className={`pointer-events-none absolute inset-x-0 h-0.5 rounded-full bg-accent ${drag.line === 'before' ? '-top-2' : '-bottom-2'}`}
         />
       )}
-      <div className="mb-2.5 flex items-center gap-2">
-        {/* Ручка — полная тач-цель: иконка мелкая, а промах пальцем по ней означает
-            прокрутку страницы вместо переноса. `touch-none` не даёт жесту с ручки
-            уйти в прокрутку. Из таб-порядка ручка убрана: с клавиатуры блок двигают
-            соседние кнопки и Alt+↑/↓, а фокус на пустышке только мешал бы. */}
-        <Tooltip label={t('editor.dragToReorder', lang)}>
-          <IconButton variant="ghost" tabIndex={-1} label={t('editor.dragToReorder', lang)} {...drag.handle} className="cursor-grab touch-none select-none active:cursor-grabbing">
-            <GripVertical size={iconSizeFor()} />
-          </IconButton>
-        </Tooltip>
-        {item.type === 'step' ? (
-          <span className="font-mono text-[0.78125rem] text-muted">{stepNumber === null ? '•' : t('editor.itemN', lang).replace('{n}', String(stepNumber))}</span>
-        ) : (
-          <span className="inline-flex items-center gap-1 font-mono text-[0.78125rem] text-muted">
-            <TypeIcon size={13} />
-            {blockLabel(item.type, lang)}
-          </span>
-        )}
-        {/* Порядок и удаление — иконочные кнопки общей шкалы: пальцем цель вырастает
-            до 44px, мышью остаётся плотной. «В начало» и «в конец» уехали в «…»:
-            пять целей по 44 не помещаются в шапку 390px рядом с номером пункта, а
-            вторичному место в меню, а не второй строкой. */}
-        <div className="ml-auto flex items-center gap-1">
-          <Tooltip label={t('editor.moveUp', lang)}>
-            <IconButton variant="ghost" label={t('editor.moveUp', lang)} onClick={() => onMove(-1)} disabled={isFirst}>
-              <ChevronUp size={iconSizeFor()} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip label={t('editor.moveDown', lang)}>
-            <IconButton variant="ghost" label={t('editor.moveDown', lang)} onClick={() => onMove(1)} disabled={isLast}>
-              <ChevronDown size={iconSizeFor()} />
-            </IconButton>
-          </Tooltip>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <IconButton variant="ghost" label={t('editor.blockActions', lang)}>
-                <MoreHorizontal size={iconSizeFor()} />
-              </IconButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onMoveToEdge('top')} disabled={isFirst}>
-                <ChevronsUp size={iconSizeFor('xs')} /> {t('editor.moveTop', lang)}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onMoveToEdge('bottom')} disabled={isLast}>
-                <ChevronsDown size={iconSizeFor('xs')} /> {t('editor.moveBottom', lang)}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Tooltip label={t('editor.remove', lang)}>
-            <IconButton variant="danger" label={t('editor.remove', lang)} onClick={onRemove}>
-              <Trash2 size={iconSizeFor()} />
-            </IconButton>
-          </Tooltip>
-        </div>
-      </div>
+      <BlockCardHeader
+        type={item.type}
+        stepNumber={stepNumber}
+        isFirst={isFirst}
+        isLast={isLast}
+        lang={lang}
+        drag={drag}
+        onMove={onMove}
+        onMoveToEdge={onMoveToEdge}
+        onRemove={onRemove}
+      />
 
       {/* Урок/секция есть у ЛЮБОГО блока: заданный заголовок начинает новую группу
           (урок курса) и объединяет блоки ниже до следующего такого заголовка. */}
