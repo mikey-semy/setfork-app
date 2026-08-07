@@ -314,11 +314,6 @@
       "count": 5
     }
   },
-  "src/features/library/ListEditor.tsx": {
-    "no-restricted-syntax": {
-      "count": 100
-    }
-  },
   "src/features/library/ListSettingsDanger.tsx": {
     "boundaries/dependencies": {
       "count": 1
