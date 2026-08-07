@@ -5,7 +5,7 @@ import { Textarea } from '@/shared/ui/textarea'
 import { Field } from '@/shared/ui/Field'
 import { FormSaveBar } from '@/shared/ui/FormSaveBar'
 import { SettingsSection } from '@/shared/ui/SettingsSection'
-import { ListTypeToggle } from './ListTypeToggle'
+import { ListTypeToggle } from './ListFormToggles'
 import { updateListMeta } from './actions'
 
 /** Настройки списка → Основное: название / описание / теги / порядок.

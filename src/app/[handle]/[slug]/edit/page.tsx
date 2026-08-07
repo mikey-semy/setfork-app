@@ -9,7 +9,7 @@ import { canEditList } from '@/core'
 import { discardDraft, publishEdits, saveDraft } from '@/features/library/actions'
 import { BackLink } from '@/shared/ui/BackLink'
 import { ListEditor } from '@/features/library/list-editor/ListEditor'
-import { ListTypeToggle } from '@/features/library/ListTypeToggle'
+import { GatedToggle, ListTypeToggle } from '@/features/library/ListFormToggles'
 import { TagInput } from '@/shared/ui/TagInput'
 import { Field } from '@/shared/ui/Field'
 import { ChangeNoteField } from '@/features/library/ChangeNoteField'
@@ -137,18 +137,16 @@ export default async function EditPage({
           <TagInput initial={draftTags} lang={lang} />
         </Field>
 
-        {/* htmlFor: тумблер типа — группа кнопок, не одиночный контрол. */}
-        <Field label={t('listKind', lang)} htmlFor="edit-kind" className="mb-6">
-          <ListTypeToggle ordered={draftOrdered} lang={lang} />
-        </Field>
-
-        <label className="mb-6 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 has-checked:border-accent">
-          <input type="checkbox" name="gated" defaultChecked={draftGated} className="mt-0.5" />
-          <span>
-            <span className="block text-[0.8125rem] font-medium text-ink">{lang === 'ru' ? 'Последовательный курс' : 'Sequential course'}</span>
-            <span className="block text-[0.78125rem] text-ink-2">{lang === 'ru' ? 'Следующий урок откроется только после сдачи тестов предыдущего' : 'The next lesson unlocks only after passing the previous lesson’s tests'}</span>
-          </span>
-        </label>
+        {/* Тип и режим курса — одним рядом, как в форме создания. Видимость здесь не
+            правится: она живёт в опасной зоне настроек (как «Change visibility» у GitHub).
+            htmlFor: внутри тумблеров свои label — вложенные невалидны. */}
+        <div className="mb-6 flex flex-wrap items-end gap-x-4 gap-y-3">
+          <Field label={t('listKind', lang)} htmlFor="edit-kind">
+            <ListTypeToggle ordered={draftOrdered} lang={lang} />
+          </Field>
+          {/* Без подписи сверху: у пометки она своя, внутри чипа. */}
+          <GatedToggle gated={draftGated} lang={lang} />
+        </div>
 
         <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{lang === 'ru' ? 'Пункты' : 'Items'}</label>
         <ListEditor

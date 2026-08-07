@@ -16,7 +16,7 @@
   },
   "src/app/[handle]/[slug]/edit/page.tsx": {
     "no-restricted-syntax": {
-      "count": 3
+      "count": 1
     }
   },
   "src/app/[handle]/[slug]/insights/page.tsx": {
@@ -121,7 +121,7 @@
   },
   "src/app/new/page.tsx": {
     "no-restricted-syntax": {
-      "count": 8
+      "count": 6
     }
   },
   "src/app/reset-password/page.tsx": {
