@@ -29,6 +29,19 @@ import { getListLabels, getOpenIssuesForPicker } from '@/features/issues/queries
 import { getMilestonesForPicker } from '@/features/milestones/queries'
 import { getWatchCount, getWatchState } from '@/features/watch/queries'
 
+// Почему merge не прошёл — по коду из ?e=. Тексты в словаре: это то, что человек
+// читает, а не техническая метка.
+const MERGE_ERR: Record<string, TKey> = {
+  conflict: 'prMergeErrConflict',
+  'nothing-to-merge': 'prMergeErrNothing',
+  'not-linear': 'prMergeErrNotLinear',
+  unresolved: 'prMergeErrUnresolved',
+  // Правку не записали, потому что ветку подвинули: чужой пуш не затираем.
+  stale: 'prStaleWrite',
+  // Применяли предложенную правку, а пункта уже нет — применять некуда.
+  orphaned: 'prMergeErrOrphaned',
+}
+
 /**
  * Всё, что странице предложения нужно знать, прежде чем что-то показать: доступ,
  * снимки веток, дифф, обсуждения, ревью, состояние слияния, проверки, коммиты.
@@ -152,18 +165,6 @@ export async function loadSuggestionPage({
   const branchBehind = !!mergeState && mergeState.mergeBaseSha !== mergeState.ours.tipSha
   const hasConflicts = !!threeWay && (threeWay.conflicts.length > 0 || threeWay.metaConflicts.length > 0)
 
-  // Почему merge не прошёл — по коду из ?e=. Тексты в словаре: это то, что человек
-  // читает, а не техническая метка.
-  const MERGE_ERR: Record<string, TKey> = {
-    conflict: 'prMergeErrConflict',
-    'nothing-to-merge': 'prMergeErrNothing',
-    'not-linear': 'prMergeErrNotLinear',
-    unresolved: 'prMergeErrUnresolved',
-    // Правку не записали, потому что ветку подвинули: чужой пуш не затираем.
-    stale: 'prStaleWrite',
-    // Применяли предложенную правку, а пункта уже нет — применять некуда.
-    orphaned: 'prMergeErrOrphaned',
-  }
   const mergeErr = sp.e ? (MERGE_ERR[sp.e] ?? 'prMergeErrGeneric') : null
 
   // Участники для @mention: автор правки + комментаторы, без дублей.
