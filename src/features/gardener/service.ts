@@ -28,6 +28,15 @@ import { getRoster, type Expert } from '@/shared/ai/roster'
 import { t, type Lang, type LocaleText } from '@/shared/i18n'
 import { uniqueSlug } from '@/shared/lib/slug'
 
+// Аккаунт и расписание живут отдельно, но вход прежний: снаружи садовник —
+// это по-прежнему один модуль.
+import { ensureGardenerUser } from './sweep/account'
+import { alreadyForked, pickCandidates, stablePasses } from './sweep/candidates'
+
+// Вход прежний: снаружи садовник — по-прежнему один модуль.
+export { ensureGardenerScheduled, ensureGardenerUser } from './sweep/account'
+export { alreadyForked, pickCandidates, stablePasses } from './sweep/candidates'
+
 // ── ИИ-садовник (Э2 → ось B «живые списки») ──────────────────────────
 // Прозрачный ИИ-участник: раз в GARDENER_EVERY_DAYS выбирает несколько публичных
 // списков и предлагает улучшения ОБЫЧНОЙ правкой (PR-модель) от сервисного
@@ -36,7 +45,6 @@ import { uniqueSlug } from '@/shared/lib/slug'
 // Правка идёт НА ЯЗЫКЕ СПИСКА и ПО ПОЛИТИКЕ ЕГО ТИПА (рецепт: точные
 // количества; процедура: актуальность команд — см. gardener-policies).
 
-const GARDENER_HANDLE = 'gardener'
 const GARDENER_EVERY_DAYS = 2
 
 /**
@@ -53,140 +61,8 @@ const loc = (v: LocaleText | null | undefined, lang: Lang): string => {
   return v[lang] ?? v.en ?? Object.values(v).find(Boolean) ?? ''
 }
 
-/**
- * Сервисный аккаунт садовника (создаётся при первом прогоне; входа у него нет).
- *
- * Существующую строку ДОЧИНИВАЕМ: на проде садовник был создан раньше, чем появилась
- * пометка account_type, и после деплоя остался бы «человеком» — то есть ровно то, что
- * ADR-0004 запрещает. Разовым скриптом такое чинить нельзя: он забывается, а инвариант
- * должен держать код. Апдейт узкий (только пустые/дефолтные поля) и идемпотентный —
- * заданные вручную значения не перетираем.
- */
-export async function ensureGardenerUser(): Promise<{ id: string }> {
-  const [existing] = await db
-    .select({ id: users.id, accountType: users.accountType, profession: users.profession, location: users.location })
-    .from(users)
-    .where(eq(users.handle, GARDENER_HANDLE))
-  if (existing) {
-    if (existing.accountType !== 'agent' || !existing.profession || !existing.location) {
-      await db
-        .update(users)
-        .set({
-          accountType: 'agent',
-          profession: existing.profession || 'Gardener',
-          location: existing.location || HOME_REALM,
-        })
-        .where(eq(users.id, existing.id))
-      log.info('gardener user marked as service account', { id: existing.id })
-    }
-    return { id: existing.id }
-  }
-  const [created] = await db
-    .insert(users)
-    .values({
-      handle: GARDENER_HANDLE,
-      name: 'SetFork Gardener',
-      // account_type='agent' (ADR-0004): служебность стала ДАННЫМИ, а не догадкой по
-      // handle и эмодзи в bio — UI и API обязаны показывать, что это не человек.
-      accountType: 'agent',
-      profession: 'Gardener',
-      location: HOME_REALM,
-      bio: '\u{1F9D9} Gardener. I propose improvements to public lists; humans review and merge.',
-    })
-    .returning({ id: users.id })
-  log.info('gardener user created', { id: created.id })
-  return created
-}
 
-/**
- * Одна ОЖИДАЮЩАЯ джоба садовника в очереди — самоподдержание без cron.
- *
- * Считаем только `pending`, и это принципиально: планировщик зовётся ИЗ САМОЙ задачи, а она в
- * этот момент `processing`. Учитывая её, проверка видела бы «работа уже стоит» и преемника не
- * ставила — петля тихо умирала бы после первого прогона и оживала только рестартом инстанса
- * (нашёл ревьюер Codex на #532; проверено тестом контракта петель).
- */
-export async function ensureGardenerScheduled(): Promise<void> {
-  const pending = await db
-    .select({ id: jobs.id })
-    .from(jobs)
-    .where(and(eq(jobs.type, 'gardener'), eq(jobs.status, 'pending')))
-    .limit(1)
-  if (pending.length) return
-  // РИТМ ЗАДАЁТ СОДЕРЖИМОЕ. Раз в двое суток — нормальный темп для полировки, но для ленты
-  // это не темп: новость, добавленная через два дня, уже не новость. Пока в библиотеке есть
-  // хоть один живой список, проход встаёт чаще. Отдельную петлю не заводим: рубильник,
-  // журнал, предохранитель и бюджет у ухода уже есть, а второй петле их пришлось бы
-  // повторить — и разъехаться с этой при первой же правке.
-  const [alive] = await db.select({ id: templates.id }).from(templates).where(eq(templates.living, true)).limit(1)
-  const delayMs = alive ? LIVING_EVERY_HOURS * 60 * 60 * 1000 : GARDENER_EVERY_DAYS * 24 * 60 * 60 * 1000
-  // maxAttempts:1 — без ретрая всего прохода: при повторе уже авто-смёрдженные
-  // кураторские списки рефайнились бы заново (двойной расход). Пропуск одного
-  // прохода не страшен — следующий встаёт по расписанию.
-  await enqueueJob('gardener', {}, { delayMs, maxAttempts: 1 })
-  log.info('gardener scheduled', { inHours: delayMs / 3_600_000, living: !!alive })
-}
 
-/** Кандидаты: публичные активные, без открытой правки садовника, без секций
- *  (refine пока не сохраняет section) — сначала популярные и давно не обновлявшиеся. */
-export async function pickCandidates(agentIds: string[], limit: number, only?: 'living' | 'ordinary') {
-  // Дедуп и исключение владельца — по ВСЕМ служебным аккаунтам, а не по одному
-  // садовнику: с раздачей ухода профильным специалистам автором правки может быть
-  // любой из них, и проверка «уже предлагал» обязана это учитывать (иначе список
-  // с открытой правкой Фьялара попадал бы в выборку снова → повторный refine).
-  const agents = agentIds.length ? agentIds : ['00000000-0000-0000-0000-000000000000']
-  return db
-    .select({ id: templates.id, slug: templates.slug, ownerId: templates.ownerId, title: templates.title, desc: templates.desc, tags: templates.tags, currentVersion: templates.currentVersion, listKind: templates.listKind, living: templates.living, status: templates.status, ownerCurated: users.curated, ownerAccountType: users.accountType })
-    .from(templates)
-    .innerJoin(users, eq(users.id, templates.ownerId))
-    .where(
-      and(
-        // Опубликованные — у любого владельца. СВОИ ЧЕРНОВИКИ — тоже: самогенерация
-        // осознанно рождает черновик («публикует человек»), и без этой ветки уход
-        // за собственным творчеством не начинался бы вообще — измерено на дев-БД
-        // 2026-07-27: у компании 0 опубликованных списков и все её работы в черновиках.
-        // Черновик чужого владельца не трогаем: это его незаконченная работа.
-        or(eq(templates.status, 'published'), and(eq(templates.status, 'draft'), inArray(users.id, agents))),
-        eq(templates.visibility, 'public'),
-        eq(templates.moderation, 'active'),
-        // Архивные/замороженные списки садовник не трогает (read-only от правок).
-        sql`${templates.archivedAt} is null and ${templates.frozenAt} is null`,
-        // Списки служебных аккаунтов БОЛЬШЕ НЕ исключаем: раньше стояло
-        // notInArray(ownerId, agents) — «правку себе не предлагают», и следствие было
-        // обратным задуманному: всё, что компания создала сама, НИКОГДА не улучшалось.
-        // Теперь свои списки правятся НАПРЯМУЮ (см. ownerIsAgent ниже), без церемонии
-        // «предложить себе», а чужие — предложением, как раньше.
-        //
-        // Зато исключаем владельцев БЕЗ ВХОДА (сид-фикстуры): проверено 2026-07-27, что
-        // все 7 висевших правок были адресованы именно им — принять их некому физически,
-        // и такие предложения только копят мусор. Служебные аккаунты тоже без входа,
-        // поэтому условие пропускает их отдельно.
-        or(
-          inArray(users.id, agents),
-          isNotNull(users.passwordHash),
-          isNotNull(users.githubId),
-          isNotNull(users.yandexId),
-          isNotNull(users.telegramId),
-          isNotNull(users.email),
-        ),
-        // Не берём список, где служебный участник уже оставил ОТКРЫТУЮ правку ЛИБО
-        // что-либо предлагал за последние GARDENER_EVERY_DAYS дней. Второе условие важно
-        // для кураторских списков: их правка авто-мёрджится (status='accepted', не 'open'),
-        // и без учёта свежести список попадал бы в выборку снова → повторный refine.
-        sql`not exists (select 1 from ${suggestions} sg where sg.template_id = ${templates.id} and sg.author_id = any(${sql.param(agents)}::uuid[])
-             and (sg.status = 'open' or sg.created_at > now() - (${GARDENER_EVERY_DAYS}::int * interval '1 day')))`,
-        // Ленты и обычные списки выбираем РАЗНЫМИ запросами: при общей выборке живые (они идут
-        // первыми) вытесняли бы обычные из лимита, и уход выродился бы в одну ленту.
-        only === 'living' ? eq(templates.living, true) : only === 'ordinary' ? eq(templates.living, false) : undefined,
-      ),
-    )
-    // Живые списки — первыми: у ленты ценность в свежести, и ждать своей очереди за
-    // популярностью она не может. Дальше как раньше: популярные и давно не обновлявшиеся.
-    // Внутри лент — сначала те, кого дольше не трогали: иначе одна звёздная лента забирала бы
-    // каждый проход, а соседние молчали.
-    .orderBy(desc(templates.living), asc(templates.updatedAt), desc(templates.starsCount))
-    .limit(limit)
-}
 
 /** Override-политики из админки (app_settings gardener.policy.<kind>); пусто = код-дефолты. */
 async function policyOverrides(): Promise<Partial<Record<ListKind, string>>> {
@@ -310,32 +186,7 @@ export async function gateOwnDraft(
  */
 const STABLE_PASSES_BEFORE_FORK = 2
 
-/** Сколько раз ПОДРЯД список признан устоявшимся (refine не нашёл, что менять). */
-export async function stablePasses(templateId: string): Promise<number> {
-  const rows = await db
-    .select({ action: agentActions.action })
-    .from(agentActions)
-    .where(and(eq(agentActions.loop, 'gardener'), sql`${agentActions.signal}->>'templateId' = ${templateId}`))
-    .orderBy(desc(agentActions.occurredAt))
-    .limit(6)
-  let n = 0
-  for (const r of rows) {
-    // Любое ДЕЙСТВИЕ по списку (правка, форк) обнуляет счётчик: считаем именно «подряд».
-    if (r.action !== 'list.stable') break
-    n++
-  }
-  return n
-}
 
-/** Уже расходились от этого списка? Один форк на источник — иначе плодим клоны. */
-export async function alreadyForked(templateId: string, agents: string[]): Promise<boolean> {
-  const [row] = await db
-    .select({ id: templates.id })
-    .from(templates)
-    .where(and(eq(templates.forkedFromId, templateId), inArray(templates.ownerId, agents)))
-    .limit(1)
-  return !!row
-}
 
 /**
  * Расхождение форком: другой мастер берёт устоявшийся список и уводит в ДРУГОЙ контекст.
