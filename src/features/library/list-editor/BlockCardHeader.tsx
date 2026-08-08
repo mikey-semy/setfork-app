@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, GripVertical, MoreHorizontal, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, GripVertical, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
@@ -12,8 +12,8 @@ import { BLOCK_ICON, blockLabel } from './block-meta'
 import type { CardDrag } from './BlockCard'
 
 /**
- * Шапка карточки блока: ручка переноса, номер или подпись типа, порядок, «ещё» и
- * удаление.
+ * Шапка карточки блока: жёлоб (перенос и вставка), номер или подпись типа, порядок,
+ * «ещё» и удаление.
  *
  * Отдельно от карточки, потому что причина меняться у неё своя — состав и порядок
  * действий над блоком. Что показывать ВНУТРИ карточки, решает тип блока, и это другой
@@ -33,6 +33,7 @@ export function BlockCardHeader({
   onMove,
   onMoveToEdge,
   onRemove,
+  onInsertBelow,
   chat,
 }: {
   type: BlockType
@@ -45,21 +46,42 @@ export function BlockCardHeader({
   onMove: (dir: -1 | 1) => void
   onMoveToEdge: (edge: 'top' | 'bottom') => void
   onRemove: () => void
+  /** Вставить ниже блок ТОГО ЖЕ типа — жёлобный «плюс». */
+  onInsertBelow: () => void
   /** Кнопка чата правки; у видов без текстовых полей её нет. */
   chat?: ReactNode
 }) {
   const TypeIcon = BLOCK_ICON[type]
   return (
     <div className="mb-2.5 flex items-center gap-2">
-      {/* Ручка — полная тач-цель: иконка мелкая, а промах пальцем по ней означает
-          прокрутку страницы вместо переноса. `touch-none` не даёт жесту с ручки уйти
-          в прокрутку. Из таб-порядка ручка убрана: с клавиатуры блок двигают соседние
-          кнопки и Alt+↑/↓, а фокус на пустышке только мешал бы. */}
-      <Tooltip label={t('editor.dragToReorder', lang)}>
-        <IconButton variant="ghost" tabIndex={-1} label={t('editor.dragToReorder', lang)} {...drag.handle} className="cursor-grab touch-none select-none active:cursor-grabbing">
-          <GripVertical size={iconSizeFor()} />
-        </IconButton>
-      </Tooltip>
+      {/* ЖЁЛОБ. На широком экране колонка уезжает в левое поле страницы (у формы
+          читаемая ширина 720px, по бокам пусто) и проявляется при наведении на
+          карточку — так устроены Notion и Linear, и перенос ищут именно там. Узкому
+          экрану поля взять неоткуда, и та же пара живёт первой в шапке.
+          Один узел на оба случая: вторая копия ручки разъехалась бы с первой.
+
+          Порог именно xl: на 1024 поле страницы всего 32px, и вынесенный жёлоб уходит
+          ПОД боковое меню (240px) — замер 08.08.2026 показал, что нажатие достаётся
+          меню, а не кнопке. С 1280 запас 160px даже при открытом меню. */}
+      <div className="flex items-center gap-1 xl:absolute xl:top-3.5 xl:-left-19 xl:opacity-0 xl:transition-opacity xl:group-focus-within/card:opacity-100 xl:group-hover/card:opacity-100">
+        {/* «Плюс» вставляет блок ТОГО ЖЕ вида одним нажатием — подряд идут шаги, и это
+            самый частый выбор. Другой вид даёт веер между карточками и «/» в тексте:
+            третьего способа выбирать тип заводить незачем. */}
+        <Tooltip label={`${t('editor.addBlockBelow', lang)}: ${blockLabel(type, lang)}`}>
+          <IconButton variant="ghost" label={`${t('editor.addBlockBelow', lang)}: ${blockLabel(type, lang)}`} onClick={onInsertBelow} className="max-xl:hidden">
+            <Plus size={iconSizeFor()} />
+          </IconButton>
+        </Tooltip>
+        {/* Ручка — полная тач-цель: иконка мелкая, а промах пальцем по ней означает
+            прокрутку страницы вместо переноса. `touch-none` не даёт жесту с ручки уйти
+            в прокрутку. Из таб-порядка ручка убрана: с клавиатуры блок двигают соседние
+            кнопки и Alt+↑/↓, а фокус на пустышке только мешал бы. */}
+        <Tooltip label={t('editor.dragToReorder', lang)}>
+          <IconButton variant="ghost" tabIndex={-1} label={t('editor.dragToReorder', lang)} {...drag.handle} className="cursor-grab touch-none select-none active:cursor-grabbing">
+            <GripVertical size={iconSizeFor()} />
+          </IconButton>
+        </Tooltip>
+      </div>
 
       {type === 'step' ? (
         <span className="shrink-0 font-mono text-[0.78125rem] whitespace-nowrap text-muted">

@@ -1996,6 +1996,7 @@ export const ru: Record<DictKey, string> = {
   'editor.sameAsPrevious': 'Как предыдущий',
   'editor.repeat': 'Повторить',
   'editor.addBlock': 'Добавить блок',
+  'editor.addBlockBelow': 'Добавить ниже',
   'quiz.explain': 'Пояснение (после проверки)',
   'quiz.explainPh': 'Пояснение — покажется после проверки (необязательно)',
   'quiz.checkOnListPage': 'Проверка — на странице списка.',
