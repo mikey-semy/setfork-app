@@ -3,6 +3,7 @@
 import * as React from 'react'
 import * as SwitchPrimitive from '@radix-ui/react-switch'
 import { cn } from '@/shared/lib/cn'
+import { TOUCH_HIT } from './control'
 
 // React 19: ref — обычный проп (ComponentProps его включает), forwardRef не нужен.
 function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimitive.Root>) {
@@ -11,6 +12,9 @@ function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimi
       className={cn(
       'peer inline-flex h-[1.375rem] w-[2.5rem] shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors outline-hidden',
       'focus-visible:ring-2 focus-visible:ring-(--accent) disabled:cursor-not-allowed disabled:opacity-50',
+      // Пилюля 40×22 — вид, менять его нельзя; пальцу же нужна цель 44. Растёт
+      // ОБЛАСТЬ нажатия, а не размер: ровно так это решают Apple HIG и Material.
+      TOUCH_HIT,
       'data-[state=checked]:bg-ok data-[state=unchecked]:bg-(--border-strong)',
       className,
     )}

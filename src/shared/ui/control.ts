@@ -121,7 +121,7 @@ export const LAYER = {
  * кегль (анти-зум iOS), в компактные 28px он влезает впритык (Codex #651).
  * С дефолтом md=32 это касается только рядов, явно переведённых на xs/sm. */
 export const FIELD_BOX =
-  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 max-sm:min-h-8 pointer-coarse:min-h-8'
+  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 max-sm:min-h-8 pointer-coarse:min-h-11'
 
 // ── Тач-цель ─────────────────────────────────────────────────────────────
 // Шкала контролов (24/28/32) — про ВИД: мышь попадает в такую кнопку без труда.
@@ -133,3 +133,16 @@ export const FIELD_BOX =
 export const TOUCH_BOX = 'pointer-coarse:size-11'
 /** То же для НЕквадратных целей: текстовая кнопка-ссылка, строка меню. */
 export const TOUCH_MIN_H = 'pointer-coarse:min-h-11'
+
+/** Цель, чей ВИД менять нельзя: переключатель — пилюля заданного размера, вырасти
+ *  вдвое он не может. Область нажатия растягивает псевдоэлемент — ровно приём
+ *  Apple HIG и Material («hit region больше визуального размера»), а не масштаб.
+ *
+ *  Вместе с зоной резервируется и МЕСТО под неё — вертикальный отступ до 44px в
+ *  потоке. Без резерва зона висит поверх соседей: в рядах настроек центры
+ *  переключателей стоят в 38px друг от друга (замер 08.08.2026 на /settings), и
+ *  зоны по 44px накладываются — палец у края попадает в ЧУЖУЮ настройку. Это хуже
+ *  мелкой цели: не промах, а тихое переключение не того. Material требует того же
+ *  — цель 48dp И зазор не меньше 8dp между соседними целями. */
+export const TOUCH_HIT =
+  "pointer-coarse:relative pointer-coarse:my-[0.6875rem] pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:top-1/2 pointer-coarse:before:h-11 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']"

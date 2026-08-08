@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { cn } from '@/shared/lib/cn'
-import { CONTROL_H, CONTROL_TEXT, type ControlSize } from './control'
+import { CONTROL_H, CONTROL_TEXT, TOUCH_MIN_H, type ControlSize } from './control'
 
 // Единая кнопка приложения. Варианты покрывают весь используемый спектр:
 //   primary — главное действие (bg-primary)
@@ -46,6 +46,10 @@ export function Button({ variant = 'outline', size = 'md', className, type = 'bu
         'inline-flex items-center justify-center rounded-md font-semibold outline-hidden transition-colors focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50',
         VARIANTS[variant],
         CONTROL_H[size],
+        // Шкала 24/28/32 — про ВИД под мышью. Пальцу нужна цель 44 (Apple HIG, у
+        // Material 48dp), и кнопка с текстом до неё дорастает высотой: на телефоне
+        // ряд кнопок такой высоты — норма мобильных интерфейсов, а не раздутие.
+        TOUCH_MIN_H,
         CONTROL_TEXT[size],
         SIZES[size],
         className,
