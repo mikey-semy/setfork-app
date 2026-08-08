@@ -121,7 +121,7 @@ export const LAYER = {
  * кегль (анти-зум iOS), в компактные 28px он влезает впритык (Codex #651).
  * С дефолтом md=32 это касается только рядов, явно переведённых на xs/sm. */
 export const FIELD_BOX =
-  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 max-sm:min-h-8 pointer-coarse:min-h-8'
+  'rounded-md border border-border bg-surface-2 text-ink outline-hidden placeholder:text-muted focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent disabled:opacity-50 max-sm:min-h-8 pointer-coarse:min-h-11'
 
 // ── Тач-цель ─────────────────────────────────────────────────────────────
 // Шкала контролов (24/28/32) — про ВИД: мышь попадает в такую кнопку без труда.
@@ -133,3 +133,11 @@ export const FIELD_BOX =
 export const TOUCH_BOX = 'pointer-coarse:size-11'
 /** То же для НЕквадратных целей: текстовая кнопка-ссылка, строка меню. */
 export const TOUCH_MIN_H = 'pointer-coarse:min-h-11'
+
+/** Цель, чей ВИД менять нельзя: переключатель — пилюля заданного размера, вырасти
+ *  вдвое он не может. Область нажатия растягивает псевдоэлемент — ровно приём
+ *  Apple HIG и Material («hit region больше визуального размера»), а не масштаб.
+ *  Родителю нужен `relative`; между соседями по ряду зазор ≥ 8px, иначе зоны
+ *  наложатся и палец попадёт в чужой контрол. */
+export const TOUCH_HIT =
+  "pointer-coarse:relative pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:top-1/2 pointer-coarse:before:h-11 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']"
