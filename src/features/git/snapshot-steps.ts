@@ -32,7 +32,7 @@ export interface SnapshotStepRow {
   refs: { label: LocaleText; url?: string }[]
   imageKey: string | null
   hasImage: boolean
-  /** Пометка «здесь нужен человек» — в git не сериализуется (golden-паритет). */
+  /** Пометка «здесь нужен человек» — в каноне ЕСТЬ с Ф2a, читается из снимка. */
   needsHuman: boolean
   needsHumanAsk: Record<string, unknown>
   /** Разрушительный пункт — в каноне ЕСТЬ, поэтому из снимка ветки честно виден. */
@@ -56,13 +56,15 @@ export function snapshotSteps(snapshot: BranchSnapshot, idPrefix = 'br'): Snapsh
     section: { en: s.section },
     subtasks: s.subtasks.map((t) => ({ en: t })),
     refs: s.refs.map((r) => ({ label: { en: r.label }, ...(r.url ? { url: r.url } : {}) })),
-    // Картинок у снапшота нет: изображения живут в объектном хранилище, а не в git.
-    imageKey: null,
-    hasImage: false,
-    // «Нужен человек» в list.json не пишется (golden-паритет с Rust) — на ветке
-    // это не ложное false, а честное «из снимка неизвестно».
-    needsHuman: false,
-    needsHumanAsk: {},
+    // Картинка живёт в объектном хранилище, но КЛЮЧ канон несёт (Ф2a) — иначе
+    // просмотр ветки уверял бы, что скриншота у пункта нет, а он есть.
+    imageKey: s.imageKey ?? null,
+    hasImage: Boolean(s.imageKey),
+    // «Нужен человек» канон тоже несёт с Ф2a. Раньше здесь стояло жёсткое false с
+    // пояснением «в git не сериализуется» — правда времён, когда поля в каноне не
+    // было; в диффе правки пометка из-за этого пропадала.
+    needsHuman: s.needsHuman === true,
+    needsHumanAsk: s.needsHumanAsk ? { en: s.needsHumanAsk } : {},
     danger: s.danger === true,
   }))
 }

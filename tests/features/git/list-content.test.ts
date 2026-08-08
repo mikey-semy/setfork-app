@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ListBlock, ListContent } from '@/core'
 import { fromWireContent, fromWireStep, toWireContent, type WireStep } from '@/features/git/list-content'
+import { snapshotSteps } from '@/features/git/snapshot-steps'
 
 // Эти два пути записи («Применить правку» и ручной резолв конфликта) до Ф0a.2 не
 // покрывались тестами вообще: сборка канона сидела внутри серверного экшена и
@@ -146,5 +147,30 @@ describe('круг домен → провод → домен', () => {
       [2, 'Install Redis', null],
     ])
     expect(back.steps[1].content).toEqual({ md: 'x' })
+  })
+})
+
+describe('снимок ветки перестал врать про картинку и пометку', () => {
+  it('ключ картинки и «нужен человек» доезжают до строк, а не гасятся в null/false', () => {
+    // До Ф2a канон этих полей не нёс, и здесь стояло жёсткое false с пояснением
+    // «в git не сериализуется». Поля появились, пояснение устарело — а дифф правки
+    // из-за него показывал пункт без пометки и без скриншота.
+    const snap = {
+      tipSha: 'abc',
+      title: 'T',
+      desc: '',
+      tags: [],
+      ordered: true,
+      steps: [fromWireStep({
+        n: 1, type: '', contentJson: '', blockId: '', title: 'Ш', desc: '', command: '', level: 'required',
+        why: '', section: '', subtasks: [], refs: [],
+        imageKey: 'u/1/shot.png', needsHuman: true, needsHumanAsk: 'глянь глазами',
+      })],
+    }
+    const [row] = snapshotSteps(snap)
+    expect(row.imageKey).toBe('u/1/shot.png')
+    expect(row.hasImage).toBe(true)
+    expect(row.needsHuman).toBe(true)
+    expect(row.needsHumanAsk).toEqual({ en: 'глянь глазами' })
   })
 })
