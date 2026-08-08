@@ -2006,6 +2006,7 @@ export const en = {
   'editor.sameAsPrevious': 'Same as previous',
   'editor.repeat': 'Repeat',
   'editor.addBlock': 'Add block',
+  'editor.addBlockBelow': 'Add below',
   'quiz.explain': 'Explanation (after check)',
   'quiz.explainPh': 'Explanation — shown after checking (optional)',
   'quiz.checkOnListPage': 'Checking happens on the list page.',

@@ -131,6 +131,7 @@ export function ListEditor({
             onMove={(dir) => list.move(i, dir)}
             onMoveToEdge={(edge) => list.moveToEdge(i, edge)}
             onRemove={() => list.removeAt(i)}
+            onInsertBelow={() => list.insertAt(i + 1, item.type)}
             onRetype={(type) => list.retype(i, type)}
             // Чат правки — только у шага: у опроса и картинки текстовых полей,
             // которые он правит, попросту нет.
