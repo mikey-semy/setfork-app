@@ -6,8 +6,9 @@ import { toProposedItems, type EditorItem } from '../editor'
 import { SuggestionResult } from '../SuggestionResult'
 import { BlockCard } from './BlockCard'
 import { BlockInserter } from './BlockInserter'
+import { CanonPanel } from './CanonPanel'
 import { EditorToolbar } from './EditorToolbar'
-import { commandFor } from './hotkeys'
+import { commandFor, isFieldTarget } from './hotkeys'
 import { KeyboardDock } from './KeyboardDock'
 import { BlockChatButton, BlockChatHost } from './BlockChat'
 import { useBlockDrag } from './use-block-drag'
@@ -29,6 +30,7 @@ export function ListEditor({
   lang,
   aiRefine,
   ordered = true,
+  canonOf,
 }: {
   name?: string
   initialItems: EditorItem[]
@@ -37,6 +39,9 @@ export function ListEditor({
   aiRefine?: { title: string; desc: string; tags: string[] }
   /** Упорядоченный список — нумерация; иначе набор (маркеры). */
   ordered?: boolean
+  /** Список, у которого есть канон (Ф4). У НЕсозданного списка его нет — ядру
+   *  нечего показывать, поэтому режим «код» там не предлагается вовсе. */
+  canonOf?: string
 }) {
   const list = useBlockList(initialItems)
   const uploads = useBlockUploads(list.patchByUid)
@@ -45,6 +50,9 @@ export function ListEditor({
   // было сохранить версию (жалоба владельца 04.08.2026). Показываем тем же
   // рендером, что и предложения правок, — вторая копия разъехалась бы с первой.
   const [preview, setPreview] = useState(false)
+  // ПРАВКА КАК КОДА (Ф4): тот же состав каноническим list.json. Разобранный текст
+  // возвращается блоками, а не сохраняется отдельным путём — сохранение одно.
+  const [code, setCode] = useState(false)
   // Какой блок правят разговором — по стабильному id, а не по номеру: пока чат
   // открыт, список живёт (блок выше могли удалить), и номер начал бы указывать на
   // соседа. ОДНО окно на редактор: своё состояние у каждой карточки давало два чата
@@ -64,7 +72,7 @@ export function ListEditor({
       mod: e.ctrlKey || e.metaKey,
       shift: e.shiftKey,
       alt: e.altKey,
-      inField: el.tagName === 'INPUT' || el.tagName === 'TEXTAREA',
+      inField: isFieldTarget(el),
     })
     if (!cmd) return
     if (cmd.kind === 'move') {
@@ -95,9 +103,25 @@ export function ListEditor({
           onRedo={list.redo}
           preview={preview}
           onTogglePreview={() => setPreview((v) => !v)}
+          code={code}
+          onToggleCode={canonOf ? () => setCode((v) => !v) : undefined}
           lang={lang}
         />
       </KeyboardDock>
+
+      {code && canonOf && (
+        <CanonPanel
+          // key по составу НЕ ставим: текст берётся один раз при открытии, иначе
+          // набранное затиралось бы на каждое изменение блоков.
+          templateId={canonOf}
+          itemsJson={JSON.stringify(list.items)}
+          onApply={(items) => {
+            list.replaceAll(items)
+            setCode(false)
+          }}
+          lang={lang}
+        />
+      )}
 
       {preview && (
         // Состав, приведённый к доменной форме, — ровно то, что уедет в версию.
@@ -108,7 +132,9 @@ export function ListEditor({
         </div>
       )}
 
-      <div ref={listRef} className={`flex flex-col gap-3 ${preview ? 'hidden' : ''}`}>
+      {/* Блоки прячем, но НЕ размонтируем: состав уезжает на сервер скрытым полем
+          формы, и снятое дерево унесло бы с собой позиции загрузок и фокус. */}
+      <div ref={listRef} className={`flex flex-col gap-3 ${preview || code ? 'hidden' : ''}`}>
         {/* Инсертер НАД первым блоком: без него «добавить сверху» стоило двух
             действий — добавить в конец и гнать блок наверх стрелками. */}
         {list.items.length > 0 && (
@@ -165,7 +191,7 @@ export function ListEditor({
         })()}
 
       {/* Главный инсертер — добавить блок в конец списка. */}
-      <div className="flex justify-center pt-1">
+      <div className={`flex justify-center pt-1 ${preview || code ? 'hidden' : ''}`}>
         <BlockInserter onInsert={(type) => list.insertAt(list.items.length, type)} repeatType={list.items[list.items.length - 1]?.type ?? 'step'} lang={lang} />
       </div>
     </div>

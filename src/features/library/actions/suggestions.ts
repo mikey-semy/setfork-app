@@ -36,6 +36,7 @@ import { countUnresolvedThreads } from '@/features/comments/queries'
 import { canEditList, canViewList } from '@/core'
 import { DestructiveCommandError } from '@/core/domain/destructive-command'
 import { parseEditorItems, toProposedItems } from '../editor'
+import { toListContent } from '../list-content'
 import { getVersionSteps } from '../queries'
 import { countApprovals, hasBlockingReview } from '../review-queries'
 import { listStore } from '../list-store'
@@ -357,26 +358,13 @@ async function writeSuggestionItems(
     const snap = await gitCore.branchSnapshot({ owner, slug: tpl.slug }, sug.branchRef).catch(() => null)
     if (!snap) return 'not-found'
     // Содержимое версии, а не готовый файл: канон собирает ядро (владелец формата).
-    const content = {
-      title: snap.title,
-      desc: snap.desc,
-      tags: snap.tags,
-      ordered: snap.ordered,
-      version: tpl.currentVersion + 1,
-      steps: proposed.map((it, i) => ({
-        n: i + 1,
-        ...(it.type && it.type !== 'step' ? { type: it.type, content: (it.content ?? {}) as Record<string, unknown> } : {}),
-        ...(it.blockId ? { blockId: String(it.blockId) } : {}),
-        title: tr(it.title as LocaleText, lang),
-        desc: tr(it.desc as LocaleText, lang),
-        command: it.command ?? '',
-        level: it.level ?? 'required',
-        why: tr(it.why as LocaleText, lang),
-        section: tr(it.section as LocaleText, lang),
-        subtasks: (it.subtasks ?? []).map((s) => tr(s as LocaleText, lang)),
-        refs: (it.refs ?? []).map((r) => ({ label: tr(r.label as LocaleText, lang), ...(r.url ? { url: r.url } : {}) })),
-      })),
-    }
+    // Раскладка ОБЩАЯ с показом канона текстом (Ф4) — см. toListContent: до этого
+    // она жила здесь инлайном и была уже третьей копией конвертера шагов.
+    const content = toListContent(
+      proposed,
+      { title: snap.title, desc: snap.desc, tags: snap.tags, ordered: snap.ordered, version: tpl.currentVersion + 1 },
+      lang,
+    )
     try {
       // expectedTip — снапшот, который правил человек: если ветку подвинули, пишем
       // не поверх чужого пуша, а честно отказываем.

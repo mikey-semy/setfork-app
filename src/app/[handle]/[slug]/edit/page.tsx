@@ -164,6 +164,9 @@ export default async function EditPage({
           lang={lang}
           ordered={draftOrdered}
           aiRefine={{ title: tr(tpl.title, lang), desc: tr(tpl.desc, lang), tags: tpl.tags }}
+          // Ф4: канон собирает ядро по СУЩЕСТВУЮЩЕМУ списку — здесь он есть.
+          // На странице создания списка его нет, и режим «код» там не предлагается.
+          canonOf={tpl.id}
         />
 
         {/* ОБЕ кнопки в одной форме: публикация обязана взять то, что человек видит

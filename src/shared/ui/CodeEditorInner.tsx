@@ -49,11 +49,13 @@ export default function CodeEditorInner({
   onChange,
   placeholder,
   ariaLabel,
+  maxHeightClass = 'max-h-64',
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
   ariaLabel?: string
+  maxHeightClass?: string
 }) {
   const { resolvedTheme } = useTheme()
   const id = detectLang(value)
@@ -89,7 +91,7 @@ export default function CodeEditorInner({
           searchKeymap: false,
           drawSelection: true,
         }}
-        className="max-h-64 min-h-[2.625rem] overflow-auto rounded-md border border-border bg-surface-2 text-ink focus-within:border-border-strong"
+        className={`${maxHeightClass} min-h-[2.625rem] overflow-auto rounded-md border border-border bg-surface-2 text-ink focus-within:border-border-strong`}
       />
     </div>
   )

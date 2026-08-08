@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { commandFor } from '@/features/library/list-editor/hotkeys'
+import { commandFor, isFieldTarget } from '@/features/library/list-editor/hotkeys'
 
 /**
  * КЛАВИАТУРА РЕДАКТОРА НЕ ОТБИРАЕТ У БРАУЗЕРА ЕГО ОТМЕНУ.
@@ -36,5 +36,24 @@ describe('горячие клавиши редактора', () => {
     expect(press({ key: 'ArrowUp' })).toBeNull()
     expect(press({ key: 'z' })).toBeNull()
     expect(press({ key: 'Enter', mod: true })).toBeNull()
+  })
+})
+
+describe('что считается полем со своей отменой', () => {
+  it('input и textarea — поля', () => {
+    expect(isFieldTarget({ tagName: 'INPUT' })).toBe(true)
+    expect(isFieldTarget({ tagName: 'TEXTAREA' })).toBe(true)
+  })
+
+  it('редактор кода — тоже поле, хотя это div', () => {
+    // CodeMirror правит обычный div с contenteditable. Пока правило смотрело на
+    // тег, Ctrl+Z внутри текста канона откатывал СТРУКТУРУ БЛОКОВ вместо
+    // набранного — то есть отбирал у человека его же правку.
+    expect(isFieldTarget({ tagName: 'DIV', isContentEditable: true })).toBe(true)
+  })
+
+  it('обычная разметка полем не считается', () => {
+    expect(isFieldTarget({ tagName: 'DIV' })).toBe(false)
+    expect(isFieldTarget({ tagName: 'BUTTON', isContentEditable: false })).toBe(false)
   })
 })
