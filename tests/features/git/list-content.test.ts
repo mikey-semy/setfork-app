@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ListBlock, ListContent } from '@/core'
-import { toWireContent } from '@/features/git/list-content'
+import { fromWireContent, fromWireStep, toWireContent, type WireStep } from '@/features/git/list-content'
 
 // Эти два пути записи («Применить правку» и ручной резолв конфликта) до Ф0a.2 не
 // покрывались тестами вообще: сборка канона сидела внутри серверного экшена и
@@ -80,5 +80,71 @@ describe('состав блоков доезжает целиком', () => {
     // «удалён + добавлен».
     expect(wire.steps[0].blockId).toBe('b-1')
     expect(wire.steps[1].type).toBe('text')
+  })
+})
+
+describe('fromWireStep — провод → домен (общий для снимка ветки и строгого разбора)', () => {
+  const wire = (over: Partial<WireStep> = {}): WireStep => ({
+    n: 1,
+    type: '',
+    contentJson: '',
+    blockId: '',
+    title: 'Install Redis',
+    desc: '',
+    command: '',
+    level: 'required',
+    why: '',
+    section: '',
+    subtasks: [],
+    refs: [],
+    ...over,
+  })
+
+  it('довески канона переживают провод: без них сохранение стёрло бы картинку и пометку', () => {
+    // Набор шагов при сохранении перезаписывается ЦЕЛИКОМ, поэтому поле, о котором
+    // путь не знает, исчезает молча — этот баг в проекте чинили дважды.
+    const s = fromWireStep(wire({ imageKey: 'u/1/shot.png', needsHuman: true, needsHumanAsk: 'глянь', danger: true }))
+    expect(s.imageKey).toBe('u/1/shot.png')
+    expect(s.needsHuman).toBe(true)
+    expect(s.needsHumanAsk).toBe('глянь')
+    expect(s.danger).toBe(true)
+  })
+
+  it('пустые пометки в домен не протекают: пусто на проводе = «нет»', () => {
+    const s = fromWireStep(wire())
+    expect(s.imageKey).toBeUndefined()
+    expect(s.needsHuman).toBeUndefined()
+    expect(s.needsHumanAsk).toBeUndefined()
+    expect(s.danger).toBe(false)
+  })
+
+  it('шаг остаётся шагом, блок несёт type и разобранный content', () => {
+    expect(fromWireStep(wire({ type: 'step' })).type).toBeUndefined()
+    const b = fromWireStep(wire({ type: 'text', contentJson: '{"md":"x"}' }))
+    expect(b.type).toBe('text')
+    expect(b.content).toEqual({ md: 'x' })
+  })
+
+  it('битый content от чужого клиента не роняет чтение', () => {
+    expect(fromWireStep(wire({ type: 'text', contentJson: 'не json' })).content).toEqual({})
+  })
+
+  it('ссылка без адреса не получает пустой url, идентичности нет → null', () => {
+    const s = fromWireStep(wire({ refs: [{ label: 'docs', url: '' }] }))
+    expect(s.refs).toEqual([{ label: 'docs' }])
+    expect(s.blockId).toBeNull()
+  })
+})
+
+describe('круг домен → провод → домен', () => {
+  it('содержимое возвращается тем же (кроме пометок, которые записью не едут)', () => {
+    const c = content({ steps: [block({ n: 1, blockId: 'b-1' }), block({ n: 2, type: 'text', content: { md: 'x' } })] })
+    const back = fromWireContent(toWireContent(c))
+    expect(back).toMatchObject({ title: c.title, desc: c.desc, tags: c.tags, ordered: true, version: 3 })
+    expect(back.steps.map((s) => [s.n, s.title, s.blockId])).toEqual([
+      [1, 'Install Redis', 'b-1'],
+      [2, 'Install Redis', null],
+    ])
+    expect(back.steps[1].content).toEqual({ md: 'x' })
   })
 })

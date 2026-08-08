@@ -5,7 +5,7 @@ import type { GitCore, GitRepoRef } from '@/core'
 import { BranchOpError } from '@/core'
 import { toTransportError } from './transport-error'
 import { GitCore as GitCoreService, type RepoRef } from '@/shared/gen/git_pb'
-import { toWireContent } from './list-content'
+import { fromWireContent, fromWireStep, toWireContent, type WireStep } from './list-content'
 
 // Единственная реализация GitCore: Connect-ES → Rust git-core по gRPC (h2c,
 // plaintext); адрес — SETFORK_CORE_ADDR. Ядро резолвит/лочит/проецирует репо
@@ -239,6 +239,29 @@ export const gitCoreRemote: GitCore = {
     }
   },
 
+  /** Ф4: канон текстом. Договор — в порту; здесь только вызов. */
+  async renderCanon(repo, content) {
+    const res = await client.renderCanon({ repo: toRepoRef(repo), content: toWireContent(content) })
+    return res.canon
+  },
+
+  /** Ф4: строгий разбор. Придирки — тело ответа, а не исключение: это разбор
+   *  пользовательского ввода. Исключением остаётся только сбой связи и отказ по
+   *  списку — то, что придиркой к тексту не является. */
+  async parseCanon(repo, canon) {
+    const res = await client.parseCanon({ repo: toRepoRef(repo), canon })
+    return {
+      issues: res.issues.map((i) => ({
+        path: i.path,
+        code: i.code,
+        message: i.message,
+        line: i.line,
+        column: i.column,
+      })),
+      content: res.content ? fromWireContent(res.content) : null,
+    }
+  },
+
   async listTags(repo) {
     const res = await client.listTags(toRepoRef(repo)).catch(() => null)
     return res ? res.tags.map((t) => ({ name: t.name, targetSha: t.targetSha })) : []
@@ -261,48 +284,23 @@ export const gitCoreRemote: GitCore = {
   },
 }
 
-// pb-снапшот → форма порта (общий маппинг branchSnapshot/mergeState).
+// pb-снапшот → форма порта (общий маппинг branchSnapshot/mergeState). Разбор шага
+// общий со строгим разбором канона — см. `fromWireStep`.
 function toSnapshot(res: {
   tipSha: string
   title: string
   desc: string
   tags: string[]
   ordered: boolean
-  steps: { n: number; type: string; contentJson: string; blockId: string; title: string; desc: string; command: string; level: string; why: string; section: string; subtasks: string[]; refs: { label: string; url: string }[]; danger?: boolean }[]
+  steps: WireStep[]
 }) {
-  const parseContent = (json: string): Record<string, unknown> => {
-    if (!json) return {}
-    try {
-      const o = JSON.parse(json)
-      return o && typeof o === 'object' ? (o as Record<string, unknown>) : {}
-    } catch {
-      return {}
-    }
-  }
   return {
     tipSha: res.tipSha,
     title: res.title,
     desc: res.desc,
     tags: res.tags,
     ordered: res.ordered,
-    steps: res.steps.map((s) => ({
-      n: s.n,
-      // Блочная модель: type/content_json из ядра (R2); '' = шаг (поля опускаем).
-      ...(s.type && s.type !== 'step' ? { type: s.type, content: parseContent(s.contentJson) } : {}),
-      // '' в proto = «идентичности нет» (данные старше ADR-0013).
-      blockId: s.blockId || null,
-      title: s.title,
-      desc: s.desc,
-      command: s.command,
-      level: s.level,
-      why: s.why,
-      section: s.section,
-      subtasks: s.subtasks,
-      refs: s.refs.map((r) => ({ label: r.label, ...(r.url ? { url: r.url } : {}) })),
-      // Пометка «разрушительный пункт» из канона ветки: смотрящий чужую правку
-      // обязан видеть её ДО слияния, а не узнать из собранного скрипта.
-      danger: s.danger === true,
-    })),
+    steps: res.steps.map(fromWireStep),
   }
 }
 

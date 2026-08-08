@@ -191,6 +191,12 @@ export interface ListBlock {
    *  берёт пометку из текущей версии по blockId — иначе клиент, который её не
    *  заполнил, снимал бы её с необратимой команды одной правкой в ветке. */
   danger?: boolean
+  /** Довески канона — приходят при СТРОГОМ разборе (Ф4), потому что сохранение
+   *  перезаписывает набор шагов целиком: содержимое без них стёрло бы картинку и
+   *  пометку. На записи в ветку игнорируются ровно как `danger`. */
+  imageKey?: string
+  needsHuman?: boolean
+  needsHumanAsk?: string
 }
 
 export interface BranchSnapshot {
@@ -309,6 +315,28 @@ export interface GitCore {
     content: ListContent,
     opts?: { message?: string; expectedTip?: string; author?: { name: string; email: string } },
   ): Promise<{ tipSha: string; changed: boolean }>
+  /** Ф4, чтение: канон `list.json` ТЕКСТОМ — ровно тот, что уехал бы в коммит.
+   *  Собирает ядро тем же кодом, что и запись: показать человеку один текст, а
+   *  закоммитить другой — худшее, что может сделать редактор кода. */
+  renderCanon(repo: GitRepoRef, content: ListContent): Promise<string>
+  /** Ф4, запись: строгий разбор отредактированного текста.
+   *
+   *  Придирки — обычный ответ, а не исключение: это разбор пользовательского
+   *  ввода, и редактору нужен ВЕСЬ список сразу, чтобы подсветить места. Пустой
+   *  список придирок означает, что `content` годен для сохранения версии. */
+  parseCanon(repo: GitRepoRef, canon: string): Promise<{ issues: CanonIssue[]; content: ListContent | null }>
+}
+
+/** Придирка строгого разбора канона. Текст выбирает ИНТЕРФЕЙС по `code`: язык
+ *  читателя знает он, а не ядро. `path` — JSON Pointer к узлу (`/steps/3/title`);
+ *  `line`/`column` заполнены только у синтаксической ошибки, где указателя на
+ *  поле не существует. */
+export interface CanonIssue {
+  path: string
+  code: string
+  message: string
+  line: number
+  column: number
 }
 
 export interface GitCommit {
