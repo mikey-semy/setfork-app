@@ -66,12 +66,17 @@ export function CanonPanel({
     [],
   )
 
-  // Текст берём у ядра ровно один раз при открытии: перезапрашивать его на каждую
-  // правку значило бы затирать набранное человеком.
+  // Состав читаем через ref: он меняется на каждое нажатие клавиши в блоках, а
+  // запрос идёт ОДИН раз — на открытие панели. Держать его в зависимостях эффекта
+  // значило бы перезапрашивать текст и затирать набранное человеком, а замыкать
+  // на первое значение — рисковать устаревшим составом.
+  const itemsRef = useRef(itemsJson)
+  itemsRef.current = itemsJson
+
   useEffect(() => {
     let alive = true
     void (async () => {
-      const res = await renderCanonAction(templateId, itemsJson)
+      const res = await renderCanonAction(templateId, itemsRef.current)
       if (!alive) return
       if ('canon' in res) setText(res.canon)
       else setError(res.error)
@@ -79,9 +84,6 @@ export function CanonPanel({
     return () => {
       alive = false
     }
-    // itemsJson намеренно вне зависимостей: он меняется на каждое нажатие клавиши
-    // в блоках, а текст запрашивается ОДИН раз — на момент открытия панели.
-    // Иначе каждый ответ ядра затирал бы то, что человек уже набрал руками.
   }, [templateId])
 
   async function apply() {
@@ -89,12 +91,17 @@ export function CanonPanel({
     setBusy(true)
     setIssues([])
     setError(null)
-    const res = await parseCanonAction(templateId, text)
-    if (!alive.current) return
-    setBusy(false)
-    if ('items' in res) onApply(res.items)
-    else if ('issues' in res) setIssues(res.issues)
-    else setError(res.error)
+    try {
+      const res = await parseCanonAction(templateId, text)
+      if (!alive.current) return
+      if ('items' in res) onApply(res.items)
+      else if ('issues' in res) setIssues(res.issues)
+      else setError(res.error)
+    } finally {
+      // Снимаем занятость и на отказе: иначе сбой связи оставлял бы кнопку
+      // вечно крутящейся, и повторить попытку было бы нечем.
+      if (alive.current) setBusy(false)
+    }
   }
 
   if (error) {
