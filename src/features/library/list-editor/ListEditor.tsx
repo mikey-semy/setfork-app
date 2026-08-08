@@ -8,7 +8,7 @@ import { BlockCard } from './BlockCard'
 import { BlockInserter } from './BlockInserter'
 import { CanonPanel } from './CanonPanel'
 import { EditorToolbar } from './EditorToolbar'
-import { commandFor } from './hotkeys'
+import { commandFor, isFieldTarget } from './hotkeys'
 import { KeyboardDock } from './KeyboardDock'
 import { BlockChatButton, BlockChatHost } from './BlockChat'
 import { useBlockDrag } from './use-block-drag'
@@ -72,7 +72,7 @@ export function ListEditor({
       mod: e.ctrlKey || e.metaKey,
       shift: e.shiftKey,
       alt: e.altKey,
-      inField: el.tagName === 'INPUT' || el.tagName === 'TEXTAREA',
+      inField: isFieldTarget(el),
     })
     if (!cmd) return
     if (cmd.kind === 'move') {

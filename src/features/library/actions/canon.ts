@@ -6,7 +6,7 @@ import { tr } from '@/shared/i18n'
 import { snapshotSteps } from '@/features/git/snapshot-steps'
 import type { ProposedItem } from '@/shared/db'
 import { parseEditorItems, toEditorItems, toProposedItems, type EditorItem } from '../editor'
-import { getStepPreviews } from '../queries'
+import { getStepPreviews } from '../queries/list'
 import { toListContent } from '../list-content'
 import { editableList, gitPort, ownerHandle } from './shared'
 
@@ -27,9 +27,9 @@ import { editableList, gitPort, ownerHandle } from './shared'
  *  правками. Показывать сохранённое, пока человек правит другое, значило бы
  *  показывать не тот текст, что он редактирует. */
 export async function renderCanonAction(templateId: string, itemsJson: string): Promise<{ canon: string } | { error: string }> {
-  const tpl = await editableList(templateId)
+  // Право и язык друг от друга не зависят — ждём их разом.
+  const [tpl, lang] = await Promise.all([editableList(templateId), getLang()])
   if (!tpl) return { error: 'forbidden' }
-  const lang = await getLang()
   const proposed: ProposedItem[] = toProposedItems(parseEditorItems(itemsJson), lang)
   const content = toListContent(
     proposed,
@@ -43,8 +43,8 @@ export async function renderCanonAction(templateId: string, itemsJson: string): 
     },
     lang,
   )
-  const { gitCore } = await gitPort()
-  const owner = await ownerHandle(tpl.ownerId)
+  // Порт и ник владельца друг от друга не зависят — ждём их разом.
+  const [{ gitCore }, owner] = await Promise.all([gitPort(), ownerHandle(tpl.ownerId)])
   try {
     return { canon: await gitCore.renderCanon({ owner, slug: tpl.slug }, content) }
   } catch {
@@ -65,9 +65,7 @@ export async function parseCanonAction(
 > {
   const tpl = await editableList(templateId)
   if (!tpl) return { error: 'forbidden' }
-  const lang = await getLang()
-  const { gitCore } = await gitPort()
-  const owner = await ownerHandle(tpl.ownerId)
+  const [lang, { gitCore }, owner] = await Promise.all([getLang(), gitPort(), ownerHandle(tpl.ownerId)])
   let res
   try {
     res = await gitCore.parseCanon({ owner, slug: tpl.slug }, canon)

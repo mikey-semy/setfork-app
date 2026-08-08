@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/button'
@@ -55,6 +55,16 @@ export function CanonPanel({
   const [issues, setIssues] = useState<CanonIssue[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Панель ещё на экране. Ответ ядра, пришедший ПОСЛЕ закрытия, применять нельзя:
+  // человек уже вернулся к блокам и, возможно, правит их — запоздалый разбор
+  // затёр бы свежую работу (находка авто-ревью #719).
+  const alive = useRef(true)
+  useEffect(
+    () => () => {
+      alive.current = false
+    },
+    [],
+  )
 
   // Текст берём у ядра ровно один раз при открытии: перезапрашивать его на каждую
   // правку значило бы затирать набранное человеком.
@@ -80,6 +90,7 @@ export function CanonPanel({
     setIssues([])
     setError(null)
     const res = await parseCanonAction(templateId, text)
+    if (!alive.current) return
     setBusy(false)
     if ('items' in res) onApply(res.items)
     else if ('issues' in res) setIssues(res.issues)

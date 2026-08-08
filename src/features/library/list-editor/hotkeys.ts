@@ -18,6 +18,18 @@ export type KeyIntent = {
   inField: boolean
 }
 
+/**
+ * Стоит ли курсор в поле, у которого СВОЯ отмена.
+ *
+ * Не только `input`/`textarea`: редактор кода (CodeMirror в режиме «правка как
+ * кода») редактирует обычный `div` с `contenteditable`, и по тегу такое поле не
+ * узнать. Пока правило смотрело на тег, Ctrl+Z внутри текста канона откатывал
+ * СТРУКТУРУ БЛОКОВ вместо набранного — находка авто-ревью #719.
+ */
+export function isFieldTarget(el: { tagName?: string; isContentEditable?: boolean }): boolean {
+  return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable === true
+}
+
 /** Команда редактора по нажатию; null — нажатие нас не касается. */
 export function commandFor({ key, mod, shift, alt, inField }: KeyIntent): EditorCommand | null {
   const k = key.toLowerCase()
