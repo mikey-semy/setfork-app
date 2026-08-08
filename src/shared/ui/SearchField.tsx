@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { Search, X } from 'lucide-react'
-import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_TEXT_MOBILE, ICON_SIZE } from './control'
+import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_TEXT_MOBILE, ICON_SIZE, TOUCH_MIN_H } from './control'
 
 type Size = 'lg' | 'md' | 'sm' | 'xs'
 
@@ -77,7 +77,9 @@ export function SearchField({
   const box =
     variant === 'bare'
       ? 'flex items-center gap-2'
-      : `flex items-center gap-2 rounded-md border border-border bg-surface-2 ${s.box} focus-within:border-border-strong`
+      : // Тач-минимум здесь ЯВНО: рамка собирается из SIZES, а не из FIELD_BOX, и
+        // правило полей поле поиска обходило стороной (находка авто-ревью #717).
+        `flex items-center gap-2 rounded-md border border-border bg-surface-2 ${s.box} ${TOUCH_MIN_H} focus-within:border-border-strong`
 
   function clear() {
     onValueChange('')

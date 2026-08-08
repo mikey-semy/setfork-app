@@ -137,7 +137,12 @@ export const TOUCH_MIN_H = 'pointer-coarse:min-h-11'
 /** Цель, чей ВИД менять нельзя: переключатель — пилюля заданного размера, вырасти
  *  вдвое он не может. Область нажатия растягивает псевдоэлемент — ровно приём
  *  Apple HIG и Material («hit region больше визуального размера»), а не масштаб.
- *  Родителю нужен `relative`; между соседями по ряду зазор ≥ 8px, иначе зоны
- *  наложатся и палец попадёт в чужой контрол. */
+ *
+ *  Вместе с зоной резервируется и МЕСТО под неё — вертикальный отступ до 44px в
+ *  потоке. Без резерва зона висит поверх соседей: в рядах настроек центры
+ *  переключателей стоят в 38px друг от друга (замер 08.08.2026 на /settings), и
+ *  зоны по 44px накладываются — палец у края попадает в ЧУЖУЮ настройку. Это хуже
+ *  мелкой цели: не промах, а тихое переключение не того. Material требует того же
+ *  — цель 48dp И зазор не меньше 8dp между соседними целями. */
 export const TOUCH_HIT =
-  "pointer-coarse:relative pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:top-1/2 pointer-coarse:before:h-11 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']"
+  "pointer-coarse:relative pointer-coarse:my-[0.6875rem] pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:top-1/2 pointer-coarse:before:h-11 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']"
