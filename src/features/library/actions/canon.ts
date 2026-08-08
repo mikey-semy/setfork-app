@@ -6,6 +6,7 @@ import { tr } from '@/shared/i18n'
 import { snapshotSteps } from '@/features/git/snapshot-steps'
 import type { ProposedItem } from '@/shared/db'
 import { parseEditorItems, toEditorItems, toProposedItems, type EditorItem } from '../editor'
+import { getStepPreviews } from '../queries'
 import { toListContent } from '../list-content'
 import { editableList, gitPort, ownerHandle } from './shared'
 
@@ -77,5 +78,9 @@ export async function parseCanonAction(
   // Строки канона → блоки редактора. Обе половины пути уже существуют и общие с
   // просмотром ветки: третьего конвертера шагов заводить нельзя.
   const rows = snapshotSteps({ ...res.content, tipSha: '' }) as unknown as ProposedItem[]
-  return { items: toEditorItems(rows, lang) }
+  // Превью картинок обязательны: канон несёт КЛЮЧ, а без подписанной ссылки блок
+  // покажет пустой слот — и человек решит, что применение текста стёрло скриншот
+  // (та же ловушка, что уже ловили на черновиках правок).
+  const previews = await getStepPreviews(rows.map((r) => ({ imageKey: r.imageKey ?? null })))
+  return { items: toEditorItems(rows, lang, previews) }
 }
