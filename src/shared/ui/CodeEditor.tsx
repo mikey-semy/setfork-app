@@ -7,6 +7,9 @@ export type CodeEditorProps = {
   onChange: (v: string) => void
   placeholder?: string
   ariaLabel?: string
+  /** Предел высоты окна с прокруткой внутри. По умолчанию поле команды шага —
+   *  оно короткое; целому файлу (правка списка как кода) нужно больше места. */
+  maxHeightClass?: string
 }
 
 // CodeMirror грузим ЛЕНИВО (ssr:false) — тяжёлые пакеты не идут в основной бандл и

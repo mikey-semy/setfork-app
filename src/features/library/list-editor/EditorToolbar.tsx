@@ -1,13 +1,13 @@
 'use client'
 
-import { Eye, Pencil, Redo2, Undo2 } from 'lucide-react'
+import { Code2, Eye, Pencil, Redo2, Undo2 } from 'lucide-react'
 import { iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
 
 /**
- * Верхний ряд редактора: отмена, повтор, предпросмотр.
+ * Верхний ряд редактора: отмена, повтор, предпросмотр, правка как кода.
  *
  * Только иконки: три подписи занимали треть ширины телефона ради действий, которые
  * узнаются по значку (решение владельца 07.08). Смысл каждой — в тултипе и в
@@ -20,6 +20,8 @@ export function EditorToolbar({
   onRedo,
   preview,
   onTogglePreview,
+  code,
+  onToggleCode,
   lang,
 }: {
   canUndo: boolean
@@ -28,6 +30,10 @@ export function EditorToolbar({
   onRedo: () => void
   preview: boolean
   onTogglePreview: () => void
+  /** Режим «код»; кнопки нет вовсе, пока список не сохранён — канон собирает ядро
+   *  по существующему списку, а у несозданного его ещё нет. */
+  code?: boolean
+  onToggleCode?: () => void
   lang: Lang
 }) {
   return (
@@ -53,6 +59,19 @@ export function EditorToolbar({
           {preview ? <Pencil size={iconSizeFor()} /> : <Eye size={iconSizeFor()} />}
         </IconButton>
       </Tooltip>
+      {onToggleCode && (
+        <Tooltip label={t(code ? 'canon.backToBlocksTip' : 'canon.openTip', lang)}>
+          <IconButton
+            variant="ghost"
+            onClick={onToggleCode}
+            aria-pressed={code}
+            label={t(code ? 'canon.backToBlocks' : 'canon.open', lang)}
+            className={code ? 'text-accent' : ''}
+          >
+            <Code2 size={iconSizeFor()} />
+          </IconButton>
+        </Tooltip>
+      )}
       {/* Подсказка — только на широком экране: половина её про Alt+↑/↓, а клавиатуры
           на телефоне нет. Сам перенос работает и пальцем. */}
       <span className="ml-1 hidden sm:inline">{t('editor.dragHint', lang)}</span>
