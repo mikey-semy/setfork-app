@@ -62,8 +62,12 @@ export function BlockCardHeader({
 
           Порог именно xl: на 1024 поле страницы всего 32px, и вынесенный жёлоб уходит
           ПОД боковое меню (240px) — замер 08.08.2026 показал, что нажатие достаётся
-          меню, а не кнопке. С 1280 запас 160px даже при открытом меню. */}
-      <div className="flex items-center gap-1 xl:absolute xl:top-3.5 xl:-left-19 xl:opacity-0 xl:transition-opacity xl:group-focus-within/card:opacity-100 xl:group-hover/card:opacity-100">
+          меню, а не кнопке. С 1280 запас 160px даже при открытом меню.
+
+          Прячем только там, где ЕСТЬ наведение. Планшет в альбомной ориентации шире
+          1280 и наведения не имеет: спрятанный до hover жёлоб там исчез бы навсегда,
+          оставив прозрачные кнопки ловить касания — палец попадал бы во «вставить». */}
+      <div className="flex items-center gap-1 xl:absolute xl:top-3.5 xl:-left-19 xl:transition-opacity xl:group-focus-within/card:opacity-100 xl:group-hover/card:opacity-100 xl:[@media(hover:hover)]:opacity-0">
         {/* «Плюс» вставляет блок ТОГО ЖЕ вида одним нажатием — подряд идут шаги, и это
             самый частый выбор. Другой вид даёт веер между карточками и «/» в тексте:
             третьего способа выбирать тип заводить незачем. */}
