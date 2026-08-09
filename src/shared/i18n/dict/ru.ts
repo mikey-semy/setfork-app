@@ -885,6 +885,8 @@ export const ru: Record<DictKey, string> = {
   productTierNone: 'Без яруса',
   productNamePh: 'Название товара',
   productNotePh: 'Зачем это в наборе (необязательно)',
+  productDialogTitle: 'Товар',
+  productEdit: 'Изменить товар',
   productAdd: 'Добавить товар',
   productRemove: 'Удалить товар',
   productCaptionPh: 'Заголовок подборки (необязательно)',

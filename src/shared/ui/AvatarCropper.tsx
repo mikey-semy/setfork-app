@@ -122,7 +122,23 @@ export function AvatarCropper({
   }
 
   return (
-    <OverlayPanel open={open} onClose={onCancel} width={320} title={labels.title}>
+    <OverlayPanel
+      open={open}
+      onClose={onCancel}
+      width={320}
+      title={labels.title}
+      closeLabel={labels.cancel}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel}>
+            {labels.cancel}
+          </Button>
+          <Button variant="primary" onClick={apply}>
+            {labels.apply}
+          </Button>
+        </>
+      }
+    >
       <div className="flex flex-col gap-4">
         <div
           className="relative mx-auto touch-none overflow-hidden rounded-lg bg-surface-2 select-none"
@@ -161,15 +177,6 @@ export function AvatarCropper({
         </label>
 
         {err && <p className="text-[0.78125rem] text-danger">{err}</p>}
-
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" onClick={onCancel} className="rounded-md px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink">
-            {labels.cancel}
-          </button>
-          <Button variant="primary" size="md" onClick={apply}>
-            {labels.apply}
-          </Button>
-        </div>
       </div>
     </OverlayPanel>
   )

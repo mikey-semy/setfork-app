@@ -67,7 +67,22 @@ export function LinkDialog({
   }
 
   return (
-    <OverlayPanel open={open} onClose={onClose} title={t('editor.linkDialogTitle', lang)} width={380}>
+    <OverlayPanel
+      open={open}
+      onClose={onClose}
+      title={t('editor.linkDialogTitle', lang)}
+      width={380}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {t('cancel', lang)}
+          </Button>
+          <Button variant="primary" onClick={save} disabled={!url.trim()}>
+            {initial ? t('saveChanges', lang) : t('editor.linkAdd', lang)}
+          </Button>
+        </>
+      }
+    >
       <div className="flex flex-col gap-3">
         {/* Метки живут В ПОЛЯХ и поднимаются при вводе: подписи над полями занимали
             в этом окне половину высоты (замечание владельца 09.08.2026). */}
@@ -100,15 +115,6 @@ export function LinkDialog({
             }
           }}
         />
-
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>
-            {t('cancel', lang)}
-          </Button>
-          <Button variant="primary" onClick={save} disabled={!url.trim()}>
-            {initial ? t('saveChanges', lang) : t('editor.linkAdd', lang)}
-          </Button>
-        </div>
       </div>
     </OverlayPanel>
   )

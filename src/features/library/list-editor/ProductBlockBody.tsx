@@ -1,20 +1,23 @@
 'use client'
 
-import { Trash2 } from 'lucide-react'
-import { TEXT, iconSizeFor } from '@/shared/ui/control'
-import { IconButton } from '@/shared/ui/IconButton'
+import { Package } from 'lucide-react'
+import { ChipList } from '@/shared/ui/ChipList'
+import { iconSizeFor } from '@/shared/ui/control'
 import { Input } from '@/shared/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { t, type Lang, type TKey } from '@/shared/i18n'
-import { PRODUCT_TIERS, type ProductTier } from '../blocks'
+import { t, type Lang } from '@/shared/i18n'
 import type { EditorProduct } from '../editor'
 import { AddLink } from './block-fields'
+import { linkHost } from './LinkChips'
+import { ProductDialog } from './ProductDialog'
 
-/** Ярус товара → ключ подписи; «без яруса» задаётся отдельным значением списка. */
-const TIER_LABEL: Record<ProductTier, TKey> = { budget: 'productTierBudget', mid: 'productTierMid', premium: 'productTierPremium' }
-const NO_TIER = '__none__'
-
-/** Product-блок: заголовок подборки и строки товаров (имя, ссылка, ярус, пометка). */
+/**
+ * Product-блок: заголовок подборки и товары — чипами, правка в окне.
+ *
+ * Товары устроены ровно как ссылки: тот же каркас `ChipList`, та же кнопка
+ * добавления `AddLink`, то же окно на `OverlayPanel`. Второй копии логики здесь
+ * нет — это и требовал владелец («унифицировать каждый элемент во всех
+ * редакторах», 09.08.2026).
+ */
 export function ProductBlockBody({
   products,
   caption,
@@ -28,53 +31,27 @@ export function ProductBlockBody({
   onCaption: (c: string) => void
   lang: Lang
 }) {
-  const patchRow = (i: number, p: Partial<EditorProduct>) => onProducts(products.map((x, xi) => (xi === i ? { ...x, ...p } : x)))
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-2 p-3">
       <Input aria-label={t('productCaptionPh', lang)} placeholder={t('productCaptionPh', lang)} value={caption} onChange={(e) => onCaption(e.target.value)} />
-      {products.map((p, pi) => (
-        <div key={pi} className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2 sm:flex-row sm:items-center">
-          <Input
-            className="sm:max-w-[11.25rem]"
-            aria-label={t('productNamePh', lang)}
-            placeholder={t('productNamePh', lang)}
-            value={p.name}
-            onChange={(e) => patchRow(pi, { name: e.target.value })}
-          />
-          <Input className="font-mono" aria-label="URL" placeholder="https://…" value={p.url} onChange={(e) => patchRow(pi, { url: e.target.value })} />
-          <Select value={p.tier || NO_TIER} onValueChange={(v) => patchRow(pi, { tier: (v === NO_TIER ? '' : v) as EditorProduct['tier'] })}>
-            <SelectTrigger className="sm:max-w-[8.125rem]" aria-label={t('productTierNone', lang)}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_TIER}>{t('productTierNone', lang)}</SelectItem>
-              {PRODUCT_TIERS.map((tier) => (
-                <SelectItem key={tier} value={tier}>
-                  {t(TIER_LABEL[tier], lang)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            aria-label={t('productNotePh', lang)}
-            placeholder={t('productNotePh', lang)}
-            value={p.note}
-            onChange={(e) => patchRow(pi, { note: e.target.value })}
-          />
-          <IconButton
-            size="sm"
-            variant="danger"
-            onClick={() => onProducts(products.filter((_, xi) => xi !== pi))}
-            label={t('productRemove', lang)}
-            className="self-end sm:self-auto"
-          >
-            <Trash2 size={iconSizeFor('sm')} />
-          </IconButton>
-        </div>
-      ))}
-      <div className={`${TEXT.bodySm}`}>
-        <AddLink onClick={() => onProducts([...products, { name: '', url: '', tier: '', note: '' }])}>{t('productAdd', lang)}</AddLink>
-      </div>
+      <ChipList
+        items={products}
+        onChange={onProducts}
+        removeLabel={t('productRemove', lang)}
+        editLabel={t('productEdit', lang)}
+        chipTitle={(p) => [p.name, p.url].filter(Boolean).join(' — ') || t('productNamePh', lang)}
+        chip={(p) => (
+          <>
+            <Package size={iconSizeFor('xs')} className="shrink-0 text-muted" />
+            <span className="max-w-[10rem] truncate">{p.name || linkHost(p.url)}</span>
+            {p.name && p.url ? <span className="max-w-[8rem] truncate font-mono text-muted">{linkHost(p.url)}</span> : null}
+          </>
+        )}
+        addButton={(open) => <AddLink onClick={open}>{t('productAdd', lang)}</AddLink>}
+        dialog={({ open, item, save, close }) => (
+          <ProductDialog open={open} initial={item} onSave={save} onClose={close} lang={lang} />
+        )}
+      />
     </div>
   )
 }

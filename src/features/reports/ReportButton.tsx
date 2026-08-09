@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useId, useState } from 'react'
 import { Flag } from 'lucide-react'
 import { t, type Lang } from '@/shared/i18n'
 import { legalUrl } from '@/shared/docs'
@@ -20,6 +20,7 @@ const REASONS = [
 ] as const
 
 export function ReportButton({ templateId, lang }: { templateId: string; lang: Lang }) {
+  const formId = useId()
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState<ReportReason | ''>('')
   const [state, action, pending] = useActionState<ReportResult, FormData>(submitReport, null)
@@ -34,14 +35,29 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
         <Flag size={14} /> {t('reportList', lang)}
       </button>
 
-      <OverlayPanel open={open} onClose={() => setOpen(false)} title={t('reportTitle', lang)} width={440}>
+      <OverlayPanel
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t('reportTitle', lang)}
+        width={440}
+        closeLabel={t('close', lang)}
+        // Кнопка отправки — в общей нижней полосе окна; форма связана с ней
+        // атрибутом `form`, поэтому переносить её наружу не нужно.
+        footer={
+          state?.ok ? undefined : (
+            <Button type="submit" form={formId} variant="primary" disabled={pending}>
+              {t('rpSend', lang)}
+            </Button>
+          )
+        }
+      >
         {state?.ok ? (
           <div className="text-center">
             <div className="mb-1 text-[1rem] font-bold text-ink">{t('rpThanks', lang)}</div>
             <p className="text-[0.8125rem] text-ink-2">{t('rpThanksBody', lang)}</p>
           </div>
         ) : (
-          <form action={action} className="flex flex-col gap-3 p-4">
+          <form id={formId} action={action} className="flex flex-col gap-3">
             <p className="text-[0.78125rem] text-ink-2">{t('rpIntro', lang)}</p>
 
             <div className="flex flex-col gap-1.5">
@@ -101,9 +117,6 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
             <input type="hidden" name="templateId" value={templateId} />
 
             {state?.error && <div className="text-[0.78125rem] text-danger">{state.error}</div>}
-            <Button type="submit" variant="primary" disabled={pending} className="px-4 py-2 text-[0.8125rem] disabled:opacity-60">
-              {t('rpSend', lang)}
-            </Button>
           </form>
         )}
       </OverlayPanel>

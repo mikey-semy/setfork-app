@@ -889,6 +889,8 @@ export const en = {
   productTierNone: 'No tier',
   productNamePh: 'Product name',
   productNotePh: 'Why it’s in the kit (optional)',
+  productDialogTitle: 'Product',
+  productEdit: 'Edit product',
   productAdd: 'Add product',
   productRemove: 'Remove product',
   productCaptionPh: 'Collection title (optional)',

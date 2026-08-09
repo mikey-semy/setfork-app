@@ -24,6 +24,7 @@ export function ChipList<T>({
   chip,
   chipTitle,
   removeLabel,
+  editLabel,
   addButton,
   dialog,
 }: {
@@ -34,6 +35,8 @@ export function ChipList<T>({
   /** Подсказка на чипе (полный адрес, полное название). */
   chipTitle?: (item: T) => string
   removeLabel: string
+  /** Что делает нажатие на чип — для читалок с экрана («Изменить ссылку»). */
+  editLabel: string
   /** Кнопка «добавить»: своя подпись у каждого списка («ссылку», «товар»). */
   addButton: (open: () => void) => ReactNode
   /** Окно правки; index < 0 — добавление новой строки. */
@@ -52,7 +55,12 @@ export function ChipList<T>({
       {items.map((item, i) => (
         <Badge key={i} variant="soft" className="gap-1 bg-surface-2 pr-1 font-medium text-ink-2">
           <Tooltip label={chipTitle?.(item) ?? ''}>
-            <button type="button" onClick={() => setEditing(i)} className={`flex min-w-0 items-center gap-1.5 hover:text-ink ${TOUCH_MIN_H}`}>
+            <button
+              type="button"
+              onClick={() => setEditing(i)}
+              aria-label={`${chipTitle?.(item) ?? ''} — ${editLabel}`}
+              className={`flex min-w-0 items-center gap-1.5 hover:text-ink ${TOUCH_MIN_H}`}
+            >
               {chip(item)}
             </button>
           </Tooltip>
