@@ -6,19 +6,8 @@ import { iconSizeFor } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import type { EditorRef } from '../editor'
 import { AddLink } from './block-fields'
+import { linkHost } from './link-url'
 import { LinkDialog } from './LinkDialog'
-
-/** Домен вместо полного адреса: смотреть на «https://…» незачем, а места он
- *  занимает много. Полный адрес живёт в подсказке. */
-export function linkHost(raw: string): string {
-  const s = raw.trim()
-  if (!s) return ''
-  try {
-    return new URL(s.includes('://') ? s : `https://${s}`).host
-  } catch {
-    return s
-  }
-}
 
 /**
  * Ссылки шага — чипами, ввод и правка в отдельном окне (LinkDialog).
@@ -44,6 +33,7 @@ export function LinkChips({
       items={refs}
       onChange={onChange}
       removeLabel={t('editor.removeLink', lang)}
+      itemKey={(r) => `${r.label}|${r.url}`}
       editLabel={t('editor.linkEdit', lang)}
       chipTitle={(r) => r.label || linkHost(r.url) || t('editor.linkUrl', lang)}
       chip={(r) => (

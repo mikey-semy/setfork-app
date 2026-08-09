@@ -7,7 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { t, type Lang } from '@/shared/i18n'
 import type { EditorProduct } from '../editor'
 import { AddLink } from './block-fields'
-import { linkHost } from './LinkChips'
+import { linkHost } from './link-url'
 import { ProductDialog } from './ProductDialog'
 
 /**
@@ -38,6 +38,7 @@ export function ProductBlockBody({
         items={products}
         onChange={onProducts}
         removeLabel={t('productRemove', lang)}
+        itemKey={(p) => `${p.name}|${p.url}`}
         editLabel={t('productEdit', lang)}
         chipTitle={(p) => [p.name, p.url].filter(Boolean).join(' — ') || t('productNamePh', lang)}
         chip={(p) => (

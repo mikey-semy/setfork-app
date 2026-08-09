@@ -1,19 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/shared/ui/button'
 import { FloatingInput } from '@/shared/ui/FloatingInput'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { PRODUCT_TIERS, type ProductTier } from '../blocks'
-import type { EditorProduct } from '../editor'
+import { EMPTY_PRODUCT, type EditorProduct } from '../editor'
 
 /** Ярус товара → ключ подписи; «без яруса» задаётся отдельным значением списка. */
 const TIER_LABEL: Record<ProductTier, TKey> = { budget: 'productTierBudget', mid: 'productTierMid', premium: 'productTierPremium' }
 const NO_TIER = '__none__'
-
-export const EMPTY_PRODUCT: EditorProduct = { name: '', url: '', tier: '', note: '' }
 
 /**
  * Товар правится В ОКНЕ — так же, как ссылка (требование владельца 09.08.2026:
@@ -37,13 +35,9 @@ export function ProductDialog({
   onClose: () => void
   lang: Lang
 }) {
+  // Значение берётся при монтировании: окно пересоздаётся на каждую строку
+  // (ChipList даёт ему ключ), поэтому сбрасывать поля вручную не нужно.
   const [draft, setDraft] = useState<EditorProduct>(initial ?? EMPTY_PRODUCT)
-
-  // Окно переиспользуется для разных товаров: при открытии подставляем тот, что
-  // правят сейчас, иначе в форме остались бы поля от прошлого.
-  useEffect(() => {
-    if (open) setDraft(initial ?? EMPTY_PRODUCT)
-  }, [open, initial])
 
   const patch = (p: Partial<EditorProduct>) => setDraft((d) => ({ ...d, ...p }))
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { Badge } from './badge'
 import { TOUCH_MIN_H } from './control'
@@ -23,6 +23,7 @@ export function ChipList<T>({
   onChange,
   chip,
   chipTitle,
+  itemKey,
   removeLabel,
   editLabel,
   addButton,
@@ -34,6 +35,9 @@ export function ChipList<T>({
   chip: (item: T) => ReactNode
   /** Подсказка на чипе (полный адрес, полное название). */
   chipTitle?: (item: T) => string
+  /** Ключ строки из её СОДЕРЖИМОГО: по номеру в массиве React путает строки при
+   *  удалении из середины. */
+  itemKey: (item: T) => string
   removeLabel: string
   /** Что делает нажатие на чип — для читалок с экрана («Изменить ссылку»). */
   editLabel: string
@@ -53,7 +57,7 @@ export function ChipList<T>({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {items.map((item, i) => (
-        <Badge key={i} variant="soft" className="gap-1 bg-surface-2 pr-1 font-medium text-ink-2">
+        <Badge key={itemKey(item)} variant="soft" className="gap-1 bg-surface-2 pr-1 font-medium text-ink-2">
           <Tooltip label={chipTitle?.(item) ?? ''}>
             <button
               type="button"
@@ -76,13 +80,18 @@ export function ChipList<T>({
         </Badge>
       ))}
       {addButton(() => setEditing(-1))}
-      {dialog({
-        open: editing !== null,
-        index: editing ?? -1,
-        item: editing !== null && editing >= 0 ? items[editing] : undefined,
-        save,
-        close: () => setEditing(null),
-      })}
+      {/* Окно пересоздаётся при смене строки — поля в нём берут значение из
+          пропа при монтировании, а не сбрасываются вручную в эффекте: при ручном
+          сбросе кадр показывал бы чужие данные. */}
+      <Fragment key={editing ?? 'closed'}>
+        {dialog({
+          open: editing !== null,
+          index: editing ?? -1,
+          item: editing !== null && editing >= 0 ? items[editing] : undefined,
+          save,
+          close: () => setEditing(null),
+        })}
+      </Fragment>
     </div>
   )
 }

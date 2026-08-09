@@ -15,6 +15,8 @@ const asLevel = (v: unknown): StepLevel => (LEVELS.includes(v as StepLevel) ? (v
 export type EditorRef = { label: string; url: string }
 // Товар product-блока; tier '' = без яруса.
 export type EditorProduct = { name: string; url: string; tier: '' | ProductTier; note: string }
+/** Пустой товар — рядом с типом, а не в компоненте окна: заводит его и блок, и окно. */
+export const EMPTY_PRODUCT: EditorProduct = { name: '', url: '', tier: '', note: '' }
 export type EditorOption = { id: string; text: string }
 export type EditorPoll = { question: string; options: EditorOption[]; multi: boolean; deadline: string }
 export type EditorQuizOption = { id: string; text: string; correct: boolean }

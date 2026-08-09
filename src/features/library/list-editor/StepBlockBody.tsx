@@ -154,6 +154,25 @@ export function StepBlockBody({
         </div>
       )}
 
+      {/* Скриншот шага: пока его нет — область загрузки, потом сам снимок со
+          снятием в правом верхнем углу картинки. */}
+      {item.imagePreview ? (
+        <div className="relative w-fit">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.imagePreview} alt="" className="max-h-[10rem] rounded-md border border-border" />
+          <IconButton
+            size="sm"
+            onClick={() => onPatch({ imageKey: '', imagePreview: '' })}
+            label={t('editor.remove', lang)}
+            className="absolute top-1.5 right-1.5 border-0 bg-black/60 text-white hover:bg-black/80 hover:text-white"
+          >
+            <X size={iconSizeFor('sm')} />
+          </IconButton>
+        </div>
+      ) : (
+        <FileDrop kind="image" uploading={uploading} onFile={onFile} lang={lang} />
+      )}
+
       {/* Ссылки — чипами, ввод и правка в отдельном окне (решение владельца
           09.08.2026, как в Telegram и текстовых редакторах): адрес нужен один раз,
           а место в карточке занимал всегда. Кнопка добавления стоит В ОДНОМ РЯДУ с

@@ -63,12 +63,15 @@ export function OverlayPanel({
       <div
         onClick={(e) => e.stopPropagation()}
         style={width ? { width } : undefined}
-        className={`sf-pop-in max-w-full rounded-lg border border-border bg-surface shadow-card ${className}`}
+        // Окно никогда не вырастает выше экрана: высоту ограничивает подложка
+        // (max-h-full — это её content-box, уже без полей и верхнего отступа),
+        // длинное содержимое прокручивается в теле, а шапка и футер стоят на месте.
+        className={`sf-pop-in flex max-h-full max-w-full flex-col rounded-lg border border-border bg-surface shadow-card ${className}`}
       >
         {title !== undefined && <PanelHead title={title} onClose={onClose} closeLabel={closeLabel} />}
         {/* Тело всегда с полями панели: раньше отступ задавал КАЖДЫЙ вызывающий,
             и одни окна имели поля, другие упирались в края. */}
-        <div className={bare ? undefined : PANEL_PAD}>{children}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto ${bare ? '' : PANEL_PAD}`}>{children}</div>
         {/* Футер действий: линия во всю ширину панели, как и у шапки, а кнопки —
             с теми же полями, что тело. Раньше каждое окно рисовало ряд кнопок
             по-своему: где-то без линии, где-то с другими отступами. */}

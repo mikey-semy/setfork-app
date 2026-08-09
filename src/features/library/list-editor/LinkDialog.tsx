@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { iconSizeFor } from '@/shared/ui/control'
@@ -36,18 +36,11 @@ export function LinkDialog({
   onClose: () => void
   lang: Lang
 }) {
+  // Значение берётся при монтировании: окно пересоздаётся на каждую ссылку
+  // (ChipList даёт ему ключ), поэтому сбрасывать поля вручную не нужно.
   const [label, setLabel] = useState(initial?.label ?? '')
   const [url, setUrl] = useState(initial?.url ?? '')
   const [busy, setBusy] = useState(false)
-
-  // Окно переиспользуется для разных ссылок: при открытии подставляем то, что
-  // правят сейчас, иначе в форме остались бы поля от прошлой.
-  useEffect(() => {
-    if (open) {
-      setLabel(initial?.label ?? '')
-      setUrl(initial?.url ?? '')
-    }
-  }, [open, initial?.label, initial?.url])
 
   const urlOk = /^https?:\/\/\S+/i.test(url.trim())
 
