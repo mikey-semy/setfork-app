@@ -3,7 +3,7 @@
 import type { PointerEvent, ReactNode } from 'react'
 import { Heading } from 'lucide-react'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
-import { iconSizeFor } from '@/shared/ui/control'
+import { TEXT, iconSizeFor } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import type { BlockType } from '../blocks'
 import type { EditorItem } from '../editor'
@@ -146,7 +146,7 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
           singleLine
           bare
           className="flex-1"
-          textareaClassName="text-[0.78125rem] font-semibold placeholder:font-normal placeholder:text-muted"
+          textareaClassName={`${TEXT.bodySm} font-semibold placeholder:font-normal placeholder:text-muted`}
           lang={lang}
           ariaLabel={t('editor.sectionOfBlockN', lang).replace('{n}', String(index + 1))}
           placeholder={t('editor.sectionPh', lang)}

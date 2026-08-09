@@ -71,7 +71,9 @@ export function StarFolderMenu({
           <ChevronDown size={13} />
         </button>
       </Tooltip>
-      <OverlayPanel open={open} onClose={() => setOpen(false)} width={280} className="p-0">
+      {/* bare: поля внутри задаёт сама выбиралка, иначе её шапка и футер отошли бы
+          от краёв окна — линии обязаны идти от края до края. */}
+      <OverlayPanel open={open} onClose={() => setOpen(false)} width={280} bare className="overflow-hidden">
         {/* Та же оболочка, что у выбора списка и ветки: заголовок, поиск, строки. */}
         <PickerPanel
           title={t('switchFolder', lang as Lang)}

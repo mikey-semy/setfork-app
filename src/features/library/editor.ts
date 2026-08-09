@@ -15,6 +15,8 @@ const asLevel = (v: unknown): StepLevel => (LEVELS.includes(v as StepLevel) ? (v
 export type EditorRef = { label: string; url: string }
 // Товар product-блока; tier '' = без яруса.
 export type EditorProduct = { name: string; url: string; tier: '' | ProductTier; note: string }
+/** Пустой товар — рядом с типом, а не в компоненте окна: заводит его и блок, и окно. */
+export const EMPTY_PRODUCT: EditorProduct = { name: '', url: '', tier: '', note: '' }
 export type EditorOption = { id: string; text: string }
 export type EditorPoll = { question: string; options: EditorOption[]; multi: boolean; deadline: string }
 export type EditorQuizOption = { id: string; text: string; correct: boolean }
@@ -87,12 +89,13 @@ export function emptyItem(): EditorItem {
 
 /** Пустой блок заданного типа (для инсертера). Стабильный bid получает ЛЮБОЙ
  *  блок, включая шаг: по нему дифф понимает «это тот же пункт, его переименовали»,
- *  а не «удалили и добавили». poll/quiz заводятся с двумя пустыми вариантами. */
+ *  а не «удалили и добавили». poll/quiz заводятся с двумя пустыми вариантами;
+ *  товары — пустым списком: они показаны чипами, и пустой чип читался бы как
+ *  «товар без названия», а не как приглашение ввести первый. */
 export function emptyBlock(type: BlockType): EditorItem {
   const base = { ...emptyItem(), type, bid: newBlockId() }
   if (type === 'poll') base.poll = { question: '', options: [{ id: newOptionId(), text: '' }, { id: newOptionId(), text: '' }], multi: false, deadline: '' }
   if (type === 'quiz') base.quiz = { ...emptyQuiz(), options: [{ id: newOptionId(), text: '', correct: false }, { id: newOptionId(), text: '', correct: false }], accept: [''] }
-  if (type === 'product') base.products = [{ name: '', url: '', tier: '', note: '' }]
   return base
 }
 
@@ -312,7 +315,9 @@ export function toEditorItems(items: LocaleItem[], lang: Lang, previews: Record<
         bid,
         section,
         caption: typeof c.title === 'string' ? c.title : '',
-        products: products.length ? products : [{ name: '', url: '', tier: '', note: '' }],
+        // Пустой строки-заготовки быть не должно: товары теперь чипы, и пустой
+        // чип читается как «товар без названия», а не как приглашение к вводу.
+        products,
       }
     }
     if (type === 'poll') {

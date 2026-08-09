@@ -50,7 +50,8 @@ export function PinsPicker({
       </button>
       {/* Шапка одна — у PickerPanel (title со счётчиком); OverlayPanel остаётся
           без title, иначе получилось бы два заголовка. */}
-      <OverlayPanel open={open} onClose={() => setOpen(false)} className="overflow-hidden">
+      {/* bare: см. StarFolderMenu — поля задаёт выбиралка, линии идут от края до края. */}
+      <OverlayPanel open={open} onClose={() => setOpen(false)} bare className="overflow-hidden">
         <PickerPanel
           title={
             <span>

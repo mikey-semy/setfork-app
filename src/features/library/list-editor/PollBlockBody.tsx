@@ -1,6 +1,7 @@
 'use client'
 
 import { DatePicker } from '@/shared/ui/DatePicker'
+import { TEXT } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import { newOptionId } from '../blocks'
 import type { EditorPoll } from '../editor'
@@ -15,7 +16,7 @@ export function PollBlockBody({ poll, onChange, lang }: { poll: EditorPoll; onCh
       <div className="flex flex-col gap-1.5">
         {poll.options.map((o, oi) => (
           <div key={o.id} className="flex items-center gap-2">
-            <span className="w-4 text-right text-[0.6875rem] text-muted">{oi + 1}</span>
+            <span className={`w-4 text-right ${TEXT.caption} text-muted`}>{oi + 1}</span>
             <LineField
               value={o.text}
               onChange={(v) => set({ options: poll.options.map((x, xi) => (xi === oi ? { ...x, text: v } : x)) })}

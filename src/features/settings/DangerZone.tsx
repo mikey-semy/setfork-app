@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useId, useState } from 'react'
 import { AtSign, Trash2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -13,6 +13,8 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
   const [delState, delAction, delPending] = useActionState<ActionResult | null, FormData>(deleteAccount, null)
   const [hState, hAction, hPending] = useActionState<ActionResult | null, FormData>(changeHandle, null)
   const [dialog, setDialog] = useState<null | 'delete' | 'handle'>(null)
+  // Кнопка отправки живёт в футере окна, вне формы: связываем их атрибутом form.
+  const handleFormId = useId()
 
   return (
     <>
@@ -49,8 +51,19 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
             <AtSign size={14} /> {t('changeHandle', lang)}
           </span>
         }
+        closeLabel={t('cancel', lang)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDialog(null)}>
+              {t('cancel', lang)}
+            </Button>
+            <Button type="submit" form={handleFormId} variant="dangerSolid" disabled={hPending}>
+              {t('changeHandle', lang)}
+            </Button>
+          </>
+        }
       >
-        <form action={hAction} className="flex flex-col gap-4 p-4">
+        <form id={handleFormId} action={hAction} className="flex flex-col gap-4">
           <p className="text-[0.8125rem] leading-relaxed text-ink-2">{t('changeHandleWarn', lang)}</p>
           <label className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
             {t('changeHandleField', lang)}
@@ -67,14 +80,6 @@ export function DangerZone({ lang, handle }: { lang: Lang; handle: string }) {
             </div>
           </label>
           {hState?.error && <div className="text-[0.8125rem] text-danger">{hState.error}</div>}
-          <div className="flex items-center justify-end gap-2">
-            <button type="button" onClick={() => setDialog(null)} className="rounded-md px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink">
-              {t('cancel', lang)}
-            </button>
-            <Button type="submit" variant="dangerSolid" size="md" disabled={hPending}>
-              {t('changeHandle', lang)}
-            </Button>
-          </div>
         </form>
       </OverlayPanel>
 

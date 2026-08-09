@@ -5,7 +5,7 @@ import { X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Checkbox } from '@/shared/ui/checkbox'
-import { iconSizeFor, TOUCH_MIN_H } from '@/shared/ui/control'
+import { iconSizeFor, TEXT, TOUCH_MIN_H } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 
 /**
@@ -26,6 +26,23 @@ export function RemoveBtn({ onClick, disabled = false, label }: { onClick: () =>
     <IconButton size="sm" variant="danger" onClick={onClick} disabled={disabled} label={label}>
       <X size={iconSizeFor('sm')} />
     </IconButton>
+  )
+}
+
+/**
+ * Ряд настройки шага: подпись слева, контрол справа.
+ *
+ * Уровень, «нужен человек» и «разрушительный пункт» рисовались тремя разными
+ * способами — разные кегли подписи, разные отступы, разное выравнивание, и
+ * карточка выглядела набором случайных строк (замечание владельца 09.08.2026).
+ * Теперь у всех трёх одна форма, и новая настройка получает её даром.
+ */
+export function SettingRow({ label, children }: { label: ReactNode; children: ReactNode }) {
+  return (
+    <div className="flex min-h-8 items-center justify-between gap-3">
+      <span className={`min-w-0 truncate ${TEXT.bodySm} text-muted`}>{label}</span>
+      {children}
+    </div>
   )
 }
 
@@ -50,7 +67,7 @@ export function CheckLabel({ checked, onChange, children }: { checked: boolean; 
 }
 
 /** Серое пояснение под блоком. */
-export const Hint = ({ children }: { children: ReactNode }) => <span className="text-[0.6875rem] text-muted">{children}</span>
+export const Hint = ({ children }: { children: ReactNode }) => <span className={`${TEXT.caption} text-muted`}>{children}</span>
 
 /** Ряд действий под списком строк: «+ добавить» и тумблеры. */
-export const FieldRow = ({ children }: { children: ReactNode }) => <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 text-[0.78125rem]">{children}</div>
+export const FieldRow = ({ children }: { children: ReactNode }) => <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 pt-0.5 ${TEXT.bodySm}`}>{children}</div>

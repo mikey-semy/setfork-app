@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState, useTransition } from 'react'
+import { useActionState, useId, useState, useTransition } from 'react'
 import { Archive, Globe, Lock, Snowflake, Trash2, UserRoundPlus } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
@@ -36,6 +36,8 @@ export function ListSettingsDanger({
 }) {
   const [pending, start] = useTransition()
   const [dialog, setDialog] = useState<null | 'visibility' | 'delete' | 'archive' | 'freeze' | 'transfer'>(null)
+  // Кнопка отправки живёт в футере окна, вне формы: связываем их атрибутом form.
+  const transferFormId = useId()
   const [trState, trAction, trPending] = useActionState<TransferResult | null, FormData>(initiateTransfer.bind(null, templateId), null)
   const fullName = `${handle}/${slug}` // видимый идентификатор для подтверждения
   const isPublic = visibility === 'public'
@@ -118,8 +120,19 @@ export function ListSettingsDanger({
             <UserRoundPlus size={14} /> {t('transferOwnership', lang)}
           </span>
         }
+        closeLabel={t('cancel', lang)}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDialog(null)}>
+              {t('cancel', lang)}
+            </Button>
+            <Button type="submit" form={transferFormId} variant="dangerSolid" disabled={trPending}>
+              {t('transferOwnership', lang)}
+            </Button>
+          </>
+        }
       >
-        <form action={trAction} className="flex flex-col gap-4 p-4">
+        <form id={transferFormId} action={trAction} className="flex flex-col gap-4">
           <p className="text-[0.8125rem] leading-relaxed text-ink-2">{t('transferWarn', lang)}</p>
           <label className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
             {t('transferRecipientField', lang)}
@@ -130,14 +143,6 @@ export function ListSettingsDanger({
           </label>
           {trState?.error && <div className="text-[0.8125rem] text-danger">{trState.error}</div>}
           {trState?.ok && <div className="text-[0.8125rem] text-ok">✓</div>}
-          <div className="flex items-center justify-end gap-2">
-            <button type="button" onClick={() => setDialog(null)} className="rounded-md px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink">
-              {t('cancel', lang)}
-            </button>
-            <Button type="submit" variant="dangerSolid" size="md" disabled={trPending}>
-              {t('transferOwnership', lang)}
-            </Button>
-          </div>
         </form>
       </OverlayPanel>
 

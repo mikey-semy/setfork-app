@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import { OverlayPanel } from './OverlayPanel'
 import { Button } from './button'
@@ -49,12 +49,13 @@ export function ConfirmDialog({
   hiddenFields?: ReactNode
   cancelLabel?: string
 }) {
+  const formId = useId()
   const [typed, setTyped] = useState('')
   const matched = confirmPhrase ? confirmMatches(typed, confirmPhrase) : true
   const disabled = !matched || busy
 
   const body = (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4">
       {intro && <div className="text-[0.8125rem] leading-relaxed text-ink-2">{intro}</div>}
       {confirmPhrase && (
         <div className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">
@@ -79,21 +80,27 @@ export function ConfirmDialog({
         </div>
       )}
       {error && <div className="text-[0.8125rem] text-danger">{error}</div>}
-      <div className="flex items-center justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-md px-3 py-2 text-[0.8125rem] text-ink-2 hover:text-ink">
-          {cancelLabel}
-        </button>
-        <Button
-          type={formAction ? 'submit' : 'button'}
-          variant="dangerSolid"
-          size="md"
-          disabled={disabled}
-          onClick={formAction ? undefined : onConfirm}
-        >
-          {confirmLabel}
-        </Button>
-      </div>
     </div>
+  )
+
+  // Кнопки живут в футере окна — общей полосе с линией во всю ширину. В режиме
+  // серверного экшена они оказываются ВНЕ формы, поэтому submit связан с ней
+  // атрибутом `form` (штатный приём HTML), а не переносом формы наружу.
+  const actions = (
+    <>
+      <Button variant="ghost" onClick={onClose}>
+        {cancelLabel}
+      </Button>
+      <Button
+        type={formAction ? 'submit' : 'button'}
+        form={formAction ? formId : undefined}
+        variant="dangerSolid"
+        disabled={disabled}
+        onClick={formAction ? undefined : onConfirm}
+      >
+        {confirmLabel}
+      </Button>
+    </>
   )
 
   return (
@@ -106,9 +113,10 @@ export function ConfirmDialog({
           <TriangleAlert size={14} /> {title}
         </span>
       }
+      footer={actions}
     >
       {formAction ? (
-        <form action={formAction}>
+        <form id={formId} action={formAction}>
           {hiddenFields}
           {body}
         </form>

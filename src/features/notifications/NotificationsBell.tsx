@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { Bell } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { PanelHead } from '@/shared/ui/panel-parts'
+import { PANEL_HEAD, TEXT } from '@/shared/ui/control'
 import { Avatar } from '@/shared/ui/Avatar'
 import { IconButton } from '@/shared/ui/IconButton'
 import { t, tr, type Lang, type TKey } from '@/shared/i18n'
@@ -38,7 +40,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
         </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[21.25rem] p-0">
-        <div className="border-b border-border px-3 py-2.5 text-[0.8125rem] font-semibold text-ink">{t('notifications', lang)}</div>
+        <PanelHead title={t('notifications', lang)} />
 
         {items.length === 0 ? (
           <div className="px-3 py-8 text-center text-[0.78125rem] text-muted">{t('noNotifications', lang)}</div>
@@ -74,7 +76,7 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
 
         <Link
           href="/notifications"
-          className="block border-t border-border px-3 py-2.5 text-center text-[0.78125rem] font-semibold text-accent hover:bg-surface-2"
+          className={`block border-t border-border text-center font-semibold text-accent hover:bg-surface-2 ${PANEL_HEAD} ${TEXT.bodySm}`}
         >
           {t('seeAll', lang)}
         </Link>

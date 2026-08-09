@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { TEXT } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import { toProposedItems, type EditorItem } from '../editor'
 import { SuggestionResult } from '../SuggestionResult'
@@ -149,7 +150,7 @@ export function ListEditor({
         // Состав, приведённый к доменной форме, — ровно то, что уедет в версию.
         // Черновые пункты без заголовка сюда не попадают, как и при сохранении.
         <div className="rounded-lg border border-dashed border-border p-3">
-          <div className="mb-2 text-[0.78125rem] text-muted">{t('previewHint', lang)}</div>
+          <div className={`mb-2 ${TEXT.bodySm} text-muted`}>{t('previewHint', lang)}</div>
           <SuggestionResult items={toProposedItems(list.items, lang)} lang={lang} ordered={ordered} />
         </div>
       )}

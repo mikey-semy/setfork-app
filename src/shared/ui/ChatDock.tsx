@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Loader2, X } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { ChatComposer } from './ChatComposer'
+import { PanelFoot, PanelHead } from './panel-parts'
 import { GnomeAvatar } from './GnomeAvatar'
-import { IconButton } from './IconButton'
 import { Markdown } from './Markdown'
 import { Button } from './button'
-import { iconSizeFor, LAYER } from './control'
+import { LAYER, PANEL_PAD } from './control'
 import { useViewportBottom } from './use-viewport-bottom'
 import { t, type Lang } from '@/shared/i18n'
 
@@ -92,18 +92,19 @@ export function ChatDock({
       style={gap ? { bottom: gap + 16, maxHeight: Math.round(visibleHeight * 0.7) } : undefined}
       className={`fixed right-4 bottom-4 flex max-h-[70dvh] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-card ${LAYER.modal}`}
     >
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <span className="shrink-0 text-accent">{icon}</span>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[0.78125rem] font-semibold text-ink">{title}</div>
-          {subtitle}
-        </div>
-        <IconButton variant="ghost" size="sm" label={t('close', lang)} onClick={onClose}>
-          <X size={iconSizeFor('sm')} />
-        </IconButton>
-      </div>
+      <PanelHead
+        icon={icon}
+        title={
+          <>
+            <div className="truncate">{title}</div>
+            {subtitle}
+          </>
+        }
+        onClose={onClose}
+        closeLabel={t('close', lang)}
+      />
 
-      <div ref={scrollRef} className="min-h-[7.5rem] flex-1 space-y-3 overflow-y-auto px-3 py-3">
+      <div ref={scrollRef} className={`min-h-[7.5rem] flex-1 space-y-3 overflow-y-auto ${PANEL_PAD}`}>
         {messages.length === 0 && <p className="text-[0.78125rem] leading-relaxed text-muted">{emptyHint}</p>}
         {messages.map((m, i) =>
           m.role === 'user' ? (
@@ -142,7 +143,7 @@ export function ChatDock({
         {footer}
       </div>
 
-      <div className="border-t border-border px-2.5 py-2">
+      <PanelFoot align="stretch">
         <ChatComposer
           value={value}
           onChange={onChange}
@@ -154,7 +155,7 @@ export function ChatDock({
           sendTooltip={sendTooltip}
           onEscape={onClose}
         />
-      </div>
+      </PanelFoot>
     </div>
   )
 }

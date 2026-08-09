@@ -1,7 +1,8 @@
 'use client'
 
-import { Check, X } from 'lucide-react'
+import { Check } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { PanelFoot, PanelHead } from './panel-parts'
 import { SearchField } from './SearchField'
 
 /**
@@ -12,6 +13,7 @@ import { SearchField } from './SearchField'
  * оформляем одинаково и правим из ОДНОГО места.
  *
  * Сама панель не позиционируется: её кладут в Popover/абсолютный блок вызывающего.
+ * Шапка и футер — общие PanelHead/PanelFoot, те же, что у модальных окон.
  */
 export function PickerPanel({
   title,
@@ -35,21 +37,9 @@ export function PickerPanel({
 }) {
   return (
     <div className="flex max-h-[min(420px,70vh)] flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <span className="min-w-0 truncate text-[0.78125rem] font-semibold text-ink">{title}</span>
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={closeLabel}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
-          >
-            <X size={13} />
-          </button>
-        )}
-      </div>
+      <PanelHead title={title} onClose={onClose} closeLabel={closeLabel} />
       {search && (
-        <div className="border-b border-border p-2">
+        <div className="shrink-0 border-b border-border p-2">
           <SearchField
             value={search.value}
             onValueChange={search.onChange}
@@ -61,7 +51,7 @@ export function PickerPanel({
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto p-1">{children}</div>
-      {footer && <div className="border-t border-border p-2">{footer}</div>}
+      {footer && <PanelFoot align="stretch">{footer}</PanelFoot>}
     </div>
   )
 }
