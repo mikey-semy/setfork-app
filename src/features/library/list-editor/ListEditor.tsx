@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { t, type Lang } from '@/shared/i18n'
 import { toProposedItems, type EditorItem } from '../editor'
 import { SuggestionResult } from '../SuggestionResult'
@@ -31,6 +31,8 @@ export function ListEditor({
   aiRefine,
   ordered = true,
   canonOf,
+  headerField,
+  headerRight,
 }: {
   name?: string
   initialItems: EditorItem[]
@@ -42,6 +44,12 @@ export function ListEditor({
   /** Список, у которого есть канон (Ф4). У НЕсозданного списка его нет — ядру
    *  нечего показывать, поэтому режим «код» там не предлагается вовсе. */
   canonOf?: string
+  /** Поле названия списка. Идёт ПОД действиями редактора и во всю ширину: в одном
+   *  ряду с кнопками оно сжималось до 110px, и ввести название было нельзя. */
+  headerField?: ReactNode
+  /** Кнопка свойств списка — справа ОТ ПОЛЯ, в одном ряду с ним (решение владельца
+   *  09.08): она про сам список, а не про правку блоков. */
+  headerRight?: ReactNode
 }) {
   const list = useBlockList(initialItems)
   const uploads = useBlockUploads(list.patchByUid)
@@ -93,10 +101,15 @@ export function ListEditor({
     <div ref={editorRef} className="flex flex-col gap-3" onKeyDown={onKeyDown}>
       <input type="hidden" name={name} value={JSON.stringify(list.items)} />
 
-      {/* Пока правят текст на телефоне, отмена и повтор переезжают к клавиатуре: в
-          верху формы на длинном списке до них не дотянуться. */}
-      <KeyboardDock scopeRef={editorRef}>
-        <EditorToolbar
+      {/* ОДИН ряд на всё: слева название списка, справа — действия редактора и
+          свойства. Пока правят текст на телефоне, отмена и повтор переезжают к
+          клавиатуре: в верху формы на длинном списке до них не дотянуться. */}
+      {/* Действия редактора — в ПРАВОМ ВЕРХНЕМ УГЛУ, отдельной строкой над полем:
+          там их место у всех служебных действий приложения. Подписи у строки нет —
+          поле само себя объясняет плейсхолдером. */}
+      <div className="flex items-center justify-end gap-1">
+        <KeyboardDock scopeRef={editorRef}>
+          <EditorToolbar
           canUndo={list.canUndo}
           canRedo={list.canRedo}
           onUndo={list.undo}
@@ -105,9 +118,18 @@ export function ListEditor({
           onTogglePreview={() => setPreview((v) => !v)}
           code={code}
           onToggleCode={canonOf ? () => setCode((v) => !v) : undefined}
-          lang={lang}
-        />
-      </KeyboardDock>
+            lang={lang}
+          />
+        </KeyboardDock>
+      </div>
+      {/* Поле названия и свойства списка — один ряд: свойства про САМ список, и
+          стоять им рядом с его названием. */}
+      {(headerField || headerRight) && (
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">{headerField}</div>
+          {headerRight}
+        </div>
+      )}
 
       {code && canonOf && (
         <CanonPanel

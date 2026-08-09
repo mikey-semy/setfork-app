@@ -1,6 +1,6 @@
 'use client'
 
-import { Code2, Eye, Pencil, Redo2, Undo2 } from 'lucide-react'
+import { Code2, Eye, Info, Pencil, Redo2, Undo2 } from 'lucide-react'
 import { iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
@@ -72,9 +72,14 @@ export function EditorToolbar({
           </IconButton>
         </Tooltip>
       )}
-      {/* Подсказка — только на широком экране: половина её про Alt+↑/↓, а клавиатуры
-          на телефоне нет. Сам перенос работает и пальцем. */}
-      <span className="ml-1 hidden sm:inline">{t('editor.dragHint', lang)}</span>
+      {/* Подсказка про перенос — за кнопкой «i», а не строкой в ряду: она нужна
+          один раз, а место занимала всегда (решение владельца 09.08). Тултипа
+          достаточно — текст короткий и читается наведением или фокусом. */}
+      <Tooltip label={t('editor.dragHint', lang)}>
+        <IconButton variant="ghost" label={t('editor.dragHint', lang)} className="text-muted">
+          <Info size={iconSizeFor()} />
+        </IconButton>
+      </Tooltip>
     </div>
   )
 }

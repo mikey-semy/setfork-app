@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Sparkles, X } from 'lucide-react'
+import { Asterisk, CircleDashed, Loader2, Sparkles, ThumbsUp, X } from 'lucide-react'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Button } from '@/shared/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { CodeEditor } from '@/shared/ui/CodeEditor'
 import { iconSizeFor, TOUCH_MIN_H } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
@@ -18,6 +19,23 @@ import { AddLink, LineField, RemoveBtn } from './block-fields'
 import { FileDrop } from './FileDrop'
 
 const LEVELS: EditorItem['level'][] = ['required', 'recommended', 'optional']
+/**
+ * Знак уровня. Формы РАЗНЫЕ, не только цвет: иконки, отличающиеся одним цветом, не
+ * различает никто — на это прямо жалуются пользователи Jira, где приоритеты рисуют
+ * одинаковыми стрелками разных оттенков. Цвет здесь — второй признак, не первый.
+ */
+const LEVEL_ICON: Record<EditorItem['level'], typeof Asterisk> = {
+  required: Asterisk,
+  recommended: ThumbsUp,
+  optional: CircleDashed,
+}
+
+const LEVEL_TONE: Record<EditorItem['level'], string> = {
+  required: 'text-danger',
+  recommended: 'text-accent',
+  optional: 'text-muted',
+}
+
 const LEVEL_LABEL: Record<EditorItem['level'], TKey> = {
   required: 'editor.levelRequired',
   recommended: 'editor.levelRecommended',
@@ -74,19 +92,33 @@ export function StepBlockBody({
       <BubbleTextEditor value={item.desc} onChange={(desc) => onPatch({ desc })} rows={3} lang={lang} ariaLabel={nth('editor.itemDescN')} placeholder={t('editor.itemDescPh', lang)} />
       <CodeEditor value={item.command || ''} onChange={(command) => onPatch({ command })} ariaLabel={nth('editor.itemCommandN')} placeholder={t('editor.itemCommandPh', lang)} />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[0.6875rem] text-muted">{t('editor.level', lang)}:</span>
-        {LEVELS.map((level) => (
-          <Button
-            key={level}
-            size="xs"
-            variant={item.level === level ? 'primary' : 'ghost'}
-            onClick={() => onPatch({ level })}
-            className={`${TOUCH_MIN_H} ${item.level === level ? '' : 'bg-surface-2'}`}
-          >
-            {t(LEVEL_LABEL[level], lang)}
-          </Button>
-        ))}
+      {/* Уровень — ОДИН контрол с текущим значением, а не три кнопки в ряд: так это
+          устроено у Linear и Jira, и так оно занимает одну цель вместо трёх. Ряд из
+          трёх подписей съедал половину ширины телефона и переносился на вторую
+          строку, а три одинаковых значка без подписей не различались вовсе. */}
+      <div className="flex items-center gap-2">
+        <span className="text-[0.6875rem] text-muted">{t('editor.level', lang)}</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="xs" variant="ghost" className={`gap-1.5 bg-surface-2 ${TOUCH_MIN_H}`}>
+              {(() => {
+                const Icon = LEVEL_ICON[item.level]
+                return <Icon size={iconSizeFor('sm')} className={LEVEL_TONE[item.level]} />
+              })()}
+              {t(LEVEL_LABEL[item.level], lang)}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {LEVELS.map((level) => {
+              const Icon = LEVEL_ICON[level]
+              return (
+                <DropdownMenuItem key={level} onClick={() => onPatch({ level })}>
+                  <Icon size={iconSizeFor('sm')} className={LEVEL_TONE[level]} /> {t(LEVEL_LABEL[level], lang)}
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <LineField value={item.why} onChange={(why) => onPatch({ why })} lang={lang} className="" label={t('editor.why', lang)} placeholder={t('editor.whyPh', lang)} />
 

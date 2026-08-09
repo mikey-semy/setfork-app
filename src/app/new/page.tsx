@@ -55,14 +55,21 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
 
         {/* На экране — только название и пункты. Остальные свойства (описание, теги,
             тип, видимость, курс) заполняют один раз, а места занимали столько же,
-            сколько сам редактор, — поэтому они в боковой панели (решение владельца). */}
-        <div className="mb-5 flex flex-wrap items-end gap-3">
-          <Field label={t('listTitle', lang)} className="min-w-[15rem] flex-1">
-            <Input name="title" required placeholder={t('listTitlePh', lang)} className="px-3 py-2.5 text-[0.875rem]" />
-          </Field>
+            сколько сам редактор, — поэтому они в боковой панели (решение владельца).
+
+            Название и свойства уезжают ВНУТРЬ редактора: там они встают в один ряд с
+            его действиями (отмена, повтор, просмотр, код), и полоса под словом
+            «Пункты» больше не нужна. */}
+        <ListEditor
+          name="items"
+          initialItems={[]}
+          lang={lang}
+          aiRefine={{ title: '', desc: '', tags: [] }}
+          headerField={<Input name="title" required placeholder={t('listTitlePh', lang)} aria-label={t('listTitle', lang)} />}
+          headerRight={
           <ListSettingsSheet lang={lang}>
             <Field label={t('listDesc', lang)}>
-              <Input name="desc" placeholder={t('listDescPh', lang)} className="px-3 py-2.5 text-[0.875rem]" />
+              <Input name="desc" placeholder={t('listDescPh', lang)} />
             </Field>
 
             {/* htmlFor: внутри TagInput чипы с кнопками удаления — оборачивание в label ловило бы их клики. */}
@@ -83,12 +90,19 @@ export default async function NewListPage({ searchParams }: { searchParams: Prom
               </Field>
             </div>
           </ListSettingsSheet>
+          }
+        />
+
+        {/* Создание — ПЛАВАЮЩЕЙ кнопкой справа внизу (решение владельца 09.08):
+            на длинном списке кнопка в конце формы уезжает за экран, и до неё надо
+            доскроллить. Слева внизу уже живёт плавающий «назад» — пара занимает
+            оба нижних угла, между ними центр остаётся свободным под инсертер. */}
+        {/* `data-sticky-input` — признак нижней плавающей панели: по нему кнопка
+            «наверх» садится ВЫШЕ неё, а не поверх (механика ScrollToTop, она же
+            разводит чат раскопок и полосу сохранения). */}
+        <div data-sticky-input className="fixed right-5 bottom-5 z-40 print:hidden">
+          <SubmitButton className="shadow-card">{t('listCreate', lang)}</SubmitButton>
         </div>
-
-        <label className="mb-2 block text-[0.78125rem] font-semibold text-ink-2">{t('listItems', lang)}</label>
-        <ListEditor name="items" initialItems={[]} lang={lang} aiRefine={{ title: '', desc: '', tags: [] }} />
-
-        <SubmitButton className="mt-6">{t('listCreate', lang)}</SubmitButton>
       </form>
     </div>
   )

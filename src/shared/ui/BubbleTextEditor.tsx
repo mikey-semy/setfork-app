@@ -9,6 +9,7 @@ import emojiData from '@emoji-mart/data'
 import { caretCoords } from './caret-coords'
 import { Tooltip } from './Tooltip'
 import { Popover, PopoverAnchor, PopoverContent } from './popover'
+import { useToolbarFit } from './use-toolbar-fit'
 
 const EmojiPicker = dynamic(() => import('@emoji-mart/react'), { ssr: false })
 const tbtn = 'grid h-7 w-7 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink'
@@ -176,6 +177,13 @@ export function BubbleTextEditor({
   }
 
   const groups = markdownToolbarGroups({ L, surround, linePrefix })
+  // Все инструменты одним рядом: что не влезло — уходит в «⋯». Порядок групп
+  // сохраняем, он от частого к редкому.
+  const tools = groups.flat()
+  const barRef = useRef<HTMLDivElement>(null)
+  const fit = useToolbarFit(barRef, tools.length, [bubble?.left, bubble?.top])
+  const shown = tools.slice(0, fit)
+  const hidden = tools.slice(fit)
 
   return (
     <div className={`relative ${className ?? ''}`}>
@@ -193,7 +201,11 @@ export function BubbleTextEditor({
         onScroll={refresh}
         onKeyDown={onKeyDown}
         onBlur={() => setTimeout(() => { if (!emojiOpen) { setBubble(null); setMention(null); setMoreOpen(false) } }, 150)}
-        className={`w-full text-[0.8125rem] leading-relaxed text-ink outline-hidden ${
+        // `block` обязателен: textarea по умолчанию inline-block, и под базовой
+        // линией остаётся зазор — обёртка становится на 7px выше поля, а иконка
+        // рядом (например «H» у строки урока) центрируется по обёртке и уезжает
+        // относительно текста. Замер 09.08.2026: расхождение осей ровно 4px.
+        className={`block w-full text-[0.8125rem] leading-relaxed text-ink outline-hidden ${
           bare ? 'resize-none overflow-hidden bg-transparent' : 'rounded-md border border-border bg-surface-2 px-3 py-2 focus:border-border-strong'
         } ${singleLine && !bare ? 'resize-none overflow-hidden' : bare ? '' : 'min-h-[4.5rem] resize-y'} ${trailing ? 'pr-9' : ''} ${mono ? 'font-mono text-[0.78125rem]' : ''} ${textareaClassName ?? ''}`}
       />
@@ -201,15 +213,17 @@ export function BubbleTextEditor({
 
       {bubble && !mention && (
         <div
+          ref={barRef}
           className="absolute z-30 flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 shadow-lg transition-[top,left] duration-150 ease-out motion-reduce:transition-none"
           style={{ top: Math.max(0, bubble.top), left: bubble.left }}
           onMouseDown={(e) => e.preventDefault()}
         >
-          {/* Инлайн — только базовое форматирование (первая группа). Остальное в «⋯»:
-              13 кнопок в ряд не влезали в мобильный экран. */}
-          {(groups[0] ?? []).map((tool, i) => (
+          {/* Показываем СТОЛЬКО, СКОЛЬКО ВЛЕЗАЕТ: на телефоне это три-четыре кнопки,
+              на широком экране — весь набор. Фиксированная первая группа оставляла
+              половину панели пустой там, где место было. */}
+          {shown.map((tool, i) => (
             <Tooltip key={i} label={tool.t}>
-              <button type="button" aria-label={tool.t} onClick={tool.run} className={tbtn}>
+              <button type="button" data-tool aria-label={tool.t} onClick={tool.run} className={tbtn}>
                 <tool.icon size={14} />
               </button>
             </Tooltip>
@@ -224,6 +238,7 @@ export function BubbleTextEditor({
                 <PopoverAnchor asChild>
                   <button
                     type="button"
+                    data-more
                     aria-label={L('ещё', 'more')}
                     aria-expanded={moreOpen}
                     onClick={() => setMoreOpen((o) => !o)}
@@ -251,7 +266,7 @@ export function BubbleTextEditor({
             {moreOpen && (
               // Сетка с переносом: меню тоже не должно быть шире экрана.
               <div className="absolute right-0 top-full z-40 mt-1 flex w-max max-w-[11.75rem] flex-wrap items-center gap-0.5 rounded-md border border-border bg-surface p-1 shadow-lg">
-                {groups.slice(1).flat().map((tool, i) => (
+                {hidden.map((tool, i) => (
                   <Tooltip key={i} label={tool.t}>
                     <button type="button" aria-label={tool.t} onClick={() => { tool.run(); setMoreOpen(false) }} className={tbtn}>
                       <tool.icon size={14} />
