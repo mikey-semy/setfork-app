@@ -17,6 +17,13 @@ export function TooltipProvider({ children, delay = 250 }: { children: React.Rea
 // Тултип (Radix / shadcn-стиль) вместо браузерного title=. Триггер оборачивает
 // переданный children через asChild (кнопку/иконку/ссылку). Требует <TooltipProvider>
 // в предках (есть в layout). Пустой label → просто children без тултипа.
+//
+// ВНИМАНИЕ к порядку с ДРУГИМИ триггерами (Sheet, DropdownMenu, Popover): этот
+// компонент НЕ пробрасывает полученные снаружи пропы в children. Поэтому Tooltip
+// ставится СНАРУЖИ, а триггер — внутри:
+//     <Tooltip label="…"><SheetTrigger asChild><IconButton …/></SheetTrigger></Tooltip>
+// Обратный порядок молча ломает кнопку: onClick и aria-* от триггера уходят в
+// Tooltip и до неё не доходят (09.08.2026 так перестала открываться панель свойств).
 export function Tooltip({
   label,
   children,

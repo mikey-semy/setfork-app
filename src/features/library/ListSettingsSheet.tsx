@@ -41,14 +41,31 @@ export function ListSettingsSheet({ lang, defaultOpen = false, children }: { lan
       {/* Иконка без подписи: кнопка стоит в одном ряду с полем названия, и текст
           рядом с ним читается как второй заголовок. Смысл даёт тултип и подпись
           для диктора — как у остальных иконочных кнопок приложения. */}
-      <SheetTrigger asChild>
-        <Tooltip label={t('listSettings', lang)}>
+      {/* Порядок обёрток ВАЖЕН: Tooltip снаружи, SheetTrigger внутри. Наоборот
+          триггер отдавал свои onClick/aria-* Тултипу, а тот их не пробрасывает —
+          кнопка оставалась немой, и панель не открывалась вовсе (поймано смоком
+          09.08.2026). */}
+      <Tooltip label={t('listSettings', lang)}>
+        <SheetTrigger asChild>
           <IconButton variant="outline" label={t('listSettings', lang)}>
             <SlidersHorizontal size={iconSizeFor()} />
           </IconButton>
-        </Tooltip>
-      </SheetTrigger>
-      <SheetContent portal={false} closeLabel={t('close', lang)} aria-describedby={undefined}>
+        </SheetTrigger>
+      </Tooltip>
+      <SheetContent
+        portal={false}
+        closeLabel={t('close', lang)}
+        aria-describedby={undefined}
+        // Escape В ПОЛЕ принадлежит полю, а не панели: там он закрывает подсказку
+        // автокомплита (теги), и захлопывать вместе с ней всю панель — значит
+        // прятать от человека то, что он правит. Остановить это из самого поля
+        // нельзя: Radix слушает Escape на документе в фазе ПЕРЕХВАТА и получает
+        // событие раньше любого React-обработчика (09.08.2026, поймано смоком).
+        onEscapeKeyDown={(e) => {
+          const el = document.activeElement
+          if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) e.preventDefault()
+        }}
+      >
         <SheetHeader>
           <SheetTitle>{t('listSettings', lang)}</SheetTitle>
         </SheetHeader>
