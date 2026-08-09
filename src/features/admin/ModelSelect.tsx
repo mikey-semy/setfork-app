@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Braces, Check, ChevronDown, Search, X } from 'lucide-react'
+import { Braces, Check, ChevronDown, X } from 'lucide-react'
 import { GnomeAvatar } from '@/shared/ui/GnomeAvatar'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { CONTROL_H, CONTROL_PX, CONTROL_TEXT, FIELD_TEXT_MOBILE, TEXT } from '@/shared/ui/control'
+import { SearchField } from '@/shared/ui/SearchField'
 import { t, type Lang } from '@/shared/i18n'
 
 /** Значение-пустышка для «нет модели». */
@@ -229,35 +230,23 @@ export function ModelSelect({
 
         {open && (
           <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-md border border-border bg-surface shadow-card">
-            <div className="flex items-center gap-2 border-b border-border px-2.5 py-2">
-              <Search size={14} className="shrink-0 text-muted" />
-              <input
+            {/* Поиск — общий SearchField в такой же полосе, как у остальных
+                выбиралок: своего поля с лупой и крестиком здесь больше нет. */}
+            <div className="border-b border-border p-2">
+              <SearchField
                 ref={inputRef}
                 value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value)
+                onValueChange={(v) => {
+                  setQuery(v)
                   setHighlight(0)
                 }}
+                onClear={() => inputRef.current?.focus()}
                 onKeyDown={onKeyDown}
-                // Плейсхолдер — ПРИМЕР значения, а не инструкция «Поиск модели…» (правило
-                // мобильной вёрстки); подпись поля живёт в aria-label.
-                aria-label={t('modelSelect.searchLabel', lang)}
+                ariaLabel={t('modelSelect.searchLabel', lang)}
                 placeholder={t('modelSelect.searchPlaceholder', lang)}
-                className={`w-full bg-transparent ${TEXT.body} ${FIELD_TEXT_MOBILE} text-ink outline-hidden placeholder:text-muted`}
+                clearLabel={t('modelSelect.clearSearch', lang)}
+                size="sm"
               />
-              {query && (
-                <button
-                  type="button"
-                  aria-label={t('modelSelect.clearSearch', lang)}
-                  onClick={() => {
-                    setQuery('')
-                    inputRef.current?.focus()
-                  }}
-                  className="grid size-11 shrink-0 place-items-center rounded-md text-muted hover:text-ink"
-                >
-                  <X size={14} />
-                </button>
-              )}
             </div>
 
             <div className="max-h-[60vh] overflow-y-auto overscroll-contain p-1 sm:max-h-96">
