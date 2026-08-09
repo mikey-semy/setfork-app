@@ -453,6 +453,7 @@ export const ru: Record<DictKey, string> = {
   shareVia: 'Поделиться через',
   runHeading: 'Запуск в терминале',
   runHint: 'Пайпит список в шелл, как gist. Сначала проверь.',
+  runShellOnlyHint: 'Команды пунктов написаны для шелла, поэтому скрипт запускается в bash. На Windows — WSL или Git Bash.',
   viewRaw: 'Смотреть raw-скрипт',
   signedInLabel: 'вход',
   staleLabel: 'неактивна',

@@ -1,6 +1,15 @@
 import { getLang } from '@/shared/i18n/server'
 import { requireViewableDetail, requireViewableDetailFor } from '@/features/library/guard'
-import { dialectExt, dialectMime, normalizeDialect, toRunnableScript, toExportList } from '@/features/library/export'
+import { scriptRefusal, toRunnableScript, toExportList } from '@/features/library/export'
+import {
+  AUTHORED_DIALECT,
+  dialectExt,
+  dialectMime,
+  dialectSpec,
+  errorScript,
+  normalizeDialect,
+  type ScriptDialect,
+} from '@/core/domain/script-dialect'
 import { isPubliclyVisible } from '@/core'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { verifyApiToken } from '@/shared/auth/api-token'
@@ -10,8 +19,11 @@ import { cacheHeaders, noStoreHeaders, notModified } from '@/shared/http/cache'
 /**
  * GET /{handle}/{slug}/raw[?lang=sh|ps1|py] — СПИСОК КАК ИСПОЛНЯЕМЫЙ СКРИПТ (gist-стиль).
  *
- *   curl -fsSL https://host/{owner}/{slug}/raw | bash
- *   irm "https://host/{owner}/{slug}/raw?lang=ps1" | iex
+ *   curl -fsSL "https://host/{owner}/{slug}/raw" | bash
+ *
+ * `?lang=` выбирает ДИАЛЕКТ ОБЁРТКИ, и обёртка не переводит авторские команды: списку
+ * с исполняемыми командами чужой диалект отвечает 406, а не скриптом (см. ниже и
+ * `core/domain/script-dialect`).
  *
  * Машинный контракт держится ТЕМ ЖЕ набором правил, что у близнеца `data.json`: тот отдаёт
  * список как данные, этот — как код. Раньше правила были только у близнеца, и правки,
@@ -23,6 +35,18 @@ export const runtime = 'nodejs'
 
 const plain = (body: string, status: number, mime: string) =>
   new Response(body, { status, headers: { 'Content-Type': mime, ...noStoreHeaders() } })
+
+/**
+ * ОТКАЗ МАШИННОЙ ПОВЕРХНОСТИ. Тело этого ответа читает не человек, а интерпретатор:
+ * `curl … | bash` исполнит всё, что пришло. Поэтому отказ — не строка текста, а
+ * валидная для диалекта заглушка: только комментарии и выход с ненулевым кодом.
+ * Причина едет ещё и заголовком — машине незачем разбирать текст, написанный для глаз.
+ */
+const refuse = (dialect: ScriptDialect, status: number, reason: string, message: string[]) =>
+  new Response(errorScript(dialect, message), {
+    status,
+    headers: { 'Content-Type': dialectMime(dialect), 'SF-Reason': reason, ...noStoreHeaders() },
+  })
 
 /**
  * Имя файла для Content-Disposition. Слаг приходит из АДРЕСА, а адреса старых списков
@@ -76,6 +100,31 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const known = new Set(list.steps.flatMap((s) => (s.bid ? [s.bid] : [])))
   const unknown = only.filter((b) => !known.has(b))
   if (unknown.length) return plain(`# No such block: ${unknown.join(', ')}\n`, 404, mime)
+
+  // ДИАЛЕКТ НЕ ПЕРЕВОДИТ КОМАНДЫ. `?lang=py` меняет только обёртку — shebang,
+  // print(), расширение, MIME, — а поле `command` вставляет как есть. Авторская
+  // `export FOO=bar`, конвейер или heredoc не становятся Python оттого, что сверху
+  // приписали `#!/usr/bin/env python3`: скрипт либо не компилируется целиком, либо —
+  // что хуже — в другом интерпретаторе значит другое. Модель списка runtime не
+  // объявляет (см. AUTHORED_DIALECT), поэтому чужой диалект авторских команд не
+  // получает вовсе. Списку без исполняемых команд отказывать не за что: там вся
+  // обёртка — комментарии и печать прогресса, и она честна на любом диалекте.
+  const refusal = scriptRefusal(list, dialect, { only })
+  if (refusal) {
+    // Предлагаемая команда — с той же выборкой пунктов, что просили, и от
+    // КОНФИГУРАЦИИ (rawUrl), а не от адреса запроса: на проде `req.url` собран из
+    // адреса привязки сервера и подсказка была бы нерабочей.
+    const shellUrl = new URL(rawUrl)
+    u.searchParams.forEach((v, k) => {
+      if (k !== 'lang') shellUrl.searchParams.append(k, v)
+    })
+    return refuse(dialect, 406, refusal, [
+      `SetFork: no ${dialect} script for ${handle}/${slug}.`,
+      'Its steps carry shell commands, and this endpoint does not translate commands',
+      'between languages — that would hand you code meaning something else.',
+      `Run the shell form instead:  ${dialectSpec(AUTHORED_DIALECT).run(shellUrl.toString())}`,
+    ])
+  }
 
   const version = detail.currentVersion?.version ?? detail.tpl.currentVersion
   const updatedAt = detail.tpl.updatedAt ?? new Date(0)

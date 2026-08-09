@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { TooltipProvider } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
+import { AUTHORED_DIALECT, dialectSpec } from '@/core/domain/script-dialect'
 
 /**
  * Меню «Получить» — ЕДИНСТВЕННЫЙ вход в машинные поверхности (/raw, data.json, MCP,
@@ -50,10 +51,24 @@ describe('меню «Получить»: доступность и содерж�
     fireEvent.click(screen.getByRole('tab', { name: /run/i }))
 
     // Полная команда присутствует в разметке — включая опасный хвост `| bash`.
-    expect(screen.getByText(/curl -fsSL .*\/raw \| bash/)).toBeTruthy()
+    // Сверяемся с КАТАЛОГОМ ДИАЛЕКТОВ, а не с переписанной сюда строкой: команду
+    // печатают и меню, и шапка самого скрипта, и разъезжаться им нельзя.
+    // Ищем по textContent целиком: подсветка раскладывает строку на токены-спаны
+    // (адрес в кавычках — отдельный токен), и getByText её уже не видит одним узлом.
+    const expected = dialectSpec(AUTHORED_DIALECT).run(`${window.location.origin}/alice/deploy/raw`)
+    expect(document.body.textContent).toContain(expected)
     // И она не лежит в input, который обрезает значение по ширине поля.
     const inputs = Array.from(document.querySelectorAll('input')).map((i) => i.getAttribute('value') ?? '')
     expect(inputs.some((v) => v.includes('| bash'))).toBe(false)
+  })
+
+  it('PowerShell-формы запуска нет: обёртка диалекта не переводит авторские команды', () => {
+    open()
+    fireEvent.click(screen.getByRole('tab', { name: /run/i }))
+
+    // `/raw?lang=ps1` на списке с командами теперь отвечает 406, поэтому предлагать
+    // эту форму — значит класть человеку в буфер заведомо нерабочую команду.
+    expect(document.body.textContent).not.toMatch(/lang=ps1|\| iex/)
   })
 
   it('во вкладке клонирования сказано, как быть с приватным списком', () => {

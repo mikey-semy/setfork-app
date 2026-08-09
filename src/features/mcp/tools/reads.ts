@@ -4,7 +4,8 @@ import { db, templates, users } from '@/shared/db'
 import { tr, trKey } from '@/shared/i18n'
 // eslint-disable-next-line no-restricted-imports -- MCP: доступ по userId токена (нет cookie-сессии/админа), canViewList на месте у каждого вызова
 import { getDraft, getFeed, getTemplateDetail } from '@/features/library/queries'
-import { buildScript, dialectExt, normalizeDialect, toExportList } from '@/features/library/export'
+import { buildScript, scriptRefusal, toExportList } from '@/features/library/export'
+import { AUTHORED_DIALECT, dialectExt, normalizeDialect } from '@/core/domain/script-dialect'
 import { getCourseCompletion } from '@/features/quizzes/queries'
 import { blockForMcp, mcpCanView, SITE_URL, type DetailStep } from './shared'
 import { isCollaborator } from '@/features/collab/queries'
@@ -105,6 +106,15 @@ export async function mcpGetScript(
   const known = new Set(list.steps.flatMap((s) => (s.bid ? [s.bid] : [])))
   const unknown = only.filter((b) => !known.has(b))
   if (unknown.length) return { error: `no such block in ${handle}/${slug}: ${unknown.join(', ')}` }
+  // Та же политика, что у /raw: обёртка диалекта не переводит авторские команды,
+  // поэтому чужому диалекту они не отдаются. Агенту это важнее, чем человеку: он
+  // не читает скрипт глазами и запустит то, что дали.
+  if (scriptRefusal(list, dialect, { only })) {
+    return {
+      error: `no ${dialect} script for ${handle}/${slug}: its steps carry ${AUTHORED_DIALECT} commands, and commands are not translated between languages`,
+      dialect: AUTHORED_DIALECT,
+    }
+  }
 
   const { script, included, skipped } = buildScript(list, 'en', rawUrl, dialect, { only })
   const params = new URLSearchParams()

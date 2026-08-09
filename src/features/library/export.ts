@@ -6,6 +6,7 @@ import { escapeHtml as esc } from '@/shared/lib/escape'
 import { markdownCodeBlock } from '@/shared/lib/markdown'
 import { stepDanger } from '@/core/domain/destructive-command'
 import { productItems } from './blocks'
+import { carriesCommands, dialectSpec, flatten, hashComment, type ScriptDialect } from '@/core/domain/script-dialect'
 
 export interface ExportStep {
   n: number
@@ -291,74 +292,6 @@ ${steps}
 </html>`
 }
 
-// ГРАНИЦА «данные vs код». Всё, что пришло из полей списка, обязано пройти здесь: текст не
-// может начать новую строку скрипта. Терминатор строки — не только \n: python3 и PowerShell
-// так же трактуют одиночный \r (проверено их парсерами), поэтому /\r?\n/ границу НЕ держит —
-// на этом подтверждались инъекции из title и из desc/why/текстовых блоков.
-const LINE_TERMINATORS = /\r\n|\r|\n/g
-/** Одна строка вместо любой многострочности — для мест, где перенос недопустим. */
-const flatten = (s: string): string => s.replace(LINE_TERMINATORS, ' ')
-
-// Все три диалекта комментируют через «# …» — общий хелпер (без хвостовых пробелов).
-function hashComment(s: string): string {
-  return s
-    .split(LINE_TERMINATORS)
-    .map((l) => `# ${l}`.replace(/\s+$/, ''))
-    .join('\n')
-}
-// Экранирование строк для echo/print каждого диалекта (переводы строк → пробел).
-const escSh = (s: string) => flatten(s).replace(/'/g, `'\\''`)
-const escPs = (s: string) => flatten(s).replace(/`/g, '``').replace(/"/g, '`"').replace(/\$/g, '`$')
-// Python: содержимое литерала в двойных кавычках даёт встроенная сериализация — она
-// экранирует кавычки, слеши и ВЕСЬ диапазон управляющих символов, чего самописный вариант
-// не делал (на \r литерал оставался незакрытым и скрипт не компилировался целиком).
-const escPy = (s: string) => JSON.stringify(flatten(s)).slice(1, -1)
-
-export type ScriptDialect = 'sh' | 'ps1' | 'py'
-export function normalizeDialect(v: string | null | undefined): ScriptDialect {
-  const s = (v ?? '').toLowerCase()
-  if (s === 'ps1' || s === 'powershell' || s === 'pwsh') return 'ps1'
-  if (s === 'py' || s === 'python') return 'py'
-  return 'sh'
-}
-
-interface DialectSpec {
-  shebang: string | null
-  pre: string | null // строка, задающая «стоп на первой ошибке»
-  echo: (s: string) => string // прогресс-строка
-  run: (url: string) => string // one-liner для запуска из шапки
-  ext: string
-  mime: string
-}
-const DIALECTS: Record<ScriptDialect, DialectSpec> = {
-  sh: {
-    shebang: '#!/usr/bin/env bash',
-    pre: 'set -euo pipefail',
-    echo: (s) => `echo '${escSh(s)}'`,
-    run: (u) => `curl -fsSL ${u} | bash`,
-    ext: 'sh',
-    mime: 'text/x-shellscript; charset=utf-8',
-  },
-  ps1: {
-    shebang: null, // PowerShell без shebang
-    pre: "$ErrorActionPreference = 'Stop'",
-    echo: (s) => `Write-Host "${escPs(s)}"`,
-    run: (u) => `irm "${u}?lang=ps1" | iex`,
-    ext: 'ps1',
-    mime: 'text/plain; charset=utf-8',
-  },
-  py: {
-    shebang: '#!/usr/bin/env python3',
-    pre: null, // в python необработанное исключение и так останавливает скрипт
-    echo: (s) => `print("${escPy(s)}")`,
-    run: (u) => `curl -fsSL "${u}?lang=py" | python3`,
-    ext: 'py',
-    mime: 'text/x-python; charset=utf-8',
-  },
-}
-export const dialectExt = (d: ScriptDialect) => DIALECTS[d].ext
-export const dialectMime = (d: ScriptDialect) => DIALECTS[d].mime
-
 /**
  * «Raw»-версия списка как исполняемый скрипт (аналог gist «curl … | bash»):
  * заголовки/описания/зачем → комментарии, echo-прогресс перед каждым шагом,
@@ -390,6 +323,50 @@ export interface ScriptOptions {
   only?: string[]
 }
 
+/**
+ * Пункты, которые войдут в скрипт. Выбор — по адресам (bid), а порядок ВСЕГДА
+ * списка, а не тот, в каком адреса перечислили: «собери пункты 7, 3 и 12» иначе
+ * дало бы скрипт, где шаги идут не в том порядке, в каком их писал автор, — а
+ * зависимости между ними никуда не делись.
+ *
+ * Отдельной функцией, потому что ровно тот же выбор нужен вопросу «есть ли тут
+ * что исполнять» ниже. Разойдись они — отказ по диалекту считался бы по одному
+ * набору пунктов, а скрипт собирался по другому.
+ */
+export function selectSteps(list: ExportList, opts: ScriptOptions = {}): ExportStep[] {
+  const picked = new Set(opts.only ?? [])
+  return picked.size ? list.steps.filter((s) => s.bid && picked.has(s.bid)) : list.steps
+}
+
+/**
+ * Есть ли в выборке пункт, чья авторская команда попадёт в скрипт ИСПОЛНЯЕМОЙ
+ * строкой. Разрушительные не в счёт: они приезжают закомментированными, и
+ * интерпретатор их не читает — а значит, чужой диалект их не искажает.
+ */
+function hasExecutableCommands(list: ExportList, opts: ScriptOptions = {}): boolean {
+  return selectSteps(list, opts).some((s) => {
+    if (!isStepBlk(s)) return false
+    const cmd = (s.command ?? '').trim()
+    return Boolean(cmd) && !stepDanger(s)
+  })
+}
+
+/** Ключ отказа — он же значение заголовка `SF-Reason` и текста ошибки MCP. */
+export const DIALECT_CANNOT_CARRY = 'dialect_cannot_carry_commands'
+export type ScriptRefusal = typeof DIALECT_CANNOT_CARRY
+
+/**
+ * ОДНО решение «можно ли отдать этот список этим диалектом» на все поверхности.
+ *
+ * Не два предиката, которые каждый вызывающий складывает у себя: `/raw` и MCP
+ * обязаны отвечать одинаково, а третий потребитель (свой CLI) появится и подавно
+ * не должен переоткрывать правило. Поверхности отличаются только формой ответа —
+ * 406 с заглушкой у HTTP, поле `error` у MCP.
+ */
+export function scriptRefusal(list: ExportList, dialect: ScriptDialect, opts: ScriptOptions = {}): ScriptRefusal | null {
+  return !carriesCommands(dialect) && hasExecutableCommands(list, opts) ? DIALECT_CANNOT_CARRY : null
+}
+
 export function toRunnableScript(
   list: ExportList,
   lang: Lang,
@@ -414,13 +391,10 @@ export function buildScript(
   dialect: ScriptDialect = 'sh',
   opts: ScriptOptions = {},
 ): { script: string; included: { n: number; bid?: string | null }[]; skipped: ScriptSkip[] } {
-  const d = DIALECTS[dialect]
+  const d = dialectSpec(dialect)
   const title = tr(list.title, lang)
-  // Выбор пунктов: фильтруем по адресам, порядок оставляем СПИСКА. Иначе
-  // «собери мне пункты 7, 3 и 12» дало бы скрипт, где шаги идут не в том порядке,
-  // в каком их писал автор, — а зависимости между ними никуда не делись.
-  const picked = new Set(opts.only ?? [])
-  const steps = picked.size ? list.steps.filter((s) => s.bid && picked.has(s.bid)) : list.steps
+  const steps = selectSteps(list, opts)
+  const partial = (opts.only?.length ?? 0) > 0
   const vars = scriptVariables(steps) // опционально: нет ${VAR} → скрипт как раньше
   const included: { n: number; bid?: string | null }[] = []
   const skipped: ScriptSkip[] = []
@@ -433,7 +407,7 @@ export function buildScript(
   out.push('#', '# ⚠  Review before running — this script comes from a SetFork list, not from you.', `#    Run:  ${d.run(url)}`)
   // Выборка пунктов названа прямо в шапке: иначе скрипт из трёх команд неотличим
   // от списка, у которого три команды и есть.
-  if (picked.size) out.push(`#    Selected steps only: ${steps.length} of ${list.steps.length} blocks`)
+  if (partial) out.push(`#    Selected steps only: ${steps.length} of ${list.steps.length} blocks`)
   if (vars.length) out.push(`#    Required variables (pass as env): ${vars.map((v) => `${v}=…`).join(' ')}`)
   out.push('')
   if (d.pre) out.push(d.pre, '')
