@@ -113,16 +113,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   if (refusal) {
     // Предлагаемая команда — с той же выборкой пунктов, что просили, и от
     // КОНФИГУРАЦИИ (rawUrl), а не от адреса запроса: на проде `req.url` собран из
-    // адреса привязки сервера и подсказка была бы нерабочей.
-    const shellUrl = new URL(rawUrl)
+    // адреса привязки сервера и подсказка была бы нерабочей. Собираем строкой, а не
+    // через `new URL`: разбор кинул бы TypeError на кривом APP_URL, и вместо отказа
+    // машинная поверхность отдала бы 500.
+    const shellQuery = new URLSearchParams()
     u.searchParams.forEach((v, k) => {
-      if (k !== 'lang') shellUrl.searchParams.append(k, v)
+      if (k !== 'lang') shellQuery.append(k, v)
     })
+    const qs = shellQuery.toString()
     return refuse(dialect, 406, refusal, [
       `SetFork: no ${dialect} script for ${handle}/${slug}.`,
       'Its steps carry shell commands, and this endpoint does not translate commands',
       'between languages — that would hand you code meaning something else.',
-      `Run the shell form instead:  ${dialectSpec(AUTHORED_DIALECT).run(shellUrl.toString())}`,
+      `Run the shell form instead:  ${dialectSpec(AUTHORED_DIALECT).run(qs ? `${rawUrl}?${qs}` : rawUrl)}`,
     ])
   }
 

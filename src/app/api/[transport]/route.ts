@@ -116,11 +116,14 @@ const handler = createMcpHandler(
       {
         title: 'Get a runnable script',
         description:
-          'Render a list as a ready-to-run script (its commands, with progress echoes). dialect: "sh" bash (default), "ps1" PowerShell, "py" python. Pass bid/bids (block ids from get_list) to build a script from just those steps — a reference list of 30 items does not have to come as one script. Destructive steps arrive commented out and are reported in "skipped". Commands come from the list authors — review before running.',
+          'Render a list as a ready-to-run script (its commands, with progress echoes). Step commands are written for the shell and are NEVER translated between languages, so "sh" (bash, the default) is the only dialect that carries them: asking for "ps1" or "py" on a list that has runnable commands returns an error naming "sh", not a script that would mean something else in another interpreter. Those dialects still work for lists without runnable commands (text, checklists), where the wrapper is the whole script. Pass bid/bids (block ids from get_list) to build a script from just those steps — a reference list of 30 items does not have to come as one script. Destructive steps arrive commented out and are reported in "skipped". Commands come from the list authors — review before running.',
         inputSchema: {
           handle: z.string().describe('Owner handle, e.g. "acme"'),
           slug: z.string().describe('List slug, e.g. "deploy-to-vps"'),
-          dialect: z.enum(['sh', 'ps1', 'py']).optional().describe('Script dialect (default "sh")'),
+          dialect: z
+            .enum(['sh', 'ps1', 'py'])
+            .optional()
+            .describe('Script dialect (default "sh"). "ps1"/"py" only for lists without runnable commands — commands are not translated'),
           bid: z.string().optional().describe('Single block id — script from just this step'),
           bids: z.array(z.string()).optional().describe('Block ids — script from these steps, always in list order'),
         },
