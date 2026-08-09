@@ -53,6 +53,40 @@ env:
 # коммит, который проверял CI: он в github.event.workflow_run.head_sha. Отсюда эта
 # конструкция во всех шагах ниже.
 jobs:
+  # Деплой с красным CI не идёт — это правильно, но раньше он просто «не случался»
+  # и никто не узнавал: прод молча оставался на позавчерашнем коммите (09.08 так и
+  # вышло — один флейковый тест в coverage, и вся выкатка встала без единого следа).
+  # Молчаливая непрокатка хуже упавшей: упавшая хотя бы краснеет.
+  stuck:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
+    runs-on: [self-hosted, setfork]
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Тревога — выкатка не состоялась
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: '🟠 Прод отстаёт от master: CI не зелёный'
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          RESULT: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          command -v gh >/dev/null || { echo "::warning::нет gh CLI на раннере — тревога не отправлена"; exit 0; }
+          BODY="CI на master завершился как \`$RESULT\` на \`${SHA:0:7}\` — деплой пропущен, прод остался на прошлом коммите.
+
+          Прогон CI: $RUN_URL
+
+          Что делать: посмотреть, что упало. Если это флейк (чаще всего таймаут хука в itest на загруженном раннере) — перезапустить упавшую джобу: \`gh run rerun <id> --failed\`; зелёный прогон сам утянет деплой. Если падение настоящее — чинить и пушить.
+          Выкатить текущий master без нового коммита можно вручную: \`gh workflow run deploy.yml\`.
+          Эта тревога закроется сама при следующем зелёном деплое."
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number' 2>/dev/null || true)
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            gh issue comment "$EXISTING" --body "$BODY" || echo "::warning::не удалось дописать в тревогу #$EXISTING"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" || echo "::warning::не удалось создать тревогу"
+          fi
+
   deploy:
     runs-on: [self-hosted, setfork]
     # Красный/отменённый CI до деплоя не доходит вовсе. Ручной запуск идёт без условия.
@@ -227,11 +261,18 @@ jobs:
         if: success() && steps.fresh.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          TITLE: '🔴 Деплой на прод падает'
+          TITLE_FAIL: '🔴 Деплой на прод падает'
+          TITLE_STUCK: '🟠 Прод отстаёт от master: CI не зелёный'
           SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           command -v gh >/dev/null || exit 0
-          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number' 2>/dev/null || true)
-          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
-            gh issue close "$EXISTING" --comment "Деплой прошёл на \`${SHA:0:7}\` — прод снова свежий." || true
-          fi
+          # Обе тревоги про одно состояние «прод не свежий»: успешная выкатка снимает
+          # и ту, что про падение деплоя, и ту, что про пропущенный запуск.
+          close_alert() {
+            EXISTING=$(gh issue list --state open --search "$1 in:title" --json number --jq '.[0].number' 2>/dev/null || true)
+            if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+              gh issue close "$EXISTING" --comment "Деплой прошёл на \`${SHA:0:7}\` — прод снова свежий." || true
+            fi
+          }
+          close_alert "$TITLE_FAIL"
+          close_alert "$TITLE_STUCK"
