@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
 import { AtSign, MoreHorizontal, SmilePlus } from 'lucide-react'
@@ -23,14 +23,15 @@ type Tool = { t: string; icon: React.ComponentType<{ size?: number }>; run: () =
  */
 export function BubbleToolbar({
   tools,
-  at,
+  caret,
   lang,
   onMention,
   onEmoji,
   onOverlay,
 }: {
   tools: Tool[]
-  at: { top: number; left: number }
+  /** Где стоит каретка внутри поля: верх строки, низ выделения и отступ слева. */
+  caret: { top: number; bottom: number; left: number }
   lang: 'ru' | 'en'
   /** Вставить «@» в текст — дальше подсказку ведёт сам редактор. */
   onMention: () => void
@@ -53,7 +54,22 @@ export function BubbleToolbar({
     setMoreOpenState(v)
     onOverlay(v || emojiOpen)
   }
-  const fit = useToolbarFit(barRef, tools.length, [at.left, at.top])
+  const fit = useToolbarFit(barRef, tools.length, [caret.left, caret.top])
+  // Высоту панели меряем, а не задаём числом: на грубом указателе кнопки
+  // вырастают до тач-цели, и панель становится выше — с фиксированным числом она
+  // накрывала бы строку, над которой встала.
+  const [barH, setBarH] = useState(0)
+  useEffect(() => {
+    const el = barRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setBarH(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const GAP = 6
+  // Пока высота неизвестна (первый кадр) — становимся ПОД строкой: так панель
+  // гарантированно не перекроет текст.
+  const top = barH && caret.top >= barH + GAP ? caret.top - barH - GAP : caret.bottom + GAP
   const shown = tools.slice(0, fit)
   const hidden = tools.slice(fit)
   const size = iconSizeFor('sm')
@@ -62,7 +78,7 @@ export function BubbleToolbar({
     <div
       ref={barRef}
       className="absolute z-30 flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5 shadow-lg transition-[top,left] duration-150 ease-out motion-reduce:transition-none"
-      style={{ top: Math.max(0, at.top), left: at.left }}
+      style={{ top: Math.max(0, top), left: caret.left }}
       // Нажатие на панель не должно уводить фокус из поля — иначе выделение пропадёт.
       onMouseDown={(e) => e.preventDefault()}
     >

@@ -44,7 +44,8 @@ export function BubbleTextEditor({
   trailing?: ReactNode // кнопка/иконка внутри поля справа (напр. авто-генерация)
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
-  const [bubble, setBubble] = useState<{ top: number; left: number } | null>(null)
+  // Где стоит каретка; куда встанет панель — решает она сама, по своей высоте.
+  const [caret, setCaret] = useState<{ top: number; bottom: number; left: number } | null>(null)
   // Последнее выделение: пикер эмодзи забирает фокус, и вставлять надо туда, где
   // человек стоял до его открытия.
   const savedSel = useRef<[number, number]>([0, 0])
@@ -72,21 +73,16 @@ export function BubbleTextEditor({
     if (!el) return
     savedSel.current = [el.selectionStart, el.selectionEnd]
     if (mention.mention) {
-      setBubble(null)
+      setCaret(null)
       return
     } // при активном @-меню панель прячем
-    const TOOLBAR_H = 34
-    const GAP = 6
     const start = caretCoords(el, el.selectionStart)
-    const startTop = start.top - el.scrollTop
-    let top: number
-    if (startTop >= TOOLBAR_H + GAP) {
-      top = startTop - TOOLBAR_H - GAP
-    } else {
-      const end = caretCoords(el, el.selectionEnd)
-      top = end.top - el.scrollTop + end.height + GAP
-    }
-    setBubble({ top, left: Math.max(4, Math.min(start.left, el.clientWidth - 300)) })
+    const end = caretCoords(el, el.selectionEnd)
+    setCaret({
+      top: start.top - el.scrollTop,
+      bottom: end.top - el.scrollTop + end.height,
+      left: Math.max(4, Math.min(start.left, el.clientWidth - 300)),
+    })
   }
 
   function surround(before: string, after = before, ph = '') {
@@ -118,7 +114,7 @@ export function BubbleTextEditor({
 
   function onChangeText(v: string) {
     onChange(v)
-    if (mention.onText(v)) setBubble(null)
+    if (mention.onText(v)) setCaret(null)
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -163,7 +159,7 @@ export function BubbleTextEditor({
         onBlur={() =>
           setTimeout(() => {
             if (!overlayOpen.current) {
-              setBubble(null)
+              setCaret(null)
               mention.close()
             }
           }, 150)
@@ -178,10 +174,10 @@ export function BubbleTextEditor({
       />
       {trailing && <div className="absolute right-1.5 top-1.5">{trailing}</div>}
 
-      {bubble && !mention.mention && (
+      {caret && !mention.mention && (
         <BubbleToolbar
           tools={tools}
-          at={bubble}
+          caret={caret}
           lang={lang}
           onMention={() => insertAtRange('@', savedSel.current[0], savedSel.current[1])}
           onEmoji={(native) => insertAtRange(native, savedSel.current[0], savedSel.current[1])}

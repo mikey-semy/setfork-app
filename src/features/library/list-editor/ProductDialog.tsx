@@ -5,6 +5,7 @@ import { Button } from '@/shared/ui/button'
 import { FloatingInput } from '@/shared/ui/FloatingInput'
 import { OverlayPanel } from '@/shared/ui/OverlayPanel'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { safeHref } from '@/shared/lib/safe-url'
 import { t, type Lang, type TKey } from '@/shared/i18n'
 import { PRODUCT_TIERS, type ProductTier } from '../blocks'
 import { EMPTY_PRODUCT, type EditorProduct } from '../editor'
@@ -41,10 +42,14 @@ export function ProductDialog({
 
   const patch = (p: Partial<EditorProduct>) => setDraft((d) => ({ ...d, ...p }))
 
+  // Товар без имени ИЛИ без пригодной ссылки при сохранении списка отбрасывается
+  // (см. toProposedItems). Кнопка должна знать ровно это правило, иначе чип
+  // выглядит сохранённым, а после перезагрузки списка исчезает.
+  const ready = Boolean(draft.name.trim() && safeHref(draft.url))
+
   function save() {
-    const v: EditorProduct = { ...draft, name: draft.name.trim(), url: draft.url.trim(), note: draft.note.trim() }
-    if (!v.name && !v.url) return
-    onSave(v)
+    if (!ready) return
+    onSave({ ...draft, name: draft.name.trim(), url: draft.url.trim(), note: draft.note.trim() })
     onClose()
   }
 
@@ -60,7 +65,7 @@ export function ProductDialog({
           <Button variant="ghost" onClick={onClose}>
             {t('cancel', lang)}
           </Button>
-          <Button variant="primary" onClick={save} disabled={!draft.name.trim() && !draft.url.trim()}>
+          <Button variant="primary" onClick={save} disabled={!ready}>
             {initial ? t('saveChanges', lang) : t('productAdd', lang)}
           </Button>
         </>
