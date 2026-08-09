@@ -10,6 +10,7 @@ import { yaml } from '@codemirror/lang-yaml'
 import { shell } from '@codemirror/legacy-modes/mode/shell'
 import { dockerFile } from '@codemirror/legacy-modes/mode/dockerfile'
 import { useTheme } from 'next-themes'
+import { TEXT } from './control'
 import { detectLang, LANG_LABEL, type CodeLang } from './detect-lang'
 import { CopyButton } from './CopyButton'
 
@@ -67,10 +68,11 @@ export default function CodeEditorInner({
 
   return (
     <div className="relative" role="group" aria-label={ariaLabel}>
-      {/* Правый верхний угол: язык + копировать (фидбек владельца). */}
+      {/* Язык и «копировать» — плотно в ПРАВОМ ВЕРХНЕМ УГЛУ и мельче текста кода:
+          это служебная пара, она не должна спорить с содержимым поля. */}
       {value.trim() !== '' && (
-        <span className="absolute right-2 top-1.5 z-10 inline-flex items-center gap-1.5">
-          <span className="pointer-events-none rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[0.6875rem] uppercase tracking-wide text-muted">
+        <span className="absolute right-1 top-1 z-10 inline-flex items-center gap-1">
+          <span className={`pointer-events-none font-mono ${TEXT.caption} uppercase tracking-wide text-muted/80`}>
             {LANG_LABEL[id]}
           </span>
           <CopyButton text={value} />

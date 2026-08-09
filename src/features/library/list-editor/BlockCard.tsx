@@ -47,8 +47,9 @@ type BlockCardProps = {
   onInsertBelow: () => void
   /** Смена типа блока на месте — выбор в слэш-меню. */
   onRetype: (type: BlockType) => void
-  /** Чат правки этого блока; у видов без текстовых полей его нет. */
-  chat?: ReactNode
+  /** Открыть разговор о правке блока; у видов без текстовых полей его нет. */
+  onChat?: () => void
+  chatActive?: boolean
   isUploading: (kind: DropKind) => boolean
   onUpload: (kind: DropKind, file: File) => void
   /** Инсертер следующего блока — стоит внутри карточки, под её содержимым. */
@@ -108,7 +109,7 @@ function BlockBody({
  * Стрелки и Alt+↑/↓ не вспомогательные, а полноценный путь: перенос указателем удобен,
  * но с клавиатуры он недоступен по своей природе.
  */
-export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, onInsertBelow, onRetype, isUploading, onUpload, insertAfter, chat }: BlockCardProps) {
+export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang, drag, onPatch, onMove, onMoveToEdge, onRemove, onInsertBelow, onRetype, isUploading, onUpload, insertAfter, onChat, chatActive }: BlockCardProps) {
   return (
     // `group/card` — для жёлоба: он проявляется, когда указатель на ЭТОЙ карточке.
     <div data-i={index} data-uid={uid} className={`group/card relative rounded-lg border border-border bg-surface p-4 ${drag.dragging ? 'opacity-50' : ''}`}>
@@ -131,7 +132,8 @@ export function BlockCard({ item, index, uid, stepNumber, isFirst, isLast, lang,
         onMoveToEdge={onMoveToEdge}
         onRemove={onRemove}
         onInsertBelow={onInsertBelow}
-        chat={chat}
+        onChat={onChat}
+        chatActive={chatActive}
       />
 
       {/* Урок/секция есть у ЛЮБОГО блока: заданный заголовок начинает новую группу

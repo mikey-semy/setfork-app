@@ -1,7 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
-import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, GripVertical, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, GripVertical, MoreHorizontal, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
@@ -34,7 +33,8 @@ export function BlockCardHeader({
   onMoveToEdge,
   onRemove,
   onInsertBelow,
-  chat,
+  onChat,
+  chatActive,
 }: {
   type: BlockType
   /** Номер шага в нумерованном списке; null — маркер вместо числа. */
@@ -48,8 +48,9 @@ export function BlockCardHeader({
   onRemove: () => void
   /** Вставить ниже блок ТОГО ЖЕ типа — жёлобный «плюс». */
   onInsertBelow: () => void
-  /** Кнопка чата правки; у видов без текстовых полей её нет. */
-  chat?: ReactNode
+  /** Открыть разговор о правке блока; у видов без текстовых полей его нет. */
+  onChat?: () => void
+  chatActive?: boolean
 }) {
   const TypeIcon = BLOCK_ICON[type]
   return (
@@ -99,7 +100,6 @@ export function BlockCardHeader({
       )}
 
       <div className="ml-auto flex items-center gap-1">
-        {chat}
         <Tooltip label={t('editor.moveUp', lang)}>
           <IconButton variant="ghost" label={t('editor.moveUp', lang)} onClick={() => onMove(-1)} disabled={isFirst}>
             <ChevronUp size={iconSizeFor()} />
@@ -123,13 +123,21 @@ export function BlockCardHeader({
             <DropdownMenuItem onClick={() => onMoveToEdge('bottom')} disabled={isLast}>
               <ChevronsDown size={iconSizeFor('xs')} /> {t('editor.moveBottom', lang)}
             </DropdownMenuItem>
+            {/* Улучшение разговором — тоже в меню: оно нужно изредка, а место в
+                ряду занимало всегда (решение владельца 09.08). */}
+            {onChat && (
+              <DropdownMenuItem onClick={onChat} className={chatActive ? 'text-accent' : ''}>
+                <Sparkles size={iconSizeFor('xs')} /> {t('editor.improveBlock', lang)}
+              </DropdownMenuItem>
+            )}
+            {/* Удаление — В МЕНЮ, а не отдельной кнопкой в ряду (решение владельца
+                09.08): необратимое действие не должно стоять в шаге промаха от
+                стрелок порядка, да и ряд оно удлиняло. */}
+            <DropdownMenuItem onClick={onRemove} className="text-danger focus:text-danger">
+              <Trash2 size={iconSizeFor('xs')} /> {t('editor.remove', lang)}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Tooltip label={t('editor.remove', lang)}>
-          <IconButton variant="danger" label={t('editor.remove', lang)} onClick={onRemove}>
-            <Trash2 size={iconSizeFor()} />
-          </IconButton>
-        </Tooltip>
       </div>
     </div>
   )

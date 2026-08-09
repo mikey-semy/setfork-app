@@ -10,7 +10,7 @@ import { CanonPanel } from './CanonPanel'
 import { EditorToolbar } from './EditorToolbar'
 import { commandFor, isFieldTarget } from './hotkeys'
 import { KeyboardDock } from './KeyboardDock'
-import { BlockChatButton, BlockChatHost } from './BlockChat'
+import { BlockChatHost } from './BlockChat'
 import { useBlockDrag } from './use-block-drag'
 import { useBlockList } from './use-block-list'
 import { useBlockUploads } from './use-block-uploads'
@@ -181,9 +181,10 @@ export function ListEditor({
             onRemove={() => list.removeAt(i)}
             onInsertBelow={() => list.insertAt(i + 1, item.type)}
             onRetype={(type) => list.retype(i, type)}
-            // Чат правки — только у шага: у опроса и картинки текстовых полей,
-            // которые он правит, попросту нет.
-            chat={aiRefine && item.type === 'step' ? <BlockChatButton onOpen={() => setChatUid(list.uids[i])} active={chatUid === list.uids[i]} lang={lang} /> : undefined}
+            // Разговор о правке — только у шага: у опроса и картинки текстовых
+            // полей, которые он правит, попросту нет.
+            onChat={aiRefine && item.type === 'step' ? () => setChatUid(list.uids[i]) : undefined}
+            chatActive={chatUid === list.uids[i]}
             isUploading={(kind) => uploads.isBusy(list.uids[i], kind)}
             onUpload={(kind, file) => void uploads.upload(list.uids[i], kind, file)}
             // Инсертер после ПОСЛЕДНЕГО блока не рисуем: конец списка покрывает
