@@ -123,7 +123,7 @@ export function AvatarCropper({
 
   return (
     <OverlayPanel open={open} onClose={onCancel} width={320} title={labels.title}>
-      <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-4">
         <div
           className="relative mx-auto touch-none overflow-hidden rounded-lg bg-surface-2 select-none"
           style={{ width: VIEWPORT, height: VIEWPORT, maxWidth: '100%' }}

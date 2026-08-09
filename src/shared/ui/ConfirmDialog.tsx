@@ -54,7 +54,7 @@ export function ConfirmDialog({
   const disabled = !matched || busy
 
   const body = (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4">
       {intro && <div className="text-[0.8125rem] leading-relaxed text-ink-2">{intro}</div>}
       {confirmPhrase && (
         <div className="flex flex-col gap-1.5 text-[0.78125rem] font-semibold text-ink-2">

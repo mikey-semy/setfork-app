@@ -3,6 +3,7 @@
 import { Paperclip, X } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
+import { TEXT } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import { parseVideoEmbed, type BlockType } from '../blocks'
 import type { EditorItem } from '../editor'
@@ -63,7 +64,7 @@ export function VideoBlockBody({ item, onPatch, uploading, onFile, lang }: BodyP
       <Input aria-label={t('editor.videoUrl', lang)} placeholder={t('editor.videoUrlPh', lang)} value={item.videoUrl} onChange={(e) => onPatch({ videoUrl: e.target.value })} />
       {VIDEO_UPLOAD_ENABLED && (
         <>
-          <div className="flex items-center gap-2 text-[0.6875rem] text-muted">
+          <div className={`flex items-center gap-2 ${TEXT.caption} text-muted`}>
             <span className="h-px flex-1 bg-border" />
             {t('editor.or', lang)}
             <span className="h-px flex-1 bg-border" />
@@ -75,7 +76,7 @@ export function VideoBlockBody({ item, onPatch, uploading, onFile, lang }: BodyP
       {/* Нераспознанная ссылка не молчит: читателю она покажется просто ссылкой,
           и автор должен узнать об этом здесь, а не после публикации. */}
       {embed && (
-        <span className={`text-[0.6875rem] ${embed === 'link' ? 'text-warn' : 'text-muted'}`}>
+        <span className={`${TEXT.caption} ${embed === 'link' ? 'text-warn' : 'text-muted'}`}>
           {embed === 'youtube' && '▶ YouTube'}
           {embed === 'vimeo' && '▶ Vimeo'}
           {embed === 'file' && t('editor.videoFile', lang)}

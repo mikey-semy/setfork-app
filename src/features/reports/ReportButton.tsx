@@ -36,7 +36,7 @@ export function ReportButton({ templateId, lang }: { templateId: string; lang: L
 
       <OverlayPanel open={open} onClose={() => setOpen(false)} title={t('reportTitle', lang)} width={440}>
         {state?.ok ? (
-          <div className="p-4 text-center">
+          <div className="text-center">
             <div className="mb-1 text-[1rem] font-bold text-ink">{t('rpThanks', lang)}</div>
             <p className="text-[0.8125rem] text-ink-2">{t('rpThanksBody', lang)}</p>
           </div>

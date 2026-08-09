@@ -125,7 +125,7 @@ export function WatchButton({
       </DropdownMenu>
 
       <OverlayPanel open={customOpen} onClose={() => setCustomOpen(false)} title={labels.customTitle} width={360}>
-        <div className="flex flex-col gap-1 px-3.5 py-3">
+        <div className="flex flex-col gap-1">
           {EVENT_KEYS.map((k) => {
             const label = k === 'versions' ? labels.evVersions : k === 'issues' ? labels.evIssues : labels.evSuggestions
             return (

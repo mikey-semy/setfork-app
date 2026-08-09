@@ -2,7 +2,7 @@
 
 import { ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, GripVertical, MoreHorizontal, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
-import { iconSizeFor } from '@/shared/ui/control'
+import { TEXT, iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
@@ -89,11 +89,11 @@ export function BlockCardHeader({
       </div>
 
       {type === 'step' ? (
-        <span className="shrink-0 font-mono text-[0.78125rem] whitespace-nowrap text-muted">
+        <span className={`shrink-0 font-mono ${TEXT.bodySm} whitespace-nowrap text-muted`}>
           {stepNumber === null ? '•' : t('editor.itemN', lang).replace('{n}', String(stepNumber))}
         </span>
       ) : (
-        <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.78125rem] whitespace-nowrap text-muted">
+        <span className={`inline-flex shrink-0 items-center gap-1 font-mono ${TEXT.bodySm} whitespace-nowrap text-muted`}>
           <TypeIcon size={13} />
           {blockLabel(type, lang)}
         </span>

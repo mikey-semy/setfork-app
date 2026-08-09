@@ -1,7 +1,7 @@
 'use client'
 
 import { Code2, Eye, Info, Pencil, Redo2, Undo2 } from 'lucide-react'
-import { iconSizeFor } from '@/shared/ui/control'
+import { TEXT, iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { t, type Lang } from '@/shared/i18n'
@@ -37,7 +37,7 @@ export function EditorToolbar({
   lang: Lang
 }) {
   return (
-    <div className="flex items-center gap-1 text-[0.78125rem] text-muted">
+    <div className={`flex items-center gap-1 ${TEXT.bodySm} text-muted`}>
       <Tooltip label={t('editor.undoHint', lang)}>
         <IconButton variant="ghost" onClick={onUndo} disabled={!canUndo} label={t('editor.undo', lang)}>
           <Undo2 size={iconSizeFor()} />

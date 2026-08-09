@@ -6,7 +6,7 @@ import { BubbleTextEditor } from '@/shared/ui/BubbleTextEditor'
 import { Button } from '@/shared/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { CodeEditor } from '@/shared/ui/CodeEditor'
-import { iconSizeFor, TOUCH_MIN_H } from '@/shared/ui/control'
+import { TEXT, TOUCH_MIN_H, iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
 import { Switch } from '@/shared/ui/switch'
@@ -15,7 +15,8 @@ import { t, type Lang, type TKey } from '@/shared/i18n'
 import { isRiskyCommand } from '@/core/domain/destructive-command'
 import { fetchLinkTitleAction } from '../actions/ai'
 import type { EditorItem } from '../editor'
-import { AddLink, LineField, RemoveBtn } from './block-fields'
+import { AddLink, LineField, RemoveBtn, SettingRow } from './block-fields'
+import { LinkChips } from './LinkChips'
 import { FileDrop } from './FileDrop'
 
 const LEVELS: EditorItem['level'][] = ['required', 'recommended', 'optional']
@@ -40,27 +41,6 @@ const LEVEL_LABEL: Record<EditorItem['level'], TKey> = {
   required: 'editor.levelRequired',
   recommended: 'editor.levelRecommended',
   optional: 'editor.levelOptional',
-}
-
-/** Кнопка в поле подписи ссылки: тянет <title> страницы по URL. Своё состояние
- *  занятости на строку; неактивна, пока в соседнем поле не валидный адрес. */
-function LinkTitleButton({ url, onLabel, lang }: { url: string; onLabel: (v: string) => void; lang: Lang }) {
-  const [busy, setBusy] = useState(false)
-  const ok = /^https?:\/\/\S+/i.test(url.trim())
-  async function gen() {
-    if (busy || !ok) return
-    setBusy(true)
-    const res = await fetchLinkTitleAction(url.trim())
-    setBusy(false)
-    if ('label' in res) onLabel(res.label)
-  }
-  return (
-    <Tooltip label={t('editor.linkTitleFromUrl', lang)}>
-      <IconButton size="xs" variant="ghost" onClick={gen} disabled={busy || !ok} label={t('editor.linkTitleFromUrl', lang)} className="hover:text-accent">
-        {busy ? <Loader2 size={iconSizeFor('sm')} className="animate-spin" /> : <Sparkles size={iconSizeFor('sm')} />}
-      </IconButton>
-    </Tooltip>
-  )
 }
 
 /**
@@ -96,8 +76,7 @@ export function StepBlockBody({
           устроено у Linear и Jira, и так оно занимает одну цель вместо трёх. Ряд из
           трёх подписей съедал половину ширины телефона и переносился на вторую
           строку, а три одинаковых значка без подписей не различались вовсе. */}
-      <div className="flex items-center gap-2">
-        <span className="text-[0.6875rem] text-muted">{t('editor.level', lang)}</span>
+      <SettingRow label={t('editor.level', lang)}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="xs" variant="ghost" className={`gap-1.5 bg-surface-2 ${TOUCH_MIN_H}`}>
@@ -119,20 +98,19 @@ export function StepBlockBody({
             })}
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </SettingRow>
       <LineField value={item.why} onChange={(why) => onPatch({ why })} lang={lang} className="" label={t('editor.why', lang)} placeholder={t('editor.whyPh', lang)} />
 
       {/* «ЗДЕСЬ НУЖЕН ЧЕЛОВЕК»: пункт зависит от того, чего не знает никакая модель —
           местные цены, вкус, время на вашем оборудовании. Снятая пометка = «человек
           ответил», это единственный способ её закрыть. */}
-      <div className="flex items-center justify-between gap-3">
-        <span className="min-w-0 text-[0.6875rem] text-muted">{t('needsHumanLabel', lang)}</span>
+      <SettingRow label={t('needsHumanLabel', lang)}>
         <Switch
           checked={item.needsHuman}
           onCheckedChange={(on) => onPatch({ needsHuman: on, ...(on ? {} : { needsHumanAsk: '' }) })}
           aria-label={`${index + 1}: ${t('needsHumanLabel', lang)}`}
         />
-      </div>
+      </SettingRow>
       {item.needsHuman && (
         <LineField
           value={item.needsHumanAsk}
@@ -151,11 +129,10 @@ export function StepBlockBody({
           прямо, а не делаем вид, что переключатель всесилен. */}
       {item.command.trim() && (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <span className="min-w-0 text-[0.6875rem] text-muted">{t('dangerLabel', lang)}</span>
+          <SettingRow label={t('dangerLabel', lang)}>
             <Switch checked={item.danger ?? isRiskyCommand(item.command)} onCheckedChange={(danger) => onPatch({ danger })} aria-label={`${index + 1}: ${t('dangerLabel', lang)}`} />
-          </div>
-          {item.danger === false && isRiskyCommand(item.command) && <p className="text-[0.6875rem] text-muted">{t('dangerStillCommented', lang)}</p>}
+          </SettingRow>
+          {item.danger === false && isRiskyCommand(item.command) && <p className={`${TEXT.caption} text-muted`}>{t('dangerStillCommented', lang)}</p>}
         </>
       )}
 
@@ -177,52 +154,13 @@ export function StepBlockBody({
         </div>
       )}
 
-      {item.refs.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {item.refs.map((r, ri) => {
-            const patchRef = (p: Partial<EditorItem['refs'][number]>) => onPatch({ refs: item.refs.map((x, xi) => (xi === ri ? { ...x, ...p } : x)) })
-            return (
-              <div key={ri} className="flex items-center gap-2">
-                <BubbleTextEditor
-                  value={r.label}
-                  onChange={(label) => patchRef({ label })}
-                  singleLine
-                  className="w-[12.5rem] shrink-0"
-                  textareaClassName="leading-normal"
-                  lang={lang}
-                  ariaLabel={t('editor.linkLabel', lang)}
-                  placeholder={t('editor.linkLabel', lang)}
-                  trailing={<LinkTitleButton url={r.url} lang={lang} onLabel={(label) => patchRef({ label })} />}
-                />
-                <Input className="font-mono leading-normal" aria-label={t('editor.linkUrl', lang)} placeholder="https://…" value={r.url} onChange={(e) => patchRef({ url: e.target.value })} />
-                <RemoveBtn onClick={() => onPatch({ refs: item.refs.filter((_, xi) => xi !== ri) })} label={t('editor.removeLink', lang)} />
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {item.imagePreview ? (
-        <div className="relative w-fit">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.imagePreview} alt="" className="max-h-[10rem] rounded-md border border-border" />
-          {/* Снять скриншот — служебное действие в правом верхнем углу картинки. */}
-          <IconButton
-            size="sm"
-            onClick={() => onPatch({ imageKey: '', imagePreview: '' })}
-            label={t('editor.remove', lang)}
-            className="absolute top-1.5 right-1.5 border-0 bg-black/60 text-white hover:bg-black/80 hover:text-white"
-          >
-            <X size={iconSizeFor('sm')} />
-          </IconButton>
-        </div>
-      ) : (
-        <FileDrop kind="image" uploading={uploading} onFile={onFile} lang={lang} />
-      )}
-
-      <div className="flex flex-wrap gap-3 pt-1 text-[0.78125rem]">
+      {/* Ссылки — чипами, ввод и правка в отдельном окне (решение владельца
+          09.08.2026, как в Telegram и текстовых редакторах): адрес нужен один раз,
+          а место в карточке занимал всегда. Кнопка добавления стоит В ОДНОМ РЯДУ с
+          «+ подпункт» — это соседние действия одного вида. */}
+      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 pt-1 ${TEXT.bodySm}`}>
         <AddLink onClick={() => onPatch({ subtasks: [...item.subtasks, ''] })}>{t('editor.addSubitem', lang)}</AddLink>
-        <AddLink onClick={() => onPatch({ refs: [...item.refs, { label: '', url: '' }] })}>{t('editor.addLinkWord', lang)}</AddLink>
+        <LinkChips refs={item.refs} onChange={(refs) => onPatch({ refs })} lang={lang} />
       </div>
     </div>
   )

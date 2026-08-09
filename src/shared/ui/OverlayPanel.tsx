@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+import { PANEL_HEAD, PANEL_PAD } from './control'
 
 // Единая модальная панель-оверлей для всех центр-портальных пикеров
 // (эмодзи, папки, пины, фильтр, assignee/label/milestone, мобильный поиск).
@@ -20,6 +21,7 @@ export function OverlayPanel({
   width = 340,
   align = 'center',
   className = '',
+  bare = false,
 }: {
   open: boolean
   onClose: () => void
@@ -30,6 +32,8 @@ export function OverlayPanel({
   /** center — по центру экрана; top — вверху (для поиска/списков, как GitHub). */
   align?: 'center' | 'top'
   className?: string
+  /** Содержимое само отвечает за поля (эмодзи-пикер, галерея): панель их не ставит. */
+  bare?: boolean
 }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
@@ -53,14 +57,16 @@ export function OverlayPanel({
         className={`sf-pop-in max-w-full rounded-lg border border-border bg-surface shadow-card ${className}`}
       >
         {title !== undefined && (
-          <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
+          <div className={`flex items-center justify-between border-b border-border ${PANEL_HEAD}`}>
             <span className="text-[0.8125rem] font-semibold text-ink">{title}</span>
             <button type="button" onClick={onClose} className="rounded-md p-1 text-muted hover:text-ink" aria-label="Close">
               <X size={14} />
             </button>
           </div>
         )}
-        {children}
+        {/* Тело всегда с полями панели: раньше отступ задавал КАЖДЫЙ вызывающий,
+            и одни окна имели поля, другие упирались в края. */}
+        <div className={bare ? undefined : PANEL_PAD}>{children}</div>
       </div>
     </div>,
     document.body,

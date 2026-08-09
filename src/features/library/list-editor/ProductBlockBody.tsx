@@ -1,7 +1,7 @@
 'use client'
 
 import { Trash2 } from 'lucide-react'
-import { iconSizeFor } from '@/shared/ui/control'
+import { TEXT, iconSizeFor } from '@/shared/ui/control'
 import { IconButton } from '@/shared/ui/IconButton'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -72,7 +72,7 @@ export function ProductBlockBody({
           </IconButton>
         </div>
       ))}
-      <div className="text-[0.78125rem]">
+      <div className={`${TEXT.bodySm}`}>
         <AddLink onClick={() => onProducts([...products, { name: '', url: '', tier: '', note: '' }])}>{t('productAdd', lang)}</AddLink>
       </div>
     </div>

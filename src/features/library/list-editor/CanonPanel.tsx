@@ -5,6 +5,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react'
 import { Alert } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/button'
 import { CodeEditor } from '@/shared/ui/CodeEditor'
+import { TEXT } from '@/shared/ui/control'
 import { t, type Lang } from '@/shared/i18n'
 import { parseCanonAction, renderCanonAction } from '../actions/canon'
 import type { EditorItem } from '../editor'
@@ -115,7 +116,7 @@ export function CanonPanel({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-[0.78125rem] text-muted">{t('canon.hint', lang)}</p>
+      <p className={`${TEXT.bodySm} text-muted`}>{t('canon.hint', lang)}</p>
       {text === null ? (
         <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 p-4 text-[0.8125rem] text-muted">
           <Loader2 size={14} className="animate-spin" /> {t('canon.loading', lang)}
