@@ -52,10 +52,14 @@ export function LinkDialog({
     if ('label' in res) setLabel(res.label)
   }
 
+  // При записи ссылка живёт, если заполнено ХОТЬ ЧТО-ТО: подпись без адреса —
+  // законная ссылка-заметка (см. toProposedItems). Кнопка знает то же правило,
+  // иначе правку такой ссылки нельзя было бы сохранить.
+  const ready = Boolean(label.trim() || url.trim())
+
   function save() {
-    const v = { label: label.trim(), url: url.trim() }
-    if (!v.url) return
-    onSave(v)
+    if (!ready) return
+    onSave({ label: label.trim(), url: url.trim() })
     onClose()
   }
 
@@ -70,7 +74,7 @@ export function LinkDialog({
           <Button variant="ghost" onClick={onClose}>
             {t('cancel', lang)}
           </Button>
-          <Button variant="primary" onClick={save} disabled={!url.trim()}>
+          <Button variant="primary" onClick={save} disabled={!ready}>
             {initial ? t('saveChanges', lang) : t('editor.linkAdd', lang)}
           </Button>
         </>

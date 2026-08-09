@@ -46,14 +46,15 @@ export function BubbleToolbar({
   const barRef = useRef<HTMLDivElement>(null)
   const [emojiOpen, setEmojiOpenState] = useState(false)
   const [moreOpen, setMoreOpenState] = useState(false)
+  // Об открытии сообщаем ТОЛЬКО про пикер эмодзи: он живёт в портале и забирает
+  // фокус, поэтому панель обязана пережить потерю фокуса. Меню «⋯» — часть самой
+  // панели и своего закрытия по клику мимо не имеет: если бы оно тоже удерживало
+  // панель, та зависала бы на экране после ухода в другое поле.
   const setEmojiOpen = (v: boolean) => {
     setEmojiOpenState(v)
-    onOverlay(v || moreOpen)
+    onOverlay(v)
   }
-  const setMoreOpen = (v: boolean) => {
-    setMoreOpenState(v)
-    onOverlay(v || emojiOpen)
-  }
+  const setMoreOpen = setMoreOpenState
   const fit = useToolbarFit(barRef, tools.length, [caret.left, caret.top])
   // Высоту панели меряем, а не задаём числом: на грубом указателе кнопки
   // вырастают до тач-цели, и панель становится выше — с фиксированным числом она
