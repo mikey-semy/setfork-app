@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Bell } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { Avatar } from '@/shared/ui/Avatar'
+import { IconButton } from '@/shared/ui/IconButton'
 import { t, tr, type Lang, type TKey } from '@/shared/i18n'
 import type { NotificationItem } from './queries'
 import { markNotificationsRead } from './actions'
@@ -25,18 +26,16 @@ export function NotificationsBell({ unread, items, lang }: { unread: number; ite
   return (
     <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={t('notifications', lang)}
-          className="relative grid h-[1.875rem] w-[1.875rem] place-items-center rounded-md text-ink-2 outline-hidden hover:text-ink"
-        >
+        {/* `relative` — под бейдж счётчика; сам вид и тач-цель берутся у примитива,
+            а не пишутся здесь (до этого высота была 30px — мимо шкалы 24/28/32). */}
+        <IconButton variant="ghost" label={t('notifications', lang)} className="relative">
           <Bell size={17} />
           {count > 0 && (
             <span className="absolute -right-0.5 -top-0.5 grid h-[0.9375rem] min-w-[0.9375rem] place-items-center rounded-full bg-danger px-1 text-[0.6875rem] font-bold text-white">
               {count > 9 ? '9+' : count}
             </span>
           )}
-        </button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[21.25rem] p-0">
         <div className="border-b border-border px-3 py-2.5 text-[0.8125rem] font-semibold text-ink">{t('notifications', lang)}</div>

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { ListChecks, Search, X } from 'lucide-react'
 import type { Lang } from '@/shared/i18n'
+import { IconButton } from '@/shared/ui/IconButton'
 
 /** Мобильный поиск: оверлей НА МЕСТЕ (не редирект на /search — оттуда не вернуться).
  *  На странице списка первая опция — «искать в этом списке» (?find= фильтрует шаги,
@@ -32,9 +33,9 @@ export function MobileSearch({
 
   return (
     <>
-      <button type="button" aria-label={ru ? 'Поиск' : 'Search'} onClick={() => setOpen(true)} className={className}>
+      <IconButton variant="ghost" label={ru ? 'Поиск' : 'Search'} onClick={() => setOpen(true)} className={className}>
         <Search size={17} />
-      </button>
+      </IconButton>
       {open &&
         createPortal(
           <div className="fixed inset-0 z-50 bg-black/40 p-3 pt-14" onClick={() => setOpen(false)}>

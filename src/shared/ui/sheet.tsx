@@ -43,12 +43,16 @@ function SheetContent({
   portal = true,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & { side?: 'right' | 'left'; closeLabel: string; portal?: boolean }) {
-  const Portal = portal ? SheetPrimitive.Portal : React.Fragment
   // Панель-часть-формы держим смонтированной; обычная панель (в портале) живёт по
   // умолчанию Radix — монтируется на открытие и не занимает DOM зря.
   const keep = portal ? undefined : true
-  return (
-    <Portal {...(keep ? { forceMount: true } : {})}>
+  // Обёртка: настоящий портал — только когда он нужен. React.Fragment пропов не
+  // принимает вовсе (forceMount на нём — предупреждение в консоли), поэтому
+  // ветвление здесь, а не в пропах общей переменной.
+  const wrap = (children: React.ReactNode) =>
+    portal ? <SheetPrimitive.Portal>{children}</SheetPrimitive.Portal> : <>{children}</>
+  return wrap(
+    <>
       <SheetPrimitive.Overlay
         forceMount={keep}
         className={cn('fixed inset-0 bg-black/50 backdrop-blur-[1px] data-[state=closed]:hidden', LAYER.overlay)}
@@ -73,7 +77,7 @@ function SheetContent({
           </IconButton>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
-    </Portal>
+    </>,
   )
 }
 

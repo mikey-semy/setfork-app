@@ -105,7 +105,17 @@ export function TagInput({ name = 'tags', initial = [], lang, max = 8 }: { name?
               } else if (e.key === 'ArrowUp') {
                 e.preventDefault()
                 setHi((h) => Math.max(h - 1, 0))
-              } else if (e.key === 'Escape') {
+              } else if (e.key === 'Escape' && (q || (open && sugg.length > 0))) {
+                // Escape закрывает ПОДСКАЗКУ, а не то, внутри чего стоит поле:
+                // без остановки всплытия он доходил до боковой панели свойств и
+                // захлопывал её целиком (поймано смоком 09.08.2026).
+                //
+                // Условие — про НЕЗАКОНЧЕННЫЙ ввод: пока в поле есть текст или
+                // висит подсказка, Escape принадлежит полю (закрывает подсказку,
+                // ввод остаётся). Пустое поле и нет подсказки — Escape отдаём
+                // наверх, там он закрывает панель, и это правильно.
+                e.preventDefault()
+                e.stopPropagation()
                 setOpen(false)
               }
             }}

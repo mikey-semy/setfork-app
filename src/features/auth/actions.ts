@@ -8,6 +8,7 @@ import { dummyVerify, hashPassword, verifyPassword } from '@/shared/auth/passwor
 import { clientIpFromHeaders } from '@/shared/auth/app-origin'
 import { isHandleShapeValid } from '@/shared/auth/handle'
 import { rateLimit } from '@/shared/rate-limit'
+import { envNumber } from '@/shared/env'
 import { avatarSrc } from '@/shared/media'
 import { getLang } from '@/shared/i18n/server'
 import { t } from '@/shared/i18n'
@@ -64,9 +65,13 @@ export async function loginWithPassword(_prev: AuthResult | null, formData: Form
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
 
-  // Троттлинг перебора паролей: 10 попыток / 15 мин на ip+email.
+  // Троттлинг перебора паролей: попытки на ip+email за 15 минут. Число — настройка,
+  // а не константа: сквозной смок логинит одну персону десятки раз за прогон и
+  // упирался в потолок, из-за чего половина сценариев «не могла войти» (09.08.2026).
+  // Прод и dev живут на значении по умолчанию.
   const ip = await clientIpFromHeaders()
-  if (!(await rateLimit(`login:${ip}:${email}`, 10, 15 * 60_000)).ok) return { error: t('invalidCredentials', lang) }
+  const attempts = envNumber('SETFORK_LOGIN_ATTEMPTS', 10)
+  if (!(await rateLimit(`login:${ip}:${email}`, attempts, 15 * 60_000)).ok) return { error: t('invalidCredentials', lang) }
 
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1)
   if (!user) {

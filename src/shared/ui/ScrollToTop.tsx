@@ -56,7 +56,10 @@ export function ScrollToTop({ label = 'Наверх' }: { label?: string }) {
     }
     // Высота панели меняется и без правок DOM-структуры: растёт поле ввода, приходит
     // ответ в чат. Поэтому именно ResizeObserver, а не разовый замер.
-    const measure = () => setBarH(bar.offsetHeight)
+    // Мерим не ВЫСОТУ панели, а сколько она занимает СНИЗУ экрана: панель может
+    // стоять с отступом (плавающая кнопка «Создать список» — bottom-5), и тогда её
+    // высоты не хватало — кнопка «наверх» садилась ровно на её верхнюю кромку.
+    const measure = () => setBarH(Math.max(0, window.innerHeight - bar.getBoundingClientRect().top))
     measure()
     if (typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(measure)

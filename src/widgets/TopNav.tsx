@@ -29,8 +29,10 @@ import { MobileSearch } from './MobileSearch'
 import { ListSwitcher } from './ListSwitcher'
 import type { NotificationItem } from '@/features/notifications/queries'
 import { LangSwitch, ThemeModeSwitch } from '@/shared/ui/controls'
-import { CONTROL_H } from '@/shared/ui/control'
+import { TOUCH_HIT } from '@/shared/ui/control'
 import { Avatar } from '@/shared/ui/Avatar'
+import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/IconButton'
 import { Tooltip } from '@/shared/ui/Tooltip'
 import { useSidebar } from './sidebar-context'
 import {
@@ -125,9 +127,6 @@ export function TopNav({
   // Убираем дефолтный аутлайн (Radix возвращает фокус на триггер после закрытия —
   // из-за этого «залипало» выделение); кольцо оставляем только для клавиатуры.
   const focusRing = 'outline-hidden focus-visible:ring-2 focus-visible:ring-border-strong'
-  // Высота — из шкалы (CONTROL_H.md), а не рукописная: иконки шапки стоят в одном
-  // ряду с поиском, и любое своё число тут же читается как «разъехалось».
-  const iconBtn = `grid ${CONTROL_H.md} w-8 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`
   // Иконки пунктов меню — приглушённые: ведёт текст, значок только помогает нащупать
   // строку взглядом (как в меню аккаунта у GitHub).
   const menuIcon = 'text-muted'
@@ -171,14 +170,9 @@ export function TopNav({
     <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5 print:hidden">
       {/* Бургер + SF = логотип на одном уровне: ☰ читается как «список», линии жирные */}
       <div className="flex shrink-0 items-center gap-1.5">
-        <button
-          type="button"
-          aria-label={t('menu', lang)}
-          onClick={toggleSidebar}
-          className={`grid ${CONTROL_H.md} w-8 place-items-center rounded-md text-ink hover:bg-surface-2 ${focusRing}`}
-        >
+        <IconButton variant="ghost" label={t('menu', lang)} onClick={toggleSidebar} className={`text-ink ${focusRing}`}>
           <Menu size={21} strokeWidth={2.75} />
-        </button>
+        </IconButton>
         {/* Имя начинается с видимого «SF» (WCAG 2.5.3 label-in-name): голый "SetFork" его не содержал. */}
         <Link href="/" className="font-logo text-[1.125rem] leading-none text-ink" aria-label="SF — SetFork">
           SF
@@ -197,13 +191,9 @@ export function TopNav({
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={crumb.handle}
-                    className={`grid size-7 shrink-0 place-items-center rounded-md text-ink-2 hover:bg-surface-2 hover:text-ink sm:hidden ${focusRing}`}
-                  >
+                  <IconButton size="sm" variant="ghost" label={crumb.handle} className={`sm:hidden ${focusRing}`}>
                     <MoreHorizontal size={16} />
-                  </button>
+                  </IconButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                   <DropdownMenuItem asChild>
@@ -300,7 +290,7 @@ export function TopNav({
             </div>
             {/* Мобильный поиск — оверлей на месте (не редирект); на странице списка
                 предлагает «искать в этом списке» (?find= — фильтр шагов). */}
-            <MobileSearch crumb={crumb} lang={lang} className={`${iconBtn} md:hidden`} />
+            <MobileSearch crumb={crumb} lang={lang} className={`md:hidden ${focusRing}`} />
           </>
         )}
 
@@ -316,13 +306,9 @@ export function TopNav({
             {!isListPage && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={t('create', lang)}
-                  className={`inline-flex ${CONTROL_H.md} items-center gap-0.5 rounded-md border border-border px-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`}
-                >
+                <Button aria-label={t('create', lang)} className={`gap-0.5 bg-transparent px-1.5 text-ink-2 hover:bg-surface-2 hover:text-ink ${focusRing}`}>
                   <Plus size={16} /> <ChevronDown size={13} />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
@@ -344,7 +330,7 @@ export function TopNav({
             {/* avatar user menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" aria-label={user.handle} className={`shrink-0 rounded-full ${focusRing}`}>
+                <button type="button" aria-label={user.handle} className={`shrink-0 rounded-full ${TOUCH_HIT} ${focusRing}`}>
                   <Avatar handle={user.handle} avatarUrl={user.avatarUrl} size={32} />
                 </button>
               </DropdownMenuTrigger>
@@ -441,7 +427,7 @@ export function TopNav({
               <button
                 type="button"
                 aria-label={t('signIn', lang)}
-                className={`grid size-8 shrink-0 place-items-center rounded-full border border-border text-ink-2 hover:text-ink ${focusRing}`}
+                className={`grid size-8 shrink-0 place-items-center rounded-full border border-border text-ink-2 hover:text-ink ${TOUCH_HIT} ${focusRing}`}
               >
                 <UserRound size={17} />
               </button>
