@@ -104,13 +104,21 @@ export function RunView({
   const blockedCount = steps.filter((s) => isStep(s) && s.blocked).length
   const pct = total ? Math.round((done / total) * 100) : 0
   const closed = status === 'done' || status === 'failed' || status === 'abandoned'
+  // Прохождение курса — факт с сервера: снимок при рендере (courseCompleted) плюс
+  // ответ отметки шага, которая могла завершить курс уже после него.
+  const [completedNow, setCompletedNow] = useState(false)
+  const completed = courseCompleted || completedNow
 
   const patch = (i: number, p: Partial<RunStepVM>) => setSteps((xs) => xs.map((s, idx) => (idx === i ? { ...s, ...p } : s)))
 
   function toggle(i: number) {
     const s = steps[i]
     patch(i, { done: !s.done, blocked: false })
-    start(() => toggleStep(runId, s.id))
+    start(async () => {
+      // Признак зажигаем ТОЛЬКО по ответу сервера: он знает про обе стороны курса
+      // (шаги и тесты), а страница после отметки шага не перерисовывается.
+      if (await toggleStep(runId, s.id)) setCompletedNow(true)
+    })
   }
   function toggleSub(i: number, idx: number) {
     const s = steps[i]
@@ -224,8 +232,11 @@ export function RunView({
       {/* Хост dig-чата («в шахту») — одна модалка на страницу, открывают кирки на шагах. */}
       {digEnabled && digGnomes && <DigChatHost gnomes={digGnomes} lang={lang} />}
 
-      {/* Все шаги сделаны СЕЙЧАС или курс пройден РАНЬШЕ → ссылка на сертификат. */}
-      {certificateHref && ((total > 0 && done === total && blockedCount === 0) || courseCompleted) && (
+      {/* Курс ПРОЙДЕН (запись есть) → ссылка на сертификат. Показывать по «все шаги
+          отмечены» нельзя: на версии с тестами это половина условия, и плашка обещала
+          бы сертификат, который страница выдачи честно не даёт. Отмеченные шаги здесь
+          только выбирают формулировку — завершено сейчас или уже было раньше. */}
+      {certificateHref && completed && (
         <div className="mb-5 flex items-center gap-3 rounded-lg border border-ok/40 bg-ok/10 px-4 py-3">
           <GraduationCap size={18} className="shrink-0 text-ok" />
           <span className="min-w-0 flex-1 text-[0.8125rem] font-medium text-ink">

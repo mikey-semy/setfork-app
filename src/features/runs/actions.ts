@@ -84,16 +84,27 @@ export async function startRun(templateId: string): Promise<void> {
 }
 
 // ── Отметить/снять шаг ────────────────────────────────────────────────
-export async function toggleStep(runId: string, stepId: string): Promise<void> {
+/**
+ * Возвращает `true`, если ИМЕННО ЭТА отметка сделала курс пройденным (запись в
+ * courseCompletions появилась). Нужно интерфейсу: плашку «курс пройден» со ссылкой
+ * на сертификат он обязан показывать по ФАКТУ прохождения, а не по «все шаги
+ * отмечены» — на версии с тестами шаги лишь половина условия (shared/completion.ts),
+ * и обещание сертификата опережало бы реальность.
+ *
+ * `false` означает «этой отметкой не завершилось», а НЕ «курс не пройден»: он мог
+ * быть пройден раньше. Поэтому ответ годится только чтобы ЗАЖЕЧЬ признак, гасить
+ * им нельзя.
+ */
+export async function toggleStep(runId: string, stepId: string): Promise<boolean> {
   const session = await requireSession()
   const run = await ownedRun(runId, session.userId)
-  if (!run) return
+  if (!run) return false
   const [st] = await db
     .select()
     .from(runStepState)
     .where(and(eq(runStepState.runId, runId), eq(runStepState.stepId, stepId)))
     .limit(1)
-  if (!st) return
+  if (!st) return false
   const next = st.status === 'done' ? 'todo' : 'done'
   await db
     .update(runStepState)
@@ -101,7 +112,7 @@ export async function toggleStep(runId: string, stepId: string): Promise<void> {
     .where(eq(runStepState.id, st.id))
   await recountDone(runId)
   // Отметили шаг → возможно, пройдены все шаги курса (веха прохождения).
-  if (next === 'done') await recordRunCompletionIfDone(session.userId, run)
+  return next === 'done' ? await recordRunCompletionIfDone(session.userId, run) : false
 }
 
 // ── Отметить/снять подпункт (по индексу) ──────────────────────────────
