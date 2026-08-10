@@ -1,0 +1,89 @@
+// РЕЕСТР ИНСТРУМЕНТОВ MCP: состав и вшитая авторизация.
+//
+// Скоуп проверяется не в каждом инструменте, а в способе регистрации (`kit`): read-токен
+// не должен доходить до мутирующего вызова. Раньше это свойство держалось только на
+// внимательности — ни один тест не падал, если новый writeTool заводили мимо обёртки.
+//
+// Заодно фиксируется САМ СОСТАВ: инструменты — публичный контракт для агентов, и
+// пропажа или переименование обязаны быть видны как падение, а не как тихое изменение
+// поверхности.
+import { describe, expect, it } from 'vitest'
+import { registerTools } from '@/features/mcp/registry'
+
+type Captured = { name: string; config: { annotations?: Record<string, unknown> }; cb: (args: unknown, extra: unknown) => Promise<{ content: { text: string }[]; isError?: boolean }> }
+
+function collect(): Captured[] {
+  const tools: Captured[] = []
+  const server = {
+    registerTool: (name: string, config: Captured['config'], cb: Captured['cb']) => tools.push({ name, config, cb }),
+  }
+  registerTools(server as unknown as Parameters<typeof registerTools>[0])
+  return tools
+}
+
+const READ_TOKEN = { authInfo: { scopes: ['read'], extra: { userId: 'u1' } } }
+const ANONYMOUS = {}
+
+/** Состав поверхности. Меняется он — меняется и этот список, осознанно. */
+const EXPECTED = [
+  // чтение
+  'search_lists', 'get_list', 'get_script', 'get_run',
+  // гномы и совет
+  'list_gnomes', 'ask_gnome', 'gnome_review', 'get_council_draft', 'council_draft',
+  // списки
+  'create_list', 'update_list', 'patch_list', 'publish_draft', 'discard_draft', 'delete_list', 'bulk_create_lists',
+  // предложения и проверки
+  'pending_suggestions', 'apply_suggestion', 'suggest_edit', 'review_suggestion', 'merge_suggestion', 'revert_suggestion', 'report_check',
+  // источники и прогоны
+  'register_source', 'list_sources', 'start_run', 'check_step',
+]
+
+describe('реестр MCP: состав', () => {
+  const tools = collect()
+
+  it('зарегистрированы все инструменты и ни один не задвоился', () => {
+    const names = tools.map((t) => t.name)
+    expect(names.length).toBe(new Set(names).size)
+    expect([...names].sort()).toEqual([...EXPECTED].sort())
+  })
+
+  it('каждый инструмент из ожидаемого состава на месте', () => {
+    const names = new Set(tools.map((t) => t.name))
+    for (const n of EXPECTED) expect(names.has(n), `пропал инструмент ${n}`).toBe(true)
+  })
+
+  it('у каждого инструмента есть подсказки агенту — иначе он гадает, что тот делает', () => {
+    for (const t of tools) {
+      expect(t.config.annotations, `нет annotations у ${t.name}`).toBeTruthy()
+      expect(typeof t.config.annotations?.readOnlyHint, `нет readOnlyHint у ${t.name}`).toBe('boolean')
+    }
+  })
+})
+
+describe('реестр MCP: вшитая авторизация', () => {
+  const tools = collect()
+  const reads = tools.filter((t) => t.config.annotations?.readOnlyHint === true)
+  const writes = tools.filter((t) => t.config.annotations?.readOnlyHint === false)
+
+  it('поверхность делится на читающие и пишущие, и обе непусты', () => {
+    expect(reads.length).toBeGreaterThan(0)
+    expect(writes.length).toBeGreaterThan(0)
+    expect(reads.length + writes.length).toBe(tools.length)
+  })
+
+  it('read-токен не доходит ни до одного мутирующего инструмента', async () => {
+    for (const t of writes) {
+      const res = await t.cb({}, READ_TOKEN)
+      expect(res.isError, `${t.name} впустил read-токен`).toBe(true)
+      expect(res.content[0].text, `${t.name}`).toContain('read-only')
+    }
+  })
+
+  it('без токена не работает ничего — ни чтение, ни запись', async () => {
+    for (const t of tools) {
+      const res = await t.cb({}, ANONYMOUS)
+      expect(res.isError, `${t.name} ответил анониму`).toBe(true)
+      expect(res.content[0].text).toBe('Unauthorized')
+    }
+  })
+})
