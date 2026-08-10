@@ -6,7 +6,7 @@
 // реестра ровно про то, что у этой поверхности не было ни одного теста.
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DIALECT_CANNOT_CARRY } from '@/features/library/export'
-import { AUTHORED_DIALECT, dialectSpec } from '@/core/domain/script-dialect'
+import { AUTHORED_DIALECT, dialectSpec, scriptFilename } from '@/core/domain/script-dialect'
 
 const CMD = 'export FOO=bar && echo "$FOO"'
 // Происхождение скрипта роут берёт из КОНФИГУРАЦИИ, а не из адреса запроса (на проде
@@ -83,7 +83,9 @@ describe('GET /{handle}/{slug}/raw — диалект и авторские ко
     it(`${dialect}: в теле отказа нет авторской команды и есть рабочая замена`, async () => {
       const body = await (await call(`?lang=${dialect}`)).text()
       expect(body).not.toContain(CMD)
-      expect(body).toContain(dialectSpec(AUTHORED_DIALECT).run(`${ORIGIN}/${HANDLE}/${SLUG}/raw`))
+      expect(body).toContain(
+        dialectSpec(AUTHORED_DIALECT).run(`${ORIGIN}/${HANDLE}/${SLUG}/raw`, scriptFilename(SLUG, AUTHORED_DIALECT)),
+      )
     })
 
     it(`${dialect}: список без исполняемых команд отдаётся как прежде`, async () => {

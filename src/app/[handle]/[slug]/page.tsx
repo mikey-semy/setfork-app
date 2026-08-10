@@ -297,7 +297,7 @@ export default async function ListPage({
                       </Tooltip>
                     </form>
                   )}
-                  <CloneDropdown base={base} lang={lang} />
+                  <CloneDropdown base={base} slug={slug} lang={lang} />
                   {/* Вторичное (правка/перевод/история/blame) — одним «...»-меню,
                       а не россыпью разновысоких иконок (эталон: секции настроек). */}
                   <ListActionsMenu

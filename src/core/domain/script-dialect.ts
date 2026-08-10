@@ -50,7 +50,13 @@ interface DialectSpec {
   echo: (s: string) => string // прогресс-строка
   /** Оператор «завершиться с ненулевым кодом» — им кончается любая заглушка отказа. */
   fail: string
-  run: (url: string) => string // one-liner для запуска из шапки
+  /**
+   * КОМАНДА ЗАПУСКА для шапки скрипта и кнопки «Получить»: готовый адрес и имя
+   * файла артефакта. Адрес приходит собранным — диалект к нему ничего не
+   * дописывает, иначе `?lang=` приклеивался бы вторым вопросительным знаком к
+   * адресу, у которого уже есть выборка пунктов.
+   */
+  run: (url: string, filename: string) => string
   ext: string
   mime: string
 }
@@ -61,9 +67,10 @@ const DIALECTS: Record<ScriptDialect, DialectSpec> = {
     pre: 'set -euo pipefail',
     echo: (s) => `echo '${escSh(s)}'`,
     fail: 'exit 1',
-    // Адрес В КАВЫЧКАХ: с выборкой пунктов в нём появляется `&`, а голый `&` шелл
-    // читает как «в фон» и рвёт команду пополам.
-    run: (u) => `curl -fsSL "${u}" | bash`,
+    // СНАЧАЛА СКАЧАТЬ, ПОТОМ ЗАПУСТИТЬ — см. ниже, почему не конвейер и почему
+    // во временный каталог. Адрес и путь В КАВЫЧКАХ: с выборкой пунктов в адресе
+    // появляется `&`, а голый `&` шелл читает как «в фон» и рвёт команду пополам.
+    run: (u, f) => `d=$(mktemp -d) && curl -fsSL "${u}" -o "$d/${f}" && bash "$d/${f}"`,
     ext: 'sh',
     mime: 'text/x-shellscript; charset=utf-8',
   },
@@ -72,7 +79,9 @@ const DIALECTS: Record<ScriptDialect, DialectSpec> = {
     pre: "$ErrorActionPreference = 'Stop'",
     echo: (s) => `Write-Host "${escPs(s)}"`,
     fail: 'exit 1',
-    run: (u) => `irm "${u}?lang=ps1" | iex`,
+    // Конвейер здесь безопасен: `irm` на не-2xx БРОСАЕТ, и до `iex` дело не доходит.
+    // Это и есть та асимметрия, из-за которой sh и py пришлось переводить на файл.
+    run: (u) => `irm "${u}" | iex`,
     ext: 'ps1',
     mime: 'text/plain; charset=utf-8',
   },
@@ -81,7 +90,7 @@ const DIALECTS: Record<ScriptDialect, DialectSpec> = {
     pre: null, // в python необработанное исключение и так останавливает скрипт
     echo: (s) => `print("${escPy(s)}")`,
     fail: 'raise SystemExit(1)',
-    run: (u) => `curl -fsSL "${u}?lang=py" | python3`,
+    run: (u, f) => `d=$(mktemp -d) && curl -fsSL "${u}" -o "$d/${f}" && python3 "$d/${f}"`,
     ext: 'py',
     mime: 'text/x-python; charset=utf-8',
   },
@@ -90,6 +99,50 @@ const DIALECTS: Record<ScriptDialect, DialectSpec> = {
 export const dialectSpec = (d: ScriptDialect): Readonly<DialectSpec> => DIALECTS[d]
 export const dialectExt = (d: ScriptDialect) => DIALECTS[d].ext
 export const dialectMime = (d: ScriptDialect) => DIALECTS[d].mime
+
+/**
+ * ПОЧЕМУ КОМАНДА ЗАПУСКА НЕ КОНВЕЙЕР.
+ *
+ * `curl -fsSL … | bash` при отказе сервера завершается УСПЕХОМ. Флаг `-f` не
+ * печатает тело ошибки, то есть в шелл уходит пустой поток; пустой скрипт
+ * отрабатывает нормально, а код возврата конвейера — это код ПОСЛЕДНЕЙ команды,
+ * то есть `bash`, то есть ноль. Проба против локального сервера:
+ *
+ *   == 503 == curl: (22) … returned error: 503   pipeline exit=0
+ *   == 404 == curl: (22) … returned error: 404   pipeline exit=0
+ *   == 500 == curl: (22) … returned error: 500   pipeline exit=0
+ *
+ * Значит `curl … | bash && echo provisioned` печатает «provisioned», не выполнив
+ * ничего, — и то же самое делает шаг CI или чужой скрипт. Скачивание в файл через
+ * `&&` разрывает эту цепочку: отказ виден кодом возврата curl, и вторая половина
+ * команды просто не запускается. Заодно артефакт остаётся на диске — ровно то, что
+ * просит собственная надпись скрипта «сначала проверь, потом запускай».
+ *
+ * И ОБЯЗАТЕЛЬНО ВО ВРЕМЕННЫЙ КАТАЛОГ. Скачивание по имени списка прямо в текущий
+ * каталог тихо затирает чужой файл: у человека в проекте вполне может лежать свой
+ * `deploy.sh`, а `curl -o` перезаписывает без вопросов. Списки с одинаковым слагом
+ * у разных владельцев столкнулись бы так же. `--no-clobber` не годится: при
+ * существующем файле curl пропускает загрузку и возвращает 0, то есть `bash`
+ * выполнит СТАРЫЙ файл — ровно тот класс «тихо сделали не то», от которого здесь и
+ * уходим. Поэтому `mktemp -d`: имя файла остаётся читаемым, столкнуться не с чем.
+ */
+
+/**
+ * Имя файла артефакта. Слаг приходит из АДРЕСА, а адреса старых списков
+ * создавались правилами, которых больше нет: в базе живут слаги вида `-`, и такой
+ * файл скачивается как `-.sh`, после чего обычное `bash *.sh` разворачивается в
+ * аргумент, начинающийся с дефиса. Санитайзер на выдаче, а не доверие к хранилищу.
+ */
+export function scriptFilename(slug: string, dialect: ScriptDialect): string {
+  const base = slug.replace(/[^A-Za-z0-9._-]/g, '').replace(/^[-.]+/, '')
+  return `${base || 'list'}.${DIALECTS[dialect].ext}`
+}
+
+/** Адрес `/raw` для диалекта: `?lang=` дописывается только чужому. */
+export function scriptUrl(rawUrl: string, dialect: ScriptDialect): string {
+  if (dialect === AUTHORED_DIALECT) return rawUrl
+  return `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}lang=${dialect}`
+}
 
 /**
  * ДИАЛЕКТ, НА КОТОРОМ НАПИСАНЫ АВТОРСКИЕ КОМАНДЫ.

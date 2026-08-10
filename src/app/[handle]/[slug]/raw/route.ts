@@ -3,17 +3,17 @@ import { requireViewableDetail, requireViewableDetailFor } from '@/features/libr
 import { scriptRefusal, toRunnableScript, toExportList } from '@/features/library/export'
 import {
   AUTHORED_DIALECT,
-  dialectExt,
   dialectMime,
   dialectSpec,
   errorScript,
   normalizeDialect,
+  scriptFilename,
   type ScriptDialect,
 } from '@/core/domain/script-dialect'
 import { isPubliclyVisible } from '@/core'
 import { appOrigin } from '@/shared/auth/app-origin'
 import { verifyApiToken } from '@/shared/auth/api-token'
-import { clientIp, rateLimit, tooMany } from '@/shared/rate-limit'
+import { clientIp, rateLimit } from '@/shared/rate-limit'
 import { cacheHeaders, noStoreHeaders, notModified } from '@/shared/http/cache'
 
 /**
@@ -33,31 +33,29 @@ import { cacheHeaders, noStoreHeaders, notModified } from '@/shared/http/cache'
  */
 export const runtime = 'nodejs'
 
-const plain = (body: string, status: number, mime: string) =>
-  new Response(body, { status, headers: { 'Content-Type': mime, ...noStoreHeaders() } })
-
 /**
- * ОТКАЗ МАШИННОЙ ПОВЕРХНОСТИ. Тело этого ответа читает не человек, а интерпретатор:
- * `curl … | bash` исполнит всё, что пришло. Поэтому отказ — не строка текста, а
- * валидная для диалекта заглушка: только комментарии и выход с ненулевым кодом.
- * Причина едет ещё и заголовком — машине незачем разбирать текст, написанный для глаз.
+ * ОТКАЗ МАШИННОЙ ПОВЕРХНОСТИ — ЕДИНСТВЕННАЯ форма любого не-200 ответа.
+ *
+ * Тело этого ответа читает не человек, а интерпретатор: `curl … | bash` исполняет
+ * всё, что пришло. Обычная строка («Not found», JSON про rate limit) в шелле — это
+ * команда, а не сообщение. Поэтому отказ всегда одинаков: валидная для диалекта
+ * заглушка из комментариев, кончающаяся ненулевым выходом. Причина едет ещё и
+ * заголовком — машине незачем разбирать текст, написанный для глаз.
+ *
+ * Одна функция на все статусы намеренно: разойдись они, ровно один забытый путь и
+ * вернул бы отказ, который выглядит как успешный прогон.
  */
-const refuse = (dialect: ScriptDialect, status: number, reason: string, message: string[]) =>
+const refuse = (
+  dialect: ScriptDialect,
+  status: number,
+  reason: string,
+  message: string[],
+  extraHeaders: Record<string, string> = {},
+) =>
   new Response(errorScript(dialect, message), {
     status,
-    headers: { 'Content-Type': dialectMime(dialect), 'SF-Reason': reason, ...noStoreHeaders() },
+    headers: { 'Content-Type': dialectMime(dialect), 'SF-Reason': reason, ...extraHeaders, ...noStoreHeaders() },
   })
-
-/**
- * Имя файла для Content-Disposition. Слаг приходит из АДРЕСА, а адреса старых списков
- * создавались правилами, которых больше нет: в базе живут слаги вида `-`, и такой файл
- * скачивается как `-.sh`, после чего обычное `bash *.sh` разворачивается в аргумент,
- * начинающийся с дефиса. Санитайзер на выдаче, а не доверие к хранилищу.
- */
-function safeFilename(slug: string, ext: string): string {
-  const base = slug.replace(/[^A-Za-z0-9._-]/g, '').replace(/^[-.]+/, '')
-  return `${base || 'list'}.${ext}`
-}
 
 export async function GET(req: Request, { params }: { params: Promise<{ handle: string; slug: string }> }) {
   const { handle, slug } = await params
@@ -67,8 +65,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
 
   // Частотный лимит по IP: транспорт публичный, без аутентификации, и его дёргают в цикле.
   // Тот же бюджет, что у близнеца — один контракт на обе машинные поверхности.
+  // Общий `tooMany` здесь не годится: он отдаёт JSON, а JSON в шелле — не сообщение,
+  // а текст, который интерпретатор попытается исполнить.
   const rate = await rateLimit(`list-raw:${clientIp(req)}`, 120, 60_000)
-  if (!rate.ok) return tooMany(rate)
+  if (!rate.ok) {
+    return refuse(
+      dialect,
+      429,
+      'rate_limited',
+      [`SetFork: too many requests for ${handle}/${slug}.`, `Retry after ${rate.retryAfter} seconds.`],
+      { 'Retry-After': String(rate.retryAfter) },
+    )
+  }
 
   // Токен важнее сессии: если он передан, читаем ОТ ЕГО ВЛАДЕЛЬЦА. Предъявленный кредитив
   // обязан быть либо принят, либо отклонён — раньше заголовок не читался вовсе, поэтому
@@ -76,14 +84,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   // а владелец приватного списка не мог забрать собственный скрипт ничем, кроме браузера.
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
   const auth = bearer ? await verifyApiToken(bearer) : null
-  if (bearer && !auth) return plain('# Invalid token\n', 401, mime)
+  if (bearer && !auth) return refuse(dialect, 401, 'invalid_token', ['SetFork: the API token was rejected.'])
 
   const [lang, detail] = await Promise.all([
     getLang(),
     auth ? requireViewableDetailFor(handle, slug, auth.userId) : requireViewableDetail(handle, slug),
   ])
   // Приватный список без прав неотличим от несуществующего — та же политика, что у близнеца.
-  if (!detail) return plain('# Not found\n', 404, mime)
+  // Поэтому в теле НЕТ ни адреса, ни слага: иначе два отказа отличались бы друг от друга
+  // и по разнице было бы видно, существует список или нет.
+  if (!detail) return refuse(dialect, 404, 'not_found', ['SetFork: no such list, or it is not visible to you.'])
 
   // Происхождение и команда повторного запуска — из КОНФИГУРАЦИИ, а не из адреса запроса.
   // На проде `req.url` строится из адреса привязки сервера, и скрипт называл своим
@@ -99,7 +109,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
     .filter(Boolean)
   const known = new Set(list.steps.flatMap((s) => (s.bid ? [s.bid] : [])))
   const unknown = only.filter((b) => !known.has(b))
-  if (unknown.length) return plain(`# No such block: ${unknown.join(', ')}\n`, 404, mime)
+  if (unknown.length) {
+    return refuse(dialect, 404, 'unknown_block', [`SetFork: no such block in ${handle}/${slug}: ${unknown.join(', ')}.`])
+  }
 
   // ДИАЛЕКТ НЕ ПЕРЕВОДИТ КОМАНДЫ. `?lang=py` меняет только обёртку — shebang,
   // print(), расширение, MIME, — а поле `command` вставляет как есть. Авторская
@@ -125,7 +137,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
       `SetFork: no ${dialect} script for ${handle}/${slug}.`,
       'Its steps carry shell commands, and this endpoint does not translate commands',
       'between languages — that would hand you code meaning something else.',
-      `Run the shell form instead:  ${dialectSpec(AUTHORED_DIALECT).run(qs ? `${rawUrl}?${qs}` : rawUrl)}`,
+      `Run the shell form instead:  ${dialectSpec(AUTHORED_DIALECT).run(qs ? `${rawUrl}?${qs}` : rawUrl, scriptFilename(slug, AUTHORED_DIALECT))}`,
     ])
   }
 
@@ -143,7 +155,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ handle: 
   const shared = isPubliclyVisible(detail.tpl) && !auth
   const headers: Record<string, string> = {
     'Content-Type': mime,
-    'Content-Disposition': `inline; filename="${safeFilename(slug, dialectExt(dialect))}"`,
+    'Content-Disposition': `inline; filename="${scriptFilename(slug, dialect)}"`,
     ...cacheHeaders({ shared, etag, negotiated: true }),
   }
 

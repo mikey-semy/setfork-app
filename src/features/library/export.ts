@@ -6,7 +6,7 @@ import { escapeHtml as esc } from '@/shared/lib/escape'
 import { markdownCodeBlock } from '@/shared/lib/markdown'
 import { stepDanger } from '@/core/domain/destructive-command'
 import { productItems } from './blocks'
-import { carriesCommands, dialectSpec, flatten, hashComment, type ScriptDialect } from '@/core/domain/script-dialect'
+import { carriesCommands, dialectSpec, flatten, hashComment, scriptFilename, scriptUrl, type ScriptDialect } from '@/core/domain/script-dialect'
 
 export interface ExportStep {
   n: number
@@ -404,7 +404,11 @@ export function buildScript(
   out.push(`# ${list.ownerHandle}/${list.slug} · v${list.version} · ${url}`)
   const desc = tr(list.desc, lang)
   if (desc) out.push(hashComment(desc))
-  out.push('#', '# ⚠  Review before running — this script comes from a SetFork list, not from you.', `#    Run:  ${d.run(url)}`)
+  // Команда запуска СКАЧИВАЕТ и только потом исполняет: конвейер `curl -f … | bash`
+  // при отказе сервера возвращает ноль и выглядит как успешный прогон (см. подробности
+  // в script-dialect). Артефакт заодно остаётся на диске — как и просит строка выше.
+  const runCmd = d.run(scriptUrl(url, dialect), scriptFilename(list.slug, dialect))
+  out.push('#', '# ⚠  Review before running — this script comes from a SetFork list, not from you.', `#    Run:  ${runCmd}`)
   // Выборка пунктов названа прямо в шапке: иначе скрипт из трёх команд неотличим
   // от списка, у которого три команды и есть.
   if (partial) out.push(`#    Selected steps only: ${steps.length} of ${list.steps.length} blocks`)

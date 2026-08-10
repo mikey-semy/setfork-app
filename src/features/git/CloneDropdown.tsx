@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { CodeCard } from '@/shared/ui/CodeCard'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { SectionLabel } from '@/shared/ui/SectionLabel'
-import { AUTHORED_DIALECT, dialectSpec } from '@/core/domain/script-dialect'
+import { AUTHORED_DIALECT, dialectSpec, scriptFilename } from '@/core/domain/script-dialect'
 import { t, type Lang } from '@/shared/i18n'
 
 type TabKey = 'clone' | 'run' | 'embed'
@@ -21,7 +21,7 @@ const TAB_ORDER: TabKey[] = ['clone', 'run', 'embed']
  *  по своим пунктам, а здесь содержимое — поля, вкладки и ссылки. С меню всё это
  *  было недостижимо с клавиатуры, то есть ЕДИНСТВЕННЫЙ вход в /raw, data.json и
  *  MCP открывался только мышью. */
-export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
+export function CloneDropdown({ base, slug, lang }: { base: string; slug: string; lang: Lang }) {
   const [origin, setOrigin] = useState('')
   const [tab, setTab] = useState<TabKey>('clone')
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -144,7 +144,11 @@ export function CloneDropdown({ base, lang }: { base: string; lang: Lang }) {
                   диалекта не переводит авторские команды, и `/raw?lang=ps1` на списке с
                   командами отвечает 406, а не скриптом (см. script-dialect.ts). */}
               {heading(<Terminal size={12} />, t('runHeading', lang))}
-              <CodeCard code={dialectSpec(AUTHORED_DIALECT).run(`${origin}${base}/raw`)} name="bash" lang={lang} />
+              <CodeCard
+                code={dialectSpec(AUTHORED_DIALECT).run(`${origin}${base}/raw`, scriptFilename(slug, AUTHORED_DIALECT))}
+                name="bash"
+                lang={lang}
+              />
               <p className="mt-1 text-[0.78125rem] text-ink-2">{t('runHint', lang)}</p>
               <p className="mt-1 text-[0.78125rem] text-ink-2">{t('runShellOnlyHint', lang)}</p>
               <a href={`${base}/raw`} className={`${row} mt-1`}>

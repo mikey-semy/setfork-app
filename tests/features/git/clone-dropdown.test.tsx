@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { CloneDropdown } from '@/features/git/CloneDropdown'
 import { TooltipProvider } from '@/shared/ui/Tooltip'
 import { CopyButton } from '@/shared/ui/CopyButton'
-import { AUTHORED_DIALECT, dialectSpec } from '@/core/domain/script-dialect'
+import { AUTHORED_DIALECT, dialectSpec, scriptFilename } from '@/core/domain/script-dialect'
 
 /**
  * Меню «Получить» — ЕДИНСТВЕННЫЙ вход в машинные поверхности (/raw, data.json, MCP,
@@ -22,7 +22,7 @@ import { AUTHORED_DIALECT, dialectSpec } from '@/core/domain/script-dialect'
 const open = () => {
   render(
     <TooltipProvider>
-      <CloneDropdown base="/alice/deploy" lang="en" />
+      <CloneDropdown base="/alice/deploy" slug="deploy" lang="en" />
     </TooltipProvider>,
   )
   fireEvent.click(screen.getByRole('button', { name: /get|получить/i }))
@@ -55,8 +55,14 @@ describe('меню «Получить»: доступность и содерж�
     // печатают и меню, и шапка самого скрипта, и разъезжаться им нельзя.
     // Ищем по textContent целиком: подсветка раскладывает строку на токены-спаны
     // (адрес в кавычках — отдельный токен), и getByText её уже не видит одним узлом.
-    const expected = dialectSpec(AUTHORED_DIALECT).run(`${window.location.origin}/alice/deploy/raw`)
+    const expected = dialectSpec(AUTHORED_DIALECT).run(
+      `${window.location.origin}/alice/deploy/raw`,
+      scriptFilename('deploy', AUTHORED_DIALECT),
+    )
     expect(document.body.textContent).toContain(expected)
+    // Команда СКАЧИВАЕТ и только потом запускает: конвейер `curl -f … | bash` при
+    // отказе сервера возвращает ноль и выглядит как успешный прогон.
+    expect(expected).not.toMatch(/\|\s*bash/)
     // И она не лежит в input, который обрезает значение по ширине поля.
     const inputs = Array.from(document.querySelectorAll('input')).map((i) => i.getAttribute('value') ?? '')
     expect(inputs.some((v) => v.includes('| bash'))).toBe(false)

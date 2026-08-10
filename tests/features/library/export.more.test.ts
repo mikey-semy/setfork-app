@@ -48,9 +48,10 @@ describe('toRunnableScript — диалекты', () => {
     expect(out).toContain('set -euo pipefail')
     expect(out).toContain("echo '==> 1. Run it'")
     expect(out).toContain('echo hi')
-    // Адрес в кавычках: с выборкой пунктов в нём появляется `&`, и голый адрес
-    // шелл разорвал бы пополам («в фон»).
-    expect(out).toContain('curl -fsSL "https://x/raw" | bash')
+    // Команда СКАЧИВАЕТ во временный каталог и только потом запускает: конвейер
+    // `curl -f … | bash` при отказе сервера возвращает ноль и сходит за успешный
+    // прогон, а скачивание рядом затёрло бы чужой файл с тем же именем (карточка 014).
+    expect(out).toContain('d=$(mktemp -d) && curl -fsSL "https://x/raw" -o "$d/deploy.sh" && bash "$d/deploy.sh"')
   })
 
   it('ps1: без shebang, ErrorActionPreference, Write-Host', () => {
