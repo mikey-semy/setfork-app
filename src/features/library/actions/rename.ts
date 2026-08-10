@@ -38,8 +38,11 @@ export async function renameList(
   formData: FormData,
 ): Promise<RenameResult> {
   // Независимые чтения — параллельно: язык ответа и личность друг от друга не зависят.
-  const [lang, session] = await Promise.all([getLang(), requireSession()])
-  const tpl = await db.query.templates.findFirst({ where: (x) => eq(x.id, templateId) })
+  const [lang, session, tpl] = await Promise.all([
+    getLang(),
+    requireSession(),
+    db.query.templates.findFirst({ where: (x) => eq(x.id, templateId) }),
+  ])
   // Молча выходим ровно как соседние действия зоны: чужой список — не наше дело.
   if (!tpl || tpl.ownerId !== session.userId) return { error: t('renameNotAllowed', lang) }
 

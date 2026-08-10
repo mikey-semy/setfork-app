@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useRef, useState, useTransition } from 'react'
 import { Archive, Globe, Link2, Lock, Snowflake, Trash2, UserRoundPlus } from 'lucide-react'
-import { slugify } from '@/shared/lib/slug'
+import { slugify } from '@/shared/lib/slugify'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { ActionRow, DangerZone } from '@/shared/ui/DangerZone'

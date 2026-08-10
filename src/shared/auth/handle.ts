@@ -1,6 +1,6 @@
 // Handle (ник) — правила и генерация уникального при OAuth-регистрации.
 import { randomBytes } from 'crypto'
-import { and, sql } from 'drizzle-orm'
+import { and, ne, sql } from 'drizzle-orm'
 import { db, userRedirects, users } from '@/shared/db'
 import { handleHoldAlive } from '@/shared/db/resolve-list'
 import { isAdminHandle } from '@/shared/auth/admin-handle'
@@ -30,7 +30,7 @@ export function sanitizeHandleBase(raw: string): string {
   return s.length >= 3 ? s : ''
 }
 
-export async function handleTaken(h: string): Promise<boolean> {
+export async function handleTaken(h: string, exceptUserId?: string): Promise<boolean> {
   const norm = normalizeHandle(h)
   // admin-ники (ADMIN_HANDLES) НЕЛЬЗЯ занять сменой ника/регистрацией — иначе privesc
   // до админа через самоназначаемый handle (security-скан 2026-07-23, F9).
@@ -53,7 +53,15 @@ export async function handleTaken(h: string): Promise<boolean> {
   const [previous] = await db
     .select({ id: userRedirects.id })
     .from(userRedirects)
-    .where(and(sql`lower(${userRedirects.handle}) = ${norm}`, handleHoldAlive()))
+    .where(
+      and(
+        sql`lower(${userRedirects.handle}) = ${norm}`,
+        handleHoldAlive(),
+        // СВОИ прежние ники не блокируют: иначе к собственному прежнему имени нельзя
+        // вернуться — та же ловушка, что была с прежними адресами списков.
+        ...(exceptUserId ? [ne(userRedirects.userId, exceptUserId)] : []),
+      ),
+    )
     .limit(1)
   return !!previous
 }

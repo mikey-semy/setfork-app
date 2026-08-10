@@ -78,7 +78,12 @@ export async function acceptTransfer(inviteId: string): Promise<void> {
   // сюда. Поэтому оба источника в одном наборе.
   const [live, previous] = await Promise.all([
     db.select({ slug: templates.slug }).from(templates).where(eq(templates.ownerId, session.userId)),
-    db.select({ slug: listRedirects.slug }).from(listRedirects).where(eq(listRedirects.ownerId, session.userId)),
+    db
+      .select({ slug: listRedirects.slug })
+      .from(listRedirects)
+      // Прежний адрес, указывающий на ЭТОТ ЖЕ список, занять безопасно: он и так ведёт
+      // сюда. Случай реальный — список уходил к другому владельцу и возвращается.
+      .where(and(eq(listRedirects.ownerId, session.userId), ne(listRedirects.templateId, tpl.id))),
   ])
   const taken = new Set([...live, ...previous].map((r) => r.slug))
   let slug = tpl.slug

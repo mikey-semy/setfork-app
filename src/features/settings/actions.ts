@@ -104,7 +104,7 @@ export async function changeHandle(_prev: ActionResult | null, formData: FormDat
   if (next === session.handle) return { error: 'Это ваш текущий ник.' }
   if (!isHandleShapeValid(next)) return { error: 'Ник: 3–30 символов, только a–z, 0–9 и дефис; некоторые слова зарезервированы.' }
 
-  if (await handleTaken(next)) return { error: 'Этот ник уже занят.' }
+  if (await handleTaken(next, session.userId)) return { error: 'Этот ник уже занят.' }
 
   try {
     // Прежний ник продолжает вести на этого же человека: он стоит первым сегментом в
