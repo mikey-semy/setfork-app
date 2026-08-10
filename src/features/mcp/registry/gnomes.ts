@@ -139,7 +139,10 @@ export function registerGnomes({ readTool, writeTool }: ToolKit) {
       // им id выдаётся при записи.
       .refine(
         (opts) => {
-          const ids = opts.map((o) => (o.id ?? '').trim()).filter(Boolean)
+          const ids = opts.flatMap((o) => {
+            const id = (o.id ?? '').trim()
+            return id ? [id] : []
+          })
           return new Set(ids).size === ids.length
         },
         { message: 'option ids must be unique within the block' },
