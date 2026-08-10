@@ -26,7 +26,12 @@ export function CourseProgress({
   if (total <= 0 && !completed) return null
   const ru = lang === 'ru'
   const pct = total > 0 ? Math.round((passed / total) * 100) : 100
-  const done = !!completed || (total > 0 && passed >= total)
+  // «Курс пройден» — ТОЛЬКО по записи прохождения. Решённые тесты сами по себе
+  // прохождением не являются: на версии с шагами это половина условия
+  // (shared/completion.ts), и надпись обещала бы сертификат, которого ещё нет.
+  // Запись появляется в том же submitQuiz и приезжает сюда его revalidatePath,
+  // поэтому ждать перезагрузки не приходится.
+  const done = !!completed
   return (
     <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
       <GraduationCap size={18} className={done ? 'shrink-0 text-ok' : 'shrink-0 text-accent'} />
