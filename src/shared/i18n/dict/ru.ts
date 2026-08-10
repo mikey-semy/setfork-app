@@ -419,6 +419,7 @@ export const ru: Record<DictKey, string> = {
   copyLink: 'Скопировать ссылку',
   qrHint: 'Сканируйте, чтобы открыть',
   catalogsTab: 'Каталоги',
+  collectionsEmpty: 'Подборок пока нет.',
   catalogHeading: 'Каталог',
   catalogHint: 'Сгруппируйте связанные списки в каталог (репозиторий из списков).',
   noCatalogOpt: 'Без каталога (solo)',

@@ -1,101 +1,54 @@
 import Link from 'next/link'
-import { ChevronRight, Compass, Flame, FolderGit2, Hash, Star, Users } from 'lucide-react'
-import { TabItem, TabNav } from '@/shared/ui/TabNav'
+import { ChevronRight, Star, Users } from 'lucide-react'
 import { getSession } from '@/shared/auth/session'
 import { getLang } from '@/shared/i18n/server'
 import { t, tr } from '@/shared/i18n'
 import { Avatar } from '@/shared/ui/Avatar'
-import { EmptyState } from '@/shared/ui/EmptyState'
-import { FeedList } from '@/features/library/FeedList'
 import { FeedCard } from '@/features/library/FeedCard'
-import { TagChip } from '@/shared/ui/TagChip'
-import { getFeed, getPopularTags, getStarredIds, getTrendingFeed, type TrendRange } from '@/features/library/queries'
+import { getFeed, getStarredIds, getTrendingFeed, type TrendRange } from '@/features/library/queries'
 import { getPublicCatalogs } from '@/features/catalogs/queries'
 import { CatalogRow } from '@/features/catalogs/CatalogRow'
 import { searchPeople } from '@/features/profile/search'
-import { PeopleResults } from '@/features/profile/PeopleResults'
-import { getCollections } from '@/features/collections/queries'
-import { CollectionCard } from '@/features/collections/CollectionCard'
+import { ExploreNav } from '@/widgets/explore/ExploreNav'
 import { PAGE } from '@/shared/ui/control'
 
-// Витрина-открытие (не поиск!) вкладками, как GitHub Explore. Без заголовка под шапкой.
-type Tab = 'explore' | 'topics' | 'trending' | 'collections'
-type TKey = Parameters<typeof t>[0]
-const TABS: { id: Tab; key: TKey }[] = [
-  { id: 'explore', key: 'explore' },
-  { id: 'topics', key: 'popularTags' },
-  { id: 'trending', key: 'trending' },
-  { id: 'collections', key: 'catalogsTab' },
-]
-const RANGES: TrendRange[] = ['day', 'week', 'month', 'all']
+// Витрина-открытие (не поиск!). Соседние разделы — теги, популярное и подборки —
+// живут по СВОИМ адресам (/tags, /trending, /collections), как у GitHub; здесь
+// осталась только сама витрина.
 
-/** Период, на который ведёт ссылка «ещё» из бокового виджета списков.
- *
- *  Неделя, а не день: виджет висит на каждой странице раздела, и за сутки в нём
- *  бывает пусто. У людей такой ссылки с периодом нет вовсе — их страница фильтра
- *  по времени не имеет. */
+/** Период ссылки «ещё» из бокового виджета: неделя, а не день — за сутки бывает пусто. */
 const SIDE_TREND_RANGE: TrendRange = 'week'
-const TAB_ICON: Record<Tab, React.ReactNode> = {
-  explore: <Compass size={15} />,
-  topics: <Hash size={15} />,
-  trending: <Flame size={15} />,
-  collections: <FolderGit2 size={15} />,
-}
-const RANGE_LABEL: Record<TrendRange, { en: string; ru: string }> = {
-  day: { en: 'Today', ru: 'Сегодня' },
-  week: { en: 'This week', ru: 'Неделя' },
-  month: { en: 'This month', ru: 'Месяц' },
-  all: { en: 'All time', ru: 'Всё время' },
-}
 
 export async function generateMetadata() {
   const lang = await getLang()
   return { title: t('explore', lang) }
 }
 
-export default async function ExplorePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string; view?: string; range?: string }>
-}) {
-  const [{ tab, view, range }, lang, session] = await Promise.all([searchParams, getLang(), getSession()])
-  const active: Tab = TABS.some((x) => x.id === tab) ? (tab as Tab) : 'explore'
+export default async function ExplorePage() {
+  // Прежние адреса вкладок (`?tab=`) перенаправляет middleware: у этой страницы есть
+  // loading.tsx, то есть потоковая отдача, и заголовки уходят клиенту ДО рендера —
+  // `redirect()` отсюда физически не может сменить статус ответа (тот же случай, что
+  // с notFound() на профиле: страница «не найдено» уезжала с кодом 200).
+  const [lang, session] = await Promise.all([getLang(), getSession()])
   const uid = session?.userId
-  const trendView: 'lists' | 'people' = view === 'people' ? 'people' : 'lists'
-  const trendRange: TrendRange = RANGES.includes(range as TrendRange) ? (range as TrendRange) : 'week'
-
-  // Данные только активной вкладки.
-  const feed = active === 'explore' ? await getFeed({ sort: 'trending' }, uid, lang) : []
+  const feed = await getFeed({ sort: 'trending' }, uid, lang)
   const feedTop = feed.slice(0, 12)
-  // Каталоги идут в ОСНОВНОЙ ленте Explore рядом со списками (не своя вкладка).
-  const exploreCatalogs = active === 'explore' ? await getPublicCatalogs(6) : []
-  const feedStarred = active === 'explore' && uid ? await getStarredIds(uid, feedTop.map((i) => i.id)) : new Set<string>()
-  const sidePeople = active === 'explore' ? await searchPeople({ sort: 'followers', limit: 5 }) : []
+  // Каталоги идут в ОСНОВНОЙ ленте рядом со списками (не отдельной вкладкой).
+  const exploreCatalogs = await getPublicCatalogs(6)
+  const feedStarred = uid ? await getStarredIds(uid, feedTop.map((i) => i.id)) : new Set<string>()
+  const sidePeople = await searchPeople({ sort: 'followers', limit: 5 })
   // Виджет показывает ТО ЖЕ, куда ведёт его ссылка: тот же запрос и тот же период.
   // Лента страницы ранжируется иначе (звёзды за всё время), и наполнять ею виджет с
   // подписью «Trending» значило бы обещать одно, а по клику показывать другое.
-  const sideTrending = active === 'explore' ? await getTrendingFeed(SIDE_TREND_RANGE, uid, lang) : []
-  const tags = active === 'topics' ? await getPopularTags(60) : []
-  const trendLists = active === 'trending' && trendView === 'lists' ? await getTrendingFeed(trendRange, uid, lang) : []
-  const trendPeople = active === 'trending' && trendView === 'people' ? await searchPeople({ sort: 'followers', limit: 30 }) : []
-  const collectionCards = active === 'collections' ? await getCollections() : []
-
-  const tabHref = (id: Tab) => (id === 'explore' ? '/explore' : `/explore?tab=${id}`)
+  const sideTrending = await getTrendingFeed(SIDE_TREND_RANGE, uid, lang)
 
   return (
     <div className="w-full">
-      {/* Единый TabNav (как профиль/список): полоска активной вкладки и «…» для не
-          влезших вкладок. Ряд НЕ листается вбок — поведение одно на всех разделах. */}
-      <TabNav scope="explore" overflow={{ moreLabel: t('moreTabs', lang) }}>
-        {TABS.map((tb) => (
-          <TabItem key={tb.id} href={tabHref(tb.id)} on={tb.id === active} icon={TAB_ICON[tb.id]} label={t(tb.key, lang)} />
-        ))}
-      </TabNav>
+      <ExploreNav active="explore" lang={lang} />
       <div className={PAGE}>
 
-      {/* ── Explore: лента + сайдбар виджетов ── */}
-      {active === 'explore' && (
-        <div className="flex flex-col gap-8 lg:flex-row">
+      {/* Лента + сайдбар виджетов. */}
+      <div className="flex flex-col gap-8 lg:flex-row">
           <div className="min-w-0 flex-1">
             {/* Единая лента в ОДИН столбец (как список репозиториев GitHub):
                 каталоги (до 4) строками рядом со списками. Обложки — только у тех,
@@ -157,67 +110,7 @@ export default async function ExplorePage({
               ))}
             </Widget>
           </aside>
-        </div>
-      )}
-
-      {/* ── Topics: сетка тегов ── */}
-      {active === 'topics' && (
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tg) => (
-            <TagChip key={tg.tag} slug={tg.tag} count={tg.count} className="px-3 py-1 text-[0.8125rem]" />
-          ))}
-        </div>
-      )}
-
-      {/* ── Trending: переключатель Lists/People + фильтр по дате ── */}
-      {active === 'trending' && (
-        <>
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-md border border-border p-0.5 text-[0.8125rem]">
-              <Link href={`/explore?tab=trending&view=lists&range=${trendRange}`} className={`rounded px-3 py-1 font-medium ${trendView === 'lists' ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}>
-                {t('scopeLists', lang)}
-              </Link>
-              <Link href={`/explore?tab=trending&view=people&range=${trendRange}`} className={`rounded px-3 py-1 font-medium ${trendView === 'people' ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'}`}>
-                {t('scopePeople', lang)}
-              </Link>
-            </div>
-            {trendView === 'lists' && (
-              <div className="inline-flex flex-wrap gap-1 text-[0.78125rem]">
-                {RANGES.map((r) => (
-                  <Link
-                    key={r}
-                    href={`/explore?tab=trending&view=lists&range=${r}`}
-                    className={`rounded-md px-2.5 py-1 ${r === trendRange ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
-                  >
-                    {RANGE_LABEL[r][lang === 'ru' ? 'ru' : 'en']}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-          {trendView === 'lists' ? (
-            trendLists.length === 0 ? (
-              <Empty text={t('noProfileLists', lang)} />
-            ) : (
-              <FeedList items={trendLists.slice(0, 30)} lang={lang} viewerId={uid} className="space-y-3" />
-            )
-          ) : (
-            <PeopleResults people={trendPeople} lang={lang} />
-          )}
-        </>
-      )}
-
-      {/* ── Collections: курируемые подборки ── */}
-      {active === 'collections' &&
-        (collectionCards.length === 0 ? (
-          <Empty text={lang === 'ru' ? 'Подборок пока нет.' : 'No collections yet.'} />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {collectionCards.map((c) => (
-              <CollectionCard key={c.id} c={c} lang={lang} />
-            ))}
-          </div>
-        ))}
+      </div>
       </div>
     </div>
   )
@@ -260,8 +153,4 @@ function Widget({
       )}
     </section>
   )
-}
-
-function Empty({ text }: { text: string }) {
-  return <EmptyState variant="plain" hint={text} />
 }
