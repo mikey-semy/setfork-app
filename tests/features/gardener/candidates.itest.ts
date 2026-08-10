@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { db, suggestions, templates, users } from '@/shared/db'
 import { pickCandidates } from '@/features/gardener/service'
+import { resetTables } from '../../helpers/reset-db'
 
 // Интеграция: КОГО компания берёт в уход. Предикат живёт в SQL, поэтому проверяется
 // на реальной БД — второй копии правила в TS нет намеренно (разъехалась бы).
@@ -26,7 +27,7 @@ const seedList = async (ownerId: string, slug: string, over: Partial<typeof temp
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${suggestions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${suggestions}, ${templates}, ${users}`)
   const [agent] = await db
     .insert(users)
     .values({ handle: 'gc-agent', accountType: 'agent', profession: 'Cook' })

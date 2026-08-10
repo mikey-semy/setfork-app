@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Неудача, о которой ЯДРО НЕ УЗНАЛО — на настоящей Postgres.
@@ -33,7 +34,7 @@ const row = async () => (await db.select().from(templates).where(eq(templates.sl
 
 beforeEach(async () => {
   behave = async () => ({ ok: true, error: '' })
-  await db.execute(sql`truncate table ${users}, ${templates} restart identity cascade`)
+  await resetTables(sql`${users}, ${templates}`)
   const [u] = await db.insert(users).values({ handle: 'owner' }).returning({ id: users.id })
   ownerId = u.id
   await db.insert(templates).values({

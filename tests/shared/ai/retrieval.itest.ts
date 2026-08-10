@@ -23,7 +23,7 @@ const axis = (i: number) => {
 let ownerId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${embeddings}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${embeddings}, ${templates}, ${users}`)
   const [owner] = await db.insert(users).values({ handle: 'ret-owner' }).returning({ id: users.id })
   ownerId = owner.id
 
@@ -53,12 +53,13 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await db.execute(sql`truncate table ${embeddings}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${embeddings}, ${templates}, ${users}`)
   vi.restoreAllMocks()
 })
 
 // import ПОСЛЕ vi.mock: retrieval получает замоканный embedOne.
 import { findPrecedents } from '@/shared/ai/retrieval'
+import { resetTables } from '../../helpers/reset-db'
 
 describe('findPrecedents: гибрид на реальной БД', () => {
   it('векторная ветка: близкий вектор находит список, приватное не утекает', async () => {

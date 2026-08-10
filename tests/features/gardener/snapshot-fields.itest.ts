@@ -1,6 +1,7 @@
 import { asc, eq, sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { db, steps, templates, templateVersions, users } from '@/shared/db'
+import { resetTables } from '../../helpers/reset-db'
 
 // Снимок списка, который петля ухода отдаёт модели, обязан нести ВСЕ поля, которые нельзя
 // потерять. Проверяем на реальной БД именно чтение шагов: пометка «здесь нужен человек»
@@ -11,7 +12,7 @@ let ownerId = ''
 let versionId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${steps}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'snap-owner' }).returning({ id: users.id })
   ownerId = u.id
   const [tpl] = await db

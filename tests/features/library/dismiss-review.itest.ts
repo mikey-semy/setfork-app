@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Снятие чужого вердикта — как Dismiss review у GitHub.
@@ -33,7 +34,7 @@ const asReviewer = () => Object.assign(session, { userId: reviewerId, handle: 'd
 const asStranger = () => Object.assign(session, { userId: strangerId, handle: 'dis-stranger' })
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const rows = await db
     .insert(users)
     .values([{ handle: 'dis-owner' }, { handle: 'dis-reviewer' }, { handle: 'dis-stranger' }, { handle: 'dis-author' }])

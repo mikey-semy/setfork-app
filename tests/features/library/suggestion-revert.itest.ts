@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Откат принятого предложения на реальной БД.
@@ -70,13 +71,13 @@ const editItem = (i: number, title: string) =>
   mergeEdit(build(editorFromState().map((b, k) => (k === i ? { ...b, title } : b))))
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [owner] = await db.insert(users).values({ handle: 'rev-owner' }).returning({ id: users.id })
   ownerId = owner.id
 })
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates} cascade`)
+  await resetTables(sql`${templates}`, { restartIdentity: false })
   const [tpl] = await db
     .insert(templates)
     .values({ ownerId, slug: 'rev-list', title: { en: 'Revert list' }, visibility: 'public', status: 'published' })

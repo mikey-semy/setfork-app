@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Доставка watch по уровням против реального Postgres: watcherIds отдаёт получателей
 // события, УВАЖАЯ уровень подписки. 'all' — все события; 'custom' — только по events;
@@ -11,7 +12,7 @@ let listId = ''
 const ids: Record<string, string> = {}
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${watches}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${watches}, ${templates}, ${users}`)
   const [owner] = await db.insert(users).values({ handle: 'wowner' }).returning({ id: users.id })
   const [tpl] = await db
     .insert(templates)
@@ -29,7 +30,7 @@ beforeAll(async () => {
   await curationStore.setWatch(listId, ids.ue, 'custom', { versions: true })
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${watches}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${watches}, ${templates}, ${users}`)
 })
 
 describe('watch-уровни: доставка watcherIds', () => {

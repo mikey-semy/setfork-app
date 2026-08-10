@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { db, generationCandidates, generationDrafts, generationMessages, generations, templates, users } from '@/shared/db'
 import { getDomainScorecards } from '@/features/admin/scorecard-queries'
+import { resetTables } from '../../helpers/reset-db'
 
 // Скоркарт по домену собирается из двух источников: журнал генераций (приёмка) и сохранённые
 // черновики совета (многогранность). Проверяем на реальной БД главное свойство — что домен
@@ -14,7 +15,7 @@ const card = (all: Awaited<ReturnType<typeof getDomainScorecards>>, gnome: strin
   all.find((c) => c.gnomeId === gnome && c.domain === domain)
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${generationDrafts}, ${generationCandidates}, ${generationMessages}, ${generations}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${generationDrafts}, ${generationCandidates}, ${generationMessages}, ${generations}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'sc-owner' }).returning({ id: users.id })
   userId = u.id
 })

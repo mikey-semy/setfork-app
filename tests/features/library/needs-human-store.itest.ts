@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { db, templates, users } from '@/shared/db'
 import { listStore } from '@/features/library/list-store'
 import { toProposed, toStepInput } from '@/shared/lib/step-input'
+import { resetTables } from '../../helpers/reset-db'
 
 // Пометка «здесь нужен человек» проходит через ЗАПИСЬ И ЧТЕНИЕ хранилища. Проверка нужна
 // именно на БД: адаптер перечисляет колонки руками, поэтому новое поле теряется молча —
@@ -11,7 +12,7 @@ import { toProposed, toStepInput } from '@/shared/lib/step-input'
 let ownerId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'nh-owner' }).returning({ id: users.id })
   ownerId = u.id
 })

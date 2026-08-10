@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Линза 02, F3: заморозка и архив не держались на `git push`. Жёсткий backstop
 // состояния стоит на TS-точке записи версий (list-store), но на проде git идёт в
@@ -53,7 +54,7 @@ async function makeList(slug: string, over: Record<string, unknown> = {}): Promi
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   for (const k of ['owner', 'collab', 'stranger']) {
     const [u] = await db.insert(users).values({ handle: k === 'owner' ? OWNER : `gw-${k}` }).returning({ id: users.id })
     uid[k] = u.id

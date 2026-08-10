@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // acceptSuggestion против реального Postgres: только владелец списка принимает; принятие
 // создаёт новую версию через фасад listStore.addVersion. Мокаем границу Next + уведомления
@@ -54,7 +55,7 @@ const versionCount = async (tplId: string) => {
 }
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [o] = await db.insert(users).values({ handle: 'aowner' }).returning({ id: users.id })
   const [x] = await db.insert(users).values({ handle: 'aother' }).returning({ id: users.id })
   const [a] = await db.insert(users).values({ handle: 'aauthor' }).returning({ id: users.id })
@@ -63,7 +64,7 @@ beforeEach(async () => {
   authorId = a.id
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
 })
 
 describe('acceptSuggestion — владение + создание версии', () => {

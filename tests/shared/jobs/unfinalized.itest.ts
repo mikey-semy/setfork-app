@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Захват «похороны ещё не состоялись».
@@ -22,7 +23,7 @@ const add = (over: Partial<typeof jobs.$inferInsert> = {}) =>
     .returning({ id: jobs.id })
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${jobs} restart identity cascade`)
+  await resetTables(sql`${jobs}`)
 })
 
 describe('незакрытые похороны', () => {

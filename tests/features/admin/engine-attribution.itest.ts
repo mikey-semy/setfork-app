@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * КОМУ ЗАСЧИТАНА ГЕНЕРАЦИЯ: совету или одиночке.
@@ -26,7 +27,7 @@ const newGeneration = async (over: Record<string, unknown> = {}) => {
 const engines = async () => (await getDevelopmentMetrics()).engines
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'eng-owner' }).returning({ id: users.id })
   userId = u.id
 })

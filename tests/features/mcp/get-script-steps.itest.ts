@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { db, steps, templateVersions, templates, users } from '@/shared/db'
 import { mcpGetList, mcpGetScript } from '@/features/mcp/tools'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Сквозной путь «справочник → скрипт из нужных пунктов»: строки БД → detail →
@@ -16,7 +17,7 @@ const SLUG = 'server-maintenance'
 const BIDS = { disk: randomUUID(), logs: randomUUID(), prune: randomUUID(), restart: randomUUID() }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${steps}, ${templateVersions}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${steps}, ${templateVersions}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'ops' }).returning({ id: users.id })
   ownerId = u.id
   const [t] = await db

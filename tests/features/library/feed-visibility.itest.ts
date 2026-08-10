@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { db, templates, users } from '@/shared/db'
 import { getFeed } from '@/features/library/queries'
+import { resetTables } from '../../helpers/reset-db'
 
 // Интеграция data-layer: SQL-предикат видимости `visibleFilter` (через getFeed) —
 // это read-authz на уровне запроса, парная к canViewList (unit — core/domain/access).
@@ -22,7 +23,7 @@ async function seedList(ownerId: string, slug: string, over: Partial<typeof temp
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   const [owner] = await db.insert(users).values({ handle: 'itest-owner' }).returning({ id: users.id })
   const [other] = await db.insert(users).values({ handle: 'itest-other' }).returning({ id: users.id })
   ownerId = owner.id
@@ -35,7 +36,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
 })
 
 const feedIds = async (viewerId?: string) => new Set((await getFeed({}, viewerId)).map((r) => r.id))

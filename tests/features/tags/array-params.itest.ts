@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { db, tags, templates, users } from '@/shared/db'
 import { knownTagSlugs } from '@/features/tags/queries'
 import { recomputeTagUsage } from '@/features/tags/service'
+import { resetTables } from '../../helpers/reset-db'
 
 // Регрессия на класс бага, найденный 2026-07-27 в петле садовника: в шаблоне `sql`
 // массив разворачивается в СПИСОК параметров, поэтому `= any(${arr})` даёт
@@ -11,7 +12,7 @@ import { recomputeTagUsage } from '@/features/tags/service'
 // сломанной формой и не имели покрытия вовсе — падали на ЛЮБОМ непустом входе.
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${tags}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${tags}, ${templates}, ${users}`)
   const [owner] = await db.insert(users).values({ handle: 'tag-owner' }).returning({ id: users.id })
   await db.insert(tags).values([{ slug: 'cooking' }, { slug: 'deploy' }, { slug: 'unused' }])
   await db.insert(templates).values([

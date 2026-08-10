@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Движок модерации против реального Postgres. Мокаем ТОЛЬКО ключ ИИ (иначе гейт
 // выключен на стендах) — сама логика гейта/recheck/дедупа настоящая, БД настоящая.
@@ -31,12 +32,12 @@ const jobCount = async (id: string) => {
 }
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users}, ${jobs} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}, ${jobs}`)
   const [o] = await db.insert(users).values({ handle: 'gowner' }).returning({ id: users.id })
   ownerId = o.id
 })
 afterAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users}, ${jobs} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}, ${jobs}`)
 })
 
 describe('gateListPublication — гейт публикации', () => {

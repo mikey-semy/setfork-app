@@ -3,6 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { agentActions, agentLoops, db, templates, users } from '@/shared/db'
 import { autonomyHealthy, publishQuotaLeft, ERROR_STREAK_TRIP } from '@/shared/agents/canary'
 import { loopPolicy, recordAgentAction, resetCircuit } from '@/shared/agents/policy'
+import { resetTables } from '../../helpers/reset-db'
 
 // КАНАРЕЙКА — триггеры к предохранителю, который до этого никто не срывал: механизм без
 // триггера это иллюзия защиты. Проверяем на реальной БД, потому что все три сигнала —
@@ -11,7 +12,7 @@ import { loopPolicy, recordAgentAction, resetCircuit } from '@/shared/agents/pol
 let ownerId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${agentActions}, ${agentLoops}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${agentActions}, ${agentLoops}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'canary-agent', accountType: 'agent' }).returning({ id: users.id })
   ownerId = u.id
 })

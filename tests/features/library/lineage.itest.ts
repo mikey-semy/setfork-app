@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { db, generationCandidates, generations, templates, users } from '@/shared/db'
 import { getListLineage, isLineageExact } from '@/features/library/lineage'
+import { resetTables } from '../../helpers/reset-db'
 
 // Родословная принятого списка отвечает на вопрос, который задают ПОЗЖЕ: «откуда это
 // взялось?». Тут проверяется главное — что показывается провенанс ИМЕННО принятого варианта
@@ -12,7 +13,7 @@ let userId = ''
 let tplId = ''
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${generationCandidates}, ${generations}, ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${generationCandidates}, ${generations}, ${templates}, ${users}`)
   const [u] = await db.insert(users).values({ handle: 'lin-owner' }).returning({ id: users.id })
   userId = u.id
   const [t] = await db.insert(templates).values({ ownerId: userId, slug: 'bread', title: { ru: 'Хлеб' } }).returning({ id: templates.id })

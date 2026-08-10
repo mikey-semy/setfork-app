@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { appSettings, db } from '@/shared/db'
 import { getModelSettings, getProviderConfigFor } from '@/shared/settings/ai'
+import { resetTables } from '../../helpers/reset-db'
 
 // БАГ 2026-07-27: в админке каталог моделей строился для СОХРАНЁННОГО провайдера, а
 // переключатель провайдера жил в клиентском состоянии. Выбор другого провайдера не менял
@@ -16,7 +17,7 @@ const set = async (key: string, value: string) => {
 }
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${appSettings}`)
+  await resetTables(sql`${appSettings}`, { restartIdentity: false, cascade: false })
 })
 
 beforeEach(async () => {

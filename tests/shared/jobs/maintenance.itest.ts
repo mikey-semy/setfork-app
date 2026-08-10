@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 /**
  * Обслуживание очереди: два порога reaper и уборка терминальных задач.
@@ -21,7 +22,7 @@ const add = (over: Partial<typeof jobs.$inferInsert> = {}) =>
 const ago = (interval: string) => sql`now() - interval '${sql.raw(interval)}'`
 
 beforeEach(async () => {
-  await db.execute(sql`truncate table ${jobs} restart identity cascade`)
+  await resetTables(sql`${jobs}`)
 })
 
 describe('reaper: пульс против таймаута', () => {

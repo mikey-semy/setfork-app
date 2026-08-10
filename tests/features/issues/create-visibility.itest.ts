@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Линза 02, F4: createIssue держал СВОЮ пару проверок (private + moderation) вместо
 // единого предиката canViewList и забыл про ЧЕРНОВИК — посторонний открывал задачу в
@@ -51,7 +52,7 @@ async function open(slug: string, title: string): Promise<void> {
 const issueCount = async (id: string) => (await db.select().from(issues).where(eq(issues.templateId, id))).length
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   for (const k of ['owner', 'stranger', 'collab']) {
     const [u] = await db.insert(users).values({ handle: k === 'owner' ? OWNER : `iv-${k}` }).returning({ id: users.id })
     uid[k] = u.id

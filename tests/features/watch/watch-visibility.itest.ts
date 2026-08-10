@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { resetTables } from '../../helpers/reset-db'
 
 // Линза 02, F8: подписка переживала закрытие списка. Две половины одной дыры —
 // ensureWatch (экспорт из 'use server') подписывал кого угодно на что угодно, а
@@ -51,7 +52,7 @@ const watchRows = (listId: string, userId: string) =>
   db.select().from(watches).where(and(eq(watches.templateId, listId), eq(watches.userId, userId)))
 
 beforeAll(async () => {
-  await db.execute(sql`truncate table ${templates}, ${users} restart identity cascade`)
+  await resetTables(sql`${templates}, ${users}`)
   for (const k of ['owner', 'stranger', 'collab']) {
     const [u] = await db.insert(users).values({ handle: `w-${k}`, name: k }).returning({ id: users.id })
     uid[k] = u.id
