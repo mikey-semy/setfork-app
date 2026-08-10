@@ -449,6 +449,9 @@ export const ru: Record<DictKey, string> = {
   searchTitle: 'Поиск',
   searchPrompt: 'Ищите списки, людей и задачи',
   popularPeople: 'Популярные люди',
+  // Выход из бокового виджета на полную страницу — как «See more…» у GitHub.
+  trendingListsMore: 'Ещё популярные списки',
+  trendingPeopleMore: 'Ещё популярные люди',
   searchFor: 'Искать',
   shareVia: 'Поделиться через',
   runHeading: 'Запуск в терминале',

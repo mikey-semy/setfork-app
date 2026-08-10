@@ -453,6 +453,9 @@ export const en = {
   searchTitle: 'Search',
   searchPrompt: 'Search lists, people and issues',
   popularPeople: 'Popular people',
+  // Выход из бокового виджета на полную страницу — как «See more…» у GitHub.
+  trendingListsMore: 'See more trending lists',
+  trendingPeopleMore: 'See more popular people',
   searchFor: 'Search for',
   shareVia: 'Share via',
   runHeading: 'Run in terminal',
