@@ -256,7 +256,7 @@ jobs:
               ...context.repo,
               deployment_id: Number(process.env.DEP_ID),
               state: process.env.JOB_STATUS === 'success' ? 'success' : 'failure',
-              environment_url: 'https://setfork.ru',
+              environment_url: 'https://setfork.com',
               log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             })
         env:
