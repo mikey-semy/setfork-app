@@ -29,7 +29,7 @@ import { REPORTED_STATUSES, reportedChecks, type ReportedStatus } from '@/featur
 import { currentRevision } from '@/features/library/suggestion-core'
 import { recordRunCompletionIfDone } from '@/shared/completion'
 import { getCourseCompletion } from '@/features/quizzes/queries'
-import { mcpCanView } from './shared'
+import { detailByRefOrMoved, mcpCanView } from './shared'
 import { SITE_URL, resolveListRefOrMoved, toProposed, type McpItemInput } from './shared'
 import { blockForMcp, type DetailStep } from './shared'
 
@@ -667,7 +667,7 @@ export async function mcpPatchList(
     }
   }
 
-  const detail = await getTemplateDetail(handle, slug)
+  const detail = await detailByRefOrMoved(handle, slug)
   if (!detail) return { error: 'list not found' }
   const current = detail.currentVersion?.version ?? tpl.currentVersion
 

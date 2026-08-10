@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 // и чтения, и записи MCP, и ошибка здесь стоила бы сразу всем.
 const { db, listRedirects, templates, userRedirects, users } = await import('@/shared/db')
 const { resolveListRefOrMoved } = await import('@/features/mcp/tools/shared')
+const { mcpGetList } = await import('@/features/mcp/tools')
 
 let ownerId = ''
 let templateId = ''
@@ -54,6 +55,16 @@ describe('resolveListRefOrMoved', () => {
 
   it('ссылка без владельца работает и по прежнему слагу', async () => {
     expect((await resolveListRefOrMoved('old-address'))?.id).toBe(templateId)
+  })
+
+  // Резолвер сам по себе бесполезен, если инструменты ходят мимо него — а именно так
+  // и было: чтения звали строгий лукап по handle/slug и отвечали «не найдено» на
+  // прежний адрес, то есть ровно в том случае, ради которого всё и затевалось.
+  it('get_list читает список по прежнему адресу', async () => {
+    const byOld = await mcpGetList(ownerId, 'moved-owner-old', 'old-address')
+    expect(byOld).not.toBeNull()
+    const byNew = await mcpGetList(ownerId, 'moved-owner', 'new-address')
+    expect(byOld?.slug).toBe(byNew?.slug)
   })
 
   it('несуществующий адрес остаётся ненайденным', async () => {

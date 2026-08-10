@@ -288,3 +288,18 @@ async function findByAddress(owner: string | null, slug: string) {
     .limit(1)
   return row ? { ...row, movedTo: null } : null
 }
+
+/**
+ * Полное содержимое списка по человеческой ссылке — включая ПРЕЖНИЕ адреса.
+ *
+ * Обёртка нужна затем, что `getTemplateDetail` принимает ровно текущие handle/slug и
+ * про переезды не знает. Без неё читающие инструменты (get_list, get_script, прогоны)
+ * отвечали бы «не найдено» на ссылку, которая у агента осталась с прошлого названия —
+ * то есть ровно в том случае, ради которого прежние адреса и заведены.
+ */
+export async function detailByRefOrMoved(handle: string, slug: string) {
+  const found = await resolveListRefOrMoved(`${handle}/${slug}`)
+  if (!found) return null
+  const detail = await getTemplateDetail(found.ownerHandle, found.slug)
+  return detail ? { ...detail, movedTo: found.movedTo } : null
+}
