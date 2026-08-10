@@ -2,7 +2,8 @@ import 'server-only'
 import { cache } from 'react'
 import { eq } from 'drizzle-orm'
 import { db, templates } from '@/shared/db'
-import { redirectIfListMoved } from '@/shared/db/moved-list'
+import { permanentRedirectTo } from '@/shared/db/moved-list'
+import { resolveListOrMoved } from '@/shared/db/resolve-list'
 import { getSession } from '@/shared/auth/session'
 import { isAdminHandle } from '@/shared/auth/admin'
 import { canEditList, canRunList, canViewList, editBlockReason } from '@/core'
@@ -14,6 +15,30 @@ import { getListMeta, getTemplateDetail } from './queries'
 // сама вспомнить про canViewList — забытый вызов = утечка (так родились дыры blame/versions/
 // insights). Эти обёртки возвращают данные ТОЛЬКО если текущий зритель вправе их видеть,
 // иначе null → вызывающий делает notFound(). Приватное/черновик/снятое модерацией не утекает.
+
+/**
+ * Перенаправить на новый адрес — но ТОЛЬКО если список виден этому зрителю.
+ *
+ * Здесь мы строже Gitea: там перенаправление отдаётся безусловно, и по старому адресу
+ * можно узнать текущее имя списка и сам факт его существования — даже если он с тех пор
+ * стал приватным, черновиком или снят модерацией. У нас такая цель ведёт себя как
+ * отсутствующая, как и на всей остальной поверхности.
+ *
+ * Живёт в guard, а не в shared: решение опирается на соавторство и админство, а
+ * shared про фичи знать не может.
+ */
+async function redirectMovedIfVisible(owner: string, slug: string): Promise<void> {
+  const moved = await resolveListOrMoved(owner, slug)
+  if (!moved?.movedTo) return
+  const viewer = await getSession()
+  const isOwner = moved.list.ownerId === viewer?.userId
+  const visible = canViewList(moved.list, {
+    isOwner,
+    isCollaborator: isOwner ? false : await collabIfNeeded(moved.list, viewer?.userId),
+    isAdmin: isAdminHandle(viewer?.handle),
+  })
+  if (visible) await permanentRedirectTo(`/${owner}/${slug}`, moved.movedTo)
+}
 
 /** Статус коллаборатора нужен ТОЛЬКО чтобы пустить его к приватному/черновику —
  *  не гоняем лишний запрос на каждый публичный список. */
@@ -43,7 +68,7 @@ export const requireViewableMeta = cache(async (owner: string, slug: string) => 
   // ссылка осталась старой. Перенаправление бросает исключение (как notFound), так
   // что до `return null` доходят только по-настоящему несуществующие адреса.
   if (!meta) {
-    await redirectIfListMoved(owner, slug)
+    await redirectMovedIfVisible(owner, slug)
     return null
   }
   const viewer = await getSession()
@@ -74,7 +99,7 @@ export async function requireViewableDetailFor(owner: string, slug: string, view
 async function viewableDetailFor(owner: string, slug: string, viewerId?: string, viewerHandle?: string | null) {
   const detail = await getTemplateDetail(owner, slug)
   if (!detail) {
-    await redirectIfListMoved(owner, slug)
+    await redirectMovedIfVisible(owner, slug)
     return null
   }
   const isOwner = detail.tpl.ownerId === viewerId

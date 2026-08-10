@@ -101,12 +101,9 @@ async function dispatch(req: Request, ctx: RouteContext, method: 'GET' | 'POST')
 
   const grant = await authorizeGitRead(req.headers.get('authorization'), op.repo, op.need)
   if (isFailure(grant)) {
-    // «Нет такого репозитория» может означать «его переименовали»: адрес живёт в
-    // git remote у каждого, кто клонировал, и обязан доводить до места.
-    if (grant.code === 'not_found') {
-      const moved = await gitMovedResponse(req, op.repo)
-      if (moved) return moved
-    }
+    // Адрес переехал — ведём клиента на новый: адрес живёт в git remote у каждого, кто
+    // клонировал. Видимость цели гейт уже проверил, здесь только форма ответа.
+    if (grant.code === 'moved') return gitMovedResponse(req, op.repo, grant.to)
     return gitFailureResponse(grant)
   }
 

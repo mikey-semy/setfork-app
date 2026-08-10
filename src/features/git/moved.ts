@@ -1,28 +1,18 @@
-import 'server-only'
 import { movedPath } from '@/shared/db/moved-list'
-import { resolveListOrMoved } from '@/shared/db/resolve-list'
 
 /**
- * Запрос git пришёл на ПРЕЖНИЙ адрес списка → ответ с перенаправлением; иначе null
- * (вызывающий отвечает обычным отказом).
+ * Ответ git-клиенту «репозиторий переехал».
  *
- * Зачем вообще: адрес живёт в `git remote` у всех, кто клонировал. Переименование без
- * этого превращало бы каждый такой клон в мёртвый — человек узнавал бы о смене адреса
- * от `fatal: repository not found`.
- *
- * 301, а не 308: именно его git-клиент запоминает и следует за ним по умолчанию — так
- * же поступает Gitea (services/context/repo.go, «Git client needs a 301 redirect by
- * default to follow the new location»). Хвост пути сохраняется целиком, поэтому
+ * 301, а не 308: именно за ним git-клиент следует по умолчанию — так же поступает Gitea
+ * (services/context/repo.go, «Git client needs a 301 redirect by default to follow the
+ * new location»). Хвост пути сохраняется целиком, поэтому
  * `.git/info/refs?service=git-upload-pack` доезжает вместе с query.
  *
- * Стоит запроса к БД только на промахе — то есть там, где ответом всё равно был бы 404.
+ * Решение о самом перенаправлении принято раньше — в гейте доступа, вместе с проверкой
+ * видимости цели. Здесь только форма ответа, без БД и без прав.
  */
-export async function gitMovedResponse(req: Request, repo: { owner: string; slug: string }): Promise<Response | null> {
-  const found = await resolveListOrMoved(repo.owner, repo.slug)
-  if (!found?.movedTo) return null
-
+export function gitMovedResponse(req: Request, repo: { owner: string; slug: string }, to: string): Response {
   const url = new URL(req.url)
-  const from = `/${repo.owner}/${repo.slug}`
-  const location = new URL(movedPath(url.pathname + url.search, from, found.movedTo), url)
+  const location = new URL(movedPath(url.pathname + url.search, `/${repo.owner}/${repo.slug}`, to), url)
   return new Response(null, { status: 301, headers: { Location: location.toString() } })
 }

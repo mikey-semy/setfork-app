@@ -6,6 +6,7 @@ import { contributorsEnabled, openForContributions, type PushRole } from '@/feat
 import { coreEnforcesPushRoles } from '@/features/git/capabilities'
 import { isCollaborator } from '@/features/collab/queries'
 import { identifyGitActor } from '@/features/git/http-auth'
+import { resolveListOrMoved } from '@/shared/db/resolve-list'
 import type { GitHttpFailure } from '@/features/git/http-response'
 
 /**
@@ -36,13 +37,32 @@ export interface GitGrant {
 }
 
 /** Видит ли этот пользователь список — ОБЩИЙ предикат домена, а не своя копия правила. */
-async function canRead(meta: Meta, userId: string): Promise<boolean> {
+async function canRead(meta: Pick<Meta, 'id' | 'ownerId' | 'visibility' | 'status' | 'moderation'>, userId: string): Promise<boolean> {
   const isOwner = meta.ownerId === userId
   if (canViewList(meta, { isOwner })) return true
   // Соредактор ведёт список вместе с владельцем: в вебе он приватный список видит и
   // правит, а `git clone` того же списка получал 404. Проверка отдельным запросом — и
   // только когда без неё отказ, чтобы не ходить в БД на каждый публичный клон.
   return canViewList(meta, { isOwner, isCollaborator: await isCollaborator(meta.id, userId) })
+}
+
+/**
+ * Куда переехал адрес — но ТОЛЬКО если цель видна этому актору; иначе null.
+ *
+ * Видимость проверяется до перенаправления сознательно, и здесь мы строже Gitea: там
+ * редирект отдаётся безусловно, то есть по старому адресу можно узнать и текущее имя
+ * списка, и сам факт его существования — даже когда он с тех пор стал приватным. У нас
+ * приватная цель ведёт себя как отсутствующая, ровно как того требует остальная
+ * поверхность (`/raw`, `data.json`): факт существования не утекает.
+ */
+async function movedTargetFor(
+  repo: { owner: string; slug: string },
+  actor: Awaited<ReturnType<typeof identifyGitActor>>,
+): Promise<string | null> {
+  const moved = await resolveListOrMoved(repo.owner, repo.slug)
+  if (!moved?.movedTo) return null
+  const visible = actor.kind === 'user' ? await canRead(moved.list, actor.userId) : isPubliclyVisible(moved.list)
+  return visible ? moved.movedTo : null
 }
 
 /**
@@ -65,6 +85,15 @@ export async function authorizeGitRead(
   if (actor.kind === 'unavailable') return { code: 'auth_unavailable' }
 
   const meta = await getListMeta(repo.owner, repo.slug)
+
+  // Адрес мог переехать (переименование списка или смена ника владельца), а в git remote
+  // у клонов остался прежний. Проверяем ДО отказов: иначе анонимный клон переехавшего
+  // ПУБЛИЧНОГО списка получал бы 401 вместо перенаправления — ветка `auth_required`
+  // ниже срабатывает раньше, чем «не найдено».
+  if (!meta) {
+    const to = await movedTargetFor(repo, actor)
+    if (to) return { code: 'moved', to }
+  }
 
   // Единственный путь без кредитива — чтение того, что и так открыто всем.
   if (need === 'read' && actor.kind === 'anonymous' && meta && isPubliclyVisible(meta)) {

@@ -33,14 +33,14 @@ export async function renameList(
   _prev: RenameResult | null,
   formData: FormData,
 ): Promise<RenameResult> {
-  const lang = await getLang()
-  const session = await requireSession()
+  // Независимые чтения — параллельно: язык ответа и личность друг от друга не зависят.
+  const [lang, session] = await Promise.all([getLang(), requireSession()])
   const tpl = await db.query.templates.findFirst({ where: (x) => eq(x.id, templateId) })
   // Молча выходим ровно как соседние действия зоны: чужой список — не наше дело.
   if (!tpl || tpl.ownerId !== session.userId) return { error: t('renameNotAllowed', lang) }
 
   const raw = String(formData.get('slug') ?? '')
-  const { slug, free } = await checkSlugAvailable(raw, session.userId)
+  const { slug, free } = await checkSlugAvailable(raw, session.userId, templateId)
   if (!raw.trim()) return { error: t('renameEmpty', lang) }
   if (slug === tpl.slug) return { error: t('renameSame', lang) }
   // slugify никогда не возвращает пустое (фолбэк 'list'), поэтому проверяем не пустоту
