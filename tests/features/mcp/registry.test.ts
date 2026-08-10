@@ -68,9 +68,19 @@ describe('реестр MCP: состав', () => {
  */
 const READ_ONLY = [
   'search_lists', 'get_list', 'get_script', 'get_run',
-  'list_gnomes', 'ask_gnome', 'gnome_review', 'get_council_draft',
+  'list_gnomes', 'get_council_draft',
   'pending_suggestions', 'list_sources',
 ]
+
+/**
+ * ТРАТИТ ДЕНЬГИ — значит не чтение, чем бы оно ни выглядело снаружи.
+ *
+ * `ask_gnome` и `gnome_review` спрашивают модель: проверяют `globalBudgetOk` и
+ * `aiQuota`, пишут `recordUsage`. Числились читающими — то есть утёкший read-токен
+ * жёг бюджет владельца и инстанса. `council_draft`, ровно такой же по природе, всё
+ * это время был пишущим: расхождение и выдало ошибку.
+ */
+const SPENDS_MONEY = ['ask_gnome', 'gnome_review', 'council_draft']
 
 describe('реестр MCP: вшитая авторизация', () => {
   const tools = collect()
@@ -78,6 +88,13 @@ describe('реестр MCP: вшитая авторизация', () => {
   it('читающие помечены readOnlyHint, пишущие — нет', () => {
     for (const t of tools) {
       expect(t.config.annotations?.readOnlyHint, t.name).toBe(READ_ONLY.includes(t.name))
+    }
+  })
+
+  it('ни один инструмент, тратящий деньги, не числится читающим', () => {
+    for (const name of SPENDS_MONEY) {
+      expect(READ_ONLY.includes(name), `${name} тратит квоту и не может быть читающим`).toBe(false)
+      expect(tools.find((t) => t.name === name)?.config.annotations?.readOnlyHint, name).toBe(false)
     }
   })
 

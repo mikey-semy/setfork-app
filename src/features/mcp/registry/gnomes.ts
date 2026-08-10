@@ -17,7 +17,7 @@ export function registerGnomes({ readTool, writeTool }: ToolKit) {
     async () => json(await mcpListGnomes()),
   )
 
-  readTool(
+  writeTool(
     'ask_gnome',
     {
       title: 'Ask a gnome',
@@ -36,7 +36,7 @@ export function registerGnomes({ readTool, writeTool }: ToolKit) {
     },
   )
 
-  readTool(
+  writeTool(
     'gnome_review',
     {
       title: 'Gnome review of a list',
